@@ -2389,7 +2389,8 @@ void make_point_shape(vector<int>& points, vector<vec3f>& positions,
 }
 
 // Make a bezier circle. Returns bezier, pos.
-tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle_shape(float size) {
+void make_bezier_circle_shape(
+    vector<vec4i>& beziers, vector<vec3f>& positions, float size) {
     // constant from http://spencermortensen.com/articles/bezier-circle/
     const auto  c              = 0.551915024494f;
     static auto circle_pos     = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
@@ -2397,10 +2398,9 @@ tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle_shape(float size) {
         {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
     static auto circle_beziers = vector<vec4i>{
         {0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
-    auto positions = circle_pos;
-    auto beziers   = circle_beziers;
+    positions = circle_pos;
+    beziers   = circle_beziers;
     for (auto& p : positions) p *= size;
-    return {beziers, positions};
 }
 
 // Make a hair ball around a shape
@@ -2476,7 +2476,8 @@ void make_hair_shape(vector<vec2i>& lines, vector<vec3f>& positions,
 // cases.
 void make_shell_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, float thickness) {
-    auto bbox                = make_bbox(positions);
+    auto bbox = invalid_bbox3f;
+    for (auto p : positions) bbox += p;
     auto center              = bbox_center(bbox);
     auto inner_quads         = quads;
     auto inner_positions     = positions;

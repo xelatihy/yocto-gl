@@ -9,12 +9,12 @@
 // be considered internal to Yocto.
 //
 //
-// ## Printing and parsing values
+// ## Array view
 //
-// Use `print_value()` to write a string in a stream or `println_values()`
-// to print a line of values. Use `format_duraction()` and `format_num()`
-// for pretty printing times and numbers. These will change once lib `fmt`
-// is accepted in the standard.
+// `array_view` is a non owning view over a contiguos sequence of elements.
+// it is very similar to `std::span` and in fact it will be eventually 
+// substituted to that one when span will become readily available.
+// It is used through Yocto/GL to pass arrays as pointer and length pairs.
 //
 //
 // ## Python-like iterators and collection helpers
@@ -29,6 +29,14 @@
 // 3. use opeartors + to either concatenate two vectors or a vector and an
 //    element
 // 4. use operators += to append an element or a vector to a given vector
+//
+//
+// ## Printing and parsing values
+//
+// Use `print_value()` to write a string in a stream or `println_values()`
+// to print a line of values. Use `format_duraction()` and `format_num()`
+// for pretty printing times and numbers. These will change once lib `fmt`
+// is accepted in the standard.
 //
 //
 // ## Path manipulation
@@ -99,6 +107,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -110,27 +119,51 @@ using std::deque;
 using std::future;
 using std::lock_guard;
 using std::mutex;
+using std::string;
 using std::thread;
+using std::vector;
+using namespace std::string_literals;
 using namespace std::chrono_literals;
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// APPLICATION UTILITIES
+// ARRAY VIEW
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration);
-// Format a large integer number in human readable form
-inline string format_num(uint64_t num);
+// Array view, similar to std::span for C++20. Wraps a pointer length and 
+// provides a vector like interface.
+template<typename T>
+struct array_view {
+    // constructors
+    constexpr array_view() : ptr{nullptr}, count{0} { }
+    constexpr array_view(T* data, size_t count) : ptr{nullptr}, count{count} { }
+    constexpr array_view(vector<T>& data) : ptr{data.data()}, count{data.size()} { }
+    constexpr array_view(const vector<T>& data) : ptr{data.data()}, count{data.size()} { }
 
-// get time in nanoseconds - useful only to compute difference of times
-inline int64_t get_time() {
-    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    // size
+    constexpr bool empty() const { return count == 0; }
+    constexpr size_t size() const { return count; }
+    constexpr ptrdiff_t ssize() const { return (ptrdiff_t)count; }
+
+    // element access
+    constexpr T& operator[](size_t i) const { return ptr[i]; }
+    constexpr T& at(size_t i) { return ptr[i]; }
+
+    // data access
+    constexpr T* data() const { return ptr; }
+
+    // iteration
+    constexpr T* begin() const { return ptr; }
+    constexpr T* end() const { return ptr + count; }
+
+  private:
+    T* ptr = nullptr;
+    size_t count = 0;
+};
+
 }
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
@@ -216,6 +249,23 @@ inline vector<T> operator+(const vector<T>& a, const T& b) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// APPLICATION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Format duration string from nanoseconds
+inline string format_duration(int64_t duration);
+// Format a large integer number in human readable form
+inline string format_num(uint64_t num);
+
+// get time in nanoseconds - useful only to compute difference of times
+inline int64_t get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -287,10 +337,10 @@ inline auto async(Function&& function, Args&&... args) {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
-inline void parallel_for(int begin, int end, const Func& func,
+inline void parallel_for(size_t begin, size_t end, const Func& func,
     atomic<bool>* cancel = nullptr, bool serial = false);
 template <typename Func>
-inline void parallel_for(int num, const Func& func,
+inline void parallel_for(size_t num, const Func& func,
     atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(0, num, func, cancel, serial);
 }
@@ -518,17 +568,17 @@ inline bool concurrent_queue<T>::try_pop(T& value) {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms.
 template <typename Func>
-inline void parallel_for(
-    int begin, int end, const Func& func, atomic<bool>* cancel, bool serial) {
+inline void parallel_for(size_t begin, size_t end, const Func& func,
+    atomic<bool>* cancel, bool serial) {
     if (serial) {
         for (auto idx = begin; idx < end; idx++) {
             if (cancel && *cancel) break;
             func(idx);
         }
     } else {
-        auto        futures  = vector<future<void>>{};
-        auto        nthreads = thread::hardware_concurrency();
-        atomic<int> next_idx(begin);
+        auto           futures  = vector<future<void>>{};
+        auto           nthreads = thread::hardware_concurrency();
+        atomic<size_t> next_idx(begin);
         for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
             futures.emplace_back(async([&func, &next_idx, cancel, end]() {
                 while (true) {

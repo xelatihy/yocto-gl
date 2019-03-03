@@ -78,6 +78,15 @@
 #include "yocto_utils.h"
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::function;
+
+}
+
+// -----------------------------------------------------------------------------
 // PATH TRACING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -106,13 +115,12 @@ struct trace_pixel {
     rng_state rng      = {};
 };
 struct trace_state {
-    int                 width  = 0;
-    int                 height = 0;
-    vector<trace_pixel> pixels = {};
+    vec2i               image_size = {0, 0};
+    vector<trace_pixel> pixels     = {};
 };
 
 // Initialize state of the renderer.
-void init_trace_state(trace_state& state, int width, int height,
+void init_trace_state(trace_state& state, const vec2i& image_size,
     uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
@@ -149,8 +157,7 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 // Options for trace functions
 struct trace_image_options {
     int                camera_id           = 0;
-    int                image_width         = 1280;
-    int                image_height        = 720;
+    vec2i              image_size          = {1280, 720};
     trace_sampler_type sampler_type        = trace_sampler_type::path;
     trace_sampler_func custom_sampler      = {};
     int                num_samples         = 512;
@@ -234,7 +241,7 @@ vec3f sample_phase_function(float vg, const vec2f& u);
 float evaluate_phase_function(float cos_theta, float vg);
 
 // Get a complex ior table with keys the metal name and values (eta, etak)
-const unordered_map<string, pair<vec3f, vec3f>>& get_metal_ior_table();
+bool get_metal_ior(const string& element, vec3f& eta, vec3f& etak);
 
 }  // namespace yocto
 

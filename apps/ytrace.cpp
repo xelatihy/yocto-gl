@@ -35,6 +35,8 @@ using namespace yocto;
 
 #include "ext/CLI11.hpp"
 
+#include <map>
+
 void exit_error(const string& msg) {
     printf("%s\n", msg.c_str());
     exit(1);
@@ -55,7 +57,7 @@ int main(int argc, char* argv[]) {
     auto filename      = "scene.json"s;
 
     // names for enums
-    auto trace_sampler_type_namemap = map<string, trace_sampler_type>{};
+    auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
     for (auto type = 0; type < trace_sampler_type_names.size(); type++) {
         trace_sampler_type_namemap[trace_sampler_type_names[type]] =
             (trace_sampler_type)type;
@@ -64,10 +66,10 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = CLI::App{"Offline path tracing"};
     parser.add_option("--camera", trace_options.camera_id, "Camera index.");
+    parser.add_option("--hres,-R", trace_options.image_size.x,
+        "Image horizontal resolution.");
     parser.add_option(
-        "--hres,-R", trace_options.image_width, "Image horizontal resolution.");
-    parser.add_option(
-        "--vres,-r", trace_options.image_height, "Image vertical resolution.");
+        "--vres,-r", trace_options.image_size.y, "Image vertical resolution.");
     parser.add_option(
         "--nsamples,-s", trace_options.num_samples, "Number of samples.");
     parser.add_option("--tracer,-t", trace_options.sampler_type, "Trace type.")
@@ -150,12 +152,11 @@ int main(int argc, char* argv[]) {
     }
 
     // allocate buffers
-    auto [width, height] = get_camera_image_size(
-        scene.cameras[trace_options.camera_id], trace_options.image_width,
-        trace_options.image_height);
-    auto image = yocto::image{{width, height}, zero4f};
+    auto image_size = get_camera_image_size(
+        scene.cameras[trace_options.camera_id], trace_options.image_size);
+    auto image = yocto::image{image_size, zero4f};
     auto state = trace_state{};
-    init_trace_state(state, width, height, trace_options.random_seed);
+    init_trace_state(state, image_size, trace_options.random_seed);
 
     // render
     for (auto sample = 0; sample < trace_options.num_samples;

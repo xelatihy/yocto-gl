@@ -32,6 +32,14 @@
 #include "yocto_utils.h"
 
 #include <cassert>
+#include <unordered_map>
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+using std::unordered_map;
+}
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SCENE UTILITIES
@@ -322,7 +330,7 @@ pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
     } else if (!shape.quads.empty()) {
         return sample_quads_element(elements_cdf, re, ruv);
     } else if (!shape.lines.empty()) {
-        return {get<0>(sample_lines_element(elements_cdf, re, ruv.x)), ruv};
+        return {sample_lines_element(elements_cdf, re, ruv.x).first, ruv};
     } else if (!shape.points.empty()) {
         return {sample_points_element(elements_cdf, re), ruv};
     } else if (!shape.quads_positions.empty()) {
@@ -488,7 +496,7 @@ void add_missing_tangent_space(yocto_scene& scene) {
         auto& material = scene.materials[shape.material];
         if (!shape.tangentspaces.empty() || shape.texturecoords.empty())
             continue;
-        if (material.normal_texture < 0 && material.bump_texture < 0) continue;
+        if (material.normal_texture < 0) continue;
         if (!shape.triangles.empty()) {
             if (shape.normals.empty()) {
                 shape.normals.resize(shape.positions.size());
@@ -971,26 +979,23 @@ float get_camera_fovy(const yocto_camera& camera) {
 float get_camera_aspect(const yocto_camera& camera) {
     return camera.film_width / camera.film_height;
 }
-pair<int, int> get_camera_image_size(
-    const yocto_camera& camera, int width, int height) {
-    if (width == 0 && height == 0) {
-        width  = 1280;
-        height = 720;
-    }
-    if (width != 0 && height != 0) {
-        if (width * camera.film_height / camera.film_width > height) {
-            width = 0;
+vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size_) {
+    auto size = size_;
+    if (size == zero2i) size = {1280, 720};
+    if (size.x != 0 && size.y != 0) {
+        if (size.x * camera.film_height / camera.film_width > size.y) {
+            size.x = 0;
         } else {
-            height = 0;
+            size.y = 0;
         }
     }
-    if (width == 0) {
-        width = (int)round(height * camera.film_width / camera.film_height);
+    if (size.x == 0) {
+        size.x = (int)round(size.y * camera.film_width / camera.film_height);
     }
-    if (height == 0) {
-        height = (int)round(width * camera.film_height / camera.film_width);
+    if (size.y == 0) {
+        size.y = (int)round(size.x * camera.film_height / camera.film_width);
     }
-    return {width, height};
+    return size;
 }
 void set_camera_perspective(
     yocto_camera& camera, float fovy, float aspect, float focus, float height) {
@@ -1298,14 +1303,8 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
             material.transmission_texture += offset_textures;
         if (material.roughness_texture >= 0)
             material.roughness_texture += offset_textures;
-        if (material.opacity_texture >= 0)
-            material.opacity_texture += offset_textures;
-        if (material.occlusion_texture >= 0)
-            material.occlusion_texture += offset_textures;
         if (material.normal_texture >= 0)
             material.normal_texture += offset_textures;
-        if (material.bump_texture >= 0)
-            material.bump_texture += offset_textures;
         if (material.displacement_texture >= 0)
             material.displacement_texture += offset_textures;
         if (material.volume_density_texture >= 0)

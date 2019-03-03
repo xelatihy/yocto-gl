@@ -73,19 +73,12 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <cfloat>
 #include <climits>
 #include <cmath>
 #include <cstdint>
 #include <functional>
 #include <limits>
-#include <map>
-#include <string>
-#include <tuple>
-#include <unordered_map>
-#include <vector>
-#include <memory>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -113,24 +106,12 @@ using std::swap;
 using std::tan;
 
 using std::array;
-using std::atomic;
-using std::exception;
-using std::function;
-using std::get;
-using std::ignore;
-using std::map;
-using std::out_of_range;
 using std::pair;
-using std::runtime_error;
-using std::string;
-using std::tie;
-using std::tuple;
-using std::unordered_map;
-using std::vector;
-using std::unique_ptr;
-using std::invalid_argument;
 using std::numeric_limits;
-using namespace std::string_literals;
+using std::exception;
+using std::out_of_range;
+using std::runtime_error;
+using std::invalid_argument;
 
 }  // namespace yocto
 
@@ -1469,20 +1450,6 @@ constexpr inline bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b) {
 template <typename T, int N>
 constexpr inline bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b) {
     return a = a + b;
-}
-
-// Create bounding boxes from arrays
-template <typename T>
-constexpr inline bbox<T, 1> make_bbox(const vector<T>& values) {
-    auto a = bbox<T, 1>{};
-    for (auto& value : values) a += value;
-    return a;
-}
-template <typename T, int N>
-constexpr inline bbox<T, N> make_bbox(const vector<vec<T, N>>& values) {
-    auto a = bbox<T, N>{};
-    for (auto& value : values) a += value;
-    return a;
 }
 
 // Primitive bounds.

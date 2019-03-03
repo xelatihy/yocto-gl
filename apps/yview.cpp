@@ -564,11 +564,6 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             ? state.textures.at(material.roughness_texture)
             : opengl_texture{},
         3);
-    set_opengl_uniform_texture(state.program, "mat_op_txt", "mat_op_txt_on",
-        material.opacity_texture >= 0
-            ? state.textures.at(material.opacity_texture)
-            : opengl_texture{},
-        4);
     set_opengl_uniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
         material.normal_texture >= 0
             ? state.textures.at(material.normal_texture)

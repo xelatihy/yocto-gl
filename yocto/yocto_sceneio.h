@@ -66,7 +66,6 @@ struct load_scene_options {
     bool          skip_meshes               = false;
     bool          obj_split_shapes          = true;
     bool          obj_preserve_face_varying = false;
-    bool          assign_texture_opacity    = true;
     atomic<bool>* cancel_flag               = nullptr;
     bool          run_serially              = false;
 };

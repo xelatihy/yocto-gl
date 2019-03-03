@@ -104,6 +104,18 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_math.h"
+#include "yocto_utils.h"
+
+#include <unordered_map>
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::unordered_map;
+
+}
 
 // -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
@@ -576,7 +588,8 @@ void make_random_points_shape(vector<int>& points, vector<vec3f>& positions,
     uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle_shape(float size);
+void make_bezier_circle_shape(
+    vector<vec4i>& beziers, vector<vec3f>& positions, float size);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length

@@ -349,34 +349,6 @@ void load_scene_textures(yocto_scene& scene, const string& dirname,
             load_volume(filename, texture.volume_data);
         },
         options.cancel_flag, options.run_serially);
-
-    // assign opacity texture if needed
-    if (options.assign_texture_opacity) {
-        auto has_opacity = vector<int>(scene.textures.size());
-        parallel_for((int)scene.textures.size(),
-            [&scene, &has_opacity](int texture_id) {
-                auto& texture           = scene.textures[texture_id];
-                has_opacity[texture_id] = 0;
-                for (auto& p : texture.hdr_image) {
-                    if (p.w < 0.999f) {
-                        has_opacity[texture_id] = 1;
-                        break;
-                    }
-                }
-                for (auto& p : texture.ldr_image) {
-                    if (p.w < 255) {
-                        has_opacity[texture_id] = 1;
-                        break;
-                    }
-                }
-            },
-            options.cancel_flag, options.run_serially);
-        for (auto& material : scene.materials) {
-            if (material.diffuse_texture >= 0 && material.opacity_texture < 0 &&
-                has_opacity[material.diffuse_texture])
-                material.opacity_texture = material.diffuse_texture;
-        }
-    }
 }
 
 // helper to save textures
@@ -725,14 +697,6 @@ void to_json(json& js, const yocto_material& value, const yocto_scene& scene) {
     if (value.roughness_texture != def.roughness_texture)
         js["roughness_texture"] = ref_to_json(
             value.roughness_texture, scene.textures);
-    if (value.opacity_texture != def.opacity_texture)
-        js["opacity_texture"] = ref_to_json(
-            value.opacity_texture, scene.textures);
-    if (value.occlusion_texture != def.occlusion_texture)
-        js["occlusion_texture"] = ref_to_json(
-            value.occlusion_texture, scene.textures);
-    if (value.bump_texture != def.bump_texture)
-        js["bump_texture"] = ref_to_json(value.bump_texture, scene.textures);
     if (value.displacement_texture != def.displacement_texture)
         js["displacement_texture"] = ref_to_json(
             value.displacement_texture, scene.textures);
@@ -766,12 +730,6 @@ void from_json(const json& js, yocto_material& value, yocto_scene& scene) {
         js.value("transmission_texture", ""s), scene.textures);
     value.roughness_texture = ref_from_json(
         js.value("roughness_texture", ""s), scene.textures);
-    value.opacity_texture = ref_from_json(
-        js.value("opacity_texture", ""s), scene.textures);
-    value.occlusion_texture = ref_from_json(
-        js.value("occlusion_texture", ""s), scene.textures);
-    value.bump_texture = ref_from_json(
-        js.value("bump_texture", ""s), scene.textures);
     value.displacement_texture = ref_from_json(
         js.value("displacement_texture", ""s), scene.textures);
     value.normal_texture = ref_from_json(
@@ -1656,10 +1614,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         material.diffuse_texture        = add_texture(omat.kd_txt, false);
         material.specular_texture       = add_texture(omat.ks_txt, false);
         material.transmission_texture   = add_texture(omat.kt_txt, false);
-        material.opacity_texture        = add_texture(omat.op_txt, true);
         material.roughness_texture      = add_texture(omat.rs_txt, true);
-        material.occlusion_texture      = add_texture(omat.occ_txt, true);
-        material.bump_texture           = add_texture(omat.bump_txt, true);
         material.displacement_texture   = add_texture(omat.disp_txt, true);
         material.normal_texture         = add_texture(omat.norm_txt, true);
         material.volume_emission        = omat.ve;
@@ -1783,19 +1738,9 @@ void save_mtl(
         if (material.transmission_texture >= 0)
             println_values(fs, "  map_Kt",
                 scene.textures[material.transmission_texture].filename);
-        if (material.opacity_texture >= 0 &&
-            material.opacity_texture != material.diffuse_texture)
-            println_values(fs, "  map_d",
-                scene.textures[material.opacity_texture].filename);
         if (material.roughness_texture >= 0)
             println_values(fs, "  map_Pr",
                 scene.textures[material.roughness_texture].filename);
-        if (material.occlusion_texture >= 0)
-            println_values(fs, "  map_occ",
-                scene.textures[material.occlusion_texture].filename);
-        if (material.bump_texture >= 0)
-            println_values(fs, "  map_bump",
-                scene.textures[material.bump_texture].filename);
         if (material.displacement_texture >= 0)
             println_values(fs, "  map_disp",
                 scene.textures[material.displacement_texture].filename);
@@ -2086,8 +2031,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
     if (result != cgltf_result_success) {
         throw sceneio_error("could not load gltf " + filename);
     }
-    auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
-        data, cgltf_free};
+    auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{data, cgltf_free};
     if (cgltf_load_buffers(&options, data, get_dirname(filename).c_str()) !=
         cgltf_result_success) {
         throw sceneio_error("could not load gltf buffers " + filename);
@@ -2165,8 +2109,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
                 gmr->metallic_roughness_texture, true);
             material.roughness_texture = material.specular_texture;
         }
-        material.occlusion_texture = add_texture(gmat->occlusion_texture, true);
-        material.normal_texture    = add_texture(gmat->normal_texture, true);
+        material.normal_texture = add_texture(gmat->normal_texture, true);
         scene.materials.push_back(material);
         mmap[gmat] = (int)scene.materials.size() - 1;
     }
@@ -2691,8 +2634,6 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         }
         if (material.normal_texture >= 0)
             mjs["normalTexture"]["index"] = material.normal_texture;
-        if (material.occlusion_texture >= 0)
-            mjs["occlusionTexture"]["index"] = material.occlusion_texture;
         js["materials"].push_back(mjs);
     }
 
@@ -3355,8 +3296,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                         auto op     = vec3f{0, 0, 0};
                         auto op_txt = -1;
                         get_scaled_texture(jcmd.at("opacity"), op, op_txt);
-                        material.opacity         = (op.x + op.y + op.z) / 3;
-                        material.opacity_texture = op_txt;
+                        material.opacity = (op.x + op.y + op.z) / 3;
                     }
                     material.roughness = 0;
                 } else if (type == "plastic") {
@@ -3656,73 +3596,71 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
     auto fs = output_file(filename);
 
     // convert camera and settings
-    auto& camera         = scene.cameras.front();
-    auto  from           = camera.frame.o;
-    auto  to             = camera.frame.o - camera.frame.z;
-    auto  up             = camera.frame.y;
-    auto [width, height] = get_camera_image_size(camera, 0, 720);
+    auto& camera     = scene.cameras.front();
+    auto  from       = camera.frame.o;
+    auto  to         = camera.frame.o - camera.frame.z;
+    auto  up         = camera.frame.y;
+    auto  image_size = get_camera_image_size(camera, {0, 720});
     println_values(fs, "LookAt", from, to, up);
     println_values(fs, "Camera \"perspective\" \"float fov\"",
         get_camera_fovy(camera) * 180 / pif);
 
     // save renderer
-    println_values(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
+    println_values(fs, "Sampler \"random\" \"integer pixelsamples\" [64]");
     // fprintf(f, "Sampler \"sobol\" \"interger pixelsamples\" [64]\n");
     println_values(fs, "Integrator \"path\"\n");
-    println_values(fs,
-        "Film \"image\" \"string filename\" [\"{}\"] "
-        "\"integer xresolution\" [{}] \"integer yresolution\" [{}]\n",
-        replace_extension(filename, "exr"), width, height);
+    println_values(fs, "Film \"image\" \"string filename\" [\"{}\"] ",
+        replace_extension(filename, "exr"), "\"integer xresolution\" [",
+        image_size.x, "] \"integer yresolution\" [", image_size.y, "]");
 
     // start world
-    println_values(fs, "WorldBegin\n");
+    println_values(fs, "WorldBegin");
 
     // convert textures
     for (auto& texture : scene.textures) {
-        println_values(fs,
-            "Texture \"{}\" \"spectrum\" \"imagemap\" "
-            "\"string filename\" [\"{}\"]\n",
-            texture.name, texture.filename);
+        println_values(fs, "Texture \"", texture.name,
+            "\" \"spectrum\" \"imagemap\" "
+            "\"string filename\" [\"",
+            texture.filename, "\"]");
     }
 
     // convert materials
     for (auto& material : scene.materials) {
-        println_values(fs, "MakeNamedMaterial \"{}\" ", material.name);
-        println_values(fs, "\"string type\" \"{}\" ", "uber");
+        println_values(fs, "MakeNamedMaterial \"", material.name, "\" ");
+        println_values(fs, "\"string type\" \"uber\" ");
         if (material.diffuse_texture >= 0)
-            println_values(fs, "\"texture Kd\" [\"{}\"] ",
-                scene.textures[material.diffuse_texture].name);
+            println_values(fs, "\"texture Kd\" [\"",
+                scene.textures[material.diffuse_texture].name, "\"] ");
         else
-            println_values(fs, "\"rgb Kd\" [{}] ", material.diffuse);
+            println_values(fs, "\"rgb Kd\" [", material.diffuse, "] ");
         if (material.specular_texture >= 0)
-            println_values(fs, "\"texture Ks\" [\"{}\"] ",
-                scene.textures[material.specular_texture].name);
+            println_values(fs, "\"texture Ks\" [\"",
+                scene.textures[material.specular_texture].name, "\"] ");
         else
-            println_values(fs, "\"rgb Ks\" [{}] ", material.specular);
-        println_values(fs, "\"float roughness\" [{}] ", material.roughness);
-        println_values(fs, "\n");
+            println_values(fs, "\"rgb Ks\" [", material.specular, "] ");
+        println_values(fs, "\"float roughness\" [", material.roughness, "] ");
     }
 
     // convert instances
     for (auto& instance : scene.instances) {
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[shape.material];
-        println_values(fs, "AttributeBegin\n");
-        println_values(fs, "TransformBegin\n");
+        println_values(fs, "AttributeBegin");
+        println_values(fs, "TransformBegin");
         println_values(
-            fs, "ConcatTransform [{}]\n", frame_to_mat(instance.frame));
+            fs, "ConcatTransform [", frame_to_mat(instance.frame), "]");
         if (material.emission != zero3f)
-            println_values(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ {} ]\n",
-                material.emission);
-        println_values(fs, "NamedMaterial \"{}\"\n", material.name);
-        println_values(fs, "Shape \"plymesh\" \"string filename\" [\"{}\"]\n",
-            shape.filename);
-        println_values(fs, "TransformEnd\n");
-        println_values(fs, "AttributeEnd\n");
+            println_values(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ ",
+                material.emission, " ]");
+        println_values(fs, "NamedMaterial \"", material.name, "\"");
+        println_values(fs, "Shape \"plymesh\" \"string filename\" [\"",
+            shape.filename, "\"]");
+        println_values(fs, "TransformEnd");
+        println_values(fs, "AttributeEnd");
     }
 
     // end world
-    println_values(fs, "WorldEnd\n");
+    println_values(fs, "WorldEnd");
 }
 
 // Save a pbrt scene
@@ -4021,9 +3959,6 @@ void write_object(output_file& fs, const yocto_material& material) {
     write_value(fs, material.specular_texture);
     write_value(fs, material.transmission_texture);
     write_value(fs, material.roughness_texture);
-    write_value(fs, material.opacity_texture);
-    write_value(fs, material.occlusion_texture);
-    write_value(fs, material.bump_texture);
     write_value(fs, material.displacement_texture);
     write_value(fs, material.normal_texture);
     write_value(fs, material.volume_emission);
@@ -4049,9 +3984,6 @@ void read_object(input_file& fs, yocto_material& material) {
     read_value(fs, material.specular_texture);
     read_value(fs, material.transmission_texture);
     read_value(fs, material.roughness_texture);
-    read_value(fs, material.opacity_texture);
-    read_value(fs, material.occlusion_texture);
-    read_value(fs, material.bump_texture);
     read_value(fs, material.displacement_texture);
     read_value(fs, material.normal_texture);
     read_value(fs, material.volume_emission);

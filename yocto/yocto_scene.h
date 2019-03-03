@@ -148,9 +148,6 @@ struct yocto_material {
     int specular_texture     = -1;
     int transmission_texture = -1;
     int roughness_texture    = -1;
-    int opacity_texture      = -1;
-    int occlusion_texture    = -1;
-    int bump_texture         = -1;
     int displacement_texture = -1;
     int normal_texture       = -1;
 
@@ -366,13 +363,12 @@ float evaluate_voltexture(
     const yocto_voltexture& texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float          get_camera_fovx(const yocto_camera& camera);
-float          get_camera_fovy(const yocto_camera& camera);
-float          get_camera_aspect(const yocto_camera& camera);
-pair<int, int> get_camera_image_size(
-    const yocto_camera& camera, int width, int height);
-void set_camera_perspective(yocto_camera& camera, float fovy, float aspect,
-    float focus, float height = 0.024f);
+float get_camera_fovx(const yocto_camera& camera);
+float get_camera_fovy(const yocto_camera& camera);
+float get_camera_aspect(const yocto_camera& camera);
+vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size);
+void  set_camera_perspective(yocto_camera& camera, float fovy, float aspect,
+     float focus, float height = 0.024f);
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_camera_view_from_bbox(yocto_camera& camera, const bbox3f& bbox,

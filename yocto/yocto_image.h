@@ -86,6 +86,7 @@
 
 #include "yocto_math.h"
 #include "yocto_random.h"
+#include "yocto_utils.h"
 
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
