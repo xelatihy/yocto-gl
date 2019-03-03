@@ -64,8 +64,8 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = CLI::App{"Offline path tracing"};
     parser.add_option("--camera", trace_options.camera_id, "Camera index.");
-    parser.add_option(
-        "--hres,-R", trace_options.image_size.x, "Image horizontal resolution.");
+    parser.add_option("--hres,-R", trace_options.image_size.x,
+        "Image horizontal resolution.");
     parser.add_option(
         "--vres,-r", trace_options.image_size.y, "Image vertical resolution.");
     parser.add_option(

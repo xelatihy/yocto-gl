@@ -59,7 +59,7 @@ struct app_state {
     bool                filmic        = false;
     bool                srgb          = true;
     int                 preview_ratio = 8;
-    vec2i               image_size  = {0, 0};
+    vec2i               image_size    = {0, 0};
 
     // scene
     yocto_scene scene      = {};
@@ -308,9 +308,8 @@ void draw(const opengl_window& win) {
             win_size, app.zoom_to_fit);
         if (!app.display_texture) {
             if (app.image_size != zero2i) {
-                init_opengl_texture(app.display_texture,
-                    app.image_size, false, false, false,
-                    false);
+                init_opengl_texture(app.display_texture, app.image_size, false,
+                    false, false, false);
             }
         } else {
             auto region = image_region{};

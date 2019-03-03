@@ -38,7 +38,7 @@
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
 namespace yocto {
-    using std::unordered_map;
+using std::unordered_map;
 }
 
 // -----------------------------------------------------------------------------
@@ -979,8 +979,7 @@ float get_camera_fovy(const yocto_camera& camera) {
 float get_camera_aspect(const yocto_camera& camera) {
     return camera.film_width / camera.film_height;
 }
-vec2i get_camera_image_size(
-    const yocto_camera& camera, const vec2i& size_) {
+vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size_) {
     auto size = size_;
     if (size == zero2i) size = {1280, 720};
     if (size.x != 0 && size.y != 0) {

@@ -106,8 +106,8 @@ struct trace_pixel {
     rng_state rng      = {};
 };
 struct trace_state {
-    vec2i image_size  = {0, 0};
-    vector<trace_pixel> pixels = {};
+    vec2i               image_size = {0, 0};
+    vector<trace_pixel> pixels     = {};
 };
 
 // Initialize state of the renderer.

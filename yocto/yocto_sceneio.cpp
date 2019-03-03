@@ -2031,8 +2031,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
     if (result != cgltf_result_success) {
         throw sceneio_error("could not load gltf " + filename);
     }
-    auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
-        data, cgltf_free};
+    auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{data, cgltf_free};
     if (cgltf_load_buffers(&options, data, get_dirname(filename).c_str()) !=
         cgltf_result_success) {
         throw sceneio_error("could not load gltf buffers " + filename);
@@ -2110,7 +2109,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
                 gmr->metallic_roughness_texture, true);
             material.roughness_texture = material.specular_texture;
         }
-        material.normal_texture    = add_texture(gmat->normal_texture, true);
+        material.normal_texture = add_texture(gmat->normal_texture, true);
         scene.materials.push_back(material);
         mmap[gmat] = (int)scene.materials.size() - 1;
     }
@@ -3297,7 +3296,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                         auto op     = vec3f{0, 0, 0};
                         auto op_txt = -1;
                         get_scaled_texture(jcmd.at("opacity"), op, op_txt);
-                        material.opacity         = (op.x + op.y + op.z) / 3;
+                        material.opacity = (op.x + op.y + op.z) / 3;
                     }
                     material.roughness = 0;
                 } else if (type == "plastic") {
@@ -3597,11 +3596,11 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
     auto fs = output_file(filename);
 
     // convert camera and settings
-    auto& camera         = scene.cameras.front();
-    auto  from           = camera.frame.o;
-    auto  to             = camera.frame.o - camera.frame.z;
-    auto  up             = camera.frame.y;
-    auto image_size = get_camera_image_size(camera, {0, 720});
+    auto& camera     = scene.cameras.front();
+    auto  from       = camera.frame.o;
+    auto  to         = camera.frame.o - camera.frame.z;
+    auto  up         = camera.frame.y;
+    auto  image_size = get_camera_image_size(camera, {0, 720});
     println_values(fs, "LookAt", from, to, up);
     println_values(fs, "Camera \"perspective\" \"float fov\"",
         get_camera_fovy(camera) * 180 / pif);
@@ -3610,19 +3609,19 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
     println_values(fs, "Sampler \"random\" \"integer pixelsamples\" [64]");
     // fprintf(f, "Sampler \"sobol\" \"interger pixelsamples\" [64]\n");
     println_values(fs, "Integrator \"path\"\n");
-    println_values(fs,
-        "Film \"image\" \"string filename\" [\"{}\"] ", 
-        replace_extension(filename, "exr"),
-        "\"integer xresolution\" [", image_size.x, "] \"integer yresolution\" [", image_size.y, "]");
+    println_values(fs, "Film \"image\" \"string filename\" [\"{}\"] ",
+        replace_extension(filename, "exr"), "\"integer xresolution\" [",
+        image_size.x, "] \"integer yresolution\" [", image_size.y, "]");
 
     // start world
     println_values(fs, "WorldBegin");
 
     // convert textures
     for (auto& texture : scene.textures) {
-        println_values(fs,
-            "Texture \"", texture.name, "\" \"spectrum\" \"imagemap\" "
-            "\"string filename\" [\"", texture.filename, "\"]");
+        println_values(fs, "Texture \"", texture.name,
+            "\" \"spectrum\" \"imagemap\" "
+            "\"string filename\" [\"",
+            texture.filename, "\"]");
     }
 
     // convert materials
@@ -3630,14 +3629,16 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
         println_values(fs, "MakeNamedMaterial \"", material.name, "\" ");
         println_values(fs, "\"string type\" \"uber\" ");
         if (material.diffuse_texture >= 0)
-            println_values(fs, "\"texture Kd\" [\"", scene.textures[material.diffuse_texture].name, "\"] ");
+            println_values(fs, "\"texture Kd\" [\"",
+                scene.textures[material.diffuse_texture].name, "\"] ");
         else
             println_values(fs, "\"rgb Kd\" [", material.diffuse, "] ");
         if (material.specular_texture >= 0)
-            println_values(fs, "\"texture Ks\" [\"", scene.textures[material.specular_texture].name, "\"] ");
+            println_values(fs, "\"texture Ks\" [\"",
+                scene.textures[material.specular_texture].name, "\"] ");
         else
-            println_values(fs, "\"rgb Ks\" [",material.specular,"] ");
-        println_values(fs, "\"float roughness\" [",material.roughness,"] ");
+            println_values(fs, "\"rgb Ks\" [", material.specular, "] ");
+        println_values(fs, "\"float roughness\" [", material.roughness, "] ");
     }
 
     // convert instances
@@ -3647,11 +3648,13 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
         println_values(fs, "AttributeBegin");
         println_values(fs, "TransformBegin");
         println_values(
-            fs, "ConcatTransform [",frame_to_mat(instance.frame),"]");
+            fs, "ConcatTransform [", frame_to_mat(instance.frame), "]");
         if (material.emission != zero3f)
-            println_values(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ ", material.emission," ]");
-        println_values(fs, "NamedMaterial \"",material.name,"\"");
-        println_values(fs, "Shape \"plymesh\" \"string filename\" [\"",shape.filename,"\"]");
+            println_values(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ ",
+                material.emission, " ]");
+        println_values(fs, "NamedMaterial \"", material.name, "\"");
+        println_values(fs, "Shape \"plymesh\" \"string filename\" [\"",
+            shape.filename, "\"]");
         println_values(fs, "TransformEnd");
         println_values(fs, "AttributeEnd");
     }

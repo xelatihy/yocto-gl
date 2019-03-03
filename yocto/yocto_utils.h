@@ -98,8 +98,8 @@
 #include <future>
 #include <mutex>
 #include <string>
-#include <vector>
 #include <thread>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -111,9 +111,9 @@ using std::deque;
 using std::future;
 using std::lock_guard;
 using std::mutex;
+using std::string;
 using std::thread;
 using std::vector;
-using std::string;
 using namespace std::chrono_literals;
 using namespace std::string_literals;
 
@@ -522,16 +522,16 @@ inline bool concurrent_queue<T>::try_pop(T& value) {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms.
 template <typename Func>
-inline void parallel_for(
-    size_t begin, size_t end, const Func& func, atomic<bool>* cancel, bool serial) {
+inline void parallel_for(size_t begin, size_t end, const Func& func,
+    atomic<bool>* cancel, bool serial) {
     if (serial) {
         for (auto idx = begin; idx < end; idx++) {
             if (cancel && *cancel) break;
             func(idx);
         }
     } else {
-        auto        futures  = vector<future<void>>{};
-        auto        nthreads = thread::hardware_concurrency();
+        auto           futures  = vector<future<void>>{};
+        auto           nthreads = thread::hardware_concurrency();
         atomic<size_t> next_idx(begin);
         for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
             futures.emplace_back(async([&func, &next_idx, cancel, end]() {

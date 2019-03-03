@@ -113,12 +113,12 @@ using std::exception;
 using std::function;
 using std::get;
 using std::ignore;
+using std::invalid_argument;
 using std::map;
+using std::numeric_limits;
 using std::out_of_range;
 using std::pair;
 using std::runtime_error;
-using std::invalid_argument;
-using std::numeric_limits;
 
 }  // namespace yocto
 

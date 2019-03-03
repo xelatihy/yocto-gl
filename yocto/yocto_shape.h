@@ -588,7 +588,8 @@ void make_random_points_shape(vector<int>& points, vector<vec3f>& positions,
     uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-void make_bezier_circle_shape(vector<vec4i>& beziers, vector<vec3f>& positions, float size);
+void make_bezier_circle_shape(
+    vector<vec4i>& beziers, vector<vec3f>& positions, float size);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length

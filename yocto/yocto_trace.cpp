@@ -35,10 +35,10 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::unordered_map;
 using std::pair;
+using std::unordered_map;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING
@@ -1951,8 +1951,8 @@ void trace_image_region(image4f& image, trace_state& state,
 // Init a sequence of random number generators.
 void init_trace_state(
     trace_state& state, const vec2i& image_size, uint64_t seed) {
-    state = trace_state{
-        image_size, vector<trace_pixel>(image_size.x * image_size.y, trace_pixel{})};
+    state    = trace_state{image_size,
+        vector<trace_pixel>(image_size.x * image_size.y, trace_pixel{})};
     auto rng = make_rng(1301081);
     for (auto j = 0; j < state.image_size.y; j++) {
         for (auto i = 0; i < state.image_size.x; i++) {
@@ -1998,13 +1998,14 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_image_options& options) {
     auto image_size = get_camera_image_size(
         scene.cameras.at(options.camera_id), options.image_size);
-    auto image  = yocto::image{image_size, zero4f};
+    auto image = yocto::image{image_size, zero4f};
     auto state = trace_state{};
     init_trace_state(state, image_size, options.random_seed);
     auto regions = vector<image_region>{};
     make_image_regions(regions, image.size(), options.region_size, true);
 
-    parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, &options](const image_region& region) {
+    parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, &options](
+                                  const image_region& region) {
         trace_image_region(image, state, scene, bvh, lights, region,
             options.num_samples, options);
     });
@@ -2020,10 +2021,12 @@ int trace_image_samples(image4f& image, trace_state& state,
     make_image_regions(regions, image.size(), options.region_size, true);
     auto num_samples = min(
         options.samples_per_batch, options.num_samples - current_sample);
-    parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, num_samples, &options](const image_region& region) {
-        trace_image_region(image, state, scene, bvh, lights, region,
-            num_samples, options);
-    });
+    parallel_foreach(
+        regions, [&image, &state, &scene, &bvh, &lights, num_samples, &options](
+                     const image_region& region) {
+            trace_image_region(
+                image, state, scene, bvh, lights, region, num_samples, options);
+        });
     return current_sample + num_samples;
 }
 
@@ -2032,10 +2035,10 @@ void trace_image_async_start(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     vector<future<void>>& futures, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue, const trace_image_options& options) {
-    auto& camera         = scene.cameras.at(options.camera_id);
-    auto image_size = get_camera_image_size(camera, options.image_size);
-    image = {image_size, zero4f};
-    state = trace_state{};
+    auto& camera     = scene.cameras.at(options.camera_id);
+    auto  image_size = get_camera_image_size(camera, options.image_size);
+    image            = {image_size, zero4f};
+    state            = trace_state{};
     init_trace_state(state, image_size, options.random_seed);
     auto regions = vector<image_region>{};
     make_image_regions(regions, image.size(), options.region_size, true);
@@ -2252,10 +2255,10 @@ const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
 
 // Get a complex ior table with keys the metal name and values (eta, etak)
 bool get_metal_ior(const string& name, vec3f& eta, vec3f& etak) {
-    if(metal_ior_table.find(name) == metal_ior_table.end()) return false;
+    if (metal_ior_table.find(name) == metal_ior_table.end()) return false;
     auto value = metal_ior_table.at(name);
-    eta = value.first;
-    etak = value.second;
+    eta        = value.first;
+    etak       = value.second;
     return true;
 }
 
