@@ -58,6 +58,7 @@
 namespace yocto {
 
 using std::unordered_map;
+using std::function;
 
 }
 

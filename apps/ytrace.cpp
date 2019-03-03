@@ -35,6 +35,8 @@ using namespace yocto;
 
 #include "ext/CLI11.hpp"
 
+#include <map>
+
 void exit_error(const string& msg) {
     printf("%s\n", msg.c_str());
     exit(1);
@@ -55,7 +57,7 @@ int main(int argc, char* argv[]) {
     auto filename      = "scene.json"s;
 
     // names for enums
-    auto trace_sampler_type_namemap = map<string, trace_sampler_type>{};
+    auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
     for (auto type = 0; type < trace_sampler_type_names.size(); type++) {
         trace_sampler_type_namemap[trace_sampler_type_names[type]] =
             (trace_sampler_type)type;

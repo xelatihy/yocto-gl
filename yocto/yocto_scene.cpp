@@ -330,7 +330,7 @@ pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
     } else if (!shape.quads.empty()) {
         return sample_quads_element(elements_cdf, re, ruv);
     } else if (!shape.lines.empty()) {
-        return {get<0>(sample_lines_element(elements_cdf, re, ruv.x)), ruv};
+        return {sample_lines_element(elements_cdf, re, ruv.x).first, ruv};
     } else if (!shape.points.empty()) {
         return {sample_points_element(elements_cdf, re), ruv};
     } else if (!shape.quads_positions.empty()) {

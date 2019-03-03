@@ -73,14 +73,12 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <cfloat>
 #include <climits>
 #include <cmath>
 #include <cstdint>
 #include <functional>
 #include <limits>
-#include <map>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -108,17 +106,12 @@ using std::swap;
 using std::tan;
 
 using std::array;
-using std::atomic;
-using std::exception;
-using std::function;
-using std::get;
-using std::ignore;
-using std::invalid_argument;
-using std::map;
-using std::numeric_limits;
-using std::out_of_range;
 using std::pair;
+using std::numeric_limits;
+using std::exception;
+using std::out_of_range;
 using std::runtime_error;
+using std::invalid_argument;
 
 }  // namespace yocto
 
