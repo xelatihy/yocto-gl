@@ -115,7 +115,6 @@ using std::string;
 using std::thread;
 using std::vector;
 using namespace std::chrono_literals;
-using namespace std::string_literals;
 
 }  // namespace yocto
 
