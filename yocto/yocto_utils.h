@@ -292,12 +292,12 @@ inline bool exists_file(const string& filename);
 namespace yocto {
 
 // Load/save a text file
-inline bool load_text(const string& filename, string& str);
-inline bool save_text(const string& filename, const string& str);
+inline void load_text(const string& filename, string& str);
+inline void save_text(const string& filename, const string& str);
 
 // Load/save a binary file
-inline bool load_binary(const string& filename, vector<byte>& data);
-inline bool save_binary(const string& filename, const vector<byte>& data);
+inline void load_binary(const string& filename, vector<byte>& data);
+inline void save_binary(const string& filename, const vector<byte>& data);
 
 }  // namespace yocto
 
@@ -472,49 +472,57 @@ bool exists_file(const string& filename) {
 namespace yocto {
 
 // Load a text file
-inline bool load_text(const string& filename, string& str) {
+inline void load_text(const string& filename, string& str) {
     // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) return false;
+    if (!fs) throw runtime_error("cannot open file " + filename);
     fseek(fs, 0, SEEK_END);
     auto length = ftell(fs);
     fseek(fs, 0, SEEK_SET);
     str.resize(length);
-    auto ok = fread(str.data(), 1, length, fs) == length;
+    if(fread(str.data(), 1, length, fs) != length) {
+        fclose(fs);
+        throw runtime_error("cannot read file " + filename);
+    }
     fclose(fs);
-    return ok;
 }
 
 // Save a text file
-inline bool save_text(const string& filename, const string& str) {
+inline void save_text(const string& filename, const string& str) {
     auto fs = fopen(filename.c_str(), "wt");
-    if (!fs) return false;
-    auto ok = fprintf(fs, "%s", str.c_str()) > 0;
+    if (!fs) throw runtime_error("cannot open file " + filename);
+    if(fprintf(fs, "%s", str.c_str()) < 0) {
+        fclose(fs);
+        throw runtime_error("cannot write file " + filename);
+    }
     fclose(fs);
-    return ok;
 }
 
 // Load a binary file
-inline bool load_binary(const string& filename, vector<byte>& data) {
+inline void load_binary(const string& filename, vector<byte>& data) {
     // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
     auto fs = fopen(filename.c_str(), "rb");
-    if (!fs) return false;
+    if (!fs) throw runtime_error("cannot open file " + filename);
     fseek(fs, 0, SEEK_END);
     auto length = ftell(fs);
     fseek(fs, 0, SEEK_SET);
     data.resize(length);
-    auto ok = fread(data.data(), 1, length, fs) == length;
+    if(fread(data.data(), 1, length, fs) != length) {
+        fclose(fs);
+        throw runtime_error("cannot read file " + filename);
+    }
     fclose(fs);
-    return ok;
 }
 
 // Save a binary file
-inline bool save_binary(const string& filename, const vector<byte>& data) {
+inline void save_binary(const string& filename, const vector<byte>& data) {
     auto fs = fopen(filename.c_str(), "wb");
-    if (!fs) return false;
-    auto ok = fwrite(data.data(), 1, data.size(), fs) == data.size();
+    if (!fs) throw runtime_error("cannot open file " + filename);
+    if(fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+        fclose(fs);
+        throw runtime_error("cannot write file " + filename);
+    }
     fclose(fs);
-    return ok;
 }
 
 }  // namespace yocto

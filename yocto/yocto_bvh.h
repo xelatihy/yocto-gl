@@ -210,7 +210,7 @@ struct bvh_scene {
 
 // Options for build bvh
 struct build_bvh_options {
-    bool          high_quality   = true;
+    bool          high_quality   = false;
     bool          use_embree     = false;
     bool          flatten_embree = true;
     bool          run_serially   = false;

@@ -89,23 +89,14 @@ namespace yocto {
 
 // Load a JSON object
 inline void load_json(const string& filename, json& js) {
-    auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw runtime_error("could not load json " + filename);
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
-    js = json::parse(fs);
+    auto txt = string{};
+    load_text(filename, txt);
+    js = json::parse(txt);
 }
 
 // Save a JSON object
 inline void save_json(const string& filename, const json& js) {
-    auto str = js.dump(4);
-    auto fs  = fopen(filename.c_str(), "wt");
-    if (!fs) throw runtime_error("could not save json " + filename);
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
-    if (fprintf(fs, "%s", str.c_str()) < 0) {
-        throw runtime_error("could not save json " + filename);
-    }
+    save_text(filename, js.dump(4));
 }
 
 }  // namespace yocto
