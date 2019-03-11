@@ -31,10 +31,10 @@
 // represent triangles correctly, an this convention is used throught the
 // library. This is equivalent to Intel's Embree.
 //
-// Shape and scene data is copied from the application to the BVH by default. 
-// This is safer and avoids memory corruption problems. We also support 
+// Shape and scene data is copied from the application to the BVH by default.
+// This is safer and avoids memory corruption problems. We also support
 // data sharing with the application to reduce memory usage. Since this is
-// less safe, we require this option to be explicitly defined during 
+// less safe, we require this option to be explicitly defined during
 // initialization.
 //
 // We support working either on the whole scene or on a single shape. In the
@@ -130,13 +130,13 @@ struct bvh_node {
 // for internal nodes, or the primitive arrays, for leaf nodes.
 struct bvh_shape {
     // internal class for shared memory references
-    template<typename T>
+    template <typename T>
     struct array_view {
-        const T* ptr = nullptr; 
-        int count = 0;
+        const T* ptr   = nullptr;
+        int      count = 0;
 
-        bool empty() const { return count == 0; }
-        int size() const { return count; }
+        bool     empty() const { return count == 0; }
+        int      size() const { return count; }
         const T& operator[](int idx) const { return ptr[idx]; }
         const T* data() const { return ptr; }
         const T* begin() const { return ptr; }
@@ -181,13 +181,15 @@ struct bvh_instance {
 // for internal nodes, or the primitive arrays, for leaf nodes.
 struct bvh_scene {
     // internal class for shared memory references
-    template<typename T>
+    template <typename T>
     struct strided_array_view {
-        const void* ptr = nullptr; 
-        int count = 0;
-        int stride = 0;
-        
-        const T& operator[](int idx) const { return *(T*)((char*)ptr + stride*idx); }
+        const void* ptr    = nullptr;
+        int         count  = 0;
+        int         stride = 0;
+
+        const T& operator[](int idx) const {
+            return *(T*)((char*)ptr + stride * idx);
+        }
     };
 
     // data for instance BVH
@@ -195,10 +197,10 @@ struct bvh_scene {
 
     // data for shared-memory instances
     strided_array_view<frame3f> frames_view;
-    strided_array_view<int> shapeids_view;
+    strided_array_view<int>     shapeids_view;
 
     // shape BVHs
-    vector<bvh_shape>    shape_bvhs;
+    vector<bvh_shape> shape_bvhs;
 
     // bvh internal nodes
     vector<bvh_node> nodes;
@@ -220,14 +222,14 @@ struct build_bvh_options {
 // Build a BVH from the given set of shape primitives. Data is copied or shared
 // depending on `copy_data`.
 void init_shape_bvh(bvh_shape& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius, 
+    const vector<vec3f>& positions, const vector<float>& radius,
     bool copy_data = true);
 void init_shape_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius, 
+    const vector<vec3f>& positions, const vector<float>& radius,
     bool copy_data = true);
 void init_shape_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, bool copy_data = true);
-void init_shape_bvh(bvh_shape& bvh, const vector<vec4i>& quads, 
+void init_shape_bvh(bvh_shape& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, bool copy_data = true);
 
 // Build a BVH from the given set of instances.

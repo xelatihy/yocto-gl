@@ -12,7 +12,7 @@
 // ## Array view
 //
 // `array_view` is a non owning view over a contiguos sequence of elements.
-// it is very similar to `std::span` and in fact it will be eventually 
+// it is very similar to `std::span` and in fact it will be eventually
 // substituted to that one when span will become readily available.
 // It is used through Yocto/GL to pass arrays as pointer and length pairs.
 //
@@ -132,19 +132,21 @@ using namespace std::chrono_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Array view, similar to std::span for C++20. Wraps a pointer length and 
+// Array view, similar to std::span for C++20. Wraps a pointer length and
 // provides a vector like interface.
-template<typename T>
+template <typename T>
 struct array_view {
     // constructors
-    constexpr array_view() : ptr{nullptr}, count{0} { }
-    constexpr array_view(T* data, size_t count) : ptr{nullptr}, count{count} { }
-    constexpr array_view(vector<T>& data) : ptr{data.data()}, count{data.size()} { }
-    constexpr array_view(const vector<T>& data) : ptr{data.data()}, count{data.size()} { }
+    constexpr array_view() : ptr{nullptr}, count{0} {}
+    constexpr array_view(T* data, size_t count) : ptr{nullptr}, count{count} {}
+    constexpr array_view(vector<T>& data)
+        : ptr{data.data()}, count{data.size()} {}
+    constexpr array_view(const vector<T>& data)
+        : ptr{data.data()}, count{data.size()} {}
 
     // size
-    constexpr bool empty() const { return count == 0; }
-    constexpr size_t size() const { return count; }
+    constexpr bool      empty() const { return count == 0; }
+    constexpr size_t    size() const { return count; }
     constexpr ptrdiff_t ssize() const { return (ptrdiff_t)count; }
 
     // element access
@@ -158,12 +160,12 @@ struct array_view {
     constexpr T* begin() const { return ptr; }
     constexpr T* end() const { return ptr + count; }
 
-  private:
-    T* ptr = nullptr;
+   private:
+    T*     ptr   = nullptr;
     size_t count = 0;
 };
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
@@ -480,7 +482,7 @@ inline void load_text(const string& filename, string& str) {
     auto length = ftell(fs);
     fseek(fs, 0, SEEK_SET);
     str.resize(length);
-    if(fread(str.data(), 1, length, fs) != length) {
+    if (fread(str.data(), 1, length, fs) != length) {
         fclose(fs);
         throw runtime_error("cannot read file " + filename);
     }
@@ -491,7 +493,7 @@ inline void load_text(const string& filename, string& str) {
 inline void save_text(const string& filename, const string& str) {
     auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw runtime_error("cannot open file " + filename);
-    if(fprintf(fs, "%s", str.c_str()) < 0) {
+    if (fprintf(fs, "%s", str.c_str()) < 0) {
         fclose(fs);
         throw runtime_error("cannot write file " + filename);
     }
@@ -507,7 +509,7 @@ inline void load_binary(const string& filename, vector<byte>& data) {
     auto length = ftell(fs);
     fseek(fs, 0, SEEK_SET);
     data.resize(length);
-    if(fread(data.data(), 1, length, fs) != length) {
+    if (fread(data.data(), 1, length, fs) != length) {
         fclose(fs);
         throw runtime_error("cannot read file " + filename);
     }
@@ -518,7 +520,7 @@ inline void load_binary(const string& filename, vector<byte>& data) {
 inline void save_binary(const string& filename, const vector<byte>& data) {
     auto fs = fopen(filename.c_str(), "wb");
     if (!fs) throw runtime_error("cannot open file " + filename);
-    if(fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
         fclose(fs);
         throw runtime_error("cannot write file " + filename);
     }

@@ -427,13 +427,14 @@ json ref_to_json(int value, const vector<T>& refs) {
 }
 template <typename T>
 int ref_from_json(const json& js, const vector<T>& refs) {
-    if(js.is_null()) return -1;
-    if(js.is_number()) {
+    if (js.is_null()) return -1;
+    if (js.is_number()) {
         auto value = js.get<int>();
-        if(value < 0 || value >= refs.size()) throw runtime_error("invalid object reference");
+        if (value < 0 || value >= refs.size())
+            throw runtime_error("invalid object reference");
         return value;
     }
-    auto name  = js.get<string>();
+    auto name = js.get<string>();
     if (name == "") return -1;
     auto value = -1;
     for (auto index = 0; index < refs.size(); index++) {
@@ -935,7 +936,8 @@ void from_json(const json& js, yocto_shape& value, yocto_scene& scene) {
     static const auto def = yocto_shape();
     value.name            = js.value("name", def.name);
     value.filename        = js.value("filename", def.filename);
-    value.material = ref_from_json(js.value("material", json{}), scene.materials);
+    value.material        = ref_from_json(
+        js.value("material", json{}), scene.materials);
     value.subdivision_level = js.value(
         "subdivision_level", def.subdivision_level);
     value.catmull_clark   = js.value("catmull_clark", def.catmull_clark);
@@ -991,7 +993,7 @@ void from_json(const json& js, yocto_instance& value, yocto_scene& scene) {
     static const auto def = yocto_instance();
     value.name            = js.value("name", def.name);
     value.frame           = js.value("frame", def.frame);
-    value.shape           = ref_from_json(js.value("shape", json{}), scene.shapes);
+    value.shape = ref_from_json(js.value("shape", json{}), scene.shapes);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
@@ -1066,9 +1068,10 @@ void from_json(const json& js, yocto_scene_node& value, yocto_scene& scene) {
     value.rotation        = js.value("rotation", def.rotation);
     value.scale           = js.value("scale", def.scale);
     value.weights         = js.value("weights", def.weights);
-    value.parent          = ref_from_json(js.value("parent", json{}), scene.nodes);
+    value.parent   = ref_from_json(js.value("parent", json{}), scene.nodes);
     value.camera   = ref_from_json(js.value("camera", json{}), scene.cameras);
-    value.instance = ref_from_json(js.value("instance", json{}), scene.instances);
+    value.instance = ref_from_json(
+        js.value("instance", json{}), scene.instances);
     value.environment = ref_from_json(
         js.value("environment", json{}), scene.environments);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);

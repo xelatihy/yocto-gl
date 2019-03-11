@@ -427,7 +427,8 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
         } else if (!shape.quads.empty()) {
             init_shape_bvh(shape_bvh, shape.quads, shape.positions, false);
         } else if (!shape.quads_positions.empty()) {
-            init_shape_bvh(shape_bvh, shape.quads_positions, shape.positions, false);
+            init_shape_bvh(
+                shape_bvh, shape.quads_positions, shape.positions, false);
         } else {
             throw runtime_error("empty shape");
         }
