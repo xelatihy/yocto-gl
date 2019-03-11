@@ -528,7 +528,8 @@ void build_scene_embree_flattened_bvh(
         auto& instance = bvh.instances[instance_id];
         if (bvh.shape_bvhs[instance.shape_id].positions.empty()) continue;
         auto& shape_bvh             = bvh.shape_bvhs.at(instance.shape_id);
-        auto  transformed_positions = shape_bvh.positions;
+        auto  transformed_positions = vector<vec3f>{
+            shape_bvh.positions.begin(), shape_bvh.positions.end()};
         if (instance.frame != identity_frame3f) {
             for (auto& p : transformed_positions)
                 p = transform_point(instance.frame, p);
@@ -974,6 +975,22 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
 // Build a BVH from a set of primitives.
 void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
+    // setup internal views
+    if (!bvh.positions_data.empty())
+        bvh.positions = {
+            bvh.positions_data.data(), (int)bvh.positions_data.size()};
+    if (!bvh.radius_data.empty())
+        bvh.radius = {bvh.radius_data.data(), (int)bvh.radius_data.size()};
+    if (!bvh.points_data.empty())
+        bvh.points = {bvh.points_data.data(), (int)bvh.points_data.size()};
+    if (!bvh.lines_data.empty())
+        bvh.lines = {bvh.lines_data.data(), (int)bvh.lines_data.size()};
+    if (!bvh.triangles_data.empty())
+        bvh.triangles = {
+            bvh.triangles_data.data(), (int)bvh.triangles_data.size()};
+    if (!bvh.quads_data.empty())
+        bvh.quads = {bvh.quads_data.data(), (int)bvh.quads_data.size()};
+
 #if YOCTO_EMBREE
     if (options.use_embree) return build_shape_embree_bvh(bvh, options);
 #endif
@@ -1017,30 +1034,54 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
 
 // Build a BVH from the given set of shape primitives.
 void init_shape_bvh(bvh_shape& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius) {
-    bvh           = {};
-    bvh.points    = points;
-    bvh.positions = positions;
-    bvh.radius    = radius;
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool copy_data) {
+    bvh = {};
+    if (copy_data) {
+        bvh.points_data    = points;
+        bvh.positions_data = positions;
+        bvh.radius_data    = radius;
+    } else {
+        bvh.points    = {points.data(), (int)points.size()};
+        bvh.positions = {positions.data(), (int)positions.size()};
+        bvh.radius    = {radius.data(), (int)radius.size()};
+    }
 }
 void init_shape_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius) {
-    bvh           = {};
-    bvh.lines     = lines;
-    bvh.positions = positions;
-    bvh.radius    = radius;
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool copy_data) {
+    bvh = {};
+    if (copy_data) {
+        bvh.lines_data     = lines;
+        bvh.positions_data = positions;
+        bvh.radius_data    = radius;
+    } else {
+        bvh.lines     = {lines.data(), (int)lines.size()};
+        bvh.positions = {positions.data(), (int)positions.size()};
+        bvh.radius    = {radius.data(), (int)radius.size()};
+    }
 }
 void init_shape_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions) {
-    bvh           = {};
-    bvh.triangles = triangles;
-    bvh.positions = positions;
+    const vector<vec3f>& positions, bool copy_data) {
+    bvh = {};
+    if (copy_data) {
+        bvh.triangles_data = triangles;
+        bvh.positions_data = positions;
+    } else {
+        bvh.triangles = {triangles.data(), (int)triangles.size()};
+        bvh.positions = {positions.data(), (int)positions.size()};
+    }
 }
 void init_shape_bvh(bvh_shape& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
-    bvh           = {};
-    bvh.quads     = quads;
-    bvh.positions = positions;
+    const vector<vec3f>& positions, bool copy_data) {
+    bvh = {};
+    if (copy_data) {
+        bvh.quads_data     = quads;
+        bvh.positions_data = positions;
+    } else {
+        bvh.quads     = {quads.data(), (int)quads.size()};
+        bvh.positions = {positions.data(), (int)positions.size()};
+    }
 }
 
 // Build a BVH from a set of primitives.
@@ -1165,12 +1206,12 @@ void refit_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
 
 // Recursively recomputes the node bounds for a shape bvh
 void update_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions) {
-    bvh.positions = positions;
+    bvh.positions_data = positions;
 }
 void update_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions,
     const vector<float>& radius) {
-    bvh.positions = positions;
-    bvh.radius    = radius;
+    bvh.positions_data = positions;
+    bvh.radius_data    = radius;
 }
 void update_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances) {
     bvh.instances = instances;

@@ -57,10 +57,10 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::unordered_map;
 using std::function;
+using std::unordered_map;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SIMPLE OBJ LOADER

@@ -427,9 +427,16 @@ json ref_to_json(int value, const vector<T>& refs) {
 }
 template <typename T>
 int ref_from_json(const json& js, const vector<T>& refs) {
-    auto value = -1;
-    auto name  = js.get<string>();
+    if (js.is_null()) return -1;
+    if (js.is_number()) {
+        auto value = js.get<int>();
+        if (value < 0 || value >= refs.size())
+            throw runtime_error("invalid object reference");
+        return value;
+    }
+    auto name = js.get<string>();
     if (name == "") return -1;
+    auto value = -1;
     for (auto index = 0; index < refs.size(); index++) {
         if (refs[index].name == name) {
             value = index;
@@ -721,21 +728,21 @@ void from_json(const json& js, yocto_material& value, yocto_scene& scene) {
     value.fresnel          = js.value("fresnel", def.fresnel);
     value.refract          = js.value("refract", def.refract);
     value.emission_texture = ref_from_json(
-        js.value("emission_texture", ""s), scene.textures);
+        js.value("emission_texture", json{}), scene.textures);
     value.diffuse_texture = ref_from_json(
-        js.value("diffuse_texture", ""s), scene.textures);
+        js.value("diffuse_texture", json{}), scene.textures);
     value.specular_texture = ref_from_json(
-        js.value("specular_texture", ""s), scene.textures);
+        js.value("specular_texture", json{}), scene.textures);
     value.transmission_texture = ref_from_json(
-        js.value("transmission_texture", ""s), scene.textures);
+        js.value("transmission_texture", json{}), scene.textures);
     value.roughness_texture = ref_from_json(
-        js.value("roughness_texture", ""s), scene.textures);
+        js.value("roughness_texture", json{}), scene.textures);
     value.displacement_texture = ref_from_json(
-        js.value("displacement_texture", ""s), scene.textures);
+        js.value("displacement_texture", json{}), scene.textures);
     value.normal_texture = ref_from_json(
-        js.value("normal_texture", ""s), scene.textures);
+        js.value("normal_texture", json{}), scene.textures);
     value.volume_density_texture = ref_from_json(
-        js.value("volume_density_texture", ""s), scene.voltextures);
+        js.value("volume_density_texture", json{}), scene.voltextures);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
@@ -929,7 +936,8 @@ void from_json(const json& js, yocto_shape& value, yocto_scene& scene) {
     static const auto def = yocto_shape();
     value.name            = js.value("name", def.name);
     value.filename        = js.value("filename", def.filename);
-    value.material = ref_from_json(js.value("material", ""s), scene.materials);
+    value.material        = ref_from_json(
+        js.value("material", json{}), scene.materials);
     value.subdivision_level = js.value(
         "subdivision_level", def.subdivision_level);
     value.catmull_clark   = js.value("catmull_clark", def.catmull_clark);
@@ -985,7 +993,7 @@ void from_json(const json& js, yocto_instance& value, yocto_scene& scene) {
     static const auto def = yocto_instance();
     value.name            = js.value("name", def.name);
     value.frame           = js.value("frame", def.frame);
-    value.shape           = ref_from_json(js.value("shape", ""s), scene.shapes);
+    value.shape = ref_from_json(js.value("shape", json{}), scene.shapes);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
@@ -1016,7 +1024,7 @@ void from_json(const json& js, yocto_environment& value, yocto_scene& scene) {
     value.frame            = js.value("frame", def.frame);
     value.emission         = js.value("emission", def.emission);
     value.emission_texture = ref_from_json(
-        js.value("emission_texture", ""s), scene.textures);
+        js.value("emission_texture", json{}), scene.textures);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
@@ -1060,11 +1068,12 @@ void from_json(const json& js, yocto_scene_node& value, yocto_scene& scene) {
     value.rotation        = js.value("rotation", def.rotation);
     value.scale           = js.value("scale", def.scale);
     value.weights         = js.value("weights", def.weights);
-    value.parent          = ref_from_json(js.value("parent", ""s), scene.nodes);
-    value.camera   = ref_from_json(js.value("camera", ""s), scene.cameras);
-    value.instance = ref_from_json(js.value("instance", ""s), scene.instances);
+    value.parent   = ref_from_json(js.value("parent", json{}), scene.nodes);
+    value.camera   = ref_from_json(js.value("camera", json{}), scene.cameras);
+    value.instance = ref_from_json(
+        js.value("instance", json{}), scene.instances);
     value.environment = ref_from_json(
-        js.value("environment", ""s), scene.environments);
+        js.value("environment", json{}), scene.environments);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
@@ -1271,6 +1280,10 @@ void load_json_scene(const string& filename, yocto_scene& scene,
 
         // deserialize json
         from_json(js, scene, scene);
+
+        // clear json memory
+        js.clear();
+        js = {};
 
         // load meshes and textures
         auto dirname = get_dirname(filename);
@@ -4495,7 +4508,7 @@ void load_facevarying_mesh(const string& filename,
         reset_facevarying_mesh_data(quads_positions, quads_normals,
             quads_texturecoords, positions, normals, texturecoords,
             quads_materials);
-        throw sceneio_error("unsupported mesh type " + ext);
+        throw sceneio_error("unsupported mesh type " + ext + " " + filename);
     }
 }
 
@@ -4511,7 +4524,7 @@ void save_facevarying_mesh(const string& filename,
             quads_normals, quads_texturecoords, positions, normals,
             texturecoords, quads_materials);
     } else {
-        throw sceneio_error("unsupported mesh type " + ext);
+        throw sceneio_error("unsupported mesh type " + ext + " " + filename);
     }
 }
 

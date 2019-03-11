@@ -31,6 +31,12 @@
 // represent triangles correctly, an this convention is used throught the
 // library. This is equivalent to Intel's Embree.
 //
+// Shape and scene data is copied from the application to the BVH by default.
+// This is safer and avoids memory corruption problems. We also support
+// data sharing with the application to reduce memory usage. Since this is
+// less safe, we require this option to be explicitly defined during
+// initialization.
+//
 // We support working either on the whole scene or on a single shape. In the
 // description below yoi will see this dual API defined.
 //
@@ -123,13 +129,35 @@ struct bvh_node {
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
 struct bvh_shape {
+    // internal class for shared memory references
+    template <typename T>
+    struct array_view {
+        const T* ptr   = nullptr;
+        int      count = 0;
+
+        bool     empty() const { return count == 0; }
+        int      size() const { return count; }
+        const T& operator[](int idx) const { return ptr[idx]; }
+        const T* data() const { return ptr; }
+        const T* begin() const { return ptr; }
+        const T* end() const { return ptr + count; }
+    };
+
     // data for shape BVH
-    vector<vec3f> positions;
-    vector<float> radius;
-    vector<int>   points;
-    vector<vec2i> lines;
-    vector<vec3i> triangles;
-    vector<vec4i> quads;
+    array_view<vec3f> positions;
+    array_view<float> radius;
+    array_view<int>   points;
+    array_view<vec2i> lines;
+    array_view<vec3i> triangles;
+    array_view<vec4i> quads;
+
+    // data for shared shape BVH
+    vector<vec3f> positions_data;
+    vector<float> radius_data;
+    vector<int>   points_data;
+    vector<vec2i> lines_data;
+    vector<vec3i> triangles_data;
+    vector<vec4i> quads_data;
 
     // bvh internal nodes
     vector<bvh_node> nodes;
@@ -152,9 +180,27 @@ struct bvh_instance {
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
 struct bvh_scene {
+    // internal class for shared memory references
+    template <typename T>
+    struct strided_array_view {
+        const void* ptr    = nullptr;
+        int         count  = 0;
+        int         stride = 0;
+
+        const T& operator[](int idx) const {
+            return *(T*)((char*)ptr + stride * idx);
+        }
+    };
+
     // data for instance BVH
     vector<bvh_instance> instances;
-    vector<bvh_shape>    shape_bvhs;
+
+    // data for shared-memory instances
+    strided_array_view<frame3f> frames_view;
+    strided_array_view<int>     shapeids_view;
+
+    // shape BVHs
+    vector<bvh_shape> shape_bvhs;
 
     // bvh internal nodes
     vector<bvh_node> nodes;
@@ -166,22 +212,25 @@ struct bvh_scene {
 
 // Options for build bvh
 struct build_bvh_options {
-    bool          high_quality   = true;
+    bool          high_quality   = false;
     bool          use_embree     = false;
     bool          flatten_embree = true;
     bool          run_serially   = false;
     atomic<bool>* cancel_flag    = nullptr;
 };
 
-// Build a BVH from the given set of shape primitives.
+// Build a BVH from the given set of shape primitives. Data is copied or shared
+// depending on `copy_data`.
 void init_shape_bvh(bvh_shape& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool copy_data = true);
 void init_shape_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool copy_data = true);
 void init_shape_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions);
-void init_shape_bvh(
-    bvh_shape& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
+    const vector<vec3f>& positions, bool copy_data = true);
+void init_shape_bvh(bvh_shape& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, bool copy_data = true);
 
 // Build a BVH from the given set of instances.
 void init_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances,

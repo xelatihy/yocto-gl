@@ -418,16 +418,17 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
         auto shape_bvh = bvh_shape{};
         if (!shape.points.empty()) {
             init_shape_bvh(
-                shape_bvh, shape.points, shape.positions, shape.radius);
+                shape_bvh, shape.points, shape.positions, shape.radius, false);
         } else if (!shape.lines.empty()) {
             init_shape_bvh(
-                shape_bvh, shape.lines, shape.positions, shape.radius);
+                shape_bvh, shape.lines, shape.positions, shape.radius, false);
         } else if (!shape.triangles.empty()) {
-            init_shape_bvh(shape_bvh, shape.triangles, shape.positions);
+            init_shape_bvh(shape_bvh, shape.triangles, shape.positions, false);
         } else if (!shape.quads.empty()) {
-            init_shape_bvh(shape_bvh, shape.quads, shape.positions);
+            init_shape_bvh(shape_bvh, shape.quads, shape.positions, false);
         } else if (!shape.quads_positions.empty()) {
-            init_shape_bvh(shape_bvh, shape.quads_positions, shape.positions);
+            init_shape_bvh(
+                shape_bvh, shape.quads_positions, shape.positions, false);
         } else {
             throw runtime_error("empty shape");
         }
