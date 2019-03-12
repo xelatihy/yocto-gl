@@ -92,12 +92,16 @@ int main(int argc, char** argv) {
     save_options.skip_meshes   = skip_meshes;
 
     // load scene
-    auto scene = yocto_scene{};
+    printf("loading scene ...\n");
+    auto start_load = get_time();
+    auto scene      = yocto_scene{};
     try {
         load_scene(filename, scene, load_options);
     } catch (const std::exception& e) {
         exit_error(e.what());
     }
+    printf("loading scene [%s]\n",
+        format_duration(get_time() - start_load).c_str());
 
     // validate scene
     print_validation_errors(scene, true);
@@ -154,11 +158,15 @@ int main(int argc, char** argv) {
     }
 
     // save scene
+    printf("saving scene ...\n");
+    auto start_save = get_time();
     try {
         save_scene(output, scene, save_options);
     } catch (const std::exception& e) {
         exit_error(e.what());
     }
+    printf("saving scene [%s]\n",
+        format_duration(get_time() - start_save).c_str());
 
     // done
     return 0;

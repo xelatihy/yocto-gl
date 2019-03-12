@@ -1834,6 +1834,57 @@ pair<vec3f, bool> trace_debug_color(const yocto_scene& scene,
 }
 
 // Debug previewing.
+pair<vec3f, bool> trace_debug_material(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
+    // intersect ray
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
+    if (!point.hit) return {zero3f, false};
+
+    // shade
+    auto& instance = scene.instances[point.instance_id];
+    auto& shape    = scene.shapes[instance.shape];
+    auto  hashed   = std::hash<int>()(shape.material);
+    auto  rng_     = make_rng(trace_default_seed, hashed);
+    return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
+}
+
+// Debug previewing.
+pair<vec3f, bool> trace_debug_shape(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
+    // intersect ray
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
+    if (!point.hit) return {zero3f, false};
+
+    // shade
+    auto& instance = scene.instances[point.instance_id];
+    auto  hashed   = std::hash<int>()(instance.shape);
+    auto  rng_     = make_rng(trace_default_seed, hashed);
+    return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
+}
+
+// Debug previewing.
+pair<vec3f, bool> trace_debug_instance(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
+    // intersect ray
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
+    if (!point.hit) return {zero3f, false};
+
+    // shade
+    auto hashed = std::hash<int>()(point.instance_id);
+    auto rng_   = make_rng(trace_default_seed, hashed);
+    return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
+}
+
+// Debug previewing.
 pair<vec3f, bool> trace_debug_highlight(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces,
@@ -1874,6 +1925,9 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
         case trace_sampler_type::debug_transmission:
             return trace_debug_tranmission;
         case trace_sampler_type::debug_roughness: return trace_debug_roughness;
+        case trace_sampler_type::debug_material: return trace_debug_material;
+        case trace_sampler_type::debug_shape: return trace_debug_shape;
+        case trace_sampler_type::debug_instance: return trace_debug_instance;
         case trace_sampler_type::debug_highlight: return trace_debug_highlight;
         default: {
             throw runtime_error("sampler unknown");

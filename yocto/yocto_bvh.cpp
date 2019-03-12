@@ -363,28 +363,24 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#if YOCTO_EMBREE
 // Cleanup
-void clear_shape_bvh_embree(bvh_shape& bvh) {
-#if YOCTO_EMBREE
-    if (bvh.embree_bvh) {
-        rtcReleaseScene((RTCScene)bvh.embree_bvh);
+bvh_shape::~bvh_shape() {
+    if (embree_bvh) {
+        rtcReleaseScene((RTCScene)embree_bvh);
     }
-#endif
 }
-void clear_scene_bvh_embree(bvh_scene& bvh) {
-#if YOCTO_EMBREE
-    if (bvh.embree_bvh) {
-        for (auto i = 0; i < max(1, (int)bvh.instances.size()); i++) {
-            auto geom = rtcGetGeometry((RTCScene)bvh.embree_bvh, i);
-            rtcDetachGeometry((RTCScene)bvh.embree_bvh, i);
+bvh_scene::~bvh_scene() {
+    if (embree_bvh) {
+        for (auto i = 0; i < max(1, (int)instances.size()); i++) {
+            auto geom = rtcGetGeometry((RTCScene)embree_bvh, i);
+            rtcDetachGeometry((RTCScene)embree_bvh, i);
             rtcReleaseGeometry(geom);
         }
-        rtcReleaseScene((RTCScene)bvh.embree_bvh);
+        rtcReleaseScene((RTCScene)embree_bvh);
     }
-#endif
 }
 
-#if YOCTO_EMBREE
 void embree_error(void* ctx, RTCError code, const char* str) {
     switch (code) {
         case RTC_ERROR_UNKNOWN:
@@ -409,26 +405,24 @@ void embree_error(void* ctx, RTCError code, const char* str) {
     }
 }
 
+// Embree memory
+atomic<ssize_t> embree_memory = 0;
+bool            embree_memory_monitor(void* userPtr, ssize_t bytes, bool post) {
+    embree_memory += bytes;
+    return true;
+}
+
 // Get Embree device
 RTCDevice get_embree_device() {
     static RTCDevice device = nullptr;
     if (!device) {
         device = rtcNewDevice("");
         rtcSetDeviceErrorFunction(device, embree_error, nullptr);
+        rtcSetDeviceMemoryMonitorFunction(
+            device, embree_memory_monitor, nullptr);
     }
     return device;
 }
-
-// unused Embree code kept in case we want to reactivate in the future
-// void test_embree_shape_filter(const RTCFilterFunctionNArguments* args) {
-//     auto& bvh = *(bvh_shape*)args->geometryUserPtr;
-//     if(!bvh.intersection_filter) return;
-//     auto element_uv = vec2f{RTCHitN_u(args->hit, args->N, 0),
-//     RTCHitN_v(args->hit, args->N, 0)}; auto element_id =
-//     (int)RTCHitN_primID(args->hit, args->N, 0); auto hit =
-//     bvh.intersection_filter(element_id, element_uv); if(hit) args->valid[0] =
-//     0;
-// }
 
 // Build a BVH using Embree.
 void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
@@ -439,7 +433,38 @@ void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
     if (!bvh.points.empty()) {
         throw runtime_error("embree does not support points");
     } else if (!bvh.lines.empty()) {
-        throw runtime_error("not yet implemented");
+        auto lines      = vector<int>{};
+        auto positions  = vector<vec4f>{};
+        auto last_index = -1;
+        for (auto l : bvh.lines) {
+            if (last_index == l.x) {
+                lines.push_back((int)positions.size() - 1);
+                auto p1 = bvh.positions[l.y];
+                auto r1 = bvh.radius[l.y];
+                positions.push_back({p1.x, p1.y, p1.z, r1});
+            } else {
+                lines.push_back((int)positions.size());
+                auto p0 = bvh.positions[l.x];
+                auto r0 = bvh.radius[l.x];
+                auto p1 = bvh.positions[l.y];
+                auto r1 = bvh.radius[l.y];
+                positions.push_back({p0.x, p0.y, p0.z, r0});
+                positions.push_back({p1.x, p1.y, p1.z, r1});
+            }
+            last_index = l.y;
+        }
+        auto embree_geom = rtcNewGeometry(
+            embree_device, RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
+        rtcSetGeometryVertexAttributeCount(embree_geom, 1);
+        auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
+            RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4,
+            positions.size());
+        auto embree_lines     = rtcSetNewGeometryBuffer(embree_geom,
+            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, lines.size());
+        memcpy(embree_positions, positions.data(), positions.size() * 16);
+        memcpy(embree_lines, lines.data(), lines.size() * 4);
+        rtcCommitGeometry(embree_geom);
+        rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else if (!bvh.triangles.empty()) {
         auto embree_geom = rtcNewGeometry(
             embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
@@ -1571,5 +1596,104 @@ bvh_scene_intersection overlap_scene_bvh(
         }
     }
 #endif
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF BVH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Print bvh statistics.
+string print_bvh_stats(const bvh_scene& bvh) {
+    auto num_shapes    = (size_t)0;
+    auto num_instances = (size_t)0;
+
+    auto elem_points    = (size_t)0;
+    auto elem_lines     = (size_t)0;
+    auto elem_triangles = (size_t)0;
+    auto elem_quads     = (size_t)0;
+
+    auto vert_pos    = (size_t)0;
+    auto vert_radius = (size_t)0;
+
+    auto shape_nodes = (size_t)0;
+    auto scene_nodes = (size_t)0;
+
+    auto stored_elem_points    = (size_t)0;
+    auto stored_elem_lines     = (size_t)0;
+    auto stored_elem_triangles = (size_t)0;
+    auto stored_elem_quads     = (size_t)0;
+
+    auto stored_vert_pos    = (size_t)0;
+    auto stored_vert_radius = (size_t)0;
+
+    auto memory_elems = (size_t)0;
+    auto memory_verts = (size_t)0;
+
+    auto memory_ists = (size_t)0;
+
+    auto memory_shape_nodes = (size_t)0;
+    auto memory_scene_nodes = (size_t)0;
+
+    for (auto& sbvh : bvh.shape_bvhs) {
+        elem_points += sbvh.points.size();
+        elem_lines += sbvh.lines.size();
+        elem_triangles += sbvh.triangles.size();
+        elem_quads += sbvh.quads.size();
+        vert_pos += sbvh.positions.size();
+        vert_radius += sbvh.radius.size();
+        stored_elem_points += sbvh.points_data.size();
+        stored_elem_lines += sbvh.lines_data.size();
+        stored_elem_triangles += sbvh.triangles_data.size();
+        stored_elem_quads += sbvh.quads_data.size();
+        stored_vert_pos += sbvh.positions_data.size();
+        stored_vert_radius += sbvh.radius_data.size();
+        shape_nodes += sbvh.nodes.size();
+    }
+
+    num_shapes    = bvh.shape_bvhs.size();
+    num_instances = bvh.instances.size();
+    scene_nodes   = bvh.nodes.size();
+
+    memory_elems = stored_elem_points * sizeof(int) +
+                   stored_elem_lines * sizeof(vec2i) +
+                   stored_elem_triangles * sizeof(vec3i) +
+                   stored_elem_quads * sizeof(vec4i);
+    memory_verts = stored_vert_pos * sizeof(vec3f) +
+                   stored_vert_radius * sizeof(float);
+
+    memory_ists = num_instances * sizeof(bvh_instance);
+
+    memory_shape_nodes = shape_nodes * sizeof(bvh_node);
+    memory_scene_nodes = scene_nodes * sizeof(bvh_node);
+
+    auto str = ""s;
+
+    str += "num_shapes: " + std::to_string(num_shapes) + "\n";
+    str += "num_instances: " + std::to_string(num_instances) + "\n";
+
+    str += "elem_points: " + std::to_string(elem_points) + "\n";
+    str += "elem_lines: " + std::to_string(elem_lines) + "\n";
+    str += "elem_triangles: " + std::to_string(elem_triangles) + "\n";
+    str += "elem_quads: " + std::to_string(elem_quads) + "\n";
+    str += "vert_pos: " + std::to_string(vert_pos) + "\n";
+    str += "vert_radius: " + std::to_string(vert_radius) + "\n";
+
+    str += "shape_nodes: " + std::to_string(shape_nodes) + "\n";
+    str += "scene_nodes: " + std::to_string(scene_nodes) + "\n";
+
+    str += "memory_elems: " + std::to_string(memory_elems) + "\n";
+    str += "memory_verts: " + std::to_string(memory_verts) + "\n";
+    str += "memory_ists: " + std::to_string(memory_ists) + "\n";
+    str += "memory_shape_nodes: " + std::to_string(memory_shape_nodes) + "\n";
+    str += "memory_scene_nodes: " + std::to_string(memory_scene_nodes) + "\n";
+
+#if YOCTO_EMBREE
+    str += "memory_embree: " + std::to_string(embree_memory) + "\n";
+#endif
+
+    return str;
+}
 
 }  // namespace yocto

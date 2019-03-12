@@ -697,6 +697,23 @@ constexpr inline vec<T, N> clamp01(const vec<T, N>& x) {
         return c;
     }
 }
+template <typename T, int N, typename T1>
+constexpr inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T1 u) {
+    if constexpr (N == 1) {
+        return {lerp(a.x, b.x, u)};
+    } else if constexpr (N == 2) {
+        return {lerp(a.x, b.x, u), lerp(a.y, b.y, u)};
+    } else if constexpr (N == 3) {
+        return {lerp(a.x, b.x, u), lerp(a.y, b.y, u), lerp(a.z, b.z, u)};
+    } else if constexpr (N == 4) {
+        return {lerp(a.x, b.x, u), lerp(a.y, b.y, u), lerp(a.z, b.z, u),
+            lerp(a.w, b.w, u)};
+    } else {
+        auto c = vec<T, N>{};
+        for (auto i = 0; i < N; i++) c[i] = lerp(a[i], b[i], u);
+        return c;
+    }
+}
 template <typename T, int N>
 constexpr inline T max(const vec<T, N>& a) {
     if constexpr (N == 1) {
@@ -798,6 +815,10 @@ constexpr inline vec<T, N> apply(T (*func)(T, T), const vec<T, N>& a, T b) {
 }
 
 // Functions applied to vector elements
+template <typename T, int N>
+constexpr inline vec<T, N> sqrt(const vec<T, N>& a) {
+    return apply(sqrt, a);
+};
 template <typename T, int N>
 constexpr inline vec<T, N> exp(const vec<T, N>& a) {
     return apply(exp, a);

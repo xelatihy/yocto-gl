@@ -252,11 +252,29 @@ void save_pfm_image(const string& filename, const image4f& img) {
 }
 
 // load exr image weith tiny exr
+static const char* get_tinyexr_error(int error) {
+    switch (error) {
+        case TINYEXR_ERROR_INVALID_MAGIC_NUMBER: return "INVALID_MAGIC_NUMBER";
+        case TINYEXR_ERROR_INVALID_EXR_VERSION: return "INVALID_EXR_VERSION";
+        case TINYEXR_ERROR_INVALID_ARGUMENT: return "INVALID_ARGUMENT";
+        case TINYEXR_ERROR_INVALID_DATA: return "INVALID_DATA";
+        case TINYEXR_ERROR_INVALID_FILE: return "INVALID_FILE";
+        // case TINYEXR_ERROR_INVALID_PARAMETER: return "INVALID_PARAMETER";
+        case TINYEXR_ERROR_CANT_OPEN_FILE: return "CANT_OPEN_FILE";
+        case TINYEXR_ERROR_UNSUPPORTED_FORMAT: return "UNSUPPORTED_FORMAT";
+        case TINYEXR_ERROR_INVALID_HEADER: return "INVALID_HEADER";
+        default: throw imageio_error("unknown tinyexr error");
+    }
+}
+
 void load_exr_image(const string& filename, image4f& img) {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0) {
-        throw imageio_error("error loading image " + filename);
+    if (auto error = LoadEXR(
+            &pixels, &width, &height, filename.c_str(), nullptr);
+        error < 0) {
+        throw imageio_error("error loading image " + filename + "("s +
+                            get_tinyexr_error(error) + ")"s);
     }
     if (!pixels) {
         throw imageio_error("error loading image " + filename);

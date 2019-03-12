@@ -104,6 +104,7 @@
 #include <cstdio>
 #include <deque>
 #include <future>
+#include <initializer_list>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -117,6 +118,7 @@ namespace yocto {
 using std::atomic;
 using std::deque;
 using std::future;
+using std::initializer_list;
 using std::lock_guard;
 using std::mutex;
 using std::string;
@@ -228,14 +230,24 @@ inline auto enumerate(vector<T>& vals) {
 
 // Vector append and concatenation
 template <typename T>
+inline vector<T>& operator+=(vector<T>& a, const T& b) {
+    a.push_back(b);
+    return a;
+}
+template <typename T>
 inline vector<T>& operator+=(vector<T>& a, const vector<T>& b) {
     a.insert(a.end(), b.begin(), b.end());
     return a;
 }
 template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const T& b) {
-    a.push_back(b);
+inline vector<T>& operator+=(vector<T>& a, const initializer_list<T>& b) {
+    a.insert(a.end(), b.begin(), b.end());
     return a;
+}
+template <typename T>
+inline vector<T> operator+(const vector<T>& a, const T& b) {
+    auto c = a;
+    return c += b;
 }
 template <typename T>
 inline vector<T> operator+(const vector<T>& a, const vector<T>& b) {
@@ -243,7 +255,7 @@ inline vector<T> operator+(const vector<T>& a, const vector<T>& b) {
     return c += b;
 }
 template <typename T>
-inline vector<T> operator+(const vector<T>& a, const T& b) {
+inline vector<T> operator+(const vector<T>& a, const initializer_list<T>& b) {
     auto c = a;
     return c += b;
 }

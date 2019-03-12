@@ -89,13 +89,14 @@ namespace yocto {
 
 // Load a JSON object
 inline void load_json(const string& filename, json& js) {
-    auto txt = string{};
-    load_text(filename, txt);
-    js = json::parse(txt);
+    auto text = ""s;
+    load_text(filename, text);
+    js = json::parse(text);
 }
 
 // Save a JSON object
 inline void save_json(const string& filename, const json& js) {
+    // we have to use streams here since the json library is faster with them
     save_text(filename, js.dump(4));
 }
 

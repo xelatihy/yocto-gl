@@ -560,6 +560,7 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
     auto errs        = vector<string>();
     auto check_names = [&errs](const auto& vals, const string& base) {
         auto used = unordered_map<string, int>();
+        used.reserve(vals.size());
         for (auto& value : vals) used[value.name] += 1;
         for (auto& [name, used] : used) {
             if (name == "") {
@@ -998,13 +999,27 @@ vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size_) {
     }
     return size;
 }
-void set_camera_perspective(
+void set_camera_perspectivey(
     yocto_camera& camera, float fovy, float aspect, float focus, float height) {
     camera.orthographic   = false;
     camera.film_width     = height * aspect;
     camera.film_height    = height;
     camera.focus_distance = focus;
     auto distance         = camera.film_height / (2 * tan(fovy / 2));
+    if (focus < float_max) {
+        camera.focal_length = camera.focus_distance * distance /
+                              (camera.focus_distance + distance);
+    } else {
+        camera.focal_length = distance;
+    }
+}
+void set_camera_perspectivex(
+    yocto_camera& camera, float fovx, float aspect, float focus, float width) {
+    camera.orthographic   = false;
+    camera.film_width     = width;
+    camera.film_height    = width / aspect;
+    camera.focus_distance = focus;
+    auto distance         = camera.film_width / (2 * tan(fovx / 2));
     if (focus < float_max) {
         camera.focal_length = camera.focus_distance * distance /
                               (camera.focus_distance + distance);
@@ -1344,39 +1359,44 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
 
 string print_scene_stats(const yocto_scene& scene) {
     // using long long instead of uint64_t to avoid printf macros
-    auto num_cameras      = (long long)0;
-    auto num_shapes       = (long long)0;
-    auto num_surfaces     = (long long)0;
-    auto num_instances    = (long long)0;
-    auto num_materials    = (long long)0;
-    auto num_textures     = (long long)0;
-    auto num_voltextures  = (long long)0;
-    auto num_environments = (long long)0;
-    auto num_nodes        = (long long)0;
-    auto num_animations   = (long long)0;
+    auto num_cameras      = (size_t)0;
+    auto num_shapes       = (size_t)0;
+    auto num_surfaces     = (size_t)0;
+    auto num_instances    = (size_t)0;
+    auto num_materials    = (size_t)0;
+    auto num_textures     = (size_t)0;
+    auto num_voltextures  = (size_t)0;
+    auto num_environments = (size_t)0;
+    auto num_nodes        = (size_t)0;
+    auto num_animations   = (size_t)0;
 
-    auto elem_points         = (long long)0;
-    auto elem_lines          = (long long)0;
-    auto elem_triangles      = (long long)0;
-    auto elem_quads          = (long long)0;
-    auto elem_quads_pos      = (long long)0;
-    auto elem_quads_norm     = (long long)0;
-    auto elem_quads_texcoord = (long long)0;
-    auto vert_pos            = (long long)0;
-    auto vert_norm           = (long long)0;
-    auto vert_texcoord       = (long long)0;
-    auto vert_color          = (long long)0;
-    auto vert_radius         = (long long)0;
-    auto vert_tangsp         = (long long)0;
+    auto elem_points         = (size_t)0;
+    auto elem_lines          = (size_t)0;
+    auto elem_triangles      = (size_t)0;
+    auto elem_quads          = (size_t)0;
+    auto elem_quads_pos      = (size_t)0;
+    auto elem_quads_norm     = (size_t)0;
+    auto elem_quads_texcoord = (size_t)0;
+    auto vert_pos            = (size_t)0;
+    auto vert_norm           = (size_t)0;
+    auto vert_texcoord       = (size_t)0;
+    auto vert_color          = (size_t)0;
+    auto vert_radius         = (size_t)0;
+    auto vert_tangsp         = (size_t)0;
 
-    auto texel_hdr = (long long)0;
-    auto texel_ldr = (long long)0;
-    auto voxel_hdr = (long long)0;
+    auto texel_hdr = (size_t)0;
+    auto texel_ldr = (size_t)0;
+    auto voxel_hdr = (size_t)0;
 
-    auto memory_imgs  = (long long)0;
-    auto memory_vols  = (long long)0;
-    auto memory_elems = (long long)0;
-    auto memory_verts = (long long)0;
+    auto memory_imgs  = (size_t)0;
+    auto memory_vols  = (size_t)0;
+    auto memory_elems = (size_t)0;
+    auto memory_verts = (size_t)0;
+    auto memory_shps  = (size_t)0;
+    auto memory_ists  = (size_t)0;
+    auto memory_txts  = (size_t)0;
+    auto memory_cams  = (size_t)0;
+    auto memory_mats  = (size_t)0;
 
     auto bbox = compute_scene_bounds(scene);
 
@@ -1428,6 +1448,12 @@ string print_scene_stats(const yocto_scene& scene) {
     }
     memory_vols = voxel_hdr * sizeof(float);
 
+    memory_ists = sizeof(yocto_instance) * scene.instances.size();
+    memory_shps = sizeof(yocto_shape) * scene.shapes.size();
+    memory_txts = sizeof(yocto_texture) * scene.textures.size();
+    memory_mats = sizeof(yocto_material) * scene.materials.size();
+    memory_cams = sizeof(yocto_camera) * scene.cameras.size();
+
     auto str = ""s;
 
     str += "num_cameras: " + std::to_string(num_cameras) + "\n";
@@ -1452,14 +1478,6 @@ string print_scene_stats(const yocto_scene& scene) {
     str += "vert_radius: " + std::to_string(vert_radius) + "\n";
     str += "vert_tangsp: " + std::to_string(vert_tangsp) + "\n";
 
-    str += "elem_points: " + std::to_string(elem_points) + "\n";
-    str += "elem_lines: " + std::to_string(elem_lines) + "\n";
-    str += "elem_triangles: " + std::to_string(elem_triangles) + "\n";
-    str += "elem_quads: " + std::to_string(elem_quads) + "\n";
-    str += "vert_pos: " + std::to_string(vert_pos) + "\n";
-    str += "vert_norm: " + std::to_string(vert_norm) + "\n";
-    str += "vert_texcoord: " + std::to_string(vert_texcoord) + "\n";
-
     str += "texel_hdr: " + std::to_string(texel_hdr) + "\n";
     str += "texel_ldr: " + std::to_string(texel_ldr) + "\n";
 
@@ -1467,6 +1485,12 @@ string print_scene_stats(const yocto_scene& scene) {
     str += "memory_vols: " + std::to_string(memory_vols) + "\n";
     str += "memory_elems: " + std::to_string(memory_elems) + "\n";
     str += "memory_verts: " + std::to_string(memory_verts) + "\n";
+
+    str += "memory_cameras: " + std::to_string(memory_cams) + "\n";
+    str += "memory_textures: " + std::to_string(memory_txts) + "\n";
+    str += "memory_materials: " + std::to_string(memory_mats) + "\n";
+    str += "memory_shapes: " + std::to_string(memory_shps) + "\n";
+    str += "memory_instances: " + std::to_string(memory_ists) + "\n";
 
     str += "bbox min: " + std::to_string(bbox.min.x) + " " +
            std::to_string(bbox.min.y) + " " + std::to_string(bbox.min.z) + "\n";

@@ -162,8 +162,12 @@ struct bvh_shape {
     // bvh internal nodes
     vector<bvh_node> nodes;
 
+#if YOCTO_EMBREE
     // Embree opaque data
     void* embree_bvh = nullptr;
+    // Cleanup for embree data
+    ~bvh_shape();
+#endif
 };
 
 // Instance for a scene BVH.
@@ -205,16 +209,20 @@ struct bvh_scene {
     // bvh internal nodes
     vector<bvh_node> nodes;
 
+#if YOCTO_EMBREE
     // Embree opaque data
     void* embree_bvh       = nullptr;
     bool  embree_flattened = false;
+    // Cleanup for embree data
+    ~bvh_scene();
+#endif
 };
 
 // Options for build bvh
 struct build_bvh_options {
     bool          high_quality   = false;
     bool          use_embree     = false;
-    bool          flatten_embree = true;
+    bool          flatten_embree = false;
     bool          run_serially   = false;
     atomic<bool>* cancel_flag    = nullptr;
 };
@@ -373,6 +381,16 @@ bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
 
 // Check if two bounding boxes overlap.
 bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BVH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Print bvh statistics.
+string print_bvh_stats(const bvh_scene& bvh);
 
 }  // namespace yocto
 
