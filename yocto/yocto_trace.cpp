@@ -820,10 +820,10 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
         auto  size             = evaluate_texture_size(emission_texture);
         auto  texcoord         = evaluate_environment_texturecoord(
             environment, incoming);
-        auto i    = (int)(texcoord.x * size.x);
-        auto j    = (int)(texcoord.y * size.y);
-        auto idx  = j * size.x + i;
-        auto prob = sample_discrete_distribution_pdf(elements_cdf, idx) /
+        auto i    = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
+        auto j    = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
+        auto prob = sample_discrete_distribution_pdf(
+                        elements_cdf, j * size.x + i) /
                     elements_cdf.back();
         auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
