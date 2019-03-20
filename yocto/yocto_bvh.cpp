@@ -684,7 +684,6 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
         return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
                2 * size.y * size.z;
     };
-    auto min_left = 0, min_right = 0;
     for (auto axis = 0; axis < 3; axis++) {
         for (auto b = 1; b < nbins; b++) {
             auto split     = (&cbbox.min.x)[axis] + b * csize[axis] / nbins;
@@ -706,8 +705,6 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
                 min_cost   = cost;
                 middle     = split;
                 split_axis = axis;
-                min_left   = left_nprims;
-                min_right  = right_nprims;
             }
         }
     }
