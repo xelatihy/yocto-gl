@@ -1169,9 +1169,17 @@ struct affine;
 // Affine transformations stored as a column-major matrix.
 template <typename T>
 struct affine<T, 2> {
-    vec<T, 2> x = {1, 0};
-    vec<T, 2> y = {0, 1};
-    vec<T, 2> o = {0, 0};
+    union {
+        struct {
+            vec<T, 2> x = {1, 0};
+            vec<T, 2> y = {0, 1};
+            vec<T, 2> o = {0, 0};
+        };
+        struct {
+            mat<T, 2, 2> m;
+            vec<T, 2> t;
+        };
+    };
 
     constexpr affine() : x{}, y{}, o{} {}
     constexpr affine(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
@@ -1189,10 +1197,18 @@ struct affine<T, 2> {
 // Affine transformations stored as a column-major matrix.
 template <typename T>
 struct affine<T, 3> {
-    vec<T, 3> x = {1, 0, 0};
-    vec<T, 3> y = {0, 1, 0};
-    vec<T, 3> z = {0, 0, 1};
-    vec<T, 3> o = {0, 0, 0};
+    union {
+        struct {
+            vec<T, 3> x = {1, 0, 0};
+            vec<T, 3> y = {0, 1, 0};
+            vec<T, 3> z = {0, 0, 1};
+            vec<T, 3> o = {0, 0, 0};
+        };
+        struct {
+            mat<T, 3, 3> m;
+            vec<T, 3> t;
+        };
+    };
 
     constexpr affine() : x{}, y{}, z{}, o{} {}
     constexpr affine(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
@@ -1222,24 +1238,6 @@ constexpr const auto identity_affine2f = affine2f{{1, 0}, {0, 1}, {0, 0}};
 constexpr const auto identity_affine3f = affine3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
-// Access rotation and translation.
-template <typename T, int N>
-constexpr inline mat<T, N, N>& affine_rotation(affine<T, N>& f) {
-    return (mat<T, N, N>&)f;
-}
-template <typename T, int N>
-constexpr inline const mat<T, N, N>& affine_rotation(const affine<T, N>& f) {
-    return (mat<T, N, N>&)f;
-}
-template <typename T, int N>
-constexpr inline vec<T, N>& affine_translation(affine<T, N>& f) {
-    return f.o;
-}
-template <typename T, int N>
-constexpr inline const vec<T, N>& affine_translation(const affine<T, N>& f) {
-    return f.o;
-}
-
 // Frame comparisons.
 template <typename T, int N>
 constexpr inline bool operator==(const affine<T, N>& a, const affine<T, N>& b) {
@@ -1262,13 +1260,12 @@ constexpr inline bool operator!=(const affine<T, N>& a, const affine<T, N>& b) {
 template <typename T, int N>
 constexpr inline affine<T, N> operator*(
     const affine<T, N>& a, const affine<T, N>& b) {
-    return {affine_rotation(a) * affine_rotation(b),
-        affine_rotation(a) * b.o + a.o};
+    return {a.m * b.m, a.m * b.o + a.o};
 }
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, int N>
 constexpr inline affine<T, N> inverse(const affine<T, N>& a) {
-    auto minv = inverse(affine_rotation(a));
+    auto minv = inverse(a.m);
     return {minv, -(minv * a.o)};
 }
 
@@ -1286,9 +1283,17 @@ struct frame;
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 2> {
-    vec<T, 2> x = {1, 0};
-    vec<T, 2> y = {0, 1};
-    vec<T, 2> o = {0, 0};
+    union {
+        struct {
+            vec<T, 2> x = {1, 0};
+            vec<T, 2> y = {0, 1};
+            vec<T, 2> o = {0, 0};
+        };
+        struct {
+            mat<T, 2, 2> m;
+            vec<T, 2> t;
+        };
+    };
 
     constexpr frame() : x{}, y{}, o{} {}
     constexpr frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
@@ -1308,10 +1313,18 @@ struct frame<T, 2> {
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 3> {
-    vec<T, 3> x = {1, 0, 0};
-    vec<T, 3> y = {0, 1, 0};
-    vec<T, 3> z = {0, 0, 1};
-    vec<T, 3> o = {0, 0, 0};
+    union {
+        struct {
+            vec<T, 3> x = {1, 0, 0};
+            vec<T, 3> y = {0, 1, 0};
+            vec<T, 3> z = {0, 0, 1};
+            vec<T, 3> o = {0, 0, 0};
+        };
+        struct {
+            mat<T, 3, 3> m;
+            vec<T, 3> t;
+        };
+    };
 
     constexpr frame() : x{}, y{}, z{}, o{} {}
     constexpr frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
@@ -1343,24 +1356,6 @@ using frame3f = frame<float, 3>;
 constexpr const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
 constexpr const auto identity_frame3f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
-
-// Access rotation and translation.
-template <typename T, int N>
-constexpr inline mat<T, N, N>& frame_rotation(frame<T, N>& f) {
-    return (mat<T, N, N>&)f;
-}
-template <typename T, int N>
-constexpr inline const mat<T, N, N>& frame_rotation(const frame<T, N>& f) {
-    return (mat<T, N, N>&)f;
-}
-template <typename T, int N>
-constexpr inline vec<T, N>& frame_translation(frame<T, N>& f) {
-    return f.o;
-}
-template <typename T, int N>
-constexpr inline const vec<T, N>& frame_translation(const frame<T, N>& f) {
-    return f.o;
-}
 
 // Frame construction from axis.
 template <typename T>
@@ -1406,13 +1401,12 @@ constexpr inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
 template <typename T, int N>
 constexpr inline frame<T, N> operator*(
     const frame<T, N>& a, const frame<T, N>& b) {
-    return {
-        frame_rotation(a) * frame_rotation(b), frame_rotation(a) * b.o + a.o};
+    return {a.m * b.m, a.m * b.o + a.o};
 }
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, int N>
 constexpr inline frame<T, N> inverse(const frame<T, N>& a) {
-    auto minv = transpose(frame_rotation(a));
+    auto minv = transpose(a.m);
     return {minv, -(minv * a.o)};
 }
 
@@ -1781,7 +1775,7 @@ constexpr inline vec<T, N> transform_direction(
 template <typename T, int N>
 constexpr inline vec<T, N> transform_normal(
     const affine<T, N>& a, const vec<T, N>& b) {
-    return transform_normal(affine_rotation(a), b);
+    return transform_normal(a.m, b);
 }
 
 // Transforms points, vectors and directions by frames.
