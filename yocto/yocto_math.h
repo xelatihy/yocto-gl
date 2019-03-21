@@ -1797,7 +1797,7 @@ constexpr inline vec<T, N> transform_direction(
 }
 template <typename T, int N>
 constexpr inline vec<T, N> transform_normal(const affine<T, N>& a, const vec<T, N>& b) {
-    return transform_normal(frame_rotation(a), b);
+    return transform_normal(affine_rotation(a), b);
 }
 
 // Transforms points, vectors and directions by frames.
@@ -1831,13 +1831,8 @@ constexpr inline vec<T, N> transform_direction(
     return normalize(transform_vector(a, b));
 }
 template <typename T, int N>
-constexpr inline vec<T, N> transform_normal(
-    const frame<T, N>& a, const vec<T, N>& b, bool non_rigid = false) {
-    if (non_rigid) {
-        return transform_normal(frame_rotation(a), b);
-    } else {
+constexpr inline vec<T, N> transform_normal(const frame<T, N>& a, const vec<T, N>& b) {
         return normalize(transform_vector(a, b));
-    }
 }
 
 // Transforms rays and bounding boxes by matrices.
