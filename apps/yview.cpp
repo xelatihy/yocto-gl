@@ -626,7 +626,9 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     const drawgl_options& options) {
     auto& camera      = scene.cameras.at(options.camera_id);
     auto  camera_view = frame_to_mat(inverse(camera.frame));
-    auto  camera_proj = make_perspective_mat(get_camera_fovy(camera),
+    auto  camera_proj = make_perspective_mat(get_camera_fovx(camera) *
+                                                (float)viewport_size.y /
+                                                (float)viewport_size.x,
         (float)viewport_size.x / (float)viewport_size.y, options.near_plane,
         options.far_plane);
 
