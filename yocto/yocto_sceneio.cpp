@@ -2369,7 +2369,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
         }
         if (gnde->has_matrix) {
             auto m     = gnde->matrix;
-            node.local = mat_to_frame(
+            node.local = frame3f(
                 mat4f{{m[0], m[1], m[2], m[3]}, {m[4], m[5], m[6], m[7]},
                     {m[8], m[9], m[10], m[11]}, {m[12], m[13], m[14], m[15]}});
         }
@@ -4943,7 +4943,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
                 {1, 1});
             scene.shapes.push_back(shape);
             auto instance  = yocto_instance{};
-            instance.frame = mat_to_frame(
+            instance.frame = frame3f(
                 ljs.at("translationMatrix").get<mat4f>());
             instance.shape = (int)scene.shapes.size() - 1;
             scene.instances.push_back(instance);
@@ -4956,7 +4956,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
             environment.emission = xyz(ljs.at("color").get<vec4f>()) *
                                    pow(2.0f, ljs.at("exposure").get<float>());
             environment.emission_texture = (int)scene.textures.size() - 1;
-            environment.frame            = mat_to_frame(
+            environment.frame            = frame3f(
                 ljs.at("translationMatrix").get<mat4f>());
             scene.environments.push_back(environment);
         } else {
@@ -5103,7 +5103,7 @@ void add_disney_island_instance(yocto_scene& scene, const string& parent_name,
     const mat4f& xform, const vector<int>& shapes) {
     for (auto shape_id : shapes) {
         auto instance  = yocto_instance{};
-        instance.frame = mat_to_frame(xform);
+        instance.frame = frame3f(xform);
         instance.shape = shape_id;
         scene.instances.push_back(instance);
     }
