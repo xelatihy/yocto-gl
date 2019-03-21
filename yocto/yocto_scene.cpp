@@ -439,7 +439,7 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     auto bvh_instances = vector<bvh_instance>{};
     for (auto& instance : scene.instances) {
         bvh_instances.push_back(
-            {instance.frame, inverse(instance.frame, true), instance.shape});
+            {instance.frame, (frame3f)inverse((affine3f)instance.frame), instance.shape});
     }
 
     // build bvh
@@ -458,7 +458,7 @@ void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     auto bvh_instances = vector<bvh_instance>{};
     for (auto& instance : scene.instances) {
         bvh_instances.push_back(
-            {instance.frame, inverse(instance.frame, true), instance.shape});
+            {instance.frame, (frame3f)inverse((affine3f)instance.frame), instance.shape});
     }
     update_scene_bvh(bvh, bvh_instances);
 

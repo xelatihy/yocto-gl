@@ -1304,6 +1304,7 @@ struct frame<T, 2> {
         : x{x}, y{y}, o{o} {}
     constexpr frame(const mat<T, 2, 2>& m, const vec<T, 2>& t)
         : x{m.x}, y{m.y}, o{t} {}
+    constexpr explicit frame(const affine<T, 2>& m) : x{m.x}, y{m.y}, o{m.o} { }
     constexpr operator affine<T, 2>() const { return {x, y, o}; }
 
     constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
@@ -1324,6 +1325,7 @@ struct frame<T, 3> {
         : x{x}, y{y}, z{z}, o{o} {}
     constexpr frame(const mat<T, 3, 3>& m, const vec<T, 3>& t)
         : x{m.x}, y{m.y}, z{m.z}, o{t} {}
+    constexpr explicit frame(const affine<T, 3>& m) : x{m.x}, y{m.y}, z{m.z}, o{m.o} { }
     constexpr operator affine<T, 3>() const { return {x, y, z, o}; }
 
     constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
@@ -1426,10 +1428,8 @@ constexpr inline frame<T, N> operator*(
 }
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, int N>
-constexpr inline frame<T, N> inverse(
-    const frame<T, N>& a, bool non_rigid = false) {
-    auto minv = (non_rigid) ? inverse(frame_rotation(a))
-                            : transpose(frame_rotation(a));
+constexpr inline frame<T, N> inverse(const frame<T, N>& a) {
+    auto minv = transpose(frame_rotation(a));
     return {minv, -(minv * a.o)};
 }
 
