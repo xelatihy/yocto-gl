@@ -1128,16 +1128,55 @@ constexpr inline vec<T, N> diagonal(const mat<T, N, N>& a) {
     }
 }
 template <typename T, int N, int M>
-constexpr inline mat<T, M, N> transpose(const mat<T, N, M>& a);
+constexpr inline mat<T, M, N> transpose(const mat<T, N, M>& a) {
+    if constexpr (N == 1 && M == 1) {
+        return a;
+    } else if constexpr (N == 2 && M == 2) {
+        return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
+    } else if constexpr (N == 3 && M == 3) {
+        return {
+            {a.x.x, a.y.x, a.z.x},
+            {a.x.y, a.y.y, a.z.y},
+            {a.x.z, a.y.z, a.z.z},
+        };
+    } else if constexpr (N == 4 && M == 4) {
+        return {
+            {a.x.x, a.y.x, a.z.x, a.w.x},
+            {a.x.y, a.y.y, a.z.y, a.w.y},
+            {a.x.z, a.y.z, a.z.z, a.w.z},
+            {a.x.w, a.y.w, a.z.w, a.w.w},
+        };
+    } else {
+        auto c = mat<T, M, N>{};
+        for (auto i = 0; i < M; i++)
+            for (auto j = 0; j < N; j++) c[j][i] = a[i][j];
+    }
+}
 
-// Matrix adjugates, determinant and inverses.
-template <typename T, int N>
-constexpr inline mat<T, N, N> adjugate(const mat<T, N, N>& a);
-template <typename T, int N>
-constexpr inline T determinant(const mat<T, N, N>& a);
-template <typename T, int N>
-constexpr inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
-    return adjugate(a) * (1 / determinant(a));
+// Matrix adjoints, determinants and inverses.
+template <typename T>
+constexpr inline T determinant(const mat<T, 2, 2>& a) {
+    return cross(a.x, a.y);
+}
+template <typename T>
+constexpr inline T determinant(const mat<T, 3, 3>& a) {
+    return dot(a.x,cross(a.y,a.z));
+}
+template <typename T>
+constexpr inline mat<T, 2, 2> adjoint(const mat<T, 2, 2>& a) {
+    return {{a.y.y,-a.x.y}, {-a.y.x,a.x.x}};
+}
+template <typename T>
+constexpr inline mat<T, 3, 3> adjoint(const mat<T, 3, 3>& a) {
+    return transpose(mat<T, 3, 3>{cross(a.y,a.z),cross(a.z,a.x),cross(a.x,a.y)});
+}
+template <typename T>
+constexpr inline mat<T, 2, 2> inverse(const mat<T, 2, 2>& a) {
+    return adjoint(a) * (1 / determinant(a));
+}
+template <typename T>
+constexpr inline mat<T, 3, 3> inverse(const mat<T, 3, 3>& a) {
+    return adjoint(a) * (1 / determinant(a));
 }
 
 // Constructs a basis from a direction
@@ -2082,156 +2121,6 @@ constexpr inline void update_image_view(vec<T, 2>& center, T& scale,
 //                             IMPLEMENTATION                                 //
 //                                                                            //
 // ---------------------------------------------------------------------------//
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF MATRICES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Matrix diagonals and transposes.
-template <typename T, int N, int M>
-constexpr inline mat<T, M, N> transpose(const mat<T, N, M>& a) {
-    if constexpr (N == 1 && M == 1) {
-        return a;
-    } else if constexpr (N == 2 && M == 2) {
-        return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
-    } else if constexpr (N == 3 && M == 3) {
-        return {
-            {a.x.x, a.y.x, a.z.x},
-            {a.x.y, a.y.y, a.z.y},
-            {a.x.z, a.y.z, a.z.z},
-        };
-    } else if constexpr (N == 4 && M == 4) {
-        return {
-            {a.x.x, a.y.x, a.z.x, a.w.x},
-            {a.x.y, a.y.y, a.z.y, a.w.y},
-            {a.x.z, a.y.z, a.z.z, a.w.z},
-            {a.x.w, a.y.w, a.z.w, a.w.w},
-        };
-    } else {
-        auto c = mat<T, M, N>{};
-        for (auto i = 0; i < M; i++)
-            for (auto j = 0; j < N; j++) c[j][i] = a[i][j];
-    }
-}
-
-// Matrix adjugates, determinant and inverses.
-template <typename T, int N>
-constexpr inline mat<T, N, N> adjugate(const mat<T, N, N>& a) {
-    if constexpr (N == 1) {
-        return {a.x};
-    } else if constexpr (N == 2) {
-        return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
-    } else if constexpr (N == 3) {
-        return {
-            {
-                a.y.y * a.z.z - a.z.y * a.y.z,
-                a.z.y * a.x.z - a.x.y * a.z.z,
-                a.x.y * a.y.z - a.y.y * a.x.z,
-            },
-            {
-                a.y.z * a.z.x - a.z.z * a.y.x,
-                a.z.z * a.x.x - a.x.z * a.z.x,
-                a.x.z * a.y.x - a.y.z * a.x.x,
-            },
-            {
-                a.y.x * a.z.y - a.z.x * a.y.y,
-                a.z.x * a.x.y - a.x.x * a.z.y,
-                a.x.x * a.y.y - a.y.x * a.x.y,
-            },
-        };
-    } else if constexpr (N == 4) {
-        return {
-            {
-                a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
-                    a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
-                    a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w,
-                a.x.y * a.w.z * a.z.w + a.z.y * a.x.z * a.w.w +
-                    a.w.y * a.z.z * a.x.w - a.w.y * a.x.z * a.z.w -
-                    a.z.y * a.w.z * a.x.w - a.x.y * a.z.z * a.w.w,
-                a.x.y * a.y.z * a.w.w + a.w.y * a.x.z * a.y.w +
-                    a.y.y * a.w.z * a.x.w - a.x.y * a.w.z * a.y.w -
-                    a.y.y * a.x.z * a.w.w - a.w.y * a.y.z * a.x.w,
-                a.x.y * a.z.z * a.y.w + a.y.y * a.x.z * a.z.w +
-                    a.z.y * a.y.z * a.x.w - a.x.y * a.y.z * a.z.w -
-                    a.z.y * a.x.z * a.y.w - a.y.y * a.z.z * a.x.w,
-            },
-            {
-                a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x +
-                    a.w.z * a.z.w * a.y.x - a.y.z * a.z.w * a.w.x -
-                    a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x,
-                a.x.z * a.z.w * a.w.x + a.w.z * a.x.w * a.z.x +
-                    a.z.z * a.w.w * a.x.x - a.x.z * a.w.w * a.z.x -
-                    a.z.z * a.x.w * a.w.x - a.w.z * a.z.w * a.x.x,
-                a.x.z * a.w.w * a.y.x + a.y.z * a.x.w * a.w.x +
-                    a.w.z * a.y.w * a.x.x - a.x.z * a.y.w * a.w.x -
-                    a.w.z * a.x.w * a.y.x - a.y.z * a.w.w * a.x.x,
-                a.x.z * a.y.w * a.z.x + a.z.z * a.x.w * a.y.x +
-                    a.y.z * a.z.w * a.x.x - a.x.z * a.z.w * a.y.x -
-                    a.y.z * a.x.w * a.z.x - a.z.z * a.y.w * a.x.x,
-            },
-            {
-                a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y +
-                    a.z.w * a.w.x * a.y.y - a.y.w * a.w.x * a.z.y -
-                    a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y,
-                a.x.w * a.w.x * a.z.y + a.z.w * a.x.x * a.w.y +
-                    a.w.w * a.z.x * a.x.y - a.x.w * a.z.x * a.w.y -
-                    a.w.w * a.x.x * a.z.y - a.z.w * a.w.x * a.x.y,
-                a.x.w * a.y.x * a.w.y + a.w.w * a.x.x * a.y.y +
-                    a.y.w * a.w.x * a.x.y - a.x.w * a.w.x * a.y.y -
-                    a.y.w * a.x.x * a.w.y - a.w.w * a.y.x * a.x.y,
-                a.x.w * a.z.x * a.y.y + a.y.w * a.x.x * a.z.y +
-                    a.z.w * a.y.x * a.x.y - a.x.w * a.y.x * a.z.y -
-                    a.z.w * a.x.x * a.y.y - a.y.w * a.z.x * a.x.y,
-            },
-            {
-                a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z +
-                    a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z -
-                    a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z,
-                a.x.x * a.z.y * a.w.z + a.w.x * a.x.y * a.z.z +
-                    a.z.x * a.w.y * a.x.z - a.x.x * a.w.y * a.z.z -
-                    a.z.x * a.x.y * a.w.z - a.w.x * a.z.y * a.x.z,
-                a.x.x * a.w.y * a.y.z + a.y.x * a.x.y * a.w.z +
-                    a.w.x * a.y.y * a.x.z - a.x.x * a.y.y * a.w.z -
-                    a.w.x * a.x.y * a.y.z - a.y.x * a.w.y * a.x.z,
-                a.x.x * a.y.y * a.z.z + a.z.x * a.x.y * a.y.z +
-                    a.y.x * a.z.y * a.x.z - a.x.x * a.z.y * a.y.z -
-                    a.y.x * a.x.y * a.z.z - a.z.x * a.y.y * a.x.z,
-            },
-        };
-    } else {
-        throw invalid_argument("matrix size not supported");
-    }
-}
-template <typename T, int N>
-constexpr inline T determinant(const mat<T, N, N>& a) {
-    if constexpr (N == 1) {
-        return {a.x};
-    } else if constexpr (N == 2) {
-        return a.x.x * a.y.y - a.x.y * a.y.x;
-    } else if constexpr (N == 3) {
-        return a.x.x * (a.y.y * a.z.z - a.z.y * a.y.z) +
-               a.x.y * (a.y.z * a.z.x - a.z.z * a.y.x) +
-               a.x.z * (a.y.x * a.z.y - a.z.x * a.y.y);
-    } else if constexpr (N == 4) {
-        return a.x.x * (a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
-                           a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
-                           a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w) +
-               a.x.y * (a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x +
-                           a.w.z * a.z.w * a.y.x - a.y.z * a.z.w * a.w.x -
-                           a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x) +
-               a.x.z * (a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y +
-                           a.z.w * a.w.x * a.y.y - a.y.w * a.w.x * a.z.y -
-                           a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y) +
-               a.x.w * (a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z +
-                           a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z -
-                           a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z);
-    } else {
-        throw invalid_argument("matrix size not supported");
-    }
-}
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF UI UTILITIES
