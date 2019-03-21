@@ -1233,6 +1233,9 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
 vec3f sample_next_direction(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const trace_point& point,
     const vec3f& outgoing, float prob_light, rng_state& rng, vec3f& weight) {
+    // Sample next direction when path tracing. prob_light is the probabilty of
+    // sampling a direction towards a light.
+
     auto next_direction     = zero3f;
     auto next_brdf_cosine   = zero3f;
     auto next_direction_pdf = 0.0f;
@@ -1260,8 +1263,8 @@ vec3f sample_next_direction(const yocto_scene& scene,
         next_direction_pdf = sample_delta_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, next_direction);
     }
-    // exit if no hit
-    if (next_direction_pdf == 0 || next_brdf_cosine == zero3f)
+
+    if (next_direction_pdf == 0 or next_brdf_cosine == zero3f)
         weight = zero3f;
     else
         weight *= next_brdf_cosine / next_direction_pdf;
@@ -1272,6 +1275,9 @@ vec3f sample_next_direction_volume(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
     const vec3f& albedo, float phaseg, const vec3f& outgoing, float prob_light,
     rng_state& rng, vec3f& weight) {
+    // Sample next direction when path tracing inside a volume. prob_light is
+    // the probabilty of sampling a direction towards a light.
+
     auto next_direction     = zero3f;
     auto next_direction_pdf = 0.0f;
 
@@ -1300,8 +1306,7 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
     const bvh_scene& bvh, float prob_light, float prob_light_volume,
     rng_state& rng, trace_point& point, vec3f& outgoing, vec3f& next_direction,
     vec3f& weight, vec3f& radiance) {
-    // Random walk inside the volume integrating weight until the
-    // path exits.
+    // Integrate weight while random walking inside the volume until exit.
 
     auto material = scene.materials[scene.shapes[point.instance_id].material];
     auto spectrum = get_random_int(rng, 3);
@@ -1356,10 +1361,10 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
             // scattering
             weight /= volume_albedo;
 
-            outgoing = -next_direction;
+            outgoing       = -next_direction;
             next_direction = sample_next_direction_volume(scene, lights, bvh,
-                          point.position, material.volume_albedo, volume_phaseg,
-                          outgoing, prob_light_volume, rng, weight);
+                point.position, material.volume_albedo, volume_phaseg, outgoing,
+                prob_light_volume, rng, weight);
 
             // russian roulette
             if (sample_russian_roulette(
@@ -2081,7 +2086,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_image_options& options) {
     auto image_size = get_camera_image_size(
         scene.cameras.at(options.camera_id), options.image_size);
-    auto image = yocto::image<vec4f>{image_size, zero4f};
+    auto image = yocto::image{image_size, zero4f};
     auto state = trace_state{};
     init_trace_state(state, image_size, options.random_seed);
     auto regions = vector<image_region>{};
