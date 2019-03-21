@@ -1160,15 +1160,16 @@ constexpr inline T determinant(const mat<T, 2, 2>& a) {
 }
 template <typename T>
 constexpr inline T determinant(const mat<T, 3, 3>& a) {
-    return dot(a.x,cross(a.y,a.z));
+    return dot(a.x, cross(a.y, a.z));
 }
 template <typename T>
 constexpr inline mat<T, 2, 2> adjoint(const mat<T, 2, 2>& a) {
-    return {{a.y.y,-a.x.y}, {-a.y.x,a.x.x}};
+    return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
 }
 template <typename T>
 constexpr inline mat<T, 3, 3> adjoint(const mat<T, 3, 3>& a) {
-    return transpose(mat<T, 3, 3>{cross(a.y,a.z),cross(a.z,a.x),cross(a.x,a.y)});
+    return transpose(
+        mat<T, 3, 3>{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
 }
 template <typename T>
 constexpr inline mat<T, 2, 2> inverse(const mat<T, 2, 2>& a) {
@@ -1216,7 +1217,7 @@ struct affine<T, 2> {
         };
         struct {
             mat<T, 2, 2> m;
-            vec<T, 2> t;
+            vec<T, 2>    t;
         };
     };
 
@@ -1245,7 +1246,7 @@ struct affine<T, 3> {
         };
         struct {
             mat<T, 3, 3> m;
-            vec<T, 3> t;
+            vec<T, 3>    t;
         };
     };
 
@@ -1330,7 +1331,7 @@ struct frame<T, 2> {
         };
         struct {
             mat<T, 2, 2> m;
-            vec<T, 2> t;
+            vec<T, 2>    t;
         };
     };
 
@@ -1361,7 +1362,7 @@ struct frame<T, 3> {
         };
         struct {
             mat<T, 3, 3> m;
-            vec<T, 3> t;
+            vec<T, 3>    t;
         };
     };
 
