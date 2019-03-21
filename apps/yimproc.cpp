@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
         }
         for (auto j = 0; j < img.size().y; j++)
             for (auto i = 0; i < img.size().x; i++)
-                img[{i, j}].w = mean(xyz(alpha[{i, j}]));
+                img[{i, j}].w = mean(alpha[{i, j}].xyz);
     }
 
     // resize

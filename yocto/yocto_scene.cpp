@@ -144,9 +144,10 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
         auto normals = shape.normals;
         if (shape.normals.empty()) compute_shape_normals(shape, normals);
         for (auto vid = 0; vid < shape.positions.size(); vid++) {
-            shape.positions[vid] += normals[vid] * displacement.height_scale *
-                                    mean(xyz(evaluate_texture(displacement,
-                                        shape.texturecoords[vid])));
+            shape.positions[vid] +=
+                normals[vid] * displacement.height_scale *
+                mean(evaluate_texture(displacement, shape.texturecoords[vid])
+                         .xyz);
         }
         if (shape.compute_normals || !shape.normals.empty()) {
             compute_shape_normals(shape, shape.normals);
@@ -160,8 +161,9 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
             auto qtxt = shape.quads_texturecoords[fid];
             for (auto i = 0; i < 4; i++) {
                 offset[qpos[i]] += displacement.height_scale *
-                                   mean(xyz(evaluate_texture(displacement,
-                                       shape.texturecoords[qtxt[i]])));
+                                   mean(evaluate_texture(displacement,
+                                       shape.texturecoords[qtxt[i]])
+                                            .xyz);
                 count[qpos[i]] += 1;
             }
         }
@@ -362,7 +364,7 @@ void compute_environment_texels_cdf(const yocto_scene& scene,
             auto ij       = vec2i{i % size.x, i / size.x};
             auto th       = (ij.y + 0.5f) * pif / size.y;
             auto value    = lookup_texture(texture, ij.x, ij.y);
-            texels_cdf[i] = max(xyz(value)) * sin(th);
+            texels_cdf[i] = max(value.xyz) * sin(th);
             if (i) texels_cdf[i] += texels_cdf[i - 1];
         }
     } else {
@@ -770,7 +772,7 @@ pair<vec3f, bool> evaluate_shape_tangentspace(
             shape, element_id, element_uv);
     auto tangsp = evaluate_shape_elem(
         shape, {}, shape.tangentspaces, element_id, element_uv);
-    return {xyz(tangsp), tangsp.w < 0};
+    return {tangsp.xyz, tangsp.w < 0};
 }
 // Shading normals including material perturbations.
 vec3f evaluate_shape_perturbed_normal(const yocto_scene& scene,
@@ -846,8 +848,9 @@ vec3f evaluate_environment_emission(const yocto_scene& scene,
     auto ke = environment.emission;
     if (environment.emission_texture >= 0) {
         auto& emission_texture = scene.textures[environment.emission_texture];
-        ke *= xyz(evaluate_texture(emission_texture,
-            evaluate_environment_texturecoord(environment, direction)));
+        ke *= evaluate_texture(emission_texture,
+            evaluate_environment_texturecoord(environment, direction))
+                  .xyz;
     }
     return ke;
 }
@@ -1153,7 +1156,7 @@ vec3f evaluate_material_emission(const yocto_scene& scene,
     auto emission = material.emission;
     if (material.emission_texture >= 0) {
         auto& emission_texture = scene.textures[material.emission_texture];
-        emission *= xyz(evaluate_texture(emission_texture, texturecoord));
+        emission *= evaluate_texture(emission_texture, texturecoord).xyz;
     }
     return emission;
 }
@@ -1161,7 +1164,7 @@ vec3f evaluate_material_normalmap(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord) {
     if (material.normal_texture >= 0) {
         auto& normal_texture = scene.textures[material.normal_texture];
-        auto  normalmap = xyz(evaluate_texture(normal_texture, texturecoord));
+        auto  normalmap = evaluate_texture(normal_texture, texturecoord).xyz;
         normalmap       = normalmap * 2 - vec3f{1, 1, 1};
         normalmap.y = -normalmap.y;  // flip vertical axis to align green with
                                      // image up
@@ -1179,7 +1182,7 @@ microfacet_brdf evaluate_basemetallic_material_brdf(const yocto_scene& scene,
     if (material.diffuse_texture >= 0) {
         auto& diffuse_texture = scene.textures[material.diffuse_texture];
         auto  diffuse_txt     = evaluate_texture(diffuse_texture, texturecoord);
-        base *= xyz(diffuse_txt);
+        base *= diffuse_txt.xyz;
         opacity *= diffuse_txt.w;
     }
     auto metallic = material.specular;
@@ -1211,8 +1214,8 @@ microfacet_brdf evaluate_basemetallic_material_brdf(const yocto_scene& scene,
     if (material.transmission_texture >= 0) {
         auto& transmission_texture =
             scene.textures[material.transmission_texture];
-        transmission *= xyz(
-            evaluate_texture(transmission_texture, texturecoord));
+        transmission *=
+            evaluate_texture(transmission_texture, texturecoord).xyz;
     }
     auto fresnel = material.fresnel;
     auto refract = material.refract;
@@ -1236,13 +1239,13 @@ microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
     if (material.diffuse_texture >= 0) {
         auto& diffuse_texture = scene.textures[material.diffuse_texture];
         auto  diffuse_txt     = evaluate_texture(diffuse_texture, texturecoord);
-        diffuse *= xyz(diffuse_txt);
+        diffuse *= diffuse_txt.xyz;
         opacity *= diffuse_txt.w;
     }
     auto specular = material.specular;
     if (material.specular_texture >= 0) {
         auto& specular_texture = scene.textures[material.specular_texture];
-        specular *= xyz(evaluate_texture(specular_texture, texturecoord));
+        specular *= evaluate_texture(specular_texture, texturecoord).xyz;
     }
     auto roughness = material.roughness;
     if (material.roughness_texture >= 0) {
@@ -1254,8 +1257,8 @@ microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
     if (material.transmission_texture >= 0) {
         auto& transmission_texture =
             scene.textures[material.transmission_texture];
-        transmission *= xyz(
-            evaluate_texture(transmission_texture, texturecoord));
+        transmission *=
+            evaluate_texture(transmission_texture, texturecoord).xyz;
     }
     auto fresnel = material.fresnel;
     auto refract = material.refract;

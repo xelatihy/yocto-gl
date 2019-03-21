@@ -983,7 +983,7 @@ void from_json_procedural(
         auto scaling     = js.value("scale", vec3f{1, 1, 1});
         value.frame      = make_translation_frame(translation) *
                       make_scaling_frame(scaling) *
-                      make_rotation_frame(xyz(rotation), rotation.w);
+                      make_rotation_frame(rotation.xyz, rotation.w);
     }
 }
 
@@ -1009,7 +1009,7 @@ void from_json_procedural(
     const json& js, yocto_environment& value, yocto_scene& scene) {
     if (js.count("rotation")) {
         auto rotation = js.value("rotation", zero4f);
-        value.frame   = make_rotation_frame(xyz(rotation), rotation.w);
+        value.frame   = make_rotation_frame(rotation.xyz, rotation.w);
     }
 }
 
@@ -4932,7 +4932,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
         if (ljs.at("type") == "quad") {
             auto material     = yocto_material{};
             material.name     = name;
-            material.emission = xyz(ljs.at("color").get<vec4f>()) *
+            material.emission = ljs.at("color").get<vec4f>().xyz *
                                 pow(2.0f, ljs.at("exposure").get<float>());
             scene.materials.push_back(material);
             auto shape     = yocto_shape{};
@@ -4952,7 +4952,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
             load_image(texture.filename, texture.hdr_image);
             scene.textures.push_back(texture);
             auto environment     = yocto_environment{};
-            environment.emission = xyz(ljs.at("color").get<vec4f>()) *
+            environment.emission = ljs.at("color").get<vec4f>().xyz *
                                    pow(2.0f, ljs.at("exposure").get<float>());
             environment.emission_texture = (int)scene.textures.size() - 1;
             environment.frame            = frame3f(
@@ -4984,8 +4984,8 @@ void load_disney_island_materials(
                 ass_material.name      = mname + "_" + jass.get<string>();
                 ass_material.color_map = material.color_map +
                                          jass.get<string>() + ".ptx";
-                ass_material.color = xyz(
-                    tjs.at(ass_material.color_map).at("color").get<vec4f>());
+                ass_material.color =
+                    tjs.at(ass_material.color_map).at("color").get<vec4f>().xyz;
                 mmap[ass_material.name] = ass_material;
             }
         }

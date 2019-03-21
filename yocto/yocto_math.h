@@ -205,9 +205,17 @@ struct vec<T, 2> {
 
 template <typename T>
 struct vec<T, 3> {
-    T x = 0;
-    T y = 0;
-    T z = 0;
+    union {
+        struct {
+            T x = 0;
+            T y = 0;
+            T z = 0;
+        };
+        struct {
+            vec<T, 2> xy;
+            T         _z;
+        };
+    };
 
     constexpr vec() : x{0}, y{0}, z{0} {}
     constexpr vec(T x, T y, T z) : x{x}, y{y}, z{z} {}
@@ -220,10 +228,18 @@ struct vec<T, 3> {
 
 template <typename T>
 struct vec<T, 4> {
-    T x = 0;
-    T y = 0;
-    T z = 0;
-    T w = 0;
+    union {
+        struct {
+            T x = 0;
+            T y = 0;
+            T z = 0;
+            T w = 0;
+        };
+        struct {
+            vec<T, 3> xyz;
+            T         _w;
+        };
+    };
 
     constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
     constexpr vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
@@ -255,16 +271,6 @@ constexpr const auto zero2i = vec2i{0, 0};
 constexpr const auto zero3i = vec3i{0, 0, 0};
 constexpr const auto zero4i = vec4i{0, 0, 0, 0};
 constexpr const auto zero4b = vec4b{0, 0, 0, 0};
-
-// Access xyz component of a vec4 typically used for color operation.
-template <typename T>
-constexpr inline vec<T, 3>& xyz(const vec<T, 4>& a) {
-    return (vec<T, 3>&)a;
-}
-template <typename T>
-constexpr inline vec<T, 3>& xyz(vec<T, 4>& a) {
-    return (vec<T, 3>&)a;
-}
 
 // Vector comparison operations.
 template <typename T, int N>
