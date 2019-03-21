@@ -16,11 +16,15 @@
 // inverses. Matrices are stored in column-major order and are accessed and
 // constructed by column. The one dimensional version is for completeness only.
 //
+// We support 2-3 dimensional affine matrices (`affine<T, 2>`, `affine<T, 3>`,
+// with matrix-matrix and matrix-vector products, and inverses. Matrices are 
+// stored in column-major order and are accessed and constructed by column. 
+//
 // To represent transformations, most of the library facilities prefer the use
 // coordinate frames, aka rigid transforms, represented as `frame<T, 2>` and
 // `frame<T, 3>`. The structure store three coordinate axes and the origin.
 // This is equivalent to a rigid transform written as a column-major affine
-// matrix. Transform operations are better behaved with this representation.
+// matrix. Transform operations are fater with this representation.
 //
 // We represent ranges of values in 1-4 dimensions with `bbox<T, 1>`, `bbox<T,
 // 2>`, `bbox<T, 3>`, `bbox<T, 4>`. Each range support construction from points
