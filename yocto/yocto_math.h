@@ -1764,6 +1764,41 @@ constexpr inline vec<T, N> transform_normal(
 // Transforms points, vectors and directions by frames.
 template <typename T, int N>
 constexpr inline vec<T, N> transform_point(
+    const affine<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return a.x * b.x + a.o;
+    } else if constexpr (N == 2) {
+        return a.x * b.x + a.y * b.y + a.o;
+    } else if constexpr (N == 3) {
+        return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
+    } else {
+    }
+}
+template <typename T, int N>
+constexpr inline vec<T, N> transform_vector(
+    const affine<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return a.x * b.x;
+    } else if constexpr (N == 2) {
+        return a.x * b.x + a.y * b.y;
+    } else if constexpr (N == 3) {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    } else {
+    }
+}
+template <typename T, int N>
+constexpr inline vec<T, N> transform_direction(
+    const affine<T, N>& a, const vec<T, N>& b) {
+    return normalize(transform_vector(a, b));
+}
+template <typename T, int N>
+constexpr inline vec<T, N> transform_normal(const affine<T, N>& a, const vec<T, N>& b) {
+    return transform_normal(frame_rotation(a), b);
+}
+
+// Transforms points, vectors and directions by frames.
+template <typename T, int N>
+constexpr inline vec<T, N> transform_point(
     const frame<T, N>& a, const vec<T, N>& b) {
     if constexpr (N == 1) {
         return a.x * b.x + a.o;
@@ -1804,17 +1839,22 @@ constexpr inline vec<T, N> transform_normal(
 // Transforms rays and bounding boxes by matrices.
 template <typename T, int N>
 constexpr inline ray<T, N> transform_ray(
-    const frame<T, N>& a, const ray<T, N>& b) {
+    const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T, int N>
 constexpr inline ray<T, N> transform_ray(
-    const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
+    const affine<T, N>& a, const ray<T, N>& b) {
+    return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
+}
+template <typename T, int N>
+constexpr inline ray<T, N> transform_ray(
+    const frame<T, N>& a, const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
 constexpr inline bbox<T, 3> transform_bbox(
-    const frame<T, 3>& a, const bbox<T, 3>& b) {
+    const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
     auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
         vec<T, 3>{b.min.x, b.min.y, b.max.z},
         vec<T, 3>{b.min.x, b.max.y, b.min.z},
@@ -1829,7 +1869,22 @@ constexpr inline bbox<T, 3> transform_bbox(
 }
 template <typename T>
 constexpr inline bbox<T, 3> transform_bbox(
-    const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
+    const affine<T, 3>& a, const bbox<T, 3>& b) {
+    auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
+        vec<T, 3>{b.min.x, b.min.y, b.max.z},
+        vec<T, 3>{b.min.x, b.max.y, b.min.z},
+        vec<T, 3>{b.min.x, b.max.y, b.max.z},
+        vec<T, 3>{b.max.x, b.min.y, b.min.z},
+        vec<T, 3>{b.max.x, b.min.y, b.max.z},
+        vec<T, 3>{b.max.x, b.max.y, b.min.z},
+        vec<T, 3>{b.max.x, b.max.y, b.max.z}};
+    auto xformed = bbox<T, 3>();
+    for (auto& corner : corners) xformed += transform_point(a, corner);
+    return xformed;
+}
+template <typename T>
+constexpr inline bbox<T, 3> transform_bbox(
+    const frame<T, 3>& a, const bbox<T, 3>& b) {
     auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
         vec<T, 3>{b.min.x, b.min.y, b.max.z},
         vec<T, 3>{b.min.x, b.max.y, b.min.z},
