@@ -529,11 +529,11 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     auto& vbos     = state.shapes.at(instance.shape);
     auto& material = scene.materials[shape.material];
 
-    set_opengl_uniform(
-        state.program, "shape_xform", frame_to_mat(instance.frame));
+    set_opengl_uniform(state.program, "shape_xform", mat4f(instance.frame));
     set_opengl_uniform(state.program, "shape_xform_invtranspose",
-        transpose(
-            frame_to_mat(inverse(instance.frame, options.non_rigid_frames))));
+        options.non_rigid_frames
+            ? transpose(mat4f(inverse((affine3f)instance.frame)))
+            : transpose(mat4f(inverse(instance.frame))));
     set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
     set_opengl_uniform(
         state.program, "highlight", (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
@@ -630,7 +630,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     const vec2i& viewport_size, const pair<type_index, int>& highlighted,
     const drawgl_options& options) {
     auto& camera      = scene.cameras.at(options.camera_id);
-    auto  camera_view = frame_to_mat(inverse(camera.frame));
+    auto  camera_view = mat4f(inverse(camera.frame));
     auto  camera_proj = make_perspective_mat(get_camera_fovx(camera) *
                                                 (float)viewport_size.y /
                                                 (float)viewport_size.x,

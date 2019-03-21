@@ -337,7 +337,7 @@ void make_sunsky_image(image4f& img, float theta_sun, float turbidity,
                 // average channel over wavelengths
                 img[{i, j}][c / 3] += (float)val / 3;
             }
-            integral += xyz(img[{i, j}]) * sin(theta) /
+            integral += img[{i, j}].xyz * sin(theta) /
                         (img.size().x * img.size().y / 2);
         }
     }

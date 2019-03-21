@@ -96,8 +96,8 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     point.emission = evaluate_material_emission(
         scene, material, point.texturecoord);
     point.brdf = evaluate_material_brdf(scene, material, point.texturecoord);
-    point.brdf.diffuse *= xyz(point.color);
-    point.brdf.specular *= xyz(point.color);
+    point.brdf.diffuse *= point.color.xyz;
+    point.brdf.specular *= point.color.xyz;
     point.brdf.opacity *= point.color.w;
     point.hit = true;
     return point;
@@ -1127,8 +1127,9 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
         auto  emission      = evaluate_material_emission(scene, isec_material,
                             evaluate_shape_texturecoord(
                                 isec_shape, isec.element_id, isec.element_uv)) *
-                        xyz(evaluate_shape_color(
-                            isec_shape, isec.element_id, isec.element_uv));
+                        evaluate_shape_color(
+                            isec_shape, isec.element_id, isec.element_uv)
+                            .xyz;
 
         auto& medium_instance = scene.instances[mediums.back()];
         auto& medium_shape    = scene.shapes[medium_instance.shape];
@@ -1314,8 +1315,9 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
                             evaluate_material_emission(scene, isec_material,
                                 evaluate_shape_texturecoord(isec_shape,
                                     isec.element_id, isec.element_uv)) *
-                            xyz(evaluate_shape_color(
-                                isec_shape, isec.element_id, isec.element_uv));
+                            evaluate_shape_color(
+                                isec_shape, isec.element_id, isec.element_uv)
+                                .xyz;
 
             // early exit
             if (brdf.diffuse + brdf.specular + brdf.transmission == zero3f ||
@@ -1833,7 +1835,7 @@ pair<vec3f, bool> trace_debug_color(const yocto_scene& scene,
     if (!point.hit) return {zero3f, false};
 
     // shade
-    return {xyz(point.color), true};
+    return {point.color.xyz, true};
 }
 
 // Debug previewing.

@@ -983,7 +983,7 @@ void from_json_procedural(
         auto scaling     = js.value("scale", vec3f{1, 1, 1});
         value.frame      = make_translation_frame(translation) *
                       make_scaling_frame(scaling) *
-                      make_rotation_frame(xyz(rotation), rotation.w);
+                      make_rotation_frame(rotation.xyz, rotation.w);
     }
 }
 
@@ -1009,7 +1009,7 @@ void from_json_procedural(
     const json& js, yocto_environment& value, yocto_scene& scene) {
     if (js.count("rotation")) {
         auto rotation = js.value("rotation", zero4f);
-        value.frame   = make_rotation_frame(xyz(rotation), rotation.w);
+        value.frame   = make_rotation_frame(rotation.xyz, rotation.w);
     }
 }
 
@@ -2369,7 +2369,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
         }
         if (gnde->has_matrix) {
             auto m     = gnde->matrix;
-            node.local = mat_to_frame(
+            node.local = frame3f(
                 mat4f{{m[0], m[1], m[2], m[3]}, {m[4], m[5], m[6], m[7]},
                     {m[8], m[9], m[10], m[11]}, {m[12], m[13], m[14], m[15]}});
         }
@@ -2756,7 +2756,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
     for (auto& node : scene.nodes) {
         auto njs           = json();
         njs["name"]        = node.name;
-        njs["matrix"]      = frame_to_mat(node.local);
+        njs["matrix"]      = mat4f(node.local);
         njs["translation"] = node.translation;
         njs["rotation"]    = node.rotation;
         njs["scale"]       = node.scale;
@@ -2781,14 +2781,14 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
             auto njs      = json();
             njs["name"]   = camera.name;
             njs["camera"] = camera_id++;
-            njs["matrix"] = frame_to_mat(camera.frame);
+            njs["matrix"] = mat4f(camera.frame);
             js["nodes"].push_back(njs);
         }
         for (auto& instance : scene.instances) {
             auto njs      = json();
             njs["name"]   = instance.name;
             njs["mesh"]   = instance.shape;
-            njs["matrix"] = frame_to_mat(instance.frame);
+            njs["matrix"] = mat4f(instance.frame);
             js["nodes"].push_back(njs);
         }
     }
@@ -3668,8 +3668,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
         auto& material = scene.materials[shape.material];
         println_values(fs, "AttributeBegin");
         println_values(fs, "TransformBegin");
-        println_values(
-            fs, "ConcatTransform [", frame_to_mat(instance.frame), "]");
+        println_values(fs, "ConcatTransform [", mat4f(instance.frame), "]");
         if (material.emission != zero3f)
             println_values(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ ",
                 material.emission, " ]");
@@ -4933,7 +4932,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
         if (ljs.at("type") == "quad") {
             auto material     = yocto_material{};
             material.name     = name;
-            material.emission = xyz(ljs.at("color").get<vec4f>()) *
+            material.emission = ljs.at("color").get<vec4f>().xyz *
                                 pow(2.0f, ljs.at("exposure").get<float>());
             scene.materials.push_back(material);
             auto shape     = yocto_shape{};
@@ -4944,8 +4943,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
                 {1, 1});
             scene.shapes.push_back(shape);
             auto instance  = yocto_instance{};
-            instance.frame = mat_to_frame(
-                ljs.at("translationMatrix").get<mat4f>());
+            instance.frame = frame3f(ljs.at("translationMatrix").get<mat4f>());
             instance.shape = (int)scene.shapes.size() - 1;
             scene.instances.push_back(instance);
         } else if (ljs.at("type") == "dome") {
@@ -4954,10 +4952,10 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
             load_image(texture.filename, texture.hdr_image);
             scene.textures.push_back(texture);
             auto environment     = yocto_environment{};
-            environment.emission = xyz(ljs.at("color").get<vec4f>()) *
+            environment.emission = ljs.at("color").get<vec4f>().xyz *
                                    pow(2.0f, ljs.at("exposure").get<float>());
             environment.emission_texture = (int)scene.textures.size() - 1;
-            environment.frame            = mat_to_frame(
+            environment.frame            = frame3f(
                 ljs.at("translationMatrix").get<mat4f>());
             scene.environments.push_back(environment);
         } else {
@@ -4986,8 +4984,8 @@ void load_disney_island_materials(
                 ass_material.name      = mname + "_" + jass.get<string>();
                 ass_material.color_map = material.color_map +
                                          jass.get<string>() + ".ptx";
-                ass_material.color = xyz(
-                    tjs.at(ass_material.color_map).at("color").get<vec4f>());
+                ass_material.color =
+                    tjs.at(ass_material.color_map).at("color").get<vec4f>().xyz;
                 mmap[ass_material.name] = ass_material;
             }
         }
@@ -5104,7 +5102,7 @@ void add_disney_island_instance(yocto_scene& scene, const string& parent_name,
     const mat4f& xform, const vector<int>& shapes) {
     for (auto shape_id : shapes) {
         auto instance  = yocto_instance{};
-        instance.frame = mat_to_frame(xform);
+        instance.frame = frame3f(xform);
         instance.shape = shape_id;
         scene.instances.push_back(instance);
     }
