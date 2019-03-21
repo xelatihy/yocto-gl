@@ -4943,8 +4943,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
                 {1, 1});
             scene.shapes.push_back(shape);
             auto instance  = yocto_instance{};
-            instance.frame = frame3f(
-                ljs.at("translationMatrix").get<mat4f>());
+            instance.frame = frame3f(ljs.at("translationMatrix").get<mat4f>());
             instance.shape = (int)scene.shapes.size() - 1;
             scene.instances.push_back(instance);
         } else if (ljs.at("type") == "dome") {

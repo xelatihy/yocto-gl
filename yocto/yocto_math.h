@@ -1180,7 +1180,7 @@ struct affine<T, 2> {
         : x{m.x}, y{m.y}, o{t} {}
     constexpr explicit affine(const mat<T, 3, 3>& m)
         : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-    constexpr operator mat<T, 3, 3>() const { return { {x,0}, {y,0}, {o,1} }; }
+    constexpr operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
 
     constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
     constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
@@ -1201,8 +1201,13 @@ struct affine<T, 3> {
     constexpr affine(const mat<T, 3, 3>& m, const vec<T, 3>& t)
         : x{m.x}, y{m.y}, z{m.z}, o{t} {}
     constexpr explicit affine(const mat<T, 4, 4>& m)
-        : x{m.x.x, m.x.y, m.x.z}, y{m.y.x, m.y.y, m.y.z}, z{m.z.x, m.z.y, m.z.z}, o{m.w.x, m.w.y, m.w.z} {}
-    constexpr operator mat<T, 4, 4>() const { return { {x,0}, {y,0}, {z,0}, {o,1} }; }
+        : x{m.x.x, m.x.y, m.x.z}
+        , y{m.y.x, m.y.y, m.y.z}
+        , z{m.z.x, m.z.y, m.z.z}
+        , o{m.w.x, m.w.y, m.w.z} {}
+    constexpr operator mat<T, 4, 4>() const {
+        return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
+    }
 
     constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
     constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
@@ -1294,7 +1299,7 @@ struct frame<T, 2> {
     constexpr operator affine<T, 2>() const { return {x, y, o}; }
     constexpr explicit frame(const mat<T, 3, 3>& m)
         : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-    constexpr operator mat<T, 3, 3>() const { return { {x,0}, {y,0}, {o,1} }; }
+    constexpr operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
 
     constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
     constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
@@ -1318,8 +1323,13 @@ struct frame<T, 3> {
         : x{m.x}, y{m.y}, z{m.z}, o{m.o} {}
     constexpr operator affine<T, 3>() const { return {x, y, z, o}; }
     constexpr explicit frame(const mat<T, 4, 4>& m)
-        : x{m.x.x, m.x.y, m.x.z}, y{m.y.x, m.y.y, m.y.z}, z{m.z.x, m.z.y, m.z.z}, o{m.w.x, m.w.y, m.w.z} {}
-    constexpr operator mat<T, 4, 4>() const { return { {x,0}, {y,0}, {z,0}, {o,1} }; }
+        : x{m.x.x, m.x.y, m.x.z}
+        , y{m.y.x, m.y.y, m.y.z}
+        , z{m.z.x, m.z.y, m.z.z}
+        , o{m.w.x, m.w.y, m.w.z} {}
+    constexpr operator mat<T, 4, 4>() const {
+        return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
+    }
 
     constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
     constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
