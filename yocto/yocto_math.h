@@ -180,46 +180,50 @@ struct vec;
 
 template <typename T>
 struct vec<T, 1> {
-    T x = 0;
+    union {
+        T x;
+        T elems[1];
+    };
 
     constexpr vec() : x{0} {}
     constexpr vec(T x) : x{x} {}
 
-    constexpr T&       operator[](int i) { return (&x)[i]; }
-    constexpr const T& operator[](int i) const { return (&x)[i]; }
+    constexpr T&       operator[](int i) { return elems[i]; }
+    constexpr const T& operator[](int i) const { return elems[i]; }
 };
 
 template <typename T>
 struct vec<T, 2> {
-    T x = 0;
-    T y = 0;
+    union {
+        struct {
+            T x, y;
+        };
+        T elems[2];
+    };
 
     constexpr vec() : x{0}, y{0} {}
     constexpr vec(T x, T y) : x{x}, y{y} {}
     constexpr vec(const vec<T, 1>& v, T y) : x{v.x}, y{y} {}
     constexpr explicit vec(T v) : x{v}, y{v} {}
 
-    constexpr T&       operator[](int i) { return (&x)[i]; }
-    constexpr const T& operator[](int i) const { return (&x)[i]; }
+    constexpr T&       operator[](int i) { return elems[i]; }
+    constexpr const T& operator[](int i) const { return elems[i]; }
 };
 
 template <typename T>
 struct vec<T, 3> {
     union {
         struct {
-            T x = 0;
-            T y = 0;
-            T z = 0;
+            T x, y, z;
         };
         struct {
             vec<T, 2> xy;
             T         _z;
         };
         struct {
-            T r;
-            T g;
-            T b;
+            T r, g, b;
         };
+        T elems[3];
     };
 
     constexpr vec() : x{0}, y{0}, z{0} {}
@@ -227,33 +231,28 @@ struct vec<T, 3> {
     constexpr vec(const vec<T, 2>& v, T z) : x{v.x}, y{v.y}, z{z} {}
     constexpr explicit vec(T v) : x{v}, y{v}, z{v} {}
 
-    constexpr T&       operator[](int i) { return (&x)[i]; }
-    constexpr const T& operator[](int i) const { return (&x)[i]; }
+    constexpr T&       operator[](int i) { return elems[i]; }
+    constexpr const T& operator[](int i) const { return elems[i]; }
 };
 
 template <typename T>
 struct vec<T, 4> {
     union {
         struct {
-            T x = 0;
-            T y = 0;
-            T z = 0;
-            T w = 0;
+            T x, y, z, w;
         };
         struct {
             vec<T, 3> xyz;
             T         _w;
         };
         struct {
-            T r;
-            T g;
-            T b;
-            T a;
+            T r, g, b, a;
         };
         struct {
             vec<T, 3> rgb;
             T         _a;
         };
+        T elems[4];
     };
 
     constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
@@ -261,8 +260,8 @@ struct vec<T, 4> {
     constexpr vec(const vec<T, 3>& v, T w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
     constexpr explicit vec(T v) : x{v}, y{v}, z{v}, w{v} {}
 
-    constexpr T&       operator[](int i) { return (&x)[i]; }
-    constexpr const T& operator[](int i) const { return (&x)[i]; }
+    constexpr T&       operator[](int i) { return elems[i]; }
+    constexpr const T& operator[](int i) const { return elems[i]; }
 };
 
 // Typedefs
@@ -924,58 +923,70 @@ struct mat;
 // Small Fixed-size matrices stored in column major format.
 template <typename T, int N>
 struct mat<T, N, 1> {
-    vec<T, N> x = {};
+    union {
+        vec<T, N> x;
+        vec<T, N> cols[1];
+    };
 
     constexpr mat() : x{} {}
     constexpr mat(const vec<T, N>& x) : x{x} {}
 
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec<T, N>&       operator[](int i) { return cols[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return cols[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
 template <typename T, int N>
 struct mat<T, N, 2> {
-    vec<T, N> x = {};
-    vec<T, N> y = {};
+    union {
+        struct {
+            vec<T, N> x, y;
+        };
+        vec<T, N> cols[2];
+    };
 
     constexpr mat() : x{}, y{} {}
     constexpr mat(const vec<T, N>& x, const vec<T, N>& y) : x{x}, y{y} {}
 
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec<T, N>&       operator[](int i) { return cols[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return cols[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
 template <typename T, int N>
 struct mat<T, N, 3> {
-    vec<T, N> x = {};
-    vec<T, N> y = {};
-    vec<T, N> z = {};
+    union {
+        struct {
+            vec<T, N> x, y, z;
+        };
+        vec<T, N> cols[3];
+    };
 
     constexpr mat() : x{}, y{}, z{} {}
     constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z)
         : x{x}, y{y}, z{z} {}
 
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec<T, N>&       operator[](int i) { return cols[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return cols[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
 template <typename T, int N>
 struct mat<T, N, 4> {
-    vec<T, N> x = {};
-    vec<T, N> y = {};
-    vec<T, N> z = {};
-    vec<T, N> w = {};
+    union {
+        struct {
+            vec<T, N> x, y, z, w;
+        };
+        vec<T, N> cols[4];
+    };
 
     constexpr mat() : x{}, y{}, z{}, w{} {}
     constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z,
         const vec<T, N>& w)
         : x{x}, y{y}, z{z}, w{w} {}
 
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec<T, N>&       operator[](int i) { return cols[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return cols[i]; }
 };
 
 // Typedefs
@@ -1232,14 +1243,13 @@ template <typename T>
 struct affine<T, 2> {
     union {
         struct {
-            vec<T, 2> x = {1, 0};
-            vec<T, 2> y = {0, 1};
-            vec<T, 2> o = {0, 0};
+            vec<T, 2> x, y, o;
         };
         struct {
             mat<T, 2, 2> m;
             vec<T, 2>    t;
         };
+        vec<T, 2> cols[3];
     };
 
     constexpr affine() : x{}, y{}, o{} {}
@@ -1251,8 +1261,8 @@ struct affine<T, 2> {
         : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
     constexpr operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
 
-    constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec<T, 2>&       operator[](int i) { return cols[i]; }
+    constexpr const vec<T, 2>& operator[](int i) const { return cols[i]; }
 };
 
 // Affine transformations stored as a column-major matrix.
@@ -1260,15 +1270,13 @@ template <typename T>
 struct affine<T, 3> {
     union {
         struct {
-            vec<T, 3> x = {1, 0, 0};
-            vec<T, 3> y = {0, 1, 0};
-            vec<T, 3> z = {0, 0, 1};
-            vec<T, 3> o = {0, 0, 0};
+            vec<T, 3> x, y, z, o;
         };
         struct {
             mat<T, 3, 3> m;
             vec<T, 3>    t;
         };
+        vec<T, 3> cols[4];
     };
 
     constexpr affine() : x{}, y{}, z{}, o{} {}
@@ -1346,14 +1354,13 @@ template <typename T>
 struct frame<T, 2> {
     union {
         struct {
-            vec<T, 2> x = {1, 0};
-            vec<T, 2> y = {0, 1};
-            vec<T, 2> o = {0, 0};
+            vec<T, 2> x, y, o;
         };
         struct {
             mat<T, 2, 2> m;
             vec<T, 2>    t;
         };
+        vec<T, 2> cols[3];
     };
 
     constexpr frame() : x{}, y{}, o{} {}
@@ -1367,8 +1374,8 @@ struct frame<T, 2> {
         : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
     constexpr operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
 
-    constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec<T, 2>&       operator[](int i) { return cols[i]; }
+    constexpr const vec<T, 2>& operator[](int i) const { return cols[i]; }
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -1376,15 +1383,13 @@ template <typename T>
 struct frame<T, 3> {
     union {
         struct {
-            vec<T, 3> x = {1, 0, 0};
-            vec<T, 3> y = {0, 1, 0};
-            vec<T, 3> z = {0, 0, 1};
-            vec<T, 3> o = {0, 0, 0};
+            vec<T, 3> x, y, z, o;
         };
         struct {
             mat<T, 3, 3> m;
             vec<T, 3>    t;
         };
+        vec<T, 3> cols[4];
     };
 
     constexpr frame() : x{}, y{}, z{}, o{} {}
@@ -1405,8 +1410,8 @@ struct frame<T, 3> {
         return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
     }
 
-    constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec<T, 3>&       operator[](int i) { return cols[i]; }
+    constexpr const vec<T, 3>& operator[](int i) const { return cols[i]; }
 };
 
 // Typedefs
@@ -1485,10 +1490,7 @@ struct quat;
 // Quaternions to represent rotations
 template <typename T>
 struct quat<T, 4> {
-    T x = 0;
-    T y = 0;
-    T z = 0;
-    T w = 1;
+    T x, y, z, w;
 
     // constructors
     constexpr quat() : x{0}, y{0}, z{0}, w{1} {}
@@ -1570,8 +1572,7 @@ namespace yocto {
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T, int N>
 struct bbox {
-    vec<T, N> min = vec<T, N>{type_max<T>()};
-    vec<T, N> max = vec<T, N>{type_min<T>()};
+    vec<T, N> min, max;
 
     constexpr bbox() : min{type_max<T>()}, max{type_min<T>()} {}
     constexpr bbox(const vec<T, N>& min, const vec<T, N>& max)
@@ -1699,10 +1700,8 @@ struct ray;
 
 template <typename T>
 struct ray<T, 2> {
-    vec<T, 2> o    = {0, 0};
-    vec<T, 2> d    = {0, 1};
-    T         tmin = 0;
-    T         tmax = type_max<T>();
+    vec<T, 2> o, d;
+    T         tmin, tmax;
 
     constexpr ray() : o{0, 0}, d{0, 1}, tmin{0}, tmax{type_max<T>} {}
     constexpr ray(const vec<T, 2>& o, const vec<T, 2>& d, T tmin, T tmax)
@@ -1712,10 +1711,8 @@ struct ray<T, 2> {
 // Rays with origin, direction and min/max t value.
 template <typename T>
 struct ray<T, 3> {
-    vec<T, 3> o    = {0, 0, 0};
-    vec<T, 3> d    = {0, 0, 1};
-    T         tmin = 0;
-    T         tmax = type_max<T>();
+    vec<T, 3> o, d;
+    T         tmin, tmax;
 
     constexpr ray() : o{0, 0, 0}, d{0, 0, 1}, tmin{0}, tmax{type_max<T>} {}
     constexpr ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin, T tmax)
