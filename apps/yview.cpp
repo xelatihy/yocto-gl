@@ -117,6 +117,7 @@ struct drawgl_options {
     float gamma        = 2.2f;
     vec3f ambient      = {0, 0, 0};
     bool  double_sided = false;
+    bool  accurate_normals = true;
     float near_plane   = 0.01f;
     float far_plane    = 10000.0f;
 };
@@ -227,7 +228,8 @@ static const char* vertex =
         layout(location = 3) in vec4 vert_color;          // vertex color
         layout(location = 4) in vec4 vert_tangsp;         // vertex tangent space
 
-        uniform mat4 shape_xform;           // shape transform
+        uniform mat4 shape_xform;                    // shape transform
+        uniform mat4 shape_xform_invtranspose;       // shape transform
         uniform float shape_normal_offset;           // shape normal offset
 
         uniform mat4 cam_xform;          // camera xform
@@ -254,7 +256,7 @@ static const char* vertex =
 
             // world projection
             pos = (shape_xform * vec4(pos,1)).xyz;
-            norm = (shape_xform * vec4(norm,0)).xyz;
+            norm = (shape_xform_invtranspose * vec4(norm,0)).xyz;
             tangsp.xyz = (shape_xform * vec4(tangsp.xyz,0)).xyz;
 
             // copy other vertex properties
@@ -363,7 +365,8 @@ static const char* fragment =
 
         uniform bool mat_double_sided;   // double sided rendering
 
-        uniform mat4 shape_xform;           // shape transform
+        uniform mat4 shape_xform;              // shape transform
+        uniform mat4 shape_xform_invtranspose; // shape transform
 
         bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke, 
                            out vec3 kd, out vec3 ks, out float rs, out float op) {
@@ -526,9 +529,9 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     auto& vbos     = state.shapes.at(instance.shape);
     auto& material = scene.materials[shape.material];
 
-    auto xform = frame_to_mat(instance.frame);
-
-    set_opengl_uniform(state.program, "shape_xform", xform);
+    set_opengl_uniform(state.program, "shape_xform", frame_to_mat(instance.frame));
+    set_opengl_uniform(state.program, "shape_xform_invtranspose", 
+        transpose(frame_to_mat(inverse(instance.frame, !options.accurate_normals))));
     set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
     set_opengl_uniform(
         state.program, "highlight", (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
