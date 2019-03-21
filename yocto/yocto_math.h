@@ -1830,7 +1830,7 @@ constexpr inline mat<T, 4, 4> make_perspective_mat(
         {0, 0, 2 * far * near / (near - far), 0}};
 }
 template <typename T>
-constexpr inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
+constexpr inline mat<T, 4, 4> make_perspective_mat(T fovy, T aspect, T near) {
     auto tg = tan(fovy / 2);
     return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
         {0, 0, 2 * near, 0}};
