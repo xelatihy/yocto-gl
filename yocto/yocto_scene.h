@@ -423,12 +423,15 @@ bool is_material_volume_colored(const yocto_material& vol);
 vec3f evaluate_instance_position(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 vec3f evaluate_instance_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+    const yocto_instance& instance, int element_id, const vec2f& element_uv,
+    bool non_rigid_frame = false);
 vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+    const yocto_instance& instance, int element_id, const vec2f& element_uv,
+    bool non_rigid_frame = false);
 // Instance element values.
-vec3f evaluate_instance_element_normal(
-    const yocto_scene& scene, const yocto_instance& instance, int element_id);
+vec3f evaluate_instance_element_normal(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id,
+    bool non_rigid_frame = false);
 
 // Environment texture coordinates from the incoming direction.
 vec2f evaluate_environment_texturecoord(

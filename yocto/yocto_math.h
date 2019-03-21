@@ -1290,9 +1290,9 @@ constexpr inline frame<T, N> operator*(
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, int N>
 constexpr inline frame<T, N> inverse(
-    const frame<T, N>& a, bool is_rigid = true) {
-    auto minv = (is_rigid) ? transpose(frame_rotation(a))
-                           : inverse(frame_rotation(a));
+    const frame<T, N>& a, bool non_rigid = false) {
+    auto minv = (non_rigid) ? inverse(frame_rotation(a))
+                            : transpose(frame_rotation(a));
     return {minv, -(minv * a.o)};
 }
 
@@ -1608,6 +1608,11 @@ constexpr inline vec<T, N> transform_direction(
     return normalize(transform_vector(a, b));
 }
 template <typename T, int N>
+constexpr inline vec<T, N> transform_normal(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+    return normalize(transform_vector(transpose(inverse(a)), b));
+}
+template <typename T, int N>
 constexpr inline vec<T, N> transform_vector(
     const mat<T, N, N>& a, const vec<T, N>& b) {
     return a * b;
@@ -1616,6 +1621,11 @@ template <typename T, int N>
 constexpr inline vec<T, N> transform_direction(
     const mat<T, N, N>& a, const vec<T, N>& b) {
     return normalize(transform_vector(a, b));
+}
+template <typename T, int N>
+constexpr inline vec<T, N> transform_normal(
+    const mat<T, N, N>& a, const vec<T, N>& b) {
+    return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
 // Transforms points, vectors and directions by frames.
@@ -1647,6 +1657,15 @@ template <typename T, int N>
 constexpr inline vec<T, N> transform_direction(
     const frame<T, N>& a, const vec<T, N>& b) {
     return normalize(transform_vector(a, b));
+}
+template <typename T, int N>
+constexpr inline vec<T, N> transform_normal(
+    const frame<T, N>& a, const vec<T, N>& b, bool non_rigid = false) {
+    if (non_rigid) {
+        return transform_normal(frame_rotation(a), b);
+    } else {
+        return normalize(transform_vector(a, b));
+    }
 }
 
 // Transforms rays and bounding boxes by matrices.

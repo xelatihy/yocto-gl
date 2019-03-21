@@ -45,6 +45,9 @@ using std::unordered_map;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Set non-rigid frames as default
+constexpr bool trace_non_rigid_frames = true;
+
 // Trace stats.
 atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
@@ -77,15 +80,15 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     point.position    = evaluate_instance_position(
         scene, instance, element_id, element_uv);
     point.normal = evaluate_instance_normal(
-        scene, instance, element_id, element_uv);
+        scene, instance, element_id, element_uv, trace_non_rigid_frames);
     if (!shape.lines.empty()) {
         point.normal = orthonormalize(-shading_direction, point.normal);
     } else if (!shape.points.empty()) {
         point.normal = -shading_direction;
     } else {
         if (material.normal_texture >= 0)
-            point.normal = evaluate_instance_perturbed_normal(
-                scene, instance, element_id, element_uv);
+            point.normal = evaluate_instance_perturbed_normal(scene, instance,
+                element_id, element_uv, trace_non_rigid_frames);
     }
     point.texturecoord = evaluate_shape_texturecoord(
         shape, element_id, element_uv);
@@ -886,8 +889,8 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
         auto& instance       = scene.instances[isec.instance_id];
         auto  light_position = evaluate_instance_position(
             scene, instance, isec.element_id, isec.element_uv);
-        auto light_normal = evaluate_instance_normal(
-            scene, instance, isec.element_id, isec.element_uv);
+        auto light_normal = evaluate_instance_normal(scene, instance,
+            isec.element_id, isec.element_uv, trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = elements_cdf.back();
         pdf += distance_squared(light_position, position) /
@@ -1118,8 +1121,8 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
         auto& isec_shape    = scene.shapes[isec_instance.shape];
         auto  lp            = evaluate_instance_position(
             scene, isec_instance, isec.element_id, isec.element_uv);
-        auto ln = evaluate_instance_normal(
-            scene, isec_instance, isec.element_id, isec.element_uv);
+        auto  ln            = evaluate_instance_normal(scene, isec_instance,
+            isec.element_id, isec.element_uv, trace_non_rigid_frames);
         auto& isec_material = scene.materials[isec_shape.material];
         auto  emission      = evaluate_material_emission(scene, isec_material,
                             evaluate_shape_texturecoord(
@@ -1295,9 +1298,9 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             auto& isec_material = scene.materials[isec_shape.material];
             auto  p             = evaluate_instance_position(
                 scene, isec_instance, isec.element_id, isec.element_uv);
-            auto normal = evaluate_instance_normal(
-                scene, isec_instance, isec.element_id, isec.element_uv);
-            auto brdf = evaluate_material_brdf(scene, isec_material,
+            auto normal = evaluate_instance_normal(scene, isec_instance,
+                isec.element_id, isec.element_uv, trace_non_rigid_frames);
+            auto brdf   = evaluate_material_brdf(scene, isec_material,
                 evaluate_shape_texturecoord(
                     isec_shape, isec.element_id, isec.element_uv));
 

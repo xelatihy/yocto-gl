@@ -439,7 +439,7 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     auto bvh_instances = vector<bvh_instance>{};
     for (auto& instance : scene.instances) {
         bvh_instances.push_back(
-            {instance.frame, inverse(instance.frame, false), instance.shape});
+            {instance.frame, inverse(instance.frame, true), instance.shape});
     }
 
     // build bvh
@@ -458,7 +458,7 @@ void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     auto bvh_instances = vector<bvh_instance>{};
     for (auto& instance : scene.instances) {
         bvh_instances.push_back(
-            {instance.frame, inverse(instance.frame), instance.shape});
+            {instance.frame, inverse(instance.frame, true), instance.shape});
     }
     update_scene_bvh(bvh, bvh_instances);
 
@@ -799,23 +799,27 @@ vec3f evaluate_instance_position(const yocto_scene& scene,
                             element_id, element_uv));
 }
 vec3f evaluate_instance_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-    return transform_direction(
-        instance.frame, evaluate_shape_normal(scene.shapes[instance.shape],
-                            element_id, element_uv));
+    const yocto_instance& instance, int element_id, const vec2f& element_uv,
+    bool non_rigid_frame) {
+    return transform_normal(instance.frame,
+        evaluate_shape_normal(
+            scene.shapes[instance.shape], element_id, element_uv),
+        non_rigid_frame);
 }
 vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-    return transform_direction(instance.frame,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv,
+    bool non_rigid_frame) {
+    return transform_normal(instance.frame,
         evaluate_shape_perturbed_normal(
-            scene, scene.shapes[instance.shape], element_id, element_uv));
+            scene, scene.shapes[instance.shape], element_id, element_uv),
+        non_rigid_frame);
 }
 // Instance element values.
-vec3f evaluate_instance_element_normal(
-    const yocto_scene& scene, const yocto_instance& instance, int element_id) {
-    return transform_direction(
-        instance.frame, evaluate_shape_element_normal(
-                            scene.shapes[instance.shape], element_id));
+vec3f evaluate_instance_element_normal(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, bool non_rigid_frame) {
+    return transform_normal(instance.frame,
+        evaluate_shape_element_normal(scene.shapes[instance.shape], element_id),
+        non_rigid_frame);
 }
 
 // Environment texture coordinates from the direction.

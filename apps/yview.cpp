@@ -106,20 +106,20 @@ drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
 
 // Draw options
 struct drawgl_options {
-    int   camera_id    = 0;
-    int   image_width  = 1280;
-    int   image_height = 720;
-    bool  wireframe    = false;
-    bool  edges        = false;
-    float edge_offset  = 0.01f;
-    bool  eyelight     = false;
-    float exposure     = 0;
-    float gamma        = 2.2f;
-    vec3f ambient      = {0, 0, 0};
-    bool  double_sided = false;
-    bool  accurate_normals = true;
-    float near_plane   = 0.01f;
-    float far_plane    = 10000.0f;
+    int   camera_id        = 0;
+    int   image_width      = 1280;
+    int   image_height     = 720;
+    bool  wireframe        = false;
+    bool  edges            = false;
+    float edge_offset      = 0.01f;
+    bool  eyelight         = false;
+    float exposure         = 0;
+    float gamma            = 2.2f;
+    vec3f ambient          = {0, 0, 0};
+    bool  double_sided     = false;
+    bool  non_rigid_frames = true;
+    float near_plane       = 0.01f;
+    float far_plane        = 10000.0f;
 };
 
 // Application state
@@ -529,9 +529,11 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     auto& vbos     = state.shapes.at(instance.shape);
     auto& material = scene.materials[shape.material];
 
-    set_opengl_uniform(state.program, "shape_xform", frame_to_mat(instance.frame));
-    set_opengl_uniform(state.program, "shape_xform_invtranspose", 
-        transpose(frame_to_mat(inverse(instance.frame, !options.accurate_normals))));
+    set_opengl_uniform(
+        state.program, "shape_xform", frame_to_mat(instance.frame));
+    set_opengl_uniform(state.program, "shape_xform_invtranspose",
+        transpose(
+            frame_to_mat(inverse(instance.frame, options.non_rigid_frames))));
     set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
     set_opengl_uniform(
         state.program, "highlight", (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
