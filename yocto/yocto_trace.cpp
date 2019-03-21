@@ -1232,12 +1232,12 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
 
 vec3f sample_next_direction(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const trace_point& point,
-    const vec3f& outgoing, rng_state& rng, vec3f& weight) {
+    const vec3f& outgoing, float prob_light, rng_state& rng, vec3f& weight) {
     auto next_direction     = zero3f;
     auto next_brdf_cosine   = zero3f;
     auto next_direction_pdf = 0.0f;
     if (!is_brdf_delta(point.brdf)) {
-        if (get_random_float(rng) < 0.5f) {
+        if (get_random_float(rng) < 1 - prob_light) {
             next_direction = sample_brdf_direction(point.brdf, point.normal,
                 outgoing, get_random_float(rng), get_random_vec2f(rng));
         } else {
@@ -1247,11 +1247,11 @@ vec3f sample_next_direction(const yocto_scene& scene,
         }
         next_brdf_cosine = evaluate_brdf_cosine(
             point.brdf, point.normal, outgoing, next_direction);
-        next_direction_pdf = 0.5f * sample_brdf_direction_pdf(point.brdf,
-                                        point.normal, outgoing,
-                                        next_direction) +
-                             0.5f * sample_lights_direction_pdf(scene, lights,
-                                        bvh, point.position, next_direction);
+        next_direction_pdf =
+            (1 - prob_light) * sample_brdf_direction_pdf(point.brdf,
+                                   point.normal, outgoing, next_direction) +
+            prob_light * sample_lights_direction_pdf(scene, lights, bvh,
+                             point.position, next_direction);
     } else {
         next_direction   = sample_delta_brdf_direction(point.brdf, point.normal,
             outgoing, get_random_float(rng), get_random_vec2f(rng));
@@ -1270,12 +1270,11 @@ vec3f sample_next_direction(const yocto_scene& scene,
 
 vec3f sample_next_direction_volume(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
-    const vec3f& albedo, float phaseg, const vec3f& outgoing, rng_state& rng,
-    vec3f& weight) {
+    const vec3f& albedo, float phaseg, const vec3f& outgoing, float prob_light,
+    rng_state& rng, vec3f& weight) {
     auto next_direction     = zero3f;
     auto next_direction_pdf = 0.0f;
 
-    float prob_light = 0.5f;
     if (get_random_float(rng) < 1 - prob_light) {
         next_direction = sample_phase_function(phaseg, get_random_vec2f(rng));
         next_direction = make_basis_fromz(outgoing) * next_direction;
@@ -1296,6 +1295,83 @@ vec3f sample_next_direction_volume(const yocto_scene& scene,
     else
         weight *= albedo * phase_function / next_direction_pdf;
     return next_direction;
+}
+
+void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
+    const bvh_scene& bvh, float prob_light, float prob_light_volume,
+    rng_state& rng, trace_point& point, vec3f& outgoing, vec3f& next_direction,
+    vec3f& weight, vec3f& radiance) {
+    // transmission
+    auto material = scene.materials[scene.shapes[point.instance_id].material];
+    auto spectrum = get_random_int(rng, 3);
+    auto volume_density         = material.volume_density[spectrum];
+    auto volume_albedo          = material.volume_albedo[spectrum];
+    auto volume_emission        = material.volume_emission;
+    auto phaseg                 = material.volume_phaseg;
+    const int volume_max_bounce = 100;  // @giacomo: hardcoded!
+
+    for (int volume_bounce = 0; volume_bounce < volume_max_bounce;
+         ++volume_bounce) {
+        auto distance = sample_volume_distance(
+            volume_density, get_random_float(rng));
+
+        auto isec = intersect_scene_bvh(
+            bvh, make_ray(point.position, next_direction));
+
+        if (not isec.hit) {
+            weight = zero3f;
+            return;
+        };
+
+        auto next_point          = make_trace_point(scene, isec.instance_id,
+            isec.element_id, isec.element_uv, next_direction);
+        auto next_point_distance = isec.distance;
+
+        if (isec.distance < distance) {
+            // intersection with internal boundary of volume
+            if (is_brdf_zero(next_point.brdf)) break;
+
+            weight *= evaluate_volume_transmission(
+                material.volume_density, next_point_distance);
+            weight /= sample_volume_distance_pdf(volume_density, isec.distance);
+
+            point          = next_point;
+            outgoing       = -next_direction;
+            next_direction = sample_next_direction(
+                scene, lights, bvh, point, outgoing, prob_light, rng, weight);
+
+            if (dot(next_direction, point.normal) > 0)
+                // exit from volume
+                break;
+            else
+                // internal reflection
+                continue;
+        }
+
+        if (get_random_float(rng) < volume_albedo) {
+            // scattering volume interaction
+            weight *= evaluate_volume_transmission(
+                material.volume_density, distance);
+            weight /= sample_volume_distance_pdf(volume_density, distance);
+
+            point.position += next_direction * distance;
+            next_direction = sample_next_direction_volume(scene, lights, bvh,
+                point.position, material.volume_albedo, phaseg, outgoing,
+                prob_light_volume, rng, weight);
+
+            // russian roulette
+            if (sample_russian_roulette(
+                    weight, volume_bounce, get_random_float(rng)))
+                break;
+            weight /= sample_russian_roulette_pdf(weight, volume_bounce);
+
+        } else {
+            // absorption volume interaction
+            radiance += weight * volume_emission;
+            weight = zero3f;
+            return;
+        }
+    }
 }
 
 // Iterative volumetric path tracing.
@@ -1322,105 +1398,14 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         if (is_brdf_zero(point.brdf) || weight == zero3f) break;
 
         auto next_direction = sample_next_direction(
-            scene, lights, bvh, point, outgoing, rng, weight);
+            scene, lights, bvh, point, outgoing, 0.5, rng, weight);
         if (weight == zero3f) break;
 
         // transmission
         if (dot(next_direction, point.normal) < 0) {
-            auto material =
-                scene.materials[scene.shapes[point.instance_id].material];
-            auto      spectrum          = get_random_int(rng, 3);
-            auto      volume_density    = material.volume_density[spectrum];
-            auto      volume_albedo     = material.volume_albedo[spectrum];
-            auto      volume_emission   = material.volume_emission;
-            auto      phaseg            = material.volume_phaseg;
-            const int volume_max_bounce = 100;  // @giacomo: hardcoded!
-
-            for (int volume_bounce = 0; volume_bounce < volume_max_bounce;
-                 ++volume_bounce) {
-                assert(isfinite(weight));
-
-                auto distance = sample_volume_distance(
-                    volume_density, get_random_float(rng));
-
-#if 1
-                auto isec = intersect_scene_bvh(
-                    bvh, make_ray(point.position, next_direction));
-                if (not isec.hit) return {radiance, true};
-                auto next_point = make_trace_point(scene, isec.instance_id,
-                    isec.element_id, isec.element_uv, next_direction);
-                auto next_point_distance = isec.distance;
-#else
-                auto next_point = trace_ray_with_opacity(scene, bvh,
-                    point.position, next_direction, rng, max_bounces);
-
-                if (not next_point.hit) {
-                    return {radiance, true};
-                }
-
-                auto next_point_distance = length(
-                    next_point.position - point.position);
-                if (next_point_distance < distance) {
-#endif
-
-                if (isec.distance < distance) {
-                    // intersection with internal boundary of volume
-
-                    if (is_brdf_zero(next_point.brdf)) break;
-
-                    weight *= evaluate_volume_transmission(
-                        material.volume_density, next_point_distance);
-                    weight /= sample_volume_distance_pdf(
-                        volume_density, isec.distance);
-
-                    assert(isfinite(weight));
-
-                    point          = next_point;
-                    outgoing       = -next_direction;
-                    next_direction = sample_next_direction(
-                        scene, lights, bvh, point, outgoing, rng, weight);
-
-                    assert(isfinite(weight));
-                    if (dot(next_direction, point.normal) > 0)
-                        // exit from volume
-                        break;
-                    else
-                        // internal reflection
-                        continue;
-                }
-
-                if (get_random_float(rng) < volume_albedo) {
-                    // scattering volume interaction
-                    assert(isfinite(weight));
-
-                    weight *= evaluate_volume_transmission(
-                        material.volume_density, distance);
-                    weight /= sample_volume_distance_pdf(
-                        volume_density, distance);
-
-                    assert(isfinite(weight));
-
-                    point.position += next_direction * distance;
-                    next_direction = sample_next_direction_volume(scene, lights,
-                        bvh, point.position, material.volume_albedo, phaseg,
-                        outgoing, rng, weight);
-
-                    assert(isfinite(weight));
-
-                    // russian roulette
-                    if (sample_russian_roulette(
-                            weight, volume_bounce, get_random_float(rng)))
-                        break;
-                    weight /= sample_russian_roulette_pdf(
-                        weight, volume_bounce);
-
-                    assert(isfinite(weight));
-                } else {
-                    // absorption volume interaction
-                    radiance += weight * volume_emission;
-                    return {radiance, true};
-                }
-            }
+            integrate_volume(scene, lights, bvh, 0.5, 0.5, rng, point, outgoing,
+                next_direction, weight, radiance);
+            if (weight == zero3f) return {radiance, true};
         }
 
         // intersect next point
