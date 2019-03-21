@@ -17,8 +17,8 @@
 // constructed by column. The one dimensional version is for completeness only.
 //
 // We support 2-3 dimensional affine matrices (`affine<T, 2>`, `affine<T, 3>`,
-// with matrix-matrix and matrix-vector products, and inverses. Matrices are 
-// stored in column-major order and are accessed and constructed by column. 
+// with matrix-matrix and matrix-vector products, and inverses. Matrices are
+// stored in column-major order and are accessed and constructed by column.
 //
 // To represent transformations, most of the library facilities prefer the use
 // coordinate frames, aka rigid transforms, represented as `frame<T, 2>` and
@@ -1271,8 +1271,8 @@ constexpr inline bool operator!=(const affine<T, N>& a, const affine<T, N>& b) {
 template <typename T, int N>
 constexpr inline affine<T, N> operator*(
     const affine<T, N>& a, const affine<T, N>& b) {
-    return {
-        affine_rotation(a) * affine_rotation(b), affine_rotation(a) * b.o + a.o};
+    return {affine_rotation(a) * affine_rotation(b),
+        affine_rotation(a) * b.o + a.o};
 }
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, int N>
@@ -1304,7 +1304,7 @@ struct frame<T, 2> {
         : x{x}, y{y}, o{o} {}
     constexpr frame(const mat<T, 2, 2>& m, const vec<T, 2>& t)
         : x{m.x}, y{m.y}, o{t} {}
-    constexpr explicit frame(const affine<T, 2>& m) : x{m.x}, y{m.y}, o{m.o} { }
+    constexpr explicit frame(const affine<T, 2>& m) : x{m.x}, y{m.y}, o{m.o} {}
     constexpr operator affine<T, 2>() const { return {x, y, o}; }
 
     constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
@@ -1325,7 +1325,8 @@ struct frame<T, 3> {
         : x{x}, y{y}, z{z}, o{o} {}
     constexpr frame(const mat<T, 3, 3>& m, const vec<T, 3>& t)
         : x{m.x}, y{m.y}, z{m.z}, o{t} {}
-    constexpr explicit frame(const affine<T, 3>& m) : x{m.x}, y{m.y}, z{m.z}, o{m.o} { }
+    constexpr explicit frame(const affine<T, 3>& m)
+        : x{m.x}, y{m.y}, z{m.z}, o{m.o} {}
     constexpr operator affine<T, 3>() const { return {x, y, z, o}; }
 
     constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
@@ -1796,7 +1797,8 @@ constexpr inline vec<T, N> transform_direction(
     return normalize(transform_vector(a, b));
 }
 template <typename T, int N>
-constexpr inline vec<T, N> transform_normal(const affine<T, N>& a, const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_normal(
+    const affine<T, N>& a, const vec<T, N>& b) {
     return transform_normal(affine_rotation(a), b);
 }
 
@@ -1831,8 +1833,9 @@ constexpr inline vec<T, N> transform_direction(
     return normalize(transform_vector(a, b));
 }
 template <typename T, int N>
-constexpr inline vec<T, N> transform_normal(const frame<T, N>& a, const vec<T, N>& b) {
-        return normalize(transform_vector(a, b));
+constexpr inline vec<T, N> transform_normal(
+    const frame<T, N>& a, const vec<T, N>& b) {
+    return normalize(transform_vector(a, b));
 }
 
 // Transforms rays and bounding boxes by matrices.

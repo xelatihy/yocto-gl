@@ -810,7 +810,7 @@ vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     bool non_rigid_frame) {
     auto normal = evaluate_shape_perturbed_normal(
-            scene, scene.shapes[instance.shape], element_id, element_uv);
+        scene, scene.shapes[instance.shape], element_id, element_uv);
     return non_rigid_frame ? transform_normal((affine3f)instance.frame, normal)
                            : transform_normal(instance.frame, normal);
 }

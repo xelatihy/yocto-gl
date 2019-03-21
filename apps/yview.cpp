@@ -532,9 +532,9 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     set_opengl_uniform(
         state.program, "shape_xform", frame_to_mat(instance.frame));
     set_opengl_uniform(state.program, "shape_xform_invtranspose",
-        options.non_rigid_frames ? 
-            transpose(affine_to_mat(inverse((affine3f)instance.frame))) : 
-            transpose(frame_to_mat(inverse(instance.frame))));
+        options.non_rigid_frames
+            ? transpose(affine_to_mat(inverse((affine3f)instance.frame)))
+            : transpose(frame_to_mat(inverse(instance.frame))));
     set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
     set_opengl_uniform(
         state.program, "highlight", (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
