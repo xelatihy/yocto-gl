@@ -2756,7 +2756,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
     for (auto& node : scene.nodes) {
         auto njs           = json();
         njs["name"]        = node.name;
-        njs["matrix"]      = frame_to_mat(node.local);
+        njs["matrix"]      = mat4f(node.local);
         njs["translation"] = node.translation;
         njs["rotation"]    = node.rotation;
         njs["scale"]       = node.scale;
@@ -2781,14 +2781,14 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
             auto njs      = json();
             njs["name"]   = camera.name;
             njs["camera"] = camera_id++;
-            njs["matrix"] = frame_to_mat(camera.frame);
+            njs["matrix"] = mat4f(camera.frame);
             js["nodes"].push_back(njs);
         }
         for (auto& instance : scene.instances) {
             auto njs      = json();
             njs["name"]   = instance.name;
             njs["mesh"]   = instance.shape;
-            njs["matrix"] = frame_to_mat(instance.frame);
+            njs["matrix"] = mat4f(instance.frame);
             js["nodes"].push_back(njs);
         }
     }
@@ -3668,8 +3668,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
         auto& material = scene.materials[shape.material];
         println_values(fs, "AttributeBegin");
         println_values(fs, "TransformBegin");
-        println_values(
-            fs, "ConcatTransform [", frame_to_mat(instance.frame), "]");
+        println_values(fs, "ConcatTransform [", mat4f(instance.frame), "]");
         if (material.emission != zero3f)
             println_values(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ ",
                 material.emission, " ]");

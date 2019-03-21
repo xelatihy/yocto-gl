@@ -1178,6 +1178,7 @@ struct affine<T, 2> {
         : x{x}, y{y}, o{o} {}
     constexpr affine(const mat<T, 2, 2>& m, const vec<T, 2>& t)
         : x{m.x}, y{m.y}, o{t} {}
+    constexpr operator mat<T, 3, 3>() const { return { {x,0}, {y,0}, {o,1} }; }
 
     constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
     constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
@@ -1197,6 +1198,7 @@ struct affine<T, 3> {
         : x{x}, y{y}, z{z}, o{o} {}
     constexpr affine(const mat<T, 3, 3>& m, const vec<T, 3>& t)
         : x{m.x}, y{m.y}, z{m.z}, o{t} {}
+    constexpr operator mat<T, 4, 4>() const { return { {x,0}, {y,0}, {z,0}, {o,1} }; }
 
     constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
     constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
@@ -1230,15 +1232,6 @@ constexpr inline const vec<T, N>& affine_translation(const affine<T, N>& f) {
 }
 
 // Frame to matrix conversion.
-template <typename T>
-constexpr inline mat<T, 4, 4> affine_to_mat(const affine<T, 3>& a) {
-    return {
-        {a.x.x, a.x.y, a.x.z, 0},
-        {a.y.x, a.y.y, a.y.z, 0},
-        {a.z.x, a.z.y, a.z.z, 0},
-        {a.o.x, a.o.y, a.o.z, 1},
-    };
-}
 template <typename T>
 constexpr inline affine<T, 3> mat_to_affine(const mat<T, 4, 4>& a) {
     return {
@@ -1306,6 +1299,7 @@ struct frame<T, 2> {
         : x{m.x}, y{m.y}, o{t} {}
     constexpr explicit frame(const affine<T, 2>& m) : x{m.x}, y{m.y}, o{m.o} {}
     constexpr operator affine<T, 2>() const { return {x, y, o}; }
+    constexpr operator mat<T, 3, 3>() const { return { {x,0}, {y,0}, {o,1} }; }
 
     constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
     constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
@@ -1328,6 +1322,7 @@ struct frame<T, 3> {
     constexpr explicit frame(const affine<T, 3>& m)
         : x{m.x}, y{m.y}, z{m.z}, o{m.o} {}
     constexpr operator affine<T, 3>() const { return {x, y, z, o}; }
+    constexpr operator mat<T, 4, 4>() const { return { {x,0}, {y,0}, {z,0}, {o,1} }; }
 
     constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
     constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
@@ -1383,15 +1378,6 @@ constexpr inline frame<T, 3> make_frame_fromzx(
 }
 
 // Frame to matrix conversion.
-template <typename T>
-constexpr inline mat<T, 4, 4> frame_to_mat(const frame<T, 3>& a) {
-    return {
-        {a.x.x, a.x.y, a.x.z, 0},
-        {a.y.x, a.y.y, a.y.z, 0},
-        {a.z.x, a.z.y, a.z.z, 0},
-        {a.o.x, a.o.y, a.o.z, 1},
-    };
-}
 template <typename T>
 constexpr inline frame<T, 3> mat_to_frame(const mat<T, 4, 4>& a) {
     return {
