@@ -212,6 +212,11 @@ struct vec<T, 3> {
             T z = 0;
         };
         struct {
+            T r;
+            T g;
+            T b;
+        };
+        struct {
             vec<T, 2> xy;
             T         _z;
         };
@@ -234,6 +239,12 @@ struct vec<T, 4> {
             T y = 0;
             T z = 0;
             T w = 0;
+        };
+        struct {
+            T r;
+            T g;
+            T b;
+            T a;
         };
         struct {
             vec<T, 3> xyz;
