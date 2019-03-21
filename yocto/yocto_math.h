@@ -212,13 +212,13 @@ struct vec<T, 3> {
             T z = 0;
         };
         struct {
+            vec<T, 2> xy;
+            T         _z;
+        };
+        struct {
             T r;
             T g;
             T b;
-        };
-        struct {
-            vec<T, 2> xy;
-            T         _z;
         };
     };
 
@@ -241,14 +241,18 @@ struct vec<T, 4> {
             T w = 0;
         };
         struct {
+            vec<T, 3> xyz;
+            T         _w;
+        };
+        struct {
             T r;
             T g;
             T b;
             T a;
         };
         struct {
-            vec<T, 3> xyz;
-            T         _w;
+            vec<T, 3> rgb;
+            T         _a;
         };
     };
 
