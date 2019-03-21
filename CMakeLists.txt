@@ -156,8 +156,17 @@ foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplem
             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
+# volpath
 foreach(filename "glass-al.json" "refractive-al.json" "volume1-al.json" "volume2-al.json" "volume-models-al.json")
     set(tracer "volpath")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-${tracer}-${filename}
+            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+# volnaive
+foreach(filename "glass-al.json" "refractive-al.json" "volume1-al.json" "volume2-al.json" "volume-models-al.json")
+    set(tracer "volnaive")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
