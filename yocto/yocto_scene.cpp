@@ -411,60 +411,69 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 }
 
 // Build a scene BVH
-void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    const build_bvh_options& options) {
+void build_scene_bvh(
+    const yocto_scene& scene, bvh_tree& bvh, const build_bvh_options& options) {
+    // instances
+    bvh = {};
+    init_instances_bvh(bvh,
+        bvh_strided_view<bvh_instance>{&scene.instances.front().frame,
+            (int)scene.instances.size(), (int)sizeof(yocto_instance)},
+        scene.shapes.size(), options);
+
     // shapes
-    auto shape_bvhs = vector<bvh_shape>();
-    for (auto& shape : scene.shapes) {
+    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
         // make bvh
-        auto shape_bvh = bvh_shape{};
+        auto& shape     = scene.shapes[shape_id];
+        auto& shape_bvh = get_shape_bvh(bvh, shape_id);
+        if (options.share_memory &&
+            shape.positions.size() == shape.positions.capacity()) {
+            ((vector<vec3f>&)shape.positions)
+                .reserve(shape.positions.size() + 1);
+        }
         if (!shape.points.empty()) {
-            init_shape_bvh(
-                shape_bvh, shape.points, shape.positions, shape.radius, false);
+            init_points_bvh(shape_bvh, shape.points, shape.positions,
+                shape.radius, options);
         } else if (!shape.lines.empty()) {
-            init_shape_bvh(
-                shape_bvh, shape.lines, shape.positions, shape.radius, false);
+            init_lines_bvh(
+                shape_bvh, shape.lines, shape.positions, shape.radius, options);
         } else if (!shape.triangles.empty()) {
-            init_shape_bvh(shape_bvh, shape.triangles, shape.positions, false);
+            init_triangles_bvh(
+                shape_bvh, shape.triangles, shape.positions, options);
         } else if (!shape.quads.empty()) {
-            init_shape_bvh(shape_bvh, shape.quads, shape.positions, false);
+            init_quads_bvh(shape_bvh, shape.quads, shape.positions, options);
         } else if (!shape.quads_positions.empty()) {
-            init_shape_bvh(
-                shape_bvh, shape.quads_positions, shape.positions, false);
+            init_quads_bvh(
+                shape_bvh, shape.quads_positions, shape.positions, options);
         } else {
             throw runtime_error("empty shape");
         }
-        shape_bvhs.push_back(shape_bvh);
-    }
-
-    // instances
-    auto bvh_instances = vector<bvh_instance>{};
-    for (auto& instance : scene.instances) {
-        bvh_instances.push_back({instance.frame,
-            (frame3f)inverse((affine3f)instance.frame), instance.shape});
     }
 
     // build bvh
-    bvh = {};
-    init_scene_bvh(bvh, bvh_instances, shape_bvhs);
-    build_scene_bvh(bvh, options);
+    build_bvh(bvh, options);
 }
 
 // Refits a scene BVH
-void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes) {
-    for (auto shape_id : updated_shapes)
-        update_shape_bvh(get_shape_bvh(bvh, shape_id),
-            scene.shapes[shape_id].positions, scene.shapes[shape_id].radius);
+void refit_scene_bvh(const yocto_scene& scene, bvh_tree& bvh,
+    const vector<int>& updated_shapes, const build_bvh_options& options) {
+    if (!options.share_memory) {
+        for (auto shape_id : updated_shapes)
+            update_vertices(get_shape_bvh(bvh, shape_id),
+                scene.shapes[shape_id].positions,
+                scene.shapes[shape_id].radius);
 
-    auto bvh_instances = vector<bvh_instance>{};
-    for (auto& instance : scene.instances) {
-        bvh_instances.push_back({instance.frame,
-            (frame3f)inverse((affine3f)instance.frame), instance.shape});
+        auto bvh_instances = vector<bvh_instance>{};
+        for (auto& instance : scene.instances) {
+            bvh_instances.push_back({instance.frame, instance.shape});
+        }
+        update_instances(
+            bvh, bvh_strided_view<bvh_instance>{&scene.instances.front().frame,
+                     (int)scene.instances.size(), (int)sizeof(yocto_instance)});
     }
-    update_scene_bvh(bvh, bvh_instances);
 
-    refit_scene_bvh(bvh, updated_instances, updated_shapes);
+    for (auto shape_id : updated_shapes)
+        refit_bvh(get_shape_bvh(bvh, shape_id));
+    refit_bvh(bvh);
 }
 
 // Add missing names and resolve duplicated names.

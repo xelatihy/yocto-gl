@@ -57,6 +57,9 @@ int main(int argc, char* argv[]) {
     auto imfilename    = "out.hdr"s;
     auto filename      = "scene.json"s;
 
+    // default configuraions
+    bvh_options.share_memory = true;
+
     // names for enums
     auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
     for (auto type = 0; type < trace_sampler_type_names.size(); type++) {
@@ -149,7 +152,7 @@ int main(int argc, char* argv[]) {
     // build bvh
     printf("building bvh ...\n");
     auto start_bvh = get_time();
-    auto bvh       = bvh_scene{};
+    auto bvh       = bvh_tree{};
     build_scene_bvh(scene, bvh, bvh_options);
     printf(
         "building bvh [%s]\n", format_duration(get_time() - start_bvh).c_str());

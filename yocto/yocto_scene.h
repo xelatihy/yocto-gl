@@ -305,10 +305,10 @@ bbox3f compute_scene_bounds(const yocto_scene& scene);
 void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Low level make/update bvh functions.
-void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
+void build_scene_bvh(const yocto_scene& scene, bvh_tree& bvh,
     const build_bvh_options& options = {});
-void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes);
+void refit_scene_bvh(const yocto_scene& scene, bvh_tree& bvh,
+    const vector<int>& updated_shapes, const build_bvh_options& options = {});
 
 // Apply subdivision and displacement rules.
 void tesselate_shapes(yocto_scene& scene);

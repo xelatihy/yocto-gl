@@ -3836,40 +3836,6 @@ void read_object(input_file& fs, yocto_camera& camera) {
     read_value(fs, camera.lens_aperture);
 }
 
-void write_object(output_file& fs, const bvh_shape& bvh) {
-    write_value(fs, bvh.positions);
-    write_value(fs, bvh.radius);
-    write_value(fs, bvh.points);
-    write_value(fs, bvh.lines);
-    write_value(fs, bvh.triangles);
-    write_value(fs, bvh.quads);
-    write_value(fs, bvh.nodes);
-    write_value(fs, bvh.nodes);
-}
-void read_object(input_file& fs, bvh_shape& bvh) {
-    read_value(fs, bvh.positions);
-    read_value(fs, bvh.radius);
-    read_value(fs, bvh.points);
-    read_value(fs, bvh.lines);
-    read_value(fs, bvh.triangles);
-    read_value(fs, bvh.quads);
-    read_value(fs, bvh.nodes);
-    read_value(fs, bvh.nodes);
-}
-
-void write_object(output_file& fs, const bvh_scene& bvh) {
-    write_value(fs, bvh.nodes);
-    write_value(fs, bvh.instances);
-    write_objects(fs, bvh.shape_bvhs);
-    write_value(fs, bvh.nodes);
-}
-void read_object(input_file& fs, bvh_scene& bvh) {
-    read_value(fs, bvh.nodes);
-    read_value(fs, bvh.instances);
-    read_objects(fs, bvh.shape_bvhs);
-    read_value(fs, bvh.nodes);
-}
-
 void write_object(output_file& fs, const yocto_shape& shape) {
     write_value(fs, shape.name);
     write_value(fs, shape.filename);

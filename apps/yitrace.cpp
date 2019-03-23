@@ -66,7 +66,7 @@ struct app_state {
 
     // scene
     yocto_scene scene      = {};
-    bvh_scene   bvh        = {};
+    bvh_tree    bvh        = {};
     bool        add_skyenv = false;
     bool        validate   = false;
 
@@ -368,7 +368,7 @@ bool update(app_state& app) {
             updated_instances.push_back(index);
     }
     if (!updated_instances.empty() || !updated_shapes.empty())
-        refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes);
+        refit_scene_bvh(app.scene, app.bvh, updated_shapes, app.bvh_options);
     app.update_list.clear();
 
     // start rendering
@@ -438,9 +438,10 @@ void run_ui(app_state& app) {
                     app.trace_options.camera_id);
                 auto ray = evaluate_camera_ray(
                     camera, ij, app.image.size(), {0.5f, 0.5f}, zero2f);
-                auto isec = intersect_scene_bvh(app.bvh, ray);
-                if (isec.instance_id >= 0)
+                if (auto isec = bvh_intersection{};
+                    intersect_bvh(app.bvh, ray, isec)) {
                     app.selection = {typeid(yocto_instance), isec.instance_id};
+                }
             }
         }
 
@@ -462,6 +463,7 @@ int main(int argc, char* argv[]) {
     // application
     app_state app{};
     app.trace_options.samples_per_batch = 1;
+    app.bvh_options.share_memory        = true;
     auto no_parallel                    = false;
 
     // names for enums

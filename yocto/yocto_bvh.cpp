@@ -39,27 +39,29 @@
 namespace yocto {
 
 // Intersect a ray with a point (approximate)
-bvh_element_intersection intersect_point(
-    const ray3f& ray, const vec3f& p, float r) {
+bool intersect_point(
+    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist) {
     // find parameter for line-point minimum distance
     auto w = p - ray.o;
     auto t = dot(w, ray.d) / dot(ray.d, ray.d);
 
     // exit if not within bounds
-    if (t < ray.tmin || t > ray.tmax) return {};
+    if (t < ray.tmin || t > ray.tmax) return false;
 
     // test for line-point distance vs point radius
     auto rp  = ray.o + ray.d * t;
     auto prp = p - rp;
-    if (dot(prp, prp) > r * r) return {};
+    if (dot(prp, prp) > r * r) return false;
 
     // intersection occurred: set options and exit
-    return {{0, 0}, t, true};
+    uv   = {0, 0};
+    dist = t;
+    return true;
 }
 
 // Intersect a ray with a line
-bvh_element_intersection intersect_line(
-    const ray3f& ray, const vec3f& p0, const vec3f& p1, float r0, float r1) {
+bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    float r0, float r1, vec2f& uv, float& dist) {
     // setup intersection options
     auto u = ray.d;
     auto v = p1 - p0;
@@ -75,14 +77,14 @@ bvh_element_intersection intersect_line(
 
     // check determinant and exit if lines are parallel
     // (could use EPSILONS if desired)
-    if (det == 0) return {};
+    if (det == 0) return false;
 
     // compute Parameters on both ray and segment
     auto t = (b * e - c * d) / det;
     auto s = (a * e - b * d) / det;
 
     // exit if not within bounds
-    if (t < ray.tmin || t > ray.tmax) return {};
+    if (t < ray.tmin || t > ray.tmax) return false;
 
     // clamp segment param to segment corners
     s = clamp(s, (float)0, (float)1);
@@ -98,12 +100,14 @@ bvh_element_intersection intersect_line(
     if (d2 > r * r) return {};
 
     // intersection occurred: set options and exit
-    return {{s, sqrt(d2) / r}, t, true};
+    uv   = {s, sqrt(d2) / r};
+    dist = t;
+    return true;
 }
 
 // Intersect a ray with a triangle
-bvh_element_intersection intersect_triangle(
-    const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, vec2f& uv, float& dist) {
     // compute triangle edges
     auto edge1 = p1 - p0;
     auto edge2 = p2 - p0;
@@ -114,45 +118,44 @@ bvh_element_intersection intersect_triangle(
 
     // check determinant and exit if triangle and ray are parallel
     // (could use EPSILONS if desired)
-    if (det == 0) return {};
+    if (det == 0) return false;
     auto inv_det = 1.0f / det;
 
     // compute and check first bricentric coordinated
     auto tvec = ray.o - p0;
     auto u    = dot(tvec, pvec) * inv_det;
-    if (u < 0 || u > 1) return {};
+    if (u < 0 || u > 1) return false;
 
     // compute and check second bricentric coordinated
     auto qvec = cross(tvec, edge1);
     auto v    = dot(ray.d, qvec) * inv_det;
-    if (v < 0 || u + v > 1) return {};
+    if (v < 0 || u + v > 1) return false;
 
     // compute and check ray parameter
     auto t = dot(edge2, qvec) * inv_det;
-    if (t < ray.tmin || t > ray.tmax) return {};
+    if (t < ray.tmin || t > ray.tmax) return false;
 
     // intersection occurred: set options and exit
-    return {{u, v}, t, true};
+    uv   = {u, v};
+    dist = t;
+    return true;
 }
 
 // Intersect a ray with a quad.
-bvh_element_intersection intersect_quad(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-    auto intersection  = bvh_element_intersection{};
-    auto tray          = ray;
-    auto intersection1 = intersect_triangle(tray, p0, p1, p3);
-    if (intersection1.hit) {
-        intersection = intersection1;
-        tray.tmax    = intersection.distance;
+bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist) {
+    auto hit  = false;
+    auto tray = ray;
+    if (intersect_triangle(tray, p0, p1, p3, uv, dist)) {
+        hit       = true;
+        tray.tmax = dist;
     }
-    auto intersection2 = intersect_triangle(tray, p2, p3, p1);
-    if (intersection2.hit) {
-        intersection            = intersection2;
-        intersection.element_uv = {
-            1 - intersection.element_uv.x, 1 - intersection.element_uv.y};
-        tray.tmax = intersection.distance;
+    if (intersect_triangle(tray, p2, p3, p1, uv, dist)) {
+        hit       = true;
+        uv        = 1 - uv;
+        tray.tmax = dist;
     }
-    return intersection;
+    return hit;
 }
 
 // Min/max used in BVH traversal. Copied here since the traversal code
@@ -221,11 +224,13 @@ bool intersect_bbox(
 namespace yocto {
 
 // TODO: documentation
-bvh_element_intersection overlap_point(
-    const vec3f& pos, float dist_max, const vec3f& p, float r) {
+bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
+    vec2f& uv, float& dist) {
     auto d2 = dot(pos - p, pos - p);
-    if (d2 > (dist_max + r) * (dist_max + r)) return {};
-    return {{0, 0}, sqrt(d2), true};
+    if (d2 > (dist_max + r) * (dist_max + r)) return false;
+    uv   = {0, 0};
+    dist = sqrt(d2);
+    return true;
 }
 
 // TODO: documentation
@@ -240,17 +245,19 @@ float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1) {
 }
 
 // TODO: documentation
-bvh_element_intersection overlap_line(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, float r0, float r1) {
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, float r0, float r1, vec2f& uv, float& dist) {
     auto u = closestuv_line(pos, p0, p1);
     // Compute projected position from the clamped t d = a + t * ab;
     auto p  = p0 + (p1 - p0) * u;
     auto r  = r0 + (r1 - r0) * u;
     auto d2 = dot(pos - p, pos - p);
     // check distance
-    if (d2 > (dist_max + r) * (dist_max + r)) return {};
+    if (d2 > (dist_max + r) * (dist_max + r)) return false;
     // done
-    return {{u, 0}, sqrt(d2), true};
+    uv   = {u, 0};
+    dist = sqrt(d2);
+    return true;
 }
 
 // TODO: documentation
@@ -298,37 +305,34 @@ vec2f closestuv_triangle(
 }
 
 // TODO: documentation
-bvh_element_intersection overlap_triangle(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, float r0, float r1,
-    float r2) {
-    auto uv = closestuv_triangle(pos, p0, p1, p2);
-    auto p  = p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
-    auto r  = r0 * (1 - uv.x - uv.y) + r1 * uv.x + r2 * uv.y;
-    auto dd = dot(p - pos, p - pos);
-    if (dd > (dist_max + r) * (dist_max + r)) return {};
-    return {uv, sqrt(dd), true};
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, vec2f& uv,
+    float& dist) {
+    auto cuv = closestuv_triangle(pos, p0, p1, p2);
+    auto p   = p0 * (1 - cuv.x - cuv.y) + p1 * cuv.x + p2 * cuv.y;
+    auto r   = r0 * (1 - cuv.x - cuv.y) + r1 * cuv.x + r2 * cuv.y;
+    auto dd  = dot(p - pos, p - pos);
+    if (dd > (dist_max + r) * (dist_max + r)) return false;
+    uv   = cuv;
+    dist = sqrt(dd);
+    return true;
 }
 
 // TODO: documentation
-bvh_element_intersection overlap_quad(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3,
-    float r0, float r1, float r2, float r3) {
-    auto intersection  = bvh_element_intersection{};
-    auto intersection1 = overlap_triangle(
-        pos, dist_max, p0, p1, p3, r0, r1, r2);
-    if (intersection1.hit) {
-        intersection = intersection1;
-        dist_max     = intersection.distance;
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
+    float r2, float r3, vec2f& uv, float& dist) {
+    auto hit = false;
+    if (overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2, uv, dist)) {
+        hit      = true;
+        dist_max = dist;
     }
-    auto intersection2 = overlap_triangle(
-        pos, dist_max, p2, p3, p1, r2, r3, r1);
-    if (intersection2.hit) {
-        intersection            = intersection2;
-        intersection.element_uv = {
-            1 - intersection.element_uv.x, 1 - intersection.element_uv.y};
-        dist_max = intersection.distance;
+    if (!overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1, uv, dist)) {
+        hit      = true;
+        uv       = 1 - uv;
+        dist_max = dist;
     }
-    return intersection;
+    return hit;
 }
 
 // TODO: documentation
@@ -363,15 +367,39 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+constexpr static auto get_points(const bvh_tree& bvh) {
+    return !bvh.points_view.empty() ? bvh.points_view : bvh.points_data;
+}
+constexpr static auto get_lines(const bvh_tree& bvh) {
+    return !bvh.lines_view.empty() ? bvh.lines_view : bvh.lines_data;
+}
+constexpr static auto get_triangles(const bvh_tree& bvh) {
+    return !bvh.triangles_view.empty() ? bvh.triangles_view
+                                       : bvh.triangles_data;
+}
+constexpr static auto get_quads(const bvh_tree& bvh) {
+    return !bvh.quads_view.empty() ? bvh.quads_view : bvh.quads_data;
+}
+constexpr static auto get_positions(const bvh_tree& bvh) {
+    return !bvh.positions_view.empty() ? bvh.positions_view
+                                       : bvh.positions_data;
+}
+constexpr static auto get_radius(const bvh_tree& bvh) {
+    return !bvh.radius_view.empty() ? bvh.radius_view : bvh.radius_data;
+}
+constexpr static auto get_instances(const bvh_tree& bvh) {
+    return !bvh.instances_view.empty() ? bvh.instances_view
+                                       : bvh.instances_data;
+}
+constexpr static auto is_sharing(const bvh_tree& bvh) {
+    return bvh.instances_data.empty() && bvh.positions_data.empty();
+}
+
 #if YOCTO_EMBREE
 // Cleanup
-bvh_shape::~bvh_shape() {
+bvh_tree::~bvh_tree() {
     if (embree_bvh) {
-        rtcReleaseScene((RTCScene)embree_bvh);
-    }
-}
-bvh_scene::~bvh_scene() {
-    if (embree_bvh) {
+        auto instances = get_instances(*this);
         for (auto i = 0; i < max(1, (int)instances.size()); i++) {
             auto geom = rtcGetGeometry((RTCScene)embree_bvh, i);
             rtcDetachGeometry((RTCScene)embree_bvh, i);
@@ -424,107 +452,142 @@ RTCDevice get_embree_device() {
     return device;
 }
 
-// Build a BVH using Embree.
-void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
-    auto embree_device = get_embree_device();
-    auto embree_scene  = rtcNewScene(embree_device);
-    // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
-    bvh.embree_bvh = embree_scene;
-    if (!bvh.points.empty()) {
-        throw runtime_error("embree does not support points");
-    } else if (!bvh.lines.empty()) {
-        auto lines      = vector<int>{};
-        auto positions  = vector<vec4f>{};
-        auto last_index = -1;
-        for (auto l : bvh.lines) {
-            if (last_index == l.x) {
-                lines.push_back((int)positions.size() - 1);
-                auto p1 = bvh.positions[l.y];
-                auto r1 = bvh.radius[l.y];
-                positions.push_back({p1.x, p1.y, p1.z, r1});
-            } else {
-                lines.push_back((int)positions.size());
-                auto p0 = bvh.positions[l.x];
-                auto r0 = bvh.radius[l.x];
-                auto p1 = bvh.positions[l.y];
-                auto r1 = bvh.radius[l.y];
-                positions.push_back({p0.x, p0.y, p0.z, r0});
-                positions.push_back({p1.x, p1.y, p1.z, r1});
-            }
-            last_index = l.y;
+// Initialize Embree BVH
+void init_embree_points_bvh(RTCScene embree_scene, bvh_array_view<int> points,
+    bvh_array_view<vec3f> positions, bvh_array_view<float> radius,
+    bool try_sharing, int id = 0) {
+    throw runtime_error("embree does not support points");
+}
+void init_embree_lines_bvh(RTCScene embree_scene, bvh_array_view<vec2i> lines,
+    bvh_array_view<vec3f> positions, bvh_array_view<float> radius,
+    bool try_sharing, int id = 0) {
+    auto elines     = vector<int>{};
+    auto epositions = vector<vec4f>{};
+    auto last_index = -1;
+    for (auto l : lines) {
+        if (last_index == l.x) {
+            elines.push_back((int)epositions.size() - 1);
+            epositions.push_back({positions[l.y], radius[l.y]});
+        } else {
+            elines.push_back((int)epositions.size());
+            epositions.push_back({positions[l.x], radius[l.x]});
+            epositions.push_back({positions[l.y], radius[l.y]});
         }
-        auto embree_geom = rtcNewGeometry(
-            embree_device, RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
-        rtcSetGeometryVertexAttributeCount(embree_geom, 1);
-        auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
-            RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4,
-            positions.size());
-        auto embree_lines     = rtcSetNewGeometryBuffer(embree_geom,
-            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, lines.size());
-        memcpy(embree_positions, positions.data(), positions.size() * 16);
-        memcpy(embree_lines, lines.data(), lines.size() * 4);
-        rtcCommitGeometry(embree_geom);
-        rtcAttachGeometryByID(embree_scene, embree_geom, 0);
-    } else if (!bvh.triangles.empty()) {
-        auto embree_geom = rtcNewGeometry(
-            embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
-        rtcSetGeometryVertexAttributeCount(embree_geom, 1);
+        last_index = l.y;
+    }
+    auto embree_geom = rtcNewGeometry(
+        get_embree_device(), RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
+    rtcSetGeometryVertexAttributeCount(embree_geom, 1);
+    auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
+        RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4, epositions.size());
+    auto embree_lines     = rtcSetNewGeometryBuffer(embree_geom,
+        RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
+    memcpy(embree_positions, epositions.data(), epositions.size() * 16);
+    memcpy(embree_lines, elines.data(), elines.size() * 4);
+    rtcCommitGeometry(embree_geom);
+    rtcAttachGeometryByID(embree_scene, embree_geom, id);
+}
+void init_embree_triangles_bvh(RTCScene embree_scene,
+    bvh_array_view<vec3i> triangles, bvh_array_view<vec3f> positions,
+    bool try_sharing, int id = 0) {
+    auto embree_geom = rtcNewGeometry(
+        get_embree_device(), RTC_GEOMETRY_TYPE_TRIANGLE);
+    rtcSetGeometryVertexAttributeCount(embree_geom, 1);
+    if (try_sharing) {
+        rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX, 0,
+            RTC_FORMAT_FLOAT3, positions.data(), 0, 3 * 4, positions.size());
+        rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_INDEX, 0,
+            RTC_FORMAT_UINT3, triangles.data(), 0, 3 * 4, triangles.size());
+    } else {
         auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
             RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-            bvh.positions.size());
+            positions.size());
         auto embree_triangles = rtcSetNewGeometryBuffer(embree_geom,
             RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
-            bvh.triangles.size());
-        memcpy(
-            embree_positions, bvh.positions.data(), bvh.positions.size() * 12);
-        memcpy(
-            embree_triangles, bvh.triangles.data(), bvh.triangles.size() * 12);
-        rtcCommitGeometry(embree_geom);
-        rtcAttachGeometryByID(embree_scene, embree_geom, 0);
-    } else if (!bvh.quads.empty()) {
-        auto embree_geom = rtcNewGeometry(
-            embree_device, RTC_GEOMETRY_TYPE_QUAD);
-        rtcSetGeometryVertexAttributeCount(embree_geom, 1);
+            triangles.size());
+        memcpy(embree_positions, positions.data(), positions.size() * 12);
+        memcpy(embree_triangles, triangles.data(), triangles.size() * 12);
+    }
+    rtcCommitGeometry(embree_geom);
+    rtcAttachGeometryByID(embree_scene, embree_geom, 0);
+}
+void init_embree_quads_bvh(RTCScene embree_scene, bvh_array_view<vec4i> quads,
+    bvh_array_view<vec3f> positions, bool try_sharing, int id = 0) {
+    auto embree_geom = rtcNewGeometry(
+        get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
+    rtcSetGeometryVertexAttributeCount(embree_geom, 1);
+    if (try_sharing) {
+        rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX, 0,
+            RTC_FORMAT_FLOAT3, positions.data(), 0, 3 * 4, positions.size());
+        rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_INDEX, 0,
+            RTC_FORMAT_UINT4, quads.data(), 0, 4 * 4, quads.size());
+    } else {
         auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
             RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-            bvh.positions.size());
+            positions.size());
         auto embree_quads     = rtcSetNewGeometryBuffer(embree_geom,
-            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
-            bvh.quads.size());
-        memcpy(
-            embree_positions, bvh.positions.data(), bvh.positions.size() * 12);
-        memcpy(embree_quads, bvh.quads.data(), bvh.quads.size() * 16);
-        rtcCommitGeometry(embree_geom);
-        rtcAttachGeometryByID(embree_scene, embree_geom, 0);
+            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, quads.size());
+        memcpy(embree_positions, positions.data(), positions.size() * 12);
+        memcpy(embree_quads, quads.data(), quads.size() * 16);
+    }
+    rtcCommitGeometry(embree_geom);
+    rtcAttachGeometryByID(embree_scene, embree_geom, id);
+}
+
+// Build a BVH using Embree.
+void build_embree_bvh(bvh_tree& bvh, const build_bvh_options& options) {
+    auto points    = get_points(bvh);
+    auto lines     = get_lines(bvh);
+    auto triangles = get_triangles(bvh);
+    auto quads     = get_quads(bvh);
+    auto positions = get_positions(bvh);
+    auto radius    = get_radius(bvh);
+
+    auto embree_scene = rtcNewScene(get_embree_device());
+    // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
+    bvh.embree_bvh = embree_scene;
+    if (!points.empty()) {
+        init_embree_points_bvh(
+            embree_scene, get_points(bvh), positions, radius, is_sharing(bvh));
+    } else if (!lines.empty()) {
+        init_embree_lines_bvh(
+            embree_scene, lines, positions, radius, is_sharing(bvh));
+    } else if (!triangles.empty()) {
+        init_embree_triangles_bvh(
+            embree_scene, triangles, positions, is_sharing(bvh));
+    } else if (!quads.empty()) {
+        init_embree_quads_bvh(embree_scene, quads, positions, is_sharing(bvh));
     } else {
         throw runtime_error("empty bvh");
     }
     rtcCommitScene(embree_scene);
 }
-void build_scene_embree_instanced_bvh(
-    bvh_scene& bvh, const build_bvh_options& options) {
+void build_embree_instanced_bvh(
+    bvh_tree& bvh, const build_bvh_options& options) {
+    auto instances = get_instances(bvh);
+
     // build shape and surface bvhs
-    for (auto& shape_bvh : bvh.shape_bvhs)
-        build_shape_embree_bvh(shape_bvh, options);
+    for (auto& shape_bvh : bvh.shape_bvhs) build_embree_bvh(shape_bvh, options);
 
     // scene bvh
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
     bvh.embree_bvh = embree_scene;
-    if (bvh.instances.empty()) {
+    if (instances.empty()) {
         rtcCommitScene(embree_scene);
         return;
     }
-    for (auto instance_id = 0; instance_id < bvh.instances.size();
-         instance_id++) {
-        auto& instance = bvh.instances[instance_id];
+    for (auto instance_id = 0; instance_id < instances.size(); instance_id++) {
+        auto& instance = instances[instance_id];
         if (instance.shape_id < 0) continue;
-        if (bvh.shape_bvhs[instance.shape_id].positions.empty()) continue;
+        auto& shape_bvh = bvh.shape_bvhs[instance.shape_id];
+        auto  positions = get_positions(shape_bvh);
+        if (positions.empty()) continue;
         auto embree_geom = rtcNewGeometry(
             embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
-        rtcSetGeometryInstancedScene(embree_geom,
-            (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
+        rtcSetGeometryInstancedScene(
+            embree_geom, (RTCScene)shape_bvh.embree_bvh);
         rtcSetGeometryTransform(
             embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
         rtcCommitGeometry(embree_geom);
@@ -533,68 +596,50 @@ void build_scene_embree_instanced_bvh(
     rtcCommitScene(embree_scene);
     bvh.embree_flattened = false;
 }
-void build_scene_embree_flattened_bvh(
-    bvh_scene& bvh, const build_bvh_options& options) {
+void build_embree_flattened_bvh(
+    bvh_tree& bvh, const build_bvh_options& options) {
+    auto instances = get_instances(bvh);
+
     // build shape and surface bvhs
-    for (auto& shape_bvh : bvh.shape_bvhs)
-        build_shape_embree_bvh(shape_bvh, options);
+    for (auto& shape_bvh : bvh.shape_bvhs) build_embree_bvh(shape_bvh, options);
 
     // scene bvh
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
     bvh.embree_bvh = embree_scene;
-    if (bvh.instances.empty()) {
+    if (instances.empty()) {
         rtcCommitScene(embree_scene);
         return;
     }
-    for (auto instance_id = 0; instance_id < bvh.instances.size();
-         instance_id++) {
-        auto& instance = bvh.instances[instance_id];
-        if (bvh.shape_bvhs[instance.shape_id].positions.empty()) continue;
-        auto& shape_bvh             = bvh.shape_bvhs.at(instance.shape_id);
-        auto  transformed_positions = vector<vec3f>{
-            shape_bvh.positions.begin(), shape_bvh.positions.end()};
+    for (auto instance_id = 0; instance_id < instances.size(); instance_id++) {
+        auto& instance  = instances[instance_id];
+        auto& shape_bvh = bvh.shape_bvhs[instance.shape_id];
+        auto  points    = get_points(shape_bvh);
+        auto  lines     = get_lines(shape_bvh);
+        auto  triangles = get_triangles(shape_bvh);
+        auto  quads     = get_quads(shape_bvh);
+        auto  positions = get_positions(shape_bvh);
+        auto  radius    = get_radius(shape_bvh);
+        if (positions.empty()) continue;
+        auto transformed_positions = vector<vec3f>{
+            positions.begin(), positions.end()};
         if (instance.frame != identity_frame3f) {
             for (auto& p : transformed_positions)
                 p = transform_point(instance.frame, p);
         }
-        if (!shape_bvh.points.empty()) {
-            throw runtime_error("embree does not support points");
-        } else if (!shape_bvh.lines.empty()) {
-            throw runtime_error("not yet implemented");
-        } else if (!shape_bvh.triangles.empty()) {
-            auto embree_geom = rtcNewGeometry(
-                embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
-            rtcSetGeometryVertexAttributeCount(embree_geom, 1);
-            auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
-                RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-                shape_bvh.positions.size());
-            auto embree_triangles = rtcSetNewGeometryBuffer(embree_geom,
-                RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
-                shape_bvh.triangles.size());
-            memcpy(embree_positions, transformed_positions.data(),
-                transformed_positions.size() * 12);
-            memcpy(embree_triangles, shape_bvh.triangles.data(),
-                shape_bvh.triangles.size() * 12);
-            rtcCommitGeometry(embree_geom);
-            rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
-        } else if (!shape_bvh.quads.empty()) {
-            auto embree_geom = rtcNewGeometry(
-                embree_device, RTC_GEOMETRY_TYPE_QUAD);
-            rtcSetGeometryVertexAttributeCount(embree_geom, 1);
-            auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
-                RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-                shape_bvh.positions.size());
-            auto embree_quads     = rtcSetNewGeometryBuffer(embree_geom,
-                RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
-                shape_bvh.quads.size());
-            memcpy(embree_positions, transformed_positions.data(),
-                transformed_positions.size() * 12);
-            memcpy(embree_quads, shape_bvh.quads.data(),
-                shape_bvh.quads.size() * 16);
-            rtcCommitGeometry(embree_geom);
-            rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
+        if (!points.empty()) {
+            init_embree_points_bvh(embree_scene, points, transformed_positions,
+                radius, false, instance_id);
+        } else if (!lines.empty()) {
+            init_embree_lines_bvh(embree_scene, lines, transformed_positions,
+                radius, false, instance_id);
+        } else if (!triangles.empty()) {
+            init_embree_triangles_bvh(embree_scene, triangles,
+                transformed_positions, false, instance_id);
+        } else if (!quads.empty()) {
+            init_embree_quads_bvh(
+                embree_scene, quads, transformed_positions, false, instance_id);
         } else {
             throw runtime_error("empty bvh");
         }
@@ -604,14 +649,11 @@ void build_scene_embree_flattened_bvh(
 }
 // Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not
 // available.
-void refit_embree_bvh(bvh_shape& bvh) {
+void refit_embree_bvh(bvh_tree& bvh) {
     throw runtime_error("not yet implemented");
 }
-void refit_embree_bvh(bvh_scene& bvh) {
-    throw runtime_error("not yet implemented");
-}
-bvh_shape_intersection intersect_embree_bvh(
-    const bvh_shape& bvh, const ray3f& ray, bool find_any) {
+bool intersect_embree_bvh(const bvh_tree& bvh, const ray3f& ray,
+    bvh_intersection& intersection, bool find_any) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
     embree_ray.ray.org_y     = ray.o.y;
@@ -627,32 +669,14 @@ bvh_shape_intersection intersect_embree_bvh(
     RTCIntersectContext embree_ctx;
     rtcInitIntersectContext(&embree_ctx);
     rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
-    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
-    return {(int)embree_ray.hit.primID, {embree_ray.hit.u, embree_ray.hit.v},
-        embree_ray.ray.tfar, true};
-}
-bvh_scene_intersection intersect_embree_bvh(
-    const bvh_scene& bvh, const ray3f& ray, bool find_any) {
-    RTCRayHit embree_ray;
-    embree_ray.ray.org_x     = ray.o.x;
-    embree_ray.ray.org_y     = ray.o.y;
-    embree_ray.ray.org_z     = ray.o.z;
-    embree_ray.ray.dir_x     = ray.d.x;
-    embree_ray.ray.dir_y     = ray.d.y;
-    embree_ray.ray.dir_z     = ray.d.z;
-    embree_ray.ray.tnear     = ray.tmin;
-    embree_ray.ray.tfar      = ray.tmax;
-    embree_ray.ray.flags     = 0;
-    embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
-    embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-    RTCIntersectContext embree_ctx;
-    rtcInitIntersectContext(&embree_ctx);
-    rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
-    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
-    return {(bvh.embree_flattened) ? (int)embree_ray.hit.geomID
-                                   : (int)embree_ray.hit.instID[0],
-        (int)embree_ray.hit.primID, {embree_ray.hit.u, embree_ray.hit.v},
-        embree_ray.ray.tfar, true};
+    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
+    intersection.instance_id = bvh.embree_flattened
+                                   ? (int)embree_ray.hit.geomID
+                                   : (int)embree_ray.hit.instID[0];
+    intersection.element_id = (int)embree_ray.hit.primID;
+    intersection.element_uv = {embree_ray.hit.u, embree_ray.hit.v};
+    intersection.distance   = embree_ray.ray.tfar;
+    return true;
 }
 #endif
 
@@ -996,265 +1020,267 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 }
 
 // Build a BVH from a set of primitives.
-void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
-    // setup internal views
-    if (!bvh.positions_data.empty())
-        bvh.positions = {
-            bvh.positions_data.data(), (int)bvh.positions_data.size()};
-    if (!bvh.radius_data.empty())
-        bvh.radius = {bvh.radius_data.data(), (int)bvh.radius_data.size()};
-    if (!bvh.points_data.empty())
-        bvh.points = {bvh.points_data.data(), (int)bvh.points_data.size()};
-    if (!bvh.lines_data.empty())
-        bvh.lines = {bvh.lines_data.data(), (int)bvh.lines_data.size()};
-    if (!bvh.triangles_data.empty())
-        bvh.triangles = {
-            bvh.triangles_data.data(), (int)bvh.triangles_data.size()};
-    if (!bvh.quads_data.empty())
-        bvh.quads = {bvh.quads_data.data(), (int)bvh.quads_data.size()};
-
-#if YOCTO_EMBREE
-    if (options.use_embree) return build_shape_embree_bvh(bvh, options);
-#endif
-
+template <typename ElemBounds>
+void build_bvh_nodes(vector<bvh_node>& nodes, size_t num_elements,
+    const ElemBounds& element_bounds, const build_bvh_options& options) {
     // get the number of primitives and the primitive type
-    auto prims = vector<bvh_prim>();
-    if (!bvh.points.empty()) {
-        for (auto& p : bvh.points) {
-            prims.push_back({point_bounds(bvh.positions[p], bvh.radius[p])});
-        }
-    } else if (!bvh.lines.empty()) {
-        for (auto& l : bvh.lines) {
-            prims.push_back({line_bounds(bvh.positions[l.x], bvh.positions[l.y],
-                bvh.radius[l.x], bvh.radius[l.y])});
-        }
-    } else if (!bvh.triangles.empty()) {
-        for (auto& t : bvh.triangles) {
-            prims.push_back({triangle_bounds(
-                bvh.positions[t.x], bvh.positions[t.y], bvh.positions[t.z])});
-        }
-    } else if (!bvh.quads.empty()) {
-        for (auto& q : bvh.quads) {
-            prims.push_back({quad_bounds(bvh.positions[q.x], bvh.positions[q.y],
-                bvh.positions[q.z], bvh.positions[q.w])});
-        }
-    }
-
-    // create an array of primitives to sort
-    for (auto i = 0; i < prims.size(); i++) {
-        prims[i].center = (prims[i].bbox.min + prims[i].bbox.max) / 2;
-        prims[i].primid = i;
+    auto prims = vector<bvh_prim>(num_elements);
+    for (auto element_id = 0; element_id < num_elements; element_id++) {
+        prims[element_id].bbox   = element_bounds(element_id);
+        prims[element_id].center = bbox_center(prims[element_id].bbox);
+        prims[element_id].primid = element_id;
     }
 
     // build nodes
     if (options.run_serially) {
-        build_bvh_nodes_serial(bvh.nodes, prims, options);
+        build_bvh_nodes_serial(nodes, prims, options);
     } else {
-        build_bvh_nodes_parallel(bvh.nodes, prims, options);
-    }
-}
-
-// Build a BVH from the given set of shape primitives.
-void init_shape_bvh(bvh_shape& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    bool copy_data) {
-    bvh = {};
-    if (copy_data) {
-        bvh.points_data    = points;
-        bvh.positions_data = positions;
-        bvh.radius_data    = radius;
-    } else {
-        bvh.points    = {points.data(), (int)points.size()};
-        bvh.positions = {positions.data(), (int)positions.size()};
-        bvh.radius    = {radius.data(), (int)radius.size()};
-    }
-}
-void init_shape_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    bool copy_data) {
-    bvh = {};
-    if (copy_data) {
-        bvh.lines_data     = lines;
-        bvh.positions_data = positions;
-        bvh.radius_data    = radius;
-    } else {
-        bvh.lines     = {lines.data(), (int)lines.size()};
-        bvh.positions = {positions.data(), (int)positions.size()};
-        bvh.radius    = {radius.data(), (int)radius.size()};
-    }
-}
-void init_shape_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, bool copy_data) {
-    bvh = {};
-    if (copy_data) {
-        bvh.triangles_data = triangles;
-        bvh.positions_data = positions;
-    } else {
-        bvh.triangles = {triangles.data(), (int)triangles.size()};
-        bvh.positions = {positions.data(), (int)positions.size()};
-    }
-}
-void init_shape_bvh(bvh_shape& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, bool copy_data) {
-    bvh = {};
-    if (copy_data) {
-        bvh.quads_data     = quads;
-        bvh.positions_data = positions;
-    } else {
-        bvh.quads     = {quads.data(), (int)quads.size()};
-        bvh.positions = {positions.data(), (int)positions.size()};
+        build_bvh_nodes_parallel(nodes, prims, options);
     }
 }
 
 // Build a BVH from a set of primitives.
-void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
+void build_bvh(bvh_tree& bvh, const build_bvh_options& options) {
 #if YOCTO_EMBREE
     if (options.use_embree) {
-        if (options.flatten_embree) {
-            return build_scene_embree_flattened_bvh(bvh, options);
+        if (get_instances(bvh).empty()) {
+            return build_embree_bvh(bvh, options);
+        } else if (options.flatten_embree) {
+            return build_embree_flattened_bvh(bvh, options);
         } else {
-            return build_scene_embree_instanced_bvh(bvh, options);
+            return build_embree_instanced_bvh(bvh, options);
         }
     }
 #endif
 
-    // build shape and surface bvhs
-    for (auto& shape_bvh : bvh.shape_bvhs) build_shape_bvh(shape_bvh, options);
+    auto points    = get_points(bvh);
+    auto lines     = get_lines(bvh);
+    auto triangles = get_triangles(bvh);
+    auto quads     = get_quads(bvh);
+    auto positions = get_positions(bvh);
+    auto radius    = get_radius(bvh);
+    auto instances = get_instances(bvh);
 
     // get the number of primitives and the primitive type
-    auto prims = vector<bvh_prim>();
-    if (!bvh.instances.empty()) {
-        for (auto& instance : bvh.instances) {
-            auto& sbvh = bvh.shape_bvhs[instance.shape_id];
-            if (sbvh.nodes.empty()) {
-                prims.push_back({invalid_bbox3f});
-            } else {
-                prims.push_back(
-                    {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
-            }
-        }
-    }
+    if (!points.empty()) {
+        return build_bvh_nodes(
+            bvh.nodes, points.size(),
+            [points, positions, radius](int idx) {
+                auto& p = points[idx];
+                return point_bounds(positions[p], radius[p]);
+            },
+            options);
+    } else if (!lines.empty()) {
+        return build_bvh_nodes(
+            bvh.nodes, lines.size(),
+            [lines, positions, radius](int idx) {
+                auto& l = lines[idx];
+                return line_bounds(
+                    positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
+            },
+            options);
+    } else if (!triangles.empty()) {
+        return build_bvh_nodes(
+            bvh.nodes, triangles.size(),
+            [triangles, positions](int idx) {
+                auto& t = triangles[idx];
+                return triangle_bounds(
+                    positions[t.x], positions[t.y], positions[t.z]);
+            },
+            options);
+    } else if (!quads.empty()) {
+        return build_bvh_nodes(
+            bvh.nodes, quads.size(),
+            [quads, positions](int idx) {
+                auto& q = quads[idx];
+                return quad_bounds(positions[q.x], positions[q.y],
+                    positions[q.z], positions[q.w]);
+            },
+            options);
+    } else if (!instances.empty()) {
+        // build shape and surface bvhs
+        for (auto& shape_bvh : bvh.shape_bvhs) build_bvh(shape_bvh, options);
 
-    // create an array of primitives to sort
-    for (auto i = 0; i < prims.size(); i++) {
-        prims[i].center = (prims[i].bbox.min + prims[i].bbox.max) / 2;
-        prims[i].primid = i;
+        // get the number of primitives and the primitive type
+        return build_bvh_nodes(
+            bvh.nodes, instances.size(),
+            [&bvh, instances](int idx) {
+                auto& instance = instances[idx];
+                auto& sbvh     = bvh.shape_bvhs[instance.shape_id];
+                return sbvh.nodes.empty()
+                           ? invalid_bbox3f
+                           : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
+            },
+            options);
     }
+}
 
-    // build nodes
-    if (options.run_serially) {
-        build_bvh_nodes_serial(bvh.nodes, prims, options);
+// Build a BVH from the given set of shape primitives.
+void init_points_bvh(bvh_tree& bvh, bvh_array_view<int> points,
+    bvh_array_view<vec3f> positions, bvh_array_view<float> radius,
+    const build_bvh_options& options) {
+    bvh = {};
+    if (options.share_memory) {
+        bvh.points_view    = points;
+        bvh.positions_view = positions;
+        bvh.radius_view    = radius;
     } else {
-        build_bvh_nodes_parallel(bvh.nodes, prims, options);
+        bvh.points_data    = {points.begin(), points.end()};
+        bvh.positions_data = {positions.begin(), positions.end()};
+        bvh.radius_data    = {radius.begin(), radius.end()};
+    }
+}
+void init_lines_bvh(bvh_tree& bvh, bvh_array_view<vec2i> lines,
+    bvh_array_view<vec3f> positions, bvh_array_view<float> radius,
+    const build_bvh_options& options) {
+    bvh = {};
+    if (options.share_memory) {
+        bvh.lines_view     = lines;
+        bvh.positions_view = positions;
+        bvh.radius_view    = radius;
+    } else {
+        bvh.lines_data     = {lines.begin(), lines.end()};
+        bvh.positions_data = {positions.begin(), positions.end()};
+        bvh.radius_data    = {radius.begin(), radius.end()};
+    }
+}
+void init_triangles_bvh(bvh_tree& bvh, bvh_array_view<vec3i> triangles,
+    bvh_array_view<vec3f> positions, const build_bvh_options& options) {
+    bvh = {};
+    if (options.share_memory) {
+        bvh.triangles_view = triangles;
+        bvh.positions_view = positions;
+    } else {
+        bvh.triangles_data = {triangles.begin(), triangles.end()};
+        bvh.positions_data = {positions.begin(), positions.end()};
+    }
+}
+void init_quads_bvh(bvh_tree& bvh, bvh_array_view<vec4i> quads,
+    bvh_array_view<vec3f> positions, const build_bvh_options& options) {
+    bvh = {};
+    if (options.share_memory) {
+        bvh.quads_view     = quads;
+        bvh.positions_view = positions;
+    } else {
+        bvh.quads_data     = {quads.begin(), quads.end()};
+        bvh.positions_data = {positions.begin(), positions.end()};
     }
 }
 
 // Build a BVH from the given set of instances.
-void init_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances,
-    const vector<bvh_shape>& shape_bvhs) {
-    bvh            = {};
-    bvh.instances  = instances;
-    bvh.shape_bvhs = shape_bvhs;
-}
-
-// Recursively recomputes the node bounds for a shape bvh
-void refit_shape_bvh_rec(bvh_shape& bvh, int nodeid) {
-    // refit
-    auto& node = bvh.nodes[nodeid];
-    node.bbox  = invalid_bbox3f;
-    if (node.is_internal) {
-        for (auto i = 0; i < 2; i++) {
-            refit_shape_bvh_rec(bvh, node.primitive_ids[i]);
-            node.bbox += bvh.nodes[node.primitive_ids[i]].bbox;
-        }
-    } else if (!bvh.triangles.empty()) {
-        for (auto i = 0; i < node.num_primitives; i++) {
-            auto& t = bvh.triangles[node.primitive_ids[i]];
-            node.bbox += triangle_bounds(
-                bvh.positions[t.x], bvh.positions[t.y], bvh.positions[t.z]);
-        }
-    } else if (!bvh.quads.empty()) {
-        for (auto i = 0; i < node.num_primitives; i++) {
-            auto& t = bvh.quads[node.primitive_ids[i]];
-            node.bbox += quad_bounds(bvh.positions[t.x], bvh.positions[t.y],
-                bvh.positions[t.z], bvh.positions[t.w]);
-        }
-    } else if (!bvh.lines.empty()) {
-        for (auto i = 0; i < node.num_primitives; i++) {
-            auto& l = bvh.lines[node.primitive_ids[i]];
-            node.bbox += line_bounds(bvh.positions[l.x], bvh.positions[l.y],
-                bvh.radius[l.x], bvh.radius[l.y]);
-        }
-    } else if (!bvh.points.empty()) {
-        for (auto i = 0; i < node.num_primitives; i++) {
-            auto& p = bvh.points[node.primitive_ids[i]];
-            node.bbox += point_bounds(bvh.positions[p], bvh.radius[p]);
-        }
+void init_instances_bvh(bvh_tree& bvh, bvh_strided_view<bvh_instance> instances,
+    int num_shapes, const build_bvh_options& options) {
+    bvh = {};
+    bvh.shape_bvhs.resize(num_shapes);
+    if (options.share_memory) {
+        bvh.instances_view = instances;
     } else {
-        printf("empty bvh");
+        bvh.instances_data.resize(instances.size());
+        for (auto i = 0; i < instances.size(); i++)
+            bvh.instances_data[i] = instances[i];
+        // bvh.instances_data = {instances.begin(), instances.end()};
     }
 }
-
-// Recursively recomputes the node bounds for a shape bvh
-void refit_scene_bvh_rec(bvh_scene& bvh, int nodeid) {
-    // refit
-    auto& node = bvh.nodes[nodeid];
-    node.bbox  = invalid_bbox3f;
-    if (node.is_internal) {
-        for (auto i = 0; i < 2; i++) {
-            refit_scene_bvh_rec(bvh, node.primitive_ids[i]);
-            node.bbox += bvh.nodes[node.primitive_ids[i]].bbox;
-        }
-    } else if (!bvh.instances.empty()) {
-        for (auto i = 0; i < node.num_primitives; i++) {
-            auto& instance = bvh.instances[node.primitive_ids[i]];
-            auto  sbvh     = bvh.shape_bvhs[instance.shape_id];
-            node.bbox += transform_bbox(
-                instance.frame, sbvh.nodes.front().bbox);
-        }
-    } else {
-        printf("empty bvh");
-    }
-}
-
-// Recursively recomputes the node bounds for a shape bvh
-void refit_shape_bvh(bvh_shape& bvh) { refit_shape_bvh_rec(bvh, 0); }
-void refit_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes) {
-    for (auto shape_id : updated_shapes)
-        refit_shape_bvh(bvh.shape_bvhs[shape_id]);
-    if (!updated_instances.empty()) refit_scene_bvh_rec(bvh, 0);
-}
-
-// Recursively recomputes the node bounds for a shape bvh
-void update_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions) {
-    bvh.positions_data = positions;
-}
-void update_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions,
-    const vector<float>& radius) {
-    bvh.positions_data = positions;
-    bvh.radius_data    = radius;
-}
-void update_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances) {
-    bvh.instances = instances;
-}
-bvh_shape& get_shape_bvh(bvh_scene& bvh, int shape_id) {
+bvh_tree& get_shape_bvh(bvh_tree& bvh, int shape_id) {
     return bvh.shape_bvhs[shape_id];
 }
 
-// Intersect ray with a bvh.
-bvh_shape_intersection intersect_shape_bvh(
-    const bvh_shape& bvh, const ray3f& ray_, bool find_any) {
+// Recursively recomputes the node bounds for a shape bvh
+template <typename ElemBound>
+void refit_bvh_nodes(
+    vector<bvh_node>& nodes, int nodeid, const ElemBound& element_bounds) {
+    // refit
+    auto& node = nodes[nodeid];
+    node.bbox  = invalid_bbox3f;
+    if (node.is_internal) {
+        for (auto i = 0; i < 2; i++) {
+            refit_bvh_nodes(nodes, node.primitive_ids[i], element_bounds);
+            node.bbox += nodes[node.primitive_ids[i]].bbox;
+        }
+    } else {
+        for (auto elememt_id = 0; elememt_id < node.num_primitives;
+             elememt_id++) {
+            node.bbox += element_bounds(elememt_id);
+        }
+    }
+}
+
+// Recursively recomputes the node bounds for a shape bvh
+void refit_bvh(bvh_tree& bvh) {
 #if YOCTO_EMBREE
-    // call Embree if needed
-    if (bvh.embree_bvh) return intersect_embree_bvh(bvh, ray_, find_any);
+    if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
 #endif
 
+    auto points    = get_points(bvh);
+    auto lines     = get_lines(bvh);
+    auto triangles = get_triangles(bvh);
+    auto quads     = get_quads(bvh);
+    auto positions = get_positions(bvh);
+    auto radius    = get_radius(bvh);
+    auto instances = get_instances(bvh);
+
+    // get the number of primitives and the primitive type
+    if (!points.empty()) {
+        return refit_bvh_nodes(
+            bvh.nodes, 0, [points, positions, radius](int idx) {
+                auto& p = points[idx];
+                return point_bounds(positions[p], radius[p]);
+            });
+    } else if (!lines.empty()) {
+        return refit_bvh_nodes(
+            bvh.nodes, 0, [lines, positions, radius](int idx) {
+                auto& l = lines[idx];
+                return line_bounds(
+                    positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
+            });
+    } else if (!triangles.empty()) {
+        return refit_bvh_nodes(bvh.nodes, 0, [triangles, positions](int idx) {
+            auto& t = triangles[idx];
+            return triangle_bounds(
+                positions[t.x], positions[t.y], positions[t.z]);
+        });
+    } else if (!quads.empty()) {
+        return refit_bvh_nodes(bvh.nodes, 0, [quads, positions](int idx) {
+            auto& q = quads[idx];
+            return quad_bounds(
+                positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        });
+    } else if (!instances.empty()) {
+        return refit_bvh_nodes(bvh.nodes, 0, [&bvh, instances](int idx) {
+            auto& instance = instances[idx];
+            auto& sbvh     = bvh.shape_bvhs[instance.shape_id];
+            return sbvh.nodes.empty()
+                       ? invalid_bbox3f
+                       : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
+        });
+    } else {
+        throw runtime_error("empty shape");
+    }
+}
+
+// Recursively recomputes the node bounds for a shape bvh
+void update_vertices(bvh_tree& bvh, bvh_array_view<vec3f> positions,
+    bvh_array_view<float> radius) {
+    if (bvh.positions_data.size() != positions.size() ||
+        bvh.radius_data.size() != radius.size())
+        throw std::invalid_argument("mismatched sizes");
+    bvh.positions_data = {positions.begin(), positions.end()};
+    bvh.radius_data    = {radius.begin(), radius.end()};
+}
+void update_instances(bvh_tree& bvh, bvh_strided_view<bvh_instance> instances) {
+    if (bvh.instances_data.size() != instances.size())
+        throw std::invalid_argument("mismatched sizes");
+    for (auto i = 0; i < instances.size(); i++)
+        bvh.instances_data[i] = instances[i];
+}
+
+// Intersect ray with a bvh.
+template <bool IsInstanced, typename PrimitiveIntersect>
+bool intersect_bvh_nodes(const vector<bvh_node>& nodes, const ray3f& ray_,
+    bvh_intersection& intersection, bool find_any,
+    const PrimitiveIntersect& intersect_primitive) {
     // check empty
-    if (bvh.nodes.empty()) return {};
-    if (bvh.points.empty() && bvh.lines.empty() && bvh.triangles.empty() &&
-        bvh.quads.empty())
-        return {};
+    if (nodes.empty()) return false;
 
     // node stack
     int  node_stack[128];
@@ -1262,7 +1288,7 @@ bvh_shape_intersection intersect_shape_bvh(
     node_stack[node_cur++] = 0;
 
     // shared variables
-    auto intersection = bvh_shape_intersection{};
+    auto hit = false;
 
     // copy ray to modify it
     auto ray = ray_;
@@ -1275,7 +1301,7 @@ bvh_shape_intersection intersect_shape_bvh(
     // walking stack
     while (node_cur) {
         // grab node
-        auto& node = bvh.nodes[node_stack[--node_cur]];
+        auto& node = nodes[node_stack[--node_cur]];
 
         // intersect bbox
         // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
@@ -1295,130 +1321,136 @@ bvh_shape_intersection intersect_shape_bvh(
             }
         } else {
             for (auto i = 0; i < node.num_primitives; i++) {
-                auto element_intersection = bvh_element_intersection{};
-                if (!bvh.triangles.empty()) {
-                    auto& t              = bvh.triangles[node.primitive_ids[i]];
-                    element_intersection = intersect_triangle(ray,
-                        bvh.positions[t.x], bvh.positions[t.y],
-                        bvh.positions[t.z]);
-                } else if (!bvh.quads.empty()) {
-                    auto& t              = bvh.quads[node.primitive_ids[i]];
-                    element_intersection = intersect_quad(ray,
-                        bvh.positions[t.x], bvh.positions[t.y],
-                        bvh.positions[t.z], bvh.positions[t.w]);
-                } else if (!bvh.lines.empty()) {
-                    auto& l              = bvh.lines[node.primitive_ids[i]];
-                    element_intersection = intersect_line(ray,
-                        bvh.positions[l.x], bvh.positions[l.y], bvh.radius[l.x],
-                        bvh.radius[l.y]);
-                } else if (!bvh.points.empty()) {
-                    auto& p              = bvh.points[node.primitive_ids[i]];
-                    element_intersection = intersect_point(
-                        ray, bvh.positions[p], bvh.radius[p]);
+                if constexpr (!IsInstanced) {
+                    if (intersect_primitive(ray, node.primitive_ids[i],
+                            intersection.element_uv, intersection.distance)) {
+                        hit                     = true;
+                        intersection.element_id = node.primitive_ids[i];
+                        ray.tmax                = intersection.distance;
+                    }
                 } else {
-                    continue;
+                    if (intersect_primitive(ray, node.primitive_ids[i],
+                            intersection, find_any)) {
+                        hit                      = true;
+                        intersection.instance_id = node.primitive_ids[i];
+                        ray.tmax                 = intersection.distance;
+                    }
                 }
-                if (!element_intersection.hit) continue;
-                intersection = {node.primitive_ids[i],
-                    element_intersection.element_uv,
-                    element_intersection.distance, true};
-                ray.tmax     = intersection.distance;
             }
         }
 
         // check for early exit
-        if (find_any && intersection.hit) return intersection;
+        if (find_any && hit) return hit;
     }
 
-    return intersection;
+    return hit;
 }
 
 // Intersect ray with a bvh.
-bvh_scene_intersection intersect_scene_bvh(
-    const bvh_scene& bvh, const ray3f& ray_, bool find_any) {
+bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray,
+    bvh_intersection& intersection, bool find_any) {
 #if YOCTO_EMBREE
     // call Embree if needed
-    if (bvh.embree_bvh) return intersect_embree_bvh(bvh, ray_, find_any);
+    if (bvh.embree_bvh) {
+        return intersect_embree_bvh(bvh, ray, intersection, find_any);
+    }
 #endif
 
-    // check empty
-    if (bvh.nodes.empty()) return {};
-    if (bvh.instances.empty()) return {};
+    auto points    = get_points(bvh);
+    auto lines     = get_lines(bvh);
+    auto triangles = get_triangles(bvh);
+    auto quads     = get_quads(bvh);
+    auto positions = get_positions(bvh);
+    auto radius    = get_radius(bvh);
+    auto instances = get_instances(bvh);
 
-    // node stack
-    int  node_stack[128];
-    auto node_cur          = 0;
-    node_stack[node_cur++] = 0;
-
-    // shared variables
-    auto intersection = bvh_scene_intersection{};
-
-    // copy ray to modify it
-    auto ray = ray_;
-
-    // prepare ray for fast queries
-    auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-    auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-        (ray_dinv.z < 0) ? 1 : 0};
-
-    // walking stack
-    while (node_cur) {
-        // grab node
-        auto& node = bvh.nodes[node_stack[--node_cur]];
-
-        // intersect bbox
-        // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
-        if (!intersect_bbox(ray, ray_dinv, node.bbox)) continue;
-
-        // intersect node, switching based on node type
-        // for each type, iterate over the the primitive list
-        if (node.is_internal) {
-            // for internal nodes, attempts to proceed along the
-            // split axis from smallest to largest nodes
-            if (ray_dsign[node.split_axis]) {
-                node_stack[node_cur++] = node.primitive_ids[0];
-                node_stack[node_cur++] = node.primitive_ids[1];
-            } else {
-                node_stack[node_cur++] = node.primitive_ids[1];
-                node_stack[node_cur++] = node.primitive_ids[0];
-            }
-        } else {
-            for (auto i = 0; i < node.num_primitives; i++) {
-                auto& instance           = bvh.instances[node.primitive_ids[i]];
-                auto  shape_intersection = intersect_shape_bvh(
-                    bvh.shape_bvhs[instance.shape_id],
-                    transform_ray(instance.frame_inverse, ray), find_any);
-                if (!shape_intersection.hit) continue;
-                intersection = {node.primitive_ids[i],
-                    shape_intersection.element_id,
-                    shape_intersection.element_uv, shape_intersection.distance,
-                    true};
-                ray.tmax     = intersection.distance;
-            }
-        }
-
-        // check for early exit
-        if (find_any && intersection.hit) return intersection;
+    if (!triangles.empty()) {
+        return intersect_bvh_nodes<false>(bvh.nodes, ray, intersection,
+            find_any,
+            [triangles, positions](
+                const ray3f& ray, int idx, vec2f& uv, float& dist) {
+                auto& t = triangles[idx];
+                return intersect_triangle(ray, positions[t.x], positions[t.y],
+                    positions[t.z], uv, dist);
+            });
+    } else if (!quads.empty()) {
+        return intersect_bvh_nodes<false>(bvh.nodes, ray, intersection,
+            find_any,
+            [quads, positions](
+                const ray3f& ray, int idx, vec2f& uv, float& dist) {
+                auto& q = quads[idx];
+                return intersect_quad(ray, positions[q.x], positions[q.y],
+                    positions[q.z], positions[q.w], uv, dist);
+            });
+    } else if (!lines.empty()) {
+        return intersect_bvh_nodes<false>(bvh.nodes, ray, intersection,
+            find_any,
+            [lines, positions, radius](
+                const ray3f& ray, int idx, vec2f& uv, float& dist) {
+                auto& l = lines[idx];
+                return intersect_line(ray, positions[l.x], positions[l.y],
+                    radius[l.x], radius[l.y], uv, dist);
+            });
+    } else if (!points.empty()) {
+        return intersect_bvh_nodes<false>(bvh.nodes, ray, intersection,
+            find_any,
+            [points, positions, radius](
+                const ray3f& ray, int idx, vec2f& uv, float& dist) {
+                auto& p = points[idx];
+                return intersect_point(ray, positions[p], radius[p], uv, dist);
+            });
+    } else if (!instances.empty()) {
+        return intersect_bvh_nodes<true>(bvh.nodes, ray, intersection, find_any,
+            [&bvh, instances](const ray3f& ray, int idx,
+                bvh_intersection& intersection, bool find_any) {
+                auto& instance = instances[idx];
+                auto  inv_frame =
+                    bvh.non_rigid_frames
+                        ? transform_ray(inverse((affine3f)instance.frame), ray)
+                        : transform_ray_inverse(instance.frame, ray);
+                return intersect_bvh(bvh.shape_bvhs[instance.shape_id],
+                    inv_frame, intersection, find_any);
+            });
+    } else {
+        return false;
     }
-
-    return intersection;
 }
 
-// Finds the closest element with a bvh.
-bvh_shape_intersection overlap_shape_bvh(
-    const bvh_shape& bvh, const vec3f& pos, float max_distance, bool find_any) {
+// Intersect ray with a bvh.
+bool intersect_bvh(const bvh_tree& bvh, int instance_id, const ray3f& ray,
+    bvh_intersection& intersection, bool find_any) {
+    auto  instances = get_instances(bvh);
+    auto& instance  = instances[instance_id];
+    auto  tray      = transform_ray_inverse(instance.frame, ray);
+    if (intersect_bvh(
+            bvh.shape_bvhs[instance.shape_id], tray, intersection, find_any)) {
+        intersection.instance_id = instance_id;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+// Intersect ray with a bvh.
+template <bool IsInstanced, typename PrimitiveOverlap>
+bool overlap_bvh_nodes(const vector<bvh_node>& nodes, const vec3f& pos,
+    float max_distance, bvh_intersection& intersection, bool find_any,
+    const PrimitiveOverlap& overlap_primitive) {
+    // check if empty
+    if (nodes.empty()) return false;
+
     // node stack
     int  node_stack[64];
     auto node_cur          = 0;
     node_stack[node_cur++] = 0;
 
     // hit
-    auto intersection = bvh_shape_intersection{};
+    auto hit = false;
 
     // walking stack
     while (node_cur) {
         // grab node
-        auto node = bvh.nodes[node_stack[--node_cur]];
+        auto& node = nodes[node_stack[--node_cur]];
 
         // intersect bbox
         if (!distance_check_bbox(pos, max_distance, node.bbox)) continue;
@@ -1431,106 +1463,101 @@ bvh_shape_intersection overlap_shape_bvh(
             node_stack[node_cur++] = node.primitive_ids[1];
         } else {
             for (auto i = 0; i < node.num_primitives; i++) {
-                auto element_intersection = bvh_element_intersection{};
-                if (!bvh.triangles.empty()) {
-                    auto& t              = bvh.triangles[node.primitive_ids[i]];
-                    element_intersection = overlap_triangle(pos, max_distance,
-                        bvh.positions[t.x], bvh.positions[t.y],
-                        bvh.positions[t.z], bvh.radius[t.x], bvh.radius[t.y],
-                        bvh.radius[t.z]);
-                } else if (!bvh.quads.empty()) {
-                    auto& t              = bvh.quads[node.primitive_ids[i]];
-                    element_intersection = overlap_quad(pos, max_distance,
-                        bvh.positions[t.x], bvh.positions[t.y],
-                        bvh.positions[t.z], bvh.positions[t.w], bvh.radius[t.x],
-                        bvh.radius[t.y], bvh.radius[t.z], bvh.radius[t.w]);
-                } else if (!bvh.lines.empty()) {
-                    auto& l              = bvh.lines[node.primitive_ids[i]];
-                    element_intersection = overlap_line(pos, max_distance,
-                        bvh.positions[l.x], bvh.positions[l.y], bvh.radius[l.x],
-                        bvh.radius[l.y]);
-                } else if (!bvh.points.empty()) {
-                    auto& p              = bvh.points[node.primitive_ids[i]];
-                    element_intersection = overlap_point(
-                        pos, max_distance, bvh.positions[p], bvh.radius[p]);
+                if constexpr (!IsInstanced) {
+                    if (overlap_primitive(pos, max_distance,
+                            node.primitive_ids[i], intersection.element_uv,
+                            intersection.distance)) {
+                        hit                     = true;
+                        intersection.element_id = node.primitive_ids[i];
+                        max_distance            = intersection.distance;
+                    }
                 } else {
-                    continue;
+                    if (overlap_primitive(pos, max_distance,
+                            node.primitive_ids[i], intersection, find_any)) {
+                        hit                      = true;
+                        intersection.instance_id = node.primitive_ids[i];
+                        max_distance             = intersection.distance;
+                    }
                 }
-                if (!element_intersection.hit) continue;
-                intersection = {node.primitive_ids[i],
-                    element_intersection.element_uv,
-                    element_intersection.distance, true};
-                max_distance = intersection.distance;
             }
         }
 
         // check for early exit
-        if (find_any && intersection.hit) return intersection;
+        if (find_any && hit) return hit;
     }
 
-    return intersection;
-}
-
-bvh_scene_intersection intersect_instance_bvh(
-    const bvh_scene& bvh, int instance_id, const ray3f& ray, bool find_any) {
-    auto& instance           = bvh.instances[instance_id];
-    auto  tray               = transform_ray_inverse(instance.frame, ray);
-    auto  shape_intersection = bvh_shape_intersection{};
-    shape_intersection       = intersect_shape_bvh(
-        bvh.shape_bvhs[instance.shape_id], tray, find_any);
-    if (!shape_intersection.hit) return {};
-    return {instance_id, shape_intersection.element_id,
-        shape_intersection.element_uv, shape_intersection.distance, true};
+    return hit;
 }
 
 // Finds the closest element with a bvh.
-bvh_scene_intersection overlap_scene_bvh(
-    const bvh_scene& bvh, const vec3f& pos, float max_distance, bool find_any) {
-    // node stack
-    int  node_stack[64];
-    auto node_cur          = 0;
-    node_stack[node_cur++] = 0;
+bool overlap_shape_bvh(const bvh_tree& bvh, const vec3f& pos,
+    float max_distance, bvh_intersection& intersection, bool find_any) {
+    auto points    = get_points(bvh);
+    auto lines     = get_lines(bvh);
+    auto triangles = get_triangles(bvh);
+    auto quads     = get_quads(bvh);
+    auto positions = get_positions(bvh);
+    auto radius    = get_radius(bvh);
+    auto instances = get_instances(bvh);
 
-    // hit
-    auto intersection = bvh_scene_intersection{};
+    if (!triangles.empty()) {
+        return overlap_bvh_nodes<false>(bvh.nodes, pos, max_distance,
+            intersection, find_any,
+            [triangles, positions, radius](const vec3f& pos, float max_distance,
+                int idx, vec2f& element_uv, float& distance) {
+                auto& t = triangles[idx];
+                return overlap_triangle(pos, max_distance, positions[t.x],
+                    positions[t.y], positions[t.z], radius[t.x], radius[t.y],
+                    radius[t.z], element_uv, distance);
+            });
+    } else if (!quads.empty()) {
+        return overlap_bvh_nodes<false>(bvh.nodes, pos, max_distance,
+            intersection, find_any,
+            [quads, positions, radius](const vec3f& pos, float max_distance,
+                int idx, vec2f& element_uv, float& distance) {
+                auto& q = quads[idx];
+                return overlap_quad(pos, max_distance, positions[q.x],
+                    positions[q.y], positions[q.z], positions[q.w], radius[q.x],
+                    radius[q.y], radius[q.z], radius[q.w], element_uv,
+                    distance);
+            });
+    } else if (!lines.empty()) {
+        return overlap_bvh_nodes<false>(bvh.nodes, pos, max_distance,
+            intersection, find_any,
+            [lines, positions, radius](const vec3f& pos, float max_distance,
+                int idx, vec2f& element_uv, float& distance) {
+                auto& l = lines[idx];
+                return overlap_line(pos, max_distance, positions[l.x],
+                    positions[l.y], radius[l.x], radius[l.y], element_uv,
+                    distance);
+            });
+    } else if (!points.empty()) {
+        return overlap_bvh_nodes<false>(bvh.nodes, pos, max_distance,
+            intersection, find_any,
+            [points, positions, radius](const vec3f& pos, float max_distance,
+                int idx, vec2f& element_uv, float& distance) {
+                auto& p = points[idx];
+                return overlap_point(pos, max_distance, positions[p], radius[p],
+                    element_uv, distance);
+            });
+    } else if (instances.empty()) {
+        return overlap_bvh_nodes<true>(bvh.nodes, pos, max_distance,
+            intersection, find_any,
+            [&bvh, instances](const vec3f& pos, float max_distance, int idx,
+                bvh_intersection& intersection, bool find_any) {
+                auto& instance = instances[idx];
+                auto  inv_pos  = bvh.non_rigid_frames
+                                   ? transform_point(
+                                         inverse((affine3f)instance.frame), pos)
+                                   : transform_point_inverse(
+                                         instance.frame, pos);
+                return overlap_shape_bvh(bvh.shape_bvhs[instance.shape_id],
+                    inv_pos, max_distance, intersection, find_any);
+            });
 
-    // walking stack
-    while (node_cur) {
-        // grab node
-        auto node = bvh.nodes[node_stack[--node_cur]];
-
-        // intersect bbox
-        if (!distance_check_bbox(pos, max_distance, node.bbox)) continue;
-
-        // intersect node, switching based on node type
-        // for each type, iterate over the the primitive list
-        if (node.is_internal) {
-            // internal node
-            node_stack[node_cur++] = node.primitive_ids[0];
-            node_stack[node_cur++] = node.primitive_ids[1];
-        } else if (!bvh.instances.empty()) {
-            for (auto i = 0; i < node.num_primitives; i++) {
-                auto& instance           = bvh.instances[node.primitive_ids[i]];
-                auto  shape_intersection = overlap_shape_bvh(
-                    bvh.shape_bvhs[instance.shape_id],
-                    transform_point(instance.frame_inverse, pos), max_distance,
-                    find_any);
-                if (!shape_intersection.hit) continue;
-                intersection = {node.primitive_ids[i],
-                    shape_intersection.element_id,
-                    shape_intersection.element_uv, shape_intersection.distance,
-                    true};
-                max_distance = intersection.distance;
-            }
-        } else {
-            throw runtime_error("empty bvh");
-        }
-
-        // check for early exit
-        if (find_any && intersection.hit) return intersection;
+    } else {
+        return false;
     }
-
-    return intersection;
 }
 
 #if 0
@@ -1602,7 +1629,7 @@ bvh_scene_intersection overlap_scene_bvh(
 namespace yocto {
 
 // Print bvh statistics.
-string print_bvh_stats(const bvh_scene& bvh) {
+string print_bvh_stats(const bvh_tree& bvh) {
     auto num_shapes    = (size_t)0;
     auto num_instances = (size_t)0;
 
@@ -1634,12 +1661,12 @@ string print_bvh_stats(const bvh_scene& bvh) {
     auto memory_scene_nodes = (size_t)0;
 
     for (auto& sbvh : bvh.shape_bvhs) {
-        elem_points += sbvh.points.size();
-        elem_lines += sbvh.lines.size();
-        elem_triangles += sbvh.triangles.size();
-        elem_quads += sbvh.quads.size();
-        vert_pos += sbvh.positions.size();
-        vert_radius += sbvh.radius.size();
+        elem_points += get_points(sbvh).size();
+        elem_lines += get_lines(sbvh).size();
+        elem_triangles += get_triangles(sbvh).size();
+        elem_quads += get_quads(sbvh).size();
+        vert_pos += get_positions(sbvh).size();
+        vert_radius += get_radius(sbvh).size();
         stored_elem_points += sbvh.points_data.size();
         stored_elem_lines += sbvh.lines_data.size();
         stored_elem_triangles += sbvh.triangles_data.size();
@@ -1650,7 +1677,7 @@ string print_bvh_stats(const bvh_scene& bvh) {
     }
 
     num_shapes    = bvh.shape_bvhs.size();
-    num_instances = bvh.instances.size();
+    num_instances = get_instances(bvh).size();
     scene_nodes   = bvh.nodes.size();
 
     memory_elems = stored_elem_points * sizeof(int) +
