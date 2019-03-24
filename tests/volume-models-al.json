@@ -1,5 +1,5 @@
 {
-    "name": "refractive-al",
+    "name": "volume-models-al",
     "cameras": [
         {
             "name": "cam",
@@ -42,8 +42,8 @@
             ],
             "diffuse_texture": "floor"
         },
-        {
-            "name": "obj1",
+       {
+            "name": "jade",
             "diffuse": [
                 0,
                 0,
@@ -59,31 +59,12 @@
                 1,
                 1
             ],
-            "roughness": 0,
-            "refract": true
+            "roughness": 0.0,
+            "volume_density": [8,8,8],
+            "volume_albedo": [0.5, 0.7, 0.5]
         },
         {
-            "name": "obj2",
-            "diffuse": [
-                0,
-                0,
-                0
-            ],
-            "specular": [
-                0.04,
-                0.04,
-                0.04
-            ],
-            "transmission": [
-                1,
-                0.7,
-                0.7
-            ],
-            "roughness": 0,
-            "refract": true
-        },
-        {
-            "name": "obj3",
+            "name": "glass",
             "diffuse": [
                 0,
                 0,
@@ -99,8 +80,31 @@
                 1,
                 1
             ],
-            "roughness": 0.1,
-            "refract": true
+            "refract": true,
+            "roughness": 0,
+            "volume_density": [0.5, 2, 2],
+            "volume_albedo": [0, 0, 0]
+        },
+        {
+            "name": "cloud",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "transmission": [
+                1,
+                1,
+                1
+            ],
+            "volume_density": [2, 2, 2],
+            "volume_albedo": [0.9, 0.9, 0.9],
+            "volume_phaseg": 0
         },
         {
             "name": "light1",
@@ -129,28 +133,31 @@
             }
         },
         {
-            "name": "obj1",
-            "filename": "models/obj1.ply",
-            "material": "obj1",
+            "name": "cube",
+            "filename": "models/obj1.obj",
+            "material": "glass",
+            "subdivision_level": 4,
+            "catmull_clark": true,
+            "compute_normals": true,
             "!!proc": {
-                "type": "matball"
+                "type": "cube_facevarying"
             }
         },
         {
-            "name": "obj2",
+            "name": "monkey",
             "filename": "models/obj2.ply",
-            "material": "obj2",
+            "material": "cloud",
+            "subdivision_level": 2,
+            "catmull_clark": true,
+            "compute_normals": true,
             "!!proc": {
-                "type": "matball"
+                "type": "suzanne"
             }
         },
         {
-            "name": "obj3",
-            "filename": "models/obj3.ply",
-            "material": "obj3",
-            "!!proc": {
-                "type": "matball"
-            }
+            "name": "bunny",
+            "filename": "models/stanford-bunny.obj",
+            "material": "jade"
         },
         {
             "name": "light1",
@@ -181,8 +188,8 @@
             "shape": "floor"
         },
         {
-            "name": "obj1",
-            "shape": "obj1",
+            "name": "cube",
+            "shape": "cube",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -192,23 +199,23 @@
             }
         },
         {
-            "name": "obj2",
-            "shape": "obj2",
+            "name": "monkey",
+            "shape": "monkey",
             "!!proc": {
                 "translation": [
-                    0,
+                    2.5,
                     1,
                     0
                 ]
             }
         },
         {
-            "name": "obj3",
-            "shape": "obj3",
+            "name": "bunny",
+            "shape": "bunny",
             "!!proc": {
                 "translation": [
-                    2.5,
-                    1,
+                    0,
+                    0,
                     0
                 ]
             }

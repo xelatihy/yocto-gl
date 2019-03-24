@@ -629,6 +629,12 @@ vec3f evaluate_delta_brdf_cosine(const microfacet_brdf& brdf,
         microfacet_brdf += brdf.transmission * (1 - fresnel);
     }
 
+    if (brdf.transmission != zero3f && brdf.refract &&
+        outgoing_up != incoming_up) {
+        auto fresnel = evaluate_brdf_fresnel(brdf, normal, incoming);
+        microfacet_brdf += brdf.transmission * (1 - fresnel);
+    }
+
     return microfacet_brdf;
 }
 
@@ -804,6 +810,10 @@ float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
     }
     if (brdf.transmission != zero3f && !brdf.refract && !outgoing_up &&
         incoming_up) {
+        return weights.z;
+    }
+    if (brdf.transmission != zero3f && brdf.refract &&
+        outgoing_up != incoming_up) {
         return weights.z;
     }
 
@@ -999,6 +1009,23 @@ vec3f evaluate_transmission(const yocto_scene& scene,
         tr *= 1.0f - max(0.0f, density[channel] / vd[channel]);
     }
     return {tr, tr, tr};
+}
+
+float sample_volume_distance(float volume_density, float r) {
+    if (volume_density == 0 or r == 0)
+        return float_max;
+    else
+        return -log(r) / volume_density;
+}
+
+float sample_volume_distance_pdf(float volume_density, float distance) {
+    return exp(-volume_density * distance);
+}
+
+vec3f evaluate_volume_transmission(
+    const vec3f& volume_density, float distance) {
+    return vec3f{exp(-volume_density.x * distance),
+        exp(-volume_density.y * distance), exp(-volume_density.z * distance)};
 }
 
 float sample_distance(const yocto_scene& scene, const yocto_material& material,
@@ -1209,227 +1236,205 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
     return weight;
 }
 
-// Iterative volume path tracing.
+vec3f sample_next_direction(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_tree& bvh, const trace_point& point,
+    const vec3f& outgoing, float prob_light, rng_state& rng, vec3f& weight) {
+    // Sample next direction when path tracing. prob_light is the probabilty of
+    // sampling a direction towards a light.
+
+    auto next_direction     = zero3f;
+    auto next_brdf_cosine   = zero3f;
+    auto next_direction_pdf = 0.0f;
+    if (!is_brdf_delta(point.brdf)) {
+        if (get_random_float(rng) < 1 - prob_light) {
+            next_direction = sample_brdf_direction(point.brdf, point.normal,
+                outgoing, get_random_float(rng), get_random_vec2f(rng));
+        } else {
+            next_direction = sample_lights_direction(scene, lights, {},
+                point.position, get_random_float(rng), get_random_float(rng),
+                get_random_vec2f(rng));
+        }
+        next_brdf_cosine = evaluate_brdf_cosine(
+            point.brdf, point.normal, outgoing, next_direction);
+        next_direction_pdf =
+            (1 - prob_light) * sample_brdf_direction_pdf(point.brdf,
+                                   point.normal, outgoing, next_direction) +
+            prob_light * sample_lights_direction_pdf(scene, lights, bvh,
+                             point.position, next_direction);
+    } else {
+        next_direction   = sample_delta_brdf_direction(point.brdf, point.normal,
+            outgoing, get_random_float(rng), get_random_vec2f(rng));
+        next_brdf_cosine = evaluate_delta_brdf_cosine(
+            point.brdf, point.normal, outgoing, next_direction);
+        next_direction_pdf = sample_delta_brdf_direction_pdf(
+            point.brdf, point.normal, outgoing, next_direction);
+    }
+
+    if (next_direction_pdf == 0 or next_brdf_cosine == zero3f)
+        weight = zero3f;
+    else
+        weight *= next_brdf_cosine / next_direction_pdf;
+    return next_direction;
+}
+
+vec3f sample_next_direction_volume(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_tree& bvh, const vec3f& position,
+    const vec3f& albedo, float phaseg, const vec3f& outgoing, float prob_light,
+    rng_state& rng, vec3f& weight) {
+    // Sample next direction when path tracing inside a volume. prob_light is
+    // the probabilty of sampling a direction towards a light.
+
+    auto next_direction     = zero3f;
+    auto next_direction_pdf = 0.0f;
+
+    if (get_random_float(rng) < prob_light) {
+        next_direction = sample_lights_direction(scene, lights, bvh, position,
+            get_random_float(rng), get_random_float(rng),
+            get_random_vec2f(rng));
+    } else {
+        next_direction = sample_phase_function(phaseg, get_random_vec2f(rng));
+        next_direction = make_basis_fromz(-outgoing) * next_direction;
+    }
+    auto cos_theta      = dot(outgoing, next_direction);
+    auto phase_function = evaluate_phase_function(cos_theta, phaseg);
+    next_direction_pdf  = (1 - prob_light) * phase_function +
+                         prob_light * sample_lights_direction_pdf(scene, lights,
+                                          bvh, position, next_direction);
+
+    if (next_direction_pdf == 0 || phase_function == 0.0f)
+        weight = zero3f;
+    else
+        weight *= albedo * phase_function / next_direction_pdf;
+    return next_direction;
+}
+
+void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
+    const bvh_tree& bvh, float prob_light, float prob_light_volume,
+    rng_state& rng, trace_point& point, vec3f& outgoing, vec3f& next_direction,
+    vec3f& weight, vec3f& radiance) {
+    // Integrate weight while random walking inside the volume until exit.
+
+    auto material = scene.materials[scene.shapes[point.instance_id].material];
+    auto spectrum = get_random_int(rng, 3);
+    auto volume_density         = material.volume_density[spectrum];
+    auto volume_albedo          = material.volume_albedo[spectrum];
+    auto volume_emission        = material.volume_emission;
+    auto volume_phaseg          = material.volume_phaseg;
+    const int volume_max_bounce = 1000;  // @giacomo: hardcoded!
+
+    for (auto volume_bounce = 0; volume_bounce < volume_max_bounce;
+         volume_bounce++) {
+        auto distance = sample_volume_distance(
+            volume_density, get_random_float(rng));
+
+        auto isec = bvh_intersection{};
+        if (!intersect_bvh(
+                bvh, make_ray(point.position, next_direction), isec)) {
+            weight = zero3f;
+            return;
+        }
+
+        auto next_point = make_trace_point(scene, isec.instance_id,
+            isec.element_id, isec.element_uv, next_direction);
+
+        if (isec.distance < distance) {
+            // intersection with surface of volume
+            if (is_brdf_zero(next_point.brdf)) break;
+
+            weight *= evaluate_volume_transmission(
+                material.volume_density, isec.distance);
+            weight /= sample_volume_distance_pdf(volume_density, isec.distance);
+
+            point          = next_point;
+            outgoing       = -next_direction;
+            next_direction = sample_next_direction(
+                scene, lights, bvh, point, outgoing, prob_light, rng, weight);
+
+            if (dot(next_direction, point.normal) > 0)
+                break;  // exit from volume
+            else
+                continue;  // internal reflection
+        }
+
+        // medium interaction inside volume
+        point.position += next_direction * distance;
+        weight /= sample_volume_distance_pdf(volume_density, distance);
+        weight *= evaluate_volume_transmission(
+            material.volume_density, distance);
+
+        if (get_random_float(rng) < volume_albedo) {
+            // scattering
+            weight /= volume_albedo;
+
+            outgoing       = -next_direction;
+            next_direction = sample_next_direction_volume(scene, lights, bvh,
+                point.position, material.volume_albedo, volume_phaseg, outgoing,
+                prob_light_volume, rng, weight);
+
+            // russian roulette
+            if (sample_russian_roulette(
+                    weight, volume_bounce, get_random_float(rng)))
+                break;
+            weight /= sample_russian_roulette_pdf(weight, volume_bounce);
+
+        } else {
+            // absorption
+            radiance += weight * volume_emission;
+            weight = zero3f;
+            return;
+        }
+    }
+}
+
+// Iterative volumetric path tracing.
 pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_tree& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces, bool environments_hidden) {
-    if (lights.instances.empty() && lights.environments.empty())
-        return {zero3f, false};
+    // intersect ray
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
+    if (!point.hit) {
+        if (environments_hidden || scene.environments.empty())
+            return {zero3f, false};
+        return {point.emission, true};
+    }
 
     // initialize
-    auto radiance = zero3f;
+    auto radiance = point.emission;
     auto weight   = vec3f{1, 1, 1};
-    auto emission = true;
-    auto ray      = make_ray(position, direction);
+    auto outgoing = -direction;
 
-#if 0
-    // @Hack: air volume properties should be set in the scene struct.
-    if (air == nullptr) {
-        air = new instance();
-        air->name = "air";
-        air->mat = new material();
-        air->mat->vd = vec3f{0.0, 0.0, 0.0};
-        air->mat->va = vec3f{0.0, 0.0, 0.0};
-        air->mat->vg = 0.0;
-    }
-#endif
+    // trace path
+    for (auto bounce = 0; bounce < max_bounces; bounce++) {
+        // exit if needed
+        if (is_brdf_zero(point.brdf) || weight == zero3f) break;
 
-    // List of mediums that contains the path. The path starts in air.
-    auto mediums = vector<int>{-1};
+        auto next_direction = sample_next_direction(
+            scene, lights, bvh, point, outgoing, 0.5, rng, weight);
+        if (weight == zero3f) break;
 
-    // Sample color channel. This won't matter if there are no heterogeneus
-    // materials.
-    auto ch             = sample_uniform_index(3, get_random_float(rng));
-    auto single_channel = false;
-
-    int bounce = 0;
-    while (bounce < max_bounces) {
-        auto  medium   = mediums.back();
-        auto& instance = scene.instances[medium];
-        auto& shape    = scene.shapes[instance.shape];
-        auto& material = scene.materials[shape.material];
-        auto  ve       = material.volume_emission;
-        auto  va       = material.volume_albedo;
-        auto  vd       = material.volume_density;
-        auto  vg       = material.volume_phaseg;
-
-        // If medium has color but must use delta tracking, integrate only the
-        // sampled spectrum.
-        if (!single_channel && is_material_volume_colored(material) &&
-            !is_material_volume_homogeneus(material)) {
-            weight[ch] *= 3;
-            weight[(ch + 1) % 3] = 0;
-            weight[(ch + 2) % 3] = 0;
-            single_channel       = true;
+        // transmission
+        if (dot(next_direction, point.normal) < 0) {
+            integrate_volume(scene, lights, bvh, 0.5, 0.5, rng, point, outgoing,
+                next_direction, weight, radiance);
+            if (weight == zero3f) return {radiance, true};
         }
 
-        // TODO: FIXME REMOVING BBOX
-        // Sample distance of next absorption/scattering event in the medium.
-        // dist_pdf is unknown due to delta tracking.
-        auto bbox = transform_bbox(
-            instance.frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
-        auto distance = sample_distance(
-            scene, instance, bbox, ray.o, ray.d, ch, rng);
+        // intersect next point
+        auto next_point = trace_ray_with_opacity(
+            scene, bvh, point.position, next_direction, rng, max_bounces);
 
-        // Create ray and clamp it to make the intersection faster.
-        ray       = make_ray(ray.o, ray.d);
-        ray.tmax  = distance;
-        auto isec = bvh_intersection{};
-        auto hit  = intersect_bvh(bvh, ray, isec);
+        radiance += weight * next_point.emission;
+        if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
 
-        // @Hack: When isec.instance == nullptr, we must discern if the ray hit
-        // nothing (the environment)
-        //        or a medium interaction was sampled. Doing isec.distance ==
-        //        maxf doesn't work, why??
-        auto scene_size = max(
-            bvh.nodes.front().bbox.max - bvh.nodes.front().bbox.min);
-
-        // environment
-        if (!hit && distance > scene_size) {
-            if (emission) {
-                for (auto& environment : scene.environments)
-                    radiance += weight * evaluate_environment_emission(
-                                             scene, environment, ray.d);
-            }
-            return {radiance, false};
-        }
-
-        // surface intersection
-        if (hit) {
-            auto& isec_instance = scene.instances[isec.instance_id];
-            auto& isec_shape    = scene.shapes[isec_instance.shape];
-            auto  outgoing      = -ray.d;
-            auto& isec_material = scene.materials[isec_shape.material];
-            auto  p             = evaluate_instance_position(
-                scene, isec_instance, isec.element_id, isec.element_uv);
-            auto normal = evaluate_instance_normal(scene, isec_instance,
-                isec.element_id, isec.element_uv, trace_non_rigid_frames);
-            auto brdf   = evaluate_material_brdf(scene, isec_material,
-                evaluate_shape_texturecoord(
-                    isec_shape, isec.element_id, isec.element_uv));
-
-            // distance sampling pdf is unknown due to delta tracking, but we do
-            // know the value of transmission / pdf_dist.
-            weight *= evaluate_transmission_div_pdf(vd, isec.distance, ch);
-
-            // emission
-            if (emission)
-                radiance += weight *
-                            evaluate_material_emission(scene, isec_material,
-                                evaluate_shape_texturecoord(isec_shape,
-                                    isec.element_id, isec.element_uv)) *
-                            evaluate_shape_color(
-                                isec_shape, isec.element_id, isec.element_uv)
-                                .xyz;
-
-            // early exit
-            if (brdf.diffuse + brdf.specular + brdf.transmission == zero3f ||
-                bounce >= max_bounces - 1)
-                break;
-
-            // direct lighting
-            if (get_random_float(rng) < prob_direct(brdf)) {
-                // With some probabilty, this is a naive path tracer (works
-                // great with delta-like brdfs)
-                vec3f direct;
-                float pdf;
-                vec3f incoming = direct_illumination(
-                    scene, bvh, lights, p, ch, mediums, rng, pdf, direct);
-                if (pdf != 0) {
-                    auto brdf_cosine = evaluate_brdf_cosine(
-                        brdf, normal, outgoing, incoming);
-                    radiance += weight * direct * brdf_cosine / pdf;
-                    emission = false;
-                }
-            } else
-                emission = true;
-
-            // continue path
-            vec3f incoming, brdf_cosine;
-            float pdf = 0;
-            if (!is_brdf_delta(brdf)) {
-                incoming    = sample_brdf_direction(brdf, normal, outgoing,
-                    get_random_float(rng), get_random_vec2f(rng));
-                brdf_cosine = evaluate_brdf_cosine(
-                    brdf, normal, outgoing, incoming);
-                pdf = sample_brdf_direction_pdf(
-                    brdf, normal, outgoing, incoming);
-            } else {
-                incoming = sample_delta_brdf_direction(brdf, normal, outgoing,
-                    get_random_float(rng), get_random_vec2f(rng));
-                brdf_cosine = evaluate_delta_brdf_cosine(
-                    brdf, normal, outgoing, incoming);
-                pdf = sample_delta_brdf_direction_pdf(
-                    brdf, normal, outgoing, incoming);
-            }
-            auto ndi = dot(normal, incoming);
-            auto ndo = dot(normal, outgoing);
-
-            // accumulate weight
-            if (pdf == 0) break;
-            weight *= brdf_cosine / pdf;
-            if (weight == zero3f) break;
-            ray.o            = p;
-            ray.d            = incoming;
-            bool transmitted = (ndi > 0) != (ndo > 0);
-
-            // transmission in medium
-            if (transmitted) {
-                float tr = 0.05;  // avoid numerical errors
-                if (ndo < -tr) {
-                    // Exiting from medium.
-                    if (isec.instance_id != medium) break;
-                    if (mediums.size() <= 1) break;
-                    mediums.pop_back();
-                } else if (ndo > tr) {
-                    // Entering new medium.
-                    if (isec.instance_id == medium) break;
-                    mediums.push_back(isec.instance_id);
-                } else
-                    break;
-            }
-            bounce += 1;
-        }
-        // medium interaction
-        else {
-            ray.o += ray.d * distance;
-            float scattering_prob = va[ch];
-
-            // absorption and emission
-            if (get_random_float(rng) >= scattering_prob) {
-                weight /= 1 - scattering_prob;
-                radiance += weight * ve;
-                break;
-            }
-
-            // scattering event
-            weight /= scattering_prob;
-            weight *= evaluate_transmission_div_pdf(vd, distance, ch);
-
-            // direct lighting
-            vec3f direct;
-            float pdf_direct;
-            vec3f l = direct_illumination(scene, bvh, lights, ray.o, ch,
-                mediums, rng, pdf_direct, direct);
-            if (pdf_direct != 0) {
-                auto f = va * evaluate_phase_function(dot(l, -ray.d), vg);
-                radiance += weight * direct * f / pdf_direct;
-                emission = false;
-            }
-
-            // indirect
-            vec3f incoming = sample_phase_function(vg, get_random_vec2f(rng));
-            weight *= va;
-            ray.d = transform_direction(
-                make_frame_fromz(zero3f, ray.d), incoming);
-        }
+        // setup next iteration
+        point    = next_point;
+        outgoing = -next_direction;
 
         // russian roulette
-        if (bounce > 2) {
-            auto rrprob = 1.0f - min(max(weight), 0.95f);
-            if (get_random_float(rng) < rrprob) break;
-            weight *= 1 / (1 - rrprob);
-        }
+        if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
+            break;
+        weight /= sample_russian_roulette_pdf(weight, bounce);
     }
 
     return {radiance, true};
@@ -1490,6 +1495,81 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_tree& bvh,
 
         // exit if no hit
         if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
+
+        // intersect next point
+        auto next_point = trace_ray_with_opacity(
+            scene, bvh, point.position, next_direction, rng, max_bounces);
+        radiance += weight * next_brdf_cosine * next_point.emission /
+                    next_direction_pdf;
+        if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
+
+        // setup next iteration
+        point    = next_point;
+        outgoing = -next_direction;
+        weight *= next_brdf_cosine / next_direction_pdf;
+
+        // russian roulette
+        if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
+            break;
+        weight /= sample_russian_roulette_pdf(weight, bounce);
+    }
+
+    return {radiance, true};
+}
+
+// Iterative volume naive path tracing
+pair<vec3f, bool> trace_volnaive(const yocto_scene& scene, const bvh_tree& bvh,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, int max_bounces, bool environments_hidden) {
+    // intersect ray
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
+    if (!point.hit) {
+        if (environments_hidden || scene.environments.empty())
+            return {zero3f, false};
+        return {point.emission, true};
+    }
+
+    // initialize
+    auto radiance = point.emission;
+    auto weight   = vec3f{1, 1, 1};
+    auto outgoing = -direction;
+
+    // trace  path
+    for (auto bounce = 0; bounce < max_bounces; bounce++) {
+        // exit if needed
+        if (is_brdf_zero(point.brdf) || weight == zero3f) break;
+
+        // continue path
+        auto next_direction     = zero3f;
+        auto next_brdf_cosine   = zero3f;
+        auto next_direction_pdf = 0.0f;
+        if (!is_brdf_delta(point.brdf)) {
+            next_direction   = sample_brdf_direction(point.brdf, point.normal,
+                outgoing, get_random_float(rng), get_random_vec2f(rng));
+            next_brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
+            next_direction_pdf = sample_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing, next_direction);
+        } else {
+            next_direction   = sample_delta_brdf_direction(point.brdf,
+                point.normal, outgoing, get_random_float(rng),
+                get_random_vec2f(rng));
+            next_brdf_cosine = evaluate_delta_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
+            next_direction_pdf = sample_delta_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing, next_direction);
+        }
+
+        // exit if no hit
+        if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
+
+        // transmission
+        if (dot(next_direction, point.normal) < 0) {
+            integrate_volume(scene, lights, bvh, 0.0, 0.0, rng, point, outgoing,
+                next_direction, weight, radiance);
+            if (weight == zero3f) return {radiance, true};
+        }
 
         // intersect next point
         auto next_point = trace_ray_with_opacity(
@@ -1917,7 +1997,10 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
         case trace_sampler_type::path: return trace_path;
         // case trace_type::volpath:
         //     return trace_volpath(
-        //         scene, bvh, lights, position, direction, rng, max_bounces);
+        //         scene, bvh, lights, position, direction, rng,
+        //         max_bounces);
+        case trace_sampler_type::volpath: return trace_volpath;
+        case trace_sampler_type::volnaive: return trace_volnaive;
         case trace_sampler_type::naive: return trace_naive;
         case trace_sampler_type::split: return trace_split;
         case trace_sampler_type::eyelight: return trace_eyelight;
@@ -1950,6 +2033,8 @@ bool is_trace_sampler_lit(const trace_image_options& options) {
     switch (type) {
         case trace_sampler_type::path:
         case trace_sampler_type::naive:
+        case trace_sampler_type::volpath:
+        case trace_sampler_type::volnaive:
         case trace_sampler_type::split: return true;
         case trace_sampler_type::eyelight:
         case trace_sampler_type::debug_normal:

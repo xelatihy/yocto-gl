@@ -149,15 +149,31 @@ foreach(filename "simple-al.json" "cornellbox-al.json" "simplemat-al.json" "subd
 endforeach()
 set(nsamples "4") 
 # path
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json" "hairball-al.json" "models-al.json" "simple-sl.json" "camerap-al.json" "camerapf-al.json" "camerao-al.json" "cameraof-al.json" "normal-al.json" "affine-al.json")
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json" "hairball-al.json" "models-al.json" "simple-sl.json" "camerap-al.json" "camerapf-al.json" "camerao-al.json" "cameraof-al.json" "normal-al.json" "affine-al.json" "glass-al.json" "refractive-al.json")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
+# volpath
+foreach(filename "glass-al.json" "refractive-al.json" "volume1-al.json" "volume2-al.json" "volume-models-al.json")
+    set(tracer "volpath")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-${tracer}-${filename}
+            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+# volnaive
+foreach(filename "glass-al.json" "refractive-al.json" "volume1-al.json" "volume2-al.json" "volume-models-al.json")
+    set(tracer "volnaive")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-${tracer}-${filename}
+            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
 # split
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json")
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "glass-al.json" "refractive-al.json")
     set(tracer "split")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -165,7 +181,7 @@ foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplem
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # naive
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json")
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "glass-al.json" "refractive-al.json")
     set(tracer "naive")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}

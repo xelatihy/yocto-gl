@@ -1,5 +1,5 @@
 {
-    "name": "refractive-al",
+    "name": "volume1-al",
     "cameras": [
         {
             "name": "cam",
@@ -43,16 +43,16 @@
             "diffuse_texture": "floor"
         },
         {
-            "name": "obj1",
+            "name": "cloud",
             "diffuse": [
                 0,
                 0,
                 0
             ],
             "specular": [
-                0.04,
-                0.04,
-                0.04
+                0.0,
+                0.0,
+                0.0
             ],
             "transmission": [
                 1,
@@ -60,47 +60,51 @@
                 1
             ],
             "roughness": 0,
-            "refract": true
+            "volume_density": [1, 1, 1],
+            "volume_albedo": [1,1,1],
+            "volume_phaseg": 0
         },
         {
-            "name": "obj2",
+            "name": "smoke",
             "diffuse": [
                 0,
                 0,
                 0
             ],
             "specular": [
-                0.04,
-                0.04,
-                0.04
-            ],
-            "transmission": [
-                1,
-                0.7,
-                0.7
-            ],
-            "roughness": 0,
-            "refract": true
-        },
-        {
-            "name": "obj3",
-            "diffuse": [
-                0,
-                0,
-                0
-            ],
-            "specular": [
-                0.04,
-                0.04,
-                0.04
+                0.0,
+                0.0,
+                0.0
             ],
             "transmission": [
                 1,
                 1,
                 1
             ],
-            "roughness": 0.1,
-            "refract": true
+            "roughness": 0,
+            "volume_density": [1, 1, 1],
+            "volume_albedo": [0.5, 0.5, 0.5],
+            "volume_phaseg": 0.0
+        },
+        {
+            "name": "invisible",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "transmission": [
+                1,
+                1,
+                1
+            ],
+            "volume_density": [0, 0, 0],
+            "volume_albedo": [0, 0, 0]
         },
         {
             "name": "light1",
@@ -129,25 +133,25 @@
             }
         },
         {
-            "name": "obj1",
-            "filename": "models/obj1.ply",
-            "material": "obj1",
+            "name": "cloud",
+            "filename": "models/cloud.ply",
+            "material": "cloud",
             "!!proc": {
                 "type": "matball"
             }
         },
         {
-            "name": "obj2",
-            "filename": "models/obj2.ply",
-            "material": "obj2",
+            "name": "smoke",
+            "filename": "models/smoke.ply",
+            "material": "smoke",
             "!!proc": {
                 "type": "matball"
             }
         },
         {
-            "name": "obj3",
-            "filename": "models/obj3.ply",
-            "material": "obj3",
+            "name": "invisible",
+            "filename": "models/invisible.ply",
+            "material": "invisible",
             "!!proc": {
                 "type": "matball"
             }
@@ -181,8 +185,8 @@
             "shape": "floor"
         },
         {
-            "name": "obj1",
-            "shape": "obj1",
+            "name": "cloud",
+            "shape": "cloud",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -192,8 +196,8 @@
             }
         },
         {
-            "name": "obj2",
-            "shape": "obj2",
+            "name": "smoke",
+            "shape": "smoke",
             "!!proc": {
                 "translation": [
                     0,
@@ -203,8 +207,8 @@
             }
         },
         {
-            "name": "obj3",
-            "shape": "obj3",
+            "name": "invisible",
+            "shape": "invisible",
             "!!proc": {
                 "translation": [
                     2.5,

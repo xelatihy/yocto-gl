@@ -696,6 +696,15 @@ void to_json(json& js, const yocto_material& value, const yocto_scene& scene) {
     if (value.opacity != def.opacity) js["opacity"] = value.opacity;
     if (value.fresnel != def.fresnel) js["fresnel"] = value.fresnel;
     if (value.refract != def.refract) js["refract"] = value.refract;
+    if (value.volume_density != def.volume_density)
+        js["volume_density"] = value.volume_density;
+    if (value.volume_emission != def.volume_emission)
+        js["volume_emission"] = value.volume_emission;
+    if (value.volume_albedo != def.volume_albedo)
+        js["volume_albedo"] = value.volume_albedo;
+    if (value.volume_phaseg != def.volume_phaseg)
+        js["volume_phaseg"] = value.volume_phaseg;
+
     if (value.emission_texture != def.emission_texture)
         js["emission_texture"] = ref_to_json(
             value.emission_texture, scene.textures);
@@ -734,6 +743,9 @@ void from_json(const json& js, yocto_material& value, yocto_scene& scene) {
     value.opacity          = js.value("opacity", def.opacity);
     value.fresnel          = js.value("fresnel", def.fresnel);
     value.refract          = js.value("refract", def.refract);
+    value.volume_density   = js.value("volume_density", def.volume_density);
+    value.volume_albedo    = js.value("volume_albedo", def.volume_albedo);
+    value.volume_phaseg    = js.value("volume_phaseg", def.volume_phaseg);
     value.emission_texture = ref_from_json(
         js.value("emission_texture", json{}), scene.textures);
     value.diffuse_texture = ref_from_json(

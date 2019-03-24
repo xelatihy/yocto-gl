@@ -1,5 +1,5 @@
 {
-    "name": "refractive-al",
+    "name": "volume2-al",
     "cameras": [
         {
             "name": "cam",
@@ -59,8 +59,9 @@
                 1,
                 1
             ],
-            "roughness": 0,
-            "refract": true
+            "roughness": 0.0,
+            "volume_density": [2,2,2],
+            "volume_albedo": [0.5, 0.7, 0.5]
         },
         {
             "name": "obj2",
@@ -76,11 +77,13 @@
             ],
             "transmission": [
                 1,
-                0.7,
-                0.7
+                1,
+                1
             ],
+            "refract": true,
             "roughness": 0,
-            "refract": true
+            "volume_density": [0.5, 0.5, 0.1],
+            "volume_albedo": [0, 0, 0]
         },
         {
             "name": "obj3",
@@ -99,8 +102,10 @@
                 1,
                 1
             ],
-            "roughness": 0.1,
-            "refract": true
+            "roughness": 0.4,
+            "volume_density": [7, 10, 10],
+            "volume_albedo": [0.9, 0.9, 0.9],
+            "volume_phaseg": 0
         },
         {
             "name": "light1",

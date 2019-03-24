@@ -128,6 +128,8 @@ enum struct trace_sampler_type {
     path,                // path tracing
     naive,               // naive path tracing
     split,               // path tracing with split heuristic
+    volpath,             // volume path tracing
+    volnaive,            // naive volume path tracing
     eyelight,            // eyelight rendering
     debug_normal,        // debug - normal
     debug_albedo,        // debug - albedo
@@ -146,10 +148,10 @@ enum struct trace_sampler_type {
 };
 
 const auto trace_sampler_type_names = vector<string>{"path", "naive", "split",
-    "eyelight", "debug_normal", "debug_albedo", "debug_texcoord", "debug_color",
-    "debug_frontfacing", "debug_emission", "debug_diffuse", "debug_specular",
-    "debug_transmission", "debug_roughness", "debug_material", "debug_shape",
-    "debug_instance", "debug_highlight"};
+    "volpath", "volnaive", "eyelight", "debug_normal", "debug_albedo",
+    "debug_texcoord", "debug_color", "debug_frontfacing", "debug_emission",
+    "debug_diffuse", "debug_specular", "debug_transmission", "debug_roughness",
+    "debug_material", "debug_shape", "debug_instance", "debug_highlight"};
 
 // Tracer function
 using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
