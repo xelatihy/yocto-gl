@@ -438,7 +438,7 @@ int ref_from_json(const json& js, const vector<T>& refs) {
     if (js.is_number()) {
         auto value = js.get<int>();
         if (value < 0 || value >= refs.size())
-            throw runtime_error("invalid object reference");
+            throw runtime_error("invalid object reference \"" + std::to_string(value) + "\"");
         return value;
     }
     auto name = js.get<string>();
@@ -450,7 +450,7 @@ int ref_from_json(const json& js, const vector<T>& refs) {
             break;
         }
     }
-    if (value < 0) throw runtime_error("invalid object reference");
+    if (value < 0) throw runtime_error("invalid object reference \"" + name + "\"");
     return value;
 }
 template <typename T>
