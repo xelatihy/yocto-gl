@@ -1,5 +1,9 @@
 # Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
 
+[![Build Status](
+    https://travis-ci.org/xelatihy/yocto-gl.svg?branch=master)](
+    https://travis-ci.org/xelatihy/yocto-gl)
+
 Yocto/GL is a collection of utility C++17 libraries for building 
 physically-based graphics algorithms released under the MIT license.
 Yocto/GL is written in a deliberatly data-driven style for ease of
