@@ -266,76 +266,156 @@ struct pbrt_accelerator {
 
 // pbrt textures
 struct pbrt_texture {
-    
+    struct constant_t {
+        vec3f value = 1;
+    };
+    struct bilerp_t {
+        enum struct mapping_t = {uv, spherical, cylindrical, planar};
+        mapping_t mapping     = mapping_t::uv;
+        float     uscale      = 1;
+        float     vscale      = 1;
+        float     udelta      = 0;
+        float     vdelta      = 0;
+        vec3f     v1          = {1, 0, 0};
+        vec3f     v2          = {0, 1, 0};
+    };
+    struct checkerboard_t {
+        enum struct mapping_t = {uv, spherical, cylindrical, planar};
+        mapping_t mapping     = mapping_t::uv;
+        float     uscale      = 1;
+        float     vscale      = 1;
+        float     udelta      = 0;
+        float     vdelta      = 0;
+        vec3f     v1          = {1, 0, 0};
+        vec3f     v2          = {0, 1, 0};
+    };
+    struct dots_t {
+        enum struct mapping_t = {uv, spherical, cylindrical, planar};
+        mapping_t mapping     = mapping_t::uv;
+        float     uscale      = 1;
+        float     vscale      = 1;
+        float     udelta      = 0;
+        float     vdelta      = 0;
+        vec3f     v1          = {1, 0, 0};
+        vec3f     v2          = {0, 1, 0};
+    };
+    struct fbm_t {};
+    struct imagemap_t {
+        enum struct mapping_t = {uv, spherical, cylindrical, planar};
+        mapping_t mapping     = mapping_t::uv;
+        float     uscale      = 1;
+        float     vscale      = 1;
+        float     udelta      = 0;
+        float     vdelta      = 0;
+        vec3f     v1          = {1, 0, 0};
+        vec3f     v2          = {0, 1, 0};
+    };
+    struct marble_t {};
+    struct mix_t {
+
+    };
+    struct scale_t {};
+    struct uv_t {
+        enum struct mapping_t = {uv, spherical, cylindrical, planar};
+        mapping_t mapping     = mapping_t::uv;
+        float     uscale      = 1;
+        float     vscale      = 1;
+        float     udelta      = 0;
+        float     vdelta      = 0;
+        vec3f     v1          = {1, 0, 0};
+        vec3f     v2          = {0, 1, 0};
+    };
+    struct windy_t {};
+    struct wrinkled_t {};
+    enum struct type_t {
+        bilerp,
+        checkerboard,
+        checkerboard,
+        constant,
+        dots,
+        fbm,
+        imagemap,
+        marble,
+        mix,
+        scale,
+        uv,
+        windy,
+        wrinkled,
+    };
+    string         name         = "";
+    type_t         type         = type_t::constant;
+    constant_t     constant     = {};
+    bilerp_t       bilerp       = {};
+    checkerboard_t checkerboard = {};
+    checkerboard_t checkerboard = {};
+    dots_t         dots         = {};
+    fbm_t          fbm          = {};
+    imagemap_t     imagemap     = {};
+    marble_t       marble       = {};
+    mix_t          mix          = {};
+    scale_t        scale        = {};
+    uv_t           uv           = {};
+    windy_t        windy        = {};
+    wrinkled_t     wrinkled     = {};
 };
 
 // pbrt materials
 struct pbrt_material {
-struct none_t {
-};
-struct matte_t {
-};
-struct mirror_t {
-};
-struct plastic_t {
-};
-struct metal_t {
-};
-struct glass_t {
-};
-struct translucent_t {
-};
-struct uber_t {
-};
-struct disney_t {
-};
-struct fourier_t {
-};
-struct hair_t {
-};
-struct kdsubsurface_t {
-};
-struct mix_t {
-};
-struct substrate_t {
-};
-struct subsurface_t {
-};
+    struct none_t {};
+    struct matte_t {
+        vec3f        Kd        = 0.5f;
+        pbrt_texture Kd_map    = {};
+        float        sigma     = 0;
+        pbrt_texture sigma_map = {};
+    };
+    struct mirror_t {};
+    struct plastic_t {};
+    struct metal_t {};
+    struct glass_t {};
+    struct translucent_t {};
+    struct uber_t {};
+    struct disney_t {};
+    struct fourier_t {};
+    struct hair_t {};
+    struct kdsubsurface_t {};
+    struct mix_t {};
+    struct substrate_t {};
+    struct subsurface_t {};
     enum type_t {
-none,
-matte,
-mirror,
-plastic,
-metal,
-glass,
-translucent,
-uber,
-disney,
-fourier,
-hair,
-kdsubsurface,
-mix,
-substrate,
-subsurface,
+        none,
+        matte,
+        mirror,
+        plastic,
+        metal,
+        glass,
+        translucent,
+        uber,
+        disney,
+        fourier,
+        hair,
+        kdsubsurface,
+        mix,
+        substrate,
+        subsurface,
     };
 
-    string name = "";
-    type_t type = type_t::matte;
-none_t none = {};
-matte_t matte = {};
-mirror_t mirror = {};
-plastic_t plastic = {};
-metal_t metal = {};
-glass_t glass = {};
-translucent_t translucent = {};
-uber_t uber = {};
-disney_t disney = {};
-fourier_t fourier = {};
-hair_t hair = {};
-kdsubsurface_t kdsubsurface = {};
-mix_t mix = {};
-substrate_t substrate = {};
-subsurface_t subsurface = {};
+    string         name         = "";
+    type_t         type         = type_t::matte;
+    none_t         none         = {};
+    matte_t        matte        = {};
+    mirror_t       mirror       = {};
+    plastic_t      plastic      = {};
+    metal_t        metal        = {};
+    glass_t        glass        = {};
+    translucent_t  translucent  = {};
+    uber_t         uber         = {};
+    disney_t       disney       = {};
+    fourier_t      fourier      = {};
+    hair_t         hair         = {};
+    kdsubsurface_t kdsubsurface = {};
+    mix_t          mix          = {};
+    substrate_t    substrate    = {};
+    subsurface_t   subsurface   = {};
 };
 
 // pbrt shapes
@@ -510,12 +590,12 @@ struct pbrt_light {
 // pbrt area lights
 struct pbrt_arealight {
     struct diffuse_t {
-        vec3f	L	= {1, 1, 1};
-        bool	twosided =	false;
-        int	samples	= 1;
+        vec3f L        = {1, 1, 1};
+        bool  twosided = false;
+        int   samples  = 1;
     };
     enum struct type_t { none, diffuse };
-    type_t type = type_t::none;
+    type_t    type    = type_t::none;
     diffuse_t diffuse = {};
 };
 
