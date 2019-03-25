@@ -302,6 +302,14 @@ struct pbrt_texture_imagemap {
     bool      trilinear     = false;
     float     scale         = 1;
     bool      gamma         = true;
+    enum struct mapping_type { uv, spherical, cylindrical, planar };
+    mapping_type mapping = mapping_type::uv;
+    float        uscale  = 1;
+    float        vscale  = 1;
+    float        udelta  = 0;
+    float        vdelta  = 0;
+    vec3f        v1      = {1, 0, 0};
+    vec3f        v2      = {0, 1, 0};
 };
 struct pbrt_texture_marble {
     int   octaves   = 8;

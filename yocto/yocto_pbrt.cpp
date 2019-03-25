@@ -165,21 +165,19 @@ static inline void parse_value(
 }
 static inline void parse_value(
     pbrt_token_stream& stream, pbrt_texture_checkerboard::mapping_type& value) {
-    static auto value_names =
-        unordered_map<string, pbrt_texture_checkerboard::mapping_type>{
-            {"uv", pbrt_texture_checkerboard::mapping_type::uv},
-            {"spherical", pbrt_texture_checkerboard::mapping_type::spherical},
-            {"cylindrical",
-                pbrt_texture_checkerboard::mapping_type::cylindrical},
-            {"planar", pbrt_texture_checkerboard::mapping_type::planar},
-        };
-    auto value_name = ""s;
-    parse_value(stream, value_name);
-    try {
-        value = value_names.at(value_name);
-    } catch (std::out_of_range&) {
-        throw pbrtio_error("expected mapping_type");
-    }
+    return parse_value(stream, (pbrt_texture_bilerp::mapping_type&)value);
+}
+static inline void parse_value(
+    pbrt_token_stream& stream, pbrt_texture_dots::mapping_type& value) {
+    return parse_value(stream, (pbrt_texture_bilerp::mapping_type&)value);
+}
+static inline void parse_value(
+    pbrt_token_stream& stream, pbrt_texture_imagemap::mapping_type& value) {
+    return parse_value(stream, (pbrt_texture_bilerp::mapping_type&)value);
+}
+static inline void parse_value(
+    pbrt_token_stream& stream, pbrt_texture_uv::mapping_type& value) {
+    return parse_value(stream, (pbrt_texture_bilerp::mapping_type&)value);
 }
 
 static inline void parse_value(
@@ -188,6 +186,22 @@ static inline void parse_value(
         unordered_map<string, pbrt_texture_checkerboard::aamode_type>{
             {"closedform", pbrt_texture_checkerboard::aamode_type::closedform},
             {"none", pbrt_texture_checkerboard::aamode_type::none},
+        };
+    auto value_name = ""s;
+    parse_value(stream, value_name);
+    try {
+        value = value_names.at(value_name);
+    } catch (std::out_of_range&) {
+        throw pbrtio_error("expected aamode_type");
+    }
+}
+static inline void parse_value(
+    pbrt_token_stream& stream, pbrt_texture_imagemap::wrap_type& value) {
+    static auto value_names =
+        unordered_map<string, pbrt_texture_imagemap::wrap_type>{
+            {"repeat", pbrt_texture_imagemap::wrap_type::repeat},
+            {"clamp", pbrt_texture_imagemap::wrap_type::clamp},
+            {"black", pbrt_texture_imagemap::wrap_type::black},
         };
     auto value_name = ""s;
     parse_value(stream, value_name);
@@ -767,63 +781,6 @@ void parse_pbrt_texture(
     auto type = ""s;
     parse_value(streams, type);
     auto pname = ""s, ptype = ""s;
-    struct pbrt_texture_dots {
-        pbrt_textured<vec3f> inside  = {1, 1, 1};
-        pbrt_textured<vec3f> outside = {0, 0, 0};
-        enum struct mapping_type { uv, spherical, cylindrical, planar };
-        mapping_type mapping = mapping_type::uv;
-        float        uscale  = 1;
-        float        vscale  = 1;
-        float        udelta  = 0;
-        float        vdelta  = 0;
-        vec3f        v1      = {1, 0, 0};
-        vec3f        v2      = {0, 1, 0};
-    };
-    struct pbrt_texture_fbm {
-        int   octaves   = 8;
-        float roughness = 0.5;
-    };
-    struct pbrt_texture_imagemap {
-        enum wrap_type { repeat, black, clamp };
-        string    filename      = "";
-        wrap_type wrap          = wrap_type::repeat;
-        float     maxanisotropy = 8;
-        bool      trilinear     = false;
-        float     scale         = 1;
-        bool      gamma         = true;
-    };
-    struct pbrt_texture_marble {
-        int   octaves   = 8;
-        float roughness = 0.5f;
-        float scale     = 1;
-        float variation = 0.2f;
-    };
-    struct pbrt_texture_mix {
-        pbrt_textured<vec3f> tex1   = {1, 1, 1};
-        pbrt_textured<vec3f> tex2   = {1, 1, 1};
-        pbrt_textured<float> amount = 0.5f;
-    };
-    struct pbrt_texture_scale {
-        pbrt_textured<vec3f> tex1 = {1, 1, 1};
-        pbrt_textured<vec3f> tex2 = {1, 1, 1};
-    };
-    struct pbrt_texture_uv {
-        enum struct mapping_type { uv, spherical, cylindrical, planar };
-        mapping_type mapping = mapping_type::uv;
-        float        uscale  = 1;
-        float        vscale  = 1;
-        float        udelta  = 0;
-        float        vdelta  = 0;
-        vec3f        v1      = {1, 0, 0};
-        vec3f        v2      = {0, 1, 0};
-    };
-    struct pbrt_texture_windy {
-        // TODO: missing parameters
-    };
-    struct pbrt_texture_wrinkled {
-        int   octaves   = 8;
-        float roughness = 0.5;
-    };
     if (type == "constant") {
         auto tvalue = pbrt_texture_constant{};
         while (is_param(streams)) {
@@ -848,19 +805,19 @@ void parse_pbrt_texture(
             } else if (pname == "v11") {
                 parse_param(streams, ptype, tvalue.v11);
             } else if (pname == "mapping") {
-                parse_param(streams, tvalue.mapping);
+                parse_param(streams, ptype, tvalue.mapping);
             } else if (pname == "uscale") {
-                parse_param(streams, tvalue.uscale);
+                parse_param(streams, ptype, tvalue.uscale);
             } else if (pname == "vscale") {
-                parse_param(streams, tvalue.vscale);
+                parse_param(streams, ptype, tvalue.vscale);
             } else if (pname == "udelta") {
-                parse_param(streams, tvalue.udelta);
+                parse_param(streams, ptype, tvalue.udelta);
             } else if (pname == "vdelta") {
-                parse_param(streams, tvalue.vdelta);
+                parse_param(streams, ptype, tvalue.vdelta);
             } else if (pname == "v1") {
-                parse_param(streams, tvalue.v1);
+                parse_param(streams, ptype, tvalue.v1);
             } else if (pname == "v2") {
-                parse_param(streams, tvalue.v2);
+                parse_param(streams, ptype, tvalue.v2);
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -879,19 +836,186 @@ void parse_pbrt_texture(
             } else if (pname == "aamode") {
                 parse_param(streams, ptype, tvalue.aamode);
             } else if (pname == "mapping") {
-                parse_param(streams, tvalue.mapping);
+                parse_param(streams, ptype, tvalue.mapping);
             } else if (pname == "uscale") {
-                parse_param(streams, tvalue.uscale);
+                parse_param(streams, ptype, tvalue.uscale);
             } else if (pname == "vscale") {
-                parse_param(streams, tvalue.vscale);
+                parse_param(streams, ptype, tvalue.vscale);
             } else if (pname == "udelta") {
-                parse_param(streams, tvalue.udelta);
+                parse_param(streams, ptype, tvalue.udelta);
             } else if (pname == "vdelta") {
-                parse_param(streams, tvalue.vdelta);
+                parse_param(streams, ptype, tvalue.vdelta);
             } else if (pname == "v1") {
-                parse_param(streams, tvalue.v1);
+                parse_param(streams, ptype, tvalue.v1);
             } else if (pname == "v2") {
-                parse_param(streams, tvalue.v2);
+                parse_param(streams, ptype, tvalue.v2);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "dots") {
+        auto tvalue = pbrt_texture_dots{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "inside") {
+                parse_param(streams, ptype, tvalue.inside);
+            } else if (pname == "outside") {
+                parse_param(streams, ptype, tvalue.outside);
+            } else if (pname == "mapping") {
+                parse_param(streams, ptype, tvalue.mapping);
+            } else if (pname == "uscale") {
+                parse_param(streams, ptype, tvalue.uscale);
+            } else if (pname == "vscale") {
+                parse_param(streams, ptype, tvalue.vscale);
+            } else if (pname == "udelta") {
+                parse_param(streams, ptype, tvalue.udelta);
+            } else if (pname == "vdelta") {
+                parse_param(streams, ptype, tvalue.vdelta);
+            } else if (pname == "v1") {
+                parse_param(streams, ptype, tvalue.v1);
+            } else if (pname == "v2") {
+                parse_param(streams, ptype, tvalue.v2);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "imagemap") {
+        auto tvalue = pbrt_texture_imagemap{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "filename") {
+                parse_param(streams, ptype, tvalue.filename);
+            } else if (pname == "wrap") {
+                parse_param(streams, ptype, tvalue.wrap);
+            } else if (pname == "maxanisotropy") {
+                parse_param(streams, ptype, tvalue.maxanisotropy);
+            } else if (pname == "trilinear") {
+                parse_param(streams, ptype, tvalue.trilinear);
+            } else if (pname == "scale") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else if (pname == "gamma") {
+                parse_param(streams, ptype, tvalue.gamma);
+            } else if (pname == "mapping") {
+                parse_param(streams, ptype, tvalue.mapping);
+            } else if (pname == "uscale") {
+                parse_param(streams, ptype, tvalue.uscale);
+            } else if (pname == "vscale") {
+                parse_param(streams, ptype, tvalue.vscale);
+            } else if (pname == "udelta") {
+                parse_param(streams, ptype, tvalue.udelta);
+            } else if (pname == "vdelta") {
+                parse_param(streams, ptype, tvalue.vdelta);
+            } else if (pname == "v1") {
+                parse_param(streams, ptype, tvalue.v1);
+            } else if (pname == "v2") {
+                parse_param(streams, ptype, tvalue.v2);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "mix") {
+        auto tvalue = pbrt_texture_mix{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "tex1") {
+                parse_param(streams, ptype, tvalue.tex1);
+            } else if (pname == "tex2") {
+                parse_param(streams, ptype, tvalue.tex2);
+            } else if (pname == "amount") {
+                parse_param(streams, ptype, tvalue.amount);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "scale") {
+        auto tvalue = pbrt_texture_scale{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "tex1") {
+                parse_param(streams, ptype, tvalue.tex1);
+            } else if (pname == "tex2") {
+                parse_param(streams, ptype, tvalue.tex2);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "fbm") {
+        auto tvalue = pbrt_texture_fbm{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "octaves") {
+                parse_param(streams, ptype, tvalue.octaves);
+            } else if (pname == "roughness") {
+                parse_param(streams, ptype, tvalue.roughness);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "wrinkled") {
+        auto tvalue = pbrt_texture_wrinkled{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "octaves") {
+                parse_param(streams, ptype, tvalue.octaves);
+            } else if (pname == "roughness") {
+                parse_param(streams, ptype, tvalue.roughness);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "windy") {
+        auto tvalue = pbrt_texture_windy{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "") {
+                // TODO: missing params
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "marble") {
+        auto tvalue = pbrt_texture_marble{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "octaves") {
+                parse_param(streams, ptype, tvalue.octaves);
+            } else if (pname == "roughness") {
+                parse_param(streams, ptype, tvalue.roughness);
+            } else if (pname == "scale") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else if (pname == "variation") {
+                parse_param(streams, ptype, tvalue.variation);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "uv") {
+        auto tvalue = pbrt_texture_uv{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "mapping") {
+                parse_param(streams, ptype, tvalue.mapping);
+            } else if (pname == "uscale") {
+                parse_param(streams, ptype, tvalue.uscale);
+            } else if (pname == "vscale") {
+                parse_param(streams, ptype, tvalue.vscale);
+            } else if (pname == "udelta") {
+                parse_param(streams, ptype, tvalue.udelta);
+            } else if (pname == "vdelta") {
+                parse_param(streams, ptype, tvalue.vdelta);
+            } else if (pname == "v1") {
+                parse_param(streams, ptype, tvalue.v1);
+            } else if (pname == "v2") {
+                parse_param(streams, ptype, tvalue.v2);
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
