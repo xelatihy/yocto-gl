@@ -1009,7 +1009,7 @@ vec3f evaluate_transmission(const yocto_scene& scene,
 }
 
 float sample_volume_distance(float volume_density, float r) {
-    if (volume_density == 0 or r == 0)
+    if (volume_density == 0 || r == 0)
         return float_max;
     else
         return -log(r) / volume_density;
