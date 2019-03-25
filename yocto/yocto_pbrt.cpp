@@ -52,9 +52,6 @@ struct pbrt_token_stream {
     string_view str;
 };
 
-// Param type
-enum struct pbrt_param_type { int_t, float_t, bool_t, string_t, texture_t, rgb_t };
-
 static inline bool is_alpha(char c) {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
@@ -189,16 +186,7 @@ inline bool is_close_bracket(pbrt_token_stream& stream) {
 
 // parse a quoted string
 static inline void parse_nametype(
-    pbrt_token_stream& stream, string& name, pbrt_param_type& type) {
-    static const auto types = unordered_map<string, pbrt_param_type>{
-        {"integer", pbrt_param_type::int_t},
-        {"float", pbrt_param_type::float_t},
-        {"boolean", pbrt_param_type::bool_t},
-        {"string", pbrt_param_type::string_t},
-        {"texture", pbrt_param_type::texture_t},
-        {"rgb", pbrt_param_type::rgb_t},
-        {"color", pbrt_param_type::rgb_t},
-    };
+    pbrt_token_stream& stream, string& name, string& type) {
     auto value = ""s;
     parse_value(stream, value);
     auto str  = string_view{value};
@@ -206,7 +194,7 @@ static inline void parse_nametype(
     if (pos1 == string_view::npos) {
         throw pbrtio_error("bad type " + value);
     }
-    auto type_name = string(str.substr(0, pos1));
+    type = string(str.substr(0, pos1));
     str.remove_prefix(pos1);
     auto pos2 = str.find_first_not_of(' ');
     if (pos2 == string_view::npos) {
@@ -214,11 +202,6 @@ static inline void parse_nametype(
     }
     str.remove_prefix(pos2);
     name = string(str);
-    try {
-        type = types.at(type_name);
-    } catch (std::out_of_range&) {
-        throw pbrtio_error("unknown type "s + type_name);
-    }
 }
 
 static inline void skip_open_bracket(pbrt_token_stream& stream) {
@@ -232,77 +215,90 @@ static inline void skip_close_bracket(pbrt_token_stream& stream) {
     skip_whitespace_or_comment(stream);
 }
 
-static inline void parse_param(
-    pbrt_token_stream& stream, pbrt_param_type type, int& value) {
-    if (type != pbrt_param_type::int_t) throw pbrtio_error("expected int");
-    auto has_brackets = is_open_bracket(stream);
-    if (has_brackets) skip_open_bracket(stream);
-    parse_value(stream, value);
-    if (has_brackets) skip_close_bracket(stream);
-}
-static inline void parse_param(
-    pbrt_token_stream& stream, pbrt_param_type type, float& value) {
-    if (type != pbrt_param_type::float_t) throw pbrtio_error("expected int");
-    auto has_brackets = is_open_bracket(stream);
-    if (has_brackets) skip_open_bracket(stream);
-    parse_value(stream, value);
-    if (has_brackets) skip_close_bracket(stream);
-}
-static inline void parse_param(
-    pbrt_token_stream& stream, pbrt_param_type type, bbox2i& value) {
-    if (type != pbrt_param_type::int_t) throw pbrtio_error("expected bbox2i");
-    auto has_brackets = is_open_bracket(stream);
-    if (has_brackets) skip_open_bracket(stream);
-    parse_value(stream, value);
-    if (has_brackets) skip_close_bracket(stream);
-}
-static inline void parse_param(pbrt_token_stream& stream, pbrt_param_type type, bbox2f& value) {
-    if (type != pbrt_param_type::float_t) throw pbrtio_error("expected bbox2f");
-    auto has_brackets = is_open_bracket(stream);
-    if (has_brackets) skip_open_bracket(stream);
-    parse_value(stream, value);
-    if (has_brackets) skip_close_bracket(stream);
-}
-static inline void parse_param(
-    pbrt_token_stream& stream, pbrt_param_type type, vec3f& value) {
-    if (type != pbrt_param_type::rgb_t) throw pbrtio_error("expected vec4i");
-    auto has_brackets = is_open_bracket(stream);
-    if (has_brackets) skip_open_bracket(stream);
-    parse_value(stream, value);
-    if (has_brackets) skip_close_bracket(stream);
-}
-static inline void parse_param(
-    pbrt_token_stream& stream, pbrt_param_type type, mat4f& value) {
-    if (type != pbrt_param_type::float_t) throw pbrtio_error("expected vec4i");
-    auto has_brackets = is_open_bracket(stream);
-    if (has_brackets) skip_open_bracket(stream);
-    parse_value(stream, value);
-    if (has_brackets) skip_close_bracket(stream);
-}
-static inline void parse_param(
-    pbrt_token_stream& stream, pbrt_param_type type, bool& value) {
-    if (type != pbrt_param_type::bool_t) throw pbrtio_error("expected int");
-    auto has_brackets = is_open_bracket(stream);
-    if (has_brackets) skip_open_bracket(stream);
-    parse_value(stream, value);
-    if (has_brackets) skip_close_bracket(stream);
-}
-static inline void parse_param(
-    pbrt_token_stream& stream, pbrt_param_type type, string& value) {
-    if (type != pbrt_param_type::string_t && type != pbrt_param_type::texture_t) throw pbrtio_error("expected string");
+template <typename T>
+static inline void parse_param(pbrt_token_stream& stream, T& value) {
     auto has_brackets = is_open_bracket(stream);
     if (has_brackets) skip_open_bracket(stream);
     parse_value(stream, value);
     if (has_brackets) skip_close_bracket(stream);
 }
 
-template<typename T>
-static inline void parse_param(
-    pbrt_token_stream& stream, pbrt_param_type type, pbrt_textured<T>& value) {
-    if (type == pbrt_param_type::texture_t) {
-        parse_param(stream, type, value.texture);
+template <typename T>
+static inline void parse_param(pbrt_token_stream& stream, vector<T>& values) {
+    skip_open_bracket(stream);
+    values.clear();
+    while (!is_close_bracket(stream)) {
+        values.push_back({});
+        parse_value(stream, values.back());
+    }
+    skip_close_bracket(stream);
+}
+
+template <typename T>
+static inline bool is_type_compatible(const string& type) {
+    if constexpr (std::is_same<T, int>::value) {
+        return type == "integer";
+    } else if constexpr (std::is_same<T, float>::value) {
+        return type == "float";
+    } else if constexpr (std::is_same<T, bool>::value) {
+        return type == "boolean";
+    } else if constexpr (std::is_same<T, string>::value) {
+        return type == "string";
+    } else if constexpr (std::is_same<T, vec2f>::value) {
+        return type == "point2" || type == "vector2" || type == "float";
+    } else if constexpr (std::is_same<T, vec3f>::value) {
+        return type == "point3" || type == "vector3" || type == "normal3" ||
+               type == "point" || type == "vector" || type == "normal" || type == "float";
+    } else if constexpr (std::is_same<T, vec3i>::value) {
+        return type == "integer";
+    } else if constexpr (std::is_same<T, bbox2i>::value) {
+        return type == "integer";
+    } else if constexpr (std::is_same<T, bbox2f>::value) {
+        return type == "float";
     } else {
+        return false;
+    }
+}
+
+template <typename T>
+static inline void parse_param(
+    pbrt_token_stream& stream, const string& type, T& value) {
+    if (!is_type_compatible<T>(type)) {
+        throw pbrtio_error("incompatible type " + type);
+    }
+    parse_param(stream, value);
+}
+
+template <typename T>
+static inline void parse_param(
+    pbrt_token_stream& stream, const string& type, vector<T>& value) {
+    if (!is_type_compatible<T>(type)) {
+        throw pbrtio_error("incompatible type " + type);
+    }
+    parse_param(stream, value);
+}
+
+static inline void parse_param(pbrt_token_stream& stream, const string& type,
+    pbrt_textured<float>& value) {
+    if (type == "texture") {
+        parse_param(stream, type, value.texture);
+    } else if (type == "float") {
         parse_param(stream, type, value.value);
+    } else {
+        throw pbrtio_error("incomparible textured type " + type);
+    }
+}
+
+static inline void parse_param(pbrt_token_stream& stream, const string& type,
+    pbrt_textured<vec3f>& value) {
+    if (type == "texture") {
+        parse_param(stream, value.texture);
+    } else if (type == "rgb") {
+        parse_param(stream, value.value);
+    } else if (type == "spectrum") {
+        throw pbrtio_error("spectrum not supported");
+    } else {
+        throw pbrtio_error("incomparible textured type " + type);
     }
 }
 
@@ -356,19 +352,17 @@ static inline void parse_value(vector<pbrt_token_stream>& streams, T& value) {
     return parse_value(streams.back(), value);
 }
 static inline void parse_nametype(
-    vector<pbrt_token_stream>& streams, string& name, pbrt_param_type& type) {
+    vector<pbrt_token_stream>& streams, string& name, string& type) {
     return parse_nametype(streams.back(), name, type);
 }
 template <typename T>
 static inline void parse_param(
-    vector<pbrt_token_stream>& streams, pbrt_param_type ptype, T& value) {
+    vector<pbrt_token_stream>& streams, const string& ptype, T& value) {
     return parse_param(streams.back(), ptype, value);
 }
 template <typename T>
-static inline void parse_optional_param(vector<pbrt_token_stream>& streams,
-    const string& pname, pbrt_param_type ptype, const char* name, T& value) {
-    if (pname != name) return;
-    return parse_param(streams, ptype, value);
+static inline void parse_param(vector<pbrt_token_stream>& streams, T& value) {
+    return parse_param(streams.back(), value);
 }
 
 }  // namespace yocto
@@ -383,8 +377,7 @@ void parse_pbrt_integrator(
     vector<pbrt_token_stream>& streams, pbrt_integrator& value) {
     auto type = ""s;
     parse_value(streams, type);
-    auto pname = ""s;
-    auto ptype = pbrt_param_type::int_t;
+    auto pname = ""s, ptype = ""s;
     if (type == "path") {
         auto tvalue = pbrt_integrator_path{};
         while (is_param(streams)) {
@@ -432,8 +425,7 @@ void parse_pbrt_sampler(
     vector<pbrt_token_stream>& streams, pbrt_sampler& value) {
     auto type = ""s;
     parse_value(streams, type);
-    auto pname = ""s;
-    auto ptype = pbrt_param_type::int_t;
+    auto pname = ""s, ptype = ""s;
     if (type == "random") {
         auto tvalue = pbrt_sampler_random{};
         while (is_param(streams)) {
@@ -513,8 +505,7 @@ void parse_pbrt_sampler(
 void parse_pbrt_filter(vector<pbrt_token_stream>& streams, pbrt_filter& value) {
     auto type = ""s;
     parse_value(streams, type);
-    auto pname = ""s;
-    auto ptype = pbrt_param_type::int_t;
+    auto pname = ""s, ptype = ""s;
     if (type == "box") {
         auto tvalue = pbrt_filter_box{};
         while (is_param(streams)) {
@@ -597,8 +588,7 @@ void parse_pbrt_filter(vector<pbrt_token_stream>& streams, pbrt_filter& value) {
 void parse_pbrt_camera(vector<pbrt_token_stream>& streams, pbrt_camera& value) {
     auto type = ""s;
     parse_value(streams, type);
-    auto pname = ""s;
-    auto ptype = pbrt_param_type::int_t;
+    auto pname = ""s, ptype = ""s;
     if (type == "perspective") {
         auto tvalue = pbrt_camera_perspective{};
         while (is_param(streams)) {
@@ -686,23 +676,21 @@ void parse_pbrt_camera(vector<pbrt_token_stream>& streams, pbrt_camera& value) {
 void parse_pbrt_material(
     vector<pbrt_token_stream>& streams, pbrt_material& value, bool named) {
     static int material_id = 0;
-    auto name = ""s, type = ""s;
-    if(!named) {
+    auto       name = ""s, type = ""s;
+    if (!named) {
         parse_value(streams, type);
         name = "unnamed_material_" + std::to_string(material_id++);
     } else {
         parse_value(streams, name);
-        auto ptname = ""s;
-        auto pttype = pbrt_param_type::string_t;
+        auto ptname = ""s, pttype = ""s;
         parse_nametype(streams, ptname, pttype);
-        if(ptname == "type") {
+        if (ptname == "type") {
             parse_param(streams, pttype, type);
         } else {
             throw pbrtio_error("expected material type");
         }
     }
-    auto pname = ""s;
-    auto ptype = pbrt_param_type::int_t;
+    auto pname = ""s, ptype = ""s;
     struct pbrt_material_plastic {
         string               name           = "";
         pbrt_textured<vec3f> Kd             = {0.25f, 0.25f, 0.25f};
@@ -849,7 +837,114 @@ void parse_pbrt_material(
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown Film " + type);
+        throw pbrtio_error("unknown Material " + type);
+    }
+}
+
+// Parse Shape
+void parse_pbrt_shape(vector<pbrt_token_stream>& streams, pbrt_shape& value) {
+    auto type = ""s;
+    parse_value(streams, type);
+    auto pname = ""s, ptype = ""s;
+    struct pbrt_shape_plymesh {
+        string filename = {};
+        // texture alpha
+        // texture shadowalpha
+    };
+    struct pbrt_shape_curve {
+        enum struct type_t { flat, ribbon, cylinder };
+        enum struct basis_t { bezier, bspline };
+        vector<vec3f> P          = {};
+        basis_t       basis      = basis_t::bezier;
+        int           degree     = 3;
+        type_t        type       = type_t::flat;
+        vector<vec3f> N          = {};
+        float         width      = 1;
+        float         width0     = 1;
+        float         width1     = 1;
+        int           splitdepth = 3;
+    };
+    struct pbrt_shape_loopsubdiv {
+        int           levels  = 3;
+        vector<int>   indices = {};
+        vector<vec3f> P       = {};
+    };
+    struct pbrt_shape_nurbs {
+        int           nu     = -1;
+        int           nv     = -1;
+        vector<float> uknots = {};
+        vector<float> vknots = {};
+        float         u0     = -1;
+        float         v0     = -1;
+        float         u1     = -1;
+        float         v1     = -1;
+        vector<vec3f> P      = {};
+        vector<float> Pw     = {};
+    };
+    struct pbrt_shape_sphere {
+        float radius = 1;
+        float zmin   = -radius;
+        float zmax   = radius;
+        float phimax = 360;
+    };
+    struct pbrt_shape_disk {
+        float height      = 0;
+        float radius      = 1;
+        float innerradius = 0;
+        float phimax      = 360;
+    };
+    struct pbrt_shape_cone {
+        float radius = 1;
+        float height = 1;
+        float phimax = 360;
+    };
+    struct pbrt_shape_cylinder {
+        float radius = 1;
+        float zmin   = -1;
+        float zmax   = 1;
+        float phimax = 360;
+    };
+    struct pbrt_shape_hyperboloid {
+        vec3f p1     = {0, 0, 0};
+        vec3f p2     = {1, 1, 1};
+        float phimax = 360;
+    };
+    struct pbrt_shape_paraboloid {
+        float radius = 1;
+        float zmin   = 0;
+        float zmax   = 1;
+        float phimax = 360;
+    };
+    struct pbrt_shape_heightfield {
+        int           nu = 0;
+        int           nv = 0;
+        vector<float> Pz = {};
+    };
+    if (type == "trianglemesh") {
+        auto tvalue = pbrt_shape_trianglemesh{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "indices") {
+                parse_param(streams, ptype, tvalue.indices);
+            } else if (pname == "P") {
+                parse_param(streams, ptype, tvalue.P);
+            } else if (pname == "N") {
+                parse_param(streams, ptype, tvalue.N);
+            } else if (pname == "S") {
+                parse_param(streams, ptype, tvalue.S);
+            } else if (pname == "uv") {
+                parse_param(streams, ptype, tvalue.uv);
+            } else if (pname == "alpha") {
+                parse_param(streams, ptype, tvalue.alpha);
+            } else if (pname == "shadowalpha") {
+                parse_param(streams, ptype, tvalue.shadowalpha);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else {
+        throw pbrtio_error("unknown Shape " + type);
     }
 }
 
@@ -857,8 +952,7 @@ void parse_pbrt_material(
 void parse_pbrt_film(vector<pbrt_token_stream>& streams, pbrt_film& value) {
     auto type = ""s;
     parse_value(streams, type);
-    auto pname = ""s;
-    auto ptype = pbrt_param_type::int_t;
+    auto pname = ""s, ptype = ""s;
     if (type == "image") {
         auto tvalue = pbrt_film_image{};
         while (is_param(streams)) {
@@ -906,7 +1000,7 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
         } else if (cmd == "WorldEnd") {
         } else if (cmd == "Transform") {
             auto xf = identity_mat4f;
-            parse_param(streams, pbrt_param_type::float_t, xf);
+            parse_param(streams, xf);
         } else if (cmd == "Integrator") {
             auto value = pbrt_integrator{};
             parse_pbrt_integrator(streams, value);
@@ -928,6 +1022,9 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
         } else if (cmd == "NamedMaterial") {
             auto name = ""s;
             parse_value(streams, name);
+        } else if (cmd == "Shape") {
+            auto value = pbrt_shape{};
+            parse_pbrt_shape(streams, value);
         } else {
             throw pbrtio_error("unknown command " + cmd);
         }

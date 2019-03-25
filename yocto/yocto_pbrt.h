@@ -71,21 +71,21 @@ namespace yocto {
 
 // pbrt cameras
 struct pbrt_camera_perspective {
-    float fov              = 90;
-    float frameaspectratio = -1;  // or computed from film
-    float lensradius       = 0;
-    float focaldistance    = 1e30;
+    float  fov              = 90;
+    float  frameaspectratio = -1;  // or computed from film
+    float  lensradius       = 0;
+    float  focaldistance    = 1e30;
     bbox2f screenwindow     = {{-1, -1}, {1, 1}};
-    float shutteropen      = 0;
-    float shutterclose     = 1;
+    float  shutteropen      = 0;
+    float  shutterclose     = 1;
 };
 struct pbrt_camera_orthographic {
-    float frameaspectratio = -1;  // or computed from film
-    float lensradius       = 0;
-    float focaldistance    = 1e30;
+    float  frameaspectratio = -1;  // or computed from film
+    float  lensradius       = 0;
+    float  focaldistance    = 1e30;
     bbox2f screenwindow     = {{-1, -1}, {1, 1}};
-    float shutteropen      = 0;
-    float shutterclose     = 1;
+    float  shutteropen      = 0;
+    float  shutterclose     = 1;
 };
 struct pbrt_camera_environment {
     float shutteropen  = 0;
@@ -470,18 +470,18 @@ using pbrt_material = variant<pbrt_material_matte, pbrt_material_mirror,
 
 // pbrt shapes
 struct pbrt_shape_trianglemesh {
-    vector<vec3i> indices = {};
-    vector<vec3f> P       = {};
-    vector<vec3f> N       = {};
-    vector<vec3f> S       = {};
-    vector<vec2f> uv      = {};
-    // texture alpha
-    // texture shadowalpha
+    vector<vec3i>        indices     = {};
+    vector<vec3f>        P           = {};
+    vector<vec3f>        N           = {};
+    vector<vec3f>        S           = {};
+    vector<vec2f>        uv          = {};
+    pbrt_textured<float> alpha       = 1;
+    pbrt_textured<float> shadowalpha = 1;
 };
 struct pbrt_shape_plymesh {
-    string filename = {};
-    // texture alpha
-    // texture shadowalpha
+    string               filename    = {};
+    pbrt_textured<float> alpha       = 1;
+    pbrt_textured<float> shadowalpha = 1;
 };
 struct pbrt_shape_curve {
     enum struct type_t { flat, ribbon, cylinder };
