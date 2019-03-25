@@ -244,8 +244,17 @@ struct pbrt_textured<vec3f> {
     pbrt_textured() : value{0, 0, 0}, texture{} {}
     pbrt_textured(float x, float y, float z) : value{x, y, z}, texture{} {}
 };
-struct pbrt_texture_mapping {
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
+
+// pbrt textures
+struct pbrt_texture_constant {
+    pbrt_textured<vec3f> value = {1, 1, 1};
+};
+struct pbrt_texture_bilerp {
+    pbrt_textured<vec3f> v00     = {0, 0, 0};
+    pbrt_textured<vec3f> v01     = {1, 1, 1};
+    pbrt_textured<vec3f> v10     = {0, 0, 0};
+    pbrt_textured<vec3f> v11     = {1, 1, 1};
+    enum struct mapping_type {uv, spherical, cylindrical, planar}; 
     mapping_type mapping = mapping_type::uv;
     float        uscale  = 1;
     float        vscale  = 1;
@@ -254,34 +263,34 @@ struct pbrt_texture_mapping {
     vec3f        v1      = {1, 0, 0};
     vec3f        v2      = {0, 1, 0};
 };
-
-// pbrt textures
-struct pbrt_texture_constant {
-    vec3f  value = {1, 1, 1};
-};
-struct pbrt_texture_bilerp {
-    pbrt_textured<vec3f> v00     = {0, 0, 0};
-    pbrt_textured<vec3f> v01     = {1, 1, 1};
-    pbrt_textured<vec3f> v10     = {0, 0, 0};
-    pbrt_textured<vec3f> v11     = {1, 1, 1};
-    pbrt_texture_mapping mapping = {};
-};
 struct pbrt_texture_checkerboard {
     enum struct aamode_type { closedform, none };
     int                  dimension = 2;
     pbrt_textured<vec3f> tex1      = {1, 1, 1};
     pbrt_textured<vec3f> tex2      = {0, 0, 0};
     aamode_type          aamode    = aamode_type::closedform;
-    pbrt_texture_mapping mapping   = {};
+    enum struct mapping_type {uv, spherical, cylindrical, planar}; mapping_type mapping = mapping_type::uv;
+    float        uscale  = 1;
+    float        vscale  = 1;
+    float        udelta  = 0;
+    float        vdelta  = 0;
+    vec3f        v1      = {1, 0, 0};
+    vec3f        v2      = {0, 1, 0};
 };
 struct pbrt_texture_dots {
     pbrt_textured<vec3f> inside  = {1, 1, 1};
     pbrt_textured<vec3f> outside = {0, 0, 0};
-    pbrt_texture_mapping mapping = {};
+    enum struct mapping_type {uv, spherical, cylindrical, planar}; mapping_type mapping = mapping_type::uv;
+    float        uscale  = 1;
+    float        vscale  = 1;
+    float        udelta  = 0;
+    float        vdelta  = 0;
+    vec3f        v1      = {1, 0, 0};
+    vec3f        v2      = {0, 1, 0};
 };
 struct pbrt_texture_fbm {
-    int    octaves   = 8;
-    float  roughness = 0.5;
+    int   octaves   = 8;
+    float roughness = 0.5;
 };
 struct pbrt_texture_imagemap {
     enum wrap_type { repeat, black, clamp };
@@ -293,10 +302,10 @@ struct pbrt_texture_imagemap {
     bool      gamma         = true;
 };
 struct pbrt_texture_marble {
-    int    octaves   = 8;
-    float  roughness = 0.5f;
-    float  scale     = 1;
-    float  variation = 0.2f;
+    int   octaves   = 8;
+    float roughness = 0.5f;
+    float scale     = 1;
+    float variation = 0.2f;
 };
 struct pbrt_texture_mix {
     pbrt_textured<vec3f> tex1   = {1, 1, 1};
@@ -308,14 +317,20 @@ struct pbrt_texture_scale {
     pbrt_textured<vec3f> tex2 = {1, 1, 1};
 };
 struct pbrt_texture_uv {
-    pbrt_texture_mapping mapping = {};
+    enum struct mapping_type {uv, spherical, cylindrical, planar}; mapping_type mapping = mapping_type::uv;
+    float        uscale  = 1;
+    float        vscale  = 1;
+    float        udelta  = 0;
+    float        vdelta  = 0;
+    vec3f        v1      = {1, 0, 0};
+    vec3f        v2      = {0, 1, 0};
 };
 struct pbrt_texture_windy {
     // TODO: missing parameters
 };
 struct pbrt_texture_wrinkled {
-    int    octaves   = 8;
-    float  roughness = 0.5;
+    int   octaves   = 8;
+    float roughness = 0.5;
 };
 using pbrt_texture = variant<pbrt_texture_constant, pbrt_texture_bilerp,
     pbrt_texture_checkerboard, pbrt_texture_dots, pbrt_texture_fbm,
@@ -329,7 +344,7 @@ struct pbrt_material_matte {
     pbrt_textured<float> sigma = 0;
 };
 struct pbrt_material_mirror {
-    pbrt_textured<vec3f> Kr   = {0.9f, 0.9f, 0.9f};
+    pbrt_textured<vec3f> Kr = {0.9f, 0.9f, 0.9f};
 };
 struct pbrt_material_plastic {
     pbrt_textured<vec3f> Kd             = {0.25f, 0.25f, 0.25f};
@@ -338,8 +353,8 @@ struct pbrt_material_plastic {
     bool                 remaproughness = true;
 };
 struct pbrt_material_metal {
-    pbrt_textured<vec3f> eta  = {0.2004376970f, 0.9240334304f, 1.1022119527f};
-    pbrt_textured<vec3f> k    = {3.9129485033f, 2.4528477015f, 2.1421879552f};
+    pbrt_textured<vec3f> eta = {0.2004376970f, 0.9240334304f, 1.1022119527f};
+    pbrt_textured<vec3f> k   = {3.9129485033f, 2.4528477015f, 2.1421879552f};
     pbrt_textured<float> roughness      = 0.01;
     pbrt_textured<float> uroughness     = 0.01;
     pbrt_textured<float> vroughness     = 0.01;
@@ -577,8 +592,8 @@ using pbrt_light =
 struct pbrt_arealight_none {};
 struct pbrt_arealight_diffuse {
     pbrt_textured<vec3f> L        = {1, 1, 1};
-    bool  twosided = false;
-    int   samples  = 1;
+    bool                 twosided = false;
+    int                  samples  = 1;
 };
 using pbrt_arealight = variant<pbrt_arealight_none, pbrt_arealight_diffuse>;
 
