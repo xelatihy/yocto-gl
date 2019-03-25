@@ -1044,125 +1044,6 @@ void parse_pbrt_material(
         }
     }
     auto pname = ""s, ptype = ""s;
-    struct pbrt_material_plastic {
-        string               name           = "";
-        pbrt_textured<vec3f> Kd             = {0.25f, 0.25f, 0.25f};
-        pbrt_textured<vec3f> Ks             = {0.25f, 0.25f, 0.25f};
-        pbrt_textured<float> roughness      = 0.1f;
-        bool                 remaproughness = true;
-    };
-    struct pbrt_material_metal {
-        string               name = "";
-        pbrt_textured<vec3f> eta  = {
-            0.2004376970f, 0.9240334304f, 1.1022119527f};
-        pbrt_textured<vec3f> k = {3.9129485033f, 2.4528477015f, 2.1421879552f};
-        pbrt_textured<float> roughness      = 0.01;
-        pbrt_textured<float> uroughness     = 0.01;
-        pbrt_textured<float> vroughness     = 0.01;
-        bool                 remaproughness = true;
-    };
-    struct pbrt_material_glass {
-        string               name           = "";
-        pbrt_textured<vec3f> Kr             = {1, 1, 1};
-        pbrt_textured<vec3f> Kt             = {1, 1, 1};
-        pbrt_textured<float> eta            = 1;
-        pbrt_textured<float> uroughness     = 0;
-        pbrt_textured<float> vroughness     = 0;
-        bool                 remaproughness = true;
-    };
-    struct pbrt_material_translucent {
-        string               name           = "";
-        pbrt_textured<vec3f> Kd             = {0, 0, 0};
-        pbrt_textured<vec3f> Ks             = {0, 0, 0};
-        pbrt_textured<vec3f> reflect        = {0, 0, 0};
-        pbrt_textured<vec3f> transmit       = {0, 0, 0};
-        pbrt_textured<float> roughness      = 0;
-        bool                 remaproughness = true;
-    };
-    struct pbrt_material_uber {
-        string               name           = "";
-        pbrt_textured<vec3f> Kd             = {0, 0, 0};
-        pbrt_textured<vec3f> Ks             = {0, 0, 0};
-        pbrt_textured<vec3f> Kr             = {0, 0, 0};
-        pbrt_textured<vec3f> Kt             = {0, 0, 0};
-        pbrt_textured<float> roughness      = 0;
-        pbrt_textured<float> uroughness     = 0;
-        pbrt_textured<float> vroughness     = 0;
-        pbrt_textured<float> eta            = 1;
-        pbrt_textured<vec3f> opacity        = {1, 1, 1};
-        bool                 remaproughness = true;
-    };
-    struct pbrt_material_disney {
-        string               name            = "";
-        pbrt_textured<vec3f> color           = {0.5f, 0.5f, 0.5f};
-        pbrt_textured<float> anisotropic     = 0;
-        pbrt_textured<float> clearcoat       = 0;
-        pbrt_textured<float> clearcoatgloss  = 1;
-        pbrt_textured<float> eta             = 1.5f;
-        pbrt_textured<float> metallic        = 0;
-        pbrt_textured<float> roughness       = 0.5f;
-        pbrt_textured<vec3f> scatterdistance = {0, 0, 0};
-        pbrt_textured<float> sheen           = 0;
-        pbrt_textured<float> sheentint       = 0.5;
-        pbrt_textured<float> spectrans       = 0;
-        pbrt_textured<float> speculartint    = 0;
-        bool                 thin            = false;
-        pbrt_textured<vec3f> difftrans       = {1, 1, 1};
-        pbrt_textured<vec3f> flatness        = {0, 0, 0};
-    };
-    struct pbrt_material_fourier {
-        string name     = "";
-        string bsdffile = "";
-    };
-    struct pbrt_material_hair {
-        string               name        = "";
-        pbrt_textured<vec3f> sigma_a     = {0, 0, 0};  // TODO: missing default
-        pbrt_textured<vec3f> color       = {0, 0, 0};  // TODO: missing default
-        pbrt_textured<float> eumelanin   = 0;          // TODO: missing default
-        pbrt_textured<float> pheomelanin = 0;          // TODO: missing default
-        pbrt_textured<float> eta         = 1.55f;
-        pbrt_textured<float> beta_m      = 0.3f;
-        pbrt_textured<float> beta_n      = 0.3f;
-        pbrt_textured<float> alpha       = 2;
-    };
-    struct pbrt_material_kdsubsurface {
-        string               name           = "";
-        pbrt_textured<vec3f> Kd             = {0, 0, 0};
-        pbrt_textured<float> mfp            = 1;
-        pbrt_textured<float> eta            = 1;
-        pbrt_textured<vec3f> Kr             = {1, 1, 1};
-        pbrt_textured<vec3f> Kt             = {1, 1, 1};
-        pbrt_textured<float> uroughness     = 0;
-        pbrt_textured<float> vroughness     = 0;
-        bool                 remaproughness = true;
-    };
-    struct pbrt_material_mix {
-        string               name           = "";
-        pbrt_textured<vec3f> amount         = {0, 0, 0};
-        string               namedmaterial1 = "";
-        string               namedmaterial2 = "";
-    };
-    struct pbrt_material_substrate {
-        string               name           = "";
-        pbrt_textured<vec3f> Kd             = {0, 0, 0};
-        pbrt_textured<vec3f> Ks             = {0, 0, 0};
-        pbrt_textured<float> uroughness     = 0;
-        pbrt_textured<float> vroughness     = 0;
-        bool                 remaproughness = true;
-    };
-    struct pbrt_material_subsurface {
-        string               name           = "";
-        string               name_          = "";
-        pbrt_textured<vec3f> sigma_a        = {.0011, .0024, .014};
-        pbrt_textured<vec3f> sigma_prime_s  = {2.55, 3.12, 3.77};
-        float                scale          = 1;
-        pbrt_textured<float> eta            = 1;
-        pbrt_textured<vec3f> Kr             = {1, 1, 1};
-        pbrt_textured<vec3f> Kt             = {1, 1, 1};
-        pbrt_textured<float> uroughness     = 0;
-        pbrt_textured<float> vroughness     = 0;
-        bool                 remaproughness = true;
-    };
     if (type == "matte") {
         auto tvalue = pbrt_material_matte{};
         while (is_param(streams)) {
@@ -1182,6 +1063,325 @@ void parse_pbrt_material(
             parse_nametype(streams, pname, ptype);
             if (pname == "Kr") {
                 parse_param(streams, ptype, tvalue.Kr);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "plastic") {
+        auto tvalue = pbrt_material_plastic{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "Kd") {
+                parse_param(streams, ptype, tvalue.Kd);
+            } else if (pname == "Ks") {
+                parse_param(streams, ptype, tvalue.Ks);
+            } else if (pname == "roughness") {
+                pbrt_textured<float> roughness = 0.01f;
+                parse_param(streams, ptype, roughness);
+                tvalue.uroughness = roughness;
+                tvalue.vroughness = roughness;
+            } else if (pname == "uroughness") {
+                parse_param(streams, ptype, tvalue.uroughness);
+            } else if (pname == "vroughness") {
+                parse_param(streams, ptype, tvalue.vroughness);
+            } else if (pname == "remaproughness") {
+                parse_param(streams, ptype, tvalue.remaproughness);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "metal") {
+        auto tvalue = pbrt_material_metal{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "eta") {
+                parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "k") {
+                parse_param(streams, ptype, tvalue.k);
+            } else if (pname == "roughness") {
+                pbrt_textured<float> roughness = 0.01f;
+                parse_param(streams, ptype, roughness);
+                tvalue.uroughness = roughness;
+                tvalue.vroughness = roughness;
+            } else if (pname == "uroughness") {
+                parse_param(streams, ptype, tvalue.uroughness);
+            } else if (pname == "vroughness") {
+                parse_param(streams, ptype, tvalue.vroughness);
+            } else if (pname == "remaproughness") {
+                parse_param(streams, ptype, tvalue.remaproughness);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "glass") {
+        auto tvalue = pbrt_material_glass{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "Kr") {
+                parse_param(streams, ptype, tvalue.Kr);
+            } else if (pname == "Kt") {
+                parse_param(streams, ptype, tvalue.Kt);
+            } else if (pname == "eta") {
+                parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "roughness") {
+                pbrt_textured<float> roughness = 0.01f;
+                parse_param(streams, ptype, roughness);
+                tvalue.uroughness = roughness;
+                tvalue.vroughness = roughness;
+            } else if (pname == "uroughness") {
+                parse_param(streams, ptype, tvalue.uroughness);
+            } else if (pname == "vroughness") {
+                parse_param(streams, ptype, tvalue.vroughness);
+            } else if (pname == "remaproughness") {
+                parse_param(streams, ptype, tvalue.remaproughness);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "translucent") {
+        auto tvalue = pbrt_material_translucent{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "Kd") {
+                parse_param(streams, ptype, tvalue.Kd);
+            } else if (pname == "Ks") {
+                parse_param(streams, ptype, tvalue.Ks);
+            } else if (pname == "reflect") {
+                parse_param(streams, ptype, tvalue.reflect);
+            } else if (pname == "transmit") {
+                parse_param(streams, ptype, tvalue.transmit);
+            } else if (pname == "roughness") {
+                pbrt_textured<float> roughness = 0.01f;
+                parse_param(streams, ptype, roughness);
+                tvalue.uroughness = roughness;
+                tvalue.vroughness = roughness;
+            } else if (pname == "uroughness") {
+                parse_param(streams, ptype, tvalue.uroughness);
+            } else if (pname == "vroughness") {
+                parse_param(streams, ptype, tvalue.vroughness);
+            } else if (pname == "remaproughness") {
+                parse_param(streams, ptype, tvalue.remaproughness);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "uber") {
+        auto tvalue = pbrt_material_uber{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "Kd") {
+                parse_param(streams, ptype, tvalue.Kd);
+            } else if (pname == "Ks") {
+                parse_param(streams, ptype, tvalue.Ks);
+            } else if (pname == "Kr") {
+                parse_param(streams, ptype, tvalue.Kr);
+            } else if (pname == "Kt") {
+                parse_param(streams, ptype, tvalue.Kt);
+            } else if (pname == "eta") {
+                parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "opacity") {
+                parse_param(streams, ptype, tvalue.opacity);
+            } else if (pname == "roughness") {
+                pbrt_textured<float> roughness = 0.01f;
+                parse_param(streams, ptype, roughness);
+                tvalue.uroughness = roughness;
+                tvalue.vroughness = roughness;
+            } else if (pname == "uroughness") {
+                parse_param(streams, ptype, tvalue.uroughness);
+            } else if (pname == "vroughness") {
+                parse_param(streams, ptype, tvalue.vroughness);
+            } else if (pname == "remaproughness") {
+                parse_param(streams, ptype, tvalue.remaproughness);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "disney") {
+        auto tvalue = pbrt_material_disney{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "color") {
+                parse_param(streams, ptype, tvalue.color);
+            } else if (pname == "anisotropic") {
+                parse_param(streams, ptype, tvalue.anisotropic);
+            } else if (pname == "clearcoat") {
+                parse_param(streams, ptype, tvalue.clearcoat);
+            } else if (pname == "clearcoatgloss") {
+                parse_param(streams, ptype, tvalue.clearcoatgloss);
+            } else if (pname == "eta") {
+                parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "metallic") {
+                parse_param(streams, ptype, tvalue.metallic);
+            } else if (pname == "roughness") {
+                pbrt_textured<float> roughness = 0.01f;
+                parse_param(streams, ptype, roughness);
+                tvalue.uroughness = roughness;
+                tvalue.vroughness = roughness;
+            } else if (pname == "uroughness") {
+                parse_param(streams, ptype, tvalue.uroughness);
+            } else if (pname == "vroughness") {
+                parse_param(streams, ptype, tvalue.vroughness);
+            } else if (pname == "remaproughness") {
+                parse_param(streams, ptype, tvalue.remaproughness);
+            } else if (pname == "scatterdistance") {
+                parse_param(streams, ptype, tvalue.scatterdistance);
+            } else if (pname == "sheen") {
+                parse_param(streams, ptype, tvalue.sheen);
+            } else if (pname == "sheentint") {
+                parse_param(streams, ptype, tvalue.sheentint);
+            } else if (pname == "spectrans") {
+                parse_param(streams, ptype, tvalue.spectrans);
+            } else if (pname == "thin") {
+                parse_param(streams, ptype, tvalue.thin);
+            } else if (pname == "difftrans") {
+                parse_param(streams, ptype, tvalue.difftrans);
+            } else if (pname == "flatness") {
+                parse_param(streams, ptype, tvalue.flatness);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "hair") {
+        auto tvalue = pbrt_material_hair{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "color") {
+                parse_param(streams, ptype, tvalue.color);
+            } else if (pname == "sigma_a") {
+                parse_param(streams, ptype, tvalue.sigma_a);
+            } else if (pname == "eumelanin") {
+                parse_param(streams, ptype, tvalue.eumelanin);
+            } else if (pname == "pheomelanin") {
+                parse_param(streams, ptype, tvalue.pheomelanin);
+            } else if (pname == "eta") {
+                parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "beta_m") {
+                parse_param(streams, ptype, tvalue.beta_m);
+            } else if (pname == "beta_n") {
+                parse_param(streams, ptype, tvalue.beta_n);
+            } else if (pname == "alpha") {
+                parse_param(streams, ptype, tvalue.alpha);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "kdsubsurface") {
+        auto tvalue = pbrt_material_kdsubsurface{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "Kd") {
+                parse_param(streams, ptype, tvalue.Kd);
+            } else if (pname == "Kr") {
+                parse_param(streams, ptype, tvalue.Kr);
+            } else if (pname == "Kt") {
+                parse_param(streams, ptype, tvalue.Kt);
+            } else if (pname == "mfp") {
+                parse_param(streams, ptype, tvalue.mfp);
+            } else if (pname == "eta") {
+                parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "roughness") {
+                pbrt_textured<float> roughness = 0.01f;
+                parse_param(streams, ptype, roughness);
+                tvalue.uroughness = roughness;
+                tvalue.vroughness = roughness;
+            } else if (pname == "uroughness") {
+                parse_param(streams, ptype, tvalue.uroughness);
+            } else if (pname == "vroughness") {
+                parse_param(streams, ptype, tvalue.vroughness);
+            } else if (pname == "remaproughness") {
+                parse_param(streams, ptype, tvalue.remaproughness);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "mix") {
+        auto tvalue = pbrt_material_mix{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "amount") {
+                parse_param(streams, ptype, tvalue.amount);
+            } else if (pname == "namedmaterial1") {
+                parse_param(streams, ptype, tvalue.namedmaterial1);
+            } else if (pname == "namedmaterial2") {
+                parse_param(streams, ptype, tvalue.namedmaterial2);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "fourier") {
+        auto tvalue = pbrt_material_fourier{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "bsdffile") {
+                parse_param(streams, ptype, tvalue.bsdffile);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "substrate") {
+        auto tvalue = pbrt_material_substrate{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "Kd") {
+                parse_param(streams, ptype, tvalue.Kd);
+            } else if (pname == "Ks") {
+                parse_param(streams, ptype, tvalue.Ks);
+            } else if (pname == "roughness") {
+                pbrt_textured<float> roughness = 0.01f;
+                parse_param(streams, ptype, roughness);
+                tvalue.uroughness = roughness;
+                tvalue.vroughness = roughness;
+            } else if (pname == "uroughness") {
+                parse_param(streams, ptype, tvalue.uroughness);
+            } else if (pname == "vroughness") {
+                parse_param(streams, ptype, tvalue.vroughness);
+            } else if (pname == "remaproughness") {
+                parse_param(streams, ptype, tvalue.remaproughness);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "subsurface") {
+        auto tvalue = pbrt_material_subsurface{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "name") {
+                parse_param(streams, ptype, tvalue.name);
+            } else if (pname == "sigma_a") {
+                parse_param(streams, ptype, tvalue.sigma_a);
+            } else if (pname == "sigma_prime_s") {
+                parse_param(streams, ptype, tvalue.sigma_prime_s);
+            } else if (pname == "scale") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else if (pname == "eta") {
+                parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "Kr") {
+                parse_param(streams, ptype, tvalue.Kr);
+            } else if (pname == "Kt") {
+                parse_param(streams, ptype, tvalue.Kt);
+            } else if (pname == "roughness") {
+                pbrt_textured<float> roughness = 0.01f;
+                parse_param(streams, ptype, roughness);
+                tvalue.uroughness = roughness;
+                tvalue.vroughness = roughness;
+            } else if (pname == "uroughness") {
+                parse_param(streams, ptype, tvalue.uroughness);
+            } else if (pname == "vroughness") {
+                parse_param(streams, ptype, tvalue.vroughness);
+            } else if (pname == "remaproughness") {
+                parse_param(streams, ptype, tvalue.remaproughness);
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
