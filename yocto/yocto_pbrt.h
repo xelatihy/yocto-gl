@@ -75,7 +75,7 @@ struct pbrt_camera_perspective {
     float frameaspectratio = -1;  // or computed from film
     float lensradius       = 0;
     float focaldistance    = 1e30;
-    vec4f screenwindow     = {-1, -1, 1, 1};
+    bbox2f screenwindow     = {{-1, -1}, {1, 1}};
     float shutteropen      = 0;
     float shutterclose     = 1;
 };
@@ -83,7 +83,7 @@ struct pbrt_camera_orthographic {
     float frameaspectratio = -1;  // or computed from film
     float lensradius       = 0;
     float focaldistance    = 1e30;
-    vec4f screenwindow     = {-1, -1, 1, 1};
+    bbox2f screenwindow     = {{-1, -1}, {1, 1}};
     float shutteropen      = 0;
     float shutterclose     = 1;
 };
@@ -131,7 +131,7 @@ using pbrt_sampler = variant<pbrt_sampler_random, pbrt_sampler_halton,
 struct pbrt_film_image {
     int    xresolution        = 640;
     int    yresolution        = 480;
-    vec4f  cropwindow         = {0, 1, 0, 1};
+    bbox2f cropwindow         = {{0, 0}, {1, 1}};
     float  scale              = 1;
     float  maxsampleluminance = type_max<float>();
     float  diagonal           = 35;
@@ -170,15 +170,15 @@ using pbrt_filter = variant<pbrt_filter_box, pbrt_filter_gaussian,
 // pbrt integrators
 struct pbrt_integrator_path {
     enum struct lightsamplestrategy_t { uniform, power, spatial };
-    int                   maxdepth            = 5;
-    vec4i                 pixelbounds         = {-1, -1, -1, -1};
-    float                 rrthreshold         = 1;
+    int    maxdepth    = 5;
+    bbox2i pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    float  rrthreshold = 1;
     lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::spatial;
 };
 struct pbrt_integrator_bdpt {
     enum struct lightsamplestrategy_t { uniform, power, spatial };
-    int                   maxdepth            = 5;
-    vec4i                 integer             = {-1, -1, -1, -1};
+    int    maxdepth    = 5;
+    bbox2i pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
     lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::power;
     bool                  visualizestrategies = false;
     bool                  visualizeweights    = false;
@@ -187,7 +187,7 @@ struct pbrt_integrator_directlighting {
     enum struct strategy_t { all, one };
     strategy_t strategy    = strategy_t::all;
     int        maxdepth    = 5;
-    vec4i      pixelbounds = {-1, -1, -1, -1};
+    bbox2i     pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
 };
 struct pbrt_integrator_mlt {
     int   maxdepth             = 5;
@@ -632,8 +632,7 @@ struct pbrt_heterogeneous_medium {
 };
 
 // pbrt callbacks
-struct pbrt_callbacks {
-};
+struct pbrt_callbacks {};
 
 // Load obj options
 struct load_pbrt_options {
