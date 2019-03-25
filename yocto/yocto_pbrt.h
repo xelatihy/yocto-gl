@@ -360,8 +360,8 @@ struct pbrt_material_mirror {
 struct pbrt_material_plastic {
     pbrt_textured<vec3f> Kd             = {0.25f, 0.25f, 0.25f};
     pbrt_textured<vec3f> Ks             = {0.25f, 0.25f, 0.25f};
-    pbrt_textured<float> uroughness      = 0.1f;
-    pbrt_textured<float> vroughness      = 0.1f;
+    pbrt_textured<float> uroughness     = 0.1f;
+    pbrt_textured<float> vroughness     = 0.1f;
     bool                 remaproughness = true;
 };
 struct pbrt_material_metal {
@@ -384,8 +384,8 @@ struct pbrt_material_translucent {
     pbrt_textured<vec3f> Ks             = {0, 0, 0};
     pbrt_textured<vec3f> reflect        = {0, 0, 0};
     pbrt_textured<vec3f> transmit       = {0, 0, 0};
-    pbrt_textured<float> uroughness      = 0;
-    pbrt_textured<float> vroughness      = 0;
+    pbrt_textured<float> uroughness     = 0;
+    pbrt_textured<float> vroughness     = 0;
     bool                 remaproughness = true;
 };
 struct pbrt_material_uber {
@@ -406,8 +406,8 @@ struct pbrt_material_disney {
     pbrt_textured<float> clearcoatgloss  = 1;
     pbrt_textured<float> eta             = 1.5f;
     pbrt_textured<float> metallic        = 0;
-    pbrt_textured<float> uroughness     = 0;
-    pbrt_textured<float> vroughness     = 0;
+    pbrt_textured<float> uroughness      = 0;
+    pbrt_textured<float> vroughness      = 0;
     pbrt_textured<vec3f> scatterdistance = {0, 0, 0};
     pbrt_textured<float> sheen           = 0;
     pbrt_textured<float> sheentint       = 0.5;
@@ -416,7 +416,7 @@ struct pbrt_material_disney {
     bool                 thin            = false;
     pbrt_textured<vec3f> difftrans       = {1, 1, 1};
     pbrt_textured<vec3f> flatness        = {0, 0, 0};
-    bool                 remaproughness = true;
+    bool                 remaproughness  = true;
 };
 struct pbrt_material_fourier {
     string bsdffile = "";

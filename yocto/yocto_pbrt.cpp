@@ -141,8 +141,9 @@ static inline void parse_value(pbrt_token_stream& stream, bool& value) {
         throw pbrtio_error("expected boolean");
     }
 }
-template<typename T>
-static inline void parse_value(pbrt_token_stream& stream, T& value, unordered_map<string, T>& value_names) {
+template <typename T>
+static inline void parse_value(pbrt_token_stream& stream, T& value,
+    unordered_map<string, T>& value_names) {
     auto value_name = ""s;
     parse_value(stream, value_name);
     try {
@@ -198,23 +199,23 @@ static inline void parse_value(
         };
     return parse_value(stream, value, value_names);
 }
-static inline void parse_value(pbrt_token_stream& stream, pbrt_shape_curve::basis_t& value) {
-    static auto value_names =
-    unordered_map<string, pbrt_shape_curve::basis_t>{
+static inline void parse_value(
+    pbrt_token_stream& stream, pbrt_shape_curve::basis_t& value) {
+    static auto value_names = unordered_map<string, pbrt_shape_curve::basis_t>{
         {"bezier", pbrt_shape_curve::basis_t::bezier},
         {"bspline", pbrt_shape_curve::basis_t::bspline},
     };
     return parse_value(stream, value, value_names);
 }
-    static inline void parse_value(pbrt_token_stream& stream, pbrt_shape_curve::type_t& value) {
-        static auto value_names =
-        unordered_map<string, pbrt_shape_curve::type_t>{
-            {"flat", pbrt_shape_curve::type_t::flat},
-            {"cylinder", pbrt_shape_curve::type_t::cylinder},
-            {"ribbon", pbrt_shape_curve::type_t::ribbon},
-        };
-        return parse_value(stream, value, value_names);
-    }
+static inline void parse_value(
+    pbrt_token_stream& stream, pbrt_shape_curve::type_t& value) {
+    static auto value_names = unordered_map<string, pbrt_shape_curve::type_t>{
+        {"flat", pbrt_shape_curve::type_t::flat},
+        {"cylinder", pbrt_shape_curve::type_t::cylinder},
+        {"ribbon", pbrt_shape_curve::type_t::ribbon},
+    };
+    return parse_value(stream, value, value_names);
+}
 
 // parse a vec type
 template <typename T, int N>
@@ -369,7 +370,7 @@ static inline void parse_param(pbrt_token_stream& stream, const string& type,
         parse_param(stream, value.value);
     } else if (type == "spectrum") {
         printf("spectrum not supported well\n");
-        value = {1,0,0};
+        value = {1, 0, 0};
         // throw pbrtio_error("spectrum not supported");
     } else {
         throw pbrtio_error("incomparible textured type " + type);
@@ -394,7 +395,8 @@ static inline void load_token_stream(
 }
 
 // Skip whitespace
-static inline void skip_whitespace_or_comment(vector<pbrt_token_stream>& streams) {
+static inline void skip_whitespace_or_comment(
+    vector<pbrt_token_stream>& streams) {
     if (streams.empty()) return;
     while (!streams.empty()) {
         skip_whitespace_or_comment(streams.back());
@@ -576,7 +578,8 @@ static void parse_pbrt_sampler(
 }
 
 // Parse Filter
-static void parse_pbrt_filter(vector<pbrt_token_stream>& streams, pbrt_filter& value) {
+static void parse_pbrt_filter(
+    vector<pbrt_token_stream>& streams, pbrt_filter& value) {
     auto type = ""s;
     parse_value(streams, type);
     auto pname = ""s, ptype = ""s;
@@ -659,7 +662,8 @@ static void parse_pbrt_filter(vector<pbrt_token_stream>& streams, pbrt_filter& v
 }
 
 // Parse Filter
-static void parse_pbrt_film(vector<pbrt_token_stream>& streams, pbrt_film& value) {
+static void parse_pbrt_film(
+    vector<pbrt_token_stream>& streams, pbrt_film& value) {
     auto type = ""s;
     parse_value(streams, type);
     auto pname = ""s, ptype = ""s;
@@ -694,7 +698,8 @@ static void parse_pbrt_film(vector<pbrt_token_stream>& streams, pbrt_film& value
 }
 
 // Parse Camera
-static void parse_pbrt_camera(vector<pbrt_token_stream>& streams, pbrt_camera& value) {
+static void parse_pbrt_camera(
+    vector<pbrt_token_stream>& streams, pbrt_camera& value) {
     auto type = ""s;
     parse_value(streams, type);
     auto pname = ""s, ptype = ""s;
@@ -1397,7 +1402,8 @@ static void parse_pbrt_material(
 }
 
 // Parse Shape
-static void parse_pbrt_shape(vector<pbrt_token_stream>& streams, pbrt_shape& value) {
+static void parse_pbrt_shape(
+    vector<pbrt_token_stream>& streams, pbrt_shape& value) {
     auto type = ""s;
     parse_value(streams, type);
     auto pname = ""s, ptype = ""s;
