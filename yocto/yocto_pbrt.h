@@ -128,7 +128,7 @@ using pbrt_sampler = variant<pbrt_sampler_random, pbrt_sampler_halton,
     pbrt_sampler_stratified>;
 
 // pbrt film
-struct pbrt_film {
+struct pbrt_film_image {
     int    xresolution        = 640;
     int    yresolution        = 480;
     vec4f  cropwindow         = {0, 1, 0, 1};
@@ -137,6 +137,7 @@ struct pbrt_film {
     float  diagonal           = 35;
     string filename           = "pbrt.exr";
 };
+using pbrt_film = variant<pbrt_film_image>;
 
 // pbrt filters
 struct pbrt_filter_box {

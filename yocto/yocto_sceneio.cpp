@@ -30,6 +30,7 @@
 #include "yocto_imageio.h"
 #include "yocto_json.h"
 #include "yocto_obj.h"
+#include "yocto_pbrt.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
 #include "yocto_utils.h"
@@ -3085,7 +3086,7 @@ vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
 }
 
 // load pbrt scenes
-void load_pbrt_scene(const string& filename, yocto_scene& scene,
+void load_pbrt_scene_old(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     scene = yocto_scene{};
     // convert to json
@@ -3622,6 +3623,16 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     add_missing_materials(scene);
     add_missing_names(scene);
     update_transforms(scene);
+}
+
+// load pbrt scenes
+void load_pbrt_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options) {
+    scene = yocto_scene{};
+
+    auto cb = pbrt_callbacks{};
+
+    load_pbrt(filename, cb);
 }
 
 // Convert a scene to pbrt format
