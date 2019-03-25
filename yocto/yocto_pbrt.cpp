@@ -364,7 +364,9 @@ static inline void parse_param(pbrt_token_stream& stream, const string& type,
     } else if (type == "rgb") {
         parse_param(stream, value.value);
     } else if (type == "spectrum") {
-        throw pbrtio_error("spectrum not supported");
+        printf("spectrum not supported well\n");
+        value = {1,0,0};
+        // throw pbrtio_error("spectrum not supported");
     } else {
         throw pbrtio_error("incomparible textured type " + type);
     }
