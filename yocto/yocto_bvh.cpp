@@ -367,31 +367,31 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-constexpr static auto get_points(const bvh_tree& bvh) {
+inline static auto get_points(const bvh_tree& bvh) {
     return !bvh.points_view.empty() ? bvh.points_view : bvh.points_data;
 }
-constexpr static auto get_lines(const bvh_tree& bvh) {
+inline static auto get_lines(const bvh_tree& bvh) {
     return !bvh.lines_view.empty() ? bvh.lines_view : bvh.lines_data;
 }
-constexpr static auto get_triangles(const bvh_tree& bvh) {
+inline static auto get_triangles(const bvh_tree& bvh) {
     return !bvh.triangles_view.empty() ? bvh.triangles_view
                                        : bvh.triangles_data;
 }
-constexpr static auto get_quads(const bvh_tree& bvh) {
+inline static auto get_quads(const bvh_tree& bvh) {
     return !bvh.quads_view.empty() ? bvh.quads_view : bvh.quads_data;
 }
-constexpr static auto get_positions(const bvh_tree& bvh) {
+inline static auto get_positions(const bvh_tree& bvh) {
     return !bvh.positions_view.empty() ? bvh.positions_view
                                        : bvh.positions_data;
 }
-constexpr static auto get_radius(const bvh_tree& bvh) {
+inline static auto get_radius(const bvh_tree& bvh) {
     return !bvh.radius_view.empty() ? bvh.radius_view : bvh.radius_data;
 }
-constexpr static auto get_instances(const bvh_tree& bvh) {
+inline static auto get_instances(const bvh_tree& bvh) {
     return !bvh.instances_view.empty() ? bvh.instances_view
                                        : bvh.instances_data;
 }
-constexpr static auto is_sharing(const bvh_tree& bvh) {
+inline static auto is_sharing(const bvh_tree& bvh) {
     return bvh.instances_data.empty() && bvh.positions_data.empty();
 }
 
