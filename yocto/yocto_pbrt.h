@@ -225,66 +225,108 @@ struct pbrt_accelerator_kdtree {
 };
 using pbrt_accelerator = variant<pbrt_accelerator_bvh, pbrt_accelerator_kdtree>;
 
+// pbrt texture or value
+template <typename T>
+struct pbrt_textured;
+
+template <>
+struct pbrt_textured<float> {
+    float  value   = 0;
+    string texture = "";
+    pbrt_textured() : value{0}, texture{} {}
+    pbrt_textured(float v) : value{v}, texture{} {}
+};
+template <>
+struct pbrt_textured<vec3f> {
+    vec3f  value   = {0, 0, 0};
+    string texture = "";
+    pbrt_textured() : value{0, 0, 0}, texture{} {}
+    pbrt_textured(float x, float y, float z) : value{x, y, z}, texture{} {}
+};
+struct pbrt_texture_mapping {
+    enum struct mapping_type { uv, spherical, cylindrical, planar };
+    mapping_type mapping = mapping_type::uv;
+    float        uscale  = 1;
+    float        vscale  = 1;
+    float        udelta  = 0;
+    float        vdelta  = 0;
+    vec3f        v1      = {1, 0, 0};
+    vec3f        v2      = {0, 1, 0};
+};
+
 // pbrt textures
 struct pbrt_texture_constant {
-    vec3f value = {1, 1, 1};
+    string name  = "";
+    vec3f  value = {1, 1, 1};
 };
 struct pbrt_texture_bilerp {
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
+    string               name    = "";
+    pbrt_textured<vec3f> v00     = {0, 0, 0};
+    pbrt_textured<vec3f> v01     = {1, 1, 1};
+    pbrt_textured<vec3f> v10     = {0, 0, 0};
+    pbrt_textured<vec3f> v11     = {1, 1, 1};
+    pbrt_texture_mapping mapping = {};
 };
 struct pbrt_texture_checkerboard {
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
+    enum struct aamode_type { closedform, none };
+    string               name      = "";
+    int                  dimension = 2;
+    pbrt_textured<vec3f> tex1      = {1, 1, 1};
+    pbrt_textured<vec3f> tex2      = {0, 0, 0};
+    aamode_type          aamode    = aamode_type::closedform;
+    pbrt_texture_mapping mapping   = {};
 };
 struct pbrt_texture_dots {
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
+    string               name    = "";
+    pbrt_textured<vec3f> inside  = {1, 1, 1};
+    pbrt_textured<vec3f> outside = {0, 0, 0};
+    pbrt_texture_mapping mapping = {};
 };
-struct pbrt_texture_fbm {};
+struct pbrt_texture_fbm {
+    string name      = "";
+    int    octaves   = 8;
+    float  roughness = 0.5;
+};
 struct pbrt_texture_imagemap {
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
+    enum wrap_type { repeat, black, clamp };
+    string    name          = "";
+    string    filename      = "";
+    wrap_type wrap          = wrap_type::repeat;
+    float     maxanisotropy = 8;
+    bool      trilinear     = false;
+    float     scale         = 1;
+    bool      gamma         = true;
 };
-struct pbrt_texture_marble {};
-struct pbrt_texture_mix {};
-struct pbrt_texture_scale {};
+struct pbrt_texture_marble {
+    string name      = "";
+    int    octaves   = 8;
+    float  roughness = 0.5f;
+    float  scale     = 1;
+    float  variation = 0.2f;
+};
+struct pbrt_texture_mix {
+    string               name   = "";
+    pbrt_textured<vec3f> tex1   = {1, 1, 1};
+    pbrt_textured<vec3f> tex2   = {1, 1, 1};
+    pbrt_textured<float> amount = 0.5f;
+};
+struct pbrt_texture_scale {
+    string               name = "";
+    pbrt_textured<vec3f> tex1 = {1, 1, 1};
+    pbrt_textured<vec3f> tex2 = {1, 1, 1};
+};
 struct pbrt_texture_uv {
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
+    string               name    = "";
+    pbrt_texture_mapping mapping = {};
 };
-struct pbrt_texture_windy {};
-struct pbrt_texture_wrinkled {};
+struct pbrt_texture_windy {
+    string name = "";
+};
+struct pbrt_texture_wrinkled {
+    string name      = "";
+    int    octaves   = 8;
+    float  roughness = 0.5;
+};
 using pbrt_texture = variant<pbrt_texture_constant, pbrt_texture_bilerp,
     pbrt_texture_checkerboard, pbrt_texture_dots, pbrt_texture_fbm,
     pbrt_texture_imagemap, pbrt_texture_marble, pbrt_texture_mix,
@@ -292,33 +334,138 @@ using pbrt_texture = variant<pbrt_texture_constant, pbrt_texture_bilerp,
     pbrt_texture_wrinkled>;
 
 // pbrt materials
-struct pbrt_material_none {};
 struct pbrt_material_matte {
-    string       name      = "";
-    vec3f        Kd        = {0.5f, 0.5f, 0.5f};
-    pbrt_texture Kd_map    = {};
-    float        sigma     = 0;
-    pbrt_texture sigma_map = {};
+    string               name  = "";
+    pbrt_textured<vec3f> Kd    = {0.5f, 0.5f, 0.5f};
+    pbrt_textured<float> sigma = 0;
 };
-struct pbrt_material_mirror {};
-struct pbrt_material_plastic {};
-struct pbrt_material_metal {};
-struct pbrt_material_glass {};
-struct pbrt_material_translucent {};
-struct pbrt_material_uber {};
-struct pbrt_material_disney {};
-struct pbrt_material_fourier {};
-struct pbrt_material_hair {};
-struct pbrt_material_kdsubsurface {};
-struct pbrt_material_mix {};
-struct pbrt_material_substrate {};
-struct pbrt_material_subsurface {};
-using pbrt_material =
-    variant<pbrt_material_none, pbrt_material_matte, pbrt_material_mirror,
-        pbrt_material_plastic, pbrt_material_metal, pbrt_material_glass,
-        pbrt_material_translucent, pbrt_material_uber, pbrt_material_disney,
-        pbrt_material_fourier, pbrt_material_hair, pbrt_material_kdsubsurface,
-        pbrt_material_mix, pbrt_material_substrate, pbrt_material_subsurface>;
+struct pbrt_material_mirror {
+    string               name = "";
+    pbrt_textured<vec3f> Kr   = {0.9f, 0.9f, 0.9f};
+};
+struct pbrt_material_plastic {
+    string               name           = "";
+    pbrt_textured<vec3f> Kd             = {0.25f, 0.25f, 0.25f};
+    pbrt_textured<vec3f> Ks             = {0.25f, 0.25f, 0.25f};
+    pbrt_textured<float> roughness      = 0.1f;
+    bool                 remaproughness = true;
+};
+struct pbrt_material_metal {
+    string               name = "";
+    pbrt_textured<vec3f> eta  = {0.2004376970f, 0.9240334304f, 1.1022119527f};
+    pbrt_textured<vec3f> k    = {3.9129485033f, 2.4528477015f, 2.1421879552f};
+    pbrt_textured<float> roughness      = 0.01;
+    pbrt_textured<float> uroughness     = 0.01;
+    pbrt_textured<float> vroughness     = 0.01;
+    bool                 remaproughness = true;
+};
+struct pbrt_material_glass {
+    string               name           = "";
+    pbrt_textured<vec3f> Kr             = {1, 1, 1};
+    pbrt_textured<vec3f> Kt             = {1, 1, 1};
+    pbrt_textured<float> eta            = 1;
+    pbrt_textured<float> uroughness     = 0;
+    pbrt_textured<float> vroughness     = 0;
+    bool                 remaproughness = true;
+};
+struct pbrt_material_translucent {
+    string               name           = "";
+    pbrt_textured<vec3f> Kd             = {0, 0, 0};
+    pbrt_textured<vec3f> Ks             = {0, 0, 0};
+    pbrt_textured<vec3f> reflect        = {0, 0, 0};
+    pbrt_textured<vec3f> transmit       = {0, 0, 0};
+    pbrt_textured<float> roughness      = 0;
+    bool                 remaproughness = true;
+};
+struct pbrt_material_uber {
+    string               name           = "";
+    pbrt_textured<vec3f> Kd             = {0, 0, 0};
+    pbrt_textured<vec3f> Ks             = {0, 0, 0};
+    pbrt_textured<vec3f> Kr             = {0, 0, 0};
+    pbrt_textured<vec3f> Kt             = {0, 0, 0};
+    pbrt_textured<float> roughness      = 0;
+    pbrt_textured<float> uroughness     = 0;
+    pbrt_textured<float> vroughness     = 0;
+    pbrt_textured<float> eta            = 1;
+    pbrt_textured<vec3f> opacity        = {1, 1, 1};
+    bool                 remaproughness = true;
+};
+struct pbrt_material_disney {
+    string               name            = "";
+    pbrt_textured<vec3f> color           = {0.5f, 0.5f, 0.5f};
+    pbrt_textured<float> anisotropic     = 0;
+    pbrt_textured<float> clearcoat       = 0;
+    pbrt_textured<float> clearcoatgloss  = 1;
+    pbrt_textured<float> eta             = 1.5f;
+    pbrt_textured<float> metallic        = 0;
+    pbrt_textured<float> roughness       = 0.5f;
+    pbrt_textured<vec3f> scatterdistance = {0, 0, 0};
+    pbrt_textured<float> sheen           = 0;
+    pbrt_textured<float> sheentint       = 0.5;
+    pbrt_textured<float> spectrans       = 0;
+    pbrt_textured<float> speculartint    = 0;
+    bool                 thin            = false;
+    pbrt_textured<vec3f> difftrans       = {1, 1, 1};
+    pbrt_textured<vec3f> flatness        = {0, 0, 0};
+};
+struct pbrt_material_fourier {
+    string name     = "";
+    string bsdffile = "";
+};
+struct pbrt_material_hair {
+    string               name        = "";
+    pbrt_textured<vec3f> sigma_a     = {0, 0, 0};  // TODO: missing default
+    pbrt_textured<vec3f> color       = {0, 0, 0};  // TODO: missing default
+    pbrt_textured<float> eumelanin   = 0;          // TODO: missing default
+    pbrt_textured<float> pheomelanin = 0;          // TODO: missing default
+    pbrt_textured<float> eta         = 1.55f;
+    pbrt_textured<float> beta_m      = 0.3f;
+    pbrt_textured<float> beta_n      = 0.3f;
+    pbrt_textured<float> alpha       = 2;
+};
+struct pbrt_material_kdsubsurface {
+    string               name           = "";
+    pbrt_textured<vec3f> Kd             = {0, 0, 0};
+    pbrt_textured<float> mfp            = 1;
+    pbrt_textured<float> eta            = 1;
+    pbrt_textured<vec3f> Kr             = {1, 1, 1};
+    pbrt_textured<vec3f> Kt             = {1, 1, 1};
+    pbrt_textured<float> uroughness     = 0;
+    pbrt_textured<float> vroughness     = 0;
+    bool                 remaproughness = true;
+};
+struct pbrt_material_mix {
+    string               name           = "";
+    pbrt_textured<vec3f> amount         = {0, 0, 0};
+    string               namedmaterial1 = "";
+    string               namedmaterial2 = "";
+};
+struct pbrt_material_substrate {
+    string               name           = "";
+    pbrt_textured<vec3f> Kd             = {0, 0, 0};
+    pbrt_textured<vec3f> Ks             = {0, 0, 0};
+    pbrt_textured<float> uroughness     = 0;
+    pbrt_textured<float> vroughness     = 0;
+    bool                 remaproughness = true;
+};
+struct pbrt_material_subsurface {
+    string               name           = "";
+    string               name_          = "";
+    pbrt_textured<vec3f> sigma_a        = {.0011, .0024, .014};
+    pbrt_textured<vec3f> sigma_prime_s  = {2.55, 3.12, 3.77};
+    float                scale          = 1;
+    pbrt_textured<float> eta            = 1;
+    pbrt_textured<vec3f> Kr             = {1, 1, 1};
+    pbrt_textured<vec3f> Kt             = {1, 1, 1};
+    pbrt_textured<float> uroughness     = 0;
+    pbrt_textured<float> vroughness     = 0;
+    bool                 remaproughness = true;
+};
+using pbrt_material = variant<pbrt_material_matte, pbrt_material_mirror,
+    pbrt_material_plastic, pbrt_material_metal, pbrt_material_glass,
+    pbrt_material_translucent, pbrt_material_uber, pbrt_material_disney,
+    pbrt_material_fourier, pbrt_material_hair, pbrt_material_kdsubsurface,
+    pbrt_material_mix, pbrt_material_substrate, pbrt_material_subsurface>;
 
 // pbrt shapes
 struct pbrt_shape_trianglemesh {
