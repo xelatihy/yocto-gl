@@ -606,8 +606,33 @@ struct pbrt_arealight_diffuse {
 };
 using pbrt_arealight = variant<pbrt_arealight_none, pbrt_arealight_diffuse>;
 
+// pbrt mediums
+struct pbrt_homogeneous_medium {
+    string name    = "";
+    vec3f  sigma_a = {0.0011f, 0.0024f, 0.014f};
+    vec3f  sigma_s = vec3f{2.55f, 3.21f, 3.77f};
+    string preset  = "";
+    float  g       = 0;
+    float  scale   = 1;
+};
+struct pbrt_heterogeneous_medium {
+    string        name    = "";
+    vec3f         sigma_a = {0.0011f, 0.0024f, 0.014f};
+    vec3f         sigma_s = vec3f{2.55f, 3.21f, 3.77f};
+    string        preset  = "";
+    float         g       = 0;
+    float         scale   = 1;
+    vec3f         p0      = {0, 0, 0};
+    vec3f         p1      = {1, 1, 1};
+    int           nx      = 1;
+    int           ny      = 1;
+    int           nz      = 1;
+    vector<float> density = {};
+};
+
 // pbrt callbacks
-struct pbrt_callbacks {};
+struct pbrt_callbacks {
+};
 
 // Load obj options
 struct load_pbrt_options {
