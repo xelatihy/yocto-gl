@@ -220,9 +220,6 @@ struct vec<T, 3> {
             vec<T, 2> xy;
             T         _z;
         };
-        struct {
-            T r, g, b;
-        };
         T elems[3];
     };
 

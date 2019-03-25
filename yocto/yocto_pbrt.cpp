@@ -233,6 +233,10 @@ static inline void parse_value(pbrt_token_stream& stream, bbox<T, 2>& value) {
     parse_value(stream, value[0][1]);
     parse_value(stream, value[1][1]);
 }
+template <typename T, int N>
+static inline void parse_value(pbrt_token_stream& stream, spectrum<T, N>& value) {
+    for (auto i = 0; i < N; i++) parse_value(stream, value[i]);
+}
 
 // Check if empty
 static inline bool is_empty(pbrt_token_stream& stream) {
@@ -320,6 +324,8 @@ static inline bool is_type_compatible(const string& type) {
         return type == "point3" || type == "vector3" || type == "normal3" ||
                type == "point" || type == "vector" || type == "normal" ||
                type == "float";
+    } else if constexpr (std::is_same<T, spectrum3f>::value) {
+        return type == "rgb" || type == "spectrum";
     } else if constexpr (std::is_same<T, vec3i>::value) {
         return type == "integer";
     } else if constexpr (std::is_same<T, bbox2i>::value) {
@@ -343,6 +349,18 @@ static inline void parse_param(
 }
 
 template <typename T>
+static inline void parse_value(pbrt_token_stream& stream, const string& type, spectrum<T, 3>& value) {
+    if(type == "rgb") {
+        parse_value(stream, value);
+    } else if(type == "spectrum") {
+        printf("spectrum  not well supported\n");
+        value = {1,0,0};
+    } else {
+        throw pbrtio_error("unsupported spectrum type");
+    }
+}
+
+template <typename T>
 static inline void parse_param(
     pbrt_token_stream& stream, const string& type, vector<T>& value) {
     if (!is_type_compatible<T>(type)) {
@@ -351,29 +369,13 @@ static inline void parse_param(
     parse_param(stream, value);
 }
 
+template<typename T>
 static inline void parse_param(pbrt_token_stream& stream, const string& type,
-    pbrt_textured<float>& value) {
+    pbrt_textured<T>& value) {
     if (type == "texture") {
         parse_param(stream, value.texture);
-    } else if (type == "float") {
-        parse_param(stream, value.value);
     } else {
-        throw pbrtio_error("incomparible textured type " + type);
-    }
-}
-
-static inline void parse_param(pbrt_token_stream& stream, const string& type,
-    pbrt_textured<vec3f>& value) {
-    if (type == "texture") {
-        parse_param(stream, value.texture);
-    } else if (type == "rgb") {
         parse_param(stream, value.value);
-    } else if (type == "spectrum") {
-        printf("spectrum not supported well\n");
-        value = {1, 0, 0};
-        // throw pbrtio_error("spectrum not supported");
-    } else {
-        throw pbrtio_error("incomparible textured type " + type);
     }
 }
 
