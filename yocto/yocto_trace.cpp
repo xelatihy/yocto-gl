@@ -687,11 +687,8 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal_,
 
 // Picks a direction based on the BRDF
 vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
-    const vec3f& normal_, const vec3f& outgoing, float rnl, const vec2f& rn) {
+    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (!is_brdf_delta(brdf)) return zero3f;
-
-    // flip normal if necessary
-    auto normal = (dot(normal_, outgoing) > 0) ? normal_ : -normal_;
 
     // orientation
     auto outgoing_up = dot(outgoing, normal) > 0;
@@ -1012,7 +1009,7 @@ vec3f evaluate_transmission(const yocto_scene& scene,
 }
 
 float sample_volume_distance(float volume_density, float r) {
-    if (volume_density == 0 or r == 0)
+    if (volume_density == 0 || r == 0)
         return float_max;
     else
         return -log(r) / volume_density;
