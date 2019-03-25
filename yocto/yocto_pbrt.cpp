@@ -925,6 +925,9 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
         } else if (cmd == "MakeNamedMaterial") {
             auto value = pbrt_material{};
             parse_pbrt_material(streams, value, true);
+        } else if (cmd == "NamedMaterial") {
+            auto name = ""s;
+            parse_value(streams, name);
         } else {
             throw pbrtio_error("unknown command " + cmd);
         }
