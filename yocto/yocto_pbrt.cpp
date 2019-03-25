@@ -146,47 +146,54 @@ static inline void parse_value(pbrt_token_stream& stream, bool& value) {
         throw pbrtio_error("expected boolean");
     }
 }
-static inline void parse_value(pbrt_token_stream& stream, pbrt_texture_bilerp::mapping_type& value) {
-    static auto value_names = unordered_map<string, pbrt_texture_bilerp::mapping_type>{
-        {"uv", pbrt_texture_bilerp::mapping_type::uv},
-        {"spherical", pbrt_texture_bilerp::mapping_type::spherical},
-        {"cylindrical", pbrt_texture_bilerp::mapping_type::cylindrical},
-        {"planar", pbrt_texture_bilerp::mapping_type::planar},
-    };
+static inline void parse_value(
+    pbrt_token_stream& stream, pbrt_texture_bilerp::mapping_type& value) {
+    static auto value_names =
+        unordered_map<string, pbrt_texture_bilerp::mapping_type>{
+            {"uv", pbrt_texture_bilerp::mapping_type::uv},
+            {"spherical", pbrt_texture_bilerp::mapping_type::spherical},
+            {"cylindrical", pbrt_texture_bilerp::mapping_type::cylindrical},
+            {"planar", pbrt_texture_bilerp::mapping_type::planar},
+        };
     auto value_name = ""s;
     parse_value(stream, value_name);
     try {
         value = value_names.at(value_name);
-    } catch(std::out_of_range&) {
+    } catch (std::out_of_range&) {
         throw pbrtio_error("expected mapping_type");
     }
 }
-static inline void parse_value(pbrt_token_stream& stream, pbrt_texture_checkerboard::mapping_type& value) {
-    static auto value_names = unordered_map<string, pbrt_texture_checkerboard::mapping_type>{
-        {"uv", pbrt_texture_checkerboard::mapping_type::uv},
-        {"spherical", pbrt_texture_checkerboard::mapping_type::spherical},
-        {"cylindrical", pbrt_texture_checkerboard::mapping_type::cylindrical},
-        {"planar", pbrt_texture_checkerboard::mapping_type::planar},
-    };
+static inline void parse_value(
+    pbrt_token_stream& stream, pbrt_texture_checkerboard::mapping_type& value) {
+    static auto value_names =
+        unordered_map<string, pbrt_texture_checkerboard::mapping_type>{
+            {"uv", pbrt_texture_checkerboard::mapping_type::uv},
+            {"spherical", pbrt_texture_checkerboard::mapping_type::spherical},
+            {"cylindrical",
+                pbrt_texture_checkerboard::mapping_type::cylindrical},
+            {"planar", pbrt_texture_checkerboard::mapping_type::planar},
+        };
     auto value_name = ""s;
     parse_value(stream, value_name);
     try {
         value = value_names.at(value_name);
-    } catch(std::out_of_range&) {
+    } catch (std::out_of_range&) {
         throw pbrtio_error("expected mapping_type");
     }
 }
 
-static inline void parse_value(pbrt_token_stream& stream, pbrt_texture_checkerboard::aamode_type& value) {
-    static auto value_names = unordered_map<string, pbrt_texture_checkerboard::aamode_type>{
-        {"closedform", pbrt_texture_checkerboard::aamode_type::closedform},
-        {"none", pbrt_texture_checkerboard::aamode_type::none},
-    };
+static inline void parse_value(
+    pbrt_token_stream& stream, pbrt_texture_checkerboard::aamode_type& value) {
+    static auto value_names =
+        unordered_map<string, pbrt_texture_checkerboard::aamode_type>{
+            {"closedform", pbrt_texture_checkerboard::aamode_type::closedform},
+            {"none", pbrt_texture_checkerboard::aamode_type::none},
+        };
     auto value_name = ""s;
     parse_value(stream, value_name);
     try {
         value = value_names.at(value_name);
-    } catch(std::out_of_range&) {
+    } catch (std::out_of_range&) {
         throw pbrtio_error("expected aamode_type");
     }
 }
@@ -760,63 +767,63 @@ void parse_pbrt_texture(
     auto type = ""s;
     parse_value(streams, type);
     auto pname = ""s, ptype = ""s;
-struct pbrt_texture_dots {
-    pbrt_textured<vec3f> inside  = {1, 1, 1};
-    pbrt_textured<vec3f> outside = {0, 0, 0};
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
-};
-struct pbrt_texture_fbm {
-    int   octaves   = 8;
-    float roughness = 0.5;
-};
-struct pbrt_texture_imagemap {
-    enum wrap_type { repeat, black, clamp };
-    string    filename      = "";
-    wrap_type wrap          = wrap_type::repeat;
-    float     maxanisotropy = 8;
-    bool      trilinear     = false;
-    float     scale         = 1;
-    bool      gamma         = true;
-};
-struct pbrt_texture_marble {
-    int   octaves   = 8;
-    float roughness = 0.5f;
-    float scale     = 1;
-    float variation = 0.2f;
-};
-struct pbrt_texture_mix {
-    pbrt_textured<vec3f> tex1   = {1, 1, 1};
-    pbrt_textured<vec3f> tex2   = {1, 1, 1};
-    pbrt_textured<float> amount = 0.5f;
-};
-struct pbrt_texture_scale {
-    pbrt_textured<vec3f> tex1 = {1, 1, 1};
-    pbrt_textured<vec3f> tex2 = {1, 1, 1};
-};
-struct pbrt_texture_uv {
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
-};
-struct pbrt_texture_windy {
-    // TODO: missing parameters
-};
-struct pbrt_texture_wrinkled {
-    int   octaves   = 8;
-    float roughness = 0.5;
-};
+    struct pbrt_texture_dots {
+        pbrt_textured<vec3f> inside  = {1, 1, 1};
+        pbrt_textured<vec3f> outside = {0, 0, 0};
+        enum struct mapping_type { uv, spherical, cylindrical, planar };
+        mapping_type mapping = mapping_type::uv;
+        float        uscale  = 1;
+        float        vscale  = 1;
+        float        udelta  = 0;
+        float        vdelta  = 0;
+        vec3f        v1      = {1, 0, 0};
+        vec3f        v2      = {0, 1, 0};
+    };
+    struct pbrt_texture_fbm {
+        int   octaves   = 8;
+        float roughness = 0.5;
+    };
+    struct pbrt_texture_imagemap {
+        enum wrap_type { repeat, black, clamp };
+        string    filename      = "";
+        wrap_type wrap          = wrap_type::repeat;
+        float     maxanisotropy = 8;
+        bool      trilinear     = false;
+        float     scale         = 1;
+        bool      gamma         = true;
+    };
+    struct pbrt_texture_marble {
+        int   octaves   = 8;
+        float roughness = 0.5f;
+        float scale     = 1;
+        float variation = 0.2f;
+    };
+    struct pbrt_texture_mix {
+        pbrt_textured<vec3f> tex1   = {1, 1, 1};
+        pbrt_textured<vec3f> tex2   = {1, 1, 1};
+        pbrt_textured<float> amount = 0.5f;
+    };
+    struct pbrt_texture_scale {
+        pbrt_textured<vec3f> tex1 = {1, 1, 1};
+        pbrt_textured<vec3f> tex2 = {1, 1, 1};
+    };
+    struct pbrt_texture_uv {
+        enum struct mapping_type { uv, spherical, cylindrical, planar };
+        mapping_type mapping = mapping_type::uv;
+        float        uscale  = 1;
+        float        vscale  = 1;
+        float        udelta  = 0;
+        float        vdelta  = 0;
+        vec3f        v1      = {1, 0, 0};
+        vec3f        v2      = {0, 1, 0};
+    };
+    struct pbrt_texture_windy {
+        // TODO: missing parameters
+    };
+    struct pbrt_texture_wrinkled {
+        int   octaves   = 8;
+        float roughness = 0.5;
+    };
     if (type == "constant") {
         auto tvalue = pbrt_texture_constant{};
         while (is_param(streams)) {

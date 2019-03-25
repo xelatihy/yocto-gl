@@ -250,11 +250,11 @@ struct pbrt_texture_constant {
     pbrt_textured<vec3f> value = {1, 1, 1};
 };
 struct pbrt_texture_bilerp {
-    pbrt_textured<vec3f> v00     = {0, 0, 0};
-    pbrt_textured<vec3f> v01     = {1, 1, 1};
-    pbrt_textured<vec3f> v10     = {0, 0, 0};
-    pbrt_textured<vec3f> v11     = {1, 1, 1};
-    enum struct mapping_type {uv, spherical, cylindrical, planar}; 
+    pbrt_textured<vec3f> v00 = {0, 0, 0};
+    pbrt_textured<vec3f> v01 = {1, 1, 1};
+    pbrt_textured<vec3f> v10 = {0, 0, 0};
+    pbrt_textured<vec3f> v11 = {1, 1, 1};
+    enum struct mapping_type { uv, spherical, cylindrical, planar };
     mapping_type mapping = mapping_type::uv;
     float        uscale  = 1;
     float        vscale  = 1;
@@ -269,7 +269,8 @@ struct pbrt_texture_checkerboard {
     pbrt_textured<vec3f> tex1      = {1, 1, 1};
     pbrt_textured<vec3f> tex2      = {0, 0, 0};
     aamode_type          aamode    = aamode_type::closedform;
-    enum struct mapping_type {uv, spherical, cylindrical, planar}; mapping_type mapping = mapping_type::uv;
+    enum struct mapping_type { uv, spherical, cylindrical, planar };
+    mapping_type mapping = mapping_type::uv;
     float        uscale  = 1;
     float        vscale  = 1;
     float        udelta  = 0;
@@ -280,7 +281,8 @@ struct pbrt_texture_checkerboard {
 struct pbrt_texture_dots {
     pbrt_textured<vec3f> inside  = {1, 1, 1};
     pbrt_textured<vec3f> outside = {0, 0, 0};
-    enum struct mapping_type {uv, spherical, cylindrical, planar}; mapping_type mapping = mapping_type::uv;
+    enum struct mapping_type { uv, spherical, cylindrical, planar };
+    mapping_type mapping = mapping_type::uv;
     float        uscale  = 1;
     float        vscale  = 1;
     float        udelta  = 0;
@@ -317,7 +319,8 @@ struct pbrt_texture_scale {
     pbrt_textured<vec3f> tex2 = {1, 1, 1};
 };
 struct pbrt_texture_uv {
-    enum struct mapping_type {uv, spherical, cylindrical, planar}; mapping_type mapping = mapping_type::uv;
+    enum struct mapping_type { uv, spherical, cylindrical, planar };
+    mapping_type mapping = mapping_type::uv;
     float        uscale  = 1;
     float        vscale  = 1;
     float        udelta  = 0;
