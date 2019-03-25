@@ -70,11 +70,11 @@ using std::variant;
 namespace yocto {
 
 // pbrt spectrum as rgb color
-template<typename T, int N>
+template <typename T, int N>
 struct spectrum;
 
 // pbrt spectrum as rgb color
-template<typename T>
+template <typename T>
 struct spectrum<T, 3> {
     union {
         struct {
@@ -264,8 +264,8 @@ struct pbrt_textured<float> {
 };
 template <>
 struct pbrt_textured<spectrum3f> {
-    spectrum3f  value   = {0, 0, 0};
-    string texture = "";
+    spectrum3f value   = {0, 0, 0};
+    string     texture = "";
     pbrt_textured() : value{0, 0, 0}, texture{} {}
     pbrt_textured(float x, float y, float z) : value{x, y, z}, texture{} {}
 };
@@ -290,10 +290,10 @@ struct pbrt_texture_bilerp {
 };
 struct pbrt_texture_checkerboard {
     enum struct aamode_type { closedform, none };
-    int                  dimension = 2;
+    int                       dimension = 2;
     pbrt_textured<spectrum3f> tex1      = {1, 1, 1};
     pbrt_textured<spectrum3f> tex2      = {0, 0, 0};
-    aamode_type          aamode    = aamode_type::closedform;
+    aamode_type               aamode    = aamode_type::closedform;
     enum struct mapping_type { uv, spherical, cylindrical, planar };
     mapping_type mapping = mapping_type::uv;
     float        uscale  = 1;
@@ -345,7 +345,7 @@ struct pbrt_texture_marble {
 struct pbrt_texture_mix {
     pbrt_textured<spectrum3f> tex1   = {1, 1, 1};
     pbrt_textured<spectrum3f> tex2   = {1, 1, 1};
-    pbrt_textured<float> amount = 0.5f;
+    pbrt_textured<float>      amount = 0.5f;
 };
 struct pbrt_texture_scale {
     pbrt_textured<spectrum3f> tex1 = {1, 1, 1};
@@ -376,133 +376,134 @@ using pbrt_texture = variant<pbrt_texture_constant, pbrt_texture_bilerp,
 
 // pbrt materials
 struct pbrt_material_matte {
-    pbrt_textured<spectrum3f> Kd    = {0.5f, 0.5f, 0.5f};
-    pbrt_textured<float> sigma = 0;
-    pbrt_textured<float> bumpmap = 0;
+    pbrt_textured<spectrum3f> Kd      = {0.5f, 0.5f, 0.5f};
+    pbrt_textured<float>      sigma   = 0;
+    pbrt_textured<float>      bumpmap = 0;
 };
 struct pbrt_material_mirror {
-    pbrt_textured<spectrum3f> Kr = {0.9f, 0.9f, 0.9f};
-    pbrt_textured<float> bumpmap = 0;
+    pbrt_textured<spectrum3f> Kr      = {0.9f, 0.9f, 0.9f};
+    pbrt_textured<float>      bumpmap = 0;
 };
 struct pbrt_material_plastic {
     pbrt_textured<spectrum3f> Kd             = {0.25f, 0.25f, 0.25f};
     pbrt_textured<spectrum3f> Ks             = {0.25f, 0.25f, 0.25f};
-    pbrt_textured<float> uroughness     = 0.1f;
-    pbrt_textured<float> vroughness     = 0.1f;
-    bool                 remaproughness = true;
-    pbrt_textured<float> bumpmap = 0;
+    pbrt_textured<float>      uroughness     = 0.1f;
+    pbrt_textured<float>      vroughness     = 0.1f;
+    bool                      remaproughness = true;
+    pbrt_textured<float>      bumpmap        = 0;
 };
 struct pbrt_material_metal {
-    pbrt_textured<spectrum3f> eta = {0.2004376970f, 0.9240334304f, 1.1022119527f};
-    pbrt_textured<spectrum3f> k   = {3.9129485033f, 2.4528477015f, 2.1421879552f};
-    pbrt_textured<float> uroughness     = 0.01;
-    pbrt_textured<float> vroughness     = 0.01;
-    bool                 remaproughness = true;
-    pbrt_textured<float> bumpmap = 0;
+    pbrt_textured<spectrum3f> eta = {
+        0.2004376970f, 0.9240334304f, 1.1022119527f};
+    pbrt_textured<spectrum3f> k = {3.9129485033f, 2.4528477015f, 2.1421879552f};
+    pbrt_textured<float>      uroughness     = 0.01;
+    pbrt_textured<float>      vroughness     = 0.01;
+    bool                      remaproughness = true;
+    pbrt_textured<float>      bumpmap        = 0;
 };
 struct pbrt_material_glass {
     pbrt_textured<spectrum3f> Kr             = {1, 1, 1};
     pbrt_textured<spectrum3f> Kt             = {1, 1, 1};
-    pbrt_textured<float> eta            = 1;
-    pbrt_textured<float> uroughness     = 0;
-    pbrt_textured<float> vroughness     = 0;
-    bool                 remaproughness = true;
-    pbrt_textured<float> bumpmap = 0;
+    pbrt_textured<float>      eta            = 1;
+    pbrt_textured<float>      uroughness     = 0;
+    pbrt_textured<float>      vroughness     = 0;
+    bool                      remaproughness = true;
+    pbrt_textured<float>      bumpmap        = 0;
 };
 struct pbrt_material_translucent {
     pbrt_textured<spectrum3f> Kd             = {0, 0, 0};
     pbrt_textured<spectrum3f> Ks             = {0, 0, 0};
     pbrt_textured<spectrum3f> reflect        = {0, 0, 0};
     pbrt_textured<spectrum3f> transmit       = {0, 0, 0};
-    pbrt_textured<float> uroughness     = 0;
-    pbrt_textured<float> vroughness     = 0;
-    bool                 remaproughness = true;
-    pbrt_textured<float> bumpmap = 0;
+    pbrt_textured<float>      uroughness     = 0;
+    pbrt_textured<float>      vroughness     = 0;
+    bool                      remaproughness = true;
+    pbrt_textured<float>      bumpmap        = 0;
 };
 struct pbrt_material_uber {
     pbrt_textured<spectrum3f> Kd             = {0, 0, 0};
     pbrt_textured<spectrum3f> Ks             = {0, 0, 0};
     pbrt_textured<spectrum3f> Kr             = {0, 0, 0};
     pbrt_textured<spectrum3f> Kt             = {0, 0, 0};
-    pbrt_textured<float> uroughness     = 0;
-    pbrt_textured<float> vroughness     = 0;
-    pbrt_textured<float> eta            = 1;
+    pbrt_textured<float>      uroughness     = 0;
+    pbrt_textured<float>      vroughness     = 0;
+    pbrt_textured<float>      eta            = 1;
     pbrt_textured<spectrum3f> opacity        = {1, 1, 1};
-    bool                 remaproughness = true;
-    pbrt_textured<float> bumpmap = 0;
+    bool                      remaproughness = true;
+    pbrt_textured<float>      bumpmap        = 0;
 };
 struct pbrt_material_disney {
     pbrt_textured<spectrum3f> color           = {0.5f, 0.5f, 0.5f};
-    pbrt_textured<float> anisotropic     = 0;
-    pbrt_textured<float> clearcoat       = 0;
-    pbrt_textured<float> clearcoatgloss  = 1;
-    pbrt_textured<float> eta             = 1.5f;
-    pbrt_textured<float> metallic        = 0;
-    pbrt_textured<float> uroughness      = 0;
-    pbrt_textured<float> vroughness      = 0;
+    pbrt_textured<float>      anisotropic     = 0;
+    pbrt_textured<float>      clearcoat       = 0;
+    pbrt_textured<float>      clearcoatgloss  = 1;
+    pbrt_textured<float>      eta             = 1.5f;
+    pbrt_textured<float>      metallic        = 0;
+    pbrt_textured<float>      uroughness      = 0;
+    pbrt_textured<float>      vroughness      = 0;
     pbrt_textured<spectrum3f> scatterdistance = {0, 0, 0};
-    pbrt_textured<float> sheen           = 0;
-    pbrt_textured<float> sheentint       = 0.5;
-    pbrt_textured<float> spectrans       = 0;
-    pbrt_textured<float> speculartint    = 0;
-    bool                 thin            = false;
+    pbrt_textured<float>      sheen           = 0;
+    pbrt_textured<float>      sheentint       = 0.5;
+    pbrt_textured<float>      spectrans       = 0;
+    pbrt_textured<float>      speculartint    = 0;
+    bool                      thin            = false;
     pbrt_textured<spectrum3f> difftrans       = {1, 1, 1};
     pbrt_textured<spectrum3f> flatness        = {0, 0, 0};
-    bool                 remaproughness  = true;
-    pbrt_textured<float> bumpmap = 0;
+    bool                      remaproughness  = true;
+    pbrt_textured<float>      bumpmap         = 0;
 };
 struct pbrt_material_fourier {
-    string bsdffile = "";
-    pbrt_textured<float> bumpmap = 0;
+    string               bsdffile = "";
+    pbrt_textured<float> bumpmap  = 0;
 };
 struct pbrt_material_hair {
     pbrt_textured<spectrum3f> color       = {0, 0, 0};  // TODO: missing default
     pbrt_textured<spectrum3f> sigma_a     = {0, 0, 0};  // TODO: missing default
-    pbrt_textured<float> eumelanin   = 0;          // TODO: missing default
-    pbrt_textured<float> pheomelanin = 0;          // TODO: missing default
-    pbrt_textured<float> eta         = 1.55f;
-    pbrt_textured<float> beta_m      = 0.3f;
-    pbrt_textured<float> beta_n      = 0.3f;
-    pbrt_textured<float> alpha       = 2;
-    pbrt_textured<float> bumpmap = 0;
+    pbrt_textured<float>      eumelanin   = 0;          // TODO: missing default
+    pbrt_textured<float>      pheomelanin = 0;          // TODO: missing default
+    pbrt_textured<float>      eta         = 1.55f;
+    pbrt_textured<float>      beta_m      = 0.3f;
+    pbrt_textured<float>      beta_n      = 0.3f;
+    pbrt_textured<float>      alpha       = 2;
+    pbrt_textured<float>      bumpmap     = 0;
 };
 struct pbrt_material_kdsubsurface {
     pbrt_textured<spectrum3f> Kd             = {0, 0, 0};
-    pbrt_textured<float> mfp            = 1;
-    pbrt_textured<float> eta            = 1;
+    pbrt_textured<float>      mfp            = 1;
+    pbrt_textured<float>      eta            = 1;
     pbrt_textured<spectrum3f> Kr             = {1, 1, 1};
     pbrt_textured<spectrum3f> Kt             = {1, 1, 1};
-    pbrt_textured<float> uroughness     = 0;
-    pbrt_textured<float> vroughness     = 0;
-    bool                 remaproughness = true;
-    pbrt_textured<float> bumpmap = 0;
+    pbrt_textured<float>      uroughness     = 0;
+    pbrt_textured<float>      vroughness     = 0;
+    bool                      remaproughness = true;
+    pbrt_textured<float>      bumpmap        = 0;
 };
 struct pbrt_material_mix {
     pbrt_textured<spectrum3f> amount         = {0, 0, 0};
-    string               namedmaterial1 = "";
-    string               namedmaterial2 = "";
-    pbrt_textured<float> bumpmap = 0;
+    string                    namedmaterial1 = "";
+    string                    namedmaterial2 = "";
+    pbrt_textured<float>      bumpmap        = 0;
 };
 struct pbrt_material_substrate {
     pbrt_textured<spectrum3f> Kd             = {0, 0, 0};
     pbrt_textured<spectrum3f> Ks             = {0, 0, 0};
-    pbrt_textured<float> uroughness     = 0;
-    pbrt_textured<float> vroughness     = 0;
-    bool                 remaproughness = true;
-    pbrt_textured<float> bumpmap = 0;
+    pbrt_textured<float>      uroughness     = 0;
+    pbrt_textured<float>      vroughness     = 0;
+    bool                      remaproughness = true;
+    pbrt_textured<float>      bumpmap        = 0;
 };
 struct pbrt_material_subsurface {
-    string               name           = "";
+    string                    name           = "";
     pbrt_textured<spectrum3f> sigma_a        = {.0011, .0024, .014};
     pbrt_textured<spectrum3f> sigma_prime_s  = {2.55, 3.12, 3.77};
-    float                scale          = 1;
-    pbrt_textured<float> eta            = 1;
+    float                     scale          = 1;
+    pbrt_textured<float>      eta            = 1;
     pbrt_textured<spectrum3f> Kr             = {1, 1, 1};
     pbrt_textured<spectrum3f> Kt             = {1, 1, 1};
-    pbrt_textured<float> uroughness     = 0;
-    pbrt_textured<float> vroughness     = 0;
-    bool                 remaproughness = true;
-    pbrt_textured<float> bumpmap = 0;
+    pbrt_textured<float>      uroughness     = 0;
+    pbrt_textured<float>      vroughness     = 0;
+    bool                      remaproughness = true;
+    pbrt_textured<float>      bumpmap        = 0;
 };
 using pbrt_material = variant<pbrt_material_matte, pbrt_material_mirror,
     pbrt_material_plastic, pbrt_material_metal, pbrt_material_glass,
@@ -602,38 +603,38 @@ using pbrt_shape = variant<pbrt_shape_trianglemesh, pbrt_shape_plymesh,
 struct pbrt_light_distant {
     spectrum3f scale = {1, 1, 1};
     spectrum3f L     = {1, 1, 1};
-    vec3f from{0, 0, 0};
-    vec3f to = {0, 0, 1};
+    vec3f      from{0, 0, 0};
+    vec3f      to = {0, 0, 1};
 };
 struct pbrt_light_goniometric {
-    spectrum3f  scale   = {1, 1, 1};
-    spectrum3f  I       = {1, 1, 1};
-    string mapname = "";
+    spectrum3f scale   = {1, 1, 1};
+    spectrum3f I       = {1, 1, 1};
+    string     mapname = "";
 };
 struct pbrt_light_infinite {
-    spectrum3f  scale   = {1, 1, 1};
-    spectrum3f  L       = {1, 1, 1};
-    int    samples = 1;
-    string mapname = "";
+    spectrum3f scale   = {1, 1, 1};
+    spectrum3f L       = {1, 1, 1};
+    int        samples = 1;
+    string     mapname = "";
 };
 struct pbrt_light_point {
     spectrum3f scale = {1, 1, 1};
     spectrum3f I     = {1, 1, 1};
-    vec3f from{0, 0, 0};
+    vec3f      from{0, 0, 0};
 };
 struct pbrt_light_projection {
-    spectrum3f  scale   = {1, 1, 1};
-    spectrum3f  I       = {1, 1, 1};
-    float  fov     = 45;
-    string mapname = "";
+    spectrum3f scale   = {1, 1, 1};
+    spectrum3f I       = {1, 1, 1};
+    float      fov     = 45;
+    string     mapname = "";
 };
 struct pbrt_light_spot {
     spectrum3f scale          = {1, 1, 1};
     spectrum3f I              = {1, 1, 1};
-    vec3f from           = {0, 0, 0};
-    vec3f to             = {0, 0, 1};
-    float coneangle      = 30;
-    float conedeltaangle = 5;
+    vec3f      from           = {0, 0, 0};
+    vec3f      to             = {0, 0, 1};
+    float      coneangle      = 30;
+    float      conedeltaangle = 5;
 };
 using pbrt_light =
     variant<pbrt_light_distant, pbrt_light_goniometric, pbrt_light_infinite,
@@ -643,8 +644,8 @@ using pbrt_light =
 struct pbrt_arealight_none {};
 struct pbrt_arealight_diffuse {
     pbrt_textured<spectrum3f> L        = {1, 1, 1};
-    bool                 twosided = false;
-    int                  samples  = 1;
+    bool                      twosided = false;
+    int                       samples  = 1;
 };
 using pbrt_arealight = variant<pbrt_arealight_none, pbrt_arealight_diffuse>;
 

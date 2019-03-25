@@ -234,7 +234,8 @@ static inline void parse_value(pbrt_token_stream& stream, bbox<T, 2>& value) {
     parse_value(stream, value[1][1]);
 }
 template <typename T, int N>
-static inline void parse_value(pbrt_token_stream& stream, spectrum<T, N>& value) {
+static inline void parse_value(
+    pbrt_token_stream& stream, spectrum<T, N>& value) {
     for (auto i = 0; i < N; i++) parse_value(stream, value[i]);
 }
 
@@ -349,12 +350,13 @@ static inline void parse_param(
 }
 
 template <typename T>
-static inline void parse_value(pbrt_token_stream& stream, const string& type, spectrum<T, 3>& value) {
-    if(type == "rgb") {
+static inline void parse_value(
+    pbrt_token_stream& stream, const string& type, spectrum<T, 3>& value) {
+    if (type == "rgb") {
         parse_value(stream, value);
-    } else if(type == "spectrum") {
+    } else if (type == "spectrum") {
         printf("spectrum  not well supported\n");
-        value = {1,0,0};
+        value = {1, 0, 0};
     } else {
         throw pbrtio_error("unsupported spectrum type");
     }
@@ -369,9 +371,9 @@ static inline void parse_param(
     parse_param(stream, value);
 }
 
-template<typename T>
-static inline void parse_param(pbrt_token_stream& stream, const string& type,
-    pbrt_textured<T>& value) {
+template <typename T>
+static inline void parse_param(
+    pbrt_token_stream& stream, const string& type, pbrt_textured<T>& value) {
     if (type == "texture") {
         parse_param(stream, value.texture);
     } else {
