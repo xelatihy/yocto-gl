@@ -1703,16 +1703,103 @@ static void parse_pbrt_light(
     auto type = ""s;
     parse_value(streams, type);
     auto pname = ""s, ptype = ""s;
-    if (type == "diffuse") {
-        auto tvalue = pbrt_arealight_diffuse{};
+    if (type == "distant") {
+        auto tvalue = pbrt_light_distant{};
         while (is_param(streams)) {
             parse_nametype(streams, pname, ptype);
-            if (pname == "L") {
+            if (pname == "scale") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else if (pname == "L") {
                 parse_param(streams, ptype, tvalue.L);
-            } else if (pname == "twosided") {
-                parse_param(streams, ptype, tvalue.twosided);
+            } else if (pname == "from") {
+                parse_param(streams, ptype, tvalue.from);
+            } else if (pname == "to") {
+                parse_param(streams, ptype, tvalue.to);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "goniometric") {
+        auto tvalue = pbrt_light_goniometric{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "scale") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else if (pname == "I") {
+                parse_param(streams, ptype, tvalue.I);
+            } else if (pname == "mapname") {
+                parse_param(streams, ptype, tvalue.mapname);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "infinite") {
+        auto tvalue = pbrt_light_infinite{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "scale") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else if (pname == "L") {
+                parse_param(streams, ptype, tvalue.L);
             } else if (pname == "samples") {
                 parse_param(streams, ptype, tvalue.samples);
+            } else if (pname == "mapname") {
+                parse_param(streams, ptype, tvalue.mapname);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "distant") {
+        auto tvalue = pbrt_light_distant{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "scale") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else if (pname == "L") {
+                parse_param(streams, ptype, tvalue.L);
+            } else if (pname == "from") {
+                parse_param(streams, ptype, tvalue.from);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "projection") {
+        auto tvalue = pbrt_light_projection{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "scale") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else if (pname == "I") {
+                parse_param(streams, ptype, tvalue.I);
+            } else if (pname == "fov") {
+                parse_param(streams, ptype, tvalue.fov);
+            } else if (pname == "mapname") {
+                parse_param(streams, ptype, tvalue.mapname);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "spot") {
+        auto tvalue = pbrt_light_spot{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "scale") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else if (pname == "I") {
+                parse_param(streams, ptype, tvalue.I);
+            } else if (pname == "from") {
+                parse_param(streams, ptype, tvalue.from);
+            } else if (pname == "to") {
+                parse_param(streams, ptype, tvalue.to);
+            } else if (pname == "coneangle") {
+                parse_param(streams, ptype, tvalue.coneangle);
+            } else if (pname == "conedeltaangle") {
+                parse_param(streams, ptype, tvalue.conedeltaangle);
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
