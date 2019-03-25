@@ -353,6 +353,7 @@ using pbrt_texture = variant<pbrt_texture_constant, pbrt_texture_bilerp,
 struct pbrt_material_matte {
     pbrt_textured<vec3f> Kd    = {0.5f, 0.5f, 0.5f};
     pbrt_textured<float> sigma = 0;
+    pbrt_textured<float> bumpmap = 0;
 };
 struct pbrt_material_mirror {
     pbrt_textured<vec3f> Kr = {0.9f, 0.9f, 0.9f};
