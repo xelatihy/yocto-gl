@@ -494,7 +494,6 @@ struct pbrt_shape_curve {
     int           degree     = 3;
     type_t        type       = type_t::flat;
     vector<vec3f> N          = {};
-    float         width      = 1;
     float         width0     = 1;
     float         width1     = 1;
     int           splitdepth = 3;
