@@ -690,7 +690,7 @@ struct pbrt_context {
     string   arealight       = "";
     string   medium_interior = "";
     string   medium_exterior = "";
-    bool reverse = false;
+    bool     reverse         = false;
 };
 
 // clang-format off
