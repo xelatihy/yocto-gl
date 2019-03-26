@@ -400,12 +400,12 @@ static inline void parse_param(
         parse_param(stream, blackbody);
         (vec3f&)value = blackbody_to_rgb(blackbody.x) * blackbody.y;
     } else if (type == "spectrum" && is_string(stream)) {
-        if(verbose) printf("spectrum  not well supported\n");
+        if (verbose) printf("spectrum  not well supported\n");
         auto filename = ""s;
         parse_param(stream, filename);
         value = {1, 0, 0};
     } else if (type == "spectrum" && !is_string(stream)) {
-        if(verbose) printf("spectrum  not well supported\n");
+        if (verbose) printf("spectrum  not well supported\n");
         auto values = vector<float>{};
         parse_param(stream, values);
         value = {1, 0, 0};
@@ -1179,8 +1179,7 @@ static void parse_pbrt_texture(
 }
 
 // Get typename
-static void parse_typeparam(
-    pbrt_token_stream& stream, string& value) {
+static void parse_typeparam(pbrt_token_stream& stream, string& value) {
     save_stream_position(stream);
     value      = "";
     auto pname = ""s, ptype = ""s;
@@ -2105,8 +2104,8 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
     load_token_stream(filename, streams);
 
     // parsing stack
-    auto stack  = vector<pbrt_context>{{}};
-    auto object = pbrt_object{};
+    auto stack    = vector<pbrt_context>{{}};
+    auto object   = pbrt_object{};
     auto coordsys = unordered_map<string, affine3f>{};
 
     // parse command by command
@@ -2184,7 +2183,7 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
         } else if (cmd == "CoordSysTransform") {
             auto name = ""s;
             parse_value(stream, name);
-            if(coordsys.find(name) != coordsys.end()) {
+            if (coordsys.find(name) != coordsys.end()) {
                 stack.back().frame = coordsys.at(name);
             }
         } else if (cmd == "Integrator") {
@@ -2227,13 +2226,13 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             if (cb.texture) cb.texture(value, name, stack.back());
         } else if (cmd == "Material") {
             static auto material_id = 0;
-            auto type = ""s;
+            auto        type        = ""s;
             parse_value(stream, type);
-            if(type == "") {
+            if (type == "") {
                 stack.back().material = "";
             } else {
                 auto value = pbrt_material{};
-                auto name  = "unnamed_material_" + std::to_string(material_id++);
+                auto name = "unnamed_material_" + std::to_string(material_id++);
                 parse_pbrt_material(stream, type, value);
                 stack.back().material = name;
                 if (cb.material) cb.material(value, name, stack.back());

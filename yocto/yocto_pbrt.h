@@ -480,7 +480,7 @@ struct pbrt_material_hair {
 };
 struct pbrt_material_kdsubsurface {
     pbrt_textured<spectrum3f> Kd             = {0, 0, 0};
-    pbrt_textured<spectrum3f>      mfp       = {1,1,1};
+    pbrt_textured<spectrum3f> mfp            = {1, 1, 1};
     pbrt_textured<float>      eta            = 1;
     pbrt_textured<spectrum3f> Kr             = {1, 1, 1};
     pbrt_textured<spectrum3f> Kt             = {1, 1, 1};
@@ -551,7 +551,7 @@ struct pbrt_shape_curve {
 };
 struct pbrt_shape_loopsubdiv {
     int           levels  = 3;
-    vector<vec3i>   indices = {};
+    vector<vec3i> indices = {};
     vector<vec3f> P       = {};
 };
 struct pbrt_shape_nurbs {
@@ -663,15 +663,15 @@ using pbrt_arealight = variant<pbrt_arealight_none, pbrt_arealight_diffuse>;
 
 // pbrt mediums
 struct pbrt_medium_homogeneous {
-    spectrum3f  sigma_a = {0.0011f, 0.0024f, 0.014f};
-    spectrum3f  sigma_s = {2.55f, 3.21f, 3.77f};
-    string preset  = "";
-    float  g       = 0;
-    float  scale   = 1;
+    spectrum3f sigma_a = {0.0011f, 0.0024f, 0.014f};
+    spectrum3f sigma_s = {2.55f, 3.21f, 3.77f};
+    string     preset  = "";
+    float      g       = 0;
+    float      scale   = 1;
 };
 struct pbrt_medium_heterogeneous {
-    spectrum3f         sigma_a = {0.0011f, 0.0024f, 0.014f};
-    spectrum3f         sigma_s = {2.55f, 3.21f, 3.77f};
+    spectrum3f    sigma_a = {0.0011f, 0.0024f, 0.014f};
+    spectrum3f    sigma_s = {2.55f, 3.21f, 3.77f};
     string        preset  = "";
     float         g       = 0;
     float         scale   = 1;

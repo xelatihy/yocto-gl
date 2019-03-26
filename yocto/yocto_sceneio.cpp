@@ -3637,8 +3637,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     auto mmap       = unordered_map<string, yocto_material>{{"", {}}};
     auto amap       = unordered_map<string, vec3f>{{"", zero3f}};
     auto ammap      = unordered_map<string, int>{};
-    auto tmap       = unordered_map<string, int>{ {"", -1} };
-    auto timap      = unordered_map<string, bool>{ {"", false} };
+    auto tmap       = unordered_map<string, int>{{"", -1}};
+    auto timap      = unordered_map<string, bool>{{"", false}};
     auto omap       = unordered_map<string, vector<yocto_instance>>{};
     auto cur_object = ""s;
 
@@ -3716,9 +3716,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             for (auto& uv : shape.texturecoords) uv.y = (1 - uv.y);
             shape.triangles = mesh.indices;
         } else if (std::holds_alternative<pbrt_shape_loopsubdiv>(pshape)) {
-                auto& mesh          = std::get<pbrt_shape_loopsubdiv>(pshape);
-                shape.positions     = mesh.P;
-                shape.triangles     = mesh.indices;
+            auto& mesh      = std::get<pbrt_shape_loopsubdiv>(pshape);
+            shape.positions = mesh.P;
+            shape.triangles = mesh.indices;
         } else if (std::holds_alternative<pbrt_shape_plymesh>(pshape)) {
             auto& mesh     = std::get<pbrt_shape_plymesh>(pshape);
             shape.filename = mesh.filename;
@@ -3737,7 +3737,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             make_uvdisk_shape(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, {32, 16}, 2 * disk.radius, {1, 1});
         } else {
-            throw sceneio_error("unsupported shape type " + std::to_string(pshape.index()));
+            throw sceneio_error(
+                "unsupported shape type " + std::to_string(pshape.index()));
         }
         scene.shapes.push_back(shape);
         auto instance  = yocto_instance{};
@@ -3756,88 +3757,96 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         if (std::holds_alternative<pbrt_texture_imagemap>(ptexture)) {
             auto& imagemap   = std::get<pbrt_texture_imagemap>(ptexture);
             texture.filename = imagemap.filename;
-        } else if(std::holds_alternative<pbrt_texture_constant>(ptexture)) {
+        } else if (std::holds_alternative<pbrt_texture_constant>(ptexture)) {
             auto& constant   = std::get<pbrt_texture_constant>(ptexture);
             texture.filename = "textures/" + texture.name + ".png";
             texture.ldr_image.resize({1, 1});
-            texture.ldr_image[{0, 0}] = float_to_byte({(vec3f)constant.value.value, 1});
-        } else if(std::holds_alternative<pbrt_texture_bilerp>(ptexture)) {
+            texture.ldr_image[{0, 0}] = float_to_byte(
+                {(vec3f)constant.value.value, 1});
+        } else if (std::holds_alternative<pbrt_texture_bilerp>(ptexture)) {
             // auto& bilerp   = std::get<pbrt_texture_bilerp>(ptexture);
             texture.filename = "textures/" + texture.name + ".png";
             texture.ldr_image.resize({1, 1});
             texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-            if(verbose) printf("texture bilerp not supported well");
-        } else if(std::holds_alternative<pbrt_texture_checkerboard>(ptexture)) {
-            // auto& checkerboard   = std::get<pbrt_texture_checkerboard>(ptexture);
+            if (verbose) printf("texture bilerp not supported well");
+        } else if (std::holds_alternative<pbrt_texture_checkerboard>(
+                       ptexture)) {
+            // auto& checkerboard   =
+            // std::get<pbrt_texture_checkerboard>(ptexture);
             texture.filename = "textures/" + texture.name + ".png";
             texture.ldr_image.resize({1, 1});
             texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-            if(verbose) printf("texture checkerboard not supported well");
-        } else if(std::holds_alternative<pbrt_texture_dots>(ptexture)) {
+            if (verbose) printf("texture checkerboard not supported well");
+        } else if (std::holds_alternative<pbrt_texture_dots>(ptexture)) {
             // auto& dots   = std::get<pbrt_texture_dots>(ptexture);
             texture.filename = "textures/" + texture.name + ".png";
             texture.ldr_image.resize({1, 1});
             texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-            if(verbose) printf("texture dots not supported well");
-        } else if(std::holds_alternative<pbrt_texture_fbm>(ptexture)) {
+            if (verbose) printf("texture dots not supported well");
+        } else if (std::holds_alternative<pbrt_texture_fbm>(ptexture)) {
             // auto& fbm   = std::get<pbrt_texture_fbm>(ptexture);
             texture.filename = "textures/" + texture.name + ".png";
             texture.ldr_image.resize({1, 1});
             texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-            if(verbose) printf("texture fbm not supported well");
-        } else if(std::holds_alternative<pbrt_texture_marble>(ptexture)) {
+            if (verbose) printf("texture fbm not supported well");
+        } else if (std::holds_alternative<pbrt_texture_marble>(ptexture)) {
             // auto& marble   = std::get<pbrt_texture_marble>(ptexture);
             texture.filename = "textures/" + texture.name + ".png";
             texture.ldr_image.resize({1, 1});
             texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-            if(verbose) printf("texture marble not supported well");
-        } else if(std::holds_alternative<pbrt_texture_mix>(ptexture)) {
-            auto& mix   = std::get<pbrt_texture_mix>(ptexture);
-            if(timap.at(mix.tex1.texture)) {
-                texture.filename = scene.textures.at(tmap.at(mix.tex1.texture)).filename;
-            } else if(timap.at(mix.tex2.texture)) {
-                texture.filename = scene.textures.at(tmap.at(mix.tex2.texture)).filename;
+            if (verbose) printf("texture marble not supported well");
+        } else if (std::holds_alternative<pbrt_texture_mix>(ptexture)) {
+            auto& mix = std::get<pbrt_texture_mix>(ptexture);
+            if (timap.at(mix.tex1.texture)) {
+                texture.filename =
+                    scene.textures.at(tmap.at(mix.tex1.texture)).filename;
+            } else if (timap.at(mix.tex2.texture)) {
+                texture.filename =
+                    scene.textures.at(tmap.at(mix.tex2.texture)).filename;
             } else {
                 texture.filename = "textures/" + texture.name + ".png";
                 texture.ldr_image.resize({1, 1});
                 texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
             }
-            if(verbose) printf("texture mix not supported well");
-        } else if(std::holds_alternative<pbrt_texture_scale>(ptexture)) {
-            auto& scale   = std::get<pbrt_texture_scale>(ptexture);
-            if(timap.at(scale.tex1.texture)) {
-                texture.filename = scene.textures.at(tmap.at(scale.tex1.texture)).filename;
-            } else if(timap.at(scale.tex2.texture)) {
-                texture.filename = scene.textures.at(tmap.at(scale.tex2.texture)).filename;
+            if (verbose) printf("texture mix not supported well");
+        } else if (std::holds_alternative<pbrt_texture_scale>(ptexture)) {
+            auto& scale = std::get<pbrt_texture_scale>(ptexture);
+            if (timap.at(scale.tex1.texture)) {
+                texture.filename =
+                    scene.textures.at(tmap.at(scale.tex1.texture)).filename;
+            } else if (timap.at(scale.tex2.texture)) {
+                texture.filename =
+                    scene.textures.at(tmap.at(scale.tex2.texture)).filename;
             } else {
                 texture.filename = "textures/" + texture.name + ".png";
                 texture.ldr_image.resize({1, 1});
                 texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
             }
-            if(verbose) printf("texture scale not supported well");
-        } else if(std::holds_alternative<pbrt_texture_uv>(ptexture)) {
+            if (verbose) printf("texture scale not supported well");
+        } else if (std::holds_alternative<pbrt_texture_uv>(ptexture)) {
             // auto& uv   = std::get<pbrt_texture_uv>(ptexture);
             texture.filename = "textures/" + texture.name + ".png";
             texture.ldr_image.resize({1, 1});
             texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-            if(verbose) printf("texture uv not supported well");
-        } else if(std::holds_alternative<pbrt_texture_windy>(ptexture)) {
+            if (verbose) printf("texture uv not supported well");
+        } else if (std::holds_alternative<pbrt_texture_windy>(ptexture)) {
             // auto& windy   = std::get<pbrt_texture_uv>(ptexture);
             texture.filename = "textures/" + texture.name + ".png";
             texture.ldr_image.resize({1, 1});
             texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-            if(verbose) printf("texture windy not supported well");
-        } else if(std::holds_alternative<pbrt_texture_wrinkled>(ptexture)) {
+            if (verbose) printf("texture windy not supported well");
+        } else if (std::holds_alternative<pbrt_texture_wrinkled>(ptexture)) {
             // auto& uv   = std::get<pbrt_texture_wrinkled>(ptexture);
             texture.filename = "textures/" + texture.name + ".png";
             texture.ldr_image.resize({1, 1});
             texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-            if(verbose) printf("texture wrinkled not supported well");
+            if (verbose) printf("texture wrinkled not supported well");
         } else {
-            throw sceneio_error("texture not supported" + std::to_string(ptexture.index()));
+            throw sceneio_error(
+                "texture not supported" + std::to_string(ptexture.index()));
         }
         scene.textures.push_back(texture);
-        tmap[name] = (int)scene.textures.size() - 1;
+        tmap[name]  = (int)scene.textures.size() - 1;
         timap[name] = std::holds_alternative<pbrt_texture_imagemap>(ptexture);
     };
     cb.material = [&](const pbrt_material& pmaterial, const string& name,
@@ -3925,42 +3934,53 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             //     material.transmission_texture);
             material.roughness = 0;
         } else if (std::holds_alternative<pbrt_material_hair>(pmaterial)) {
-            auto& hair           = std::get<pbrt_material_hair>(pmaterial);
-            get_scaled_texture3f(hair.color, material.diffuse, material.diffuse_texture);
+            auto& hair = std::get<pbrt_material_hair>(pmaterial);
+            get_scaled_texture3f(
+                hair.color, material.diffuse, material.diffuse_texture);
             material.roughness = 1;
-            if(verbose) printf("hair material not properly supported\n");
+            if (verbose) printf("hair material not properly supported\n");
         } else if (std::holds_alternative<pbrt_material_disney>(pmaterial)) {
-            auto& disney           = std::get<pbrt_material_disney>(pmaterial);
-            get_scaled_texture3f(disney.color, material.diffuse, material.diffuse_texture);
+            auto& disney = std::get<pbrt_material_disney>(pmaterial);
+            get_scaled_texture3f(
+                disney.color, material.diffuse, material.diffuse_texture);
             material.roughness = 1;
-            if(verbose) printf("disney material not properly supported\n");
-        } else if (std::holds_alternative<pbrt_material_kdsubsurface>(pmaterial)) {
-            auto& kdsubdurface           = std::get<pbrt_material_kdsubsurface>(pmaterial);
-            get_scaled_texture3f(kdsubdurface.Kd, material.diffuse, material.diffuse_texture);
-            get_scaled_texture3f(kdsubdurface.Kr, material.specular, material.specular_texture);
-            material.roughness =
-            (kdsubdurface.uroughness.value + kdsubdurface.vroughness.value) / 2;
+            if (verbose) printf("disney material not properly supported\n");
+        } else if (std::holds_alternative<pbrt_material_kdsubsurface>(
+                       pmaterial)) {
+            auto& kdsubdurface = std::get<pbrt_material_kdsubsurface>(
+                pmaterial);
+            get_scaled_texture3f(
+                kdsubdurface.Kd, material.diffuse, material.diffuse_texture);
+            get_scaled_texture3f(
+                kdsubdurface.Kr, material.specular, material.specular_texture);
+            material.roughness = (kdsubdurface.uroughness.value +
+                                     kdsubdurface.vroughness.value) /
+                                 2;
             if (kdsubdurface.remaproughness)
                 material.roughness = pbrt_remap_roughness(material.roughness);
-            if(verbose) printf("kdsubsurface material not properly supported\n");
-        } else if (std::holds_alternative<pbrt_material_subsurface>(pmaterial)) {
-            // auto& subdurface           = std::get<pbrt_material_subsurface>(pmaterial);
-            material.diffuse = {1,0,0};
+            if (verbose)
+                printf("kdsubsurface material not properly supported\n");
+        } else if (std::holds_alternative<pbrt_material_subsurface>(
+                       pmaterial)) {
+            // auto& subdurface           =
+            // std::get<pbrt_material_subsurface>(pmaterial);
+            material.diffuse   = {1, 0, 0};
             material.roughness = 1;
-            if(verbose) printf("subsurface material not properly supported\n");
+            if (verbose) printf("subsurface material not properly supported\n");
         } else if (std::holds_alternative<pbrt_material_mix>(pmaterial)) {
             auto& mix     = std::get<pbrt_material_mix>(pmaterial);
             auto  matname = (!mix.namedmaterial1.empty()) ? mix.namedmaterial1
                                                          : mix.namedmaterial2;
             material = mmap.at(matname);
-            if(verbose) printf("mix material not properly supported\n");
+            if (verbose) printf("mix material not properly supported\n");
         } else if (std::holds_alternative<pbrt_material_fourier>(pmaterial)) {
             // auto& fourier     = std::get<pbrt_material_fourier>(pmaterial);
-            material.diffuse = {1,0,0};
+            material.diffuse   = {1, 0, 0};
             material.roughness = 1;
-            if(verbose) printf("fourier material not properly supported\n");
+            if (verbose) printf("fourier material not properly supported\n");
         } else {
-            throw sceneio_error("material type not supported " + std::to_string(pmaterial.index()));
+            throw sceneio_error("material type not supported " +
+                                std::to_string(pmaterial.index()));
         }
         mmap[name] = material;
     };
@@ -3971,7 +3991,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             auto& diffuse = std::get<pbrt_arealight_diffuse>(plight);
             emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
         } else {
-            throw sceneio_error("area light type not supported " + std::to_string(plight.index()));
+            throw sceneio_error("area light type not supported " +
+                                std::to_string(plight.index()));
         }
         amap[name] = emission;
     };
@@ -4066,7 +4087,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             shape.name  = name;
             auto size   = 0.01f;
             make_sphere_shape(shape.quads, shape.positions, shape.normals,
-                              shape.texturecoords, 4, size, 1);
+                shape.texturecoords, 4, size, 1);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
             shape.material    = scene.materials.size() - 1;
@@ -4079,7 +4100,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             instance.frame = (frame3f)ctx.frame;
             scene.instances.push_back(instance);
         } else {
-            throw sceneio_error("light type not supported " + std::to_string(plight.index()));
+            throw sceneio_error(
+                "light type not supported " + std::to_string(plight.index()));
         }
     };
     cb.begin_object = [&](const pbrt_object& pobject, const pbrt_context& ctx) {
