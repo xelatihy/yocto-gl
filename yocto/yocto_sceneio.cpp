@@ -3669,8 +3669,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
     };
     cb.shape = [&](const pbrt_shape& pshape, const pbrt_context& ctx) {
+        static auto shape_id = 0;
         auto shape = yocto_shape{};
         shape.material = get_material(ctx);
+        shape.filename = "models/" + std::to_string(shape_id++) + ".ply";
         if(std::holds_alternative<pbrt_shape_trianglemesh>(pshape)) {
             auto& mesh = std::get<pbrt_shape_trianglemesh>(pshape);
             shape.positions = mesh.P;
@@ -3681,9 +3683,18 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             shape.triangles = mesh.indices;
         } else if(std::holds_alternative<pbrt_shape_plymesh>(pshape)) {
             auto& mesh = std::get<pbrt_shape_plymesh>(pshape);
+            shape.filename = mesh.filename;
             if(!options.skip_meshes) {
                 load_ply_mesh(mesh.filename, shape.points, shape.lines, shape.triangles, shape.quads, shape.positions, shape.normals, shape.texturecoords, shape.colors, shape.radius, false);
             }
+        } else if (std::holds_alternative<pbrt_shape_sphere>(pshape)) {
+            auto& sphere = std::get<pbrt_shape_sphere>(pshape);
+            make_uvsphere_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, {64, 32}, 2 * sphere.radius, {1, 1});
+        } else if (std::holds_alternative<pbrt_shape_disk>(pshape)) {
+            auto& disk = std::get<pbrt_shape_disk>(pshape);
+            make_uvdisk_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, {32, 16}, 2 * disk.radius, {1, 1});
         } else {
             throw sceneio_error("unsupported pbrt type");
         }
