@@ -385,6 +385,8 @@ static inline void parse_param(
     pbrt_token_stream& stream, const string& type, spectrum<T, 3>& value) {
     if (type == "rgb") {
         parse_param(stream, value);
+    } else if (type == "color") {
+        parse_param(stream, value);
     } else if (type == "blackbody") {
         auto blackbody = zero2f;
         parse_param(stream, blackbody);
