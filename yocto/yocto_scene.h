@@ -171,7 +171,6 @@ struct yocto_shape {
     // shape data
     string name     = "";
     string filename = "";
-    int    material = -1;
 
     // subdision properties
     int  subdivision_level    = 0;
@@ -201,9 +200,10 @@ struct yocto_shape {
 
 // Instance of a visible shape in the scene.
 struct yocto_instance {
-    string  name  = "";
-    frame3f frame = identity_frame3f;
-    int     shape = -1;
+    string  name     = "";
+    frame3f frame    = identity_frame3f;
+    int     shape    = -1;
+    int     material = -1;
 };
 
 // Environment map.
@@ -341,7 +341,8 @@ float evaluate_shape_radius(
 pair<vec3f, bool> evaluate_shape_tangentspace(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
 vec3f evaluate_shape_perturbed_normal(const yocto_scene& scene,
-    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+    const yocto_shape& shape, int element_id, const vec2f& element_uv,
+    const vec3f& normalmap);
 // Shape element values.
 vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id);
 pair<vec3f, bool> evaluate_shape_element_tangentspace(

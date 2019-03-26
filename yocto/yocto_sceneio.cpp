@@ -923,8 +923,6 @@ void to_json(json& js, const yocto_shape& value, const yocto_scene& scene) {
     js                    = json::object_t{};
     if (value.name != def.name) js["name"] = value.name;
     if (value.filename != def.filename) js["filename"] = value.filename;
-    if (value.material != def.material)
-        js["material"] = ref_to_json(value.material, scene.materials);
     if (value.subdivision_level != def.subdivision_level)
         js["subdivision_level"] = value.subdivision_level;
     if (value.catmull_clark != def.catmull_clark)
@@ -955,11 +953,9 @@ void to_json(json& js, const yocto_shape& value, const yocto_scene& scene) {
     }
 }
 void from_json(const json& js, yocto_shape& value, yocto_scene& scene) {
-    static const auto def = yocto_shape();
-    value.name            = js.value("name", def.name);
-    value.filename        = js.value("filename", def.filename);
-    value.material        = ref_from_json(
-        js.value("material", json{}), scene.materials);
+    static const auto def   = yocto_shape();
+    value.name              = js.value("name", def.name);
+    value.filename          = js.value("filename", def.filename);
     value.subdivision_level = js.value(
         "subdivision_level", def.subdivision_level);
     value.catmull_clark   = js.value("catmull_clark", def.catmull_clark);
@@ -1010,12 +1006,16 @@ void to_json(json& js, const yocto_instance& value, const yocto_scene& scene) {
     if (value.frame != def.frame) js["frame"] = value.frame;
     if (value.shape != def.shape)
         js["shape"] = ref_to_json(value.shape, scene.shapes);
+    if (value.material != def.material)
+        js["material"] = ref_to_json(value.material, scene.materials);
 }
 void from_json(const json& js, yocto_instance& value, yocto_scene& scene) {
     static const auto def = yocto_instance();
     value.name            = js.value("name", def.name);
     value.frame           = js.value("frame", def.frame);
-    value.shape = ref_from_json(js.value("shape", json{}), scene.shapes);
+    value.shape    = ref_from_json(js.value("shape", json{}), scene.shapes);
+    value.material = ref_from_json(
+        js.value("material", json{}), scene.materials);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
@@ -1428,13 +1428,17 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
 
     // add object if needed
     auto add_shape = [&]() {
-        auto shape                 = yocto_shape();
+        auto shape                 = yocto_shape{};
         shape.name                 = oname + gname;
-        shape.material             = mmap.at(mname);
         shape.preserve_facevarying = options.obj_preserve_face_varying ||
                                      shape.name.find("[yocto::facevarying]") !=
                                          string::npos;
         scene.shapes.push_back(shape);
+        auto instance     = yocto_instance{};
+        instance.name     = shape.name;
+        instance.shape    = (int)scene.shapes.size() - 1;
+        instance.material = mmap.at(mname);
+        scene.instances.push_back(instance);
         vertex_map.clear();
         pos_map.clear();
         norm_map.clear();
@@ -1683,11 +1687,6 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
     cb.procedural = [&](const obj_procedural& oproc) {
         auto shape = yocto_shape();
         shape.name = oproc.name;
-        if (mmap.find(oproc.material) == mmap.end()) {
-            throw sceneio_error("missing material " + oproc.material);
-        } else {
-            shape.material = mmap.find(oproc.material)->second;
-        }
         if (oproc.type == "floor") {
             make_floor_shape(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords,
@@ -1698,6 +1697,15 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             throw sceneio_error("unknown obj procedural");
         }
         scene.shapes.push_back(shape);
+        auto instance  = yocto_instance{};
+        instance.name  = shape.name;
+        instance.shape = (int)scene.shapes.size() - 1;
+        if (mmap.find(oproc.material) == mmap.end()) {
+            throw sceneio_error("missing material " + oproc.material);
+        } else {
+            instance.material = mmap.find(oproc.material)->second;
+        }
+        scene.instances.push_back(instance);
     };
 
     try {
@@ -1708,8 +1716,10 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
 
         // cleanup empty
         for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+            scene.instances[idx].shape = idx;
             if (!scene.shapes[idx].positions.empty()) continue;
             scene.shapes.erase(scene.shapes.begin() + idx);
+            scene.instances.erase(scene.instances.begin() + idx);
             idx--;
         }
 
@@ -1717,14 +1727,6 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         for (auto& shape : scene.shapes) {
             if (shape.triangles.empty() || shape.quads.empty()) continue;
             merge_triangles_and_quads(shape.triangles, shape.quads, false);
-        }
-
-        // prepare instances
-        for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-            auto instance  = yocto_instance{};
-            instance.name  = scene.shapes[idx].name;
-            instance.shape = idx;
-            scene.instances.push_back(instance);
         }
 
         // load textures
@@ -1857,8 +1859,9 @@ void save_obj(const string& filename, const yocto_scene& scene,
     for (auto& instance : scene.instances) {
         auto& shape = scene.shapes[instance.shape];
         println_values(fs, "o", instance.name);
-        if (shape.material >= 0)
-            println_values(fs, "usemtl", scene.materials[shape.material].name);
+        if (instance.material >= 0)
+            println_values(
+                fs, "usemtl", scene.materials[instance.material].name);
         if (instance.frame == identity_frame3f) {
             for (auto& p : shape.positions) println_values(fs, "v", p);
             for (auto& n : shape.normals) println_values(fs, "vn", n);
@@ -2208,7 +2211,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
     };
 
     // convert meshes
-    auto meshes = unordered_map<cgltf_mesh*, vector<int>>{{nullptr, {}}};
+    auto meshes = unordered_map<cgltf_mesh*, vector<vec2i>>{{nullptr, {}}};
     for (auto mid = 0; mid < gltf->meshes_count; mid++) {
         auto gmesh    = &gltf->meshes[mid];
         meshes[gmesh] = {};
@@ -2334,9 +2337,9 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
                     throw sceneio_error("unknown primitive type");
                 }
             }
-            shape.material = mmap.at(gprim->material);
             scene.shapes.push_back(shape);
-            meshes[gmesh].push_back((int)scene.shapes.size() - 1);
+            meshes[gmesh].push_back(
+                {(int)scene.shapes.size() - 1, mmap.at(gprim->material)});
         }
     }
 
@@ -2409,17 +2412,19 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
         auto& shps = meshes.at(gnde->mesh);
         if (shps.empty()) continue;
         if (shps.size() == 1) {
-            auto instance  = yocto_instance();
-            instance.name  = node.name;
-            instance.shape = shps[0];
+            auto instance     = yocto_instance();
+            instance.name     = node.name;
+            instance.shape    = shps[0].x;
+            instance.material = shps[0].y;
             scene.instances.push_back(instance);
             node.instance = (int)scene.instances.size() - 1;
         } else {
             for (auto shp : shps) {
-                auto& shape    = scene.shapes[shp];
-                auto  instance = yocto_instance();
-                instance.name  = node.name + "_" + shape.name;
-                instance.shape = shp;
+                auto& shape       = scene.shapes[shp.x];
+                auto  instance    = yocto_instance();
+                instance.name     = node.name + "_" + shape.name;
+                instance.shape    = shp.x;
+                instance.material = shp.y;
                 scene.instances.push_back(instance);
                 auto child     = yocto_scene_node{};
                 child.name     = node.name + "_" + shape.name;
@@ -2673,16 +2678,27 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         js["materials"].push_back(mjs);
     }
 
+    // shape materials
+    auto smat = vector<int>(scene.shapes.size(), -2);
+    for (auto& instance : scene.instances) {
+        if (smat[instance.shape] == -2) {
+            smat[instance.shape] = instance.material;
+        } else if (smat[instance.shape] != instance.material) {
+            throw sceneio_error("gltf supports only same material per shape");
+        }
+    }
+
     // shapes
-    for (auto& shape : scene.shapes) {
-        auto mjs = json(), bjs = json(), pjs = json();
-        auto bid          = js["buffers"].size();
+    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
+        auto& shape = scene.shapes[shape_id];
+        auto  mjs = json(), bjs = json(), pjs = json();
+        auto  bid         = js["buffers"].size();
         mjs["name"]       = shape.name;
         mjs["primitives"] = json::array();
         bjs["name"]       = shape.name;
         bjs["byteLength"] = 0;
         bjs["uri"]        = replace_extension(shape.filename, ".bin");
-        pjs["material"]   = shape.material;
+        pjs["material"]   = smat[shape_id];
         auto add_accessor = [&js, &bjs, bid](
                                 int count, string type, bool indices = false) {
             auto bytes = count * 4;
@@ -3014,7 +3030,6 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     cb.shape = [&](const pbrt_shape& pshape, const pbrt_context& ctx) {
         static auto shape_id = 0;
         auto        shape    = yocto_shape{};
-        shape.material       = get_material(ctx);
         shape.filename       = "models/" + std::to_string(shape_id++) + ".ply";
         if (std::holds_alternative<pbrt_shape_trianglemesh>(pshape)) {
             auto& mesh          = std::get<pbrt_shape_trianglemesh>(pshape);
@@ -3049,9 +3064,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 "unsupported shape type " + std::to_string(pshape.index()));
         }
         scene.shapes.push_back(shape);
-        auto instance  = yocto_instance{};
-        instance.frame = (frame3f)ctx.frame;
-        instance.shape = (int)scene.shapes.size() - 1;
+        auto instance     = yocto_instance{};
+        instance.frame    = (frame3f)ctx.frame;
+        instance.shape    = (int)scene.shapes.size() - 1;
+        instance.material = get_material(ctx);
         if (cur_object == "") {
             scene.instances.push_back(instance);
         } else {
@@ -3338,14 +3354,14 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.texturecoords, {1, 1}, {size, size}, {1, 1});
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
-            shape.material    = scene.materials.size() - 1;
             material.name     = shape.name;
             material.emission = (vec3f)distant.L * (vec3f)distant.scale;
             material.emission *= (distant_dist * distant_dist) / (size * size);
-            auto instance  = yocto_instance();
-            instance.name  = shape.name;
-            instance.shape = (int)scene.shapes.size() - 1;
-            instance.frame = (frame3f)ctx.frame *
+            auto instance     = yocto_instance();
+            instance.name     = shape.name;
+            instance.shape    = (int)scene.shapes.size() - 1;
+            instance.material = (int)scene.materials.size() - 1;
+            instance.frame    = (frame3f)ctx.frame *
                              make_lookat_frame(
                                  dir * distant_dist, zero3f, {0, 1, 0}, true);
             scene.instances.push_back(instance);
@@ -3359,14 +3375,14 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.texturecoords, 4, size, 1);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
-            shape.material    = scene.materials.size() - 1;
             material.name     = shape.name;
             material.emission = (vec3f)point.I * (vec3f)point.scale;
             // TODO: fix emission
-            auto instance  = yocto_instance();
-            instance.name  = shape.name;
-            instance.shape = (int)scene.shapes.size() - 1;
-            instance.frame = (frame3f)ctx.frame *
+            auto instance     = yocto_instance();
+            instance.name     = shape.name;
+            instance.shape    = (int)scene.shapes.size() - 1;
+            instance.material = (int)scene.materials.size() - 1;
+            instance.frame    = (frame3f)ctx.frame *
                              make_translation_frame(point.from);
             scene.instances.push_back(instance);
         } else if (std::holds_alternative<pbrt_light_goniometric>(plight)) {
@@ -3379,14 +3395,14 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.texturecoords, 4, size, 1);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
-            shape.material    = scene.materials.size() - 1;
             material.name     = shape.name;
             material.emission = (vec3f)goniometric.I * (vec3f)goniometric.scale;
             // TODO: fix emission
-            auto instance  = yocto_instance();
-            instance.name  = shape.name;
-            instance.shape = (int)scene.shapes.size() - 1;
-            instance.frame = (frame3f)ctx.frame;
+            auto instance     = yocto_instance();
+            instance.name     = shape.name;
+            instance.shape    = (int)scene.shapes.size() - 1;
+            instance.material = (int)scene.materials.size() - 1;
+            instance.frame    = (frame3f)ctx.frame;
             scene.instances.push_back(instance);
         } else if (std::holds_alternative<pbrt_light_spot>(plight)) {
             auto& spot = std::get<pbrt_light_spot>(plight);
@@ -3398,14 +3414,14 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.texturecoords, 4, size, 1);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
-            shape.material    = scene.materials.size() - 1;
             material.name     = shape.name;
             material.emission = (vec3f)spot.I * (vec3f)spot.scale;
             // TODO: fix emission
-            auto instance  = yocto_instance();
-            instance.name  = shape.name;
-            instance.shape = (int)scene.shapes.size() - 1;
-            instance.frame = (frame3f)ctx.frame;
+            auto instance     = yocto_instance();
+            instance.name     = shape.name;
+            instance.shape    = (int)scene.shapes.size() - 1;
+            instance.material = (int)scene.materials.size() - 1;
+            instance.frame    = (frame3f)ctx.frame;
             scene.instances.push_back(instance);
         } else {
             throw sceneio_error(
@@ -3503,7 +3519,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
     // convert instances
     for (auto& instance : scene.instances) {
         auto& shape    = scene.shapes[instance.shape];
-        auto& material = scene.materials[shape.material];
+        auto& material = scene.materials[instance.material];
         println_values(fs, "AttributeBegin");
         println_values(fs, "TransformBegin");
         println_values(fs, "ConcatTransform [", mat4f(instance.frame), "]");
@@ -3677,7 +3693,6 @@ void read_object(input_file& fs, yocto_camera& camera) {
 void write_object(output_file& fs, const yocto_shape& shape) {
     write_value(fs, shape.name);
     write_value(fs, shape.filename);
-    write_value(fs, shape.material);
     write_value(fs, shape.subdivision_level);
     write_value(fs, shape.catmull_clark);
     write_value(fs, shape.compute_normals);
@@ -3699,7 +3714,6 @@ void write_object(output_file& fs, const yocto_shape& shape) {
 void read_object(input_file& fs, yocto_shape& shape) {
     read_value(fs, shape.name);
     read_value(fs, shape.filename);
-    read_value(fs, shape.material);
     read_value(fs, shape.subdivision_level);
     read_value(fs, shape.catmull_clark);
     read_value(fs, shape.compute_normals);
@@ -3821,11 +3835,13 @@ void write_object(output_file& fs, const yocto_instance& instance) {
     write_value(fs, instance.name);
     write_value(fs, instance.frame);
     write_value(fs, instance.shape);
+    write_value(fs, instance.material);
 };
 void read_object(input_file& fs, yocto_instance& instance) {
     read_value(fs, instance.name);
     read_value(fs, instance.frame);
     read_value(fs, instance.shape);
+    read_value(fs, instance.material);
 };
 
 void write_object(output_file& fs, const yocto_scene& scene) {
@@ -4751,8 +4767,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
             material.emission = ljs.at("color").get<vec4f>().xyz *
                                 pow(2.0f, ljs.at("exposure").get<float>());
             scene.materials.push_back(material);
-            auto shape     = yocto_shape{};
-            shape.material = (int)scene.materials.size() - 1;
+            auto shape = yocto_shape{};
             make_quad_shape(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, {1, 1},
                 {ljs.at("width").get<float>(), ljs.at("height").get<float>()},
@@ -4761,6 +4776,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
             auto instance  = yocto_instance{};
             instance.frame = frame3f(ljs.at("translationMatrix").get<mat4f>());
             instance.shape = (int)scene.shapes.size() - 1;
+            instance.material = (int)scene.materials.size() - 1;
             scene.instances.push_back(instance);
         } else if (ljs.at("type") == "dome") {
             auto texture     = yocto_texture{};
@@ -4809,12 +4825,13 @@ void load_disney_island_materials(
 }
 
 void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
-    const string& filename, unordered_map<string, vector<int>>& smap,
+    const string& filename, unordered_map<string, vector<vec2i>>& smap,
     unordered_map<string, disney_material>& mmap) {
     if (smap.find(filename) != smap.end()) return;
     printf("%s\n", filename.c_str());
 
-    auto shapes = vector<yocto_shape>{};
+    auto shapes    = vector<yocto_shape>{};
+    auto materials = vector<yocto_material>{};
 
     // obj vertices
     auto opos      = std::deque<vec3f>();
@@ -4878,15 +4895,13 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         // printf("--- %s\n", dmaterial.name.c_str());
         if (!shapes.empty() && mname == dmaterial.name) return;
         // printf("+++ %s\n", dmaterial.name.c_str());
-        auto material    = yocto_material{};
-        material.diffuse = mmap.at(dmaterial.name).color;
-        scene.materials.push_back(material);
+        materials.push_back({});
+        materials.back().diffuse = mmap.at(dmaterial.name).color;
         shapes.push_back(yocto_shape{});
         shapes.back().filename = filename + "." +
                                  std::to_string(shapes.size()) +
                                  get_extension(filename);
-        shapes.back().material = (int)scene.materials.size() - 1;
-        mname                  = dmaterial.name;
+        mname = dmaterial.name;
     };
 
     try {
@@ -4908,25 +4923,28 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         throw sceneio_error("cannot load mesh " + filename + "\n" + e.what());
     }
 
-    for (auto& shape : shapes) {
-        scene.shapes.push_back(shape);
-        smap[filename].push_back((int)scene.shapes.size() - 1);
+    for (auto shape_id = 0; shape_id < shapes.size(); shape_id++) {
+        scene.shapes.push_back(shapes[shape_id]);
+        scene.materials.push_back(materials[shape_id]);
+        smap[filename].push_back(
+            {(int)scene.shapes.size() - 1, (int)scene.materials.size() - 1});
     }
 }
 
 void add_disney_island_instance(yocto_scene& scene, const string& parent_name,
-    const mat4f& xform, const vector<int>& shapes) {
-    for (auto shape_id : shapes) {
-        auto instance  = yocto_instance{};
-        instance.frame = frame3f(xform);
-        instance.shape = shape_id;
+    const mat4f& xform, const vector<vec2i>& shapes) {
+    for (auto shape_material : shapes) {
+        auto instance     = yocto_instance{};
+        instance.frame    = frame3f(xform);
+        instance.shape    = shape_material.x;
+        instance.material = shape_material.y;
         scene.instances.push_back(instance);
     }
 }
 
 void load_disney_island_archive(const string& filename, yocto_scene& scene,
     const string& parent_name, const mat4f& parent_xform,
-    unordered_map<string, vector<int>>&     smap,
+    unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap) {
     printf("%s\n", filename.c_str());
     auto buffer = ""s;
@@ -4973,7 +4991,7 @@ void load_disney_island_archive(const string& filename, yocto_scene& scene,
 
 void load_disney_island_curve(const string& filename, yocto_scene& scene,
     const string& parent_name, const mat4f& parent_xform, float start_radius,
-    float end_radius, unordered_map<string, vector<int>>& smap,
+    float end_radius, unordered_map<string, vector<vec2i>>& smap,
     unordered_map<string, disney_material>& mmap) {
     printf("%s\n", filename.c_str());
     auto buffer = ""s;
@@ -4983,12 +5001,12 @@ void load_disney_island_curve(const string& filename, yocto_scene& scene,
     auto outname = "ply/" + get_dirname(filename).substr(5) +
                    get_filename(filename) + ".ply";
     if (smap.find(outname) == smap.end()) {
-        auto curves = doc.get_root();
-        auto shape  = yocto_shape{};
+        auto curves   = doc.get_root();
+        auto shape    = yocto_shape{};
+        auto material = -1;
         for (auto j = 0; j < curves.get_length(); j++) {
             auto curve     = curves.get_array_element(j);
             shape.filename = outname;
-            shape.material = -1;  // missing material
             for (auto i = 0; i < curve.get_length(); i++) {
                 auto point = curve.get_array_element(i);
                 shape.positions.push_back({
@@ -5005,7 +5023,7 @@ void load_disney_island_curve(const string& filename, yocto_scene& scene,
             }
         }
         scene.shapes.push_back(shape);
-        smap[outname] = {(int)scene.shapes.size() - 1};
+        smap[outname] = {{(int)scene.shapes.size() - 1, material}};
     }
     add_disney_island_instance(
         scene, parent_name, parent_xform, smap.at(outname));
@@ -5014,7 +5032,7 @@ void load_disney_island_curve(const string& filename, yocto_scene& scene,
 void load_disney_island_curvetube(const string& filename, yocto_scene& scene,
     const string& parent_name, const mat4f& parent_xform, float start_width,
     float end_width, const string& material_name,
-    unordered_map<string, vector<int>>&     smap,
+    unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap) {
     printf("%s\n", filename.c_str());
     auto buffer = ""s;
@@ -5028,9 +5046,9 @@ void load_disney_island_curvetube(const string& filename, yocto_scene& scene,
         auto material    = yocto_material{};
         material.diffuse = mmap.at(material_name).color;
         scene.materials.push_back(material);
-        auto shape     = yocto_shape{};
-        shape.filename = outname;
-        shape.material = (int)scene.materials.size() - 1;
+        auto shape      = yocto_shape{};
+        shape.filename  = outname;
+        auto ssmaterial = (int)scene.materials.size() - 1;
         for (auto j = 0; j < curves.get_length(); j++) {
             auto curve             = curves.get_array_element(j);
             auto bspline_positions = vector<vec3f>{};
@@ -5090,14 +5108,14 @@ void load_disney_island_curvetube(const string& filename, yocto_scene& scene,
             }
         }
         scene.shapes.push_back(shape);
-        smap[outname] = {(int)scene.shapes.size() - 1};
+        smap[outname] = {{(int)scene.shapes.size() - 1, ssmaterial}};
     }
     add_disney_island_instance(
         scene, parent_name, parent_xform, smap.at(outname));
 }
 
 void load_disney_island_elements(const string& filename, yocto_scene& scene,
-    unordered_map<string, vector<int>>& smap) {
+    unordered_map<string, vector<vec2i>>& smap) {
     // instancing model
     // - main shape: "geomObjFile" and "name" properties
     // - main instance: "transform"
@@ -5198,7 +5216,7 @@ void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
         for (auto filename : js.at("cameras").get<vector<string>>()) {
             load_disney_island_cameras(filename, scene);
         }
-        auto smap = std::unordered_map<std::string, vector<int>>{};
+        auto smap = std::unordered_map<std::string, vector<vec2i>>{};
         for (auto filename : js.at("elements").get<vector<string>>()) {
             load_disney_island_elements(filename, scene, smap);
         }

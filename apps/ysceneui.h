@@ -83,16 +83,15 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_shape& value,
-    pair<type_index, int>& sel) {
-    draw_opengl_widgets_scene_tree(
-        win, "material", scene, value.material, scene.materials, sel);
-}
+    pair<type_index, int>& sel) {}
 
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_instance& value,
     pair<type_index, int>& sel) {
     draw_opengl_widgets_scene_tree(
         win, "shape", scene, value.shape, scene.shapes, sel);
+    draw_opengl_widgets_scene_tree(
+        win, "material", scene, value.material, scene.materials, sel);
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_environment& value,
@@ -304,8 +303,6 @@ inline bool draw_opengl_widgets_scene_inspector(
     auto edited = 0;
     edited += draw_textinput_opengl_widget(win, "name", value.name);
     edited += draw_textinput_opengl_widget(win, "path", value.filename);
-    edited += draw_combobox_opengl_widget(
-        win, "material", value.material, scene.materials, true);
     draw_label_opengl_widget(win, "lines", "%ld", value.lines.size());
     draw_label_opengl_widget(win, "triangles", "%ld", value.triangles.size());
     draw_label_opengl_widget(win, "quads", "%ld", value.quads.size());
@@ -329,6 +326,8 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_slider_opengl_widget(win, "frame.o", value.frame.o, -10, 10);
     edited += draw_combobox_opengl_widget(
         win, "shape", value.shape, scene.shapes, true);
+    edited += draw_combobox_opengl_widget(
+        win, "material", value.material, scene.materials, true);
     return edited;
 }
 

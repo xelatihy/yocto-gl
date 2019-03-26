@@ -82,7 +82,6 @@
         {
             "name": "floor",
             "filename": "models/floor.ply",
-            "material": "floor",
             "!!proc": {
                 "type": "floor"
             }
@@ -90,7 +89,6 @@
         {
             "name": "obj1",
             "filename": "models/obj1.ply",
-            "material": "obj1",
             "!!proc": {
                 "type": "matball"
             }
@@ -98,7 +96,6 @@
         {
             "name": "obj2",
             "filename": "models/obj2.ply",
-            "material": "obj2",
             "!!proc": {
                 "type": "matball"
             }
@@ -106,7 +103,6 @@
         {
             "name": "obj3",
             "filename": "models/obj3.ply",
-            "material": "obj3",
             "!!proc": {
                 "type": "matball"
             }
@@ -115,11 +111,13 @@
     "instances": [
         {
             "name": "floor",
-            "shape": "floor"
+            "shape": "floor",
+            "material": "floor"
         },
         {
             "name": "obj1",
             "shape": "obj1",
+            "material": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -131,6 +129,7 @@
         {
             "name": "obj2",
             "shape": "obj2",
+            "material": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -142,6 +141,7 @@
         {
             "name": "obj3",
             "shape": "obj3",
+            "material": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,

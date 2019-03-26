@@ -94,7 +94,6 @@
         {
             "name": "floor",
             "filename": "models/floor.ply",
-            "material": "floor",
             "!!proc": {
                 "type": "floor"
             }
@@ -102,7 +101,6 @@
         {
             "name": "obj1",
             "filename": "models/obj1.ply",
-            "material": "obj1",
             "!!proc": {
                 "type": "uvsphere_flipcap"
             }
@@ -110,7 +108,6 @@
         {
             "name": "obj2",
             "filename": "models/obj2.ply",
-            "material": "obj2",
             "!!proc": {
                 "type": "uvsphere"
             }
@@ -118,14 +115,12 @@
         {
             "name": "obj3",
             "filename": "models/obj3.ply",
-            "material": "obj3",
             "!!proc": {
                 "type": "cube_rounded"
             }
         },
         {
             "name": "light1",
-            "material": "light1",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -136,7 +131,6 @@
         },
         {
             "name": "light2",
-            "material": "light2",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -149,11 +143,13 @@
     "instances": [
         {
             "name": "floor",
-            "shape": "floor"
+            "shape": "floor",
+            "material": "floor"
         },
         {
             "name": "obj1",
             "shape": "obj1",
+            "material": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -165,6 +161,7 @@
         {
             "name": "obj2",
             "shape": "obj2",
+            "material": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -176,6 +173,7 @@
         {
             "name": "obj3",
             "shape": "obj3",
+            "material": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -187,6 +185,7 @@
         {
             "name": "light1",
             "shape": "light1",
+            "material": "light1",
             "!!proc": {
                 "from": [
                     -4,
@@ -203,6 +202,7 @@
         {
             "name": "light2",
             "shape": "light2",
+            "material": "light2",
             "!!proc": {
                 "from": [
                     4,

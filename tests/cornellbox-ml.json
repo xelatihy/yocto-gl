@@ -745,39 +745,48 @@
     "instances": [
         {
             "name": "floor",
-            "shape": "floor"
+            "shape": "floor",
+            "material": "floor"
         },
         {
             "name": "ceiling",
-            "shape": "ceiling"
+            "shape": "ceiling",
+            "material": "ceiling"
         },
         {
             "name": "backwall",
-            "shape": "backwall"
+            "shape": "backwall",
+            "material": "backwall"
         },
         {
             "name": "rightwall",
-            "shape": "rightwall"
+            "shape": "rightwall",
+            "material": "rightwall"
         },
         {
             "name": "leftwall",
-            "shape": "leftwall"
+            "shape": "leftwall",
+            "material": "leftwall"
         },
         {
             "name": "shortbox",
-            "shape": "shortbox"
+            "shape": "shortbox",
+            "material": "shortbox"
         },
         {
             "name": "tallbox",
-            "shape": "tallbox"
+            "shape": "tallbox",
+            "material": "tallbox"
         },
         {
             "name": "light1",
-            "shape": "light1"
+            "shape": "light1",
+            "material": "light1"
         },
         {
             "name": "light2",
-            "shape": "light2"
+            "shape": "light2",
+            "material": "light2"
         }
     ],
     "environments": []

@@ -181,16 +181,26 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
 
 // Updates tesselation.
 void tesselate_shapes(yocto_scene& scene) {
-    for (auto& shape : scene.shapes) {
-        auto& material = scene.materials[shape.material];
-        if (!shape.subdivision_level && material.displacement_texture < 0)
-            continue;
+    auto displacements = vector<int>(scene.shapes.size(), -2);
+    for (auto& instance : scene.instances) {
+        auto& material     = scene.materials[instance.material];
+        auto& displacement = displacements[instance.shape];
+        if (displacement == -2) {
+            displacement = material.displacement_texture;
+        } else if (displacement != material.displacement_texture) {
+            throw runtime_error(
+                "different displacements applied to the same shape");
+        }
+    }
+    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
+        auto& shape                = scene.shapes[shape_id];
+        auto  displacement_texture = displacements[shape_id];
+        if (!shape.subdivision_level && displacement_texture < 0) continue;
         if (shape.subdivision_level) {
             subdivide_shape(shape);
         }
-        if (material.displacement_texture >= 0) {
-            displace_shape(
-                shape, scene.textures[material.displacement_texture]);
+        if (displacement_texture >= 0) {
+            displace_shape(shape, scene.textures[displacement_texture]);
         }
     }
 }
@@ -504,11 +514,12 @@ void add_missing_names(yocto_scene& scene) {
 
 // Add missing tangent space if needed.
 void add_missing_tangent_space(yocto_scene& scene) {
-    for (auto& shape : scene.shapes) {
-        auto& material = scene.materials[shape.material];
+    for (auto& instance : scene.instances) {
+        auto& material = scene.materials[instance.material];
+        if (material.normal_texture < 0) continue;
+        auto& shape = scene.shapes[instance.shape];
         if (!shape.tangentspaces.empty() || shape.texturecoords.empty())
             continue;
-        if (material.normal_texture < 0) continue;
         if (!shape.triangles.empty()) {
             if (shape.normals.empty()) {
                 shape.normals.resize(shape.positions.size());
@@ -527,8 +538,8 @@ void add_missing_tangent_space(yocto_scene& scene) {
 // Add missing materials.
 void add_missing_materials(yocto_scene& scene) {
     auto material_id = -1;
-    for (auto& shape : scene.shapes) {
-        if (shape.material >= 0) continue;
+    for (auto& instance : scene.instances) {
+        if (instance.material >= 0) continue;
         if (material_id < 0) {
             auto material    = yocto_material{};
             material.name    = "<default>";
@@ -536,7 +547,7 @@ void add_missing_materials(yocto_scene& scene) {
             scene.materials.push_back(material);
             material_id = (int)scene.materials.size() - 1;
         }
-        shape.material = material_id;
+        instance.material = material_id;
     }
 }
 
@@ -785,20 +796,16 @@ pair<vec3f, bool> evaluate_shape_tangentspace(
 }
 // Shading normals including material perturbations.
 vec3f evaluate_shape_perturbed_normal(const yocto_scene& scene,
-    const yocto_shape& shape, int element_id, const vec2f& element_uv) {
+    const yocto_shape& shape, int element_id, const vec2f& element_uv,
+    const vec3f& normalmap) {
     auto normal = evaluate_shape_normal(shape, element_id, element_uv);
     if (shape.triangles.empty() && shape.quads.empty()) return normal;
-    auto& material = scene.materials[shape.material];
-    if (scene.materials[shape.material].normal_texture >= 0) {
-        auto normalmap         = evaluate_material_normalmap(scene, material,
-            evaluate_shape_texturecoord(shape, element_id, element_uv));
-        auto [tu, left_handed] = evaluate_shape_tangentspace(
-            shape, element_id, element_uv);
-        tu      = orthonormalize(tu, normal);
-        auto tv = normalize(cross(normal, tu) * (left_handed ? -1.0f : 1.0f));
-        normal  = normalize(
-            normalmap.x * tu + normalmap.y * tv + normalmap.z * normal);
-    }
+    auto [tu, left_handed] = evaluate_shape_tangentspace(
+        shape, element_id, element_uv);
+    tu      = orthonormalize(tu, normal);
+    auto tv = normalize(cross(normal, tu) * (left_handed ? -1.0f : 1.0f));
+    normal  = normalize(
+        normalmap.x * tu + normalmap.y * tv + normalmap.z * normal);
     return normal;
 }
 
@@ -820,8 +827,15 @@ vec3f evaluate_instance_normal(const yocto_scene& scene,
 vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     bool non_rigid_frame) {
-    auto normal = evaluate_shape_perturbed_normal(
-        scene, scene.shapes[instance.shape], element_id, element_uv);
+    auto& shape    = scene.shapes[instance.shape];
+    auto& material = scene.materials[instance.material];
+    if (material.normal_texture < 0)
+        return evaluate_instance_normal(
+            scene, instance, element_id, element_uv);
+    auto normalmap = evaluate_material_normalmap(scene, material,
+        evaluate_shape_texturecoord(shape, element_id, element_uv));
+    auto normal    = evaluate_shape_perturbed_normal(
+        scene, scene.shapes[instance.shape], element_id, element_uv, normalmap);
     return non_rigid_frame ? transform_normal((affine3f)instance.frame, normal)
                            : transform_normal(instance.frame, normal);
 }
@@ -1343,15 +1357,11 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
         if (material.volume_density_texture >= 0)
             material.volume_density_texture += offset_voltextures;
     }
-    for (auto shape_id = offset_shapes; shape_id < scene.shapes.size();
-         shape_id++) {
-        auto& shape = scene.shapes[shape_id];
-        if (shape.material >= 0) shape.material += offset_materials;
-    }
     for (auto instance_id = offset_instances;
          instance_id < scene.instances.size(); instance_id++) {
         auto& instance = scene.instances[instance_id];
         if (instance.shape >= 0) instance.shape += offset_shapes;
+        if (instance.material >= 0) instance.material += offset_materials;
     }
     for (auto environment_id = offset_environments;
          environment_id < scene.environments.size(); environment_id++) {

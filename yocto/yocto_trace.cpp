@@ -72,7 +72,7 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     const vec3f& shading_direction = zero3f) {
     auto& instance    = scene.instances[instance_id];
     auto& shape       = scene.shapes[instance.shape];
-    auto& material    = scene.materials[shape.material];
+    auto& material    = scene.materials[instance.material];
     auto  point       = trace_point();
     point.instance_id = instance_id;
     point.element_id  = element_id;
@@ -881,8 +881,7 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const bvh_tree& bvh,
     const vec3f& position, const vec3f& direction) {
     auto& instance = scene.instances[instance_id];
-    auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[shape.material];
+    auto& material = scene.materials[instance.material];
     if (material.emission == zero3f) return 0;
     auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
     // check all intersection
@@ -1059,8 +1058,7 @@ float sample_distance(const yocto_scene& scene, const yocto_material& material,
 float sample_distance(const yocto_scene& scene, const yocto_instance& instance,
     const bbox3f& bbox, const vec3f& from, const vec3f& dir, int channel,
     rng_state& rng) {
-    auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[shape.material];
+    auto& material = scene.materials[instance.material];
     if (material.volume_density == zero3f) return float_max;
 
     // Transform coordinates so that every position in the bounding box of the
@@ -1149,7 +1147,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_tree& bvh,
             scene, isec_instance, isec.element_id, isec.element_uv);
         auto  ln            = evaluate_instance_normal(scene, isec_instance,
             isec.element_id, isec.element_uv, trace_non_rigid_frames);
-        auto& isec_material = scene.materials[isec_shape.material];
+        auto& isec_material = scene.materials[isec_instance.material];
         auto  emission      = evaluate_material_emission(scene, isec_material,
                             evaluate_shape_texturecoord(
                                 isec_shape, isec.element_id, isec.element_uv)) *
@@ -1158,8 +1156,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_tree& bvh,
                             .xyz;
 
         auto& medium_instance = scene.instances[mediums.back()];
-        auto& medium_shape    = scene.shapes[medium_instance.shape];
-        auto& medium_material = scene.materials[medium_shape.material];
+        auto& medium_material = scene.materials[medium_instance.material];
         if (medium_material.volume_density != zero3f)
             weight *= evaluate_transmission(scene, medium_material, lp,
                 incoming, isec.distance, channel, rng);
@@ -1311,12 +1308,13 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
     vec3f& weight, vec3f& radiance) {
     // Integrate weight while random walking inside the volume until exit.
 
-    auto material = scene.materials[scene.shapes[point.instance_id].material];
-    auto spectrum = get_random_int(rng, 3);
-    auto volume_density         = material.volume_density[spectrum];
-    auto volume_albedo          = material.volume_albedo[spectrum];
-    auto volume_emission        = material.volume_emission;
-    auto volume_phaseg          = material.volume_phaseg;
+    auto material =
+        scene.materials[scene.instances[point.instance_id].material];
+    auto      spectrum          = get_random_int(rng, 3);
+    auto      volume_density    = material.volume_density[spectrum];
+    auto      volume_albedo     = material.volume_albedo[spectrum];
+    auto      volume_emission   = material.volume_emission;
+    auto      volume_phaseg     = material.volume_phaseg;
     const int volume_max_bounce = 1000;  // @giacomo: hardcoded!
 
     for (auto volume_bounce = 0; volume_bounce < volume_max_bounce;
@@ -1930,8 +1928,7 @@ pair<vec3f, bool> trace_debug_material(const yocto_scene& scene,
 
     // shade
     auto& instance = scene.instances[point.instance_id];
-    auto& shape    = scene.shapes[instance.shape];
-    auto  hashed   = std::hash<int>()(shape.material);
+    auto  hashed   = std::hash<int>()(instance.material);
     auto  rng_     = make_rng(trace_default_seed, hashed);
     return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
 }
@@ -2117,7 +2114,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
          instance_id++) {
         auto& instance = scene.instances[instance_id];
         auto& shape    = scene.shapes[instance.shape];
-        auto& material = scene.materials[shape.material];
+        auto& material = scene.materials[instance.material];
         if (material.emission == zero3f) continue;
         if (shape.triangles.empty() && shape.quads.empty()) continue;
         lights.instances.push_back(instance_id);

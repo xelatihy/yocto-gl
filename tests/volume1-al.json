@@ -60,8 +60,16 @@
                 1
             ],
             "roughness": 0,
-            "volume_density": [1, 1, 1],
-            "volume_albedo": [1,1,1],
+            "volume_density": [
+                1,
+                1,
+                1
+            ],
+            "volume_albedo": [
+                1,
+                1,
+                1
+            ],
             "volume_phaseg": 0
         },
         {
@@ -82,8 +90,16 @@
                 1
             ],
             "roughness": 0,
-            "volume_density": [1, 1, 1],
-            "volume_albedo": [0.5, 0.5, 0.5],
+            "volume_density": [
+                1,
+                1,
+                1
+            ],
+            "volume_albedo": [
+                0.5,
+                0.5,
+                0.5
+            ],
             "volume_phaseg": 0.0
         },
         {
@@ -103,8 +119,16 @@
                 1,
                 1
             ],
-            "volume_density": [0, 0, 0],
-            "volume_albedo": [0, 0, 0]
+            "volume_density": [
+                0,
+                0,
+                0
+            ],
+            "volume_albedo": [
+                0,
+                0,
+                0
+            ]
         },
         {
             "name": "light1",
@@ -127,7 +151,6 @@
         {
             "name": "floor",
             "filename": "models/floor.ply",
-            "material": "floor",
             "!!proc": {
                 "type": "floor"
             }
@@ -135,7 +158,6 @@
         {
             "name": "cloud",
             "filename": "models/cloud.ply",
-            "material": "cloud",
             "!!proc": {
                 "type": "matball"
             }
@@ -143,7 +165,6 @@
         {
             "name": "smoke",
             "filename": "models/smoke.ply",
-            "material": "smoke",
             "!!proc": {
                 "type": "matball"
             }
@@ -151,14 +172,12 @@
         {
             "name": "invisible",
             "filename": "models/invisible.ply",
-            "material": "invisible",
             "!!proc": {
                 "type": "matball"
             }
         },
         {
             "name": "light1",
-            "material": "light1",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -169,7 +188,6 @@
         },
         {
             "name": "light2",
-            "material": "light2",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -182,11 +200,13 @@
     "instances": [
         {
             "name": "floor",
-            "shape": "floor"
+            "shape": "floor",
+            "material": "floor"
         },
         {
             "name": "cloud",
             "shape": "cloud",
+            "material": "cloud",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -198,6 +218,7 @@
         {
             "name": "smoke",
             "shape": "smoke",
+            "material": "smoke",
             "!!proc": {
                 "translation": [
                     0,
@@ -209,6 +230,7 @@
         {
             "name": "invisible",
             "shape": "invisible",
+            "material": "invisible",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -220,6 +242,7 @@
         {
             "name": "light1",
             "shape": "light1",
+            "material": "light1",
             "!!proc": {
                 "from": [
                     -4,
@@ -236,6 +259,7 @@
         {
             "name": "light2",
             "shape": "light2",
+            "material": "light2",
             "!!proc": {
                 "from": [
                     4,

@@ -161,7 +161,6 @@
         {
             "name": "floor",
             "filename": "models/floor.ply",
-            "material": "floor",
             "!!proc": {
                 "type": "floor"
             }
@@ -169,7 +168,6 @@
         {
             "name": "obj1",
             "filename": "models/obj1.ply",
-            "material": "obj1",
             "!!proc": {
                 "type": "hairball",
                 "noise": [
@@ -181,7 +179,6 @@
         {
             "name": "obj2",
             "filename": "models/obj2.ply",
-            "material": "obj2",
             "!!proc": {
                 "type": "hairball"
             }
@@ -189,7 +186,6 @@
         {
             "name": "obj3",
             "filename": "models/obj3.ply",
-            "material": "obj3",
             "!!proc": {
                 "type": "hairball",
                 "clump": [
@@ -201,7 +197,6 @@
         {
             "name": "obj1_interior",
             "filename": "models/obj1_interior.ply",
-            "material": "obj1_interior",
             "!!proc": {
                 "type": "hairball_interior"
             }
@@ -209,7 +204,6 @@
         {
             "name": "obj2_interior",
             "filename": "models/obj2_interior.ply",
-            "material": "obj2_interior",
             "!!proc": {
                 "type": "hairball_interior"
             }
@@ -217,14 +211,12 @@
         {
             "name": "obj3_interior",
             "filename": "models/obj3_interior.ply",
-            "material": "obj3_interior",
             "!!proc": {
                 "type": "hairball_interior"
             }
         },
         {
             "name": "light1",
-            "material": "light1",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -235,7 +227,6 @@
         },
         {
             "name": "light2",
-            "material": "light2",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -248,11 +239,13 @@
     "instances": [
         {
             "name": "floor",
-            "shape": "floor"
+            "shape": "floor",
+            "material": "floor"
         },
         {
             "name": "obj1",
             "shape": "obj1",
+            "material": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -264,6 +257,7 @@
         {
             "name": "obj2",
             "shape": "obj2",
+            "material": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -275,6 +269,7 @@
         {
             "name": "obj3",
             "shape": "obj3",
+            "material": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -286,6 +281,7 @@
         {
             "name": "obj1_interior",
             "shape": "obj1_interior",
+            "material": "obj1_interior",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -297,6 +293,7 @@
         {
             "name": "obj2_interior",
             "shape": "obj2_interior",
+            "material": "obj2_interior",
             "!!proc": {
                 "translation": [
                     0,
@@ -308,6 +305,7 @@
         {
             "name": "obj3_interior",
             "shape": "obj3_interior",
+            "material": "obj3_interior",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -319,6 +317,7 @@
         {
             "name": "light1",
             "shape": "light1",
+            "material": "light1",
             "!!proc": {
                 "from": [
                     -4,
@@ -335,6 +334,7 @@
         {
             "name": "light2",
             "shape": "light2",
+            "material": "light2",
             "!!proc": {
                 "from": [
                     4,
