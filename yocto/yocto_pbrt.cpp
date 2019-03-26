@@ -2014,12 +2014,12 @@ static void parse_pbrt_light(
 static void parse_pbrt_medium(
     pbrt_token_stream& stream, const string& type, pbrt_medium& value) {
     auto pname = ""s, ptype = ""s;
-    if (type == "distant") {
+    if (type == "homogeneous") {
         auto tvalue = pbrt_medium_homogeneous{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "sigma_a") {
-                parse_param(stream, ptype, tvalue.scale);
+                parse_param(stream, ptype, tvalue.sigma_a);
             } else if (pname == "sigma_s") {
                 parse_param(stream, ptype, tvalue.sigma_s);
             } else if (pname == "preset") {
@@ -2071,10 +2071,7 @@ static void parse_pbrt_medium(
         }
         value = tvalue;
     } else {
-        struct pbrt_heterogeneous_medium {
-            vector<float> density = {};
-        };
-        throw pbrtio_error("unknown Film " + type);
+        throw pbrtio_error("unknown Medium " + type);
     }
 }
 

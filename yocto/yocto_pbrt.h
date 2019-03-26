@@ -663,15 +663,15 @@ using pbrt_arealight = variant<pbrt_arealight_none, pbrt_arealight_diffuse>;
 
 // pbrt mediums
 struct pbrt_medium_homogeneous {
-    vec3f  sigma_a = {0.0011f, 0.0024f, 0.014f};
-    vec3f  sigma_s = vec3f{2.55f, 3.21f, 3.77f};
+    spectrum3f  sigma_a = {0.0011f, 0.0024f, 0.014f};
+    spectrum3f  sigma_s = {2.55f, 3.21f, 3.77f};
     string preset  = "";
     float  g       = 0;
     float  scale   = 1;
 };
 struct pbrt_medium_heterogeneous {
-    vec3f         sigma_a = {0.0011f, 0.0024f, 0.014f};
-    vec3f         sigma_s = vec3f{2.55f, 3.21f, 3.77f};
+    spectrum3f         sigma_a = {0.0011f, 0.0024f, 0.014f};
+    spectrum3f         sigma_s = {2.55f, 3.21f, 3.77f};
     string        preset  = "";
     float         g       = 0;
     float         scale   = 1;
