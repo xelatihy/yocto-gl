@@ -76,7 +76,7 @@ drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
     for (auto& instance : scene.instances) {
         if (instance.shape < 0) continue;
         auto& shape    = scene.shapes[instance.shape];
-        auto& material = scene.materials[shape.material];
+        auto& material = scene.materials[instance.material];
         if (material.emission == zero3f) continue;
         if (lights.positions.size() >= 16) break;
         auto bbox = compute_shape_bounds(shape);
@@ -527,7 +527,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     const drawgl_options& options) {
     auto& shape    = scene.shapes[instance.shape];
     auto& vbos     = state.shapes.at(instance.shape);
-    auto& material = scene.materials[shape.material];
+    auto& material = scene.materials[instance.material];
 
     set_opengl_uniform(state.program, "shape_xform", mat4f(instance.frame));
     set_opengl_uniform(state.program, "shape_xform_invtranspose",
@@ -652,7 +652,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         for (auto& instance : scene.instances) {
             if (instance.shape < 0) continue;
             auto& shape    = scene.shapes[instance.shape];
-            auto& material = scene.materials[shape.material];
+            auto& material = scene.materials[instance.material];
             if (material.emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
             auto bbox = compute_shape_bounds(shape);
