@@ -183,11 +183,27 @@ def sync():
     # os.system('rsync -avc --delete ./ ../yocto-scenes')
 
 @cli.command()
+@click.option('--directory', '-d', default='pbrt-v3-scenes')
 @click.option('--scene', '-s', default='*')
-def pbrtparse(scene='*'):
+def pbrtparse(directory='pbrt-v3-scenes',scene='*'):
     broken_scenes = [
         'bunny-fur/f3-15.pbrt',
+        "cloud/cloud.pbrt",
+        "coffee-splash/splash.pbrt",
         "contemporary-bathroom/contemporary-bathroom.pbrt",
+        "dambreak/dambreak0.pbrt",
+        "ecosys/ecosys.pbrt",
+        "hair/curly-hair.pbrt",
+        "head/head.pbrt",
+        "killeroos/killeroo-simple.pbrt",
+        "lte-orb/lte-orb-silver.pbrt",
+        "measure-one/frame85.pbrt",
+        "sanmiguel/sanmiguel.pbrt",
+        "smoke-plume/plume-184.pbrt",
+        "sssdragon/dragon_50.pbrt",
+        "structuresynth/microcity.pbrt",
+        "volume-caustic/caustic.pbrt",
+        "white-room/whiteroom-daytime.pbrt",
     ]
     scenes = [
         'barcelona-pavilion/pavilion-day.pbrt',
@@ -204,36 +220,31 @@ def pbrtparse(scene='*'):
         "contemporary-bathroom/contemporary-bathroom.pbrt",
         "crown/crown.pbrt",
         "dambreak/dambreak0.pbrt",
-        "dragon/f.pbrt",
+        "dragon/f8-4a.pbrt",
         "ecosys/ecosys.pbrt",
-        "figures/figures.pbrt",
         "ganesha/ganesha.pbrt",
-        "hair/hair.pbrt",
+        "hair/curly-hair.pbrt",
+        "hair/sphere-hairblock.pbr",
         "head/head.pbrt",
-        "html/html.pbrt",
-        "images/images.pbrt",
-        "killeroos/killeroos.pbrt",
-        "landscape/landscape.pbrt",
-        "lenses/lenses.pbrt",
-        "lte-orb/lte-orb.pbrt",
-        "measure-one/measure-one.pbrt",
-        "pbrt-book/pbrt-book.pbrt",
+        "killeroos/killeroo-simple.pbrt",
+        "landscape/view-0.pbrt",
+        "lte-orb/lte-orb-silver.pbrt",
+        "measure-one/frame85.pbrt",
+        "pbrt-book/book.pbrt",
         "sanmiguel/sanmiguel.pbrt",
-        "simple/simple.pbrt",
-        "smoke-plume/smoke-plume.pbrt",
-        "spds/spds.pbrt",
+        "simple/dof-dragons.pbrt",
+        "smoke-plume/plume-184.pbrt",
         "sportscar/sportscar.pbrt",
-        "sssdragon/sssdragon.pbrt",
-        "structuresynth/structuresynth.pbrt",
-        "transparent-machines/transparent-machines.pbrt",
+        "sssdragon/dragon_50.pbrt",
+        "structuresynth/microcity.pbrt",
+        "transparent-machines/frame542.pbrt",
         "tt/tt.pbrt",
-        "veach-bidir/veach-bidir.pbrt",
-        "veach-mis/veach-mis.pbrt",
-        "villa/villa.pbrt",
-        "volume-caustic/volume-caustic.pbrt",
+        "veach-bidir/bidir.pbrt",
+        "veach-mis/mis.pbrt",
+        "villa/villa-daylight.pbrt",
+        "volume-caustic/caustic.pbrt",
         "vw-van/vw-van.pbrt",
-        "white-room/white-room.pbrt",
-        "wip/wip.pbrt",
+        "white-room/whiteroom-daytime.pbrt",
         "yeahright/yeahright.pbrt",
     ]
     # for filename in scenes:
@@ -241,10 +252,9 @@ def pbrtparse(scene='*'):
     #     cmd = f'../yocto-gl/bin/yitrace {filename}'
     #     print(cmd, file=sys.stderr)
     #     os.system(cmd)
-    for filename in glob.glob(f'{scene}/*.pbrt'):
-        with open(filename) as f:
-            if 'WorldBegin' not in f.read(): continue
-        cmd = f'../yocto-gl/bin/yitrace {filename}'
+    for filename in scenes:
+        if scene != '*' and not filename.startswith(f'{scene}/'): continue
+        cmd = f'../yocto-gl/bin/yitrace {directory}/{filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)
 
