@@ -3737,7 +3737,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         auto instance  = yocto_instance{};
         instance.frame = (frame3f)ctx.frame;
         instance.shape = (int)scene.shapes.size() - 1;
-        if(cur_object == "") {
+        if (cur_object == "") {
             scene.instances.push_back(instance);
         } else {
             omap[cur_object].push_back(instance);
@@ -4572,8 +4572,9 @@ void load_ply_mesh(const string& filename, vector<int>& points,
             auto indices = vector<vector<int>>{};
             try {
                 indices = elements.getListProperty<int>("vertex_indices");
-            } catch(...) {
-                (vector<vector<unsigned int>>&)indices = elements.getListProperty<unsigned int>("vertex_indices");
+            } catch (...) {
+                (vector<vector<unsigned int>>&)indices =
+                    elements.getListProperty<unsigned int>("vertex_indices");
             }
             for (auto& face : indices) {
                 if (face.size() == 4) {
@@ -4593,8 +4594,9 @@ void load_ply_mesh(const string& filename, vector<int>& points,
             auto indices = vector<vector<int>>{};
             try {
                 indices = elements.getListProperty<int>("vertex_indices");
-            } catch(...) {
-                (vector<vector<unsigned int>>&)indices = elements.getListProperty<unsigned int>("vertex_indices");
+            } catch (...) {
+                (vector<vector<unsigned int>>&)indices =
+                    elements.getListProperty<unsigned int>("vertex_indices");
             }
             for (auto& line : indices) {
                 for (auto i = 1; i < line.size(); i++)
