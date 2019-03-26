@@ -692,38 +692,25 @@ struct pbrt_context {
     string   medium_exterior = "";
 };
 
+// clang-format off
 // pbrt callbacks
 struct pbrt_callbacks {
-    function<void(const pbrt_sampler& value, const pbrt_context& ctx)> sampler =
-        {};
-    function<void(const pbrt_integrator& value, const pbrt_context& ctx)>
-                                                                      integrator = {};
-    function<void(const pbrt_film& value, const pbrt_context& ctx)>   film = {};
-    function<void(const pbrt_filter& value, const pbrt_context& ctx)> filter =
-        {};
-    function<void(const pbrt_camera& value, const pbrt_context& ctx)> camera =
-        {};
-    function<void(
-        const pbrt_texture& value, const string& name, const pbrt_context& ctx)>
-        texture = {};
-    function<void(const pbrt_material& value, const string& name,
-        const pbrt_context& ctx)>
-        material = {};
-    function<void(
-        const pbrt_medium& value, const string& name, const pbrt_context& ctx)>
-                                                                     medium = {};
+    function<void(const pbrt_sampler& value, const pbrt_context& ctx)> sampler = {};
+    function<void(const pbrt_integrator& value, const pbrt_context& ctx)> integrator = {};
+    function<void(const pbrt_film& value, const pbrt_context& ctx)>  film = {};
+    function<void(const pbrt_filter& value, const pbrt_context& ctx)> filter = {};
+    function<void(const pbrt_camera& value, const pbrt_context& ctx)> camera = {};
+    function<void(const pbrt_texture& value, const string& name, const pbrt_context& ctx)> texture = {};
+    function<void(const pbrt_material& value, const string& name, const pbrt_context& ctx)> material = {};
+    function<void(const pbrt_medium& value, const string& name, const pbrt_context& ctx)> medium = {};
     function<void(const pbrt_shape& value, const pbrt_context& ctx)> shape = {};
     function<void(const pbrt_light& value, const pbrt_context& ctx)> light = {};
-    function<void(const pbrt_arealight& value, const string& name,
-        const pbrt_context& ctx)>
-        arealight = {};
-    function<void(const pbrt_instance& value, const pbrt_context& ctx)>
-        instance = {};
-    function<void(const pbrt_instance& value, const pbrt_context& ctx)>
-        begin_instance = {};
-    function<void(const pbrt_instance& value, const pbrt_context& ctx)>
-        end_instance = {};
+    function<void(const pbrt_arealight& value, const string& name, const pbrt_context& ctx)> arealight = {};
+    function<void(const pbrt_instance& value, const pbrt_context& ctx)> instance = {};
+    function<void(const pbrt_instance& value, const pbrt_context& ctx)> begin_instance = {};
+    function<void(const pbrt_instance& value, const pbrt_context& ctx)> end_instance = {};
 };
+// clang-format on
 
 // Load obj options
 struct load_pbrt_options {
