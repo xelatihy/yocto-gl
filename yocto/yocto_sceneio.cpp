@@ -3944,7 +3944,11 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             instance.name  = shape.name;
             instance.shape = (int)scene.shapes.size() - 1;
             instance.frame = (frame3f)ctx.frame;
-            scene.instances.push_back(instance);
+            if(cur_object == "") {
+                scene.instances.push_back(instance);
+            } else {
+                omap[cur_object].push_back(instance);
+            }
         } else {
             throw sceneio_error("light type not supported");
         }
