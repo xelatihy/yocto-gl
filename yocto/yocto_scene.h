@@ -200,10 +200,10 @@ struct yocto_shape {
 
 // Instance of a visible shape in the scene.
 struct yocto_instance {
-    string  name  = "";
-    frame3f frame = identity_frame3f;
-    int     shape = -1;
-    int material = -1;
+    string  name     = "";
+    frame3f frame    = identity_frame3f;
+    int     shape    = -1;
+    int     material = -1;
 };
 
 // Environment map.

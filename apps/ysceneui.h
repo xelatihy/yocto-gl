@@ -83,8 +83,7 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_shape& value,
-    pair<type_index, int>& sel) {
-}
+    pair<type_index, int>& sel) {}
 
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_instance& value,
@@ -92,7 +91,7 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     draw_opengl_widgets_scene_tree(
         win, "shape", scene, value.shape, scene.shapes, sel);
     draw_opengl_widgets_scene_tree(
-                                   win, "material", scene, value.material, scene.materials, sel);
+        win, "material", scene, value.material, scene.materials, sel);
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_environment& value,
@@ -328,7 +327,7 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_combobox_opengl_widget(
         win, "shape", value.shape, scene.shapes, true);
     edited += draw_combobox_opengl_widget(
-                                          win, "material", value.material, scene.materials, true);
+        win, "material", value.material, scene.materials, true);
     return edited;
 }
 

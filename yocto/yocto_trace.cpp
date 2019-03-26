@@ -1308,12 +1308,13 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
     vec3f& weight, vec3f& radiance) {
     // Integrate weight while random walking inside the volume until exit.
 
-    auto material = scene.materials[scene.instances[point.instance_id].material];
-    auto spectrum = get_random_int(rng, 3);
-    auto volume_density         = material.volume_density[spectrum];
-    auto volume_albedo          = material.volume_albedo[spectrum];
-    auto volume_emission        = material.volume_emission;
-    auto volume_phaseg          = material.volume_phaseg;
+    auto material =
+        scene.materials[scene.instances[point.instance_id].material];
+    auto      spectrum          = get_random_int(rng, 3);
+    auto      volume_density    = material.volume_density[spectrum];
+    auto      volume_albedo     = material.volume_albedo[spectrum];
+    auto      volume_emission   = material.volume_emission;
+    auto      volume_phaseg     = material.volume_phaseg;
     const int volume_max_bounce = 1000;  // @giacomo: hardcoded!
 
     for (auto volume_bounce = 0; volume_bounce < volume_max_bounce;
