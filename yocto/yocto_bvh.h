@@ -153,7 +153,7 @@ struct bvh_strided_view {
     constexpr bool     empty() const { return count == 0; }
     constexpr int      size() const { return count; }
     constexpr const T& operator[](int idx) const {
-        return *(T*)((char*)ptr + stride * idx);
+        return *(T*)((char*)ptr + (size_t)stride * (size_t)idx);
     }
 
     struct iterator {
