@@ -1889,6 +1889,8 @@ static void parse_pbrt_arealight(
             parse_nametype(stream, pname, ptype);
             if (pname == "L") {
                 parse_param(stream, ptype, tvalue.L);
+            } else if (pname == "scale") {
+                parse_param(stream, ptype, tvalue.scale);
             } else if (pname == "twosided") {
                 parse_param(stream, ptype, tvalue.twosided);
             } else if (pname == "samples") {

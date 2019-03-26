@@ -193,8 +193,6 @@ def pbrtparse(directory='pbrt-v3-scenes',scene='*'):
         "contemporary-bathroom/contemporary-bathroom.pbrt",
         "head/head.pbrt",
         "ecosys/ecosys.pbrt",
-        "lte-orb/lte-orb-silver.pbrt",
-        "measure-one/frame85.pbrt",
         "sanmiguel/sanmiguel.pbrt",
         "smoke-plume/plume-184.pbrt",
         "sssdragon/dragon_50.pbrt",
