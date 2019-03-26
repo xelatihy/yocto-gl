@@ -1716,6 +1716,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
 
         // cleanup empty
         for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+            scene.instances[idx].shape = idx;
             if (!scene.shapes[idx].positions.empty()) continue;
             scene.shapes.erase(scene.shapes.begin() + idx);
             scene.instances.erase(scene.instances.begin() + idx);
