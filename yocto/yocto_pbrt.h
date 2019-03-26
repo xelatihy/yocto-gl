@@ -644,10 +644,10 @@ using pbrt_light =
 // pbrt area lights
 struct pbrt_arealight_none {};
 struct pbrt_arealight_diffuse {
-    spectrum3f scale          = {1, 1, 1};
+    spectrum3f scale    = {1, 1, 1};
     spectrum3f L        = {1, 1, 1};
-    bool                      twosided = false;
-    int                       samples  = 1;
+    bool       twosided = false;
+    int        samples  = 1;
 };
 using pbrt_arealight = variant<pbrt_arealight_none, pbrt_arealight_diffuse>;
 

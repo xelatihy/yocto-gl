@@ -3632,20 +3632,20 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     scene = yocto_scene{};
 
-    auto mmap  = unordered_map<string, yocto_material>{};
-    auto amap  = unordered_map<string, vec3f>{};
-    auto ammap = unordered_map<string, int>{};
-    auto tmap  = unordered_map<string, int>{};
-    auto omap  = unordered_map<string, vector<yocto_instance>>{};
+    auto mmap       = unordered_map<string, yocto_material>{};
+    auto amap       = unordered_map<string, vec3f>{};
+    auto ammap      = unordered_map<string, int>{};
+    auto tmap       = unordered_map<string, int>{};
+    auto omap       = unordered_map<string, vector<yocto_instance>>{};
     auto cur_object = ""s;
 
     auto get_material = [&](const pbrt_context& ctx) {
         auto lookup_name = ctx.material;
-        if(!ctx.arealight.empty()) lookup_name += "_______" + ctx.arealight;
+        if (!ctx.arealight.empty()) lookup_name += "_______" + ctx.arealight;
         if (ammap.find(lookup_name) != ammap.end())
             return ammap.at(lookup_name);
-        auto material     = mmap.at(ctx.material);
-        if(!ctx.arealight.empty()) material.emission = amap.at(ctx.arealight);
+        auto material = mmap.at(ctx.material);
+        if (!ctx.arealight.empty()) material.emission = amap.at(ctx.arealight);
         scene.materials.push_back(material);
         ammap[lookup_name] = (int)scene.materials.size() - 1;
         return (int)scene.materials.size() - 1;
@@ -3704,10 +3704,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             auto& mesh     = std::get<pbrt_shape_plymesh>(pshape);
             shape.filename = mesh.filename;
             if (!options.skip_meshes) {
-                load_ply_mesh(get_dirname(filename) + mesh.filename, shape.points, shape.lines,
-                    shape.triangles, shape.quads, shape.positions,
-                    shape.normals, shape.texturecoords, shape.colors,
-                    shape.radius, false);
+                load_ply_mesh(get_dirname(filename) + mesh.filename,
+                    shape.points, shape.lines, shape.triangles, shape.quads,
+                    shape.positions, shape.normals, shape.texturecoords,
+                    shape.colors, shape.radius, false);
             }
         } else if (std::holds_alternative<pbrt_shape_sphere>(pshape)) {
             auto& sphere = std::get<pbrt_shape_sphere>(pshape);
@@ -3727,20 +3727,20 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         scene.instances.push_back(instance);
     };
     cb.texture = [&](const pbrt_texture& ptexture, const string& name,
-                      const pbrt_context& ctx) {
+                     const pbrt_context& ctx) {
         auto texture = yocto_texture{};
         texture.name = name;
         if (std::holds_alternative<pbrt_texture_imagemap>(ptexture)) {
-            auto& imagemap = std::get<pbrt_texture_imagemap>(ptexture);
+            auto& imagemap   = std::get<pbrt_texture_imagemap>(ptexture);
             texture.filename = imagemap.filename;
         } else {
             printf("texture not well supported");
             texture.filename = "textures/" + texture.name + ".png";
-            texture.ldr_image.resize({1,1});
-            texture.ldr_image[{0,0}] = {1,0,0,1};
+            texture.ldr_image.resize({1, 1});
+            texture.ldr_image[{0, 0}] = {1, 0, 0, 1};
         }
         scene.textures.push_back(texture);
-        tmap[name] = (int)scene.textures.size()-1;
+        tmap[name] = (int)scene.textures.size() - 1;
     };
     cb.material = [&](const pbrt_material& pmaterial, const string& name,
                       const pbrt_context& ctx) {
@@ -3834,11 +3834,12 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
         mmap[name] = material;
     };
-    cb.arealight = [&](const pbrt_arealight& plight, const string& name, const pbrt_context& ctx) {
+    cb.arealight = [&](const pbrt_arealight& plight, const string& name,
+                       const pbrt_context& ctx) {
         auto emission = zero3f;
         if (std::holds_alternative<pbrt_arealight_diffuse>(plight)) {
-            auto& diffuse        = std::get<pbrt_arealight_diffuse>(plight);
-            emission = (vec3f)diffuse.L * (vec3f)diffuse.scale;
+            auto& diffuse = std::get<pbrt_arealight_diffuse>(plight);
+            emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
         } else {
             throw sceneio_error("area light type not supported");
         }
@@ -3846,9 +3847,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     };
     cb.light = [&](const pbrt_light& plight, const pbrt_context& ctx) {
         static auto light_id = 0;
-        auto name = "light_" + std::to_string(light_id++);
+        auto        name     = "light_" + std::to_string(light_id++);
         if (std::holds_alternative<pbrt_light_infinite>(plight)) {
-            auto& infinite        = std::get<pbrt_light_infinite>(plight);
+            auto& infinite    = std::get<pbrt_light_infinite>(plight);
             auto  environment = yocto_environment();
             environment.name  = name;
             // environment.frame =
@@ -3858,7 +3859,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                                                          {0, 0, 1}, {0, 1, 0},
                                                          {0, 0, 0}};
             environment.emission = (vec3f)infinite.scale;
-            if(infinite.mapname != "") {
+            if (infinite.mapname != "") {
                 auto texture     = yocto_texture{};
                 texture.filename = infinite.mapname;
                 texture.name     = environment.name;
@@ -3867,13 +3868,13 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             }
             scene.environments.push_back(environment);
         } else if (std::holds_alternative<pbrt_light_distant>(plight)) {
-            auto& distant         = std::get<pbrt_light_distant>(plight);
+            auto& distant      = std::get<pbrt_light_distant>(plight);
             auto  distant_dist = 100;
             scene.shapes.push_back({});
             auto& shape = scene.shapes.back();
             shape.name  = name;
-            auto dir  = normalize(distant.from - distant.to);
-            auto size = distant_dist * sin(5 * pif / 180);
+            auto dir    = normalize(distant.from - distant.to);
+            auto size   = distant_dist * sin(5 * pif / 180);
             make_quad_shape(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, {1, 1}, {size, size}, {1, 1});
             scene.materials.push_back({});
@@ -3890,11 +3891,11 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                                  dir * distant_dist, zero3f, {0, 1, 0}, true);
             scene.instances.push_back(instance);
         } else if (std::holds_alternative<pbrt_light_point>(plight)) {
-            auto& point         = std::get<pbrt_light_point>(plight);
+            auto& point = std::get<pbrt_light_point>(plight);
             scene.shapes.push_back({});
             auto& shape = scene.shapes.back();
             shape.name  = name;
-            auto size = 0.01f;
+            auto size   = 0.01f;
             make_sphere_shape(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, 4, size, 1);
             scene.materials.push_back({});
@@ -3910,11 +3911,11 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                              make_translation_frame(point.from);
             scene.instances.push_back(instance);
         } else if (std::holds_alternative<pbrt_light_goniometric>(plight)) {
-            auto& goniometric         = std::get<pbrt_light_goniometric>(plight);
+            auto& goniometric = std::get<pbrt_light_goniometric>(plight);
             scene.shapes.push_back({});
             auto& shape = scene.shapes.back();
             shape.name  = name;
-            auto size = 0.01f;
+            auto size   = 0.01f;
             make_sphere_shape(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, 4, size, 1);
             scene.materials.push_back({});
@@ -3933,16 +3934,17 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
     };
     cb.begin_object = [&](const pbrt_object& pobject, const pbrt_context& ctx) {
-        cur_object = pobject.name;
+        cur_object       = pobject.name;
         omap[cur_object] = {};
     };
     cb.end_object = [&](const pbrt_object& pobject, const pbrt_context& ctx) {
         cur_object = "";
     };
-    cb.object_instance = [&](const pbrt_object& pobject, const pbrt_context& ctx) {
+    cb.object_instance = [&](const pbrt_object&  pobject,
+                             const pbrt_context& ctx) {
         auto& pinstances = omap.at(pobject.name);
         for (auto& pinstance : pinstances) {
-            auto instance = yocto_instance();
+            auto instance  = yocto_instance();
             instance.frame = (frame3f)ctx.frame * pinstance.frame;
             instance.shape = pinstance.shape;
             scene.instances.push_back(instance);
