@@ -22,6 +22,9 @@ def yitrace(directory='mcguire',scene='*',format='obj',mode='path'):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
+            if format == 'pbrt':
+                with open(filename) as f:
+                    if 'WorldBegin' not in f.read(): continue
             cmd = f'../yocto-gl/bin/yitrace {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
@@ -42,6 +45,9 @@ def yview(directory='mcguire',scene='*',format='obj',mode='path'):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
+            if format == 'pbrt':
+                with open(filename) as f:
+                    if 'WorldBegin' not in f.read(): continue
             cmd = f'../yocto-gl/bin/yview {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
@@ -63,6 +69,9 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
+            if format == 'pbrt':
+                with open(filename) as f:
+                    if 'WorldBegin' not in f.read(): continue
             imagename = filename.replace(f'.{format}',f'.{format}.{mode}.png')
             imagename = imagename.replace(f'{dirname}',f'{directory}/_images')
             cmd = f'../yocto-gl/bin/ytrace -o {imagename} {options} {filename}'
@@ -90,6 +99,9 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
         if clean_models: os.system(f'rm -rf {dirname}/meshes')
         os.system(f'mkdir -p {dirname}/models')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
+            if format == 'pbrt':
+                with open(filename) as f:
+                    if 'WorldBegin' not in f.read(): continue
             outname = filename.replace(f'.{format}',f'.{outformat}')
             filedir = os.path.dirname(filename)
             cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {filename}'
@@ -175,6 +187,7 @@ def sync():
 def pbrtparse(scene='*'):
     broken_scenes = [
         'bunny-fur/f3-15.pbrt',
+        "contemporary-bathroom/contemporary-bathroom.pbrt",
     ]
     scenes = [
         'barcelona-pavilion/pavilion-day.pbrt',
@@ -185,14 +198,13 @@ def pbrtparse(scene='*'):
         'buddha-fractal/buddha-fractal.pbrt',
         'bunny-fur/f3-15.pbrt',
         'caustic-glass/glass.pbrt',
-        'chopper-titan/chopper-titan.pbrt',
         "chopper-titan/chopper-titan.pbrt",
         "cloud/cloud.pbrt",
-        "coffee-splash/coffee-splash.pbrt",
+        "coffee-splash/splash.pbrt",
         "contemporary-bathroom/contemporary-bathroom.pbrt",
         "crown/crown.pbrt",
-        "dambreak/dambreak.pbrt",
-        "dragon/dragon.pbrt",
+        "dambreak/dambreak0.pbrt",
+        "dragon/f.pbrt",
         "ecosys/ecosys.pbrt",
         "figures/figures.pbrt",
         "ganesha/ganesha.pbrt",
@@ -224,8 +236,14 @@ def pbrtparse(scene='*'):
         "wip/wip.pbrt",
         "yeahright/yeahright.pbrt",
     ]
-    for filename in scenes:
-        if scene != '*' and not filename.startswith(f'{scene}/'): continue
+    # for filename in scenes:
+    #     if scene != '*' and not filename.startswith(f'{scene}/'): continue
+    #     cmd = f'../yocto-gl/bin/yitrace {filename}'
+    #     print(cmd, file=sys.stderr)
+    #     os.system(cmd)
+    for filename in glob.glob(f'{scene}/*.pbrt'):
+        with open(filename) as f:
+            if 'WorldBegin' not in f.read(): continue
         cmd = f'../yocto-gl/bin/yitrace {filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)

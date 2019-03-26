@@ -386,6 +386,7 @@ static inline void parse_param(
 template <typename T>
 static inline void parse_param(
     pbrt_token_stream& stream, const string& type, spectrum<T, 3>& value) {
+    bool verbose = false;
     if (type == "rgb") {
         parse_param(stream, value);
     } else if (type == "color") {
@@ -399,12 +400,12 @@ static inline void parse_param(
         parse_param(stream, blackbody);
         (vec3f&)value = blackbody_to_rgb(blackbody.x) * blackbody.y;
     } else if (type == "spectrum" && is_string(stream)) {
-        printf("spectrum  not well supported\n");
+        if(verbose) printf("spectrum  not well supported\n");
         auto filename = ""s;
         parse_param(stream, filename);
         value = {1, 0, 0};
     } else if (type == "spectrum" && !is_string(stream)) {
-        printf("spectrum  not well supported\n");
+        if(verbose) printf("spectrum  not well supported\n");
         auto values = vector<float>{};
         parse_param(stream, values);
         value = {1, 0, 0};
@@ -676,7 +677,7 @@ static void parse_pbrt_sampler(
             }
         }
         value = tvalue;
-    } else if (type == "zerotwosequence") {
+    } else if (type == "02sequence") {
         auto tvalue = pbrt_sampler_zerotwosequence{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
