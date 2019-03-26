@@ -3638,6 +3638,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     auto tmap       = unordered_map<string, int>{};
     auto omap       = unordered_map<string, vector<yocto_instance>>{};
     auto cur_object = ""s;
+    
+    auto last_film_aspect = -1.0f;
 
     auto get_material = [&](const pbrt_context& ctx) {
         auto lookup_name = ctx.material;
@@ -3668,20 +3670,22 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         camera.frame = inverse((frame3f)ctx.frame);
         if (std::holds_alternative<pbrt_camera_perspective>(pcamera)) {
             auto& perspective = std::get<pbrt_camera_perspective>(pcamera);
+            auto aspect = perspective.frameaspectratio;
+            if(aspect < 0) aspect = last_film_aspect;
+            if(aspect < 0) aspect = 1;
             set_camera_perspectivey(camera, radians(perspective.fov),
-                perspective.frameaspectratio, perspective.focaldistance);
+                aspect, perspective.focaldistance);
         } else {
             throw sceneio_error("unsupported pbrt type");
         }
-        scene.cameras.push_back(camera);
+        // scene.cameras.push_back(camera);
     };
     cb.film = [&](const pbrt_film& pfilm, const pbrt_context& ctx) {
         if (std::holds_alternative<pbrt_film_image>(pfilm)) {
             auto& perspective = std::get<pbrt_film_image>(pfilm);
+            last_film_aspect = (float)perspective.xresolution / (float)perspective.yresolution;
             for (auto& camera : scene.cameras) {
-                camera.film_width = camera.film_height *
-                                    (float)perspective.xresolution /
-                                    (float)(perspective.yresolution);
+                camera.film_width = camera.film_height * last_film_aspect;
             }
         } else {
             throw sceneio_error("unsupported pbrt type");
@@ -3951,8 +3955,25 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
     };
 
-    load_pbrt(filename, cb);
-}  // namespace yocto
+    try {
+        // Parse pbrt
+        auto pbrt_options          = load_pbrt_options();
+        load_pbrt(filename, cb, pbrt_options);
+        
+        // load textures
+        auto dirname = get_dirname(filename);
+        load_scene_textures(scene, dirname, options);
+    } catch (const std::exception& e) {
+        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
+    }
+    
+    // fix scene
+    scene.name = get_filename(filename);
+    add_missing_cameras(scene);
+    add_missing_materials(scene);
+    add_missing_names(scene);
+    update_transforms(scene);
+}
 
 // Convert a scene to pbrt format
 void save_pbrt(const string& filename, const yocto_scene& scene) {
