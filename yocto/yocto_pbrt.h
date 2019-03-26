@@ -644,7 +644,8 @@ using pbrt_light =
 // pbrt area lights
 struct pbrt_arealight_none {};
 struct pbrt_arealight_diffuse {
-    pbrt_textured<spectrum3f> L        = {1, 1, 1};
+    spectrum3f scale          = {1, 1, 1};
+    spectrum3f L        = {1, 1, 1};
     bool                      twosided = false;
     int                       samples  = 1;
 };
@@ -680,8 +681,8 @@ struct pbrt_mediuminterface {
 };
 
 // pbrt insstance
-struct pbrt_instance {
-    string object = "";
+struct pbrt_object {
+    string name = "";
 };
 
 // pbrt stack ctm
@@ -708,9 +709,9 @@ struct pbrt_callbacks {
     function<void(const pbrt_shape& value, const pbrt_context& ctx)> shape = {};
     function<void(const pbrt_light& value, const pbrt_context& ctx)> light = {};
     function<void(const pbrt_arealight& value, const string& name, const pbrt_context& ctx)> arealight = {};
-    function<void(const pbrt_instance& value, const pbrt_context& ctx)> instance = {};
-    function<void(const pbrt_instance& value, const pbrt_context& ctx)> begin_instance = {};
-    function<void(const pbrt_instance& value, const pbrt_context& ctx)> end_instance = {};
+    function<void(const pbrt_object& value, const pbrt_context& ctx)> object_instance = {};
+    function<void(const pbrt_object& value, const pbrt_context& ctx)> begin_object = {};
+    function<void(const pbrt_object& value, const pbrt_context& ctx)> end_object = {};
 };
 // clang-format on
 

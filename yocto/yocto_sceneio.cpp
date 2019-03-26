@@ -3636,13 +3636,16 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     auto amap  = unordered_map<string, vec3f>{};
     auto ammap = unordered_map<string, int>{};
     auto tmap  = unordered_map<string, int>{};
+    auto omap  = unordered_map<string, vector<yocto_instance>>{};
+    auto cur_object = ""s;
 
     auto get_material = [&](const pbrt_context& ctx) {
-        auto lookup_name = ctx.material + "_______" + ctx.arealight;
+        auto lookup_name = ctx.material;
+        if(!ctx.arealight.empty()) lookup_name += "_______" + ctx.arealight;
         if (ammap.find(lookup_name) != ammap.end())
             return ammap.at(lookup_name);
         auto material     = mmap.at(ctx.material);
-        material.emission = amap.at(ctx.arealight);
+        if(!ctx.arealight.empty()) material.emission = amap.at(ctx.arealight);
         scene.materials.push_back(material);
         ammap[lookup_name] = (int)scene.materials.size() - 1;
         return (int)scene.materials.size() - 1;
@@ -3701,7 +3704,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             auto& mesh     = std::get<pbrt_shape_plymesh>(pshape);
             shape.filename = mesh.filename;
             if (!options.skip_meshes) {
-                load_ply_mesh(mesh.filename, shape.points, shape.lines,
+                load_ply_mesh(get_dirname(filename) + mesh.filename, shape.points, shape.lines,
                     shape.triangles, shape.quads, shape.positions,
                     shape.normals, shape.texturecoords, shape.colors,
                     shape.radius, false);
@@ -3722,6 +3725,22 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         instance.frame = (frame3f)ctx.frame;
         instance.shape = (int)scene.shapes.size() - 1;
         scene.instances.push_back(instance);
+    };
+    cb.texture = [&](const pbrt_texture& ptexture, const string& name,
+                      const pbrt_context& ctx) {
+        auto texture = yocto_texture{};
+        texture.name = name;
+        if (std::holds_alternative<pbrt_texture_imagemap>(ptexture)) {
+            auto& imagemap = std::get<pbrt_texture_imagemap>(ptexture);
+            texture.filename = imagemap.filename;
+        } else {
+            printf("texture not well supported");
+            texture.filename = "textures/" + texture.name + ".png";
+            texture.ldr_image.resize({1,1});
+            texture.ldr_image[{0,0}] = {1,0,0,1};
+        }
+        scene.textures.push_back(texture);
+        tmap[name] = (int)scene.textures.size()-1;
     };
     cb.material = [&](const pbrt_material& pmaterial, const string& name,
                       const pbrt_context& ctx) {
@@ -3815,6 +3834,16 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
         mmap[name] = material;
     };
+    cb.arealight = [&](const pbrt_arealight& plight, const string& name, const pbrt_context& ctx) {
+        auto emission = zero3f;
+        if (std::holds_alternative<pbrt_arealight_diffuse>(plight)) {
+            auto& diffuse        = std::get<pbrt_arealight_diffuse>(plight);
+            emission = (vec3f)diffuse.L * (vec3f)diffuse.scale;
+        } else {
+            throw sceneio_error("area light type not supported");
+        }
+        amap[name] = emission;
+    };
     cb.light = [&](const pbrt_light& plight, const pbrt_context& ctx) {
         static auto light_id = 0;
         auto name = "light_" + std::to_string(light_id++);
@@ -3901,6 +3930,22 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             scene.instances.push_back(instance);
         } else {
             throw sceneio_error("light type not supported");
+        }
+    };
+    cb.begin_object = [&](const pbrt_object& pobject, const pbrt_context& ctx) {
+        cur_object = pobject.name;
+        omap[cur_object] = {};
+    };
+    cb.end_object = [&](const pbrt_object& pobject, const pbrt_context& ctx) {
+        cur_object = "";
+    };
+    cb.object_instance = [&](const pbrt_object& pobject, const pbrt_context& ctx) {
+        auto& pinstances = omap.at(pobject.name);
+        for (auto& pinstance : pinstances) {
+            auto instance = yocto_instance();
+            instance.frame = (frame3f)ctx.frame * pinstance.frame;
+            instance.shape = pinstance.shape;
+            scene.instances.push_back(instance);
         }
     };
 
