@@ -3635,7 +3635,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     auto mmap  = unordered_map<string, yocto_material>{};
     auto amap  = unordered_map<string, vec3f>{};
     auto ammap = unordered_map<string, int>{};
-    auto tmap = unordered_map<string, int>{};
+    auto tmap  = unordered_map<string, int>{};
 
     auto get_material = [&](const pbrt_context& ctx) {
         auto lookup_name = ctx.material + "_______" + ctx.arealight;
@@ -3648,13 +3648,13 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         return (int)scene.materials.size() - 1;
     };
 
-    auto get_scaled_texture3f = [&](const pbrt_textured<spectrum3f>& textured, 
-        vec3f& value, int& texture) {
-        if(textured.texture == "") {
-            value = {textured.value.x, textured.value.y, textured.value.z};
+    auto get_scaled_texture3f = [&](const pbrt_textured<spectrum3f>& textured,
+                                    vec3f& value, int& texture) {
+        if (textured.texture == "") {
+            value   = {textured.value.x, textured.value.y, textured.value.z};
             texture = -1;
         } else {
-            value = {1,1,1};
+            value   = {1, 1, 1};
             texture = tmap.at(textured.texture);
         }
     };
@@ -3728,78 +3728,179 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         auto material = yocto_material{};
         material.name = name;
         if (std::holds_alternative<pbrt_material_uber>(pmaterial)) {
-            auto& uber = std::get<pbrt_material_uber>(pmaterial);            
+            auto& uber = std::get<pbrt_material_uber>(pmaterial);
             get_scaled_texture3f(
-                    uber.Kd, material.diffuse, material.diffuse_texture);
-            get_scaled_texture3f(uber.Ks, material.specular,
-                material.specular_texture);
-            get_scaled_texture3f(uber.Kt, material.transmission,
-                material.transmission_texture);
+                uber.Kd, material.diffuse, material.diffuse_texture);
+            get_scaled_texture3f(
+                uber.Ks, material.specular, material.specular_texture);
+            get_scaled_texture3f(
+                uber.Kt, material.transmission, material.transmission_texture);
             auto op     = vec3f{0, 0, 0};
             auto op_txt = -1;
             get_scaled_texture3f(uber.opacity, op, op_txt);
             material.opacity = (op.x + op.y + op.z) / 3;
-            material.roughness = (uber.uroughness.value + uber.vroughness.value) / 2;
+            material.roughness =
+                (uber.uroughness.value + uber.vroughness.value) / 2;
             if (uber.remaproughness) printf("remap roughness not supported\n");
         } else if (std::holds_alternative<pbrt_material_plastic>(pmaterial)) {
             auto& plastic = std::get<pbrt_material_plastic>(pmaterial);
             get_scaled_texture3f(
-                    plastic.Kd, material.diffuse, material.diffuse_texture);
-            get_scaled_texture3f(plastic.Ks, material.specular,
-                material.specular_texture);
-            material.roughness = (plastic.uroughness.value + plastic.vroughness.value) / 2;
-            if (plastic.remaproughness) printf("remap roughness not supported\n");
-        } else if (std::holds_alternative<pbrt_material_translucent>(pmaterial)) {
+                plastic.Kd, material.diffuse, material.diffuse_texture);
+            get_scaled_texture3f(
+                plastic.Ks, material.specular, material.specular_texture);
+            material.roughness =
+                (plastic.uroughness.value + plastic.vroughness.value) / 2;
+            if (plastic.remaproughness)
+                printf("remap roughness not supported\n");
+        } else if (std::holds_alternative<pbrt_material_translucent>(
+                       pmaterial)) {
             auto& translucent = std::get<pbrt_material_translucent>(pmaterial);
             get_scaled_texture3f(
-                    translucent.Kd, material.diffuse, material.diffuse_texture);
-            get_scaled_texture3f(translucent.Ks, material.specular,
-                material.specular_texture);
-            material.roughness = (translucent.uroughness.value + translucent.vroughness.value) / 2;
-            if (translucent.remaproughness) printf("remap roughness not supported\n");
-        } else if (std::holds_alternative<pbrt_material_matte>(pmaterial)) {
-            auto& matte        = std::get<pbrt_material_matte>(pmaterial);
+                translucent.Kd, material.diffuse, material.diffuse_texture);
             get_scaled_texture3f(
-                    matte.Kd, material.diffuse, material.diffuse_texture);
+                translucent.Ks, material.specular, material.specular_texture);
+            material.roughness =
+                (translucent.uroughness.value + translucent.vroughness.value) /
+                2;
+            if (translucent.remaproughness)
+                printf("remap roughness not supported\n");
+        } else if (std::holds_alternative<pbrt_material_matte>(pmaterial)) {
+            auto& matte = std::get<pbrt_material_matte>(pmaterial);
+            get_scaled_texture3f(
+                matte.Kd, material.diffuse, material.diffuse_texture);
             material.roughness = 1;
         } else if (std::holds_alternative<pbrt_material_mirror>(pmaterial)) {
-            // auto& mirror          = std::get<pbrt_material_mirror>(pmaterial);
+            // auto& mirror          =
+            // std::get<pbrt_material_mirror>(pmaterial);
             material.diffuse   = {0, 0, 0};
             material.specular  = {1, 1, 1};
             material.roughness = 0;
         } else if (std::holds_alternative<pbrt_material_metal>(pmaterial)) {
-            auto& metal         = std::get<pbrt_material_metal>(pmaterial);
-            auto eta = zero3f, k = zero3f;
-            auto eta_texture = -1, k_texture = -1;
+            auto& metal = std::get<pbrt_material_metal>(pmaterial);
+            auto  eta = zero3f, k = zero3f;
+            auto  eta_texture = -1, k_texture = -1;
             get_scaled_texture3f(metal.eta, eta, eta_texture);
             get_scaled_texture3f(metal.k, k, k_texture);
-            material.specular  = pbrt_fresnel_metal(1, eta, k);
-            material.roughness = (metal.uroughness.value + metal.vroughness.value) / 2;
+            material.specular = pbrt_fresnel_metal(1, eta, k);
+            material.roughness =
+                (metal.uroughness.value + metal.vroughness.value) / 2;
             if (metal.remaproughness) printf("remap roughness not supported\n");
         } else if (std::holds_alternative<pbrt_material_substrate>(pmaterial)) {
             auto& substrate = std::get<pbrt_material_substrate>(pmaterial);
             get_scaled_texture3f(
-                    substrate.Kd, material.diffuse, material.diffuse_texture);
-            get_scaled_texture3f(substrate.Ks, material.specular,
-                material.specular_texture);
-            material.roughness = (substrate.uroughness.value + substrate.vroughness.value) / 2;
-            if (substrate.remaproughness) printf("remap roughness not supported\n");
+                substrate.Kd, material.diffuse, material.diffuse_texture);
+            get_scaled_texture3f(
+                substrate.Ks, material.specular, material.specular_texture);
+            material.roughness =
+                (substrate.uroughness.value + substrate.vroughness.value) / 2;
+            if (substrate.remaproughness)
+                printf("remap roughness not supported\n");
         } else if (std::holds_alternative<pbrt_material_glass>(pmaterial)) {
-            auto& glass             = std::get<pbrt_material_glass>(pmaterial);
+            auto& glass           = std::get<pbrt_material_glass>(pmaterial);
             material.specular     = {0.04f, 0.04f, 0.04f};
             material.transmission = {1, 1, 1};
-            get_scaled_texture3f(glass.Kr, material.specular,
-                material.specular_texture);
-            get_scaled_texture3f(glass.Kt, material.transmission,
-                material.transmission_texture);
+            get_scaled_texture3f(
+                glass.Kr, material.specular, material.specular_texture);
+            get_scaled_texture3f(
+                glass.Kt, material.transmission, material.transmission_texture);
             material.roughness = 0;
         } else if (std::holds_alternative<pbrt_material_mix>(pmaterial)) {
-            auto& mix      = std::get<pbrt_material_mix>(pmaterial);
-            auto matname = (!mix.namedmaterial1.empty()) ? mix.namedmaterial1 : mix.namedmaterial2;
+            auto& mix     = std::get<pbrt_material_mix>(pmaterial);
+            auto  matname = (!mix.namedmaterial1.empty()) ? mix.namedmaterial1
+                                                         : mix.namedmaterial2;
             material = mmap.at(matname);
             printf("mix material not properly supported\n");
         } else {
             throw sceneio_error("material type not supported");
+        }
+        mmap[name] = material;
+    };
+    cb.light = [&](const pbrt_light& plight, const pbrt_context& ctx) {
+        static auto light_id = 0;
+        auto name = "light_" + std::to_string(light_id++);
+        if (std::holds_alternative<pbrt_light_infinite>(plight)) {
+            auto& infinite        = std::get<pbrt_light_infinite>(plight);
+            auto  environment = yocto_environment();
+            environment.name  = name;
+            // environment.frame =
+            // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
+            // * stack.back().frame;
+            environment.frame    = (frame3f)ctx.frame * frame3f{{1, 0, 0},
+                                                         {0, 0, 1}, {0, 1, 0},
+                                                         {0, 0, 0}};
+            environment.emission = (vec3f)infinite.scale;
+            if(infinite.mapname != "") {
+                auto texture     = yocto_texture{};
+                texture.filename = infinite.mapname;
+                texture.name     = environment.name;
+                scene.textures.push_back(texture);
+                environment.emission_texture = (int)scene.textures.size() - 1;
+            }
+            scene.environments.push_back(environment);
+        } else if (std::holds_alternative<pbrt_light_distant>(plight)) {
+            auto& distant         = std::get<pbrt_light_distant>(plight);
+            auto  distant_dist = 100;
+            scene.shapes.push_back({});
+            auto& shape = scene.shapes.back();
+            shape.name  = name;
+            auto dir  = normalize(distant.from - distant.to);
+            auto size = distant_dist * sin(5 * pif / 180);
+            make_quad_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, {1, 1}, {size, size}, {1, 1});
+            scene.materials.push_back({});
+            auto& material    = scene.materials.back();
+            shape.material    = scene.materials.size() - 1;
+            material.name     = shape.name;
+            material.emission = (vec3f)distant.L * (vec3f)distant.scale;
+            material.emission *= (distant_dist * distant_dist) / (size * size);
+            auto instance  = yocto_instance();
+            instance.name  = shape.name;
+            instance.shape = (int)scene.shapes.size() - 1;
+            instance.frame = (frame3f)ctx.frame *
+                             make_lookat_frame(
+                                 dir * distant_dist, zero3f, {0, 1, 0}, true);
+            scene.instances.push_back(instance);
+        } else if (std::holds_alternative<pbrt_light_point>(plight)) {
+            auto& point         = std::get<pbrt_light_point>(plight);
+            scene.shapes.push_back({});
+            auto& shape = scene.shapes.back();
+            shape.name  = name;
+            auto size = 0.01f;
+            make_sphere_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, 4, size, 1);
+            scene.materials.push_back({});
+            auto& material    = scene.materials.back();
+            shape.material    = scene.materials.size() - 1;
+            material.name     = shape.name;
+            material.emission = (vec3f)point.I * (vec3f)point.scale;
+            // TODO: fix emission
+            auto instance  = yocto_instance();
+            instance.name  = shape.name;
+            instance.shape = (int)scene.shapes.size() - 1;
+            instance.frame = (frame3f)ctx.frame *
+                             make_translation_frame(point.from);
+            scene.instances.push_back(instance);
+        } else if (std::holds_alternative<pbrt_light_goniometric>(plight)) {
+            auto& goniometric         = std::get<pbrt_light_goniometric>(plight);
+            scene.shapes.push_back({});
+            auto& shape = scene.shapes.back();
+            shape.name  = name;
+            auto size = 0.01f;
+            make_sphere_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, 4, size, 1);
+            scene.materials.push_back({});
+            auto& material    = scene.materials.back();
+            shape.material    = scene.materials.size() - 1;
+            material.name     = shape.name;
+            material.emission = (vec3f)goniometric.I * (vec3f)goniometric.scale;
+            // TODO: fix emission
+            auto instance  = yocto_instance();
+            instance.name  = shape.name;
+            instance.shape = (int)scene.shapes.size() - 1;
+            instance.frame = (frame3f)ctx.frame;
+            scene.instances.push_back(instance);
+        } else {
+            throw sceneio_error("light type not supported");
         }
     };
 

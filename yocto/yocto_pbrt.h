@@ -86,6 +86,7 @@ struct spectrum<T, 3> {
     constexpr spectrum() : x{0}, y{0}, z{0} {}
     constexpr spectrum(T x, T y, T z) : x{x}, y{y}, z{z} {}
     constexpr explicit spectrum(T v) : x{v}, y{v}, z{v} {}
+    constexpr explicit operator vec<T, 3>() const { return {x, y, z}; };
 
     constexpr T&       operator[](int i) { return elems[i]; }
     constexpr const T& operator[](int i) const { return elems[i]; }
