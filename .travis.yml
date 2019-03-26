@@ -14,10 +14,10 @@ matrix:
   #   env:
   #     - CMAKE_OPTIONS="-DYOCTO_EMBREE=OFF"
 
-  - os: osx
-    osx_image: xcode10
-    env:
-      - CMAKE_OPTIONS="-DYOCTO_EMBREE=OFF"
+  # - os: osx
+  #   osx_image: xcode10
+  #   env:
+  #     - CMAKE_OPTIONS="-DYOCTO_EMBREE=OFF"
 
   - os: linux
     compiler: gcc
