@@ -423,7 +423,7 @@ static inline void skip_value(pbrt_token_stream& stream) {
         str.remove_prefix(1);
         str.remove_prefix(str.find('"')+1);
     } else {
-        str.remove_prefix(str.find_first_of(" \n\t\r"));
+        str.remove_prefix(str.find_first_of(" \n\t\r]\""));
     }
     skip_whitespace_or_comment(stream);
 }
