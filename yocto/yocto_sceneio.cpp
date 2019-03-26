@@ -4569,7 +4569,12 @@ void load_ply_mesh(const string& filename, vector<int>& points,
             auto& elements = ply.getElement("face");
             if (!elements.hasProperty("vertex_indices"))
                 throw sceneio_error("bad ply faces");
-            auto indices = elements.getListProperty<int>("vertex_indices");
+            auto indices = vector<vector<int>>{};
+            try {
+                indices = elements.getListProperty<int>("vertex_indices");
+            } catch(...) {
+                (vector<vector<unsigned int>>&)indices = elements.getListProperty<unsigned int>("vertex_indices");
+            }
             for (auto& face : indices) {
                 if (face.size() == 4) {
                     quads.push_back({face[0], face[1], face[2], face[3]});
@@ -4585,7 +4590,12 @@ void load_ply_mesh(const string& filename, vector<int>& points,
             auto& elements = ply.getElement("line");
             if (!elements.hasProperty("vertex_indices"))
                 throw sceneio_error("bad ply lines");
-            auto indices = elements.getListProperty<int>("vertex_indices");
+            auto indices = vector<vector<int>>{};
+            try {
+                indices = elements.getListProperty<int>("vertex_indices");
+            } catch(...) {
+                (vector<vector<unsigned int>>&)indices = elements.getListProperty<unsigned int>("vertex_indices");
+            }
             for (auto& line : indices) {
                 for (auto i = 1; i < line.size(); i++)
                     lines.push_back({line[i], line[i - 1]});
