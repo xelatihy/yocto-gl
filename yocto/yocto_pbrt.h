@@ -551,7 +551,7 @@ struct pbrt_shape_curve {
 };
 struct pbrt_shape_loopsubdiv {
     int           levels  = 3;
-    vector<int>   indices = {};
+    vector<vec3i>   indices = {};
     vector<vec3f> P       = {};
 };
 struct pbrt_shape_nurbs {

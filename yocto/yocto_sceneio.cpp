@@ -3714,8 +3714,11 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             shape.normals       = mesh.N;
             shape.texturecoords = mesh.uv;
             for (auto& uv : shape.texturecoords) uv.y = (1 - uv.y);
-            // TODO: flip texture coordinates
             shape.triangles = mesh.indices;
+        } else if (std::holds_alternative<pbrt_shape_loopsubdiv>(pshape)) {
+                auto& mesh          = std::get<pbrt_shape_loopsubdiv>(pshape);
+                shape.positions     = mesh.P;
+                shape.triangles     = mesh.indices;
         } else if (std::holds_alternative<pbrt_shape_plymesh>(pshape)) {
             auto& mesh     = std::get<pbrt_shape_plymesh>(pshape);
             shape.filename = mesh.filename;
@@ -3734,7 +3737,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             make_uvdisk_shape(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, {32, 16}, 2 * disk.radius, {1, 1});
         } else {
-            throw sceneio_error("unsupported pbrt type");
+            throw sceneio_error("unsupported shape type " + std::to_string(pshape.index()));
         }
         scene.shapes.push_back(shape);
         auto instance  = yocto_instance{};

@@ -1723,6 +1723,8 @@ static void parse_pbrt_shape(
                 parse_param(stream, ptype, tvalue.P);
             } else if (pname == "levels") {
                 parse_param(stream, ptype, tvalue.levels);
+            } else if (pname == "nlevels") {
+                parse_param(stream, ptype, tvalue.levels);
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
