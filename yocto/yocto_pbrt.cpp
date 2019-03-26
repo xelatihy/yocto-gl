@@ -1655,6 +1655,8 @@ static void parse_pbrt_shape(
                 parse_param(stream, ptype, tvalue.S);
             } else if (pname == "uv") {
                 parse_param(stream, ptype, tvalue.uv);
+            } else if (pname == "st") {
+                parse_param(stream, ptype, tvalue.uv);
             } else if (pname == "alpha") {
                 parse_param(stream, ptype, tvalue.alpha);
             } else if (pname == "shadowalpha") {
