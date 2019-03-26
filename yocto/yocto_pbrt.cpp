@@ -392,8 +392,15 @@ static inline void parse_param(
         auto blackbody = zero2f;
         parse_param(stream, blackbody);
         (vec3f&)value = blackbody_to_rgb(blackbody.x) * blackbody.y;
-    } else if (type == "spectrum") {
+    } else if (type == "spectrum" && is_string(stream)) {
         printf("spectrum  not well supported\n");
+        auto filename = ""s;
+        parse_param(stream, filename);
+        value = {1, 0, 0};
+    } else if (type == "spectrum" && !is_string(stream)) {
+        printf("spectrum  not well supported\n");
+        auto values = vector<float>{};
+        parse_param(stream, values);
         value = {1, 0, 0};
     } else {
         throw pbrtio_error("unsupported spectrum type");
@@ -415,7 +422,7 @@ static inline void parse_param(
     if (type == "texture") {
         parse_param(stream, value.texture);
     } else {
-        parse_param(stream, value.value);
+        parse_param(stream, type, value.value);
     }
 }
 
