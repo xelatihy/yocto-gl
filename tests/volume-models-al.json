@@ -43,36 +43,7 @@
             "diffuse_texture": "floor"
         },
         {
-            "name": "jade",
-            "diffuse": [
-                0,
-                0,
-                0
-            ],
-            "specular": [
-                0.04,
-                0.04,
-                0.04
-            ],
-            "transmission": [
-                1,
-                1,
-                1
-            ],
-            "roughness": 0.0,
-            "volume_density": [
-                8,
-                8,
-                8
-            ],
-            "volume_albedo": [
-                0.5,
-                0.7,
-                0.5
-            ]
-        },
-        {
-            "name": "glass",
+            "name": "obj1",
             "diffuse": [
                 0,
                 0,
@@ -102,7 +73,36 @@
             ]
         },
         {
-            "name": "cloud",
+            "name": "obj2",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "transmission": [
+                1,
+                1,
+                1
+            ],
+            "roughness": 0.0,
+            "volume_density": [
+                8,
+                8,
+                8
+            ],
+            "volume_albedo": [
+                0.5,
+                0.7,
+                0.5
+            ]
+        },
+        {
+            "name": "obj3",
             "diffuse": [
                 0,
                 0,
@@ -156,7 +156,7 @@
             }
         },
         {
-            "name": "cube",
+            "name": "obj1",
             "filename": "models/obj1.obj",
             "subdivision_level": 4,
             "catmull_clark": true,
@@ -166,19 +166,19 @@
             }
         },
         {
-            "name": "monkey",
-            "filename": "models/obj2.ply",
+            "name": "obj2",
+            "filename": "models/stanford-bunny.obj",
+            "material": "jade"
+        },
+        {
+            "name": "obj3",
+            "filename": "models/obj3.ply",
             "subdivision_level": 2,
             "catmull_clark": true,
             "compute_normals": true,
             "!!proc": {
                 "type": "suzanne"
             }
-        },
-        {
-            "name": "bunny",
-            "filename": "models/stanford-bunny.obj",
-            "material": "jade"
         },
         {
             "name": "light1",
@@ -208,9 +208,9 @@
             "material": "floor"
         },
         {
-            "name": "cube",
-            "shape": "cube",
-            "material": "cube",
+            "name": "obj1",
+            "shape": "obj1",
+            "material": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -220,25 +220,25 @@
             }
         },
         {
-            "name": "monkey",
-            "shape": "monkey",
-            "material": "monkey",
+            "name": "obj2",
+            "shape": "obj2",
+            "material": "obj2",
             "!!proc": {
                 "translation": [
-                    2.5,
-                    1,
+                    0,
+                    0,
                     0
                 ]
             }
         },
         {
-            "name": "bunny",
-            "shape": "bunny",
-            "material": "bunny",
+            "name": "obj3",
+            "shape": "obj3",
+            "material": "obj3",
             "!!proc": {
                 "translation": [
-                    0,
-                    0,
+                    2.5,
+                    1,
                     0
                 ]
             }
