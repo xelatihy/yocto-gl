@@ -1267,7 +1267,7 @@ vec3f sample_next_direction(const yocto_scene& scene,
             point.brdf, point.normal, outgoing, next_direction);
     }
 
-    if (next_direction_pdf == 0 or next_brdf_cosine == zero3f)
+    if (next_direction_pdf == 0 || next_brdf_cosine == zero3f)
         weight = zero3f;
     else
         weight *= next_brdf_cosine / next_direction_pdf;
@@ -2076,7 +2076,7 @@ void trace_image_region(image4f& image, trace_state& state,
                     pixel.rng, options.max_bounces,
                     options.environments_hidden);
                 if (!isfinite(radiance)) {
-                    printf("NaN detected\n");
+                    // printf("NaN detected\n");
                     radiance = zero3f;
                 }
                 if (max(radiance) > options.pixel_clamp)

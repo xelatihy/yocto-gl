@@ -194,9 +194,9 @@ void load_obj(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options = {});
 
 // objio error
-struct obj_error : runtime_error {
-    explicit obj_error(const char* msg) : runtime_error{msg} {}
-    explicit obj_error(const std::string& msg) : runtime_error{msg} {}
+struct objio_error : runtime_error {
+    explicit objio_error(const char* msg) : runtime_error{msg} {}
+    explicit objio_error(const std::string& msg) : runtime_error{msg} {}
 };
 
 }  // namespace yocto

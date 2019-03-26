@@ -77,6 +77,7 @@ See each header file for documentation.
    command line parsing
 - `yocto/yocto_json.{h}`: utilities for reading and writing json files
 - `yocto/yocto_obj.{h,cpp}`: OBJ parser based on callbacks (SAX-like)
+- `yocto/yocto_pbrt.{h,cpp}`: pbrt parser based on callbacks (SAX-like)
 - `yocto/yocto_imageio.{h,cpp}`: image loading and saving
 - `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving
 

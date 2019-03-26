@@ -67,7 +67,7 @@ inline void normalize_obj_line(char* str, char comment_char = '#') {
 inline void parse_value(char*& str, int& value) {
     char* end = nullptr;
     value     = (int)strtol(str, &end, 10);
-    if (str == end) throw obj_error("cannot parse value");
+    if (str == end) throw objio_error("cannot parse value");
     str = end;
 }
 inline void parse_value(char*& str, bool& value) {
@@ -78,14 +78,14 @@ inline void parse_value(char*& str, bool& value) {
 inline void parse_value(char*& str, float& value) {
     char* end = nullptr;
     value     = strtof(str, &end);
-    if (str == end) throw obj_error("cannot parse value");
+    if (str == end) throw objio_error("cannot parse value");
     str = end;
 }
 inline void parse_value(char*& str, string& value, bool ok_if_empty = false) {
     value = "";
     while (*str == ' ') str++;
     if (!*str && !ok_if_empty) {
-        throw obj_error("cannot parse value");
+        throw objio_error("cannot parse value");
     }
     while (*str && *str != ' ') {
         value += *str;
@@ -140,7 +140,7 @@ inline void parse_value(char*& str, obj_texture_info& info) {
         tokens.push_back(token);
         while (*str == ' ') str++;
     }
-    if (tokens.empty()) throw obj_error("cannot parse value");
+    if (tokens.empty()) throw objio_error("cannot parse value");
 
     // texture name
     info.path = normalize_path(tokens.back());
@@ -158,7 +158,7 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw obj_error("cannot load mtl " + filename);
+    if (!fs) throw objio_error("cannot load mtl " + filename);
     auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
         fs, [](FILE* f) { fclose(f); }};
 
@@ -255,7 +255,7 @@ void load_objx(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw obj_error("cannot load objx " + filename);
+    if (!fs) throw objio_error("cannot load objx " + filename);
     auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
         fs, [](FILE* f) { fclose(f); }};
 
@@ -312,7 +312,7 @@ void load_obj(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw obj_error("cannot load obj " + filename);
+    if (!fs) throw objio_error("cannot load obj " + filename);
     auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
         fs, [](FILE* f) { fclose(f); }};
 
