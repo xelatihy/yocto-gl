@@ -480,7 +480,7 @@ struct pbrt_material_hair {
 };
 struct pbrt_material_kdsubsurface {
     pbrt_textured<spectrum3f> Kd             = {0, 0, 0};
-    pbrt_textured<float>      mfp            = 1;
+    pbrt_textured<spectrum3f>      mfp       = {1,1,1};
     pbrt_textured<float>      eta            = 1;
     pbrt_textured<spectrum3f> Kr             = {1, 1, 1};
     pbrt_textured<spectrum3f> Kt             = {1, 1, 1};

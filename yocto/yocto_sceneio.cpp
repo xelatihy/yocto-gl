@@ -3925,12 +3925,26 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             auto& hair           = std::get<pbrt_material_hair>(pmaterial);
             get_scaled_texture3f(hair.color, material.diffuse, material.diffuse_texture);
             material.roughness = 1;
-            if(verbose) printf("mix material not properly supported\n");
+            if(verbose) printf("hair material not properly supported\n");
         } else if (std::holds_alternative<pbrt_material_disney>(pmaterial)) {
             auto& disney           = std::get<pbrt_material_disney>(pmaterial);
             get_scaled_texture3f(disney.color, material.diffuse, material.diffuse_texture);
             material.roughness = 1;
-            if(verbose) printf("mix material not properly supported\n");
+            if(verbose) printf("disney material not properly supported\n");
+        } else if (std::holds_alternative<pbrt_material_kdsubsurface>(pmaterial)) {
+            auto& kdsubdurface           = std::get<pbrt_material_kdsubsurface>(pmaterial);
+            get_scaled_texture3f(kdsubdurface.Kd, material.diffuse, material.diffuse_texture);
+            get_scaled_texture3f(kdsubdurface.Kr, material.specular, material.specular_texture);
+            material.roughness =
+            (kdsubdurface.uroughness.value + kdsubdurface.vroughness.value) / 2;
+            if (kdsubdurface.remaproughness)
+                material.roughness = pbrt_remap_roughness(material.roughness);
+            if(verbose) printf("kdsubsurface material not properly supported\n");
+        } else if (std::holds_alternative<pbrt_material_subsurface>(pmaterial)) {
+            // auto& subdurface           = std::get<pbrt_material_subsurface>(pmaterial);
+            material.diffuse = {1,0,0};
+            material.roughness = 1;
+            if(verbose) printf("subsurface material not properly supported\n");
         } else if (std::holds_alternative<pbrt_material_mix>(pmaterial)) {
             auto& mix     = std::get<pbrt_material_mix>(pmaterial);
             auto  matname = (!mix.namedmaterial1.empty()) ? mix.namedmaterial1

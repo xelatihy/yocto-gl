@@ -1674,6 +1674,10 @@ static void parse_pbrt_shape(
                 parse_param(stream, ptype, tvalue.alpha);
             } else if (pname == "shadowalpha") {
                 parse_param(stream, ptype, tvalue.shadowalpha);
+            } else if (pname == "discarddegenerateUVs") {
+                // hack for some files
+                auto value = false;
+                parse_param(stream, ptype, value);
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
