@@ -58,7 +58,8 @@ struct pbrt_token_stream {
 static inline void skip_whitespace_or_comment(pbrt_token_stream& stream) {
     auto& str = stream.str;
     if (str.empty()) return;
-    while (!str.empty() && (std::isspace(str.front()) || str.front() == '#' || str.front() == ',')) {
+    while (!str.empty() && (std::isspace(str.front()) || str.front() == '#' ||
+                               str.front() == ',')) {
         if (str.front() == '#') {
             auto pos = str.find('\n');
             if (pos != string_view::npos) {
@@ -421,19 +422,19 @@ static inline void parse_param(
 static inline void skip_value(pbrt_token_stream& stream) {
     skip_whitespace_or_comment(stream);
     auto& str = stream.str;
-    if(str.front() == '"') {
+    if (str.front() == '"') {
         str.remove_prefix(1);
-        str.remove_prefix(str.find('"')+1);
+        str.remove_prefix(str.find('"') + 1);
     } else {
         str.remove_prefix(str.find_first_of(" \n\t\r],\""));
     }
     skip_whitespace_or_comment(stream);
 }
-    
+
 static inline void skip_param(pbrt_token_stream& stream) {
     if (is_open_bracket(stream)) {
         skip_open_bracket(stream);
-        while(!is_close_bracket(stream)) skip_value(stream);
+        while (!is_close_bracket(stream)) skip_value(stream);
         skip_close_bracket(stream);
     } else {
         skip_value(stream);
@@ -446,7 +447,7 @@ static inline void save_stream_position(pbrt_token_stream& stream) {
 static inline void restore_stream_position(pbrt_token_stream& stream) {
     stream.str = stream.saved;
 }
-    
+
 // Load a token stream
 static inline void load_token_stream(
     const string& filename, pbrt_token_stream& stream) {
@@ -1206,11 +1207,12 @@ static void parse_pbrt_texture(
         throw pbrtio_error("unknown Texture " + type);
     }
 }
-    
+
 // Get typename
-static void get_pbrt_typeparam(vector<pbrt_token_stream>& streams, string& value) {
+static void get_pbrt_typeparam(
+    vector<pbrt_token_stream>& streams, string& value) {
     save_stream_position(streams);
-    value = "";
+    value      = "";
     auto pname = ""s, ptype = ""s;
     while (is_param(streams) && value == "") {
         parse_nametype(streams, pname, ptype);
@@ -1220,7 +1222,7 @@ static void get_pbrt_typeparam(vector<pbrt_token_stream>& streams, string& value
             skip_param(streams);
         }
     }
-    if(value == "") throw pbrtio_error("type not found");
+    if (value == "") throw pbrtio_error("type not found");
     restore_stream_position(streams);
 }
 
@@ -1247,7 +1249,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1264,7 +1266,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1294,7 +1296,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1326,7 +1328,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1360,7 +1362,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1394,7 +1396,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1434,7 +1436,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1488,7 +1490,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1521,7 +1523,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1559,7 +1561,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1580,7 +1582,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1597,7 +1599,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1629,7 +1631,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1671,7 +1673,7 @@ static void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(streams, ptype, ttype);
-                if(ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -2132,7 +2134,7 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
     load_token_stream(filename, streams);
 
     // parsing stack
-    auto stack = vector<pbrt_context>{{}};
+    auto stack  = vector<pbrt_context>{{}};
     auto object = pbrt_object{};
 
     // parse command by command
@@ -2155,14 +2157,14 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             stack.pop_back();
         } else if (cmd == "ObjectBegin") {
             parse_value(streams, object.name);
-            if(cb.begin_object) cb.begin_object(object, stack.back());
+            if (cb.begin_object) cb.begin_object(object, stack.back());
         } else if (cmd == "ObjectEnd") {
-            if(cb.end_object) cb.end_object(object, stack.back());
+            if (cb.end_object) cb.end_object(object, stack.back());
             object = {};
         } else if (cmd == "ObjectInstance") {
             auto value = pbrt_object{};
             parse_value(streams, value.name);
-            if(cb.object_instance) cb.object_instance(value, stack.back());
+            if (cb.object_instance) cb.object_instance(value, stack.back());
         } else if (cmd == "Transform") {
             auto xf = identity_mat4f;
             parse_param(streams, xf);
@@ -2182,7 +2184,7 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             stack.back().frame = stack.back().frame *
                                  (affine3f)make_translation_frame(v);
         } else if (cmd == "Rotate") {
-            auto v             = zero4f;
+            auto v = zero4f;
             parse_param(streams, v);
             stack.back().frame = stack.back().frame *
                                  (affine3f)(affine3f)make_rotation_frame(

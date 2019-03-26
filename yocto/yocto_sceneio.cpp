@@ -3632,8 +3632,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     scene = yocto_scene{};
 
-    auto mmap       = unordered_map<string, yocto_material>{ {"", {}} };
-    auto amap       = unordered_map<string, vec3f>{ {"", zero3f} };
+    auto mmap       = unordered_map<string, yocto_material>{{"", {}}};
+    auto amap       = unordered_map<string, vec3f>{{"", zero3f}};
     auto ammap      = unordered_map<string, int>{};
     auto tmap       = unordered_map<string, int>{};
     auto omap       = unordered_map<string, vector<yocto_instance>>{};
@@ -3645,7 +3645,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         auto lookup_name = ctx.material + "_______" + ctx.arealight;
         if (ammap.find(lookup_name) != ammap.end())
             return ammap.at(lookup_name);
-        auto material = mmap.at(ctx.material);
+        auto material     = mmap.at(ctx.material);
         material.emission = amap.at(ctx.arealight);
         scene.materials.push_back(material);
         ammap[lookup_name] = (int)scene.materials.size() - 1;
