@@ -2076,7 +2076,7 @@ void trace_image_region(image4f& image, trace_state& state,
                     pixel.rng, options.max_bounces,
                     options.environments_hidden);
                 if (!isfinite(radiance)) {
-                    printf("NaN detected\n");
+                    // printf("NaN detected\n");
                     radiance = zero3f;
                 }
                 if (max(radiance) > options.pixel_clamp)
