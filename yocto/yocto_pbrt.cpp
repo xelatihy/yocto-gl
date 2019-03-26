@@ -1936,6 +1936,8 @@ static void parse_pbrt_arealight(
                 parse_param(streams, ptype, tvalue.twosided);
             } else if (pname == "samples") {
                 parse_param(streams, ptype, tvalue.samples);
+            } else if (pname == "nsamples") {
+                parse_param(streams, ptype, tvalue.samples);
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1993,6 +1995,8 @@ static void parse_pbrt_light(
             } else if (pname == "L") {
                 parse_param(streams, ptype, tvalue.L);
             } else if (pname == "samples") {
+                parse_param(streams, ptype, tvalue.samples);
+            } else if (pname == "nsamples") {
                 parse_param(streams, ptype, tvalue.samples);
             } else if (pname == "mapname") {
                 parse_param(streams, ptype, tvalue.mapname);
