@@ -3668,17 +3668,18 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     cb.camera = [&](const pbrt_camera& pcamera, const pbrt_context& ctx) {
         auto camera  = yocto_camera{};
         camera.frame = inverse((frame3f)ctx.frame);
+        camera.frame.z = -camera.frame.z;
         if (std::holds_alternative<pbrt_camera_perspective>(pcamera)) {
             auto& perspective = std::get<pbrt_camera_perspective>(pcamera);
             auto aspect = perspective.frameaspectratio;
             if(aspect < 0) aspect = last_film_aspect;
             if(aspect < 0) aspect = 1;
             set_camera_perspectivey(camera, radians(perspective.fov),
-                aspect, perspective.focaldistance);
+                aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
         } else {
             throw sceneio_error("unsupported pbrt type");
         }
-        // scene.cameras.push_back(camera);
+        scene.cameras.push_back(camera);
     };
     cb.film = [&](const pbrt_film& pfilm, const pbrt_context& ctx) {
         if (std::holds_alternative<pbrt_film_image>(pfilm)) {

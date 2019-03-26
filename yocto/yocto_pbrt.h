@@ -100,7 +100,7 @@ struct pbrt_camera_perspective {
     float  fov              = 90;
     float  frameaspectratio = -1;  // or computed from film
     float  lensradius       = 0;
-    float  focaldistance    = 1e30;
+    float  focaldistance    = 1e30; 
     bbox2f screenwindow     = {{-1, -1}, {1, 1}};
     float  shutteropen      = 0;
     float  shutterclose     = 1;
