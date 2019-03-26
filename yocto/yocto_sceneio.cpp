@@ -3841,8 +3841,6 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                       const pbrt_context& ctx) {
         auto material = yocto_material{};
         material.name = name;
-        material.diffuse = {1,0,0};
-        material.roughness = 1;
         if (std::holds_alternative<pbrt_material_uber>(pmaterial)) {
             auto& uber = std::get<pbrt_material_uber>(pmaterial);
             get_scaled_texture3f(
@@ -3931,6 +3929,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             if(verbose) printf("mix material not properly supported\n");
         } else if (std::holds_alternative<pbrt_material_fourier>(pmaterial)) {
             // auto& fourier     = std::get<pbrt_material_fourier>(pmaterial);
+            material.diffuse = {1,0,0};
+            material.roughness = 1;
             if(verbose) printf("fourier material not properly supported\n");
         } else {
             throw sceneio_error("material type not supported " + std::to_string(pmaterial.index()));
