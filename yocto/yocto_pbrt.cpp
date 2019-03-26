@@ -27,6 +27,7 @@
 //
 
 #include "yocto_pbrt.h"
+#include "yocto_image.h"
 
 #include <memory>
 #include <string_view>
@@ -50,6 +51,7 @@ namespace yocto {
 struct pbrt_token_stream {
     string      buffer;
     string_view str;
+    string_view saved;
 };
 
 // skip white space or comment
@@ -355,7 +357,7 @@ static inline bool is_type_compatible(const string& type) {
                type == "point" || type == "vector" || type == "normal" ||
                type == "float";
     } else if constexpr (std::is_same<T, spectrum3f>::value) {
-        return type == "rgb" || type == "spectrum";
+        return type == "rgb" || type == "spectrum" || type == "blackbody";
     } else if constexpr (std::is_same<T, vec3i>::value) {
         return type == "integer";
     } else if constexpr (std::is_same<T, bbox2i>::value) {
@@ -379,10 +381,14 @@ static inline void parse_param(
 }
 
 template <typename T>
-static inline void parse_value(
+static inline void parse_param(
     pbrt_token_stream& stream, const string& type, spectrum<T, 3>& value) {
     if (type == "rgb") {
-        parse_value(stream, value);
+        parse_param(stream, value);
+    } else if (type == "blackbody") {
+        auto blackbody = zero2f;
+        parse_param(stream, blackbody);
+        (vec3f&)value = blackbody_to_rgb(blackbody.x) * blackbody.y;
     } else if (type == "spectrum") {
         printf("spectrum  not well supported\n");
         value = {1, 0, 0};
@@ -410,6 +416,35 @@ static inline void parse_param(
     }
 }
 
+static inline void skip_value(pbrt_token_stream& stream) {
+    skip_whitespace_or_comment(stream);
+    auto& str = stream.str;
+    if(str.front() == '"') {
+        str.remove_prefix(1);
+        str.remove_prefix(str.find('"')+1);
+    } else {
+        str.remove_prefix(str.find_first_of(" \n\t\r"));
+    }
+    skip_whitespace_or_comment(stream);
+}
+    
+static inline void skip_param(pbrt_token_stream& stream) {
+    if (is_open_bracket(stream)) {
+        skip_open_bracket(stream);
+        while(!is_close_bracket(stream)) skip_value(stream);
+        skip_close_bracket(stream);
+    } else {
+        skip_value(stream);
+    }
+}
+
+static inline void save_stream_position(pbrt_token_stream& stream) {
+    stream.saved = stream.str;
+}
+static inline void restore_stream_position(pbrt_token_stream& stream) {
+    stream.str = stream.saved;
+}
+    
 // Load a token stream
 static inline void load_token_stream(
     const string& filename, pbrt_token_stream& stream) {
@@ -472,6 +507,16 @@ static inline void parse_param(
 template <typename T>
 static inline void parse_param(vector<pbrt_token_stream>& streams, T& value) {
     return parse_param(streams.back(), value);
+}
+
+static inline void save_stream_position(vector<pbrt_token_stream>& streams) {
+    save_stream_position(streams.back());
+}
+static inline void restore_stream_position(vector<pbrt_token_stream>& streams) {
+    restore_stream_position(streams.back());
+}
+static inline void skip_param(vector<pbrt_token_stream>& streams) {
+    skip_param(streams.back());
 }
 
 }  // namespace yocto
@@ -1159,6 +1204,23 @@ static void parse_pbrt_texture(
         throw pbrtio_error("unknown Texture " + type);
     }
 }
+    
+// Get typename
+static void get_pbrt_typeparam(vector<pbrt_token_stream>& streams, string& value) {
+    save_stream_position(streams);
+    value = "";
+    auto pname = ""s, ptype = ""s;
+    while (is_param(streams) && value == "") {
+        parse_nametype(streams, pname, ptype);
+        if (pname == "type") {
+            parse_param(streams, ptype, value);
+        } else {
+            skip_param(streams);
+        }
+    }
+    if(value == "") throw pbrtio_error("type not found");
+    restore_stream_position(streams);
+}
 
 // Parse Material
 static void parse_pbrt_material(
@@ -1167,13 +1229,7 @@ static void parse_pbrt_material(
     if (!named) {
         parse_value(streams, type);
     } else {
-        auto ptname = ""s, pttype = ""s;
-        parse_nametype(streams, ptname, pttype);
-        if (ptname == "type") {
-            parse_param(streams, pttype, type);
-        } else {
-            throw pbrtio_error("expected material type");
-        }
+        get_pbrt_typeparam(streams, type);
     }
     auto pname = ""s, ptype = ""s;
     if (type == "matte") {
@@ -1186,6 +1242,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.sigma);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1199,6 +1259,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.Kr);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1225,6 +1289,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1238,6 +1306,8 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.eta);
             } else if (pname == "k") {
                 parse_param(streams, ptype, tvalue.k);
+            } else if (pname == "index") {
+                parse_param(streams, ptype, tvalue.eta);
             } else if (pname == "roughness") {
                 pbrt_textured<float> roughness = 0.01f;
                 parse_param(streams, ptype, roughness);
@@ -1251,6 +1321,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1281,6 +1355,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1311,6 +1389,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1330,6 +1412,8 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.Kt);
             } else if (pname == "eta") {
                 parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "index") {
+                parse_param(streams, ptype, tvalue.eta);
             } else if (pname == "opacity") {
                 parse_param(streams, ptype, tvalue.opacity);
             } else if (pname == "roughness") {
@@ -1345,6 +1429,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1363,6 +1451,8 @@ static void parse_pbrt_material(
             } else if (pname == "clearcoatgloss") {
                 parse_param(streams, ptype, tvalue.clearcoatgloss);
             } else if (pname == "eta") {
+                parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "index") {
                 parse_param(streams, ptype, tvalue.eta);
             } else if (pname == "metallic") {
                 parse_param(streams, ptype, tvalue.metallic);
@@ -1393,6 +1483,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.flatness);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1412,6 +1506,8 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.pheomelanin);
             } else if (pname == "eta") {
                 parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "index") {
+                parse_param(streams, ptype, tvalue.eta);
             } else if (pname == "beta_m") {
                 parse_param(streams, ptype, tvalue.beta_m);
             } else if (pname == "beta_n") {
@@ -1420,6 +1516,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.alpha);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1439,6 +1539,8 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.mfp);
             } else if (pname == "eta") {
                 parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "index") {
+                parse_param(streams, ptype, tvalue.eta);
             } else if (pname == "roughness") {
                 pbrt_textured<float> roughness = 0.01f;
                 parse_param(streams, ptype, roughness);
@@ -1452,6 +1554,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1469,6 +1575,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.namedmaterial2);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1482,6 +1592,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.bsdffile);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1510,6 +1624,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.bumpmap);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -1529,6 +1647,8 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.scale);
             } else if (pname == "eta") {
                 parse_param(streams, ptype, tvalue.eta);
+            } else if (pname == "index") {
+                parse_param(streams, ptype, tvalue.eta);
             } else if (pname == "Kr") {
                 parse_param(streams, ptype, tvalue.Kr);
             } else if (pname == "Kt") {
@@ -1546,6 +1666,10 @@ static void parse_pbrt_material(
                 parse_param(streams, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
                 parse_param(streams, ptype, tvalue.bumpmap);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(streams, ptype, ttype);
+                if(ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
