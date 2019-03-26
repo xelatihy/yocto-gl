@@ -3921,6 +3921,16 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             //     glass.Kt, material.transmission,
             //     material.transmission_texture);
             material.roughness = 0;
+        } else if (std::holds_alternative<pbrt_material_hair>(pmaterial)) {
+            auto& hair           = std::get<pbrt_material_hair>(pmaterial);
+            get_scaled_texture3f(hair.color, material.diffuse, material.diffuse_texture);
+            material.roughness = 1;
+            if(verbose) printf("mix material not properly supported\n");
+        } else if (std::holds_alternative<pbrt_material_disney>(pmaterial)) {
+            auto& disney           = std::get<pbrt_material_disney>(pmaterial);
+            get_scaled_texture3f(disney.color, material.diffuse, material.diffuse_texture);
+            material.roughness = 1;
+            if(verbose) printf("mix material not properly supported\n");
         } else if (std::holds_alternative<pbrt_material_mix>(pmaterial)) {
             auto& mix     = std::get<pbrt_material_mix>(pmaterial);
             auto  matname = (!mix.namedmaterial1.empty()) ? mix.namedmaterial1

@@ -188,8 +188,6 @@ def sync():
 def pbrtparse(directory='pbrt-v3-scenes',scene='*'):
     broken_scenes = [
         'bunny-fur/f3-15.pbrt',
-        "cloud/cloud.pbrt",
-        "coffee-splash/splash.pbrt",
         "contemporary-bathroom/contemporary-bathroom.pbrt",
         "dambreak/dambreak0.pbrt",
         "ecosys/ecosys.pbrt",
