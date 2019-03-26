@@ -2253,7 +2253,7 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
         } else if (cmd == "Include") {
             auto inputname = ""s;
             parse_value(stream, inputname);
-            load_token_stream(get_dirname(filename) + inputname, stream);
+            load_token_stream(get_dirname(filename) + inputname, streams);
         } else {
             throw pbrtio_error("unknown command " + cmd);
         }
