@@ -2050,9 +2050,13 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             parse_param(streams, from);
             parse_param(streams, to);
             parse_param(streams, up);
-            stack.back().frame = stack.back().frame *
-                                 (affine3f)inverse(
-                                     make_lookat_frame(from, to, up, true));
+            // from pbrt parser
+            auto frame = make_lookat_frame(from, to, up, true);
+            // frame.z = normalize(to-from);
+            // frame.x = normalize(cross(frame.z,up));
+            // frame.y = cross(frame.x,frame.z);
+            // frame.o    = from;
+            stack.back().frame = stack.back().frame * (affine3f)inverse(frame);
             // stack.back().focus = length(m.x - m.y);
         } else if (cmd == "ReverseOrientation") {
             stack.back().reverse = !stack.back().reverse;
