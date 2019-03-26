@@ -201,6 +201,13 @@ struct pbrt_integrator_path {
     float  rrthreshold = 1;
     lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::spatial;
 };
+struct pbrt_integrator_volpath {
+    enum struct lightsamplestrategy_t { uniform, power, spatial };
+    int    maxdepth    = 5;
+    bbox2i pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    float  rrthreshold = 1;
+    lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::spatial;
+};
 struct pbrt_integrator_bdpt {
     enum struct lightsamplestrategy_t { uniform, power, spatial };
     int    maxdepth    = 5;
@@ -217,6 +224,7 @@ struct pbrt_integrator_directlighting {
 };
 struct pbrt_integrator_mlt {
     int   maxdepth             = 5;
+    bbox2i     pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
     int   bootstrapsamples     = 100000;
     int   chains               = 1000;
     int   mutationsperpixel    = 100;
@@ -225,15 +233,17 @@ struct pbrt_integrator_mlt {
 };
 struct pbrt_integrator_sppm {
     int   maxdepth            = 5;
+    bbox2i     pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
     int   iterations          = 64;
     int   photonsperiteration = -1;
     int   imagewritefrequency = pow2(31);
     float radius              = 5;
 };
 struct pbrt_integrator_whitted {
-    // TODO: missing from documentation
+    int   maxdepth            = 5;
+    bbox2i     pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
 };
-using pbrt_integrator = variant<pbrt_integrator_path, pbrt_integrator_bdpt,
+using pbrt_integrator = variant<pbrt_integrator_path, pbrt_integrator_volpath, pbrt_integrator_bdpt,
     pbrt_integrator_directlighting, pbrt_integrator_mlt, pbrt_integrator_sppm,
     pbrt_integrator_whitted>;
 
