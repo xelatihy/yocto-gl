@@ -170,4 +170,15 @@ def sync():
     os.system("rsync -avcm --delete --include '*/' --include '*.zip' --include '*.tgz' --include '*.pdf' --exclude='*' ./ ../yocto-scenes")
     # os.system('rsync -avc --delete ./ ../yocto-scenes')
 
+@cli.command()
+def pbrtparse():
+    scenes = [
+        'bathroom/bathroom.pbrt',
+        'bmw-m6/bmw-m6.pbrt'
+    ]
+    for filename in scenes:
+        cmd = f'../yocto-gl/bin/yitrace {filename}'
+        print(cmd, file=sys.stderr)
+        os.system(cmd)
+
 cli()
