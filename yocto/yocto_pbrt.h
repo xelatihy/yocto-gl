@@ -223,29 +223,29 @@ struct pbrt_integrator_directlighting {
     bbox2i     pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
 };
 struct pbrt_integrator_mlt {
-    int   maxdepth             = 5;
-    bbox2i     pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
-    int   bootstrapsamples     = 100000;
-    int   chains               = 1000;
-    int   mutationsperpixel    = 100;
-    float largestepprobability = 0.3;
-    float sigma                = 0.01;
+    int    maxdepth             = 5;
+    bbox2i pixelbounds          = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    int    bootstrapsamples     = 100000;
+    int    chains               = 1000;
+    int    mutationsperpixel    = 100;
+    float  largestepprobability = 0.3;
+    float  sigma                = 0.01;
 };
 struct pbrt_integrator_sppm {
-    int   maxdepth            = 5;
-    bbox2i     pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
-    int   iterations          = 64;
-    int   photonsperiteration = -1;
-    int   imagewritefrequency = pow2(31);
-    float radius              = 5;
+    int    maxdepth            = 5;
+    bbox2i pixelbounds         = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    int    iterations          = 64;
+    int    photonsperiteration = -1;
+    int    imagewritefrequency = pow2(31);
+    float  radius              = 5;
 };
 struct pbrt_integrator_whitted {
-    int   maxdepth            = 5;
-    bbox2i     pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    int    maxdepth    = 5;
+    bbox2i pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
 };
-using pbrt_integrator = variant<pbrt_integrator_path, pbrt_integrator_volpath, pbrt_integrator_bdpt,
-    pbrt_integrator_directlighting, pbrt_integrator_mlt, pbrt_integrator_sppm,
-    pbrt_integrator_whitted>;
+using pbrt_integrator = variant<pbrt_integrator_path, pbrt_integrator_volpath,
+    pbrt_integrator_bdpt, pbrt_integrator_directlighting, pbrt_integrator_mlt,
+    pbrt_integrator_sppm, pbrt_integrator_whitted>;
 
 // pbrt accellerators
 struct pbrt_accelerator_bvh {

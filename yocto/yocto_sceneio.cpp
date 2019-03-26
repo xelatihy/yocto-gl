@@ -3664,6 +3664,14 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
     };
 
+    auto pbrt_remap_roughness = [](float roughness) {
+        // from pbrt code
+        roughness = max(roughness, 1e-3f);
+        float x   = log(roughness);
+        return 1.62142f + 0.819955f * x + 0.1734f * x * x +
+               0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
+    };
+
     auto cb   = pbrt_callbacks{};
     cb.camera = [&](const pbrt_camera& pcamera, const pbrt_context& ctx) {
         auto camera    = yocto_camera{};
@@ -3766,7 +3774,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             material.opacity = (op.x + op.y + op.z) / 3;
             material.roughness =
                 (uber.uroughness.value + uber.vroughness.value) / 2;
-            if (uber.remaproughness) printf("remap roughness not supported\n");
+            if (uber.remaproughness)
+                material.roughness = pbrt_remap_roughness(material.roughness);
         } else if (std::holds_alternative<pbrt_material_plastic>(pmaterial)) {
             auto& plastic = std::get<pbrt_material_plastic>(pmaterial);
             get_scaled_texture3f(
@@ -3776,7 +3785,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             material.roughness =
                 (plastic.uroughness.value + plastic.vroughness.value) / 2;
             if (plastic.remaproughness)
-                printf("remap roughness not supported\n");
+                material.roughness = pbrt_remap_roughness(material.roughness);
         } else if (std::holds_alternative<pbrt_material_translucent>(
                        pmaterial)) {
             auto& translucent = std::get<pbrt_material_translucent>(pmaterial);
@@ -3788,7 +3797,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 (translucent.uroughness.value + translucent.vroughness.value) /
                 2;
             if (translucent.remaproughness)
-                printf("remap roughness not supported\n");
+                material.roughness = pbrt_remap_roughness(material.roughness);
         } else if (std::holds_alternative<pbrt_material_matte>(pmaterial)) {
             auto& matte = std::get<pbrt_material_matte>(pmaterial);
             get_scaled_texture3f(
@@ -3809,7 +3818,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             material.specular = pbrt_fresnel_metal(1, eta, k);
             material.roughness =
                 (metal.uroughness.value + metal.vroughness.value) / 2;
-            if (metal.remaproughness) printf("remap roughness not supported\n");
+            if (metal.remaproughness)
+                material.roughness = pbrt_remap_roughness(material.roughness);
         } else if (std::holds_alternative<pbrt_material_substrate>(pmaterial)) {
             auto& substrate = std::get<pbrt_material_substrate>(pmaterial);
             get_scaled_texture3f(
@@ -3819,7 +3829,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             material.roughness =
                 (substrate.uroughness.value + substrate.vroughness.value) / 2;
             if (substrate.remaproughness)
-                printf("remap roughness not supported\n");
+                material.roughness = pbrt_remap_roughness(material.roughness);
         } else if (std::holds_alternative<pbrt_material_glass>(pmaterial)) {
             auto& glass           = std::get<pbrt_material_glass>(pmaterial);
             material.specular     = {0.04f, 0.04f, 0.04f};
@@ -3827,7 +3837,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             get_scaled_texture3f(
                 glass.Kr, material.specular, material.specular_texture);
             // get_scaled_texture3f(
-            //     glass.Kt, material.transmission, material.transmission_texture);
+            //     glass.Kt, material.transmission,
+            //     material.transmission_texture);
             material.roughness = 0;
         } else if (std::holds_alternative<pbrt_material_mix>(pmaterial)) {
             auto& mix     = std::get<pbrt_material_mix>(pmaterial);

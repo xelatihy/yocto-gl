@@ -216,29 +216,33 @@ static inline void parse_value(
     };
     return parse_value(stream, value, value_names);
 }
-static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_integrator_path::lightsamplestrategy_t& value) {
-    static auto value_names = unordered_map<string, pbrt_integrator_path::lightsamplestrategy_t>{
-        {"power", pbrt_integrator_path::lightsamplestrategy_t::power},
-        {"spatial", pbrt_integrator_path::lightsamplestrategy_t::spatial},
-        {"uniform", pbrt_integrator_path::lightsamplestrategy_t::uniform},
-    };
+static inline void parse_value(pbrt_token_stream& stream,
+    pbrt_integrator_path::lightsamplestrategy_t&  value) {
+    static auto value_names =
+        unordered_map<string, pbrt_integrator_path::lightsamplestrategy_t>{
+            {"power", pbrt_integrator_path::lightsamplestrategy_t::power},
+            {"spatial", pbrt_integrator_path::lightsamplestrategy_t::spatial},
+            {"uniform", pbrt_integrator_path::lightsamplestrategy_t::uniform},
+        };
     return parse_value(stream, value, value_names);
 }
-static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_integrator_volpath::lightsamplestrategy_t& value) {
-        return parse_value(stream, (pbrt_integrator_path::lightsamplestrategy_t&)value);
+static inline void parse_value(pbrt_token_stream&   stream,
+    pbrt_integrator_volpath::lightsamplestrategy_t& value) {
+    return parse_value(
+        stream, (pbrt_integrator_path::lightsamplestrategy_t&)value);
 }
-static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_integrator_bdpt::lightsamplestrategy_t& value) {
-        return parse_value(stream, (pbrt_integrator_path::lightsamplestrategy_t&)value);
+static inline void parse_value(pbrt_token_stream& stream,
+    pbrt_integrator_bdpt::lightsamplestrategy_t&  value) {
+    return parse_value(
+        stream, (pbrt_integrator_path::lightsamplestrategy_t&)value);
 }
-static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_integrator_directlighting::strategy_t& value) {
-    static auto value_names = unordered_map<string, pbrt_integrator_directlighting::strategy_t>{
-        {"all", pbrt_integrator_directlighting::strategy_t::all},
-        {"one", pbrt_integrator_directlighting::strategy_t::one},
-    };
+static inline void parse_value(pbrt_token_stream& stream,
+    pbrt_integrator_directlighting::strategy_t&   value) {
+    static auto value_names =
+        unordered_map<string, pbrt_integrator_directlighting::strategy_t>{
+            {"all", pbrt_integrator_directlighting::strategy_t::all},
+            {"one", pbrt_integrator_directlighting::strategy_t::one},
+        };
     return parse_value(stream, value, value_names);
 }
 
@@ -521,94 +525,94 @@ static void parse_pbrt_integrator(
         value = tvalue;
     } else if (type == "directlighting") {
         auto tvalue = pbrt_integrator_directlighting{};
-            while (is_param(streams)) {
-                parse_nametype(streams, pname, ptype);
-                if (pname == "maxdepth") {
-                    parse_param(streams, ptype, tvalue.maxdepth);
-                } else if (pname == "pixelbounds") {
-                    parse_param(streams, ptype, tvalue.pixelbounds);
-                } else if (pname == "strategy") {
-                    parse_param(streams, ptype, tvalue.strategy);
-                } else {
-                    throw pbrtio_error("unknown parameter " + pname);
-                }
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "maxdepth") {
+                parse_param(streams, ptype, tvalue.maxdepth);
+            } else if (pname == "pixelbounds") {
+                parse_param(streams, ptype, tvalue.pixelbounds);
+            } else if (pname == "strategy") {
+                parse_param(streams, ptype, tvalue.strategy);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
             }
+        }
         value = tvalue;
     } else if (type == "bdpt") {
         auto tvalue = pbrt_integrator_bdpt{};
-            while (is_param(streams)) {
-                parse_nametype(streams, pname, ptype);
-                if (pname == "maxdepth") {
-                    parse_param(streams, ptype, tvalue.maxdepth);
-                } else if (pname == "pixelbounds") {
-                    parse_param(streams, ptype, tvalue.pixelbounds);
-                } else if (pname == "lightsamplestrategy") {
-                    parse_param(streams, ptype, tvalue.lightsamplestrategy);
-                } else if (pname == "visualizestrategies") {
-                    parse_param(streams, ptype, tvalue.visualizestrategies);
-                } else if (pname == "visualizeweights") {
-                    parse_param(streams, ptype, tvalue.visualizeweights);
-                } else {
-                    throw pbrtio_error("unknown parameter " + pname);
-                }
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "maxdepth") {
+                parse_param(streams, ptype, tvalue.maxdepth);
+            } else if (pname == "pixelbounds") {
+                parse_param(streams, ptype, tvalue.pixelbounds);
+            } else if (pname == "lightsamplestrategy") {
+                parse_param(streams, ptype, tvalue.lightsamplestrategy);
+            } else if (pname == "visualizestrategies") {
+                parse_param(streams, ptype, tvalue.visualizestrategies);
+            } else if (pname == "visualizeweights") {
+                parse_param(streams, ptype, tvalue.visualizeweights);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
             }
+        }
         value = tvalue;
     } else if (type == "mlt") {
         auto tvalue = pbrt_integrator_mlt{};
-            while (is_param(streams)) {
-                parse_nametype(streams, pname, ptype);
-                if (pname == "maxdepth") {
-                    parse_param(streams, ptype, tvalue.maxdepth);
-                } else if (pname == "pixelbounds") {
-                    parse_param(streams, ptype, tvalue.pixelbounds);
-                } else if (pname == "bootstrapsamples") {
-                    parse_param(streams, ptype, tvalue.bootstrapsamples);
-                } else if (pname == "chains") {
-                    parse_param(streams, ptype, tvalue.chains);
-                } else if (pname == "mutationsperpixel") {
-                    parse_param(streams, ptype, tvalue.mutationsperpixel);
-                } else if (pname == "largestepprobability") {
-                    parse_param(streams, ptype, tvalue.largestepprobability);
-                } else if (pname == "sigma") {
-                    parse_param(streams, ptype, tvalue.sigma);
-                } else {
-                    throw pbrtio_error("unknown parameter " + pname);
-                }
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "maxdepth") {
+                parse_param(streams, ptype, tvalue.maxdepth);
+            } else if (pname == "pixelbounds") {
+                parse_param(streams, ptype, tvalue.pixelbounds);
+            } else if (pname == "bootstrapsamples") {
+                parse_param(streams, ptype, tvalue.bootstrapsamples);
+            } else if (pname == "chains") {
+                parse_param(streams, ptype, tvalue.chains);
+            } else if (pname == "mutationsperpixel") {
+                parse_param(streams, ptype, tvalue.mutationsperpixel);
+            } else if (pname == "largestepprobability") {
+                parse_param(streams, ptype, tvalue.largestepprobability);
+            } else if (pname == "sigma") {
+                parse_param(streams, ptype, tvalue.sigma);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
             }
+        }
         value = tvalue;
     } else if (type == "sppm") {
         auto tvalue = pbrt_integrator_sppm{};
-            while (is_param(streams)) {
-                parse_nametype(streams, pname, ptype);
-                if (pname == "maxdepth") {
-                    parse_param(streams, ptype, tvalue.maxdepth);
-                } else if (pname == "pixelbounds") {
-                    parse_param(streams, ptype, tvalue.pixelbounds);
-                } else if (pname == "iterations") {
-                    parse_param(streams, ptype, tvalue.iterations);
-                } else if (pname == "photonsperiteration") {
-                    parse_param(streams, ptype, tvalue.photonsperiteration);
-                } else if (pname == "imagewritefrequency") {
-                    parse_param(streams, ptype, tvalue.imagewritefrequency);
-                } else if (pname == "radius") {
-                    parse_param(streams, ptype, tvalue.radius);
-                } else {
-                    throw pbrtio_error("unknown parameter " + pname);
-                }
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "maxdepth") {
+                parse_param(streams, ptype, tvalue.maxdepth);
+            } else if (pname == "pixelbounds") {
+                parse_param(streams, ptype, tvalue.pixelbounds);
+            } else if (pname == "iterations") {
+                parse_param(streams, ptype, tvalue.iterations);
+            } else if (pname == "photonsperiteration") {
+                parse_param(streams, ptype, tvalue.photonsperiteration);
+            } else if (pname == "imagewritefrequency") {
+                parse_param(streams, ptype, tvalue.imagewritefrequency);
+            } else if (pname == "radius") {
+                parse_param(streams, ptype, tvalue.radius);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
             }
+        }
         value = tvalue;
     } else if (type == "whitted") {
         auto tvalue = pbrt_integrator_whitted{};
-            while (is_param(streams)) {
-                parse_nametype(streams, pname, ptype);
-                if (pname == "maxdepth") {
-                    parse_param(streams, ptype, tvalue.maxdepth);
-                } else if (pname == "pixelbounds") {
-                    parse_param(streams, ptype, tvalue.pixelbounds);
-                } else {
-                    throw pbrtio_error("unknown parameter " + pname);
-                }
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "maxdepth") {
+                parse_param(streams, ptype, tvalue.maxdepth);
+            } else if (pname == "pixelbounds") {
+                parse_param(streams, ptype, tvalue.pixelbounds);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
             }
+        }
         value = tvalue;
     } else {
         throw pbrtio_error("unknown Integrator " + type);
