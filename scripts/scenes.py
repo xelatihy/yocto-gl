@@ -171,13 +171,15 @@ def sync():
     # os.system('rsync -avc --delete ./ ../yocto-scenes')
 
 @cli.command()
-def pbrtparse():
+@click.option('--scene', '-s', default='*')
+def pbrtparse(scene='*'):
     scenes = [
         'bathroom/bathroom.pbrt',
         'bmw-m6/bmw-m6.pbrt',
         'breakfast/breakfast.pbrt',
     ]
     for filename in scenes:
+        if scene != '*' and not filename.startswith(f'{scene}/'): continue
         cmd = f'../yocto-gl/bin/yitrace {filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)
