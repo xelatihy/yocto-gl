@@ -685,11 +685,12 @@ struct pbrt_instance {
 
 // pbrt stack ctm
 struct pbrt_context {
-    affine3f xform           = identity_affine3f;
+    affine3f frame           = identity_affine3f;
     string   material        = "";
     string   arealight       = "";
     string   medium_interior = "";
     string   medium_exterior = "";
+    bool reverse = false;
 };
 
 // clang-format off
