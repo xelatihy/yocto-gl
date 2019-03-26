@@ -195,7 +195,6 @@ def pbrtparse(directory='pbrt-v3-scenes',scene='*'):
         "ecosys/ecosys.pbrt",
         "sanmiguel/sanmiguel.pbrt",
         "sssdragon/dragon_50.pbrt",
-        "volume-caustic/caustic.pbrt",
         "white-room/whiteroom-daytime.pbrt",
     ]
     scenes = [
