@@ -684,6 +684,17 @@ static void parse_pbrt_sampler(
             }
         }
         value = tvalue;
+    } else if (type == "lowdiscrepancy") {
+        auto tvalue = pbrt_sampler_zerotwosequence{};
+        while (is_param(stream)) {
+            parse_nametype(stream, pname, ptype);
+            if (pname == "pixelsamples") {
+                parse_param(stream, ptype, tvalue.pixelsamples);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
     } else if (type == "maxmindist") {
         auto tvalue = pbrt_sampler_maxmindist{};
         while (is_param(stream)) {
