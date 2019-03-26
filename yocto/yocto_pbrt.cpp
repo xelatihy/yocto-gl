@@ -502,9 +502,7 @@ namespace yocto {
 
 // Parse Integrator
 static void parse_pbrt_integrator(
-    pbrt_token_stream& stream, pbrt_integrator& value) {
-    auto type = ""s;
-    parse_value(stream, type);
+    pbrt_token_stream& stream, const string& type, pbrt_integrator& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "path") {
         auto tvalue = pbrt_integrator_path{};
@@ -640,9 +638,7 @@ static void parse_pbrt_integrator(
 
 // Parse Sampler
 static void parse_pbrt_sampler(
-    pbrt_token_stream& stream, pbrt_sampler& value) {
-    auto type = ""s;
-    parse_value(stream, type);
+    pbrt_token_stream& stream, const string& type, pbrt_sampler& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "random") {
         auto tvalue = pbrt_sampler_random{};
@@ -721,9 +717,7 @@ static void parse_pbrt_sampler(
 
 // Parse Filter
 static void parse_pbrt_filter(
-    pbrt_token_stream& stream, pbrt_filter& value) {
-    auto type = ""s;
-    parse_value(stream, type);
+    pbrt_token_stream& stream, const string& type, pbrt_filter& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "box") {
         auto tvalue = pbrt_filter_box{};
@@ -805,9 +799,7 @@ static void parse_pbrt_filter(
 
 // Parse Filter
 static void parse_pbrt_film(
-    pbrt_token_stream& stream, pbrt_film& value) {
-    auto type = ""s;
-    parse_value(stream, type);
+    pbrt_token_stream& stream, const string& type, pbrt_film& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "image") {
         auto tvalue = pbrt_film_image{};
@@ -841,9 +833,7 @@ static void parse_pbrt_film(
 
 // Parse Camera
 static void parse_pbrt_camera(
-    pbrt_token_stream& stream, pbrt_camera& value) {
-    auto type = ""s;
-    parse_value(stream, type);
+    pbrt_token_stream& stream, const string& type, pbrt_camera& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "perspective") {
         auto tvalue = pbrt_camera_perspective{};
@@ -930,9 +920,7 @@ static void parse_pbrt_camera(
 
 // Parse Texture
 static void parse_pbrt_texture(
-    pbrt_token_stream& stream, pbrt_texture& value) {
-    auto type = ""s;
-    parse_value(stream, type);
+    pbrt_token_stream& stream, const string& type, pbrt_texture& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "constant") {
         auto tvalue = pbrt_texture_constant{};
@@ -1180,7 +1168,7 @@ static void parse_pbrt_texture(
 }
 
 // Get typename
-static void get_pbrt_typeparam(
+static void parse_typeparam(
     pbrt_token_stream& stream, string& value) {
     save_stream_position(stream);
     value      = "";
@@ -1199,13 +1187,7 @@ static void get_pbrt_typeparam(
 
 // Parse Material
 static void parse_pbrt_material(
-    pbrt_token_stream& stream, pbrt_material& value, bool named) {
-    auto type = ""s;
-    if (!named) {
-        parse_value(stream, type);
-    } else {
-        get_pbrt_typeparam(stream, type);
-    }
+    pbrt_token_stream& stream, const string& type, pbrt_material& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "matte") {
         auto tvalue = pbrt_material_matte{};
@@ -1657,9 +1639,7 @@ static void parse_pbrt_material(
 
 // Parse Shape
 static void parse_pbrt_shape(
-    pbrt_token_stream& stream, pbrt_shape& value) {
-    auto type = ""s;
-    parse_value(stream, type);
+    pbrt_token_stream& stream, const string& type, pbrt_shape& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "trianglemesh") {
         auto tvalue = pbrt_shape_trianglemesh{};
@@ -1893,9 +1873,7 @@ static void parse_pbrt_shape(
 
 // Parse AreaLightSource
 static void parse_pbrt_arealight(
-    pbrt_token_stream& stream, pbrt_arealight& value) {
-    auto type = ""s;
-    parse_value(stream, type);
+    pbrt_token_stream& stream, const string& type, pbrt_arealight& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "diffuse") {
         auto tvalue = pbrt_arealight_diffuse{};
@@ -1921,9 +1899,7 @@ static void parse_pbrt_arealight(
 
 // Parse LightSource
 static void parse_pbrt_light(
-    pbrt_token_stream& stream, pbrt_light& value) {
-    auto type = ""s;
-    parse_value(stream, type);
+    pbrt_token_stream& stream, const string& type, pbrt_light& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "distant") {
         auto tvalue = pbrt_light_distant{};
@@ -2036,13 +2012,7 @@ static void parse_pbrt_light(
 
 // Parse Medium
 static void parse_pbrt_medium(
-    pbrt_token_stream& stream, pbrt_medium& value, bool named) {
-    auto type = ""s;
-    if (!named) {
-        parse_value(stream, type);
-    } else {
-        get_pbrt_typeparam(stream, type);
-    }
+    pbrt_token_stream& stream, const string& type, pbrt_medium& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "distant") {
         auto tvalue = pbrt_medium_homogeneous{};
@@ -2058,6 +2028,10 @@ static void parse_pbrt_medium(
                 parse_param(stream, ptype, tvalue.g);
             } else if (pname == "scale") {
                 parse_param(stream, ptype, tvalue.scale);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(stream, ptype, ttype);
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -2087,6 +2061,10 @@ static void parse_pbrt_medium(
                 parse_param(stream, ptype, tvalue.nz);
             } else if (pname == "density") {
                 parse_param(stream, ptype, tvalue.density);
+            } else if (pname == "type") {
+                auto ttype = ""s;
+                parse_param(stream, ptype, ttype);
+                if (ttype != type) throw pbrtio_error("inconsistent types");
             } else {
                 throw pbrtio_error("unknown parameter " + pname);
             }
@@ -2111,6 +2089,7 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
     // parsing stack
     auto stack  = vector<pbrt_context>{{}};
     auto object = pbrt_object{};
+    auto coordsys = unordered_map<string, affine3f>{};
 
     // parse command by command
     auto cmd = ""s;
@@ -2180,70 +2159,105 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             // stack.back().focus = length(m.x - m.y);
         } else if (cmd == "ReverseOrientation") {
             stack.back().reverse = !stack.back().reverse;
+        } else if (cmd == "CoordinateSystem") {
+            auto name = ""s;
+            parse_value(stream, name);
+            coordsys[name] = stack.back().frame;
+        } else if (cmd == "CoordSysTransform") {
+            auto name = ""s;
+            parse_value(stream, name);
+            if(coordsys.find(name) != coordsys.end()) {
+                stack.back().frame = coordsys.at(name);
+            }
         } else if (cmd == "Integrator") {
+            auto type = ""s;
+            parse_value(stream, type);
             auto value = pbrt_integrator{};
-            parse_pbrt_integrator(stream, value);
+            parse_pbrt_integrator(stream, type, value);
             if (cb.integrator) cb.integrator(value, stack.back());
         } else if (cmd == "Sampler") {
+            auto type = ""s;
+            parse_value(stream, type);
             auto value = pbrt_sampler{};
-            parse_pbrt_sampler(stream, value);
+            parse_pbrt_sampler(stream, type, value);
             if (cb.sampler) cb.sampler(value, stack.back());
         } else if (cmd == "PixelFilter") {
+            auto type = ""s;
+            parse_value(stream, type);
             auto value = pbrt_filter{};
-            parse_pbrt_filter(stream, value);
+            parse_pbrt_filter(stream, type, value);
             if (cb.filter) cb.filter(value, stack.back());
         } else if (cmd == "Film") {
+            auto type = ""s;
+            parse_value(stream, type);
             auto value = pbrt_film{};
-            parse_pbrt_film(stream, value);
+            parse_pbrt_film(stream, type, value);
             if (cb.film) cb.film(value, stack.back());
         } else if (cmd == "Camera") {
+            auto type = ""s;
+            parse_value(stream, type);
             auto value = pbrt_camera{};
-            parse_pbrt_camera(stream, value);
+            parse_pbrt_camera(stream, type, value);
             if (cb.camera) cb.camera(value, stack.back());
         } else if (cmd == "Texture") {
-            auto name = ""s, type = ""s;
+            auto name = ""s, comptype = ""s, type = ""s;
             parse_value(stream, name);
+            parse_value(stream, comptype);
             parse_value(stream, type);
             auto value = pbrt_texture{};
-            parse_pbrt_texture(stream, value);
+            parse_pbrt_texture(stream, type, value);
             if (cb.texture) cb.texture(value, name, stack.back());
         } else if (cmd == "Material") {
             static auto material_id = 0;
-            auto name  = "unnamed_material_" + std::to_string(material_id++);
-            auto value = pbrt_material{};
-            parse_pbrt_material(stream, value, false);
-            stack.back().material = name;
-            if (cb.material) cb.material(value, name, stack.back());
+            auto type = ""s;
+            parse_value(stream, type);
+            if(type == "") {
+                stack.back().material = "";
+            } else {
+                auto value = pbrt_material{};
+                auto name  = "unnamed_material_" + std::to_string(material_id++);
+                parse_pbrt_material(stream, type, value);
+                stack.back().material = name;
+                if (cb.material) cb.material(value, name, stack.back());
+            }
         } else if (cmd == "MakeNamedMaterial") {
-            auto name = ""s;
+            auto name = ""s, type = ""s;
             parse_value(stream, name);
+            parse_typeparam(stream, type);
             auto value = pbrt_material{};
-            parse_pbrt_material(stream, value, true);
+            parse_pbrt_material(stream, type, value);
             if (cb.material) cb.material(value, name, stack.back());
         } else if (cmd == "NamedMaterial") {
             auto name = ""s;
             parse_value(stream, name);
             stack.back().material = name;
         } else if (cmd == "Shape") {
+            auto type = ""s;
+            parse_value(stream, type);
             auto value = pbrt_shape{};
-            parse_pbrt_shape(stream, value);
+            parse_pbrt_shape(stream, type, value);
             if (cb.shape) cb.shape(value, stack.back());
         } else if (cmd == "AreaLightSource") {
+            auto type = ""s;
+            parse_value(stream, type);
             static auto material_id = 0;
             auto name  = "unnamed_arealight_" + std::to_string(material_id++);
             auto value = pbrt_arealight{};
-            parse_pbrt_arealight(stream, value);
+            parse_pbrt_arealight(stream, type, value);
             stack.back().arealight = name;
             if (cb.arealight) cb.arealight(value, name, stack.back());
         } else if (cmd == "LightSource") {
+            auto type = ""s;
+            parse_value(stream, type);
             auto value = pbrt_light{};
-            parse_pbrt_light(stream, value);
+            parse_pbrt_light(stream, type, value);
             if (cb.light) cb.light(value, stack.back());
         } else if (cmd == "MakeNamedMedium") {
-            auto name = ""s;
+            auto name = ""s, type = ""s;
             parse_value(stream, name);
+            parse_typeparam(stream, type);
             auto value = pbrt_medium{};
-            parse_pbrt_medium(stream, value, true);
+            parse_pbrt_medium(stream, type, value);
             if (cb.medium) cb.medium(value, name, stack.back());
         } else if (cmd == "MediumInterface") {
             auto interior = ""s, exterior = ""s;
