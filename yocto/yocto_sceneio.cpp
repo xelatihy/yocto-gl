@@ -4015,8 +4015,27 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             instance.shape = (int)scene.shapes.size() - 1;
             instance.frame = (frame3f)ctx.frame;
             scene.instances.push_back(instance);
+        } else if (std::holds_alternative<pbrt_light_spot>(plight)) {
+            auto& spot = std::get<pbrt_light_spot>(plight);
+            scene.shapes.push_back({});
+            auto& shape = scene.shapes.back();
+            shape.name  = name;
+            auto size   = 0.01f;
+            make_sphere_shape(shape.quads, shape.positions, shape.normals,
+                              shape.texturecoords, 4, size, 1);
+            scene.materials.push_back({});
+            auto& material    = scene.materials.back();
+            shape.material    = scene.materials.size() - 1;
+            material.name     = shape.name;
+            material.emission = (vec3f)spot.I * (vec3f)spot.scale;
+            // TODO: fix emission
+            auto instance  = yocto_instance();
+            instance.name  = shape.name;
+            instance.shape = (int)scene.shapes.size() - 1;
+            instance.frame = (frame3f)ctx.frame;
+            scene.instances.push_back(instance);
         } else {
-            throw sceneio_error("light type not supported");
+            throw sceneio_error("light type not supported " + std::to_string(plight.index()));
         }
     };
     cb.begin_object = [&](const pbrt_object& pobject, const pbrt_context& ctx) {

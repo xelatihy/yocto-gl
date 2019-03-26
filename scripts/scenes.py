@@ -173,10 +173,18 @@ def sync():
 @cli.command()
 @click.option('--scene', '-s', default='*')
 def pbrtparse(scene='*'):
+    broken_scenes = [
+        'bunny-fur/f3-15.pbrt',
+    ]
     scenes = [
+        'barcelona-pavilion/pavilion-day.pbrt',
+        'barcelona-pavilion/pavilion-night.pbrt',
         'bathroom/bathroom.pbrt',
         'bmw-m6/bmw-m6.pbrt',
         'breakfast/breakfast.pbrt',
+        'buddha-fractal/buddha-fractal.pbrt',
+        'bunny-fur/f3-15.pbrt',
+        'caustic-glass/glass.pbrt',
     ]
     for filename in scenes:
         if scene != '*' and not filename.startswith(f'{scene}/'): continue
