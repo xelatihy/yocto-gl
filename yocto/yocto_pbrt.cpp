@@ -58,7 +58,7 @@ struct pbrt_token_stream {
 static inline void skip_whitespace_or_comment(pbrt_token_stream& stream) {
     auto& str = stream.str;
     if (str.empty()) return;
-    while (!str.empty() && (std::isspace(str.front()) || str.front() == '#')) {
+    while (!str.empty() && (std::isspace(str.front()) || str.front() == '#' || str.front() == ',')) {
         if (str.front() == '#') {
             auto pos = str.find('\n');
             if (pos != string_view::npos) {
@@ -67,7 +67,7 @@ static inline void skip_whitespace_or_comment(pbrt_token_stream& stream) {
                 str.remove_prefix(str.length());
             }
         } else {
-            auto pos = str.find_first_not_of(" \t\n\r");
+            auto pos = str.find_first_not_of(" \t\n\r,");
             if (pos == string_view::npos) {
                 str.remove_prefix(str.length());
             } else {
@@ -423,7 +423,7 @@ static inline void skip_value(pbrt_token_stream& stream) {
         str.remove_prefix(1);
         str.remove_prefix(str.find('"')+1);
     } else {
-        str.remove_prefix(str.find_first_of(" \n\t\r]\""));
+        str.remove_prefix(str.find_first_of(" \n\t\r],\""));
     }
     skip_whitespace_or_comment(stream);
 }
