@@ -3632,7 +3632,61 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     scene = yocto_scene{};
 
+    auto mmap = unordered_map<string, yocto_material>{};
+    auto amap = unordered_map<string, vec3f>{};
+    auto ammap = unordered_map<string, int>{};
+
+    auto get_material = [&](const pbrt_context& ctx) {
+        auto lookup_name = ctx.material + "_______" + ctx.arealight;
+        if(ammap.find(lookup_name) != ammap.end()) return ammap.at(lookup_name);
+        auto material = mmap.at(ctx.material);
+        material.emission = amap.at(ctx.arealight);
+        scene.materials.push_back(material);
+        ammap[lookup_name] = (int)scene.materials.size() - 1;
+        return (int)scene.materials.size() - 1;
+    };
+
     auto cb = pbrt_callbacks{};
+    cb.camera = [&](const pbrt_camera& pcamera, const pbrt_context& ctx) {
+        auto camera = yocto_camera{};
+        camera.frame = inverse((frame3f)ctx.xform);
+        if(std::holds_alternative<pbrt_camera_perspective>(pcamera)) {
+            auto& perspective = std::get<pbrt_camera_perspective>(pcamera);
+            set_camera_perspectivey(camera, radians(perspective.fov), perspective.frameaspectratio, perspective.focaldistance);
+        } else {
+            throw sceneio_error("unsupported pbrt type");
+        }
+        scene.cameras.push_back(camera);
+    };
+    cb.film = [&](const pbrt_film& pfilm, const pbrt_context& ctx) {
+        if(std::holds_alternative<pbrt_film_image>(pfilm)) {
+            auto& perspective = std::get<pbrt_film_image>(pfilm);
+            for(auto& camera : scene.cameras) {
+                camera.film_width = camera.film_height * (float)perspective.xresolution / (float)(perspective.yresolution);
+            }
+        } else {
+            throw sceneio_error("unsupported pbrt type");
+        }
+    };
+    cb.shape = [&](const pbrt_shape& pshape, const pbrt_context& ctx) {
+        auto shape = yocto_shape{};
+        shape.material = get_material(ctx);
+        if(std::holds_alternative<pbrt_shape_trianglemesh>(pshape)) {
+            auto& mesh = std::get<pbrt_shape_trianglemesh>(pshape);
+            shape.positions = mesh.P;
+            shape.normals = mesh.N;
+            shape.texturecoords = mesh.uv;
+            // TODO: flip texture coordinates
+            shape.triangles = mesh.indices;
+        } else {
+            throw sceneio_error("unsupported pbrt type");
+        }
+        scene.shapes.push_back(shape);
+        auto instance = yocto_instance{};
+        instance.frame = (frame3f)ctx.xform;
+        instance.shape = (int)scene.shapes.size()-1;
+        scene.instances.push_back(instance);
+    };
 
     load_pbrt(filename, cb);
 }
