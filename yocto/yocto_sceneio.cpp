@@ -3826,8 +3826,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             material.transmission = {1, 1, 1};
             get_scaled_texture3f(
                 glass.Kr, material.specular, material.specular_texture);
-            get_scaled_texture3f(
-                glass.Kt, material.transmission, material.transmission_texture);
+            // get_scaled_texture3f(
+            //     glass.Kt, material.transmission, material.transmission_texture);
             material.roughness = 0;
         } else if (std::holds_alternative<pbrt_material_mix>(pmaterial)) {
             auto& mix     = std::get<pbrt_material_mix>(pmaterial);
