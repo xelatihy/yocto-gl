@@ -2059,9 +2059,13 @@ static void parse_pbrt_light(
 
 // Parse Medium
 static void parse_pbrt_medium(
-    vector<pbrt_token_stream>& streams, pbrt_medium& value) {
+    vector<pbrt_token_stream>& streams, pbrt_medium& value, bool named) {
     auto type = ""s;
-    parse_value(streams, type);
+    if (!named) {
+        parse_value(streams, type);
+    } else {
+        get_pbrt_typeparam(streams, type);
+    }
     auto pname = ""s, ptype = ""s;
     if (type == "distant") {
         auto tvalue = pbrt_medium_homogeneous{};
@@ -2129,6 +2133,7 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
 
     // parsing stack
     auto stack = vector<pbrt_context>{{}};
+    auto object = pbrt_object{};
 
     // parse command by command
     auto cmd = ""s;
@@ -2148,11 +2153,21 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             stack.push_back(stack.back());
         } else if (cmd == "TransformEnd") {
             stack.pop_back();
+        } else if (cmd == "ObjectBegin") {
+            parse_value(streams, object.name);
+            if(cb.begin_object) cb.begin_object(object, stack.back());
+        } else if (cmd == "ObjectEnd") {
+            if(cb.end_object) cb.end_object(object, stack.back());
+            object = {};
+        } else if (cmd == "ObjectInstance") {
+            auto value = pbrt_object{};
+            parse_value(streams, value.name);
+            if(cb.object_instance) cb.object_instance(value, stack.back());
         } else if (cmd == "Transform") {
             auto xf = identity_mat4f;
             parse_param(streams, xf);
             stack.back().frame = (affine3f)xf;
-        } else if (cmd == "Transform") {
+        } else if (cmd == "ConcatTransform") {
             auto xf = identity_mat4f;
             parse_param(streams, xf);
             stack.back().frame = stack.back().frame * (affine3f)xf;
@@ -2168,6 +2183,7 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
                                  (affine3f)make_translation_frame(v);
         } else if (cmd == "Rotate") {
             auto v             = zero4f;
+            parse_param(streams, v);
             stack.back().frame = stack.back().frame *
                                  (affine3f)(affine3f)make_rotation_frame(
                                      vec3f{v.y, v.z, v.w}, radians(v.x));
@@ -2249,7 +2265,7 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             auto name = ""s;
             parse_value(streams, name);
             auto value = pbrt_medium{};
-            parse_pbrt_medium(streams, value);
+            parse_pbrt_medium(streams, value, true);
             if (cb.medium) cb.medium(value, name, stack.back());
         } else if (cmd == "MediumInterface") {
             auto interior = ""s, exterior = ""s;
