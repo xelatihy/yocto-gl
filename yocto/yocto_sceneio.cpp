@@ -3649,7 +3649,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     auto cb = pbrt_callbacks{};
     cb.camera = [&](const pbrt_camera& pcamera, const pbrt_context& ctx) {
         auto camera = yocto_camera{};
-        camera.frame = inverse((frame3f)ctx.xform);
+        camera.frame = inverse((frame3f)ctx.frame);
         if(std::holds_alternative<pbrt_camera_perspective>(pcamera)) {
             auto& perspective = std::get<pbrt_camera_perspective>(pcamera);
             set_camera_perspectivey(camera, radians(perspective.fov), perspective.frameaspectratio, perspective.focaldistance);
@@ -3676,14 +3676,20 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             shape.positions = mesh.P;
             shape.normals = mesh.N;
             shape.texturecoords = mesh.uv;
+            for(auto& uv : shape.texturecoords) uv.y = (1-uv.y);
             // TODO: flip texture coordinates
             shape.triangles = mesh.indices;
+        } else if(std::holds_alternative<pbrt_shape_plymesh>(pshape)) {
+            auto& mesh = std::get<pbrt_shape_plymesh>(pshape);
+            if(!options.skip_meshes) {
+                load_ply_mesh(mesh.filename, shape.points, shape.lines, shape.triangles, shape.quads, shape.positions, shape.normals, shape.texturecoords, shape.colors, shape.radius, false);
+            }
         } else {
             throw sceneio_error("unsupported pbrt type");
         }
         scene.shapes.push_back(shape);
         auto instance = yocto_instance{};
-        instance.frame = (frame3f)ctx.xform;
+        instance.frame = (frame3f)ctx.frame;
         instance.shape = (int)scene.shapes.size()-1;
         scene.instances.push_back(instance);
     };
