@@ -388,6 +388,10 @@ static inline void parse_param(
         parse_param(stream, value);
     } else if (type == "color") {
         parse_param(stream, value);
+    } else if (type == "float") {
+        auto valuef = 0.0f;
+        parse_param(stream, valuef);
+        value = {valuef, valuef, valuef};
     } else if (type == "blackbody") {
         auto blackbody = zero2f;
         parse_param(stream, blackbody);
