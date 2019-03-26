@@ -174,7 +174,8 @@ def sync():
 def pbrtparse():
     scenes = [
         'bathroom/bathroom.pbrt',
-        'bmw-m6/bmw-m6.pbrt'
+        'bmw-m6/bmw-m6.pbrt',
+        'breakfast/breakfast.pbrt',
     ]
     for filename in scenes:
         cmd = f'../yocto-gl/bin/yitrace {filename}'
