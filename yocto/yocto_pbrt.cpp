@@ -1699,7 +1699,7 @@ static void parse_pbrt_arealight(
     }
 }
 
-// Parse AreaLightSource
+// Parse LightSource
 static void parse_pbrt_light(
     vector<pbrt_token_stream>& streams, pbrt_light& value) {
     auto type = ""s;
@@ -1812,6 +1812,68 @@ static void parse_pbrt_light(
     }
 }
 
+// Parse Medium
+static void parse_pbrt_medium(
+    vector<pbrt_token_stream>& streams, pbrt_medium& value) {
+    auto type = ""s;
+    parse_value(streams, type);
+    auto pname = ""s, ptype = ""s;
+    if (type == "distant") {
+        auto tvalue = pbrt_medium_homogeneous{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "sigma_a") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else if (pname == "sigma_s") {
+                parse_param(streams, ptype, tvalue.sigma_s);
+            } else if (pname == "preset") {
+                parse_param(streams, ptype, tvalue.preset);
+            } else if (pname == "g") {
+                parse_param(streams, ptype, tvalue.g);
+            } else if (pname == "scale") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "heterogeneous") {
+        auto tvalue = pbrt_medium_heterogeneous{};
+        while (is_param(streams)) {
+            parse_nametype(streams, pname, ptype);
+            if (pname == "sigma_a") {
+                parse_param(streams, ptype, tvalue.scale);
+            } else if (pname == "sigma_s") {
+                parse_param(streams, ptype, tvalue.sigma_s);
+            } else if (pname == "preset") {
+                parse_param(streams, ptype, tvalue.preset);
+            } else if (pname == "g") {
+                parse_param(streams, ptype, tvalue.g);
+            } else if (pname == "p0") {
+                parse_param(streams, ptype, tvalue.p0);
+            } else if (pname == "p1") {
+                parse_param(streams, ptype, tvalue.p1);
+            } else if (pname == "nx") {
+                parse_param(streams, ptype, tvalue.nx);
+            } else if (pname == "ny") {
+                parse_param(streams, ptype, tvalue.ny);
+            } else if (pname == "nz") {
+                parse_param(streams, ptype, tvalue.nz);
+            } else if (pname == "density") {
+                parse_param(streams, ptype, tvalue.density);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else {
+struct pbrt_heterogeneous_medium {
+    vector<float> density = {};
+};
+        throw pbrtio_error("unknown Film " + type);
+    }
+}
+
 // Load pbrt scene
 void load_pbrt(const string& filename, const pbrt_callbacks& cb,
     const load_pbrt_options& options) {
@@ -1820,63 +1882,102 @@ void load_pbrt(const string& filename, const pbrt_callbacks& cb,
     init_token_streams(streams);
     load_token_stream(filename, streams);
 
+    // parsing stack
+    auto stack = vector<pbrt_context>{ {} };
+
     // parse command by command
     auto cmd = ""s;
     while (!is_empty(streams)) {
         // get command
         parse_command(streams, cmd);
         if (cmd == "WorldBegin") {
+            stack.push_back({});
         } else if (cmd == "WorldEnd") {
+            stack.pop_back();
+            if(stack.size() != 1) throw pbrtio_error("bad stack");
         } else if (cmd == "AttributeBegin") {
+            stack.push_back(stack.back());
         } else if (cmd == "AttributeEnd") {
+            stack.pop_back();
         } else if (cmd == "TransformBegin") {
+            stack.push_back(stack.back());
         } else if (cmd == "TransformEnd") {
+            stack.pop_back();
         } else if (cmd == "Transform") {
             auto xf = identity_mat4f;
             parse_param(streams, xf);
+            stack.back().xform = (affine3f)xf;
         } else if (cmd == "Integrator") {
             auto value = pbrt_integrator{};
             parse_pbrt_integrator(streams, value);
+            if(cb.integrator) cb.integrator(value, stack.back());
         } else if (cmd == "Sampler") {
             auto value = pbrt_sampler{};
             parse_pbrt_sampler(streams, value);
+            if(cb.sampler) cb.sampler(value, stack.back());
         } else if (cmd == "PixelFilter") {
             auto value = pbrt_filter{};
             parse_pbrt_filter(streams, value);
+            if(cb.filter) cb.filter(value, stack.back());
         } else if (cmd == "Film") {
             auto value = pbrt_film{};
             parse_pbrt_film(streams, value);
+            if(cb.film) cb.film(value, stack.back());
         } else if (cmd == "Camera") {
             auto value = pbrt_camera{};
             parse_pbrt_camera(streams, value);
+            if(cb.camera) cb.camera(value, stack.back());
         } else if (cmd == "Texture") {
             auto name = ""s, type = ""s;
             parse_value(streams, name);
             parse_value(streams, type);
             auto value = pbrt_texture{};
             parse_pbrt_texture(streams, value);
+            if(cb.texture) cb.texture(value, name, stack.back());
         } else if (cmd == "Material") {
             static auto material_id = 0;
             auto name  = "unnamed_material_" + std::to_string(material_id++);
             auto value = pbrt_material{};
             parse_pbrt_material(streams, value, false);
+            stack.back().material = name;
+            if(cb.material) cb.material(value, name, stack.back());
         } else if (cmd == "MakeNamedMaterial") {
             auto name = ""s;
             parse_value(streams, name);
             auto value = pbrt_material{};
             parse_pbrt_material(streams, value, true);
+            if(cb.material) cb.material(value, name, stack.back());
         } else if (cmd == "NamedMaterial") {
             auto name = ""s;
             parse_value(streams, name);
+            stack.back().material = name;
         } else if (cmd == "Shape") {
             auto value = pbrt_shape{};
             parse_pbrt_shape(streams, value);
+            if(cb.shape) cb.shape(value, stack.back());
         } else if (cmd == "AreaLightSource") {
+            static auto material_id = 0;
+            auto name  = "unnamed_arealight_" + std::to_string(material_id++);
             auto value = pbrt_arealight{};
             parse_pbrt_arealight(streams, value);
+            stack.back().arealight = name;
+            if(cb.arealight) cb.arealight(value, name, stack.back());
         } else if (cmd == "LightSource") {
             auto value = pbrt_light{};
             parse_pbrt_light(streams, value);
+            if(cb.light) cb.light(value, stack.back());
+        } else if (cmd == "MakeNamedMedium") {
+            auto name = ""s;
+            parse_value(streams, name);
+            auto value = pbrt_medium{};
+            parse_pbrt_medium(streams, value);
+            if(cb.medium) cb.medium(value, name, stack.back());
+        } else if (cmd == "MediumInterface") {
+            auto interior = ""s, exterior = ""s;
+            parse_value(streams, interior);
+            parse_value(streams, exterior);
+            stack.back().medium_interior = interior;
+            stack.back().medium_exterior = exterior;
         } else {
             throw pbrtio_error("unknown command " + cmd);
         }

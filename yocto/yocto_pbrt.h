@@ -650,14 +650,14 @@ struct pbrt_arealight_diffuse {
 using pbrt_arealight = variant<pbrt_arealight_none, pbrt_arealight_diffuse>;
 
 // pbrt mediums
-struct pbrt_homogeneous_medium {
+struct pbrt_medium_homogeneous {
     vec3f  sigma_a = {0.0011f, 0.0024f, 0.014f};
     vec3f  sigma_s = vec3f{2.55f, 3.21f, 3.77f};
     string preset  = "";
     float  g       = 0;
     float  scale   = 1;
 };
-struct pbrt_heterogeneous_medium {
+struct pbrt_medium_heterogeneous {
     vec3f         sigma_a = {0.0011f, 0.0024f, 0.014f};
     vec3f         sigma_s = vec3f{2.55f, 3.21f, 3.77f};
     string        preset  = "";
@@ -670,9 +670,45 @@ struct pbrt_heterogeneous_medium {
     int           nz      = 1;
     vector<float> density = {};
 };
+using pbrt_medium = variant<pbrt_medium_homogeneous, pbrt_medium_heterogeneous>;
+
+// pbrt medium interface
+struct pbrt_mediuminterface {
+    string interior = "";
+    string exterior = "";
+};
+
+// pbrt insstance
+struct pbrt_instance {
+    string object = "";
+};
+
+// pbrt stack ctm
+struct pbrt_context {
+    affine3f xform = identity_affine3f;
+    string material = "";
+    string arealight = "";
+    string medium_interior = "";
+    string medium_exterior = "";
+};
 
 // pbrt callbacks
-struct pbrt_callbacks {};
+struct pbrt_callbacks {
+    function<void(const pbrt_sampler& value, const pbrt_context& ctx)> sampler = {};
+    function<void(const pbrt_integrator& value, const pbrt_context& ctx)> integrator = {};
+    function<void(const pbrt_film& value, const pbrt_context& ctx)> film = {};
+    function<void(const pbrt_filter& value, const pbrt_context& ctx)> filter = {};
+    function<void(const pbrt_camera& value, const pbrt_context& ctx)> camera = {};
+    function<void(const pbrt_texture& value, const string& name, const pbrt_context& ctx)> texture = {};
+    function<void(const pbrt_material& value, const string& name, const pbrt_context& ctx)> material = {};
+    function<void(const pbrt_medium& value, const string& name, const pbrt_context& ctx)> medium = {};
+    function<void(const pbrt_shape& value, const pbrt_context& ctx)> shape = {};
+    function<void(const pbrt_light& value, const pbrt_context& ctx)> light = {};
+    function<void(const pbrt_arealight& value, const string& name, const pbrt_context& ctx)> arealight = {};
+    function<void(const pbrt_instance& value, const pbrt_context& ctx)> instance = {}; 
+    function<void(const pbrt_instance& value, const pbrt_context& ctx)> begin_instance = {}; 
+    function<void(const pbrt_instance& value, const pbrt_context& ctx)> end_instance = {}; 
+};
 
 // Load obj options
 struct load_pbrt_options {
