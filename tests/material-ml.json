@@ -304,7 +304,6 @@
         {
             "name": "floor",
             "filename": "models/floor.ply",
-            
             "!!proc": {
                 "type": "floor"
             }
@@ -312,7 +311,6 @@
         {
             "name": "obj01",
             "filename": "models/obj01.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -321,7 +319,6 @@
         {
             "name": "obj02",
             "filename": "models/obj02.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -330,7 +327,6 @@
         {
             "name": "obj03",
             "filename": "models/obj03.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -339,7 +335,6 @@
         {
             "name": "obj04",
             "filename": "models/obj04.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -348,7 +343,6 @@
         {
             "name": "obj05",
             "filename": "models/obj05.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -357,7 +351,6 @@
         {
             "name": "obj06",
             "filename": "models/obj06.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -366,7 +359,6 @@
         {
             "name": "obj07",
             "filename": "models/obj07.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -375,7 +367,6 @@
         {
             "name": "obj08",
             "filename": "models/obj08.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -384,7 +375,6 @@
         {
             "name": "obj09",
             "filename": "models/obj09.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -393,7 +383,6 @@
         {
             "name": "obj10",
             "filename": "models/obj10.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -402,7 +391,6 @@
         {
             "name": "obj11",
             "filename": "models/obj11.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -411,7 +399,6 @@
         {
             "name": "obj12",
             "filename": "models/obj12.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -420,7 +407,6 @@
         {
             "name": "obj13",
             "filename": "models/obj13.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -429,7 +415,6 @@
         {
             "name": "obj14",
             "filename": "models/obj14.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -438,7 +423,6 @@
         {
             "name": "obj15",
             "filename": "models/obj15.ply",
-            
             "!!proc": {
                 "type": "sphere",
                 "size": 1
@@ -446,7 +430,6 @@
         },
         {
             "name": "light1",
-            
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -457,7 +440,6 @@
         },
         {
             "name": "light2",
-            
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -470,11 +452,13 @@
     "instances": [
         {
             "name": "floor",
-            "shape": "floor", "material": "floor"
+            "shape": "floor",
+            "material": "floor"
         },
         {
             "name": "obj01",
-            "shape": "obj01", "material": "obj01",
+            "shape": "obj01",
+            "material": "obj01",
             "!!proc": {
                 "translation": [
                     -3,
@@ -485,7 +469,8 @@
         },
         {
             "name": "obj02",
-            "shape": "obj02", "material": "obj02",
+            "shape": "obj02",
+            "material": "obj02",
             "!!proc": {
                 "translation": [
                     -1.5,
@@ -496,7 +481,8 @@
         },
         {
             "name": "obj03",
-            "shape": "obj03", "material": "obj03",
+            "shape": "obj03",
+            "material": "obj03",
             "!!proc": {
                 "translation": [
                     0,
@@ -507,7 +493,8 @@
         },
         {
             "name": "obj04",
-            "shape": "obj04", "material": "obj04",
+            "shape": "obj04",
+            "material": "obj04",
             "!!proc": {
                 "translation": [
                     1.5,
@@ -518,7 +505,8 @@
         },
         {
             "name": "obj05",
-            "shape": "obj05", "material": "obj05",
+            "shape": "obj05",
+            "material": "obj05",
             "!!proc": {
                 "translation": [
                     3,
@@ -529,7 +517,8 @@
         },
         {
             "name": "obj06",
-            "shape": "obj06", "material": "obj06",
+            "shape": "obj06",
+            "material": "obj06",
             "!!proc": {
                 "translation": [
                     -3,
@@ -540,7 +529,8 @@
         },
         {
             "name": "obj07",
-            "shape": "obj07", "material": "obj07",
+            "shape": "obj07",
+            "material": "obj07",
             "!!proc": {
                 "translation": [
                     -1.5,
@@ -551,7 +541,8 @@
         },
         {
             "name": "obj08",
-            "shape": "obj08", "material": "obj08",
+            "shape": "obj08",
+            "material": "obj08",
             "!!proc": {
                 "translation": [
                     0,
@@ -562,7 +553,8 @@
         },
         {
             "name": "obj09",
-            "shape": "obj09", "material": "obj09",
+            "shape": "obj09",
+            "material": "obj09",
             "!!proc": {
                 "translation": [
                     1.5,
@@ -573,7 +565,8 @@
         },
         {
             "name": "obj10",
-            "shape": "obj10", "material": "obj10",
+            "shape": "obj10",
+            "material": "obj10",
             "!!proc": {
                 "translation": [
                     3,
@@ -584,7 +577,8 @@
         },
         {
             "name": "obj11",
-            "shape": "obj11", "material": "obj11",
+            "shape": "obj11",
+            "material": "obj11",
             "!!proc": {
                 "translation": [
                     -3,
@@ -595,7 +589,8 @@
         },
         {
             "name": "obj12",
-            "shape": "obj12", "material": "obj12",
+            "shape": "obj12",
+            "material": "obj12",
             "!!proc": {
                 "translation": [
                     -1.5,
@@ -606,7 +601,8 @@
         },
         {
             "name": "obj13",
-            "shape": "obj13", "material": "obj13",
+            "shape": "obj13",
+            "material": "obj13",
             "!!proc": {
                 "translation": [
                     0,
@@ -617,7 +613,8 @@
         },
         {
             "name": "obj14",
-            "shape": "obj14", "material": "obj14",
+            "shape": "obj14",
+            "material": "obj14",
             "!!proc": {
                 "translation": [
                     1.5,
@@ -628,7 +625,8 @@
         },
         {
             "name": "obj15",
-            "shape": "obj15", "material": "obj15",
+            "shape": "obj15",
+            "material": "obj15",
             "!!proc": {
                 "translation": [
                     3,
@@ -639,7 +637,8 @@
         },
         {
             "name": "light1",
-            "shape": "light1", "material": "light1",
+            "shape": "light1",
+            "material": "light1",
             "!!proc": {
                 "from": [
                     -8,
@@ -655,7 +654,8 @@
         },
         {
             "name": "light2",
-            "shape": "light2", "material": "light2",
+            "shape": "light2",
+            "material": "light2",
             "!!proc": {
                 "from": [
                     8,
