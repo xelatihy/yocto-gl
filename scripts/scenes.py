@@ -185,6 +185,7 @@ def pbrtparse(scene='*'):
         'buddha-fractal/buddha-fractal.pbrt',
         'bunny-fur/f3-15.pbrt',
         'caustic-glass/glass.pbrt',
+        'chopper-titan/chopper-titan.pbrt',
     ]
     for filename in scenes:
         if scene != '*' and not filename.startswith(f'{scene}/'): continue
