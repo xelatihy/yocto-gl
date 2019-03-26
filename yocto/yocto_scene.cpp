@@ -181,12 +181,12 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
 
 // Updates tesselation.
 void tesselate_shapes(yocto_scene& scene) {
-    auto displacements = vector<int>(scene.shapes.max_size(), -2);
+    auto displacements = vector<int>(scene.shapes.size(), -2);
     for(auto& instance : scene.instances) {
         auto& material = scene.materials[instance.material];
         auto& displacement = displacements[instance.shape];
         if(displacement == -2) {
-            displacement = material.diffuse_texture;
+            displacement = material.displacement_texture;
         } else if(displacement != material.displacement_texture) {
             throw runtime_error("different displacements applied to the same shape");
         }

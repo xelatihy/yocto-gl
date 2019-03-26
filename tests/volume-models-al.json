@@ -127,7 +127,7 @@
         {
             "name": "floor",
             "filename": "models/floor.ply",
-            "material": "floor",
+            
             "!!proc": {
                 "type": "floor"
             }
@@ -135,7 +135,7 @@
         {
             "name": "cube",
             "filename": "models/obj1.obj",
-            "material": "glass",
+            
             "subdivision_level": 4,
             "catmull_clark": true,
             "compute_normals": true,
@@ -146,7 +146,7 @@
         {
             "name": "monkey",
             "filename": "models/obj2.ply",
-            "material": "cloud",
+            
             "subdivision_level": 2,
             "catmull_clark": true,
             "compute_normals": true,
@@ -161,7 +161,7 @@
         },
         {
             "name": "light1",
-            "material": "light1",
+            
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -172,7 +172,7 @@
         },
         {
             "name": "light2",
-            "material": "light2",
+            
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -185,11 +185,11 @@
     "instances": [
         {
             "name": "floor",
-            "shape": "floor"
+            "shape": "floor", "material": "floor"
         },
         {
             "name": "cube",
-            "shape": "cube",
+            "shape": "cube", "material": "cube",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -200,7 +200,7 @@
         },
         {
             "name": "monkey",
-            "shape": "monkey",
+            "shape": "monkey", "material": "monkey",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -211,7 +211,7 @@
         },
         {
             "name": "bunny",
-            "shape": "bunny",
+            "shape": "bunny", "material": "bunny",
             "!!proc": {
                 "translation": [
                     0,
@@ -222,7 +222,7 @@
         },
         {
             "name": "light1",
-            "shape": "light1",
+            "shape": "light1", "material": "light1",
             "!!proc": {
                 "from": [
                     -4,
@@ -238,7 +238,7 @@
         },
         {
             "name": "light2",
-            "shape": "light2",
+            "shape": "light2", "material": "light2",
             "!!proc": {
                 "from": [
                     4,
