@@ -420,61 +420,67 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
     }
 }
 
-// Build a scene BVH
-void build_scene_bvh(const yocto_scene& scene, bvh_scene_data& bvh,
+// Build BVH
+void build_shape_bvh(
+    const yocto_shape& shape, bvh_tree& bvh, const bvh_build_options& options) {
+    // make bvh
+    if (options.share_memory_embree &&
+        shape.positions.size() == shape.positions.capacity()) {
+        ((vector<vec3f>&)shape.positions).reserve(shape.positions.size() + 1);
+    }
+    build_shape_bvh(bvh, shape, options);
+}
+void build_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
     const bvh_build_options& options) {
-    // clear
-    bvh = {};
-
     // shapes
-    bvh.bvh_.shapes.resize(scene.shapes.size());
     bvh.shapes.resize(scene.shapes.size());
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
-        // make bvh
-        auto& shape     = scene.shapes[shape_id];
-        auto& shape_bvh = bvh.shapes[shape_id];
-        if (options.share_memory_embree &&
-            shape.positions.size() == shape.positions.capacity()) {
-            ((vector<vec3f>&)shape.positions)
-                .reserve(shape.positions.size() + 1);
-        }
-        shape_bvh.points    = shape.points;
-        shape_bvh.lines     = shape.lines;
-        shape_bvh.triangles = shape.triangles;
-        shape_bvh.quads     = shape.quads;
-        if (!shape.quads_positions.empty())
-            shape_bvh.quads = shape.quads_positions;
-        shape_bvh.positions = shape.positions;
-        shape_bvh.radius    = shape.radius;
-        build_shape_bvh(bvh.bvh_.shapes.at(shape_id), shape_bvh, options);
-    }
-
-    // instances
-    bvh.instances.resize(scene.instances.size());
-    for (auto instance_id = 0; instance_id < scene.instances.size();
-         instance_id++) {
-        bvh.instances[instance_id] = {scene.instances[instance_id].frame,
-            scene.instances[instance_id].shape};
+        build_shape_bvh(scene.shapes[shape_id], bvh.shapes[shape_id], options);
     }
 
     // build bvh
-    build_scene_bvh(bvh.bvh_, bvh, options);
+    build_scene_bvh(bvh, scene, options);
 }
 
 // Refits a scene BVH
-void refit_scene_bvh(const yocto_scene& scene, bvh_scene_data& bvh,
+void refit_shape_bvh(const yocto_shape& shape, bvh_tree& bvh,
+    const bvh_build_options& options) {
+    refit_shape_bvh(bvh, shape, options);
+}
+void refit_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
+    const bvh_build_options& options) {
+    refit_scene_bvh(bvh, scene, options);
+}
+void refit_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_build_options& options) {
     for (auto shape_id : updated_shapes) {
-        bvh.shapes[shape_id].positions = scene.shapes[shape_id].positions;
-        bvh.shapes[shape_id].radius    = scene.shapes[shape_id].radius;
-        refit_shape_bvh(bvh.bvh_.shapes[shape_id], bvh.shapes[shape_id], options);
+        refit_shape_bvh(scene.shapes[shape_id], bvh.shapes[shape_id], options);
     }
-    for (auto instance_id : updated_instances) {
-        bvh.instances[instance_id] = {scene.instances[instance_id].frame,
-            scene.instances[instance_id].shape};
+    refit_scene_bvh(scene, bvh, options);
+}
+bool intersect_shape_bvh(const yocto_shape& shape, const bvh_tree& bvh,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any) {
+    return intersect_shape_bvh(bvh, shape, ray, intersection, find_any);
+}
+bool intersect_scene_bvh(const yocto_scene& scene, const bvh_instance_tree& bvh,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any, bool non_rigid_frames) {
+    return intersect_scene_bvh(bvh, scene, ray, intersection, find_any, non_rigid_frames);
+}
+bool intersect_instance_bvh(const yocto_scene& scene, const bvh_instance_tree& bvh,
+    int instance_id, const ray3f& ray, bvh_intersection& intersection, 
+    bool find_any, bool non_rigid_frames) {
+    auto& instance = scene.instances[instance_id];
+    auto  inv_ray  = non_rigid_frames
+                       ? transform_ray(inverse((affine3f)instance.frame), ray)
+                       : transform_ray_inverse(instance.frame, ray);
+    if (intersect_shape_bvh(scene.shapes[instance.shape], 
+            bvh.shapes[instance.shape], inv_ray, intersection, find_any)) {
+        intersection.instance_id = instance_id;
+        return true;
+    } else {
+        return false;
     }
-    refit_scene_bvh(bvh.bvh_, bvh, options);
 }
 
 // Add missing names and resolve duplicated names.

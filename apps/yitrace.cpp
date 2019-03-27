@@ -66,7 +66,7 @@ struct app_state {
 
     // scene
     yocto_scene scene      = {};
-    bvh_scene_data   bvh        = {};
+    bvh_instance_tree   bvh        = {};
     bool        add_skyenv = false;
     bool        validate   = false;
 
@@ -278,7 +278,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 continue_opengl_widget_line(win);
                 if (draw_button_opengl_widget(win, "print stats")) {
                     printf("%s\n", print_scene_stats(app.scene).c_str());
-                    printf("%s\n", print_bvh_stats(app.bvh).c_str());
+                    printf("%s\n", print_scene_bvh_stats(app.bvh).c_str());
                 }
                 auto mouse_pos = get_opengl_mouse_pos(win);
                 auto ij        = get_image_coords(mouse_pos, app.image_center,
@@ -440,7 +440,7 @@ void run_ui(app_state& app) {
                 auto ray = evaluate_camera_ray(
                     camera, ij, app.image.size(), {0.5f, 0.5f}, zero2f);
                 if (auto isec = bvh_intersection{};
-                    intersect_scene_bvh(app.bvh, ray, isec)) {
+                    intersect_scene_bvh(app.scene, app.bvh, ray, isec)) {
                     app.selection = {typeid(yocto_instance), isec.instance_id};
                 }
             }

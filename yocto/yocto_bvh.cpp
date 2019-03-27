@@ -1714,7 +1714,12 @@ bool overlap_instances_bvh(const bvh_instance_tree& bvh, int num_instances,
 namespace yocto {
 
 // Print bvh statistics.
-string print_bvh_stats(const bvh_instance_tree& bvh) {
+string print_shape_bvh_stats(const bvh_tree& bvh) {
+    // TODO
+    auto str = ""s;
+    return str;
+}
+string print_scene_bvh_stats(const bvh_instance_tree& bvh) {
 #if 0
     auto num_shapes    = (size_t)0;
     auto num_instances = (size_t)0;
@@ -1791,11 +1796,9 @@ string print_bvh_stats(const bvh_instance_tree& bvh) {
     str += "memory_embree: " + std::to_string(embree_memory) + "\n";
 #endif
 #endif
+    // TODO
     auto str = ""s;
     return str;
-}
-string print_bvh_stats(const bvh_scene_data& bvh) {
-    return print_bvh_stats(bvh.bvh_);
 }
 
 }  // namespace yocto
