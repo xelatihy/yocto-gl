@@ -615,7 +615,7 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal_,
         auto OoI = dot(outgoing, incoming);
 
         // NoH < 0 is rare
-        if (NoH > 0 and NoO > 0 and OoH > 0 and OoI < 0 and NoI < 0) {
+        //if (NoH > 0 and NoO > 0 and OoH > 0 and OoI < 0 and NoI < 0) {
             //            return 1 - evaluate_brdf_fresnel(brdf, halfway,
             //            outgoing);
 
@@ -624,35 +624,36 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal_,
                 brdf.roughness, normal, halfway);
 
             auto ir = reflect(outgoing, halfway);
-            if (dot(ir, halfway) > 0 and dot(ir, normal) > 0) {
-                auto G = evaluate_microfacet_shadowing(
-                    brdf.roughness, normal, halfway, outgoing, ir);
+            // if (dot(ir, halfway) > 0 and dot(ir, normal) > 0) {
+            auto G = evaluate_microfacet_shadowing(
+                brdf.roughness, normal, halfway, outgoing, incoming);
 
-                //            assert(D > 0);
-                //            assert(G > 0);
-                // if(fabs(dot(normal, outgoing)) * fabs(dot(normal, ir) != 0))
-                brdf_cosine +=
-                    (1 - fresnel) * D * G /
-                    (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, ir)));
-            }
-            // auto xxx = abs(dot(outgoing, halfway) * dot(incoming, halfway)) /
-            //            abs(dot(outgoing, normal) * dot(incoming, normal));
+            // brdf_cosine +=
+            //     (1 - fresnel) * D * G /
+            //     (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal,
+            //     ir)));
 
-            // auto num = (1 - fresnel) * D * G;
-            // auto den = dot(outgoing, halfway) + eta * dot(incoming, halfway);
+            auto xxx = abs(dot(outgoing, halfway) * dot(incoming, halfway)) /
+                       abs(dot(outgoing, normal) * dot(incoming, normal));
+
+            auto num = (1 - fresnel) * D * G;
+
+            auto n   = convert_specular_to_eta(brdf.specular);
+            auto den = outgoing_up ? length(outgoing + n * incoming)
+                                   : length(n * outgoing + incoming);
+
+            // if (outgoing_up) den *= n;
+            den *= den;
+            // den *= dot(halfway, incoming);
             // assert(xxx != 0);
             // assert(num != zero3f);
             // assert(den != 0);
+            // auto den_ =
+            // (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, ir)));
 
-            // brdf_cosine += xxx * num / (den * den);
-        }
-        // else
-        // return {0, 1, 0};
-        // Hack
-        // Hack
-        // Hack
-        // Hack
-        // Hack
+            brdf_cosine += xxx * num / den;
+            // }
+        //
     }
 
     return brdf_cosine * abs(dot(normal, incoming));
@@ -882,9 +883,16 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
         if (NoH > 0 and NoO > 0 and OoH > 0 and OoI < 0 and NoI < 0) {
             auto d = sample_microfacet_distribution_pdf(
                 brdf.roughness, normal, halfway);
-            assert(d > 0);
 
-            auto tmp = weights.z * d / (4 * fabs(dot(outgoing, halfway)));
+            auto n        = convert_specular_to_eta(brdf.specular);
+            auto jacobian = outgoing_up ? length(outgoing + n * incoming)
+                                        : length(n * outgoing + incoming);
+
+            // if (outgoing_up) jacobian *= n;
+            jacobian *= jacobian;
+            jacobian *= dot(halfway, incoming);
+
+            auto tmp = weights.z * d / jacobian;
 
             assert(tmp > 0);
             pdf += tmp;
