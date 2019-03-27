@@ -599,61 +599,24 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal_,
     // transmission through rough surface
     if (brdf.transmission != zero3f && outgoing_up != incoming_up &&
         brdf.refract) {
-        auto eta = convert_specular_to_eta(brdf.specular);
-        if (not outgoing_up) eta = 1.0f / eta;
+        auto eta            = convert_specular_to_eta(brdf.specular);
+        auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
+                                          : (eta * outgoing + incoming);
+        auto halfway = normalize(halfway_vector);
 
-        // halfway points towards the air
-        auto halfway = -normalize(outgoing + eta * incoming);
+        auto fresnel = evaluate_brdf_fresnel(brdf, halfway, outgoing);
+        auto D       = evaluate_microfacet_distribution(
+            brdf.roughness, normal, halfway);
+        auto G = evaluate_microfacet_shadowing(
+            brdf.roughness, normal, halfway, outgoing, incoming);
 
-        // flip halfway such that it is aligned with normal
-        if (not outgoing_up) halfway = -halfway;
+        auto dots = dot(outgoing, halfway) * dot(incoming, halfway) /
+                    (dot(outgoing, normal) * dot(incoming, normal));
 
-        auto NoH = dot(normal, halfway);
-        auto OoH = dot(outgoing, halfway);
-        auto NoI = dot(normal, incoming);
-        auto NoO = dot(normal, outgoing);
-        auto OoI = dot(outgoing, incoming);
+        auto numerator   = (1 - fresnel) * D * G;
+        auto denominator = dot(halfway_vector, halfway_vector);
 
-        // NoH < 0 is rare
-        //if (NoH > 0 and NoO > 0 and OoH > 0 and OoI < 0 and NoI < 0) {
-            //            return 1 - evaluate_brdf_fresnel(brdf, halfway,
-            //            outgoing);
-
-            auto fresnel = evaluate_brdf_fresnel(brdf, halfway, outgoing);
-            auto D       = evaluate_microfacet_distribution(
-                brdf.roughness, normal, halfway);
-
-            auto ir = reflect(outgoing, halfway);
-            // if (dot(ir, halfway) > 0 and dot(ir, normal) > 0) {
-            auto G = evaluate_microfacet_shadowing(
-                brdf.roughness, normal, halfway, outgoing, incoming);
-
-            // brdf_cosine +=
-            //     (1 - fresnel) * D * G /
-            //     (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal,
-            //     ir)));
-
-            auto xxx = abs(dot(outgoing, halfway) * dot(incoming, halfway)) /
-                       abs(dot(outgoing, normal) * dot(incoming, normal));
-
-            auto num = (1 - fresnel) * D * G;
-
-            auto n   = convert_specular_to_eta(brdf.specular);
-            auto den = outgoing_up ? length(outgoing + n * incoming)
-                                   : length(n * outgoing + incoming);
-
-            // if (outgoing_up) den *= n;
-            den *= den;
-            // den *= dot(halfway, incoming);
-            // assert(xxx != 0);
-            // assert(num != zero3f);
-            // assert(den != 0);
-            // auto den_ =
-            // (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, ir)));
-
-            brdf_cosine += xxx * num / den;
-            // }
-        //
+        brdf_cosine += abs(dots) * numerator / denominator;
     }
 
     return brdf_cosine * abs(dot(normal, incoming));
@@ -747,12 +710,11 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
              rnl < weights.x + weights.y + weights.z) {
         auto halfway = sample_microfacet_distribution(
             brdf.roughness, normal, rn);
+        auto eta = convert_specular_to_eta(brdf.specular);
         if (outgoing_up)
-            return refract(
-                outgoing, halfway, 1 / convert_specular_to_eta(brdf.specular));
+            return refract(outgoing, halfway, 1 / eta);
         else
-            return refract(
-                outgoing, -halfway, convert_specular_to_eta(brdf.specular));
+            return refract(outgoing, -halfway, eta);
 
     }
 
@@ -862,41 +824,29 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 
     if (brdf.transmission != zero3f && outgoing_up != incoming_up &&
         brdf.refract) {
-        //         pdf += weights.z;
-
         auto eta = convert_specular_to_eta(brdf.specular);
-        if (not outgoing_up) eta = 1.0f / eta;
 
-        // halfway points towards the air
-        auto halfway = -normalize(outgoing + eta * incoming);
+        // halfway is in the same halfspace of outgoing.
+        auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
+                                          : (eta * outgoing + incoming);
+        auto halfway = normalize(halfway_vector);
 
-        // flip halfway such that it is aligned with normal
-        if (not outgoing_up) halfway = -halfway;
+        auto d = sample_microfacet_distribution_pdf(
+            brdf.roughness, normal, halfway);
 
-        auto NoH = dot(normal, halfway);
-        auto NoI = dot(normal, incoming);
-        auto NoO = dot(normal, outgoing);
-        auto OoH = dot(outgoing, halfway);
-        auto OoI = dot(outgoing, incoming);
+        auto jacobian = dot(halfway, incoming) /
+                        dot(halfway_vector, halfway_vector);
+        // jacobian *= dot(halfway, incoming);
 
-        // NoH < 0 is rare
-        if (NoH > 0 and NoO > 0 and OoH > 0 and OoI < 0 and NoI < 0) {
-            auto d = sample_microfacet_distribution_pdf(
-                brdf.roughness, normal, halfway);
+        pdf += weights.z * d * jacobian;
 
-            auto n        = convert_specular_to_eta(brdf.specular);
-            auto jacobian = outgoing_up ? length(outgoing + n * incoming)
-                                        : length(n * outgoing + incoming);
-
-            // if (outgoing_up) jacobian *= n;
-            jacobian *= jacobian;
-            jacobian *= dot(halfway, incoming);
-
-            auto tmp = weights.z * d / jacobian;
-
-            assert(tmp > 0);
-            pdf += tmp;
-        }
+        // assert(tmp > 0);
+        // pdf += tmp;
+        // auto NoH = dot(normal, halfway);
+        // auto NoI = dot(normal, incoming);
+        // auto NoO = dot(normal, outgoing);
+        // auto OoH = dot(outgoing, halfway);
+        // auto OoI = dot(outgoing, incoming);
     }
 
     return pdf;
