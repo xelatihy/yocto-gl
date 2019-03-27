@@ -56,7 +56,7 @@ struct app_state {
 
     // options
     load_scene_options  load_options  = {};
-    build_bvh_options   bvh_options   = {};
+    bvh_build_options   bvh_options   = {};
     trace_image_options trace_options = {};
     float               exposure      = 0;
     bool                filmic        = false;
@@ -65,10 +65,10 @@ struct app_state {
     vec2i               image_size    = {0, 0};
 
     // scene
-    yocto_scene scene      = {};
-    bvh_tree    bvh        = {};
-    bool        add_skyenv = false;
-    bool        validate   = false;
+    yocto_scene       scene      = {};
+    bvh_scene bvh        = {};
+    bool              add_skyenv = false;
+    bool              validate   = false;
 
     // rendering state
     trace_lights                   lights  = {};
@@ -278,7 +278,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 continue_opengl_widget_line(win);
                 if (draw_button_opengl_widget(win, "print stats")) {
                     printf("%s\n", print_scene_stats(app.scene).c_str());
-                    printf("%s\n", print_bvh_stats(app.bvh).c_str());
+                    printf("%s\n", print_scene_bvh_stats(app.bvh).c_str());
                 }
                 auto mouse_pos = get_opengl_mouse_pos(win);
                 auto ij        = get_image_coords(mouse_pos, app.image_center,
@@ -368,7 +368,8 @@ bool update(app_state& app) {
             updated_instances.push_back(index);
     }
     if (!updated_instances.empty() || !updated_shapes.empty())
-        refit_scene_bvh(app.scene, app.bvh, updated_shapes, app.bvh_options);
+        refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes,
+            app.bvh_options);
     app.update_list.clear();
 
     // start rendering
@@ -439,7 +440,7 @@ void run_ui(app_state& app) {
                 auto ray = evaluate_camera_ray(
                     camera, ij, app.image.size(), {0.5f, 0.5f}, zero2f);
                 if (auto isec = bvh_intersection{};
-                    intersect_bvh(app.bvh, ray, isec)) {
+                    intersect_scene_bvh(app.scene, app.bvh, ray, isec)) {
                     app.selection = {typeid(yocto_instance), isec.instance_id};
                 }
             }
@@ -463,7 +464,6 @@ int main(int argc, char* argv[]) {
     // application
     app_state app{};
     app.trace_options.samples_per_batch = 1;
-    app.bvh_options.share_memory        = true;
     auto no_parallel                    = false;
 
     // names for enums
@@ -500,8 +500,10 @@ int main(int argc, char* argv[]) {
 #if YOCTO_EMBREE
     parser.add_flag("--embree,!--no-embree", app.bvh_options.use_embree,
         "Use Embree ratracer");
-    parser.add_flag("--flatten-embree,!--no-flatten-embree",
-        app.bvh_options.flatten_embree, "Flatten embree scene");
+    parser.add_flag("--embree-flatten,!--no-embree-flatten",
+        app.bvh_options.embree_flatten, "Flatten embree scene");
+    parser.add_flag("--embree-shared,!--no-embree-shared",
+        app.bvh_options.embree_shared, "Embree runs in shared memory");
 #endif
     parser.add_flag("--double-sided,!--no-double-sided",
         app.trace_options.double_sided, "Double-sided rendering.");

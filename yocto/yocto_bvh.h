@@ -31,28 +31,20 @@
 // represent triangles correctly, an this convention is used throught the
 // library. This is equivalent to Intel's Embree.
 //
-// Shape and scene data is copied from the application to the BVH by default.
-// This is safer and avoids memory corruption problems. We support
-// data sharing with the application to reduce memory usage. Since this is
-// less safe, we require this option to be explicitly defined during
-// initialization. In the case of using Embree and sharing, positions arrays
-// need to be slightly overallocated as per Embree documentation.
+// Shape and scene data is not copied from the application to the BVH to 
+// improve memory footprint at the price of convenience. Shape data is 
+// explixitly passed on evey call, while instance data uses callbacks, 
+// since each application has its own conventions for storing those. 
+// To make usage more convenite, we provide `bvh_XXX_data` to hold application 
+// data and convenience wrappers for all functions.
 //
 // We support working either on the whole scene or on a single shape. In the
 // description below yoi will see this dual API defined.
 //
-// 1. create shape/scene bvhs using `init_XXX_bvh()`
-// 3. build the shape/scene BVH with `build_bvh()`;
-//    for the scene build, we will build appropriately the shape bvhs
-// 4. perform ray-shape intersection with `intersect_bvh()`
-// 5. perform point overlap queries with `overlap_bvh()`
-// 6. a shape bvh can be updated if change to its positions occurs;
-//    to do so, update the bvh data with `update_vertices()` and then call
-//    `refit_bvh()`
-// 7. an instance bvh can be updated if changes to instances or shapes occur;
-//    to do so update the relevant shape bvhs as in 6. and update the bvh data
-//    with `update_vertices()` and then call `refit_bvh()`; you can retrive a
-//    shape bvh by index with `get_shape_bvh()`
+// 1. build the shape/scene BVH with `build_XXX_bvh()`;
+// 2. perform ray-shape intersection with `intersect_XXX_bvh()`
+// 3. perform point overlap queries with `overlap_XXX_bvh()`
+// 4. refit BVH for dynamic applications with `refit_XXX_bvh`
 //
 //
 
@@ -111,7 +103,7 @@ const int bvh_max_prims = 4;
 // primitives or internal nodes, the node element type,
 // and the split axis. Leaf and internal nodes are identical, except that
 // indices refer to primitives for leaf nodes or other nodes for internal
-// nodes. See bvh_scene for more details.
+// nodes. See bvh_scene_data for more details.
 struct bvh_node {
     bbox3f bbox;
     short  num_primitives;
@@ -120,98 +112,32 @@ struct bvh_node {
     int    primitive_ids[bvh_max_prims];
 };
 
-// internal class for shared memory references
-template <typename T>
-struct bvh_array_view {
-    constexpr bvh_array_view() : ptr{nullptr}, count{0} {}
-    constexpr bvh_array_view(const T* ptr, int count)
-        : ptr{ptr}, count{count} {}
-    constexpr bvh_array_view(const vector<T>& v)
-        : ptr{v.data()}, count{(int)v.size()} {}
-
-    constexpr bool     empty() const { return count == 0; }
-    constexpr int      size() const { return count; }
-    constexpr const T& operator[](int idx) const { return ptr[idx]; }
-    constexpr const T* data() const { return ptr; }
-    constexpr const T* begin() const { return ptr; }
-    constexpr const T* end() const { return ptr + count; }
-
-   private:
-    const T* ptr   = nullptr;
-    int      count = 0;
-};
-
-// internal class for shared memory references
-template <typename T>
-struct bvh_strided_view {
-    constexpr bvh_strided_view() : ptr{nullptr}, count{0} {}
-    constexpr bvh_strided_view(const void* ptr, int count, int stride)
-        : ptr{ptr}, count{count}, stride{stride} {}
-    constexpr bvh_strided_view(const vector<T>& v)
-        : ptr{v.data()}, count{(int)v.size()}, stride{sizeof(T)} {}
-
-    constexpr bool     empty() const { return count == 0; }
-    constexpr int      size() const { return count; }
-    constexpr const T& operator[](int idx) const {
-        return *(T*)((char*)ptr + (size_t)stride * (size_t)idx);
-    }
-
-    struct iterator {
-        const void* ptr    = nullptr;
-        int         stride = 0;
-        bool        operator!=(const iterator& other) const {
-            return ptr != other.ptr;
-        }
-        iterator& operator++() { ptr = (char*)ptr + stride; }
-        const T&  operator*() const { return *(T*)(char*)ptr; }
-    };
-    iterator begin() const { return {ptr, stride}; }
-    iterator end() const { return {(char*)ptr + stride * count, stride}; }
-
-   private:
-    const void* ptr    = nullptr;
-    int         count  = 0;
-    int         stride = 0;
-};
-
 // Instance for a scene BVH.
 struct bvh_instance {
     frame3f frame    = identity_frame3f;
     int     shape_id = -1;
 };
 
-// BVH for shapes made of points, lines, triangles or quads. Only one primitive
-// type can be used.
-// To build, fill in the shape data, then call `init_XXX_bvh()`.
-// The BVH is stored as a node array with the tree structure is encoded using
+// BVH tree stored as a node array with the tree structure is encoded using
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
-struct bvh_tree {
-    // shape data views
-    bvh_array_view<vec3f> positions_view;
-    bvh_array_view<float> radius_view;
-    bvh_array_view<int>   points_view;
-    bvh_array_view<vec2i> lines_view;
-    bvh_array_view<vec3i> triangles_view;
-    bvh_array_view<vec4i> quads_view;
+// Applicxation data is not stored explicitly.
+struct bvh_shape {
+    // bvh internal nodes
+    vector<bvh_node> nodes;
 
-    // shape data copies
-    vector<vec3f> positions_data;
-    vector<float> radius_data;
-    vector<int>   points_data;
-    vector<vec2i> lines_data;
-    vector<vec3i> triangles_data;
-    vector<vec4i> quads_data;
+#if YOCTO_EMBREE
+    // Embree opaque data
+    void* embree_bvh       = nullptr;
+    bool  embree_flattened = false;
+    // Cleanup for embree data
+    ~bvh_shape();
+#endif
+};
 
-    // instance data views
-    bvh_strided_view<bvh_instance> instances_view;
-
-    // instance data copies
-    vector<bvh_instance> instances_data;
-
-    // other data for instance bvh
-    vector<bvh_tree> shape_bvhs;
-    bool             non_rigid_frames = true;
+struct bvh_scene {
+    // bvh internal nodes
+    vector<bvh_shape> shapes;
 
     // bvh internal nodes
     vector<bvh_node> nodes;
@@ -221,46 +147,51 @@ struct bvh_tree {
     void* embree_bvh       = nullptr;
     bool  embree_flattened = false;
     // Cleanup for embree data
-    ~bvh_tree();
+    ~bvh_scene();
 #endif
 };
 
-// Options for build bvh
-struct build_bvh_options {
-    bool          share_memory   = false;
-    bool          high_quality   = false;
-    bool          use_embree     = false;
-    bool          flatten_embree = false;
-    bool          run_serially   = false;
-    atomic<bool>* cancel_flag    = nullptr;
+// bvh build options
+struct bvh_build_options {
+    bool          high_quality        = false;
+    #if YOCTO_EMBREE
+    bool          use_embree          = false;
+    bool          embree_flatten      = false;
+    bool          embree_shared       = false;
+    #endif
+    bool          run_serially        = false;
+    atomic<bool>* cancel_flag         = nullptr;
 };
 
-// Build a BVH from the given set of shape primitives. Data is copied or shared
-// depending on `copy_data`.
-void init_points_bvh(bvh_tree& bvh, bvh_array_view<int> points,
-    bvh_array_view<vec3f> positions, bvh_array_view<float> radius,
-    const build_bvh_options& options = {});
-void init_lines_bvh(bvh_tree& bvh, bvh_array_view<vec2i> lines,
-    bvh_array_view<vec3f> positions, bvh_array_view<float> radius,
-    const build_bvh_options& options = {});
-void init_triangles_bvh(bvh_tree& bvh, bvh_array_view<vec3i> triangles,
-    bvh_array_view<vec3f> positions, const build_bvh_options& options = {});
-void init_quads_bvh(bvh_tree& bvh, bvh_array_view<vec4i> quads,
-    bvh_array_view<vec3f> positions, const build_bvh_options& options = {});
-void init_instances_bvh(bvh_tree& bvh, bvh_strided_view<bvh_instance> instances,
-    int num_shapes, const build_bvh_options& options = {});
-bvh_tree& get_shape_bvh(bvh_tree& bvh, int shape_id);
-
 // Build the bvh acceleration structure.
-void build_bvh(bvh_tree& bvh, const build_bvh_options& options = {});
-
-// Update the node data for shape and scene bvhs.
-void update_vertices(bvh_tree& bvh, bvh_array_view<vec3f> positions,
-    bvh_array_view<float> radius = {});
-void update_instances(bvh_tree& bvh, bvh_strided_view<bvh_instance> instances);
+void build_points_bvh(bvh_shape& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const bvh_build_options& options);
+void build_lines_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const bvh_build_options& options);
+void build_triangles_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const bvh_build_options& options);
+void build_quads_bvh(bvh_shape& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const bvh_build_options& options);
+void build_instances_bvh(bvh_scene& bvh, int num_instances,
+    const void* context, bvh_instance (*get_instance)(const void*, int),
+    const bvh_build_options& options);
 
 // Refit bvh data
-void refit_bvh(bvh_tree& bvh);
+void refit_points_bvh(bvh_shape& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const bvh_build_options& options);
+void refit_lines_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const bvh_build_options& options);
+void refit_triangles_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const bvh_build_options& options);
+void refit_quads_bvh(bvh_shape& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const bvh_build_options& options);
+void refit_instances_bvh(bvh_scene& bvh, int num_instances,
+    const void* context, bvh_instance (*get_instance)(const void*, int),
+    const bvh_build_options& options);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.
@@ -277,17 +208,232 @@ struct bvh_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray,
+bool intersect_points_bvh(const bvh_shape& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
+bool intersect_lines_bvh(const bvh_shape& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
+bool intersect_triangles_bvh(const bvh_shape& bvh,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
+bool intersect_quads_bvh(const bvh_shape& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const ray3f& ray,
     bvh_intersection& intersection, bool find_any = false);
-bool intersect_bvh(const bvh_tree& bvh, int instance_id, const ray3f& ray,
-    bvh_intersection& intersection, bool find_any = false);
+bool intersect_instances_bvh(const bvh_scene& bvh, int num_instances,
+    const void* context, bvh_instance (*get_instance)(const void*, int),
+    bool (*intersect_shape)(const bvh_shape&, const void*, int, const ray3f&,
+        bvh_intersection&, bool),
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
+    bool non_rigid_frames = true);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bool overlap_bvh(const bvh_tree& bvh, const vec3f& pos, float max_distance,
+bool overlap_points_bvh(const bvh_shape& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const vec3f& pos, float max_distance, bvh_intersection& intersection,
+    bool find_any = false);
+bool overlap_lines_bvh(const bvh_shape& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const vec3f& pos, float max_distance, bvh_intersection& intersection,
+    bool find_any = false);
+bool overlap_triangles_bvh(const bvh_shape& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vec3f& pos, float max_distance,
     bvh_intersection& intersection, bool find_any = false);
+bool overlap_quads_bvh(const bvh_shape& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vec3f& pos, float max_distance,
+    bvh_intersection& intersection, bool find_any = false);
+bool overlap_instances_bvh(const bvh_scene& bvh, int num_instances,
+    const void* context, bvh_instance (*get_instance)(const void*, int),
+    bool (*overlap_shape)(const bvh_shape&, const void*, int, const vec3f&,
+        float, bvh_intersection&, bool),
+    const vec3f& pos, float max_distance, bvh_intersection& intersection,
+    bool find_any = false, bool non_rigid_frames = true);
+
+// BVH for shapes made of points, lines, triangles or quads. Only one primitive
+// type can be used.
+struct bvh_shape_data {
+    // shape data
+    vector<vec3f> positions;
+    vector<float> radius;
+    vector<int>   points;
+    vector<vec2i> lines;
+    vector<vec3i> triangles;
+    vector<vec4i> quads;
+    vector<vec4i> quads_positions;  // for face varying data
+};
+
+// BVH for instances.
+struct bvh_scene_data {
+    vector<bvh_instance>   instances        = {};
+    vector<bvh_shape_data> shapes           = {};
+    bool                   non_rigid_frames = true;
+
+    // internalbvh data
+    bvh_scene bvh_ = {};
+};
+
+// Build the bvh acceleration structure.
+template <typename Shape>
+inline void build_shape_bvh(
+    bvh_shape& bvh, const Shape& shape, const bvh_build_options& options) {
+    if (!shape.points.empty()) {
+        return build_points_bvh(
+            bvh, shape.points, shape.positions, shape.radius, options);
+    } else if (!shape.lines.empty()) {
+        return build_lines_bvh(
+            bvh, shape.lines, shape.positions, shape.radius, options);
+    } else if (!shape.triangles.empty()) {
+        return build_triangles_bvh(
+            bvh, shape.triangles, shape.positions, options);
+    } else if (!shape.quads.empty()) {
+        return build_quads_bvh(bvh, shape.quads, shape.positions, options);
+    } else if (!shape.quads_positions.empty()) {
+        return build_quads_bvh(
+            bvh, shape.quads_positions, shape.positions, options);
+    } else {
+    }
+}
+template <typename Scene>
+inline void build_scene_bvh(bvh_scene& bvh, const Scene& scene,
+    const bvh_build_options& options) {
+    return build_instances_bvh(
+        bvh, (int)scene.instances.size(), &scene,
+        [](const void* context, int instance_id) -> bvh_instance {
+            auto& scene = *(Scene*)context;
+            return {scene.instances[instance_id].frame,
+                scene.instances[instance_id].shape};
+        },
+        options);
+}
+
+// Refit bvh data
+template <typename Shape>
+inline void refit_shape_bvh(
+    bvh_shape& bvh, const Shape& shape, const bvh_build_options& options) {
+    if (!shape.points.empty()) {
+        return refit_points_bvh(
+            bvh, shape.points, shape.positions, shape.radius, options);
+    } else if (!shape.lines.empty()) {
+        return refit_lines_bvh(
+            bvh, shape.lines, shape.positions, shape.radius, options);
+    } else if (!shape.triangles.empty()) {
+        return refit_triangles_bvh(
+            bvh, shape.triangles, shape.positions, options);
+    } else if (!shape.quads.empty()) {
+        return refit_quads_bvh(bvh, shape.quads, shape.positions, options);
+    } else if (!shape.quads_positions.empty()) {
+        return refit_quads_bvh(bvh, shape.quads, shape.positions, options);
+    } else {
+    }
+}
+template <typename Scene>
+inline void refit_scene_bvh(bvh_scene& bvh, const Scene& scene,
+    const bvh_build_options& options) {
+    return refit_instances_bvh(
+        bvh, (int)scene.instances.size(), &scene,
+        [](const void* context, int instance_id) -> bvh_instance {
+            auto& scene = *(Scene*)context;
+            return {scene.instances[instance_id].frame,
+                scene.instances[instance_id].shape};
+        },
+        options);
+}
+
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
+template <typename Shape>
+inline bool intersect_shape_bvh(const bvh_shape& bvh, const Shape& shape,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false) {
+    if (!shape.points.empty()) {
+        return intersect_points_bvh(bvh, shape.points, shape.positions,
+            shape.radius, ray, intersection, find_any);
+    } else if (!shape.lines.empty()) {
+        return intersect_lines_bvh(bvh, shape.lines, shape.positions,
+            shape.radius, ray, intersection, find_any);
+    } else if (!shape.triangles.empty()) {
+        return intersect_triangles_bvh(
+            bvh, shape.triangles, shape.positions, ray, intersection, find_any);
+    } else if (!shape.quads.empty()) {
+        return intersect_quads_bvh(
+            bvh, shape.quads, shape.positions, ray, intersection, find_any);
+    } else if (!shape.quads_positions.empty()) {
+        return intersect_quads_bvh(bvh, shape.quads_positions, shape.positions,
+            ray, intersection, find_any);
+    } else {
+        return false;
+    }
+}
+template <typename Scene>
+inline bool intersect_scene_bvh(const bvh_scene& bvh,
+    const Scene& scene, const ray3f& ray, bvh_intersection& intersection,
+    bool find_any = false, bool non_rigid_frames = true) {
+    return intersect_instances_bvh(
+        bvh, (int)scene.instances.size() - 1, &scene,
+        [](const void* context, int instance_id) -> bvh_instance {
+            auto& scene = *(Scene*)context;
+            return {scene.instances[instance_id].frame,
+                scene.instances[instance_id].shape};
+        },
+        [](const bvh_shape& bvh, const void* context, int shape_id,
+            const ray3f& ray, bvh_intersection& intersection,
+            bool find_any) -> bool {
+            auto& scene = *(Scene*)context;
+            return intersect_shape_bvh(
+                bvh, scene.shapes[shape_id], ray, intersection, find_any);
+        },
+        ray, intersection, find_any, non_rigid_frames);
+}
+
+// Find a shape element that overlaps a point within a given distance
+// max distance, returning either the closest or any overlap depending on
+// `find_any`. Returns the point distance, the instance id, the shape element
+// index and the element barycentric coordinates.
+inline bool overlap_shape_bvh(const bvh_shape& bvh, const bvh_shape_data& shape,
+    const vec3f& pos, float max_distance, bvh_intersection& intersection,
+    bool find_any = false) {
+    if (!shape.points.empty()) {
+        return overlap_points_bvh(bvh, shape.points, shape.positions,
+            shape.radius, pos, max_distance, intersection, find_any);
+    } else if (!shape.lines.empty()) {
+        return overlap_lines_bvh(bvh, shape.lines, shape.positions,
+            shape.radius, pos, max_distance, intersection, find_any);
+    } else if (!shape.triangles.empty()) {
+        return overlap_triangles_bvh(bvh, shape.triangles, shape.positions, pos,
+            max_distance, intersection, find_any);
+    } else if (!shape.quads.empty()) {
+        return overlap_quads_bvh(bvh, shape.quads, shape.positions, pos,
+            max_distance, intersection, find_any);
+    } else if (!shape.quads_positions.empty()) {
+        return overlap_quads_bvh(bvh, shape.quads, shape.positions, pos,
+            max_distance, intersection, find_any);
+    } else {
+        return false;
+    }
+}
+
+inline bool overlap_scene_bvh(const bvh_scene& bvh,
+    const bvh_scene_data& scene, const vec3f& pos, float max_distance,
+    bvh_intersection& intersection, bool find_any = false) {
+    return overlap_instances_bvh(
+        bvh, (int)scene.instances.size() - 1, &scene,
+        [](const void* context, int instance_id) -> bvh_instance {
+            auto& scene = *(bvh_scene_data*)context;
+            return {scene.instances[instance_id].frame,
+                scene.instances[instance_id].shape_id};
+        },
+        [](const bvh_shape& bvh, const void* context, int shape_id,
+            const vec3f& pos, float max_distance,
+            bvh_intersection& intersection, bool find_any) -> bool {
+            auto& scene = *(bvh_scene_data*)context;
+            return overlap_shape_bvh(bvh, scene.shapes[shape_id], pos,
+                max_distance, intersection, find_any);
+        },
+        pos, max_distance, intersection, find_any);
+}
 
 }  // namespace yocto
 
@@ -374,7 +520,8 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 namespace yocto {
 
 // Print bvh statistics.
-string print_bvh_stats(const bvh_tree& bvh);
+string print_shape_bvh_stats(const bvh_shape& bvh);
+string print_scene_bvh_stats(const bvh_scene& bvh);
 
 }  // namespace yocto
 

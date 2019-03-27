@@ -111,6 +111,7 @@ using std::tan;
 
 using std::array;
 using std::exception;
+using std::function;
 using std::invalid_argument;
 using std::numeric_limits;
 using std::out_of_range;
