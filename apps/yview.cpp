@@ -815,18 +815,15 @@ void draw_widgets(const opengl_window& win) {
     begin_opengl_widgets_frame(win);
     if (begin_opengl_widgets_window(win, "yview")) {
         if (begin_tabbar_opengl_widget(win, "tabs")) {
-            if (begin_tabitem_opengl_widget(win, "scene")) {
-                draw_label_opengl_widget(
-                    win, "scene", get_filename(app.filename));
+            if (begin_tabitem_opengl_widget(win, "view")) {
                 if (draw_button_opengl_widget(win, "load")) {
                     delete_drawgl_state(app.state);
                     load_scene_async(app);
                 }
+                draw_label_opengl_widget(
+                    win, "scene", get_filename(app.filename));
                 draw_label_opengl_widget(win, "filename", app.filename);
                 draw_label_opengl_widget(win, "status", app.status);
-                end_tabitem_opengl_widget(win);
-            }
-            if (begin_tabitem_opengl_widget(win, "view")) {
                 if (app.load_done) {
                     draw_combobox_opengl_widget(win, "camera",
                         app.draw_options.camera_id, app.scene.cameras, false);
