@@ -792,7 +792,7 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 
         auto d = sample_microfacet_distribution_pdf(
             brdf.roughness, normal, halfway);
-        auto jacobian = dot(halfway, incoming) /
+        auto jacobian = fabs(dot(halfway, incoming)) /
                         dot(halfway_vector, halfway_vector);
         pdf += weights.z * d * jacobian;
     }
