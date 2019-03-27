@@ -66,7 +66,7 @@ struct app_state {
 
     // scene
     yocto_scene scene      = {};
-    bvh_tree    bvh        = {};
+    bvh_scene   bvh        = {};
     bool        add_skyenv = false;
     bool        validate   = false;
 
@@ -368,7 +368,7 @@ bool update(app_state& app) {
             updated_instances.push_back(index);
     }
     if (!updated_instances.empty() || !updated_shapes.empty())
-        refit_scene_bvh(app.scene, app.bvh, updated_shapes, app.bvh_options);
+        refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes, app.bvh_options);
     app.update_list.clear();
 
     // start rendering
