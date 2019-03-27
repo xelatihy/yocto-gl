@@ -320,10 +320,9 @@ bool intersect_shape_bvh(const yocto_shape& shape, const bvh_shape& bvh,
 bool intersect_scene_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
     bool non_rigid_frames = true);
-bool intersect_instance_bvh(const yocto_scene& scene,
-    const bvh_scene& bvh, int instance_id, const ray3f& ray,
-    bvh_intersection& intersection, bool find_any = false,
-    bool non_rigid_frames = true);
+bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
+    int instance_id, const ray3f& ray, bvh_intersection& intersection,
+    bool find_any = false, bool non_rigid_frames = true);
 
 // Apply subdivision and displacement rules.
 void tesselate_shapes(yocto_scene& scene);
