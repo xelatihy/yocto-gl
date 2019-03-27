@@ -154,9 +154,11 @@ struct bvh_scene {
 // bvh build options
 struct bvh_build_options {
     bool          high_quality        = false;
+    #if YOCTO_EMBREE
     bool          use_embree          = false;
-    bool          flatten_embree      = false;
-    bool          share_memory_embree = false;
+    bool          embree_flatten      = false;
+    bool          embree_shared       = false;
+    #endif
     bool          run_serially        = false;
     atomic<bool>* cancel_flag         = nullptr;
 };

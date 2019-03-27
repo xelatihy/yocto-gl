@@ -424,7 +424,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 void build_shape_bvh(
     const yocto_shape& shape, bvh_shape& bvh, const bvh_build_options& options) {
     // make bvh
-    if (options.share_memory_embree &&
+    if (options.embree_shared &&
         shape.positions.size() == shape.positions.capacity()) {
         ((vector<vec3f>&)shape.positions).reserve(shape.positions.size() + 1);
     }

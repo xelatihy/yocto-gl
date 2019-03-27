@@ -94,10 +94,14 @@ int main(int argc, char* argv[]) {
     parser.add_option("--exposure,-e", exposure, "Hdr exposure");
     parser.add_option("--filmic", filmic, "Hdr filmic");
     parser.add_option("--no-srgb", srgb, "No srgb");
+#if YOCTO_EMBREE
     parser.add_flag(
         "--embree,!--no-embree", bvh_options.use_embree, "Use Embree ratracer");
-    parser.add_flag("--flatten-embree,!--no-flatten-embree",
-        bvh_options.flatten_embree, "Flatten embree scene");
+    parser.add_flag("--embree-flatten,!--no-embree-flatten",
+        bvh_options.embree_flatten, "Flatten embree scene");
+    parser.add_flag("--embree-shared,!--no-embree-shared",
+        bvh_options.embree_shared, "Embree runs in shared memory");
+#endif
     parser.add_flag(
         "--add-skyenv,!--no-add-skyenv", add_skyenv, "Add sky envmap");
     parser.add_option("--output-image,-o", imfilename, "Image filename");

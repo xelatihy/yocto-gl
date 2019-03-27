@@ -500,8 +500,10 @@ int main(int argc, char* argv[]) {
 #if YOCTO_EMBREE
     parser.add_flag("--embree,!--no-embree", app.bvh_options.use_embree,
         "Use Embree ratracer");
-    parser.add_flag("--flatten-embree,!--no-flatten-embree",
-        app.bvh_options.flatten_embree, "Flatten embree scene");
+    parser.add_flag("--embree-flatten,!--no-embree-flatten",
+        app.bvh_options.embree_flatten, "Flatten embree scene");
+    parser.add_flag("--embree-shared,!--no-embree-shared",
+        app.bvh_options.embree_shared, "Embree runs in shared memory");
 #endif
     parser.add_flag("--double-sided,!--no-double-sided",
         app.trace_options.double_sided, "Double-sided rendering.");
