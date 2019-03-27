@@ -65,10 +65,10 @@ struct app_state {
     vec2i               image_size    = {0, 0};
 
     // scene
-    yocto_scene       scene      = {};
-    bvh_scene bvh        = {};
-    bool              add_skyenv = false;
-    bool              validate   = false;
+    yocto_scene scene      = {};
+    bvh_scene   bvh        = {};
+    bool        add_skyenv = false;
+    bool        validate   = false;
 
     // rendering state
     trace_lights                   lights  = {};
