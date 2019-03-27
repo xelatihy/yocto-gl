@@ -377,7 +377,7 @@ bvh_tree::~bvh_tree() {
         //     rtcDetachGeometry((RTCScene)embree_bvh, i);
         //     rtcReleaseGeometry(geom);
         // }
-        rtcReleaseScene((RTCScene)embree_bvh);
+        // rtcReleaseScene((RTCScene)embree_bvh);
     }
 }
 
@@ -649,9 +649,9 @@ void build_embree_instances_bvh(bvh_tree& bvh, int num_instances,
     }
     for (auto instance_id = 0; instance_id < num_instances; instance_id++) {
         auto instance = get_instance(instance_id);
-        if (instance.shape_id < 0) continue;
+        if (instance.shape_id < 0) throw runtime_error("empty instance");
         auto& shape_bvh = get_shape_bvh(instance.shape_id);
-        if (!shape_bvh.embree_bvh) continue;
+        if (!shape_bvh.embree_bvh) throw runtime_error("bvh not built");
         auto embree_geom = rtcNewGeometry(
             embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
         rtcSetGeometryInstancedScene(
@@ -662,7 +662,7 @@ void build_embree_instances_bvh(bvh_tree& bvh, int num_instances,
         rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
     }
     rtcCommitScene(embree_scene);
-    // bvh.bvh.embree_flattened = false;
+    bvh.embree_flattened = false;
 }
 void build_embree_instanced_bvh(
     bvh_scene& bvh, const bvh_build_options& options) {
@@ -1210,12 +1210,8 @@ void build_instances_bvh(bvh_tree& bvh, int num_instances,
     const bvh_build_options&           options) {
 #if YOCTO_EMBREE
     if (options.use_embree) {
-        // if (options.flatten_embree) {
-        //     return build_embree_flattened_bvh(bvh, options);
-        // } else {
         return build_embree_instances_bvh(
             bvh, num_instances, get_instance, get_shape_bvh, options);
-        // }
     }
 #endif
 
