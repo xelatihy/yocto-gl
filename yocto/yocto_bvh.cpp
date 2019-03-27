@@ -626,7 +626,7 @@ void build_embree_quads_bvh(RTCScene& embree_scene, const vector<vec4i>& quads,
 
 // Build a BVH using Embree.
 void build_embree_instances_bvh(bvh_instance_tree& bvh, int num_instances,
-    const function<bvh_instance(int)>& get_instance,
+    const void* context, bvh_instance(*get_instance)(const void*,int),
     const bvh_build_options&           options) {
     // scene bvh
     auto embree_device = get_embree_device();
@@ -638,7 +638,7 @@ void build_embree_instances_bvh(bvh_instance_tree& bvh, int num_instances,
         return;
     }
     for (auto instance_id = 0; instance_id < num_instances; instance_id++) {
-        auto instance = get_instance(instance_id);
+        auto instance = get_instance(context, instance_id);
         if (instance.shape_id < 0) throw runtime_error("empty instance");
         auto& shape_bvh = bvh.shapes[instance.shape_id];
         if (!shape_bvh.embree_bvh) throw runtime_error("bvh not built");
@@ -1189,12 +1189,12 @@ void build_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
 }
 
 void build_instances_bvh(bvh_instance_tree& bvh, int num_instances,
-    const function<bvh_instance(int)>& get_instance,
+    const void* context, bvh_instance(*get_instance)(const void*,int),
     const bvh_build_options&           options) {
 #if YOCTO_EMBREE
     if (options.use_embree) {
         return build_embree_instances_bvh(
-            bvh, num_instances, get_instance, options);
+            bvh, num_instances, context, get_instance, options);
     }
 #endif
 
@@ -1202,8 +1202,8 @@ void build_instances_bvh(bvh_instance_tree& bvh, int num_instances,
         // get the number of primitives and the primitive type
         return build_bvh_nodes(
             bvh.nodes, num_instances,
-            [&get_instance, &bvh](int idx) {
-                auto  instance = get_instance(idx);
+            [&bvh, context, get_instance](int idx) {
+                auto  instance = get_instance(context, idx);
                 auto& sbvh     = bvh.shapes[instance.shape_id];
                 return sbvh.nodes.empty()
                            ? invalid_bbox3f
@@ -1284,7 +1284,7 @@ void refit_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     });
 }
 void refit_instances_bvh(bvh_instance_tree& bvh, int num_instances,
-    const function<bvh_instance(int)>& get_instance,
+    const void* context, bvh_instance(*get_instance)(const void*,int),
     const bvh_build_options&           options) {
 #if YOCTO_EMBREE
     if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
@@ -1293,8 +1293,8 @@ void refit_instances_bvh(bvh_instance_tree& bvh, int num_instances,
     if (num_instances) {
         // get the number of primitives and the primitive type
         return refit_bvh_nodes(
-            bvh.nodes, 0, [&get_instance, &bvh](int idx) {
-                auto  instance = get_instance(idx);
+            bvh.nodes, 0, [get_instance, context, &bvh](int idx) {
+                auto  instance = get_instance(context, idx);
                 auto& sbvh     = bvh.shapes[instance.shape_id];
                 return sbvh.nodes.empty()
                            ? invalid_bbox3f
@@ -1470,9 +1470,8 @@ bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
 }
 
 bool intersect_instances_bvh(const bvh_instance_tree& bvh, int num_instances,
-    const function<bvh_instance(int)>& get_instance,
-    const function<bool(int, const ray3f& ray, bvh_intersection& intersection,
-        bool find_any)>&               inetrsect_shape,
+    const void* context, bvh_instance(*get_instance)(const void*,int),
+    bool (*intersect_shape)(const bvh_tree&, const void*, int, const ray3f&, bvh_intersection&, bool),
     const ray3f& ray, bvh_intersection& intersection, bool find_any,
     bool non_rigid_frames) {
 #if YOCTO_EMBREE
@@ -1484,15 +1483,15 @@ bool intersect_instances_bvh(const bvh_instance_tree& bvh, int num_instances,
 
     if (num_instances) {
         return intersect_bvh_nodes<true>(bvh.nodes, ray, intersection, find_any,
-            [&get_instance, &inetrsect_shape, non_rigid_frames](
+            [&bvh, get_instance, context, intersect_shape, non_rigid_frames](
                 const ray3f& ray, int idx, bvh_intersection& intersection,
                 bool find_any) {
-                auto instance = get_instance(idx);
+                auto instance = get_instance(context, idx);
                 auto inv_ray  = non_rigid_frames
                                    ? transform_ray(
                                          inverse((affine3f)instance.frame), ray)
                                    : transform_ray_inverse(instance.frame, ray);
-                return inetrsect_shape(
+                return intersect_shape(bvh.shapes[instance.shape_id], context, 
                     instance.shape_id, inv_ray, intersection, find_any);
             });
     } else {
@@ -1619,25 +1618,25 @@ bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
 }
 
 // Finds the closest element with a bvh.
-bool overlap_instances_bvh(const bvh_tree& bvh, int num_instances,
-    const function<bvh_instance(int)>&                   get_instance,
-    const function<bool(int, const vec3f& pos, float max_distance,
-        bvh_intersection& intersection, bool find_any)>& overlap_shape,
+bool overlap_instances_bvh(const bvh_instance_tree& bvh, int num_instances,
+    const void* context, bvh_instance(*get_instance)(const void*,int),
+    bool(*overlap_shape)(const bvh_tree&, const void*, int, const vec3f&, float,
+        bvh_intersection&, bool),
     const vec3f& pos, float max_distance, bvh_intersection& intersection,
     bool find_any, bool non_rigid_frames) {
     if (num_instances) {
         return overlap_bvh_nodes<true>(bvh.nodes, pos, max_distance,
             intersection, find_any,
-            [&get_instance, &overlap_shape, non_rigid_frames](const vec3f& pos,
+            [&bvh, get_instance, context, &overlap_shape, non_rigid_frames](const vec3f& pos,
                 float max_distance, int idx, bvh_intersection& intersection,
                 bool find_any) {
-                auto instance = get_instance(idx);
+                auto instance = get_instance(context, idx);
                 auto inv_pos  = non_rigid_frames
                                    ? transform_point(
                                          inverse((affine3f)instance.frame), pos)
                                    : transform_point_inverse(
                                          instance.frame, pos);
-                return overlap_shape(instance.shape_id, inv_pos, max_distance,
+                return overlap_shape(bvh.shapes[instance.shape_id], context, instance.shape_id, inv_pos, max_distance,
                     intersection, find_any);
             });
 
