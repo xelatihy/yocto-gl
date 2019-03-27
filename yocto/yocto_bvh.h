@@ -166,8 +166,8 @@ void build_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const bvh_build_options& options = {});
 void build_instances_bvh(bvh_tree& bvh, int num_instances,
     const function<bvh_instance(int)>& instance_func,
-    const function<bvh_tree&(int)>& shape_func,
-    const bvh_build_options& options = {});
+    const function<bvh_tree&(int)>&    shape_func,
+    const bvh_build_options&           options = {});
 
 // Refit bvh data
 void refit_points_bvh(bvh_tree& bvh, const vector<int>& points,
@@ -182,8 +182,8 @@ void refit_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const bvh_build_options& options = {});
 void refit_instances_bvh(bvh_tree& bvh, int num_instances,
     const function<bvh_instance(int)>& instance_func,
-    const function<bvh_tree&(int)>& shape_func,
-    const bvh_build_options& options = {});
+    const function<bvh_tree&(int)>&    shape_func,
+    const bvh_build_options&           options = {});
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.
@@ -212,6 +212,12 @@ bool intersect_triangles_bvh(const bvh_tree& bvh,
 bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const ray3f& ray,
     bvh_intersection& intersection, bool find_any = false);
+bool intersect_instances_bvh(const bvh_tree& bvh, int num_instances,
+    const function<bvh_instance(int)>& instance_func,
+    const function<bool(int, const ray3f& ray, bvh_intersection& intersection,
+        bool find_any)>&               shape_intersect_func,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
+    bool non_rigid_frames = true);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
@@ -219,13 +225,15 @@ bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
 // index and the element barycentric coordinates.
 bool overlap_points_bvh(const bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
-    const vec3f& pos, float max_distance, bvh_intersection& intersection, bool find_any = false);
+    const vec3f& pos, float max_distance, bvh_intersection& intersection,
+    bool find_any = false);
 bool overlap_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
-    const vec3f& pos, float max_distance, bvh_intersection& intersection, bool find_any = false);
-bool overlap_triangles_bvh(const bvh_tree& bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,  
-    const vec3f& pos, float max_distance, bvh_intersection& intersection, bool find_any = false);
+    const vec3f& pos, float max_distance, bvh_intersection& intersection,
+    bool find_any = false);
+bool overlap_triangles_bvh(const bvh_tree& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vec3f& pos, float max_distance,
+    bvh_intersection& intersection, bool find_any = false);
 bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vec3f& pos, float max_distance,
     bvh_intersection& intersection, bool find_any = false);
@@ -267,22 +275,20 @@ inline void build_bvh(bvh_shape& shape, const bvh_build_options& options = {}) {
         return build_triangles_bvh(
             shape.bvh, shape.triangles, shape.positions, options);
     } else if (!shape.quads.empty()) {
-        return build_quads_bvh(shape.bvh, shape.quads, shape.positions, options);
+        return build_quads_bvh(
+            shape.bvh, shape.quads, shape.positions, options);
     } else {
     }
 }
 inline void build_bvh(bvh_scene& scene, const bvh_build_options& options = {}) {
-    return build_instances_bvh(scene.bvh, 
-        (int)scene.instances.size(), 
+    return build_instances_bvh(
+        scene.bvh, (int)scene.instances.size(),
         [&scene](int instance_id) -> bvh_instance {
-            return {
-                scene.instances[instance_id].frame,
-                scene.instances[instance_id].shape_id
-            };
-        }, 
-        [&scene](int shape_id) -> bvh_tree& {
-            return scene.shapes[shape_id].bvh;
-        });
+            return {scene.instances[instance_id].frame,
+                scene.instances[instance_id].shape_id};
+        },
+        [&scene](
+            int shape_id) -> bvh_tree& { return scene.shapes[shape_id].bvh; });
 }
 
 // Refit bvh data
@@ -297,23 +303,20 @@ inline void refit_bvh(bvh_shape& shape, const bvh_build_options& options = {}) {
         return refit_triangles_bvh(
             shape.bvh, shape.triangles, shape.positions, options);
     } else if (!shape.quads.empty()) {
-        return refit_quads_bvh(shape.bvh, shape.quads, shape.positions, options);
+        return refit_quads_bvh(
+            shape.bvh, shape.quads, shape.positions, options);
     } else {
     }
 }
-inline void refit_bvh(bvh_scene& scene, 
-    const bvh_build_options& options = {}) {
-    return refit_instances_bvh(scene.bvh, 
-        (int)scene.instances.size(), 
+inline void refit_bvh(bvh_scene& scene, const bvh_build_options& options = {}) {
+    return refit_instances_bvh(
+        scene.bvh, (int)scene.instances.size(),
         [&scene](int instance_id) -> bvh_instance {
-            return {
-                scene.instances[instance_id].frame,
-                scene.instances[instance_id].shape_id
-            };
-        }, 
-        [&scene](int shape_id) -> bvh_tree& {
-            return scene.shapes[shape_id].bvh;
-        });
+            return {scene.instances[instance_id].frame,
+                scene.instances[instance_id].shape_id};
+        },
+        [&scene](
+            int shape_id) -> bvh_tree& { return scene.shapes[shape_id].bvh; });
 }
 
 // Intersect ray with a bvh returning either the first or any intersection
@@ -337,8 +340,18 @@ inline bool intersect_bvh(const bvh_shape& shape, const ray3f& ray,
         return false;
     }
 }
-bool intersect_bvh(const bvh_scene& bvh, const ray3f& ray,
-    bvh_intersection& intersection, bool find_any = false);
+inline bool intersect_bvh(const bvh_scene& scene, const ray3f& ray,
+    bvh_intersection& intersection, bool find_any = false) {
+    return intersect_instances_bvh(scene.bvh, (int)scene.instances.size()-1,
+        [&scene](int instance_id) -> bvh_instance {
+            return {scene.instances[instance_id].frame,
+                scene.instances[instance_id].shape_id};
+        }, 
+        [&scene](int shape_id,const ray3f& ray, bvh_intersection& intersection, bool find_any) -> bool {
+            return intersect_bvh(scene.shapes[shape_id], ray, intersection, find_any);
+        },
+        ray, intersection, find_any);
+}
 bool intersect_bvh(const bvh_scene& bvh, int instance_id, const ray3f& ray,
     bvh_intersection& intersection, bool find_any = false);
 
@@ -346,8 +359,8 @@ bool intersect_bvh(const bvh_scene& bvh, int instance_id, const ray3f& ray,
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-inline bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos, float max_distance,
-    bvh_intersection& intersection, bool find_any = false) {
+inline bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos,
+    float max_distance, bvh_intersection& intersection, bool find_any = false) {
     if (!shape.points.empty()) {
         return overlap_points_bvh(shape.bvh, shape.points, shape.positions,
             shape.radius, pos, max_distance, intersection, find_any);
@@ -358,8 +371,8 @@ inline bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos, float ma
         return overlap_triangles_bvh(shape.bvh, shape.triangles,
             shape.positions, pos, max_distance, intersection, find_any);
     } else if (!shape.quads.empty()) {
-        return overlap_quads_bvh(shape.bvh, shape.quads, shape.positions, pos, max_distance, 
-            intersection, find_any);
+        return overlap_quads_bvh(shape.bvh, shape.quads, shape.positions, pos,
+            max_distance, intersection, find_any);
     } else {
         return false;
     }
