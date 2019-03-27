@@ -368,7 +368,8 @@ bool update(app_state& app) {
             updated_instances.push_back(index);
     }
     if (!updated_instances.empty() || !updated_shapes.empty())
-        refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes, app.bvh_options);
+        refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes,
+            app.bvh_options);
     app.update_list.clear();
 
     // start rendering

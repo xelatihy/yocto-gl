@@ -308,7 +308,7 @@ void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
 void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const build_bvh_options& options = {});
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes, 
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const build_bvh_options& options = {});
 
 // Apply subdivision and displacement rules.

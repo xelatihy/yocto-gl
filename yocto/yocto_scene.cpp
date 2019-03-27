@@ -421,8 +421,8 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 }
 
 // Build a scene BVH
-void build_scene_bvh(
-    const yocto_scene& scene, bvh_scene& bvh, const build_bvh_options& options) {
+void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
+    const build_bvh_options& options) {
     // clear
     bvh = {};
 
@@ -437,18 +437,20 @@ void build_scene_bvh(
             ((vector<vec3f>&)shape.positions)
                 .reserve(shape.positions.size() + 1);
         }
-        shape_bvh.points = shape.points;
-        shape_bvh.lines = shape.lines;
+        shape_bvh.points    = shape.points;
+        shape_bvh.lines     = shape.lines;
         shape_bvh.triangles = shape.triangles;
-        shape_bvh.quads = shape.quads;
+        shape_bvh.quads     = shape.quads;
         shape_bvh.positions = shape.positions;
-        shape_bvh.radius = shape.radius;
+        shape_bvh.radius    = shape.radius;
     }
 
     // instances
     bvh.instances.resize(scene.instances.size());
-    for(auto instance_id = 0; instance_id < scene.instances.size(); instance_id ++) {
-        bvh.instances[instance_id] = { scene.instances[instance_id].frame, scene.instances[instance_id].shape };
+    for (auto instance_id = 0; instance_id < scene.instances.size();
+         instance_id++) {
+        bvh.instances[instance_id] = {scene.instances[instance_id].frame,
+            scene.instances[instance_id].shape};
     }
 
     // build bvh
@@ -457,15 +459,16 @@ void build_scene_bvh(
 
 // Refits a scene BVH
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes, 
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const build_bvh_options& options) {
     for (auto shape_id : updated_shapes) {
         bvh.shapes[shape_id].positions = scene.shapes[shape_id].positions;
-        bvh.shapes[shape_id].radius = scene.shapes[shape_id].radius;
+        bvh.shapes[shape_id].radius    = scene.shapes[shape_id].radius;
         refit_bvh(bvh.shapes[shape_id]);
     }
     for (auto instance_id : updated_instances) {
-        bvh.instances[instance_id] = {scene.instances[instance_id].frame, scene.instances[instance_id].shape};
+        bvh.instances[instance_id] = {scene.instances[instance_id].frame,
+            scene.instances[instance_id].shape};
     }
     refit_bvh(bvh);
 }

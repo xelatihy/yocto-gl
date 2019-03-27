@@ -160,9 +160,9 @@ struct bvh_shape {
 
 // BVH for instances.
 struct bvh_scene {
-    vector<bvh_instance> instances = {};
-    vector<bvh_shape> shapes = {};
-    bool             non_rigid_frames = true;
+    vector<bvh_instance> instances        = {};
+    vector<bvh_shape>    shapes           = {};
+    bool                 non_rigid_frames = true;
 
     // internalbvh data
     bvh_tree bvh = {};
@@ -170,12 +170,12 @@ struct bvh_scene {
 
 // bvh build options
 struct build_bvh_options {
-    bool          high_quality   = false;
-    bool          use_embree     = false;
-    bool          flatten_embree = false;
-    bool          share_memory_embree   = false;
-    bool          run_serially   = false;
-    atomic<bool>* cancel_flag    = nullptr;
+    bool          high_quality        = false;
+    bool          use_embree          = false;
+    bool          flatten_embree      = false;
+    bool          share_memory_embree = false;
+    bool          run_serially        = false;
+    atomic<bool>* cancel_flag         = nullptr;
 };
 
 // Build the bvh acceleration structure.
