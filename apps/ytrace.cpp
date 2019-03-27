@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
     // build bvh
     printf("building bvh ...\n");
     auto start_bvh = get_time();
-    auto bvh       = bvh_instance_tree{};
+    auto bvh       = bvh_scene{};
     build_scene_bvh(scene, bvh, bvh_options);
     printf(
         "building bvh [%s]\n", format_duration(get_time() - start_bvh).c_str());

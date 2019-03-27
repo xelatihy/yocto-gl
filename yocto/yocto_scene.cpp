@@ -422,7 +422,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 
 // Build BVH
 void build_shape_bvh(
-    const yocto_shape& shape, bvh_tree& bvh, const bvh_build_options& options) {
+    const yocto_shape& shape, bvh_shape& bvh, const bvh_build_options& options) {
     // make bvh
     if (options.share_memory_embree &&
         shape.positions.size() == shape.positions.capacity()) {
@@ -430,7 +430,7 @@ void build_shape_bvh(
     }
     build_shape_bvh(bvh, shape, options);
 }
-void build_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
+void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const bvh_build_options& options) {
     // shapes
     bvh.shapes.resize(scene.shapes.size());
@@ -444,14 +444,14 @@ void build_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
 
 // Refits a scene BVH
 void refit_shape_bvh(
-    const yocto_shape& shape, bvh_tree& bvh, const bvh_build_options& options) {
+    const yocto_shape& shape, bvh_shape& bvh, const bvh_build_options& options) {
     refit_shape_bvh(bvh, shape, options);
 }
-void refit_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
+void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const bvh_build_options& options) {
     refit_scene_bvh(bvh, scene, options);
 }
-void refit_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
+void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_build_options& options) {
     for (auto shape_id : updated_shapes) {
@@ -459,18 +459,18 @@ void refit_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
     }
     refit_scene_bvh(scene, bvh, options);
 }
-bool intersect_shape_bvh(const yocto_shape& shape, const bvh_tree& bvh,
+bool intersect_shape_bvh(const yocto_shape& shape, const bvh_shape& bvh,
     const ray3f& ray, bvh_intersection& intersection, bool find_any) {
     return intersect_shape_bvh(bvh, shape, ray, intersection, find_any);
 }
-bool intersect_scene_bvh(const yocto_scene& scene, const bvh_instance_tree& bvh,
+bool intersect_scene_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     const ray3f& ray, bvh_intersection& intersection, bool find_any,
     bool non_rigid_frames) {
     return intersect_scene_bvh(
         bvh, scene, ray, intersection, find_any, non_rigid_frames);
 }
 bool intersect_instance_bvh(const yocto_scene& scene,
-    const bvh_instance_tree& bvh, int instance_id, const ray3f& ray,
+    const bvh_scene& bvh, int instance_id, const ray3f& ray,
     bvh_intersection& intersection, bool find_any, bool non_rigid_frames) {
     auto& instance = scene.instances[instance_id];
     auto  inv_ray  = non_rigid_frames

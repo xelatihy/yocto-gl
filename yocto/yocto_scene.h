@@ -305,23 +305,23 @@ bbox3f compute_scene_bounds(const yocto_scene& scene);
 void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Low level make/update bvh functions.
-void build_shape_bvh(const yocto_scene& scene, bvh_tree& bvh,
+void build_shape_bvh(const yocto_scene& scene, bvh_shape& bvh,
     const bvh_build_options& options = {});
-void build_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
+void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const bvh_build_options& options = {});
-void refit_shape_bvh(const yocto_scene& scene, bvh_tree& bvh,
+void refit_shape_bvh(const yocto_scene& scene, bvh_shape& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_build_options& options = {});
-void refit_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
+void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_build_options& options = {});
-bool intersect_shape_bvh(const yocto_shape& shape, const bvh_tree& bvh,
+bool intersect_shape_bvh(const yocto_shape& shape, const bvh_shape& bvh,
     const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
-bool intersect_scene_bvh(const yocto_scene& scene, const bvh_instance_tree& bvh,
+bool intersect_scene_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
     bool non_rigid_frames = true);
 bool intersect_instance_bvh(const yocto_scene& scene,
-    const bvh_instance_tree& bvh, int instance_id, const ray3f& ray,
+    const bvh_scene& bvh, int instance_id, const ray3f& ray,
     bvh_intersection& intersection, bool find_any = false,
     bool non_rigid_frames = true);
 

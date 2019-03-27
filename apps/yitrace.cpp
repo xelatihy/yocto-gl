@@ -66,7 +66,7 @@ struct app_state {
 
     // scene
     yocto_scene       scene      = {};
-    bvh_instance_tree bvh        = {};
+    bvh_scene bvh        = {};
     bool              add_skyenv = false;
     bool              validate   = false;
 

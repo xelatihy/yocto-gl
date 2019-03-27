@@ -369,7 +369,7 @@ namespace yocto {
 
 #if YOCTO_EMBREE
 // Cleanup
-bvh_tree::~bvh_tree() {
+bvh_shape::~bvh_shape() {
     if (embree_bvh) {
         // TODO: fix me
         // for (auto i = 0; i < max(1, (int)instances.size()); i++) {
@@ -382,7 +382,7 @@ bvh_tree::~bvh_tree() {
 }
 
 // Cleanup
-bvh_instance_tree::~bvh_instance_tree() {
+bvh_scene::~bvh_scene() {
     if (embree_bvh) {
         // TODO: fix me
         // for (auto i = 0; i < max(1, (int)instances.size()); i++) {
@@ -438,7 +438,7 @@ RTCDevice get_embree_device() {
 }
 
 // Initialize Embree BVH
-void build_embree_points_bvh(bvh_tree& bvh, const vector<int>& points,
+void build_embree_points_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
     const bvh_build_options& options) {
     auto embree_device = get_embree_device();
@@ -449,7 +449,7 @@ void build_embree_points_bvh(bvh_tree& bvh, const vector<int>& points,
     rtcCommitScene(embree_scene);
     bvh.embree_flattened = false;
 }
-void build_embree_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+void build_embree_lines_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
     const bvh_build_options& options) {
     auto embree_device = get_embree_device();
@@ -484,7 +484,7 @@ void build_embree_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     rtcCommitScene(embree_scene);
     bvh.embree_flattened = false;
 }
-void build_embree_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+void build_embree_triangles_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const bvh_build_options& options) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
@@ -513,7 +513,7 @@ void build_embree_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     rtcCommitScene(embree_scene);
     bvh.embree_flattened = false;
 }
-void build_embree_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
+void build_embree_quads_bvh(bvh_shape& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const bvh_build_options& options) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
@@ -625,7 +625,7 @@ void build_embree_quads_bvh(RTCScene& embree_scene, const vector<vec4i>& quads,
 }
 
 // Build a BVH using Embree.
-void build_embree_instances_bvh(bvh_instance_tree& bvh, int num_instances,
+void build_embree_instances_bvh(bvh_scene& bvh, int num_instances,
     const void* context, bvh_instance (*get_instance)(const void*, int),
     const bvh_build_options& options) {
     // scene bvh
@@ -696,10 +696,10 @@ void build_embree_flattened_bvh(
 }
 // Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not
 // available.
-void refit_embree_bvh(bvh_tree& bvh) {
+void refit_embree_bvh(bvh_shape& bvh) {
     throw runtime_error("not yet implemented");
 }
-bool intersect_embree_bvh(const bvh_tree& bvh, const ray3f& ray,
+bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray,
     bvh_intersection& intersection, bool find_any) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
@@ -725,7 +725,7 @@ bool intersect_embree_bvh(const bvh_tree& bvh, const ray3f& ray,
     intersection.distance   = embree_ray.ray.tfar;
     return true;
 }
-bool intersect_embree_bvh(const bvh_instance_tree& bvh, const ray3f& ray,
+bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray,
     bvh_intersection& intersection, bool find_any) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
@@ -1113,7 +1113,7 @@ void build_bvh_nodes(vector<bvh_node>& nodes, size_t num_elements,
 }
 
 // Build the bvh acceleration structure.
-void build_points_bvh(bvh_tree& bvh, const vector<int>& points,
+void build_points_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
     const bvh_build_options& options) {
 #if YOCTO_EMBREE
@@ -1132,7 +1132,7 @@ void build_points_bvh(bvh_tree& bvh, const vector<int>& points,
         },
         options);
 }
-void build_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+void build_lines_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
     const bvh_build_options& options) {
 #if YOCTO_EMBREE
@@ -1151,7 +1151,7 @@ void build_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
         },
         options);
 }
-void build_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+void build_triangles_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const bvh_build_options& options) {
 #if YOCTO_EMBREE
     // call Embree if needed
@@ -1169,7 +1169,7 @@ void build_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
         },
         options);
 }
-void build_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
+void build_quads_bvh(bvh_shape& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const bvh_build_options& options) {
 #if YOCTO_EMBREE
     // call Embree if needed
@@ -1188,7 +1188,7 @@ void build_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
         options);
 }
 
-void build_instances_bvh(bvh_instance_tree& bvh, int num_instances,
+void build_instances_bvh(bvh_scene& bvh, int num_instances,
     const void* context, bvh_instance (*get_instance)(const void*, int),
     const bvh_build_options& options) {
 #if YOCTO_EMBREE
@@ -1233,7 +1233,7 @@ void refit_bvh_nodes(
     }
 }
 
-void refit_points_bvh(bvh_tree& bvh, const vector<int>& points,
+void refit_points_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
     const bvh_build_options& options) {
 #if YOCTO_EMBREE
@@ -1246,7 +1246,7 @@ void refit_points_bvh(bvh_tree& bvh, const vector<int>& points,
             return point_bounds(positions[p], radius[p]);
         });
 }
-void refit_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+void refit_lines_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
     const bvh_build_options& options) {
 #if YOCTO_EMBREE
@@ -1260,7 +1260,7 @@ void refit_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
                 positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
         });
 }
-void refit_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+void refit_triangles_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const bvh_build_options& options) {
 #if YOCTO_EMBREE
     if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
@@ -1271,7 +1271,7 @@ void refit_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
         return triangle_bounds(positions[t.x], positions[t.y], positions[t.z]);
     });
 }
-void refit_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
+void refit_quads_bvh(bvh_shape& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const bvh_build_options& options) {
 #if YOCTO_EMBREE
     if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
@@ -1283,7 +1283,7 @@ void refit_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
             positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     });
 }
-void refit_instances_bvh(bvh_instance_tree& bvh, int num_instances,
+void refit_instances_bvh(bvh_scene& bvh, int num_instances,
     const void* context, bvh_instance (*get_instance)(const void*, int),
     const bvh_build_options& options) {
 #if YOCTO_EMBREE
@@ -1377,7 +1377,7 @@ bool intersect_bvh_nodes(const vector<bvh_node>& nodes, const ray3f& ray_,
     return hit;
 }
 
-bool intersect_points_bvh(const bvh_tree& bvh, const vector<int>& points,
+bool intersect_points_bvh(const bvh_shape& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
     const ray3f& ray, bvh_intersection& intersection, bool find_any) {
 #if YOCTO_EMBREE
@@ -1399,7 +1399,7 @@ bool intersect_points_bvh(const bvh_tree& bvh, const vector<int>& points,
         return false;
     }
 }
-bool intersect_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
+bool intersect_lines_bvh(const bvh_shape& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
     const ray3f& ray, bvh_intersection& intersection, bool find_any) {
 #if YOCTO_EMBREE
@@ -1422,7 +1422,7 @@ bool intersect_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
         return false;
     }
 }
-bool intersect_triangles_bvh(const bvh_tree& bvh,
+bool intersect_triangles_bvh(const bvh_shape& bvh,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const ray3f& ray, bvh_intersection& intersection, bool find_any) {
 #if YOCTO_EMBREE
@@ -1445,7 +1445,7 @@ bool intersect_triangles_bvh(const bvh_tree& bvh,
         return false;
     }
 }
-bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
+bool intersect_quads_bvh(const bvh_shape& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const ray3f& ray,
     bvh_intersection& intersection, bool find_any) {
 #if YOCTO_EMBREE
@@ -1469,9 +1469,9 @@ bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
     }
 }
 
-bool intersect_instances_bvh(const bvh_instance_tree& bvh, int num_instances,
+bool intersect_instances_bvh(const bvh_scene& bvh, int num_instances,
     const void* context, bvh_instance (*get_instance)(const void*, int),
-    bool (*intersect_shape)(const bvh_tree&, const void*, int, const ray3f&,
+    bool (*intersect_shape)(const bvh_shape&, const void*, int, const ray3f&,
         bvh_intersection&, bool),
     const ray3f& ray, bvh_intersection& intersection, bool find_any,
     bool non_rigid_frames) {
@@ -1559,7 +1559,7 @@ bool overlap_bvh_nodes(const vector<bvh_node>& nodes, const vec3f& pos,
 }
 
 // Finds the closest element with a bvh.
-bool overlap_points_bvh(const bvh_tree& bvh, const vector<int>& points,
+bool overlap_points_bvh(const bvh_shape& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
     const vec3f& pos, float max_distance, bvh_intersection& intersection,
     bool find_any) {
@@ -1572,7 +1572,7 @@ bool overlap_points_bvh(const bvh_tree& bvh, const vector<int>& points,
                 element_uv, distance);
         });
 }
-bool overlap_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
+bool overlap_lines_bvh(const bvh_shape& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
     const vec3f& pos, float max_distance, bvh_intersection& intersection,
     bool find_any) {
@@ -1585,7 +1585,7 @@ bool overlap_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
                 positions[l.y], radius[l.x], radius[l.y], element_uv, distance);
         });
 }
-bool overlap_triangles_bvh(const bvh_tree& bvh, const vector<vec3i>& triangles,
+bool overlap_triangles_bvh(const bvh_shape& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vec3f& pos, float max_distance,
     bvh_intersection& intersection, bool find_any) {
     return overlap_bvh_nodes<false>(bvh.nodes, pos, max_distance, intersection,
@@ -1600,7 +1600,7 @@ bool overlap_triangles_bvh(const bvh_tree& bvh, const vector<vec3i>& triangles,
             //     radius[t.y], radius[t.z], element_uv, distance);
         });
 }
-bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
+bool overlap_quads_bvh(const bvh_shape& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vec3f& pos, float max_distance,
     bvh_intersection& intersection, bool find_any) {
     return overlap_bvh_nodes<false>(bvh.nodes, pos, max_distance, intersection,
@@ -1619,9 +1619,9 @@ bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
 }
 
 // Finds the closest element with a bvh.
-bool overlap_instances_bvh(const bvh_instance_tree& bvh, int num_instances,
+bool overlap_instances_bvh(const bvh_scene& bvh, int num_instances,
     const void* context, bvh_instance (*get_instance)(const void*, int),
-    bool (*overlap_shape)(const bvh_tree&, const void*, int, const vec3f&,
+    bool (*overlap_shape)(const bvh_shape&, const void*, int, const vec3f&,
         float, bvh_intersection&, bool),
     const vec3f& pos, float max_distance, bvh_intersection& intersection,
     bool find_any, bool non_rigid_frames) {
@@ -1716,12 +1716,12 @@ bool overlap_instances_bvh(const bvh_instance_tree& bvh, int num_instances,
 namespace yocto {
 
 // Print bvh statistics.
-string print_shape_bvh_stats(const bvh_tree& bvh) {
+string print_shape_bvh_stats(const bvh_shape& bvh) {
     // TODO
     auto str = ""s;
     return str;
 }
-string print_scene_bvh_stats(const bvh_instance_tree& bvh) {
+string print_scene_bvh_stats(const bvh_scene& bvh) {
 #if 0
     auto num_shapes    = (size_t)0;
     auto num_instances = (size_t)0;
