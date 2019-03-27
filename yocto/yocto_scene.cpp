@@ -443,8 +443,8 @@ void build_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
 }
 
 // Refits a scene BVH
-void refit_shape_bvh(const yocto_shape& shape, bvh_tree& bvh,
-    const bvh_build_options& options) {
+void refit_shape_bvh(
+    const yocto_shape& shape, bvh_tree& bvh, const bvh_build_options& options) {
     refit_shape_bvh(bvh, shape, options);
 }
 void refit_scene_bvh(const yocto_scene& scene, bvh_instance_tree& bvh,
@@ -464,17 +464,19 @@ bool intersect_shape_bvh(const yocto_shape& shape, const bvh_tree& bvh,
     return intersect_shape_bvh(bvh, shape, ray, intersection, find_any);
 }
 bool intersect_scene_bvh(const yocto_scene& scene, const bvh_instance_tree& bvh,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any, bool non_rigid_frames) {
-    return intersect_scene_bvh(bvh, scene, ray, intersection, find_any, non_rigid_frames);
+    const ray3f& ray, bvh_intersection& intersection, bool find_any,
+    bool non_rigid_frames) {
+    return intersect_scene_bvh(
+        bvh, scene, ray, intersection, find_any, non_rigid_frames);
 }
-bool intersect_instance_bvh(const yocto_scene& scene, const bvh_instance_tree& bvh,
-    int instance_id, const ray3f& ray, bvh_intersection& intersection, 
-    bool find_any, bool non_rigid_frames) {
+bool intersect_instance_bvh(const yocto_scene& scene,
+    const bvh_instance_tree& bvh, int instance_id, const ray3f& ray,
+    bvh_intersection& intersection, bool find_any, bool non_rigid_frames) {
     auto& instance = scene.instances[instance_id];
     auto  inv_ray  = non_rigid_frames
                        ? transform_ray(inverse((affine3f)instance.frame), ray)
                        : transform_ray_inverse(instance.frame, ray);
-    if (intersect_shape_bvh(scene.shapes[instance.shape], 
+    if (intersect_shape_bvh(scene.shapes[instance.shape],
             bvh.shapes[instance.shape], inv_ray, intersection, find_any)) {
         intersection.instance_id = instance_id;
         return true;
