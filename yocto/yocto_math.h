@@ -115,6 +115,7 @@ using std::invalid_argument;
 using std::numeric_limits;
 using std::out_of_range;
 using std::pair;
+using std::function;
 using std::runtime_error;
 
 }  // namespace yocto

@@ -164,7 +164,10 @@ void build_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const bvh_build_options& options = {});
 void build_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const bvh_build_options& options = {});
-// void build_bvh(bvh_scene& bvh, const bvh_build_options& options = {});
+void build_instances_bvh(bvh_tree& bvh, int num_instances,
+    const function<bvh_instance(int)>& instance_func,
+    const function<bvh_tree&(int)>& shape_func,
+    const bvh_build_options& options = {});
 
 // Refit bvh data
 void refit_points_bvh(bvh_tree& bvh, const vector<int>& points,

@@ -531,6 +531,37 @@ void build_embree_bvh(bvh_shape& bvh, const bvh_build_options& options) {
     }
     rtcCommitScene(embree_scene);
 }
+void build_embree_instances_bvh(bvh_tree& bvh, int num_instances,
+    const function<bvh_instance(int)>& instance_func,
+    const function<bvh_tree&(int)>& shape_func,
+    const bvh_build_options& options) {
+    // scene bvh
+    auto embree_device = get_embree_device();
+    auto embree_scene  = rtcNewScene(embree_device);
+    // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
+    bvh.embree_bvh = embree_scene;
+    if (!num_instances) {
+        rtcCommitScene(embree_scene);
+        return;
+    }
+    for (auto instance_id = 0; instance_id < num_instances;
+         instance_id++) {
+        auto instance = instance_func(instance_id);
+        if (instance.shape_id < 0) continue;
+        auto& shape_bvh = shape_func(instance.shape_id);
+        if (!shape_bvh.embree_bvh) continue;
+        auto embree_geom = rtcNewGeometry(
+            embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
+        rtcSetGeometryInstancedScene(
+            embree_geom, (RTCScene)shape_bvh.embree_bvh);
+        rtcSetGeometryTransform(
+            embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+        rtcCommitGeometry(embree_geom);
+        rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
+    }
+    rtcCommitScene(embree_scene);
+    // bvh.bvh.embree_flattened = false;
+}
 void build_embree_instanced_bvh(
     bvh_scene& bvh, const bvh_build_options& options) {
     // build shape and surface bvhs
@@ -1076,6 +1107,35 @@ void build_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
                 positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         },
         options);
+}
+
+void build_instances_bvh(bvh_tree& bvh, int num_instances,
+    const function<bvh_instance(int)>& instance_func,
+    const function<bvh_tree&(int)>& shape_func,
+    const bvh_build_options& options) {
+#if YOCTO_EMBREE
+    if (options.use_embree) {
+        // if (options.flatten_embree) {
+        //     return build_embree_flattened_bvh(bvh, options);
+        // } else {
+        return build_embree_instances_bvh(bvh, num_instances, instance_func, shape_func, options);
+        // }
+    }
+#endif
+
+    if (num_instances) {
+        // get the number of primitives and the primitive type
+        return build_bvh_nodes(
+            bvh.nodes, num_instances,
+            [&instance_func,&shape_func](int idx) {
+                auto instance = instance_func(idx);
+                auto& sbvh     = shape_func(instance.shape_id);
+                return sbvh.nodes.empty() ? invalid_bbox3f
+                                              : transform_bbox(instance.frame,
+                                                    sbvh.nodes[0].bbox);
+            },
+            options);
+    }
 }
 
 // Build a BVH from a set of primitives.
