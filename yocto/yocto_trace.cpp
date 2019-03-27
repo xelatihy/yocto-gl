@@ -536,62 +536,80 @@ vec3f evaluate_brdf_fresnel(
 // BRDFs" http://jcgt.org/published/0003/02/03/
 // - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
+
+// The following code for evaluation and sampling of brdfs
+// assumes that the input shading normal (normal_) can be back facing with
+// respect to the outgoing direction. This lets us understand if the ray is
+// entering or exiting the surface. However, at the beginning of each function,
+// the normal is flipped if needed so that it is forward facing. In other words,
+// for the processed normal, dot(outgoing, normal) > 0 always holds true.
+//
+//                                                  giacomo, 28-3-2019
+
 vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal_,
     const vec3f& outgoing, const vec3f& incoming) {
     if (is_brdf_delta(brdf)) return zero3f;
     auto brdf_cosine = zero3f;
 
-    // flip normal if necessary
-    auto normal = (dot(normal_, outgoing) > 0) ? normal_ : -normal_;
-
     // orientation
-    auto outgoing_up = dot(outgoing, normal) > 0;
-    auto incoming_up = dot(incoming, normal) > 0;
+    auto outgoing_up = dot(outgoing, normal_) > 0;
+    auto incoming_up = dot(incoming, normal_) > 0;
+    auto normal      = outgoing_up ? normal_ : -normal_;
 
     // diffuse
-    if (brdf.diffuse != zero3f && outgoing_up && incoming_up) {
+    if (brdf.diffuse != zero3f && outgoing_up == incoming_up) {
         auto half_vector = normalize(incoming + outgoing);
-        auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, incoming);
+        auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, outgoing);
         brdf_cosine += brdf.diffuse * (1 - fresnel) / pif;
     }
 
     // specular
-    if (brdf.specular != zero3f && outgoing_up && incoming_up) {
+    if (brdf.specular != zero3f && outgoing_up == incoming_up) {
         auto half_vector = normalize(incoming + outgoing);
-        auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, incoming);
+        auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, outgoing);
         auto D           = evaluate_microfacet_distribution(
             brdf.roughness, normal, half_vector);
         auto G = evaluate_microfacet_shadowing(
             brdf.roughness, normal, half_vector, outgoing, incoming);
-        brdf_cosine +=
-            fresnel * D * G /
-            (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, incoming)));
+        brdf_cosine += fresnel * D * G /
+                       fabs(4 * dot(normal, outgoing) * dot(normal, incoming));
     }
 
-    // transmission (thin sheet)
-    if (brdf.transmission != zero3f && outgoing_up && !incoming_up) {
-        auto ir          = reflect(-incoming, normal);
-        auto half_vector = normalize(ir + outgoing);
-        auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, -outgoing);
-        auto D           = evaluate_microfacet_distribution(
-            brdf.roughness, normal, half_vector);
+    // transmission through rough thin surface
+    if (brdf.transmission != zero3f && !brdf.refract &&
+        outgoing_up != incoming_up) {
+        auto ir      = reflect(-incoming, normal);
+        auto halfway = normalize(ir + outgoing);
+        auto fresnel = evaluate_brdf_fresnel(brdf, halfway, outgoing);
+        auto D       = evaluate_microfacet_distribution(
+            brdf.roughness, normal, halfway);
         auto G = evaluate_microfacet_shadowing(
-            brdf.roughness, normal, half_vector, outgoing, ir);
-        brdf_cosine +=
-            brdf.transmission * (1 - fresnel) * D * G /
-            (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, ir)));
+            brdf.roughness, normal, halfway, outgoing, ir);
+        brdf_cosine += fresnel * D * G /
+                       fabs(4 * dot(normal, outgoing) * dot(normal, incoming));
     }
-    if (brdf.transmission != zero3f && !outgoing_up && incoming_up) {
-        auto ir          = reflect(-incoming, -normal);
-        auto half_vector = normalize(ir + outgoing);
-        auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, incoming);
-        auto D           = evaluate_microfacet_distribution(
-            brdf.roughness, normal, half_vector);
+
+    // refraction through rough surface
+    if (brdf.transmission != zero3f && brdf.refract &&
+        outgoing_up != incoming_up) {
+        auto eta            = convert_specular_to_eta(brdf.specular);
+        auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
+                                          : (eta * outgoing + incoming);
+        auto halfway = normalize(halfway_vector);
+
+        auto fresnel = evaluate_brdf_fresnel(brdf, halfway, outgoing);
+        auto D       = evaluate_microfacet_distribution(
+            brdf.roughness, normal, halfway);
         auto G = evaluate_microfacet_shadowing(
-            brdf.roughness, normal, half_vector, outgoing, ir);
-        brdf_cosine +=
-            brdf.transmission * (1 - fresnel) * D * G /
-            (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, ir)));
+            brdf.roughness, normal, halfway, outgoing, incoming);
+
+        auto dots = dot(outgoing, halfway) * dot(incoming, halfway) /
+                    (dot(outgoing, normal) * dot(incoming, normal));
+
+        auto numerator   = (1 - fresnel) * D * G;
+        auto denominator = dot(halfway_vector, halfway_vector);
+
+        brdf_cosine += abs(dots) * numerator / denominator;
     }
 
     return brdf_cosine * abs(dot(normal, incoming));
@@ -604,34 +622,27 @@ vec3f evaluate_delta_brdf_cosine(const microfacet_brdf& brdf,
     if (!is_brdf_delta(brdf)) return zero3f;
     auto microfacet_brdf = zero3f;
 
-    // flip normal if necessary
-    auto normal = (dot(normal_, outgoing) > 0) ? normal_ : -normal_;
-
     // orientation
-    auto outgoing_up = dot(outgoing, normal) > 0;
-    auto incoming_up = dot(incoming, normal) > 0;
+    auto outgoing_up = dot(outgoing, normal_) > 0;
+    auto incoming_up = dot(incoming, normal_) > 0;
+    auto normal      = outgoing_up ? normal_ : -normal_;
+
+    auto fresnel = evaluate_brdf_fresnel(brdf, normal, outgoing);
 
     // specular
-    if (brdf.specular != zero3f && outgoing_up && incoming_up) {
-        auto fresnel = evaluate_brdf_fresnel(brdf, normal, incoming);
+    if (brdf.specular != zero3f && outgoing_up == incoming_up) {
         microfacet_brdf += fresnel;
     }
 
-    // transmission (thin sheet)
-    if (brdf.transmission != zero3f && !brdf.refract && outgoing_up &&
-        !incoming_up) {
-        auto fresnel = evaluate_brdf_fresnel(brdf, normal, -incoming);
-        microfacet_brdf += brdf.transmission * (1 - fresnel);
-    }
-    if (brdf.transmission != zero3f && !brdf.refract && !outgoing_up &&
-        incoming_up) {
-        auto fresnel = evaluate_brdf_fresnel(brdf, normal, incoming);
+    // transmission (thin surface)
+    if (brdf.transmission != zero3f && !brdf.refract &&
+        outgoing_up != incoming_up) {
         microfacet_brdf += brdf.transmission * (1 - fresnel);
     }
 
+    // refraction
     if (brdf.transmission != zero3f && brdf.refract &&
         outgoing_up != incoming_up) {
-        auto fresnel = evaluate_brdf_fresnel(brdf, normal, incoming);
         microfacet_brdf += brdf.transmission * (1 - fresnel);
     }
 
@@ -643,11 +654,9 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal_,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (is_brdf_delta(brdf)) return zero3f;
 
-    // flip normal if necessary
-    auto normal = (dot(normal_, outgoing) > 0) ? normal_ : -normal_;
-
     // orientation
-    auto outgoing_up = dot(outgoing, normal) > 0;
+    auto outgoing_up = dot(outgoing, normal_) > 0;
+    auto normal      = outgoing_up ? normal_ : -normal_;
 
     // weights
     auto fresnel = evaluate_brdf_fresnel(brdf, normal, outgoing);
@@ -660,38 +669,45 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal_,
     if (brdf.diffuse != zero3f && outgoing_up && rnl < weights.x) {
         return sample_hemisphere_direction(normal, rn);
     }
+
     // sample according to specular GGX
-    else if (brdf.specular != zero3f && outgoing_up &&
-             rnl < weights.x + weights.y) {
-        auto half_vector = sample_microfacet_distribution(
+    else if (brdf.specular != zero3f && rnl < weights.x + weights.y) {
+        auto halfway = sample_microfacet_distribution(
             brdf.roughness, normal, rn);
-        return reflect(outgoing, half_vector);
+        return reflect(outgoing, halfway);
     }
-    // transmission hack
-    else if (brdf.transmission != zero3f && outgoing_up &&
+
+    // sample according to transmission
+    else if (brdf.transmission != zero3f && !brdf.refract &&
              rnl < weights.x + weights.y + weights.z) {
-        auto half_vector = sample_microfacet_distribution(
+        auto halfway = sample_microfacet_distribution(
             brdf.roughness, normal, rn);
-        auto ir = reflect(outgoing, half_vector);
-        return reflect(-ir, -normal);
-    } else if (brdf.transmission != zero3f && !outgoing_up &&
-               rnl < weights.x + weights.y + weights.z) {
-        auto half_vector = sample_microfacet_distribution(
+        auto ir = reflect(outgoing, halfway);
+        return -reflect(ir, normal);
+    }
+
+    // sample according to rough refraction
+    else if (brdf.transmission != zero3f && brdf.refract &&
+             rnl < weights.x + weights.y + weights.z) {
+        auto halfway = sample_microfacet_distribution(
             brdf.roughness, normal, rn);
-        auto ir = reflect(outgoing, half_vector);
-        return reflect(-ir, normal);
-    } else {
+        auto eta = convert_specular_to_eta(brdf.specular);
+        return refract(outgoing, halfway, outgoing_up ? 1 / eta : eta);
+    }
+
+    else {
         return zero3f;
     }
 }
 
 // Picks a direction based on the BRDF
 vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
-    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
+    const vec3f& normal_, const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (!is_brdf_delta(brdf)) return zero3f;
 
     // orientation
-    auto outgoing_up = dot(outgoing, normal) > 0;
+    auto outgoing_up = dot(outgoing, normal_) > 0;
+    auto normal      = outgoing_up ? normal_ : -normal_;
 
     // weights
     auto fresnel = evaluate_brdf_fresnel(brdf, normal, outgoing);
@@ -701,28 +717,21 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
     weights /= weights.x + weights.y + weights.z;
 
     // sample according to specular mirror
-    if (brdf.specular != zero3f && outgoing_up && rnl < weights.x + weights.y) {
-        return reflect(outgoing, dot(normal, outgoing) >= 0 ? normal : -normal);
+    if (brdf.specular != zero3f && rnl < weights.x + weights.y) {
+        return reflect(outgoing, normal);
     }
     // sample according to transmission
-    else if (brdf.transmission != zero3f && !brdf.refract && outgoing_up &&
+    else if (brdf.transmission != zero3f && !brdf.refract &&
              rnl < weights.x + weights.y + weights.z) {
-        return -outgoing;
-    } else if (brdf.transmission != zero3f && !brdf.refract && !outgoing_up &&
-               rnl < weights.x + weights.y + weights.z) {
         return -outgoing;
     }
-    // sample according to transmission
-    else if (brdf.transmission != zero3f && brdf.refract && outgoing_up &&
+    // sample according to perfect refraction
+    else if (brdf.transmission != zero3f && brdf.refract &&
              rnl < weights.x + weights.y + weights.z) {
-        return refract(
-            outgoing, normal, 1 / convert_specular_to_eta(brdf.specular));
+        auto eta = convert_specular_to_eta(brdf.specular);
+        return refract(outgoing, normal, outgoing_up ? 1 / eta : eta);
+    }
 
-    } else if (brdf.transmission != zero3f && brdf.refract && !outgoing_up &&
-               rnl < weights.x + weights.y + weights.z) {
-        return refract(
-            outgoing, -normal, convert_specular_to_eta(brdf.specular));
-    }
     // no sampling
     else {
         return zero3f;
@@ -734,12 +743,10 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
     const vec3f& normal_, const vec3f& outgoing, const vec3f& incoming) {
     if (is_brdf_delta(brdf)) return 0;
 
-    // flip normal if necessary
-    auto normal = (dot(normal_, outgoing) > 0) ? normal_ : -normal_;
-
     // orientation
-    auto outgoing_up = dot(outgoing, normal) > 0;
-    auto incoming_up = dot(incoming, normal) > 0;
+    auto outgoing_up = dot(outgoing, normal_) > 0;
+    auto incoming_up = dot(incoming, normal_) > 0;
+    auto normal      = outgoing_up ? normal_ : -normal_;
 
     // weights
     auto fresnel = evaluate_brdf_fresnel(brdf, normal, outgoing);
@@ -750,28 +757,44 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 
     auto pdf = 0.0f;
 
+    // diffuse
     if (brdf.diffuse != zero3f && outgoing_up && incoming_up) {
         pdf += weights.x * fabs(dot(normal, incoming)) / pif;
     }
-    if (brdf.specular != zero3f && outgoing_up && incoming_up) {
-        auto half_vector = normalize(incoming + outgoing);
-        auto d           = sample_microfacet_distribution_pdf(
-            brdf.roughness, normal, half_vector);
-        pdf += weights.y * d / (4 * fabs(dot(outgoing, half_vector)));
+
+    // specular reflection
+    if (brdf.specular != zero3f && outgoing_up == incoming_up) {
+        auto halfway = normalize(incoming + outgoing);
+        auto d       = sample_microfacet_distribution_pdf(
+            brdf.roughness, normal, halfway);
+        auto jacobian = 0.25f / fabs(dot(outgoing, halfway));
+        pdf += weights.y * d * jacobian;
     }
-    if (brdf.transmission != zero3f && outgoing_up && !incoming_up) {
-        auto ir          = reflect(-incoming, normal);
-        auto half_vector = normalize(ir + outgoing);
-        auto d           = sample_microfacet_distribution_pdf(
-            brdf.roughness, normal, half_vector);
-        pdf += weights.z * d / (4 * fabs(dot(outgoing, half_vector)));
+
+    // transmission through thin surface
+    if (brdf.transmission != zero3f && !brdf.refract &&
+        outgoing_up != incoming_up) {
+        auto ir      = reflect(-incoming, normal);
+        auto halfway = normalize(ir + outgoing);
+        auto d       = sample_microfacet_distribution_pdf(
+            brdf.roughness, normal, halfway);
+        auto jacobian = 0.25f / fabs(dot(outgoing, halfway));
+        pdf += weights.y * d * jacobian;
     }
-    if (brdf.transmission != zero3f && !outgoing_up && incoming_up) {
-        auto ir          = reflect(-incoming, -normal);
-        auto half_vector = normalize(ir + outgoing);
-        auto d           = sample_microfacet_distribution_pdf(
-            brdf.roughness, normal, half_vector);
-        pdf += weights.z * d / (4 * fabs(dot(outgoing, half_vector)));
+
+    // refraction through rough surface
+    if (brdf.transmission != zero3f && brdf.refract &&
+        outgoing_up != incoming_up) {
+        auto eta            = convert_specular_to_eta(brdf.specular);
+        auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
+                                          : (eta * outgoing + incoming);
+        auto halfway = normalize(halfway_vector);
+
+        auto d = sample_microfacet_distribution_pdf(
+            brdf.roughness, normal, halfway);
+        auto jacobian = dot(halfway, incoming) /
+                        dot(halfway_vector, halfway_vector);
+        pdf += weights.z * d * jacobian;
     }
 
     return pdf;
@@ -782,12 +805,10 @@ float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
     const vec3f& normal_, const vec3f& outgoing, const vec3f& incoming) {
     if (!is_brdf_delta(brdf)) return 0;
 
-    // flip normal if necessary
-    auto normal = (dot(normal_, outgoing) > 0) ? normal_ : -normal_;
-
     // orientation
-    auto outgoing_up = dot(outgoing, normal) > 0;
-    auto incoming_up = dot(incoming, normal) > 0;
+    auto outgoing_up = dot(outgoing, normal_) > 0;
+    auto incoming_up = dot(incoming, normal_) > 0;
+    auto normal      = outgoing_up ? normal_ : -normal_;
 
     // weights
     auto fresnel = evaluate_brdf_fresnel(brdf, normal, outgoing);
@@ -798,20 +819,14 @@ float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
 
     auto pdf = 0.0f;
 
-    if (brdf.specular != zero3f && outgoing_up && incoming_up) {
-        return weights.y;
+    // specular reflection
+    if (brdf.specular != zero3f && outgoing_up == incoming_up) {
+        pdf += weights.y;
     }
-    if (brdf.transmission != zero3f && !brdf.refract && outgoing_up &&
-        !incoming_up) {
-        return weights.z;
-    }
-    if (brdf.transmission != zero3f && !brdf.refract && !outgoing_up &&
-        incoming_up) {
-        return weights.z;
-    }
-    if (brdf.transmission != zero3f && brdf.refract &&
-        outgoing_up != incoming_up) {
-        return weights.z;
+
+    // refraction or transmission
+    if (brdf.transmission != zero3f && outgoing_up != incoming_up) {
+        pdf += weights.z;
     }
 
     return pdf;
@@ -1236,39 +1251,40 @@ vec3f sample_next_direction(const yocto_scene& scene,
     // Sample next direction when path tracing. prob_light is the probabilty of
     // sampling a direction towards a light.
 
-    auto next_direction     = zero3f;
-    auto next_brdf_cosine   = zero3f;
-    auto next_direction_pdf = 0.0f;
+    auto direction     = zero3f;
+    auto brdf_cosine   = zero3f;
+    auto direction_pdf = 0.0f;
     if (!is_brdf_delta(point.brdf)) {
         if (get_random_float(rng) < 1 - prob_light) {
-            next_direction = sample_brdf_direction(point.brdf, point.normal,
+            direction = sample_brdf_direction(point.brdf, point.normal,
                 outgoing, get_random_float(rng), get_random_vec2f(rng));
         } else {
-            next_direction = sample_lights_direction(scene, lights, {},
+            direction = sample_lights_direction(scene, lights, {},
                 point.position, get_random_float(rng), get_random_float(rng),
                 get_random_vec2f(rng));
         }
-        next_brdf_cosine = evaluate_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        next_direction_pdf =
-            (1 - prob_light) * sample_brdf_direction_pdf(point.brdf,
-                                   point.normal, outgoing, next_direction) +
-            prob_light * sample_lights_direction_pdf(scene, lights, bvh,
-                             point.position, next_direction);
+        auto brfd_pdf = sample_brdf_direction_pdf(
+            point.brdf, point.normal, outgoing, direction);
+        auto lights_pdf = sample_lights_direction_pdf(
+            scene, lights, bvh, point.position, direction);
+        direction_pdf = (1 - prob_light) * brfd_pdf + prob_light * lights_pdf;
+        if (brfd_pdf != 0)
+            brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, direction);
     } else {
-        next_direction   = sample_delta_brdf_direction(point.brdf, point.normal,
+        direction   = sample_delta_brdf_direction(point.brdf, point.normal,
             outgoing, get_random_float(rng), get_random_vec2f(rng));
-        next_brdf_cosine = evaluate_delta_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        next_direction_pdf = sample_delta_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
+        brdf_cosine = evaluate_delta_brdf_cosine(
+            point.brdf, point.normal, outgoing, direction);
+        direction_pdf = sample_delta_brdf_direction_pdf(
+            point.brdf, point.normal, outgoing, direction);
     }
 
-    if (next_direction_pdf == 0 || next_brdf_cosine == zero3f)
+    if (direction_pdf == 0 || brdf_cosine == zero3f)
         weight = zero3f;
     else
-        weight *= next_brdf_cosine / next_direction_pdf;
-    return next_direction;
+        weight *= brdf_cosine / direction_pdf;
+    return direction;
 }
 
 vec3f sample_next_direction_volume(const yocto_scene& scene,
