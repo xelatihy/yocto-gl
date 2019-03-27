@@ -215,18 +215,15 @@ void draw_opengl_widgets(const opengl_window& win) {
     begin_opengl_widgets_frame(win);
     if (begin_opengl_widgets_window(win, "yitrace")) {
         if (begin_tabbar_opengl_widget(win, "tabs")) {
-            if (begin_tabitem_opengl_widget(win, "scene")) {
-                draw_label_opengl_widget(
-                    win, "scene", get_filename(app.filename));
+            if (begin_tabitem_opengl_widget(win, "trace")) {
                 if (draw_button_opengl_widget(win, "load")) {
                     stop_rendering_async(app);
                     load_scene_async(app);
                 }
+                draw_label_opengl_widget(
+                    win, "scene", get_filename(app.filename));
                 draw_label_opengl_widget(win, "filename", app.filename);
                 draw_label_opengl_widget(win, "status", app.status);
-                end_tabitem_opengl_widget(win);
-            }
-            if (begin_tabitem_opengl_widget(win, "trace")) {
                 draw_label_opengl_widget(win, "image", "%d x %d @ %d",
                     app.image.size().x, app.image.size().y,
                     (int)app.trace_sample);

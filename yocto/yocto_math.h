@@ -102,6 +102,7 @@ using std::floor;
 using std::fmod;
 using std::isfinite;
 using std::log;
+using std::log2;
 using std::pow;
 using std::round;
 using std::sin;

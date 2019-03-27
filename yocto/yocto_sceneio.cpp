@@ -4736,10 +4736,10 @@ void load_cyhair_mesh(const string& filename, vector<int>& points,
 namespace yocto {
 
 struct disney_material {
-    string name      = "";
-    vec3f  color     = zero3f;
-    string color_map = ""s;
-    float refractive = 0;
+    string name       = "";
+    vec3f  color      = zero3f;
+    string color_map  = ""s;
+    float  refractive = 0;
 };
 
 void load_disney_island_cameras(const string& filename, yocto_scene& scene) {
@@ -4809,11 +4809,11 @@ void load_disney_island_materials(
     auto js = json{};
     load_json(filename, js);
     for (auto& [mname, mjs] : js.items()) {
-        auto material  = disney_material{};
-        material.name  = mname;
-        auto base      = mjs.at("baseColor").get<vector<float>>();
+        auto material       = disney_material{};
+        material.name       = mname;
+        auto base           = mjs.at("baseColor").get<vector<float>>();
         material.refractive = mjs.value("refractive", 0.0f);
-        material.color = {
+        material.color      = {
             powf(base[0], 2.2f), powf(base[1], 2.2f), pow(base[2], 2.2f)};
         material.color_map  = mjs.at("colorMap");
         mmap[material.name] = material;
@@ -4903,15 +4903,15 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         if (!shapes.empty() && mname == dmaterial.name) return;
         // printf("+++ %s\n", dmaterial.name.c_str());
         materials.push_back({});
-        if(mmap.at(dmaterial.name).refractive == 0) {
-            materials.back().diffuse = mmap.at(dmaterial.name).color;
-            materials.back().specular = {0.04f,0.04f,0.04f};
+        if (mmap.at(dmaterial.name).refractive == 0) {
+            materials.back().diffuse   = mmap.at(dmaterial.name).color;
+            materials.back().specular  = {0.04f, 0.04f, 0.04f};
             materials.back().roughness = 1;
         } else {
-            materials.back().diffuse = {0,0,0};
-            materials.back().specular = {0.04f,0.04f,0.04f};
-            materials.back().transmission = {1,1,1};
-            materials.back().roughness = 0;
+            materials.back().diffuse      = {0, 0, 0};
+            materials.back().specular     = {0.04f, 0.04f, 0.04f};
+            materials.back().transmission = {1, 1, 1};
+            materials.back().roughness    = 0;
         }
         shapes.push_back(yocto_shape{});
         shapes.back().filename = filename + "." +

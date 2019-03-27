@@ -335,6 +335,11 @@ bool draw_coloredit_opengl_widget(
 bool draw_coloredit_opengl_widget(
     const opengl_window& win, const char* lbl, vec4f& value);
 
+bool draw_hdr_coloredit_opengl_widget(
+    const opengl_window& win, const char* lbl, vec3f& value);
+bool draw_hdr_coloredit_opengl_widget(
+    const opengl_window& win, const char* lbl, vec4f& value);
+
 bool begin_treenode_opengl_widget(const opengl_window& win, const char* lbl);
 void end_treenode_opengl_widget(const opengl_window& win);
 

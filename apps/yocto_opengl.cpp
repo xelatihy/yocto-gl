@@ -894,6 +894,48 @@ bool draw_coloredit_opengl_widget(
     return ImGui::ColorEdit4(lbl, &value.x);
 }
 
+bool draw_hdr_coloredit_opengl_widget(
+    const opengl_window& win, const char* lbl, vec3f& value) {
+    auto color    = value;
+    auto exposure = 0.0f;
+    auto scale    = max(color);
+    if (scale > 1) {
+        color /= scale;
+        exposure = log2(scale);
+    }
+    auto edit_exposure = draw_slider_opengl_widget(
+        win, (lbl + " [exp]"s).c_str(), exposure, 0, 10);
+    auto edit_color = draw_coloredit_opengl_widget(
+        win, (lbl + " [col]"s).c_str(), color);
+    if (edit_exposure || edit_color) {
+        value = color * exp2(exposure);
+        return true;
+    } else {
+        return false;
+    }
+}
+bool draw_hdr_coloredit_opengl_widget(
+    const opengl_window& win, const char* lbl, vec4f& value) {
+    auto color    = value;
+    auto exposure = 0.0f;
+    auto scale    = max(color.xyz);
+    if (scale > 1) {
+        color.xyz /= scale;
+        exposure = log2(scale);
+    }
+    auto edit_exposure = draw_slider_opengl_widget(
+        win, (lbl + " [exp]"s).c_str(), exposure, 0, 10);
+    auto edit_color = draw_coloredit_opengl_widget(
+        win, (lbl + " [col]"s).c_str(), color);
+    if (edit_exposure || edit_color) {
+        value.xyz = color.xyz * exp2(exposure);
+        value.w   = color.w;
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool begin_treenode_opengl_widget(const opengl_window& win, const char* lbl) {
     return ImGui::TreeNode(lbl);
 }
