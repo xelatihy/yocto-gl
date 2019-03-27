@@ -440,7 +440,7 @@ void run_ui(app_state& app) {
                 auto ray = evaluate_camera_ray(
                     camera, ij, app.image.size(), {0.5f, 0.5f}, zero2f);
                 if (auto isec = bvh_intersection{};
-                    intersect_bvh(app.bvh, ray, isec)) {
+                    intersect_scene_bvh(app.bvh, ray, isec)) {
                     app.selection = {typeid(yocto_instance), isec.instance_id};
                 }
             }

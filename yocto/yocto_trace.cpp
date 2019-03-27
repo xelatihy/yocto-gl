@@ -108,7 +108,7 @@ trace_point trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
     const vec3f& position, const vec3f& direction) {
     _trace_nrays += 1;
     if (auto isec = bvh_intersection{};
-        intersect_bvh(bvh, make_ray(position, direction), isec)) {
+        intersect_scene_bvh(bvh, make_ray(position, direction), isec)) {
         return make_trace_point(scene, isec.instance_id, isec.element_id,
             isec.element_uv, direction);
     } else {
@@ -889,7 +889,7 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
     auto next_position = position;
     for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = bvh_intersection{};
-        if (!intersect_bvh(
+        if (!intersect_instance_bvh(
                 bvh, instance_id, make_ray(next_position, direction), isec))
             break;
         // accumulate pdf
@@ -1130,7 +1130,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
         pdf *= sample_environment_direction_pdf(
             scene, lights, environment_id, incoming);
         if (auto isec = bvh_intersection{};
-            !intersect_bvh(bvh, make_ray(p, incoming), isec)) {
+            !intersect_scene_bvh(bvh, make_ray(p, incoming), isec)) {
             auto& environment = scene.environments[environment_id];
             le = evaluate_environment_emission(scene, environment, incoming);
             return incoming;
@@ -1138,7 +1138,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
     }
 
     auto isec = bvh_intersection{};
-    auto hit  = intersect_bvh(bvh, make_ray(p, incoming), isec);
+    auto hit  = intersect_scene_bvh(bvh, make_ray(p, incoming), isec);
 
     while (hit) {
         auto& isec_instance = scene.instances[isec.instance_id];
@@ -1207,7 +1207,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // HACK: 10? Don't know...
-        hit = intersect_bvh(bvh, make_ray(lp, incoming), isec);
+        hit = intersect_scene_bvh(bvh, make_ray(lp, incoming), isec);
     }
 
     return incoming;
@@ -1323,7 +1323,7 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
             volume_density, get_random_float(rng));
 
         auto isec = bvh_intersection{};
-        if (!intersect_bvh(
+        if (!intersect_scene_bvh(
                 bvh, make_ray(point.position, next_direction), isec)) {
             weight = zero3f;
             return;
