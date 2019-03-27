@@ -294,7 +294,8 @@ inline void build_bvh(bvh_scene& scene, const bvh_build_options& options = {}) {
                 scene.instances[instance_id].shape_id};
         },
         [&scene](
-            int shape_id) -> bvh_tree& { return scene.shapes[shape_id].bvh; }, options);
+            int shape_id) -> bvh_tree& { return scene.shapes[shape_id].bvh; },
+        options);
 }
 
 // Refit bvh data
