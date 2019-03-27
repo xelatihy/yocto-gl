@@ -120,60 +120,6 @@ struct bvh_node {
     int    primitive_ids[bvh_max_prims];
 };
 
-// internal class for shared memory references
-template <typename T>
-struct bvh_array_view {
-    constexpr bvh_array_view() : ptr{nullptr}, count{0} {}
-    constexpr bvh_array_view(const T* ptr, int count)
-        : ptr{ptr}, count{count} {}
-    constexpr bvh_array_view(const vector<T>& v)
-        : ptr{v.data()}, count{(int)v.size()} {}
-
-    constexpr bool     empty() const { return count == 0; }
-    constexpr int      size() const { return count; }
-    constexpr const T& operator[](int idx) const { return ptr[idx]; }
-    constexpr const T* data() const { return ptr; }
-    constexpr const T* begin() const { return ptr; }
-    constexpr const T* end() const { return ptr + count; }
-
-   private:
-    const T* ptr   = nullptr;
-    int      count = 0;
-};
-
-// internal class for shared memory references
-template <typename T>
-struct bvh_strided_view {
-    constexpr bvh_strided_view() : ptr{nullptr}, count{0} {}
-    constexpr bvh_strided_view(const void* ptr, int count, int stride)
-        : ptr{ptr}, count{count}, stride{stride} {}
-    constexpr bvh_strided_view(const vector<T>& v)
-        : ptr{v.data()}, count{(int)v.size()}, stride{sizeof(T)} {}
-
-    constexpr bool     empty() const { return count == 0; }
-    constexpr int      size() const { return count; }
-    constexpr const T& operator[](int idx) const {
-        return *(T*)((char*)ptr + (size_t)stride * (size_t)idx);
-    }
-
-    struct iterator {
-        const void* ptr    = nullptr;
-        int         stride = 0;
-        bool        operator!=(const iterator& other) const {
-            return ptr != other.ptr;
-        }
-        iterator& operator++() { ptr = (char*)ptr + stride; }
-        const T&  operator*() const { return *(T*)(char*)ptr; }
-    };
-    iterator begin() const { return {ptr, stride}; }
-    iterator end() const { return {(char*)ptr + stride * count, stride}; }
-
-   private:
-    const void* ptr    = nullptr;
-    int         count  = 0;
-    int         stride = 0;
-};
-
 // Instance for a scene BVH.
 struct bvh_instance {
     frame3f frame    = identity_frame3f;
@@ -187,27 +133,16 @@ struct bvh_instance {
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
 struct bvh_tree {
-    // shape data views
-    bvh_array_view<vec3f> positions_view;
-    bvh_array_view<float> radius_view;
-    bvh_array_view<int>   points_view;
-    bvh_array_view<vec2i> lines_view;
-    bvh_array_view<vec3i> triangles_view;
-    bvh_array_view<vec4i> quads_view;
-
-    // shape data copies
-    vector<vec3f> positions_data;
-    vector<float> radius_data;
-    vector<int>   points_data;
-    vector<vec2i> lines_data;
-    vector<vec3i> triangles_data;
-    vector<vec4i> quads_data;
-
-    // instance data views
-    bvh_strided_view<bvh_instance> instances_view;
+    // shape data
+    vector<vec3f> positions;
+    vector<float> radius;
+    vector<int>   points;
+    vector<vec2i> lines;
+    vector<vec3i> triangles;
+    vector<vec4i> quads;
 
     // instance data copies
-    vector<bvh_instance> instances_data;
+    vector<bvh_instance> instances;
 
     // other data for instance bvh
     vector<bvh_tree> shape_bvhs;
@@ -227,27 +162,27 @@ struct bvh_tree {
 
 // Options for build bvh
 struct build_bvh_options {
-    bool          share_memory   = false;
     bool          high_quality   = false;
     bool          use_embree     = false;
     bool          flatten_embree = false;
+    bool          share_memory_embree   = false;
     bool          run_serially   = false;
     atomic<bool>* cancel_flag    = nullptr;
 };
 
 // Build a BVH from the given set of shape primitives. Data is copied or shared
 // depending on `copy_data`.
-void init_points_bvh(bvh_tree& bvh, bvh_array_view<int> points,
-    bvh_array_view<vec3f> positions, bvh_array_view<float> radius,
+void init_points_bvh(bvh_tree& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
     const build_bvh_options& options = {});
-void init_lines_bvh(bvh_tree& bvh, bvh_array_view<vec2i> lines,
-    bvh_array_view<vec3f> positions, bvh_array_view<float> radius,
+void init_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
     const build_bvh_options& options = {});
-void init_triangles_bvh(bvh_tree& bvh, bvh_array_view<vec3i> triangles,
-    bvh_array_view<vec3f> positions, const build_bvh_options& options = {});
-void init_quads_bvh(bvh_tree& bvh, bvh_array_view<vec4i> quads,
-    bvh_array_view<vec3f> positions, const build_bvh_options& options = {});
-void init_instances_bvh(bvh_tree& bvh, bvh_strided_view<bvh_instance> instances,
+void init_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const build_bvh_options& options = {});
+void init_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const build_bvh_options& options = {});
+void init_instances_bvh(bvh_tree& bvh, const vector<bvh_instance>& instances,
     int num_shapes, const build_bvh_options& options = {});
 bvh_tree& get_shape_bvh(bvh_tree& bvh, int shape_id);
 
@@ -255,9 +190,9 @@ bvh_tree& get_shape_bvh(bvh_tree& bvh, int shape_id);
 void build_bvh(bvh_tree& bvh, const build_bvh_options& options = {});
 
 // Update the node data for shape and scene bvhs.
-void update_vertices(bvh_tree& bvh, bvh_array_view<vec3f> positions,
-    bvh_array_view<float> radius = {});
-void update_instances(bvh_tree& bvh, bvh_strided_view<bvh_instance> instances);
+void update_vertices(bvh_tree& bvh, const vector<vec3f>& positions,
+    const vector<float>& radius = {});
+void update_instances(bvh_tree& bvh, const vector<bvh_instance>& instances);
 
 // Refit bvh data
 void refit_bvh(bvh_tree& bvh);

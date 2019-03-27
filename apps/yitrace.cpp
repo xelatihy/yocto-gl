@@ -463,7 +463,6 @@ int main(int argc, char* argv[]) {
     // application
     app_state app{};
     app.trace_options.samples_per_batch = 1;
-    app.bvh_options.share_memory        = true;
     auto no_parallel                    = false;
 
     // names for enums

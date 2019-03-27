@@ -423,11 +423,15 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 // Build a scene BVH
 void build_scene_bvh(
     const yocto_scene& scene, bvh_tree& bvh, const build_bvh_options& options) {
-    // instances
+    // clear
     bvh = {};
-    init_instances_bvh(bvh,
-        bvh_strided_view<bvh_instance>{&scene.instances.front().frame,
-            (int)scene.instances.size(), (int)sizeof(yocto_instance)},
+
+    // instances
+    auto bvh_instances = vector<bvh_instance>(scene.instances.size());
+    for(auto i = 0; i < scene.instances.size(); i ++) {
+        bvh_instances[i] = { scene.instances[i].frame, scene.instances[i].shape };
+    }
+    init_instances_bvh(bvh, bvh_instances, 
         scene.shapes.size(), options);
 
     // shapes
@@ -435,7 +439,7 @@ void build_scene_bvh(
         // make bvh
         auto& shape     = scene.shapes[shape_id];
         auto& shape_bvh = get_shape_bvh(bvh, shape_id);
-        if (options.share_memory &&
+        if (options.share_memory_embree &&
             shape.positions.size() == shape.positions.capacity()) {
             ((vector<vec3f>&)shape.positions)
                 .reserve(shape.positions.size() + 1);
@@ -466,7 +470,7 @@ void build_scene_bvh(
 // Refits a scene BVH
 void refit_scene_bvh(const yocto_scene& scene, bvh_tree& bvh,
     const vector<int>& updated_shapes, const build_bvh_options& options) {
-    if (!options.share_memory) {
+    if (!options.share_memory_embree) {
         for (auto shape_id : updated_shapes)
             update_vertices(get_shape_bvh(bvh, shape_id),
                 scene.shapes[shape_id].positions,
@@ -476,9 +480,7 @@ void refit_scene_bvh(const yocto_scene& scene, bvh_tree& bvh,
         for (auto& instance : scene.instances) {
             bvh_instances.push_back({instance.frame, instance.shape});
         }
-        update_instances(
-            bvh, bvh_strided_view<bvh_instance>{&scene.instances.front().frame,
-                     (int)scene.instances.size(), (int)sizeof(yocto_instance)});
+        update_instances(bvh, bvh_instances);
     }
 
     for (auto shape_id : updated_shapes)

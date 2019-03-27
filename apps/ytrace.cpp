@@ -57,9 +57,6 @@ int main(int argc, char* argv[]) {
     auto imfilename    = "out.hdr"s;
     auto filename      = "scene.json"s;
 
-    // default configuraions
-    bvh_options.share_memory = true;
-
     // names for enums
     auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
     for (auto type = 0; type < trace_sampler_type_names.size(); type++) {
