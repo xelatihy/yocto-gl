@@ -9,14 +9,6 @@
 // be considered internal to Yocto.
 //
 //
-// ## Array view
-//
-// `array_view` is a non owning view over a contiguos sequence of elements.
-// it is very similar to `std::span` and in fact it will be eventually
-// substituted to that one when span will become readily available.
-// It is used through Yocto/GL to pass arrays as pointer and length pairs.
-//
-//
 // ## Python-like iterators and collection helpers
 //
 // This library includes a set of functions to help use C++ collections with
@@ -126,46 +118,6 @@ using std::thread;
 using std::vector;
 using namespace std::string_literals;
 using namespace std::chrono_literals;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// ARRAY VIEW
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Array view, similar to std::span for C++20. Wraps a pointer length and
-// provides a vector like interface.
-template <typename T>
-struct array_view {
-    // constructors
-    constexpr array_view() : ptr{nullptr}, count{0} {}
-    constexpr array_view(T* data, size_t count) : ptr{nullptr}, count{count} {}
-    constexpr array_view(vector<T>& data)
-        : ptr{data.data()}, count{data.size()} {}
-    constexpr array_view(const vector<T>& data)
-        : ptr{data.data()}, count{data.size()} {}
-
-    // size
-    constexpr bool      empty() const { return count == 0; }
-    constexpr size_t    size() const { return count; }
-    constexpr ptrdiff_t ssize() const { return (ptrdiff_t)count; }
-
-    // element access
-    constexpr T& operator[](size_t i) const { return ptr[i]; }
-    constexpr T& at(size_t i) { return ptr[i]; }
-
-    // data access
-    constexpr T* data() const { return ptr; }
-
-    // iteration
-    constexpr T* begin() const { return ptr; }
-    constexpr T* end() const { return ptr + count; }
-
-   private:
-    T*     ptr   = nullptr;
-    size_t count = 0;
-};
 
 }  // namespace yocto
 
