@@ -1309,58 +1309,27 @@ void refit_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
             positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     });
 }
-
-// Recursively recomputes the node bounds for a shape bvh
-void refit_bvh(bvh_shape& bvh) {
+void refit_instances_bvh(bvh_tree& bvh, int num_instances,
+    const function<bvh_instance(int)>& instance_func,
+    const function<bvh_tree&(int)>& shape_func,
+    const bvh_build_options& options) {
 #if YOCTO_EMBREE
-    if (bvh.bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
+    if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
 #endif
 
-    // get the number of primitives and the primitive type
-    if (!bvh.points.empty()) {
-        return refit_bvh_nodes(bvh.bvh.nodes, 0, [&](int idx) {
-            auto& p = bvh.points[idx];
-            return point_bounds(bvh.positions[p], bvh.radius[p]);
-        });
-    } else if (!bvh.lines.empty()) {
-        return refit_bvh_nodes(bvh.bvh.nodes, 0, [&bvh](int idx) {
-            auto& l = bvh.lines[idx];
-            return line_bounds(bvh.positions[l.x], bvh.positions[l.y],
-                bvh.radius[l.x], bvh.radius[l.y]);
-        });
-    } else if (!bvh.triangles.empty()) {
-        return refit_bvh_nodes(bvh.bvh.nodes, 0, [&](int idx) {
-            auto& t = bvh.triangles[idx];
-            return triangle_bounds(
-                bvh.positions[t.x], bvh.positions[t.y], bvh.positions[t.z]);
-        });
-    } else if (!bvh.quads.empty()) {
-        return refit_bvh_nodes(bvh.bvh.nodes, 0, [&bvh](int idx) {
-            auto& q = bvh.quads[idx];
-            return quad_bounds(bvh.positions[q.x], bvh.positions[q.y],
-                bvh.positions[q.z], bvh.positions[q.w]);
-        });
-    } else {
-        throw runtime_error("empty shape");
-    }
-}
-// Recursively recomputes the node bounds for a shape bvh
-void refit_bvh(bvh_scene& bvh, const bvh_build_options& options) {
-#if YOCTO_EMBREE
-    if (bvh.bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
-#endif
-
-    // get the number of primitives and the primitive type
-    if (!bvh.instances.empty()) {
-        return refit_bvh_nodes(bvh.bvh.nodes, 0, [&bvh](int idx) {
-            auto& instance = bvh.instances[idx];
-            auto& sbvh     = bvh.shapes[instance.shape_id];
-            return sbvh.bvh.nodes.empty()
+    if (num_instances) {
+        // get the number of primitives and the primitive type
+        return refit_bvh_nodes(
+            bvh.nodes, 0,
+            [&instance_func, &shape_func](int idx) {
+            auto instance = instance_func(idx);
+            auto& sbvh     = shape_func(instance.shape_id);
+            return sbvh.nodes.empty()
                        ? invalid_bbox3f
-                       : transform_bbox(instance.frame, sbvh.bvh.nodes[0].bbox);
+                       : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
         });
     } else {
-        throw runtime_error("empty shape");
+        throw runtime_error("empty instances");
     }
 }
 

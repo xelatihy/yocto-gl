@@ -180,6 +180,10 @@ void refit_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const bvh_build_options& options = {});
 void refit_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const bvh_build_options& options = {});
+void refit_instances_bvh(bvh_tree& bvh, int num_instances,
+    const function<bvh_instance(int)>& instance_func,
+    const function<bvh_tree&(int)>& shape_func,
+    const bvh_build_options& options = {});
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.
@@ -297,7 +301,20 @@ inline void refit_bvh(bvh_shape& shape, const bvh_build_options& options = {}) {
     } else {
     }
 }
-void refit_bvh(bvh_scene& bvh, const bvh_build_options& options = {});
+inline void refit_bvh(bvh_scene& scene, 
+    const bvh_build_options& options = {}) {
+    return refit_instances_bvh(scene.bvh, 
+        (int)scene.instances.size(), 
+        [&scene](int instance_id) -> bvh_instance {
+            return {
+                scene.instances[instance_id].frame,
+                scene.instances[instance_id].shape_id
+            };
+        }, 
+        [&scene](int shape_id) -> bvh_tree& {
+            return scene.shapes[shape_id].bvh;
+        });
+}
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
