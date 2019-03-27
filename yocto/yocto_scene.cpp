@@ -427,6 +427,7 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene_data& bvh,
     bvh = {};
 
     // shapes
+    bvh.bvh_.shapes.resize(scene.shapes.size());
     bvh.shapes.resize(scene.shapes.size());
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
         // make bvh
@@ -445,7 +446,7 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene_data& bvh,
             shape_bvh.quads = shape.quads_positions;
         shape_bvh.positions = shape.positions;
         shape_bvh.radius    = shape.radius;
-        build_shape_bvh(shape_bvh, options);
+        build_shape_bvh(bvh.bvh_.shapes.at(shape_id), shape_bvh, options);
     }
 
     // instances
@@ -457,7 +458,7 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene_data& bvh,
     }
 
     // build bvh
-    build_scene_bvh(bvh, options);
+    build_scene_bvh(bvh.bvh_, bvh, options);
 }
 
 // Refits a scene BVH
@@ -467,13 +468,13 @@ void refit_scene_bvh(const yocto_scene& scene, bvh_scene_data& bvh,
     for (auto shape_id : updated_shapes) {
         bvh.shapes[shape_id].positions = scene.shapes[shape_id].positions;
         bvh.shapes[shape_id].radius    = scene.shapes[shape_id].radius;
-        refit_shape_bvh(bvh.shapes[shape_id], options);
+        refit_shape_bvh(bvh.bvh_.shapes[shape_id], bvh.shapes[shape_id], options);
     }
     for (auto instance_id : updated_instances) {
         bvh.instances[instance_id] = {scene.instances[instance_id].frame,
             scene.instances[instance_id].shape};
     }
-    refit_scene_bvh(bvh, options);
+    refit_scene_bvh(bvh.bvh_, bvh, options);
 }
 
 // Add missing names and resolve duplicated names.
