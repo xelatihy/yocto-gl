@@ -1239,33 +1239,6 @@ void build_instances_bvh(bvh_tree& bvh, int num_instances,
     }
 }
 
-// Build a BVH from a set of primitives.
-void build_bvh(bvh_scene& bvh, const bvh_build_options& options) {
-#if YOCTO_EMBREE
-    if (options.use_embree) {
-        if (options.flatten_embree) {
-            return build_embree_flattened_bvh(bvh, options);
-        } else {
-            return build_embree_instanced_bvh(bvh, options);
-        }
-    }
-#endif
-
-    if (!bvh.instances.empty()) {
-        // get the number of primitives and the primitive type
-        return build_bvh_nodes(
-            bvh.bvh.nodes, bvh.instances.size(),
-            [&bvh](int idx) {
-                auto& instance = bvh.instances[idx];
-                auto& sbvh     = bvh.shapes[instance.shape_id];
-                return sbvh.bvh.nodes.empty() ? invalid_bbox3f
-                                              : transform_bbox(instance.frame,
-                                                    sbvh.bvh.nodes[0].bbox);
-            },
-            options);
-    }
-}
-
 // Recursively recomputes the node bounds for a shape bvh
 template <typename ElemBound>
 void refit_bvh_nodes(

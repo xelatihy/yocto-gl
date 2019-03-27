@@ -267,7 +267,19 @@ inline void build_bvh(bvh_shape& shape, const bvh_build_options& options = {}) {
     } else {
     }
 }
-void build_bvh(bvh_scene& bvh, const bvh_build_options& options = {});
+inline void build_bvh(bvh_scene& scene, const bvh_build_options& options = {}) {
+    return build_instances_bvh(scene.bvh, 
+        (int)scene.instances.size(), 
+        [&scene](int instance_id) -> bvh_instance {
+            return {
+                scene.instances[instance_id].frame,
+                scene.instances[instance_id].shape_id
+            };
+        }, 
+        [&scene](int shape_id) -> bvh_tree& {
+            return scene.shapes[shape_id].bvh;
+        });
+}
 
 // Refit bvh data
 inline void refit_bvh(bvh_shape& shape, const bvh_build_options& options = {}) {
