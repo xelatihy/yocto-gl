@@ -441,6 +441,7 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
         shape_bvh.lines     = shape.lines;
         shape_bvh.triangles = shape.triangles;
         shape_bvh.quads     = shape.quads;
+        if(!shape.quads_positions.empty()) shape_bvh.quads = shape.quads_positions;
         shape_bvh.positions = shape.positions;
         shape_bvh.radius    = shape.radius;
     }

@@ -1216,49 +1216,91 @@ bool intersect_bvh_nodes(const vector<bvh_node>& nodes, const ray3f& ray_,
     return hit;
 }
 
-// Intersect ray with a bvh.
-bool intersect_bvh(const bvh_shape& bvh, const ray3f& ray,
-    bvh_intersection& intersection, bool find_any) {
+bool intersect_points_bvh(const bvh_tree& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any) {
 #if YOCTO_EMBREE
     // call Embree if needed
-    if (bvh.bvh.embree_bvh) {
-        return intersect_embree_bvh(bvh.bvh, ray, intersection, find_any);
+    if (bvh.embree_bvh) {
+        return intersect_embree_bvh(bvh, ray, intersection, find_any);
     }
 #endif
 
-    if (!bvh.triangles.empty()) {
-        return intersect_bvh_nodes<false>(bvh.bvh.nodes, ray, intersection,
+    if (!points.empty()) {
+        return intersect_bvh_nodes<false>(bvh.nodes, ray, intersection,
             find_any,
-            [&bvh](const ray3f& ray, int idx, vec2f& uv, float& dist) {
-                auto& t = bvh.triangles[idx];
-                return intersect_triangle(ray, bvh.positions[t.x],
-                    bvh.positions[t.y], bvh.positions[t.z], uv, dist);
+            [&points, &positions, &radius](const ray3f& ray, int idx, vec2f& uv, float& dist) {
+                auto& p = points[idx];
+                return intersect_point(
+                    ray, positions[p], radius[p], uv, dist);
             });
-    } else if (!bvh.quads.empty()) {
-        return intersect_bvh_nodes<false>(bvh.bvh.nodes, ray, intersection,
+    } else {
+        return false;
+    }
+}
+bool intersect_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any) {
+#if YOCTO_EMBREE
+    // call Embree if needed
+    if (bvh.embree_bvh) {
+        return intersect_embree_bvh(bvh, ray, intersection, find_any);
+    }
+#endif
+
+    if (!lines.empty()) {
+        return intersect_bvh_nodes<false>(bvh.nodes, ray, intersection,
             find_any,
-            [&bvh](const ray3f& ray, int idx, vec2f& uv, float& dist) {
-                auto& q = bvh.quads[idx];
-                return intersect_quad(ray, bvh.positions[q.x],
-                    bvh.positions[q.y], bvh.positions[q.z], bvh.positions[q.w],
-                    uv, dist);
-            });
-    } else if (!bvh.lines.empty()) {
-        return intersect_bvh_nodes<false>(bvh.bvh.nodes, ray, intersection,
-            find_any,
-            [&bvh](const ray3f& ray, int idx, vec2f& uv, float& dist) {
-                auto& l = bvh.lines[idx];
-                return intersect_line(ray, bvh.positions[l.x],
-                    bvh.positions[l.y], bvh.radius[l.x], bvh.radius[l.y], uv,
+            [&lines, &positions, &radius](const ray3f& ray, int idx, vec2f& uv, float& dist) {
+                auto& l = lines[idx];
+                return intersect_line(ray, positions[l.x],
+                    positions[l.y], radius[l.x], radius[l.y], uv,
                     dist);
             });
-    } else if (!bvh.points.empty()) {
-        return intersect_bvh_nodes<false>(bvh.bvh.nodes, ray, intersection,
+    } else {
+        return false;
+    }
+}
+bool intersect_triangles_bvh(const bvh_tree& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const ray3f& ray,
+    bvh_intersection& intersection, bool find_any) {
+#if YOCTO_EMBREE
+    // call Embree if needed
+    if (bvh.embree_bvh) {
+        return intersect_embree_bvh(bvh, ray, intersection, find_any);
+    }
+#endif
+
+    if (!triangles.empty()) {
+        return intersect_bvh_nodes<false>(bvh.nodes, ray, intersection,
             find_any,
-            [&bvh](const ray3f& ray, int idx, vec2f& uv, float& dist) {
-                auto& p = bvh.points[idx];
-                return intersect_point(
-                    ray, bvh.positions[p], bvh.radius[p], uv, dist);
+            [&triangles, &positions](const ray3f& ray, int idx, vec2f& uv, float& dist) {
+                auto& t = triangles[idx];
+                return intersect_triangle(ray, positions[t.x],
+                    positions[t.y], positions[t.z], uv, dist);
+            });
+    } else {
+        return false;
+    }
+}
+bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const ray3f& ray,
+    bvh_intersection& intersection, bool find_any) {
+#if YOCTO_EMBREE
+    // call Embree if needed
+    if (bvh.embree_bvh) {
+        return intersect_embree_bvh(bvh, ray, intersection, find_any);
+    }
+#endif
+
+    if (!quads.empty()) {
+        return intersect_bvh_nodes<false>(bvh.nodes, ray, intersection,
+            find_any,
+            [&quads, &positions](const ray3f& ray, int idx, vec2f& uv, float& dist) {
+                auto& q = quads[idx];
+                return intersect_quad(ray, positions[q.x],
+                    positions[q.y], positions[q.z], positions[q.w],
+                    uv, dist);
             });
     } else {
         return false;
