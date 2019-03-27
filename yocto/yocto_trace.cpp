@@ -1236,39 +1236,40 @@ vec3f sample_next_direction(const yocto_scene& scene,
     // Sample next direction when path tracing. prob_light is the probabilty of
     // sampling a direction towards a light.
 
-    auto next_direction     = zero3f;
-    auto next_brdf_cosine   = zero3f;
-    auto next_direction_pdf = 0.0f;
+    auto direction     = zero3f;
+    auto brdf_cosine   = zero3f;
+    auto direction_pdf = 0.0f;
     if (!is_brdf_delta(point.brdf)) {
         if (get_random_float(rng) < 1 - prob_light) {
-            next_direction = sample_brdf_direction(point.brdf, point.normal,
+            direction = sample_brdf_direction(point.brdf, point.normal,
                 outgoing, get_random_float(rng), get_random_vec2f(rng));
         } else {
-            next_direction = sample_lights_direction(scene, lights, {},
+            direction = sample_lights_direction(scene, lights, {},
                 point.position, get_random_float(rng), get_random_float(rng),
                 get_random_vec2f(rng));
         }
-        next_brdf_cosine = evaluate_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        next_direction_pdf =
-            (1 - prob_light) * sample_brdf_direction_pdf(point.brdf,
-                                   point.normal, outgoing, next_direction) +
-            prob_light * sample_lights_direction_pdf(scene, lights, bvh,
-                             point.position, next_direction);
+        auto brfd_pdf = sample_brdf_direction_pdf(
+            point.brdf, point.normal, outgoing, direction);
+        auto lights_pdf = sample_lights_direction_pdf(
+            scene, lights, bvh, point.position, direction);
+        direction_pdf = (1 - prob_light) * brfd_pdf + prob_light * lights_pdf;
+        if (brfd_pdf != 0)
+            brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, direction);
     } else {
-        next_direction   = sample_delta_brdf_direction(point.brdf, point.normal,
+        direction   = sample_delta_brdf_direction(point.brdf, point.normal,
             outgoing, get_random_float(rng), get_random_vec2f(rng));
-        next_brdf_cosine = evaluate_delta_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        next_direction_pdf = sample_delta_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
+        brdf_cosine = evaluate_delta_brdf_cosine(
+            point.brdf, point.normal, outgoing, direction);
+        direction_pdf = sample_delta_brdf_direction_pdf(
+            point.brdf, point.normal, outgoing, direction);
     }
 
-    if (next_direction_pdf == 0 || next_brdf_cosine == zero3f)
+    if (direction_pdf == 0 || brdf_cosine == zero3f)
         weight = zero3f;
     else
-        weight *= next_brdf_cosine / next_direction_pdf;
-    return next_direction;
+        weight *= brdf_cosine / direction_pdf;
+    return direction;
 }
 
 vec3f sample_next_direction_volume(const yocto_scene& scene,
