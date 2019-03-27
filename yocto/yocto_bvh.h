@@ -206,20 +206,21 @@ bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const ray3f& ray,
     bvh_intersection& intersection, bool find_any = false);
 
-// Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance , the instance id,
-// the shape element index and the element barycentric coordinates.
-bool intersect_points_bvh(const bvh_tree& bvh, const vector<int>& points,
+// Find a shape element that overlaps a point within a given distance
+// max distance, returning either the closest or any overlap depending on
+// `find_any`. Returns the point distance, the instance id, the shape element
+// index and the element barycentric coordinates.
+bool overlap_points_bvh(const bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
-bool intersect_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
+    const vec3f& pos, float max_distance, bvh_intersection& intersection, bool find_any = false);
+bool overlap_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
-bool intersect_triangles_bvh(const bvh_tree& bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
-bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const ray3f& ray,
+    const vec3f& pos, float max_distance, bvh_intersection& intersection, bool find_any = false);
+bool overlap_triangles_bvh(const bvh_tree& bvh,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,  
+    const vec3f& pos, float max_distance, bvh_intersection& intersection, bool find_any = false);
+bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vec3f& pos, float max_distance,
     bvh_intersection& intersection, bool find_any = false);
 
 // BVH for shapes made of points, lines, triangles or quads. Only one primitive
@@ -313,8 +314,25 @@ bool intersect_bvh(const bvh_scene& bvh, int instance_id, const ray3f& ray,
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bool overlap_bvh(const bvh_shape& bvh, const vec3f& pos, float max_distance,
-    bvh_intersection& intersection, bool find_any = false);
+inline bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos, float max_distance,
+    bvh_intersection& intersection, bool find_any = false) {
+    if (!shape.points.empty()) {
+        return overlap_points_bvh(shape.bvh, shape.points, shape.positions,
+            shape.radius, pos, max_distance, intersection, find_any);
+    } else if (!shape.lines.empty()) {
+        return overlap_lines_bvh(shape.bvh, shape.lines, shape.positions,
+            shape.radius, pos, max_distance, intersection, find_any);
+    } else if (!shape.triangles.empty()) {
+        return overlap_triangles_bvh(shape.bvh, shape.triangles,
+            shape.positions, pos, max_distance, intersection, find_any);
+    } else if (!shape.quads.empty()) {
+        return overlap_quads_bvh(shape.bvh, shape.quads, shape.positions, pos, max_distance, 
+            intersection, find_any);
+    } else {
+        return false;
+    }
+}
+
 bool overlap_bvh(const bvh_tree& bvh, const vec3f& pos, float max_distance,
     bvh_intersection& intersection, bool find_any = false);
 
