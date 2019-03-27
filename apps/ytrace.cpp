@@ -45,7 +45,7 @@ void exit_error(const string& msg) {
 int main(int argc, char* argv[]) {
     // options
     auto load_options  = load_scene_options{};
-    auto bvh_options   = build_bvh_options{};
+    auto bvh_options   = bvh_build_options{};
     auto trace_options = trace_image_options{};
     auto no_parallel   = false;
     auto save_batch    = false;

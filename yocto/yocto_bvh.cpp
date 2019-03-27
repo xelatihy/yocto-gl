@@ -511,7 +511,7 @@ void build_embree_quads_bvh(RTCScene& embree_scene, const vector<vec4i>& quads,
 }
 
 // Build a BVH using Embree.
-void build_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
+void build_embree_bvh(bvh_shape& bvh, const bvh_build_options& options) {
     // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
     auto& embree_scene = (RTCScene&)bvh.bvh.embree_bvh;
     if (!bvh.points.empty()) {
@@ -532,7 +532,7 @@ void build_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
     rtcCommitScene(embree_scene);
 }
 void build_embree_instanced_bvh(
-    bvh_scene& bvh, const build_bvh_options& options) {
+    bvh_scene& bvh, const bvh_build_options& options) {
     // build shape and surface bvhs
     for (auto& shape_bvh : bvh.shapes) build_embree_bvh(shape_bvh, options);
 
@@ -564,7 +564,7 @@ void build_embree_instanced_bvh(
     bvh.bvh.embree_flattened = false;
 }
 void build_embree_flattened_bvh(
-    bvh_scene& bvh, const build_bvh_options& options) {
+    bvh_scene& bvh, const bvh_build_options& options) {
     // build shape and surface bvhs
     for (auto& shape_bvh : bvh.shapes) build_embree_bvh(shape_bvh, options);
 
@@ -832,7 +832,7 @@ void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
 // Build BVH nodes
 void build_bvh_nodes_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
-    const build_bvh_options& options) {
+    const bvh_build_options& options) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
@@ -891,7 +891,7 @@ void build_bvh_nodes_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
 // Build BVH nodes
 void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
-    const build_bvh_options& options) {
+    const bvh_build_options& options) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
@@ -981,7 +981,7 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 // Build a BVH from a set of primitives.
 template <typename ElemBounds>
 void build_bvh_nodes(vector<bvh_node>& nodes, size_t num_elements,
-    const ElemBounds& element_bounds, const build_bvh_options& options) {
+    const ElemBounds& element_bounds, const bvh_build_options& options) {
     // get the number of primitives and the primitive type
     auto prims = vector<bvh_prim>(num_elements);
     for (auto element_id = 0; element_id < num_elements; element_id++) {
@@ -1001,7 +1001,7 @@ void build_bvh_nodes(vector<bvh_node>& nodes, size_t num_elements,
 // Build the bvh acceleration structure.
 void build_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
-    const build_bvh_options& options) {
+    const bvh_build_options& options) {
 #if YOCTO_EMBREE
     // call Embree if needed
     if (options.use_embree) {
@@ -1021,7 +1021,7 @@ void build_points_bvh(bvh_tree& bvh, const vector<int>& points,
 }
 void build_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
-    const build_bvh_options& options) {
+    const bvh_build_options& options) {
 #if YOCTO_EMBREE
     // call Embree if needed
     if (options.use_embree) {
@@ -1034,13 +1034,13 @@ void build_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
         bvh.nodes, lines.size(),
         [&lines, &positions, &radius](int idx) {
             auto& l = lines[idx];
-            return line_bounds(positions[l.x], positions[l.y],
-                radius[l.x], radius[l.y]);
+            return line_bounds(
+                positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
         },
         options);
 }
 void build_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const build_bvh_options& options) {
+    const vector<vec3f>& positions, const bvh_build_options& options) {
 #if YOCTO_EMBREE
     // call Embree if needed
     if (options.use_embree) {
@@ -1059,7 +1059,7 @@ void build_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
         options);
 }
 void build_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const build_bvh_options& options) {
+    const vector<vec3f>& positions, const bvh_build_options& options) {
 #if YOCTO_EMBREE
     // call Embree if needed
     if (options.use_embree) {
@@ -1072,14 +1072,14 @@ void build_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
         bvh.nodes, quads.size(),
         [&quads, &positions](int idx) {
             auto& q = quads[idx];
-            return quad_bounds(positions[q.x], positions[q.y],
-                positions[q.z], positions[q.w]);
+            return quad_bounds(
+                positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         },
         options);
 }
 
 // Build a BVH from a set of primitives.
-void build_bvh(bvh_scene& bvh, const build_bvh_options& options) {
+void build_bvh(bvh_scene& bvh, const bvh_build_options& options) {
 #if YOCTO_EMBREE
     if (options.use_embree) {
         if (options.flatten_embree) {
@@ -1128,6 +1128,56 @@ void refit_bvh_nodes(
     }
 }
 
+void refit_points_bvh(bvh_tree& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const bvh_build_options& options) {
+#if YOCTO_EMBREE
+    if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
+#endif
+
+    return refit_bvh_nodes(bvh.nodes, 0, [&points, &positions, &radius](int idx) {
+        auto& p = points[idx];
+        return point_bounds(positions[p], radius[p]);
+    });
+}
+void refit_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const bvh_build_options& options) {
+#if YOCTO_EMBREE
+    if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
+#endif
+
+    return refit_bvh_nodes(bvh.nodes, 0, [&lines, &positions, &radius](int idx) {
+        auto& l = lines[idx];
+        return line_bounds(positions[l.x], positions[l.y],
+            radius[l.x], radius[l.y]);
+    });
+}
+void refit_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const bvh_build_options& options) {
+#if YOCTO_EMBREE
+    if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
+#endif
+
+    return refit_bvh_nodes(bvh.nodes, 0, [&triangles, &positions](int idx) {
+        auto& t = triangles[idx];
+        return triangle_bounds(
+            positions[t.x], positions[t.y], positions[t.z]);
+    });
+}
+void refit_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const bvh_build_options& options) {
+#if YOCTO_EMBREE
+    if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
+#endif
+
+    return refit_bvh_nodes(bvh.nodes, 0, [&quads, &positions](int idx) {
+        auto& q = quads[idx];
+        return quad_bounds(positions[q.x], positions[q.y],
+            positions[q.z], positions[q.w]);
+    });
+}
+
 // Recursively recomputes the node bounds for a shape bvh
 void refit_bvh(bvh_shape& bvh) {
 #if YOCTO_EMBREE
@@ -1163,7 +1213,7 @@ void refit_bvh(bvh_shape& bvh) {
     }
 }
 // Recursively recomputes the node bounds for a shape bvh
-void refit_bvh(bvh_scene& bvh) {
+void refit_bvh(bvh_scene& bvh, const bvh_build_options& options) {
 #if YOCTO_EMBREE
     if (bvh.bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
 #endif

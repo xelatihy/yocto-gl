@@ -422,7 +422,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 
 // Build a scene BVH
 void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    const build_bvh_options& options) {
+    const bvh_build_options& options) {
     // clear
     bvh = {};
 
@@ -461,7 +461,7 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
 // Refits a scene BVH
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const build_bvh_options& options) {
+    const bvh_build_options& options) {
     for (auto shape_id : updated_shapes) {
         bvh.shapes[shape_id].positions = scene.shapes[shape_id].positions;
         bvh.shapes[shape_id].radius    = scene.shapes[shape_id].radius;

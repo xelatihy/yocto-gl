@@ -144,7 +144,7 @@ struct bvh_tree {
 };
 
 // bvh build options
-struct build_bvh_options {
+struct bvh_build_options {
     bool          high_quality        = false;
     bool          use_embree          = false;
     bool          flatten_embree      = false;
@@ -156,19 +156,27 @@ struct build_bvh_options {
 // Build the bvh acceleration structure.
 void build_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
-    const build_bvh_options& options = {});
+    const bvh_build_options& options = {});
 void build_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
-    const build_bvh_options& options = {});
+    const bvh_build_options& options = {});
 void build_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const build_bvh_options& options = {});
+    const vector<vec3f>& positions, const bvh_build_options& options = {});
 void build_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const build_bvh_options& options = {});
-// void build_bvh(bvh_scene& bvh, const build_bvh_options& options = {});
+    const vector<vec3f>& positions, const bvh_build_options& options = {});
+// void build_bvh(bvh_scene& bvh, const bvh_build_options& options = {});
 
 // Refit bvh data
-// void refit_bvh(bvh_shape& bvh);
-// void refit_bvh(bvh_scene& bvh);
+void refit_points_bvh(bvh_tree& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const bvh_build_options& options = {});
+void refit_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const bvh_build_options& options = {});
+void refit_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const bvh_build_options& options = {});
+void refit_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const bvh_build_options& options = {});
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.
@@ -181,6 +189,22 @@ struct bvh_intersection {
     vec2f element_uv  = {0, 0};
     float distance    = 0;
 };
+
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
+bool intersect_points_bvh(const bvh_tree& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
+bool intersect_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
+bool intersect_triangles_bvh(const bvh_tree& bvh,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
+bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const ray3f& ray,
+    bvh_intersection& intersection, bool find_any = false);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
@@ -224,7 +248,7 @@ struct bvh_scene {
 };
 
 // Build the bvh acceleration structure.
-inline void build_bvh(bvh_shape& shape, const build_bvh_options& options = {}) {
+inline void build_bvh(bvh_shape& shape, const bvh_build_options& options = {}) {
     if (!shape.points.empty()) {
         return build_points_bvh(
             shape.bvh, shape.points, shape.positions, shape.radius, options);
@@ -239,11 +263,25 @@ inline void build_bvh(bvh_shape& shape, const build_bvh_options& options = {}) {
     } else {
     }
 }
-void build_bvh(bvh_scene& bvh, const build_bvh_options& options = {});
+void build_bvh(bvh_scene& bvh, const bvh_build_options& options = {});
 
 // Refit bvh data
-void refit_bvh(bvh_shape& bvh);
-void refit_bvh(bvh_scene& bvh);
+inline void refit_bvh(bvh_shape& shape, const bvh_build_options& options = {}) {
+    if (!shape.points.empty()) {
+        return refit_points_bvh(
+            shape.bvh, shape.points, shape.positions, shape.radius, options);
+    } else if (!shape.lines.empty()) {
+        return refit_lines_bvh(
+            shape.bvh, shape.lines, shape.positions, shape.radius, options);
+    } else if (!shape.triangles.empty()) {
+        return refit_triangles_bvh(
+            shape.bvh, shape.triangles, shape.positions, options);
+    } else if (!shape.quads.empty()) {
+        return refit_quads_bvh(shape.bvh, shape.quads, shape.positions, options);
+    } else {
+    }
+}
+void refit_bvh(bvh_scene& bvh, const bvh_build_options& options = {});
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,

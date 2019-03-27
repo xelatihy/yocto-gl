@@ -132,7 +132,7 @@ struct app_state {
 
     // options
     load_scene_options load_options = {};
-    build_bvh_options  bvh_options  = {};
+    bvh_build_options  bvh_options  = {};
     drawgl_options     draw_options = {};
 
     // scene

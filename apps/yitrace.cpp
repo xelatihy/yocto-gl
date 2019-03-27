@@ -56,7 +56,7 @@ struct app_state {
 
     // options
     load_scene_options  load_options  = {};
-    build_bvh_options   bvh_options   = {};
+    bvh_build_options   bvh_options   = {};
     trace_image_options trace_options = {};
     float               exposure      = 0;
     bool                filmic        = false;
