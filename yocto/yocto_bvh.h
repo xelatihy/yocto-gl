@@ -111,7 +111,7 @@ const int bvh_max_prims = 4;
 // primitives or internal nodes, the node element type,
 // and the split axis. Leaf and internal nodes are identical, except that
 // indices refer to primitives for leaf nodes or other nodes for internal
-// nodes. See bvh_scene for more details.
+// nodes. See bvh_scene_data for more details.
 struct bvh_node {
     bbox3f bbox;
     short  num_primitives;
@@ -246,7 +246,7 @@ bool overlap_instances_bvh(const bvh_tree& bvh, int num_instances,
 
 // BVH for shapes made of points, lines, triangles or quads. Only one primitive
 // type can be used.
-struct bvh_shape {
+struct bvh_shape_data {
     // shape data
     vector<vec3f> positions;
     vector<float> radius;
@@ -260,9 +260,9 @@ struct bvh_shape {
 };
 
 // BVH for instances.
-struct bvh_scene {
+struct bvh_scene_data {
     vector<bvh_instance> instances        = {};
-    vector<bvh_shape>    shapes           = {};
+    vector<bvh_shape_data>    shapes           = {};
     bool                 non_rigid_frames = true;
 
     // internalbvh data
@@ -270,7 +270,7 @@ struct bvh_scene {
 };
 
 // Build the bvh acceleration structure.
-inline void build_shape_bvh(bvh_shape& shape, const bvh_build_options& options) {
+inline void build_shape_bvh(bvh_shape_data& shape, const bvh_build_options& options) {
     if (!shape.points.empty()) {
         return build_points_bvh(
             shape.bvh, shape.points, shape.positions, shape.radius, options);
@@ -286,7 +286,7 @@ inline void build_shape_bvh(bvh_shape& shape, const bvh_build_options& options) 
     } else {
     }
 }
-inline void build_scene_bvh(bvh_scene& scene, const bvh_build_options& options) {
+inline void build_scene_bvh(bvh_scene_data& scene, const bvh_build_options& options) {
     return build_instances_bvh(
         scene.bvh, (int)scene.instances.size(),
         [&scene](int instance_id) -> bvh_instance {
@@ -299,7 +299,7 @@ inline void build_scene_bvh(bvh_scene& scene, const bvh_build_options& options) 
 }
 
 // Refit bvh data
-inline void refit_shape_bvh(bvh_shape& shape, const bvh_build_options& options) {
+inline void refit_shape_bvh(bvh_shape_data& shape, const bvh_build_options& options) {
     if (!shape.points.empty()) {
         return refit_points_bvh(
             shape.bvh, shape.points, shape.positions, shape.radius, options);
@@ -315,7 +315,7 @@ inline void refit_shape_bvh(bvh_shape& shape, const bvh_build_options& options) 
     } else {
     }
 }
-inline void refit_scene_bvh(bvh_scene& scene, const bvh_build_options& options) {
+inline void refit_scene_bvh(bvh_scene_data& scene, const bvh_build_options& options) {
     return refit_instances_bvh(
         scene.bvh, (int)scene.instances.size(),
         [&scene](int instance_id) -> bvh_instance {
@@ -330,7 +330,7 @@ inline void refit_scene_bvh(bvh_scene& scene, const bvh_build_options& options) 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-inline bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray,
+inline bool intersect_shape_bvh(const bvh_shape_data& shape, const ray3f& ray,
     bvh_intersection& intersection, bool find_any = false) {
     if (!shape.points.empty()) {
         return intersect_points_bvh(shape.bvh, shape.points, shape.positions,
@@ -348,7 +348,7 @@ inline bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray,
         return false;
     }
 }
-inline bool intersect_scene_bvh(const bvh_scene& scene, const ray3f& ray,
+inline bool intersect_scene_bvh(const bvh_scene_data& scene, const ray3f& ray,
     bvh_intersection& intersection, bool find_any = false) {
     return intersect_instances_bvh(
         scene.bvh, (int)scene.instances.size() - 1,
@@ -363,7 +363,7 @@ inline bool intersect_scene_bvh(const bvh_scene& scene, const ray3f& ray,
         },
         ray, intersection, find_any);
 }
-inline bool intersect_instance_bvh(const bvh_scene& scene, int instance_id,
+inline bool intersect_instance_bvh(const bvh_scene_data& scene, int instance_id,
     const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
     bool non_rigid_frames = true) {
     auto& instance = scene.instances[instance_id];
@@ -383,7 +383,7 @@ inline bool intersect_instance_bvh(const bvh_scene& scene, int instance_id,
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-inline bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos,
+inline bool overlap_shape_bvh(const bvh_shape_data& shape, const vec3f& pos,
     float max_distance, bvh_intersection& intersection, bool find_any = false) {
     if (!shape.points.empty()) {
         return overlap_points_bvh(shape.bvh, shape.points, shape.positions,
@@ -402,7 +402,7 @@ inline bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos,
     }
 }
 
-inline bool overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
+inline bool overlap_scene_bvh(const bvh_scene_data& scene, const vec3f& pos,
     float max_distance, bvh_intersection& intersection, bool find_any = false) {
     return overlap_instances_bvh(
         scene.bvh, (int)scene.instances.size() - 1,
@@ -503,7 +503,7 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 namespace yocto {
 
 // Print bvh statistics.
-string print_bvh_stats(const bvh_scene& bvh);
+string print_bvh_stats(const bvh_scene_data& bvh);
 
 }  // namespace yocto
 

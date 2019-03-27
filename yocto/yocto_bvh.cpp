@@ -612,7 +612,7 @@ void build_embree_quads_bvh(RTCScene& embree_scene, const vector<vec4i>& quads,
 }
 
 // Build a BVH using Embree.
-void build_embree_bvh(bvh_shape& bvh, const bvh_build_options& options) {
+void build_embree_bvh(bvh_shape_data& bvh, const bvh_build_options& options) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
@@ -665,7 +665,7 @@ void build_embree_instances_bvh(bvh_tree& bvh, int num_instances,
     bvh.embree_flattened = false;
 }
 void build_embree_instanced_bvh(
-    bvh_scene& bvh, const bvh_build_options& options) {
+    bvh_scene_data& bvh, const bvh_build_options& options) {
     // scene bvh
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
@@ -694,7 +694,7 @@ void build_embree_instanced_bvh(
     bvh.bvh.embree_flattened = false;
 }
 void build_embree_flattened_bvh(
-    bvh_scene& bvh, const bvh_build_options& options) {
+    bvh_scene_data& bvh, const bvh_build_options& options) {
     // build shape and surface bvhs
     for (auto& shape_bvh : bvh.shapes) build_embree_bvh(shape_bvh, options);
 
@@ -1667,7 +1667,7 @@ bool overlap_instances_bvh(const bvh_tree& bvh, int num_instances,
 #if 0
     // Finds the overlap between BVH leaf nodes.
     template <typename OverlapElem>
-    void overlap_bvh_elems(const bvh_scene& bvh1, const bvh_scene& bvh2,
+    void overlap_bvh_elems(const bvh_scene_data& bvh1, const bvh_scene_data& bvh2,
                            bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
                            const OverlapElem& overlap_elems) {
         // node stack
@@ -1733,7 +1733,7 @@ bool overlap_instances_bvh(const bvh_tree& bvh, int num_instances,
 namespace yocto {
 
 // Print bvh statistics.
-string print_bvh_stats(const bvh_scene& bvh) {
+string print_bvh_stats(const bvh_scene_data& bvh) {
     auto num_shapes    = (size_t)0;
     auto num_instances = (size_t)0;
 
