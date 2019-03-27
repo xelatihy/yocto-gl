@@ -458,7 +458,6 @@ const vector<float>& get_bvh_shape_radius(const void* context, int shape) {
 // Build BVH
 void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
     const bvh_build_options& options) {
-    // make bvh
 #if YOCTO_EMBREE
     if (options.embree_shared &&
         shape.positions.size() == shape.positions.capacity()) {
