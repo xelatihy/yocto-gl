@@ -1320,6 +1320,7 @@ void load_json_scene(const string& filename, yocto_scene& scene,
     add_missing_cameras(scene);
     add_missing_materials(scene);
     add_missing_names(scene);
+    trim_memory(scene);
     update_transforms(scene);
 }
 
@@ -1741,6 +1742,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
     add_missing_cameras(scene);
     add_missing_materials(scene);
     add_missing_names(scene);
+    trim_memory(scene);
     update_transforms(scene);
 }
 
@@ -2027,6 +2029,7 @@ void load_ply_scene(const string& filename, yocto_scene& scene,
     add_missing_cameras(scene);
     add_missing_materials(scene);
     add_missing_names(scene);
+    trim_memory(scene);
     update_transforms(scene);
 }
 
@@ -2576,6 +2579,7 @@ void load_gltf_scene(const string& filename, yocto_scene& scene,
     add_missing_cameras(scene);
     add_missing_materials(scene);
     add_missing_names(scene);
+    trim_memory(scene);
     update_transforms(scene);
 
     // fix cameras
@@ -3463,6 +3467,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     add_missing_cameras(scene);
     add_missing_materials(scene);
     add_missing_names(scene);
+    trim_memory(scene);
     update_transforms(scene);
 }
 
@@ -5236,6 +5241,7 @@ void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
     add_missing_cameras(scene);
     add_missing_materials(scene);
     add_missing_names(scene);
+    trim_memory(scene);
     update_transforms(scene);
 
     // print stats

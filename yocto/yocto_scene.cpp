@@ -578,6 +578,38 @@ void add_sky_environment(yocto_scene& scene, float sun_angle) {
     scene.environments.push_back(environment);
 }
 
+// Reduce memory usage
+void trim_memory(yocto_scene& scene) {
+    for(auto& shape : scene.shapes) {
+        shape.points.shrink_to_fit();
+        shape.lines.shrink_to_fit();
+        shape.triangles.shrink_to_fit();
+        shape.quads.shrink_to_fit();
+        shape.quads_positions.shrink_to_fit();
+        shape.quads_normals.shrink_to_fit();
+        shape.quads_texturecoords.shrink_to_fit();
+        shape.positions.shrink_to_fit();
+        shape.normals.shrink_to_fit();
+        shape.texturecoords.shrink_to_fit();
+        shape.colors.shrink_to_fit();
+        shape.radius.shrink_to_fit();
+        shape.tangentspaces.shrink_to_fit();
+    }
+    for(auto& texture : scene.textures) {
+        texture.ldr_image._pixels.shrink_to_fit();
+        texture.hdr_image._pixels.shrink_to_fit();
+    }
+    scene.cameras.shrink_to_fit();
+    scene.shapes.shrink_to_fit();
+    scene.instances.shrink_to_fit();
+    scene.materials.shrink_to_fit();
+    scene.textures.shrink_to_fit();
+    scene.environments.shrink_to_fit();
+    scene.voltextures.shrink_to_fit();
+    scene.nodes.shrink_to_fit();
+    scene.animations.shrink_to_fit();
+}
+
 // Checks for validity of the scene.
 vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
     auto errs        = vector<string>();

@@ -338,6 +338,9 @@ void add_missing_cameras(yocto_scene& scene);
 // Add a sky environment
 void add_sky_environment(yocto_scene& scene, float sun_angle = pif / 4);
 
+// Reduce memory usage
+void trim_memory(yocto_scene& scene);
+
 // Checks for validity of the scene.
 void print_validation_errors(
     const yocto_scene& scene, bool skip_textures = false);
