@@ -45,7 +45,7 @@ void exit_error(const string& msg) {
 int main(int argc, char* argv[]) {
     // options
     auto load_options  = load_scene_options{};
-    auto bvh_options   = build_bvh_options{};
+    auto bvh_options   = bvh_build_options{};
     auto trace_options = trace_image_options{};
     auto no_parallel   = false;
     auto save_batch    = false;
@@ -56,9 +56,6 @@ int main(int argc, char* argv[]) {
     auto validate      = false;
     auto imfilename    = "out.hdr"s;
     auto filename      = "scene.json"s;
-
-    // default configuraions
-    bvh_options.share_memory = true;
 
     // names for enums
     auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
@@ -97,10 +94,14 @@ int main(int argc, char* argv[]) {
     parser.add_option("--exposure,-e", exposure, "Hdr exposure");
     parser.add_option("--filmic", filmic, "Hdr filmic");
     parser.add_option("--no-srgb", srgb, "No srgb");
+#if YOCTO_EMBREE
     parser.add_flag(
         "--embree,!--no-embree", bvh_options.use_embree, "Use Embree ratracer");
-    parser.add_flag("--flatten-embree,!--no-flatten-embree",
-        bvh_options.flatten_embree, "Flatten embree scene");
+    parser.add_flag("--embree-flatten,!--no-embree-flatten",
+        bvh_options.embree_flatten, "Flatten embree scene");
+    parser.add_flag("--embree-shared,!--no-embree-shared",
+        bvh_options.embree_shared, "Embree runs in shared memory");
+#endif
     parser.add_flag(
         "--add-skyenv,!--no-add-skyenv", add_skyenv, "Add sky envmap");
     parser.add_option("--output-image,-o", imfilename, "Image filename");
@@ -152,7 +153,7 @@ int main(int argc, char* argv[]) {
     // build bvh
     printf("building bvh ...\n");
     auto start_bvh = get_time();
-    auto bvh       = bvh_tree{};
+    auto bvh       = bvh_scene{};
     build_scene_bvh(scene, bvh, bvh_options);
     printf(
         "building bvh [%s]\n", format_duration(get_time() - start_bvh).c_str());

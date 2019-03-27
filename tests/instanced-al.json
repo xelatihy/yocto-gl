@@ -1,5 +1,5 @@
 {
-    "name": "basic-al",
+    "name": "instanced-al",
     "cameras": [
         {
             "name": "cam",
@@ -21,7 +21,25 @@
             "film_height": 0.024
         }
     ],
-    "textures": [],
+    "textures": [
+        {
+            "name": "floor",
+            "filename": "textures/floor.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "grid",
+                "border": true
+            }
+        },
+        {
+            "name": "uvgrid",
+            "filename": "textures/uvgrid.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "uvgrid"
+            }
+        }
+    ],
     "materials": [
         {
             "name": "floor",
@@ -29,18 +47,26 @@
                 0.7,
                 0.7,
                 0.7
-            ]
+            ],
+            "diffuse_texture": "floor"
         },
         {
-            "name": "light1",
-            "emission": [
-                20,
-                20,
-                20
-            ]
+            "name": "obj",
+            "diffuse": [
+                1,
+                1,
+                1
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "uvgrid"
         },
         {
-            "name": "light2",
+            "name": "light",
             "emission": [
                 20,
                 20,
@@ -57,17 +83,14 @@
             }
         },
         {
-            "name": "light1",
+            "name": "obj",
+            "filename": "models/obj.ply",
             "!!proc": {
-                "type": "quad",
-                "size": [
-                    4,
-                    4
-                ]
+                "type": "sphere"
             }
         },
         {
-            "name": "light2",
+            "name": "light",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -84,9 +107,45 @@
             "material": "floor"
         },
         {
+            "name": "obj1",
+            "shape": "obj",
+            "material": "obj",
+            "!!proc": {
+                "translation": [
+                    -2.5,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "obj2",
+            "shape": "obj",
+            "material": "obj",
+            "!!proc": {
+                "translation": [
+                    0,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "obj3",
+            "shape": "obj",
+            "material": "obj",
+            "!!proc": {
+                "translation": [
+                    2.5,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
             "name": "light1",
-            "shape": "light1",
-            "material": "light1",
+            "shape": "light",
+            "material": "light",
             "!!proc": {
                 "from": [
                     -4,
@@ -102,8 +161,8 @@
         },
         {
             "name": "light2",
-            "shape": "light2",
-            "material": "light2",
+            "shape": "light",
+            "material": "light",
             "!!proc": {
                 "from": [
                     4,

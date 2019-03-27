@@ -155,9 +155,9 @@ const auto trace_sampler_type_names = vector<string>{"path", "naive", "split",
 
 // Tracer function
 using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden)>;
+    const bvh_scene& bvh, const trace_lights& lights,
+    const vec3f& position, const vec3f& direction, rng_state& rng,
+    int max_bounces, bool environments_hidden)>;
 trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 
 // Options for trace functions
@@ -179,22 +179,24 @@ struct trace_image_options {
 };
 
 // Progressively compute an image by calling trace_samples multiple times.
-image4f trace_image(const yocto_scene& scene, const bvh_tree& bvh,
+image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_image_options& options);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 int trace_image_samples(image4f& image, trace_state& state,
-    const yocto_scene& scene, const bvh_tree& bvh, const trace_lights& lights,
-    int current_sample, const trace_image_options& options);
+    const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, int current_sample,
+    const trace_image_options& options);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // options.
 void trace_image_async_start(image4f& image, trace_state& state,
-    const yocto_scene& scene, const bvh_tree& bvh, const trace_lights& lights,
-    vector<future<void>>& futures, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue, const trace_image_options& options);
+    const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, vector<future<void>>& futures,
+    atomic<int>& current_sample, concurrent_queue<image_region>& queue,
+    const trace_image_options& options);
 // Stop the asynchronous renderer.
 void trace_image_async_stop(vector<future<void>>& futures,
     concurrent_queue<image_region>& queue, const trace_image_options& options);
