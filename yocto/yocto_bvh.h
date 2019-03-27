@@ -165,8 +165,8 @@ void build_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
 void build_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const bvh_build_options& options = {});
 void build_instances_bvh(bvh_tree& bvh, int num_instances,
-    const function<bvh_instance(int)>& instance_func,
-    const function<bvh_tree&(int)>&    shape_func,
+    const function<bvh_instance(int)>& get_instance,
+    const function<bvh_tree&(int)>&    get_shape_bvh,
     const bvh_build_options&           options = {});
 
 // Refit bvh data
@@ -181,8 +181,8 @@ void refit_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
 void refit_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const bvh_build_options& options = {});
 void refit_instances_bvh(bvh_tree& bvh, int num_instances,
-    const function<bvh_instance(int)>& instance_func,
-    const function<bvh_tree&(int)>&    shape_func,
+    const function<bvh_instance(int)>& get_instance,
+    const function<bvh_tree&(int)>&    get_shape_bvh,
     const bvh_build_options&           options = {});
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
@@ -213,9 +213,9 @@ bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const ray3f& ray,
     bvh_intersection& intersection, bool find_any = false);
 bool intersect_instances_bvh(const bvh_tree& bvh, int num_instances,
-    const function<bvh_instance(int)>& instance_func,
+    const function<bvh_instance(int)>& get_instance,
     const function<bool(int, const ray3f& ray, bvh_intersection& intersection,
-        bool find_any)>&               shape_intersect_func,
+        bool find_any)>&               intersect_shape,
     const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
     bool non_rigid_frames = true);
 
@@ -237,6 +237,12 @@ bool overlap_triangles_bvh(const bvh_tree& bvh, const vector<vec3i>& triangles,
 bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vec3f& pos, float max_distance,
     bvh_intersection& intersection, bool find_any = false);
+bool overlap_instances_bvh(const bvh_tree& bvh, int num_instances,
+    const function<bvh_instance(int)>&                   get_instance,
+    const function<bool(int, const vec3f& pos, float max_distance,
+        bvh_intersection& intersection, bool find_any)>& intersect_shape,
+    const vec3f& pos, float max_distance, bvh_intersection& intersection,
+    bool find_any = false, bool non_rigid_frames = true);
 
 // BVH for shapes made of points, lines, triangles or quads. Only one primitive
 // type can be used.
@@ -342,18 +348,34 @@ inline bool intersect_bvh(const bvh_shape& shape, const ray3f& ray,
 }
 inline bool intersect_bvh(const bvh_scene& scene, const ray3f& ray,
     bvh_intersection& intersection, bool find_any = false) {
-    return intersect_instances_bvh(scene.bvh, (int)scene.instances.size()-1,
+    return intersect_instances_bvh(
+        scene.bvh, (int)scene.instances.size() - 1,
         [&scene](int instance_id) -> bvh_instance {
             return {scene.instances[instance_id].frame,
                 scene.instances[instance_id].shape_id};
-        }, 
-        [&scene](int shape_id,const ray3f& ray, bvh_intersection& intersection, bool find_any) -> bool {
-            return intersect_bvh(scene.shapes[shape_id], ray, intersection, find_any);
+        },
+        [&scene](int shape_id, const ray3f& ray, bvh_intersection& intersection,
+            bool find_any) -> bool {
+            return intersect_bvh(
+                scene.shapes[shape_id], ray, intersection, find_any);
         },
         ray, intersection, find_any);
 }
-bool intersect_bvh(const bvh_scene& bvh, int instance_id, const ray3f& ray,
-    bvh_intersection& intersection, bool find_any = false);
+inline bool intersect_bvh(const bvh_scene& scene, int instance_id,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
+    bool non_rigid_frames = true) {
+    auto& instance = scene.instances[instance_id];
+    auto  inv_ray  = non_rigid_frames
+                       ? transform_ray(inverse((affine3f)instance.frame), ray)
+                       : transform_ray_inverse(instance.frame, ray);
+    if (intersect_bvh(
+            scene.shapes[instance.shape_id], inv_ray, intersection, find_any)) {
+        intersection.instance_id = instance_id;
+        return true;
+    } else {
+        return false;
+    }
+}
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
@@ -378,8 +400,21 @@ inline bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos,
     }
 }
 
-bool overlap_bvh(const bvh_tree& bvh, const vec3f& pos, float max_distance,
-    bvh_intersection& intersection, bool find_any = false);
+inline bool overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
+    float max_distance, bvh_intersection& intersection, bool find_any = false) {
+    return overlap_instances_bvh(
+        scene.bvh, (int)scene.instances.size() - 1,
+        [&scene](int instance_id) -> bvh_instance {
+            return {scene.instances[instance_id].frame,
+                scene.instances[instance_id].shape_id};
+        },
+        [&scene](int shape_id, const vec3f& pos, float max_distance,
+            bvh_intersection& intersection, bool find_any) -> bool {
+            return overlap_shape_bvh(scene.shapes[shape_id], pos, max_distance,
+                intersection, find_any);
+        },
+        pos, max_distance, intersection, find_any);
+}
 
 }  // namespace yocto
 
