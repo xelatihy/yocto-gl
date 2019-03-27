@@ -157,12 +157,12 @@ struct build_bvh_options {
 void build_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
     const build_bvh_options& options = {});
-void build_lines_bvh(bvh_tree& bvh, const vector<int>& lines,
+void build_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
     const build_bvh_options& options = {});
-void build_triangles_bvh(bvh_tree& bvh, const vector<int>& triangles,
+void build_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const build_bvh_options& options = {});
-void build_quads_bvh(bvh_tree& bvh, const vector<int>& quads,
+void build_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const build_bvh_options& options = {});
 // void build_bvh(bvh_scene& bvh, const build_bvh_options& options = {});
 
@@ -191,9 +191,9 @@ bool intersect_points_bvh(const bvh_tree& bvh, const vector<int>& points,
 bool intersect_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
     const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
-bool intersect_triangles_bvh(const bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const ray3f& ray,
-    bvh_intersection& intersection, bool find_any = false);
+bool intersect_triangles_bvh(const bvh_tree& bvh,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
 bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const ray3f& ray,
     bvh_intersection& intersection, bool find_any = false);
@@ -224,7 +224,21 @@ struct bvh_scene {
 };
 
 // Build the bvh acceleration structure.
-void build_bvh(bvh_shape& bvh, const build_bvh_options& options = {});
+inline void build_bvh(bvh_shape& shape, const build_bvh_options& options = {}) {
+    if (!shape.points.empty()) {
+        return build_points_bvh(
+            shape.bvh, shape.points, shape.positions, shape.radius, options);
+    } else if (!shape.lines.empty()) {
+        return build_lines_bvh(
+            shape.bvh, shape.lines, shape.positions, shape.radius, options);
+    } else if (!shape.triangles.empty()) {
+        return build_triangles_bvh(
+            shape.bvh, shape.triangles, shape.positions, options);
+    } else if (!shape.quads.empty()) {
+        return build_quads_bvh(shape.bvh, shape.quads, shape.positions, options);
+    } else {
+    }
+}
 void build_bvh(bvh_scene& bvh, const build_bvh_options& options = {});
 
 // Refit bvh data
@@ -246,8 +260,8 @@ inline bool intersect_bvh(const bvh_shape& shape, const ray3f& ray,
         return intersect_triangles_bvh(shape.bvh, shape.triangles,
             shape.positions, ray, intersection, find_any);
     } else if (!shape.quads.empty()) {
-        return intersect_quads_bvh(shape.bvh, shape.quads, shape.positions,
-            ray, intersection, find_any);
+        return intersect_quads_bvh(shape.bvh, shape.quads, shape.positions, ray,
+            intersection, find_any);
     } else {
         return false;
     }
