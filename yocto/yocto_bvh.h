@@ -178,6 +178,22 @@ void build_instances_bvh(bvh_scene& bvh, int num_instances,
     const void* context, bvh_instance (*get_instance)(const void*, int),
     const bvh_build_options& options);
 
+void build_shape_bvh(bvh_shape& bvh, const vector<int>& points,
+    const vector<vec2i>& lines,  const vector<vec3i>& triangles, 
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec3f>& positions, const vector<float>& radius, 
+    const bvh_build_options& options);
+void build_scene_bvh(bvh_scene& bvh, int num_instances, int num_shapes,
+    const void* context, bvh_instance (*get_instance)(const void*, int),
+    const vector<int>& (*get_shape_points)(const void*, int),
+    const vector<vec2i>& (*get_shape_lines)(const void*, int),
+    const vector<vec3i>& (*get_shape_triangles)(const void*, int),
+    const vector<vec4i>& (*get_shape_quads)(const void*, int),
+    const vector<vec4i>& (*get_shape_quads_positions)(const void*, int),
+    const vector<vec3f>& (*get_shape_positions)(const void*, int),
+    const vector<float>& (*get_shape_radius)(const void*, int),
+    const bvh_build_options& options);
+
 // Refit bvh data
 void refit_points_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
@@ -191,6 +207,24 @@ void refit_quads_bvh(bvh_shape& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const bvh_build_options& options);
 void refit_instances_bvh(bvh_scene& bvh, int num_instances,
     const void* context, bvh_instance (*get_instance)(const void*, int),
+    const bvh_build_options& options);
+
+void refit_shape_bvh(bvh_shape& bvh, const vector<int>& points,
+    const vector<vec2i>& lines,  const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec3f>& positions, const vector<float>& radius, 
+    const bvh_build_options& options);
+void refit_scene_bvh(bvh_scene& bvh,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+                     int num_instances, int num_shapes,
+    const void* context, bvh_instance (*get_instance)(const void*, int),
+    const vector<int>& (*get_shape_points)(const void*, int),
+    const vector<vec2i>& (*get_shape_lines)(const void*, int),
+    const vector<vec3i>& (*get_shape_triangles)(const void*, int),
+    const vector<vec4i>& (*get_shape_quads)(const void*, int),
+    const vector<vec4i>& (*get_shape_quads_positions)(const void*, int),
+    const vector<vec3f>& (*get_shape_positions)(const void*, int),
+    const vector<float>& (*get_shape_radius)(const void*, int),
     const bvh_build_options& options);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
@@ -227,6 +261,24 @@ bool intersect_instances_bvh(const bvh_scene& bvh, int num_instances,
     const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
     bool non_rigid_frames = true);
 
+bool intersect_shape_bvh(const bvh_shape& bvh, const vector<int>& points,
+    const vector<vec2i>& lines,  const vector<vec3i>& triangles, 
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
+    bool non_rigid_frames = true);
+bool intersect_scene_bvh(const bvh_scene& bvh, int num_instances, int num_shapes,
+    const void* context, bvh_instance (*get_instance)(const void*, int),
+    const vector<int>& (*get_shape_points)(const void*, int),
+    const vector<vec2i>& (*get_shape_lines)(const void*, int),
+    const vector<vec3i>& (*get_shape_triangles)(const void*, int),
+    const vector<vec4i>& (*get_shape_quads)(const void*, int),
+    const vector<vec4i>& (*get_shape_quads_positions)(const void*, int),
+     const vector<vec3f>& (*get_shape_positions)(const void*, int),
+     const vector<float>& (*get_shape_radius)(const void*, int),
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
+    bool non_rigid_frames = true);
+
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
@@ -251,6 +303,24 @@ bool overlap_instances_bvh(const bvh_scene& bvh, int num_instances,
         float, bvh_intersection&, bool),
     const vec3f& pos, float max_distance, bvh_intersection& intersection,
     bool find_any = false, bool non_rigid_frames = true);
+
+bool overlap_shape_bvh(const bvh_shape& bvh, const vector<int>& points,
+    const vector<vec2i>& lines,  const vector<vec3i>& triangles, 
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const vec3f& pos, float max_distance,bvh_intersection& intersection, bool find_any = false,
+    bool non_rigid_frames = true);
+bool overlap_instances_bvh(const bvh_scene& bvh, int num_instances, int num_shapes,
+    const void* context, bvh_instance (*get_instance)(const void*, int),
+    const vector<int>& (*get_shape_points)(const void*, int),
+    const vector<vec2i>& (*get_shape_lines)(const void*, int),
+    const vector<vec3i>& (*get_shape_triangles)(const void*, int),
+    const vector<vec4i>& (*get_shape_quads)(const void*, int),
+    const vector<vec4i>& (*get_shape_quads_positions)(const void*, int),
+                           const vector<vec3f>& (*get_shape_positions)(const void*, int),
+                           const vector<float>& (*get_shape_radius)(const void*, int),
+    const vec3f& pos, float max_distance,bvh_intersection& intersection, bool find_any = false,
+    bool non_rigid_frames = true);
 
 // BVH for shapes made of points, lines, triangles or quads. Only one primitive
 // type can be used.
