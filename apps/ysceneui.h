@@ -257,9 +257,7 @@ inline bool draw_opengl_widgets_scene_inspector(
     const opengl_window& win, yocto_material& value, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_opengl_widget(win, "name", value.name);
-    edited += draw_coloredit_opengl_widget(
-        win, "emission", value.emission);  // TODO:
-                                           // HDR
+    edited += draw_hdr_coloredit_opengl_widget(win, "emission", value.emission);
     edited += draw_coloredit_opengl_widget(win, "diffuse", value.diffuse);
     edited += draw_coloredit_opengl_widget(win, "specular", value.specular);
     edited += draw_coloredit_opengl_widget(
@@ -339,8 +337,7 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_slider_opengl_widget(win, "frame[1]", value.frame.y, -1, 1);
     edited += draw_slider_opengl_widget(win, "frame[2]", value.frame.z, -1, 1);
     edited += draw_slider_opengl_widget(win, "frame.o", value.frame.o, -10, 10);
-    edited += draw_coloredit_opengl_widget(win, "ke", value.emission);  // TODO:
-                                                                        // HDR
+    edited += draw_hdr_coloredit_opengl_widget(win, "ke", value.emission);
     edited += draw_combobox_opengl_widget(
         win, "ke texture", value.emission_texture, scene.textures, true);
     return edited;
