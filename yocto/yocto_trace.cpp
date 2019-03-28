@@ -1406,8 +1406,8 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         scene, bvh, position, direction, rng, options.max_bounces);
     if (!point.hit) {
         if (options.environments_hidden || scene.environments.empty())
-            return {zero3f, false};
-        return {point.emission, true};
+            return zero4f;
+        return {point.emission, 1};
     }
 
     // initialize
@@ -1448,7 +1448,7 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         weight /= sample_russian_roulette_pdf(weight, bounce);
     }
 
-    return {radiance, true};
+    return {radiance, 1};
 }
 
 // Recursive path tracing.
@@ -1460,8 +1460,8 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         scene, bvh, position, direction, rng, options.max_bounces);
     if (!point.hit) {
         if (options.environments_hidden || scene.environments.empty())
-            return {zero3f, false};
-        return {point.emission, true};
+            return zero4f;
+        return {point.emission, 1};
     }
 
     // initialize
@@ -1525,7 +1525,7 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         weight /= sample_russian_roulette_pdf(weight, bounce);
     }
 
-    return {radiance, true};
+    return {radiance, 1};
 }
 
 // Iterative volume naive path tracing
@@ -1537,8 +1537,8 @@ vec4f trace_volnaive(const yocto_scene& scene, const bvh_scene& bvh,
         scene, bvh, position, direction, rng, options.max_bounces);
     if (!point.hit) {
         if (options.environments_hidden || scene.environments.empty())
-            return {zero3f, false};
-        return {point.emission, true};
+            return zero4f;
+        return {point.emission, 1};
     }
 
     // initialize
@@ -1579,7 +1579,7 @@ vec4f trace_volnaive(const yocto_scene& scene, const bvh_scene& bvh,
         if (dot(next_direction, point.normal) < 0) {
             integrate_volume(scene, lights, bvh, 0.0, 0.0, rng, point, outgoing,
                 next_direction, weight, radiance);
-            if (weight == zero3f) return {radiance, true};
+            if (weight == zero3f) return {radiance, 1};
         }
 
         // intersect next point
@@ -1600,7 +1600,7 @@ vec4f trace_volnaive(const yocto_scene& scene, const bvh_scene& bvh,
         weight /= sample_russian_roulette_pdf(weight, bounce);
     }
 
-    return {radiance, true};
+    return {radiance, 1};
 }
 
 // Recursive path tracing.
@@ -1612,8 +1612,8 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         scene, bvh, position, direction, rng, options.max_bounces);
     if (!point.hit) {
         if (options.environments_hidden || scene.environments.empty())
-            return {zero3f, false};
-        return {point.emission, true};
+            return zero4f;
+        return {point.emission, 1};
     }
 
     // initialize
@@ -1668,7 +1668,7 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         weight /= sample_russian_roulette_pdf(weight, bounce);
     }
 
-    return {radiance, true};
+    return {radiance, 1};
 }
 
 // Recursive path tracing.
@@ -1680,8 +1680,8 @@ vec4f trace_split(const yocto_scene& scene, const bvh_scene& bvh,
         scene, bvh, position, direction, rng, options.max_bounces);
     if (!point.hit) {
         if (options.environments_hidden || scene.environments.empty())
-            return {zero3f, false};
-        return {point.emission, true};
+            return zero4f;
+        return {point.emission, 1};
     }
 
     // initialize
@@ -1757,7 +1757,7 @@ vec4f trace_split(const yocto_scene& scene, const bvh_scene& bvh,
         weight /= sample_russian_roulette_pdf(weight, bounce);
     }
 
-    return {radiance, true};
+    return {radiance, 1};
 }
 
 // Eyelight for quick previewing.
@@ -1769,8 +1769,8 @@ vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         scene, bvh, position, direction, rng, options.max_bounces);
     if (!point.hit) {
         if (options.environments_hidden || scene.environments.empty())
-            return {zero3f, false};
-        return {point.emission, true};
+            return zero4f;
+        return {point.emission, 1};
     }
 
     // initialize
@@ -1783,7 +1783,7 @@ vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
                 pif;
 
     // done
-    return {radiance, true};
+    return {radiance, 1};
 }
 
 // False color rendering
@@ -1793,66 +1793,66 @@ vec4f trace_falsecolor(const yocto_scene& scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, options.max_bounces);
-    if (!point.hit) return {zero3f, false};
+    if (!point.hit) return zero4f;
 
     switch (options.falsecolor_type) {
         case trace_falsecolor_type::normal: {
-            return {point.normal * 0.5f + 0.5f, true};
+            return {point.normal * 0.5f + 0.5f, 1};
         }
         case trace_falsecolor_type::frontfacing: {
             auto outgoing    = -direction;
             auto frontfacing = dot(point.normal, outgoing) > 0 ? vec3f{0, 1, 0}
                                                                : vec3f{1, 0, 0};
-            return {frontfacing, true};
+            return {frontfacing, 1};
         }
         case trace_falsecolor_type::albedo: {
             auto albedo = point.brdf.diffuse + point.brdf.specular +
                           point.brdf.transmission;
-            return {albedo, true};
+            return {albedo, 1};
         }
         case trace_falsecolor_type::texcoord: {
-            return {{point.texturecoord.x, point.texturecoord.y, 0}, true};
+            return {{point.texturecoord.x, point.texturecoord.y, 0}, 1};
         }
         case trace_falsecolor_type::color: {
-            return {point.color.xyz, true};
+            return {point.color.xyz, 1};
         }
         case trace_falsecolor_type::emission: {
-            return {point.emission, true};
+            return {point.emission, 1};
         }
         case trace_falsecolor_type::diffuse: {
-            return {point.brdf.diffuse, true};
+            return {point.brdf.diffuse, 1};
         }
         case trace_falsecolor_type::specular: {
-            return {point.brdf.specular, true};
+            return {point.brdf.specular, 1};
         }
         case trace_falsecolor_type::transmission: {
-            return {point.brdf.transmission, true};
+            return {point.brdf.transmission, 1};
         }
         case trace_falsecolor_type::roughness: {
-            return {vec3f{point.brdf.roughness}, true};
+            return {vec3f{point.brdf.roughness}, 1};
         }
         case trace_falsecolor_type::material: {
             auto& instance = scene.instances[point.instance_id];
             auto  hashed   = std::hash<int>()(instance.material);
             auto  rng_     = make_rng(trace_default_seed, hashed);
-            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
+            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::shape: {
             auto& instance = scene.instances[point.instance_id];
             auto  hashed   = std::hash<int>()(instance.shape);
             auto  rng_     = make_rng(trace_default_seed, hashed);
-            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
+            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::instance: {
             auto hashed = std::hash<int>()(point.instance_id);
             auto rng_   = make_rng(trace_default_seed, hashed);
-            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
+            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::highlight: {
             auto emission = point.emission;
             auto outgoing = -direction;
             if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
-            return {emission * abs(dot(outgoing, point.normal)), true};
+            return {emission * abs(dot(outgoing, point.normal)), 1};
         }
     }
 }
