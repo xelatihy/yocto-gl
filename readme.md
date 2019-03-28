@@ -64,11 +64,11 @@ See each header file for documentation.
    bounding boxes, transforms
 - `yocto/yocto_random.{h}`: random number generation, Perlin noise, Monte Carlo
    utilities
-- `yocto/yocto_shape.{h,cpp}`: geometry utilities, shape manipulation, 
+- `yocto/yocto_shape.{h}`: geometry utilities, shape manipulation, 
    procedural shapes
-- `yocto/yocto_bvh.{h,cpp}`: ray intersection and closest point queries 
+- `yocto/yocto_bvh.{h}`: ray intersection and closest point queries 
    using a two-level bounding volume hierarchy
-- `yocto/yocto_image.{h,cpp}`: color utilities, image manipulation, 
+- `yocto/yocto_image.{h}`: color utilities, image manipulation, 
    procedural images, procedural sun-sky
 - `yocto/yocto_scene.{h,cpp}`: simple scene storage, evaluation of scene 
    properties
