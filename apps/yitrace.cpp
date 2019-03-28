@@ -244,6 +244,9 @@ void draw_opengl_widgets(const opengl_window& win) {
                 edited += draw_combobox_opengl_widget(win, "tracer",
                     (int&)app.trace_options.sampler_type,
                     trace_sampler_type_names);
+                edited += draw_combobox_opengl_widget(win, "false color",
+                    (int&)app.trace_options.falsecolor_type,
+                    trace_falsecolor_type_names);
                 edited += draw_slider_opengl_widget(
                     win, "nbounces", app.trace_options.max_bounces, 1, 10);
                 edited += draw_checkbox_opengl_widget(
@@ -469,6 +472,12 @@ int main(int argc, char* argv[]) {
         trace_sampler_type_namemap[trace_sampler_type_names[type]] =
             (trace_sampler_type)type;
     }
+    auto trace_falsecolor_type_namemap =
+        std::map<string, trace_falsecolor_type>{};
+    for (auto type = 0; type < trace_falsecolor_type_names.size(); type++) {
+        trace_falsecolor_type_namemap[trace_falsecolor_type_names[type]] =
+            (trace_falsecolor_type)type;
+    }
 
     // parse command line
     auto parser = CLI::App{"progressive path tracing"};
@@ -483,6 +492,10 @@ int main(int argc, char* argv[]) {
         .add_option(
             "--tracer,-t", app.trace_options.sampler_type, "Tracer type.")
         ->transform(CLI::IsMember(trace_sampler_type_namemap));
+    parser
+        .add_option("--falsecolor,-F", app.trace_options.falsecolor_type,
+            "Tracer false color type.")
+        ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
     parser.add_option("--nbounces", app.trace_options.max_bounces,
         "Maximum number of bounces.");
     parser.add_option("--pixel-clamp", app.trace_options.pixel_clamp,

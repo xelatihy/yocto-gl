@@ -63,6 +63,12 @@ int main(int argc, char* argv[]) {
         trace_sampler_type_namemap[trace_sampler_type_names[type]] =
             (trace_sampler_type)type;
     }
+    auto trace_falsecolor_type_namemap =
+        std::map<string, trace_falsecolor_type>{};
+    for (auto type = 0; type < trace_falsecolor_type_names.size(); type++) {
+        trace_falsecolor_type_namemap[trace_falsecolor_type_names[type]] =
+            (trace_falsecolor_type)type;
+    }
 
     // parse command line
     auto parser = CLI::App{"Offline path tracing"};
@@ -75,6 +81,10 @@ int main(int argc, char* argv[]) {
         "--nsamples,-s", trace_options.num_samples, "Number of samples.");
     parser.add_option("--tracer,-t", trace_options.sampler_type, "Trace type.")
         ->transform(CLI::IsMember(trace_sampler_type_namemap));
+    parser
+        .add_option("--falsecolor,-F", trace_options.falsecolor_type,
+            "Tracer false color type.")
+        ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
     parser.add_option(
         "--nbounces", trace_options.max_bounces, "Maximum number of bounces.");
     parser.add_option(

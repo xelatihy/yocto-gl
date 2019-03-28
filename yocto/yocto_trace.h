@@ -125,57 +125,56 @@ void init_trace_state(trace_state& state, const vec2i& image_size,
 
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {
-    path,                // path tracing
-    naive,               // naive path tracing
-    split,               // path tracing with split heuristic
-    volpath,             // volume path tracing
-    volnaive,            // naive volume path tracing
-    eyelight,            // eyelight rendering
-    debug_normal,        // debug - normal
-    debug_albedo,        // debug - albedo
-    debug_texcoord,      // debug - texcoord
-    debug_color,         // debug - color
-    debug_frontfacing,   // debug - faceforward
-    debug_emission,      // debug - emission
-    debug_diffuse,       // debug - diffuse
-    debug_specular,      // debug - specular
-    debug_transmission,  // debug - transmission
-    debug_roughness,     // debug - roughness
-    debug_material,      // debug - material
-    debug_shape,         // debug - shape
-    debug_instance,      // debug - instance
-    debug_highlight,     // debug - highlight
+    path,        // path tracing
+    naive,       // naive path tracing
+    split,       // path tracing with split heuristic
+    volpath,     // volume path tracing
+    volnaive,    // naive volume path tracing
+    eyelight,    // eyelight rendering
+    falsecolor,  // false color rendering
 };
 
-const auto trace_sampler_type_names = vector<string>{"path", "naive", "split",
-    "volpath", "volnaive", "eyelight", "debug_normal", "debug_albedo",
-    "debug_texcoord", "debug_color", "debug_frontfacing", "debug_emission",
-    "debug_diffuse", "debug_specular", "debug_transmission", "debug_roughness",
-    "debug_material", "debug_shape", "debug_instance", "debug_highlight"};
+const auto trace_sampler_type_names = vector<string>{
+    "path", "naive", "split", "volpath", "volnaive", "eyelight", "falsecolor"};
 
-// Tracer function
-using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden)>;
-trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
+// Type of tracing algorithm to use
+enum struct trace_falsecolor_type {
+    normal,        // normal
+    frontfacing,   // faceforward
+    albedo,        // albedo
+    texcoord,      // texcoord
+    color,         // color
+    emission,      // emission
+    diffuse,       // diffuse
+    specular,      // specular
+    transmission,  // transmission
+    roughness,     // roughness
+    material,      // material
+    shape,         // shape
+    instance,      // instance
+    highlight,     // highlight
+};
+
+const auto trace_falsecolor_type_names = vector<string>{"normal", "frontfacing",
+    "albedo", "texcoord", "color", "emission", "diffuse", "specular",
+    "transmission", "roughness", "material", "shape", "instance", "highlight"};
 
 // Options for trace functions
 struct trace_image_options {
-    int                camera_id           = 0;
-    vec2i              image_size          = {1280, 720};
-    trace_sampler_type sampler_type        = trace_sampler_type::path;
-    trace_sampler_func custom_sampler      = {};
-    int                num_samples         = 512;
-    int                max_bounces         = 8;
-    int                samples_per_batch   = 16;
-    int                region_size         = 16;
-    float              pixel_clamp         = 10;
-    bool               environments_hidden = false;
-    bool               double_sided        = false;
-    uint64_t           random_seed         = trace_default_seed;
-    std::atomic<bool>* cancel_flag         = nullptr;
-    bool               run_serially        = false;
+    int                   camera_id           = 0;
+    vec2i                 image_size          = {1280, 720};
+    trace_sampler_type    sampler_type        = trace_sampler_type::path;
+    trace_falsecolor_type falsecolor_type     = trace_falsecolor_type::albedo;
+    int                   num_samples         = 512;
+    int                   max_bounces         = 8;
+    int                   samples_per_batch   = 16;
+    int                   region_size         = 16;
+    float                 pixel_clamp         = 10;
+    bool                  environments_hidden = false;
+    bool                  double_sided        = false;
+    uint64_t              random_seed         = trace_default_seed;
+    std::atomic<bool>*    cancel_flag         = nullptr;
+    bool                  run_serially        = false;
 };
 
 // Progressively compute an image by calling trace_samples multiple times.
