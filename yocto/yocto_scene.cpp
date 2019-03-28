@@ -470,11 +470,7 @@ void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
 }
 void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const bvh_build_options& options) {
-    build_scene_bvh(bvh, (int)scene.instances.size(), (int)scene.shapes.size(),
-        &scene, get_bvh_scene_data_instance, get_bvh_scene_data_shape_points, get_bvh_scene_data_shape_lines,
-        get_bvh_scene_data_shape_triangles, get_bvh_scene_data_shape_quads,
-        get_bvh_scene_data_shape_quads_positions, get_bvh_scene_data_shape_positions,
-        get_bvh_scene_data_shape_radius, options);
+    build_scene_bvh(bvh, scene, options);
 }
 
 // Refits a scene BVH
@@ -487,12 +483,7 @@ void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_build_options& options) {
-    refit_scene_bvh(bvh, updated_instances, updated_shapes,
-        (int)scene.instances.size(), (int)scene.shapes.size(), &scene,
-        get_bvh_scene_data_instance, get_bvh_scene_data_shape_points, get_bvh_scene_data_shape_lines,
-        get_bvh_scene_data_shape_triangles, get_bvh_scene_data_shape_quads,
-        get_bvh_scene_data_shape_quads_positions, get_bvh_scene_data_shape_positions,
-        get_bvh_scene_data_shape_radius, options);
+    refit_scene_bvh(bvh, scene, updated_instances, updated_shapes, options);
 }
 bool intersect_shape_bvh(const yocto_shape& shape, const bvh_shape& bvh,
     const ray3f& ray, bvh_intersection& intersection, bool find_any) {
@@ -503,11 +494,7 @@ bool intersect_shape_bvh(const yocto_shape& shape, const bvh_shape& bvh,
 bool intersect_scene_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     const ray3f& ray, bvh_intersection& intersection, bool find_any,
     bool non_rigid_frames) {
-    return intersect_scene_bvh(bvh, (int)scene.instances.size(),
-        (int)scene.shapes.size(), &scene, get_bvh_scene_data_instance,
-        get_bvh_scene_data_shape_points, get_bvh_scene_data_shape_lines, get_bvh_scene_data_shape_triangles,
-        get_bvh_scene_data_shape_quads, get_bvh_scene_data_shape_quads_positions,
-        get_bvh_scene_data_shape_positions, get_bvh_scene_data_shape_radius, ray, intersection,
+    return intersect_scene_bvh(bvh, scene, ray, intersection,
         find_any, non_rigid_frames);
 }
 bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
