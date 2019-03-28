@@ -50,8 +50,8 @@
 #include "yocto_math.h"
 #include "yocto_utils.h"
 
-#include <unordered_map>
 #include <memory>
+#include <unordered_map>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -59,8 +59,8 @@
 namespace yocto {
 
 using std::function;
-using std::unordered_map;
 using std::unique_ptr;
+using std::unordered_map;
 
 }  // namespace yocto
 

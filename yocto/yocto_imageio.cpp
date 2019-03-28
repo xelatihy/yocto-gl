@@ -44,10 +44,10 @@
 
 // #ifndef __clang_analyzer__
 
+#include "ext/json.hpp"
 #include "ext/stb_image.h"
 #include "ext/stb_image_write.h"
 #include "ext/tinyexr.h"
-#include "ext/json.hpp"
 
 // #endif
 
@@ -60,10 +60,10 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::unique_ptr;
 using nlohmann::json;
+using std::unique_ptr;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // JSON SUPPORT
@@ -119,7 +119,7 @@ inline void from_json(const json& js, bbox<T, N>& val) {
     nlohmann::to_json(js, (const std::array<T, N * 2>&)val);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO

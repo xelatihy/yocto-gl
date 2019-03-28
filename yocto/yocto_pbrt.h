@@ -50,9 +50,9 @@
 #include "yocto_math.h"
 #include "yocto_utils.h"
 
+#include <string_view>
 #include <unordered_map>
 #include <variant>
-#include <string_view>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -60,9 +60,9 @@
 namespace yocto {
 
 using std::function;
+using std::string_view;
 using std::unordered_map;
 using std::variant;
-using std::string_view;
 
 }  // namespace yocto
 
@@ -750,7 +750,6 @@ struct pbrtio_error : runtime_error {
 //                             IMPLEMENTATION                                 //
 //                                                                            //
 // ---------------------------------------------------------------------------//
-
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF LOW LEVEL PARSING

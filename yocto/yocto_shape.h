@@ -218,8 +218,8 @@ inline void compute_vertex_tangents(vector<vec3f>& tangents,
     const vector<vec2i>& lines, const vector<vec3f>& positions);
 inline void compute_vertex_normals(vector<vec3f>& normals,
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
-inline void compute_vertex_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
-    const vector<vec3f>& positions);
+inline void compute_vertex_normals(vector<vec3f>& normals,
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
@@ -288,10 +288,10 @@ inline void init_hash_grid(
 // Inserts a point into the grid
 inline int insert_vertex(hash_grid& grid, const vec3f& position);
 // Finds the nearest neighboors within a given radius
-inline void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
-    const vec3f& position, float max_radius);
-inline void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
-    int vertex_id, float max_radius);
+inline void find_nearest_neightbors(const hash_grid& grid,
+    vector<int>& neighboors, const vec3f& position, float max_radius);
+inline void find_nearest_neightbors(const hash_grid& grid,
+    vector<int>& neighboors, int vertex_id, float max_radius);
 
 }  // namespace yocto
 
@@ -385,9 +385,9 @@ inline void subdivide_triangles(vector<vec3i>& triangles, vector<float>& vert);
 inline void subdivide_triangles(vector<vec3i>& triangles, vector<vec2f>& vert);
 inline void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& vert);
 inline void subdivide_triangles(vector<vec3i>& triangles, vector<vec4f>& vert);
-inline void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
-    vector<float>& radius);
+inline void subdivide_triangles(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<vec4f>& colors, vector<float>& radius);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 inline void subdivide_quads(vector<vec4i>& quads, vector<float>& vert);
@@ -414,9 +414,9 @@ inline void subdivide_catmullclark(
     vector<vec4i>& quads, vector<vec3f>& vert, bool lock_boundary = false);
 inline void subdivide_catmullclark(
     vector<vec4i>& quads, vector<vec4f>& vert, bool lock_boundary = false);
-inline void subdivide_catmullclark(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
-    vector<float>& radius);
+inline void subdivide_catmullclark(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<vec4f>& colors, vector<float>& radius);
 
 }  // namespace yocto
 
@@ -431,8 +431,8 @@ inline void sample_points_element_cdf(vector<float>& cdf, int npoints);
 inline int  sample_points_element(const vector<float>& cdf, float re);
 
 // Pick a point on lines uniformly.
-inline void sample_lines_element_cdf(vector<float>& cdf, const vector<vec2i>& lines,
-    const vector<vec3f>& positions);
+inline void             sample_lines_element_cdf(vector<float>& cdf,
+                const vector<vec2i>& lines, const vector<vec3f>& positions);
 inline pair<int, float> sample_lines_element(
     const vector<float>& cdf, float re, float ru);
 
@@ -443,8 +443,8 @@ inline pair<int, vec2f> sample_triangles_element(
     const vector<float>& cdf, float re, const vec2f& ruv);
 
 // Pick a point on a quad mesh uniformly.
-inline void sample_quads_element_cdf(vector<float>& cdf, const vector<vec4i>& quads,
-    const vector<vec3f>& positions);
+inline void             sample_quads_element_cdf(vector<float>& cdf,
+                const vector<vec4i>& quads, const vector<vec3f>& positions);
 inline pair<int, vec2f> sample_quads_element(
     const vector<float>& cdf, float re, const vec2f& ruv);
 inline pair<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
@@ -506,45 +506,52 @@ namespace yocto {
 inline void make_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
     const vec2f& size, const vec2f& uvsize);
-inline void make_quad_stack_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
-    const vec3f& size, const vec2f& uvsize);
+inline void make_quad_stack_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec3i& steps, const vec3f& size,
+    const vec2f& uvsize);
 inline void make_floor_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
     const vec2f& size, const vec2f& uvsize);
-inline void make_floor_bent_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize, float radius);
+inline void make_floor_bent_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, float radius);
 inline void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
     const vec3f& size, const vec3f& uvsize);
-inline void make_cube_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize, float radius);
+inline void make_cube_rounded_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec3i& steps, const vec3f& size,
+    const vec3f& uvsize, float radius);
 inline void make_uvsphere_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
     float size, const vec2f& uvsize);
 inline void make_sphere_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
     float uvsize);
-inline void make_uvsphere_flipcap_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
-    float size, const vec2f& uvsize, const vec2f& zflip);
+inline void make_uvsphere_flipcap_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec2i& steps, float size,
+    const vec2f& uvsize, const vec2f& zflip);
 inline void make_uvdisk_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
     float size, const vec2f& uvsize);
 inline void make_disk_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
     float uvsize);
-inline void make_disk_bulged_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
-    float uvsize, float height);
-inline void make_quad_bulged_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
-    float uvsize, float height);
-inline void make_uvcylinder_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize);
+inline void make_disk_bulged_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, int steps, float size, float uvsize,
+    float height);
+inline void make_quad_bulged_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, int steps, float size, float uvsize,
+    float height);
+inline void make_uvcylinder_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec3i& steps, const vec2f& size,
+    const vec3f& uvsize);
 inline void make_uvcylinder_rounded_shape(vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, const vec3i& steps, const vec2f& size,
@@ -583,9 +590,10 @@ inline void make_point_shape(vector<int>& points, vector<vec3f>& positions,
 inline void make_points_shape(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
     int num, float uvsize, float point_radius = 0.001f);
-inline void make_random_points_shape(vector<int>& points, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
-    int num, const vec3f& size, float uvsize, float point_radius = 0.001f,
+inline void make_random_points_shape(vector<int>& points,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<float>& radius, int num,
+    const vec3f& size, float uvsize, float point_radius = 0.001f,
     uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
@@ -716,8 +724,8 @@ inline void compute_vertex_normals(vector<vec3f>& normals,
 }
 
 // Compute per-vertex normals for quads.
-inline void compute_vertex_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
+inline void compute_vertex_normals(vector<vec3f>& normals,
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
     if (normals.size() != positions.size()) {
         throw std::out_of_range("array should be the same length");
     }
@@ -917,8 +925,9 @@ inline int insert_vertex(hash_grid& grid, const vec3f& position) {
     return vertex_id;
 }
 // Finds the nearest neighboors within a given radius
-inline void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
-    const vec3f& position, float max_radius, int skip_id) {
+inline void find_nearest_neightbors(const hash_grid& grid,
+    vector<int>& neighboors, const vec3f& position, float max_radius,
+    int skip_id) {
     auto cell        = get_cell_index(grid, position);
     auto cell_radius = (int)(max_radius * grid.cell_inv_size) + 1;
     neighboors.clear();
@@ -941,12 +950,12 @@ inline void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboo
         }
     }
 }
-inline void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
-    const vec3f& position, float max_radius) {
+inline void find_nearest_neightbors(const hash_grid& grid,
+    vector<int>& neighboors, const vec3f& position, float max_radius) {
     find_nearest_neightbors(grid, neighboors, position, max_radius, -1);
 }
-inline void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
-    int vertex_id, float max_radius) {
+inline void find_nearest_neightbors(const hash_grid& grid,
+    vector<int>& neighboors, int vertex_id, float max_radius) {
     find_nearest_neightbors(
         grid, neighboors, grid.positions[vertex_id], max_radius, vertex_id);
 }
@@ -1072,8 +1081,8 @@ inline void convert_facevarying(vector<vec4i>& split_quads,
 
 // Split primitives per id
 template <typename T>
-inline void ungroup_elems(vector<vector<T>>& split_elems, const vector<T>& elems,
-    const vector<int>& ids) {
+inline void ungroup_elems(vector<vector<T>>& split_elems,
+    const vector<T>& elems, const vector<int>& ids) {
     auto max_id = *max_element(ids.begin(), ids.end());
     split_elems.resize(max_id + 1);
     for (auto elem_id = 0; elem_id < elems.size(); elem_id++) {
@@ -1259,7 +1268,8 @@ inline void subdivide_lines(vector<vec2i>& lines, vector<vec4f>& vert) {
 
 // Subdivide triangle.
 template <typename T>
-inline void subdivide_triangles_impl(vector<vec3i>& triangles, vector<T>& vert) {
+inline void subdivide_triangles_impl(
+    vector<vec3i>& triangles, vector<T>& vert) {
     // early exit
     if (triangles.empty() || vert.empty()) return;
     // get edges
@@ -1602,8 +1612,9 @@ inline void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     subdivide_elems_impl(lines, positions, normals, texturecoords, colors,
         radius, [](auto& lines, auto& vert) { subdivide_lines(lines, vert); });
 }
-inline void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+inline void subdivide_triangles(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<vec4f>& colors,
     vector<float>& radius) {
     subdivide_elems_impl(triangles, positions, normals, texturecoords, colors,
         radius, [](auto& triangles, auto& vert) {
@@ -1623,8 +1634,9 @@ inline void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& positions,
         radius,
         [](auto& beziers, auto& vert) { subdivide_beziers(beziers, vert); });
 }
-inline void subdivide_catmullclark(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+inline void subdivide_catmullclark(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<vec4f>& colors,
     vector<float>& radius) {
     subdivide_elems_impl(quads, positions, normals, texturecoords, colors,
         radius,
@@ -1651,8 +1663,8 @@ inline int sample_points_element(const vector<float>& cdf, float re) {
 }
 
 // Pick a point on lines uniformly.
-inline void sample_lines_element_cdf(vector<float>& cdf, const vector<vec2i>& lines,
-    const vector<vec3f>& positions) {
+inline void sample_lines_element_cdf(vector<float>& cdf,
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
     cdf.resize(lines.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto l = lines[i];
@@ -1682,8 +1694,8 @@ inline pair<int, vec2f> sample_triangles_element(
 }
 
 // Pick a point on a quad mesh uniformly.
-inline void sample_quads_element_cdf(vector<float>& cdf, const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
+inline void sample_quads_element_cdf(vector<float>& cdf,
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
     cdf.resize(quads.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto q = quads[i];
@@ -2120,9 +2132,10 @@ inline void make_floor_shape(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 // Make a rounded cube.
-inline void make_floor_bent_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize, float radius) {
+inline void make_floor_bent_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, float radius) {
     make_floor_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
     auto start = (size.y / 2 - radius) / 2;
@@ -2143,9 +2156,10 @@ inline void make_floor_bent_shape(vector<vec4i>& quads, vector<vec3f>& positions
 }
 
 // Make a stack of quads
-inline void make_quad_stack_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
-    const vec3f& size, const vec2f& uvsize) {
+inline void make_quad_stack_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec3i& steps, const vec3f& size,
+    const vec2f& uvsize) {
     quads.clear();
     positions.clear();
     normals.clear();
@@ -2224,9 +2238,10 @@ inline void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 // Make a rounded cube.
-inline void make_cube_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize, float radius) {
+inline void make_cube_rounded_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec3i& steps, const vec3f& size,
+    const vec3f& uvsize, float radius) {
     make_cube_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
     auto c = size / 2 - vec3f{radius, radius, radius};
@@ -2290,9 +2305,10 @@ inline void make_sphere_shape(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 // Make a flipped sphere. This is not watertight.
-inline void make_uvsphere_flipcap_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
-    float size, const vec2f& uvsize, const vec2f& zflip) {
+inline void make_uvsphere_flipcap_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec2i& steps, float size,
+    const vec2f& uvsize, const vec2f& zflip) {
     make_uvsphere_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
     for (auto i = 0; i < positions.size(); i++) {
@@ -2341,9 +2357,10 @@ inline void make_disk_shape(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 // Make a bulged disk from a quad.
-inline void make_disk_bulged_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
-    float uvsize, float height) {
+inline void make_disk_bulged_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, int steps, float size, float uvsize,
+    float height) {
     make_disk_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
     if (height == 0) return;
@@ -2357,9 +2374,10 @@ inline void make_disk_bulged_shape(vector<vec4i>& quads, vector<vec3f>& position
 }
 
 // Make a bulged quad.
-inline void make_quad_bulged_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
-    float uvsize, float height) {
+inline void make_quad_bulged_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, int steps, float size, float uvsize,
+    float height) {
     make_quad_shape(quads, positions, normals, texturecoords, {steps, steps},
         {size, size}, {uvsize, uvsize});
     if (height == 0) return;
@@ -2373,9 +2391,10 @@ inline void make_quad_bulged_shape(vector<vec4i>& quads, vector<vec3f>& position
 }
 
 // Make a cylinder (side-only).
-inline void make_cylinder_side_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize) {
+inline void make_cylinder_side_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize) {
     make_quad_shape(
         quads, positions, normals, texturecoords, steps, {1, 1}, {1, 1});
     for (auto i = 0; i < positions.size(); i++) {
@@ -2389,9 +2408,10 @@ inline void make_cylinder_side_shape(vector<vec4i>& quads, vector<vec3f>& positi
 }
 
 // Make a cylinder.
-inline void make_uvcylinder_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize) {
+inline void make_uvcylinder_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec3i& steps, const vec2f& size,
+    const vec3f& uvsize) {
     quads.clear();
     positions.clear();
     normals.clear();
@@ -3008,10 +3028,10 @@ inline void make_points_shape(vector<int>& points, vector<vec3f>& positions,
 }
 
 // Generate a point set.
-inline void make_random_points_shape(vector<int>& points, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
-    int num, const vec3f& size, float uvsize, float point_radius,
-    uint64_t seed) {
+inline void make_random_points_shape(vector<int>& points,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<float>& radius, int num,
+    const vec3f& size, float uvsize, float point_radius, uint64_t seed) {
     make_points_shape(points, positions, normals, texturecoords, radius, num,
         uvsize, point_radius);
     auto rng = make_rng(seed);

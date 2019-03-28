@@ -171,14 +171,16 @@ inline void srgb_to_linear(image<vec4f>& lin, const image<vec4b>& srgb);
 inline void linear_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin);
 
 // Conversion between linear and gamma-encoded images.
-inline void gamma_to_linear(image<vec4f>& lin, const image<vec4f>& srgb, float gamma);
-inline void linear_to_gamma(image<vec4f>& srgb, const image<vec4f>& lin, float gamma);
+inline void gamma_to_linear(
+    image<vec4f>& lin, const image<vec4f>& srgb, float gamma);
+inline void linear_to_gamma(
+    image<vec4f>& srgb, const image<vec4f>& lin, float gamma);
 
 // Apply exposure and filmic tone mapping
-inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr, float exposure,
-    bool filmic, bool srgb);
-inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr, float exposure,
-    bool filmic, bool srgb);
+inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb);
+inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb);
 inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
@@ -207,9 +209,10 @@ inline void make_ramp_image(
     image<vec4f>& img, const vec4f& c0, const vec4f& c1, float srgb = false);
 inline void make_gammaramp_image(image<vec4f>& img);
 inline void make_uvramp_image(image<vec4f>& img);
-inline void make_uvgrid_image(image<vec4f>& img, int tile = 8, bool colored = true);
-inline void make_blackbodyramp_image(image<vec4f>& img, float start_temperature = 1000,
-    float end_temperature = 12000);
+inline void make_uvgrid_image(
+    image<vec4f>& img, int tile = 8, bool colored = true);
+inline void make_blackbodyramp_image(image<vec4f>& img,
+    float start_temperature = 1000, float end_temperature = 12000);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 inline void bump_to_normal_map(
@@ -220,20 +223,22 @@ inline void bump_to_normal_map(
 // disabled with has_sun. The sun parameters can be slightly modified by
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
-inline void make_sunsky_image(image<vec4f>& img, float sun_angle, float turbidity = 3,
-    bool has_sun = false, float sun_intensity = 1.0f, float sun_temperature = 0,
-    const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
+inline void make_sunsky_image(image<vec4f>& img, float sun_angle,
+    float turbidity = 3, bool has_sun = false, float sun_intensity = 1.0f,
+    float sun_temperature = 0, const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
 // Make an image of multiple lights.
 inline void make_lights_image(image<vec4f>& img, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-inline void make_noise_image(image<vec4f>& img, float scale = 1, bool wrap = true);
-inline void make_fbm_image(image<vec4f>& img, float scale = 1, float lacunarity = 2,
-    float gain = 0.5f, int octaves = 6, bool wrap = true);
-inline void make_ridge_image(image<vec4f>& img, float scale = 1, float lacunarity = 2,
-    float gain = 0.5f, float offset = 1.0f, int octaves = 6, bool wrap = true);
+inline void make_noise_image(
+    image<vec4f>& img, float scale = 1, bool wrap = true);
+inline void make_fbm_image(image<vec4f>& img, float scale = 1,
+    float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
+inline void make_ridge_image(image<vec4f>& img, float scale = 1,
+    float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
+    int octaves = 6, bool wrap = true);
 inline void make_turbulence_image(image<vec4f>& img, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
@@ -307,7 +312,8 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b) {
 }
 
 // make a simple example volume
-inline void make_test_volume(volume1f& vol, float scale = 10, float exponent = 6);
+inline void make_test_volume(
+    volume1f& vol, float scale = 10, float exponent = 6);
 
 }  // namespace yocto
 
@@ -613,7 +619,8 @@ inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
 namespace yocto {
 
 // Conversion between linear and gamma-encoded images.
-inline void gamma_to_linear(image<vec4f>& lin, const image<vec4f>& srgb, float gamma) {
+inline void gamma_to_linear(
+    image<vec4f>& lin, const image<vec4f>& srgb, float gamma) {
     if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < srgb.size().y; j++) {
         for (auto i = 0; i < srgb.size().x; i++) {
@@ -621,7 +628,8 @@ inline void gamma_to_linear(image<vec4f>& lin, const image<vec4f>& srgb, float g
         }
     }
 }
-inline void linear_to_gamma(image<vec4f>& srgb, const image<vec4f>& lin, float gamma) {
+inline void linear_to_gamma(
+    image<vec4f>& srgb, const image<vec4f>& lin, float gamma) {
     if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < srgb.size().y; j++) {
         for (auto i = 0; i < srgb.size().x; i++) {
@@ -683,8 +691,8 @@ inline void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl) {
 }
 
 // Tonemap image
-inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr, float exposure,
-    bool filmic, bool srgb) {
+inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb) {
     if (ldr.size() != hdr.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < hdr.size().y; j++) {
         for (auto i = 0; i < hdr.size().x; i++) {
@@ -692,8 +700,8 @@ inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr, float expo
         }
     }
 }
-inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr, float exposure,
-    bool filmic, bool srgb) {
+inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb) {
     if (ldr.size() != hdr.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < hdr.size().y; j++) {
         for (auto i = 0; i < hdr.size().x; i++) {
@@ -712,7 +720,6 @@ inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
         }
     }
 }
-
 
 // Resize image.
 inline void resize_image(image<vec4f>& res_img, const image<vec4f>& img) {
@@ -788,7 +795,8 @@ inline void make_bumpdimple_image(image<vec4f>& img, int tiles) {
 }
 
 // Make a uv colored grid
-inline void make_ramp_image(image<vec4f>& img, const vec4f& c0, const vec4f& c1) {
+inline void make_ramp_image(
+    image<vec4f>& img, const vec4f& c0, const vec4f& c1) {
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
             auto u      = (float)i / (float)img.size().x;
@@ -890,8 +898,8 @@ inline void bump_to_normal_map(
 #if 1
 
 // Implementation of sunsky modified heavily from pbrt
-inline void make_sunsky_image(image<vec4f>& img, float theta_sun, float turbidity,
-    bool has_sun, float sun_intensity, float sun_temperature,
+inline void make_sunsky_image(image<vec4f>& img, float theta_sun,
+    float turbidity, bool has_sun, float sun_intensity, float sun_temperature,
     const vec3f& ground_albedo) {
     // idea adapted from pbrt
 
@@ -1171,8 +1179,8 @@ inline void make_ridge_image(image<vec4f>& img, float scale, float lacunarity,
 }
 
 // Make a noise image. Wrap works only if size is a power of two.
-inline void make_turbulence_image(image<vec4f>& img, float scale, float lacunarity,
-    float gain, int octaves, bool wrap) {
+inline void make_turbulence_image(image<vec4f>& img, float scale,
+    float lacunarity, float gain, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {

@@ -37,8 +37,8 @@
 #include "ext/happly.h"
 #define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
-#include "ext/sajson.h"
 #include "ext/json.hpp"
+#include "ext/sajson.h"
 
 #include <array>
 #include <climits>
@@ -51,10 +51,10 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::unique_ptr;
 using nlohmann::json;
+using std::unique_ptr;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // JSON SUPPORT
@@ -110,7 +110,7 @@ inline void from_json(const json& js, bbox<T, N>& val) {
     nlohmann::to_json(js, (const std::array<T, N * 2>&)val);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // FILE UTILITIES

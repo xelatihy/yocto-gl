@@ -425,19 +425,23 @@ bvh_instance get_bvh_scene_data_instance(const void* context, int instance) {
     auto& scene = *(yocto_scene*)context;
     return {scene.instances[instance].frame, scene.instances[instance].shape};
 }
-const vector<int>& get_bvh_scene_data_shape_points(const void* context, int shape) {
+const vector<int>& get_bvh_scene_data_shape_points(
+    const void* context, int shape) {
     auto& scene = *(yocto_scene*)context;
     return scene.shapes[shape].points;
 }
-const vector<vec2i>& get_bvh_scene_data_shape_lines(const void* context, int shape) {
+const vector<vec2i>& get_bvh_scene_data_shape_lines(
+    const void* context, int shape) {
     auto& scene = *(yocto_scene*)context;
     return scene.shapes[shape].lines;
 }
-const vector<vec3i>& get_bvh_scene_data_shape_triangles(const void* context, int shape) {
+const vector<vec3i>& get_bvh_scene_data_shape_triangles(
+    const void* context, int shape) {
     auto& scene = *(yocto_scene*)context;
     return scene.shapes[shape].triangles;
 }
-const vector<vec4i>& get_bvh_scene_data_shape_quads(const void* context, int shape) {
+const vector<vec4i>& get_bvh_scene_data_shape_quads(
+    const void* context, int shape) {
     auto& scene = *(yocto_scene*)context;
     return scene.shapes[shape].quads;
 }
@@ -446,11 +450,13 @@ const vector<vec4i>& get_bvh_scene_data_shape_quads_positions(
     auto& scene = *(yocto_scene*)context;
     return scene.shapes[shape].quads_positions;
 }
-const vector<vec3f>& get_bvh_scene_data_shape_positions(const void* context, int shape) {
+const vector<vec3f>& get_bvh_scene_data_shape_positions(
+    const void* context, int shape) {
     auto& scene = *(yocto_scene*)context;
     return scene.shapes[shape].positions;
 }
-const vector<float>& get_bvh_scene_data_shape_radius(const void* context, int shape) {
+const vector<float>& get_bvh_scene_data_shape_radius(
+    const void* context, int shape) {
     auto& scene = *(yocto_scene*)context;
     return scene.shapes[shape].radius;
 }
@@ -494,8 +500,8 @@ bool intersect_shape_bvh(const yocto_shape& shape, const bvh_shape& bvh,
 bool intersect_scene_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     const ray3f& ray, bvh_intersection& intersection, bool find_any,
     bool non_rigid_frames) {
-    return intersect_scene_bvh(bvh, scene, ray, intersection,
-        find_any, non_rigid_frames);
+    return intersect_scene_bvh(
+        bvh, scene, ray, intersection, find_any, non_rigid_frames);
 }
 bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     int instance_id, const ray3f& ray, bvh_intersection& intersection,
