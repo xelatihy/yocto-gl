@@ -159,20 +159,11 @@ const auto trace_falsecolor_type_names = vector<string>{"normal", "frontfacing",
     "albedo", "texcoord", "color", "emission", "diffuse", "specular",
     "transmission", "roughness", "material", "shape", "instance", "highlight"};
 
-// Tracer function
-using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden)>;
-trace_sampler_func get_trace_sampler_func(
-    trace_sampler_type type, trace_falsecolor_type falsecolor_type);
-
 // Options for trace functions
 struct trace_image_options {
     int                   camera_id           = 0;
     vec2i                 image_size          = {1280, 720};
     trace_sampler_type    sampler_type        = trace_sampler_type::path;
-    trace_sampler_func    custom_sampler      = {};
     trace_falsecolor_type falsecolor_type     = trace_falsecolor_type::albedo;
     int                   num_samples         = 512;
     int                   max_bounces         = 8;
