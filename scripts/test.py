@@ -17,7 +17,10 @@ def clean():
     os.system('rm tests/_runtests/output/*.png; rm tests/_runtests/difference/*.png')
 
 @cli.command()
-def update():
+@click.option('--clean/--no-clean', default=False)
+def update(clean=False):
+    if clean:
+        os.system('rm tests/_runtests/result/*.png')
     os.system('cp tests/_runtests/output/*.png tests/_runtests/result/')
 
 @cli.command()

@@ -127,7 +127,6 @@ void init_trace_state(trace_state& state, const vec2i& image_size,
 enum struct trace_sampler_type {
     path,        // path tracing
     naive,       // naive path tracing
-    split,       // path tracing with split heuristic
     volpath,     // volume path tracing
     volnaive,    // naive volume path tracing
     eyelight,    // eyelight rendering
@@ -135,7 +134,7 @@ enum struct trace_sampler_type {
 };
 
 const auto trace_sampler_type_names = vector<string>{
-    "path", "naive", "split", "volpath", "volnaive", "eyelight", "falsecolor"};
+    "path", "naive", "volpath", "volnaive", "eyelight", "falsecolor"};
 
 // Type of tracing algorithm to use
 enum struct trace_falsecolor_type {

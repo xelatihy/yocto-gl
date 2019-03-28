@@ -173,14 +173,6 @@ foreach(filename "glass-al.json" "refractive-al.json" "volume1-al.json" "volume2
             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
-# split
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "glass-al.json" "refractive-al.json")
-    set(tracer "split")
-    get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME ytrace-${tracer}-${filename}
-            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-endforeach()
 # naive
 foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "glass-al.json" "refractive-al.json")
     set(tracer "naive")
