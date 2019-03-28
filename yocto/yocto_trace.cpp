@@ -1794,7 +1794,6 @@ bool is_trace_sampler_lit(const trace_image_options& options) {
         case trace_sampler_type::naive: return true;
         case trace_sampler_type::volpath: return true;
         case trace_sampler_type::volnaive: return true;
-        case trace_sampler_type::split: return true;
         case trace_sampler_type::eyelight: return true;
         case trace_sampler_type::falsecolor: return true;
         default: {
