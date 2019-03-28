@@ -57,6 +57,10 @@ add_library(yocto
     yocto/yocto_imageio.h yocto/yocto_imageio.cpp
     yocto/yocto_sceneio.h yocto/yocto_sceneio.cpp
     yocto/ext/ArHosekSkyModel.cpp
+    yocto/ext/stb_image.cpp
+    yocto/ext/stb_image_write.cpp
+    yocto/ext/stb_image_resize.cpp
+    yocto/ext/tinyexr.cpp
 )
 
 if(UNIX AND NOT APPLE)
