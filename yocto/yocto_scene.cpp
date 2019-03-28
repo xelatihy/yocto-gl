@@ -476,6 +476,10 @@ void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
 }
 void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const bvh_build_options& options) {
+    bvh.shapes.resize(scene.shapes.size());
+    for(auto shape_id = 0 ; shape_id < scene.shapes.size(); shape_id++) {
+        build_shape_bvh(scene.shapes[shape_id], bvh.shapes[shape_id], options);
+    }
     build_scene_bvh(bvh, scene, options);
 }
 
@@ -489,7 +493,8 @@ void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_build_options& options) {
-    refit_scene_bvh(bvh, scene, updated_instances, updated_shapes, options);
+    for(auto shape_id : updated_shapes) refit_shape_bvh(scene.shapes[shape_id], bvh.shapes[shape_id], options);
+    refit_scene_bvh(bvh, scene, options);
 }
 bool intersect_shape_bvh(const yocto_shape& shape, const bvh_shape& bvh,
     const ray3f& ray, bvh_intersection& intersection, bool find_any) {
