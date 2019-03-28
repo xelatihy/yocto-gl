@@ -1,3 +1,0 @@
-[submodule "tests/testresults"]
-	path = tests/testresults
-	url = git@github.com:xelatihy/yocto-gl-testresults.git
