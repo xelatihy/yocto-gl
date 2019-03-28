@@ -1398,7 +1398,7 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
 }
 
 // Iterative volumetric path tracing.
-pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
+vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect ray
@@ -1452,7 +1452,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Recursive path tracing.
-pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
+vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect ray
@@ -1529,7 +1529,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Iterative volume naive path tracing
-pair<vec3f, bool> trace_volnaive(const yocto_scene& scene, const bvh_scene& bvh,
+vec4f trace_volnaive(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect ray
@@ -1604,7 +1604,7 @@ pair<vec3f, bool> trace_volnaive(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Recursive path tracing.
-pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
+vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect ray
@@ -1672,7 +1672,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Recursive path tracing.
-pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
+vec4f trace_split(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect ray
@@ -1761,7 +1761,7 @@ pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Eyelight for quick previewing.
-pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
+vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect ray
@@ -1787,7 +1787,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // False color rendering
-pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
+vec4f trace_falsecolor(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, const trace_image_options& options) {
     // intersect ray
@@ -1858,7 +1858,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using trace_sampler_func = pair<vec3f, bool> (*)(const yocto_scene& scene,
+using trace_sampler_func = vec4f (*)(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, const trace_image_options& options);
 trace_sampler_func get_trace_sampler_func(const trace_image_options& options) {
@@ -1914,8 +1914,10 @@ void trace_image_region(image4f& image, trace_state& state,
                 _trace_npaths += 1;
                 auto ray = sample_camera_ray(camera, {i, j}, image.size(),
                     get_random_vec2f(pixel.rng), get_random_vec2f(pixel.rng));
-                auto [radiance, hit] = sampler(scene, bvh, lights, ray.o, ray.d,
+                auto sample = sampler(scene, bvh, lights, ray.o, ray.d,
                     pixel.rng, options);
+                auto radiance = sample.xyz;
+                auto hit = sample.w > 0;
                 if (!isfinite(radiance)) {
                     // printf("NaN detected\n");
                     radiance = zero3f;
