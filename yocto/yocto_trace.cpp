@@ -1786,250 +1786,96 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     return {radiance, true};
 }
 
-// Debug previewing.
-pair<vec3f, bool> trace_debug_normal(const yocto_scene& scene,
+// False color rendering
+pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
+    bool environments_hidden, trace_falsecolor_type type) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
-    // shade
-    return {point.normal * 0.5f + 0.5f, true};
-}
-
-// Debug frontfacing.
-pair<vec3f, bool> trace_debug_frontfacing(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    auto outgoing    = -direction;
-    auto frontfacing = dot(point.normal, outgoing) > 0 ? vec3f{0, 1, 0}
-                                                       : vec3f{1, 0, 0};
-    return {frontfacing, true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_albedo(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    auto albedo = point.brdf.diffuse + point.brdf.specular +
-                  point.brdf.transmission;
-    return {albedo, true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_emission(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    return {point.emission, true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_diffuse(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    return {point.brdf.diffuse, true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_specular(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    return {point.brdf.specular, true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_tranmission(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    return {point.brdf.transmission, true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_roughness(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    return {{point.brdf.roughness, point.brdf.roughness, point.brdf.roughness},
-        true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_texcoord(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    return {{point.texturecoord.x, point.texturecoord.y, 0}, true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_color(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    return {point.color.xyz, true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_material(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    auto& instance = scene.instances[point.instance_id];
-    auto  hashed   = std::hash<int>()(instance.material);
-    auto  rng_     = make_rng(trace_default_seed, hashed);
-    return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_shape(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    auto& instance = scene.instances[point.instance_id];
-    auto  hashed   = std::hash<int>()(instance.shape);
-    auto  rng_     = make_rng(trace_default_seed, hashed);
-    return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_instance(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // shade
-    auto hashed = std::hash<int>()(point.instance_id);
-    auto rng_   = make_rng(trace_default_seed, hashed);
-    return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
-}
-
-// Debug previewing.
-pair<vec3f, bool> trace_debug_highlight(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) return {zero3f, false};
-
-    // initialize
-    auto emission = point.emission;
-    auto outgoing = -direction;
-    if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
-
-    // done
-    return {emission * abs(dot(outgoing, point.normal)), true};
+    switch (type) {
+        case trace_falsecolor_type::normal: {
+            return {point.normal * 0.5f + 0.5f, true};
+        }
+        case trace_falsecolor_type::frontfacing: {
+            auto outgoing    = -direction;
+            auto frontfacing = dot(point.normal, outgoing) > 0 ? vec3f{0, 1, 0}
+                                                               : vec3f{1, 0, 0};
+            return {frontfacing, true};
+        }
+        case trace_falsecolor_type::albedo: {
+            auto albedo = point.brdf.diffuse + point.brdf.specular +
+                          point.brdf.transmission;
+            return {albedo, true};
+        }
+        case trace_falsecolor_type::texcoord: {
+            return {{point.texturecoord.x, point.texturecoord.y, 0}, true};
+        }
+        case trace_falsecolor_type::color: {
+            return {point.color.xyz, true};
+        }
+        case trace_falsecolor_type::emission: {
+            return {point.emission, true};
+        }
+        case trace_falsecolor_type::diffuse: {
+            return {point.brdf.diffuse, true};
+        }
+        case trace_falsecolor_type::specular: {
+            return {point.brdf.specular, true};
+        }
+        case trace_falsecolor_type::transmission: {
+            return {point.brdf.transmission, true};
+        }
+        case trace_falsecolor_type::roughness: {
+            return {vec3f{point.brdf.roughness}, true};
+        }
+        case trace_falsecolor_type::material: {
+            auto& instance = scene.instances[point.instance_id];
+            auto  hashed   = std::hash<int>()(instance.material);
+            auto  rng_     = make_rng(trace_default_seed, hashed);
+            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
+        }
+        case trace_falsecolor_type::shape: {
+            auto& instance = scene.instances[point.instance_id];
+            auto  hashed   = std::hash<int>()(instance.shape);
+            auto  rng_     = make_rng(trace_default_seed, hashed);
+            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
+        }
+        case trace_falsecolor_type::instance: {
+            auto hashed = std::hash<int>()(point.instance_id);
+            auto rng_   = make_rng(trace_default_seed, hashed);
+            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), true};
+        }
+        case trace_falsecolor_type::highlight: {
+            auto emission = point.emission;
+            auto outgoing = -direction;
+            if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
+            return {emission * abs(dot(outgoing, point.normal)), true};
+        }
+    }
 }
 
 // Trace a single ray from the camera using the given algorithm.
-trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
+trace_sampler_func get_trace_sampler_func(
+    trace_sampler_type type, trace_falsecolor_type falsecolor) {
     switch (type) {
         case trace_sampler_type::path: return trace_path;
-        // case trace_type::volpath:
-        //     return trace_volpath(
-        //         scene, bvh, lights, position, direction, rng,
-        //         max_bounces);
         case trace_sampler_type::volpath: return trace_volpath;
         case trace_sampler_type::volnaive: return trace_volnaive;
         case trace_sampler_type::naive: return trace_naive;
         case trace_sampler_type::split: return trace_split;
         case trace_sampler_type::eyelight: return trace_eyelight;
-        case trace_sampler_type::debug_normal: return trace_debug_normal;
-        case trace_sampler_type::debug_albedo: return trace_debug_albedo;
-        case trace_sampler_type::debug_texcoord: return trace_debug_texcoord;
-        case trace_sampler_type::debug_color: return trace_debug_color;
-        case trace_sampler_type::debug_frontfacing:
-            return trace_debug_frontfacing;
-        case trace_sampler_type::debug_emission: return trace_debug_emission;
-        case trace_sampler_type::debug_diffuse: return trace_debug_diffuse;
-        case trace_sampler_type::debug_specular: return trace_debug_specular;
-        case trace_sampler_type::debug_transmission:
-            return trace_debug_tranmission;
-        case trace_sampler_type::debug_roughness: return trace_debug_roughness;
-        case trace_sampler_type::debug_material: return trace_debug_material;
-        case trace_sampler_type::debug_shape: return trace_debug_shape;
-        case trace_sampler_type::debug_instance: return trace_debug_instance;
-        case trace_sampler_type::debug_highlight: return trace_debug_highlight;
+        case trace_sampler_type::falsecolor:
+            return [falsecolor](const yocto_scene& scene, const bvh_scene& bvh,
+                       const trace_lights& lights, const vec3f& position,
+                       const vec3f& direction, rng_state& rng, int max_bounces,
+                       bool environments_hidden) {
+                return trace_falsecolor(scene, bvh, lights, position, direction,
+                    rng, max_bounces, environments_hidden, falsecolor);
+            };
         default: {
             throw runtime_error("sampler unknown");
             return {};
@@ -2041,23 +1887,13 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
 bool is_trace_sampler_lit(const trace_image_options& options) {
     auto type = options.sampler_type;
     switch (type) {
-        case trace_sampler_type::path:
-        case trace_sampler_type::naive:
-        case trace_sampler_type::volpath:
-        case trace_sampler_type::volnaive:
+        case trace_sampler_type::path: return true;
+        case trace_sampler_type::naive: return true;
+        case trace_sampler_type::volpath: return true;
+        case trace_sampler_type::volnaive: return true;
         case trace_sampler_type::split: return true;
-        case trace_sampler_type::eyelight:
-        case trace_sampler_type::debug_normal:
-        case trace_sampler_type::debug_albedo:
-        case trace_sampler_type::debug_texcoord:
-        case trace_sampler_type::debug_color:
-        case trace_sampler_type::debug_frontfacing:
-        case trace_sampler_type::debug_emission:
-        case trace_sampler_type::debug_diffuse:
-        case trace_sampler_type::debug_specular:
-        case trace_sampler_type::debug_transmission:
-        case trace_sampler_type::debug_roughness:
-        case trace_sampler_type::debug_highlight: return false;
+        case trace_sampler_type::eyelight: return true;
+        case trace_sampler_type::falsecolor: return true;
         default: {
             throw runtime_error("sampler unknown");
             return false;
@@ -2076,7 +1912,7 @@ void trace_image_region(image4f& image, trace_state& state,
     const image_region& region, int num_samples,
     const trace_image_options& options) {
     auto& camera  = scene.cameras.at(options.camera_id);
-    auto  sampler = get_trace_sampler_func(options.sampler_type);
+    auto  sampler = get_trace_sampler_func(options.sampler_type, options.falsecolor_type);
     for (auto j = region.min.y; j < region.max.y; j++) {
         for (auto i = region.min.x; i < region.max.x; i++) {
             auto& pixel = get_trace_pixel(state, i, j);
