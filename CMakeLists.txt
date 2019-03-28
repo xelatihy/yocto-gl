@@ -47,8 +47,7 @@ endif(MSVC)
 add_library(yocto 
     yocto/yocto_math.h yocto/yocto_random.h
     yocto/yocto_utils.h yocto/yocto_image.h 
-    yocto/yocto_shape.h yocto/yocto_shape.cpp
-    yocto/yocto_bvh.h yocto/yocto_bvh.cpp
+    yocto/yocto_shape.h yocto/yocto_bvh.h 
     yocto/yocto_scene.h yocto/yocto_scene.cpp
     yocto/yocto_trace.h yocto/yocto_trace.cpp
     yocto/yocto_obj.h yocto/yocto_pbrt.h 
