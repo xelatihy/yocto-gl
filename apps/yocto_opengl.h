@@ -97,25 +97,25 @@ void init_opengl_texture(opengl_texture& texture, const vec2i& size,
     bool as_float, bool as_srgb, bool linear, bool mipmap);
 
 void update_opengl_texture(
-    opengl_texture& texture, const image4f& img, bool mipmap);
-void update_opengl_texture_region(opengl_texture& texture, const image4f& img,
-    const image_region& region, bool mipmap);
+    opengl_texture& texture, const image<vec4f>& img, bool mipmap);
+void update_opengl_texture_region(opengl_texture& texture,
+    const image<vec4f>& img, const image_region& region, bool mipmap);
 
-inline void init_opengl_texture(opengl_texture& texture, const image4f& img,
-    bool as_float, bool linear, bool mipmap) {
+inline void init_opengl_texture(opengl_texture& texture,
+    const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
     init_opengl_texture(texture, img.size(), as_float, false, linear, mipmap);
     update_opengl_texture(texture, img, mipmap);
 }
 
-void init_opengl_texture(opengl_texture& texture, const image4b& img,
+void init_opengl_texture(opengl_texture& texture, const image<vec4b>& img,
     bool as_srgb, bool linear, bool mipmap);
 void update_opengl_texture(
-    opengl_texture& texture, const image4b& img, bool mipmap);
-void update_opengl_texture_region(opengl_texture& texture, const image4b& img,
-    const image_region& region, bool mipmap);
+    opengl_texture& texture, const image<vec4b>& img, bool mipmap);
+void update_opengl_texture_region(opengl_texture& texture,
+    const image<vec4b>& img, const image_region& region, bool mipmap);
 
-inline void init_opengl_texture(opengl_texture& texture, const image4b& img,
-    bool as_srgb, bool linear, bool mipmap) {
+inline void init_opengl_texture(opengl_texture& texture,
+    const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
     init_opengl_texture(texture, img.size(), false, as_srgb, linear, mipmap);
     update_opengl_texture(texture, img, mipmap);
 }

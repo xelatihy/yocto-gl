@@ -37,7 +37,7 @@ using namespace yocto;
 
 #include "ext/CLI11.hpp"
 
-image4f compute_diff_image(const image4f& a, const image4f& b) {
+image<vec4f> compute_diff_image(const image<vec4f>& a, const image<vec4f>& b) {
     auto diff = image{a.size(), zero4f};
     for (auto j = 0; j < a.size().y; j++) {
         for (auto i = 0; i < a.size().x; i++) {
@@ -49,7 +49,7 @@ image4f compute_diff_image(const image4f& a, const image4f& b) {
     return diff;
 }
 
-vec4f max_diff_value(const image4f& diff) {
+vec4f max_diff_value(const image<vec4f>& diff) {
     auto max_value = vec4f{0, 0, 0, 0};
     for (auto& c : diff) {
         max_value = {max(c.x, max_value.x), max(c.y, max_value.y),
@@ -58,7 +58,7 @@ vec4f max_diff_value(const image4f& diff) {
     return max_value;
 }
 
-image4f display_diff(const image4f& diff) {
+image<vec4f> display_diff(const image<vec4f>& diff) {
     auto display = image{diff.size(), zero4f};
     for (auto j = 0; j < diff.size().y; j++) {
         for (auto i = 0; i < diff.size().x; i++) {
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
     }
 
     // check image type
-    auto img1 = image4f{}, img2 = image4f{};
+    auto img1 = image<vec4f>{}, img2 = image<vec4f>{};
     try {
         load_image(filename1, img1);
         load_image(filename2, img2);

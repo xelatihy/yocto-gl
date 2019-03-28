@@ -504,7 +504,7 @@ struct glTFImage : glTFChildOfRootProperty {
     glTFid<glTFBufferView> bufferView = {};
 
     // Image data (if loaded).
-    image4f data = {};
+    image<vec4f> data = {};
 };
 
 // Reference to a texture.

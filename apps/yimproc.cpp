@@ -65,8 +65,8 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
 }
 #endif
 
-image4f filter_bilateral(const image4f& img, float spatial_sigma,
-    float range_sigma, const vector<image4f>& features,
+image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
+    float range_sigma, const vector<image<vec4f>>& features,
     const vector<float>& features_sigma) {
     auto filtered     = image{img.size(), zero4f};
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
@@ -102,8 +102,8 @@ image4f filter_bilateral(const image4f& img, float spatial_sigma,
     return filtered;
 }
 
-image4f filter_bilateral(
-    const image4f& img, float spatial_sigma, float range_sigma) {
+image<vec4f> filter_bilateral(
+    const image<vec4f>& img, float spatial_sigma, float range_sigma) {
     auto filtered = image{img.size(), zero4f};
     auto fwidth   = (int)ceil(2.57f * spatial_sigma);
     auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
@@ -179,7 +179,7 @@ int main(int argc, char* argv[]) {
     }
 
     // load
-    auto img = image4f();
+    auto img = image<vec4f>();
     try {
         load_image(filename, img);
     } catch (const std::exception& e) {
@@ -188,7 +188,7 @@ int main(int argc, char* argv[]) {
 
     // set alpha
     if (alpha_filename != "") {
-        auto alpha = image4f();
+        auto alpha = image<vec4f>();
         try {
             load_image(alpha_filename, alpha);
         } catch (const std::exception& e) {
@@ -205,7 +205,7 @@ int main(int argc, char* argv[]) {
 
     // set alpha
     if (coloralpha_filename != "") {
-        auto alpha = image4f();
+        auto alpha = image<vec4f>();
         try {
             load_image(coloralpha_filename, alpha);
         } catch (const std::exception& e) {
@@ -222,7 +222,7 @@ int main(int argc, char* argv[]) {
 
     // resize
     if (resize_width != 0 || resize_height != 0) {
-        auto res = image4f{};
+        auto res = image<vec4f>{};
         resize_image(res, img, {resize_width, resize_height});
         img = res;
     }
