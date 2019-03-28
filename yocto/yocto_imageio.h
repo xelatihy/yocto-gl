@@ -54,19 +54,19 @@ namespace yocto {
 bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channel float image in linear color space.
-void load_image(const string& filename, image4f& img);
-void save_image(const string& filename, const image4f& img);
-void load_image_from_memory(const byte* data, int data_size, image4f& img);
+void load_image(const string& filename, image<vec4f>& img);
+void save_image(const string& filename, const image<vec4f>& img);
+void load_image_from_memory(const byte* data, int data_size, image<vec4f>& img);
 
 // Loads/saves a 4 channel byte image in sRGB color space.
-void load_image(const string& filename, image4b& img);
-void save_image(const string& filename, const image4b& img);
-void load_image_from_memory(const byte* data, int data_size, image4b& img);
-void load_image_from_memory(const byte* data, int data_size, image4b& img);
+void load_image(const string& filename, image<vec4b>& img);
+void save_image(const string& filename, const image<vec4b>& img);
+void load_image_from_memory(const byte* data, int data_size, image<vec4b>& img);
+void load_image_from_memory(const byte* data, int data_size, image<vec4b>& img);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-void save_tonemapped_image(const string& filename, const image4f& hdr,
+void save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
     float exposure = 0, bool filmic = false, bool srgb = true);
 
 // imageio error

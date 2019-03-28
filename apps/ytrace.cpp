@@ -182,8 +182,8 @@ int main(int argc, char* argv[]) {
     // allocate buffers
     auto image_size = get_camera_image_size(
         scene.cameras[trace_options.camera_id], trace_options.image_size);
-    auto image = yocto::image{image_size, zero4f};
-    auto state = trace_state{};
+    auto render = image{image_size, zero4f};
+    auto state  = trace_state{};
     init_trace_state(state, image_size, trace_options.random_seed);
 
     // render
@@ -195,7 +195,7 @@ int main(int argc, char* argv[]) {
             "rendering image [%d/%d] ...\n", sample, trace_options.num_samples);
         auto start_batch = get_time();
         trace_image_samples(
-            image, state, scene, bvh, lights, sample, trace_options);
+            render, state, scene, bvh, lights, sample, trace_options);
         printf("rendering image [%d/%d] [%s]\n", sample,
             trace_options.num_samples,
             format_duration(get_time() - start_batch).c_str());
@@ -204,7 +204,7 @@ int main(int argc, char* argv[]) {
                 imfilename, std::to_string(sample + nsamples) + "." +
                                 get_extension(imfilename));
             try {
-                save_tonemapped_image(filename, image, exposure, filmic, srgb);
+                save_tonemapped_image(filename, render, exposure, filmic, srgb);
             } catch (const std::exception& e) {
                 exit_error(e.what());
             }
@@ -215,7 +215,7 @@ int main(int argc, char* argv[]) {
     printf("saving image ...\n");
     auto start_save = get_time();
     try {
-        save_tonemapped_image(imfilename, image, exposure, filmic, srgb);
+        save_tonemapped_image(imfilename, render, exposure, filmic, srgb);
     } catch (const std::exception& e) {
         exit_error(e.what());
     }

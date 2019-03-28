@@ -138,7 +138,7 @@ struct obj_object {
 // Obj texture. Texture data is loaded only if desired.
 struct obj_texture {
     std::string path;  // path
-    image4f img;       // image data
+    image<vec4f> img;       // image data
 };
 
 // Obj texture information.

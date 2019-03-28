@@ -134,10 +134,6 @@ struct image {
     vector<T> _pixels = {};
 };
 
-// Typedefs
-using image4f = image<vec4f>;
-using image4b = image<vec4b>;
-
 // equality
 template <typename T>
 inline bool operator==(const image<T>& a, const image<T>& b) {
@@ -165,30 +161,31 @@ inline void get_image_region(
     image<T>& clipped, const image<T>& img, const image_region& region);
 
 // Conversion from/to floats.
-void byte_to_float(image4f& fl, const image4b& bt);
-void float_to_byte(image4b& bt, const image4f& fl);
+void byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
+void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
-void srgb_to_linear(image4f& lin, const image4f& srgb);
-void linear_to_srgb(image4f& srgb, const image4f& lin);
-void srgb_to_linear(image4f& lin, const image4b& srgb);
-void linear_to_srgb(image4b& srgb, const image4f& lin);
+void srgb_to_linear(image<vec4f>& lin, const image<vec4f>& srgb);
+void linear_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
+void srgb_to_linear(image<vec4f>& lin, const image<vec4b>& srgb);
+void linear_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin);
 
 // Conversion between linear and gamma-encoded images.
-void gamma_to_linear(image4f& lin, const image4f& srgb, float gamma);
-void linear_to_gamma(image4f& srgb, const image4f& lin, float gamma);
+void gamma_to_linear(image<vec4f>& lin, const image<vec4f>& srgb, float gamma);
+void linear_to_gamma(image<vec4f>& srgb, const image<vec4f>& lin, float gamma);
 
 // Apply exposure and filmic tone mapping
-void tonemap_image(
-    image4f& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb);
-void tonemap_image(
-    image4b& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb);
-void tonemap_image_region(image4f& ldr, const image_region& region,
-    const image4f& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr, float exposure,
+    bool filmic, bool srgb);
+void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr, float exposure,
+    bool filmic, bool srgb);
+void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-void resize_image(image4f& res, const image4f& img, const vec2i& size);
-void resize_image(image4f& res, const image4f& img);
+void resize_image(
+    image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
+void resize_image(image<vec4f>& res, const image<vec4f>& img);
 
 }  // namespace yocto
 
@@ -199,48 +196,49 @@ namespace yocto {
 
 // Make example images in linear color space. Takes as input images allocated
 // to the desired size and fill the pixel with expected values.
-void make_grid_image(image4f& img, int tile = 8,
+void make_grid_image(image<vec4f>& img, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
-void make_checker_image(image4f& img, int tile = 8,
+void make_checker_image(image<vec4f>& img, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
-void make_bumpdimple_image(image4f& img, int tile = 8);
+void make_bumpdimple_image(image<vec4f>& img, int tile = 8);
 void make_ramp_image(
-    image4f& img, const vec4f& c0, const vec4f& c1, float srgb = false);
-void make_gammaramp_image(image4f& img);
-void make_uvramp_image(image4f& img);
-void make_uvgrid_image(image4f& img, int tile = 8, bool colored = true);
-void make_blackbodyramp_image(image4f& img, float start_temperature = 1000,
+    image<vec4f>& img, const vec4f& c0, const vec4f& c1, float srgb = false);
+void make_gammaramp_image(image<vec4f>& img);
+void make_uvramp_image(image<vec4f>& img);
+void make_uvgrid_image(image<vec4f>& img, int tile = 8, bool colored = true);
+void make_blackbodyramp_image(image<vec4f>& img, float start_temperature = 1000,
     float end_temperature = 12000);
 
 // Comvert a bump map to a normal map. All linear color spaces.
-void bump_to_normal_map(image4f& norm, const image4f& img, float scale = 1);
+void bump_to_normal_map(
+    image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
 // disabled with has_sun. The sun parameters can be slightly modified by
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
-void make_sunsky_image(image4f& img, float sun_angle, float turbidity = 3,
+void make_sunsky_image(image<vec4f>& img, float sun_angle, float turbidity = 3,
     bool has_sun = false, float sun_intensity = 1.0f, float sun_temperature = 0,
     const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
 // Make an image of multiple lights.
-void make_lights_image(image4f& img, const vec3f& le = {1, 1, 1},
+void make_lights_image(image<vec4f>& img, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-void make_noise_image(image4f& img, float scale = 1, bool wrap = true);
-void make_fbm_image(image4f& img, float scale = 1, float lacunarity = 2,
+void make_noise_image(image<vec4f>& img, float scale = 1, bool wrap = true);
+void make_fbm_image(image<vec4f>& img, float scale = 1, float lacunarity = 2,
     float gain = 0.5f, int octaves = 6, bool wrap = true);
-void make_ridge_image(image4f& img, float scale = 1, float lacunarity = 2,
+void make_ridge_image(image<vec4f>& img, float scale = 1, float lacunarity = 2,
     float gain = 0.5f, float offset = 1.0f, int octaves = 6, bool wrap = true);
-void make_turbulence_image(image4f& img, float scale = 1, float lacunarity = 2,
-    float gain = 0.5f, int octaves = 6, bool wrap = true);
+void make_turbulence_image(image<vec4f>& img, float scale = 1,
+    float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 // Add a border to an image
-void add_image_border(image4f& img, int border_width = 2,
+void add_image_border(image<vec4f>& img, int border_width = 2,
     const vec4f& border_color = {0, 0, 0, 1});
 
 }  // namespace yocto

@@ -103,14 +103,14 @@ struct yocto_camera {
 // conversion can be disabled with `ldr_as_linear` for example to render
 // normal maps.
 struct yocto_texture {
-    string  name             = "";
-    string  filename         = "";
-    image4f hdr_image        = {};
-    image4b ldr_image        = {};
-    bool    clamp_to_edge    = false;
-    bool    no_interpolation = false;
-    float   height_scale     = 1;
-    bool    ldr_as_linear    = false;
+    string       name             = "";
+    string       filename         = "";
+    image<vec4f> hdr_image        = {};
+    image<vec4b> ldr_image        = {};
+    bool         clamp_to_edge    = false;
+    bool         no_interpolation = false;
+    float        height_scale     = 1;
+    bool         ldr_as_linear    = false;
 };
 
 // Volumetric texture containing a float only volume data. See texture

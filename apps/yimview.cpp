@@ -41,13 +41,13 @@ struct image_stats {
 
 struct app_image {
     // original data
-    string  filename = "";
-    string  outname  = "";
-    string  name     = "";
-    image4f img      = {};
+    string       filename = "";
+    string       outname  = "";
+    string       name     = "";
+    image<vec4f> img      = {};
 
     // diplay image
-    image4f        display = {};
+    image<vec4f>   display = {};
     opengl_texture gl_txt  = {};
 
     // image stats
@@ -139,11 +139,11 @@ void load_image_async(app_image& img) {
 void save_image_async(app_image& img) {
     try {
         if (!is_hdr_filename(img.outname)) {
-            auto ldr = image4b{};
+            auto ldr = image<vec4b>{};
             float_to_byte(ldr, img.display);
             save_image(img.outname, ldr);
         } else {
-            auto aux = image4f{};
+            auto aux = image<vec4f>{};
             srgb_to_linear(aux, img.display);
             save_image(img.outname, aux);
         }
