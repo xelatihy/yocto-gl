@@ -28,7 +28,6 @@
 
 #include "yocto_sceneio.h"
 #include "yocto_imageio.h"
-#include "yocto_json.h"
 #include "yocto_obj.h"
 #include "yocto_pbrt.h"
 #include "yocto_random.h"
@@ -38,6 +37,7 @@
 #include "ext/happly.h"
 #define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
+#include "ext/json.hpp"
 #include "ext/sajson.h"
 
 #include <array>
@@ -45,6 +45,72 @@
 #include <cstdlib>
 #include <memory>
 #include <regex>
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using nlohmann::json;
+using std::unique_ptr;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON SUPPORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load a JSON object
+inline void load_json(const string& filename, json& js) {
+    auto text = ""s;
+    load_text(filename, text);
+    js = json::parse(text);
+}
+
+// Save a JSON object
+inline void save_json(const string& filename, const json& js) {
+    // we have to use streams here since the json library is faster with them
+    save_text(filename, js.dump(4));
+}
+
+template <typename T, int N>
+inline void to_json(json& js, const vec<T, N>& val) {
+    nlohmann::to_json(js, (const std::array<T, N>&)val);
+}
+template <typename T, int N>
+inline void from_json(const json& js, vec<T, N>& val) {
+    nlohmann::from_json(js, (std::array<T, N>&)val);
+}
+
+template <typename T, int N>
+inline void to_json(json& js, const frame<T, N>& val) {
+    nlohmann::to_json(js, (const std::array<T, N*(N + 1)>&)val);
+}
+template <typename T, int N>
+inline void from_json(const json& js, frame<T, N>& val) {
+    nlohmann::from_json(js, (std::array<T, N*(N + 1)>&)val);
+}
+
+template <typename T, int N, int M>
+inline void to_json(json& js, const mat<T, N, M>& val) {
+    nlohmann::to_json(js, (const std::array<T, N * M>&)val);
+}
+template <typename T, int N, int M>
+inline void from_json(const json& js, mat<T, N, M>& val) {
+    nlohmann::from_json(js, (std::array<T, N * M>&)val);
+}
+
+template <typename T, int N>
+inline void to_json(json& js, const bbox<T, N>& val) {
+    nlohmann::from_json(js, (std::array<T, N * 2>&)val);
+}
+template <typename T, int N>
+inline void from_json(const json& js, bbox<T, N>& val) {
+    nlohmann::to_json(js, (const std::array<T, N * 2>&)val);
+}
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // FILE UTILITIES
