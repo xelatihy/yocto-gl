@@ -1432,8 +1432,8 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // intersect next point
-        auto next_point = trace_ray_with_opacity(
-            scene, bvh, point.position, next_direction, rng, options.max_bounces);
+        auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
+            next_direction, rng, options.max_bounces);
 
         radiance += weight * next_point.emission;
         if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
@@ -1508,8 +1508,8 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
 
         // intersect next point
-        auto next_point = trace_ray_with_opacity(
-            scene, bvh, point.position, next_direction, rng, options.max_bounces);
+        auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
+            next_direction, rng, options.max_bounces);
         radiance += weight * next_brdf_cosine * next_point.emission /
                     next_direction_pdf;
         if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
@@ -1583,8 +1583,8 @@ vec4f trace_volnaive(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // intersect next point
-        auto next_point = trace_ray_with_opacity(
-            scene, bvh, point.position, next_direction, rng, options.max_bounces);
+        auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
+            next_direction, rng, options.max_bounces);
         radiance += weight * next_brdf_cosine * next_point.emission /
                     next_direction_pdf;
         if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
@@ -1651,8 +1651,8 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
 
         // intersect next point
-        auto next_point = trace_ray_with_opacity(
-            scene, bvh, point.position, next_direction, rng, options.max_bounces);
+        auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
+            next_direction, rng, options.max_bounces);
         radiance += weight * next_brdf_cosine * next_point.emission /
                     next_direction_pdf;
         if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
@@ -1733,14 +1733,14 @@ vec4f trace_split(const yocto_scene& scene, const bvh_scene& bvh,
         // intersect points
         auto next_point = trace_point{}, light_point = trace_point{};
         if (next_direction_pdf > 0 && next_brdf_cosine != zero3f) {
-            next_point = trace_ray_with_opacity(
-                scene, bvh, point.position, next_direction, rng, options.max_bounces);
+            next_point = trace_ray_with_opacity(scene, bvh, point.position,
+                next_direction, rng, options.max_bounces);
             radiance += weight * next_brdf_cosine * next_point.emission /
                         next_direction_pdf;
         }
         if (light_direction_pdf > 0 && light_brdf_cosine != zero3f) {
-            light_point = trace_ray_with_opacity(
-                scene, bvh, point.position, light_direction, rng, options.max_bounces);
+            light_point = trace_ray_with_opacity(scene, bvh, point.position,
+                light_direction, rng, options.max_bounces);
             radiance += weight * light_brdf_cosine * light_point.emission /
                         light_direction_pdf;
         }
@@ -1787,9 +1787,9 @@ vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // False color rendering
-vec4f trace_falsecolor(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, const trace_image_options& options) {
+vec4f trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, const trace_image_options& options) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, options.max_bounces);
@@ -1912,12 +1912,12 @@ void trace_image_region(image4f& image, trace_state& state,
             for (auto s = 0; s < num_samples; s++) {
                 if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
-                auto ray = sample_camera_ray(camera, {i, j}, image.size(),
+                auto ray    = sample_camera_ray(camera, {i, j}, image.size(),
                     get_random_vec2f(pixel.rng), get_random_vec2f(pixel.rng));
-                auto sample = sampler(scene, bvh, lights, ray.o, ray.d,
-                    pixel.rng, options);
+                auto sample = sampler(
+                    scene, bvh, lights, ray.o, ray.d, pixel.rng, options);
                 auto radiance = sample.xyz;
-                auto hit = sample.w > 0;
+                auto hit      = sample.w > 0;
                 if (!isfinite(radiance)) {
                     // printf("NaN detected\n");
                     radiance = zero3f;
