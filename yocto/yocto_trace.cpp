@@ -1765,6 +1765,9 @@ vec4f trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
             if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
             return {emission * abs(dot(outgoing, point.normal)), 1};
         }
+        default: {
+            return zero4f;
+        }
     }
 }
 

@@ -1725,9 +1725,8 @@ inline void add_node(geodesic_solver& solver, const vec3f& position) {
 }
 
 inline void add_directed_arc(geodesic_solver& solver, int from, int to) {
-    assert(from >= 0 and from < solver.graph.size());
-    assert(to >= 0 and to < solver.graph.size());
-
+    // assert(from >= 0 && from < solver.graph.size());
+    // assert(to >= 0 && to < solver.graph.size());
     float len = length(solver.positions[from] - solver.positions[to]);
     solver.graph[from].push_back({to, len});
 }
@@ -1921,7 +1920,7 @@ inline void compute_geodesic_distances(geodesic_solver& graph,
     // Small Label Fisrt + Large Label Last
     // https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
     auto num_nodes = (int)graph.graph.size();
-    assert(distances.size() == num_nodes);
+    // assert(distances.size() == num_nodes);
     auto visited = vector<bool>(num_nodes, false);
 
     // setup queue
