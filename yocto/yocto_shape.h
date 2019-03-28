@@ -372,48 +372,35 @@ inline void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
 namespace yocto {
 
 // Subdivide lines by splitting each line in half.
-inline void subdivide_lines(vector<vec2i>& lines, vector<float>& vert);
-inline void subdivide_lines(vector<vec2i>& lines, vector<vec2f>& vert);
-inline void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& vert);
-inline void subdivide_lines(vector<vec2i>& lines, vector<vec4f>& vert);
+template<typename T>
+inline void subdivide_lines(vector<vec2i>& lines, vector<T>& vert);
 inline void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
     vector<float>& radius);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
-inline void subdivide_triangles(vector<vec3i>& triangles, vector<float>& vert);
-inline void subdivide_triangles(vector<vec3i>& triangles, vector<vec2f>& vert);
-inline void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& vert);
-inline void subdivide_triangles(vector<vec3i>& triangles, vector<vec4f>& vert);
+template<typename T>
+inline void subdivide_triangles(vector<vec3i>& triangles, vector<T>& vert);
 inline void subdivide_triangles(vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, vector<vec4f>& colors, vector<float>& radius);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
-inline void subdivide_quads(vector<vec4i>& quads, vector<float>& vert);
-inline void subdivide_quads(vector<vec4i>& quads, vector<vec2f>& vert);
-inline void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& vert);
-inline void subdivide_quads(vector<vec4i>& quads, vector<vec4f>& vert);
+template<typename T>
+inline void subdivide_quads(vector<vec4i>& quads, vector<T>& vert);
 inline void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
     vector<float>& radius);
 // Subdivide beziers by splitting each segment in two.
-inline void subdivide_beziers(vector<vec4i>& beziers, vector<float>& vert);
-inline void subdivide_beziers(vector<vec4i>& beziers, vector<vec2f>& vert);
-inline void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& vert);
-inline void subdivide_beziers(vector<vec4i>& beziers, vector<vec4f>& vert);
+template<typename T>
+inline void subdivide_beziers(vector<vec4i>& beziers, vector<T>& vert);
 inline void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
     vector<float>& radius);
 // Subdivide quads using Carmull-Clark subdivision rules.
+template<typename T>
 inline void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<float>& vert, bool lock_boundary = false);
-inline void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec2f>& vert, bool lock_boundary = false);
-inline void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec3f>& vert, bool lock_boundary = false);
-inline void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec4f>& vert, bool lock_boundary = false);
+    vector<vec4i>& quads, vector<T>& vert, bool lock_boundary = false);
 inline void subdivide_catmullclark(vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, vector<vec4f>& colors, vector<float>& radius);
@@ -1229,7 +1216,7 @@ namespace yocto {
 
 // Subdivide lines.
 template <typename T>
-inline void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert) {
+inline void subdivide_lines(vector<vec2i>& lines, vector<T>& vert) {
     // early exit
     if (lines.empty() || vert.empty()) return;
     // sizes
@@ -1253,22 +1240,9 @@ inline void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert) {
     swap(tvert, vert);
 }
 
-inline void subdivide_lines(vector<vec2i>& lines, vector<float>& vert) {
-    return subdivide_lines_impl(lines, vert);
-}
-inline void subdivide_lines(vector<vec2i>& lines, vector<vec2f>& vert) {
-    return subdivide_lines_impl(lines, vert);
-}
-inline void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& vert) {
-    return subdivide_lines_impl(lines, vert);
-}
-inline void subdivide_lines(vector<vec2i>& lines, vector<vec4f>& vert) {
-    return subdivide_lines_impl(lines, vert);
-}
-
 // Subdivide triangle.
 template <typename T>
-inline void subdivide_triangles_impl(
+inline void subdivide_triangles(
     vector<vec3i>& triangles, vector<T>& vert) {
     // early exit
     if (triangles.empty() || vert.empty()) return;
@@ -1306,22 +1280,9 @@ inline void subdivide_triangles_impl(
     swap(tvert, vert);
 }
 
-inline void subdivide_triangles(vector<vec3i>& triangles, vector<float>& vert) {
-    subdivide_triangles_impl(triangles, vert);
-}
-inline void subdivide_triangles(vector<vec3i>& triangles, vector<vec2f>& vert) {
-    subdivide_triangles_impl(triangles, vert);
-}
-inline void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& vert) {
-    subdivide_triangles_impl(triangles, vert);
-}
-inline void subdivide_triangles(vector<vec3i>& triangles, vector<vec4f>& vert) {
-    subdivide_triangles_impl(triangles, vert);
-}
-
 // Subdivide quads.
 template <typename T>
-inline void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert) {
+inline void subdivide_quads(vector<vec4i>& quads, vector<T>& vert) {
     // early exit
     if (quads.empty() || vert.empty()) return;
     // get edges
@@ -1379,22 +1340,9 @@ inline void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert) {
     swap(tvert, vert);
 }
 
-inline void subdivide_quads(vector<vec4i>& quads, vector<float>& vert) {
-    subdivide_quads_impl(quads, vert);
-}
-inline void subdivide_quads(vector<vec4i>& quads, vector<vec2f>& vert) {
-    subdivide_quads_impl(quads, vert);
-}
-inline void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& vert) {
-    subdivide_quads_impl(quads, vert);
-}
-inline void subdivide_quads(vector<vec4i>& quads, vector<vec4f>& vert) {
-    subdivide_quads_impl(quads, vert);
-}
-
 // Subdivide beziers.
 template <typename T>
-inline void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert) {
+inline void subdivide_beziers(vector<vec4i>& beziers, vector<T>& vert) {
     // early exit
     if (beziers.empty() || vert.empty()) return;
     // get edges
@@ -1426,22 +1374,9 @@ inline void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert) {
     swap(tvert, vert);
 }
 
-inline void subdivide_beziers(vector<vec4i>& beziers, vector<float>& vert) {
-    subdivide_beziers_impl(beziers, vert);
-}
-inline void subdivide_beziers(vector<vec4i>& beziers, vector<vec2f>& vert) {
-    subdivide_beziers_impl(beziers, vert);
-}
-inline void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& vert) {
-    subdivide_beziers_impl(beziers, vert);
-}
-inline void subdivide_beziers(vector<vec4i>& beziers, vector<vec4f>& vert) {
-    subdivide_beziers_impl(beziers, vert);
-}
-
 // Subdivide catmullclark.
 template <typename T>
-inline void subdivide_catmullclark_impl(
+inline void subdivide_catmullclark(
     vector<vec4i>& quads, vector<T>& vert, bool lock_boundary) {
     // early exit
     if (quads.empty() || vert.empty()) return;
@@ -1564,23 +1499,6 @@ inline void subdivide_catmullclark_impl(
     // done
     swap(tquads, quads);
     swap(tvert, vert);
-}
-
-inline void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<float>& vert, bool lock_boundary) {
-    subdivide_catmullclark_impl(quads, vert, lock_boundary);
-}
-inline void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec2f>& vert, bool lock_boundary) {
-    subdivide_catmullclark_impl(quads, vert, lock_boundary);
-}
-inline void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec3f>& vert, bool lock_boundary) {
-    subdivide_catmullclark_impl(quads, vert, lock_boundary);
-}
-inline void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec4f>& vert, bool lock_boundary) {
-    subdivide_catmullclark_impl(quads, vert, lock_boundary);
 }
 
 template <typename T, typename SubdivideFunc>
