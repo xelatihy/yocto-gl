@@ -46,7 +46,6 @@
 
 #include "ext/stb_image.h"
 #include "ext/stb_image_write.h"
-#include "ext/stb_image_resize.h"
 #include "ext/tinyexr.h"
 #include "ext/json.hpp"
 
@@ -658,29 +657,6 @@ void save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
         tonemap_image(ldr, hdr, exposure, filmic, srgb);
         save_image(filename, ldr);
     }
-}
-
-// Resize image.
-void resize_image(image<vec4f>& res_img, const image<vec4f>& img) {
-    stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
-        sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
-        res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
-        STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
-        nullptr);
-}
-void resize_image(
-    image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
-    auto size = size_;
-    if (size == zero2i) {
-        throw std::invalid_argument("bad image size in resize_image");
-    }
-    if (size.y == 0) {
-        size.y = (int)round(size.x * (float)img.size().y / (float)img.size().x);
-    } else if (size.x == 0) {
-        size.x = (int)round(size.y * (float)img.size().x / (float)img.size().y);
-    }
-    res_img = {size};
-    resize_image(res_img, img);
 }
 
 }  // namespace yocto
