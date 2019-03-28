@@ -83,6 +83,9 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <string>
+#include <vector>
+#include <unordered_map>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -111,6 +114,9 @@ using std::swap;
 using std::tan;
 
 using std::array;
+using std::vector;
+using std::string;
+using std::unordered_map;
 using std::exception;
 using std::function;
 using std::invalid_argument;
@@ -118,6 +124,7 @@ using std::numeric_limits;
 using std::out_of_range;
 using std::pair;
 using std::runtime_error;
+using namespace std::literals::string_literals;
 
 }  // namespace yocto
 
