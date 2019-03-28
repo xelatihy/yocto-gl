@@ -1912,7 +1912,8 @@ void trace_image_region(image4f& image, trace_state& state,
     const image_region& region, int num_samples,
     const trace_image_options& options) {
     auto& camera  = scene.cameras.at(options.camera_id);
-    auto  sampler = get_trace_sampler_func(options.sampler_type, options.falsecolor_type);
+    auto  sampler = get_trace_sampler_func(
+        options.sampler_type, options.falsecolor_type);
     for (auto j = region.min.y; j < region.max.y; j++) {
         for (auto i = region.min.x; i < region.max.x; i++) {
             auto& pixel = get_trace_pixel(state, i, j);

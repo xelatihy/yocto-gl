@@ -472,7 +472,8 @@ int main(int argc, char* argv[]) {
         trace_sampler_type_namemap[trace_sampler_type_names[type]] =
             (trace_sampler_type)type;
     }
-    auto trace_falsecolor_type_namemap = std::map<string, trace_falsecolor_type>{};
+    auto trace_falsecolor_type_namemap =
+        std::map<string, trace_falsecolor_type>{};
     for (auto type = 0; type < trace_falsecolor_type_names.size(); type++) {
         trace_falsecolor_type_namemap[trace_falsecolor_type_names[type]] =
             (trace_falsecolor_type)type;
@@ -492,8 +493,8 @@ int main(int argc, char* argv[]) {
             "--tracer,-t", app.trace_options.sampler_type, "Tracer type.")
         ->transform(CLI::IsMember(trace_sampler_type_namemap));
     parser
-        .add_option(
-            "--falsecolor,-F", app.trace_options.falsecolor_type, "Tracer false color type.")
+        .add_option("--falsecolor,-F", app.trace_options.falsecolor_type,
+            "Tracer false color type.")
         ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
     parser.add_option("--nbounces", app.trace_options.max_bounces,
         "Maximum number of bounces.");
