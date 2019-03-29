@@ -281,6 +281,9 @@ using vec1i = vec<int, 1>;
 using vec2i = vec<int, 2>;
 using vec3i = vec<int, 3>;
 using vec4i = vec<int, 4>;
+using vec1b = vec<byte, 1>;
+using vec2b = vec<byte, 2>;
+using vec3b = vec<byte, 3>;
 using vec4b = vec<byte, 4>;
 
 // Zero vector constants.
@@ -292,6 +295,9 @@ constexpr const auto zero1i = vec1i{0};
 constexpr const auto zero2i = vec2i{0, 0};
 constexpr const auto zero3i = vec3i{0, 0, 0};
 constexpr const auto zero4i = vec4i{0, 0, 0, 0};
+constexpr const auto zero1b = vec1b{0};
+constexpr const auto zero2b = vec2b{0, 0};
+constexpr const auto zero3b = vec3b{0, 0, 0};
 constexpr const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Vector comparison operations.

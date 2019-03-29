@@ -242,11 +242,16 @@ inline void tonemap_image_region(image<T>& ldr, const image_region& region,
 }
 
 // Resize an image.
-template <typename T1, typename T2>
-inline void resize_image(
-    image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
-template <typename T1, typename T2>
-inline void resize_image(image<vec4f>& res, const image<vec4f>& img);
+template <typename T, int N>
+inline void resize_image(image<vec<T, N>>& res, const image<vec<T, N>>& img);
+inline void resize_image(image<float>& res, const image<float>& img) {
+    return resize_image((image<vec1f>&)res, (const image<vec1f>&)img);
+}
+inline void resize_image(image<byte>& res, const image<byte>& img) {
+    return resize_image((image<vec1b>&)res, (const image<vec1b>&)img);
+}
+template <typename T>
+inline void resize_image(image<T>& res, const image<T>& img, const vec2i& size);
 
 }  // namespace yocto
 
@@ -689,15 +694,28 @@ inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
 namespace yocto {
 
 // Resize image.
-inline void resize_image(image<vec4f>& res_img, const image<vec4f>& img) {
-    stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
-        sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
-        res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
-        STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
-        nullptr);
+template <typename T, int N>
+inline void resize_image(image<vec<T, N>>& res_img, const image<vec<T, N>>& img) {
+    auto alpha = (N == 2 || N == 4) ? N-1 : -1;
+    if constexpr(std::is_same_v<T, float>) {
+        stbir_resize_float_generic((T*)img.data(), img.size().x, img.size().y,
+            sizeof(vec<T, N>) * img.size().x, (T*)res_img.data(), res_img.size().x,
+            res_img.size().y, sizeof(vec<T, N>) * res_img.size().x, N, alpha, 0,
+            STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
+            nullptr);
+    } else if constexpr(std::is_same_v<T, byte>) {
+        stbir_resize_uint8_generic((T*)img.data(), img.size().x, img.size().y,
+            sizeof(vec<T, N>) * img.size().x, (T*)res_img.data(), res_img.size().x,
+            res_img.size().y, sizeof(vec<T, N>) * res_img.size().x, N, alpha, 0,
+            STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
+            nullptr);
+    } else {
+        throw runtime_error("type not supported");
+    }
 }
+template<typename T>
 inline void resize_image(
-    image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
+    image<T>& res_img, const image<T>& img, const vec2i& size_) {
     auto size = size_;
     if (size == zero2i) {
         throw std::invalid_argument("bad image size in resize_image");
