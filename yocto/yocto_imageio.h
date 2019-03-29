@@ -54,28 +54,31 @@ namespace yocto {
 bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 1-4 channels float image in linear color space.
-template<int N>
+template <int N>
 void load_image(const string& filename, image<vec<float, N>>& img);
-template<int N>
+template <int N>
 void save_image(const string& filename, const image<vec<float, N>>& img);
-template<int N>
-void load_image_from_memory(const byte* data, int data_size, image<vec<float, N>>& img);
+template <int N>
+void load_image_from_memory(
+    const byte* data, int data_size, image<vec<float, N>>& img);
 
 // Loads/saves a 1-4 byte image in sRGB color space.
-template<int N>
+template <int N>
 void load_image(const string& filename, image<vec<byte, N>>& img);
-template<int N>
+template <int N>
 void save_image(const string& filename, const image<vec<byte, N>>& img);
-template<int N>
-void load_image_from_memory(const byte* data, int data_size, image<vec<byte, N>>& img);
-template<int N>
-void load_image_from_memory(const byte* data, int data_size, image<vec<byte, N>>& img);
+template <int N>
+void load_image_from_memory(
+    const byte* data, int data_size, image<vec<byte, N>>& img);
+template <int N>
+void load_image_from_memory(
+    const byte* data, int data_size, image<vec<byte, N>>& img);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-template<int N>
-inline void save_tonemapped_image(const string& filename, const image<vec<float, N>>& hdr,
-    float exposure, bool filmic, bool srgb) {
+template <int N>
+inline void save_tonemapped_image(const string& filename,
+    const image<vec<float, N>>& hdr, float exposure, bool filmic, bool srgb) {
     if (is_hdr_filename(filename)) {
         save_image(filename, hdr);
     } else {

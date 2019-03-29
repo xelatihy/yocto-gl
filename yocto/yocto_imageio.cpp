@@ -286,7 +286,7 @@ bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
 }
 
 // load pfm image
-template<int N>
+template <int N>
 void load_pfm_image(const string& filename, image<vec<float, N>>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, N);
@@ -296,7 +296,7 @@ void load_pfm_image(const string& filename, image<vec<float, N>>& img) {
     img = image{{width, height}, (const vec<float, N>*)pixels};
     delete[] pixels;
 }
-template<int N>
+template <int N>
 void save_pfm_image(const string& filename, const image<vec<float, N>>& img) {
     if (!save_pfm(filename.c_str(), img.size().x, img.size().y, N,
             (float*)img.data())) {
@@ -320,10 +320,10 @@ static const char* get_tinyexr_error(int error) {
     }
 }
 
-template<int N>
+template <int N>
 void load_exr_image(const string& filename, image<vec<float, N>>& img) {
     // TODO
-    if(N != 4) throw runtime_error("bad number of channels");
+    if (N != 4) throw runtime_error("bad number of channels");
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
     if (auto error = LoadEXR(
@@ -338,10 +338,10 @@ void load_exr_image(const string& filename, image<vec<float, N>>& img) {
     img = image{{width, height}, (const vec<float, N>*)pixels};
     free(pixels);
 }
-template<int N>
+template <int N>
 void save_exr_image(const string& filename, const image<vec<float, N>>& img) {
     // TODO
-    if(N != 4) throw runtime_error("bad number of channels");
+    if (N != 4) throw runtime_error("bad number of channels");
     if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, N,
             filename.c_str())) {
         throw imageio_error("error saving image " + filename);
@@ -349,7 +349,7 @@ void save_exr_image(const string& filename, const image<vec<float, N>>& img) {
 }
 
 // load an image using stbi library
-template<int N>
+template <int N>
 void load_stb_image(const string& filename, image<vec<byte, N>>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, N);
@@ -359,7 +359,7 @@ void load_stb_image(const string& filename, image<vec<byte, N>>& img) {
     img = image{{width, height}, (const vec<byte, N>*)pixels};
     free(pixels);
 }
-template<int N>
+template <int N>
 void load_stb_image(const string& filename, image<vec<float, N>>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, N);
@@ -371,35 +371,35 @@ void load_stb_image(const string& filename, image<vec<float, N>>& img) {
 }
 
 // save an image with stbi
-template<int N>
+template <int N>
 void save_png_image(const string& filename, const image<vec<byte, N>>& img) {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, N,
             img.data(), img.size().x * 4)) {
         throw imageio_error("error saving image " + filename);
     }
 }
-template<int N>
+template <int N>
 void save_jpg_image(const string& filename, const image<vec<byte, N>>& img) {
     if (!stbi_write_jpg(
             filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
         throw imageio_error("error saving image " + filename);
     }
 }
-template<int N>
+template <int N>
 void save_tga_image(const string& filename, const image<vec<byte, N>>& img) {
     if (!stbi_write_tga(
             filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         throw imageio_error("error saving image " + filename);
     }
 }
-template<int N>
+template <int N>
 void save_bmp_image(const string& filename, const image<vec<byte, N>>& img) {
     if (!stbi_write_bmp(
             filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         throw imageio_error("error saving image " + filename);
     }
 }
-template<int N>
+template <int N>
 void save_hdr_image(const string& filename, const image<vec<float, N>>& img) {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data())) {
@@ -408,7 +408,7 @@ void save_hdr_image(const string& filename, const image<vec<float, N>>& img) {
 }
 
 // load an image using stbi library
-template<int N>
+template <int N>
 void load_stb_image_from_memory(
     const byte* data, int data_size, image<vec<byte, N>>& img) {
     auto width = 0, height = 0, ncomp = 0;
@@ -420,7 +420,7 @@ void load_stb_image_from_memory(
     img = image{{width, height}, (const vec<byte, N>*)pixels};
     free(pixels);
 }
-template<int N>
+template <int N>
 void load_stb_image_from_memory(
     const byte* data, int data_size, image<vec<float, N>>& img) {
     auto width = 0, height = 0, ncomp = 0;
@@ -513,9 +513,9 @@ void apply_json_procedural(const json& js, image<vec4b>& img) {
 }
 
 // load a JSON image
-template<int N>
+template <int N>
 void load_json_image(const string& filename, image<vec<float, N>>& img) {
-    if constexpr(N == 4) {
+    if constexpr (N == 4) {
         auto js = json();
         load_json(filename, js);
         apply_json_procedural(js, img);
@@ -527,9 +527,9 @@ void load_json_image(const string& filename, image<vec<float, N>>& img) {
         from_rgba(img, img_rgba);
     }
 }
-template<int N>
+template <int N>
 void load_json_image(const string& filename, image<vec<byte, N>>& img) {
-    if constexpr(N == 4) {
+    if constexpr (N == 4) {
         auto js = json();
         load_json(filename, js);
         apply_json_procedural(js, img);
@@ -549,7 +549,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an hdr image.
-template<int N>
+template <int N>
 void load_image(const string& filename, image<vec<float, N>>& img) {
     auto ext = get_extension(filename);
     if (ext == "exr" || ext == "EXR") {
@@ -586,7 +586,7 @@ void load_image(const string& filename, image<vec<float, N>>& img) {
 }
 
 // Saves an hdr image.
-template<int N>
+template <int N>
 void save_image(const string& filename, const image<vec<float, N>>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
@@ -618,16 +618,15 @@ void save_image(const string& filename, const image<vec<float, N>>& img) {
     }
 }
 
-    // Loads an hdr image.
-    template<int N>
-    void load_image_from_memory(
-                                const byte* data, int data_size, image<vec<float, N>>& img) {
-        load_stb_image_from_memory(data, data_size, img);
-    }
-    
+// Loads an hdr image.
+template <int N>
+void load_image_from_memory(
+    const byte* data, int data_size, image<vec<float, N>>& img) {
+    load_stb_image_from_memory(data, data_size, img);
+}
 
 // Loads an hdr image.
-template<int N>
+template <int N>
 void load_image(const string& filename, image<vec<byte, N>>& img) {
     auto ext = get_extension(filename);
     if (ext == "exr" || ext == "EXR") {
@@ -661,7 +660,7 @@ void load_image(const string& filename, image<vec<byte, N>>& img) {
 }
 
 // Saves an ldr image.
-template<int N>
+template <int N>
 void save_image(const string& filename, const image<vec<byte, N>>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
@@ -690,9 +689,9 @@ void save_image(const string& filename, const image<vec<byte, N>>& img) {
 }
 
 // Loads an hdr image.
-template<int N>
+template <int N>
 void load_image_from_memory(
-                            const byte* data, int data_size, image<vec<byte, N>>& img) {
+    const byte* data, int data_size, image<vec<byte, N>>& img) {
     load_stb_image_from_memory(data, data_size, img);
 }
 
@@ -701,26 +700,42 @@ template void load_image<1>(const string& filename, image<vec<float, 1>>& img);
 template void load_image<2>(const string& filename, image<vec<float, 2>>& img);
 template void load_image<3>(const string& filename, image<vec<float, 3>>& img);
 template void load_image<4>(const string& filename, image<vec<float, 4>>& img);
-template void save_image<1>(const string& filename, const image<vec<float, 1>>& img);
-template void save_image<2>(const string& filename, const image<vec<float, 2>>& img);
-template void save_image<3>(const string& filename, const image<vec<float, 3>>& img);
-template void save_image<4>(const string& filename, const image<vec<float, 4>>& img);
-template void load_image_from_memory<1>(const byte* data, int data_size, image<vec<float, 1>>& img);
-template void load_image_from_memory<2>(const byte* data, int data_size, image<vec<float, 2>>& img);
-template void load_image_from_memory<3>(const byte* data, int data_size, image<vec<float, 3>>& img);
-template void load_image_from_memory<4>(const byte* data, int data_size, image<vec<float, 4>>& img);
+template void save_image<1>(
+    const string& filename, const image<vec<float, 1>>& img);
+template void save_image<2>(
+    const string& filename, const image<vec<float, 2>>& img);
+template void save_image<3>(
+    const string& filename, const image<vec<float, 3>>& img);
+template void save_image<4>(
+    const string& filename, const image<vec<float, 4>>& img);
+template void load_image_from_memory<1>(
+    const byte* data, int data_size, image<vec<float, 1>>& img);
+template void load_image_from_memory<2>(
+    const byte* data, int data_size, image<vec<float, 2>>& img);
+template void load_image_from_memory<3>(
+    const byte* data, int data_size, image<vec<float, 3>>& img);
+template void load_image_from_memory<4>(
+    const byte* data, int data_size, image<vec<float, 4>>& img);
 template void load_image<1>(const string& filename, image<vec<byte, 1>>& img);
 template void load_image<2>(const string& filename, image<vec<byte, 2>>& img);
 template void load_image<3>(const string& filename, image<vec<byte, 3>>& img);
 template void load_image<4>(const string& filename, image<vec<byte, 4>>& img);
-template void save_image<1>(const string& filename, const image<vec<byte, 1>>& img);
-template void save_image<2>(const string& filename, const image<vec<byte, 2>>& img);
-template void save_image<3>(const string& filename, const image<vec<byte, 3>>& img);
-template void save_image<4>(const string& filename, const image<vec<byte, 4>>& img);
-template void load_image_from_memory<1>(const byte* data, int data_size, image<vec<byte, 1>>& img);
-template void load_image_from_memory<2>(const byte* data, int data_size, image<vec<byte, 2>>& img);
-template void load_image_from_memory<3>(const byte* data, int data_size, image<vec<byte, 3>>& img);
-template void load_image_from_memory<4>(const byte* data, int data_size, image<vec<byte, 4>>& img);
+template void save_image<1>(
+    const string& filename, const image<vec<byte, 1>>& img);
+template void save_image<2>(
+    const string& filename, const image<vec<byte, 2>>& img);
+template void save_image<3>(
+    const string& filename, const image<vec<byte, 3>>& img);
+template void save_image<4>(
+    const string& filename, const image<vec<byte, 4>>& img);
+template void load_image_from_memory<1>(
+    const byte* data, int data_size, image<vec<byte, 1>>& img);
+template void load_image_from_memory<2>(
+    const byte* data, int data_size, image<vec<byte, 2>>& img);
+template void load_image_from_memory<3>(
+    const byte* data, int data_size, image<vec<byte, 3>>& img);
+template void load_image_from_memory<4>(
+    const byte* data, int data_size, image<vec<byte, 4>>& img);
 
 }  // namespace yocto
 
