@@ -161,7 +161,7 @@ struct pbrt_film_image {
     int    yresolution        = 480;
     bbox2f cropwindow         = {{0, 0}, {1, 1}};
     float  scale              = 1;
-    float  maxsampleluminance = type_max<float>();
+    float  maxsampleluminance = type_max<float>;
     float  diagonal           = 35;
     string filename           = "pbrt.exr";
 };
@@ -199,21 +199,21 @@ using pbrt_filter = variant<pbrt_filter_box, pbrt_filter_gaussian,
 struct pbrt_integrator_path {
     enum struct lightsamplestrategy_t { uniform, power, spatial };
     int    maxdepth    = 5;
-    bbox2i pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
     float  rrthreshold = 1;
     lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::spatial;
 };
 struct pbrt_integrator_volpath {
     enum struct lightsamplestrategy_t { uniform, power, spatial };
     int    maxdepth    = 5;
-    bbox2i pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
     float  rrthreshold = 1;
     lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::spatial;
 };
 struct pbrt_integrator_bdpt {
     enum struct lightsamplestrategy_t { uniform, power, spatial };
     int    maxdepth    = 5;
-    bbox2i pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
     lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::power;
     bool                  visualizestrategies = false;
     bool                  visualizeweights    = false;
@@ -222,11 +222,11 @@ struct pbrt_integrator_directlighting {
     enum struct strategy_t { all, one };
     strategy_t strategy    = strategy_t::all;
     int        maxdepth    = 5;
-    bbox2i     pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    bbox2i     pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
 };
 struct pbrt_integrator_mlt {
     int    maxdepth             = 5;
-    bbox2i pixelbounds          = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    bbox2i pixelbounds          = {{0, 0}, {type_max<int>, type_max<int>}};
     int    bootstrapsamples     = 100000;
     int    chains               = 1000;
     int    mutationsperpixel    = 100;
@@ -235,7 +235,7 @@ struct pbrt_integrator_mlt {
 };
 struct pbrt_integrator_sppm {
     int    maxdepth            = 5;
-    bbox2i pixelbounds         = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    bbox2i pixelbounds         = {{0, 0}, {type_max<int>, type_max<int>}};
     int    iterations          = 64;
     int    photonsperiteration = -1;
     int    imagewritefrequency = pow2(31);
@@ -243,7 +243,7 @@ struct pbrt_integrator_sppm {
 };
 struct pbrt_integrator_whitted {
     int    maxdepth    = 5;
-    bbox2i pixelbounds = {{0, 0}, {type_max<int>(), type_max<int>()}};
+    bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
 };
 using pbrt_integrator = variant<pbrt_integrator_path, pbrt_integrator_volpath,
     pbrt_integrator_bdpt, pbrt_integrator_directlighting, pbrt_integrator_mlt,

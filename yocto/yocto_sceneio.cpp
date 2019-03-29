@@ -604,11 +604,14 @@ void from_json_procedural(
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "bump") {
-        make_bumpdimple_image(value.hdr_image, js.value("tile", 8));
+        make_bumpdimple_image(value.hdr_image, js.value("tile", 8),
+            js.value("c0", vec4f{0, 0, 0, 1}),
+            js.value("c1", vec4f{1, 1, 1, 1}));
     } else if (type == "uvramp") {
         make_uvramp_image(value.hdr_image);
     } else if (type == "gammaramp") {
-        make_gammaramp_image(value.hdr_image);
+        make_gammaramp_image(value.hdr_image, js.value("c0", vec4f{0, 0, 0, 1}),
+            js.value("c1", vec4f{1, 1, 1, 1}));
     } else if (type == "blackbodyramp") {
         make_blackbodyramp_image(value.hdr_image);
     } else if (type == "uvgrid") {
@@ -620,19 +623,24 @@ void from_json_procedural(
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr = true;
     } else if (type == "noise") {
-        make_noise_image(
-            value.hdr_image, js.value("scale", 1.0f), js.value("wrap", true));
+        make_noise_image(value.hdr_image, js.value("c0", vec4f{0, 0, 0, 1}),
+            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
+            js.value("wrap", true));
     } else if (type == "fbm") {
-        make_fbm_image(value.hdr_image, js.value("scale", 1.0f),
+        make_fbm_image(value.hdr_image, js.value("c0", vec4f{0, 0, 0, 1}),
+            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        make_ridge_image(value.hdr_image, js.value("scale", 1.0f),
+        make_ridge_image(value.hdr_image, js.value("c0", vec4f{0, 0, 0, 1}),
+            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        make_turbulence_image(value.hdr_image, js.value("scale", 1.0f),
+        make_turbulence_image(value.hdr_image,
+            js.value("c0", vec4f{0, 0, 0, 1}),
+            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {
@@ -932,7 +940,7 @@ void from_json_procedural(
         auto base_normals       = vector<vec3f>{};
         auto base_texturecoords = vector<vec2f>{};
         make_sphere_shape(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1);
+            base_texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1.0f);
         make_hair_shape(value.lines, value.positions, value.normals,
             value.texturecoords, value.radius,
             js.value("steps", vec2i{4, 65536}), {}, base_quads, base_positions,
@@ -942,7 +950,7 @@ void from_json_procedural(
             js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}));
     } else if (type == "hairball_interior") {
         make_sphere_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1);
+            value.texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1.0f);
     } else if (type == "suzanne") {
         make_suzanne_shape(
             value.quads, value.positions, js.value("size", 2.0f));
@@ -964,8 +972,8 @@ void from_json_procedural(
     } else if (type == "sphere_facevarying") {
         make_sphere_fvshape(value.quads_positions, value.quads_normals,
             value.quads_texturecoords, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32), js.value("size", 2),
-            js.value("uvsize", 1));
+            value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
+            js.value("uvsize", 1.0f));
     } else {
         throw std::invalid_argument("unknown procedural type " + type);
     }
@@ -3442,7 +3450,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             shape.name  = name;
             auto size   = 0.01f;
             make_sphere_shape(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, 4, size, 1);
+                shape.texturecoords, 4.0f, size, 1.0f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
             material.name     = shape.name;
@@ -3462,7 +3470,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             shape.name  = name;
             auto size   = 0.01f;
             make_sphere_shape(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, 4, size, 1);
+                shape.texturecoords, 4.0f, size, 1.0f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
             material.name     = shape.name;
@@ -3481,7 +3489,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             shape.name  = name;
             auto size   = 0.01f;
             make_sphere_shape(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, 4, size, 1);
+                shape.texturecoords, 4.0f, size, 1.0f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
             material.name     = shape.name;

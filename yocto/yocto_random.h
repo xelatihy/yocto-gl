@@ -182,128 +182,154 @@ inline void random_shuffle(vector<T>& vals, rng_state& rng) {
 namespace yocto {
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere_direction(const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_hemisphere_direction(const vec<T, 2>& ruv) {
     auto z   = ruv.y;
     auto r   = sqrt(clamp01(1 - z * z));
-    auto phi = 2 * pif * ruv.x;
+    auto phi = 2 * (T)pi * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_direction_pdf(const vec3f& direction) {
-    return (direction.z <= 0) ? 0 : 1 / (2 * pif);
+template <typename T>
+inline T sample_hemisphere_direction_pdf(const vec<T, 3>& direction) {
+    return (direction.z <= 0) ? 0 : 1 / (2 * (T)pi);
 }
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere_direction(
-    const vec3f& normal, const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_hemisphere_direction(
+    const vec<T, 3>& normal, const vec<T, 2>& ruv) {
     auto z               = ruv.y;
     auto r               = sqrt(clamp01(1 - z * z));
-    auto phi             = 2 * pif * ruv.x;
-    auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+    auto phi             = 2 * (T)pi * ruv.x;
+    auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
     return transform_direction(make_basis_fromz(normal), local_direction);
 }
-inline float sample_hemisphere_direction_pdf(
-    const vec3f& normal, const vec3f& direction) {
-    return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * pif);
+template <typename T>
+inline T sample_hemisphere_direction_pdf(
+    const vec<T, 3>& normal, const vec<T, 3>& direction) {
+    return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * (T)pi);
 }
 
 // Sample a spherical direction with uniform distribution.
-inline vec3f sample_sphere_direction(const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_sphere_direction(const vec<T, 2>& ruv) {
     auto z   = 2 * ruv.y - 1;
     auto r   = sqrt(clamp01(1 - z * z));
-    auto phi = 2 * pif * ruv.x;
+    auto phi = 2 * (T)pi * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_sphere_direction_pdf(const vec3f& w) {
-    return 1 / (4 * pif);
+template <typename T>
+inline T sample_sphere_direction_pdf(const vec<T, 3>& w) {
+    return 1 / (4 * (T)pi);
 }
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_direction_cosine(const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_hemisphere_direction_cosine(const vec<T, 2>& ruv) {
     auto z   = sqrt(ruv.y);
     auto r   = sqrt(1 - z * z);
-    auto phi = 2 * pif * ruv.x;
+    auto phi = 2 * (T)pi * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_direction_cosine_pdf(const vec3f& direction) {
-    return (direction.z <= 0) ? 0 : direction.z / pif;
+template <typename T>
+inline T sample_hemisphere_direction_cosine_pdf(const vec<T, 3>& direction) {
+    return (direction.z <= 0) ? 0 : direction.z / (T)pi;
 }
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_direction_cospower(
-    float exponent, const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_hemisphere_direction_cospower(
+    T exponent, const vec<T, 2>& ruv) {
     auto z   = pow(ruv.y, 1 / (exponent + 1));
     auto r   = sqrt(1 - z * z);
-    auto phi = 2 * pif * ruv.x;
+    auto phi = 2 * (T)pi * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_direction_cospower_pdf(
-    float exponent, const vec3f& direction) {
+template <typename T>
+inline T sample_hemisphere_direction_cospower_pdf(
+    T exponent, const vec<T, 3>& direction) {
     return (direction.z <= 0)
                ? 0
-               : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
+               : pow(direction.z, exponent) * (exponent + 1) / (2 * (T)pi);
 }
 
 // Sample a point uniformly on a disk.
-inline vec2f sample_disk_point(const vec2f& ruv) {
+template <typename T>
+inline vec<T, 2> sample_disk_point(const vec<T, 2>& ruv) {
     auto r   = sqrt(ruv.y);
-    auto phi = 2 * pif * ruv.x;
+    auto phi = 2 * (T)pi * ruv.x;
     return {cos(phi) * r, sin(phi) * r};
 }
-inline float sample_disk_point_pdf() { return 1 / pif; }
+template <typename T>
+inline T sample_disk_point_pdf() {
+    return 1 / (T)pi;
+}
 
 // Sample a point uniformly on a cylinder, without caps.
-inline vec3f sample_cylinder_point(const vec2f& ruv) {
-    auto phi = 2 * pif * ruv.x;
+template <typename T>
+inline vec<T, 3> sample_cylinder_point(const vec<T, 2>& ruv) {
+    auto phi = 2 * (T)pi * ruv.x;
     return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
-inline float sample_cylinder_point_pdf() { return 1 / pif; }
+template <typename T>
+inline T sample_cylinder_point_pdf() {
+    return 1 / (T)pi;
+}
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
-inline vec2f sample_triangle_coordinates(const vec2f& ruv) {
+template <typename T>
+inline vec<T, 2> sample_triangle_coordinates(const vec<T, 2>& ruv) {
     return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
 
 // Sample a point uniformly on a triangle.
-inline vec3f sample_triangle_point(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_triangle_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 2>& ruv) {
     auto uv = sample_triangle_coordinates(ruv);
     return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_point_pdf(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+template <typename T>
+inline T sample_triangle_point_pdf(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
     return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
 // Sample an index with uniform distribution.
-inline int sample_uniform_index(int size, float r) {
+template <typename T>
+inline int sample_uniform_index(int size, T r) {
     return clamp((int)(r * size), 0, size - 1);
 }
-inline float sample_uniform_index_pdf(int size) { return 1.0f / size; }
+template <typename T>
+inline T sample_uniform_index_pdf(int size) {
+    return (T)1 / (T)size;
+}
 
 // Sample an index with uniform distribution.
-template <typename T>
-inline T sample_uniform_element(const vector<T>& elements, float r) {
+template <typename T, typename T1>
+inline T sample_uniform_element(const vector<T>& elements, T1 r) {
     if (elements.empty()) return {};
     auto size = (int)elements.size();
     return elements[clamp((int)(r * size), 0, size - 1)];
 }
 template <typename T>
-inline float sample_uniform_element_pdf(const vector<T>& elements) {
+inline T sample_uniform_element_pdf(const vector<T>& elements) {
     if (elements.empty()) return 0;
     return 1.0f / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete_distribution(const vector<float>& cdf, float r) {
+template <typename T>
+inline int sample_discrete_distribution(const vector<T>& cdf, T r) {
     r        = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
     auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                      cdf.data());
     return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_distribution_pdf(
-    const vector<float>& cdf, int idx) {
+template <typename T>
+inline T sample_discrete_distribution_pdf(const vector<T>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }
@@ -321,14 +347,18 @@ namespace yocto {
 // lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
 // output), gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
-inline float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
-inline float perlin_ridge_noise(const vec3f& p, float lacunarity = 2.0f,
-    float gain = 0.5f, float offset = 1.0f, int octaves = 6,
+template <typename T>
+inline T perlin_noise(const vec<T, 3>& p, const vec3i& wrap = zero3i);
+template <typename T>
+inline T perlin_ridge_noise(const vec<T, 3>& p, T lacunarity = (T)2,
+    T gain = (T)0.5, T offset = (T)1, int octaves = 6,
     const vec3i& wrap = zero3i);
-inline float perlin_fbm_noise(const vec3f& p, float lacunarity = 2.0f,
-    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
-inline float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
-    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
+template <typename T>
+inline T perlin_fbm_noise(const vec<T, 3>& p, T lacunarity = (T)2,
+    T gain = (T)0.5, int octaves = 6, const vec3i& wrap = zero3i);
+template <typename T>
+inline T perlin_turbulence_noise(const vec<T, 3>& p, T lacunarity = (T)2,
+    T gain = (T)0.5, int octaves = 6, const vec3i& wrap = zero3i);
 
 }  // namespace yocto
 
@@ -535,27 +565,31 @@ inline float stb_perlin_turbulence_noise3(float x, float y, float z, float lacun
 // clang-format on
 
 // adapeted  stb_perlin.h
-inline float perlin_noise(const vec3f& p, const vec3i& wrap) {
+template <typename T>
+inline T perlin_noise(const vec<T, 3>& p, const vec3i& wrap) {
     return stb_perlin_noise3(p.x, p.y, p.z, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_ridge_noise(const vec3f& p, float lacunarity, float gain,
-    float offset, int octaves, const vec3i& wrap) {
+template <typename T>
+inline T perlin_ridge_noise(const vec<T, 3>& p, T lacunarity, T gain, T offset,
+    int octaves, const vec3i& wrap) {
     return stb_perlin_ridge_noise3(p.x, p.y, p.z, lacunarity, gain, offset,
         octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_fbm_noise(const vec3f& p, float lacunarity, float gain,
-    int octaves, const vec3i& wrap) {
+template <typename T>
+inline T perlin_fbm_noise(
+    const vec<T, 3>& p, T lacunarity, T gain, int octaves, const vec3i& wrap) {
     return stb_perlin_fbm_noise3(
         p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_turbulence_noise(const vec3f& p, float lacunarity,
-    float gain, int octaves, const vec3i& wrap) {
+template <typename T>
+inline T perlin_turbulence_noise(
+    const vec<T, 3>& p, T lacunarity, T gain, int octaves, const vec3i& wrap) {
     return stb_perlin_turbulence_noise3(
         p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }

@@ -954,7 +954,7 @@ float sample_lights_direction_pdf(const yocto_scene& scene,
         pdf += sample_environment_direction_pdf(
             scene, lights, environment, direction);
     }
-    pdf *= sample_uniform_index_pdf(
+    pdf *= sample_uniform_index_pdf<float>(
         lights.instances.size() + lights.environments.size());
     return pdf;
 }

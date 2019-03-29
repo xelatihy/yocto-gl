@@ -136,22 +136,18 @@ namespace yocto {
 using byte = unsigned char;
 using uint = unsigned int;
 
-const auto pi  = 3.14159265358979323846;
-const auto pif = 3.14159265f;
+constexpr inline const double pi  = 3.14159265358979323846;
+constexpr inline const float  pif = (float)pi;
 
 template <typename T>
-constexpr inline T type_max() {
-    return numeric_limits<T>::max();
-}
+constexpr inline T type_max = numeric_limits<T>::max();
 template <typename T>
-constexpr inline T type_min() {
-    return numeric_limits<T>::lowest();
-}
+constexpr inline T type_min = numeric_limits<T>::lowest();
 
-constexpr const auto int_max       = type_max<int>();
-constexpr const auto int_min       = type_min<int>();
-constexpr const auto float_max     = type_max<float>();
-constexpr const auto float_min     = type_min<float>();
+constexpr const auto int_max       = type_max<int>;
+constexpr const auto int_min       = type_min<int>;
+constexpr const auto float_max     = type_max<float>;
+constexpr const auto float_min     = type_min<float>;
 constexpr const auto float_epsilon = FLT_EPSILON;
 
 template <typename T>
@@ -170,13 +166,25 @@ template <typename T>
 constexpr inline T clamp01(T x) {
     return min(max(x, (T)0), (T)1);
 }
-template <typename T>
-constexpr inline T lerp(T a, T b, T u) {
+template <typename T, typename T1>
+constexpr inline T lerp(const T& a, const T& b, T1 u) {
     return a * (1 - u) + b * u;
 }
+template <typename T, typename T1>
+constexpr inline T bilerp(
+    const T& c00, const T& c10, const T& c11, const T& c01, T1 u, T1 v) {
+    return c00 * (1 - u) * (1 - v) + c10 * u * (1 - v) + c01 * (1 - u) * v +
+           c11 * u * v;
+}
 constexpr inline int pow2(int x) { return 1 << x; }
-inline float         radians(float x) { return x * pif / 180; }
-inline float         degrees(float x) { return x * 180 / pif; }
+template <typename T>
+inline T radians(T x) {
+    return x * (T)pi / 180;
+}
+template <typename T>
+inline T degrees(T x) {
+    return x * 180 / (T)pi;
+}
 
 }  // namespace yocto
 
@@ -740,23 +748,7 @@ constexpr inline vec<T, N> clamp01(const vec<T, N>& x) {
         return c;
     }
 }
-template <typename T, int N, typename T1>
-constexpr inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T1 u) {
-    if constexpr (N == 1) {
-        return {lerp(a.x, b.x, u)};
-    } else if constexpr (N == 2) {
-        return {lerp(a.x, b.x, u), lerp(a.y, b.y, u)};
-    } else if constexpr (N == 3) {
-        return {lerp(a.x, b.x, u), lerp(a.y, b.y, u), lerp(a.z, b.z, u)};
-    } else if constexpr (N == 4) {
-        return {lerp(a.x, b.x, u), lerp(a.y, b.y, u), lerp(a.z, b.z, u),
-            lerp(a.w, b.w, u)};
-    } else {
-        auto c = vec<T, N>{};
-        for (auto i = 0; i < N; i++) c[i] = lerp(a[i], b[i], u);
-        return c;
-    }
-}
+
 template <typename T, int N>
 constexpr inline T max(const vec<T, N>& a) {
     if constexpr (N == 1) {
@@ -1590,7 +1582,7 @@ template <typename T, int N>
 struct bbox {
     vec<T, N> min, max;
 
-    constexpr bbox() : min{type_max<T>()}, max{type_min<T>()} {}
+    constexpr bbox() : min{type_max<T>}, max{type_min<T>} {}
     constexpr bbox(const vec<T, N>& min, const vec<T, N>& max)
         : min{min}, max{max} {}
 
@@ -1746,7 +1738,7 @@ using ray3f = ray<float, 3>;
 template <typename T, int N>
 constexpr inline ray<T, N> make_ray(
     const vec<T, N>& o, const vec<T, N>& d, T eps = (T)ray_eps) {
-    return {o, d, eps, type_max<T>()};
+    return {o, d, eps, type_max<T>};
 }
 template <typename T, int N>
 constexpr inline ray<T, N> make_segment(
@@ -2172,7 +2164,7 @@ constexpr inline void update_camera_turntable(vec<T, 3>& from, vec<T, 3>& to,
         auto lz    = length(to - from);
         auto phi   = atan2(z.z, z.x) + rotate.x;
         auto theta = acos(z.y) + rotate.y;
-        theta      = clamp(theta, 0.001f, pi - 0.001f);
+        theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
         auto nz    = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
             sin(theta) * sin(phi) * lz};
         from       = to - nz;
