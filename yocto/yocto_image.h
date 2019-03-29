@@ -99,10 +99,10 @@ struct image {
     // constructors
     image() : _size{0, 0}, _pixels{} {}
     image(const vec2i& size, const T& value = {})
-        : _size{size}, _pixels{(size_t)size.x * (size_t)size.y, value} {}
+        : _size{size}, _pixels((size_t)size.x * (size_t)size.y, value) {}
     image(const vec2i& size, const T* value)
         : _size{size}
-        , _pixels{value, value + (size_t)size.x * (size_t)size.y} {}
+        , _pixels(value, value + (size_t)size.x * (size_t)size.y) {}
 
     // size
     bool  empty() const { return _pixels.empty(); }
