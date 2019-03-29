@@ -932,7 +932,7 @@ void from_json_procedural(
         auto base_normals       = vector<vec3f>{};
         auto base_texturecoords = vector<vec2f>{};
         make_sphere_shape(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1);
+            base_texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1.0f);
         make_hair_shape(value.lines, value.positions, value.normals,
             value.texturecoords, value.radius,
             js.value("steps", vec2i{4, 65536}), {}, base_quads, base_positions,
@@ -942,7 +942,7 @@ void from_json_procedural(
             js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}));
     } else if (type == "hairball_interior") {
         make_sphere_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1);
+            value.texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1.0f);
     } else if (type == "suzanne") {
         make_suzanne_shape(
             value.quads, value.positions, js.value("size", 2.0f));
@@ -964,8 +964,8 @@ void from_json_procedural(
     } else if (type == "sphere_facevarying") {
         make_sphere_fvshape(value.quads_positions, value.quads_normals,
             value.quads_texturecoords, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32), js.value("size", 2),
-            js.value("uvsize", 1));
+            value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
+            js.value("uvsize", 1.0f));
     } else {
         throw std::invalid_argument("unknown procedural type " + type);
     }
@@ -3442,7 +3442,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             shape.name  = name;
             auto size   = 0.01f;
             make_sphere_shape(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, 4, size, 1);
+                shape.texturecoords, 4.0f, size, 1.0f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
             material.name     = shape.name;
@@ -3462,7 +3462,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             shape.name  = name;
             auto size   = 0.01f;
             make_sphere_shape(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, 4, size, 1);
+                shape.texturecoords, 4.0f, size, 1.0f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
             material.name     = shape.name;
@@ -3481,7 +3481,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             shape.name  = name;
             auto size   = 0.01f;
             make_sphere_shape(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, 4, size, 1);
+                shape.texturecoords, 4.0f, size, 1.0f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
             material.name     = shape.name;

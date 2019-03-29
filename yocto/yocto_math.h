@@ -140,18 +140,14 @@ const auto pi  = 3.14159265358979323846;
 const auto pif = 3.14159265f;
 
 template <typename T>
-constexpr inline T type_max() {
-    return numeric_limits<T>::max();
-}
+constexpr inline T type_max = numeric_limits<T>::max();
 template <typename T>
-constexpr inline T type_min() {
-    return numeric_limits<T>::lowest();
-}
+constexpr inline T type_min = numeric_limits<T>::lowest();
 
-constexpr const auto int_max       = type_max<int>();
-constexpr const auto int_min       = type_min<int>();
-constexpr const auto float_max     = type_max<float>();
-constexpr const auto float_min     = type_min<float>();
+constexpr const auto int_max       = type_max<int>;
+constexpr const auto int_min       = type_min<int>;
+constexpr const auto float_max     = type_max<float>;
+constexpr const auto float_min     = type_min<float>;
 constexpr const auto float_epsilon = FLT_EPSILON;
 
 template <typename T>
@@ -1590,7 +1586,7 @@ template <typename T, int N>
 struct bbox {
     vec<T, N> min, max;
 
-    constexpr bbox() : min{type_max<T>()}, max{type_min<T>()} {}
+    constexpr bbox() : min{type_max<T>}, max{type_min<T>} {}
     constexpr bbox(const vec<T, N>& min, const vec<T, N>& max)
         : min{min}, max{max} {}
 
@@ -1746,7 +1742,7 @@ using ray3f = ray<float, 3>;
 template <typename T, int N>
 constexpr inline ray<T, N> make_ray(
     const vec<T, N>& o, const vec<T, N>& d, T eps = (T)ray_eps) {
-    return {o, d, eps, type_max<T>()};
+    return {o, d, eps, type_max<T>};
 }
 template <typename T, int N>
 constexpr inline ray<T, N> make_segment(
