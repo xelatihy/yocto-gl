@@ -372,33 +372,33 @@ inline void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
 namespace yocto {
 
 // Subdivide lines by splitting each line in half.
-template<typename T>
+template <typename T>
 inline void subdivide_lines(vector<vec2i>& lines, vector<T>& vert);
 inline void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
     vector<float>& radius);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
-template<typename T>
+template <typename T>
 inline void subdivide_triangles(vector<vec3i>& triangles, vector<T>& vert);
 inline void subdivide_triangles(vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, vector<vec4f>& colors, vector<float>& radius);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
-template<typename T>
+template <typename T>
 inline void subdivide_quads(vector<vec4i>& quads, vector<T>& vert);
 inline void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
     vector<float>& radius);
 // Subdivide beziers by splitting each segment in two.
-template<typename T>
+template <typename T>
 inline void subdivide_beziers(vector<vec4i>& beziers, vector<T>& vert);
 inline void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
     vector<float>& radius);
 // Subdivide quads using Carmull-Clark subdivision rules.
-template<typename T>
+template <typename T>
 inline void subdivide_catmullclark(
     vector<vec4i>& quads, vector<T>& vert, bool lock_boundary = false);
 inline void subdivide_catmullclark(vector<vec4i>& quads,
@@ -1242,8 +1242,7 @@ inline void subdivide_lines(vector<vec2i>& lines, vector<T>& vert) {
 
 // Subdivide triangle.
 template <typename T>
-inline void subdivide_triangles(
-    vector<vec3i>& triangles, vector<T>& vert) {
+inline void subdivide_triangles(vector<vec3i>& triangles, vector<T>& vert) {
     // early exit
     if (triangles.empty() || vert.empty()) return;
     // get edges

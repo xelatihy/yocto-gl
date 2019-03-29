@@ -402,7 +402,7 @@ inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
 inline float byte_to_float(byte a) { return a / 255.0f; }
 
 // Element-wise float to byte conversion.
-template<int N>
+template <int N>
 inline vec<byte, N> float_to_byte(const vec<float, N>& a) {
     if constexpr (N == 1) {
         return {float_to_byte(a.x)};
@@ -411,12 +411,13 @@ inline vec<byte, N> float_to_byte(const vec<float, N>& a) {
     } else if constexpr (N == 3) {
         return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z)};
     } else if constexpr (N == 4) {
-        return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z), float_to_byte(a.w)};
+        return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z),
+            float_to_byte(a.w)};
     } else {
         throw runtime_error("Bad number of arguments");
     }
 }
-template<int N>
+template <int N>
 inline vec<float, N> byte_to_float(const vec<byte, N>& a) {
     if constexpr (N == 1) {
         return {byte_to_float(a.x)};
@@ -425,7 +426,8 @@ inline vec<float, N> byte_to_float(const vec<byte, N>& a) {
     } else if constexpr (N == 3) {
         return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z)};
     } else if constexpr (N == 4) {
-        return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z), byte_to_float(a.w)};
+        return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z),
+            byte_to_float(a.w)};
     } else {
         throw runtime_error("Bad number of arguments");
     }
@@ -542,17 +544,15 @@ inline float linear_to_srgb(float lin) {
 }
 template <typename T, int N>
 inline vec<T, N> srgb_to_linear(const vec<T, N>& srgb) {
-    return apply_color(
-        [](auto& a) { return srgb_to_linear(a); }, srgb);
+    return apply_color([](auto& a) { return srgb_to_linear(a); }, srgb);
 }
 template <typename T, int N>
 inline vec<T, N> linear_to_srgb(const vec<T, N>& lin) {
-    return apply_color(
-        [](auto& a) { return linear_to_srgb(a); }, lin);
+    return apply_color([](auto& a) { return linear_to_srgb(a); }, lin);
 }
 
 // Fitted ACES tonemapping curve.
-template<typename T>
+template <typename T>
 inline T tonemap_filmic(T hdr) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     // hdr *= 0.6; // brings it back to ACES range
@@ -599,31 +599,30 @@ inline vec<T, N> tonemap_filmic(
 }
 
 // Convert between CIE XYZ and xyY
-template<typename T>
+template <typename T>
 inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
     if (xyz == zero<T, 3>) return zero<T, 3>;
-    return {xyz.x / (xyz.x + xyz.y + xyz.z),
-        xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
+    return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
+        xyz.y};
 }
 // Convert between CIE XYZ and xyY
-template<typename T>
+template <typename T>
 inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY) {
     if (xyY.y == 0) return zero<T, 3>;
-    return {
-        xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
+    return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 // Convert between CIE XYZ and RGB
-template<typename T>
+template <typename T>
 inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
     return {
-        (T)+3.2404542 * xyz.x - (T)1.5371385 * xyz.y - (T)0.4985314 * xyz.z,
+        (T) + 3.2404542 * xyz.x - (T)1.5371385 * xyz.y - (T)0.4985314 * xyz.z,
         (T)-0.9692660 * xyz.x + (T)1.8760108 * xyz.y + (T)0.0415560 * xyz.z,
-        (T)+0.0556434 * xyz.x - (T)0.2040259 * xyz.y + (T)1.0572252 * xyz.z,
+        (T) + 0.0556434 * xyz.x - (T)0.2040259 * xyz.y + (T)1.0572252 * xyz.z,
     };
 }
 // Convert between CIE XYZ and RGB
-template<typename T>
+template <typename T>
 inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
     return {
@@ -634,13 +633,13 @@ inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
 }
 
 // Approximate color of blackbody radiation from wavelength in nm.
-template<typename T>
+template <typename T>
 inline vec<T, 3> blackbody_to_rgb(T temperature);
 
 // Converts HSV to RGB.
-template<typename T>
+template <typename T>
 inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv);
-template<typename T>
+template <typename T>
 inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
 
 }  // namespace yocto
@@ -660,7 +659,7 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
 namespace yocto {
 
 // Approximate color of blackbody radiation from wavelength in nm.
-template<typename T>
+template <typename T>
 inline vec<T, 3> blackbody_to_rgb(T temperature) {
     // https://github.com/neilbartlett/color-temperature
     auto rgb = zero<T, 3>;
@@ -726,7 +725,7 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
 }
 
 // Convert HSV to RGB
-template<typename T>
+template <typename T>
 inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
     // from Imgui.cpp
     auto h = hsv.x, s = hsv.y, v = hsv.z;
@@ -749,7 +748,7 @@ inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
         default: return {v, p, q};
     }
 }
-template<typename T>
+template <typename T>
 inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
     // from Imgui.cpp
     auto  r = rgb.x, g = rgb.y, b = rgb.z;
@@ -764,8 +763,8 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
     }
 
     float chroma = r - (g < b ? g : b);
-    return {
-        fabsf(K + (g - b) / (6.f * chroma + (T)1e-20)), chroma / (r + (T)1e-20), r};
+    return {fabsf(K + (g - b) / (6.f * chroma + (T)1e-20)),
+        chroma / (r + (T)1e-20), r};
 }
 
 }  // namespace yocto
@@ -951,7 +950,8 @@ inline void make_uvgrid_image(image<vec4f>& img, int tiles, bool colored) {
                 pv = 0.8f;
                 ps = 0.2f;
             }
-            auto rgb = (colored) ? hsv_to_rgb(vec3f{ph, ps, pv}) : vec3f{pv, pv, pv};
+            auto rgb = (colored) ? hsv_to_rgb(vec3f{ph, ps, pv})
+                                 : vec3f{pv, pv, pv};
             img[{i, img.size().y - j - 1}] = {rgb.x, rgb.y, rgb.z, 1};
         }
     }
