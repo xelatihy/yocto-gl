@@ -136,8 +136,8 @@ namespace yocto {
 using byte = unsigned char;
 using uint = unsigned int;
 
-const auto pi  = 3.14159265358979323846;
-const auto pif = 3.14159265f;
+constexpr inline const double pi  = 3.14159265358979323846;
+constexpr inline const float pif = (float)pi;
 
 template <typename T>
 constexpr inline T type_max = numeric_limits<T>::max();
@@ -2168,7 +2168,7 @@ constexpr inline void update_camera_turntable(vec<T, 3>& from, vec<T, 3>& to,
         auto lz    = length(to - from);
         auto phi   = atan2(z.z, z.x) + rotate.x;
         auto theta = acos(z.y) + rotate.y;
-        theta      = clamp(theta, 0.001f, pi - 0.001f);
+        theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
         auto nz    = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
             sin(theta) * sin(phi) * lz};
         from       = to - nz;
