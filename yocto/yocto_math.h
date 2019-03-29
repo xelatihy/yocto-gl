@@ -287,6 +287,8 @@ using vec3b = vec<byte, 3>;
 using vec4b = vec<byte, 4>;
 
 // Zero vector constants.
+template<typename T, int N>
+constexpr const auto zero = vec<T, N>{};
 constexpr const auto zero1f = vec1f{0};
 constexpr const auto zero2f = vec2f{0, 0};
 constexpr const auto zero3f = vec3f{0, 0, 0};

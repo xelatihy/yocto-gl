@@ -599,42 +599,49 @@ inline vec<T, N> tonemap_filmic(
 }
 
 // Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz) {
-    if (xyz == zero3f) return zero3f;
+template<typename T>
+inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
+    if (xyz == zero<T, 3>) return zero<T, 3>;
     return {xyz.x / (xyz.x + xyz.y + xyz.z),
         xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
 // Convert between CIE XYZ and xyY
-inline vec3f xyY_to_xyz(const vec3f& xyY) {
-    if (xyY.y == 0) return zero3f;
+template<typename T>
+inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY) {
+    if (xyY.y == 0) return zero<T, 3>;
     return {
         xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 // Convert between CIE XYZ and RGB
-inline vec3f xyz_to_rgb(const vec3f& xyz) {
+template<typename T>
+inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
     return {
-        +3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz.z,
-        -0.9692660f * xyz.x + 1.8760108f * xyz.y + 0.0415560f * xyz.z,
-        +0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz.z,
+        (T)+3.2404542 * xyz.x - (T)1.5371385 * xyz.y - (T)0.4985314 * xyz.z,
+        (T)-0.9692660 * xyz.x + (T)1.8760108 * xyz.y + (T)0.0415560 * xyz.z,
+        (T)+0.0556434 * xyz.x - (T)0.2040259 * xyz.y + (T)1.0572252 * xyz.z,
     };
 }
 // Convert between CIE XYZ and RGB
-inline vec3f rgb_to_xyz(const vec3f& rgb) {
+template<typename T>
+inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
     return {
-        0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb.z,
-        0.2126729f * rgb.x + 0.7151522f * rgb.y + 0.0721750f * rgb.z,
-        0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z,
+        (T)0.4124564 * rgb.x + (T)0.3575761 * rgb.y + (T)0.1804375 * rgb.z,
+        (T)0.2126729 * rgb.x + (T)0.7151522 * rgb.y + (T)0.0721750 * rgb.z,
+        (T)0.0193339 * rgb.x + (T)0.1191920 * rgb.y + (T)0.9503041 * rgb.z,
     };
 }
 
 // Approximate color of blackbody radiation from wavelength in nm.
-inline vec3f blackbody_to_rgb(float temperature);
+template<typename T>
+inline vec<T, 3> blackbody_to_rgb(T temperature);
 
 // Converts HSV to RGB.
-inline vec3f hsv_to_rgb(const vec3f& hsv);
-inline vec3f rgb_to_hsv(const vec3f& rgb);
+template<typename T>
+inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv);
+template<typename T>
+inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
 
 }  // namespace yocto
 
@@ -653,10 +660,11 @@ inline vec3f rgb_to_hsv(const vec3f& rgb);
 namespace yocto {
 
 // Approximate color of blackbody radiation from wavelength in nm.
-inline vec3f blackbody_to_rgb(float temperature) {
+template<typename T>
+inline vec<T, 3> blackbody_to_rgb(T temperature) {
     // https://github.com/neilbartlett/color-temperature
-    auto rgb = zero3f;
-    if ((temperature / 100) < 66.0) {
+    auto rgb = zero<T, 3>;
+    if ((temperature / 100) < 66) {
         rgb.x = 255;
     } else {
         // a + b x + c Log[x] /.
@@ -665,21 +673,21 @@ inline vec3f blackbody_to_rgb(float temperature) {
         // c -> -40.25366309332127
         // x -> (kelvin/100) - 55}
         rgb.x = (temperature / 100) - 55;
-        rgb.x = 351.97690566805693f + 0.114206453784165f * rgb.x -
-                40.25366309332127f * log(rgb.x);
+        rgb.x = (T)351.97690566805693 + (T)0.114206453784165 * rgb.x -
+                (T)40.25366309332127 * log(rgb.x);
         if (rgb.x < 0) rgb.x = 0;
         if (rgb.x > 255) rgb.x = 255;
     }
 
-    if ((temperature / 100) < 66.0) {
+    if ((temperature / 100) < 66) {
         // a + b x + c Log[x] /.
         // {a -> -155.25485562709179`,
         // b -> -0.44596950469579133`,
         // c -> 104.49216199393888`,
         // x -> (kelvin/100) - 2}
         rgb.y = (temperature / 100) - 2;
-        rgb.y = -155.25485562709179f - 0.44596950469579133f * rgb.y +
-                104.49216199393888f * log(rgb.y);
+        rgb.y = (T)-155.25485562709179 - (T)0.44596950469579133 * rgb.y +
+                (T)104.49216199393888 * log(rgb.y);
         if (rgb.y < 0) rgb.y = 0;
         if (rgb.y > 255) rgb.y = 255;
     } else {
@@ -689,8 +697,8 @@ inline vec3f blackbody_to_rgb(float temperature) {
         // c -> -28.0852963507957`,
         // x -> (kelvin/100) - 50}
         rgb.y = (temperature / 100) - 50;
-        rgb.y = 325.4494125711974f + 0.07943456536662342f * rgb.y -
-                28.0852963507957f * log(rgb.y);
+        rgb.y = (T)325.4494125711974 + (T)0.07943456536662342 * rgb.y -
+                (T)28.0852963507957 * log(rgb.y);
         if (rgb.y < 0) rgb.y = 0;
         if (rgb.y > 255) rgb.y = 255;
     }
@@ -707,8 +715,8 @@ inline vec3f blackbody_to_rgb(float temperature) {
             // c -> 115.67994401066147`,
             // x -> kelvin/100 - 10}
             rgb.z = (temperature / 100) - 10;
-            rgb.z = -254.76935184120902 + 0.8274096064007395 * rgb.z +
-                    115.67994401066147 * log(rgb.z);
+            rgb.z = (T)-254.76935184120902 + (T)0.8274096064007395 * rgb.z +
+                    (T)115.67994401066147 * log(rgb.z);
             if (rgb.z < 0) rgb.z = 0;
             if (rgb.z > 255) rgb.z = 255;
         }
@@ -718,12 +726,13 @@ inline vec3f blackbody_to_rgb(float temperature) {
 }
 
 // Convert HSV to RGB
-inline vec3f hsv_to_rgb(const vec3f& hsv) {
+template<typename T>
+inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
     // from Imgui.cpp
     auto h = hsv.x, s = hsv.y, v = hsv.z;
-    if (hsv.y == 0.0f) return {v, v, v};
+    if (hsv.y == 0) return {v, v, v};
 
-    h       = fmodf(h, 1.0f) / (60.0f / 360.0f);
+    h       = fmod(h, (T)1) / ((T)60 / (T)360);
     int   i = (int)h;
     float f = h - (float)i;
     float p = v * (1.0f - s);
@@ -740,7 +749,8 @@ inline vec3f hsv_to_rgb(const vec3f& hsv) {
         default: return {v, p, q};
     }
 }
-inline vec3f rgb_to_hsv(const vec3f& rgb) {
+template<typename T>
+inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
     // from Imgui.cpp
     auto  r = rgb.x, g = rgb.y, b = rgb.z;
     float K = 0.f;
@@ -755,7 +765,7 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
 
     float chroma = r - (g < b ? g : b);
     return {
-        fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
+        fabsf(K + (g - b) / (6.f * chroma + (T)1e-20)), chroma / (r + (T)1e-20), r};
 }
 
 }  // namespace yocto
@@ -941,7 +951,7 @@ inline void make_uvgrid_image(image<vec4f>& img, int tiles, bool colored) {
                 pv = 0.8f;
                 ps = 0.2f;
             }
-            auto rgb = (colored) ? hsv_to_rgb({ph, ps, pv}) : vec3f{pv, pv, pv};
+            auto rgb = (colored) ? hsv_to_rgb(vec3f{ph, ps, pv}) : vec3f{pv, pv, pv};
             img[{i, img.size().y - j - 1}] = {rgb.x, rgb.y, rgb.z, 1};
         }
     }
