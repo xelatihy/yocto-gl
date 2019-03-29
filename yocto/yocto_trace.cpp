@@ -2294,7 +2294,7 @@ void print_integrate_func_test(const Func& f, float a, float b,
 
 template<typename Func>
 float integrate_func2_base(
-    function<float(vec2f)> f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
+    const Func& f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = get_random_vec2f(rng);
@@ -2307,7 +2307,7 @@ float integrate_func2_base(
 
 template<typename Func>
 float integrate_func2_stratified(
-    function<float(vec2f)> f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
+    const Func& f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral  = 0.0f;
     auto nsamples2 = (int)sqrt(nsamples);
     for (auto i = 0; i < nsamples2; i++) {
