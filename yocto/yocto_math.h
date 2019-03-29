@@ -137,7 +137,7 @@ using byte = unsigned char;
 using uint = unsigned int;
 
 constexpr inline const double pi  = 3.14159265358979323846;
-constexpr inline const float pif = (float)pi;
+constexpr inline const float  pif = (float)pi;
 
 template <typename T>
 constexpr inline T type_max = numeric_limits<T>::max();
@@ -170,15 +170,21 @@ template <typename T, typename T1>
 constexpr inline T lerp(const T& a, const T& b, T1 u) {
     return a * (1 - u) + b * u;
 }
-template<typename T, typename T1>
-constexpr inline T bilerp(const T& c00, const T& c10, const T& c11, const T& c01, T1 u, T1 v) {
-    return c00 * (1 - u) * (1 - v) + c10 * u * (1-v) + c01 * (1-u) * v + c11 * u * v;
+template <typename T, typename T1>
+constexpr inline T bilerp(
+    const T& c00, const T& c10, const T& c11, const T& c01, T1 u, T1 v) {
+    return c00 * (1 - u) * (1 - v) + c10 * u * (1 - v) + c01 * (1 - u) * v +
+           c11 * u * v;
 }
 constexpr inline int pow2(int x) { return 1 << x; }
-template<typename T>
-inline T         radians(T x) { return x * (T)pi / 180; }
-template<typename T>
-inline T         degrees(T x) { return x * 180 / (T)pi; }
+template <typename T>
+inline T radians(T x) {
+    return x * (T)pi / 180;
+}
+template <typename T>
+inline T degrees(T x) {
+    return x * 180 / (T)pi;
+}
 
 }  // namespace yocto
 

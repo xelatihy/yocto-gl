@@ -1074,9 +1074,9 @@ inline void make_blackbodyramp_image(
 template <typename T, typename T1>
 inline void make_noise_image(
     image<T>& img, const T& c0, const T& c1, T1 scale, bool wrap) {
-    make_image_fromij(img,
-        [wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i, size = img.size(), scale, &c0, &c1](
-            int i, int j) {
+    make_image_fromij(
+        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
+                 size = img.size(), scale, &c0, &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_noise(p, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
@@ -1090,10 +1090,9 @@ inline void make_fbm_image(image<T>& img, const T& c0, const T& c1, T1 scale,
     T1 lacunarity, T1 gain, int octaves, bool wrap) {
     make_image_fromij(
         img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
-                 size = img.size(), scale, lacunarity, gain, octaves, &c0, &c1](int i, int j) {
-            auto p =
-                vec3f{i / (float)size.x, j / (float)size.y, 0.5f} *
-                scale;
+                 size = img.size(), scale, lacunarity, gain, octaves, &c0,
+                 &c1](int i, int j) {
+            auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             return lerp_color(c0, c1, g);
@@ -1106,7 +1105,8 @@ inline void make_ridge_image(image<T>& img, const T& c0, const T& c1, T1 scale,
     T1 lacunarity, T1 gain, T1 offset, int octaves, bool wrap) {
     make_image_fromij(
         img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
-                 size = img.size(), scale, lacunarity, gain, offset, octaves, &c0, &c1](int i, int j) {
+                 size = img.size(), scale, lacunarity, gain, offset, octaves,
+                 &c0, &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
@@ -1121,7 +1121,8 @@ inline void make_turbulence_image(image<T>& img, const T& c0, const T& c1,
     T1 scale, T1 lacunarity, T1 gain, int octaves, bool wrap) {
     make_image_fromij(
         img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
-                 size = img.size(), scale, lacunarity, gain, octaves, &c0, &c1](int i, int j) {
+                 size = img.size(), scale, lacunarity, gain, octaves, &c0,
+                 &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);
