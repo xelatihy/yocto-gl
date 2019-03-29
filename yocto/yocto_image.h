@@ -160,33 +160,92 @@ template <typename T>
 inline void get_image_region(
     image<T>& clipped, const image<T>& img, const image_region& region);
 
+// Apply a function to each image pixel
+template <typename T1, typename T2, typename Func>
+inline void apply(
+    const Func& func, image<T1>& result, const image<T2>& source) {
+    if (result.size() != source.size())
+        throw out_of_range("different image sizes");
+    for (auto j = 0; j < result.size().y; j++) {
+        for (auto i = 0; i < result.size().x; i++) {
+            result[{i, j}] = func(source[{i, j}]);
+        }
+    }
+}
+template <typename T1, typename T2, typename Func>
+inline void apply(
+    const Func& func, image<T1>& result, const image<T2>& source, const image_region& region) {
+    if (result.size() != source.size())
+        throw out_of_range("different image sizes");
+    for (auto j = region.min.y; j < region.max.y; j++) {
+        for (auto i = region.min.x; i < region.max.x; i++) {
+            result[{i, j}] = func(source[{i, j}]);
+        }
+    }
+}
+
 // Conversion from/to floats.
-inline void byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
-inline void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
+template <typename T, typename TB>
+inline void byte_to_float(image<T>& fl, const image<TB>& bt) {
+    return apply([](auto& a) { return byte_to_float(a); }, fl, bt);
+}
+template <typename T, typename TB>
+inline void float_to_byte(image<TB>& bt, const image<T>& fl) {
+    return apply([](auto& a) { return float_to_byte(a); }, bt, fl);
+}
 
 // Conversion between linear and gamma-encoded images.
-inline void srgb_to_linear(image<vec4f>& lin, const image<vec4f>& srgb);
-inline void linear_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
-inline void srgb_to_linear(image<vec4f>& lin, const image<vec4b>& srgb);
-inline void linear_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin);
+template <typename T>
+inline void srgb_to_linear(image<T>& lin, const image<T>& srgb) {
+    return apply([](auto& a) { return srgb_to_linear(a); }, lin, srgb);
+}
+template <typename T>
+inline void linear_to_srgb(image<T>& srgb, const image<T>& lin) {
+    return apply([](auto& a) { return linear_to_srgb(a); }, srgb, lin);
+}
+template <typename T, typename TB>
+inline void srgb8_to_linear(image<T>& lin, const image<TB>& srgb) {
+    return apply([](auto& a) { return srgb_to_linear(byte_to_float(a)); }, lin, srgb);
+}
+template <typename T, typename TB>
+inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin) {
+    return apply([](auto& a) { return float_to_byte(linear_to_srgb(a)); }, srgb, lin);
+}
 
 // Conversion between linear and gamma-encoded images.
+template <typename T1, typename TC>
 inline void gamma_to_linear(
-    image<vec4f>& lin, const image<vec4f>& srgb, float gamma);
+    image<T1>& lin, const image<T1>& srgb, TC gamma) {
+    return apply([gamma](auto& a) { return gamma_to_linear(a, gamma); }, lin, srgb);
+}
+template <typename T1, typename TC>
 inline void linear_to_gamma(
-    image<vec4f>& srgb, const image<vec4f>& lin, float gamma);
+    image<T1>& srgb, const image<T1>& lin, TC gamma) {
+    return apply([gamma](auto& a) { return linear_to_gamma(a, gamma); }, srgb, lin);
+}
 
 // Apply exposure and filmic tone mapping
-inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
-    float exposure, bool filmic, bool srgb);
-inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
-    float exposure, bool filmic, bool srgb);
-inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
+template <typename T, typename TC>
+inline void tonemap_image(image<T>& ldr, const image<T>& hdr,
+    TC exposure, bool filmic, bool srgb) {
+    return apply([exposure, filmic, srgb](auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); }, ldr, hdr);
+}
+template <typename T, typename TB, typename TC>
+inline void tonemap_image8(image<TB>& ldr, const image<T>& hdr,
+    TC exposure, bool filmic, bool srgb) {
+    return apply([exposure, filmic, srgb](auto& a) { return float_to_byte(tonemap_filmic(a, exposure, filmic, srgb)); }, ldr, hdr);
+}
+template <typename T, typename TC>
+inline void tonemap_image_region(image<T>& ldr, const image_region& region,
+    const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
+    return apply([exposure, filmic, srgb](auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); }, ldr, hdr, region);
+}
 
 // Resize an image.
+template <typename T1, typename T2>
 inline void resize_image(
     image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
+template <typename T1, typename T2>
 inline void resize_image(image<vec4f>& res, const image<vec4f>& img);
 
 }  // namespace yocto
@@ -401,6 +460,9 @@ inline float tonemap_filmic(float hdr) {
            (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
 }
 // Apply ACES fitted curve.
+inline vec3f tonemap_filmic(const vec3f& hdr) {
+    return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y), tonemap_filmic(hdr.z)};
+}
 inline vec4f tonemap_filmic(const vec4f& hdr) {
     return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y), tonemap_filmic(hdr.z),
         hdr.w};
@@ -408,6 +470,14 @@ inline vec4f tonemap_filmic(const vec4f& hdr) {
 
 // Tonemap a color value according to an exposure-gamma tone mapper, with
 // an optional filmic curve.
+inline vec3f tonemap_filmic(
+    const vec3f& hdr, float exposure, bool filmic, bool srgb) {
+    auto scale = pow(2.0f, exposure);
+    auto ldr   = vec3f{hdr.x * scale, hdr.y * scale, hdr.z * scale};
+    if (filmic) ldr = tonemap_filmic(ldr);
+    if (srgb) ldr = linear_to_srgb(ldr);
+    return ldr;
+}
 inline vec4f tonemap_filmic(
     const vec4f& hdr, float exposure, bool filmic, bool srgb) {
     auto scale = pow(2.0f, exposure);
@@ -617,109 +687,6 @@ inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
 // IMPLEMENTATION FOR IMAGE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Conversion between linear and gamma-encoded images.
-inline void gamma_to_linear(
-    image<vec4f>& lin, const image<vec4f>& srgb, float gamma) {
-    if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
-    for (auto j = 0; j < srgb.size().y; j++) {
-        for (auto i = 0; i < srgb.size().x; i++) {
-            lin[{i, j}] = gamma_to_linear(srgb[{i, j}], gamma);
-        }
-    }
-}
-inline void linear_to_gamma(
-    image<vec4f>& srgb, const image<vec4f>& lin, float gamma) {
-    if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
-    for (auto j = 0; j < srgb.size().y; j++) {
-        for (auto i = 0; i < srgb.size().x; i++) {
-            srgb[{i, j}] = linear_to_gamma(lin[{i, j}], gamma);
-        }
-    }
-}
-
-// Conversion between linear and gamma-encoded images.
-inline void srgb_to_linear(image<vec4f>& lin, const image<vec4f>& srgb) {
-    if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
-    for (auto j = 0; j < srgb.size().y; j++) {
-        for (auto i = 0; i < srgb.size().x; i++) {
-            lin[{i, j}] = srgb_to_linear(srgb[{i, j}]);
-        }
-    }
-}
-inline void linear_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin) {
-    if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
-    for (auto j = 0; j < srgb.size().y; j++) {
-        for (auto i = 0; i < srgb.size().x; i++) {
-            srgb[{i, j}] = linear_to_srgb(lin[{i, j}]);
-        }
-    }
-}
-inline void srgb_to_linear(image<vec4f>& lin, const image<vec4b>& srgb) {
-    if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
-    for (auto j = 0; j < srgb.size().y; j++) {
-        for (auto i = 0; i < srgb.size().x; i++) {
-            lin[{i, j}] = srgb_to_linear(byte_to_float(srgb[{i, j}]));
-        }
-    }
-}
-inline void linear_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin) {
-    if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
-    for (auto j = 0; j < srgb.size().y; j++) {
-        for (auto i = 0; i < srgb.size().x; i++) {
-            srgb[{i, j}] = float_to_byte(linear_to_srgb(lin[{i, j}]));
-        }
-    }
-}
-
-// Conversion from/to floats.
-inline void byte_to_float(image<vec4f>& fl, const image<vec4b>& bt) {
-    if (fl.size() != bt.size()) throw out_of_range("different image sizes");
-    for (auto j = 0; j < bt.size().y; j++) {
-        for (auto i = 0; i < bt.size().x; i++) {
-            fl[{i, j}] = byte_to_float(bt[{i, j}]);
-        }
-    }
-}
-inline void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl) {
-    if (fl.size() != bt.size()) throw out_of_range("different image sizes");
-    for (auto j = 0; j < bt.size().y; j++) {
-        for (auto i = 0; i < bt.size().x; i++) {
-            bt[{i, j}] = float_to_byte(fl[{i, j}]);
-        }
-    }
-}
-
-// Tonemap image
-inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
-    float exposure, bool filmic, bool srgb) {
-    if (ldr.size() != hdr.size()) throw out_of_range("different image sizes");
-    for (auto j = 0; j < hdr.size().y; j++) {
-        for (auto i = 0; i < hdr.size().x; i++) {
-            ldr[{i, j}] = tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb);
-        }
-    }
-}
-inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
-    float exposure, bool filmic, bool srgb) {
-    if (ldr.size() != hdr.size()) throw out_of_range("different image sizes");
-    for (auto j = 0; j < hdr.size().y; j++) {
-        for (auto i = 0; i < hdr.size().x; i++) {
-            ldr[{i, j}] = float_to_byte(
-                tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb));
-        }
-    }
-}
-
-// Tonemap image
-inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
-    for (auto j = region.min.y; j < region.max.y; j++) {
-        for (auto i = region.min.x; i < region.max.x; i++) {
-            ldr[{i, j}] = tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb);
-        }
-    }
-}
 
 // Resize image.
 inline void resize_image(image<vec4f>& res_img, const image<vec4f>& img) {

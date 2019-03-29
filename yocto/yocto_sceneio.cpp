@@ -651,7 +651,7 @@ void from_json_procedural(
     if (!is_hdr) {
         value.ldr_image = {value.hdr_image.size()};
         if (!value.ldr_as_linear) {
-            linear_to_srgb(value.ldr_image, value.hdr_image);
+            linear_to_srgb8(value.ldr_image, value.hdr_image);
         } else {
             float_to_byte(value.ldr_image, value.hdr_image);
         }

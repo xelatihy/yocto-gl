@@ -518,22 +518,22 @@ void load_image(const string& filename, image<vec4f>& img) {
         auto img8 = image<vec4b>{};
         load_stb_image(filename, img8);
         img.resize(img8.size());
-        srgb_to_linear(img, img8);
+        srgb8_to_linear(img, img8);
     } else if (ext == "jpg" || ext == "JPG") {
         auto img8 = image<vec4b>{};
         load_stb_image(filename, img8);
         img.resize(img8.size());
-        srgb_to_linear(img, img8);
+        srgb8_to_linear(img, img8);
     } else if (ext == "tga" || ext == "TGA") {
         auto img8 = image<vec4b>{};
         load_stb_image(filename, img8);
         img.resize(img8.size());
-        srgb_to_linear(img, img8);
+        srgb8_to_linear(img, img8);
     } else if (ext == "bmp" || ext == "BMP") {
         auto img8 = image<vec4b>{};
         load_stb_image(filename, img8);
         img.resize(img8.size());
-        srgb_to_linear(img, img8);
+        srgb8_to_linear(img, img8);
     } else if (ext == "json" || ext == "JSON") {
         load_json_image(filename, img);
     } else {
@@ -546,23 +546,23 @@ void save_image(const string& filename, const image<vec4f>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
         auto img8 = image<vec4b>{img.size()};
-        linear_to_srgb(img8, img);
+        linear_to_srgb8(img8, img);
         save_png_image(filename, img8);
     } else if (ext == "jpg" || ext == "JPG") {
         auto img8 = image<vec4b>{img.size()};
-        linear_to_srgb(img8, img);
+        linear_to_srgb8(img8, img);
         save_jpg_image(filename, img8);
     } else if (ext == "tga" || ext == "TGA") {
         auto img8 = image<vec4b>{img.size()};
-        linear_to_srgb(img8, img);
+        linear_to_srgb8(img8, img);
         save_tga_image(filename, img8);
     } else if (ext == "bmp" || ext == "BMP") {
         auto img8 = image<vec4b>{img.size()};
-        linear_to_srgb(img8, img);
+        linear_to_srgb8(img8, img);
         save_bmp_image(filename, img8);
     } else if (ext == "hdr" || ext == "HDR") {
         auto img8 = image<vec4b>{img.size()};
-        linear_to_srgb(img8, img);
+        linear_to_srgb8(img8, img);
         save_hdr_image(filename, img);
     } else if (ext == "pfm" || ext == "PFM") {
         save_pfm_image(filename, img);
@@ -586,17 +586,17 @@ void load_image(const string& filename, image<vec4b>& img) {
         auto imgf = image<vec4f>{};
         load_exr_image(filename, imgf);
         img.resize(imgf.size());
-        linear_to_srgb(img, imgf);
+        linear_to_srgb8(img, imgf);
     } else if (ext == "pfm" || ext == "PFM") {
         auto imgf = image<vec4f>{};
         load_pfm_image(filename, imgf);
         img.resize(imgf.size());
-        linear_to_srgb(img, imgf);
+        linear_to_srgb8(img, imgf);
     } else if (ext == "hdr" || ext == "HDR") {
         auto imgf = image<vec4f>{};
         load_stb_image(filename, imgf);
         img.resize(imgf.size());
-        linear_to_srgb(img, imgf);
+        linear_to_srgb8(img, imgf);
     } else if (ext == "png" || ext == "PNG") {
         load_stb_image(filename, img);
     } else if (ext == "jpg" || ext == "JPG") {
@@ -625,15 +625,15 @@ void save_image(const string& filename, const image<vec4b>& img) {
         save_bmp_image(filename, img);
     } else if (ext == "hdr" || ext == "HDR") {
         auto imgf = image<vec4f>{img.size()};
-        srgb_to_linear(imgf, img);
+        srgb8_to_linear(imgf, img);
         save_hdr_image(filename, imgf);
     } else if (ext == "pfm" || ext == "PFM") {
         auto imgf = image<vec4f>{img.size()};
-        srgb_to_linear(imgf, img);
+        srgb8_to_linear(imgf, img);
         save_pfm_image(filename, imgf);
     } else if (ext == "exr" || ext == "EXR") {
         auto imgf = image<vec4f>{img.size()};
-        srgb_to_linear(imgf, img);
+        srgb8_to_linear(imgf, img);
         save_exr_image(filename, imgf);
     } else {
         throw imageio_error("unsupported image format " + ext);
@@ -654,7 +654,7 @@ void save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
         save_image(filename, hdr);
     } else {
         auto ldr = image<vec4b>{hdr.size()};
-        tonemap_image(ldr, hdr, exposure, filmic, srgb);
+        tonemap_image8(ldr, hdr, exposure, filmic, srgb);
         save_image(filename, ldr);
     }
 }
