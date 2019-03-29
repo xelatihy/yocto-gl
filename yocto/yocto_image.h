@@ -173,8 +173,8 @@ inline void apply(
     }
 }
 template <typename T1, typename T2, typename Func>
-inline void apply(
-    const Func& func, image<T1>& result, const image<T2>& source, const image_region& region) {
+inline void apply(const Func& func, image<T1>& result, const image<T2>& source,
+    const image_region& region) {
     if (result.size() != source.size())
         throw out_of_range("different image sizes");
     for (auto j = region.min.y; j < region.max.y; j++) {
@@ -205,40 +205,52 @@ inline void linear_to_srgb(image<T>& srgb, const image<T>& lin) {
 }
 template <typename T, typename TB>
 inline void srgb8_to_linear(image<T>& lin, const image<TB>& srgb) {
-    return apply([](auto& a) { return srgb_to_linear(byte_to_float(a)); }, lin, srgb);
+    return apply(
+        [](auto& a) { return srgb_to_linear(byte_to_float(a)); }, lin, srgb);
 }
 template <typename T, typename TB>
 inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin) {
-    return apply([](auto& a) { return float_to_byte(linear_to_srgb(a)); }, srgb, lin);
+    return apply(
+        [](auto& a) { return float_to_byte(linear_to_srgb(a)); }, srgb, lin);
 }
 
 // Conversion between linear and gamma-encoded images.
 template <typename T1, typename TC>
-inline void gamma_to_linear(
-    image<T1>& lin, const image<T1>& srgb, TC gamma) {
-    return apply([gamma](auto& a) { return gamma_to_linear(a, gamma); }, lin, srgb);
+inline void gamma_to_linear(image<T1>& lin, const image<T1>& srgb, TC gamma) {
+    return apply(
+        [gamma](auto& a) { return gamma_to_linear(a, gamma); }, lin, srgb);
 }
 template <typename T1, typename TC>
-inline void linear_to_gamma(
-    image<T1>& srgb, const image<T1>& lin, TC gamma) {
-    return apply([gamma](auto& a) { return linear_to_gamma(a, gamma); }, srgb, lin);
+inline void linear_to_gamma(image<T1>& srgb, const image<T1>& lin, TC gamma) {
+    return apply(
+        [gamma](auto& a) { return linear_to_gamma(a, gamma); }, srgb, lin);
 }
 
 // Apply exposure and filmic tone mapping
 template <typename T, typename TC>
-inline void tonemap_image(image<T>& ldr, const image<T>& hdr,
-    TC exposure, bool filmic, bool srgb) {
-    return apply([exposure, filmic, srgb](auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); }, ldr, hdr);
+inline void tonemap_image(
+    image<T>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
+    return apply(
+        [exposure, filmic, srgb](
+            auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); },
+        ldr, hdr);
 }
 template <typename T, typename TB, typename TC>
-inline void tonemap_image8(image<TB>& ldr, const image<T>& hdr,
-    TC exposure, bool filmic, bool srgb) {
-    return apply([exposure, filmic, srgb](auto& a) { return float_to_byte(tonemap_filmic(a, exposure, filmic, srgb)); }, ldr, hdr);
+inline void tonemap_image8(
+    image<TB>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
+    return apply(
+        [exposure, filmic, srgb](auto& a) {
+            return float_to_byte(tonemap_filmic(a, exposure, filmic, srgb));
+        },
+        ldr, hdr);
 }
 template <typename T, typename TC>
 inline void tonemap_image_region(image<T>& ldr, const image_region& region,
     const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
-    return apply([exposure, filmic, srgb](auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); }, ldr, hdr, region);
+    return apply(
+        [exposure, filmic, srgb](
+            auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); },
+        ldr, hdr, region);
 }
 
 // Resize an image.
@@ -386,33 +398,131 @@ inline void make_test_volume(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
+inline float byte_to_float(byte a) { return a / 255.0f; }
+
 // Element-wise float to byte conversion.
-inline vec4b float_to_byte(const vec4f& a) {
-    return {
-        (byte)clamp(int(a.x * 256), 0, 255),
-        (byte)clamp(int(a.y * 256), 0, 255),
-        (byte)clamp(int(a.z * 256), 0, 255),
-        (byte)clamp(int(a.w * 256), 0, 255),
-    };
+template<int N>
+inline vec<byte, N> float_to_byte(const vec<float, N>& a) {
+    if constexpr (N == 1) {
+        return {float_to_byte(a.x)};
+    } else if constexpr (N == 2) {
+        return {float_to_byte(a.x), float_to_byte(a.y)};
+    } else if constexpr (N == 3) {
+        return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z)};
+    } else if constexpr (N == 4) {
+        return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z), float_to_byte(a.w)};
+    } else {
+        throw runtime_error("Bad number of arguments");
+    }
 }
-inline vec4f byte_to_float(const vec4b& a) {
-    return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
+template<int N>
+inline vec<float, N> byte_to_float(const vec<byte, N>& a) {
+    if constexpr (N == 1) {
+        return {byte_to_float(a.x)};
+    } else if constexpr (N == 2) {
+        return {byte_to_float(a.x), byte_to_float(a.y)};
+    } else if constexpr (N == 3) {
+        return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z)};
+    } else if constexpr (N == 4) {
+        return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z), byte_to_float(a.w)};
+    } else {
+        throw runtime_error("Bad number of arguments");
+    }
+}
+
+// Default alpha
+template <typename T>
+constexpr T _default_alpha() {
+    if constexpr (std::is_same_v<T, byte>) {
+        return (byte)255;
+    } else {
+        return (T)1;
+    }
+}
+template <typename T>
+constexpr T default_alpha = _default_alpha<T>();
+
+// Apply an operator to a color
+template <typename T>
+inline vec<T, 3> rgb(T a) {
+    return {a, a, a};
+}
+template <typename T, int N>
+inline vec<T, 3> rgb(const vec<T, N>& a) {
+    if constexpr (N == 1) {
+        return {a.x, a.x, a.x};
+    } else if constexpr (N == 2) {
+        return {a.x, a.x, a.x};
+    } else if constexpr (N == 3) {
+        return {a.x, a.y, a.z};
+    } else if constexpr (N == 4) {
+        return {a.x, a.y, a.z};
+    } else {
+        throw runtime_error("Bad number of arguments");
+    }
+}
+template <typename T, int N>
+inline vec<T, 4> rgba(const vec<T, N>& a) {
+    if constexpr (N == 1) {
+        return {a.x, a.x, a.x, default_alpha<T>};
+    } else if constexpr (N == 2) {
+        return {a.x, a.x, a.x, a.y};
+    } else if constexpr (N == 3) {
+        return {a.x, a.y, a.z, default_alpha<T>};
+    } else if constexpr (N == 4) {
+        return {a.x, a.y, a.z, a.w};
+    } else {
+        throw runtime_error("Bad number of arguments");
+    }
+}
+template <typename T, int N>
+inline T luminance(const vec<T, N>& a) {
+    if constexpr (N == 1) {
+        return a.x;
+    } else if constexpr (N == 2) {
+        return a.x;
+    } else if constexpr (N == 3) {
+        return ((T)0.2126 * a.x + (T)0.7152 * a.y + (T)0.0722 * a.z);
+    } else if constexpr (N == 4) {
+        return ((T)0.2126 * a.x + (T)0.7152 * a.y + (T)0.0722 * a.z);
+    } else {
+        throw runtime_error("Bad number of arguments");
+    }
+}
+
+// Apply an operator to a color
+template <typename T, int N, typename Func>
+inline vec<T, N> apply_color(const Func& func, const vec<T, N>& a) {
+    if constexpr (N == 1) {
+        return {func(a.x)};
+    } else if constexpr (N == 2) {
+        return {func(a.x), a.y};
+    } else if constexpr (N == 3) {
+        return {func(a.x), func(a.y), func(a.z)};
+    } else if constexpr (N == 4) {
+        return {func(a.x), func(a.y), func(a.z), a.w};
+    } else {
+        throw runtime_error("Bad number of arguments");
+    }
 }
 
 // Conversion between linear and gamma-encoded colors.
-inline vec3f gamma_to_linear(const vec3f& srgb, float gamma) {
-    return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma)};
+inline float gamma_to_linear(float srgb, float gamma) {
+    return pow(srgb, gamma);
 }
+inline float linear_to_gamma(float srgb, float gamma) {
+    return pow(srgb, 1 / gamma);
+}
+template <typename T, int N>
+inline vec<T, N> gamma_to_linear(const vec<T, N>& srgb, float gamma) {
+    return apply_color(
+        [&gamma](auto& a) { return gamma_to_linear(a, gamma); }, srgb);
+}
+template <typename T, int N>
 inline vec3f linear_to_gamma(const vec3f& lin, float gamma) {
-    return {
-        pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma)};
-}
-inline vec4f gamma_to_linear(const vec4f& srgb, float gamma) {
-    return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma), srgb.w};
-}
-inline vec4f linear_to_gamma(const vec4f& lin, float gamma) {
-    return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma),
-        lin.w};
+    return apply_color(
+        [&gamma](auto& a) { return linear_to_gamma(a, gamma); }, lin);
 }
 
 // sRGB non-linear curve
@@ -430,78 +540,75 @@ inline float linear_to_srgb(float lin) {
         return (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
     }
 }
-
-// Conversion between linear and srgb colors.
-inline vec3f srgb_to_linear(const vec3f& srgb) {
-    return {
-        srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
+template <typename T, int N>
+inline vec<T, N> srgb_to_linear(const vec<T, N>& srgb) {
+    return apply_color(
+        [](auto& a) { return srgb_to_linear(a); }, srgb);
 }
-inline vec3f linear_to_srgb(const vec3f& lin) {
-    return {
-        linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
-}
-inline vec4f srgb_to_linear(const vec4f& srgb) {
-    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
-        srgb_to_linear(srgb.z), srgb.w};
-}
-inline vec4f linear_to_srgb(const vec4f& lin) {
-    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z),
-        lin.w};
-}
-
-// Approximate luminance estimate for sRGB primaries (better relative luminance)
-inline float luminance(const vec3f& a) {
-    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z);
-}
-inline float luminance(const vec4f& a) {
-    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z);
+template <typename T, int N>
+inline vec<T, N> linear_to_srgb(const vec<T, N>& lin) {
+    return apply_color(
+        [](auto& a) { return linear_to_srgb(a); }, lin);
 }
 
 // Fitted ACES tonemapping curve.
-inline float tonemap_filmic(float hdr) {
+template<typename T>
+inline T tonemap_filmic(T hdr) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     // hdr *= 0.6; // brings it back to ACES range
-    return (hdr * hdr * 2.51f + hdr * 0.03f) /
-           (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+    return (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
+           (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
 }
-// Apply ACES fitted curve.
-inline vec3f tonemap_filmic(const vec3f& hdr) {
-    return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y), tonemap_filmic(hdr.z)};
-}
-inline vec4f tonemap_filmic(const vec4f& hdr) {
-    return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y), tonemap_filmic(hdr.z),
-        hdr.w};
+template <typename T, int N>
+inline vec<T, N> tonemap_filmic(const vec<T, N>& hdr) {
+    return apply_color([](auto& a) { return tonemap_filmic(a); }, hdr);
 }
 
 // Tonemap a color value according to an exposure-gamma tone mapper, with
 // an optional filmic curve.
-inline vec3f tonemap_filmic(
-    const vec3f& hdr, float exposure, bool filmic, bool srgb) {
-    auto scale = pow(2.0f, exposure);
-    auto ldr   = vec3f{hdr.x * scale, hdr.y * scale, hdr.z * scale};
-    if (filmic) ldr = tonemap_filmic(ldr);
-    if (srgb) ldr = linear_to_srgb(ldr);
-    return ldr;
-}
-inline vec4f tonemap_filmic(
-    const vec4f& hdr, float exposure, bool filmic, bool srgb) {
-    auto scale = pow(2.0f, exposure);
-    auto ldr   = vec4f{hdr.x * scale, hdr.y * scale, hdr.z * scale, hdr.w};
-    if (filmic) ldr = tonemap_filmic(ldr);
-    if (srgb) ldr = linear_to_srgb(ldr);
-    return ldr;
+template <typename T, int N>
+inline vec<T, N> tonemap_filmic(
+    const vec<T, N>& hdr, T exposure, bool filmic, bool srgb) {
+    if constexpr (N == 1) {
+        auto scale = pow(2.0f, exposure);
+        auto ldr   = hdr * scale;
+        if (filmic) ldr = tonemap_filmic(ldr);
+        if (srgb) ldr = linear_to_srgb(ldr);
+        return ldr;
+    } else if constexpr (N == 2) {
+        auto scale = pow(2.0f, exposure);
+        auto ldr   = hdr.x * scale;
+        if (filmic) ldr = tonemap_filmic(ldr);
+        if (srgb) ldr = linear_to_srgb(ldr);
+        return {ldr, hdr.y};
+    } else if constexpr (N == 3) {
+        auto scale = pow(2.0f, exposure);
+        auto ldr   = hdr * scale;
+        if (filmic) ldr = tonemap_filmic(ldr);
+        if (srgb) ldr = linear_to_srgb(ldr);
+        return ldr;
+    } else if constexpr (N == 4) {
+        auto scale = pow(2.0f, exposure);
+        auto ldr   = hdr.xyz * scale;
+        if (filmic) ldr = tonemap_filmic(ldr);
+        if (srgb) ldr = linear_to_srgb(ldr);
+        return {ldr, hdr.w};
+    } else {
+        throw runtime_error("Bad number of arguments");
+    }
 }
 
 // Convert between CIE XYZ and xyY
 inline vec3f xyz_to_xyY(const vec3f& xyz) {
     if (xyz == zero3f) return zero3f;
-    return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
-        xyz.y};
+    return {xyz.x / (xyz.x + xyz.y + xyz.z),
+        xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
 // Convert between CIE XYZ and xyY
 inline vec3f xyY_to_xyz(const vec3f& xyY) {
     if (xyY.y == 0) return zero3f;
-    return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
+    return {
+        xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 // Convert between CIE XYZ and RGB
 inline vec3f xyz_to_rgb(const vec3f& xyz) {
@@ -695,25 +802,26 @@ namespace yocto {
 
 // Resize image.
 template <typename T, int N>
-inline void resize_image(image<vec<T, N>>& res_img, const image<vec<T, N>>& img) {
-    auto alpha = (N == 2 || N == 4) ? N-1 : -1;
-    if constexpr(std::is_same_v<T, float>) {
+inline void resize_image(
+    image<vec<T, N>>& res_img, const image<vec<T, N>>& img) {
+    auto alpha = (N == 2 || N == 4) ? N - 1 : -1;
+    if constexpr (std::is_same_v<T, float>) {
         stbir_resize_float_generic((T*)img.data(), img.size().x, img.size().y,
-            sizeof(vec<T, N>) * img.size().x, (T*)res_img.data(), res_img.size().x,
-            res_img.size().y, sizeof(vec<T, N>) * res_img.size().x, N, alpha, 0,
-            STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
-            nullptr);
-    } else if constexpr(std::is_same_v<T, byte>) {
+            sizeof(vec<T, N>) * img.size().x, (T*)res_img.data(),
+            res_img.size().x, res_img.size().y,
+            sizeof(vec<T, N>) * res_img.size().x, N, alpha, 0, STBIR_EDGE_CLAMP,
+            STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    } else if constexpr (std::is_same_v<T, byte>) {
         stbir_resize_uint8_generic((T*)img.data(), img.size().x, img.size().y,
-            sizeof(vec<T, N>) * img.size().x, (T*)res_img.data(), res_img.size().x,
-            res_img.size().y, sizeof(vec<T, N>) * res_img.size().x, N, alpha, 0,
-            STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
-            nullptr);
+            sizeof(vec<T, N>) * img.size().x, (T*)res_img.data(),
+            res_img.size().x, res_img.size().y,
+            sizeof(vec<T, N>) * res_img.size().x, N, alpha, 0, STBIR_EDGE_CLAMP,
+            STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     } else {
         throw runtime_error("type not supported");
     }
 }
-template<typename T>
+template <typename T>
 inline void resize_image(
     image<T>& res_img, const image<T>& img, const vec2i& size_) {
     auto size = size_;

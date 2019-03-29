@@ -3156,7 +3156,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             texture.filename = "textures/" + texture.name + ".png";
             texture.ldr_image.resize({1, 1});
             texture.ldr_image[{0, 0}] = float_to_byte(
-                {(vec3f)constant.value.value, 1});
+                vec4f{(vec3f)constant.value.value, 1});
         } else if (std::holds_alternative<pbrt_texture_bilerp>(ptexture)) {
             // auto& bilerp   = std::get<pbrt_texture_bilerp>(ptexture);
             texture.filename = "textures/" + texture.name + ".png";
