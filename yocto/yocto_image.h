@@ -515,6 +515,30 @@ inline T luminance(const vec<T, N>& a) {
         throw runtime_error("Bad number of arguments");
     }
 }
+template <int N>
+inline byte luminance(const vec<byte, N>& a) {
+    return float_to_byte(luminance(byte_to_float(a)));
+}
+
+template <typename T, int N>
+inline vec<T, N> from_rgba(const vec<T, 4>& a) {
+    if constexpr (N == 1) {
+        return {luminance(a)};
+    } else if constexpr (N == 2) {
+        return {luminance(a), a.y};
+    } else if constexpr (N == 3) {
+        return {a.x, a.y, a.z};
+    } else if constexpr (N == 4) {
+        return {a.x, a.y, a.z, a.w};
+    } else {
+        throw runtime_error("Bad number of arguments");
+    }
+}
+
+template <typename T, int N>
+inline void from_rgba(image<vec<T, N>>& col, const image<vec<T, 4>>& rgba) {
+    return apply([](auto& a) { return from_rgba<T, N>(a); }, col, rgba);
+}
 
 // Apply an operator to a color
 template <typename T, int N, typename Func>
