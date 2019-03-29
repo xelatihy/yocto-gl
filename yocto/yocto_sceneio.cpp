@@ -4638,7 +4638,7 @@ void load_obj_facevarying_mesh(const string& filename,
         obj_options.exit_on_error = false;
         obj_options.geometry_only = true;
         obj_options.flip_texcoord = flip_texcoord;
-        auto cb                   = parse_callbacks{quads_positions, quads_normals,
+        auto cb = parse_callbacks{quads_positions, quads_normals,
             quads_texturecoords, positions, normals, texturecoords,
             quads_materials};
         load_obj(filename, cb, obj_options);
@@ -4978,26 +4978,31 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
     printf("%s\n", filename.c_str());
 
     struct parse_callbacks : obj_callbacks {
-        vector<yocto_shape>& shapes;
-        vector<yocto_material>& materials;
-        unordered_map<string, vector<vec2i>>& smap;
+        vector<yocto_shape>&                    shapes;
+        vector<yocto_material>&                 materials;
+        unordered_map<string, vector<vec2i>>&   smap;
         unordered_map<string, disney_material>& mmap;
-        const string& filename;
+        const string&                           filename;
 
-        parse_callbacks(vector<yocto_shape>& shapes,
-                        vector<yocto_material>& materials,
-                        unordered_map<string, vector<vec2i>>& smap,
-                        unordered_map<string, disney_material>& mmap,
-                        const string& filename) :
-        shapes{shapes}, materials{materials}, smap{smap}, mmap{mmap}, filename{filename} { }
-        
+        parse_callbacks(vector<yocto_shape>&        shapes,
+            vector<yocto_material>&                 materials,
+            unordered_map<string, vector<vec2i>>&   smap,
+            unordered_map<string, disney_material>& mmap,
+            const string&                           filename)
+            : shapes{shapes}
+            , materials{materials}
+            , smap{smap}
+            , mmap{mmap}
+            , filename{filename} {}
+
         // obj vertices
         std::deque<vec3f> opos      = std::deque<vec3f>();
         std::deque<vec3f> onorm     = std::deque<vec3f>();
         std::deque<vec2f> otexcoord = std::deque<vec2f>();
 
         // vertex maps
-         unordered_map<obj_vertex, int, obj_vertex_hash> vertex_map = unordered_map<obj_vertex, int, obj_vertex_hash>();
+        unordered_map<obj_vertex, int, obj_vertex_hash> vertex_map =
+            unordered_map<obj_vertex, int, obj_vertex_hash>();
 
         // last material and group name
         string gname = ""s;
@@ -5071,8 +5076,8 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
             mname = dmaterial.name;
         }
     };
-    
-    auto shapes = vector<yocto_shape>{};
+
+    auto shapes    = vector<yocto_shape>{};
     auto materials = vector<yocto_material>{};
 
     try {
