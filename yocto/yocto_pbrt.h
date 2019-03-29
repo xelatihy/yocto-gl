@@ -2862,17 +2862,17 @@ inline void load_pbrt(
             auto v = zero3f;
             parse_param(stream, v);
             stack.back().frame = stack.back().frame *
-                                 (affine3f)make_scaling_frame(v);
+                                 (const affine3f&)make_scaling_frame(v);
         } else if (cmd == "Translate") {
             auto v = zero3f;
             parse_param(stream, v);
             stack.back().frame = stack.back().frame *
-                                 (affine3f)make_translation_frame(v);
+                                 (const affine3f&)make_translation_frame(v);
         } else if (cmd == "Rotate") {
             auto v = zero4f;
             parse_param(stream, v);
             stack.back().frame = stack.back().frame *
-                                 (affine3f)(affine3f)make_rotation_frame(
+                                 (const affine3f&)make_rotation_frame(
                                      vec3f{v.y, v.z, v.w}, radians(v.x));
         } else if (cmd == "LookAt") {
             auto from = zero3f, to = zero3f, up = zero3f;
@@ -2885,7 +2885,8 @@ inline void load_pbrt(
             // frame.x = normalize(cross(frame.z,up));
             // frame.y = cross(frame.x,frame.z);
             // frame.o    = from;
-            stack.back().frame = stack.back().frame * (affine3f)inverse(frame);
+            stack.back().frame = stack.back().frame *
+                                 (const affine3f&)inverse(frame);
             // stack.back().focus = length(m.x - m.y);
         } else if (cmd == "ReverseOrientation") {
             stack.back().reverse = !stack.back().reverse;
