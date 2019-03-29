@@ -707,25 +707,27 @@ struct pbrt_context {
     bool     reverse         = false;
 };
 
-// clang-format off
 // pbrt callbacks
 struct pbrt_callbacks {
-    function<void(const pbrt_sampler& value, const pbrt_context& ctx)> sampler = {};
-    function<void(const pbrt_integrator& value, const pbrt_context& ctx)> integrator = {};
-    function<void(const pbrt_film& value, const pbrt_context& ctx)>  film = {};
-    function<void(const pbrt_filter& value, const pbrt_context& ctx)> filter = {};
-    function<void(const pbrt_camera& value, const pbrt_context& ctx)> camera = {};
-    function<void(const pbrt_texture& value, const string& name, const pbrt_context& ctx)> texture = {};
-    function<void(const pbrt_material& value, const string& name, const pbrt_context& ctx)> material = {};
-    function<void(const pbrt_medium& value, const string& name, const pbrt_context& ctx)> medium = {};
-    function<void(const pbrt_shape& value, const pbrt_context& ctx)> shape = {};
-    function<void(const pbrt_light& value, const pbrt_context& ctx)> light = {};
-    function<void(const pbrt_arealight& value, const string& name, const pbrt_context& ctx)> arealight = {};
-    function<void(const pbrt_object& value, const pbrt_context& ctx)> object_instance = {};
-    function<void(const pbrt_object& value, const pbrt_context& ctx)> begin_object = {};
-    function<void(const pbrt_object& value, const pbrt_context& ctx)> end_object = {};
+    void sampler(const pbrt_sampler& value, const pbrt_context& ctx) {}
+    void integrator(const pbrt_integrator& value, const pbrt_context& ctx) {}
+    void film(const pbrt_film& value, const pbrt_context& ctx) {}
+    void filter(const pbrt_filter& value, const pbrt_context& ctx) {}
+    void camera(const pbrt_camera& value, const pbrt_context& ctx) {}
+    void texture(const pbrt_texture& value, const string& name,
+        const pbrt_context& ctx) {}
+    void material(const pbrt_material& value, const string& name,
+        const pbrt_context& ctx) {}
+    void medium(const pbrt_medium& value, const string& name,
+        const pbrt_context& ctx) {}
+    void shape(const pbrt_shape& value, const pbrt_context& ctx) {}
+    void light(const pbrt_light& value, const pbrt_context& ctx) {}
+    void arealight(const pbrt_arealight& value, const string& name,
+        const pbrt_context& ctx) {}
+    void object_instance(const pbrt_object& value, const pbrt_context& ctx) {}
+    void begin_object(const pbrt_object& value, const pbrt_context& ctx) {}
+    void end_object(const pbrt_object& value, const pbrt_context& ctx) {}
 };
-// clang-format on
 
 // Load obj options
 struct load_pbrt_options {
@@ -734,7 +736,8 @@ struct load_pbrt_options {
 };
 
 // Load obj scene
-inline void load_pbrt(const string& filename, const pbrt_callbacks& cb,
+template <typename Callbacks>
+inline void load_pbrt(const string& filename, Callbacks& cb,
     const load_pbrt_options& options = {});
 
 // objio error
@@ -2805,8 +2808,9 @@ static inline void parse_pbrt_medium(
 }
 
 // Load pbrt scene
-inline void load_pbrt(const string& filename, const pbrt_callbacks& cb,
-    const load_pbrt_options& options) {
+template <typename Callbacks>
+inline void load_pbrt(
+    const string& filename, Callbacks& cb, const load_pbrt_options& options) {
     // start laoding files
     auto streams = vector<pbrt_token_stream>{};
     init_token_stream(streams);
@@ -2838,14 +2842,14 @@ inline void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             stack.pop_back();
         } else if (cmd == "ObjectBegin") {
             parse_value(stream, object.name);
-            if (cb.begin_object) cb.begin_object(object, stack.back());
+            cb.begin_object(object, stack.back());
         } else if (cmd == "ObjectEnd") {
-            if (cb.end_object) cb.end_object(object, stack.back());
+            cb.end_object(object, stack.back());
             object = {};
         } else if (cmd == "ObjectInstance") {
             auto value = pbrt_object{};
             parse_value(stream, value.name);
-            if (cb.object_instance) cb.object_instance(value, stack.back());
+            cb.object_instance(value, stack.back());
         } else if (cmd == "Transform") {
             auto xf = identity_mat4f;
             parse_param(stream, xf);
@@ -2858,17 +2862,17 @@ inline void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             auto v = zero3f;
             parse_param(stream, v);
             stack.back().frame = stack.back().frame *
-                                 (affine3f)make_scaling_frame(v);
+                                 (const affine3f&)make_scaling_frame(v);
         } else if (cmd == "Translate") {
             auto v = zero3f;
             parse_param(stream, v);
             stack.back().frame = stack.back().frame *
-                                 (affine3f)make_translation_frame(v);
+                                 (const affine3f&)make_translation_frame(v);
         } else if (cmd == "Rotate") {
             auto v = zero4f;
             parse_param(stream, v);
             stack.back().frame = stack.back().frame *
-                                 (affine3f)(affine3f)make_rotation_frame(
+                                 (const affine3f&)make_rotation_frame(
                                      vec3f{v.y, v.z, v.w}, radians(v.x));
         } else if (cmd == "LookAt") {
             auto from = zero3f, to = zero3f, up = zero3f;
@@ -2881,7 +2885,8 @@ inline void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             // frame.x = normalize(cross(frame.z,up));
             // frame.y = cross(frame.x,frame.z);
             // frame.o    = from;
-            stack.back().frame = stack.back().frame * (affine3f)inverse(frame);
+            stack.back().frame = stack.back().frame *
+                                 (const affine3f&)inverse(frame);
             // stack.back().focus = length(m.x - m.y);
         } else if (cmd == "ReverseOrientation") {
             stack.back().reverse = !stack.back().reverse;
@@ -2900,31 +2905,31 @@ inline void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             parse_value(stream, type);
             auto value = pbrt_integrator{};
             parse_pbrt_integrator(stream, type, value);
-            if (cb.integrator) cb.integrator(value, stack.back());
+            cb.integrator(value, stack.back());
         } else if (cmd == "Sampler") {
             auto type = ""s;
             parse_value(stream, type);
             auto value = pbrt_sampler{};
             parse_pbrt_sampler(stream, type, value);
-            if (cb.sampler) cb.sampler(value, stack.back());
+            cb.sampler(value, stack.back());
         } else if (cmd == "PixelFilter") {
             auto type = ""s;
             parse_value(stream, type);
             auto value = pbrt_filter{};
             parse_pbrt_filter(stream, type, value);
-            if (cb.filter) cb.filter(value, stack.back());
+            cb.filter(value, stack.back());
         } else if (cmd == "Film") {
             auto type = ""s;
             parse_value(stream, type);
             auto value = pbrt_film{};
             parse_pbrt_film(stream, type, value);
-            if (cb.film) cb.film(value, stack.back());
+            cb.film(value, stack.back());
         } else if (cmd == "Camera") {
             auto type = ""s;
             parse_value(stream, type);
             auto value = pbrt_camera{};
             parse_pbrt_camera(stream, type, value);
-            if (cb.camera) cb.camera(value, stack.back());
+            cb.camera(value, stack.back());
         } else if (cmd == "Texture") {
             auto name = ""s, comptype = ""s, type = ""s;
             parse_value(stream, name);
@@ -2932,7 +2937,7 @@ inline void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             parse_value(stream, type);
             auto value = pbrt_texture{};
             parse_pbrt_texture(stream, type, value);
-            if (cb.texture) cb.texture(value, name, stack.back());
+            cb.texture(value, name, stack.back());
         } else if (cmd == "Material") {
             static auto material_id = 0;
             auto        type        = ""s;
@@ -2944,7 +2949,7 @@ inline void load_pbrt(const string& filename, const pbrt_callbacks& cb,
                 auto name = "unnamed_material_" + std::to_string(material_id++);
                 parse_pbrt_material(stream, type, value);
                 stack.back().material = name;
-                if (cb.material) cb.material(value, name, stack.back());
+                cb.material(value, name, stack.back());
             }
         } else if (cmd == "MakeNamedMaterial") {
             auto name = ""s, type = ""s;
@@ -2952,7 +2957,7 @@ inline void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             parse_typeparam(stream, type);
             auto value = pbrt_material{};
             parse_pbrt_material(stream, type, value);
-            if (cb.material) cb.material(value, name, stack.back());
+            cb.material(value, name, stack.back());
         } else if (cmd == "NamedMaterial") {
             auto name = ""s;
             parse_value(stream, name);
@@ -2962,7 +2967,7 @@ inline void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             parse_value(stream, type);
             auto value = pbrt_shape{};
             parse_pbrt_shape(stream, type, value);
-            if (cb.shape) cb.shape(value, stack.back());
+            cb.shape(value, stack.back());
         } else if (cmd == "AreaLightSource") {
             auto type = ""s;
             parse_value(stream, type);
@@ -2971,20 +2976,20 @@ inline void load_pbrt(const string& filename, const pbrt_callbacks& cb,
             auto value = pbrt_arealight{};
             parse_pbrt_arealight(stream, type, value);
             stack.back().arealight = name;
-            if (cb.arealight) cb.arealight(value, name, stack.back());
+            cb.arealight(value, name, stack.back());
         } else if (cmd == "LightSource") {
             auto type = ""s;
             parse_value(stream, type);
             auto value = pbrt_light{};
             parse_pbrt_light(stream, type, value);
-            if (cb.light) cb.light(value, stack.back());
+            cb.light(value, stack.back());
         } else if (cmd == "MakeNamedMedium") {
             auto name = ""s, type = ""s;
             parse_value(stream, name);
             parse_typeparam(stream, type);
             auto value = pbrt_medium{};
             parse_pbrt_medium(stream, type, value);
-            if (cb.medium) cb.medium(value, name, stack.back());
+            cb.medium(value, name, stack.back());
         } else if (cmd == "MediumInterface") {
             auto interior = ""s, exterior = ""s;
             parse_value(stream, interior);

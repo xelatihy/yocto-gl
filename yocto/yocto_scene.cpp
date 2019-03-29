@@ -514,7 +514,8 @@ bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     bool find_any, bool non_rigid_frames) {
     auto& instance = scene.instances[instance_id];
     auto  inv_ray  = non_rigid_frames
-                       ? transform_ray(inverse((affine3f)instance.frame), ray)
+                       ? transform_ray(
+                             inverse((const affine3f&)instance.frame), ray)
                        : transform_ray_inverse(instance.frame, ray);
     if (intersect_shape_bvh(scene.shapes[instance.shape],
             bvh.shapes[instance.shape], inv_ray, intersection, find_any)) {
@@ -892,8 +893,9 @@ vec3f evaluate_instance_normal(const yocto_scene& scene,
     bool non_rigid_frame) {
     auto normal = evaluate_shape_normal(
         scene.shapes[instance.shape], element_id, element_uv);
-    return non_rigid_frame ? transform_normal((affine3f)instance.frame, normal)
-                           : transform_normal(instance.frame, normal);
+    return non_rigid_frame
+               ? transform_normal((const affine3f&)instance.frame, normal)
+               : transform_normal(instance.frame, normal);
 }
 vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
@@ -907,16 +909,18 @@ vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
         evaluate_shape_texturecoord(shape, element_id, element_uv));
     auto normal    = evaluate_shape_perturbed_normal(
         scene, scene.shapes[instance.shape], element_id, element_uv, normalmap);
-    return non_rigid_frame ? transform_normal((affine3f)instance.frame, normal)
-                           : transform_normal(instance.frame, normal);
+    return non_rigid_frame
+               ? transform_normal((const affine3f&)instance.frame, normal)
+               : transform_normal(instance.frame, normal);
 }
 // Instance element values.
 vec3f evaluate_instance_element_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, bool non_rigid_frame) {
     auto normal = evaluate_shape_element_normal(
         scene.shapes[instance.shape], element_id);
-    return non_rigid_frame ? transform_normal((affine3f)instance.frame, normal)
-                           : transform_normal(instance.frame, normal);
+    return non_rigid_frame
+               ? transform_normal((const affine3f&)instance.frame, normal)
+               : transform_normal(instance.frame, normal);
 }
 
 // Environment texture coordinates from the direction.

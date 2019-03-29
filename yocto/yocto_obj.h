@@ -166,21 +166,21 @@ struct obj_procedural {
 
 // Obj callbacks
 struct obj_callbacks {
-    function<void(const vec3f&)>              vert        = {};
-    function<void(const vec3f&)>              norm        = {};
-    function<void(const vec2f&)>              texcoord    = {};
-    function<void(const vector<obj_vertex>&)> face        = {};
-    function<void(const vector<obj_vertex>&)> line        = {};
-    function<void(const vector<obj_vertex>&)> point       = {};
-    function<void(const string& name)>        object      = {};
-    function<void(const string& name)>        group       = {};
-    function<void(const string& name)>        usemtl      = {};
-    function<void(const string& name)>        smoothing   = {};
-    function<void(const string& name)>        mtllib      = {};
-    function<void(const obj_material&)>       material    = {};
-    function<void(const obj_camera&)>         camera      = {};
-    function<void(const obj_environment&)>    environmnet = {};
-    function<void(const obj_procedural&)>     procedural  = {};
+    void vert(const vec3f&) {}
+    void norm(const vec3f&) {}
+    void texcoord(const vec2f&) {}
+    void face(const vector<obj_vertex>&) {}
+    void line(const vector<obj_vertex>&) {}
+    void point(const vector<obj_vertex>&) {}
+    void object(const string&) {}
+    void group(const string&) {}
+    void usemtl(const string&) {}
+    void smoothing(const string&) {}
+    void mtllib(const string&) {}
+    void material(const obj_material&) {}
+    void camera(const obj_camera&) {}
+    void environmnet(const obj_environment&) {}
+    void procedural(const obj_procedural&) {}
 };
 
 // Load obj options
@@ -192,7 +192,8 @@ struct load_obj_options {
 };
 
 // Load obj scene
-inline void load_obj(const string& filename, const obj_callbacks& cb,
+template <typename Callbacks>
+inline void load_obj(const string& filename, Callbacks& cb,
     const load_obj_options& options = {});
 
 // objio error
@@ -324,8 +325,9 @@ inline void parse_value(char*& str, obj_texture_info& info) {
 }
 
 // Load obj materials
-void load_mtl(const string& filename, const obj_callbacks& cb,
-    const load_obj_options& options) {
+template <typename Callbacks>
+void load_mtl(
+    const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw objio_error("cannot load mtl " + filename);
@@ -351,7 +353,7 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
 
         // possible token values
         if (cmd == "newmtl") {
-            if (!first && cb.material) cb.material(material);
+            if (!first) cb.material(material);
             first    = false;
             material = obj_material();
             parse_value(line, material.name);
@@ -417,12 +419,13 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
     }
 
     // issue current material
-    if (!first && cb.material) cb.material(material);
+    if (!first) cb.material(material);
 }
 
 // Load obj extensions
-inline void load_objx(const string& filename, const obj_callbacks& cb,
-    const load_obj_options& options) {
+template <typename Callbacks>
+inline void load_objx(
+    const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw objio_error("cannot load objx " + filename);
@@ -453,7 +456,7 @@ inline void load_objx(const string& filename, const obj_callbacks& cb,
             parse_value(line, camera.focus);
             parse_value(line, camera.aperture);
             parse_value(line, camera.frame);
-            if (cb.camera) cb.camera(camera);
+            cb.camera(camera);
         } else if (cmd == "e") {
             auto environment = obj_environment();
             parse_value(line, environment.name);
@@ -461,7 +464,7 @@ inline void load_objx(const string& filename, const obj_callbacks& cb,
             parse_value(line, environment.ke_txt.path);
             parse_value(line, environment.frame);
             if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
-            if (cb.environmnet) cb.environmnet(environment);
+            cb.environmnet(environment);
         } else if (cmd == "po") {
             auto procedural = obj_procedural();
             parse_value(line, procedural.name);
@@ -470,7 +473,7 @@ inline void load_objx(const string& filename, const obj_callbacks& cb,
             parse_value(line, procedural.size);
             parse_value(line, procedural.level);
             parse_value(line, procedural.frame);
-            if (cb.procedural) cb.procedural(procedural);
+            cb.procedural(procedural);
         } else {
             // unused
         }
@@ -478,8 +481,9 @@ inline void load_objx(const string& filename, const obj_callbacks& cb,
 }
 
 // Load obj scene
-inline void load_obj(const string& filename, const obj_callbacks& cb,
-    const load_obj_options& options) {
+template <typename Callbacks>
+inline void load_obj(
+    const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw objio_error("cannot load obj " + filename);
@@ -507,18 +511,18 @@ inline void load_obj(const string& filename, const obj_callbacks& cb,
         if (cmd == "v") {
             auto vert = zero3f;
             parse_value(line, vert);
-            if (cb.vert) cb.vert(vert);
+            cb.vert(vert);
             vert_size.position += 1;
         } else if (cmd == "vn") {
             auto vert = zero3f;
             parse_value(line, vert);
-            if (cb.norm) cb.norm(vert);
+            cb.norm(vert);
             vert_size.normal += 1;
         } else if (cmd == "vt") {
             auto vert = zero2f;
             parse_value(line, vert);
             if (options.flip_texcoord) vert.y = 1 - vert.y;
-            if (cb.texcoord) cb.texcoord(vert);
+            cb.texcoord(vert);
             vert_size.texturecoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             verts.clear();
@@ -537,30 +541,30 @@ inline void load_obj(const string& filename, const obj_callbacks& cb,
                 verts.push_back(vert);
                 while (*line == ' ') line++;
             }
-            if (cmd == "f" && cb.face) cb.face(verts);
-            if (cmd == "l" && cb.line) cb.line(verts);
-            if (cmd == "p" && cb.point) cb.point(verts);
+            if (cmd == "f") cb.face(verts);
+            if (cmd == "l") cb.line(verts);
+            if (cmd == "p") cb.point(verts);
         } else if (cmd == "o") {
             auto name = ""s;
             parse_value(line, name, true);
-            if (cb.object) cb.object(name);
+            cb.object(name);
         } else if (cmd == "usemtl") {
             auto name = ""s;
             parse_value(line, name, true);
-            if (cb.usemtl) cb.usemtl(name);
+            cb.usemtl(name);
         } else if (cmd == "g") {
             auto name = ""s;
             parse_value(line, name, true);
-            if (cb.group) cb.group(name);
+            cb.group(name);
         } else if (cmd == "s") {
             auto name = ""s;
             parse_value(line, name, true);
-            if (cb.smoothing) cb.smoothing(name);
+            cb.smoothing(name);
         } else if (cmd == "mtllib") {
             if (options.geometry_only) continue;
             auto mtlname = ""s;
             parse_value(line, mtlname);
-            if (cb.mtllib) cb.mtllib(mtlname);
+            cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + mtlname;
             load_mtl(mtlpath, cb, options);
         } else {

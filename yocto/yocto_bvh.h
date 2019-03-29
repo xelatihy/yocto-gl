@@ -1841,10 +1841,11 @@ inline bool intersect_scene_bvh(const bvh_scene& bvh, int num_instances,
                 const ray3f& ray, int idx, bvh_intersection& intersection,
                 bool find_any) {
                 auto instance = get_instance(idx);
-                auto inv_ray  = non_rigid_frames
-                                   ? transform_ray(
-                                         inverse((affine3f)instance.frame), ray)
-                                   : transform_ray_inverse(instance.frame, ray);
+                auto inv_ray =
+                    non_rigid_frames
+                        ? transform_ray(
+                              inverse((const affine3f&)instance.frame), ray)
+                        : transform_ray_inverse(instance.frame, ray);
                 return intersect_shape(bvh.shapes[instance.shape],
                     instance.shape, inv_ray, intersection, find_any);
             });
@@ -1994,11 +1995,11 @@ inline bool overlap_scene_bvh(const bvh_scene& bvh, int num_instances,
                 const vec3f& pos, float max_distance, int idx,
                 bvh_intersection& intersection, bool find_any) {
                 auto instance = get_instance(idx);
-                auto inv_pos  = non_rigid_frames
-                                   ? transform_point(
-                                         inverse((affine3f)instance.frame), pos)
-                                   : transform_point_inverse(
-                                         instance.frame, pos);
+                auto inv_pos =
+                    non_rigid_frames
+                        ? transform_point(
+                              inverse((const affine3f&)instance.frame), pos)
+                        : transform_point_inverse(instance.frame, pos);
                 return overlap_shape(bvh.shapes[instance.shape], instance.shape,
                     pos, max_distance, find_any);
             });
