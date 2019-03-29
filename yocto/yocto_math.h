@@ -281,9 +281,14 @@ using vec1i = vec<int, 1>;
 using vec2i = vec<int, 2>;
 using vec3i = vec<int, 3>;
 using vec4i = vec<int, 4>;
+using vec1b = vec<byte, 1>;
+using vec2b = vec<byte, 2>;
+using vec3b = vec<byte, 3>;
 using vec4b = vec<byte, 4>;
 
 // Zero vector constants.
+template <typename T, int N>
+constexpr const auto zero   = vec<T, N>{};
 constexpr const auto zero1f = vec1f{0};
 constexpr const auto zero2f = vec2f{0, 0};
 constexpr const auto zero3f = vec3f{0, 0, 0};
@@ -292,6 +297,9 @@ constexpr const auto zero1i = vec1i{0};
 constexpr const auto zero2i = vec2i{0, 0};
 constexpr const auto zero3i = vec3i{0, 0, 0};
 constexpr const auto zero4i = vec4i{0, 0, 0, 0};
+constexpr const auto zero1b = vec1b{0};
+constexpr const auto zero2b = vec2b{0, 0};
+constexpr const auto zero3b = vec3b{0, 0, 0};
 constexpr const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Vector comparison operations.
@@ -815,8 +823,8 @@ constexpr inline int min_element(const vec<T, N>& a) {
 }
 
 // Apply a unary function to all vector elements
-template <typename T, int N>
-constexpr inline vec<T, N> apply(T (*func)(T), const vec<T, N>& a) {
+template <typename T, int N, typename Func>
+constexpr inline vec<T, N> apply(const Func& func, const vec<T, N>& a) {
     if constexpr (N == 1) {
         return {func(a.x)};
     } else if constexpr (N == 2) {
@@ -832,8 +840,8 @@ constexpr inline vec<T, N> apply(T (*func)(T), const vec<T, N>& a) {
     }
 }
 // Apply a binary function to all vector elements
-template <typename T, int N>
-constexpr inline vec<T, N> apply(T (*func)(T, T), const vec<T, N>& a, T b) {
+template <typename T, int N, typename Func>
+constexpr inline vec<T, N> apply(const Func& func, const vec<T, N>& a, T b) {
     if constexpr (N == 1) {
         return {func(a.x, b)};
     } else if constexpr (N == 2) {
@@ -852,15 +860,15 @@ constexpr inline vec<T, N> apply(T (*func)(T, T), const vec<T, N>& a, T b) {
 // Functions applied to vector elements
 template <typename T, int N>
 constexpr inline vec<T, N> sqrt(const vec<T, N>& a) {
-    return apply(sqrt, a);
+    return apply([](const T& a) { return sqrt(a); }, a);
 };
 template <typename T, int N>
 constexpr inline vec<T, N> exp(const vec<T, N>& a) {
-    return apply(exp, a);
+    return apply([](const T& a) { return exp(a); }, a);
 };
 template <typename T, int N, typename T1>
 constexpr inline vec<T, N> pow(const vec<T, N>& a, T1 b) {
-    return apply(pow, a, b);
+    return apply([](const T& a, const T& b) { return pow(a, b); }, a, b);
 };
 
 template <typename T, int N>

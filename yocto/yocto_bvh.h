@@ -273,7 +273,11 @@ inline void build_scene_bvh(
     bvh_scene& bvh, const Scene& scene, const bvh_build_options& options) {
     return build_scene_bvh(
         bvh, (int)scene.instances.size(),
-        [&scene](int idx) { return bvh_instance{ scene.instances[idx].frame, scene.instances[idx].shape} ; }, options);
+        [&scene](int idx) {
+            return bvh_instance{
+                scene.instances[idx].frame, scene.instances[idx].shape};
+        },
+        options);
 }
 
 // Refit bvh data
@@ -289,7 +293,11 @@ inline void refit_scene_bvh(
     bvh_scene& bvh, const Scene& scene, const bvh_build_options& options) {
     return refit_scene_bvh(
         bvh, (int)scene.instances.size(),
-        [&scene](int idx) { return bvh_instance{ scene.instances[idx].frame, scene.instances[idx].shape} ; }, options);
+        [&scene](int idx) {
+            return bvh_instance{
+                scene.instances[idx].frame, scene.instances[idx].shape};
+        },
+        options);
 }
 
 template <typename Shape>
@@ -305,7 +313,10 @@ inline bool intersect_scene_bvh(const bvh_scene& bvh, const Scene& scene,
     bool non_rigid_frames = true) {
     return intersect_scene_bvh(
         bvh, (int)scene.instances.size(),
-        [&scene](int idx) { return bvh_instance{ scene.instances[idx].frame, scene.instances[idx].shape} ; },
+        [&scene](int idx) {
+            return bvh_instance{
+                scene.instances[idx].frame, scene.instances[idx].shape};
+        },
         [&scene](const bvh_shape& bvh, int idx, const ray3f& ray,
             bvh_intersection& intersection, bool find_any) {
             return intersect_shape_bvh(
@@ -942,8 +953,8 @@ inline void build_embree_shape_bvh(bvh_shape& bvh, const vector<int>& points,
 }
 // Build a BVH using Embree.
 template <typename GetInstance>
-inline void build_embree_instances_bvh(
-    bvh_scene& bvh, int num_instances, const GetInstance& get_instance, const bvh_build_options& options) {
+inline void build_embree_instances_bvh(bvh_scene& bvh, int num_instances,
+    const GetInstance& get_instance, const bvh_build_options& options) {
     // scene bvh
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
@@ -956,8 +967,7 @@ inline void build_embree_instances_bvh(
         rtcCommitScene(embree_scene);
         return;
     }
-    for (auto instance_id = 0; instance_id < num_instances;
-         instance_id++) {
+    for (auto instance_id = 0; instance_id < num_instances; instance_id++) {
         auto instance = get_instance(instance_id);
         if (instance.shape < 0) throw runtime_error("empty instance");
         auto& shape_bvh = bvh.shapes[instance.shape];
@@ -1565,16 +1575,17 @@ inline void build_shape_bvh(bvh_shape& bvh, const vector<int>& points,
     }
 }
 template <typename GetInstance>
-inline void build_scene_bvh(
-    bvh_scene& bvh, int num_instances, const GetInstance& get_instance,
-    const bvh_build_options& options) {
+inline void build_scene_bvh(bvh_scene& bvh, int num_instances,
+    const GetInstance& get_instance, const bvh_build_options& options) {
 #if YOCTO_EMBREE
     if (options.use_embree) {
         if (options.embree_flatten) {
-            // return build_embree_flattened_bvh(bvh, num_instances, get_instance, options);
+            // return build_embree_flattened_bvh(bvh, num_instances,
+            // get_instance, options);
             throw runtime_error("flattening not support now");
         } else {
-            return build_embree_instances_bvh(bvh, num_instances, get_instance, options);
+            return build_embree_instances_bvh(
+                bvh, num_instances, get_instance, options);
         }
     }
 #endif
@@ -1659,8 +1670,8 @@ inline void refit_shape_bvh(bvh_shape& bvh, const vector<int>& points,
 }
 
 template <typename GetInstance>
-inline void refit_scene_bvh(bvh_scene& bvh, int num_instances, const GetInstance& get_instance,
-    const bvh_build_options& options) {
+inline void refit_scene_bvh(bvh_scene& bvh, int num_instances,
+    const GetInstance& get_instance, const bvh_build_options& options) {
 #if YOCTO_EMBREE
     if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
 #endif
@@ -1826,15 +1837,16 @@ inline bool intersect_scene_bvh(const bvh_scene& bvh, int num_instances,
 
     if (num_instances) {
         return intersect_bvh_nodes<true>(bvh.nodes, ray, intersection, find_any,
-            [&bvh, &get_instance, &intersect_shape, non_rigid_frames](const ray3f& ray, int idx,
-                bvh_intersection& intersection, bool find_any) {
+            [&bvh, &get_instance, &intersect_shape, non_rigid_frames](
+                const ray3f& ray, int idx, bvh_intersection& intersection,
+                bool find_any) {
                 auto instance = get_instance(idx);
                 auto inv_ray  = non_rigid_frames
                                    ? transform_ray(
                                          inverse((affine3f)instance.frame), ray)
                                    : transform_ray_inverse(instance.frame, ray);
-                return intersect_shape(bvh.shapes[instance.shape], instance.shape,
-                    inv_ray, intersection, find_any);
+                return intersect_shape(bvh.shapes[instance.shape],
+                    instance.shape, inv_ray, intersection, find_any);
             });
     } else {
         return false;
@@ -1978,16 +1990,17 @@ inline bool overlap_scene_bvh(const bvh_scene& bvh, int num_instances,
     if (num_instances) {
         return overlap_bvh_nodes<true>(bvh.nodes, pos, max_distance,
             intersection, find_any,
-            [&bvh, &overlap_shape, &get_instance, non_rigid_frames](const vec3f& pos,
-                float max_distance, int idx, bvh_intersection& intersection,
-                bool find_any) {
+            [&bvh, &overlap_shape, &get_instance, non_rigid_frames](
+                const vec3f& pos, float max_distance, int idx,
+                bvh_intersection& intersection, bool find_any) {
                 auto instance = get_instance(idx);
                 auto inv_pos  = non_rigid_frames
                                    ? transform_point(
                                          inverse((affine3f)instance.frame), pos)
                                    : transform_point_inverse(
                                          instance.frame, pos);
-                return overlap_shape(bvh.shapes[instance.shape], instance.shape, pos, max_distance, find_any);
+                return overlap_shape(bvh.shapes[instance.shape], instance.shape,
+                    pos, max_distance, find_any);
             });
     } else {
         return false;
