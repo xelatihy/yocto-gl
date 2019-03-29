@@ -2223,7 +2223,7 @@ bool get_metal_ior(const string& name, vec3f& eta, vec3f& etak) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template<typename Func>
+template <typename Func>
 float integrate_func_base(
     const Func& f, float a, float b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
@@ -2236,7 +2236,7 @@ float integrate_func_base(
     return integral;
 }
 
-template<typename Func>
+template <typename Func>
 float integrate_func_stratified(
     const Func& f, float a, float b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
@@ -2249,10 +2249,9 @@ float integrate_func_stratified(
     return integral;
 }
 
-template<typename Func>
-float integrate_func_importance(const Func& f,
-    const Func& pdf, const Func& warp, int nsamples,
-    rng_state& rng) {
+template <typename Func>
+float integrate_func_importance(const Func& f, const Func& pdf,
+    const Func& warp, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = get_random_float(rng);
@@ -2273,10 +2272,9 @@ float integrate_func_importance(const Func& f,
 // auto f = [](double x) { return sin(x); }
 // auto a = 0.0, b = (double)M_PI;
 // auto expected = (double)M_PI;
-template<typename Func>
-void print_integrate_func_test(const Func& f, float a, float b,
-    float expected, int nsamples, const Func& pdf,
-    const Func& warp) {
+template <typename Func>
+void print_integrate_func_test(const Func& f, float a, float b, float expected,
+    int nsamples, const Func& pdf, const Func& warp) {
     auto rng = rng_state();
     printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {
@@ -2292,7 +2290,7 @@ void print_integrate_func_test(const Func& f, float a, float b,
     }
 }
 
-template<typename Func>
+template <typename Func>
 float integrate_func2_base(
     const Func& f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
@@ -2305,7 +2303,7 @@ float integrate_func2_base(
     return integral;
 }
 
-template<typename Func>
+template <typename Func>
 float integrate_func2_stratified(
     const Func& f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral  = 0.0f;
@@ -2322,10 +2320,9 @@ float integrate_func2_stratified(
     return integral;
 }
 
-template<typename Func, typename Func2>
-float integrate_func2_importance(const Func& f,
-    const Func& pdf, const Func2& warp, int nsamples,
-    rng_state& rng) {
+template <typename Func, typename Func2>
+float integrate_func2_importance(const Func& f, const Func& pdf,
+    const Func2& warp, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = get_random_vec2f(rng);
@@ -2342,10 +2339,9 @@ float integrate_func2_importance(const Func& f,
 // auto a = 0.0, b = 1.0;
 // auto expected = 3.0 / 4.0;
 // auto nsamples = 10000
-template<typename Func, typename Func2>
-void print_integrate_func2_test(const Func& f, vec2f a, vec2f b,
-    float expected, int nsamples, const Func& pdf,
-    const Func2& warp) {
+template <typename Func, typename Func2>
+void print_integrate_func2_test(const Func& f, vec2f a, vec2f b, float expected,
+    int nsamples, const Func& pdf, const Func2& warp) {
     auto rng = rng_state();
     printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {
