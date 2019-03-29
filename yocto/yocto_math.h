@@ -171,8 +171,10 @@ constexpr inline T lerp(T a, T b, T u) {
     return a * (1 - u) + b * u;
 }
 constexpr inline int pow2(int x) { return 1 << x; }
-inline float         radians(float x) { return x * pif / 180; }
-inline float         degrees(float x) { return x * 180 / pif; }
+template<typename T>
+inline T         radians(T x) { return x * (T)pi / 180; }
+template<typename T>
+inline T         degrees(T x) { return x * 180 / (T)pi; }
 
 }  // namespace yocto
 
