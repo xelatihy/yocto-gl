@@ -621,18 +621,18 @@ void from_json_procedural(
         is_hdr = true;
     } else if (type == "noise") {
         make_noise_image(
-            value.hdr_image, js.value("scale", 1.0f), js.value("wrap", true));
+            value.hdr_image, js.value("c0", vec4f{0,0,0,1}), js.value("c1", vec4f{1,1,1,1}), js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        make_fbm_image(value.hdr_image, js.value("scale", 1.0f),
+        make_fbm_image(value.hdr_image, js.value("c0", vec4f{0,0,0,1}), js.value("c1", vec4f{1,1,1,1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        make_ridge_image(value.hdr_image, js.value("scale", 1.0f),
+        make_ridge_image(value.hdr_image, js.value("c0", vec4f{0,0,0,1}), js.value("c1", vec4f{1,1,1,1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        make_turbulence_image(value.hdr_image, js.value("scale", 1.0f),
+        make_turbulence_image(value.hdr_image, js.value("c0", vec4f{0,0,0,1}), js.value("c1", vec4f{1,1,1,1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {

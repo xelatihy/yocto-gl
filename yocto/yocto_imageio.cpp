@@ -448,18 +448,18 @@ void apply_json_procedural(const json& js, image<vec4f>& img) {
             js.value("sun_intensity", 1.0f), js.value("sun_temperature", 0.0f),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
     } else if (type == "noise") {
-        make_noise_image(img, js.value("scale", 1.0f), js.value("wrap", true));
+        make_noise_image(img, js.value("c0", vec4f{0,0,0,1}), js.value("c1", vec4f{1,1,1,1}), js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        make_fbm_image(img, js.value("scale", 1.0f),
+        make_fbm_image(img, js.value("c0", vec4f{0,0,0,1}), js.value("c1", vec4f{1,1,1,1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        make_ridge_image(img, js.value("scale", 1.0f),
+        make_ridge_image(img, js.value("c0", vec4f{0,0,0,1}), js.value("c1", vec4f{1,1,1,1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        make_turbulence_image(img, js.value("scale", 1.0f),
+        make_turbulence_image(img, js.value("c0", vec4f{0,0,0,1}), js.value("c1", vec4f{1,1,1,1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {

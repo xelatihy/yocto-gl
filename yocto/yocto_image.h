@@ -283,14 +283,12 @@ template <typename T>
 inline void make_bumpdimple_image(
     image<T>& img, int tile, const T& c0, const T& c1);
 template <typename T>
-inline void make_ramp_image(
-    image<T>& img, const T& c0, const T& c1);
+inline void make_ramp_image(image<T>& img, const T& c0, const T& c1);
 template <typename T>
 inline void make_ramp_image(
     image<T>& img, const T& c00, const T& c10, const T& c11, const T& c01);
 template <typename T>
-inline void make_gammaramp_image(
-    image<T>& img, const T& c0, const T& c1);
+inline void make_gammaramp_image(image<T>& img, const T& c0, const T& c1);
 template <typename T>
 inline void make_uvramp_image(image<T>& img);
 template <typename T, int N>
@@ -302,7 +300,8 @@ inline void make_blackbodyramp_image(image<vec<T, N>>& img,
 
 // Comvert a bump map to a normal map. All linear color spaces.
 template <typename T, int N>
-inline void bump_to_normal_map(image<vec<T, N>>& norm, const image<vec<T, N>>& img, T scale = 1);
+inline void bump_to_normal_map(
+    image<vec<T, N>>& norm, const image<vec<T, N>>& img, T scale = 1);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
@@ -312,29 +311,35 @@ inline void bump_to_normal_map(image<vec<T, N>>& norm, const image<vec<T, N>>& i
 template <typename T, int N>
 inline void make_sunsky_image(image<vec<T, N>>& img, T sun_angle,
     T turbidity = 3, bool has_sun = false, T sun_intensity = 1,
-    T sun_temperature = 0, const vec<T, 3>& ground_albedo = {(T)0.2, (T)0.2, (T)0.2});
+    T                sun_temperature = 0,
+    const vec<T, 3>& ground_albedo   = {(T)0.2, (T)0.2, (T)0.2});
 // Make an image of multiple lights.
 template <typename T, int N>
-inline void make_lights_image(image<vec<T, N>>& img, const vec<T, 3>& le = {1, 1, 1},
-    int nlights = 4, T langle = (T)pi / 4, T lwidth = (T)pi / 16,
-    T lheight = (T)pi / 16);
+inline void make_lights_image(image<vec<T, N>>& img,
+    const vec<T, 3>& le = {1, 1, 1}, int nlights = 4, T langle = (T)pi / 4,
+    T lwidth = (T)pi / 16, T lheight = (T)pi / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
+template <typename T, typename T1>
 inline void make_noise_image(
-    image<vec4f>& img, float scale = 1, bool wrap = true);
-inline void make_fbm_image(image<vec4f>& img, float scale = 1,
-    float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-inline void make_ridge_image(image<vec4f>& img, float scale = 1,
-    float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
+    image<T>& img, const T& c0, const T& c1, T1 scale = 1, bool wrap = true);
+template <typename T, typename T1>
+inline void make_fbm_image(image<T>& img, const T& c0, const T& c1,
+    T1 scale = 1, T1 lacunarity = 2, T1 gain = 0.5f, int octaves = 6,
+    bool wrap = true);
+template <typename T, typename T1>
+inline void make_ridge_image(image<T>& img, const T& c0, const T& c1,
+    T1 scale = 1, T1 lacunarity = 2, T1 gain = (T1)0.5, T1 offset = 1,
     int octaves = 6, bool wrap = true);
-template <typename T>
-inline void make_turbulence_image(image<vec4f>& img, float scale = 1,
-    float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
+template <typename T, typename T1>
+inline void make_turbulence_image(image<T>& img, const T& c0, const T& c1,
+    T1 scale = 1, T1 lacunarity = 2, T1 gain = (T1)0.5, int octaves = 6,
+    bool wrap = true);
 
 // Add a border to an image
 template <typename T>
-inline void add_image_border(image<vec4f>& img, int border_width = 2,
-    const vec4f& border_color = {0, 0, 0, 1});
+inline void add_image_border(
+    image<T>& img, int border_width, const T& border_color);
 
 }  // namespace yocto
 
@@ -528,26 +533,36 @@ inline vec<T, N> apply_color(const Func& func, const vec<T, N>& a) {
 }
 
 // Lerp colors between two values
-template<typename T, typename T1>
-inline T lerp_color(const T& a, const T& b, T1 u) { return lerp(a, b, u); }
-template<typename T1>
+template <typename T, typename T1>
+inline T lerp_color(const T& a, const T& b, T1 u) {
+    return lerp(a, b, u);
+}
+template <typename T1>
 inline byte lerp_color(byte a, byte b, T1 u) {
     return float_to_byte(lerp(byte_to_float(a), byte_to_float(b), u));
 }
-template<int N, typename T1>
-inline vec<byte, N> lerp_color(const vec<byte, N>& a, const vec<byte, N> b, T1 u) {
+template <int N, typename T1>
+inline vec<byte, N> lerp_color(
+    const vec<byte, N>& a, const vec<byte, N> b, T1 u) {
     return float_to_byte(lerp(byte_to_float(a), byte_to_float(b), u));
 }
 
-template<typename T, typename T1>
-inline T bilerp_color(const T& c00, const T& c10, const T& c11, const T& c01, T1 u, T1 v) { return bilerp(c00, c01, c11, c01, u, v); }
-template<typename T1>
-inline byte bilerp_color(byte c00, byte c10, byte c11,byte c01, T1 u, T1 v) {
-    return float_to_byte(bilerp(byte_to_float(c00), byte_to_float(c01), byte_to_float(c11), byte_to_float(c01), u, v));
+template <typename T, typename T1>
+inline T bilerp_color(
+    const T& c00, const T& c10, const T& c11, const T& c01, T1 u, T1 v) {
+    return bilerp(c00, c01, c11, c01, u, v);
 }
-template<int N, typename T1>
-inline vec<byte, N> bilerp_color(const vec<byte, N>& c00, const vec<byte, N> c10, const vec<byte, N>& c11, const vec<byte, N> c01, T1 u, T1 v) {
-    return float_to_byte(bilerp(byte_to_float(c00), byte_to_float(c01), byte_to_float(c11), byte_to_float(c01), u, v));
+template <typename T1>
+inline byte bilerp_color(byte c00, byte c10, byte c11, byte c01, T1 u, T1 v) {
+    return float_to_byte(bilerp(byte_to_float(c00), byte_to_float(c01),
+        byte_to_float(c11), byte_to_float(c01), u, v));
+}
+template <int N, typename T1>
+inline vec<byte, N> bilerp_color(const vec<byte, N>& c00,
+    const vec<byte, N> c10, const vec<byte, N>& c11, const vec<byte, N> c01,
+    T1 u, T1 v) {
+    return float_to_byte(bilerp(byte_to_float(c00), byte_to_float(c01),
+        byte_to_float(c11), byte_to_float(c01), u, v));
 }
 
 // Conversion between linear and gamma-encoded colors.
@@ -990,10 +1005,13 @@ template <typename T, int N>
 inline void make_uvramp_image(image<vec<T, N>>& img) {
     if constexpr (N == 3) {
         // FIXME: not generic
-        return make_ramp_image(img, vec<T, N>{0,0,0}, vec<T, N>{1,0,0}, vec<T, N>{1,1,0}, vec<T, N>{0,1,0});
-    } else if constexpr(N == 4) {
+        return make_ramp_image(img, vec<T, N>{0, 0, 0}, vec<T, N>{1, 0, 0},
+            vec<T, N>{1, 1, 0}, vec<T, N>{0, 1, 0});
+    } else if constexpr (N == 4) {
         // FIXME: not generic
-        return make_ramp_image(img, vec<T, N>{0,0,0,0}, vec<T, N>{1,0,0,0}, vec<T, N>{1,1,0,0}, vec<T, N>{0,1,0,0});
+        return make_ramp_image(img, vec<T, N>{0, 0, 0, 0},
+            vec<T, N>{1, 0, 0, 0}, vec<T, N>{1, 1, 0, 0},
+            vec<T, N>{0, 1, 0, 0});
     } else {
         throw runtime_error("bad channels");
     }
@@ -1004,7 +1022,7 @@ template <typename T, int N>
 inline void make_uvgrid_image(image<vec<T, N>>& img, int tiles, bool colored) {
     make_image_fromij(img, [size = img.size(), tile = img.size().x / tiles,
                                colored](int i, int j) {
-        j = size.y - j - 1;
+        j       = size.y - j - 1;
         auto ii = i / tile, jj = j / tile;
         auto ww = size.x / tile, hh = size.y / tile;
         auto ph = (((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256) /
@@ -1022,9 +1040,9 @@ inline void make_uvgrid_image(image<vec<T, N>>& img, int tiles, bool colored) {
         }
         auto rgb = (colored) ? hsv_to_rgb(vec<T, 3>{ph, ps, pv})
                              : vec<T, 3>{pv, pv, pv};
-        if constexpr(N == 3) {
+        if constexpr (N == 3) {
             return vec<T, 3>{rgb.x, rgb.y, rgb.z};
-        } else if constexpr(N == 4) {
+        } else if constexpr (N == 4) {
             return vec<T, 4>{rgb.x, rgb.y, rgb.z, 1};
         } else {
             throw runtime_error("bad number of channels");
@@ -1042,13 +1060,73 @@ inline void make_blackbodyramp_image(
                                (end_temperature - start_temperature) *
                                    (float)i / (float)(size.x - 1);
             auto rgb = blackbody_to_rgb(temperature);
-            if constexpr(N == 3) {
+            if constexpr (N == 3) {
                 return vec<T, 3>{rgb.x, rgb.y, rgb.z};
-            } else if constexpr(N == 4) {
+            } else if constexpr (N == 4) {
                 return vec<T, 4>{rgb.x, rgb.y, rgb.z, 1};
             } else {
                 throw runtime_error("bad number of channels");
             }
+        });
+}
+
+// Make a noise image. Wrap works only if size is a power of two.
+template <typename T, typename T1>
+inline void make_noise_image(
+    image<T>& img, const T& c0, const T& c1, T1 scale, bool wrap) {
+    make_image_fromij(img,
+        [wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i, size = img.size(), scale, &c0, &c1](
+            int i, int j) {
+            auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
+            auto g = perlin_noise(p, wrap3i);
+            g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
+            return lerp_color(c0, c1, g);
+        });
+}
+
+// Make a noise image. Wrap works only if size is a power of two.
+template <typename T, typename T1>
+inline void make_fbm_image(image<T>& img, const T& c0, const T& c1, T1 scale,
+    T1 lacunarity, T1 gain, int octaves, bool wrap) {
+    make_image_fromij(
+        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
+                 size = img.size(), scale, lacunarity, gain, octaves, &c0, &c1](int i, int j) {
+            auto p =
+                vec3f{i / (float)size.x, j / (float)size.y, 0.5f} *
+                scale;
+            auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
+            g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
+            return lerp_color(c0, c1, g);
+        });
+}
+
+// Make a noise image. Wrap works only if size is a power of two.
+template <typename T, typename T1>
+inline void make_ridge_image(image<T>& img, const T& c0, const T& c1, T1 scale,
+    T1 lacunarity, T1 gain, T1 offset, int octaves, bool wrap) {
+    make_image_fromij(
+        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
+                 size = img.size(), scale, lacunarity, gain, offset, octaves, &c0, &c1](int i, int j) {
+            auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
+            auto g = perlin_ridge_noise(
+                p, lacunarity, gain, offset, octaves, wrap3i);
+            g = clamp(g, 0.0f, 1.0f);
+            return lerp_color(c0, c1, g);
+        });
+}
+
+// Make a noise image. Wrap works only if size is a power of two.
+template <typename T, typename T1>
+inline void make_turbulence_image(image<T>& img, const T& c0, const T& c1,
+    T1 scale, T1 lacunarity, T1 gain, int octaves, bool wrap) {
+    make_image_fromij(
+        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
+                 size = img.size(), scale, lacunarity, gain, octaves, &c0, &c1](int i, int j) {
+            auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
+            auto g = perlin_turbulence_noise(
+                p, lacunarity, gain, octaves, wrap3i);
+            g = clamp(g, 0.0f, 1.0f);
+            return lerp_color(c0, c1, g);
         });
 }
 
@@ -1080,6 +1158,24 @@ inline void bump_to_normal_map(
     }
 }
 
+// Add a border to an image
+template <typename T>
+inline void add_image_border(
+    image<T>& img, int border_width, const T& border_color) {
+    for (auto j = 0; j < img.size().y; j++) {
+        for (auto b = 0; b < border_width; b++) {
+            img[{b, j}]                    = border_color;
+            img[{img.size().x - 1 - b, j}] = border_color;
+        }
+    }
+    for (auto i = 0; i < img.size().x; i++) {
+        for (auto b = 0; b < border_width; b++) {
+            img[{i, b}]                    = border_color;
+            img[{i, img.size().y - 1 - b}] = border_color;
+        }
+    }
+}
+
 #if 1
 
 // Implementation of sunsky modified heavily from pbrt
@@ -1107,10 +1203,10 @@ inline void make_sunsky_image(image<vec<T, N>>& img, T theta_sun, T turbidity,
     }
 
     // clear image
-    if constexpr(N == 3) {
-        for (auto& p : img) p = {0,0,0};
-    } else if constexpr(N == 4) {
-        for (auto& p : img) p = {0,0,0,default_alpha<T>};
+    if constexpr (N == 3) {
+        for (auto& p : img) p = {0, 0, 0};
+    } else if constexpr (N == 4) {
+        for (auto& p : img) p = {0, 0, 0, default_alpha<T>};
     } else {
         throw runtime_error("bad channels");
     }
@@ -1319,88 +1415,6 @@ inline void make_lights_image(image<vec<T, 4>>& img, const vec<T, 3>& le,
                 inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
             }
             img[{i, j}] = rgba(le);
-        }
-    }
-}
-
-// Make a noise image. Wrap works only if size is a power of two.
-inline void make_noise_image(image<vec4f>& img, float scale, bool wrap) {
-    auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
-    for (auto j = 0; j < img.size().y; j++) {
-        for (auto i = 0; i < img.size().x; i++) {
-            auto p =
-                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
-                scale;
-            auto g      = perlin_noise(p, wrap3i);
-            g           = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            img[{i, j}] = {g, g, g, 1};
-        }
-    }
-}
-
-// Make a noise image. Wrap works only if size is a power of two.
-inline void make_fbm_image(image<vec4f>& img, float scale, float lacunarity,
-    float gain, int octaves, bool wrap) {
-    auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
-    for (auto j = 0; j < img.size().y; j++) {
-        for (auto i = 0; i < img.size().x; i++) {
-            auto p =
-                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
-                scale;
-            auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
-            g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            img[{i, j}] = {g, g, g, 1};
-        }
-    }
-}
-
-// Make a noise image. Wrap works only if size is a power of two.
-inline void make_ridge_image(image<vec4f>& img, float scale, float lacunarity,
-    float gain, float offset, int octaves, bool wrap) {
-    auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
-    for (auto j = 0; j < img.size().y; j++) {
-        for (auto i = 0; i < img.size().x; i++) {
-            auto p =
-                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
-                scale;
-            auto g = perlin_ridge_noise(
-                p, lacunarity, gain, offset, octaves, wrap3i);
-            g           = clamp(g, 0.0f, 1.0f);
-            img[{i, j}] = {g, g, g, 1};
-        }
-    }
-}
-
-// Make a noise image. Wrap works only if size is a power of two.
-inline void make_turbulence_image(image<vec4f>& img, float scale,
-    float lacunarity, float gain, int octaves, bool wrap) {
-    auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
-    for (auto j = 0; j < img.size().y; j++) {
-        for (auto i = 0; i < img.size().x; i++) {
-            auto p =
-                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
-                scale;
-            auto g = perlin_turbulence_noise(
-                p, lacunarity, gain, octaves, wrap3i);
-            g           = clamp(g, 0.0f, 1.0f);
-            img[{i, j}] = {g, g, g, 1};
-        }
-    }
-}
-
-// Add a border to an image
-inline void add_image_border(
-    image<vec4f>& img, int border_width, const vec4f& border_color) {
-    for (auto j = 0; j < img.size().y; j++) {
-        for (auto b = 0; b < border_width; b++) {
-            img[{b, j}]                    = border_color;
-            img[{img.size().x - 1 - b, j}] = border_color;
-        }
-    }
-    for (auto i = 0; i < img.size().x; i++) {
-        for (auto b = 0; b < border_width; b++) {
-            img[{i, b}]                    = border_color;
-            img[{i, img.size().y - 1 - b}] = border_color;
         }
     }
 }
