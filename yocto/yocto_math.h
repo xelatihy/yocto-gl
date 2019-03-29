@@ -166,9 +166,13 @@ template <typename T>
 constexpr inline T clamp01(T x) {
     return min(max(x, (T)0), (T)1);
 }
-template <typename T>
-constexpr inline T lerp(T a, T b, T u) {
+template <typename T, typename T1>
+constexpr inline T lerp(const T& a, const T& b, T1 u) {
     return a * (1 - u) + b * u;
+}
+template<typename T, typename T1>
+constexpr inline T bilerp(const T& c00, const T& c10, const T& c11, const T& c01, T1 u, T1 v) {
+    return c00 * (1 - u) * (1 - v) + c10 * u * (1-v) + c01 * (1-u) * v + c11 * u * v;
 }
 constexpr inline int pow2(int x) { return 1 << x; }
 template<typename T>
@@ -738,23 +742,7 @@ constexpr inline vec<T, N> clamp01(const vec<T, N>& x) {
         return c;
     }
 }
-template <typename T, int N, typename T1>
-constexpr inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T1 u) {
-    if constexpr (N == 1) {
-        return {lerp(a.x, b.x, u)};
-    } else if constexpr (N == 2) {
-        return {lerp(a.x, b.x, u), lerp(a.y, b.y, u)};
-    } else if constexpr (N == 3) {
-        return {lerp(a.x, b.x, u), lerp(a.y, b.y, u), lerp(a.z, b.z, u)};
-    } else if constexpr (N == 4) {
-        return {lerp(a.x, b.x, u), lerp(a.y, b.y, u), lerp(a.z, b.z, u),
-            lerp(a.w, b.w, u)};
-    } else {
-        auto c = vec<T, N>{};
-        for (auto i = 0; i < N; i++) c[i] = lerp(a[i], b[i], u);
-        return c;
-    }
-}
+
 template <typename T, int N>
 constexpr inline T max(const vec<T, N>& a) {
     if constexpr (N == 1) {

@@ -604,11 +604,11 @@ void from_json_procedural(
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "bump") {
-        make_bumpdimple_image(value.hdr_image, js.value("tile", 8));
+        make_bumpdimple_image(value.hdr_image, js.value("tile", 8), js.value("c0", vec4f{0,0,0,1}), js.value("c1", vec4f{1,1,1,1}));
     } else if (type == "uvramp") {
         make_uvramp_image(value.hdr_image);
     } else if (type == "gammaramp") {
-        make_gammaramp_image(value.hdr_image);
+        make_gammaramp_image(value.hdr_image, js.value("c0", vec4f{0,0,0,1}), js.value("c1", vec4f{1,1,1,1}));
     } else if (type == "blackbodyramp") {
         make_blackbodyramp_image(value.hdr_image);
     } else if (type == "uvgrid") {
