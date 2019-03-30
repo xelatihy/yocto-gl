@@ -4917,6 +4917,7 @@ struct disney_material {
     vec3f  color      = zero3f;
     string color_map  = ""s;
     float  refractive = 0;
+    int color_ptex_faces = 0;
 };
 
 void load_disney_island_cameras(const string& filename, yocto_scene& scene) {
@@ -5000,6 +5001,7 @@ void load_disney_island_materials(
                 ass_material.name      = mname + "_" + jass.get<string>();
                 ass_material.color_map = material.color_map +
                                          jass.get<string>() + ".ptx";
+                ass_material.color_ptex_faces = tjs.at(ass_material.color_map).at("numFaces").get<int>();
                 ass_material.color =
                     tjs.at(ass_material.color_map).at("color").get<vec4f>().xyz;
                 mmap[ass_material.name] = ass_material;
@@ -5045,6 +5047,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         string gname = ""s;
         string mname = ""s;
         bool split_next = false;
+        vector<disney_material> dmaterials = {};
 
         // Add  vertices to the current shape
         void add_verts(const vector<obj_vertex>& verts) {
@@ -5082,6 +5085,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
             // printf("--- %s\n", dmaterial.name.c_str());
             if (!shapes.empty() && materials.back().name == dmaterial.name) return;
             // printf("+++ %s\n", dmaterial.name.c_str());
+            dmaterials.push_back(dmaterial);
             materials.push_back({});
             materials.back().name = dmaterial.name;
             if (dmaterial.refractive == 0) {
@@ -5133,6 +5137,16 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         auto cb = parse_callbacks{shapes, materials, smap, mmap, filename};
         load_obj(filename, cb, obj_options);
 
+        // check for PTEX errors
+        for(auto id = 0; id < shapes.size(); id ++) {
+            if(cb.dmaterials[id].color_map != "") {
+                auto ptex_faces = cb.dmaterials[id].color_ptex_faces;
+                auto shape_faces = (int)shapes[id].quads.size();
+                auto is_multiple = shape_faces % ptex_faces == 0;
+                if(!is_multiple) printf("PTEX ERROR: %d %d\n", ptex_faces, shape_faces);
+            }
+        }
+        
         // merging quads and triangles
         for (auto& shape : shapes) {
             merge_triangles_and_quads(shape.triangles, shape.quads, false);
