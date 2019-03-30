@@ -5044,6 +5044,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         // last material and group name
         string gname = ""s;
         string mname = ""s;
+        bool split_next = false;
 
         // Add  vertices to the current shape
         void add_verts(const vector<obj_vertex>& verts) {
@@ -5063,10 +5064,48 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
             }
         }
 
+        void split_shape() {
+            if(!split_next) return;
+            split_next = false;
+            // printf("--  %s\n", name.c_str());
+            auto dmaterial = mmap.at(mname);
+            if (dmaterial.color_map != "") {
+                // printf("--  %s\n", (name + "_" + gname).c_str());
+                try {
+                    dmaterial = mmap.at(mname + "_" + gname);
+                } catch (std::out_of_range& e) {
+                    // printf("------------------------------------------ %s\n",
+                    // (name + "_" + gname).c_str()); dmaterial = mmap.at(name);
+                    throw;
+                }
+            }
+            // printf("--- %s\n", dmaterial.name.c_str());
+            if (!shapes.empty() && materials.back().name == dmaterial.name) return;
+            // printf("+++ %s\n", dmaterial.name.c_str());
+            materials.push_back({});
+            materials.back().name = dmaterial.name;
+            if (dmaterial.refractive == 0) {
+                materials.back().diffuse   = dmaterial.color;
+                materials.back().specular  = {0.04f, 0.04f, 0.04f};
+                materials.back().roughness = 1;
+            } else {
+                materials.back().diffuse      = {0, 0, 0};
+                materials.back().specular     = {0.04f, 0.04f, 0.04f};
+                materials.back().transmission = {1, 1, 1};
+                materials.back().roughness    = 0;
+            }
+            shapes.push_back(yocto_shape{});
+            shapes.back().name = dmaterial.name;
+            shapes.back().filename = filename + "." +
+                                     std::to_string(shapes.size()) +
+                                     get_extension(filename);
+        }
+
         void vert(const vec3f& v) { opos.push_back(v); }
         void norm(const vec3f& v) { onorm.push_back(v); }
         void texcoord(vec2f v) { otexcoord.push_back(v); }
         void face(const vector<obj_vertex>& verts) {
+            split_shape();
             add_verts(verts);
             if (verts.size() == 4) {
                 shapes.back().quads.push_back(
@@ -5078,40 +5117,8 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                         vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
             }
         }
-        void group(const string& name) { gname = name; }
-        void usemtl(const string& name) {
-            // printf("--  %s\n", name.c_str());
-            auto dmaterial = mmap.at(name);
-            if (dmaterial.color_map != "") {
-                // printf("--  %s\n", (name + "_" + gname).c_str());
-                try {
-                    dmaterial = mmap.at(name + "_" + gname);
-                } catch (std::out_of_range& e) {
-                    // printf("------------------------------------------ %s\n",
-                    // (name + "_" + gname).c_str()); dmaterial = mmap.at(name);
-                    throw;
-                }
-            }
-            // printf("--- %s\n", dmaterial.name.c_str());
-            if (!shapes.empty() && mname == dmaterial.name) return;
-            // printf("+++ %s\n", dmaterial.name.c_str());
-            materials.push_back({});
-            if (mmap.at(dmaterial.name).refractive == 0) {
-                materials.back().diffuse   = mmap.at(dmaterial.name).color;
-                materials.back().specular  = {0.04f, 0.04f, 0.04f};
-                materials.back().roughness = 1;
-            } else {
-                materials.back().diffuse      = {0, 0, 0};
-                materials.back().specular     = {0.04f, 0.04f, 0.04f};
-                materials.back().transmission = {1, 1, 1};
-                materials.back().roughness    = 0;
-            }
-            shapes.push_back(yocto_shape{});
-            shapes.back().filename = filename + "." +
-                                     std::to_string(shapes.size()) +
-                                     get_extension(filename);
-            mname = dmaterial.name;
-        }
+        void group(const string& name) { gname = name;  split_next = true; }
+        void usemtl(const string& name) { mname = name; split_next = true; }
     };
 
     auto shapes    = vector<yocto_shape>{};
