@@ -4919,6 +4919,8 @@ struct disney_material {
     float  refractive          = 0;
     int    color_ptex_faces    = 0;
     int    color_ptex_rowfaces = 0;
+    int    color_ptex_colfaces = 0;
+    int    color_ptex_tilesize = 0;
     string color_map_baked     = "";
 };
 
@@ -5009,6 +5011,14 @@ void load_disney_island_materials(
                     tjs.at(ass_material.color_map)
                         .at("basedRowLength")
                         .get<int>();
+                ass_material.color_ptex_colfaces =
+                    tjs.at(ass_material.color_map)
+                        .at("basedColLength")
+                        .get<int>();
+                ass_material.color_ptex_tilesize =
+                    tjs.at(ass_material.color_map)
+                    .at("basedTileSize")
+                    .get<int>();
                 ass_material.color_map_baked = tjs.at(ass_material.color_map)
                                                    .at("bakedFilename")
                                                    .get<string>();
@@ -5035,33 +5045,28 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         unordered_map<string, int>&             tmap;
         yocto_scene&                            scene;
         const string&                           filename;
-        bool facevarying                        = false;
 
         parse_callbacks(vector<yocto_shape>&        shapes,
             vector<yocto_material>&                 materials,
             unordered_map<string, vector<vec2i>>&   smap,
             unordered_map<string, disney_material>& mmap,
             unordered_map<string, int>& tmap, yocto_scene& scene,
-            const string& filename, bool facevarying)
+            const string& filename)
             : shapes{shapes}
             , materials{materials}
             , smap{smap}
             , mmap{mmap}
             , tmap{tmap}
             , scene{scene}
-            , filename{filename}, facevarying{facevarying} {}
+            , filename{filename} {}
 
         // obj vertices
         std::deque<vec3f> opos      = std::deque<vec3f>();
         std::deque<vec3f> onorm     = std::deque<vec3f>();
-        std::deque<vec2f> otexcoord = std::deque<vec2f>();
 
         // vertex maps
-        unordered_map<obj_vertex, int, obj_vertex_hash> vertex_map =
-            unordered_map<obj_vertex, int, obj_vertex_hash>();
         unordered_map<int, int> pos_map      = unordered_map<int, int>();
         unordered_map<int, int> norm_map     = unordered_map<int, int>();
-        unordered_map<int, int> texcoord_map = unordered_map<int, int>();
 
         // last material and group name
         string                  gname      = ""s;
@@ -5070,22 +5075,6 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         vector<disney_material> dmaterials = {};
 
         // Add  vertices to the current shape
-        void add_verts(const vector<obj_vertex>& verts) {
-            for (auto& vert : verts) {
-                auto it = vertex_map.find(vert);
-                if (it != vertex_map.end()) continue;
-                auto nverts = (int)shapes.back().positions.size();
-                vertex_map.insert(it, {vert, nverts});
-                if (vert.position)
-                    shapes.back().positions.push_back(
-                        opos.at(vert.position - 1));
-                if (vert.texturecoord)
-                    shapes.back().texturecoords.push_back(
-                        otexcoord.at(vert.texturecoord - 1));
-                if (vert.normal)
-                    shapes.back().normals.push_back(onorm.at(vert.normal - 1));
-            }
-        }
         void add_fvverts(const vector<obj_vertex>& verts) {
             for (auto& vert : verts) {
                 if (!vert.position) continue;
@@ -5095,15 +5084,6 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 pos_map.insert(pos_it, {vert.position, nverts});
                 shapes.back().positions.push_back(opos.at(vert.position - 1));
             }
-            // for (auto& vert : verts) {
-            //     if (!vert.texturecoord) continue;
-            //     auto texcoord_it = texcoord_map.find(vert.texturecoord);
-            //     if (texcoord_it != texcoord_map.end()) continue;
-            //     auto nverts = (int)shapes.back().texturecoords.size();
-            //     texcoord_map.insert(texcoord_it, {vert.texturecoord, nverts});
-            //     shapes.back().texturecoords.push_back(
-            //         otexcoord.at(vert.texturecoord - 1));
-            // }
             for (auto& vert : verts) {
                 if (!vert.normal) continue;
                 auto norm_it = norm_map.find(vert.normal);
@@ -5126,7 +5106,6 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         void split_shape() {
             if (!split_next) return;
             split_next = false;
-            // printf("--  %s\n", name.c_str());
             auto dmaterial = mmap.at(mname);
             if (dmaterial.color_map != "") {
                 try {
@@ -5161,67 +5140,63 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
             shapes.back().filename = filename + "." +
                                      std::to_string(shapes.size()) +
                                      get_extension(filename);
-            vertex_map.clear();
             pos_map.clear();
+            pos_map.reserve(1024*1024);
             norm_map.clear();
-            texcoord_map.clear();
+            norm_map.reserve(1024*1024);
         }
 
         void vert(const vec3f& v) { opos.push_back(v); }
         void norm(const vec3f& v) { onorm.push_back(v); }
-        void texcoord(vec2f v) { otexcoord.push_back(v); }
+        void texcoord(vec2f v) {throw sceneio_error("texture coord not supported"); }
         void face(const vector<obj_vertex>& verts) {
             split_shape();
-            if(facevarying) {
-                add_fvverts(verts);
-                if (verts.size() == 4) {
+            add_fvverts(verts);
+            if (verts.size() == 4) {
+                shapes.back().quads_positions.push_back(
+                    {pos_map.at(verts[0].position),
+                        pos_map.at(verts[1].position),
+                        pos_map.at(verts[2].position),
+                        pos_map.at(verts[3].position)});
+                shapes.back().quads_normals.push_back(
+                    {norm_map.at(verts[0].normal),
+                        norm_map.at(verts[1].normal),
+                        norm_map.at(verts[2].normal),
+                        norm_map.at(verts[3].normal)});
+            } else {
+                for (auto i = 2; i < verts.size(); i++)
                     shapes.back().quads_positions.push_back(
                         {pos_map.at(verts[0].position),
-                            pos_map.at(verts[1].position),
-                            pos_map.at(verts[2].position),
-                            pos_map.at(verts[3].position)});
-                    // if (verts[0].texturecoord) {
-                    //     shape.quads_texturecoords.push_back(
-                    //         {texcoord_map.at(verts[0].texturecoord),
-                    //             texcoord_map.at(verts[1].texturecoord),
-                    //             texcoord_map.at(verts[2].texturecoord),
-                    //             texcoord_map.at(verts[3].texturecoord)});
-                    // }
+                            pos_map.at(verts[i - 1].position),
+                            pos_map.at(verts[i].position),
+                            pos_map.at(verts[i].position)});
+                for (auto i = 2; i < verts.size(); i++)
                     shapes.back().quads_normals.push_back(
                         {norm_map.at(verts[0].normal),
-                            norm_map.at(verts[1].normal),
-                            norm_map.at(verts[2].normal),
-                            norm_map.at(verts[3].normal)});
-                } else {
-                    for (auto i = 2; i < verts.size(); i++)
-                        shapes.back().quads_positions.push_back(
-                            {pos_map.at(verts[0].position),
-                                pos_map.at(verts[i - 1].position),
-                                pos_map.at(verts[i].position),
-                                pos_map.at(verts[i].position)});
-                    // for (auto i = 2; i < verts.size(); i++)
-                    //     shape.quads_texturecoords.push_back(
-                    //         {texcoord_map.at(verts[0].texturecoord),
-                    //             texcoord_map.at(verts[i - 1].texturecoord),
-                    //             texcoord_map.at(verts[i].texturecoord),
-                    //             texcoord_map.at(verts[i].texturecoord)});
-                    for (auto i = 2; i < verts.size(); i++)
-                        shapes.back().quads_normals.push_back(
-                            {norm_map.at(verts[0].normal),
-                                norm_map.at(verts[i - 1].normal),
-                                norm_map.at(verts[i].normal),
-                                norm_map.at(verts[i].normal)});
-                }
-            } else {
-                add_verts(verts);
+                            norm_map.at(verts[i - 1].normal),
+                            norm_map.at(verts[i].normal),
+                            norm_map.at(verts[i].normal)});
+            }
+            if(dmaterials.back().color_ptex_faces) {
+                auto offset = (int)shapes.back().texturecoords.size();
+                auto face = (int)shapes.back().quads_texturecoords.size();
+                face %= dmaterials.back().color_ptex_faces;
+                auto face_i = face % dmaterials.back().color_ptex_rowfaces;
+                auto face_j = face / dmaterials.back().color_ptex_rowfaces;
                 if (verts.size() == 4) {
-                    shapes.back().quads.push_back(
-                        {vertex_map.at(verts[0]), vertex_map.at(verts[1]),
-                            vertex_map.at(verts[2]), vertex_map.at(verts[3])});
+                    auto du = 1 / (float)dmaterials.back().color_ptex_rowfaces;
+                    auto dv = 1 / (float)dmaterials.back().color_ptex_colfaces;
+                    auto dpu = 1 / (float)(dmaterials.back().color_ptex_rowfaces * dmaterials.back().color_ptex_tilesize);
+                    auto dpv = 1 / (float)(dmaterials.back().color_ptex_colfaces * dmaterials.back().color_ptex_tilesize);
+                    auto u0 =  (face_i+0) * du + dpu, v0 = (face_j+0) * dv + dpv;
+                    auto u1 =  (face_i+1) * du - dpu, v1 = (face_j+1) * dv - dpv;
+                    shapes.back().texturecoords.push_back({u0, v0});
+                    shapes.back().texturecoords.push_back({u1, v0});
+                    shapes.back().texturecoords.push_back({u1, v1});
+                    shapes.back().texturecoords.push_back({u0, v1});
+                    shapes.back().quads_texturecoords.push_back({offset+0,offset+1,offset+2,offset+3});
                 } else {
-                    for (auto i = 2; i < verts.size(); i++)
-                        shapes.back().triangles.push_back({vertex_map.at(verts[0]),
-                            vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
+                    throw sceneio_error("BAD PTEX TEXCOORDS");
                 }
             }
         }
@@ -5237,7 +5212,6 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
 
     auto shapes    = vector<yocto_shape>{};
     auto materials = vector<yocto_material>{};
-    auto facevarying = true;
 
     try {
         // load obj
@@ -5246,7 +5220,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         obj_options.geometry_only = true;
         obj_options.flip_texcoord = true;
         auto cb                   = parse_callbacks{
-            shapes, materials, smap, mmap, tmap, scene, filename, facevarying};
+            shapes, materials, smap, mmap, tmap, scene, filename};
         load_obj(filename, cb, obj_options);
 
         // check for PTEX errors
@@ -5261,6 +5235,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         }
 
         // merging quads and triangles
+        #if 0
         if(!facevarying) {
             for (auto& shape : shapes) {
                 merge_triangles_and_quads(shape.triangles, shape.quads, false);
@@ -5268,6 +5243,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                     throw sceneio_error("empty shape");
             }
         }
+        #endif
 
     } catch (const std::exception& e) {
         throw sceneio_error("cannot load mesh " + filename + "\n" + e.what());
