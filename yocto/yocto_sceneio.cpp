@@ -679,12 +679,14 @@ void to_json(json& js, const yocto_texture& value, const yocto_scene& scene) {
     if (value.filename != def.filename) js["filename"] = value.filename;
     if (value.clamp_to_edge != def.clamp_to_edge)
         js["clamp_to_edge"] = value.clamp_to_edge;
-    if (value.height_scale != def.height_scale)
-        js["height_scale"] = value.height_scale;
     if (value.no_interpolation != def.no_interpolation)
         js["no_interpolation"] = value.no_interpolation;
+    if (value.height_scale != def.height_scale)
+        js["height_scale"] = value.height_scale;
     if (value.ldr_as_linear != def.ldr_as_linear)
         js["ldr_as_linear"] = value.ldr_as_linear;
+    if (value.experimental_ptex != def.experimental_ptex)
+        js["experimental_ptex"] = value.experimental_ptex;
     if (value.filename == "") {
         if (value.hdr_image != def.hdr_image) js["hdr_image"] = value.hdr_image;
         if (value.ldr_image != def.ldr_image) js["ldr_image"] = value.ldr_image;
@@ -695,9 +697,10 @@ void from_json(const json& js, yocto_texture& value, yocto_scene& scene) {
     value.name             = js.value("name", def.name);
     value.filename         = js.value("filename", def.filename);
     value.clamp_to_edge    = js.value("clamp_to_edge", def.clamp_to_edge);
-    value.height_scale     = js.value("height_scale", def.height_scale);
     value.no_interpolation = js.value("no_interpolation", def.no_interpolation);
+    value.height_scale     = js.value("height_scale", def.height_scale);
     value.ldr_as_linear    = js.value("ldr_as_linear", def.ldr_as_linear);
+    value.experimental_ptex    = js.value("experimental_ptex", def.experimental_ptex);
     value.hdr_image        = js.value("hdr_image", def.hdr_image);
     value.ldr_image        = js.value("ldr_image", def.ldr_image);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
@@ -3868,9 +3871,10 @@ void write_object(output_file& fs, const yocto_texture& texture) {
     write_value(fs, texture.hdr_image);
     write_value(fs, texture.ldr_image);
     write_value(fs, texture.clamp_to_edge);
-    write_value(fs, texture.height_scale);
     write_value(fs, texture.no_interpolation);
+    write_value(fs, texture.height_scale);
     write_value(fs, texture.ldr_as_linear);
+    write_value(fs, texture.experimental_ptex);
 }
 void read_object(input_file& fs, yocto_texture& texture) {
     read_value(fs, texture.name);
@@ -3878,9 +3882,10 @@ void read_object(input_file& fs, yocto_texture& texture) {
     read_value(fs, texture.hdr_image);
     read_value(fs, texture.ldr_image);
     read_value(fs, texture.clamp_to_edge);
-    read_value(fs, texture.height_scale);
     read_value(fs, texture.no_interpolation);
+    read_value(fs, texture.height_scale);
     read_value(fs, texture.ldr_as_linear);
+    read_value(fs, texture.experimental_ptex);
 }
 
 void write_object(output_file& fs, const yocto_voltexture& texture) {
@@ -4913,11 +4918,13 @@ void load_cyhair_mesh(const string& filename, vector<int>& points,
 namespace yocto {
 
 struct disney_material {
-    string name       = "";
-    vec3f  color      = zero3f;
-    string color_map  = ""s;
-    float  refractive = 0;
-    int color_ptex_faces = 0;
+    string name                = "";
+    vec3f  color               = zero3f;
+    string color_map           = ""s;
+    float  refractive          = 0;
+    int    color_ptex_faces    = 0;
+    int    color_ptex_rowfaces = 0;
+    string color_map_baked     = "";
 };
 
 void load_disney_island_cameras(const string& filename, yocto_scene& scene) {
@@ -5001,7 +5008,15 @@ void load_disney_island_materials(
                 ass_material.name      = mname + "_" + jass.get<string>();
                 ass_material.color_map = material.color_map +
                                          jass.get<string>() + ".ptx";
-                ass_material.color_ptex_faces = tjs.at(ass_material.color_map).at("numFaces").get<int>();
+                ass_material.color_ptex_faces =
+                    tjs.at(ass_material.color_map).at("numFaces").get<int>();
+                ass_material.color_ptex_rowfaces =
+                    tjs.at(ass_material.color_map)
+                        .at("basedRowLength")
+                        .get<int>();
+                ass_material.color_map_baked = tjs.at(ass_material.color_map)
+                                                   .at("bakedFilename")
+                                                   .get<string>();
                 ass_material.color =
                     tjs.at(ass_material.color_map).at("color").get<vec4f>().xyz;
                 mmap[ass_material.name] = ass_material;
@@ -5013,7 +5028,7 @@ void load_disney_island_materials(
 void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
     const string& filename, unordered_map<string, vector<vec2i>>& smap,
     unordered_map<string, disney_material>& mmap,
-    unordered_map<string, int>& tmap) {
+    unordered_map<string, int>&             tmap) {
     if (smap.find(filename) != smap.end()) return;
     printf("%s\n", filename.c_str());
 
@@ -5022,17 +5037,22 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         vector<yocto_material>&                 materials;
         unordered_map<string, vector<vec2i>>&   smap;
         unordered_map<string, disney_material>& mmap;
+        unordered_map<string, int>&             tmap;
+        yocto_scene&                            scene;
         const string&                           filename;
 
         parse_callbacks(vector<yocto_shape>&        shapes,
             vector<yocto_material>&                 materials,
             unordered_map<string, vector<vec2i>>&   smap,
             unordered_map<string, disney_material>& mmap,
-            const string&                           filename)
+            unordered_map<string, int>& tmap, yocto_scene& scene,
+            const string& filename)
             : shapes{shapes}
             , materials{materials}
             , smap{smap}
             , mmap{mmap}
+            , tmap{tmap}
+            , scene{scene}
             , filename{filename} {}
 
         // obj vertices
@@ -5045,9 +5065,9 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
             unordered_map<obj_vertex, int, obj_vertex_hash>();
 
         // last material and group name
-        string gname = ""s;
-        string mname = ""s;
-        bool split_next = false;
+        string                  gname      = ""s;
+        string                  mname      = ""s;
+        bool                    split_next = false;
         vector<disney_material> dmaterials = {};
 
         // Add  vertices to the current shape
@@ -5068,28 +5088,42 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
             }
         }
 
+        int add_texture(const string& mapname, int num_faces, int face_size) {
+            if (tmap.find(mapname) == tmap.end()) {
+                scene.textures.push_back({});
+                scene.textures.back().filename          = mapname;
+                scene.textures.back().experimental_ptex = {
+                    num_faces, face_size};
+                tmap[mapname] = scene.textures.size()-1;
+            }
+            return tmap.at(mapname);
+        }
+
         void split_shape() {
-            if(!split_next) return;
+            if (!split_next) return;
             split_next = false;
             // printf("--  %s\n", name.c_str());
             auto dmaterial = mmap.at(mname);
             if (dmaterial.color_map != "") {
-                // printf("--  %s\n", (name + "_" + gname).c_str());
                 try {
                     dmaterial = mmap.at(mname + "_" + gname);
                 } catch (std::out_of_range& e) {
-                    // printf("------------------------------------------ %s\n",
-                    // (name + "_" + gname).c_str()); dmaterial = mmap.at(name);
                     throw;
                 }
             }
-            // printf("--- %s\n", dmaterial.name.c_str());
-            if (!shapes.empty() && materials.back().name == dmaterial.name) return;
-            // printf("+++ %s\n", dmaterial.name.c_str());
+            if (!shapes.empty() && materials.back().name == dmaterial.name)
+                return;
             dmaterials.push_back(dmaterial);
             materials.push_back({});
             materials.back().name = dmaterial.name;
-            if (dmaterial.refractive == 0) {
+            if (dmaterial.color_map != "") {
+                materials.back().diffuse         = {1, 1, 1};
+                materials.back().diffuse_texture = add_texture(
+                    dmaterial.color_map_baked, dmaterial.color_ptex_faces,
+                    dmaterial.color_ptex_rowfaces);
+                materials.back().specular  = {0.04f, 0.04f, 0.04f};
+                materials.back().roughness = 1;
+            } else if (dmaterial.refractive == 0) {
                 materials.back().diffuse   = dmaterial.color;
                 materials.back().specular  = {0.04f, 0.04f, 0.04f};
                 materials.back().roughness = 1;
@@ -5100,7 +5134,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 materials.back().roughness    = 0;
             }
             shapes.push_back(yocto_shape{});
-            shapes.back().name = dmaterial.name;
+            shapes.back().name     = dmaterial.name;
             shapes.back().filename = filename + "." +
                                      std::to_string(shapes.size()) +
                                      get_extension(filename);
@@ -5122,8 +5156,14 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                         vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
             }
         }
-        void group(const string& name) { gname = name;  split_next = true; }
-        void usemtl(const string& name) { mname = name; split_next = true; }
+        void group(const string& name) {
+            gname      = name;
+            split_next = true;
+        }
+        void usemtl(const string& name) {
+            mname      = name;
+            split_next = true;
+        }
     };
 
     auto shapes    = vector<yocto_shape>{};
@@ -5135,19 +5175,21 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         obj_options.exit_on_error = false;
         obj_options.geometry_only = true;
         obj_options.flip_texcoord = true;
-        auto cb = parse_callbacks{shapes, materials, smap, mmap, filename};
+        auto cb                   = parse_callbacks{
+            shapes, materials, smap, mmap, tmap, scene, filename};
         load_obj(filename, cb, obj_options);
 
         // check for PTEX errors
-        for(auto id = 0; id < shapes.size(); id ++) {
-            if(cb.dmaterials[id].color_map != "") {
-                auto ptex_faces = cb.dmaterials[id].color_ptex_faces;
+        for (auto id = 0; id < shapes.size(); id++) {
+            if (cb.dmaterials[id].color_map != "") {
+                auto ptex_faces  = cb.dmaterials[id].color_ptex_faces;
                 auto shape_faces = (int)shapes[id].quads.size();
                 auto is_multiple = shape_faces % ptex_faces == 0;
-                if(!is_multiple) printf("PTEX ERROR: %d %d\n", ptex_faces, shape_faces);
+                if (!is_multiple)
+                    printf("PTEX ERROR: %d %d\n", ptex_faces, shape_faces);
             }
         }
-        
+
         // merging quads and triangles
         for (auto& shape : shapes) {
             merge_triangles_and_quads(shape.triangles, shape.quads, false);
@@ -5182,7 +5224,7 @@ void load_disney_island_archive(const string& filename, yocto_scene& scene,
     const string& parent_name, const mat4f& parent_xform,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
-    unordered_map<string, int>& tmap) {
+    unordered_map<string, int>&             tmap) {
     printf("%s\n", filename.c_str());
     auto buffer = ""s;
     load_text(filename, buffer);
@@ -5191,12 +5233,9 @@ void load_disney_island_archive(const string& filename, yocto_scene& scene,
     auto iijs = doc.get_root();
     for (auto j = 0; j < iijs.get_length(); j++) {
         auto shape_filename = iijs.get_object_key(j).as_string();
-        add_disney_island_shape(scene, parent_name, shape_filename, smap, mmap, tmap);
+        add_disney_island_shape(
+            scene, parent_name, shape_filename, smap, mmap, tmap);
         auto xforms = iijs.get_object_value(j);
-        // auto sum_scale = vec<double, 3>{0, 0, 0};
-        // auto ssq_scale = vec<double, 3>{0, 0, 0};
-        // auto min_scale = vec<double, 3>{type_max<double>()};
-        // auto max_scale = vec<double, 3>{type_min<double>()};
         for (auto i = 0; i < xforms.get_length(); i++) {
             auto xform_ = xforms.get_object_value(i);
             auto xform  = mat4f{};
@@ -5207,22 +5246,7 @@ void load_disney_island_archive(const string& filename, yocto_scene& scene,
             xform = parent_xform * xform;
             add_disney_island_instance(
                 scene, parent_name, xform, smap.at(shape_filename));
-            // auto scale     = vec<double, 3>{length(instance.frame.x),
-            //     length(instance.frame.y), length(instance.frame.z)};
-            // sum_scale += scale;
-            // ssq_scale += pow(scale, 2.0);
-            // min_scale = min(min_scale, scale);
-            // max_scale = max(max_scale, scale);
         }
-        // auto avg_scale = sum_scale / xforms.get_length();
-        // auto std_scale = sqrt(ssq_scale / xforms.get_length() -
-        //                       pow(sum_scale / xforms.get_length(), 2.0));
-        // printf("scale: %lg %lg %lg --- %lg %lg %lg\n", avg_scale[0],
-        //     avg_scale[1], avg_scale[2], std_scale[0], std_scale[1],
-        //     std_scale[2]);
-        // printf("       %lg %lg %lg --- %lg %lg %lg\n", min_scale[0],
-        //     min_scale[1], min_scale[2], max_scale[0], max_scale[1],
-        //     max_scale[2]);
     }
 }
 
@@ -5230,7 +5254,7 @@ void load_disney_island_curve(const string& filename, yocto_scene& scene,
     const string& parent_name, const mat4f& parent_xform, float start_radius,
     float end_radius, unordered_map<string, vector<vec2i>>& smap,
     unordered_map<string, disney_material>& mmap,
-    unordered_map<string, int>& tmap) {
+    unordered_map<string, int>&             tmap) {
     printf("%s\n", filename.c_str());
     auto buffer = ""s;
     load_text(filename, buffer);
@@ -5272,7 +5296,7 @@ void load_disney_island_curvetube(const string& filename, yocto_scene& scene,
     float end_width, const string& material_name,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
-    unordered_map<string, int>& tmap) {
+    unordered_map<string, int>&             tmap) {
     printf("%s\n", filename.c_str());
     auto buffer = ""s;
     load_text(filename, buffer);
@@ -5354,7 +5378,8 @@ void load_disney_island_curvetube(const string& filename, yocto_scene& scene,
 }
 
 void load_disney_island_elements(const string& filename, yocto_scene& scene,
-    unordered_map<string, vector<vec2i>>& smap, unordered_map<string, int>& tmap) {
+    unordered_map<string, vector<vec2i>>& smap,
+    unordered_map<string, int>&           tmap) {
     // instancing model
     // - main shape: "geomObjFile" and "name" properties
     // - main instance: "transform"
@@ -5388,7 +5413,8 @@ void load_disney_island_elements(const string& filename, yocto_scene& scene,
 
     // main instance
     auto name = js.at("name").get<string>();
-    add_disney_island_shape(scene, name, js.at("geomObjFile"), smap, mmap, tmap);
+    add_disney_island_shape(
+        scene, name, js.at("geomObjFile"), smap, mmap, tmap);
     add_disney_island_instance(
         scene, name, js.at("transformMatrix"), smap.at(js.at("geomObjFile")));
 
@@ -5396,8 +5422,8 @@ void load_disney_island_elements(const string& filename, yocto_scene& scene,
     for (auto& [iiname, ijs] : js.at("instancedPrimitiveJsonFiles").items()) {
         auto filename = ijs.at("jsonFile").get<std::string>();
         if (ijs.at("type") == "archive") {
-            load_disney_island_archive(
-                filename, scene, name, js.at("transformMatrix"), smap, mmap, tmap);
+            load_disney_island_archive(filename, scene, name,
+                js.at("transformMatrix"), smap, mmap, tmap);
         } else if (ijs.at("type") == "curve") {
             load_disney_island_curvetube(filename, scene, name,
                 js.at("transformMatrix"), ijs.at("widthRoot"),
@@ -5434,7 +5460,8 @@ void load_disney_island_elements(const string& filename, yocto_scene& scene,
                 } else if (ijs.at("type") == "curve") {
                     load_disney_island_curvetube(filename, scene, name,
                         cjs.at("transformMatrix"), ijs.at("widthRoot"),
-                        ijs.at("widthTip"), ijs.at("material"), smap, mmap, tmap);
+                        ijs.at("widthTip"), ijs.at("material"), smap, mmap,
+                        tmap);
                 } else if (ijs.at("type") == "element") {
                 } else if (ijs.at("type") == "skip") {
                     printf("skipping %s\n", filename.c_str());
