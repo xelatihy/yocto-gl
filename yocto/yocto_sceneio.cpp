@@ -5255,18 +5255,19 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 auto split_normals   = vector<vec3f>{};
                 auto split_texcoords = vector<vec2f>{};
                 convert_facevarying(split_quads, split_positions, split_normals,
-                    split_texcoords, shape.quads_positions,
-                    shape.quads_normals, shape.quads_texturecoords,
-                    shape.positions, shape.normals, shape.texturecoords);
-                shape.quads = split_quads;
-                shape.positions = split_positions;
-                shape.normals = split_normals;
-                shape.texturecoords = split_texcoords;
-                shape.quads_positions = {};
-                shape.quads_normals = {};
+                    split_texcoords, shape.quads_positions, shape.quads_normals,
+                    shape.quads_texturecoords, shape.positions, shape.normals,
+                    shape.texturecoords);
+                shape.quads               = split_quads;
+                shape.positions           = split_positions;
+                shape.normals             = split_normals;
+                shape.texturecoords       = split_texcoords;
+                shape.quads_positions     = {};
+                shape.quads_normals       = {};
                 shape.quads_texturecoords = {};
                 // if(shape.texturecoords.empty()) {
-                //     merge_triangles_and_quads(shape.triangles, shape.quads, false);
+                //     merge_triangles_and_quads(shape.triangles, shape.quads,
+                //     false);
                 // }
             }
         }
