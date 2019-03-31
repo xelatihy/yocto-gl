@@ -132,7 +132,7 @@
             "filename": "models/obj2.ply",
             "!!proc": {
                 "type": "sphere",
-                "steps": 10000
+                "steps": 5000
             }
         },
         {
