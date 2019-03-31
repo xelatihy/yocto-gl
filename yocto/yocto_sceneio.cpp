@@ -3365,7 +3365,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     material.roughness = pbrt_remap_roughness(
                         material.roughness);
             } else if (std::holds_alternative<pbrt_material_glass>(pmaterial)) {
-                auto& glass       = std::get<pbrt_material_glass>(pmaterial);
+                // auto& glass       = std::get<pbrt_material_glass>(pmaterial);
                 material.specular = {0.04f, 0.04f, 0.04f};
                 material.transmission = {1, 1, 1};
                 // get_scaled_texture3f(
