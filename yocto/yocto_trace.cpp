@@ -86,9 +86,10 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     } else if (!shape.points.empty()) {
         point.normal = -shading_direction;
     } else {
-        if (material.normal_texture >= 0)
+        if (material.normal_texture >= 0) {
             point.normal = evaluate_instance_perturbed_normal(scene, instance,
                 element_id, element_uv, trace_non_rigid_frames);
+        }
     }
     point.texturecoord = evaluate_shape_texturecoord(
         shape, element_id, element_uv);

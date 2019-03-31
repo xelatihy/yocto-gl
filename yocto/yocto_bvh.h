@@ -932,7 +932,7 @@ inline void build_embree_shape_bvh(bvh_shape& bvh, const vector<int>& points,
                 RTC_FORMAT_FLOAT3, positions.data(), 0, 3 * 4,
                 positions.size());
             rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_INDEX, 0,
-                RTC_FORMAT_UINT4, quads.data(), 0, 4 * 4,
+                RTC_FORMAT_UINT4, quads_positions.data(), 0, 4 * 4,
                 quads_positions.size());
         } else {
             auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,

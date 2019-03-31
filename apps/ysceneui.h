@@ -304,6 +304,12 @@ inline bool draw_opengl_widgets_scene_inspector(
     draw_label_opengl_widget(win, "lines", "%ld", value.lines.size());
     draw_label_opengl_widget(win, "triangles", "%ld", value.triangles.size());
     draw_label_opengl_widget(win, "quads", "%ld", value.quads.size());
+    draw_label_opengl_widget(
+        win, "quads pos", "%ld", value.quads_positions.size());
+    draw_label_opengl_widget(
+        win, "quads norm", "%ld", value.quads_normals.size());
+    draw_label_opengl_widget(
+        win, "quads texcoord", "%ld", value.quads_texturecoords.size());
     draw_label_opengl_widget(win, "pos", "%ld", value.positions.size());
     draw_label_opengl_widget(win, "norm", "%ld", value.normals.size());
     draw_label_opengl_widget(
