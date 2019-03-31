@@ -5123,11 +5123,13 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 materials.back().diffuse         = {1, 1, 1};
                 materials.back().diffuse_texture = add_texture(
                     dmaterial.color_map_baked);
-                materials.back().specular  = {0.04f, 0.04f, 0.04f};
+                // materials.back().specular  = {0.04f, 0.04f, 0.04f};
+                materials.back().specular  = {0, 0, 0};
                 materials.back().roughness = 1;
             } else if (dmaterial.refractive == 0) {
                 materials.back().diffuse   = dmaterial.color;
-                materials.back().specular  = {0.04f, 0.04f, 0.04f};
+                // materials.back().specular  = {0.04f, 0.04f, 0.04f};
+                materials.back().specular  = {0, 0, 0};
                 materials.back().roughness = 1;
             } else {
                 materials.back().diffuse      = {0, 0, 0};
