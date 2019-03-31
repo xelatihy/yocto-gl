@@ -5265,16 +5265,17 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 shape.quads_positions     = {};
                 shape.quads_normals       = {};
                 shape.quads_texturecoords = {};
-                if(shape.texturecoords.empty()) {
+                if (shape.texturecoords.empty()) {
                     auto all_triangles = true;
-                    for(auto& q : shape.quads) {
-                        if(q.z != q.w) {
+                    for (auto& q : shape.quads) {
+                        if (q.z != q.w) {
                             all_triangles = false;
                             break;
                         }
                     }
-                    if(all_triangles) {
-                        convert_quads_to_triangles(shape.triangles, shape.quads);
+                    if (all_triangles) {
+                        convert_quads_to_triangles(
+                            shape.triangles, shape.quads);
                         shape.quads = {};
                     }
                 }
