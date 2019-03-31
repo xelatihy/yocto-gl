@@ -5223,7 +5223,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
 
     auto shapes      = vector<yocto_shape>{};
     auto materials   = vector<yocto_material>{};
-    auto facevarying = true;
+    auto facevarying = false;
 
     try {
         // load obj
@@ -5265,10 +5265,19 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 shape.quads_positions     = {};
                 shape.quads_normals       = {};
                 shape.quads_texturecoords = {};
-                // if(shape.texturecoords.empty()) {
-                //     merge_triangles_and_quads(shape.triangles, shape.quads,
-                //     false);
-                // }
+                if(shape.texturecoords.empty()) {
+                    auto all_triangles = true;
+                    for(auto& q : shape.quads) {
+                        if(q.z != q.w) {
+                            all_triangles = false;
+                            break;
+                        }
+                    }
+                    if(all_triangles) {
+                        convert_quads_to_triangles(shape.triangles, shape.quads);
+                        shape.quads = {};
+                    }
+                }
             }
         }
 
