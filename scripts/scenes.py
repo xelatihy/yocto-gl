@@ -158,7 +158,7 @@ def zip(directory='mcguire',scene='*',mode='default'):
 @click.option('--clean/--no-clean','-C', default=False)
 def make_procedurals(directory='procedurals',mode='skies',clean=False):
     if mode == 'skies':
-        dirname = f'{directory}/textures'
+        dirname = f'{directory}/hdr/textures'
         os.system(f'mkdir -p {dirname}')
         angles = [0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 85, 90]
         for name in ['sky', 'sun']:
