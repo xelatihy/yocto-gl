@@ -5136,6 +5136,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 materials.back().specular     = {0.04f, 0.04f, 0.04f};
                 materials.back().transmission = {1, 1, 1};
                 materials.back().roughness    = 0;
+                materials.back().refract      = true;
             }
             shapes.push_back(yocto_shape{});
             shapes.back().name     = dmaterial.name;
