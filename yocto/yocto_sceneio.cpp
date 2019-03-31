@@ -3569,6 +3569,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto instance  = yocto_instance();
                 instance.frame = (frame3f)ctx.frame * pinstance.frame;
                 instance.shape = pinstance.shape;
+                instance.material = pinstance.material;
                 scene.instances.push_back(instance);
             }
         }
