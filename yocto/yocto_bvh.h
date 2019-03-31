@@ -559,6 +559,9 @@ inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
 // Intersect a ray with a quad.
 inline bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist) {
+    if (p2 == p3) {
+        return intersect_triangle(ray, p0, p1, p3, uv, dist);
+    }
     auto hit  = false;
     auto tray = ray;
     if (intersect_triangle(tray, p0, p1, p3, uv, dist)) {
@@ -738,6 +741,10 @@ inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
 inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
     float r2, float r3, vec2f& uv, float& dist) {
+    if (p2 == p3) {
+        return overlap_triangle(
+            pos, dist_max, p0, p1, p3, r0, r1, r2, uv, dist);
+    }
     auto hit = false;
     if (overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2, uv, dist)) {
         hit      = true;

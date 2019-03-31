@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
     auto mesh_filenames = true;
     auto mesh_directory = "models/"s;
     auto uniform_txt    = false;
-    auto validate      = false;
+    auto validate       = false;
     auto print_info     = false;
     auto output         = "out.json"s;
     auto filename       = "scene.json"s;

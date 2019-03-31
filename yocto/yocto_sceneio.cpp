@@ -5127,7 +5127,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 materials.back().specular  = {0, 0, 0};
                 materials.back().roughness = 1;
             } else if (dmaterial.refractive == 0) {
-                materials.back().diffuse   = dmaterial.color;
+                materials.back().diffuse = dmaterial.color;
                 // materials.back().specular  = {0.04f, 0.04f, 0.04f};
                 materials.back().specular  = {0, 0, 0};
                 materials.back().roughness = 1;
@@ -5136,6 +5136,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 materials.back().specular     = {0.04f, 0.04f, 0.04f};
                 materials.back().transmission = {1, 1, 1};
                 materials.back().roughness    = 0;
+                materials.back().refract      = true;
             }
             shapes.push_back(yocto_shape{});
             shapes.back().name     = dmaterial.name;
@@ -5220,8 +5221,9 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         }
     };
 
-    auto shapes    = vector<yocto_shape>{};
-    auto materials = vector<yocto_material>{};
+    auto shapes      = vector<yocto_shape>{};
+    auto materials   = vector<yocto_material>{};
+    auto facevarying = true;
 
     try {
         // load obj
@@ -5242,6 +5244,31 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 auto is_multiple = shape_faces % ptex_faces == 0;
                 if (!is_multiple)
                     printf("PTEX ERROR: %d %d\n", ptex_faces, shape_faces);
+            }
+        }
+
+        // conversion to non-facevarying
+        if (!facevarying) {
+            for (auto& shape : shapes) {
+                auto split_quads     = vector<vec4i>{};
+                auto split_positions = vector<vec3f>{};
+                auto split_normals   = vector<vec3f>{};
+                auto split_texcoords = vector<vec2f>{};
+                convert_facevarying(split_quads, split_positions, split_normals,
+                    split_texcoords, shape.quads_positions, shape.quads_normals,
+                    shape.quads_texturecoords, shape.positions, shape.normals,
+                    shape.texturecoords);
+                shape.quads               = split_quads;
+                shape.positions           = split_positions;
+                shape.normals             = split_normals;
+                shape.texturecoords       = split_texcoords;
+                shape.quads_positions     = {};
+                shape.quads_normals       = {};
+                shape.quads_texturecoords = {};
+                // if(shape.texturecoords.empty()) {
+                //     merge_triangles_and_quads(shape.triangles, shape.quads,
+                //     false);
+                // }
             }
         }
 
