@@ -58,6 +58,7 @@ int main(int argc, char** argv) {
     auto mesh_filenames = true;
     auto mesh_directory = "models/"s;
     auto uniform_txt    = false;
+    auto validate      = false;
     auto print_info     = false;
     auto output         = "out.json"s;
     auto filename       = "scene.json"s;
@@ -75,6 +76,7 @@ int main(int argc, char** argv) {
     parser.add_flag("--uniform-texture,!--no-uniform-textures", uniform_txt,
         "uniform texture formats");
     parser.add_flag("--print-info,-i", print_info, "print scene info");
+    parser.add_flag("--validate,!--no-validate", validate, "Validate scene");
     parser.add_option("--output,-o", output, "output scene")->required(true);
     parser.add_option("scene", filename, "input scene")->required(true);
     try {
@@ -104,7 +106,13 @@ int main(int argc, char** argv) {
         format_duration(get_time() - start_load).c_str());
 
     // validate scene
-    print_validation_errors(scene, true);
+    if (validate) {
+        printf("validating scene ...\n");
+        auto start_val = get_time();
+        print_validation_errors(scene);
+        printf("validating scene [%s]\n",
+            format_duration(get_time() - start_val).c_str());
+    }
 
     // print info
     if (print_info) printf("%s\n", print_scene_stats(scene).c_str());
