@@ -685,8 +685,6 @@ void to_json(json& js, const yocto_texture& value, const yocto_scene& scene) {
         js["height_scale"] = value.height_scale;
     if (value.ldr_as_linear != def.ldr_as_linear)
         js["ldr_as_linear"] = value.ldr_as_linear;
-    if (value.experimental_ptex != def.experimental_ptex)
-        js["experimental_ptex"] = value.experimental_ptex;
     if (value.filename == "") {
         if (value.hdr_image != def.hdr_image) js["hdr_image"] = value.hdr_image;
         if (value.ldr_image != def.ldr_image) js["ldr_image"] = value.ldr_image;
@@ -700,7 +698,6 @@ void from_json(const json& js, yocto_texture& value, yocto_scene& scene) {
     value.no_interpolation = js.value("no_interpolation", def.no_interpolation);
     value.height_scale     = js.value("height_scale", def.height_scale);
     value.ldr_as_linear    = js.value("ldr_as_linear", def.ldr_as_linear);
-    value.experimental_ptex    = js.value("experimental_ptex", def.experimental_ptex);
     value.hdr_image        = js.value("hdr_image", def.hdr_image);
     value.ldr_image        = js.value("ldr_image", def.ldr_image);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
@@ -3874,7 +3871,6 @@ void write_object(output_file& fs, const yocto_texture& texture) {
     write_value(fs, texture.no_interpolation);
     write_value(fs, texture.height_scale);
     write_value(fs, texture.ldr_as_linear);
-    write_value(fs, texture.experimental_ptex);
 }
 void read_object(input_file& fs, yocto_texture& texture) {
     read_value(fs, texture.name);
@@ -3885,7 +3881,6 @@ void read_object(input_file& fs, yocto_texture& texture) {
     read_value(fs, texture.no_interpolation);
     read_value(fs, texture.height_scale);
     read_value(fs, texture.ldr_as_linear);
-    read_value(fs, texture.experimental_ptex);
 }
 
 void write_object(output_file& fs, const yocto_voltexture& texture) {
@@ -5088,12 +5083,10 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
             }
         }
 
-        int add_texture(const string& mapname, int num_faces, int face_size) {
+        int add_texture(const string& mapname) {
             if (tmap.find(mapname) == tmap.end()) {
                 scene.textures.push_back({});
                 scene.textures.back().filename          = mapname;
-                scene.textures.back().experimental_ptex = {
-                    num_faces, face_size};
                 tmap[mapname] = scene.textures.size()-1;
             }
             return tmap.at(mapname);
@@ -5119,8 +5112,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
             if (dmaterial.color_map != "") {
                 materials.back().diffuse         = {1, 1, 1};
                 materials.back().diffuse_texture = add_texture(
-                    dmaterial.color_map_baked, dmaterial.color_ptex_faces,
-                    dmaterial.color_ptex_rowfaces);
+                    dmaterial.color_map_baked);
                 materials.back().specular  = {0.04f, 0.04f, 0.04f};
                 materials.back().roughness = 1;
             } else if (dmaterial.refractive == 0) {

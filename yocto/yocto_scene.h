@@ -111,7 +111,6 @@ struct yocto_texture {
     bool         no_interpolation = false;
     float        height_scale     = 1;
     bool         ldr_as_linear    = false;
-    vec2i        experimental_ptex = {0, 0};
 };
 
 // Volumetric texture containing a float only volume data. See texture
