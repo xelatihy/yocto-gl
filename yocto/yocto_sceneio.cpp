@@ -1924,6 +1924,7 @@ inline void print_value(const output_file& fs, const obj_vertex& value) {
     } else {
         if (value.normal) {
             print_value(fs, '/');
+            print_value(fs, '/');
             print_value(fs, value.normal);
         }
     }
@@ -3568,6 +3569,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto instance  = yocto_instance();
                 instance.frame = (frame3f)ctx.frame * pinstance.frame;
                 instance.shape = pinstance.shape;
+                instance.material = pinstance.material;
                 scene.instances.push_back(instance);
             }
         }

@@ -18,7 +18,7 @@ def yitrace(directory='mcguire',scene='*',format='obj',mode='path'):
         'eyelight': '-t eyelight'
     }
     options = modes[mode]
-    for dirname in sorted(glob.glob(f'{directory}/{scene}')):
+    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
@@ -41,7 +41,7 @@ def yview(directory='mcguire',scene='*',format='obj',mode='path'):
         'eyelight': '--double-sided --eyelight'
     }
     options = modes[mode]
-    for dirname in sorted(glob.glob(f'{directory}/{scene}')):
+    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
@@ -60,20 +60,20 @@ def yview(directory='mcguire',scene='*',format='obj',mode='path'):
 def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
     modes = {
         'path': '-s 64 -r 360',
-        'embree': '-s 256 -r 720',
-        'eyelight': '-s 16 -r 720 -t eyelight',
-        'embree-naive': '-s 256 -r 720 -t naive'
+        'embree': '-s 256 -r 720 --embree',
+        'eyelight': '-s 16 -r 720 -t eyelight'
     }
     options = modes[mode]
-    for dirname in sorted(glob.glob(f'{directory}/{scene}')):
+    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
+        os.system(f'mkdir -p {directory}/{format}/_images')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            imagename = filename.replace(f'.{format}',f'.{format}.{mode}.png')
-            imagename = imagename.replace(f'{dirname}',f'{directory}/_images')
+            imagename = filename.replace(f'.{format}',f'.{mode}.png')
+            imagename = imagename.replace(f'{dirname}',f'{directory}/{format}/_images')
             cmd = f'../yocto-gl/bin/ytrace -o {imagename} {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
@@ -84,27 +84,31 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
 @click.option('--format','-f', default='obj')
 @click.option('--outformat','-F', default='json')
 @click.option('--mode','-m', default='default')
-@click.option('--clean-models/--no-clean-models','-C', default=False)
-def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='path',clean_models=True):
+@click.option('--clean/--no-clean','-C', default=False)
+def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='path',clean=True):
     modes = {
         'default': '--skip-textures --mesh-filenames',
         'gltf': '--skip-textures --mesh-filenames --mesh-directory gltf_meshes/'
     }
     options = modes[mode]
-    for dirname in sorted(glob.glob(f'{directory}/{scene}')):
+    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         if '-instanced' in dirname and outformat == 'obj': continue
-        os.system(f'rm -rf {dirname}/meshes')
-        if clean_models: os.system(f'rm -rf {dirname}/meshes')
-        os.system(f'mkdir -p {dirname}/models')
+        outdirname = dirname.replace(f'/{format}/',f'/{outformat}/')
+        if clean: os.system(f'rm -rf {outdirname}')
+        os.system(f'mkdir -p {outdirname}')
+        if outformat != 'obj': os.system(f'mkdir -p {outdirname}/models')
+        os.system(f'mkdir -p {outdirname}/textures')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            outname = filename.replace(f'.{format}',f'.{outformat}')
-            filedir = os.path.dirname(filename)
+            outname = filename.replace(f'/{format}/',f'/{outformat}/').replace(f'.{format}',f'.{outformat}')
             cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {filename}'
+            print(cmd, file=sys.stderr)
+            os.system(cmd)
+            cmd = f'cp -r {dirname}/textures {outdirname}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
@@ -154,7 +158,7 @@ def zip(directory='mcguire',scene='*',mode='default'):
 @click.option('--clean/--no-clean','-C', default=False)
 def make_procedurals(directory='procedurals',mode='skies',clean=False):
     if mode == 'skies':
-        dirname = f'{directory}/textures'
+        dirname = f'{directory}/hdr/textures'
         os.system(f'mkdir -p {dirname}')
         angles = [0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 85, 90]
         for name in ['sky', 'sun']:

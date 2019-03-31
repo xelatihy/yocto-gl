@@ -2842,9 +2842,11 @@ inline void load_pbrt(
             stack.pop_back();
         } else if (cmd == "ObjectBegin") {
             parse_value(stream, object.name);
+            stack.push_back(stack.back());
             cb.begin_object(object, stack.back());
         } else if (cmd == "ObjectEnd") {
             cb.end_object(object, stack.back());
+            stack.pop_back();
             object = {};
         } else if (cmd == "ObjectInstance") {
             auto value = pbrt_object{};
