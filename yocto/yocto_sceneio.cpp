@@ -1924,6 +1924,7 @@ inline void print_value(const output_file& fs, const obj_vertex& value) {
     } else {
         if (value.normal) {
             print_value(fs, '/');
+            print_value(fs, '/');
             print_value(fs, value.normal);
         }
     }

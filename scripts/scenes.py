@@ -67,6 +67,7 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
+        os.system(f'mkdir -p {directory}/{format}/_images')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
@@ -97,7 +98,7 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
         outdirname = dirname.replace(f'/{format}/',f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
-        os.system(f'mkdir -p {outdirname}/models')
+        if outformat != 'obj': os.system(f'mkdir -p {outdirname}/models')
         os.system(f'mkdir -p {outdirname}/textures')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
@@ -107,7 +108,7 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
             cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
-            cmd = f'cp -r {dirname}/textures {outdirname}/textures'
+            cmd = f'cp -r {dirname}/textures {outdirname}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
