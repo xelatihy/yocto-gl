@@ -1427,6 +1427,8 @@ static inline void parse_pbrt_integrator(
                 parse_param(stream, ptype, tvalue.pixelbounds);
             } else if (pname == "iterations") {
                 parse_param(stream, ptype, tvalue.iterations);
+            } else if (pname == "numiterations") {
+                parse_param(stream, ptype, tvalue.iterations);
             } else if (pname == "photonsperiteration") {
                 parse_param(stream, ptype, tvalue.photonsperiteration);
             } else if (pname == "imagewritefrequency") {
