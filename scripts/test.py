@@ -9,19 +9,19 @@ def cli():
 @cli.command()
 def run():
     os.system('mkdir -p build && mkdir -p build/release && cd build/release && cmake ../.. -GNinja -DYOCTO_EMBREE=ON')
-    os.system('rm tests/_runtests/output/*.png; rm  tests/_runtests/difference/*.png')
+    os.system('rm tests/_output/*.png; rm  tests/_difference/*.png')
     os.system('cd build/release && ctest -j 4 --output-on-failure')
 
 @cli.command()
 def clean():
-    os.system('rm tests/_runtests/output/*.png; rm tests/_runtests/difference/*.png')
+    os.system('rm tests/_output/*.png; rm tests/_difference/*.png')
 
 @cli.command()
 @click.option('--clean/--no-clean', default=False)
 def update(clean=False):
     if clean:
-        os.system('rm tests/_runtests/result/*.png')
-    os.system('cp tests/_runtests/output/*.png tests/_runtests/result/')
+        os.system('rm tests/_result/*.png')
+    os.system('cp tests/_output/*.png tests/_results')
 
 @cli.command()
 def format():
