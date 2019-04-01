@@ -128,6 +128,7 @@ struct pbrt_realistic_camera {
     bool   simpleweighting  = true;
     float  shutteropen      = 0;
     float  shutterclose     = 1;
+    float  approx_focallength = 0;
 };
 using pbrt_camera = variant<pbrt_perspective_camera, pbrt_orthographic_camera,
     pbrt_environment_camera, pbrt_realistic_camera>;
@@ -1223,7 +1224,9 @@ static inline void parse_param(
         filename = get_filename(filename);
         if (get_extension(filename) == "spd") {
             filename = filename.substr(0, filename.size() - 4);
-            if (get_extension(filename) == "eta") {
+            if (filename == "SHPS") {
+                value = {1,1,1};
+            } else if (get_extension(filename) == "eta") {
                 auto eta = pbrt_get_element_etak(
                     filename.substr(0, filename.length() - 4))
                                .first;
@@ -1234,7 +1237,7 @@ static inline void parse_param(
                              .second;
                 value = {k.x, k.y, k.z};
             } else {
-                throw pbrtio_error("unknown spectrum file");
+                throw pbrtio_error("unknown spectrum file " + filename);
             }
         } else {
             throw pbrtio_error("unsupported spectrum format");
@@ -1788,6 +1791,12 @@ static inline void parse_pbrt_camera(
             parse_nametype(stream, pname, ptype);
             if (pname == "lensfile") {
                 parse_param(stream, ptype, tvalue.lensfile);
+                // example: wide.22mm.dat
+                auto lensfile = get_filename(tvalue.lensfile);
+                lensfile = lensfile.substr(0, lensfile.size()-4);
+                lensfile = lensfile.substr(lensfile.find('.')+1);
+                lensfile = lensfile.substr(0,lensfile.size()-2);
+                tvalue.approx_focallength = std::atof(lensfile.c_str());
             } else if (pname == "aperturediameter") {
                 parse_param(stream, ptype, tvalue.aperturediameter);
             } else if (pname == "focusdistance") {
