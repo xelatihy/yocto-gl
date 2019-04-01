@@ -3448,6 +3448,13 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     if (metal.remaproughness)
                         material.roughness = pbrt_remap_roughness(
                             material.roughness);
+                } else if (holds_alternative<pbrt_glass_material>(
+                               fourier.approx)) {
+                    // auto& glass = get<pbrt_metal_glass>(fourier.approx);
+                    material.diffuse     = {0, 0, 0};
+                    material.specular     = {0.04f, 0.04f, 0.04f};
+                    material.transmission = {1, 1, 1};
+                    material.roughness = 0;
                 } else {
                     throw sceneio_error("material type not supported " +
                                         std::to_string(fourier.approx.index()));

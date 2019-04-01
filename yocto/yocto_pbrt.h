@@ -470,7 +470,7 @@ struct pbrt_disney_material {
 struct pbrt_fourier_material {
     string                                              bsdffile = "";
     pbrt_textured<float>                                bumpmap  = 0;
-    variant<pbrt_plastic_material, pbrt_metal_material> approx   = {};
+    variant<pbrt_plastic_material, pbrt_metal_material, pbrt_glass_material> approx   = {};
 };
 struct pbrt_hair_material {
     pbrt_textured<spectrum3f> color       = {0, 0, 0};  // TODO: missing default
@@ -2000,7 +2000,7 @@ static inline void parse_pbrt_texture(
     }
 }
 
-variant<pbrt_plastic_material, pbrt_metal_material>
+variant<pbrt_plastic_material, pbrt_metal_material, pbrt_glass_material>
 pbrt_approximate_fourier_material(const string& filename) {
     if (get_filename(filename) == "paint.bsdf") {
         auto plastic = pbrt_plastic_material{};
@@ -2035,6 +2035,13 @@ pbrt_approximate_fourier_material(const string& filename) {
         metal.uroughness = 0.01f; 
         metal.vroughness = 0.01f;
         return metal;
+    } else if (get_filename(filename) == "roughglass_alpha_0.2.bsdf") {
+        auto glass = pbrt_glass_material{};
+        glass.uroughness = 0.2f;
+        glass.vroughness = 0.2f;
+        glass.Kr = {1, 1, 1};
+        glass.Kt = {1, 1, 1};
+        return glass;
     } else {
         throw pbrtio_error("unknown pbrt bsdf filename");
     }
