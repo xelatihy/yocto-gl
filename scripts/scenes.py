@@ -72,11 +72,14 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
+            os.system(f'mkdir -p {directory}/images-{format}')
             imagename = filename.replace(f'.{format}',f'.{mode}.png')
-            imagename = imagename.replace(f'{dirname}',f'{directory}/{format}/_images')
+            imagename = imagename.replace(f'{dirname}',f'{directory}/images-{format}')
+            imagename_indir = filename.replace(f'.{format}',f'.{mode}.png')
             cmd = f'../yocto-gl/bin/ytrace -o {imagename} {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
+            os.system(f'cp {imagename} {imagename_indir}')
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
@@ -128,8 +131,8 @@ def convert_hair(directory='yuksel',scene='*',format='hair',outformat="ply",mode
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         if '-instanced' in dirname and outformat == 'obj': continue
-        for filename in sorted(glob.glob(f'{dirname}/models/*.{format}')):
-            outname = filename.replace(f'.{format}',f'.{outformat}')
+        for filename in sorted(glob.glob(f'{dirname}/{format}/*.{format}')):
+            outname = filename.replace(f'/{format}/',f'/json/').replace(f'.{format}',f'.{outformat}')
             filedir = os.path.dirname(filename)
             cmd = f'../yocto-gl/bin/ymshproc -o {outname} {options} {filename}'
             print(cmd, file=sys.stderr)
@@ -138,17 +141,21 @@ def convert_hair(directory='yuksel',scene='*',format='hair',outformat="ply",mode
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
+@click.option('--format','-f', default='obj')
 @click.option('--mode','-m', default='default')
-def zip(directory='mcguire',scene='*',mode='default'):
+def backup(directory='mcguire',scene='*',format='obj',mode='default'):
     modes = {
         'default': '-r -X -q',
     }
     options = modes[mode]
-    for dirname in sorted(glob.glob(f'{directory}/{scene}')):
+    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
-        os.system(f'rm -f {dirname}.zip')
-        cmd = f'zip {options} {dirname}.zip {dirname}'
+        outdir = f'{directory}/backup-{format}'
+        os.system(f'mkdir -p {outdir}')
+        outname = dirname.replace(f'/{format}/',f'/backup-{format}/') + '.zip'
+        os.system(f'rm {outname}.zip')
+        cmd = f'zip {options} {outname} {dirname}'
         print(cmd)
         os.system(cmd)
 
