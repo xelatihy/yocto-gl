@@ -67,7 +67,6 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
-        os.system(f'mkdir -p {directory}/{format}/_images')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
