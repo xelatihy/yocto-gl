@@ -60,6 +60,8 @@
 namespace yocto {
 
 using std::function;
+using std::get;
+using std::holds_alternative;
 using std::string_view;
 using std::unordered_map;
 using std::variant;
@@ -98,7 +100,7 @@ struct spectrum<T, 3> {
 using spectrum3f = spectrum<float, 3>;
 
 // pbrt cameras
-struct pbrt_camera_perspective {
+struct pbrt_perspective_camera {
     float  fov              = 90;
     float  frameaspectratio = -1;  // or computed from film
     float  lensradius       = 0;
@@ -107,7 +109,7 @@ struct pbrt_camera_perspective {
     float  shutteropen      = 0;
     float  shutterclose     = 1;
 };
-struct pbrt_camera_orthographic {
+struct pbrt_orthographic_camera {
     float  frameaspectratio = -1;  // or computed from film
     float  lensradius       = 0;
     float  focaldistance    = 1e30;
@@ -115,11 +117,11 @@ struct pbrt_camera_orthographic {
     float  shutteropen      = 0;
     float  shutterclose     = 1;
 };
-struct pbrt_camera_environment {
+struct pbrt_environment_camera {
     float shutteropen  = 0;
     float shutterclose = 1;
 };
-struct pbrt_camera_realistic {
+struct pbrt_realistic_camera {
     string lensfile         = "";
     float  aperturediameter = 1;
     float  focusdistance    = 10;
@@ -127,33 +129,33 @@ struct pbrt_camera_realistic {
     float  shutteropen      = 0;
     float  shutterclose     = 1;
 };
-using pbrt_camera = variant<pbrt_camera_perspective, pbrt_camera_orthographic,
-    pbrt_camera_environment, pbrt_camera_realistic>;
+using pbrt_camera = variant<pbrt_perspective_camera, pbrt_orthographic_camera,
+    pbrt_environment_camera, pbrt_realistic_camera>;
 
 // pbrt samplers
-struct pbrt_sampler_random {
+struct pbrt_random_sampler {
     int pixelsamples = 16;
 };
-struct pbrt_sampler_halton {
+struct pbrt_halton_sampler {
     int pixelsamples = 16;
 };
-struct pbrt_sampler_sobol {
+struct pbrt_sobol_sampler {
     int pixelsamples = 16;
 };
-struct pbrt_sampler_zerotwosequence {
+struct pbrt_zerotwosequence_sampler {
     int pixelsamples = 16;
 };
-struct pbrt_sampler_maxmindist {
+struct pbrt_maxmindist_sampler {
     int pixelsamples = 16;
 };
-struct pbrt_sampler_stratified {
+struct pbrt_stratified_sampler {
     bool jitter   = true;
     int  xsamples = 2;
     int  ysamples = 2;
 };
-using pbrt_sampler = variant<pbrt_sampler_random, pbrt_sampler_halton,
-    pbrt_sampler_sobol, pbrt_sampler_zerotwosequence, pbrt_sampler_maxmindist,
-    pbrt_sampler_stratified>;
+using pbrt_sampler = variant<pbrt_random_sampler, pbrt_halton_sampler,
+    pbrt_sobol_sampler, pbrt_zerotwosequence_sampler, pbrt_maxmindist_sampler,
+    pbrt_stratified_sampler>;
 
 // pbrt film
 struct pbrt_film_image {
@@ -168,49 +170,49 @@ struct pbrt_film_image {
 using pbrt_film = variant<pbrt_film_image>;
 
 // pbrt filters
-struct pbrt_filter_box {
+struct pbrt_box_filter {
     float xwidth = 0.5f;
     float ywidth = 0.5f;
 };
-struct pbrt_filter_gaussian {
+struct pbrt_gaussian_filter {
     float xwidth = 2;
     float ywidth = 2;
     float alpha  = 2;
 };
-struct pbrt_filter_mitchell {
+struct pbrt_mitchell_filter {
     float xwidth = 2;
     float ywidth = 2;
     float B      = 1.0f / 3.0f;
     float C      = 1.0f / 3.0f;
 };
-struct pbrt_filter_sinc {
+struct pbrt_sinc_filter {
     float xwidth = 4;
     float ywidth = 4;
     float tau    = 3;
 };
-struct pbrt_filter_triangle {
+struct pbrt_triangle_filter {
     float xwidth = 2;
     float ywidth = 2;
 };
-using pbrt_filter = variant<pbrt_filter_box, pbrt_filter_gaussian,
-    pbrt_filter_mitchell, pbrt_filter_sinc, pbrt_filter_triangle>;
+using pbrt_filter = variant<pbrt_box_filter, pbrt_gaussian_filter,
+    pbrt_mitchell_filter, pbrt_sinc_filter, pbrt_triangle_filter>;
 
 // pbrt integrators
-struct pbrt_integrator_path {
+struct pbrt_path_integrator {
     enum struct lightsamplestrategy_t { uniform, power, spatial };
     int    maxdepth    = 5;
     bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
     float  rrthreshold = 1;
     lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::spatial;
 };
-struct pbrt_integrator_volpath {
+struct pbrt_volpath_integrator {
     enum struct lightsamplestrategy_t { uniform, power, spatial };
     int    maxdepth    = 5;
     bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
     float  rrthreshold = 1;
     lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::spatial;
 };
-struct pbrt_integrator_bdpt {
+struct pbrt_bdpt_integrator {
     enum struct lightsamplestrategy_t { uniform, power, spatial };
     int    maxdepth    = 5;
     bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
@@ -218,13 +220,13 @@ struct pbrt_integrator_bdpt {
     bool                  visualizestrategies = false;
     bool                  visualizeweights    = false;
 };
-struct pbrt_integrator_directlighting {
+struct pbrt_directlighting_integrator {
     enum struct strategy_t { all, one };
     strategy_t strategy    = strategy_t::all;
     int        maxdepth    = 5;
     bbox2i     pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
 };
-struct pbrt_integrator_mlt {
+struct pbrt_mlt_integrator {
     int    maxdepth             = 5;
     bbox2i pixelbounds          = {{0, 0}, {type_max<int>, type_max<int>}};
     int    bootstrapsamples     = 100000;
@@ -233,7 +235,7 @@ struct pbrt_integrator_mlt {
     float  largestepprobability = 0.3;
     float  sigma                = 0.01;
 };
-struct pbrt_integrator_sppm {
+struct pbrt_sppm_integrator {
     int    maxdepth            = 5;
     bbox2i pixelbounds         = {{0, 0}, {type_max<int>, type_max<int>}};
     int    iterations          = 64;
@@ -241,28 +243,28 @@ struct pbrt_integrator_sppm {
     int    imagewritefrequency = pow2(31);
     float  radius              = 5;
 };
-struct pbrt_integrator_whitted {
+struct pbrt_whitted_integrator {
     int    maxdepth    = 5;
     bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
 };
-using pbrt_integrator = variant<pbrt_integrator_path, pbrt_integrator_volpath,
-    pbrt_integrator_bdpt, pbrt_integrator_directlighting, pbrt_integrator_mlt,
-    pbrt_integrator_sppm, pbrt_integrator_whitted>;
+using pbrt_integrator = variant<pbrt_path_integrator, pbrt_volpath_integrator,
+    pbrt_bdpt_integrator, pbrt_directlighting_integrator, pbrt_mlt_integrator,
+    pbrt_sppm_integrator, pbrt_whitted_integrator>;
 
 // pbrt accellerators
-struct pbrt_accelerator_bvh {
+struct pbrt_bvh_accelerator {
     enum struct splitmethod_t { sah, equal, middle, hlbvh };
     int           maxnodeprims = 4;
     splitmethod_t splitmethod  = splitmethod_t::sah;
 };
-struct pbrt_accelerator_kdtree {
+struct pbrt_kdtree_accelerator {
     int   intersectcost = 80;
     int   traversalcost = 1;
     float emptybonus    = 0.2;
     int   maxprims      = 1;
     int   maxdepth      = -1;
 };
-using pbrt_accelerator = variant<pbrt_accelerator_bvh, pbrt_accelerator_kdtree>;
+using pbrt_accelerator = variant<pbrt_bvh_accelerator, pbrt_kdtree_accelerator>;
 
 // pbrt texture or value
 template <typename T>
@@ -284,10 +286,10 @@ struct pbrt_textured<spectrum3f> {
 };
 
 // pbrt textures
-struct pbrt_texture_constant {
+struct pbrt_constant_texture {
     pbrt_textured<spectrum3f> value = {1, 1, 1};
 };
-struct pbrt_texture_bilerp {
+struct pbrt_bilerp_texture {
     pbrt_textured<spectrum3f> v00 = {0, 0, 0};
     pbrt_textured<spectrum3f> v01 = {1, 1, 1};
     pbrt_textured<spectrum3f> v10 = {0, 0, 0};
@@ -301,7 +303,7 @@ struct pbrt_texture_bilerp {
     vec3f        v1      = {1, 0, 0};
     vec3f        v2      = {0, 1, 0};
 };
-struct pbrt_texture_checkerboard {
+struct pbrt_checkerboard_texture {
     enum struct aamode_type { closedform, none };
     int                       dimension = 2;
     pbrt_textured<spectrum3f> tex1      = {1, 1, 1};
@@ -316,7 +318,7 @@ struct pbrt_texture_checkerboard {
     vec3f        v1      = {1, 0, 0};
     vec3f        v2      = {0, 1, 0};
 };
-struct pbrt_texture_dots {
+struct pbrt_dots_texture {
     pbrt_textured<spectrum3f> inside  = {1, 1, 1};
     pbrt_textured<spectrum3f> outside = {0, 0, 0};
     enum struct mapping_type { uv, spherical, cylindrical, planar };
@@ -328,11 +330,11 @@ struct pbrt_texture_dots {
     vec3f        v1      = {1, 0, 0};
     vec3f        v2      = {0, 1, 0};
 };
-struct pbrt_texture_fbm {
+struct pbrt_fbm_texture {
     int   octaves   = 8;
     float roughness = 0.5;
 };
-struct pbrt_texture_imagemap {
+struct pbrt_imagemap_texture {
     enum wrap_type { repeat, black, clamp };
     string    filename      = "";
     wrap_type wrap          = wrap_type::repeat;
@@ -349,22 +351,22 @@ struct pbrt_texture_imagemap {
     vec3f        v1      = {1, 0, 0};
     vec3f        v2      = {0, 1, 0};
 };
-struct pbrt_texture_marble {
+struct pbrt_marble_texture {
     int   octaves   = 8;
     float roughness = 0.5f;
     float scale     = 1;
     float variation = 0.2f;
 };
-struct pbrt_texture_mix {
+struct pbrt_mix_texture {
     pbrt_textured<spectrum3f> tex1   = {1, 1, 1};
     pbrt_textured<spectrum3f> tex2   = {1, 1, 1};
     pbrt_textured<float>      amount = 0.5f;
 };
-struct pbrt_texture_scale {
+struct pbrt_scale_texture {
     pbrt_textured<spectrum3f> tex1 = {1, 1, 1};
     pbrt_textured<spectrum3f> tex2 = {1, 1, 1};
 };
-struct pbrt_texture_uv {
+struct pbrt_uv_texture {
     enum struct mapping_type { uv, spherical, cylindrical, planar };
     mapping_type mapping = mapping_type::uv;
     float        uscale  = 1;
@@ -374,30 +376,30 @@ struct pbrt_texture_uv {
     vec3f        v1      = {1, 0, 0};
     vec3f        v2      = {0, 1, 0};
 };
-struct pbrt_texture_windy {
+struct pbrt_windy_texture {
     // TODO: missing parameters
 };
-struct pbrt_texture_wrinkled {
+struct pbrt_wrinkled_texture {
     int   octaves   = 8;
     float roughness = 0.5;
 };
-using pbrt_texture = variant<pbrt_texture_constant, pbrt_texture_bilerp,
-    pbrt_texture_checkerboard, pbrt_texture_dots, pbrt_texture_fbm,
-    pbrt_texture_imagemap, pbrt_texture_marble, pbrt_texture_mix,
-    pbrt_texture_scale, pbrt_texture_uv, pbrt_texture_windy,
-    pbrt_texture_wrinkled>;
+using pbrt_texture = variant<pbrt_constant_texture, pbrt_bilerp_texture,
+    pbrt_checkerboard_texture, pbrt_dots_texture, pbrt_fbm_texture,
+    pbrt_imagemap_texture, pbrt_marble_texture, pbrt_mix_texture,
+    pbrt_scale_texture, pbrt_uv_texture, pbrt_windy_texture,
+    pbrt_wrinkled_texture>;
 
 // pbrt materials
-struct pbrt_material_matte {
+struct pbrt_matte_material {
     pbrt_textured<spectrum3f> Kd      = {0.5f, 0.5f, 0.5f};
     pbrt_textured<float>      sigma   = 0;
     pbrt_textured<float>      bumpmap = 0;
 };
-struct pbrt_material_mirror {
+struct pbrt_mirror_material {
     pbrt_textured<spectrum3f> Kr      = {0.9f, 0.9f, 0.9f};
     pbrt_textured<float>      bumpmap = 0;
 };
-struct pbrt_material_plastic {
+struct pbrt_plastic_material {
     pbrt_textured<spectrum3f> Kd             = {0.25f, 0.25f, 0.25f};
     pbrt_textured<spectrum3f> Ks             = {0.25f, 0.25f, 0.25f};
     pbrt_textured<float>      uroughness     = 0.1f;
@@ -405,7 +407,7 @@ struct pbrt_material_plastic {
     bool                      remaproughness = true;
     pbrt_textured<float>      bumpmap        = 0;
 };
-struct pbrt_material_metal {
+struct pbrt_metal_material {
     pbrt_textured<spectrum3f> eta = {
         0.2004376970f, 0.9240334304f, 1.1022119527f};
     pbrt_textured<spectrum3f> k = {3.9129485033f, 2.4528477015f, 2.1421879552f};
@@ -414,7 +416,7 @@ struct pbrt_material_metal {
     bool                      remaproughness = true;
     pbrt_textured<float>      bumpmap        = 0;
 };
-struct pbrt_material_glass {
+struct pbrt_glass_material {
     pbrt_textured<spectrum3f> Kr             = {1, 1, 1};
     pbrt_textured<spectrum3f> Kt             = {1, 1, 1};
     pbrt_textured<float>      eta            = 1;
@@ -423,7 +425,7 @@ struct pbrt_material_glass {
     bool                      remaproughness = true;
     pbrt_textured<float>      bumpmap        = 0;
 };
-struct pbrt_material_translucent {
+struct pbrt_translucent_material {
     pbrt_textured<spectrum3f> Kd             = {0, 0, 0};
     pbrt_textured<spectrum3f> Ks             = {0, 0, 0};
     pbrt_textured<spectrum3f> reflect        = {0, 0, 0};
@@ -433,7 +435,7 @@ struct pbrt_material_translucent {
     bool                      remaproughness = true;
     pbrt_textured<float>      bumpmap        = 0;
 };
-struct pbrt_material_uber {
+struct pbrt_uber_material {
     pbrt_textured<spectrum3f> Kd             = {0, 0, 0};
     pbrt_textured<spectrum3f> Ks             = {0, 0, 0};
     pbrt_textured<spectrum3f> Kr             = {0, 0, 0};
@@ -445,7 +447,7 @@ struct pbrt_material_uber {
     bool                      remaproughness = true;
     pbrt_textured<float>      bumpmap        = 0;
 };
-struct pbrt_material_disney {
+struct pbrt_disney_material {
     pbrt_textured<spectrum3f> color           = {0.5f, 0.5f, 0.5f};
     pbrt_textured<float>      anisotropic     = 0;
     pbrt_textured<float>      clearcoat       = 0;
@@ -465,11 +467,12 @@ struct pbrt_material_disney {
     bool                      remaproughness  = true;
     pbrt_textured<float>      bumpmap         = 0;
 };
-struct pbrt_material_fourier {
-    string               bsdffile = "";
-    pbrt_textured<float> bumpmap  = 0;
+struct pbrt_fourier_material {
+    string                                              bsdffile = "";
+    pbrt_textured<float>                                bumpmap  = 0;
+    variant<pbrt_plastic_material, pbrt_metal_material> approx   = {};
 };
-struct pbrt_material_hair {
+struct pbrt_hair_material {
     pbrt_textured<spectrum3f> color       = {0, 0, 0};  // TODO: missing default
     pbrt_textured<spectrum3f> sigma_a     = {0, 0, 0};  // TODO: missing default
     pbrt_textured<float>      eumelanin   = 0;          // TODO: missing default
@@ -480,7 +483,7 @@ struct pbrt_material_hair {
     pbrt_textured<float>      alpha       = 2;
     pbrt_textured<float>      bumpmap     = 0;
 };
-struct pbrt_material_kdsubsurface {
+struct pbrt_kdsubsurface_material {
     pbrt_textured<spectrum3f> Kd             = {0, 0, 0};
     pbrt_textured<spectrum3f> mfp            = {1, 1, 1};
     pbrt_textured<float>      eta            = 1;
@@ -491,13 +494,13 @@ struct pbrt_material_kdsubsurface {
     bool                      remaproughness = true;
     pbrt_textured<float>      bumpmap        = 0;
 };
-struct pbrt_material_mix {
+struct pbrt_mix_material {
     pbrt_textured<spectrum3f> amount         = {0, 0, 0};
     string                    namedmaterial1 = "";
     string                    namedmaterial2 = "";
     pbrt_textured<float>      bumpmap        = 0;
 };
-struct pbrt_material_substrate {
+struct pbrt_substrate_material {
     pbrt_textured<spectrum3f> Kd             = {0, 0, 0};
     pbrt_textured<spectrum3f> Ks             = {0, 0, 0};
     pbrt_textured<float>      uroughness     = 0;
@@ -505,7 +508,7 @@ struct pbrt_material_substrate {
     bool                      remaproughness = true;
     pbrt_textured<float>      bumpmap        = 0;
 };
-struct pbrt_material_subsurface {
+struct pbrt_subsurface_material {
     string                    name           = "";
     pbrt_textured<spectrum3f> sigma_a        = {.0011, .0024, .014};
     pbrt_textured<spectrum3f> sigma_prime_s  = {2.55, 3.12, 3.77};
@@ -518,14 +521,14 @@ struct pbrt_material_subsurface {
     bool                      remaproughness = true;
     pbrt_textured<float>      bumpmap        = 0;
 };
-using pbrt_material = variant<pbrt_material_matte, pbrt_material_mirror,
-    pbrt_material_plastic, pbrt_material_metal, pbrt_material_glass,
-    pbrt_material_translucent, pbrt_material_uber, pbrt_material_disney,
-    pbrt_material_fourier, pbrt_material_hair, pbrt_material_kdsubsurface,
-    pbrt_material_mix, pbrt_material_substrate, pbrt_material_subsurface>;
+using pbrt_material = variant<pbrt_matte_material, pbrt_mirror_material,
+    pbrt_plastic_material, pbrt_metal_material, pbrt_glass_material,
+    pbrt_translucent_material, pbrt_uber_material, pbrt_disney_material,
+    pbrt_fourier_material, pbrt_hair_material, pbrt_kdsubsurface_material,
+    pbrt_mix_material, pbrt_substrate_material, pbrt_subsurface_material>;
 
 // pbrt shapes
-struct pbrt_shape_trianglemesh {
+struct pbrt_trianglemesh_shape {
     vector<vec3i>        indices     = {};
     vector<vec3f>        P           = {};
     vector<vec3f>        N           = {};
@@ -534,12 +537,12 @@ struct pbrt_shape_trianglemesh {
     pbrt_textured<float> alpha       = 1;
     pbrt_textured<float> shadowalpha = 1;
 };
-struct pbrt_shape_plymesh {
+struct pbrt_plymesh_shape {
     string               filename    = {};
     pbrt_textured<float> alpha       = 1;
     pbrt_textured<float> shadowalpha = 1;
 };
-struct pbrt_shape_curve {
+struct pbrt_curve_shape {
     enum struct type_t { flat, ribbon, cylinder };
     enum struct basis_t { bezier, bspline };
     vector<vec3f> P          = {};
@@ -551,12 +554,12 @@ struct pbrt_shape_curve {
     float         width1     = 1;
     int           splitdepth = 3;
 };
-struct pbrt_shape_loopsubdiv {
+struct pbrt_loopsubdiv_shape {
     int           levels  = 3;
     vector<vec3i> indices = {};
     vector<vec3f> P       = {};
 };
-struct pbrt_shape_nurbs {
+struct pbrt_nurbs_shape {
     int           nu     = -1;
     int           nv     = -1;
     vector<float> uknots = {};
@@ -568,80 +571,80 @@ struct pbrt_shape_nurbs {
     vector<vec3f> P      = {};
     vector<float> Pw     = {};
 };
-struct pbrt_shape_sphere {
+struct pbrt_sphere_shape {
     float radius = 1;
     float zmin   = -radius;
     float zmax   = radius;
     float phimax = 360;
 };
-struct pbrt_shape_disk {
+struct pbrt_disk_shape {
     float height      = 0;
     float radius      = 1;
     float innerradius = 0;
     float phimax      = 360;
 };
-struct pbrt_shape_cone {
+struct pbrt_cone_shape {
     float radius = 1;
     float height = 1;
     float phimax = 360;
 };
-struct pbrt_shape_cylinder {
+struct pbrt_cylinder_shape {
     float radius = 1;
     float zmin   = -1;
     float zmax   = 1;
     float phimax = 360;
 };
-struct pbrt_shape_hyperboloid {
+struct pbrt_hyperboloid_shape {
     vec3f p1     = {0, 0, 0};
     vec3f p2     = {1, 1, 1};
     float phimax = 360;
 };
-struct pbrt_shape_paraboloid {
+struct pbrt_paraboloid_shape {
     float radius = 1;
     float zmin   = 0;
     float zmax   = 1;
     float phimax = 360;
 };
-struct pbrt_shape_heightfield {
+struct pbrt_heightfield_shape {
     int           nu = 0;
     int           nv = 0;
     vector<float> Pz = {};
 };
-using pbrt_shape = variant<pbrt_shape_trianglemesh, pbrt_shape_plymesh,
-    pbrt_shape_curve, pbrt_shape_loopsubdiv, pbrt_shape_nurbs,
-    pbrt_shape_sphere, pbrt_shape_disk, pbrt_shape_cone, pbrt_shape_cylinder,
-    pbrt_shape_hyperboloid, pbrt_shape_paraboloid, pbrt_shape_heightfield>;
+using pbrt_shape = variant<pbrt_trianglemesh_shape, pbrt_plymesh_shape,
+    pbrt_curve_shape, pbrt_loopsubdiv_shape, pbrt_nurbs_shape,
+    pbrt_sphere_shape, pbrt_disk_shape, pbrt_cone_shape, pbrt_cylinder_shape,
+    pbrt_hyperboloid_shape, pbrt_paraboloid_shape, pbrt_heightfield_shape>;
 
 // pbrt lights
-struct pbrt_light_distant {
+struct pbrt_distant_light {
     spectrum3f scale = {1, 1, 1};
     spectrum3f L     = {1, 1, 1};
     vec3f      from{0, 0, 0};
     vec3f      to = {0, 0, 1};
 };
-struct pbrt_light_goniometric {
+struct pbrt_goniometric_light {
     spectrum3f scale   = {1, 1, 1};
     spectrum3f I       = {1, 1, 1};
     string     mapname = "";
 };
-struct pbrt_light_infinite {
+struct pbrt_infinite_light {
     spectrum3f scale   = {1, 1, 1};
     spectrum3f L       = {1, 1, 1};
     int        samples = 1;
     string     mapname = "";
 };
-struct pbrt_light_point {
+struct pbrt_point_light {
     spectrum3f scale = {1, 1, 1};
     spectrum3f I     = {1, 1, 1};
     vec3f      from{0, 0, 0};
 };
-struct pbrt_light_projection {
+struct pbrt_projection_light {
     spectrum3f scale   = {1, 1, 1};
     spectrum3f I       = {1, 1, 1};
     float      fov     = 45;
     string     mapname = "";
 };
-struct pbrt_light_spot {
+struct pbrt_spot_light {
     spectrum3f scale          = {1, 1, 1};
     spectrum3f I              = {1, 1, 1};
     vec3f      from           = {0, 0, 0};
@@ -650,28 +653,28 @@ struct pbrt_light_spot {
     float      conedeltaangle = 5;
 };
 using pbrt_light =
-    variant<pbrt_light_distant, pbrt_light_goniometric, pbrt_light_infinite,
-        pbrt_light_point, pbrt_light_projection, pbrt_light_spot>;
+    variant<pbrt_distant_light, pbrt_goniometric_light, pbrt_infinite_light,
+        pbrt_point_light, pbrt_projection_light, pbrt_spot_light>;
 
 // pbrt area lights
-struct pbrt_arealight_none {};
-struct pbrt_arealight_diffuse {
+struct pbrt_none_arealight {};
+struct pbrt_diffuse_arealight {
     spectrum3f scale    = {1, 1, 1};
     spectrum3f L        = {1, 1, 1};
     bool       twosided = false;
     int        samples  = 1;
 };
-using pbrt_arealight = variant<pbrt_arealight_none, pbrt_arealight_diffuse>;
+using pbrt_arealight = variant<pbrt_none_arealight, pbrt_diffuse_arealight>;
 
 // pbrt mediums
-struct pbrt_medium_homogeneous {
+struct pbrt_homogeneous_medium {
     spectrum3f sigma_a = {0.0011f, 0.0024f, 0.014f};
     spectrum3f sigma_s = {2.55f, 3.21f, 3.77f};
     string     preset  = "";
     float      g       = 0;
     float      scale   = 1;
 };
-struct pbrt_medium_heterogeneous {
+struct pbrt_heterogeneous_medium {
     spectrum3f    sigma_a = {0.0011f, 0.0024f, 0.014f};
     spectrum3f    sigma_s = {2.55f, 3.21f, 3.77f};
     string        preset  = "";
@@ -684,7 +687,7 @@ struct pbrt_medium_heterogeneous {
     int           nz      = 1;
     vector<float> density = {};
 };
-using pbrt_medium = variant<pbrt_medium_homogeneous, pbrt_medium_heterogeneous>;
+using pbrt_medium = variant<pbrt_homogeneous_medium, pbrt_heterogeneous_medium>;
 
 // pbrt medium interface
 struct pbrt_mediuminterface {
@@ -868,95 +871,95 @@ static inline void parse_value(pbrt_token_stream& stream, T& value,
     }
 }
 static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_texture_bilerp::mapping_type& value) {
+    pbrt_token_stream& stream, pbrt_bilerp_texture::mapping_type& value) {
     static auto value_names =
-        unordered_map<string, pbrt_texture_bilerp::mapping_type>{
-            {"uv", pbrt_texture_bilerp::mapping_type::uv},
-            {"spherical", pbrt_texture_bilerp::mapping_type::spherical},
-            {"cylindrical", pbrt_texture_bilerp::mapping_type::cylindrical},
-            {"planar", pbrt_texture_bilerp::mapping_type::planar},
+        unordered_map<string, pbrt_bilerp_texture::mapping_type>{
+            {"uv", pbrt_bilerp_texture::mapping_type::uv},
+            {"spherical", pbrt_bilerp_texture::mapping_type::spherical},
+            {"cylindrical", pbrt_bilerp_texture::mapping_type::cylindrical},
+            {"planar", pbrt_bilerp_texture::mapping_type::planar},
         };
     return parse_value(stream, value, value_names);
 }
 static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_texture_checkerboard::mapping_type& value) {
-    return parse_value(stream, (pbrt_texture_bilerp::mapping_type&)value);
+    pbrt_token_stream& stream, pbrt_checkerboard_texture::mapping_type& value) {
+    return parse_value(stream, (pbrt_bilerp_texture::mapping_type&)value);
 }
 static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_texture_dots::mapping_type& value) {
-    return parse_value(stream, (pbrt_texture_bilerp::mapping_type&)value);
+    pbrt_token_stream& stream, pbrt_dots_texture::mapping_type& value) {
+    return parse_value(stream, (pbrt_bilerp_texture::mapping_type&)value);
 }
 static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_texture_imagemap::mapping_type& value) {
-    return parse_value(stream, (pbrt_texture_bilerp::mapping_type&)value);
+    pbrt_token_stream& stream, pbrt_imagemap_texture::mapping_type& value) {
+    return parse_value(stream, (pbrt_bilerp_texture::mapping_type&)value);
 }
 static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_texture_uv::mapping_type& value) {
-    return parse_value(stream, (pbrt_texture_bilerp::mapping_type&)value);
+    pbrt_token_stream& stream, pbrt_uv_texture::mapping_type& value) {
+    return parse_value(stream, (pbrt_bilerp_texture::mapping_type&)value);
 }
 
 static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_texture_checkerboard::aamode_type& value) {
+    pbrt_token_stream& stream, pbrt_checkerboard_texture::aamode_type& value) {
     static auto value_names =
-        unordered_map<string, pbrt_texture_checkerboard::aamode_type>{
-            {"closedform", pbrt_texture_checkerboard::aamode_type::closedform},
-            {"none", pbrt_texture_checkerboard::aamode_type::none},
+        unordered_map<string, pbrt_checkerboard_texture::aamode_type>{
+            {"closedform", pbrt_checkerboard_texture::aamode_type::closedform},
+            {"none", pbrt_checkerboard_texture::aamode_type::none},
         };
     return parse_value(stream, value, value_names);
 }
 static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_texture_imagemap::wrap_type& value) {
+    pbrt_token_stream& stream, pbrt_imagemap_texture::wrap_type& value) {
     static auto value_names =
-        unordered_map<string, pbrt_texture_imagemap::wrap_type>{
-            {"repeat", pbrt_texture_imagemap::wrap_type::repeat},
-            {"clamp", pbrt_texture_imagemap::wrap_type::clamp},
-            {"black", pbrt_texture_imagemap::wrap_type::black},
+        unordered_map<string, pbrt_imagemap_texture::wrap_type>{
+            {"repeat", pbrt_imagemap_texture::wrap_type::repeat},
+            {"clamp", pbrt_imagemap_texture::wrap_type::clamp},
+            {"black", pbrt_imagemap_texture::wrap_type::black},
         };
     return parse_value(stream, value, value_names);
 }
 static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_shape_curve::basis_t& value) {
-    static auto value_names = unordered_map<string, pbrt_shape_curve::basis_t>{
-        {"bezier", pbrt_shape_curve::basis_t::bezier},
-        {"bspline", pbrt_shape_curve::basis_t::bspline},
+    pbrt_token_stream& stream, pbrt_curve_shape::basis_t& value) {
+    static auto value_names = unordered_map<string, pbrt_curve_shape::basis_t>{
+        {"bezier", pbrt_curve_shape::basis_t::bezier},
+        {"bspline", pbrt_curve_shape::basis_t::bspline},
     };
     return parse_value(stream, value, value_names);
 }
 static inline void parse_value(
-    pbrt_token_stream& stream, pbrt_shape_curve::type_t& value) {
-    static auto value_names = unordered_map<string, pbrt_shape_curve::type_t>{
-        {"flat", pbrt_shape_curve::type_t::flat},
-        {"cylinder", pbrt_shape_curve::type_t::cylinder},
-        {"ribbon", pbrt_shape_curve::type_t::ribbon},
+    pbrt_token_stream& stream, pbrt_curve_shape::type_t& value) {
+    static auto value_names = unordered_map<string, pbrt_curve_shape::type_t>{
+        {"flat", pbrt_curve_shape::type_t::flat},
+        {"cylinder", pbrt_curve_shape::type_t::cylinder},
+        {"ribbon", pbrt_curve_shape::type_t::ribbon},
     };
     return parse_value(stream, value, value_names);
 }
 static inline void parse_value(pbrt_token_stream& stream,
-    pbrt_integrator_path::lightsamplestrategy_t&  value) {
+    pbrt_path_integrator::lightsamplestrategy_t&  value) {
     static auto value_names =
-        unordered_map<string, pbrt_integrator_path::lightsamplestrategy_t>{
-            {"power", pbrt_integrator_path::lightsamplestrategy_t::power},
-            {"spatial", pbrt_integrator_path::lightsamplestrategy_t::spatial},
-            {"uniform", pbrt_integrator_path::lightsamplestrategy_t::uniform},
+        unordered_map<string, pbrt_path_integrator::lightsamplestrategy_t>{
+            {"power", pbrt_path_integrator::lightsamplestrategy_t::power},
+            {"spatial", pbrt_path_integrator::lightsamplestrategy_t::spatial},
+            {"uniform", pbrt_path_integrator::lightsamplestrategy_t::uniform},
         };
     return parse_value(stream, value, value_names);
 }
 static inline void parse_value(pbrt_token_stream&   stream,
-    pbrt_integrator_volpath::lightsamplestrategy_t& value) {
+    pbrt_volpath_integrator::lightsamplestrategy_t& value) {
     return parse_value(
-        stream, (pbrt_integrator_path::lightsamplestrategy_t&)value);
+        stream, (pbrt_path_integrator::lightsamplestrategy_t&)value);
 }
 static inline void parse_value(pbrt_token_stream& stream,
-    pbrt_integrator_bdpt::lightsamplestrategy_t&  value) {
+    pbrt_bdpt_integrator::lightsamplestrategy_t&  value) {
     return parse_value(
-        stream, (pbrt_integrator_path::lightsamplestrategy_t&)value);
+        stream, (pbrt_path_integrator::lightsamplestrategy_t&)value);
 }
 static inline void parse_value(pbrt_token_stream& stream,
-    pbrt_integrator_directlighting::strategy_t&   value) {
+    pbrt_directlighting_integrator::strategy_t&   value) {
     static auto value_names =
-        unordered_map<string, pbrt_integrator_directlighting::strategy_t>{
-            {"all", pbrt_integrator_directlighting::strategy_t::all},
-            {"one", pbrt_integrator_directlighting::strategy_t::one},
+        unordered_map<string, pbrt_directlighting_integrator::strategy_t>{
+            {"all", pbrt_directlighting_integrator::strategy_t::all},
+            {"one", pbrt_directlighting_integrator::strategy_t::one},
         };
     return parse_value(stream, value, value_names);
 }
@@ -1203,12 +1206,16 @@ static inline void parse_param(
         parse_param(stream, filename);
         filename = get_filename(filename);
         if (get_extension(filename) == "spd") {
-            filename          = filename.substr(0, filename.size() - 4);
-            if(get_extension(filename) == "eta") {
-                auto eta = pbrt_get_element_etak(filename.substr(0, filename.length() - 4)).first;
+            filename = filename.substr(0, filename.size() - 4);
+            if (get_extension(filename) == "eta") {
+                auto eta = pbrt_get_element_etak(
+                    filename.substr(0, filename.length() - 4))
+                               .first;
                 value = {eta.x, eta.y, eta.z};
-            } else if(get_extension(filename) == "k") {
-                auto k = pbrt_get_element_etak(filename.substr(0, filename.length() - 2)).second;
+            } else if (get_extension(filename) == "k") {
+                auto k = pbrt_get_element_etak(
+                    filename.substr(0, filename.length() - 2))
+                             .second;
                 value = {k.x, k.y, k.z};
             } else {
                 throw pbrtio_error("unknown spectrum file");
@@ -1318,7 +1325,7 @@ static inline void parse_pbrt_integrator(
     pbrt_token_stream& stream, const string& type, pbrt_integrator& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "path") {
-        auto tvalue = pbrt_integrator_path{};
+        auto tvalue = pbrt_path_integrator{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "maxdepth") {
@@ -1337,7 +1344,7 @@ static inline void parse_pbrt_integrator(
         }
         value = tvalue;
     } else if (type == "volpath") {
-        auto tvalue = pbrt_integrator_volpath{};
+        auto tvalue = pbrt_volpath_integrator{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "maxdepth") {
@@ -1354,7 +1361,7 @@ static inline void parse_pbrt_integrator(
         }
         value = tvalue;
     } else if (type == "directlighting") {
-        auto tvalue = pbrt_integrator_directlighting{};
+        auto tvalue = pbrt_directlighting_integrator{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "maxdepth") {
@@ -1369,7 +1376,7 @@ static inline void parse_pbrt_integrator(
         }
         value = tvalue;
     } else if (type == "bdpt") {
-        auto tvalue = pbrt_integrator_bdpt{};
+        auto tvalue = pbrt_bdpt_integrator{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "maxdepth") {
@@ -1388,7 +1395,7 @@ static inline void parse_pbrt_integrator(
         }
         value = tvalue;
     } else if (type == "mlt") {
-        auto tvalue = pbrt_integrator_mlt{};
+        auto tvalue = pbrt_mlt_integrator{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "maxdepth") {
@@ -1411,7 +1418,7 @@ static inline void parse_pbrt_integrator(
         }
         value = tvalue;
     } else if (type == "sppm") {
-        auto tvalue = pbrt_integrator_sppm{};
+        auto tvalue = pbrt_sppm_integrator{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "maxdepth") {
@@ -1432,7 +1439,7 @@ static inline void parse_pbrt_integrator(
         }
         value = tvalue;
     } else if (type == "whitted") {
-        auto tvalue = pbrt_integrator_whitted{};
+        auto tvalue = pbrt_whitted_integrator{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "maxdepth") {
@@ -1454,7 +1461,7 @@ static inline void parse_pbrt_sampler(
     pbrt_token_stream& stream, const string& type, pbrt_sampler& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "random") {
-        auto tvalue = pbrt_sampler_random{};
+        auto tvalue = pbrt_random_sampler{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "pixelsamples") {
@@ -1465,7 +1472,7 @@ static inline void parse_pbrt_sampler(
         }
         value = tvalue;
     } else if (type == "halton") {
-        auto tvalue = pbrt_sampler_halton{};
+        auto tvalue = pbrt_halton_sampler{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "pixelsamples") {
@@ -1476,7 +1483,7 @@ static inline void parse_pbrt_sampler(
         }
         value = tvalue;
     } else if (type == "sobol") {
-        auto tvalue = pbrt_sampler_sobol{};
+        auto tvalue = pbrt_sobol_sampler{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "pixelsamples") {
@@ -1487,7 +1494,7 @@ static inline void parse_pbrt_sampler(
         }
         value = tvalue;
     } else if (type == "02sequence") {
-        auto tvalue = pbrt_sampler_zerotwosequence{};
+        auto tvalue = pbrt_zerotwosequence_sampler{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "pixelsamples") {
@@ -1498,7 +1505,7 @@ static inline void parse_pbrt_sampler(
         }
         value = tvalue;
     } else if (type == "lowdiscrepancy") {
-        auto tvalue = pbrt_sampler_zerotwosequence{};
+        auto tvalue = pbrt_zerotwosequence_sampler{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "pixelsamples") {
@@ -1509,7 +1516,7 @@ static inline void parse_pbrt_sampler(
         }
         value = tvalue;
     } else if (type == "maxmindist") {
-        auto tvalue = pbrt_sampler_maxmindist{};
+        auto tvalue = pbrt_maxmindist_sampler{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "pixelsamples") {
@@ -1520,7 +1527,7 @@ static inline void parse_pbrt_sampler(
         }
         value = tvalue;
     } else if (type == "stratified") {
-        auto tvalue = pbrt_sampler_stratified{};
+        auto tvalue = pbrt_stratified_sampler{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "xsamples") {
@@ -1544,7 +1551,7 @@ static inline void parse_pbrt_filter(
     pbrt_token_stream& stream, const string& type, pbrt_filter& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "box") {
-        auto tvalue = pbrt_filter_box{};
+        auto tvalue = pbrt_box_filter{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "xwidth") {
@@ -1557,7 +1564,7 @@ static inline void parse_pbrt_filter(
         }
         value = tvalue;
     } else if (type == "gaussian") {
-        auto tvalue = pbrt_filter_gaussian{};
+        auto tvalue = pbrt_gaussian_filter{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "xwidth") {
@@ -1572,7 +1579,7 @@ static inline void parse_pbrt_filter(
         }
         value = tvalue;
     } else if (type == "mitchell") {
-        auto tvalue = pbrt_filter_mitchell{};
+        auto tvalue = pbrt_mitchell_filter{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "xwidth") {
@@ -1589,7 +1596,7 @@ static inline void parse_pbrt_filter(
         }
         value = tvalue;
     } else if (type == "sinc") {
-        auto tvalue = pbrt_filter_sinc{};
+        auto tvalue = pbrt_sinc_filter{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "xwidth") {
@@ -1604,7 +1611,7 @@ static inline void parse_pbrt_filter(
         }
         value = tvalue;
     } else if (type == "triangle") {
-        auto tvalue = pbrt_filter_triangle{};
+        auto tvalue = pbrt_triangle_filter{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "xwidth") {
@@ -1660,7 +1667,7 @@ static inline void parse_pbrt_camera(
     pbrt_token_stream& stream, const string& type, pbrt_camera& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "perspective") {
-        auto tvalue = pbrt_camera_perspective{};
+        auto tvalue = pbrt_perspective_camera{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "fov") {
@@ -1683,7 +1690,7 @@ static inline void parse_pbrt_camera(
         }
         value = tvalue;
     } else if (type == "orthographic") {
-        auto tvalue = pbrt_camera_orthographic{};
+        auto tvalue = pbrt_orthographic_camera{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "frameaspectratio") {
@@ -1704,7 +1711,7 @@ static inline void parse_pbrt_camera(
         }
         value = tvalue;
     } else if (type == "environment") {
-        auto tvalue = pbrt_camera_environment{};
+        auto tvalue = pbrt_environment_camera{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "shutteropen") {
@@ -1717,7 +1724,7 @@ static inline void parse_pbrt_camera(
         }
         value = tvalue;
     } else if (type == "realistic") {
-        auto tvalue = pbrt_camera_realistic{};
+        auto tvalue = pbrt_realistic_camera{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "lensfile") {
@@ -1747,7 +1754,7 @@ static inline void parse_pbrt_texture(
     pbrt_token_stream& stream, const string& type, pbrt_texture& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "constant") {
-        auto tvalue = pbrt_texture_constant{};
+        auto tvalue = pbrt_constant_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "value") {
@@ -1758,7 +1765,7 @@ static inline void parse_pbrt_texture(
         }
         value = tvalue;
     } else if (type == "bilerp") {
-        auto tvalue = pbrt_texture_bilerp{};
+        auto tvalue = pbrt_bilerp_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "v00") {
@@ -1789,7 +1796,7 @@ static inline void parse_pbrt_texture(
         }
         value = tvalue;
     } else if (type == "checkerboard") {
-        auto tvalue = pbrt_texture_checkerboard{};
+        auto tvalue = pbrt_checkerboard_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "dimension") {
@@ -1820,7 +1827,7 @@ static inline void parse_pbrt_texture(
         }
         value = tvalue;
     } else if (type == "dots") {
-        auto tvalue = pbrt_texture_dots{};
+        auto tvalue = pbrt_dots_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "inside") {
@@ -1847,7 +1854,7 @@ static inline void parse_pbrt_texture(
         }
         value = tvalue;
     } else if (type == "imagemap") {
-        auto tvalue = pbrt_texture_imagemap{};
+        auto tvalue = pbrt_imagemap_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "filename") {
@@ -1882,7 +1889,7 @@ static inline void parse_pbrt_texture(
         }
         value = tvalue;
     } else if (type == "mix") {
-        auto tvalue = pbrt_texture_mix{};
+        auto tvalue = pbrt_mix_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "tex1") {
@@ -1897,7 +1904,7 @@ static inline void parse_pbrt_texture(
         }
         value = tvalue;
     } else if (type == "scale") {
-        auto tvalue = pbrt_texture_scale{};
+        auto tvalue = pbrt_scale_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "tex1") {
@@ -1910,7 +1917,7 @@ static inline void parse_pbrt_texture(
         }
         value = tvalue;
     } else if (type == "fbm") {
-        auto tvalue = pbrt_texture_fbm{};
+        auto tvalue = pbrt_fbm_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "octaves") {
@@ -1923,7 +1930,7 @@ static inline void parse_pbrt_texture(
         }
         value = tvalue;
     } else if (type == "wrinkled") {
-        auto tvalue = pbrt_texture_wrinkled{};
+        auto tvalue = pbrt_wrinkled_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "octaves") {
@@ -1936,7 +1943,7 @@ static inline void parse_pbrt_texture(
         }
         value = tvalue;
     } else if (type == "windy") {
-        auto tvalue = pbrt_texture_windy{};
+        auto tvalue = pbrt_windy_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "") {
@@ -1947,7 +1954,7 @@ static inline void parse_pbrt_texture(
         }
         value = tvalue;
     } else if (type == "marble") {
-        auto tvalue = pbrt_texture_marble{};
+        auto tvalue = pbrt_marble_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "octaves") {
@@ -1964,7 +1971,7 @@ static inline void parse_pbrt_texture(
         }
         value = tvalue;
     } else if (type == "uv") {
-        auto tvalue = pbrt_texture_uv{};
+        auto tvalue = pbrt_uv_texture{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "mapping") {
@@ -1991,6 +1998,45 @@ static inline void parse_pbrt_texture(
     }
 }
 
+variant<pbrt_plastic_material, pbrt_metal_material>
+pbrt_approximate_fourier_material(const string& filename) {
+    if (get_filename(filename) == "paint.bsdf") {
+        auto plastic = pbrt_plastic_material{};
+        plastic.Kd   = {0.6f, 0.6f, 0.6f};
+        // plastic.Ks = {0.4f, 0.4f, 0.4f};
+        plastic.Ks         = {1.0f, 1.0f, 1.0f};
+        plastic.uroughness = 0.2f;
+        plastic.vroughness = 0.2f;
+        return plastic;
+    } else if (get_filename(filename) == "ceramic.bsdf") {
+        auto plastic = pbrt_plastic_material{};
+        plastic.Kd   = {0.6f, 0.6f, 0.6f};
+        // plastic.Ks = {0.1f, 0.1f, 0.1f};
+        plastic.Ks         = {1.0f, 1.0f, 1.0f};
+        plastic.uroughness = 0.025f;
+        plastic.vroughness = 0.025f;
+        return plastic;
+    } else if (get_filename(filename) == "leather.bsdf") {
+        auto plastic = pbrt_plastic_material{};
+        plastic.Kd   = {0.6f, 0.57f, 0.48f};
+        // plastic.Ks = {0.1f, 0.1f, 0.1f};
+        plastic.Ks         = {1.0f, 1.0f, 1.0f};
+        plastic.uroughness = 0.3f;
+        plastic.vroughness = 0.3f;
+        return plastic;
+    } else if (get_filename(filename) == "leather.bsdf") {
+        auto plastic = pbrt_plastic_material{};
+        plastic.Kd   = {0.6f, 0.57f, 0.48f};
+        // plastic.Ks = {0.1f, 0.1f, 0.1f};
+        plastic.Ks         = {1.0f, 1.0f, 1.0f};
+        plastic.uroughness = 0.3f;
+        plastic.vroughness = 0.3f;
+        return plastic;
+    } else {
+        throw pbrtio_error("unknown pbrt bsdf filename");
+    }
+}
+
 // Get typename
 static inline void parse_typeparam(pbrt_token_stream& stream, string& value) {
     save_stream_position(stream);
@@ -2013,7 +2059,7 @@ static inline void parse_pbrt_material(
     pbrt_token_stream& stream, const string& type, pbrt_material& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "matte") {
-        auto tvalue = pbrt_material_matte{};
+        auto tvalue = pbrt_matte_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
@@ -2032,7 +2078,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "mirror") {
-        auto tvalue = pbrt_material_mirror{};
+        auto tvalue = pbrt_mirror_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kr") {
@@ -2049,7 +2095,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "plastic") {
-        auto tvalue = pbrt_material_plastic{};
+        auto tvalue = pbrt_plastic_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
@@ -2079,7 +2125,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "metal") {
-        auto tvalue = pbrt_material_metal{};
+        auto tvalue = pbrt_metal_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "eta") {
@@ -2111,7 +2157,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "glass") {
-        auto tvalue = pbrt_material_glass{};
+        auto tvalue = pbrt_glass_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kr") {
@@ -2145,7 +2191,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "translucent") {
-        auto tvalue = pbrt_material_translucent{};
+        auto tvalue = pbrt_translucent_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
@@ -2179,7 +2225,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "uber") {
-        auto tvalue = pbrt_material_uber{};
+        auto tvalue = pbrt_uber_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
@@ -2219,7 +2265,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "disney") {
-        auto tvalue = pbrt_material_disney{};
+        auto tvalue = pbrt_disney_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "color") {
@@ -2273,7 +2319,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "hair") {
-        auto tvalue = pbrt_material_hair{};
+        auto tvalue = pbrt_hair_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "color") {
@@ -2306,7 +2352,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "kdsubsurface") {
-        auto tvalue = pbrt_material_kdsubsurface{};
+        auto tvalue = pbrt_kdsubsurface_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
@@ -2344,7 +2390,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "mix") {
-        auto tvalue = pbrt_material_mix{};
+        auto tvalue = pbrt_mix_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "amount") {
@@ -2365,11 +2411,13 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "fourier") {
-        auto tvalue = pbrt_material_fourier{};
+        auto tvalue = pbrt_fourier_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "bsdffile") {
                 parse_param(stream, ptype, tvalue.bsdffile);
+                tvalue.approx = pbrt_approximate_fourier_material(
+                    tvalue.bsdffile);
             } else if (pname == "bumpmap") {
                 parse_param(stream, ptype, tvalue.bumpmap);
             } else if (pname == "type") {
@@ -2382,7 +2430,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "substrate") {
-        auto tvalue = pbrt_material_substrate{};
+        auto tvalue = pbrt_substrate_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
@@ -2414,7 +2462,7 @@ static inline void parse_pbrt_material(
         }
         value = tvalue;
     } else if (type == "subsurface") {
-        auto tvalue = pbrt_material_subsurface{};
+        auto tvalue = pbrt_subsurface_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "name") {
@@ -2465,7 +2513,7 @@ static inline void parse_pbrt_shape(
     pbrt_token_stream& stream, const string& type, pbrt_shape& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "trianglemesh") {
-        auto tvalue = pbrt_shape_trianglemesh{};
+        auto tvalue = pbrt_trianglemesh_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "indices") {
@@ -2490,7 +2538,7 @@ static inline void parse_pbrt_shape(
         }
         value = tvalue;
     } else if (type == "plymesh") {
-        auto tvalue = pbrt_shape_plymesh{};
+        auto tvalue = pbrt_plymesh_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "filename") {
@@ -2509,7 +2557,7 @@ static inline void parse_pbrt_shape(
         }
         value = tvalue;
     } else if (type == "curve") {
-        auto tvalue = pbrt_shape_curve{};
+        auto tvalue = pbrt_curve_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "P") {
@@ -2539,7 +2587,7 @@ static inline void parse_pbrt_shape(
         }
         value = tvalue;
     } else if (type == "loopsubdiv") {
-        auto tvalue = pbrt_shape_loopsubdiv{};
+        auto tvalue = pbrt_loopsubdiv_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "indices") {
@@ -2556,7 +2604,7 @@ static inline void parse_pbrt_shape(
         }
         value = tvalue;
     } else if (type == "nurbs") {
-        auto tvalue = pbrt_shape_nurbs{};
+        auto tvalue = pbrt_nurbs_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "nu") {
@@ -2585,7 +2633,7 @@ static inline void parse_pbrt_shape(
         }
         value = tvalue;
     } else if (type == "sphere") {
-        auto tvalue = pbrt_shape_sphere{};
+        auto tvalue = pbrt_sphere_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "radius") {
@@ -2602,7 +2650,7 @@ static inline void parse_pbrt_shape(
         }
         value = tvalue;
     } else if (type == "disk") {
-        auto tvalue = pbrt_shape_disk{};
+        auto tvalue = pbrt_disk_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "radius") {
@@ -2619,7 +2667,7 @@ static inline void parse_pbrt_shape(
         }
         value = tvalue;
     } else if (type == "cone") {
-        auto tvalue = pbrt_shape_cone{};
+        auto tvalue = pbrt_cone_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "radius") {
@@ -2634,7 +2682,7 @@ static inline void parse_pbrt_shape(
         }
         value = tvalue;
     } else if (type == "cylinder") {
-        auto tvalue = pbrt_shape_cylinder{};
+        auto tvalue = pbrt_cylinder_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "radius") {
@@ -2651,7 +2699,7 @@ static inline void parse_pbrt_shape(
         }
         value = tvalue;
     } else if (type == "hyperboloid") {
-        auto tvalue = pbrt_shape_hyperboloid{};
+        auto tvalue = pbrt_hyperboloid_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "p1") {
@@ -2666,7 +2714,7 @@ static inline void parse_pbrt_shape(
         }
         value = tvalue;
     } else if (type == "paraboloid") {
-        auto tvalue = pbrt_shape_paraboloid{};
+        auto tvalue = pbrt_paraboloid_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "radius") {
@@ -2683,7 +2731,7 @@ static inline void parse_pbrt_shape(
         }
         value = tvalue;
     } else if (type == "heightfield") {
-        auto tvalue = pbrt_shape_heightfield{};
+        auto tvalue = pbrt_heightfield_shape{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "nu") {
@@ -2707,7 +2755,7 @@ static inline void parse_pbrt_arealight(
     pbrt_token_stream& stream, const string& type, pbrt_arealight& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "diffuse") {
-        auto tvalue = pbrt_arealight_diffuse{};
+        auto tvalue = pbrt_diffuse_arealight{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "L") {
@@ -2735,7 +2783,7 @@ static inline void parse_pbrt_light(
     pbrt_token_stream& stream, const string& type, pbrt_light& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "distant") {
-        auto tvalue = pbrt_light_distant{};
+        auto tvalue = pbrt_distant_light{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "scale") {
@@ -2752,7 +2800,7 @@ static inline void parse_pbrt_light(
         }
         value = tvalue;
     } else if (type == "goniometric") {
-        auto tvalue = pbrt_light_goniometric{};
+        auto tvalue = pbrt_goniometric_light{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "scale") {
@@ -2767,7 +2815,7 @@ static inline void parse_pbrt_light(
         }
         value = tvalue;
     } else if (type == "infinite") {
-        auto tvalue = pbrt_light_infinite{};
+        auto tvalue = pbrt_infinite_light{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "scale") {
@@ -2786,7 +2834,7 @@ static inline void parse_pbrt_light(
         }
         value = tvalue;
     } else if (type == "distant") {
-        auto tvalue = pbrt_light_distant{};
+        auto tvalue = pbrt_distant_light{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "scale") {
@@ -2801,7 +2849,7 @@ static inline void parse_pbrt_light(
         }
         value = tvalue;
     } else if (type == "projection") {
-        auto tvalue = pbrt_light_projection{};
+        auto tvalue = pbrt_projection_light{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "scale") {
@@ -2818,7 +2866,7 @@ static inline void parse_pbrt_light(
         }
         value = tvalue;
     } else if (type == "spot") {
-        auto tvalue = pbrt_light_spot{};
+        auto tvalue = pbrt_spot_light{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "scale") {
@@ -2848,7 +2896,7 @@ static inline void parse_pbrt_medium(
     pbrt_token_stream& stream, const string& type, pbrt_medium& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "homogeneous") {
-        auto tvalue = pbrt_medium_homogeneous{};
+        auto tvalue = pbrt_homogeneous_medium{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "sigma_a") {
@@ -2871,7 +2919,7 @@ static inline void parse_pbrt_medium(
         }
         value = tvalue;
     } else if (type == "heterogeneous") {
-        auto tvalue = pbrt_medium_heterogeneous{};
+        auto tvalue = pbrt_heterogeneous_medium{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "sigma_a") {
