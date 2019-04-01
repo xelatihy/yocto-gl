@@ -3112,8 +3112,13 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto  aspect      = perspective.frameaspectratio;
                 if (aspect < 0) aspect = last_film_aspect;
                 if (aspect < 0) aspect = 1;
-                set_camera_perspectivey(camera, radians(perspective.fov),
-                    aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+                if(aspect >= 1) {
+                    set_camera_perspectivey(camera, radians(perspective.fov),
+                        aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+                } else {
+                    set_camera_perspectivex(camera, radians(perspective.fov),
+                        aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+                }
             } else {
                 throw sceneio_error("unsupported pbrt type");
             }
