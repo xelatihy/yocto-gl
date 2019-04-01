@@ -713,6 +713,7 @@ struct pbrt_context {
     bool     reverse                = false;
     bool     active_transform_start = true;
     bool     active_transform_end   = true;
+    float    last_lookat_distance   = 0;
 };
 
 // pbrt callbacks
@@ -3256,6 +3257,7 @@ inline void load_pbrt(
             // frame.y = cross(frame.x,frame.z);
             // frame.o    = from;
             concat_transform(stack.back(), (mat4f)inverse(frame));
+            stack.back().last_lookat_distance = length(from - to);
             // stack.back().focus = length(m.x - m.y);
         } else if (cmd == "ReverseOrientation") {
             stack.back().reverse = !stack.back().reverse;
