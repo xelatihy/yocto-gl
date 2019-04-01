@@ -369,7 +369,7 @@ inline string format_num(uint64_t num) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-string normalize_path(const string& filename_) {
+inline string normalize_path(const string& filename_) {
     auto filename = filename_;
     for (auto& c : filename)
         if (c == '\\') c = '/';
@@ -389,7 +389,7 @@ string normalize_path(const string& filename_) {
 }
 
 // Get directory name (including '/').
-string get_dirname(const string& filename_) {
+inline string get_dirname(const string& filename_) {
     auto filename = normalize_path(filename_);
     auto pos      = filename.rfind('/');
     if (pos == string::npos) return "";
@@ -397,7 +397,7 @@ string get_dirname(const string& filename_) {
 }
 
 // Get extension (not including '.').
-string get_extension(const string& filename_) {
+inline string get_extension(const string& filename_) {
     auto filename = normalize_path(filename_);
     auto pos      = filename.rfind('.');
     if (pos == string::npos) return "";
@@ -405,7 +405,7 @@ string get_extension(const string& filename_) {
 }
 
 // Get filename without directory.
-string get_filename(const string& filename_) {
+inline string get_filename(const string& filename_) {
     auto filename = normalize_path(filename_);
     auto pos      = filename.rfind('/');
     if (pos == string::npos) return "";
@@ -413,7 +413,7 @@ string get_filename(const string& filename_) {
 }
 
 // Replace extension.
-string replace_extension(const string& filename_, const string& ext_) {
+inline string replace_extension(const string& filename_, const string& ext_) {
     auto filename = normalize_path(filename_);
     auto ext      = normalize_path(ext_);
     if (ext.at(0) == '.') ext = ext.substr(1);
