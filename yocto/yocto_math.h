@@ -1342,7 +1342,7 @@ constexpr inline affine<T, N> operator*(
 template <typename T, int N>
 constexpr inline affine<T, N>& operator*=(
     affine<T, N>& a, const affine<T, N>& b) {
-        return a = a * b;
+    return a = a * b;
 }
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, int N>
@@ -1483,9 +1483,8 @@ constexpr inline frame<T, N> operator*(
     return {a.m * b.m, a.m * b.o + a.o};
 }
 template <typename T, int N>
-constexpr inline frame<T, N>& operator*=(
-    frame<T, N>& a, const frame<T, N>& b) {
-        return a = a * b;
+constexpr inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
+    return a = a * b;
 }
 
 // Frame inverse, equivalent to rigid affine inverse.

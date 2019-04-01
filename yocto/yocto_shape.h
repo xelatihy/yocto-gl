@@ -2191,6 +2191,7 @@ inline void make_floor_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
         quads, positions, normals, texturecoords, steps, size, uvsize);
     for (auto& p : positions) p = {p.x, p.z, p.y};
     for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
+    for (auto& q : quads) swap(q.y, q.w);
 }
 
 // Make a rounded cube.

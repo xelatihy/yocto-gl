@@ -3122,20 +3122,22 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                         clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
                 }
             } else if (holds_alternative<pbrt_realistic_camera>(pcamera)) {
-                    auto& realistic = get<pbrt_realistic_camera>(pcamera);
-                    camera.focal_length = max(realistic.approx_focallength, 35.0f) * 0.001f;
-                    auto  aspect      = 1.0f;
-                    if (aspect < 0) aspect = last_film_aspect;
-                    if (aspect < 0) aspect = 1;
-                    if (aspect >= 1) {
-                        camera.film_height = camera.film_width / aspect;
-                    } else {
-                        camera.film_width = camera.film_height * aspect;
-                    }
-                    camera.focus_distance = realistic.focusdistance;
-                    camera.lens_aperture = realistic.aperturediameter / 2;
+                auto& realistic     = get<pbrt_realistic_camera>(pcamera);
+                camera.focal_length = max(realistic.approx_focallength, 35.0f) *
+                                      0.001f;
+                auto aspect = 1.0f;
+                if (aspect < 0) aspect = last_film_aspect;
+                if (aspect < 0) aspect = 1;
+                if (aspect >= 1) {
+                    camera.film_height = camera.film_width / aspect;
+                } else {
+                    camera.film_width = camera.film_height * aspect;
+                }
+                camera.focus_distance = realistic.focusdistance;
+                camera.lens_aperture  = realistic.aperturediameter / 2;
             } else {
-                throw sceneio_error("unsupported Camera type " + std::to_string(pcamera.index()));
+                throw sceneio_error("unsupported Camera type " +
+                                    std::to_string(pcamera.index()));
             }
             scene.cameras.push_back(camera);
         }

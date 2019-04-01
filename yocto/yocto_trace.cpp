@@ -84,13 +84,8 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     point.element_uv  = element_uv;
     point.position    = evaluate_instance_position(
         scene, instance, element_id, element_uv);
-
-    auto gnormal           = evaluate_shape_element_normal(shape, element_id);
-    point.geometric_normal = trace_non_rigid_frames
-                                 ? transform_normal(
-                                       (const affine3f&)instance.frame, gnormal)
-                                 : transform_normal(instance.frame, gnormal);
-
+    point.geometric_normal = evaluate_instance_element_normal(
+        scene, instance, element_id, trace_non_rigid_frames);
     point.normal = evaluate_instance_normal(
         scene, instance, element_id, element_uv, trace_non_rigid_frames);
 
@@ -1784,6 +1779,16 @@ vec4f trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
             auto outgoing    = -direction;
             auto frontfacing = dot(point.normal, outgoing) > 0 ? vec3f{0, 1, 0}
                                                                : vec3f{1, 0, 0};
+            return {frontfacing, 1};
+        }
+        case trace_falsecolor_type::gnormal: {
+            return {point.geometric_normal * 0.5f + 0.5f, 1};
+        }
+        case trace_falsecolor_type::gfrontfacing: {
+            auto outgoing    = -direction;
+            auto frontfacing = dot(point.geometric_normal, outgoing) > 0
+                                   ? vec3f{0, 1, 0}
+                                   : vec3f{1, 0, 0};
             return {frontfacing, 1};
         }
         case trace_falsecolor_type::albedo: {

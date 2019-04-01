@@ -131,6 +131,8 @@ const auto trace_sampler_type_names = vector<string>{
 enum struct trace_falsecolor_type {
     normal,        // normal
     frontfacing,   // faceforward
+    gnormal,       // geometric normal
+    gfrontfacing,  // geometric faceforward
     albedo,        // albedo
     texcoord,      // texcoord
     color,         // color
@@ -146,8 +148,9 @@ enum struct trace_falsecolor_type {
 };
 
 const auto trace_falsecolor_type_names = vector<string>{"normal", "frontfacing",
-    "albedo", "texcoord", "color", "emission", "diffuse", "specular",
-    "transmission", "roughness", "material", "shape", "instance", "highlight"};
+    "gnormal", "gfrontfacing", "albedo", "texcoord", "color", "emission",
+    "diffuse", "specular", "transmission", "roughness", "material", "shape",
+    "instance", "highlight"};
 
 // Options for trace functions
 struct trace_image_options {
