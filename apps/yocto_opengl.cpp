@@ -886,12 +886,14 @@ bool draw_checkbox_opengl_widget(
 
 bool draw_coloredit_opengl_widget(
     const opengl_window& win, const char* lbl, vec3f& value) {
-    return ImGui::ColorEdit3(lbl, &value.x);
+    auto flags = ImGuiColorEditFlags_Float;
+    return ImGui::ColorEdit3(lbl, &value.x, flags);
 }
 
 bool draw_coloredit_opengl_widget(
     const opengl_window& win, const char* lbl, vec4f& value) {
-    return ImGui::ColorEdit4(lbl, &value.x);
+    auto flags = ImGuiColorEditFlags_Float;
+    return ImGui::ColorEdit4(lbl, &value.x, flags);
 }
 
 bool draw_hdr_coloredit_opengl_widget(
