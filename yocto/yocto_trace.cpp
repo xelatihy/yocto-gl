@@ -54,16 +54,21 @@ atomic<uint64_t> _trace_nrays{0};
 
 // Trace point
 struct trace_point {
-    int             instance_id  = -1;
-    int             element_id   = -1;
-    vec2f           element_uv   = zero2f;
-    vec3f           position     = zero3f;
-    vec3f           normal       = zero3f;
-    vec2f           texturecoord = zero2f;
-    vec4f           color        = zero4f;
-    vec3f           emission     = zero3f;
-    microfacet_brdf brdf         = {};
-    bool            hit          = false;
+    int             instance_id      = -1;
+    int             element_id       = -1;
+    vec2f           element_uv       = zero2f;
+    vec3f           position         = zero3f;
+    vec3f           normal           = zero3f;
+    vec3f           geometric_normal = zero3f;
+    vec2f           texturecoord     = zero2f;
+    vec4f           color            = zero4f;
+    vec3f           emission         = zero3f;
+    microfacet_brdf brdf             = {};
+    vec3f           volume_density   = zero3f;
+    vec3f           volume_albedo    = zero3f;
+    vec3f           volume_emission  = zero3f;
+    float           volume_phaseg    = 0.0f;
+    bool            hit              = false;
 };
 
 // Make a trace point
@@ -79,8 +84,16 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     point.element_uv  = element_uv;
     point.position    = evaluate_instance_position(
         scene, instance, element_id, element_uv);
+
+    auto gnormal           = evaluate_shape_element_normal(shape, element_id);
+    point.geometric_normal = trace_non_rigid_frames
+                                 ? transform_normal(
+                                       (const affine3f&)instance.frame, gnormal)
+                                 : transform_normal(instance.frame, gnormal);
+
     point.normal = evaluate_instance_normal(
         scene, instance, element_id, element_uv, trace_non_rigid_frames);
+
     if (!shape.lines.empty()) {
         point.normal = orthonormalize(-shading_direction, point.normal);
     } else if (!shape.points.empty()) {
@@ -100,7 +113,11 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     point.brdf.diffuse *= point.color.xyz;
     point.brdf.specular *= point.color.xyz;
     point.brdf.opacity *= point.color.w;
-    point.hit = true;
+    point.volume_emission = material.volume_emission;
+    point.volume_density  = material.volume_density;
+    point.volume_albedo   = material.volume_albedo;
+    point.volume_phaseg   = material.volume_phaseg;
+    point.hit             = true;
     return point;
 }
 
@@ -1380,13 +1397,11 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
     vec3f& weight, vec3f& radiance) {
     // Integrate weight while random walking inside the volume until exit.
 
-    auto material =
-        scene.materials[scene.instances[point.instance_id].material];
     auto      spectrum          = get_random_int(rng, 3);
-    auto      volume_density    = material.volume_density[spectrum];
-    auto      volume_albedo     = material.volume_albedo[spectrum];
-    auto      volume_emission   = material.volume_emission;
-    auto      volume_phaseg     = material.volume_phaseg;
+    auto      volume_density    = point.volume_density[spectrum];
+    auto      volume_albedo     = point.volume_albedo[spectrum];
+    auto      volume_emission   = point.volume_emission;
+    auto      volume_phaseg     = point.volume_phaseg;
     const int volume_max_bounce = 1000;  // @giacomo: hardcoded!
 
     for (auto volume_bounce = 0; volume_bounce < volume_max_bounce;
@@ -1409,7 +1424,7 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
             if (is_brdf_zero(next_point.brdf)) break;
 
             weight *= evaluate_volume_transmission(
-                material.volume_density, isec.distance);
+                point.volume_density, isec.distance);
             weight /= sample_volume_distance_pdf(volume_density, isec.distance);
 
             point          = next_point;
@@ -1417,7 +1432,7 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
             next_direction = sample_next_direction(
                 scene, lights, bvh, point, outgoing, prob_light, rng, weight);
 
-            if (dot(next_direction, point.normal) > 0)
+            if (dot(next_direction, point.geometric_normal) > 0)
                 break;  // exit from volume
             else
                 continue;  // internal reflection
@@ -1426,8 +1441,7 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
         // medium interaction inside volume
         point.position += next_direction * distance;
         weight /= sample_volume_distance_pdf(volume_density, distance);
-        weight *= evaluate_volume_transmission(
-            material.volume_density, distance);
+        weight *= evaluate_volume_transmission(point.volume_density, distance);
 
         if (get_random_float(rng) < volume_albedo) {
             // scattering
@@ -1435,7 +1449,7 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
 
             outgoing       = -next_direction;
             next_direction = sample_next_direction_volume(scene, lights, bvh,
-                point.position, material.volume_albedo, volume_phaseg, outgoing,
+                point.position, point.volume_albedo, volume_phaseg, outgoing,
                 prob_light_volume, rng, weight);
 
             // russian roulette
@@ -1481,7 +1495,7 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // transmission
-        if (dot(next_direction, point.normal) < 0) {
+        if (dot(next_direction, point.geometric_normal) < 0) {
             integrate_volume(scene, lights, bvh, 0.5, 0.5, rng, point, outgoing,
                 next_direction, weight, radiance);
             if (weight == zero3f) return {radiance, true};
