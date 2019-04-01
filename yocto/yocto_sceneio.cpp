@@ -3393,8 +3393,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto& kdsubdurface = get<pbrt_kdsubsurface_material>(pmaterial);
                 get_scaled_texture3f(kdsubdurface.Kd, material.diffuse,
                     material.diffuse_texture);
-                get_scaled_texture3f(kdsubdurface.Kr, material.specular,
-                    material.specular_texture);
+                // get_scaled_texture3f(kdsubdurface.Kr, material.specular,
+                //     material.specular_texture);
+                material.specular = {0.04f, 0.04f, 0.04f};
                 material.roughness = (kdsubdurface.uroughness.value +
                                          kdsubdurface.vroughness.value) /
                                      2;
