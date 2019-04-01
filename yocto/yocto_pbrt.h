@@ -468,9 +468,10 @@ struct pbrt_disney_material {
     pbrt_textured<float>      bumpmap         = 0;
 };
 struct pbrt_fourier_material {
-    string                                              bsdffile = "";
-    pbrt_textured<float>                                bumpmap  = 0;
-    variant<pbrt_plastic_material, pbrt_metal_material, pbrt_glass_material> approx   = {};
+    string               bsdffile = "";
+    pbrt_textured<float> bumpmap  = 0;
+    variant<pbrt_plastic_material, pbrt_metal_material, pbrt_glass_material>
+        approx = {};
 };
 struct pbrt_hair_material {
     pbrt_textured<spectrum3f> color       = {0, 0, 0};  // TODO: missing default
@@ -702,18 +703,22 @@ struct pbrt_object {
 
 // pbrt stack ctm
 struct pbrt_context {
-    affine3f frame           = identity_affine3f;
-    string   material        = "";
-    string   arealight       = "";
-    string   medium_interior = "";
-    string   medium_exterior = "";
-    bool     reverse         = false;
+    affine3f transform_start        = identity_affine3f;
+    affine3f transform_end          = identity_affine3f;
+    string   material               = "";
+    string   arealight              = "";
+    string   medium_interior        = "";
+    string   medium_exterior        = "";
+    bool     reverse                = false;
+    bool     active_transform_start = true;
+    bool     active_transform_end   = true;
 };
 
 // pbrt callbacks
 struct pbrt_callbacks {
     void sampler(const pbrt_sampler& value, const pbrt_context& ctx) {}
     void integrator(const pbrt_integrator& value, const pbrt_context& ctx) {}
+    void accelerator(const pbrt_accelerator& value, const pbrt_context& ctx) {}
     void film(const pbrt_film& value, const pbrt_context& ctx) {}
     void filter(const pbrt_filter& value, const pbrt_context& ctx) {}
     void camera(const pbrt_camera& value, const pbrt_context& ctx) {}
@@ -932,6 +937,17 @@ static inline void parse_value(
         {"cylinder", pbrt_curve_shape::type_t::cylinder},
         {"ribbon", pbrt_curve_shape::type_t::ribbon},
     };
+    return parse_value(stream, value, value_names);
+}
+static inline void parse_value(
+    pbrt_token_stream& stream, pbrt_bvh_accelerator::splitmethod_t& value) {
+    static auto value_names =
+        unordered_map<string, pbrt_bvh_accelerator::splitmethod_t>{
+            {"sah", pbrt_bvh_accelerator::splitmethod_t::sah},
+            {"equal", pbrt_bvh_accelerator::splitmethod_t::equal},
+            {"middle", pbrt_bvh_accelerator::splitmethod_t::middle},
+            {"hlbvh", pbrt_bvh_accelerator::splitmethod_t::hlbvh},
+        };
     return parse_value(stream, value, value_names);
 }
 static inline void parse_value(pbrt_token_stream& stream,
@@ -1319,6 +1335,47 @@ static inline void skip_whitespace_or_comment_to_next_file(
 // PBRT CONVERSION
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Parse Accelerator
+static inline void parse_pbrt_accelerator(
+    pbrt_token_stream& stream, const string& type, pbrt_accelerator& value) {
+    auto pname = ""s, ptype = ""s;
+    if (type == "bvh") {
+        auto tvalue = pbrt_bvh_accelerator{};
+        while (is_param(stream)) {
+            parse_nametype(stream, pname, ptype);
+            if (pname == "maxnodeprims") {
+                parse_param(stream, ptype, tvalue.maxnodeprims);
+            } else if (pname == "splitmethod") {
+                parse_param(stream, ptype, tvalue.splitmethod);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else if (type == "kdtree") {
+        auto tvalue = pbrt_kdtree_accelerator{};
+        while (is_param(stream)) {
+            parse_nametype(stream, pname, ptype);
+            if (pname == "intersectcost") {
+                parse_param(stream, ptype, tvalue.intersectcost);
+            } else if (pname == "traversalcost") {
+                parse_param(stream, ptype, tvalue.traversalcost);
+            } else if (pname == "emptybonus") {
+                parse_param(stream, ptype, tvalue.emptybonus);
+            } else if (pname == "maxprims") {
+                parse_param(stream, ptype, tvalue.maxprims);
+            } else if (pname == "maxdepth") {
+                parse_param(stream, ptype, tvalue.maxdepth);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
+    } else {
+        throw pbrtio_error("unknown Accelerator " + type);
+    }
+}
 
 // Parse Integrator
 static inline void parse_pbrt_integrator(
@@ -2027,23 +2084,32 @@ pbrt_approximate_fourier_material(const string& filename) {
         plastic.vroughness = 0.3f;
         return plastic;
     } else if (get_filename(filename) == "coated_copper.bsdf") {
-        auto metal = pbrt_metal_material{};
-        auto etak = pbrt_get_element_etak("Cu");
-        auto [eta, k] = etak;
-        metal.eta = {eta.x, eta.y, eta.z};
-        metal.k = {k.x, k.y, k.z};
-        metal.uroughness = 0.01f; 
+        auto metal       = pbrt_metal_material{};
+        auto etak        = pbrt_get_element_etak("Cu");
+        auto [eta, k]    = etak;
+        metal.eta        = {eta.x, eta.y, eta.z};
+        metal.k          = {k.x, k.y, k.z};
+        metal.uroughness = 0.01f;
         metal.vroughness = 0.01f;
         return metal;
     } else if (get_filename(filename) == "roughglass_alpha_0.2.bsdf") {
-        auto glass = pbrt_glass_material{};
+        auto glass       = pbrt_glass_material{};
         glass.uroughness = 0.2f;
         glass.vroughness = 0.2f;
-        glass.Kr = {1, 1, 1};
-        glass.Kt = {1, 1, 1};
+        glass.Kr         = {1, 1, 1};
+        glass.Kt         = {1, 1, 1};
         return glass;
+    } else if (get_filename(filename) == "roughgold_alpha_0.2.bsdf") {
+        auto metal       = pbrt_metal_material{};
+        auto etak        = pbrt_get_element_etak("Au");
+        auto [eta, k]    = etak;
+        metal.eta        = {eta.x, eta.y, eta.z};
+        metal.k          = {k.x, k.y, k.z};
+        metal.uroughness = 0.2f;
+        metal.vroughness = 0.2f;
+        return metal;
     } else {
-        throw pbrtio_error("unknown pbrt bsdf filename");
+        throw pbrtio_error("unknown pbrt bsdf filename " + filename);
     }
 }
 
@@ -2569,9 +2635,11 @@ static inline void parse_pbrt_material(
             parse_nametype(stream, pname, ptype);
             if (pname == "name") {
                 parse_param(stream, ptype, tvalue.name);
-                auto params = pbrt_subsurface_params(tvalue.name);
-                tvalue.sigma_a = {params.first.x, params.first.y, params.first.z};
-                tvalue.sigma_prime_s = {params.second.x, params.second.y, params.second.z};
+                auto params    = pbrt_subsurface_params(tvalue.name);
+                tvalue.sigma_a = {
+                    params.first.x, params.first.y, params.first.z};
+                tvalue.sigma_prime_s = {
+                    params.second.x, params.second.y, params.second.z};
             } else if (pname == "sigma_a") {
                 parse_param(stream, ptype, tvalue.sigma_a);
             } else if (pname == "sigma_prime_s") {
@@ -2991,8 +3059,23 @@ static inline void parse_pbrt_light(
             }
         }
         value = tvalue;
+    } else if (type == "point") {
+        auto tvalue = pbrt_point_light{};
+        while (is_param(stream)) {
+            parse_nametype(stream, pname, ptype);
+            if (pname == "scale") {
+                parse_param(stream, ptype, tvalue.scale);
+            } else if (pname == "I") {
+                parse_param(stream, ptype, tvalue.I);
+            } else if (pname == "from") {
+                parse_param(stream, ptype, tvalue.from);
+            } else {
+                throw pbrtio_error("unknown parameter " + pname);
+            }
+        }
+        value = tvalue;
     } else {
-        throw pbrtio_error("unknown Film " + type);
+        throw pbrtio_error("unknown LightSource " + type);
     }
 }
 
@@ -3073,7 +3156,17 @@ inline void load_pbrt(
     // parsing stack
     auto stack    = vector<pbrt_context>{{}};
     auto object   = pbrt_object{};
-    auto coordsys = unordered_map<string, affine3f>{};
+    auto coordsys = unordered_map<string, pair<affine3f, affine3f>>{};
+
+    // helpders
+    auto set_transform = [](pbrt_context& ctx, const mat4f& xform) {
+        if (ctx.active_transform_start) ctx.transform_start = (affine3f)xform;
+        if (ctx.active_transform_end) ctx.transform_end = (affine3f)xform;
+    };
+    auto concat_transform = [](pbrt_context& ctx, const mat4f& xform) {
+        if (ctx.active_transform_start) ctx.transform_start *= (affine3f)xform;
+        if (ctx.active_transform_end) ctx.transform_end *= (affine3f)xform;
+    };
 
     // parse command by command
     auto cmd = ""s;
@@ -3106,30 +3199,42 @@ inline void load_pbrt(
             auto value = pbrt_object{};
             parse_value(stream, value.name);
             cb.object_instance(value, stack.back());
+        } else if (cmd == "ActiveTransform") {
+            auto value = ""s;
+            parse_command(stream, value);
+            if (value == "StartTime") {
+                stack.back().active_transform_start = true;
+                stack.back().active_transform_end   = false;
+            } else if (value == "EndTime") {
+                stack.back().active_transform_start = false;
+                stack.back().active_transform_end   = true;
+            } else if (value == "All") {
+                stack.back().active_transform_start = true;
+                stack.back().active_transform_end   = true;
+            } else {
+                throw pbrtio_error("bad active transform");
+            }
         } else if (cmd == "Transform") {
             auto xf = identity_mat4f;
             parse_param(stream, xf);
-            stack.back().frame = (affine3f)xf;
+            set_transform(stack.back(), xf);
         } else if (cmd == "ConcatTransform") {
             auto xf = identity_mat4f;
             parse_param(stream, xf);
-            stack.back().frame = stack.back().frame * (affine3f)xf;
+            concat_transform(stack.back(), xf);
         } else if (cmd == "Scale") {
             auto v = zero3f;
             parse_param(stream, v);
-            stack.back().frame = stack.back().frame *
-                                 (const affine3f&)make_scaling_frame(v);
+            concat_transform(stack.back(), (mat4f)make_scaling_frame(v));
         } else if (cmd == "Translate") {
             auto v = zero3f;
             parse_param(stream, v);
-            stack.back().frame = stack.back().frame *
-                                 (const affine3f&)make_translation_frame(v);
+            concat_transform(stack.back(), (mat4f)make_translation_frame(v));
         } else if (cmd == "Rotate") {
             auto v = zero4f;
             parse_param(stream, v);
-            stack.back().frame = stack.back().frame *
-                                 (const affine3f&)make_rotation_frame(
-                                     vec3f{v.y, v.z, v.w}, radians(v.x));
+            concat_transform(stack.back(),
+                (mat4f)make_rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
         } else if (cmd == "LookAt") {
             auto from = zero3f, to = zero3f, up = zero3f;
             parse_param(stream, from);
@@ -3141,20 +3246,21 @@ inline void load_pbrt(
             // frame.x = normalize(cross(frame.z,up));
             // frame.y = cross(frame.x,frame.z);
             // frame.o    = from;
-            stack.back().frame = stack.back().frame *
-                                 (const affine3f&)inverse(frame);
+            concat_transform(stack.back(), (mat4f)inverse(frame));
             // stack.back().focus = length(m.x - m.y);
         } else if (cmd == "ReverseOrientation") {
             stack.back().reverse = !stack.back().reverse;
         } else if (cmd == "CoordinateSystem") {
             auto name = ""s;
             parse_value(stream, name);
-            coordsys[name] = stack.back().frame;
+            coordsys[name] = {
+                stack.back().transform_start, stack.back().transform_end};
         } else if (cmd == "CoordSysTransform") {
             auto name = ""s;
             parse_value(stream, name);
             if (coordsys.find(name) != coordsys.end()) {
-                stack.back().frame = coordsys.at(name);
+                stack.back().transform_start = coordsys.at(name).first;
+                stack.back().transform_end   = coordsys.at(name).second;
             }
         } else if (cmd == "Integrator") {
             auto type = ""s;
@@ -3180,6 +3286,12 @@ inline void load_pbrt(
             auto value = pbrt_film{};
             parse_pbrt_film(stream, type, value);
             cb.film(value, stack.back());
+        } else if (cmd == "Accelerator") {
+            auto type = ""s;
+            parse_value(stream, type);
+            auto value = pbrt_accelerator{};
+            parse_pbrt_accelerator(stream, type, value);
+            cb.accelerator(value, stack.back());
         } else if (cmd == "Camera") {
             auto type = ""s;
             parse_value(stream, type);

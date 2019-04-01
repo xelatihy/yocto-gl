@@ -3105,19 +3105,21 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
 
         void camera(const pbrt_camera& pcamera, const pbrt_context& ctx) {
             auto camera    = yocto_camera{};
-            camera.frame   = inverse((frame3f)ctx.frame);
+            camera.frame   = inverse((frame3f)ctx.transform_start);
             camera.frame.z = -camera.frame.z;
             if (holds_alternative<pbrt_perspective_camera>(pcamera)) {
                 auto& perspective = get<pbrt_perspective_camera>(pcamera);
                 auto  aspect      = perspective.frameaspectratio;
                 if (aspect < 0) aspect = last_film_aspect;
                 if (aspect < 0) aspect = 1;
-                if(aspect >= 1) {
+                if (aspect >= 1) {
                     set_camera_perspectivey(camera, radians(perspective.fov),
-                        aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+                        aspect,
+                        clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
                 } else {
                     set_camera_perspectivex(camera, radians(perspective.fov),
-                        aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+                        aspect,
+                        clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
                 }
             } else {
                 throw sceneio_error("unsupported pbrt type");
@@ -3152,7 +3154,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.positions = mesh.P;
                 shape.triangles = mesh.indices;
                 shape.normals.resize(shape.positions.size());
-                compute_vertex_normals(shape.normals, shape.triangles, shape.positions);
+                compute_vertex_normals(
+                    shape.normals, shape.triangles, shape.positions);
             } else if (holds_alternative<pbrt_plymesh_shape>(pshape)) {
                 auto& mesh     = get<pbrt_plymesh_shape>(pshape);
                 shape.filename = mesh.filename;
@@ -3176,7 +3179,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             }
             scene.shapes.push_back(shape);
             auto instance     = yocto_instance{};
-            instance.frame    = (frame3f)ctx.frame;
+            instance.frame    = (frame3f)ctx.transform_start;
             instance.shape    = (int)scene.shapes.size() - 1;
             instance.material = get_material(ctx);
             if (cur_object == "") {
@@ -3397,7 +3400,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     material.diffuse_texture);
                 // get_scaled_texture3f(kdsubdurface.Kr, material.specular,
                 //     material.specular_texture);
-                material.specular = {0.04f, 0.04f, 0.04f};
+                material.specular  = {0.04f, 0.04f, 0.04f};
                 material.roughness = (kdsubdurface.uroughness.value +
                                          kdsubdurface.vroughness.value) /
                                      2;
@@ -3451,10 +3454,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 } else if (holds_alternative<pbrt_glass_material>(
                                fourier.approx)) {
                     // auto& glass = get<pbrt_metal_glass>(fourier.approx);
-                    material.diffuse     = {0, 0, 0};
+                    material.diffuse      = {0, 0, 0};
                     material.specular     = {0.04f, 0.04f, 0.04f};
                     material.transmission = {1, 1, 1};
-                    material.roughness = 0;
+                    material.roughness    = 0;
                 } else {
                     throw sceneio_error("material type not supported " +
                                         std::to_string(fourier.approx.index()));
@@ -3488,7 +3491,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
                 // * stack.back().frame;
                 environment.frame =
-                    (frame3f)ctx.frame *
+                    (frame3f)ctx.transform_start *
                     frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
                 environment.emission = (vec3f)infinite.scale;
                 if (infinite.mapname != "") {
@@ -3520,7 +3523,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 instance.name     = shape.name;
                 instance.shape    = (int)scene.shapes.size() - 1;
                 instance.material = (int)scene.materials.size() - 1;
-                instance.frame    = (frame3f)ctx.frame *
+                instance.frame    = (frame3f)ctx.transform_start *
                                  make_lookat_frame(dir * distant_dist, zero3f,
                                      {0, 1, 0}, true);
                 scene.instances.push_back(instance);
@@ -3541,7 +3544,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 instance.name     = shape.name;
                 instance.shape    = (int)scene.shapes.size() - 1;
                 instance.material = (int)scene.materials.size() - 1;
-                instance.frame    = (frame3f)ctx.frame *
+                instance.frame    = (frame3f)ctx.transform_start *
                                  make_translation_frame(point.from);
                 scene.instances.push_back(instance);
             } else if (holds_alternative<pbrt_goniometric_light>(plight)) {
@@ -3562,7 +3565,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 instance.name     = shape.name;
                 instance.shape    = (int)scene.shapes.size() - 1;
                 instance.material = (int)scene.materials.size() - 1;
-                instance.frame    = (frame3f)ctx.frame;
+                instance.frame    = (frame3f)ctx.transform_start;
                 scene.instances.push_back(instance);
             } else if (holds_alternative<pbrt_spot_light>(plight)) {
                 auto& spot = get<pbrt_spot_light>(plight);
@@ -3581,7 +3584,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 instance.name     = shape.name;
                 instance.shape    = (int)scene.shapes.size() - 1;
                 instance.material = (int)scene.materials.size() - 1;
-                instance.frame    = (frame3f)ctx.frame;
+                instance.frame    = (frame3f)ctx.transform_start;
                 scene.instances.push_back(instance);
             } else {
                 throw sceneio_error("light type not supported " +
@@ -3599,9 +3602,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             const pbrt_object& pobject, const pbrt_context& ctx) {
             auto& pinstances = omap.at(pobject.name);
             for (auto& pinstance : pinstances) {
-                auto instance     = yocto_instance();
-                instance.frame    = (frame3f)ctx.frame * pinstance.frame;
-                instance.shape    = pinstance.shape;
+                auto instance  = yocto_instance();
+                instance.frame = (frame3f)ctx.transform_start * pinstance.frame;
+                instance.shape = pinstance.shape;
                 instance.material = pinstance.material;
                 scene.instances.push_back(instance);
             }
