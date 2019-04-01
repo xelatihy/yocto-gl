@@ -97,7 +97,10 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
-        if '-instanced' in dirname and outformat == 'obj': continue
+        if 'ecosys' in dirname and outformat == 'obj': continue
+        if 'landscape' in dirname and outformat == 'obj': continue
+        if 'fractal' in dirname and outformat == 'obj': continue
+        if 'pavilion' in dirname and outformat == 'obj': continue
         outdirname = dirname.replace(f'/{format}/',f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
@@ -130,7 +133,10 @@ def convert_hair(directory='yuksel',scene='*',format='hair',outformat="ply",mode
     for dirname in sorted(glob.glob(f'{directory}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
-        if '-instanced' in dirname and outformat == 'obj': continue
+        if 'ecosys' in dirname and outformat == 'obj': continue
+        if 'landscape' in dirname and outformat == 'obj': continue
+        if 'fractal' in dirname and outformat == 'obj': continue
+        if 'pavilion' in dirname and outformat == 'obj': continue
         for filename in sorted(glob.glob(f'{dirname}/{format}/*.{format}')):
             outname = filename.replace(f'/{format}/',f'/json/').replace(f'.{format}',f'.{outformat}')
             filedir = os.path.dirname(filename)
