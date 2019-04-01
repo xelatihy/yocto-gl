@@ -3151,6 +3151,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto& mesh      = get<pbrt_loopsubdiv_shape>(pshape);
                 shape.positions = mesh.P;
                 shape.triangles = mesh.indices;
+                shape.normals.resize(shape.positions.size());
+                compute_vertex_normals(shape.normals, shape.triangles, shape.positions);
             } else if (holds_alternative<pbrt_plymesh_shape>(pshape)) {
                 auto& mesh     = get<pbrt_plymesh_shape>(pshape);
                 shape.filename = mesh.filename;
