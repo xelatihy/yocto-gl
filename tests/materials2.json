@@ -343,9 +343,9 @@
             }
         },
         {
-            "name": "bunny_plastic-sharp",
-            "shape": "bunny",
-            "material": "plastic-sharp",
+            "name": "sphere_glass-sharp",
+            "shape": "sphere",
+            "material": "glass-sharp",
             "frame": [
                 1,
                 0,
@@ -362,9 +362,9 @@
             ]
         },
         {
-            "name": "bunny_plastic-rough",
-            "shape": "bunny",
-            "material": "plastic-rough",
+            "name": "sphere_glass-rough",
+            "shape": "sphere",
+            "material": "glass-rough",
             "frame": [
                 1,
                 0,
@@ -381,9 +381,9 @@
             ]
         },
         {
-            "name": "bunny_matte",
-            "shape": "bunny",
-            "material": "matte",
+            "name": "sphere_transparent",
+            "shape": "sphere",
+            "material": "transparent",
             "frame": [
                 1,
                 0,
@@ -400,9 +400,9 @@
             ]
         },
         {
-            "name": "bunny_metal-sharp",
-            "shape": "bunny",
-            "material": "metal-sharp",
+            "name": "sphere_thinglass-sharp",
+            "shape": "sphere",
+            "material": "thinglass-sharp",
             "frame": [
                 1,
                 0,
@@ -419,9 +419,9 @@
             ]
         },
         {
-            "name": "bunny_metal-rough",
-            "shape": "bunny",
-            "material": "metal-rough",
+            "name": "sphere_thinglass-rough",
+            "shape": "sphere",
+            "material": "thinglass-rough",
             "frame": [
                 1,
                 0,
