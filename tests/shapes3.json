@@ -647,9 +647,9 @@
             }
         },
         {
-            "name": "subdiv-cube_uvgrid",
-            "shape": "subdiv-cube",
-            "material": "uvgrid",
+            "name": "sphere_matte",
+            "shape": "sphere",
+            "material": "matte",
             "frame": [
                 1,
                 0,
@@ -666,9 +666,9 @@
             ]
         },
         {
-            "name": "subdiv-monkey_plastic-sharp",
-            "shape": "subdiv-monkey",
-            "material": "plastic-sharp",
+            "name": "hairball1_hair",
+            "shape": "hairball1",
+            "material": "hair",
             "frame": [
                 1,
                 0,
@@ -685,9 +685,9 @@
             ]
         },
         {
-            "name": "teapot_uvgrid",
-            "shape": "teapot",
-            "material": "uvgrid",
+            "name": "hairball2_hair",
+            "shape": "hairball2",
+            "material": "hair",
             "frame": [
                 1,
                 0,
@@ -704,9 +704,9 @@
             ]
         },
         {
-            "name": "bunny_plastic-sharp",
-            "shape": "bunny",
-            "material": "plastic-sharp",
+            "name": "hairball3_hair",
+            "shape": "hairball3",
+            "material": "hair",
             "frame": [
                 1,
                 0,
@@ -723,9 +723,9 @@
             ]
         },
         {
-            "name": "subdiv-cube_uvgrid",
-            "shape": "subdiv-cube",
-            "material": "uvgrid",
+            "name": "sphere_matte",
+            "shape": "sphere",
+            "material": "matte",
             "frame": [
                 1,
                 0,

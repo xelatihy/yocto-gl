@@ -418,6 +418,20 @@
             "refract": false
         },
         {
+            "name": "hair",
+            "diffuse": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "specular": [
+                0,
+                0,
+                0
+            ],
+            "roughness": 1
+        },
+        {
             "name": "arealight1",
             "emission": [
                 20,
@@ -540,6 +554,35 @@
                 "type": "suzanne",
                 "size": 1.5,
                 "align_bottom": true
+            }
+        },
+        {
+            "name": "hairball1",
+            "filename": "models/test-hairball1.ply",
+            "!!proc": {
+                "type": "hairball",
+                "noise": [
+                    0.3,
+                    10
+                ]
+            }
+        },
+        {
+            "name": "hairball2",
+            "filename": "models/test-hairball2.ply",
+            "!!proc": {
+                "type": "hairball"
+            }
+        },
+        {
+            "name": "hairball3",
+            "filename": "models/test-hairball3.ply",
+            "!!proc": {
+                "type": "hairball",
+                "clump": [
+                    0.5,
+                    128
+                ]
             }
         },
         {

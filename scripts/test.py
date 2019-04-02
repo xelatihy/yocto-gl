@@ -230,6 +230,12 @@ def make_tests():
                 "refract": false
             },
             {
+                "name": "hair",
+                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "specular": [ 0, 0, 0 ],
+                "roughness": 1
+            },
+            {
                 "name": "arealight1",
                 "emission": [ 20, 20, 20 ]
             },
@@ -301,6 +307,24 @@ def make_tests():
                 "!!proc": { "type": "suzanne", "size": 1.5, "align_bottom": true }
             },
             {
+                "name": "hairball1",
+                "filename": "models/test-hairball1.ply",
+                "!!proc": { "type": "hairball", "noise": [ 0.3, 10 ] }
+            },
+            {
+                "name": "hairball2",
+                "filename": "models/test-hairball2.ply",
+                "!!proc": { "type": "hairball" }
+            },
+            {
+                "name": "hairball3",
+                "filename": "models/test-hairball3.ply",
+                "!!proc": {
+                    "type": "hairball",
+                    "clump": [ 0.5, 128 ]
+                }
+            },
+            {
                 "name": "arealight1",
                 "!!proc": { "type": "quad", "size": [ 4, 4 ] }
             },
@@ -357,5 +381,6 @@ def make_tests():
     make_test('materials3', ['sphere', 'sphere', 'sphere-displaced', 'sphere', 'sphere'], ['plastic-sharp-bumped', 'plastic-sharp-bumped', 'matte-displaced', 'metal-sharp-bumped', 'metal-sharp-bumped'], area_lights)
     make_test('shapes1', ['sphere', "sphere-flipcap", "disk", "cylinder", "cube"], ['uvgrid'], area_lights)
     make_test('shapes2', ['subdiv-cube', "subdiv-monkey", "teapot", "bunny", "subdiv-cube"], ['uvgrid', 'plastic-sharp'], area_lights)
+    make_test('shapes3', ['sphere', "hairball1", "hairball2", "hairball3", "sphere"], ['matte', 'hair', 'hair', 'hair', 'matte'], area_lights)
 
 cli()
