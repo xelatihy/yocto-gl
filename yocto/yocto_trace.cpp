@@ -1427,7 +1427,8 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
             next_direction = sample_next_direction(
                 scene, lights, bvh, point, outgoing, prob_light, rng, weight);
 
-            if (dot(next_direction, point.geometric_normal) > 0)
+            if (dot(next_direction, point.geometric_normal) > 0 !=
+                dot(outgoing, point.geometric_normal) > 0)
                 break;  // exit from volume
             else
                 continue;  // internal reflection
@@ -1490,7 +1491,8 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // transmission
-        if (dot(next_direction, point.geometric_normal) < 0) {
+        if (dot(next_direction, point.geometric_normal) > 0 !=
+            dot(outgoing, point.geometric_normal) > 0) {
             integrate_volume(scene, lights, bvh, 0.5, 0.5, rng, point, outgoing,
                 next_direction, weight, radiance);
             if (weight == zero3f) return {radiance, true};
