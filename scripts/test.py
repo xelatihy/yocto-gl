@@ -430,6 +430,31 @@ def make_tests():
                 'material': material,
                 'frame': [ xscale, 0, 0, 0, yscale, 0, 0, 0, zscale, xoffset, yoffset, zoffset ]
             } ]
+        if True: # pruning
+            old_materials = scene['materials']
+            scene['materials'] = []
+            for material in old_materials:
+                used = False
+                for instance in scene['instances']:
+                    if instance['material'] == material['name']: used = True
+                if used: scene['materials'] += [material] 
+            old_shapes = scene['shapes']
+            scene['shapes'] = []
+            for shape in old_shapes:
+                used = False
+                for instance in scene['instances']:
+                    if instance['shape'] == shape['name']: used = True
+                if used: scene['shapes'] += [shape] 
+            old_textures = scene['textures']
+            scene['textures'] = []
+            for texture in old_textures:
+                used = False
+                for material in scene['materials']:
+                    if 'diffuse_texture' in material and material['diffuse_texture'] == texture['name']: used = True
+                    if 'normal_texture' in material and material['normal_texture'] == texture['name']: used = True
+                for environment in scene['environments']:
+                    if environment['emission_texture'] == texture['name']: used = True
+                if used: scene['textures'] += [texture] 
         with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
     make_test('features', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ['uvgrid', 'plastic-sharp', 'metal-rough', 'plastic-rough', 'metal-sharp'], mixed_lights)
     make_test('materials1', ['sphere'], ['plastic-sharp', 'plastic-rough', 'matte', 'metal-sharp', 'metal-rough'], mixed_lights)
