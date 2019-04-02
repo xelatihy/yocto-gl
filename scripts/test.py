@@ -108,6 +108,22 @@ def make_tests():
                 "filename": "textures/uvgrid.png",
                 "gamma": 2.2,
                 "!!proc": { "type": "uvgrid" }
+            },
+            {
+                "name": "bumps",
+                "filename": "textures/bumps.png",
+                "!!proc": { "type": "bump", "bump_scale": 0.05 }
+            },
+            {
+                "name": "bumps-normal",
+                "filename": "textures/bumps-normal.png",
+                "!!proc": { "type": "bump", "bump_to_normal": true, "bump_scale": 0.05 }
+            },
+            {
+                "name": "fbm-displacement",
+                "filename": "textures/fbm-displacement.png",
+                "height_scale": 0.25,
+                "!!proc": { "type": "fbm", "scale": 10 }
             }
         ],
         "materials": [
@@ -152,6 +168,27 @@ def make_tests():
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.66, 0.45, 0.34 ],
                 "roughness": 0.1
+            },
+            {
+                "name": "matte-displaced",
+                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "specular": [ 0, 0, 0 ],
+                "roughness": 1,
+                "displacement_texture": "fbm-displacement"
+            },
+            {
+                "name": "plastic-sharp-bumped",
+                "diffuse": [ 0.5, 0.5, 0.7 ],
+                "specular": [ 0.04, 0.04, 0.04 ],
+                "roughness": 0.01,
+                "normal_texture": "bumps-normal"
+            },
+            {
+                "name": "metal-sharp-bumped",
+                "diffuse": [ 0, 0, 0 ],
+                "specular": [ 0.7, 0.7, 0.7 ],
+                "roughness": 0,
+                "normal_texture": "bumps-normal"
             },
             {
                 "name": "transparent",
@@ -241,6 +278,12 @@ def make_tests():
                 "!!proc": { "type": "uvcylinder_rounded", "size": [1.5, 1.5, 1.5], "align_bottom": true }
             },
             {
+                "name": "sphere-displaced",
+                "filename": "models/test-sphere-displaced.obj",
+                "preserve_facevarying": false,
+                "!!proc": { "type": "sphere", "size": 1.5, "align_bottom": true }
+            },
+            {
                 "name": "subdiv-cube",
                 "filename": "models/test-subdiv-cube.obj",
                 "subdivision_level": 4,
@@ -311,7 +354,7 @@ def make_tests():
     make_test('simple', ['bunny'], ['uvgrid'], area_lights)
     make_test('materials1', ['sphere'], ['plastic-sharp', 'plastic-rough', 'matte', 'metal-sharp', 'metal-rough'], area_lights)
     make_test('materials2', ['sphere'], ['glass-sharp', 'glass-rough', 'transparent', 'thinglass-sharp', 'thinglass-rough'], area_lights)
-    make_test('materials3', ['sphere'], ['plastic-sharp-bumped', 'plastic-rough-bumped', 'matte-bumped', 'metal-sharp-bumped', 'metal-rough-bumped'], area_lights)
+    make_test('materials3', ['sphere', 'sphere', 'sphere-displaced', 'sphere', 'sphere'], ['plastic-sharp-bumped', 'plastic-sharp-bumped', 'matte-displaced', 'metal-sharp-bumped', 'metal-sharp-bumped'], area_lights)
     make_test('shapes1', ['sphere', "sphere-flipcap", "disk", "cylinder", "cube"], ['uvgrid'], area_lights)
     make_test('shapes2', ['subdiv-cube', "subdiv-monkey", "teapot", "bunny", "subdiv-cube"], ['uvgrid', 'plastic-sharp'], area_lights)
 

@@ -154,6 +154,32 @@
             "!!proc": {
                 "type": "uvgrid"
             }
+        },
+        {
+            "name": "bumps",
+            "filename": "textures/bumps.png",
+            "!!proc": {
+                "type": "bump",
+                "bump_scale": 0.05
+            }
+        },
+        {
+            "name": "bumps-normal",
+            "filename": "textures/bumps-normal.png",
+            "!!proc": {
+                "type": "bump",
+                "bump_to_normal": true,
+                "bump_scale": 0.05
+            }
+        },
+        {
+            "name": "fbm-displacement",
+            "filename": "textures/fbm-displacement.png",
+            "height_scale": 0.25,
+            "!!proc": {
+                "type": "fbm",
+                "scale": 10
+            }
         }
     ],
     "materials": [
@@ -250,6 +276,51 @@
                 0.34
             ],
             "roughness": 0.1
+        },
+        {
+            "name": "matte-displaced",
+            "diffuse": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "specular": [
+                0,
+                0,
+                0
+            ],
+            "roughness": 1,
+            "displacement_texture": "fbm-displacement"
+        },
+        {
+            "name": "plastic-sharp-bumped",
+            "diffuse": [
+                0.5,
+                0.5,
+                0.7
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.01,
+            "normal_texture": "bumps-normal"
+        },
+        {
+            "name": "metal-sharp-bumped",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "roughness": 0,
+            "normal_texture": "bumps-normal"
         },
         {
             "name": "transparent",
@@ -433,6 +504,16 @@
             }
         },
         {
+            "name": "sphere-displaced",
+            "filename": "models/test-sphere-displaced.obj",
+            "preserve_facevarying": false,
+            "!!proc": {
+                "type": "sphere",
+                "size": 1.5,
+                "align_bottom": true
+            }
+        },
+        {
             "name": "subdiv-cube",
             "filename": "models/test-subdiv-cube.obj",
             "subdivision_level": 4,
@@ -542,9 +623,9 @@
             ]
         },
         {
-            "name": "sphere_plastic-rough-bumped",
+            "name": "sphere_plastic-sharp-bumped",
             "shape": "sphere",
-            "material": "plastic-rough-bumped",
+            "material": "plastic-sharp-bumped",
             "frame": [
                 1,
                 0,
@@ -561,9 +642,9 @@
             ]
         },
         {
-            "name": "sphere_matte-bumped",
-            "shape": "sphere",
-            "material": "matte-bumped",
+            "name": "sphere-displaced_matte-displaced",
+            "shape": "sphere-displaced",
+            "material": "matte-displaced",
             "frame": [
                 1,
                 0,
@@ -599,9 +680,9 @@
             ]
         },
         {
-            "name": "sphere_metal-rough-bumped",
+            "name": "sphere_metal-sharp-bumped",
             "shape": "sphere",
-            "material": "metal-rough-bumped",
+            "material": "metal-sharp-bumped",
             "frame": [
                 1,
                 0,
