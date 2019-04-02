@@ -732,14 +732,14 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal_,
     weights /= weights.x + weights.y + weights.z;
 
     // sample according to diffuse
-    if (brdf.diffuse != zero3f && outgoing_up && rnl < weights.x) {
-        return sample_hemisphere_direction(normal, rn);
+    if (brdf.diffuse != zero3f && rnl < weights.x) {
+        return sample_hemisphere_direction(outgoing_up ? normal : -normal, rn);
     }
 
     // sample according to specular GGX
     else if (brdf.specular != zero3f && rnl < weights.x + weights.y) {
         auto halfway = sample_microfacet_distribution(
-            brdf.roughness, normal, rn);
+            brdf.roughness, outgoing_up ? normal : -normal, rn);
         return reflect(outgoing, halfway);
     }
 
@@ -784,7 +784,7 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
 
     // sample according to specular mirror
     if (brdf.specular != zero3f && rnl < weights.x + weights.y) {
-        return reflect(outgoing, normal);
+        return reflect(outgoing, outgoing_up ? normal : -normal);
     }
     // sample according to transmission
     else if (brdf.transmission != zero3f && !brdf.refract &&
@@ -824,7 +824,7 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
     auto pdf = 0.0f;
 
     // diffuse
-    if (brdf.diffuse != zero3f && outgoing_up && incoming_up) {
+    if (brdf.diffuse != zero3f && outgoing_up == incoming_up) {
         pdf += weights.x * fabs(dot(normal, incoming)) / pif;
     }
 
