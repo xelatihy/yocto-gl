@@ -626,7 +626,6 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal_,
         auto halfway = normalize(incoming + outgoing);
         auto fresnel = evaluate_brdf_fresnel(brdf, halfway, outgoing);
         brdf_cosine += brdf.diffuse * (1 - fresnel) / pif;
-        brdf_cosine += brdf.diffuse / pif;
     }
 
     // specular
