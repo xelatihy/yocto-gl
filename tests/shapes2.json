@@ -180,6 +180,24 @@
                 "type": "fbm",
                 "scale": 10
             }
+        },
+        {
+            "name": "sky",
+            "filename": "textures/sky.hdr",
+            "!!proc": {
+                "type": "sky"
+            }
+        },
+        {
+            "name": "sunsky",
+            "filename": "textures/sky.hdr",
+            "!!proc": {
+                "type": "sky",
+                "has_sun": true,
+                "width": 2048,
+                "height": 1024,
+                "sun_angle": 0.1
+            }
         }
     ],
     "materials": [
@@ -750,5 +768,15 @@
             ]
         }
     ],
-    "environments": []
+    "environments": [
+        {
+            "name": "sky",
+            "emission": [
+                1,
+                1,
+                1
+            ],
+            "emission_texture": "sky"
+        }
+    ]
 }

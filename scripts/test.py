@@ -124,6 +124,16 @@ def make_tests():
                 "filename": "textures/fbm-displacement.png",
                 "height_scale": 0.25,
                 "!!proc": { "type": "fbm", "scale": 10 }
+            },
+            {
+                "name": "sky",
+                "filename": "textures/sky.hdr",
+                "!!proc": { "type": "sky" }
+            },
+            {
+                "name": "sunsky",
+                "filename": "textures/sky.hdr",
+                "!!proc": { "type": "sky", "has_sun": true, "width": 2048, "height": 1024, "sun_angle": 0.1 }
             }
         ],
         "materials": [
@@ -364,6 +374,39 @@ def make_tests():
         ],
         "environments": []
     }
+    mixed_lights = {
+        "instances": [
+            {
+                "name": "arealight1",
+                "shape": "arealight1",
+                "material": "arealight1",
+                "!!proc": { "from": [ -4, 8, 8 ], "to": [ 0, 1, 0 ] }
+            },
+            {
+                "name": "arealight2",
+                "shape": "arealight2",
+                "material": "arealight2",
+                "!!proc": { "from": [ 4, 8, 8 ], "to": [ 0, 1, 0 ] }
+            }
+        ],
+        "environments": [
+            {
+                "name": 'sky',
+                "emission": [1, 1, 1],
+                "emission_texture": "sky"
+            }
+        ]
+    }
+    sunsky_lights = {
+        "instances": [],
+        "environments": [
+            {
+                "name": 'sunsky',
+                "emission": [1, 1, 1],
+                "emission_texture": "sunsky"
+            }
+        ]
+    }
     def make_test(name, shapes, materials, lights, xoffsets=[ -4, -2, 0, 2, 4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1]):
         import copy
         scene = copy.deepcopy(default_scene)
@@ -388,13 +431,15 @@ def make_tests():
                 'frame': [ xscale, 0, 0, 0, yscale, 0, 0, 0, zscale, xoffset, yoffset, zoffset ]
             } ]
         with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
-    make_test('features', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ['uvgrid', 'plastic-sharp', 'metal-rough', 'plastic-rough', 'metal-sharp'], area_lights)
-    make_test('materials1', ['sphere'], ['plastic-sharp', 'plastic-rough', 'matte', 'metal-sharp', 'metal-rough'], area_lights)
-    make_test('materials2', ['sphere'], ['glass-sharp', 'glass-rough', 'transparent', 'thinglass-sharp', 'thinglass-rough'], area_lights)
-    make_test('materials3', ['sphere', 'sphere', 'sphere-displaced', 'sphere', 'sphere'], ['plastic-sharp-bumped', 'plastic-sharp-bumped', 'matte-displaced', 'metal-sharp-bumped', 'metal-sharp-bumped'], area_lights)
-    make_test('shapes1', ['sphere', "sphere-flipcap", "disk", "cylinder", "cube"], ['uvgrid'], area_lights)
-    make_test('shapes2', ['subdiv-cube', "subdiv-monkey", "teapot", "bunny", "subdiv-cube"], ['uvgrid', 'plastic-sharp'], area_lights)
-    make_test('shapes3', ['sphere', "hairball1", "hairball2", "hairball3", "sphere", "", "hairballi", "hairballi", "hairballi", ""], ['matte', 'hair', 'hair', 'hair', 'matte'], area_lights,
+    make_test('features', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ['uvgrid', 'plastic-sharp', 'metal-rough', 'plastic-rough', 'metal-sharp'], mixed_lights)
+    make_test('materials1', ['sphere'], ['plastic-sharp', 'plastic-rough', 'matte', 'metal-sharp', 'metal-rough'], mixed_lights)
+    make_test('materials2', ['sphere'], ['glass-sharp', 'glass-rough', 'transparent', 'thinglass-sharp', 'thinglass-rough'], mixed_lights)
+    make_test('materials3', ['sphere', 'sphere', 'sphere-displaced', 'sphere', 'sphere'], ['plastic-sharp-bumped', 'plastic-sharp-bumped', 'matte-displaced', 'metal-sharp-bumped', 'metal-sharp-bumped'], mixed_lights)
+    make_test('shapes1', ['sphere', "sphere-flipcap", "disk", "cylinder", "cube"], ['uvgrid'], mixed_lights)
+    make_test('shapes2', ['subdiv-cube', "subdiv-monkey", "teapot", "bunny", "subdiv-cube"], ['uvgrid', 'plastic-sharp'], mixed_lights)
+    make_test('shapes3', ['sphere', "hairball1", "hairball2", "hairball3", "sphere", "", "hairballi", "hairballi", "hairballi", ""], ['matte', 'hair', 'hair', 'hair', 'matte'], mixed_lights,
         yoffsets=[ 0, 0.75, 0.75, 0.75, 0 ], xscales=[ 0.5, 1, 1, 1, 0.5 ])
+    make_test('arealights1', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ['uvgrid', 'plastic-sharp', 'metal-rough', 'plastic-rough', 'metal-sharp'], area_lights)
+    make_test('environments1', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ['uvgrid', 'plastic-sharp', 'metal-rough', 'plastic-rough', 'metal-sharp'], sunsky_lights)
 
 cli()

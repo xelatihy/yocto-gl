@@ -673,9 +673,9 @@
             }
         },
         {
-            "name": "sphere_plastic-sharp-bumped",
-            "shape": "sphere",
-            "material": "plastic-sharp-bumped",
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,
@@ -692,9 +692,9 @@
             ]
         },
         {
-            "name": "sphere_plastic-sharp-bumped",
+            "name": "sphere_plastic-sharp",
             "shape": "sphere",
-            "material": "plastic-sharp-bumped",
+            "material": "plastic-sharp",
             "frame": [
                 1,
                 0,
@@ -711,9 +711,9 @@
             ]
         },
         {
-            "name": "sphere-displaced_matte-displaced",
-            "shape": "sphere-displaced",
-            "material": "matte-displaced",
+            "name": "bunny_metal-rough",
+            "shape": "bunny",
+            "material": "metal-rough",
             "frame": [
                 1,
                 0,
@@ -730,9 +730,9 @@
             ]
         },
         {
-            "name": "sphere_metal-sharp-bumped",
+            "name": "sphere_plastic-rough",
             "shape": "sphere",
-            "material": "metal-sharp-bumped",
+            "material": "plastic-rough",
             "frame": [
                 1,
                 0,
@@ -749,9 +749,9 @@
             ]
         },
         {
-            "name": "sphere_metal-sharp-bumped",
-            "shape": "sphere",
-            "material": "metal-sharp-bumped",
+            "name": "bunny_metal-sharp",
+            "shape": "bunny",
+            "material": "metal-sharp",
             "frame": [
                 1,
                 0,
@@ -768,15 +768,5 @@
             ]
         }
     ],
-    "environments": [
-        {
-            "name": "sky",
-            "emission": [
-                1,
-                1,
-                1
-            ],
-            "emission_texture": "sky"
-        }
-    ]
+    "environments": []
 }
