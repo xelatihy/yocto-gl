@@ -135,14 +135,14 @@ foreach(filename "uvgrid.png")
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # procedurla images
-foreach(filename "image-grid.json" "image-uvgrid.json" "image-checker.json" "image-gammaramp.json" "image-noise.json" "image-fbm.json" "image-turbulence.json" "image-ridge.json" "image-sky.json" "image-blackbodyramp.json")
+foreach(filename "images1.json" "images2.json")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yimproc-${filename}
              COMMAND ${test-yimproc} ${testdir}/${filename} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # eyelight
-foreach(filename "simple-al.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "hairball-al.json" "models-al.json" "simple-sl.json" "shape1-al.json" "shape2-al.json" "shape3-al.json" "shape4-al.json" "affine-al.json" "instanced-al.json")
+foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
     set(tracer "eyelight")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -151,7 +151,7 @@ foreach(filename "simple-al.json" "cornellbox-al.json" "simplemat-al.json" "subd
 endforeach()
 set(nsamples "4") 
 # path
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json" "hairball-al.json" "models-al.json" "simple-sl.json" "camerap-al.json" "camerapf-al.json" "camerao-al.json" "cameraof-al.json" "normal-al.json" "affine-al.json" "instanced-al.json" "glass-al.json" "refractive-al.json")
+foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -159,7 +159,7 @@ foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplem
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # volpath
-foreach(filename "glass-al.json" "refractive-al.json" "volume1-al.json" "volume2-al.json" "volume-models-al.json")
+foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
     set(tracer "volpath")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -167,7 +167,7 @@ foreach(filename "glass-al.json" "refractive-al.json" "volume1-al.json" "volume2
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # volnaive
-foreach(filename "glass-al.json" "refractive-al.json" "volume1-al.json" "volume2-al.json" "volume-models-al.json")
+foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
     set(tracer "volnaive")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -175,7 +175,7 @@ foreach(filename "glass-al.json" "refractive-al.json" "volume1-al.json" "volume2
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # naive
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "glass-al.json" "refractive-al.json")
+foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
     set(tracer "naive")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -183,7 +183,7 @@ foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplem
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # json output
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "models-al.json" "affine-al.json")
+foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json")
     set(format "json")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yscnproc-${format}-${filename}
@@ -191,7 +191,7 @@ foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplem
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # obj output
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "models-al.json" "affine-al.json")
+foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json")
     set(format "obj")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yscnproc-${format}-${filename}
@@ -199,7 +199,7 @@ foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplem
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # ybin output
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "models-al.json" "affine-al.json")
+foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json")
     set(format "ybin")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yscnproc-${format}-${filename}
@@ -207,7 +207,7 @@ foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplem
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # gltf output
-foreach(filename "simple-al.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "models-al.json" "affine-al.json")
+foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json")
     set(format "gltf")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yscnproc-${format}-${filename}
@@ -216,7 +216,7 @@ foreach(filename "simple-al.json" "cornellbox-al.json" "simplemat-al.json" "subd
 endforeach()
 if(YOCTO_EMBREE)
 # embree
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "models-al.json" "affine-al.json" "instanced-al.json")
+foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-embree-${tracer}-${filename}

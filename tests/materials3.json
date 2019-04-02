@@ -157,6 +157,15 @@
             }
         },
         {
+            "name": "fbm-displacement",
+            "filename": "textures/fbm-displacement.png",
+            "height_scale": 0.25,
+            "!!proc": {
+                "type": "fbm",
+                "scale": 10
+            }
+        },
+        {
             "name": "sky",
             "filename": "textures/sky.hdr",
             "!!proc": {

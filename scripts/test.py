@@ -20,7 +20,7 @@ def clean():
 @click.option('--clean/--no-clean', default=False)
 def update(clean=False):
     if clean:
-        os.system('rm tests/_result/*.png')
+        os.system('rm tests/_results/*.png')
     os.system('cp tests/_output/*.png tests/_results')
 
 @cli.command()
@@ -450,8 +450,10 @@ def make_tests():
             for texture in old_textures:
                 used = False
                 for material in scene['materials']:
+                    if 'emission_texture' in material and material['emission_texture'] == texture['name']: used = True
                     if 'diffuse_texture' in material and material['diffuse_texture'] == texture['name']: used = True
                     if 'normal_texture' in material and material['normal_texture'] == texture['name']: used = True
+                    if 'displacement_texture' in material and material['displacement_texture'] == texture['name']: used = True
                 for environment in scene['environments']:
                     if environment['emission_texture'] == texture['name']: used = True
                 if used: scene['textures'] += [texture] 
