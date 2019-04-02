@@ -163,6 +163,10 @@ def make_tests():
                 "filename": "models/stanford-bunny.obj"
             },
             {
+                "name": "teapot",
+                "filename": "models/utah-teapot.obj"
+            },
+            {
                 "name": "sphere",
                 "filename": "models/test-sphere.obj",
                 "!!proc": { "type": "sphere", "size": 1.5, "align_bottom": true }
@@ -260,6 +264,6 @@ def make_tests():
     make_test('materials2', ['sphere'], ['glass-sharp', 'glass-rough', 'transparent', 'thinglass-sharp', 'thinglass-rough'], area_lights)
     make_test('materials3', ['sphere'], ['plastic-sharp-bumped', 'plastic-rough-bumped', 'matte-bumped', 'metal-sharp-bumped', 'metal-rough-bumped'], area_lights)
     make_test('shapes1', ['sphere', "sphere-flipcap", "disk", "cylinder", "cube"], ['uvgrid'], area_lights)
-    make_test('shapes2', ['subdiv-cube', "subdiv-monkey", "subdiv-cube", "subdiv-cube", "subdiv-cube"], ['uvgrid', 'plastic-sharp'], area_lights)
+    make_test('shapes2', ['subdiv-cube', "subdiv-monkey", "teapot", "bunny", "subdiv-cube"], ['uvgrid', 'plastic-sharp'], area_lights)
 
 cli()

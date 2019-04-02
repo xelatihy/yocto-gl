@@ -260,6 +260,10 @@
             "filename": "models/stanford-bunny.obj"
         },
         {
+            "name": "teapot",
+            "filename": "models/utah-teapot.obj"
+        },
+        {
             "name": "sphere",
             "filename": "models/test-sphere.obj",
             "!!proc": {
@@ -441,8 +445,8 @@
             ]
         },
         {
-            "name": "subdiv-cube_uvgrid",
-            "shape": "subdiv-cube",
+            "name": "teapot_uvgrid",
+            "shape": "teapot",
             "material": "uvgrid",
             "frame": [
                 1,
@@ -460,8 +464,8 @@
             ]
         },
         {
-            "name": "subdiv-cube_plastic-sharp",
-            "shape": "subdiv-cube",
+            "name": "bunny_plastic-sharp",
+            "shape": "bunny",
             "material": "plastic-sharp",
             "frame": [
                 1,
