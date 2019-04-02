@@ -15,6 +15,7 @@ def yitrace(directory='mcguire',scene='*',format='obj',mode='path'):
     modes = {
         'path': '',
         'embree': '--embree',
+        'embree-compact': '--embree --embree-shared',
         'eyelight': '-t eyelight'
     }
     options = modes[mode]
@@ -61,6 +62,7 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
     modes = {
         'path': '-s 64 -r 360',
         'embree': '-s 256 -r 720 --embree',
+        'embree-compact': '-s 256 -r 720 --embree --embree-shared',
         'eyelight': '-s 16 -r 720 -t eyelight'
     }
     options = modes[mode]

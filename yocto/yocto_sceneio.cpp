@@ -985,7 +985,14 @@ void from_json_procedural(
         convert_quads_to_triangles(value.triangles, value.quads);
         value.quads = {};
     }
-    if (js.value("flipyz", false)) {
+    if (js.value("flip_normals", false)) {
+        flip_vertex_normals(value.normals);
+    }
+    if (js.value("flip_faces", false)) {
+        flip_triangles_orientation(value.triangles);
+        flip_quads_orientation(value.quads);
+    }
+    if (js.value("flip_yz", false)) {
         for (auto& p : value.positions) p = {p.x, p.z, p.y};
         for (auto& n : value.normals) n = {n.x, n.z, n.y};
     }

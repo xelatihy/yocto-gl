@@ -260,6 +260,22 @@ inline void compute_matrix_skinning(vector<vec<T, 3>>& skinned_positions,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// COMPUTATION OF PER_VERTEX PROPETIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Flip vertex normals
+template<typename T>
+inline void flip_vertex_normals(vector<vec<T, 3>>& normals);
+// Flip face orientation
+template<typename T>
+inline void flip_triangles_orientation(vector<vec<T, 3>>& triangles);
+template<typename T>
+inline void flip_quads_orientation(vector<vec<T, 4>>& quads);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // EDGE AND GRID DATA STRUCTURES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -901,6 +917,28 @@ inline void compute_matrix_skinning(vector<vec<T, 3>>& skinned_positions,
         skinned_positions[i] = transform_point(xform, positions[i]);
         skinned_normals[i] = normalize(transform_direction(xform, normals[i]));
     }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// COMPUTATION OF PER_VERTEX PROPETIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Flip vertex normals
+template<typename T>
+inline void flip_vertex_normals(vector<vec<T, 3>>& normals) {
+    for(auto& n : normals) n = -n;
+}
+// Flip face orientation
+template<typename T>
+inline void flip_triangles_orientation(vector<vec<T, 3>>& triangles) {
+    for(auto& t : triangles) swap(t.y, t.z);
+}
+template<typename T>
+inline void flip_quads_orientation(vector<vec<T, 4>>& quads) {
+    for(auto& q : quads) swap(q.y, q.w);
 }
 
 }  // namespace yocto
