@@ -159,6 +159,9 @@ inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
 template <typename T>
 inline void get_image_region(
     image<T>& clipped, const image<T>& img, const image_region& region);
+template <typename T>
+inline void set_image_region(
+    image<T>& img, const image<T>& region, const vec2i& offset);
 
 // Apply a function to each image pixel
 template <typename T1, typename T2, typename Func>
@@ -862,6 +865,15 @@ inline void get_image_region(
     for (auto j = 0; j < region.size().y; j++) {
         for (auto i = 0; i < region.size().x; i++) {
             clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+        }
+    }
+}
+template <typename T>
+inline void set_image_region(
+    image<T>& img, const image<T>& region, const vec2i& offset) {
+    for (auto j = 0; j < region.size().y; j++) {
+        for (auto i = 0; i < region.size().x; i++) {
+            img[vec2i{i, j} + offset] = region[{i, j}];
         }
     }
 }

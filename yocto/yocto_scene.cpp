@@ -420,62 +420,25 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
     }
 }
 
-// BVH helpers
-bvh_instance get_bvh_scene_data_instance(const void* context, int instance) {
-    auto& scene = *(yocto_scene*)context;
-    return {scene.instances[instance].frame, scene.instances[instance].shape};
-}
-const vector<int>& get_bvh_scene_data_shape_points(
-    const void* context, int shape) {
-    auto& scene = *(yocto_scene*)context;
-    return scene.shapes[shape].points;
-}
-const vector<vec2i>& get_bvh_scene_data_shape_lines(
-    const void* context, int shape) {
-    auto& scene = *(yocto_scene*)context;
-    return scene.shapes[shape].lines;
-}
-const vector<vec3i>& get_bvh_scene_data_shape_triangles(
-    const void* context, int shape) {
-    auto& scene = *(yocto_scene*)context;
-    return scene.shapes[shape].triangles;
-}
-const vector<vec4i>& get_bvh_scene_data_shape_quads(
-    const void* context, int shape) {
-    auto& scene = *(yocto_scene*)context;
-    return scene.shapes[shape].quads;
-}
-const vector<vec4i>& get_bvh_scene_data_shape_quads_positions(
-    const void* context, int shape) {
-    auto& scene = *(yocto_scene*)context;
-    return scene.shapes[shape].quads_positions;
-}
-const vector<vec3f>& get_bvh_scene_data_shape_positions(
-    const void* context, int shape) {
-    auto& scene = *(yocto_scene*)context;
-    return scene.shapes[shape].positions;
-}
-const vector<float>& get_bvh_scene_data_shape_radius(
-    const void* context, int shape) {
-    auto& scene = *(yocto_scene*)context;
-    return scene.shapes[shape].radius;
-}
-
 // Build BVH
-void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
-    const bvh_build_options& options) {
+void build_shape_bvh(
+    yocto_shape& shape, bvh_shape& bvh, const bvh_build_options& options) {
 #if YOCTO_EMBREE
     if (options.embree_shared &&
         shape.positions.size() == shape.positions.capacity()) {
-        ((vector<vec3f>&)shape.positions).reserve(shape.positions.size() + 1);
+        shape.positions.reserve(shape.positions.size() + 1);
     }
 #endif
+    if ((!shape.lines.empty() || !shape.points.empty()) &&
+        shape.radius.empty()) {
+        shape.radius.assign(shape.positions.size(), 0.001f);
+    }
     build_shape_bvh(bvh, shape.points, shape.lines, shape.triangles,
         shape.quads, shape.quads_positions, shape.positions, shape.radius,
         options);
 }
-void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    const bvh_build_options& options) {
+void build_scene_bvh(
+    yocto_scene& scene, bvh_scene& bvh, const bvh_build_options& options) {
     bvh.shapes.resize(scene.shapes.size());
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
         build_shape_bvh(scene.shapes[shape_id], bvh.shapes[shape_id], options);
@@ -484,13 +447,13 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
 }
 
 // Refits a scene BVH
-void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
-    const bvh_build_options& options) {
+void refit_shape_bvh(
+    yocto_shape& shape, bvh_shape& bvh, const bvh_build_options& options) {
     refit_shape_bvh(bvh, shape.points, shape.lines, shape.triangles,
         shape.quads, shape.quads_positions, shape.positions, shape.radius,
         options);
 }
-void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
+void refit_scene_bvh(yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_build_options& options) {
     for (auto shape_id : updated_shapes)

@@ -1,0 +1,386 @@
+{
+    "name": "simple-ml",
+    "cameras": [
+        {
+            "name": "default",
+            "focal_length": 0.05,
+            "lens_aperture": 0.0,
+            "film_width": 0.036,
+            "film_height": 0.015,
+            "!!proc": {
+                "from": [
+                    -7.5,
+                    4,
+                    9
+                ],
+                "to": [
+                    -0.75,
+                    0.5,
+                    -0.5
+                ]
+            }
+        },
+        {
+            "name": "front",
+            "focal_length": 0.05,
+            "lens_aperture": 0.0,
+            "film_width": 0.036,
+            "film_height": 0.012,
+            "!!proc": {
+                "from": [
+                    0,
+                    5.75,
+                    14
+                ],
+                "to": [
+                    0,
+                    0.5,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "back",
+            "focal_length": 0.05,
+            "lens_aperture": 0.0,
+            "film_width": 0.036,
+            "film_height": 0.012,
+            "!!proc": {
+                "from": [
+                    0,
+                    5.75,
+                    -14
+                ],
+                "to": [
+                    0,
+                    0.5,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "perspective-sharp",
+            "focal_length": 0.05,
+            "lens_aperture": 0.0,
+            "film_width": 0.036,
+            "film_height": 0.015,
+            "!!proc": {
+                "from": [
+                    -7.5,
+                    4,
+                    9
+                ],
+                "to": [
+                    -0.75,
+                    0.5,
+                    -0.5
+                ]
+            }
+        },
+        {
+            "name": "perspective-dof",
+            "focal_length": 0.05,
+            "lens_aperture": 0.25,
+            "film_width": 0.036,
+            "film_height": 0.015,
+            "!!proc": {
+                "from": [
+                    -7.5,
+                    4,
+                    9
+                ],
+                "to": [
+                    -0.75,
+                    0.5,
+                    -0.5
+                ]
+            }
+        },
+        {
+            "name": "orthographic-sharp",
+            "focal_length": 0.005,
+            "lens_aperture": 0.0,
+            "film_width": 0.036,
+            "film_height": 0.015,
+            "orthographic": true,
+            "!!proc": {
+                "from": [
+                    -7.5,
+                    4,
+                    9
+                ],
+                "to": [
+                    -0.75,
+                    0.5,
+                    -0.5
+                ]
+            }
+        },
+        {
+            "name": "orthographic-dof",
+            "focal_length": 0.005,
+            "lens_aperture": 0.2,
+            "film_width": 0.036,
+            "film_height": 0.015,
+            "orthographic": true,
+            "!!proc": {
+                "from": [
+                    -7.5,
+                    4,
+                    9
+                ],
+                "to": [
+                    -0.75,
+                    0.5,
+                    -0.5
+                ]
+            }
+        }
+    ],
+    "textures": [
+        {
+            "name": "floor",
+            "filename": "textures/floor.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "grid",
+                "border": true
+            }
+        },
+        {
+            "name": "uvgrid",
+            "filename": "textures/uvgrid.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "uvgrid"
+            }
+        },
+        {
+            "name": "sunsky",
+            "filename": "textures/sky.hdr",
+            "!!proc": {
+                "type": "sky",
+                "has_sun": true,
+                "width": 2048,
+                "height": 1024
+            }
+        }
+    ],
+    "materials": [
+        {
+            "name": "floor",
+            "diffuse": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "diffuse_texture": "floor"
+        },
+        {
+            "name": "uvgrid",
+            "diffuse": [
+                1,
+                1,
+                1
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "uvgrid"
+        },
+        {
+            "name": "plastic-sharp",
+            "diffuse": [
+                0.5,
+                0.5,
+                0.7
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.01
+        },
+        {
+            "name": "plastic-rough",
+            "diffuse": [
+                0.5,
+                0.7,
+                0.5
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1
+        },
+        {
+            "name": "metal-sharp",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "roughness": 0
+        },
+        {
+            "name": "metal-rough",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.66,
+                0.45,
+                0.34
+            ],
+            "roughness": 0.1
+        }
+    ],
+    "shapes": [
+        {
+            "name": "floor",
+            "filename": "models/floor.ply",
+            "!!proc": {
+                "type": "floor"
+            }
+        },
+        {
+            "name": "bunny",
+            "filename": "models/stanford-bunny.obj"
+        },
+        {
+            "name": "sphere",
+            "filename": "models/test-sphere.obj",
+            "!!proc": {
+                "type": "sphere",
+                "size": 1.5,
+                "align_bottom": true
+            }
+        }
+    ],
+    "instances": [
+        {
+            "name": "floor",
+            "shape": "floor",
+            "material": "floor"
+        },
+        {
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                -4,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "sphere_plastic-sharp",
+            "shape": "sphere",
+            "material": "plastic-sharp",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                -2,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "bunny_metal-rough",
+            "shape": "bunny",
+            "material": "metal-rough",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "sphere_plastic-rough",
+            "shape": "sphere",
+            "material": "plastic-rough",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                2,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "bunny_metal-sharp",
+            "shape": "bunny",
+            "material": "metal-sharp",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                4,
+                0,
+                0
+            ]
+        }
+    ],
+    "environments": [
+        {
+            "name": "sunsky",
+            "emission": [
+                1,
+                1,
+                1
+            ],
+            "emission_texture": "sunsky"
+        }
+    ]
+}

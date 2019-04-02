@@ -265,16 +265,17 @@ inline void compute_matrix_skinning(vector<vec<T, 3>>& skinned_positions,
 namespace yocto {
 
 // Flip vertex normals
-template<typename T>
+template <typename T>
 inline void flip_vertex_normals(vector<vec<T, 3>>& normals);
 // Flip face orientation
-template<typename T>
+template <typename T>
 inline void flip_triangles_orientation(vector<vec<T, 3>>& triangles);
-template<typename T>
+template <typename T>
 inline void flip_quads_orientation(vector<vec<T, 4>>& quads);
-// Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center. 
-template<typename T>
-inline void align_vertices(vector<vec<T, 3>>& positions, const vec3i& alignment);
+// Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
+template <typename T>
+inline void align_vertices(
+    vector<vec<T, 3>>& positions, const vec3i& alignment);
 
 }  // namespace yocto
 
@@ -930,18 +931,43 @@ inline void compute_matrix_skinning(vector<vec<T, 3>>& skinned_positions,
 namespace yocto {
 
 // Flip vertex normals
-template<typename T>
+template <typename T>
 inline void flip_vertex_normals(vector<vec<T, 3>>& normals) {
-    for(auto& n : normals) n = -n;
+    for (auto& n : normals) n = -n;
 }
 // Flip face orientation
-template<typename T>
+template <typename T>
 inline void flip_triangles_orientation(vector<vec<T, 3>>& triangles) {
-    for(auto& t : triangles) swap(t.y, t.z);
+    for (auto& t : triangles) swap(t.y, t.z);
 }
-template<typename T>
+template <typename T>
 inline void flip_quads_orientation(vector<vec<T, 4>>& quads) {
-    for(auto& q : quads) swap(q.y, q.w);
+    for (auto& q : quads) swap(q.y, q.w);
+}
+
+// Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
+template <typename T>
+inline void align_vertices(
+    vector<vec<T, 3>>& positions, const vec3i& alignment) {
+    auto bounds = invalid_bbox3f;
+    for (auto& p : positions) bounds += p;
+    auto offset = vec<T, 3>{0, 0, 0};
+    switch (alignment.x) {
+        case 1: offset.x = bounds.min.x; break;
+        case 2: offset.x = (bounds.min.x + bounds.max.x) / 2; break;
+        case 3: offset.x = bounds.max.x; break;
+    }
+    switch (alignment.y) {
+        case 1: offset.y = bounds.min.y; break;
+        case 2: offset.y = (bounds.min.y + bounds.max.y) / 2; break;
+        case 3: offset.y = bounds.max.y; break;
+    }
+    switch (alignment.z) {
+        case 1: offset.z = bounds.min.z; break;
+        case 2: offset.z = (bounds.min.z + bounds.max.z) / 2; break;
+        case 3: offset.z = bounds.max.z; break;
+    }
+    for (auto& p : positions) p -= offset;
 }
 
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center. 

@@ -232,6 +232,10 @@ inline bool draw_opengl_widgets_scene_inspector(
         win, "focus distance", value.focus_distance, 0.01f, 1000);
     edited += draw_slider_opengl_widget(
         win, "lens aperture", value.lens_aperture, 0, 5);
+    auto from = value.frame.o,
+         to   = value.frame.o - value.focus_distance * value.frame.z;
+    draw_slider_opengl_widget(win, "!!from", from, -10, 10);
+    draw_slider_opengl_widget(win, "!!to", to, -10, 10);
     return edited;
 }
 

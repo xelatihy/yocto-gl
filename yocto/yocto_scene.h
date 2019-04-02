@@ -304,15 +304,16 @@ bbox3f compute_scene_bounds(const yocto_scene& scene);
 // Compute shape vertex normals
 void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
-// Low level make/update bvh functions.
-void build_shape_bvh(const yocto_scene& scene, bvh_shape& bvh,
-    const bvh_build_options& options = {});
-void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    const bvh_build_options& options = {});
-void refit_shape_bvh(const yocto_scene& scene, bvh_shape& bvh,
+// Low level make/update bvh functions. The make functions take mutable objects
+// since adjustment might be frequired for the bvh to work in shared memory.
+void build_shape_bvh(
+    yocto_shape& shape, bvh_shape& bvh, const bvh_build_options& options = {});
+void build_scene_bvh(
+    yocto_scene& scene, bvh_scene& bvh, const bvh_build_options& options = {});
+void refit_shape_bvh(yocto_scene& scene, bvh_shape& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_build_options& options = {});
-void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
+void refit_scene_bvh(yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_build_options& options = {});
 bool intersect_shape_bvh(const yocto_shape& shape, const bvh_shape& bvh,

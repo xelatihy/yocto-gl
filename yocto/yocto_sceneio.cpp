@@ -1454,6 +1454,13 @@ void save_json_scene(const string& filename, const yocto_scene& scene,
     }
 }
 
+void print_json_camera(const yocto_camera& camera) {
+    auto scene = yocto_scene{};
+    auto js    = json{};
+    to_json(js, camera, scene);
+    printf("%s\n", js.dump(4).c_str());
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -2452,7 +2459,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
         camera.name         = gcam->name ? gcam->name : "";
         camera.orthographic = gcam->type == cgltf_camera_type_orthographic;
         if (camera.orthographic) {
-            throw sceneio_error("orthographic not supported well");
+            // throw sceneio_error("orthographic not supported well");
             auto ortho           = &gcam->orthographic;
             camera.lens_aperture = 0;
             camera.orthographic  = true;
@@ -2779,20 +2786,12 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
             mjs["normalTexture"]["index"] = material.normal_texture;
         js["materials"].push_back(mjs);
     }
-
-    // shape materials
-    auto smat = vector<int>(scene.shapes.size(), -2);
-    for (auto& instance : scene.instances) {
-        if (smat[instance.shape] == -2) {
-            smat[instance.shape] = instance.material;
-        } else if (smat[instance.shape] != instance.material) {
-            throw sceneio_error("gltf supports only same material per shape");
-        }
-    }
-
     // shapes
-    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
-        auto& shape = scene.shapes[shape_id];
+    auto smap = unordered_map<vec2i, int>{};
+    for (auto& instance : scene.instances) {
+        if (smap.find({instance.shape, instance.material}) != smap.end())
+            continue;
+        auto& shape = scene.shapes[instance.shape];
         auto  mjs = json(), bjs = json(), pjs = json();
         auto  bid         = js["buffers"].size();
         mjs["name"]       = shape.name;
@@ -2800,7 +2799,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         bjs["name"]       = shape.name;
         bjs["byteLength"] = 0;
         bjs["uri"]        = replace_extension(shape.filename, ".bin");
-        pjs["material"]   = smat[shape_id];
+        pjs["material"]   = instance.material;
         auto add_accessor = [&js, &bjs, bid](
                                 int count, string type, bool indices = false) {
             auto bytes = count * 4;
@@ -2883,6 +2882,8 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         mjs["primitives"].push_back(pjs);
         js["meshes"].push_back(mjs);
         js["buffers"].push_back(bjs);
+        smap[{instance.shape, instance.material}] = (int)js["meshes"].size() -
+                                                    1;
     }
 
     // nodes
@@ -2894,8 +2895,10 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         njs["rotation"]    = node.rotation;
         njs["scale"]       = node.scale;
         if (node.camera >= 0) njs["camera"] = node.camera;
-        if (node.instance >= 0)
-            njs["mesh"] = scene.instances[node.instance].shape;
+        if (node.instance >= 0) {
+            auto& instance = scene.instances[node.instance];
+            njs["mesh"]    = smap.at({instance.shape, instance.material});
+        }
         if (!node.children.empty()) {
             njs["children"] = json::array();
             for (auto& c : node.children) njs["children"].push_back(c);
@@ -2920,7 +2923,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         for (auto& instance : scene.instances) {
             auto njs      = json();
             njs["name"]   = instance.name;
-            njs["mesh"]   = instance.shape;
+            njs["mesh"]   = smap.at({instance.shape, instance.material});
             njs["matrix"] = mat4f(instance.frame);
             js["nodes"].push_back(njs);
         }
