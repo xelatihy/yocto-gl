@@ -133,7 +133,7 @@ def make_tests():
             {
                 "name": "sunsky",
                 "filename": "textures/sky.hdr",
-                "!!proc": { "type": "sky", "has_sun": true, "width": 2048, "height": 1024, "sun_angle": 0.1 }
+                "!!proc": { "type": "sky", "has_sun": true, "width": 2048, "height": 1024 }
             }
         ],
         "materials": [
@@ -392,7 +392,7 @@ def make_tests():
         "environments": [
             {
                 "name": 'sky',
-                "emission": [1, 1, 1],
+                "emission": [2, 2, 2],
                 "emission_texture": "sky"
             }
         ]
