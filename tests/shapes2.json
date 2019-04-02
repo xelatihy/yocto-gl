@@ -403,9 +403,9 @@
             }
         },
         {
-            "name": "sphere_plastic-sharp",
-            "shape": "sphere",
-            "material": "plastic-sharp",
+            "name": "subdiv-cube_uvgrid",
+            "shape": "subdiv-cube",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,
@@ -422,9 +422,9 @@
             ]
         },
         {
-            "name": "sphere_plastic-rough",
-            "shape": "sphere",
-            "material": "plastic-rough",
+            "name": "subdiv-monkey_plastic-sharp",
+            "shape": "subdiv-monkey",
+            "material": "plastic-sharp",
             "frame": [
                 1,
                 0,
@@ -441,9 +441,9 @@
             ]
         },
         {
-            "name": "sphere_matte",
-            "shape": "sphere",
-            "material": "matte",
+            "name": "subdiv-cube_uvgrid",
+            "shape": "subdiv-cube",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,
@@ -460,9 +460,9 @@
             ]
         },
         {
-            "name": "sphere_metal-sharp",
-            "shape": "sphere",
-            "material": "metal-sharp",
+            "name": "subdiv-cube_plastic-sharp",
+            "shape": "subdiv-cube",
+            "material": "plastic-sharp",
             "frame": [
                 1,
                 0,
@@ -479,9 +479,9 @@
             ]
         },
         {
-            "name": "sphere_metal-rough",
-            "shape": "sphere",
-            "material": "metal-rough",
+            "name": "subdiv-cube_uvgrid",
+            "shape": "subdiv-cube",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,

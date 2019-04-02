@@ -313,35 +313,6 @@
             }
         },
         {
-            "name": "subdiv-cube",
-            "filename": "models/test-subdiv-cube.obj",
-            "subdivision_level": 4,
-            "catmull_clark": true,
-            "compute_normals": true,
-            "preserve_facevarying": true,
-            "!!proc": {
-                "type": "cube_facevarying",
-                "size": [
-                    1.5,
-                    1.5,
-                    1.5
-                ],
-                "align_bottom": true
-            }
-        },
-        {
-            "name": "subdiv-monkey",
-            "filename": "models/test-subdiv-monkey.obj",
-            "subdivision_level": 2,
-            "catmull_clark": true,
-            "compute_normals": true,
-            "!!proc": {
-                "type": "suzanne",
-                "size": 1.5,
-                "align_bottom": true
-            }
-        },
-        {
             "name": "arealight1",
             "!!proc": {
                 "type": "quad",
@@ -403,9 +374,9 @@
             }
         },
         {
-            "name": "sphere_plastic-sharp",
+            "name": "sphere_uvgrid",
             "shape": "sphere",
-            "material": "plastic-sharp",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,
@@ -422,9 +393,9 @@
             ]
         },
         {
-            "name": "sphere_plastic-rough",
-            "shape": "sphere",
-            "material": "plastic-rough",
+            "name": "sphere-flipcap_uvgrid",
+            "shape": "sphere-flipcap",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,
@@ -441,9 +412,9 @@
             ]
         },
         {
-            "name": "sphere_matte",
-            "shape": "sphere",
-            "material": "matte",
+            "name": "disk_uvgrid",
+            "shape": "disk",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,
@@ -460,9 +431,9 @@
             ]
         },
         {
-            "name": "sphere_metal-sharp",
-            "shape": "sphere",
-            "material": "metal-sharp",
+            "name": "cylinder_uvgrid",
+            "shape": "cylinder",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,
@@ -479,9 +450,9 @@
             ]
         },
         {
-            "name": "sphere_metal-rough",
-            "shape": "sphere",
-            "material": "metal-rough",
+            "name": "cube_uvgrid",
+            "shape": "cube",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,

@@ -403,9 +403,9 @@
             }
         },
         {
-            "name": "sphere_plastic-sharp",
+            "name": "sphere_plastic-sharp-bumped",
             "shape": "sphere",
-            "material": "plastic-sharp",
+            "material": "plastic-sharp-bumped",
             "frame": [
                 1,
                 0,
@@ -422,9 +422,9 @@
             ]
         },
         {
-            "name": "sphere_plastic-rough",
+            "name": "sphere_plastic-rough-bumped",
             "shape": "sphere",
-            "material": "plastic-rough",
+            "material": "plastic-rough-bumped",
             "frame": [
                 1,
                 0,
@@ -441,9 +441,9 @@
             ]
         },
         {
-            "name": "sphere_matte",
+            "name": "sphere_matte-bumped",
             "shape": "sphere",
-            "material": "matte",
+            "material": "matte-bumped",
             "frame": [
                 1,
                 0,
@@ -460,9 +460,9 @@
             ]
         },
         {
-            "name": "sphere_metal-sharp",
+            "name": "sphere_metal-sharp-bumped",
             "shape": "sphere",
-            "material": "metal-sharp",
+            "material": "metal-sharp-bumped",
             "frame": [
                 1,
                 0,
@@ -479,9 +479,9 @@
             ]
         },
         {
-            "name": "sphere_metal-rough",
+            "name": "sphere_metal-rough-bumped",
             "shape": "sphere",
-            "material": "metal-rough",
+            "material": "metal-rough-bumped",
             "frame": [
                 1,
                 0,

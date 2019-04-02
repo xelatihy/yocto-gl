@@ -164,13 +164,45 @@ def make_tests():
             },
             {
                 "name": "sphere",
-                "filename": "models/obj2.ply",
+                "filename": "models/test-sphere.obj",
                 "!!proc": { "type": "sphere", "size": 1.5, "align_bottom": true }
             },
             {
-                "name": "test-cube",
-                "filename": "models/obj3.ply",
+                "name": "cube",
+                "filename": "models/test-cube.obj",
                 "!!proc": { "type": "cube_rounded", "size": [1.5, 1.5, 1.5], "align_bottom": true }
+            },
+            {
+                "name": "disk",
+                "filename": "models/test-disk.obj",
+                "!!proc": { "type": "disk", "size": 1.5, "align_bottom": true }
+            },
+            {
+                "name": "sphere-flipcap",
+                "filename": "models/test-flipcap.obj",
+                "!!proc": { "type": "uvsphere_flipcap", "size": 1.5, "align_bottom": true }
+            },
+            {
+                "name": "cylinder",
+                "filename": "models/test-cylinder.obj",
+                "!!proc": { "type": "uvcylinder_rounded", "size": [1.5, 1.5, 1.5], "align_bottom": true }
+            },
+            {
+                "name": "subdiv-cube",
+                "filename": "models/test-subdiv-cube.obj",
+                "subdivision_level": 4,
+                "catmull_clark": true,
+                "compute_normals": true,
+                "preserve_facevarying": true,
+                "!!proc": { "type": "cube_facevarying", "size": [1.5, 1.5, 1.5], "align_bottom": true }
+            },
+            {
+                "name": "subdiv-monkey",
+                "filename": "models/test-subdiv-monkey.obj",
+                "subdivision_level": 2,
+                "catmull_clark": true,
+                "compute_normals": true,
+                "!!proc": { "type": "suzanne", "size": 1.5, "align_bottom": true }
             },
             {
                 "name": "arealight1",
@@ -226,5 +258,8 @@ def make_tests():
     make_test('simple', ['bunny'], ['uvgrid'], area_lights)
     make_test('materials1', ['sphere'], ['plastic-sharp', 'plastic-rough', 'matte', 'metal-sharp', 'metal-rough'], area_lights)
     make_test('materials2', ['sphere'], ['glass-sharp', 'glass-rough', 'transparent', 'thinglass-sharp', 'thinglass-rough'], area_lights)
+    make_test('materials3', ['sphere'], ['plastic-sharp-bumped', 'plastic-rough-bumped', 'matte-bumped', 'metal-sharp-bumped', 'metal-rough-bumped'], area_lights)
+    make_test('shapes1', ['sphere', "sphere-flipcap", "disk", "cylinder", "cube"], ['uvgrid'], area_lights)
+    make_test('shapes2', ['subdiv-cube', "subdiv-monkey", "subdiv-cube", "subdiv-cube", "subdiv-cube"], ['uvgrid', 'plastic-sharp'], area_lights)
 
 cli()

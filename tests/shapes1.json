@@ -403,9 +403,9 @@
             }
         },
         {
-            "name": "sphere_plastic-sharp",
+            "name": "sphere_uvgrid",
             "shape": "sphere",
-            "material": "plastic-sharp",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,
@@ -422,9 +422,9 @@
             ]
         },
         {
-            "name": "sphere_plastic-rough",
-            "shape": "sphere",
-            "material": "plastic-rough",
+            "name": "sphere-flipcap_uvgrid",
+            "shape": "sphere-flipcap",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,
@@ -441,9 +441,9 @@
             ]
         },
         {
-            "name": "sphere_matte",
-            "shape": "sphere",
-            "material": "matte",
+            "name": "disk_uvgrid",
+            "shape": "disk",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,
@@ -460,9 +460,9 @@
             ]
         },
         {
-            "name": "sphere_metal-sharp",
-            "shape": "sphere",
-            "material": "metal-sharp",
+            "name": "cylinder_uvgrid",
+            "shape": "cylinder",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,
@@ -479,9 +479,9 @@
             ]
         },
         {
-            "name": "sphere_metal-rough",
-            "shape": "sphere",
-            "material": "metal-rough",
+            "name": "cube_uvgrid",
+            "shape": "cube",
+            "material": "uvgrid",
             "frame": [
                 1,
                 0,

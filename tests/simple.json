@@ -261,7 +261,7 @@
         },
         {
             "name": "sphere",
-            "filename": "models/obj2.ply",
+            "filename": "models/test-sphere.obj",
             "!!proc": {
                 "type": "sphere",
                 "size": 1.5,
@@ -269,8 +269,8 @@
             }
         },
         {
-            "name": "test-cube",
-            "filename": "models/obj3.ply",
+            "name": "cube",
+            "filename": "models/test-cube.obj",
             "!!proc": {
                 "type": "cube_rounded",
                 "size": [
@@ -278,6 +278,66 @@
                     1.5,
                     1.5
                 ],
+                "align_bottom": true
+            }
+        },
+        {
+            "name": "disk",
+            "filename": "models/test-disk.obj",
+            "!!proc": {
+                "type": "disk",
+                "size": 1.5,
+                "align_bottom": true
+            }
+        },
+        {
+            "name": "sphere-flipcap",
+            "filename": "models/test-flipcap.obj",
+            "!!proc": {
+                "type": "uvsphere_flipcap",
+                "size": 1.5,
+                "align_bottom": true
+            }
+        },
+        {
+            "name": "cylinder",
+            "filename": "models/test-cylinder.obj",
+            "!!proc": {
+                "type": "uvcylinder_rounded",
+                "size": [
+                    1.5,
+                    1.5,
+                    1.5
+                ],
+                "align_bottom": true
+            }
+        },
+        {
+            "name": "subdiv-cube",
+            "filename": "models/test-subdiv-cube.obj",
+            "subdivision_level": 4,
+            "catmull_clark": true,
+            "compute_normals": true,
+            "preserve_facevarying": true,
+            "!!proc": {
+                "type": "cube_facevarying",
+                "size": [
+                    1.5,
+                    1.5,
+                    1.5
+                ],
+                "align_bottom": true
+            }
+        },
+        {
+            "name": "subdiv-monkey",
+            "filename": "models/test-subdiv-monkey.obj",
+            "subdivision_level": 2,
+            "catmull_clark": true,
+            "compute_normals": true,
+            "!!proc": {
+                "type": "suzanne",
+                "size": 1.5,
                 "align_bottom": true
             }
         },
