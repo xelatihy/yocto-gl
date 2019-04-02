@@ -1,0 +1,14 @@
+{
+    "type": "montage",
+    "images": [
+        { "type": "grid" },
+        { "type": "uvgrid" },
+        { "type": "checker" },
+        { "type": "gammaramp" },
+        { "type": "bump" },
+        { "type": "bump", "bump_to_normal": true },
+        { "type": "noise" },
+        { "type": "fbm" },
+        { "type": "blackbodyramp" }
+    ]
+}
