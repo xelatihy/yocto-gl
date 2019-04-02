@@ -44,7 +44,56 @@ def make_tests():
                 "film_width": 0.036,
                 "film_height": 0.015,
                 "!!proc": { "from": [-7.5, 4, 9], "to": [-0.75, 0.5, -0.5] }
-                # "!!proc": { "from": [-3, 5, 10], "to": [0, 0, 0] }
+            },
+            {
+                "name": "front",
+                "focal_length": 0.05,
+                "lens_aperture": 0.0,
+                "film_width": 0.036,
+                "film_height": 0.012,
+                "!!proc": { "from": [0, 5.75, 14], "to": [0, 0.5, 0] }
+            },
+            {
+                "name": "back",
+                "focal_length": 0.05,
+                "lens_aperture": 0.0,
+                "film_width": 0.036,
+                "film_height": 0.012,
+                "!!proc": { "from": [0, 5.75, -14], "to": [0, 0.5, 0] }
+            },
+            {
+                "name": "perspective-sharp",
+                "focal_length": 0.05,
+                "lens_aperture": 0.0,
+                "film_width": 0.036,
+                "film_height": 0.015,
+                "!!proc": { "from": [-7.5, 4, 9], "to": [-0.75, 0.5, -0.5] }
+            },
+            {
+                "name": "perspective-dof",
+                "focal_length": 0.05,
+                "lens_aperture": 0.25,
+                "film_width": 0.036,
+                "film_height": 0.015,
+                "!!proc": { "from": [-7.5, 4, 9], "to": [-0.75, 0.5, -0.5] }
+            },
+            {
+                "name": "orthographic-sharp",
+                "focal_length": 0.005,
+                "lens_aperture": 0.0,
+                "film_width": 0.036,
+                "film_height": 0.015,
+                "orthographic": true,
+                "!!proc": { "from": [-7.5, 4, 9], "to": [-0.75, 0.5, -0.5] }
+            },
+            {
+                "name": "orthographic-dof",
+                "focal_length": 0.005,
+                "lens_aperture": 0.2,
+                "film_width": 0.036,
+                "film_height": 0.015,
+                "orthographic": true,
+                "!!proc": { "from": [-7.5, 4, 9], "to": [-0.75, 0.5, -0.5] }
             },
         ],
         "textures": [
