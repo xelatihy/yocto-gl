@@ -650,7 +650,7 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal_,
             brdf.roughness, normal, halfway);
         auto G = evaluate_microfacet_shadowing(
             brdf.roughness, normal, halfway, outgoing, ir);
-        brdf_cosine += F * D * G /
+        brdf_cosine += (1 - F) * D * G /
                        fabs(4 * dot(normal, outgoing) * dot(normal, incoming));
     }
 
@@ -733,13 +733,13 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal_,
 
     // sample according to diffuse
     if (brdf.diffuse != zero3f && rnl < weights.x) {
-        return sample_hemisphere_direction(outgoing_up ? normal : -normal, rn);
+        return sample_hemisphere_direction(normal, rn);
     }
 
     // sample according to specular GGX
     else if (brdf.specular != zero3f && rnl < weights.x + weights.y) {
         auto halfway = sample_microfacet_distribution(
-            brdf.roughness, outgoing_up ? normal : -normal, rn);
+            brdf.roughness, normal, rn);
         return reflect(outgoing, halfway);
     }
 
@@ -784,7 +784,7 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
 
     // sample according to specular mirror
     if (brdf.specular != zero3f && rnl < weights.x + weights.y) {
-        return reflect(outgoing, outgoing_up ? normal : -normal);
+        return reflect(outgoing, normal);
     }
     // sample according to transmission
     else if (brdf.transmission != zero3f && !brdf.refract &&
@@ -845,7 +845,7 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
         auto d       = sample_microfacet_distribution_pdf(
             brdf.roughness, normal, halfway);
         auto jacobian = 0.25f / fabs(dot(outgoing, halfway));
-        pdf += weights.y * d * jacobian;
+        pdf += weights.z * d * jacobian;
     }
 
     // refraction through rough surface
