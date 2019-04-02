@@ -1,0 +1,372 @@
+{
+    "name": "simple-ml",
+    "cameras": [
+        {
+            "name": "cam",
+            "focal_length": 0.05,
+            "lens_aperture": 0.0,
+            "film_width": 0.0576,
+            "film_height": 0.024,
+            "!!proc": {
+                "from": [
+                    -3,
+                    5,
+                    10
+                ],
+                "to": [
+                    0,
+                    0,
+                    0
+                ]
+            }
+        }
+    ],
+    "textures": [
+        {
+            "name": "floor",
+            "filename": "textures/floor.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "grid",
+                "border": true
+            }
+        },
+        {
+            "name": "uvgrid",
+            "filename": "textures/uvgrid.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "uvgrid"
+            }
+        }
+    ],
+    "materials": [
+        {
+            "name": "floor",
+            "diffuse": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "diffuse_texture": "floor"
+        },
+        {
+            "name": "uvgrid",
+            "diffuse": [
+                1,
+                1,
+                1
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "uvgrid"
+        },
+        {
+            "name": "arealight1",
+            "emission": [
+                20,
+                20,
+                20
+            ]
+        },
+        {
+            "name": "arealight2",
+            "emission": [
+                20,
+                20,
+                20
+            ]
+        }
+    ],
+    "shapes": [
+        {
+            "name": "floor",
+            "filename": "models/floor.ply",
+            "!!proc": {
+                "type": "floor"
+            }
+        },
+        {
+            "name": "bunny",
+            "filename": "models/stanford-bunny.obj"
+        },
+        {
+            "name": "test-sphere",
+            "filename": "models/obj2.ply",
+            "!!proc": {
+                "type": "sphere",
+                "size": 1.5,
+                "align_bottom": true
+            }
+        },
+        {
+            "name": "test-cube",
+            "filename": "models/obj3.ply",
+            "!!proc": {
+                "type": "cube_rounded",
+                "size": [
+                    1.5,
+                    1.5,
+                    1.5
+                ],
+                "align_bottom": true
+            }
+        },
+        {
+            "name": "arealight1",
+            "!!proc": {
+                "type": "quad",
+                "size": [
+                    4,
+                    4
+                ]
+            }
+        },
+        {
+            "name": "arealight2",
+            "!!proc": {
+                "type": "quad",
+                "size": [
+                    4,
+                    4
+                ]
+            }
+        }
+    ],
+    "instances": [
+        {
+            "name": "floor",
+            "shape": "floor",
+            "material": "floor"
+        },
+        {
+            "name": "arealight1",
+            "shape": "arealight1",
+            "material": "arealight1",
+            "!!proc": {
+                "from": [
+                    -4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "arealight2",
+            "shape": "arealight2",
+            "material": "arealight2",
+            "!!proc": {
+                "from": [
+                    4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                -4,
+                0,
+                2
+            ]
+        },
+        {
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                -2,
+                0,
+                2
+            ]
+        },
+        {
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                2
+            ]
+        },
+        {
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                2,
+                0,
+                2
+            ]
+        },
+        {
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                4,
+                0,
+                2
+            ]
+        },
+        {
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                -4,
+                0,
+                -2
+            ]
+        },
+        {
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                -2,
+                0,
+                -2
+            ]
+        },
+        {
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                -2
+            ]
+        },
+        {
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                2,
+                0,
+                -2
+            ]
+        },
+        {
+            "name": "bunny_uvgrid",
+            "shape": "bunny",
+            "material": "uvgrid",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                4,
+                0,
+                -2
+            ]
+        }
+    ],
+    "environments": []
+}
