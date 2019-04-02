@@ -33,7 +33,7 @@ def format():
 @cli.command()
 def make_tests():
     true = True   # to cut and paste from json
-    flase = False # to cut and paste from json
+    false = False # to cut and paste from json
     default_scene = {
         "name": "simple-ml",
         "cameras": [
@@ -75,6 +75,75 @@ def make_tests():
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "roughness": 0.1,
                 "diffuse_texture": "uvgrid"
+            },
+            {
+                "name": "matte",
+                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "specular": [ 0, 0, 0 ],
+                "roughness": 1
+            },
+            {
+                "name": "plastic-sharp",
+                "diffuse": [ 0.5, 0.5, 0.7 ],
+                "specular": [ 0.04, 0.04, 0.04 ],
+                "roughness": 0.01
+            },
+            {
+                "name": "plastic-rough",
+                "diffuse": [ 0.5, 0.7, 0.5 ],
+                "specular": [ 0.04, 0.04, 0.04 ],
+                "roughness": 0.1
+            },
+            {
+                "name": "metal-sharp",
+                "diffuse": [ 0, 0, 0 ],
+                "specular": [ 0.7, 0.7, 0.7 ],
+                "roughness": 0
+            },
+            {
+                "name": "metal-rough",
+                "diffuse": [ 0, 0, 0 ],
+                "specular": [ 0.66, 0.45, 0.34 ],
+                "roughness": 0.1
+            },
+            {
+                "name": "transparent",
+                "diffuse": [ 0.7, 0.5, 0.5 ],
+                "specular": [ 0, 0, 0 ],
+                "roughness": 1,
+                "opacity": 0.2
+            },
+            {
+                "name": "glass-sharp",
+                "diffuse": [ 0, 0, 0 ],
+                "specular": [ 0.04, 0.04, 0.04 ],
+                "transmission": [ 1, 1, 1 ],
+                "roughness": 0,
+                "refract": true
+            },
+            {
+                "name": "glass-rough",
+                "diffuse": [ 0, 0, 0 ],
+                "specular": [ 0.04, 0.04, 0.04 ],
+                "transmission": [ 1, 0.7, 0.7 ],
+                "roughness": 0.1,
+                "refract": true
+            },
+            {
+                "name": "thinglass-sharp",
+                "diffuse": [ 0, 0, 0 ],
+                "specular": [ 0.04, 0.04, 0.04 ],
+                "transmission": [ 1, 1, 1 ],
+                "roughness": 0,
+                "refract": false
+            },
+            {
+                "name": "thinglass-rough",
+                "diffuse": [ 0, 0, 0 ],
+                "specular": [ 0.04, 0.04, 0.04 ],
+                "transmission": [ 1, 0.7, 0.7 ],
+                "roughness": 0.05,
+                "refract": false
             },
             {
                 "name": "arealight1",
@@ -141,9 +210,10 @@ def make_tests():
         "environments": []
     }
     def make_test(name, shapes, materials, lights):
-        scene = default_scene.copy()
-        scene['instances'] += lights['instances']
-        scene['environments'] += lights['environments']
+        import copy
+        scene = copy.deepcopy(default_scene)
+        scene['instances'] += copy.deepcopy(lights['instances'])
+        scene['environments'] += copy.deepcopy(lights['environments'])
         posx = [ -4, -2, 0, 2, 4, -4, -2, 0, 2, 4 ]
         posy = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
         posz = [ 2, 2, 2, 2, 2, -2, -2, -2, -2, -2 ]
@@ -158,5 +228,6 @@ def make_tests():
             } ]
         with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
     make_test('simple', ['bunny'], ['uvgrid'], area_lights)
+    make_test('materials', ['test-sphere'], ['plastic-sharp', 'plastic-rough', 'matte', 'metal-sharp', 'metal-rough', 'thinglass-sharp', 'thinglass-rough', 'transparent', 'glass-sharp', 'glass-rough'], area_lights)
 
 cli()
