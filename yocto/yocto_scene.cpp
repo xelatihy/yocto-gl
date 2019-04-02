@@ -429,7 +429,8 @@ void build_shape_bvh(
         shape.positions.reserve(shape.positions.size() + 1);
     }
 #endif
-    if ((!shape.lines.empty() || !shape.points.empty()) && shape.radius.empty()) {
+    if ((!shape.lines.empty() || !shape.points.empty()) &&
+        shape.radius.empty()) {
         shape.radius.assign(shape.positions.size(), 0.001f);
     }
     build_shape_bvh(bvh, shape.points, shape.lines, shape.triangles,

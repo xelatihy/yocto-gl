@@ -1456,7 +1456,7 @@ void save_json_scene(const string& filename, const yocto_scene& scene,
 
 void print_json_camera(const yocto_camera& camera) {
     auto scene = yocto_scene{};
-    auto js = json{};
+    auto js    = json{};
     to_json(js, camera, scene);
     printf("%s\n", js.dump(4).c_str());
 }
@@ -2789,7 +2789,8 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
     // shapes
     auto smap = unordered_map<vec2i, int>{};
     for (auto& instance : scene.instances) {
-        if(smap.find({instance.shape, instance.material}) != smap.end()) continue;
+        if (smap.find({instance.shape, instance.material}) != smap.end())
+            continue;
         auto& shape = scene.shapes[instance.shape];
         auto  mjs = json(), bjs = json(), pjs = json();
         auto  bid         = js["buffers"].size();
@@ -2881,7 +2882,8 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         mjs["primitives"].push_back(pjs);
         js["meshes"].push_back(mjs);
         js["buffers"].push_back(bjs);
-        smap[{instance.shape, instance.material}] = (int)js["meshes"].size() - 1;
+        smap[{instance.shape, instance.material}] = (int)js["meshes"].size() -
+                                                    1;
     }
 
     // nodes
@@ -2895,7 +2897,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         if (node.camera >= 0) njs["camera"] = node.camera;
         if (node.instance >= 0) {
             auto& instance = scene.instances[node.instance];
-            njs["mesh"] = smap.at({instance.shape, instance.material});
+            njs["mesh"]    = smap.at({instance.shape, instance.material});
         }
         if (!node.children.empty()) {
             njs["children"] = json::array();
@@ -2921,7 +2923,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         for (auto& instance : scene.instances) {
             auto njs      = json();
             njs["name"]   = instance.name;
-            njs["mesh"] = smap.at({instance.shape, instance.material});
+            njs["mesh"]   = smap.at({instance.shape, instance.material});
             njs["matrix"] = mat4f(instance.frame);
             js["nodes"].push_back(njs);
         }

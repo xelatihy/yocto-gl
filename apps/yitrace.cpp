@@ -42,7 +42,7 @@ using namespace yocto;
 namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
 void print_json_camera(const yocto_camera& camera);
-};
+};  // namespace yocto
 
 void exit_error(const string& msg) {
     printf("%s\n", msg.c_str());

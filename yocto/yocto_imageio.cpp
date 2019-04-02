@@ -489,17 +489,17 @@ void apply_json_procedural(const json& js, image<vec4f>& img) {
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "montage") {
         auto sub_imgs = vector<image<vec4f>>(js.at("images").size());
-        for(auto i = 0; i < sub_imgs.size(); i ++) {
+        for (auto i = 0; i < sub_imgs.size(); i++) {
             apply_json_procedural(js.at("images").at(i), sub_imgs.at(i));
         }
         auto size = zero2i;
-        for(auto& sub_img : sub_imgs) {
+        for (auto& sub_img : sub_imgs) {
             size.x += sub_img.size().x;
             size.y = max(size.y, sub_img.size().y);
         }
         img.resize(size);
         auto pos = 0;
-        for(auto& sub_img : sub_imgs) {
+        for (auto& sub_img : sub_imgs) {
             set_image_region(img, sub_img, {pos, 0});
             pos += sub_img.size().x;
         }
