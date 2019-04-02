@@ -996,6 +996,9 @@ void from_json_procedural(
         for (auto& p : value.positions) p = {p.x, p.z, p.y};
         for (auto& n : value.normals) n = {n.x, n.z, n.y};
     }
+    if (js.value("align_bottom", false)) {
+        align_vertices(value.positions, {0, 1, 0});
+    }
 }
 
 // Serialize struct
