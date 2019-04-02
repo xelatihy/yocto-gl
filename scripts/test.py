@@ -325,6 +325,11 @@ def make_tests():
                 }
             },
             {
+                "name": "hairballi",
+                "filename": "models/test-hairballi.ply",
+                "!!proc": { "type": "sphere", "size": 0.7 }
+            },
+            {
                 "name": "arealight1",
                 "!!proc": { "type": "quad", "size": [ 4, 4 ] }
             },
@@ -359,20 +364,28 @@ def make_tests():
         ],
         "environments": []
     }
-    def make_test(name, shapes, materials, lights):
+    def make_test(name, shapes, materials, lights, xoffsets=[ -4, -2, 0, 2, 4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1]):
         import copy
         scene = copy.deepcopy(default_scene)
         scene['instances'] += copy.deepcopy(lights['instances'])
         scene['environments'] += copy.deepcopy(lights['environments'])
-        posx = [ -4, -2, 0, 2, 4 ]
-        for i in range(len(posx)):
+        num = max(len(xoffsets), len(shapes), len(materials))
+        for i in range(num):
             shape = shapes[i % len(shapes)]
             material = materials[i % len(materials)]
+            xoffset = xoffsets[i % len(xoffsets)]
+            yoffset = yoffsets[i % len(yoffsets)]
+            zoffset = zoffsets[i % len(zoffsets)]
+            xscale = xscales[i % len(xscales)]
+            yscale = yscales[i % len(yscales)]
+            zscale = zscales[i % len(zscales)]
+            if not shape: continue
+            if not material: continue
             scene['instances'] += [ {
                 'name': f'{shape}_{material}',
                 'shape': shape,
                 'material': material,
-                'frame': [ 1, 0, 0, 0, 1, 0, 0, 0, 1, posx[i], 0, 0 ]
+                'frame': [ xscale, 0, 0, 0, yscale, 0, 0, 0, zscale, xoffset, yoffset, zoffset ]
             } ]
         with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
     make_test('simple', ['bunny'], ['uvgrid'], area_lights)
@@ -381,6 +394,7 @@ def make_tests():
     make_test('materials3', ['sphere', 'sphere', 'sphere-displaced', 'sphere', 'sphere'], ['plastic-sharp-bumped', 'plastic-sharp-bumped', 'matte-displaced', 'metal-sharp-bumped', 'metal-sharp-bumped'], area_lights)
     make_test('shapes1', ['sphere', "sphere-flipcap", "disk", "cylinder", "cube"], ['uvgrid'], area_lights)
     make_test('shapes2', ['subdiv-cube', "subdiv-monkey", "teapot", "bunny", "subdiv-cube"], ['uvgrid', 'plastic-sharp'], area_lights)
-    make_test('shapes3', ['sphere', "hairball1", "hairball2", "hairball3", "sphere"], ['matte', 'hair', 'hair', 'hair', 'matte'], area_lights)
+    make_test('shapes3', ['sphere', "hairball1", "hairball2", "hairball3", "sphere", "", "hairballi", "hairballi", "hairballi", ""], ['matte', 'hair', 'hair', 'hair', 'matte'], area_lights,
+        yoffsets=[ 0, 0.75, 0.75, 0.75, 0 ], xscales=[ 0.5, 1, 1, 1, 0.5 ])
 
 cli()

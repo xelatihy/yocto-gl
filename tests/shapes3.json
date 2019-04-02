@@ -586,6 +586,14 @@
             }
         },
         {
+            "name": "hairballi",
+            "filename": "models/test-hairballi.ply",
+            "!!proc": {
+                "type": "sphere",
+                "size": 0.7
+            }
+        },
+        {
             "name": "arealight1",
             "!!proc": {
                 "type": "quad",
@@ -651,7 +659,7 @@
             "shape": "sphere",
             "material": "matte",
             "frame": [
-                1,
+                0.5,
                 0,
                 0,
                 0,
@@ -680,7 +688,7 @@
                 0,
                 1,
                 -2,
-                0,
+                0.75,
                 0
             ]
         },
@@ -699,7 +707,7 @@
                 0,
                 1,
                 0,
-                0,
+                0.75,
                 0
             ]
         },
@@ -718,7 +726,7 @@
                 0,
                 1,
                 2,
-                0,
+                0.75,
                 0
             ]
         },
@@ -727,7 +735,7 @@
             "shape": "sphere",
             "material": "matte",
             "frame": [
-                1,
+                0.5,
                 0,
                 0,
                 0,
@@ -738,6 +746,63 @@
                 1,
                 4,
                 0,
+                0
+            ]
+        },
+        {
+            "name": "hairballi_hair",
+            "shape": "hairballi",
+            "material": "hair",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                -2,
+                0.75,
+                0
+            ]
+        },
+        {
+            "name": "hairballi_hair",
+            "shape": "hairballi",
+            "material": "hair",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0.75,
+                0
+            ]
+        },
+        {
+            "name": "hairballi_hair",
+            "shape": "hairballi",
+            "material": "hair",
+            "frame": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                2,
+                0.75,
                 0
             ]
         }

@@ -586,6 +586,14 @@
             }
         },
         {
+            "name": "hairballi",
+            "filename": "models/test-hairballi.ply",
+            "!!proc": {
+                "type": "sphere",
+                "size": 0.7
+            }
+        },
+        {
             "name": "arealight1",
             "!!proc": {
                 "type": "quad",
