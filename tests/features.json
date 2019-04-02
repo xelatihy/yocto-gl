@@ -674,9 +674,9 @@
             ]
         },
         {
-            "name": "bunny_uvgrid",
-            "shape": "bunny",
-            "material": "uvgrid",
+            "name": "sphere_plastic-sharp",
+            "shape": "sphere",
+            "material": "plastic-sharp",
             "frame": [
                 1,
                 0,
@@ -693,9 +693,9 @@
             ]
         },
         {
-            "name": "bunny_uvgrid",
+            "name": "bunny_metal-rough",
             "shape": "bunny",
-            "material": "uvgrid",
+            "material": "metal-rough",
             "frame": [
                 1,
                 0,
@@ -712,9 +712,9 @@
             ]
         },
         {
-            "name": "bunny_uvgrid",
-            "shape": "bunny",
-            "material": "uvgrid",
+            "name": "sphere_plastic-rough",
+            "shape": "sphere",
+            "material": "plastic-rough",
             "frame": [
                 1,
                 0,
@@ -731,9 +731,9 @@
             ]
         },
         {
-            "name": "bunny_uvgrid",
+            "name": "bunny_metal-sharp",
             "shape": "bunny",
-            "material": "uvgrid",
+            "material": "metal-sharp",
             "frame": [
                 1,
                 0,

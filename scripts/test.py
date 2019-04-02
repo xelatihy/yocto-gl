@@ -388,7 +388,7 @@ def make_tests():
                 'frame': [ xscale, 0, 0, 0, yscale, 0, 0, 0, zscale, xoffset, yoffset, zoffset ]
             } ]
         with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
-    make_test('simple', ['bunny'], ['uvgrid'], area_lights)
+    make_test('features', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ['uvgrid', 'plastic-sharp', 'metal-rough', 'plastic-rough', 'metal-sharp'], area_lights)
     make_test('materials1', ['sphere'], ['plastic-sharp', 'plastic-rough', 'matte', 'metal-sharp', 'metal-rough'], area_lights)
     make_test('materials2', ['sphere'], ['glass-sharp', 'glass-rough', 'transparent', 'thinglass-sharp', 'thinglass-rough'], area_lights)
     make_test('materials3', ['sphere', 'sphere', 'sphere-displaced', 'sphere', 'sphere'], ['plastic-sharp-bumped', 'plastic-sharp-bumped', 'matte-displaced', 'metal-sharp-bumped', 'metal-sharp-bumped'], area_lights)
