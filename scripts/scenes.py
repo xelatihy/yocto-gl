@@ -60,10 +60,10 @@ def yview(directory='mcguire',scene='*',format='obj',mode='path'):
 @click.option('--mode','-m', default='path')
 def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
     modes = {
-        'path': '-s 64 -r 360',
-        'embree': '-s 256 -r 720 --embree',
-        'embree-compact': '-s 256 -r 720 --embree --embree-shared',
-        'eyelight': '-s 16 -r 720 -t eyelight'
+        'path': '--all-cameras -s 64 -r 360',
+        'embree': '--all-cameras -s 256 -r 720 --embree',
+        'embree-compact': '--all-cameras -s 256 -r 720 --embree --embree-shared',
+        'eyelight': '--all-cameras -s 16 -r 720 -t eyelight'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
@@ -76,11 +76,12 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
             os.system(f'mkdir -p {directory}/images-{format}')
             imagename = filename.replace(f'.{format}',f'.{mode}.png')
             imagename = imagename.replace(f'{dirname}',f'{directory}/images-{format}')
-            imagename_indir = filename.replace(f'.{format}',f'.{mode}.png')
+            imagenames = filename.replace(f'.{format}',f'.{mode}.cam*.png')
+            imagenames = imagenames.replace(f'{dirname}',f'{directory}/images-{format}')
             cmd = f'../yocto-gl/bin/ytrace -o {imagename} {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
-            os.system(f'cp {imagename} {imagename_indir}')
+            os.system(f'cp {imagenames} {dirname}')
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')

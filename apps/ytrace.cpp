@@ -47,6 +47,7 @@ int main(int argc, char* argv[]) {
     auto load_options  = load_scene_options{};
     auto bvh_options   = bvh_build_options{};
     auto trace_options = trace_image_options{};
+    auto all_cameras   = false;
     auto no_parallel   = false;
     auto save_batch    = false;
     auto exposure      = 0.0f;
@@ -73,6 +74,8 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = CLI::App{"Offline path tracing"};
     parser.add_option("--camera", trace_options.camera_id, "Camera index.");
+    parser.add_flag(
+        "--all-cameras,!--no-all-cameras", all_cameras, "Render all cameras.");
     parser.add_option("--hres,-R", trace_options.image_size.x,
         "Image horizontal resolution.");
     parser.add_option(
@@ -130,16 +133,16 @@ int main(int argc, char* argv[]) {
     }
 
     // scene loading
-    printf("loading scene ...\n");
-    auto start_load = get_time();
-    auto scene      = yocto_scene{};
+    auto scene = yocto_scene{};
     try {
+        printf("loading scene ...\n");
+        auto start_load = get_time();
         load_scene(filename, scene, load_options);
+        printf("loading scene [%s]\n",
+            format_duration(get_time() - start_load).c_str());
     } catch (const std::exception& e) {
         exit_error(e.what());
     }
-    printf("loading scene [%s]\n",
-        format_duration(get_time() - start_load).c_str());
 
     // tesselate
     printf("tesselating scene ...\n");
@@ -179,48 +182,72 @@ int main(int argc, char* argv[]) {
         trace_options.sampler_type = trace_sampler_type::eyelight;
     }
 
-    // allocate buffers
-    auto image_size = get_camera_image_size(
-        scene.cameras[trace_options.camera_id], trace_options.image_size);
-    auto render = image{image_size, zero4f};
-    auto state  = trace_state{};
-    init_trace_state(state, image_size, trace_options.random_seed);
+    // cameras to render from
+    auto selected_cameras = vector<int>{};
+    if (all_cameras) {
+        for (auto i = 0; i < scene.cameras.size(); i++) {
+            selected_cameras.push_back(i);
+        }
+    } else {
+        selected_cameras.push_back(trace_options.camera_id);
+    }
 
-    // render
-    for (auto sample = 0; sample < trace_options.num_samples;
-         sample += trace_options.samples_per_batch) {
-        auto nsamples = min(trace_options.samples_per_batch,
-            trace_options.num_samples - sample);
-        printf(
-            "rendering image [%d/%d] ...\n", sample, trace_options.num_samples);
-        auto start_batch = get_time();
-        trace_image_samples(
-            render, state, scene, bvh, lights, sample, trace_options);
-        printf("rendering image [%d/%d] [%s]\n", sample,
-            trace_options.num_samples,
-            format_duration(get_time() - start_batch).c_str());
-        if (save_batch) {
-            auto filename = replace_extension(
-                imfilename, std::to_string(sample + nsamples) + "." +
-                                get_extension(imfilename));
-            try {
-                save_tonemapped_image(filename, render, exposure, filmic, srgb);
-            } catch (const std::exception& e) {
-                exit_error(e.what());
+    // render all selected cameras
+    for (auto camera_id : selected_cameras) {
+        // set camera
+        trace_options.camera_id = camera_id;
+
+        // allocate buffers
+        auto image_size = get_camera_image_size(
+            scene.cameras[trace_options.camera_id], trace_options.image_size);
+        auto render = image{image_size, zero4f};
+        auto state  = trace_state{};
+        init_trace_state(state, image_size, trace_options.random_seed);
+
+        // render
+        for (auto sample = 0; sample < trace_options.num_samples;
+             sample += trace_options.samples_per_batch) {
+            auto nsamples = min(trace_options.samples_per_batch,
+                trace_options.num_samples - sample);
+            printf("rendering camera %d [%d/%d] ...\n", trace_options.camera_id,
+                sample, trace_options.num_samples);
+            auto start_batch = get_time();
+            trace_image_samples(
+                render, state, scene, bvh, lights, sample, trace_options);
+            printf("rendering camera %d [%d/%d] [%s]\n",
+                trace_options.camera_id, sample, trace_options.num_samples,
+                format_duration(get_time() - start_batch).c_str());
+            if (save_batch) {
+                auto outfilename = replace_extension(imfilename,
+                    "cam" + std::to_string(trace_options.camera_id) + ".s" +
+                        std::to_string(sample + nsamples) + "." +
+                        get_extension(imfilename));
+                try {
+                    save_tonemapped_image(
+                        outfilename, render, exposure, filmic, srgb);
+                } catch (const std::exception& e) {
+                    exit_error(e.what());
+                }
             }
         }
-    }
 
-    // save image
-    printf("saving image ...\n");
-    auto start_save = get_time();
-    try {
-        save_tonemapped_image(imfilename, render, exposure, filmic, srgb);
-    } catch (const std::exception& e) {
-        exit_error(e.what());
+        // save image
+        try {
+            auto outfilename = imfilename;
+            if (all_cameras) {
+                outfilename = replace_extension(imfilename,
+                    "cam" + std::to_string(trace_options.camera_id) + "." +
+                        get_extension(imfilename));
+            }
+            printf("saving image %s ...\n", outfilename.c_str());
+            auto start_save = get_time();
+            save_tonemapped_image(outfilename, render, exposure, filmic, srgb);
+            printf("saving image %s [%s]\n", outfilename.c_str(),
+                format_duration(get_time() - start_save).c_str());
+        } catch (const std::exception& e) {
+            exit_error(e.what());
+        }
     }
-    printf("saving image [%s]\n",
-        format_duration(get_time() - start_save).c_str());
 
     // done
     return 0;
