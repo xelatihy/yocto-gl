@@ -34,90 +34,28 @@ def format():
 def make_tests():
     true = True   # to cut and paste from json
     flase = False # to cut and paste from json
-    default_cameras = {
+    default_scene = {
+        "name": "simple-ml",
         "cameras": [
             {
                 "name": "cam",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
+                "film_width": 0.0576,
+                "film_height": 0.024,
                 "!!proc": {
                     "from": [ -3, 5, 10 ],
                     "to": [ 0, 0, 0 ]
                 },
-                "film_width": 0.0576,
-                "film_height": 0.024
             }
-        ]
-    }
-    default_floor = {
+        ],
         "textures": [
             {
                 "name": "floor",
                 "filename": "textures/floor.png",
                 "gamma": 2.2,
                 "!!proc": { "type": "grid", "border": true }
-            }
-        ],
-        "materials": [
-            {
-                "name": "floor",
-                "diffuse": [ 0.7, 0.7, 0.7 ],
-                "diffuse_texture": "floor"
-            }
-        ],
-        "shapes": [
-            {
-                "name": "floor",
-                "filename": "models/floor.ply",
-                "!!proc": { "type": "floor" }
-            }
-        ],
-        "instances": [
-            {
-                "name": "floor",
-                "shape": "floor",
-                "material": "floor"
             },
-        ]
-    }
-    area_lights = {
-        "materials": [
-            {
-                "name": "light1",
-                "emission": [ 20, 20, 20 ]
-            },
-            {
-                "name": "light2",
-                "emission": [ 20, 20, 20 ]
-            }
-        ],
-        "shapes": [
-            {
-                "name": "light1",
-                "!!proc": { "type": "quad", "size": [ 4, 4 ] }
-            },
-            {
-                "name": "light2",
-                "!!proc": { "type": "quad", "size": [ 4, 4 ] }
-            }
-        ],
-        "instances": [
-            {
-                "name": "light1",
-                "shape": "light1",
-                "material": "light1",
-                "!!proc": { "from": [ -4, 8, 8 ], "to": [ 0, 1, 0 ] }
-            },
-            {
-                "name": "light2",
-                "shape": "light2",
-                "material": "light2",
-                "!!proc": { "from": [ 4, 8, 8 ], "to": [ 0, 1, 0 ] }
-            }
-        ]
-    }
-    default_materials = {
-        "textures": [
             {
                 "name": "uvgrid",
                 "filename": "textures/uvgrid.png",
@@ -127,50 +65,98 @@ def make_tests():
         ],
         "materials": [
             {
+                "name": "floor",
+                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "diffuse_texture": "floor"
+            },
+            {
                 "name": "uvgrid",
                 "diffuse": [ 1, 1, 1 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "roughness": 0.1,
                 "diffuse_texture": "uvgrid"
             },
-        ]
-    }
-    default_shapes = {
+            {
+                "name": "arealight1",
+                "emission": [ 20, 20, 20 ]
+            },
+            {
+                "name": "arealight2",
+                "emission": [ 20, 20, 20 ]
+            }
+        ],
         "shapes": [
             {
+                "name": "floor",
+                "filename": "models/floor.ply",
+                "!!proc": { "type": "floor" }
+            },
+            {
+                "name": "bunny",
+                "filename": "models/stanford-bunny.obj"
+            },
+            {
                 "name": "test-sphere",
-                "filename": "models/test-sphere.ply",
+                "filename": "models/obj2.ply",
                 "!!proc": { "type": "sphere", "size": 1.5, "align_bottom": true }
+            },
+            {
+                "name": "test-cube",
+                "filename": "models/obj3.ply",
+                "!!proc": { "type": "cube_rounded", "size": [1.5, 1.5, 1.5], "align_bottom": true }
+            },
+            {
+                "name": "arealight1",
+                "!!proc": { "type": "quad", "size": [ 4, 4 ] }
+            },
+            {
+                "name": "arealight2",
+                "!!proc": { "type": "quad", "size": [ 4, 4 ] }
             }
-        ]
+        ],
+        "instances": [
+            {
+                "name": "floor",
+                "shape": "floor",
+                "material": "floor"
+            }
+        ],
+        "environments": []
     }
-    def make_test(name, scenes, make_instances=True):
-        js = {
-            'name': name,
-            'cameras': [],
-            'textures': [],
-            'materials': [],
-            'shapes': [],
-            'instances': [],
-            'environments': [],
-        }
-        for scene in scenes:
-            for key in scene:
-                js[key] += scene[key]
-        if make_instances:
-            posx = [ -4, -2, 0, 2, 4, -4, -2, 0, 2, 4 ]
-            posy = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
-            posz = [ 2, 2, 2, 2, 2, -2, -2, -2, -2, -2 ]
-            materials = scenes[-2]['materials']
-            shapes = scenes[-1]['shapes']
-            for i in range(10):
-                js['instances'] += [ {
-                    'name': f'obj{i}',
-                    'shape': shapes[i % len(shapes)]['name'],
-                    'material': materials[i % len(materials)]['name'],
-                    'frame': [ 1, 0, 0, 0, 1, 0, 0, 0, 1, posx[i], posy[i], posz[i] ]
-                } ]
-        with open(f'tests/{name}.json', 'wt') as f: json.dump(js, f, indent=2)
-    make_test('simple', [default_cameras, default_floor, area_lights, default_materials, default_shapes])
+    area_lights = {
+        "instances": [
+            {
+                "name": "arealight1",
+                "shape": "arealight1",
+                "material": "arealight1",
+                "!!proc": { "from": [ -4, 8, 8 ], "to": [ 0, 1, 0 ] }
+            },
+            {
+                "name": "arealight2",
+                "shape": "arealight2",
+                "material": "arealight2",
+                "!!proc": { "from": [ 4, 8, 8 ], "to": [ 0, 1, 0 ] }
+            }
+        ],
+        "environments": []
+    }
+    def make_test(name, shapes, materials, lights):
+        scene = default_scene.copy()
+        scene['instances'] += lights['instances']
+        scene['environments'] += lights['environments']
+        posx = [ -4, -2, 0, 2, 4, -4, -2, 0, 2, 4 ]
+        posy = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+        posz = [ 2, 2, 2, 2, 2, -2, -2, -2, -2, -2 ]
+        for i in range(10):
+            shape = shapes[i % len(shapes)]
+            material = materials[i % len(materials)]
+            scene['instances'] += [ {
+                'name': f'{shape}_{material}',
+                'shape': shape,
+                'material': material,
+                'frame': [ 1, 0, 0, 0, 1, 0, 0, 0, 1, posx[i], posy[i], posz[i] ]
+            } ]
+        with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
+    make_test('simple', ['bunny'], ['uvgrid'], area_lights)
 
 cli()
