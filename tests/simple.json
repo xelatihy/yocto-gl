@@ -2,21 +2,21 @@
     "name": "simple-ml",
     "cameras": [
         {
-            "name": "cam",
+            "name": "default",
             "focal_length": 0.05,
             "lens_aperture": 0.0,
-            "film_width": 0.0576,
-            "film_height": 0.024,
+            "film_width": 0.036,
+            "film_height": 0.015,
             "!!proc": {
                 "from": [
-                    -3,
-                    5,
-                    10
+                    -7.5,
+                    4,
+                    9
                 ],
                 "to": [
-                    0,
-                    0,
-                    0
+                    -0.75,
+                    0.5,
+                    -0.5
                 ]
             }
         }
@@ -260,7 +260,7 @@
             "filename": "models/stanford-bunny.obj"
         },
         {
-            "name": "test-sphere",
+            "name": "sphere",
             "filename": "models/obj2.ply",
             "!!proc": {
                 "type": "sphere",
@@ -358,7 +358,7 @@
                 1,
                 -4,
                 0,
-                2
+                0
             ]
         },
         {
@@ -377,7 +377,7 @@
                 1,
                 -2,
                 0,
-                2
+                0
             ]
         },
         {
@@ -396,102 +396,7 @@
                 1,
                 0,
                 0,
-                2
-            ]
-        },
-        {
-            "name": "bunny_uvgrid",
-            "shape": "bunny",
-            "material": "uvgrid",
-            "frame": [
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                1,
-                2,
-                0,
-                2
-            ]
-        },
-        {
-            "name": "bunny_uvgrid",
-            "shape": "bunny",
-            "material": "uvgrid",
-            "frame": [
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                1,
-                4,
-                0,
-                2
-            ]
-        },
-        {
-            "name": "bunny_uvgrid",
-            "shape": "bunny",
-            "material": "uvgrid",
-            "frame": [
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                1,
-                -4,
-                0,
-                -2
-            ]
-        },
-        {
-            "name": "bunny_uvgrid",
-            "shape": "bunny",
-            "material": "uvgrid",
-            "frame": [
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                1,
-                -2,
-                0,
-                -2
-            ]
-        },
-        {
-            "name": "bunny_uvgrid",
-            "shape": "bunny",
-            "material": "uvgrid",
-            "frame": [
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                -2
+                0
             ]
         },
         {
@@ -510,7 +415,7 @@
                 1,
                 2,
                 0,
-                -2
+                0
             ]
         },
         {
@@ -529,7 +434,7 @@
                 1,
                 4,
                 0,
-                -2
+                0
             ]
         }
     ],

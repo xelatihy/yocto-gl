@@ -1454,6 +1454,13 @@ void save_json_scene(const string& filename, const yocto_scene& scene,
     }
 }
 
+void print_json_camera(const yocto_camera& camera) {
+    auto scene = yocto_scene{};
+    auto js = json{};
+    to_json(js, camera, scene);
+    printf("%s\n", js.dump(4).c_str());
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

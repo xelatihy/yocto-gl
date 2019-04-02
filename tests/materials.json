@@ -2,21 +2,21 @@
     "name": "simple-ml",
     "cameras": [
         {
-            "name": "cam",
+            "name": "default",
             "focal_length": 0.05,
             "lens_aperture": 0.0,
-            "film_width": 0.0576,
-            "film_height": 0.024,
+            "film_width": 0.036,
+            "film_height": 0.015,
             "!!proc": {
                 "from": [
-                    -3,
-                    5,
-                    10
+                    -7.5,
+                    4,
+                    9
                 ],
                 "to": [
-                    0,
-                    0,
-                    0
+                    -0.75,
+                    0.5,
+                    -0.5
                 ]
             }
         }
@@ -260,7 +260,7 @@
             "filename": "models/stanford-bunny.obj"
         },
         {
-            "name": "test-sphere",
+            "name": "sphere",
             "filename": "models/obj2.ply",
             "!!proc": {
                 "type": "sphere",
@@ -343,8 +343,8 @@
             }
         },
         {
-            "name": "test-sphere_plastic-sharp",
-            "shape": "test-sphere",
+            "name": "bunny_plastic-sharp",
+            "shape": "bunny",
             "material": "plastic-sharp",
             "frame": [
                 1,
@@ -358,12 +358,12 @@
                 1,
                 -4,
                 0,
-                2
+                0
             ]
         },
         {
-            "name": "test-sphere_plastic-rough",
-            "shape": "test-sphere",
+            "name": "bunny_plastic-rough",
+            "shape": "bunny",
             "material": "plastic-rough",
             "frame": [
                 1,
@@ -377,12 +377,12 @@
                 1,
                 -2,
                 0,
-                2
+                0
             ]
         },
         {
-            "name": "test-sphere_matte",
-            "shape": "test-sphere",
+            "name": "bunny_matte",
+            "shape": "bunny",
             "material": "matte",
             "frame": [
                 1,
@@ -396,12 +396,12 @@
                 1,
                 0,
                 0,
-                2
+                0
             ]
         },
         {
-            "name": "test-sphere_metal-sharp",
-            "shape": "test-sphere",
+            "name": "bunny_metal-sharp",
+            "shape": "bunny",
             "material": "metal-sharp",
             "frame": [
                 1,
@@ -415,12 +415,12 @@
                 1,
                 2,
                 0,
-                2
+                0
             ]
         },
         {
-            "name": "test-sphere_metal-rough",
-            "shape": "test-sphere",
+            "name": "bunny_metal-rough",
+            "shape": "bunny",
             "material": "metal-rough",
             "frame": [
                 1,
@@ -434,102 +434,7 @@
                 1,
                 4,
                 0,
-                2
-            ]
-        },
-        {
-            "name": "test-sphere_thinglass-sharp",
-            "shape": "test-sphere",
-            "material": "thinglass-sharp",
-            "frame": [
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                1,
-                -4,
-                0,
-                -2
-            ]
-        },
-        {
-            "name": "test-sphere_thinglass-rough",
-            "shape": "test-sphere",
-            "material": "thinglass-rough",
-            "frame": [
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                1,
-                -2,
-                0,
-                -2
-            ]
-        },
-        {
-            "name": "test-sphere_transparent",
-            "shape": "test-sphere",
-            "material": "transparent",
-            "frame": [
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                -2
-            ]
-        },
-        {
-            "name": "test-sphere_glass-sharp",
-            "shape": "test-sphere",
-            "material": "glass-sharp",
-            "frame": [
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                1,
-                2,
-                0,
-                -2
-            ]
-        },
-        {
-            "name": "test-sphere_glass-rough",
-            "shape": "test-sphere",
-            "material": "glass-rough",
-            "frame": [
-                1,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                1,
-                4,
-                0,
-                -2
+                0
             ]
         }
     ],

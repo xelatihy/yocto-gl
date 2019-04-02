@@ -41,6 +41,7 @@ using namespace yocto;
 
 namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
+void print_json_camera(const yocto_camera& camera);
 };
 
 void exit_error(const string& msg) {
@@ -269,10 +270,12 @@ void draw_opengl_widgets(const opengl_window& win) {
                     win, "zoom to fit", app.zoom_to_fit);
                 continue_opengl_widget_line(win);
                 draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
-                continue_opengl_widget_line(win);
                 if (draw_button_opengl_widget(win, "print cams")) {
                     for (auto& camera : app.scene.cameras) {
                         print_obj_camera(camera);
+                    }
+                    for (auto& camera : app.scene.cameras) {
+                        print_json_camera(camera);
                     }
                 }
                 continue_opengl_widget_line(win);

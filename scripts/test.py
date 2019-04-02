@@ -38,16 +38,14 @@ def make_tests():
         "name": "simple-ml",
         "cameras": [
             {
-                "name": "cam",
+                "name": "default",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
-                "film_width": 0.0576,
-                "film_height": 0.024,
-                "!!proc": {
-                    "from": [ -3, 5, 10 ],
-                    "to": [ 0, 0, 0 ]
-                },
-            }
+                "film_width": 0.036,
+                "film_height": 0.015,
+                "!!proc": { "from": [-7.5, 4, 9], "to": [-0.75, 0.5, -0.5] }
+                # "!!proc": { "from": [-3, 5, 10], "to": [0, 0, 0] }
+            },
         ],
         "textures": [
             {
@@ -165,7 +163,7 @@ def make_tests():
                 "filename": "models/stanford-bunny.obj"
             },
             {
-                "name": "test-sphere",
+                "name": "sphere",
                 "filename": "models/obj2.ply",
                 "!!proc": { "type": "sphere", "size": 1.5, "align_bottom": true }
             },
@@ -214,20 +212,18 @@ def make_tests():
         scene = copy.deepcopy(default_scene)
         scene['instances'] += copy.deepcopy(lights['instances'])
         scene['environments'] += copy.deepcopy(lights['environments'])
-        posx = [ -4, -2, 0, 2, 4, -4, -2, 0, 2, 4 ]
-        posy = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
-        posz = [ 2, 2, 2, 2, 2, -2, -2, -2, -2, -2 ]
-        for i in range(10):
+        posx = [ -4, -2, 0, 2, 4 ]
+        for i in range(len(posx)):
             shape = shapes[i % len(shapes)]
             material = materials[i % len(materials)]
             scene['instances'] += [ {
                 'name': f'{shape}_{material}',
                 'shape': shape,
                 'material': material,
-                'frame': [ 1, 0, 0, 0, 1, 0, 0, 0, 1, posx[i], posy[i], posz[i] ]
+                'frame': [ 1, 0, 0, 0, 1, 0, 0, 0, 1, posx[i], 0, 0 ]
             } ]
         with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
     make_test('simple', ['bunny'], ['uvgrid'], area_lights)
-    make_test('materials', ['test-sphere'], ['plastic-sharp', 'plastic-rough', 'matte', 'metal-sharp', 'metal-rough', 'thinglass-sharp', 'thinglass-rough', 'transparent', 'glass-sharp', 'glass-rough'], area_lights)
+    make_test('materials', ['bunny'], ['plastic-sharp', 'plastic-rough', 'matte', 'metal-sharp', 'metal-rough'], area_lights)
 
 cli()
