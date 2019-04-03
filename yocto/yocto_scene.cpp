@@ -1566,3 +1566,236 @@ string print_scene_stats(const yocto_scene& scene) {
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE PRESETS FOR TESTS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Scene elements presets
+void make_shape_presets(yocto_shape& shape, const string& type) {
+    if (type == "default-quad") {
+        make_quad_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {1, 1}, {2, 2}, {1, 1});
+    } else if (type == "default-quady") {
+        make_quad_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {1, 1}, {2, 2}, {1, 1});
+    } else if (type == "default-quad-stack") {
+        make_quad_stack_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1});
+    } else if (type == "default-box") {
+        make_box_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
+    } else if (type == "default-box-rounded") {
+        make_box_rounded_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {32, 32, 32}, {2, 2, 2}, {1, 1, 1}, 0.15f);
+    } else if (type == "default-uvsphere") {
+        make_uvsphere_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {64, 32}, 2.0f, {1, 1});
+    } else if (type == "default-sphere") {
+        make_sphere_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, 32, 2.0f, 1.0f);
+    } else if (type == "default-uvsphere-flipcap") {
+        make_uvsphere_flipcap_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {64, 32}, 2.0f, {1, 1}, {-0.75f, +0.75f});
+    } else if (type == "default-uvdisk") {
+        make_uvdisk_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {32, 16}, 2.0f, {1, 1});
+    } else if (type == "default-disk") {
+        make_disk_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, 32, 2.0f, 1.0f);
+    } else if (type == "default-disk-bulged") {
+        make_disk_bulged_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, 32, 2.0f, 1.0f, 0.25f);
+    } else if (type == "default-quad-bulged") {
+        make_quad_bulged_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, 32, 2.0f, 1.0f, 0.25f);
+    } else if (type == "default-uvcylinder") {
+        make_uvcylinder_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {64, 32, 16}, vec2f{2.0f, 2.0f}, {1, 1, 1});
+    } else if (type == "default-uvcylinder-rounded") {
+        make_uvcylinder_rounded_shape(shape.quads, shape.positions,
+            shape.normals, shape.texturecoords, {64, 32, 16}, vec2f{2.0f, 2.0f},
+            {1, 1, 1}, 0.075f);
+    } else if (type == "default-sphere-geodesic") {
+        make_geodesic_sphere_shape(
+            shape.triangles, shape.positions, shape.normals, 4, 2.0f);
+    } else if (type == "default-floor") {
+        make_floor_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {1, 1}, {40, 40}, {20, 20});
+    } else if (type == "default-floor-bent") {
+        make_floor_bent_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {1, 40}, {40, 40}, {20, 20}, 10.0f);
+    } else if (type == "default-matball") {
+        make_sphere_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, 32, 2.0f, 1.0f);
+    } else if (type == "default-hairball") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere_shape(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 2.0f * 0.8f, 1.0f);
+        make_hair_shape(shape.lines, shape.positions, shape.normals,
+            shape.texturecoords, shape.radius, {4, 65536}, {}, base_quads,
+            base_positions, base_normals, base_texturecoords,
+            vec2f{0.1f, 0.1f} * 2.0f, vec2f{0.001f, 0.0005f} * 2.0f, {0, 0},
+            {0, 0});
+    } else if (type == "default-hairball-interior") {
+        make_sphere_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, 32, 2.0f * 0.8f, 1.0f);
+    } else if (type == "default-suzanne") {
+        make_suzanne_shape(shape.quads, shape.positions, 2.0f);
+    } else if (type == "default-cube-posonly") {
+        auto ignore1 = vector<vec4i>{};
+        auto ignore2 = vector<vec4i>{};
+        auto ignore3 = vector<vec3f>{};
+        auto ignore4 = vector<vec2f>{};
+        make_box_fvshape(shape.quads, ignore1, ignore2, shape.positions,
+            ignore3, ignore4, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
+    } else if (type == "default-cube-facevarying") {
+        make_box_fvshape(shape.quads_positions, shape.quads_normals,
+            shape.quads_texturecoords, shape.positions, shape.normals,
+            shape.texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
+    } else if (type == "default-sphere-facevarying") {
+        make_sphere_fvshape(shape.quads_positions, shape.quads_normals,
+            shape.quads_texturecoords, shape.positions, shape.normals,
+            shape.texturecoords, 32, 2.0f, 1.0f);
+    } else if (type == "test-cube") {
+        make_box_rounded_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {32, 32, 32}, {2, 2, 2}, {1, 1, 1}, 0.15f);
+    } else if (type == "test-uvsphere") {
+        make_uvsphere_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {64, 32}, 2.0f, {1, 1});
+    } else if (type == "test-sphere") {
+        make_sphere_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, 32, 2.0f, 1.0f);
+    } else if (type == "test-disk") {
+        make_disk_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, 32, 2.0f, 1.0f);
+    } else if (type == "test-cylinder") {
+        make_uvcylinder_rounded_shape(shape.quads, shape.positions,
+            shape.normals, shape.texturecoords, {64, 32, 16}, vec2f{2.0f, 2.0f},
+            {1, 1, 1}, 0.075f);
+    } else if (type == "test-floor") {
+        make_floor_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, {1, 1}, {40, 40}, {20, 20});
+    } else if (type == "test-matball") {
+        make_sphere_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, 32, 2.0f, 1.0f);
+    } else if (type == "test-hairball1") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere_shape(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 2.0f * 0.8f, 1.0f);
+        make_hair_shape(shape.lines, shape.positions, shape.normals,
+            shape.texturecoords, shape.radius, {4, 65536}, {}, base_quads,
+            base_positions, base_normals, base_texturecoords,
+            vec2f{0.1f, 0.1f} * 2.0f, vec2f{0.001f, 0.0005f} * 2.0f, {0, 0},
+            {0, 0});
+    } else if (type == "test-hairball2") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere_shape(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 2.0f * 0.8f, 1.0f);
+        make_hair_shape(shape.lines, shape.positions, shape.normals,
+            shape.texturecoords, shape.radius, {4, 65536}, {}, base_quads,
+            base_positions, base_normals, base_texturecoords,
+            vec2f{0.1f, 0.1f} * 2.0f, vec2f{0.001f, 0.0005f} * 2.0f, {0, 0},
+            {0, 0});
+    } else if (type == "test-hairball3") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere_shape(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 2.0f * 0.8f, 1.0f);
+        make_hair_shape(shape.lines, shape.positions, shape.normals,
+            shape.texturecoords, shape.radius, {4, 65536}, {}, base_quads,
+            base_positions, base_normals, base_texturecoords,
+            vec2f{0.1f, 0.1f} * 2.0f, vec2f{0.001f, 0.0005f} * 2.0f, {0, 0},
+            {0, 0});
+    } else if (type == "test-hairball-interior") {
+        make_sphere_shape(shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, 32, 2.0f * 0.8f, 1.0f);
+    } else if (type == "test-suzanne-subdiv") {
+        make_suzanne_shape(shape.quads, shape.positions, 2.0f);
+    } else if (type == "test-cube-subdiv") {
+        make_box_fvshape(shape.quads_positions, shape.quads_normals,
+            shape.quads_texturecoords, shape.positions, shape.normals,
+            shape.texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
+    } else {
+        throw std::invalid_argument("unknown procedural type " + type);
+    }
+    if (shape.filename == "") {
+        auto ext       = shape.quads_positions.empty() ? "ply"s : "obj"s;
+        shape.filename = "shapes/" + type + "." + ext;
+    }
+}
+void make_texture_presets(yocto_texture& texture, const string& type) {
+    auto size   = vec2i{1024, 1024};
+    auto is_sky = type.find("sky") != type.npos;
+    if (is_sky) size.x = size.y * 2;
+    texture.hdr_image.resize(size);
+    if (type == "grid") {
+        make_grid_image(
+            texture.hdr_image, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
+    } else if (type == "checker") {
+        make_checker_image(
+            texture.hdr_image, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
+    } else if (type == "bump") {
+        make_bumpdimple_image(texture.hdr_image, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+    } else if (type == "uvramp") {
+        make_uvramp_image(texture.hdr_image);
+    } else if (type == "gammaramp") {
+        make_gammaramp_image(texture.hdr_image, {0, 0, 0, 1}, {1, 1, 1, 1});
+    } else if (type == "blackbodyramp") {
+        make_blackbodyramp_image(texture.hdr_image);
+    } else if (type == "uvgrid") {
+        make_uvgrid_image(texture.hdr_image);
+    } else if (type == "sky") {
+        make_sunsky_image(texture.hdr_image, pif / 4,
+            3.0f, false, 1.0f, 0.0f, {0.7f, 0.7f, 0.7f});
+    } else if (type == "noise") {
+        make_noise_image(
+            texture.hdr_image, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
+    } else if (type == "fbm") {
+        make_fbm_image(texture.hdr_image, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f,
+            2.0f, 0.5f, 6, true);
+    } else if (type == "ridge") {
+        make_ridge_image(texture.hdr_image, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f,
+            2.0f, 0.5f, 1.0f, 6, true);
+    } else if (type == "turbulence") {
+        make_turbulence_image(texture.hdr_image, {0, 0, 0, 1}, {1, 1, 1, 1},
+            1.0f, 2.0f, 0.5f, 6, true);
+    } else {
+        throw std::invalid_argument("unknown procedural type " + type);
+    }
+    if (false) {
+        add_image_border(texture.hdr_image, 2, {0, 0, 0, 1});
+    }
+    if (false) {
+        auto buffer = texture.hdr_image;
+        bump_to_normal_map(texture.hdr_image, buffer, 1.0f);
+        texture.ldr_as_linear = true;
+    }
+    if (!is_sky) {
+        texture.ldr_image = {texture.hdr_image.size()};
+        if (!texture.ldr_as_linear) {
+            linear_to_srgb8(texture.ldr_image, texture.hdr_image);
+        } else {
+            float_to_byte(texture.ldr_image, texture.hdr_image);
+        }
+        texture.hdr_image = {};
+    }
+    if (texture.filename == "") {
+        auto ext       = (is_sky) ? string("hdr") : string("png");
+        texture.filename = "textures/" + type + "." + ext;
+    }
+}
+
+}  // namespace yocto
