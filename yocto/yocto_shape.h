@@ -594,7 +594,7 @@ template <typename T>
 inline void make_cube_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 3>& uvsize, T radius);
+    const vec<T, 3>& uvsize, T rounded);
 template <typename T>
 inline void make_uvsphere_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
@@ -635,7 +635,7 @@ template <typename T>
 inline void make_uvcylinder_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 2>& size,
-    const vec<T, 3>& uvsize, T radius);
+    const vec<T, 3>& uvsize, T rounded);
 template <typename T>
 inline void make_geodesic_sphere_shape(vector<vec3i>& triangles,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals, int tesselation,
@@ -2374,9 +2374,10 @@ template <typename T>
 inline void make_cube_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 3>& uvsize, T radius) {
+    const vec<T, 3>& uvsize, T rounded) {
     make_cube_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
+    auto radius = rounded * min(size) / 2;
     auto c = size / 2 - vec<T, 3>{radius, radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
         auto pc = vec<T, 3>{
@@ -2445,9 +2446,10 @@ template <typename T>
 inline void make_uvsphere_flipcap_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize, const vec<T, 2>& zflip) {
+    const vec<T, 2>& uvsize, const vec<T, 2>& zflip_) {
     make_uvsphere_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
+    auto zflip = zflip_ * size / 2;
     for (auto i = 0; i < positions.size(); i++) {
         if (positions[i].z > zflip.y) {
             positions[i].z = 2 * zflip.y - positions[i].z;
@@ -2592,9 +2594,10 @@ template <typename T>
 inline void make_uvcylinder_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 2>& size,
-    const vec<T, 3>& uvsize, T radius) {
+    const vec<T, 3>& uvsize, T rounded) {
     make_uvcylinder_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
+    auto radius = rounded * max(size) / 2;
     auto c = size / 2 - vec<T, 2>{radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
         auto phi = atan2(positions[i].y, positions[i].x);

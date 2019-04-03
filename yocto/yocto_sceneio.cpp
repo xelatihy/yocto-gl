@@ -877,7 +877,7 @@ void from_json_procedural(
         make_cube_rounded_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec3i{32, 32, 32}),
             js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.3f));
+            js.value("uvsize", vec3f{1, 1, 1}), js.value("rounded", 0.15f));
     } else if (type == "uvsphere") {
         make_uvsphere_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec2i{64, 32}),
@@ -917,7 +917,7 @@ void from_json_procedural(
             value.normals, value.texturecoords,
             js.value("steps", vec3i{64, 32, 16}),
             js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.15f));
+            js.value("uvsize", vec3f{1, 1, 1}), js.value("rounded", 0.075f));
     } else if (type == "sphere_geodesic") {
         make_geodesic_sphere_shape(value.triangles, value.positions,
             value.normals, js.value("tesselation", 4), js.value("size", 2.0f));

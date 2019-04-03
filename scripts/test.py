@@ -276,7 +276,7 @@ def make_tests():
             {
                 "name": "cube",
                 "filename": "models/test-cube.obj",
-                "!!proc": { "type": "cube_rounded", "size": [0.15, 0.15, 0.15], "align_bottom": true }
+                "!!proc": { "type": "cube_rounded", "size": [0.15, 0.15, 0.15], "rounded": 0.3, "align_bottom": true }
             },
             {
                 "name": "disk",

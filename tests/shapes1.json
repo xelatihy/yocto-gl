@@ -236,6 +236,7 @@
                     0.15,
                     0.15
                 ],
+                "rounded": 0.3,
                 "align_bottom": true
             }
         },
