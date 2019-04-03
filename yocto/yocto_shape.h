@@ -453,6 +453,10 @@ inline void merge_quads(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     const vector<vec<T, 3>>& merge_normals,
     const vector<vec<T, 2>>& merge_texturecoords);
 
+// Merge quads and triangles
+inline void merge_triangles_and_quads(
+    vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1428,6 +1432,22 @@ inline void merge_quads(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
     texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
         merge_texturecoords.end());
+}
+
+inline void merge_triangles_and_quads(
+    vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
+    if (quads.empty()) return;
+    if (force_triangles) {
+        auto qtriangles = vector<vec3i>{};
+        convert_quads_to_triangles(qtriangles, quads);
+        triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
+        quads = {};
+    } else {
+        auto tquads = vector<vec4i>{};
+        convert_triangles_to_quads(tquads, triangles);
+        quads.insert(quads.end(), tquads.begin(), tquads.end());
+        triangles = {};
+    }
 }
 
 }  // namespace yocto

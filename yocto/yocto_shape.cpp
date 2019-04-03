@@ -438,23 +438,6 @@ const auto suzanne_quads     = vector<vec4i>{{46, 0, 2, 44}, {3, 1, 47, 45},
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// merge quads and triangles
-inline void merge_triangles_and_quads(
-    vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
-    if (quads.empty()) return;
-    if (force_triangles) {
-        auto qtriangles = vector<vec3i>{};
-        convert_quads_to_triangles(qtriangles, quads);
-        triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
-        quads = {};
-    } else {
-        auto tquads = vector<vec4i>{};
-        convert_triangles_to_quads(tquads, triangles);
-        quads.insert(quads.end(), tquads.begin(), tquads.end());
-        triangles = {};
-    }
-}
-
 // hack for CyHair data
 inline void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals,
@@ -804,21 +787,6 @@ inline void save_ply_shape(const string& filename, const vector<int>& points,
     }
 }
 
-inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
-    return a.position == b.position && a.texturecoord == b.texturecoord &&
-           a.normal == b.normal;
-}
-
-struct obj_vertex_hash {
-    size_t operator()(const obj_vertex& v) const {
-        auto vh = std::hash<int>();
-        auto h  = (size_t)0;
-        for (auto i = 0; i < 3; i++)
-            h ^= vh((&v.position)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
-        return h;
-    }
-};
-
 inline void print_value(const output_file& fs, const obj_vertex& value) {
     print_value(fs, value.position);
     if (value.texturecoord) {
@@ -865,8 +833,8 @@ inline void load_obj_shape(const string& filename, vector<int>& points,
         std::deque<vec2f> otexcoord = std::deque<vec2f>();
 
         // vertex maps
-        unordered_map<obj_vertex, int, obj_vertex_hash> vertex_map =
-            unordered_map<obj_vertex, int, obj_vertex_hash>();
+        unordered_map<obj_vertex, int> vertex_map =
+            unordered_map<obj_vertex, int>();
 
         // vertex maps
         unordered_map<int, int> pos_map      = unordered_map<int, int>();

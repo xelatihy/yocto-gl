@@ -1292,8 +1292,8 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         unordered_map<string, int> mmap = unordered_map<string, int>{{"", -1}};
 
         // vertex maps
-        unordered_map<obj_vertex, int, obj_vertex_hash> vertex_map =
-            unordered_map<obj_vertex, int, obj_vertex_hash>();
+        unordered_map<obj_vertex, int> vertex_map =
+            unordered_map<obj_vertex, int>();
         unordered_map<int, int> pos_map      = unordered_map<int, int>();
         unordered_map<int, int> norm_map     = unordered_map<int, int>();
         unordered_map<int, int> texcoord_map = unordered_map<int, int>();
@@ -1700,6 +1700,24 @@ void save_objx(const string& filename, const yocto_scene& scene) {
         } else {
             println_values(fs, "e", environment.name, environment.emission,
                 "\"\"", environment.frame);
+        }
+    }
+}
+
+inline void print_value(const output_file& fs, const obj_vertex& value) {
+    print_value(fs, value.position);
+    if (value.texturecoord) {
+        print_value(fs, '/');
+        print_value(fs, value.texturecoord);
+        if (value.normal) {
+            print_value(fs, '/');
+            print_value(fs, value.normal);
+        }
+    } else {
+        if (value.normal) {
+            print_value(fs, '/');
+            print_value(fs, '/');
+            print_value(fs, value.normal);
         }
     }
 }
@@ -3876,9 +3894,6 @@ void load_mesh(const string& filename, vector<int>& points,
     } else if (ext == "obj" || ext == "OBJ") {
         load_obj_mesh(filename, points, lines, triangles, quads, positions,
             normals, texturecoords, force_triangles);
-    } else if (ext == "hair" || ext == "HAIR") {
-        load_cyhair_shape(filename, lines, positions, normals, texturecoords, 
-        colors, radius);
     } else {
         reset_mesh_data(points, lines, triangles, quads, positions, normals,
             texturecoords, colors, radius);
@@ -4166,8 +4181,8 @@ void load_obj_mesh(const string& filename, vector<int>& points,
         std::deque<vec2f> otexcoord = std::deque<vec2f>();
 
         // vertex maps
-        unordered_map<obj_vertex, int, obj_vertex_hash> vertex_map =
-            unordered_map<obj_vertex, int, obj_vertex_hash>();
+        unordered_map<obj_vertex, int> vertex_map =
+            unordered_map<obj_vertex, int>();
 
         parse_callbacks(vector<int>& points, vector<vec2i>& lines,
             vector<vec3i>& triangles, vector<vec4i>& quads,
