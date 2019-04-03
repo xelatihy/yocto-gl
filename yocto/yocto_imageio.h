@@ -52,6 +52,8 @@ namespace yocto {
 
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename);
+// Check if an image is a preset based on filename.
+bool is_image_preset_filename(const string& filename);
 
 // Loads/saves a 1-4 channels float image in linear color space.
 template <int N>

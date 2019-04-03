@@ -347,6 +347,9 @@ template <typename T>
 inline void add_image_border(
     image<T>& img, int border_width, const T& border_color);
 
+// Make an image preset, useful for testing. See implementation for types.
+inline void make_image_preset(image<vec<float, 4>>& img, const string& type);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -472,11 +475,11 @@ constexpr T default_alpha = _default_alpha<T>();
 
 // Apply an operator to a color
 template <typename T>
-inline vec<T, 3> rgb(T a) {
+inline vec<T, 3> color_to_rgb(T a) {
     return {a, a, a};
 }
 template <typename T, int N>
-inline vec<T, 3> rgb(const vec<T, N>& a) {
+inline vec<T, 3> color_to_rgb(const vec<T, N>& a) {
     if constexpr (N == 1) {
         return {a.x, a.x, a.x};
     } else if constexpr (N == 2) {
@@ -490,11 +493,11 @@ inline vec<T, 3> rgb(const vec<T, N>& a) {
     }
 }
 template <typename T>
-inline vec<T, 3> rgba(T a) {
+inline vec<T, 3> color_to_rgba(T a) {
     return {a, a, a, default_alpha<T>};
 }
 template <typename T, int N>
-inline vec<T, 4> rgba(const vec<T, N>& a) {
+inline vec<T, 4> color_to_rgba(const vec<T, N>& a) {
     if constexpr (N == 1) {
         return {a.x, a.x, a.x, default_alpha<T>};
     } else if constexpr (N == 2) {
@@ -527,7 +530,7 @@ inline byte luminance(const vec<byte, N>& a) {
 }
 
 template <typename T, int N>
-inline vec<T, N> from_rgba(const vec<T, 4>& a) {
+inline vec<T, N> rgba_to_color(const vec<T, 4>& a) {
     if constexpr (N == 1) {
         return {luminance(a)};
     } else if constexpr (N == 2) {
@@ -542,8 +545,8 @@ inline vec<T, N> from_rgba(const vec<T, 4>& a) {
 }
 
 template <typename T, int N>
-inline void from_rgba(image<vec<T, N>>& col, const image<vec<T, 4>>& rgba) {
-    return apply([](auto& a) { return from_rgba<T, N>(a); }, col, rgba);
+inline void rgba_to_color(image<vec<T, N>>& col, const image<vec<T, 4>>& rgba) {
+    return apply([](auto& a) { return rgba_to_color<T, N>(a); }, col, rgba);
 }
 
 // Apply an operator to a color
@@ -608,7 +611,7 @@ inline vec<T, N> gamma_to_linear(const vec<T, N>& srgb, float gamma) {
         [&gamma](auto& a) { return gamma_to_linear(a, gamma); }, srgb);
 }
 template <typename T, int N>
-inline vec3f linear_to_gamma(const vec3f& lin, float gamma) {
+inline vec<T, N> linear_to_gamma(const vec<T, N>& lin, float gamma) {
     return apply_color(
         [&gamma](auto& a) { return linear_to_gamma(a, gamma); }, lin);
 }
@@ -1457,6 +1460,95 @@ inline void make_lights_image(image<vec<T, 4>>& img, const vec<T, 3>& le,
             }
             img[{i, j}] = rgba(le);
         }
+    }
+}
+
+inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
+    if (type == "grid") {
+        make_grid_image(img, 8,
+            {0.2f, 0.2f, 0.2f, 1},
+            {0.5f, 0.5f, 0.5f, 1});
+    } else if (type == "checker") {
+        make_checker_image(img, 8,
+            {0.2f, 0.2f, 0.2f, 1},
+            {0.5f, 0.5f, 0.5f, 1});
+    } else if (type == "bump") {
+        make_bumpdimple_image(img, 8,
+            {0, 0, 0, 1},
+            {1, 1, 1, 1});
+    } else if (type == "uvramp") {
+        make_uvramp_image(img);
+    } else if (type == "gammaramp") {
+        make_gammaramp_image(img, {0, 0, 0, 1},
+            {1, 1, 1, 1});
+    } else if (type == "blackbodyramp") {
+        make_blackbodyramp_image(img);
+    } else if (type == "uvgrid") {
+        make_uvgrid_image(img);
+    } else if (type == "sky") {
+        make_sunsky_image(img, pif / 4, 3.0f, false,
+            1.0f, 0.0f, vec<float, 3>{0.7f, 0.7f, 0.7f});
+    } else if (type == "sunsky") {
+        make_sunsky_image(img, pif / 4, 3.0f, true,
+                          1.0f, 0.0f, vec<float, 3>{0.7f, 0.7f, 0.7f});
+    } else if (type == "noise") {
+        make_noise_image(img, {0, 0, 0, 1},
+            {1, 1, 1, 1}, 1.0f, true);
+    } else if (type == "fbm") {
+        make_fbm_image(img, {0, 0, 0, 1},
+            {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
+    } else if (type == "ridge") {
+        make_ridge_image(img, {0, 0, 0, 1},
+            {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 1.0f, 6,
+            true);
+    } else if (type == "turbulence") {
+        make_turbulence_image(img, {0, 0, 0, 1},
+            {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
+    } else if (type == "bump-normal") {
+        auto bump = image<vec<float, 4>>{img.size()};
+        make_bumpdimple_image(bump, 8,
+                              {0, 0, 0, 1},
+                              {1, 1, 1, 1});
+        bump_to_normal_map(img, bump);
+    } else if (type == "images1") {
+        auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp", 
+            "bump", "bump-normal", "noise", "fbm", "blackbodyramp" };
+        auto sub_imgs = vector<image<vec4f>>(sub_types.size());
+        for (auto i = 0; i < sub_imgs.size(); i++) {
+            sub_imgs.at(i).resize(img.size());
+            make_image_preset(sub_imgs.at(i), sub_types.at(i));
+        }
+        auto montage_size = zero2i;
+        for (auto& sub_img : sub_imgs) {
+            montage_size.x += sub_img.size().x;
+            montage_size.y = max(montage_size.y, sub_img.size().y);
+        }
+        img.resize(montage_size);
+        auto pos = 0;
+        for (auto& sub_img : sub_imgs) {
+            set_image_region(img, sub_img, {pos, 0});
+            pos += sub_img.size().x;
+        }
+    } else if (type == "images2") {
+        auto sub_types = vector<string>{"sky", "sunsky"};
+        auto sub_imgs = vector<image<vec4f>>(sub_types.size());
+        for (auto i = 0; i < sub_imgs.size(); i++) {
+            sub_imgs.at(i).resize(img.size());
+            make_image_preset(sub_imgs.at(i), sub_types.at(i));
+        }
+        auto montage_size = zero2i;
+        for (auto& sub_img : sub_imgs) {
+            montage_size.x += sub_img.size().x;
+            montage_size.y = max(montage_size.y, sub_img.size().y);
+        }
+        img.resize(montage_size);
+        auto pos = 0;
+        for (auto& sub_img : sub_imgs) {
+            set_image_region(img, sub_img, {pos, 0});
+            pos += sub_img.size().x;
+        }
+    } else {
+        throw std::invalid_argument("unknown image preset" + type);
     }
 }
 

@@ -769,7 +769,7 @@ void load_json_image(const string& filename, image<vec<float, N>>& img) {
         load_json(filename, js);
         auto img_rgba = image{img.size(), vec<float, 4>{}};
         apply_json_procedural(js, img_rgba);
-        from_rgba(img, img_rgba);
+        rgba_to_color(img, img_rgba);
     }
 }
 template <int N>
@@ -783,10 +783,40 @@ void load_json_image(const string& filename, image<vec<byte, N>>& img) {
         load_json(filename, js);
         auto img_rgba = image{img.size(), vec<byte, 4>{}};
         apply_json_procedural(js, img_rgba);
-        from_rgba(img, img_rgba);
+        rgba_to_color(img, img_rgba);
     }
 }
+    
+// Check if an image is a preset based on filename.
+bool is_image_preset_filename(const string& filename) {
+    return get_filename(filename).find("yocto::") == 0;
+}
+string get_image_preset_type(const string& filename) {
+    return get_noextension(get_filename(filename).substr(7));
+}
 
+template<int N>
+void load_image_preset(const string& filename, image<vec<float, N>>& img) {
+    if constexpr(N == 4) {
+        img.resize({1024, 1024});
+        if(get_image_preset_type(filename) == "images2") img.resize({2048,1024});
+        make_image_preset(img, get_image_preset_type(filename));
+    } else {
+        auto img4 = image<vec<float, 4>>({1024, 1024});
+        if(get_image_preset_type(filename) == "images2") img4.resize({2048,1024});
+        make_image_preset(img4, get_image_preset_type(filename));
+        img.resize(img4.size());
+        rgba_to_color(img, img4);
+    }
+}
+template<int N>
+void load_image_preset(const string& filename, image<vec<byte, N>>& img) {
+    auto imgf = image<vec<float, N>>{};
+    load_image_preset(filename,imgf);
+    img.resize(imgf.size());
+    linear_to_srgb8(img, imgf);
+}
+    
 // check hdr extensions
 bool is_hdr_filename(const string& filename) {
     auto ext = get_extension(filename);
@@ -796,6 +826,9 @@ bool is_hdr_filename(const string& filename) {
 // Loads an hdr image.
 template <int N>
 void load_image(const string& filename, image<vec<float, N>>& img) {
+    if (is_image_preset_filename(filename)) {
+        return load_image_preset(filename, img);
+    }
     auto ext = get_extension(filename);
     if (ext == "exr" || ext == "EXR") {
         load_exr_image(filename, img);
@@ -893,6 +926,9 @@ void load_image_from_memory(
 // Loads an hdr image.
 template <int N>
 void load_image(const string& filename, image<vec<byte, N>>& img) {
+    if (is_image_preset_filename(filename)) {
+        return load_image_preset(filename, img);
+    }
     auto ext = get_extension(filename);
     if (ext == "exr" || ext == "EXR") {
         auto imgf = image<vec<float, N>>{};
