@@ -360,13 +360,13 @@ def make_tests():
                 "name": "arealight1",
                 "shape": "arealight1",
                 "material": "arealight1",
-                "!!proc": { "from": [ -4, 8, 8 ], "to": [ 0, 1, 0 ] }
+                "!!proc": { "from": [ -0.4, 0.8, 0.8 ], "to": [ 0, 0.1, 0 ] }
             },
             {
                 "name": "arealight2",
                 "shape": "arealight2",
                 "material": "arealight2",
-                "!!proc": { "from": [ 4, 8, 8 ], "to": [ 0, 1, 0 ] }
+                "!!proc": { "from": [ 0.4, 0.8, 0.8 ], "to": [ 0, 0.1, 0 ] }
             }
         ],
         "environments": []

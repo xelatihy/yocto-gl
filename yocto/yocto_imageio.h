@@ -107,4 +107,43 @@ void save_volume(const string& filename, const volume1f& vol);
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// BUILTIN IMAGES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Loads/saves a 1-4 channel builtin image.
+template <int N>
+void load_builtin_image(const string& name, image<vec<byte, N>>& img);
+template <int N>
+void load_builtin_image(const string& name, image<vec<float, N>>& img);
+
+// Save with a logo embedded
+template <typename T, int N>
+inline void save_image_with_logo(
+    const string& filename, const image<vec<T, N>>& img) {
+    auto logo = image<vec<T, N>>{};
+    load_builtin_image("logo-render", logo);
+    auto img_copy = img;
+    auto offset   = img.size() - logo.size() - 8;
+    set_image_region(img_copy, logo, offset);
+    save_image(filename, img_copy);
+}
+
+// Convenience helper that saves an HDR images as wither a linear HDR file or
+// a tonemapped LDR file depending on file name
+template <int N>
+inline void save_tonemapped_image_with_logo(const string& filename,
+    const image<vec<float, N>>& hdr, float exposure, bool filmic, bool srgb) {
+    if (is_hdr_filename(filename)) {
+        save_image_with_logo(filename, hdr);
+    } else {
+        auto ldr = image<vec<byte, N>>{hdr.size()};
+        tonemap_image8(ldr, hdr, exposure, filmic, srgb);
+        save_image_with_logo(filename, ldr);
+    }
+}
+
+}  // namespace yocto
+
 #endif

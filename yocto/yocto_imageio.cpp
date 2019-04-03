@@ -285,6 +285,206 @@ bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
     return true;
 }
 
+// Pnm load
+byte* load_pnm(const char* filename, int* w, int* h, int* nc, int req) {
+    auto fs = fopen(filename, "rb");
+    if (!fs) return nullptr;
+    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
+        fs, [](FILE* f) { fclose(f); }};
+
+    // read magic
+    char magic[2];
+    if (fscanf(fs, "%c%c", magic + 0, magic + 1) != 2) return nullptr;
+    if (magic[0] == 'P' && magic[1] == '2')
+        *nc = 1;
+    else if (magic[0] == 'P' && magic[1] == '3')
+        *nc = 3;
+    else
+        return nullptr;
+
+    // read w, h, nc
+    if (fscanf(fs, "%d %d", w, h) != 2) return nullptr;
+
+    // read max
+    auto max = 0;
+    if (fscanf(fs, "%d", &max) != 1) return nullptr;
+    if (max > 255) return nullptr;
+
+    // read the data (flip y)
+    auto npixels = (size_t)(*w) * (size_t)(*h);
+    auto nvalues = npixels * (size_t)(*nc);
+    auto pixels  = unique_ptr<byte[]>(new byte[nvalues]);
+    for (auto i = 0; i < nvalues; i++) {
+        if (fscanf(fs, "%hhu", &pixels[i]) != 1) return nullptr;
+    }
+
+    // proper number of channels
+    if (!req || *nc == req) return pixels.release();
+
+    // pack into channels
+    if (req < 0 || req > 4) {
+        return nullptr;
+    }
+    auto cpixels = unique_ptr<byte[]>(new byte[req * npixels]);
+    for (auto i = 0ull; i < npixels; i++) {
+        auto vp = pixels.get() + i * (*nc);
+        auto cp = cpixels.get() + i * req;
+        if (*nc == 1) {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    cp[2] = vp[0];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    cp[2] = vp[0];
+                    cp[3] = (byte)255;
+                    break;
+            }
+        } else {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    cp[3] = (byte)255;
+                    break;
+            }
+        }
+    }
+    return cpixels.release();
+}
+
+// Pnm load
+byte* load_pnm_from_string(const char* data, int* w, int* h, int* nc, int req) {
+    // read magic
+    auto offset = 0;
+    char magic[256];
+    if (sscanf(data, "%s%n", magic, &offset) != 1) return nullptr;
+    if (magic == "P2"s)
+        *nc = 1;
+    else if (magic == "P3"s)
+        *nc = 3;
+    else
+        return nullptr;
+
+    // read w, h, nc
+    data += offset + 1;
+    if (sscanf(data, "%d %d%n", w, h, &offset) != 2) return nullptr;
+
+    // read max
+    data += offset + 1;
+    auto max = 0;
+    if (sscanf(data, "%d%n", &max, &offset) != 1) return nullptr;
+    if (max > 255) return nullptr;
+
+    // read the data (flip y)
+    auto npixels = (size_t)(*w) * (size_t)(*h);
+    auto nvalues = npixels * (size_t)(*nc);
+    auto pixels  = unique_ptr<byte[]>(new byte[nvalues]);
+    for (auto i = 0; i < nvalues; i++) {
+        data += offset + 1;
+        if (sscanf(data, "%hhu%n", &pixels[i], &offset) != 1) return nullptr;
+    }
+
+    // proper number of channels
+    if (!req || *nc == req) return pixels.release();
+
+    // pack into channels
+    if (req < 0 || req > 4) {
+        return nullptr;
+    }
+    auto cpixels = unique_ptr<byte[]>(new byte[req * npixels]);
+    for (auto i = 0ull; i < npixels; i++) {
+        auto vp = pixels.get() + i * (*nc);
+        auto cp = cpixels.get() + i * req;
+        if (*nc == 1) {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    cp[2] = vp[0];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    cp[2] = vp[0];
+                    cp[3] = (byte)255;
+                    break;
+            }
+        } else {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    cp[3] = (byte)255;
+                    break;
+            }
+        }
+    }
+    return cpixels.release();
+}
+
+// save pnm
+bool save_pnm(const char* filename, int w, int h, int nc, const byte* pixels) {
+    auto fs = fopen(filename, "wb");
+    if (!fs) return false;
+    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
+        fs, [](FILE* f) { fclose(f); }};
+
+    if (fprintf(fs, "%s\n", (nc == 1) ? "P2" : "P3") < 0) return false;
+    if (fprintf(fs, "%d %d\n", w, h) < 0) return false;
+    if (fprintf(fs, "255\n") < 0) return false;
+    for (auto j = 0; j < h; j++) {
+        for (auto i = 0; i < w; i++) {
+            auto v = pixels + (j * w + i) * nc;
+            if (nc == 1 || nc == 2) {
+                if (fprintf(fs, "%d ", (int)v[0]) < 0) return false;
+            } else {
+                if (fprintf(fs, "%d %d %d ", (int)v[0], (int)v[1], (int)v[2]) <
+                    0)
+                    return false;
+            }
+        }
+        if (fprintf(fs, "\n") < 0) return false;
+    }
+
+    return true;
+}
+
 // load pfm image
 template <int N>
 void load_pfm_image(const string& filename, image<vec<float, N>>& img) {
@@ -302,6 +502,35 @@ void save_pfm_image(const string& filename, const image<vec<float, N>>& img) {
             (float*)img.data())) {
         throw imageio_error("error saving image " + filename);
     }
+}
+
+// load pfm image
+template <int N>
+void load_pnm_image(const string& filename, image<vec<byte, N>>& img) {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = load_pnm(filename.c_str(), &width, &height, &ncomp, N);
+    if (!pixels) {
+        throw imageio_error("error loading image " + filename);
+    }
+    img = image{{width, height}, (const vec<byte, N>*)pixels};
+    delete[] pixels;
+}
+template <int N>
+void save_pnm_image(const string& filename, const image<vec<byte, N>>& img) {
+    if (!save_pnm(filename.c_str(), img.size().x, img.size().y, N,
+            (byte*)img.data())) {
+        throw imageio_error("error saving image " + filename);
+    }
+}
+template <int N>
+void load_pnm_image_from_string(const char* data, image<vec<byte, N>>& img) {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = load_pnm_from_string(data, &width, &height, &ncomp, N);
+    if (!pixels) {
+        throw imageio_error("error loading image from string");
+    }
+    img = image{{width, height}, (const vec<byte, N>*)pixels};
+    delete[] pixels;
 }
 
 // load exr image weith tiny exr
@@ -594,6 +823,18 @@ void load_image(const string& filename, image<vec<float, N>>& img) {
         load_stb_image(filename, img8);
         img.resize(img8.size());
         srgb8_to_linear(img, img8);
+    } else if (ext == "ppm" || ext == "PPM") {
+        auto img8 = image<vec<byte, N>>{};
+        load_pnm_image(filename, img8);
+        // load_stb_image(filename, img8);
+        img.resize(img8.size());
+        srgb8_to_linear(img, img8);
+    } else if (ext == "pgm" || ext == "PGM") {
+        auto img8 = image<vec<byte, N>>{};
+        load_pnm_image(filename, img8);
+        // load_stb_image(filename, img8);
+        img.resize(img8.size());
+        srgb8_to_linear(img, img8);
     } else if (ext == "json" || ext == "JSON") {
         load_json_image(filename, img);
     } else {
@@ -621,6 +862,14 @@ void save_image(const string& filename, const image<vec<float, N>>& img) {
         auto img8 = image<vec<byte, N>>{img.size()};
         linear_to_srgb8(img8, img);
         save_bmp_image(filename, img8);
+    } else if (ext == "ppm" || ext == "PPM") {
+        auto img8 = image<vec<byte, N>>{img.size()};
+        linear_to_srgb8(img8, img);
+        save_pnm_image(filename, img8);
+    } else if (ext == "pgm" || ext == "PGM") {
+        auto img8 = image<vec<byte, N>>{img.size()};
+        linear_to_srgb8(img8, img);
+        save_pnm_image(filename, img8);
     } else if (ext == "hdr" || ext == "HDR") {
         auto img8 = image<vec<byte, N>>{img.size()};
         linear_to_srgb8(img8, img);
@@ -668,6 +917,10 @@ void load_image(const string& filename, image<vec<byte, N>>& img) {
         load_stb_image(filename, img);
     } else if (ext == "bmp" || ext == "BMP") {
         load_stb_image(filename, img);
+    } else if (ext == "ppm" || ext == "PPM") {
+        load_pnm_image(filename, img);
+    } else if (ext == "pgm" || ext == "PGM") {
+        load_pnm_image(filename, img);
     } else if (ext == "json" || ext == "JSON") {
         load_json_image(filename, img);
     } else {
@@ -687,6 +940,10 @@ void save_image(const string& filename, const image<vec<byte, N>>& img) {
         save_tga_image(filename, img);
     } else if (ext == "bmp" || ext == "BMP") {
         save_bmp_image(filename, img);
+    } else if (ext == "ppm" || ext == "PPM") {
+        save_pnm_image(filename, img);
+    } else if (ext == "pgm" || ext == "PGM") {
+        save_pnm_image(filename, img);
     } else if (ext == "hdr" || ext == "HDR") {
         auto imgf = image<vec<float, N>>{img.size()};
         srgb8_to_linear(imgf, img);
@@ -916,5 +1173,82 @@ void save_volume(const string& filename, const volume1f& vol) {
         throw imageio_error("error saving volume " + filename);
     }
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BUILTIN IMAGES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Loads/saves a 1-4 channel builtin image.
+template <int N>
+void load_builtin_image(const string& name, image<vec<byte, N>>& img) {
+    static const char* logo_render = R"(
+        P2
+        144 28
+        255
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 212 87 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 32 255 62 0 0 0 0 0 14 27 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 187 245 13 0 0 0 80 255 90 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 29 88 14 0 0 0 0 0 0 0 0 0 0 0 0 0 0 88 251 10 0 0 0 40 200 253 255 234 106 0 0 6 255 157 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12 147 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 90 69 0 0 0 0 0 0 0 0 0 0 0 144 125 0 0 0 0 0 117 37 0 0 0 0 0 0 0 79 255 101 0 0 0 178 232 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 115 255 33 0 0 0 0 0 0 0 0 0 0 0 0 0 0 145 205 0 0 0 47 239 210 74 57 144 232 24 0 6 255 157 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 18 251 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 146 123 0 0 0 0 0 0 0 0 0 0 0 43 35 0 61 87 0 0 208 61 0 0 0 0 0 0 0 3 224 199 0 0 24 251 129 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 115 255 33 0 0 0 0 0 0 0 0 0 0 0 0 0 0 201 149 0 0 0 180 238 20 0 0 0 16 0 0 6 255 157 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 18 251 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 146 123 0 0 0 0 0 0 0 0 0 0 0 0 0 0 119 150 0 0 208 61 0 0 0 0 0 0 0 0 118 255 41 0 117 250 26 0 7 147 223 232 167 19 0 0 0 5 143 224 234 162 20 166 227 255 210 201 3 0 7 147 223 232 167 19 0 0 0 0 8 249 93 0 0 45 255 146 0 0 0 0 0 0 0 6 255 157 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 14 192 114 207 0 84 224 220 61 0 68 143 166 220 78 0 0 142 234 160 251 0 0 134 234 195 25 0 123 105 211 89 12 177 236 158 4 0 44 217 214 189 123 0 0 0 149 76 0 189 108 0 160 55 123 107 83 236 240 179 0 208 128 220 174 6 0 0 0 0 0 19 247 140 0 214 168 0 0 176 248 122 111 237 212 2 0 0 167 251 128 127 223 59 103 185 255 143 117 0 0 176 248 122 111 237 212 2 0 0 0 58 255 36 0 0 97 255 77 0 0 0 0 0 0 0 6 255 157 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 16 248 166 36 13 234 44 73 215 0 80 248 65 80 193 0 66 222 32 97 251 0 65 207 21 135 152 0 144 230 81 12 129 157 17 189 88 0 194 126 17 208 123 0 0 0 131 125 7 228 164 0 224 23 144 125 5 127 156 10 0 208 179 13 205 65 0 0 0 0 0 0 158 233 61 255 59 0 46 255 121 0 0 91 255 83 0 40 254 134 0 0 0 0 0 115 255 33 0 0 46 255 121 0 0 91 255 83 0 0 0 114 235 0 0 0 130 255 51 0 2 17 17 17 7 0 6 255 157 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 16 255 43 0 76 191 0 1 242 20 80 192 0 36 235 0 138 142 0 18 251 0 140 127 0 52 212 0 144 171 0 0 204 63 0 116 148 11 255 14 0 146 123 0 0 0 84 164 46 155 201 9 231 0 144 125 0 119 150 0 0 208 64 0 164 107 0 0 0 0 0 0 49 255 220 206 0 0 114 255 46 0 0 17 255 148 0 111 255 54 0 0 0 0 0 115 255 33 0 0 114 255 46 0 0 17 255 148 0 0 0 171 179 0 0 0 159 255 29 0 20 255 255 255 109 0 6 255 157 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 16 253 0 0 101 242 214 214 249 40 80 189 0 34 236 0 162 121 0 18 251 0 165 232 214 219 232 0 144 126 0 0 229 222 214 229 168 34 249 0 0 146 123 0 0 0 38 203 88 107 206 48 187 0 144 125 0 119 150 0 0 208 61 0 162 108 0 0 0 0 0 0 0 197 255 98 0 0 144 255 22 0 0 0 249 177 0 141 255 28 0 0 0 0 0 115 255 33 0 0 144 255 22 0 0 0 249 177 0 0 0 227 123 0 0 0 143 255 40 0 0 79 108 255 109 0 6 255 157 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 16 253 0 0 85 188 4 4 4 0 80 189 0 34 236 0 149 132 0 18 251 0 149 125 4 4 3 0 144 125 0 0 213 62 4 4 2 21 255 4 0 146 123 0 0 0 2 230 130 67 178 116 141 0 144 125 0 119 150 0 0 208 61 0 162 108 0 0 0 0 0 0 0 130 255 33 0 0 151 255 17 0 0 0 245 183 0 152 255 21 0 0 0 0 0 115 255 33 0 0 151 255 17 0 0 0 245 183 0 0 28 255 67 0 0 0 116 255 59 0 0 0 39 255 109 0 6 255 157 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 16 253 0 0 32 236 19 2 33 0 80 189 0 34 236 0 98 195 4 64 251 0 93 191 4 11 24 0 144 125 0 0 157 131 0 27 8 1 225 72 1 190 123 0 0 0 0 201 196 26 137 197 96 0 144 125 0 109 159 0 0 208 61 0 162 108 0 0 0 0 0 0 0 130 255 33 0 0 122 255 36 0 0 8 255 152 0 124 255 42 0 0 0 0 0 115 255 33 0 0 122 255 36 0 0 8 255 152 0 0 84 253 13 0 0 0 79 255 108 0 0 0 39 255 109 0 6 255 157 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 16 253 0 0 0 123 238 224 155 0 80 189 0 34 236 0 11 201 218 156 248 0 6 178 225 234 97 0 144 125 0 0 31 216 214 228 49 0 89 244 198 179 123 0 0 0 0 154 239 0 96 253 50 0 144 125 0 34 224 201 25 208 61 0 162 108 0 0 0 0 0 0 0 130 255 33 0 0 70 255 96 0 0 67 255 97 0 76 255 104 0 0 0 0 0 113 255 35 0 0 70 255 96 0 0 67 255 97 0 0 141 210 0 0 0 0 5 230 200 2 0 0 39 255 109 0 6 255 157 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 11 14 0 0 0 0 0 0 0 0 0 0 18 0 0 0 0 0 19 6 0 0 0 0 0 0 0 0 23 1 0 0 0 12 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 9 0 0 0 0 0 0 0 0 0 0 0 0 0 130 255 33 0 0 1 211 223 54 44 205 229 7 0 2 216 230 69 74 169 31 0 55 255 120 59 26 1 211 223 54 44 205 229 7 0 0 197 154 0 0 0 0 0 109 255 166 59 78 165 255 109 0 6 255 201 113 113 113 105 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 130 255 33 0 0 0 30 204 255 255 214 40 0 0 0 35 208 255 255 212 47 0 1 174 252 243 102 0 30 204 255 255 214 40 0 0 6 247 97 0 0 0 0 0 0 103 235 255 255 242 146 24 0 6 255 255 255 255 255 213 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 24 29 0 0 0 0 0 0 0 25 31 0 0 0 0 0 23 9 0 0 0 0 24 29 0 0 0 0 54 255 41 0 0 0 0 0 0 0 0 33 30 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 63 188 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+        )";
+    if (name == "logo-render") {
+        load_pnm_image_from_string(logo_render, img);
+    } else {
+        throw imageio_error("unknown builtin image " + name);
+    }
+}
+
+// Loads/saves a 1-4 channel builtin image.
+template <int N>
+void load_builtin_image(const string& name, image<vec<float, N>>& img) {
+    auto img8 = image<vec<byte, N>>();
+    load_builtin_image(name, img8);
+    img.resize(img8.size());
+    srgb8_to_linear(img, img8);
+}
+
+// Specializations
+template void load_builtin_image<1>(
+    const string& filename, image<vec<float, 1>>& img);
+template void load_builtin_image<2>(
+    const string& filename, image<vec<float, 2>>& img);
+template void load_builtin_image<3>(
+    const string& filename, image<vec<float, 3>>& img);
+template void load_builtin_image<4>(
+    const string& filename, image<vec<float, 4>>& img);
+template void load_builtin_image<1>(
+    const string& filename, image<vec<byte, 1>>& img);
+template void load_builtin_image<2>(
+    const string& filename, image<vec<byte, 2>>& img);
+template void load_builtin_image<3>(
+    const string& filename, image<vec<byte, 3>>& img);
+template void load_builtin_image<4>(
+    const string& filename, image<vec<byte, 4>>& img);
 
 }  // namespace yocto

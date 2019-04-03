@@ -107,7 +107,10 @@ struct image {
     // size
     bool  empty() const { return _pixels.empty(); }
     vec2i size() const { return _size; }
-    void  resize(const vec2i& size) {
+    bool  contains(const vec2i& ij) const {
+        return ij.x > 0 && ij.x < _size.x && ij.y > 0 && ij.y < _size.y;
+    }
+    void resize(const vec2i& size) {
         if (size == _size) return;
         _size = size;
         _pixels.resize((size_t)size.x * (size_t)size.y);
@@ -873,6 +876,7 @@ inline void set_image_region(
     image<T>& img, const image<T>& region, const vec2i& offset) {
     for (auto j = 0; j < region.size().y; j++) {
         for (auto i = 0; i < region.size().x; i++) {
+            if (!img.contains({i, j})) continue;
             img[vec2i{i, j} + offset] = region[{i, j}];
         }
     }

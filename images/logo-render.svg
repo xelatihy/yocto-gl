@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" 
+      xmlns:xlink="http://www.w3.org/1999/xlink" 
+      width="144" height="28">
+    <rect width="144" height="28" />
+    <text x="6" y="18" fill="white" font-size="12px" font-family="Fira Sans Condensed">
+        rendered with</text>
+    <text x="76" y="20" fill="white" font-size="18px" font-family="Fira Sans Condensed">
+        Yocto/GL</text>
+</svg>
+ 
