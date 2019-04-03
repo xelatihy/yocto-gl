@@ -244,6 +244,8 @@ inline string get_dirname(const string& filename);
 inline string get_extension(const string& filename);
 // Get filename without directory.
 inline string get_filename(const string& filename);
+// Get path without extension.
+inline string get_noextension(const string& filename);
 // Replace extension.
 inline string replace_extension(const string& filename, const string& ext);
 
@@ -408,11 +410,19 @@ inline string get_extension(const string& filename_) {
 inline string get_filename(const string& filename_) {
     auto filename = normalize_path(filename_);
     auto pos      = filename.rfind('/');
-    if (pos == string::npos) return "";
+    if (pos == string::npos) return filename;
     return filename.substr(pos + 1);
 }
 
-// Replace extension.
+// Get extension.
+inline string get_noextension(const string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos      = filename.rfind('.');
+    if (pos == string::npos) return filename;
+    return filename.substr(0, pos);
+}
+
+    // Replace extension.
 inline string replace_extension(const string& filename_, const string& ext_) {
     auto filename = normalize_path(filename_);
     auto ext      = normalize_path(ext_);
