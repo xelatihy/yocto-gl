@@ -1410,7 +1410,8 @@ vec3f sample_next_direction_volume(const yocto_scene& scene,
                          prob_light * sample_lights_direction_pdf(scene, lights,
                                           bvh, position, next_direction);
 
-    if (next_direction_pdf == 0 || phase_function == 0.0f)
+    if (next_direction == zero3f || next_direction_pdf == 0 ||
+        phase_function == 0.0f)
         weight = zero3f;
     else
         weight *= albedo * phase_function / next_direction_pdf;
@@ -1606,7 +1607,9 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // exit if no hit
-        if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
+        if (next_direction == zero3f || next_direction_pdf == 0 ||
+            next_brdf_cosine == zero3f)
+            break;
 
         // intersect next point
         auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
@@ -1676,7 +1679,9 @@ vec4f trace_volnaive(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // exit if no hit
-        if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
+        if (next_direction == zero3f || next_direction_pdf == 0 ||
+            next_brdf_cosine == zero3f)
+            break;
 
         // transmission
         if (dot(next_direction, point.normal) < 0) {
@@ -1753,7 +1758,9 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // exit if no hit
-        if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
+        if (next_direction == zero3f || next_direction == zero3f ||
+            next_direction_pdf == 0 || next_brdf_cosine == zero3f)
+            break;
 
         // intersect next point
         auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
