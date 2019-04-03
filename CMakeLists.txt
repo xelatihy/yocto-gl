@@ -138,7 +138,7 @@ endforeach()
 foreach(filename "images1.json" "images2.json")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yimproc-${filename}
-             COMMAND ${test-yimproc} ${testdir}/${filename} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
+             COMMAND ${test-yimproc} yocto::${name} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # eyelight

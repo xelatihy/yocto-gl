@@ -1510,7 +1510,7 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
                               {0, 0, 0, 1},
                               {1, 1, 1, 1});
         bump_to_normal_map(img, bump);
-    } else if (type == "montage1") {
+    } else if (type == "images1") {
         auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp", 
             "bump", "bump-normal", "noise", "fbm", "blackbodyramp" };
         auto sub_imgs = vector<image<vec4f>>(sub_types.size());
@@ -1529,7 +1529,7 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
             set_image_region(img, sub_img, {pos, 0});
             pos += sub_img.size().x;
         }
-    } else if (type == "montage2") {
+    } else if (type == "images2") {
         auto sub_types = vector<string>{"sky", "sunsky"};
         auto sub_imgs = vector<image<vec4f>>(sub_types.size());
         for (auto i = 0; i < sub_imgs.size(); i++) {

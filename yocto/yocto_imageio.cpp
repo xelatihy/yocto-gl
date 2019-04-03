@@ -799,9 +799,11 @@ template<int N>
 void load_image_preset(const string& filename, image<vec<float, N>>& img) {
     if constexpr(N == 4) {
         img.resize({1024, 1024});
+        if(get_image_preset_type(filename) == "images2") img.resize({2048,1024});
         make_image_preset(img, get_image_preset_type(filename));
     } else {
         auto img4 = image<vec<float, 4>>({1024, 1024});
+        if(get_image_preset_type(filename) == "images2") img4.resize({2048,1024});
         make_image_preset(img4, get_image_preset_type(filename));
         img.resize(img4.size());
         rgba_to_color(img, img4);
