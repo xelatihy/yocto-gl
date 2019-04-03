@@ -43,7 +43,7 @@ def make_tests():
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
                 "film_height": 0.015,
-                "!!proc": { "from": [-7.5, 4, 9], "to": [-0.75, 0.5, -0.5] }
+                "!!proc": { "from": [-0.75, 0.4, 0.9], "to": [-0.075, 0.05, -0.05] }
             },
             {
                 "name": "front",
@@ -51,7 +51,7 @@ def make_tests():
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
                 "film_height": 0.012,
-                "!!proc": { "from": [0, 5.75, 14], "to": [0, 0.5, 0] }
+                "!!proc": { "from": [0, 0.575, 0.14], "to": [0, 0.05, 0] }
             },
             {
                 "name": "back",
@@ -59,7 +59,7 @@ def make_tests():
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
                 "film_height": 0.012,
-                "!!proc": { "from": [0, 5.75, -14], "to": [0, 0.5, 0] }
+                "!!proc": { "from": [0, 0.575, -0.14], "to": [0, 0.05, 0] }
             },
             {
                 "name": "perspective-sharp",
@@ -67,7 +67,7 @@ def make_tests():
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
                 "film_height": 0.015,
-                "!!proc": { "from": [-7.5, 4, 9], "to": [-0.75, 0.5, -0.5] }
+                "!!proc": { "from": [-0.75, 0.4, 0.9], "to": [-0.075, 0.05, -0.05] }
             },
             {
                 "name": "perspective-dof",
@@ -75,7 +75,7 @@ def make_tests():
                 "lens_aperture": 0.25,
                 "film_width": 0.036,
                 "film_height": 0.015,
-                "!!proc": { "from": [-7.5, 4, 9], "to": [-0.75, 0.5, -0.5] }
+                "!!proc": { "from": [-0.75, 0.4, 0.9], "to": [-0.075, 0.05, -0.05] }
             },
             {
                 "name": "orthographic-sharp",
@@ -84,7 +84,7 @@ def make_tests():
                 "film_width": 0.036,
                 "film_height": 0.015,
                 "orthographic": true,
-                "!!proc": { "from": [-7.5, 4, 9], "to": [-0.75, 0.5, -0.5] }
+                "!!proc": { "from": [-0.75, 0.4, 0.9], "to": [-0.075, 0.05, -0.05] }
             },
             {
                 "name": "orthographic-dof",
@@ -93,7 +93,7 @@ def make_tests():
                 "film_width": 0.036,
                 "film_height": 0.015,
                 "orthographic": true,
-                "!!proc": { "from": [-7.5, 4, 9], "to": [-0.75, 0.5, -0.5] }
+                "!!proc": { "from": [-0.75, 0.4, 0.9], "to": [-0.075, 0.05, -0.05] }
             },
         ],
         "textures": [
@@ -122,7 +122,7 @@ def make_tests():
             {
                 "name": "fbm-displacement",
                 "filename": "textures/fbm-displacement.png",
-                "height_scale": 0.25,
+                "height_scale": 0.025,
                 "!!proc": { "type": "fbm", "scale": 10 }
             },
             {
@@ -257,47 +257,47 @@ def make_tests():
         "shapes": [
             {
                 "name": "floor",
-                "filename": "models/floor.ply",
-                "!!proc": { "type": "floor" }
+                "filename": "models/test-floor.ply",
+                "!!proc": { "type": "floor", "size": [ 4, 4 ] }
             },
             {
                 "name": "bunny",
-                "filename": "models/stanford-bunny.obj"
+                "filename": "models/test-bunny.obj"
             },
             {
                 "name": "teapot",
-                "filename": "models/utah-teapot.obj"
+                "filename": "models/test-teapot.obj"
             },
             {
                 "name": "sphere",
                 "filename": "models/test-sphere.obj",
-                "!!proc": { "type": "sphere", "size": 1.5, "align_bottom": true }
+                "!!proc": { "type": "sphere", "size": 0.15, "align_bottom": true }
             },
             {
                 "name": "cube",
                 "filename": "models/test-cube.obj",
-                "!!proc": { "type": "cube_rounded", "size": [1.5, 1.5, 1.5], "align_bottom": true }
+                "!!proc": { "type": "box_rounded", "size": [0.15, 0.15, 0.15], "rounded": 0.3, "align_bottom": true }
             },
             {
                 "name": "disk",
                 "filename": "models/test-disk.obj",
-                "!!proc": { "type": "disk", "size": 1.5, "align_bottom": true }
+                "!!proc": { "type": "disk", "size": 0.15, "align_bottom": true }
             },
             {
                 "name": "sphere-flipcap",
                 "filename": "models/test-flipcap.obj",
-                "!!proc": { "type": "uvsphere_flipcap", "size": 1.5, "align_bottom": true }
+                "!!proc": { "type": "uvsphere_flipcap", "size": 0.15, "align_bottom": true }
             },
             {
                 "name": "cylinder",
                 "filename": "models/test-cylinder.obj",
-                "!!proc": { "type": "uvcylinder_rounded", "size": [1.5, 1.5, 1.5], "align_bottom": true }
+                "!!proc": { "type": "uvcylinder_rounded", "size": [0.15, 0.15, 0.15], "align_bottom": true }
             },
             {
                 "name": "sphere-displaced",
                 "filename": "models/test-sphere-displaced.obj",
                 "preserve_facevarying": false,
-                "!!proc": { "type": "sphere", "size": 1.5, "align_bottom": true }
+                "!!proc": { "type": "sphere", "size": 0.15, "align_bottom": true }
             },
             {
                 "name": "subdiv-cube",
@@ -306,7 +306,7 @@ def make_tests():
                 "catmull_clark": true,
                 "compute_normals": true,
                 "preserve_facevarying": true,
-                "!!proc": { "type": "cube_facevarying", "size": [1.5, 1.5, 1.5], "align_bottom": true }
+                "!!proc": { "type": "cube_facevarying", "size": [0.15, 0.15, 0.15], "align_bottom": true }
             },
             {
                 "name": "subdiv-monkey",
@@ -314,38 +314,35 @@ def make_tests():
                 "subdivision_level": 2,
                 "catmull_clark": true,
                 "compute_normals": true,
-                "!!proc": { "type": "suzanne", "size": 1.5, "align_bottom": true }
+                "!!proc": { "type": "suzanne", "size": 0.15, "align_bottom": true }
             },
             {
                 "name": "hairball1",
                 "filename": "models/test-hairball1.ply",
-                "!!proc": { "type": "hairball", "noise": [ 0.3, 10 ] }
+                "!!proc": { "type": "hairball", "size": 0.15, "noise": [ 0.03, 100 ] }
             },
             {
                 "name": "hairball2",
                 "filename": "models/test-hairball2.ply",
-                "!!proc": { "type": "hairball" }
+                "!!proc": { "type": "hairball", "size": 0.15 }
             },
             {
                 "name": "hairball3",
                 "filename": "models/test-hairball3.ply",
-                "!!proc": {
-                    "type": "hairball",
-                    "clump": [ 0.5, 128 ]
-                }
+                "!!proc": { "type": "hairball",  "size": 0.15, "clump": [ 0.5, 128 ] }
             },
             {
                 "name": "hairballi",
                 "filename": "models/test-hairballi.ply",
-                "!!proc": { "type": "sphere", "size": 0.7 }
+                "!!proc": { "type": "hairball_interior", "size": 0.15 }
             },
             {
                 "name": "arealight1",
-                "!!proc": { "type": "quad", "size": [ 4, 4 ] }
+                "!!proc": { "type": "quad", "size": [ 0.4, 0.4 ] }
             },
             {
                 "name": "arealight2",
-                "!!proc": { "type": "quad", "size": [ 4, 4 ] }
+                "!!proc": { "type": "quad", "size": [ 0.4, 0.4 ] }
             }
         ],
         "instances": [
@@ -380,13 +377,13 @@ def make_tests():
                 "name": "arealight1",
                 "shape": "arealight1",
                 "material": "arealight1",
-                "!!proc": { "from": [ -4, 8, 8 ], "to": [ 0, 1, 0 ] }
+                "!!proc": { "from": [ -0.4, 0.8, 0.8 ], "to": [ 0, 0.1, 0 ] }
             },
             {
                 "name": "arealight2",
                 "shape": "arealight2",
                 "material": "arealight2",
-                "!!proc": { "from": [ 4, 8, 8 ], "to": [ 0, 1, 0 ] }
+                "!!proc": { "from": [ 0.4, 0.8, 0.8 ], "to": [ 0, 0.1, 0 ] }
             }
         ],
         "environments": [
@@ -407,7 +404,7 @@ def make_tests():
             }
         ]
     }
-    def make_test(name, shapes, materials, lights, xoffsets=[ -4, -2, 0, 2, 4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1]):
+    def make_test(name, shapes, materials, lights, xoffsets=[ -0.4, -0.2, 0, 0.2, 0.4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1]):
         import copy
         scene = copy.deepcopy(default_scene)
         scene['instances'] += copy.deepcopy(lights['instances'])
@@ -465,7 +462,7 @@ def make_tests():
     make_test('shapes1', ['sphere', "sphere-flipcap", "disk", "cylinder", "cube"], ['uvgrid'], mixed_lights)
     make_test('shapes2', ['subdiv-cube', "subdiv-monkey", "teapot", "bunny", "subdiv-cube"], ['uvgrid', 'plastic-sharp'], mixed_lights)
     make_test('shapes3', ['sphere', "hairball1", "hairball2", "hairball3", "sphere", "", "hairballi", "hairballi", "hairballi", ""], ['matte', 'hair', 'hair', 'hair', 'matte'], mixed_lights,
-        yoffsets=[ 0, 0.75, 0.75, 0.75, 0 ], xscales=[ 0.5, 1, 1, 1, 0.5 ])
+        yoffsets=[ 0, 0.075, 0.075, 0.075, 0 ], xscales=[ 0.5, 1, 1, 1, 0.5 ])
     make_test('arealights1', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ['uvgrid', 'plastic-sharp', 'metal-rough', 'plastic-rough', 'metal-sharp'], area_lights)
     make_test('environments1', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ['uvgrid', 'plastic-sharp', 'metal-rough', 'plastic-rough', 'metal-sharp'], sunsky_lights)
 

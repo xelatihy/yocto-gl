@@ -42,14 +42,13 @@
 //    `compute_tangent_spaces()`
 // 6. compute skinning with `compute_skinning()` and
 //    `compute_matrix_skinning()`
-// 6. create shapes with `make_cube_shape()`, `make_uvsphere_shape()`,
-// `make_quad_shape()`,
-//    `make_cube_fvshape()`, `make_hair_shape()`, `make_suzanne_shape()`,
-//    `make_lines_shape()`, `make_points_shape()`, `make_sphere_shape()`,
-//    `make_cube_rounded_shape()`, `make_uvsphere_flipcap_shape()`,
-//    `make_uvcylinder_shape()`, `make_uvcylinder_rounded_shape()`,
-//    `make_uvdisk_shape()`, `make_cylinder_side_shape()`,
-//    `make_disk_shape()`
+// 6. create shapes with `make_box_shape()`, `make_sphere_shape()`,
+//    `make_quad_shape()`,  `make_disk_shape()`, `make_box_fvshape()`, 
+//    `make_hair_shape()`,  `make_suzanne_shape()`, `make_lines_shape()`, 
+//    `make_points_shape()`,  `make_uvsphere_shape()`, 
+//    `make_box_rounded_shape()`,  `make_uvsphere_flipcap_shape()`, 
+//    `make_uvcylinder_shape()`,  `make_uvcylinder_rounded_shape()`, 
+//    `make_uvdisk_shape()`,  `make_disk_shape()`
 // 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 // 8. shape sampling with `sample_points_element()`, `sample_lines_element()`,
 //    `sample_triangles_element()`; initialize the sampling CDFs with
@@ -587,14 +586,14 @@ inline void make_floor_bent_shape(vector<vec4i>& quads,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, const vec<T, 2>& size,
     const vec<T, 2>& uvsize, T radius);
 template <typename T>
-inline void make_cube_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+inline void make_box_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
     const vec3i& steps, const vec<T, 3>& size, const vec<T, 3>& uvsize);
 template <typename T>
-inline void make_cube_rounded_shape(vector<vec4i>& quads,
+inline void make_box_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 3>& uvsize, T radius);
+    const vec<T, 3>& uvsize, T rounded);
 template <typename T>
 inline void make_uvsphere_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
@@ -635,7 +634,7 @@ template <typename T>
 inline void make_uvcylinder_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 2>& size,
-    const vec<T, 3>& uvsize, T radius);
+    const vec<T, 3>& uvsize, T rounded);
 template <typename T>
 inline void make_geodesic_sphere_shape(vector<vec3i>& triangles,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals, int tesselation,
@@ -646,12 +645,12 @@ template <typename T>
 inline void make_suzanne_shape(
     vector<vec4i>& quads, vector<vec<T, 3>>& positions, T size);
 template <typename T>
-inline void make_cube_shape(
+inline void make_box_shape(
     vector<vec4i>& quads, vector<vec<T, 3>>& positions, const vec<T, 3>& size);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
 template <typename T>
-inline void make_cube_fvshape(vector<vec4i>& quads_positions,
+inline void make_box_fvshape(vector<vec4i>& quads_positions,
     vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
@@ -2310,7 +2309,7 @@ inline void make_quad_stack_shape(vector<vec4i>& quads,
 
 // Make a cube.
 template <typename T>
-inline void make_cube_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+inline void make_box_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
     const vec3i& steps, const vec<T, 3>& size, const vec<T, 3>& uvsize) {
     quads.clear();
@@ -2371,12 +2370,13 @@ inline void make_cube_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
 
 // Make a rounded cube.
 template <typename T>
-inline void make_cube_rounded_shape(vector<vec4i>& quads,
+inline void make_box_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 3>& uvsize, T radius) {
-    make_cube_shape(
+    const vec<T, 3>& uvsize, T rounded) {
+    make_box_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
+    auto radius = rounded * min(size) / 2;
     auto c = size / 2 - vec<T, 3>{radius, radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
         auto pc = vec<T, 3>{
@@ -2431,7 +2431,7 @@ template <typename T>
 inline void make_sphere_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize) {
-    make_cube_shape(quads, positions, normals, texturecoords,
+    make_box_shape(quads, positions, normals, texturecoords,
         {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize});
     for (auto i = 0; i < positions.size(); i++) {
         auto p       = positions[i];
@@ -2445,9 +2445,10 @@ template <typename T>
 inline void make_uvsphere_flipcap_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize, const vec<T, 2>& zflip) {
+    const vec<T, 2>& uvsize, const vec<T, 2>& zflip_) {
     make_uvsphere_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
+    auto zflip = zflip_ * size / 2;
     for (auto i = 0; i < positions.size(); i++) {
         if (positions[i].z > zflip.y) {
             positions[i].z = 2 * zflip.y - positions[i].z;
@@ -2592,9 +2593,10 @@ template <typename T>
 inline void make_uvcylinder_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 2>& size,
-    const vec<T, 3>& uvsize, T radius) {
+    const vec<T, 3>& uvsize, T rounded) {
     make_uvcylinder_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
+    auto radius = rounded * max(size) / 2;
     auto c = size / 2 - vec<T, 2>{radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
         auto phi = atan2(positions[i].y, positions[i].x);
@@ -2639,12 +2641,12 @@ inline void make_geodesic_sphere_shape(vector<vec3i>& triangles,
 
 // Make a facevarying cube.
 template <typename T>
-inline void make_cube_fvshape(vector<vec4i>& quads_positions,
+inline void make_box_fvshape(vector<vec4i>& quads_positions,
     vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
     const vec<T, 3>& uvsize) {
-    make_cube_shape(quads_positions, positions, normals, texturecoords, steps,
+    make_box_shape(quads_positions, positions, normals, texturecoords, steps,
         size, uvsize);
     quads_normals       = quads_positions;
     quads_texturecoords = quads_positions;
@@ -2659,7 +2661,7 @@ inline void make_sphere_fvshape(vector<vec4i>& quads_positions,
     vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize) {
-    make_cube_fvshape(quads_positions, quads_normals, quads_texturecoords,
+    make_box_fvshape(quads_positions, quads_normals, quads_texturecoords,
         positions, normals, texturecoords, {steps, steps, steps}, {1, 1, 1},
         {uvsize, uvsize, uvsize});
     quads_normals = quads_positions;
@@ -3104,7 +3106,7 @@ inline void make_suzanne_shape(
 
 // Watertight cube
 template <typename T>
-inline void make_cube_shape(
+inline void make_box_shape(
     vector<vec4i>& quads, vector<vec<T, 3>>& positions, const vec<T, 3>& size) {
     static auto cube_pos     = vector<vec<T, 3>>{{-1, -1, -1}, {-1, +1, -1},
         {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1},
