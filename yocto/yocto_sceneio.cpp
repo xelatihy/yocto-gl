@@ -154,6 +154,45 @@ inline void from_json(const json& js, volume<T>& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Load/save a scene in the builtin JSON format.
+void load_json_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options);
+void save_json_scene(const string& filename, const yocto_scene& scene,
+    const save_scene_options& options);
+
+// Load/save a scene from/to OBJ.
+void load_obj_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options);
+void save_obj_scene(const string& filename, const yocto_scene& scene,
+    const save_scene_options& options);
+
+// Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
+void load_ply_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options);
+void save_ply_scene(const string& filename, const yocto_scene& scene,
+    const save_scene_options& options);
+
+// Load/save a scene from/to glTF.
+void load_gltf_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options);
+void save_gltf_scene(const string& filename, const yocto_scene& scene,
+    const save_scene_options& options);
+
+// Load/save a scene from/to pbrt. This is not robust at all and only
+// works on scene that have been previously adapted since the two renderers
+// are too different to match.
+void load_pbrt_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options);
+void save_pbrt_scene(const string& filename, const yocto_scene& scene,
+    const save_scene_options& options);
+
+// Load/save a binary dump useful for very fast scene IO. This format is not
+// an archival format and should only be used as an intermediate format.
+void load_ybin_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options);
+void save_ybin_scene(const string& filename, const yocto_scene& scene,
+    const save_scene_options& options);
+
 // Forward declaration
 void load_disney_island_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options);
@@ -178,7 +217,7 @@ void load_scene(const string& filename, yocto_scene& scene,
         load_disney_island_scene(filename, scene, options);
     } else {
         scene = {};
-        throw sceneio_error("unsupported scene format " + ext);
+        throw io_error("unsupported scene format " + ext);
     }
 }
 
@@ -197,7 +236,7 @@ void save_scene(const string& filename, const yocto_scene& scene,
     } else if (ext == "ybin" || ext == "YBIN") {
         save_ybin_scene(filename, scene, options);
     } else {
-        throw sceneio_error("unsupported scene format " + ext);
+        throw io_error("unsupported scene format " + ext);
     }
 }
 
@@ -1147,17 +1186,11 @@ void load_json_meshes(yocto_scene& scene, const string& dirname,
         [&dirname](yocto_shape& shape) {
             if (shape.filename == "" || !shape.positions.empty()) return;
             auto filename = normalize_path(dirname + shape.filename);
-            if (!shape.preserve_facevarying) {
-                load_mesh(filename, shape.points, shape.lines, shape.triangles,
-                    shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, shape.colors, shape.radius, false);
-            } else {
-                auto quads_materials = vector<int>{};
-                load_facevarying_mesh(filename, shape.quads_positions,
-                    shape.quads_normals, shape.quads_texturecoords,
-                    shape.positions, shape.normals, shape.texturecoords,
-                    quads_materials);
-            }
+            load_shape(filename, shape.points, shape.lines, shape.triangles,
+                shape.quads, shape.quads_positions, shape.quads_normals,
+                shape.quads_texturecoords, shape.positions, shape.normals,
+                shape.texturecoords, shape.colors, shape.radius,
+                shape.preserve_facevarying);
         },
         options.cancel_flag, options.run_serially);
 }
@@ -1186,7 +1219,7 @@ void load_json_scene(const string& filename, yocto_scene& scene,
         load_json_meshes(scene, dirname, options);
         load_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
 
     // fix scene
@@ -1209,15 +1242,10 @@ void save_json_meshes(const yocto_scene& scene, const string& dirname,
         [&dirname](const yocto_shape& shape) {
             if (shape.filename == "") return;
             auto filename = normalize_path(dirname + shape.filename);
-            if (!shape.preserve_facevarying) {
-                save_mesh(filename, shape.points, shape.lines, shape.triangles,
-                    shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, shape.colors, shape.radius);
-            } else {
-                save_facevarying_mesh(filename, shape.quads_positions,
-                    shape.quads_normals, shape.quads_texturecoords,
-                    shape.positions, shape.normals, shape.texturecoords, {});
-            }
+            save_shape(filename, shape.points, shape.lines, shape.triangles,
+                shape.quads, shape.quads_positions, shape.quads_normals,
+                shape.quads_texturecoords, shape.positions, shape.normals,
+                shape.texturecoords, shape.colors, shape.radius);
         },
         options.cancel_flag, options.run_serially);
 }
@@ -1240,7 +1268,7 @@ void save_json_scene(const string& filename, const yocto_scene& scene,
         save_json_meshes(scene, dirname, options);
         save_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
 }
 
@@ -1264,7 +1292,7 @@ void set_obj_material(
     for (material_id = 0; material_id < scene.materials.size(); material_id++) {
         if (scene.materials[material_id].name == name) return;
     }
-    throw sceneio_error("unknown material " + name);
+    throw io_error("unknown material " + name);
 }
 
 // Loads an OBJ
@@ -1572,14 +1600,14 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
                         oproc.level < 0 ? 20 : pow2(oproc.level)},
                     {oproc.size, oproc.size}, {oproc.size / 2, oproc.size / 2});
             } else {
-                throw sceneio_error("unknown obj procedural");
+                throw io_error("unknown obj procedural");
             }
             scene.shapes.push_back(shape);
             auto instance  = yocto_instance{};
             instance.name  = shape.name;
             instance.shape = (int)scene.shapes.size() - 1;
             if (mmap.find(oproc.material) == mmap.end()) {
-                throw sceneio_error("missing material " + oproc.material);
+                throw io_error("missing material " + oproc.material);
             } else {
                 instance.material = mmap.find(oproc.material)->second;
             }
@@ -1613,7 +1641,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         auto dirname = get_dirname(filename);
         load_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
 
     // fix scene
@@ -1865,7 +1893,7 @@ void save_obj_scene(const string& filename, const yocto_scene& scene,
         auto dirname = get_dirname(filename);
         save_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot save scene " + filename + "\n" + e.what());
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
@@ -1890,8 +1918,8 @@ void load_ply_scene(const string& filename, yocto_scene& scene,
         // load ply mesh
         scene.shapes.push_back({});
         auto& shape = scene.shapes.back();
-        load_ply_mesh(filename, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.positions, shape.normals, shape.texturecoords,
+        load_shape(filename, shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.quads_positions, shape.quads_normals, shape.quads_texturecoords, shape.positions, shape.normals, shape.texturecoords,
             shape.colors, shape.radius, false);
 
         // add instance
@@ -1901,7 +1929,7 @@ void load_ply_scene(const string& filename, yocto_scene& scene,
         scene.instances.push_back(instance);
 
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
 
     // fix scene
@@ -1916,15 +1944,15 @@ void load_ply_scene(const string& filename, yocto_scene& scene,
 void save_ply_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     if (scene.shapes.empty()) {
-        throw sceneio_error("cannot save empty scene " + filename);
+        throw io_error("cannot save empty scene " + filename);
     }
     try {
         auto& shape = scene.shapes.front();
-        save_ply_mesh(filename, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.positions, shape.normals, shape.texturecoords,
+        save_shape(filename, shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.quads_positions, shape.quads_normals, shape.quads_texturecoords, shape.positions, shape.normals, shape.texturecoords,
             shape.colors, shape.radius);
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot save scene " + filename + "\n" + e.what());
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
@@ -1950,12 +1978,12 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
     auto data   = (cgltf_data*)nullptr;
     auto result = cgltf_parse_file(&options, filename.c_str(), &data);
     if (result != cgltf_result_success) {
-        throw sceneio_error("could not load gltf " + filename);
+        throw io_error("could not load gltf " + filename);
     }
     auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{data, cgltf_free};
     if (cgltf_load_buffers(&options, data, get_dirname(filename).c_str()) !=
         cgltf_result_success) {
-        throw sceneio_error("could not load gltf buffers " + filename);
+        throw io_error("could not load gltf buffers " + filename);
     }
 
     // convert textures
@@ -2175,9 +2203,9 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
                         shape.lines.push_back({i - 1, i});
                 } else if (gprim->type == cgltf_primitive_type_points) {
                     // points
-                    throw sceneio_error("points not supported");
+                    throw io_error("points not supported");
                 } else {
-                    throw sceneio_error("unknown primitive type");
+                    throw io_error("unknown primitive type");
                 }
             } else {
                 auto indices = accessor_values(gprim->indices);
@@ -2215,9 +2243,9 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
                         shape.lines.push_back(
                             {(int)indices[i - 1][0], (int)indices[i][0]});
                 } else if (gprim->type == cgltf_primitive_type_points) {
-                    throw sceneio_error("points not supported");
+                    throw io_error("points not supported");
                 } else {
-                    throw sceneio_error("unknown primitive type");
+                    throw io_error("unknown primitive type");
                 }
             }
             scene.shapes.push_back(shape);
@@ -2234,7 +2262,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
         camera.name         = gcam->name ? gcam->name : "";
         camera.orthographic = gcam->type == cgltf_camera_type_orthographic;
         if (camera.orthographic) {
-            // throw sceneio_error("orthographic not supported well");
+            // throw io_error("orthographic not supported well");
             auto ortho           = &gcam->orthographic;
             camera.lens_aperture = 0;
             camera.orthographic  = true;
@@ -2397,7 +2425,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
                                     (float)output_view[i][2]});
                     } break;
                     case cgltf_animation_path_type_weights: {
-                        throw sceneio_error("weights not supported for now");
+                        throw io_error("weights not supported for now");
 #if 0
                     // get a node that it refers to
                     auto ncomp = 0;
@@ -2423,7 +2451,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
 #endif
                     } break;
                     default: {
-                        throw sceneio_error("bad gltf animation");
+                        throw io_error("bad gltf animation");
                     }
                 }
                 sampler_map[{gchannel->sampler, path}] =
@@ -2451,7 +2479,7 @@ void load_gltf_scene(const string& filename, yocto_scene& scene,
         load_scene_textures(scene, dirname, options);
 
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
 
     // fix scene
@@ -2683,7 +2711,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
 
     // animations not supported yet
     if (!scene.animations.empty())
-        throw sceneio_error("animation not supported yet");
+        throw io_error("animation not supported yet");
 
     // nodes from instances
     if (scene.nodes.empty()) {
@@ -2765,7 +2793,7 @@ void save_gltf_scene(const string& filename, const yocto_scene& scene,
         // save textures
         save_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot save scene " + filename + "\n" + e.what());
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
@@ -2924,8 +2952,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 camera.focus_distance = realistic.focusdistance;
                 camera.lens_aperture  = realistic.aperturediameter / 2;
             } else {
-                throw sceneio_error("unsupported Camera type " +
-                                    std::to_string(pcamera.index()));
+                throw io_error("unsupported Camera type " +
+                               std::to_string(pcamera.index()));
             }
             scene.cameras.push_back(camera);
         }
@@ -2938,7 +2966,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     camera.film_width = camera.film_height * last_film_aspect;
                 }
             } else {
-                throw sceneio_error("unsupported pbrt type");
+                throw io_error("unsupported pbrt type");
             }
         }
         void shape(const pbrt_shape& pshape, const pbrt_context& ctx) {
@@ -2963,8 +2991,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto& mesh     = get<pbrt_plymesh_shape>(pshape);
                 shape.filename = mesh.filename;
                 if (!options.skip_meshes) {
-                    load_ply_mesh(get_dirname(filename) + mesh.filename,
+                    load_shape(get_dirname(filename) + mesh.filename,
                         shape.points, shape.lines, shape.triangles, shape.quads,
+                               shape.quads_positions, shape.quads_normals, shape.quads_texturecoords,
                         shape.positions, shape.normals, shape.texturecoords,
                         shape.colors, shape.radius, false);
                 }
@@ -2977,7 +3006,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 make_uvdisk_shape(shape.quads, shape.positions, shape.normals,
                     shape.texturecoords, {32, 16}, 2 * disk.radius, {1, 1});
             } else {
-                throw sceneio_error(
+                throw io_error(
                     "unsupported shape type " + std::to_string(pshape.index()));
             }
             scene.shapes.push_back(shape);
@@ -3082,7 +3111,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
                 if (verbose) printf("texture wrinkled not supported well");
             } else {
-                throw sceneio_error(
+                throw io_error(
                     "texture not supported" + std::to_string(ptexture.index()));
             }
             scene.textures.push_back(texture);
@@ -3262,12 +3291,12 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     material.transmission = {1, 1, 1};
                     material.roughness    = 0;
                 } else {
-                    throw sceneio_error("material type not supported " +
-                                        std::to_string(fourier.approx.index()));
+                    throw io_error("material type not supported " +
+                                   std::to_string(fourier.approx.index()));
                 }
             } else {
-                throw sceneio_error("material type not supported " +
-                                    std::to_string(pmaterial.index()));
+                throw io_error("material type not supported " +
+                               std::to_string(pmaterial.index()));
             }
             mmap[name] = material;
         }
@@ -3278,8 +3307,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto& diffuse = get<pbrt_diffuse_arealight>(plight);
                 emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
             } else {
-                throw sceneio_error("area light type not supported " +
-                                    std::to_string(plight.index()));
+                throw io_error("area light type not supported " +
+                               std::to_string(plight.index()));
             }
             amap[name] = emission;
         }
@@ -3390,8 +3419,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 instance.frame    = (frame3f)ctx.transform_start;
                 scene.instances.push_back(instance);
             } else {
-                throw sceneio_error("light type not supported " +
-                                    std::to_string(plight.index()));
+                throw io_error("light type not supported " +
+                               std::to_string(plight.index()));
             }
         }
         void begin_object(const pbrt_object& pobject, const pbrt_context& ctx) {
@@ -3424,7 +3453,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         auto dirname = get_dirname(filename);
         load_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
 
     // fix scene
@@ -3519,8 +3548,8 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
         for (auto& shape : scene.shapes) {
             if (shape.filename == "") continue;
             auto filename = normalize_path(dirname + shape.filename);
-            save_mesh(filename, shape.points, shape.lines, shape.triangles,
-                shape.quads, shape.positions, shape.normals,
+            save_shape(filename, shape.points, shape.lines, shape.triangles,
+                shape.quads, shape.quads_positions, shape.quads_normals, shape.quads_texturecoords, shape.positions, shape.normals,
                 shape.texturecoords, shape.colors, shape.radius);
         }
 
@@ -3528,7 +3557,7 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
         save_scene_textures(scene, dirname, options);
 
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot save scene " + filename + "\n" + e.what());
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
@@ -3843,7 +3872,7 @@ void load_ybin_scene(const string& filename, yocto_scene& scene,
         auto fs = input_file(filename, true);
         read_object(fs, scene);
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
 }
 
@@ -3854,715 +3883,7 @@ void save_ybin_scene(const string& filename, const yocto_scene& scene,
         auto fs = output_file(filename, true);
         write_object(fs, scene);
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot save scene " + filename + "\n" + e.what());
-    }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF SHAPE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Reset mesh data
-void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
-    vector<float>& radius) {
-    points        = {};
-    lines         = {};
-    triangles     = {};
-    quads         = {};
-    positions     = {};
-    normals       = {};
-    texturecoords = {};
-    colors        = {};
-    radius        = {};
-}
-
-// Load ply mesh
-void load_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, vector<vec4f>& colors, vector<float>& radius,
-    bool force_triangles) {
-    auto ext = get_extension(filename);
-    if (ext == "ply" || ext == "PLY") {
-        load_ply_mesh(filename, points, lines, triangles, quads, positions,
-            normals, texturecoords, colors, radius, force_triangles);
-    } else if (ext == "obj" || ext == "OBJ") {
-        load_obj_mesh(filename, points, lines, triangles, quads, positions,
-            normals, texturecoords, force_triangles);
-    } else {
-        reset_mesh_data(points, lines, triangles, quads, positions, normals,
-            texturecoords, colors, radius);
-        throw sceneio_error("unsupported mesh type " + ext);
-    }
-}
-
-// Save ply mesh
-void save_mesh(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<vec4f>& colors, const vector<float>& radius, bool ascii) {
-    auto ext = get_extension(filename);
-    if (ext == "ply" || ext == "PLY") {
-        return save_ply_mesh(filename, points, lines, triangles, quads,
-            positions, normals, texturecoords, colors, radius, ascii);
-    } else if (ext == "obj" || ext == "OBJ") {
-        return save_obj_mesh(filename, points, lines, triangles, quads,
-            positions, normals, texturecoords);
-    } else {
-        throw sceneio_error("unsupported mesh type " + ext);
-    }
-}
-
-void load_ply_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, vector<vec4f>& colors, vector<float>& radius,
-    bool force_triangles, bool flip_texcoord) {
-    // clear
-    reset_mesh_data(points, lines, triangles, quads, positions, normals,
-        texturecoords, colors, radius);
-
-    try {
-        // load ply
-        happly::PLYData ply(filename);
-
-        // copy vertex data
-        if (ply.hasElement("vertex")) {
-            auto& vertex = ply.getElement("vertex");
-            if (vertex.hasProperty("x") && vertex.hasProperty("y") &&
-                vertex.hasProperty("z")) {
-                auto x = vertex.getProperty<float>("x");
-                auto y = vertex.getProperty<float>("y");
-                auto z = vertex.getProperty<float>("z");
-                positions.resize(x.size());
-                for (auto i = 0; i < positions.size(); i++) {
-                    positions[i] = {x[i], y[i], z[i]};
-                }
-            } else {
-                throw sceneio_error("vertex positions not present");
-            }
-            if (vertex.hasProperty("nx") && vertex.hasProperty("ny") &&
-                vertex.hasProperty("nz")) {
-                auto x = vertex.getProperty<float>("nx");
-                auto y = vertex.getProperty<float>("ny");
-                auto z = vertex.getProperty<float>("nz");
-                normals.resize(x.size());
-                for (auto i = 0; i < normals.size(); i++) {
-                    normals[i] = {x[i], y[i], z[i]};
-                }
-            }
-            if (vertex.hasProperty("u") && vertex.hasProperty("v")) {
-                auto x = vertex.getProperty<float>("u");
-                auto y = vertex.getProperty<float>("v");
-                texturecoords.resize(x.size());
-                for (auto i = 0; i < texturecoords.size(); i++) {
-                    texturecoords[i] = {x[i], y[i]};
-                }
-            }
-            if (vertex.hasProperty("s") && vertex.hasProperty("t")) {
-                auto x = vertex.getProperty<float>("s");
-                auto y = vertex.getProperty<float>("t");
-                texturecoords.resize(x.size());
-                for (auto i = 0; i < texturecoords.size(); i++) {
-                    texturecoords[i] = {x[i], y[i]};
-                }
-            }
-            if (vertex.hasProperty("red") && vertex.hasProperty("green") &&
-                vertex.hasProperty("blue")) {
-                auto x = vertex.getProperty<float>("red");
-                auto y = vertex.getProperty<float>("green");
-                auto z = vertex.getProperty<float>("blue");
-                colors.resize(x.size());
-                for (auto i = 0; i < colors.size(); i++) {
-                    colors[i] = {x[i], y[i], z[i], 1};
-                }
-                if (vertex.hasProperty("alpha")) {
-                    auto w = vertex.getProperty<float>("alpha");
-                    for (auto i = 0; i < colors.size(); i++) {
-                        colors[i].w = w[i];
-                    }
-                }
-            }
-            if (vertex.hasProperty("radius")) {
-                radius = vertex.getProperty<float>("radius");
-            }
-        }
-
-        // fix texture coordinated
-        if (flip_texcoord && !texturecoords.empty()) {
-            for (auto& uv : texturecoords) uv.y = 1 - uv.y;
-        }
-
-        // copy face data
-        if (ply.hasElement("face")) {
-            auto& elements = ply.getElement("face");
-            if (!elements.hasProperty("vertex_indices"))
-                throw sceneio_error("bad ply faces");
-            auto indices = vector<vector<int>>{};
-            try {
-                indices = elements.getListProperty<int>("vertex_indices");
-            } catch (...) {
-                (vector<vector<unsigned int>>&)indices =
-                    elements.getListProperty<unsigned int>("vertex_indices");
-            }
-            for (auto& face : indices) {
-                if (face.size() == 4) {
-                    quads.push_back({face[0], face[1], face[2], face[3]});
-                } else {
-                    for (auto i = 2; i < face.size(); i++)
-                        triangles.push_back({face[0], face[i - 1], face[i]});
-                }
-            }
-        }
-
-        // copy face data
-        if (ply.hasElement("line")) {
-            auto& elements = ply.getElement("line");
-            if (!elements.hasProperty("vertex_indices"))
-                throw sceneio_error("bad ply lines");
-            auto indices = vector<vector<int>>{};
-            try {
-                indices = elements.getListProperty<int>("vertex_indices");
-            } catch (...) {
-                (vector<vector<unsigned int>>&)indices =
-                    elements.getListProperty<unsigned int>("vertex_indices");
-            }
-            for (auto& line : indices) {
-                for (auto i = 1; i < line.size(); i++)
-                    lines.push_back({line[i], line[i - 1]});
-            }
-        }
-
-        merge_triangles_and_quads(triangles, quads, force_triangles);
-
-    } catch (const std::exception& e) {
-        throw sceneio_error("cannot load mesh " + filename + "\n" + e.what());
-    }
-}
-
-// Save ply mesh
-void save_ply_mesh(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<vec4f>& colors, const vector<float>& radius, bool ascii,
-    bool flip_texcoord) {
-    // empty data
-    happly::PLYData ply;
-
-    // add elements
-    ply.addElement("vertex", positions.size());
-    if (!positions.empty()) {
-        auto& vertex = ply.getElement("vertex");
-        auto  x      = vector<float>{};
-        auto  y      = vector<float>{};
-        auto  z      = vector<float>{};
-        for (auto& p : positions) {
-            x.push_back(p.x);
-            y.push_back(p.y);
-            z.push_back(p.z);
-        }
-        vertex.addProperty("x", x);
-        vertex.addProperty("y", y);
-        vertex.addProperty("z", z);
-    }
-    if (!normals.empty()) {
-        auto& vertex = ply.getElement("vertex");
-        auto  x      = vector<float>{};
-        auto  y      = vector<float>{};
-        auto  z      = vector<float>{};
-        for (auto& n : normals) {
-            x.push_back(n.x);
-            y.push_back(n.y);
-            z.push_back(n.z);
-        }
-        vertex.addProperty("nx", x);
-        vertex.addProperty("ny", y);
-        vertex.addProperty("nz", z);
-    }
-    if (!texturecoords.empty()) {
-        auto& vertex = ply.getElement("vertex");
-        auto  x      = vector<float>{};
-        auto  y      = vector<float>{};
-        for (auto& t : texturecoords) {
-            x.push_back(t.x);
-            y.push_back(flip_texcoord ? 1 - t.y : t.y);
-        }
-        vertex.addProperty("u", x);
-        vertex.addProperty("v", y);
-    }
-    if (!colors.empty()) {
-        auto& vertex = ply.getElement("vertex");
-        auto  x      = vector<float>{};
-        auto  y      = vector<float>{};
-        auto  z      = vector<float>{};
-        auto  w      = vector<float>{};
-        for (auto& c : colors) {
-            x.push_back(c.x);
-            y.push_back(c.y);
-            z.push_back(c.z);
-            w.push_back(c.w);
-        }
-        vertex.addProperty("red", x);
-        vertex.addProperty("green", y);
-        vertex.addProperty("blue", z);
-        vertex.addProperty("alpha", w);
-    }
-    if (!radius.empty()) {
-        auto& vertex = ply.getElement("vertex");
-        vertex.addProperty("radius", radius);
-    }
-
-    // face date
-    if (!triangles.empty() || !quads.empty()) {
-        ply.addElement("face", triangles.size() + quads.size());
-        auto elements = vector<vector<int>>{};
-        for (auto& t : triangles) {
-            elements.push_back({t.x, t.y, t.z});
-        }
-        for (auto& q : quads) {
-            if (q.z == q.w) {
-                elements.push_back({q.x, q.y, q.z});
-            } else {
-                elements.push_back({q.x, q.y, q.z, q.w});
-            }
-        }
-        ply.getElement("face").addListProperty("vertex_indices", elements);
-    }
-    if (!lines.empty()) {
-        ply.addElement("line", lines.size());
-        auto elements = vector<vector<int>>{};
-        for (auto& l : lines) {
-            elements.push_back({l.x, l.y});
-        }
-        ply.getElement("line").addListProperty("vertex_indices", elements);
-    }
-    if (!points.empty() || !quads.empty()) {
-        ply.addElement("point", points.size());
-        auto elements = vector<vector<int>>{};
-        for (auto& p : points) {
-            elements.push_back({p});
-        }
-        ply.getElement("point").addListProperty("vertex_indices", elements);
-    }
-
-    // Write our data
-    try {
-        ply.write(filename,
-            ascii ? happly::DataFormat::ASCII : happly::DataFormat::Binary);
-    } catch (const std::exception& e) {
-        throw sceneio_error("cannot save mesh " + filename + "\n" + e.what());
-    }
-}
-
-// Load ply mesh
-void load_obj_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, bool force_triangles, bool flip_texcoord) {
-    struct parse_callbacks : obj_callbacks {
-        vector<int>&   points;
-        vector<vec2i>& lines;
-        vector<vec3i>& triangles;
-        vector<vec4i>& quads;
-        vector<vec3f>& positions;
-        vector<vec3f>& normals;
-        vector<vec2f>& texturecoords;
-
-        // obj vertices
-        std::deque<vec3f> opos      = std::deque<vec3f>();
-        std::deque<vec3f> onorm     = std::deque<vec3f>();
-        std::deque<vec2f> otexcoord = std::deque<vec2f>();
-
-        // vertex maps
-        unordered_map<obj_vertex, int> vertex_map =
-            unordered_map<obj_vertex, int>();
-
-        parse_callbacks(vector<int>& points, vector<vec2i>& lines,
-            vector<vec3i>& triangles, vector<vec4i>& quads,
-            vector<vec3f>& positions, vector<vec3f>& normals,
-            vector<vec2f>& texturecoords)
-            : points{points}
-            , lines{lines}
-            , triangles{triangles}
-            , quads{quads}
-            , positions{positions}
-            , normals{normals}
-            , texturecoords{texturecoords} {}
-
-        // Add  vertices to the current shape
-        void add_verts(const vector<obj_vertex>& verts) {
-            for (auto& vert : verts) {
-                auto it = vertex_map.find(vert);
-                if (it != vertex_map.end()) continue;
-                auto nverts = (int)positions.size();
-                vertex_map.insert(it, {vert, nverts});
-                if (vert.position)
-                    positions.push_back(opos.at(vert.position - 1));
-                if (vert.texturecoord)
-                    texturecoords.push_back(
-                        otexcoord.at(vert.texturecoord - 1));
-                if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
-            }
-        }
-
-        void vert(const vec3f& v) { opos.push_back(v); }
-        void norm(const vec3f& v) { onorm.push_back(v); }
-        void texcoord(const vec2f& v) { otexcoord.push_back(v); }
-        void face(const vector<obj_vertex>& verts) {
-            add_verts(verts);
-            if (verts.size() == 4) {
-                quads.push_back(
-                    {vertex_map.at(verts[0]), vertex_map.at(verts[1]),
-                        vertex_map.at(verts[2]), vertex_map.at(verts[3])});
-            } else {
-                for (auto i = 2; i < verts.size(); i++)
-                    triangles.push_back({vertex_map.at(verts[0]),
-                        vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
-            }
-        }
-        void line(const vector<obj_vertex>& verts) {
-            add_verts(verts);
-            for (auto i = 1; i < verts.size(); i++)
-                lines.push_back(
-                    {vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
-        }
-        void point(const vector<obj_vertex>& verts) {
-            add_verts(verts);
-            for (auto i = 0; i < verts.size(); i++)
-                points.push_back(vertex_map.at(verts[i]));
-        }
-    };
-
-    // clear
-    vector<vec4f> colors = vector<vec4f>{};
-    vector<float> radius = vector<float>{};
-    reset_mesh_data(points, lines, triangles, quads, positions, normals,
-        texturecoords, colors, radius);
-
-    try {
-        // load obj
-        auto obj_options          = load_obj_options();
-        obj_options.exit_on_error = false;
-        obj_options.geometry_only = true;
-        obj_options.flip_texcoord = flip_texcoord;
-        auto cb                   = parse_callbacks{
-            points, lines, triangles, quads, positions, normals, texturecoords};
-        load_obj(filename, cb, obj_options);
-
-        // merging quads and triangles
-        merge_triangles_and_quads(triangles, quads, force_triangles);
-
-    } catch (const std::exception& e) {
-        throw sceneio_error("cannot load mesh " + filename + "\n" + e.what());
-    }
-}
-
-// Load ply mesh
-void save_obj_mesh(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    bool flip_texcoord) {
-    auto fs = output_file(filename);
-
-    println_values(
-        fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n");
-
-    for (auto& p : positions) println_values(fs, "v", p);
-    for (auto& n : normals) println_values(fs, "vn", n);
-    for (auto& t : texturecoords)
-        println_values(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
-
-    auto mask = obj_vertex{
-        1, texturecoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
-    auto vert = [mask](int i) {
-        return obj_vertex{(i + 1) * mask.position, (i + 1) * mask.texturecoord,
-            (i + 1) * mask.normal};
-    };
-
-    for (auto& p : points) {
-        println_values(fs, "p", vert(p));
-    }
-    for (auto& l : lines) {
-        println_values(fs, "l", vert(l.x), vert(l.y));
-    }
-    for (auto& t : triangles) {
-        println_values(fs, "f", vert(t.x), vert(t.y), vert(t.z));
-    }
-    for (auto& q : quads) {
-        if (q.z == q.w) {
-            println_values(fs, "f", vert(q.x), vert(q.y), vert(q.z));
-        } else {
-            println_values(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
-        }
-    }
-}
-
-// Reset mesh data
-void reset_facevarying_mesh_data(vector<vec4i>& quads_positions,
-    vector<vec4i>& quads_normals, vector<vec4i>& quads_textuercoords,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, vector<int>& quads_materials) {
-    quads_positions     = {};
-    quads_normals       = {};
-    quads_textuercoords = {};
-    positions           = {};
-    normals             = {};
-    texturecoords       = {};
-    quads_materials     = {};
-}
-
-// Load ply mesh
-void load_facevarying_mesh(const string& filename,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    vector<int>& quads_materials) {
-    auto ext = get_extension(filename);
-    if (ext == "obj" || ext == "OBJ") {
-        return load_obj_facevarying_mesh(filename, quads_positions,
-            quads_normals, quads_texturecoords, positions, normals,
-            texturecoords, quads_materials);
-    } else {
-        reset_facevarying_mesh_data(quads_positions, quads_normals,
-            quads_texturecoords, positions, normals, texturecoords,
-            quads_materials);
-        throw sceneio_error("unsupported mesh type " + ext + " " + filename);
-    }
-}
-
-// Save ply mesh
-void save_facevarying_mesh(const string& filename,
-    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<int>& quads_materials, bool ascii) {
-    auto ext = get_extension(filename);
-    if (ext == "obj" || ext == "OBJ") {
-        return save_obj_facevarying_mesh(filename, quads_positions,
-            quads_normals, quads_texturecoords, positions, normals,
-            texturecoords, quads_materials);
-    } else {
-        throw sceneio_error("unsupported mesh type " + ext + " " + filename);
-    }
-}
-
-// Load ply mesh
-void load_obj_facevarying_mesh(const string& filename,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    vector<int>& quads_materials, bool flip_texcoord) {
-    struct parse_callbacks : obj_callbacks {
-        vector<vec4i>& quads_positions;
-        vector<vec4i>& quads_normals;
-        vector<vec4i>& quads_texturecoords;
-        vector<vec3f>& positions;
-        vector<vec3f>& normals;
-        vector<vec2f>& texturecoords;
-        vector<int>&   quads_materials;
-
-        // obj vertices
-        std::deque<vec3f> opos      = std::deque<vec3f>();
-        std::deque<vec3f> onorm     = std::deque<vec3f>();
-        std::deque<vec2f> otexcoord = std::deque<vec2f>();
-
-        // vertex maps
-        unordered_map<int, int> pos_map      = unordered_map<int, int>();
-        unordered_map<int, int> texcoord_map = unordered_map<int, int>();
-        unordered_map<int, int> norm_map     = unordered_map<int, int>();
-
-        // material group
-        vector<string> material_group      = vector<string>();
-        int            current_material_id = -1;
-
-        parse_callbacks(vector<vec4i>& quads_positions,
-            vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
-            vector<vec3f>& positions, vector<vec3f>& normals,
-            vector<vec2f>& texturecoords, vector<int>& quads_materials)
-            : quads_positions{quads_positions}
-            , quads_normals{quads_normals}
-            , quads_texturecoords{quads_texturecoords}
-            , positions{positions}
-            , normals{normals}
-            , texturecoords{texturecoords}
-            , quads_materials{quads_materials} {}
-
-        // add vertex
-        void add_fvverts(const vector<obj_vertex>& verts) {
-            for (auto& vert : verts) {
-                if (!vert.position) continue;
-                auto pos_it = pos_map.find(vert.position);
-                if (pos_it != pos_map.end()) continue;
-                auto nverts = (int)positions.size();
-                pos_map.insert(pos_it, {vert.position, nverts});
-                positions.push_back(opos.at(vert.position - 1));
-            }
-            for (auto& vert : verts) {
-                if (!vert.texturecoord) continue;
-                auto texcoord_it = texcoord_map.find(vert.texturecoord);
-                if (texcoord_it != texcoord_map.end()) continue;
-                auto nverts = (int)texturecoords.size();
-                texcoord_map.insert(texcoord_it, {vert.texturecoord, nverts});
-                texturecoords.push_back(otexcoord.at(vert.texturecoord - 1));
-            }
-            for (auto& vert : verts) {
-                if (!vert.normal) continue;
-                auto norm_it = norm_map.find(vert.normal);
-                if (norm_it != norm_map.end()) continue;
-                auto nverts = (int)normals.size();
-                norm_map.insert(norm_it, {vert.normal, nverts});
-                normals.push_back(onorm.at(vert.normal - 1));
-            }
-        }
-
-        void vert(const vec3f& v) { opos.push_back(v); }
-        void norm(const vec3f& v) { onorm.push_back(v); }
-        void texcoord(const vec2f& v) { otexcoord.push_back(v); }
-        void face(const vector<obj_vertex>& verts) {
-            add_fvverts(verts);
-            if (verts.size() == 4) {
-                if (verts[0].position) {
-                    quads_positions.push_back({pos_map.at(verts[0].position),
-                        pos_map.at(verts[1].position),
-                        pos_map.at(verts[2].position),
-                        pos_map.at(verts[3].position)});
-                }
-                if (verts[0].texturecoord) {
-                    quads_texturecoords.push_back(
-                        {texcoord_map.at(verts[0].texturecoord),
-                            texcoord_map.at(verts[1].texturecoord),
-                            texcoord_map.at(verts[2].texturecoord),
-                            texcoord_map.at(verts[3].texturecoord)});
-                }
-                if (verts[0].normal) {
-                    quads_normals.push_back({norm_map.at(verts[0].normal),
-                        norm_map.at(verts[1].normal),
-                        norm_map.at(verts[2].normal),
-                        norm_map.at(verts[3].normal)});
-                }
-                quads_materials.push_back(current_material_id);
-            } else {
-                if (verts[0].position) {
-                    for (auto i = 2; i < verts.size(); i++)
-                        quads_positions.push_back(
-                            {pos_map.at(verts[0].position),
-                                pos_map.at(verts[1].position),
-                                pos_map.at(verts[i].position),
-                                pos_map.at(verts[i].position)});
-                }
-                if (verts[0].texturecoord) {
-                    for (auto i = 2; i < verts.size(); i++)
-                        quads_texturecoords.push_back(
-                            {texcoord_map.at(verts[0].texturecoord),
-                                texcoord_map.at(verts[1].texturecoord),
-                                texcoord_map.at(verts[i].texturecoord),
-                                texcoord_map.at(verts[i].texturecoord)});
-                }
-                if (verts[0].normal) {
-                    for (auto i = 2; i < verts.size(); i++)
-                        quads_normals.push_back({norm_map.at(verts[0].normal),
-                            norm_map.at(verts[1].normal),
-                            norm_map.at(verts[i].normal),
-                            norm_map.at(verts[i].normal)});
-                }
-                for (auto i = 2; i < verts.size(); i++)
-                    quads_materials.push_back(current_material_id);
-            }
-        }
-        void line(const vector<obj_vertex>& verts) {
-            throw sceneio_error("lines not supported!");
-        }
-        void point(const vector<obj_vertex>& verts) {
-            throw sceneio_error("points not supported!");
-        }
-        void usemtl(const string& name) {
-            auto pos = std::find(
-                material_group.begin(), material_group.end(), name);
-            if (pos == material_group.end()) {
-                material_group.push_back(name);
-                current_material_id = (int)material_group.size() - 1;
-            } else {
-                current_material_id = (int)(pos - material_group.begin());
-            }
-        }
-    }
-
-    // clear
-    reset_facevarying_mesh_data(quads_positions, quads_normals,
-        quads_texturecoords, positions, normals, texturecoords,
-        quads_materials);
-
-    try {
-        // load obj
-        auto obj_options          = load_obj_options();
-        obj_options.exit_on_error = false;
-        obj_options.geometry_only = true;
-        obj_options.flip_texcoord = flip_texcoord;
-        auto cb = parse_callbacks{quads_positions, quads_normals,
-            quads_texturecoords, positions, normals, texturecoords,
-            quads_materials};
-        load_obj(filename, cb, obj_options);
-
-        // cleanup materials ids
-        if (std::all_of(quads_materials.begin(), quads_materials.end(),
-                [b = quads_materials.front()](auto a) { return a == b; })) {
-            quads_materials.clear();
-        }
-    } catch (const std::exception& e) {
-        throw sceneio_error("cannot load mesh " + filename + "\n" + e.what());
-    }
-}
-
-// Load ply mesh
-void save_obj_facevarying_mesh(const string& filename,
-    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<int>& quads_materials, bool flip_texcoord) {
-    auto fs = output_file(filename);
-
-    println_values(
-        fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n");
-
-    for (auto& p : positions) println_values(fs, "v", p);
-    for (auto& n : normals) println_values(fs, "vn", n);
-    for (auto& t : texturecoords)
-        println_values(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
-
-    auto fvmask = obj_vertex{
-        1, texturecoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
-    auto fvvert = [fvmask](int pi, int ti, int ni) {
-        return obj_vertex{(pi + 1) * fvmask.position,
-            (ti + 1) * fvmask.texturecoord, (ni + 1) * fvmask.normal};
-    };
-    auto last_material_id = -1;
-    for (auto i = 0; i < quads_positions.size(); i++) {
-        if (!quads_materials.empty() &&
-            quads_materials[i] != last_material_id) {
-            last_material_id = quads_materials[i];
-            println_values(fs, "usemtl material_{}\n", last_material_id);
-        }
-        auto qp = quads_positions.at(i);
-        auto qt = !quads_texturecoords.empty() ? quads_texturecoords.at(i)
-                                               : vec4i{-1, -1, -1, -1};
-        auto qn = !quads_normals.empty() ? quads_normals.at(i)
-                                         : vec4i{-1, -1, -1, -1};
-        if (qp.z != qp.w) {
-            println_values(fs, "f", fvvert(qp.x, qt.x, qn.x),
-                fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z),
-                fvvert(qp.w, qt.w, qn.w));
-        } else {
-            println_values(fs, "f", fvvert(qp.x, qt.x, qn.x),
-                fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z));
-        }
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
@@ -4640,7 +3961,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
                 ljs.at("translationMatrix").get<mat4f>());
             scene.environments.push_back(environment);
         } else {
-            throw sceneio_error("unknown light type");
+            throw io_error("unknown light type");
         }
     }
 }
@@ -4813,7 +4134,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         void vert(const vec3f& v) { opos.push_back(v); }
         void norm(const vec3f& v) { onorm.push_back(v); }
         void texcoord(vec2f v) {
-            throw sceneio_error("texture coord not supported");
+            throw io_error("texture coord not supported");
         }
         void face(const vector<obj_vertex>& verts) {
             split_shape();
@@ -4868,7 +4189,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                     shapes.back().quads_texturecoords.push_back(
                         {offset + 0, offset + 1, offset + 2, offset + 3});
                 } else {
-                    throw sceneio_error("BAD PTEX TEXCOORDS");
+                    throw io_error("BAD PTEX TEXCOORDS");
                 }
             }
         }
@@ -4949,13 +4270,13 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
             for (auto& shape : shapes) {
                 merge_triangles_and_quads(shape.triangles, shape.quads, false);
                 if (shape.triangles.empty() && shape.quads.empty())
-                    throw sceneio_error("empty shape");
+                    throw io_error("empty shape");
             }
         }
 #endif
 
     } catch (const std::exception& e) {
-        throw sceneio_error("cannot load mesh " + filename + "\n" + e.what());
+        throw io_error("cannot load mesh " + filename + "\n" + e.what());
     }
 
     for (auto shape_id = 0; shape_id < shapes.size(); shape_id++) {
@@ -5082,7 +4403,7 @@ void load_disney_island_variants(const string& filename, yocto_scene& scene,
                     vjs.at("transformMatrix"), instances[vname], smap, mmap,
                     tmap);
             } else {
-                throw sceneio_error("unknown instance type");
+                throw io_error("unknown instance type");
             }
         }
     }
@@ -5308,7 +4629,7 @@ void load_disney_island_elements(const string& filename, yocto_scene& scene,
         } else if (ijs.at("type") == "skip") {
             printf("skipping %s\n", filename.c_str());
         } else {
-            throw sceneio_error("unknown instance type");
+            throw io_error("unknown instance type");
         }
     }
 
@@ -5342,7 +4663,7 @@ void load_disney_island_elements(const string& filename, yocto_scene& scene,
                 } else if (ijs.at("type") == "skip") {
                     printf("skipping %s\n", filename.c_str());
                 } else {
-                    throw sceneio_error("unknown instance type");
+                    throw io_error("unknown instance type");
                 }
             }
         }
@@ -5371,7 +4692,7 @@ void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
         auto dirname = get_dirname(filename);
         load_scene_textures(scene, dirname, options);
     } catch (std::exception& e) {
-        throw sceneio_error("error loading scene "s + e.what());
+        throw io_error("error loading scene "s + e.what());
     }
 
     // fix scene

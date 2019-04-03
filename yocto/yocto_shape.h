@@ -238,11 +238,11 @@ void load_shape(const string& filename, vector<int>& points,
     vector<float>& radius, bool preserve_facevarying);
 void save_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, vector<vec4i>& quads_positions,
-    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texturecoords,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texturecoords, const vector<vec4f>& colors,
-    const vector<float>& radius, bool preserve_facevarying, bool ascii = false);
+    const vector<float>& radius, bool ascii = false);
 
 // shapeio error
 struct shapeio_error : runtime_error {

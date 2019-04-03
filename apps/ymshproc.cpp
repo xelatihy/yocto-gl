@@ -42,6 +42,7 @@ void exit_error(const string& msg) {
 int main(int argc, char** argv) {
     // command line parameters
     auto geodesic_source = -1;
+    auto facevarying     = false;
     auto output          = "out.ply"s;
     auto filename        = "mesh.ply"s;
 
@@ -49,6 +50,8 @@ int main(int argc, char** argv) {
     auto parser = CLI::App{"Applies operations on a triangle mesh"};
     parser.add_option(
         "--geodesic-source,-g", geodesic_source, "Geodesic source");
+    parser.add_flag(
+        "--facevarying,!-facevarying", facevarying, "Preserve facevarying");
     parser.add_option("--output,-o", output, "output mesh")->required(true);
     parser.add_option("mesh", filename, "input mesh")->required(true);
     try {
@@ -60,9 +63,10 @@ int main(int argc, char** argv) {
     // load mesh
     auto shape = yocto_shape{};
     try {
-        load_mesh(filename, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.positions, shape.normals, shape.texturecoords,
-            shape.colors, shape.radius, true);
+        load_shape(filename, shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.quads_positions, shape.quads_normals,
+            shape.quads_texturecoords, shape.positions, shape.normals,
+            shape.texturecoords, shape.colors, shape.radius, facevarying);
     } catch (const std::exception& e) {
         exit_error(e.what());
     }
@@ -79,9 +83,10 @@ int main(int argc, char** argv) {
 
     // save mesh
     try {
-        save_mesh(output, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.positions, shape.normals, shape.texturecoords,
-            shape.colors, shape.radius);
+        save_shape(filename, shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.quads_positions, shape.quads_normals,
+            shape.quads_texturecoords, shape.positions, shape.normals,
+            shape.texturecoords, shape.colors, shape.radius);
     } catch (const std::exception& e) {
         exit_error(e.what());
     }
