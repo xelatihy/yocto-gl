@@ -55,6 +55,7 @@ int main(int argc, char* argv[]) {
     auto srgb          = true;
     auto add_skyenv    = false;
     auto validate      = false;
+    auto logo          = true;
     auto imfilename    = "out.hdr"s;
     auto filename      = "scene.json"s;
 
@@ -105,8 +106,8 @@ int main(int argc, char* argv[]) {
         trace_options.double_sided, "Double-sided rendering.");
     parser.add_option("--save-batch", save_batch, "Save images progressively");
     parser.add_option("--exposure,-e", exposure, "Hdr exposure");
-    parser.add_option("--filmic", filmic, "Hdr filmic");
-    parser.add_option("--no-srgb", srgb, "No srgb");
+    parser.add_flag("--filmic,!--no-filmic", filmic, "Hdr filmic");
+    parser.add_flag("--srgb,!--no-srgb", srgb, "Hdr srgb");
 #if YOCTO_EMBREE
     parser.add_flag(
         "--embree,!--no-embree", bvh_options.use_embree, "Use Embree ratracer");
@@ -119,6 +120,7 @@ int main(int argc, char* argv[]) {
         "--add-skyenv,!--no-add-skyenv", add_skyenv, "Add sky envmap");
     parser.add_option("--output-image,-o", imfilename, "Image filename");
     parser.add_flag("--validate,!--no-validate", validate, "Validate scene");
+    parser.add_flag("--logo,!--no-logo", logo, "Whether to append a logo");
     parser.add_option("scene", filename, "Scene filename", true);
     try {
         parser.parse(argc, argv);
@@ -223,8 +225,13 @@ int main(int argc, char* argv[]) {
                         std::to_string(sample + nsamples) + "." +
                         get_extension(imfilename));
                 try {
-                    save_tonemapped_image(
-                        outfilename, render, exposure, filmic, srgb);
+                    if (logo) {
+                        save_tonemapped_image_with_logo(
+                            outfilename, render, exposure, filmic, srgb);
+                    } else {
+                        save_tonemapped_image(
+                            outfilename, render, exposure, filmic, srgb);
+                    }
                 } catch (const std::exception& e) {
                     exit_error(e.what());
                 }
@@ -241,7 +248,13 @@ int main(int argc, char* argv[]) {
             }
             printf("saving image %s ...\n", outfilename.c_str());
             auto start_save = get_time();
-            save_tonemapped_image(outfilename, render, exposure, filmic, srgb);
+            if (logo) {
+                save_tonemapped_image_with_logo(
+                    outfilename, render, exposure, filmic, srgb);
+            } else {
+                save_tonemapped_image(
+                    outfilename, render, exposure, filmic, srgb);
+            }
             printf("saving image %s [%s]\n", outfilename.c_str(),
                 format_duration(get_time() - start_save).c_str());
         } catch (const std::exception& e) {
