@@ -230,7 +230,7 @@
             "name": "cube",
             "filename": "models/test-cube.obj",
             "!!proc": {
-                "type": "cube_rounded",
+                "type": "box_rounded",
                 "size": [
                     0.15,
                     0.15,

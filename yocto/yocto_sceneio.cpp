@@ -868,13 +868,13 @@ void from_json_procedural(
         make_quad_stack_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec2f{1, 1}));
-    } else if (type == "cube") {
-        make_cube_shape(value.quads, value.positions, value.normals,
+    } else if (type == "box") {
+        make_box_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
             js.value("uvsize", vec3f{1, 1, 1}));
-    } else if (type == "cube_rounded") {
-        make_cube_rounded_shape(value.quads, value.positions, value.normals,
+    } else if (type == "box_rounded") {
+        make_box_rounded_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec3i{32, 32, 32}),
             js.value("size", vec3f{2, 2, 2}),
             js.value("uvsize", vec3f{1, 1, 1}), js.value("rounded", 0.15f));
@@ -959,12 +959,12 @@ void from_json_procedural(
         auto ignore2 = vector<vec4i>{};
         auto ignore3 = vector<vec3f>{};
         auto ignore4 = vector<vec2f>{};
-        make_cube_fvshape(value.quads, ignore1, ignore2, value.positions,
+        make_box_fvshape(value.quads, ignore1, ignore2, value.positions,
             ignore3, ignore4, js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
             js.value("uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_facevarying") {
-        make_cube_fvshape(value.quads_positions, value.quads_normals,
+        make_box_fvshape(value.quads_positions, value.quads_normals,
             value.quads_texturecoords, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
