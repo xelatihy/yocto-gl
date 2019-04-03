@@ -321,8 +321,9 @@ void draw(const opengl_window& win) {
     if (app.load_done) {
         update_image_view(app.image_center, app.image_scale, app.render.size(),
             win_size, app.zoom_to_fit);
-        if (!app.display_texture || app.display_texture.size != app.image_size) {
-            if(app.display_texture) delete_opengl_texture(app.display_texture);
+        if (!app.display_texture ||
+            app.display_texture.size != app.image_size) {
+            if (app.display_texture) delete_opengl_texture(app.display_texture);
             if (app.image_size != zero2i) {
                 init_opengl_texture(app.display_texture, app.image_size, false,
                     false, false, false);

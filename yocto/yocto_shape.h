@@ -43,11 +43,11 @@
 // 6. compute skinning with `compute_skinning()` and
 //    `compute_matrix_skinning()`
 // 6. create shapes with `make_box_shape()`, `make_sphere_shape()`,
-//    `make_quad_shape()`,  `make_disk_shape()`, `make_box_fvshape()`, 
-//    `make_hair_shape()`,  `make_suzanne_shape()`, `make_lines_shape()`, 
-//    `make_points_shape()`,  `make_uvsphere_shape()`, 
-//    `make_box_rounded_shape()`,  `make_uvsphere_flipcap_shape()`, 
-//    `make_uvcylinder_shape()`,  `make_uvcylinder_rounded_shape()`, 
+//    `make_quad_shape()`,  `make_disk_shape()`, `make_box_fvshape()`,
+//    `make_hair_shape()`,  `make_suzanne_shape()`, `make_lines_shape()`,
+//    `make_points_shape()`,  `make_uvsphere_shape()`,
+//    `make_box_rounded_shape()`,  `make_uvsphere_flipcap_shape()`,
+//    `make_uvcylinder_shape()`,  `make_uvcylinder_rounded_shape()`,
 //    `make_uvdisk_shape()`,  `make_disk_shape()`
 // 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 // 8. shape sampling with `sample_points_element()`, `sample_lines_element()`,
@@ -944,28 +944,29 @@ inline void flip_quads_orientation(vector<vec<T, 4>>& quads) {
     for (auto& q : quads) swap(q.y, q.w);
 }
 
-// Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center. 
-template<typename T>
-inline void align_vertices(vector<vec<T, 3>>& positions, const vec3i& alignment) {
+// Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
+template <typename T>
+inline void align_vertices(
+    vector<vec<T, 3>>& positions, const vec3i& alignment) {
     auto bounds = invalid_bbox3f;
-    for(auto& p : positions) bounds += p;
+    for (auto& p : positions) bounds += p;
     auto offset = vec<T, 3>{0, 0, 0};
-    switch(alignment.x) {
+    switch (alignment.x) {
         case 1: offset.x = bounds.min.x; break;
         case 2: offset.x = (bounds.min.x + bounds.max.x) / 2; break;
         case 3: offset.x = bounds.max.x; break;
     }
-    switch(alignment.y) {
+    switch (alignment.y) {
         case 1: offset.y = bounds.min.y; break;
         case 2: offset.y = (bounds.min.y + bounds.max.y) / 2; break;
         case 3: offset.y = bounds.max.y; break;
     }
-    switch(alignment.z) {
+    switch (alignment.z) {
         case 1: offset.z = bounds.min.z; break;
         case 2: offset.z = (bounds.min.z + bounds.max.z) / 2; break;
         case 3: offset.z = bounds.max.z; break;
     }
-    for(auto& p : positions) p -= offset;
+    for (auto& p : positions) p -= offset;
 }
 
 }  // namespace yocto
@@ -2377,7 +2378,7 @@ inline void make_box_rounded_shape(vector<vec4i>& quads,
     make_box_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
     auto radius = rounded * min(size) / 2;
-    auto c = size / 2 - vec<T, 3>{radius, radius, radius};
+    auto c      = size / 2 - vec<T, 3>{radius, radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
         auto pc = vec<T, 3>{
             fabs(positions[i].x), fabs(positions[i].y), fabs(positions[i].z)};
@@ -2597,7 +2598,7 @@ inline void make_uvcylinder_rounded_shape(vector<vec4i>& quads,
     make_uvcylinder_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
     auto radius = rounded * max(size) / 2;
-    auto c = size / 2 - vec<T, 2>{radius, radius};
+    auto c      = size / 2 - vec<T, 2>{radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
         auto phi = atan2(positions[i].y, positions[i].x);
         auto r   = length(vec<T, 2>{positions[i].x, positions[i].y});

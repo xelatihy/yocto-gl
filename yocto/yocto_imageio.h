@@ -120,12 +120,12 @@ void load_builtin_image(const string& name, image<vec<float, N>>& img);
 
 // Save with a logo embedded
 template <typename T, int N>
-inline void save_image_with_logo(const string& filename,
-    const image<vec<T, N>>& img) {
+inline void save_image_with_logo(
+    const string& filename, const image<vec<T, N>>& img) {
     auto logo = image<vec<T, N>>{};
     load_builtin_image("logo-render", logo);
     auto img_copy = img;
-    auto offset = img.size() - logo.size() - 8;
+    auto offset   = img.size() - logo.size() - 8;
     set_image_region(img_copy, logo, offset);
     save_image(filename, img_copy);
 }

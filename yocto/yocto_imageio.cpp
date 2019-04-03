@@ -294,7 +294,7 @@ byte* load_pnm(const char* filename, int* w, int* h, int* nc, int req) {
 
     // read magic
     char magic[2];
-    if (fscanf(fs, "%c%c", magic+0, magic+1) != 2) return nullptr;
+    if (fscanf(fs, "%c%c", magic + 0, magic + 1) != 2) return nullptr;
     if (magic[0] == 'P' && magic[1] == '2')
         *nc = 1;
     else if (magic[0] == 'P' && magic[1] == '3')
@@ -308,7 +308,7 @@ byte* load_pnm(const char* filename, int* w, int* h, int* nc, int req) {
     // read max
     auto max = 0;
     if (fscanf(fs, "%d", &max) != 1) return nullptr;
-    if(max > 255) return nullptr;
+    if (max > 255) return nullptr;
 
     // read the data (flip y)
     auto npixels = (size_t)(*w) * (size_t)(*h);
@@ -393,7 +393,7 @@ byte* load_pnm_from_string(const char* data, int* w, int* h, int* nc, int req) {
     data += offset + 1;
     auto max = 0;
     if (sscanf(data, "%d%n", &max, &offset) != 1) return nullptr;
-    if(max > 255) return nullptr;
+    if (max > 255) return nullptr;
 
     // read the data (flip y)
     auto npixels = (size_t)(*w) * (size_t)(*h);
@@ -470,11 +470,13 @@ bool save_pnm(const char* filename, int w, int h, int nc, const byte* pixels) {
     if (fprintf(fs, "255\n") < 0) return false;
     for (auto j = 0; j < h; j++) {
         for (auto i = 0; i < w; i++) {
-            auto v  = pixels + (j * w + i) * nc;
-            if(nc == 1 || nc == 2) {
+            auto v = pixels + (j * w + i) * nc;
+            if (nc == 1 || nc == 2) {
                 if (fprintf(fs, "%d ", (int)v[0]) < 0) return false;
             } else {
-                if (fprintf(fs, "%d %d %d ", (int)v[0], (int)v[1], (int)v[2]) < 0) return false;
+                if (fprintf(fs, "%d %d %d ", (int)v[0], (int)v[1], (int)v[2]) <
+                    0)
+                    return false;
             }
         }
         if (fprintf(fs, "\n") < 0) return false;
@@ -1215,7 +1217,7 @@ void load_builtin_image(const string& name, image<vec<byte, N>>& img) {
             0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
             0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
         )";
-    if(name == "logo-render") {
+    if (name == "logo-render") {
         load_pnm_image_from_string(logo_render, img);
     } else {
         throw imageio_error("unknown builtin image " + name);
@@ -1232,13 +1234,21 @@ void load_builtin_image(const string& name, image<vec<float, N>>& img) {
 }
 
 // Specializations
-template void load_builtin_image<1>(const string& filename, image<vec<float, 1>>& img);
-template void load_builtin_image<2>(const string& filename, image<vec<float, 2>>& img);
-template void load_builtin_image<3>(const string& filename, image<vec<float, 3>>& img);
-template void load_builtin_image<4>(const string& filename, image<vec<float, 4>>& img);
-template void load_builtin_image<1>(const string& filename, image<vec<byte, 1>>& img);
-template void load_builtin_image<2>(const string& filename, image<vec<byte, 2>>& img);
-template void load_builtin_image<3>(const string& filename, image<vec<byte, 3>>& img);
-template void load_builtin_image<4>(const string& filename, image<vec<byte, 4>>& img);
+template void load_builtin_image<1>(
+    const string& filename, image<vec<float, 1>>& img);
+template void load_builtin_image<2>(
+    const string& filename, image<vec<float, 2>>& img);
+template void load_builtin_image<3>(
+    const string& filename, image<vec<float, 3>>& img);
+template void load_builtin_image<4>(
+    const string& filename, image<vec<float, 4>>& img);
+template void load_builtin_image<1>(
+    const string& filename, image<vec<byte, 1>>& img);
+template void load_builtin_image<2>(
+    const string& filename, image<vec<byte, 2>>& img);
+template void load_builtin_image<3>(
+    const string& filename, image<vec<byte, 3>>& img);
+template void load_builtin_image<4>(
+    const string& filename, image<vec<byte, 4>>& img);
 
 }  // namespace yocto
