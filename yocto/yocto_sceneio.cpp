@@ -945,8 +945,8 @@ void from_json_procedural(
             value.texturecoords, value.radius,
             js.value("steps", vec2i{4, 65536}), {}, base_quads, base_positions,
             base_normals, base_texturecoords,
-            js.value("length", vec2f{0.2f, 0.2f}),
-            js.value("radius", vec2f{0.001f, 0.001f}),
+            js.value("length", vec2f{0.1f, 0.1f}) * js.value("size", 2.0f),
+            js.value("radius", vec2f{0.001f, 0.0005f}) * js.value("size", 2.0f),
             js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}));
     } else if (type == "hairball_interior") {
         make_sphere_shape(value.quads, value.positions, value.normals,
