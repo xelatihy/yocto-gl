@@ -4,11 +4,11 @@
 //
 // Yocto/Image is a collection of image utilities useful when writing rendering
 // algorithms. These include a simple image data structure, color conversion
-// utilities and tone mapping. We provinde loading and saving functionality for 
+// utilities and tone mapping. We provinde loading and saving functionality for
 // images and support PNG, JPG, TGA, BMP, HDR, EXR formats.
 //
-// This library depends on stb_image.h, stb_image_write.h, stb_image_resize.h, 
-// tinyexr.h for the IO features. If thoese are not needed, it can be safely 
+// This library depends on stb_image.h, stb_image_write.h, stb_image_resize.h,
+// tinyexr.h for the IO features. If thoese are not needed, it can be safely
 // used without dependencies.
 //
 //
@@ -153,7 +153,7 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
     return a.size() != b.size() || a._pixels != b._pixels;
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE IO
@@ -1581,55 +1581,46 @@ inline void make_lights_image(image<vec<T, 4>>& img, const vec<T, 3>& le,
 
 inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
     if (type == "grid") {
-        make_grid_image(img, 8,
-            {0.2f, 0.2f, 0.2f, 1},
-            {0.5f, 0.5f, 0.5f, 1});
+        make_grid_image(img, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
     } else if (type == "checker") {
-        make_checker_image(img, 8,
-            {0.2f, 0.2f, 0.2f, 1},
-            {0.5f, 0.5f, 0.5f, 1});
+        make_checker_image(
+            img, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
     } else if (type == "bump") {
-        make_bumpdimple_image(img, 8,
-            {0, 0, 0, 1},
-            {1, 1, 1, 1});
+        make_bumpdimple_image(img, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
     } else if (type == "uvramp") {
         make_uvramp_image(img);
     } else if (type == "gammaramp") {
-        make_gammaramp_image(img, {0, 0, 0, 1},
-            {1, 1, 1, 1});
+        make_gammaramp_image(img, {0, 0, 0, 1}, {1, 1, 1, 1});
     } else if (type == "blackbodyramp") {
         make_blackbodyramp_image(img);
     } else if (type == "uvgrid") {
         make_uvgrid_image(img);
     } else if (type == "sky") {
-        make_sunsky_image(img, pif / 4, 3.0f, false,
-            1.0f, 0.0f, vec<float, 3>{0.7f, 0.7f, 0.7f});
+        make_sunsky_image(img, pif / 4, 3.0f, false, 1.0f, 0.0f,
+            vec<float, 3>{0.7f, 0.7f, 0.7f});
     } else if (type == "sunsky") {
-        make_sunsky_image(img, pif / 4, 3.0f, true,
-                          1.0f, 0.0f, vec<float, 3>{0.7f, 0.7f, 0.7f});
+        make_sunsky_image(img, pif / 4, 3.0f, true, 1.0f, 0.0f,
+            vec<float, 3>{0.7f, 0.7f, 0.7f});
     } else if (type == "noise") {
-        make_noise_image(img, {0, 0, 0, 1},
-            {1, 1, 1, 1}, 1.0f, true);
+        make_noise_image(img, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
     } else if (type == "fbm") {
-        make_fbm_image(img, {0, 0, 0, 1},
-            {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
+        make_fbm_image(
+            img, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
     } else if (type == "ridge") {
-        make_ridge_image(img, {0, 0, 0, 1},
-            {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 1.0f, 6,
-            true);
+        make_ridge_image(
+            img, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 1.0f, 6, true);
     } else if (type == "turbulence") {
-        make_turbulence_image(img, {0, 0, 0, 1},
-            {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
+        make_turbulence_image(
+            img, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
     } else if (type == "bump-normal") {
         auto bump = image<vec<float, 4>>{img.size()};
-        make_bumpdimple_image(bump, 8,
-                              {0, 0, 0, 1},
-                              {1, 1, 1, 1});
+        make_bumpdimple_image(bump, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
         bump_to_normal_map(img, bump);
     } else if (type == "images1") {
-        auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp", 
-            "bump", "bump-normal", "noise", "fbm", "blackbodyramp" };
-        auto sub_imgs = vector<image<vec4f>>(sub_types.size());
+        auto sub_types = vector<string>{"grid", "uvgrid", "checker",
+            "gammaramp", "bump", "bump-normal", "noise", "fbm",
+            "blackbodyramp"};
+        auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
         for (auto i = 0; i < sub_imgs.size(); i++) {
             sub_imgs.at(i).resize(img.size());
             make_image_preset(sub_imgs.at(i), sub_types.at(i));
@@ -1647,7 +1638,7 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
         }
     } else if (type == "images2") {
         auto sub_types = vector<string>{"sky", "sunsky"};
-        auto sub_imgs = vector<image<vec4f>>(sub_types.size());
+        auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
         for (auto i = 0; i < sub_imgs.size(); i++) {
             sub_imgs.at(i).resize(img.size());
             make_image_preset(sub_imgs.at(i), sub_types.at(i));
@@ -1721,7 +1712,8 @@ static inline vector<string> _image_split_string(const string& str) {
 }
 
 // Pfm load
-static inline float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
+static inline float* load_pfm(
+    const char* filename, int* w, int* h, int* nc, int req) {
     auto fs = fopen(filename, "rb");
     if (!fs) return nullptr;
     auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
@@ -1832,7 +1824,8 @@ static inline float* load_pfm(const char* filename, int* w, int* h, int* nc, int
 }
 
 // save pfm
-static inline bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
+static inline bool save_pfm(
+    const char* filename, int w, int h, int nc, const float* pixels) {
     auto fs = fopen(filename, "wb");
     if (!fs) return false;
     auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
@@ -1862,7 +1855,8 @@ static inline bool save_pfm(const char* filename, int w, int h, int nc, const fl
 }
 
 // Pnm load
-static inline byte* load_pnm(const char* filename, int* w, int* h, int* nc, int req) {
+static inline byte* load_pnm(
+    const char* filename, int* w, int* h, int* nc, int req) {
     auto fs = fopen(filename, "rb");
     if (!fs) return nullptr;
     auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
@@ -1949,7 +1943,8 @@ static inline byte* load_pnm(const char* filename, int* w, int* h, int* nc, int 
 }
 
 // Pnm load
-static inline byte* load_pnm_from_string(const char* data, int* w, int* h, int* nc, int req) {
+static inline byte* load_pnm_from_string(
+    const char* data, int* w, int* h, int* nc, int req) {
     // read magic
     auto offset = 0;
     char magic[256];
@@ -2035,7 +2030,8 @@ static inline byte* load_pnm_from_string(const char* data, int* w, int* h, int* 
 }
 
 // save pnm
-static inline bool save_pnm(const char* filename, int w, int h, int nc, const byte* pixels) {
+static inline bool save_pnm(
+    const char* filename, int w, int h, int nc, const byte* pixels) {
     auto fs = fopen(filename, "wb");
     if (!fs) return false;
     auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
@@ -2063,7 +2059,8 @@ static inline bool save_pnm(const char* filename, int w, int h, int nc, const by
 
 // load pfm image
 template <int N>
-static inline void load_pfm_image(const string& filename, image<vec<float, N>>& img) {
+static inline void load_pfm_image(
+    const string& filename, image<vec<float, N>>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, N);
     if (!pixels) {
@@ -2073,7 +2070,8 @@ static inline void load_pfm_image(const string& filename, image<vec<float, N>>& 
     delete[] pixels;
 }
 template <int N>
-static inline void save_pfm_image(const string& filename, const image<vec<float, N>>& img) {
+static inline void save_pfm_image(
+    const string& filename, const image<vec<float, N>>& img) {
     if (!save_pfm(filename.c_str(), img.size().x, img.size().y, N,
             (float*)img.data())) {
         throw imageio_error("error saving image " + filename);
@@ -2082,7 +2080,8 @@ static inline void save_pfm_image(const string& filename, const image<vec<float,
 
 // load pfm image
 template <int N>
-static inline void load_pnm_image(const string& filename, image<vec<byte, N>>& img) {
+static inline void load_pnm_image(
+    const string& filename, image<vec<byte, N>>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pnm(filename.c_str(), &width, &height, &ncomp, N);
     if (!pixels) {
@@ -2092,14 +2091,16 @@ static inline void load_pnm_image(const string& filename, image<vec<byte, N>>& i
     delete[] pixels;
 }
 template <int N>
-static inline void save_pnm_image(const string& filename, const image<vec<byte, N>>& img) {
+static inline void save_pnm_image(
+    const string& filename, const image<vec<byte, N>>& img) {
     if (!save_pnm(filename.c_str(), img.size().x, img.size().y, N,
             (byte*)img.data())) {
         throw imageio_error("error saving image " + filename);
     }
 }
 template <int N>
-static inline void load_pnm_image_from_string(const char* data, image<vec<byte, N>>& img) {
+static inline void load_pnm_image_from_string(
+    const char* data, image<vec<byte, N>>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pnm_from_string(data, &width, &height, &ncomp, N);
     if (!pixels) {
@@ -2126,7 +2127,8 @@ static inline const char* get_tinyexr_error(int error) {
 }
 
 template <int N>
-static inline void load_exr_image(const string& filename, image<vec<float, N>>& img) {
+static inline void load_exr_image(
+    const string& filename, image<vec<float, N>>& img) {
     // TODO
     if (N != 4) throw runtime_error("bad number of channels");
     auto width = 0, height = 0;
@@ -2144,7 +2146,8 @@ static inline void load_exr_image(const string& filename, image<vec<float, N>>& 
     free(pixels);
 }
 template <int N>
-static inline void save_exr_image(const string& filename, const image<vec<float, N>>& img) {
+static inline void save_exr_image(
+    const string& filename, const image<vec<float, N>>& img) {
     // TODO
     if (N != 4) throw runtime_error("bad number of channels");
     if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, N,
@@ -2155,7 +2158,8 @@ static inline void save_exr_image(const string& filename, const image<vec<float,
 
 // load an image using stbi library
 template <int N>
-static inline void load_stb_image(const string& filename, image<vec<byte, N>>& img) {
+static inline void load_stb_image(
+    const string& filename, image<vec<byte, N>>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, N);
     if (!pixels) {
@@ -2165,7 +2169,8 @@ static inline void load_stb_image(const string& filename, image<vec<byte, N>>& i
     free(pixels);
 }
 template <int N>
-static inline void load_stb_image(const string& filename, image<vec<float, N>>& img) {
+static inline void load_stb_image(
+    const string& filename, image<vec<float, N>>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, N);
     if (!pixels) {
@@ -2177,35 +2182,40 @@ static inline void load_stb_image(const string& filename, image<vec<float, N>>& 
 
 // save an image with stbi
 template <int N>
-static inline void save_png_image(const string& filename, const image<vec<byte, N>>& img) {
+static inline void save_png_image(
+    const string& filename, const image<vec<byte, N>>& img) {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, N,
             img.data(), img.size().x * 4)) {
         throw imageio_error("error saving image " + filename);
     }
 }
 template <int N>
-static inline void save_jpg_image(const string& filename, const image<vec<byte, N>>& img) {
+static inline void save_jpg_image(
+    const string& filename, const image<vec<byte, N>>& img) {
     if (!stbi_write_jpg(
             filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
         throw imageio_error("error saving image " + filename);
     }
 }
 template <int N>
-static inline void save_tga_image(const string& filename, const image<vec<byte, N>>& img) {
+static inline void save_tga_image(
+    const string& filename, const image<vec<byte, N>>& img) {
     if (!stbi_write_tga(
             filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         throw imageio_error("error saving image " + filename);
     }
 }
 template <int N>
-static inline void save_bmp_image(const string& filename, const image<vec<byte, N>>& img) {
+static inline void save_bmp_image(
+    const string& filename, const image<vec<byte, N>>& img) {
     if (!stbi_write_bmp(
             filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         throw imageio_error("error saving image " + filename);
     }
 }
 template <int N>
-static inline void save_hdr_image(const string& filename, const image<vec<float, N>>& img) {
+static inline void save_hdr_image(
+    const string& filename, const image<vec<float, N>>& img) {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data())) {
         throw imageio_error("error saving image " + filename);
@@ -2365,7 +2375,7 @@ void load_json_image(const string& filename, image<vec<byte, N>>& img) {
 }
 
 #endif
-    
+
 // Check if an image is a preset based on filename.
 inline bool is_image_preset_filename(const string& filename) {
     return get_filename(filename).find("yocto::") == 0;
@@ -2374,28 +2384,32 @@ inline string get_image_preset_type(const string& filename) {
     return get_noextension(get_filename(filename).substr(7));
 }
 
-template<int N>
-inline void load_image_preset(const string& filename, image<vec<float, N>>& img) {
-    if constexpr(N == 4) {
+template <int N>
+inline void load_image_preset(
+    const string& filename, image<vec<float, N>>& img) {
+    if constexpr (N == 4) {
         img.resize({1024, 1024});
-        if(get_image_preset_type(filename) == "images2") img.resize({2048,1024});
+        if (get_image_preset_type(filename) == "images2")
+            img.resize({2048, 1024});
         make_image_preset(img, get_image_preset_type(filename));
     } else {
         auto img4 = image<vec<float, 4>>({1024, 1024});
-        if(get_image_preset_type(filename) == "images2") img4.resize({2048,1024});
+        if (get_image_preset_type(filename) == "images2")
+            img4.resize({2048, 1024});
         make_image_preset(img4, get_image_preset_type(filename));
         img.resize(img4.size());
         rgba_to_color(img, img4);
     }
 }
-template<int N>
-inline void load_image_preset(const string& filename, image<vec<byte, N>>& img) {
+template <int N>
+inline void load_image_preset(
+    const string& filename, image<vec<byte, N>>& img) {
     auto imgf = image<vec<float, N>>{};
-    load_image_preset(filename,imgf);
+    load_image_preset(filename, imgf);
     img.resize(imgf.size());
     linear_to_srgb8(img, imgf);
 }
-    
+
 // check hdr extensions
 inline bool is_hdr_filename(const string& filename) {
     auto ext = get_extension(filename);
@@ -2458,7 +2472,8 @@ inline void load_image(const string& filename, image<vec<float, N>>& img) {
 
 // Saves an hdr image.
 template <int N>
-inline void save_image(const string& filename, const image<vec<float, N>>& img) {
+inline void save_image(
+    const string& filename, const image<vec<float, N>>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
         auto img8 = image<vec<byte, N>>{img.size()};

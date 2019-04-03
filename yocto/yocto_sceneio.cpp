@@ -112,198 +112,6 @@ inline void from_json(const json& js, bbox<T, N>& val) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// FILE UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// file inout stream
-struct input_file {
-    input_file(const string& filename, bool binary = false) {
-        this->filename = filename;
-        file           = fopen(filename.c_str(), binary ? "rb" : "rt");
-        if (!file) throw sceneio_error("could not open " + filename);
-    }
-    input_file(FILE* fs) {
-        file  = fs;
-        owned = false;
-    }
-
-    input_file(const input_file&) = delete;
-    input_file& operator=(const input_file&) = delete;
-
-    ~input_file() {
-        if (file && owned) fclose(file);
-    }
-
-    string filename = "";
-    FILE*  file     = nullptr;
-    bool   owned    = true;
-};
-
-// file writer
-struct output_file {
-    output_file(const string& filename, bool binary = false) {
-        this->filename = filename;
-        file           = fopen(filename.c_str(), binary ? "wb" : "wt");
-        if (!file) throw sceneio_error("could not open " + filename);
-    }
-    output_file(FILE* fs) {
-        file  = fs;
-        owned = false;
-    }
-
-    output_file(const output_file&) = delete;
-    output_file& operator=(const output_file&) = delete;
-
-    ~output_file() {
-        if (file && owned) fclose(file);
-    }
-
-    string filename = "";
-    FILE*  file     = nullptr;
-    bool   owned    = true;
-};
-
-// write a value to a file
-template <typename T>
-inline void write_value(const output_file& fs, const T& value) {
-    if (fwrite(&value, sizeof(value), 1, fs.file) != 1) {
-        throw sceneio_error("cannot write to " + fs.filename);
-    }
-}
-
-// write values to a file
-template <typename T>
-inline void write_values(const output_file& fs, const vector<T>& values) {
-    if (values.empty()) return;
-    if (fwrite(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw sceneio_error("cannot write to " + fs.filename);
-    }
-}
-template <typename T>
-inline void write_values(const output_file& fs, const T* values, size_t count) {
-    if (!count) return;
-    if (fwrite(values, sizeof(values[0]), count, fs.file) != count) {
-        throw sceneio_error("cannot write to " + fs.filename);
-    }
-}
-
-// write text to a file
-inline void write_text(const output_file& fs, const std::string& str) {
-    if (fprintf(fs.file, "%s", str.c_str()) < 0) {
-        throw sceneio_error("cannot write to " + fs.filename);
-    }
-}
-
-// read a value from a file
-template <typename T>
-inline void read_value(const input_file& fs, T& value) {
-    if (fread(&value, sizeof(value), 1, fs.file) != 1) {
-        throw sceneio_error("cannot read from " + fs.filename);
-    }
-}
-
-// read values from a file
-template <typename T>
-inline void read_values(const input_file& fs, T* values, size_t count) {
-    if (!count) return;
-    if (fread(values, sizeof(values[0]), count, fs.file) != count) {
-        throw sceneio_error("cannot read from " + fs.filename);
-    }
-}
-template <typename T>
-inline void read_values(const input_file& fs, vector<T>& values) {
-    if (values.empty()) return;
-    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw sceneio_error("cannot read from " + fs.filename);
-    }
-}
-// read characters from a file
-inline void read_values(const input_file& fs, string& values) {
-    if (values.empty()) return;
-    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw sceneio_error("cannot read from " + fs.filename);
-    }
-}
-
-// read a line of text
-inline bool read_line(const input_file& fs, string& str) {
-    char buffer[4096];
-    if (fgets(buffer, sizeof(buffer), fs.file) == nullptr) return false;
-    str = buffer;
-    return true;
-}
-inline bool read_line(const input_file& fs, char* buffer, size_t size) {
-    if (fgets(buffer, size, fs.file) == nullptr) return false;
-    return true;
-}
-
-// Printing values
-inline void print_value(const output_file& fs, int value) {
-    if (fprintf(fs.file, "%d", value) < 0)
-        throw sceneio_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, bool value) {
-    if (fprintf(fs.file, "%d", (int)value) < 0)
-        throw sceneio_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, float value) {
-    if (fprintf(fs.file, "%g", value) < 0)
-        throw sceneio_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, char value) {
-    if (fprintf(fs.file, "%c", value) < 0)
-        throw sceneio_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, const char* value) {
-    if (fprintf(fs.file, "%s", value) < 0)
-        throw sceneio_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, const string& value) {
-    if (fprintf(fs.file, "%s", value.c_str()) < 0)
-        throw sceneio_error("cannot write to file " + fs.filename);
-}
-template <typename T, int N>
-inline void print_value(const output_file& fs, const vec<T, N>& value) {
-    for (auto i = 0; i < N; i++) {
-        if (i) print_value(fs, ' ');
-        print_value(fs, value[i]);
-    }
-}
-template <typename T, int N, int M>
-inline void print_value(const output_file& fs, const mat<T, N, M>& value) {
-    for (auto i = 0; i < M; i++) {
-        if (i) print_value(fs, ' ');
-        print_value(fs, value[i]);
-    }
-}
-template <typename T, int N>
-inline void print_value(const output_file& fs, const frame<T, N>& value) {
-    for (auto i = 0; i < N + 1; i++) {
-        if (i) print_value(fs, ' ');
-        print_value(fs, value[i]);
-    }
-}
-
-// print values to file
-template <typename Arg, typename... Args>
-inline void println_values(
-    const output_file& fs, const Arg& value, const Args&... values) {
-    print_value(fs, value);
-    if constexpr (sizeof...(values) > 0) {
-        print_value(fs, ' ');
-        println_values(fs, values...);
-    } else {
-        print_value(fs, '\n');
-    }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF CONVERSION TO/FROM JSON
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -452,23 +260,6 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
             save_volume(filename, texture.volume_data);
         },
         options.cancel_flag, options.run_serially);
-}
-
-// merge quads and triangles
-void merge_triangles_and_quads(
-    vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
-    if (quads.empty()) return;
-    if (force_triangles) {
-        auto qtriangles = vector<vec3i>{};
-        convert_quads_to_triangles(qtriangles, quads);
-        triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
-        quads = {};
-    } else {
-        auto tquads = vector<vec4i>{};
-        convert_triangles_to_quads(tquads, triangles);
-        quads.insert(quads.end(), tquads.begin(), tquads.end());
-        triangles = {};
-    }
 }
 
 // check if it is really face varying
@@ -1467,21 +1258,6 @@ void print_json_camera(const yocto_camera& camera) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
-    return a.position == b.position && a.texturecoord == b.texturecoord &&
-           a.normal == b.normal;
-}
-
-struct obj_vertex_hash {
-    size_t operator()(const obj_vertex& v) const {
-        auto vh = std::hash<int>();
-        auto h  = (size_t)0;
-        for (auto i = 0; i < 3; i++)
-            h ^= vh((&v.position)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
-        return h;
-    }
-};
-
 // Get material index
 void set_obj_material(
     const string& name, int& material_id, const yocto_scene& scene) {
@@ -1924,24 +1700,6 @@ void save_objx(const string& filename, const yocto_scene& scene) {
         } else {
             println_values(fs, "e", environment.name, environment.emission,
                 "\"\"", environment.frame);
-        }
-    }
-}
-
-inline void print_value(const output_file& fs, const obj_vertex& value) {
-    print_value(fs, value.position);
-    if (value.texturecoord) {
-        print_value(fs, '/');
-        print_value(fs, value.texturecoord);
-        if (value.normal) {
-            print_value(fs, '/');
-            print_value(fs, value.normal);
-        }
-    } else {
-        if (value.normal) {
-            print_value(fs, '/');
-            print_value(fs, '/');
-            print_value(fs, value.normal);
         }
     }
 }
@@ -4105,13 +3863,6 @@ void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
     radius        = {};
 }
 
-// hack for CyHair data
-void load_cyhair_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
-    bool force_triangles, bool flip_texcoord = true);
-
 // Load ply mesh
 void load_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
@@ -4126,8 +3877,8 @@ void load_mesh(const string& filename, vector<int>& points,
         load_obj_mesh(filename, points, lines, triangles, quads, positions,
             normals, texturecoords, force_triangles);
     } else if (ext == "hair" || ext == "HAIR") {
-        load_cyhair_mesh(filename, points, lines, triangles, quads, positions,
-            normals, texturecoords, colors, radius, force_triangles);
+        load_cyhair_shape(filename, lines, positions, normals, texturecoords, 
+        colors, radius);
     } else {
         reset_mesh_data(points, lines, triangles, quads, positions, normals,
             texturecoords, colors, radius);
@@ -4798,176 +4549,6 @@ void save_obj_facevarying_mesh(const string& filename,
                 fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z));
         }
     }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF CYHAIR
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-struct cyhair_strand {
-    vector<vec3f> positions;
-    vector<float> radius;
-    vector<float> transparency;
-    vector<vec3f> color;
-};
-
-struct cyhair_data {
-    vector<cyhair_strand> strands              = {};
-    float                 default_thickness    = 0;
-    float                 default_transparency = 0;
-    vec3f                 default_color        = zero3f;
-};
-
-void load_cyhair(const string& filename, cyhair_data& hair) {
-    // open file
-    hair    = {};
-    auto fs = input_file(filename, std::ios::binary);
-
-    // Bytes 0-3    Must be "HAIR" in ascii code (48 41 49 52)
-    // Bytes 4-7    Number of hair strands as unsigned int
-    // Bytes 8-11    Total number of points of all strands as unsigned int
-    // Bytes 12-15    Bit array of data in the file
-    // Bit-0 is 1 if the file has segments array.
-    // Bit-1 is 1 if the file has points array (this bit must be 1).
-    // Bit-2 is 1 if the file has radius array.
-    // Bit-3 is 1 if the file has transparency array.
-    // Bit-4 is 1 if the file has color array.
-    // Bit-5 to Bit-31 are reserved for future extension (must be 0).
-    // Bytes 16-19    Default number of segments of hair strands as unsigned int
-    // If the file does not have a segments array, this default value is used.
-    // Bytes 20-23    Default radius hair strands as float
-    // If the file does not have a radius array, this default value is used.
-    // Bytes 24-27    Default transparency hair strands as float
-    // If the file does not have a transparency array, this default value is
-    // used. Bytes 28-39    Default color hair strands as float array of size 3
-    // If the file does not have a radius array, this default value is used.
-    // Bytes 40-127    File information as char array of size 88 in ascii
-
-    // parse header
-    hair = cyhair_data{};
-    struct cyhair_header {
-        char         magic[4]             = {0};
-        unsigned int num_strands          = 0;
-        unsigned int num_points           = 0;
-        unsigned int flags                = 0;
-        unsigned int default_segments     = 0;
-        float        default_thickness    = 0;
-        float        default_transparency = 0;
-        vec3f        default_color        = zero3f;
-        char         info[88]             = {0};
-    };
-    static_assert(sizeof(cyhair_header) == 128);
-    auto header = cyhair_header{};
-    read_value(fs, header);
-    if (header.magic[0] != 'H' || header.magic[1] != 'A' ||
-        header.magic[2] != 'I' || header.magic[3] != 'R')
-        throw sceneio_error("bad cyhair header");
-
-    // set up data
-    hair.default_thickness    = header.default_thickness;
-    hair.default_transparency = header.default_transparency;
-    hair.default_color        = header.default_color;
-    hair.strands.resize(header.num_strands);
-
-    // get segments length
-    auto segments = vector<unsigned short>();
-    if (header.flags & 1) {
-        segments.resize(header.num_strands);
-        read_values(fs, segments);
-    } else {
-        segments.assign(header.num_strands, header.default_segments);
-    }
-
-    // check segment length
-    auto total_length = 0;
-    for (auto segment : segments) total_length += segment + 1;
-    if (total_length != header.num_points) {
-        throw sceneio_error("bad cyhair file");
-    }
-
-    // read positions data
-    if (header.flags & 2) {
-        for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
-            auto strand_size = (int)segments[strand_id] + 1;
-            hair.strands[strand_id].positions.resize(strand_size);
-            read_values(fs, hair.strands[strand_id].positions);
-        }
-    }
-    // read radius data
-    if (header.flags & 4) {
-        for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
-            auto strand_size = (int)segments[strand_id] + 1;
-            hair.strands[strand_id].radius.resize(strand_size);
-            read_values(fs, hair.strands[strand_id].radius);
-        }
-    }
-    // read transparency data
-    if (header.flags & 8) {
-        for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
-            auto strand_size = (int)segments[strand_id] + 1;
-            hair.strands[strand_id].transparency.resize(strand_size);
-            read_values(fs, hair.strands[strand_id].transparency);
-        }
-    }
-    // read color data
-    if (header.flags & 16) {
-        for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
-            auto strand_size = (int)segments[strand_id] + 1;
-            hair.strands[strand_id].color.resize(strand_size);
-            read_values(fs, hair.strands[strand_id].color);
-        }
-    }
-}
-
-void load_cyhair_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
-    bool force_triangles, bool flip_texcoord) {
-    // load hair file
-    auto hair = cyhair_data();
-    load_cyhair(filename, hair);
-
-    // generate curve data
-    for (auto& strand : hair.strands) {
-        auto offset = (int)positions.size();
-        for (auto segment = 0; segment < (int)strand.positions.size() - 1;
-             segment++) {
-            lines.push_back({offset + segment, offset + segment + 1});
-        }
-        positions.insert(
-            positions.end(), strand.positions.begin(), strand.positions.end());
-        if (strand.radius.empty()) {
-            radius.insert(
-                radius.end(), strand.positions.size(), hair.default_thickness);
-        } else {
-            radius.insert(
-                radius.end(), strand.radius.begin(), strand.radius.end());
-        }
-        if (strand.color.empty()) {
-            color.insert(color.end(), strand.positions.size(),
-                {hair.default_color.x, hair.default_color.y,
-                    hair.default_color.z, 1});
-        } else {
-            for (auto i = 0; i < strand.color.size(); i++) {
-                auto scolor = strand.color[i];
-                color.push_back({scolor.x, scolor.y, scolor.z, 1});
-            }
-        }
-    }
-
-    // flip yz
-    for (auto& p : positions) std::swap(p.y, p.z);
-
-    // compute tangents
-    normals.resize(positions.size());
-    compute_vertex_tangents(normals, lines, positions);
-
-    // fix colors
-    for (auto& c : color) c = srgb_to_linear(c);
 }
 
 }  // namespace yocto

@@ -1758,8 +1758,8 @@ void make_texture_presets(yocto_texture& texture, const string& type) {
     } else if (type == "uvgrid") {
         make_uvgrid_image(texture.hdr_image);
     } else if (type == "sky") {
-        make_sunsky_image(texture.hdr_image, pif / 4,
-            3.0f, false, 1.0f, 0.0f, {0.7f, 0.7f, 0.7f});
+        make_sunsky_image(texture.hdr_image, pif / 4, 3.0f, false, 1.0f, 0.0f,
+            {0.7f, 0.7f, 0.7f});
     } else if (type == "noise") {
         make_noise_image(
             texture.hdr_image, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
@@ -1793,7 +1793,7 @@ void make_texture_presets(yocto_texture& texture, const string& type) {
         texture.hdr_image = {};
     }
     if (texture.filename == "") {
-        auto ext       = (is_sky) ? string("hdr") : string("png");
+        auto ext         = (is_sky) ? string("hdr") : string("png");
         texture.filename = "textures/" + type + "." + ext;
     }
 }

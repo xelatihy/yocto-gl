@@ -65,6 +65,13 @@
 // 14. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
 //
 //
+// ## Shape IO
+//
+// We support reading and writing shapes in OBJ and PLY.
+//
+// 1. load/save shapes with `load_shape()`/`save_shape()`
+//
+//
 
 //
 // LICENSE:
@@ -214,6 +221,34 @@ inline T interpolate_bezier_derivative(
     return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
            (p3 - p2) * 3 * u * u;
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE IO FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/Save a mesh
+void load_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius, bool preserve_facevarying);
+void save_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, vector<vec4i>& quads_positions,
+    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords, const vector<vec4f>& colors,
+    const vector<float>& radius, bool preserve_facevarying, bool ascii = false);
+
+// shapeio error
+struct shapeio_error : runtime_error {
+    explicit shapeio_error(const char* msg) : runtime_error{msg} {}
+    explicit shapeio_error(const std::string& msg) : runtime_error{msg} {}
+};
 
 }  // namespace yocto
 
@@ -714,12 +749,12 @@ inline void make_shell_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords, T thickness);
 
 // Shape presets used ofr testing.
-template<typename T>
-inline void make_shape_presets(vector<vec4i>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads, 
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals, 
+template <typename T>
+inline void make_shape_presets(vector<vec4i>& points, vector<vec2i>& lines,
+    vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords, 
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
     vector<T>& radius, const string& type);
 
 }  // namespace yocto
@@ -3324,68 +3359,63 @@ inline void make_shell_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
 }
 
 // Shape presets used ofr testing.
-template<typename T>
-inline void make_shape_presets(vector<vec4i>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads, 
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals, 
+template <typename T>
+inline void make_shape_presets(vector<vec4i>& points, vector<vec2i>& lines,
+    vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords, 
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
     vector<T>& radius, const string& type) {
     if (type == "default-quad") {
-        make_quad_shape(quads, positions, normals,
-            texturecoords, {1, 1}, {2, 2}, {1, 1});
+        make_quad_shape(
+            quads, positions, normals, texturecoords, {1, 1}, {2, 2}, {1, 1});
     } else if (type == "default-quady") {
-        make_quad_shape(quads, positions, normals,
-            texturecoords, {1, 1}, {2, 2}, {1, 1});
+        make_quad_shape(
+            quads, positions, normals, texturecoords, {1, 1}, {2, 2}, {1, 1});
     } else if (type == "default-quad-stack") {
-        make_quad_stack_shape(quads, positions, normals,
-            texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1});
+        make_quad_stack_shape(quads, positions, normals, texturecoords,
+            {1, 1, 1}, {2, 2, 2}, {1, 1});
     } else if (type == "default-box") {
-        make_box_shape(quads, positions, normals,
-            texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
+        make_box_shape(quads, positions, normals, texturecoords, {1, 1, 1},
+            {2, 2, 2}, {1, 1, 1});
     } else if (type == "default-box-rounded") {
-        make_box_rounded_shape(quads, positions, normals,
-            texturecoords, {32, 32, 32}, {2, 2, 2}, {1, 1, 1}, 0.15f);
+        make_box_rounded_shape(quads, positions, normals, texturecoords,
+            {32, 32, 32}, {2, 2, 2}, {1, 1, 1}, 0.15f);
     } else if (type == "default-uvsphere") {
-        make_uvsphere_shape(quads, positions, normals,
-            texturecoords, {64, 32}, 2, {1, 1});
+        make_uvsphere_shape(
+            quads, positions, normals, texturecoords, {64, 32}, 2, {1, 1});
     } else if (type == "default-sphere") {
-        make_sphere_shape(quads, positions, normals,
-            texturecoords, 32, 2, 1);
+        make_sphere_shape(quads, positions, normals, texturecoords, 32, 2, 1);
     } else if (type == "default-uvsphere-flipcap") {
-        make_uvsphere_flipcap_shape(quads, positions, normals,
-            texturecoords, {64, 32}, 2, {1, 1}, {(T)-0.75, (T)+0.75});
+        make_uvsphere_flipcap_shape(quads, positions, normals, texturecoords,
+            {64, 32}, 2, {1, 1}, {(T)-0.75, (T) + 0.75});
     } else if (type == "default-uvdisk") {
-        make_uvdisk_shape(quads, positions, normals,
-            texturecoords, {32, 16}, 2, {1, 1});
+        make_uvdisk_shape(
+            quads, positions, normals, texturecoords, {32, 16}, 2, {1, 1});
     } else if (type == "default-disk") {
-        make_disk_shape(quads, positions, normals,
-            texturecoords, 32, 2, 1);
+        make_disk_shape(quads, positions, normals, texturecoords, 32, 2, 1);
     } else if (type == "default-disk-bulged") {
-        make_disk_bulged_shape(quads, positions, normals,
-            texturecoords, 32, 2, 1, (T)0.25);
+        make_disk_bulged_shape(
+            quads, positions, normals, texturecoords, 32, 2, 1, (T)0.25);
     } else if (type == "default-quad-bulged") {
-        make_quad_bulged_shape(quads, positions, normals,
-            texturecoords, 32, 2, 1, (T)0.25);
+        make_quad_bulged_shape(
+            quads, positions, normals, texturecoords, 32, 2, 1, (T)0.25);
     } else if (type == "default-uvcylinder") {
-        make_uvcylinder_shape(quads, positions, normals,
-            texturecoords, {64, 32, 16}, {2, 2}, {1, 1, 1});
+        make_uvcylinder_shape(quads, positions, normals, texturecoords,
+            {64, 32, 16}, {2, 2}, {1, 1, 1});
     } else if (type == "default-uvcylinder-rounded") {
-        make_uvcylinder_rounded_shape(quads, positions,
-            normals, texturecoords, {64, 32, 16}, {2, 2},
-            {1, 1, 1}, (T)0.075);
+        make_uvcylinder_rounded_shape(quads, positions, normals, texturecoords,
+            {64, 32, 16}, {2, 2}, {1, 1, 1}, (T)0.075);
     } else if (type == "default-sphere-geodesic") {
-        make_geodesic_sphere_shape(
-            triangles, positions, normals, 4, 2);
+        make_geodesic_sphere_shape(triangles, positions, normals, 4, 2);
     } else if (type == "default-floor") {
-        make_floor_shape(quads, positions, normals,
-            texturecoords, {1, 1}, {40, 40}, {20, 20});
+        make_floor_shape(quads, positions, normals, texturecoords, {1, 1},
+            {40, 40}, {20, 20});
     } else if (type == "default-floor-bent") {
-        make_floor_bent_shape(quads, positions, normals,
-            texturecoords, {1, 40}, {40, 40}, {20, 20}, 10);
+        make_floor_bent_shape(quads, positions, normals, texturecoords, {1, 40},
+            {40, 40}, {20, 20}, 10);
     } else if (type == "default-matball") {
-        make_sphere_shape(quads, positions, normals,
-            texturecoords, 32, 2, 1);
+        make_sphere_shape(quads, positions, normals, texturecoords, 32, 2, 1);
     } else if (type == "default-hairball") {
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
@@ -3393,14 +3423,13 @@ inline void make_shape_presets(vector<vec4i>& points,
         auto base_texturecoords = vector<vec2f>{};
         make_sphere_shape(base_quads, base_positions, base_normals,
             base_texturecoords, 32, 2 * (T)0.8, 1);
-        make_hair_shape(lines, positions, normals,
-            texturecoords, radius, {4, 65536}, {}, base_quads,
-            base_positions, base_normals, base_texturecoords,
-            {(T)0.2, (T)0.2}, {(T)0.002, (T)0.001}, {0, 0},
+        make_hair_shape(lines, positions, normals, texturecoords, radius,
+            {4, 65536}, {}, base_quads, base_positions, base_normals,
+            base_texturecoords, {(T)0.2, (T)0.2}, {(T)0.002, (T)0.001}, {0, 0},
             {0, 0});
     } else if (type == "default-hairball-interior") {
-        make_sphere_shape(quads, positions, normals,
-            texturecoords, 32, 2 * (T)0.8, 1);
+        make_sphere_shape(
+            quads, positions, normals, texturecoords, 32, 2 * (T)0.8, 1);
     } else if (type == "default-suzanne") {
         make_suzanne_shape(quads, positions, 2);
     } else if (type == "default-cube-posonly") {
@@ -3408,38 +3437,35 @@ inline void make_shape_presets(vector<vec4i>& points,
         auto ignore2 = vector<vec4i>{};
         auto ignore3 = vector<vec3f>{};
         auto ignore4 = vector<vec2f>{};
-        make_box_fvshape(quads, ignore1, ignore2, positions,
-            ignore3, ignore4, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
+        make_box_fvshape(quads, ignore1, ignore2, positions, ignore3, ignore4,
+            {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
     } else if (type == "default-cube-facevarying") {
-        make_box_fvshape(quads_positions, quads_normals,
-            quads_texturecoords, positions, normals,
-            texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
+        make_box_fvshape(quads_positions, quads_normals, quads_texturecoords,
+            positions, normals, texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
     } else if (type == "default-sphere-facevarying") {
-        make_sphere_fvshape(quads_positions, quads_normals,
-            quads_texturecoords, positions, normals,
-            texturecoords, 32, 2.0f, 1.0f);
+        make_sphere_fvshape(quads_positions, quads_normals, quads_texturecoords,
+            positions, normals, texturecoords, 32, 2.0f, 1.0f);
     } else if (type == "test-cube") {
-        make_box_rounded_shape(quads, positions, normals,
-            texturecoords, {32, 32, 32}, {2, 2, 2}, {1, 1, 1}, 0.15f);
+        make_box_rounded_shape(quads, positions, normals, texturecoords,
+            {32, 32, 32}, {2, 2, 2}, {1, 1, 1}, 0.15f);
     } else if (type == "test-uvsphere") {
-        make_uvsphere_shape(quads, positions, normals,
-            texturecoords, {64, 32}, 2.0f, {1, 1});
+        make_uvsphere_shape(
+            quads, positions, normals, texturecoords, {64, 32}, 2.0f, {1, 1});
     } else if (type == "test-sphere") {
-        make_sphere_shape(quads, positions, normals,
-            texturecoords, 32, 2.0f, 1.0f);
+        make_sphere_shape(
+            quads, positions, normals, texturecoords, 32, 2.0f, 1.0f);
     } else if (type == "test-disk") {
-        make_disk_shape(quads, positions, normals,
-            texturecoords, 32, 2.0f, 1.0f);
+        make_disk_shape(
+            quads, positions, normals, texturecoords, 32, 2.0f, 1.0f);
     } else if (type == "test-cylinder") {
-        make_uvcylinder_rounded_shape(quads, positions,
-            normals, texturecoords, {64, 32, 16}, vec2f{2.0f, 2.0f},
-            {1, 1, 1}, 0.075f);
+        make_uvcylinder_rounded_shape(quads, positions, normals, texturecoords,
+            {64, 32, 16}, vec2f{2.0f, 2.0f}, {1, 1, 1}, 0.075f);
     } else if (type == "test-floor") {
-        make_floor_shape(quads, positions, normals,
-            texturecoords, {1, 1}, {40, 40}, {20, 20});
+        make_floor_shape(quads, positions, normals, texturecoords, {1, 1},
+            {40, 40}, {20, 20});
     } else if (type == "test-matball") {
-        make_sphere_shape(quads, positions, normals,
-            texturecoords, 32, 2.0f, 1.0f);
+        make_sphere_shape(
+            quads, positions, normals, texturecoords, 32, 2.0f, 1.0f);
     } else if (type == "test-hairball1") {
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
@@ -3447,11 +3473,10 @@ inline void make_shape_presets(vector<vec4i>& points,
         auto base_texturecoords = vector<vec2f>{};
         make_sphere_shape(base_quads, base_positions, base_normals,
             base_texturecoords, 32, 2.0f * 0.8f, 1.0f);
-        make_hair_shape(lines, positions, normals,
-            texturecoords, radius, {4, 65536}, {}, base_quads,
-            base_positions, base_normals, base_texturecoords,
-            {2 * (T)0.1, 2 * (T)0.1}, {2 * (T)0.001, 2 * (T)0.0005}, {0, 0},
-            {0, 0});
+        make_hair_shape(lines, positions, normals, texturecoords, radius,
+            {4, 65536}, {}, base_quads, base_positions, base_normals,
+            base_texturecoords, {2 * (T)0.1, 2 * (T)0.1},
+            {2 * (T)0.001, 2 * (T)0.0005}, {0, 0}, {0, 0});
     } else if (type == "test-hairball2") {
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
@@ -3459,11 +3484,10 @@ inline void make_shape_presets(vector<vec4i>& points,
         auto base_texturecoords = vector<vec2f>{};
         make_sphere_shape(base_quads, base_positions, base_normals,
             base_texturecoords, 32, 2.0f * 0.8f, 1.0f);
-        make_hair_shape(lines, positions, normals,
-            texturecoords, radius, {4, 65536}, {}, base_quads,
-            base_positions, base_normals, base_texturecoords,
-            {2 * (T)0.1, 2 * (T)0.1}, {2 * (T)0.001, 2 * (T)0.0005}, {0, 0},
-            {0, 0});
+        make_hair_shape(lines, positions, normals, texturecoords, radius,
+            {4, 65536}, {}, base_quads, base_positions, base_normals,
+            base_texturecoords, {2 * (T)0.1, 2 * (T)0.1},
+            {2 * (T)0.001, 2 * (T)0.0005}, {0, 0}, {0, 0});
     } else if (type == "test-hairball3") {
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
@@ -3471,23 +3495,889 @@ inline void make_shape_presets(vector<vec4i>& points,
         auto base_texturecoords = vector<vec2f>{};
         make_sphere_shape(base_quads, base_positions, base_normals,
             base_texturecoords, 32, 2.0f * 0.8f, 1.0f);
-        make_hair_shape(lines, positions, normals,
-            texturecoords, radius, {4, 65536}, {}, base_quads,
-            base_positions, base_normals, base_texturecoords,
-            vec2f{0.1f, 0.1f} * 2.0f, vec2f{0.001f, 0.0005f} * 2.0f, {0, 0},
-            {0, 0});
+        make_hair_shape(lines, positions, normals, texturecoords, radius,
+            {4, 65536}, {}, base_quads, base_positions, base_normals,
+            base_texturecoords, vec2f{0.1f, 0.1f} * 2.0f,
+            vec2f{0.001f, 0.0005f} * 2.0f, {0, 0}, {0, 0});
     } else if (type == "test-hairball-interior") {
-        make_sphere_shape(quads, positions, normals,
-            texturecoords, 32, 2.0f * 0.8f, 1.0f);
+        make_sphere_shape(
+            quads, positions, normals, texturecoords, 32, 2.0f * 0.8f, 1.0f);
     } else if (type == "test-suzanne-subdiv") {
         make_suzanne_shape(quads, positions, 2.0f);
     } else if (type == "test-cube-subdiv") {
-        make_box_fvshape(quads_positions, quads_normals,
-            quads_texturecoords, positions, normals,
-            texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
+        make_box_fvshape(quads_positions, quads_normals, quads_texturecoords,
+            positions, normals, texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
     } else {
         throw std::invalid_argument("unknown procedural type " + type);
     }
+}
+
+}  // namespace yocto
+
+#include "ext/happly.h"
+#include "yocto_obj.h"
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// merge quads and triangles
+inline void merge_triangles_and_quads(
+    vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
+    if (quads.empty()) return;
+    if (force_triangles) {
+        auto qtriangles = vector<vec3i>{};
+        convert_quads_to_triangles(qtriangles, quads);
+        triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
+        quads = {};
+    } else {
+        auto tquads = vector<vec4i>{};
+        convert_triangles_to_quads(tquads, triangles);
+        quads.insert(quads.end(), tquads.begin(), tquads.end());
+        triangles = {};
+    }
+}
+
+// hack for CyHair data
+inline void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
+    bool flip_texcoord = true);
+
+// Load/Save a ply mesh
+inline void load_ply_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& color,
+    vector<float>& radius, bool flip_texcoord = true);
+inline void save_ply_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<vec4f>& colors, const vector<float>& radius,
+    bool ascii = false, bool flip_texcoord = true);
+
+// Load/Save an OBJ mesh
+inline void load_obj_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    bool preserve_facevarying, bool flip_texcoord = true);
+inline void save_obj_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    bool flip_texcoord = true);
+
+// Load ply mesh
+inline void load_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius, bool preserve_facevarrying) {
+    points              = {};
+    lines               = {};
+    triangles           = {};
+    quads               = {};
+    quads_positions     = {};
+    quads_normals       = {};
+    quads_texturecoords = {};
+    positions           = {};
+    normals             = {};
+    texturecoords       = {};
+    colors              = {};
+    radius              = {};
+
+    auto ext = get_extension(filename);
+    if (ext == "ply" || ext == "PLY") {
+        load_ply_shape(filename, points, lines, triangles, quads,
+            quads_positions, quads_normals, quads_texturecoords, positions,
+            normals, texturecoords, colors, radius);
+    } else if (ext == "obj" || ext == "OBJ") {
+        load_obj_shape(filename, points, lines, triangles, quads,
+            quads_positions, quads_normals, quads_texturecoords, positions,
+            normals, texturecoords, preserve_facevarrying);
+    } else if (ext == "hair" || ext == "HAIR") {
+        load_cyhair_shape(
+            filename, lines, positions, normals, texturecoords, colors, radius);
+    } else {
+        throw shapeio_error("unsupported mesh type " + ext);
+    }
+}
+
+// Save ply mesh
+inline void save_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<vec4f>& colors, const vector<float>& radius, bool ascii) {
+    auto ext = get_extension(filename);
+    if (ext == "ply" || ext == "PLY") {
+        return save_ply_shape(filename, points, lines, triangles, quads,
+            quads_positions, quads_normals, quads_texturecoords, positions,
+            normals, texturecoords, colors, radius, ascii);
+    } else if (ext == "obj" || ext == "OBJ") {
+        return save_obj_shape(filename, points, lines, triangles, quads,
+            quads_positions, quads_normals, quads_texturecoords, positions,
+            normals, texturecoords);
+    } else {
+        throw shapeio_error("unsupported mesh type " + ext);
+    }
+}
+
+inline void load_ply_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius, bool flip_texcoord) {
+    try {
+        // load ply
+        happly::PLYData ply(filename);
+
+        // copy vertex data
+        if (ply.hasElement("vertex")) {
+            auto& vertex = ply.getElement("vertex");
+            if (vertex.hasProperty("x") && vertex.hasProperty("y") &&
+                vertex.hasProperty("z")) {
+                auto x = vertex.getProperty<float>("x");
+                auto y = vertex.getProperty<float>("y");
+                auto z = vertex.getProperty<float>("z");
+                positions.resize(x.size());
+                for (auto i = 0; i < positions.size(); i++) {
+                    positions[i] = {x[i], y[i], z[i]};
+                }
+            } else {
+                throw shapeio_error("vertex positions not present");
+            }
+            if (vertex.hasProperty("nx") && vertex.hasProperty("ny") &&
+                vertex.hasProperty("nz")) {
+                auto x = vertex.getProperty<float>("nx");
+                auto y = vertex.getProperty<float>("ny");
+                auto z = vertex.getProperty<float>("nz");
+                normals.resize(x.size());
+                for (auto i = 0; i < normals.size(); i++) {
+                    normals[i] = {x[i], y[i], z[i]};
+                }
+            }
+            if (vertex.hasProperty("u") && vertex.hasProperty("v")) {
+                auto x = vertex.getProperty<float>("u");
+                auto y = vertex.getProperty<float>("v");
+                texturecoords.resize(x.size());
+                for (auto i = 0; i < texturecoords.size(); i++) {
+                    texturecoords[i] = {x[i], y[i]};
+                }
+            }
+            if (vertex.hasProperty("s") && vertex.hasProperty("t")) {
+                auto x = vertex.getProperty<float>("s");
+                auto y = vertex.getProperty<float>("t");
+                texturecoords.resize(x.size());
+                for (auto i = 0; i < texturecoords.size(); i++) {
+                    texturecoords[i] = {x[i], y[i]};
+                }
+            }
+            if (vertex.hasProperty("red") && vertex.hasProperty("green") &&
+                vertex.hasProperty("blue")) {
+                auto x = vertex.getProperty<float>("red");
+                auto y = vertex.getProperty<float>("green");
+                auto z = vertex.getProperty<float>("blue");
+                colors.resize(x.size());
+                for (auto i = 0; i < colors.size(); i++) {
+                    colors[i] = {x[i], y[i], z[i], 1};
+                }
+                if (vertex.hasProperty("alpha")) {
+                    auto w = vertex.getProperty<float>("alpha");
+                    for (auto i = 0; i < colors.size(); i++) {
+                        colors[i].w = w[i];
+                    }
+                }
+            }
+            if (vertex.hasProperty("radius")) {
+                radius = vertex.getProperty<float>("radius");
+            }
+        }
+
+        // fix texture coordinated
+        if (flip_texcoord && !texturecoords.empty()) {
+            for (auto& uv : texturecoords) uv.y = 1 - uv.y;
+        }
+
+        // copy face data
+        if (ply.hasElement("face")) {
+            auto& elements = ply.getElement("face");
+            if (!elements.hasProperty("vertex_indices"))
+                throw shapeio_error("bad ply faces");
+            auto indices = vector<vector<int>>{};
+            try {
+                indices = elements.getListProperty<int>("vertex_indices");
+            } catch (...) {
+                (vector<vector<unsigned int>>&)indices =
+                    elements.getListProperty<unsigned int>("vertex_indices");
+            }
+            for (auto& face : indices) {
+                if (face.size() == 4) {
+                    quads.push_back({face[0], face[1], face[2], face[3]});
+                } else {
+                    for (auto i = 2; i < face.size(); i++)
+                        triangles.push_back({face[0], face[i - 1], face[i]});
+                }
+            }
+        }
+
+        // copy face data
+        if (ply.hasElement("line")) {
+            auto& elements = ply.getElement("line");
+            if (!elements.hasProperty("vertex_indices"))
+                throw shapeio_error("bad ply lines");
+            auto indices = vector<vector<int>>{};
+            try {
+                indices = elements.getListProperty<int>("vertex_indices");
+            } catch (...) {
+                (vector<vector<unsigned int>>&)indices =
+                    elements.getListProperty<unsigned int>("vertex_indices");
+            }
+            for (auto& line : indices) {
+                for (auto i = 1; i < line.size(); i++)
+                    lines.push_back({line[i], line[i - 1]});
+            }
+        }
+
+        merge_triangles_and_quads(triangles, quads, false);
+
+    } catch (const std::exception& e) {
+        throw shapeio_error("cannot load mesh " + filename + "\n" + e.what());
+    }
+}
+
+// Save ply mesh
+inline void save_ply_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<vec4f>& colors, const vector<float>& radius, bool ascii,
+    bool flip_texcoord) {
+    if (!quads_positions.empty()) {
+        auto split_quads         = vector<vec4i>{};
+        auto split_positions     = vector<vec3f>{};
+        auto split_normals       = vector<vec3f>{};
+        auto split_texturecoords = vector<vec2f>{};
+        convert_facevarying(split_quads, split_positions, split_normals,
+            split_texturecoords, quads_positions, quads_normals,
+            quads_texturecoords, positions, normals, texturecoords);
+        return save_ply_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
+            positions, normals, texturecoords, {}, {}, ascii, flip_texcoord);
+    }
+
+    // empty data
+    happly::PLYData ply;
+
+    // add elements
+    ply.addElement("vertex", positions.size());
+    if (!positions.empty()) {
+        auto& vertex = ply.getElement("vertex");
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        auto  z      = vector<float>{};
+        for (auto& p : positions) {
+            x.push_back(p.x);
+            y.push_back(p.y);
+            z.push_back(p.z);
+        }
+        vertex.addProperty("x", x);
+        vertex.addProperty("y", y);
+        vertex.addProperty("z", z);
+    }
+    if (!normals.empty()) {
+        auto& vertex = ply.getElement("vertex");
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        auto  z      = vector<float>{};
+        for (auto& n : normals) {
+            x.push_back(n.x);
+            y.push_back(n.y);
+            z.push_back(n.z);
+        }
+        vertex.addProperty("nx", x);
+        vertex.addProperty("ny", y);
+        vertex.addProperty("nz", z);
+    }
+    if (!texturecoords.empty()) {
+        auto& vertex = ply.getElement("vertex");
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        for (auto& t : texturecoords) {
+            x.push_back(t.x);
+            y.push_back(flip_texcoord ? 1 - t.y : t.y);
+        }
+        vertex.addProperty("u", x);
+        vertex.addProperty("v", y);
+    }
+    if (!colors.empty()) {
+        auto& vertex = ply.getElement("vertex");
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        auto  z      = vector<float>{};
+        auto  w      = vector<float>{};
+        for (auto& c : colors) {
+            x.push_back(c.x);
+            y.push_back(c.y);
+            z.push_back(c.z);
+            w.push_back(c.w);
+        }
+        vertex.addProperty("red", x);
+        vertex.addProperty("green", y);
+        vertex.addProperty("blue", z);
+        vertex.addProperty("alpha", w);
+    }
+    if (!radius.empty()) {
+        auto& vertex = ply.getElement("vertex");
+        vertex.addProperty("radius", radius);
+    }
+
+    // face date
+    if (!triangles.empty() || !quads.empty()) {
+        ply.addElement("face", triangles.size() + quads.size());
+        auto elements = vector<vector<int>>{};
+        for (auto& t : triangles) {
+            elements.push_back({t.x, t.y, t.z});
+        }
+        for (auto& q : quads) {
+            if (q.z == q.w) {
+                elements.push_back({q.x, q.y, q.z});
+            } else {
+                elements.push_back({q.x, q.y, q.z, q.w});
+            }
+        }
+        ply.getElement("face").addListProperty("vertex_indices", elements);
+    }
+    if (!lines.empty()) {
+        ply.addElement("line", lines.size());
+        auto elements = vector<vector<int>>{};
+        for (auto& l : lines) {
+            elements.push_back({l.x, l.y});
+        }
+        ply.getElement("line").addListProperty("vertex_indices", elements);
+    }
+    if (!points.empty() || !quads.empty()) {
+        ply.addElement("point", points.size());
+        auto elements = vector<vector<int>>{};
+        for (auto& p : points) {
+            elements.push_back({p});
+        }
+        ply.getElement("point").addListProperty("vertex_indices", elements);
+    }
+
+    // Write our data
+    try {
+        ply.write(filename,
+            ascii ? happly::DataFormat::ASCII : happly::DataFormat::Binary);
+    } catch (const std::exception& e) {
+        throw shapeio_error("cannot save mesh " + filename + "\n" + e.what());
+    }
+}
+
+inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
+    return a.position == b.position && a.texturecoord == b.texturecoord &&
+           a.normal == b.normal;
+}
+
+struct obj_vertex_hash {
+    size_t operator()(const obj_vertex& v) const {
+        auto vh = std::hash<int>();
+        auto h  = (size_t)0;
+        for (auto i = 0; i < 3; i++)
+            h ^= vh((&v.position)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
+};
+
+inline void print_value(const output_file& fs, const obj_vertex& value) {
+    print_value(fs, value.position);
+    if (value.texturecoord) {
+        print_value(fs, '/');
+        print_value(fs, value.texturecoord);
+        if (value.normal) {
+            print_value(fs, '/');
+            print_value(fs, value.normal);
+        }
+    } else {
+        if (value.normal) {
+            print_value(fs, '/');
+            print_value(fs, '/');
+            print_value(fs, value.normal);
+        }
+    }
+}
+
+// Load ply mesh
+inline void load_obj_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    bool preserve_facevarying, bool flip_texcoord) {
+    struct parse_callbacks : obj_callbacks {
+        vector<int>&   points;
+        vector<vec2i>& lines;
+        vector<vec3i>& triangles;
+        vector<vec4i>& quads;
+        vector<vec4i>& quads_positions;
+        vector<vec4i>& quads_normals;
+        vector<vec4i>& quads_texturecoords;
+        vector<vec3f>& positions;
+        vector<vec3f>& normals;
+        vector<vec2f>& texturecoords;
+        bool           facevarying = false;
+
+        // TODO: implement me
+
+        // obj vertices
+        std::deque<vec3f> opos      = std::deque<vec3f>();
+        std::deque<vec3f> onorm     = std::deque<vec3f>();
+        std::deque<vec2f> otexcoord = std::deque<vec2f>();
+
+        // vertex maps
+        unordered_map<obj_vertex, int, obj_vertex_hash> vertex_map =
+            unordered_map<obj_vertex, int, obj_vertex_hash>();
+
+        // vertex maps
+        unordered_map<int, int> pos_map      = unordered_map<int, int>();
+        unordered_map<int, int> texcoord_map = unordered_map<int, int>();
+        unordered_map<int, int> norm_map     = unordered_map<int, int>();
+
+        parse_callbacks(vector<int>& points, vector<vec2i>& lines,
+            vector<vec3i>& triangles, vector<vec4i>& quads,
+            vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+            vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+            vector<vec3f>& normals, vector<vec2f>& texturecoords,
+            bool facevarying)
+            : points{points}
+            , lines{lines}
+            , triangles{triangles}
+            , quads{quads}
+            , quads_positions{quads_positions}
+            , quads_normals{quads_normals}
+            , quads_texturecoords{quads_texturecoords}
+            , positions{positions}
+            , normals{normals}
+            , texturecoords{texturecoords}
+            , facevarying{facevarying} {}
+
+        // Add  vertices to the current shape
+        void add_verts(const vector<obj_vertex>& verts) {
+            for (auto& vert : verts) {
+                auto it = vertex_map.find(vert);
+                if (it != vertex_map.end()) continue;
+                auto nverts = (int)positions.size();
+                vertex_map.insert(it, {vert, nverts});
+                if (vert.position)
+                    positions.push_back(opos.at(vert.position - 1));
+                if (vert.texturecoord)
+                    texturecoords.push_back(
+                        otexcoord.at(vert.texturecoord - 1));
+                if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
+            }
+        }
+
+        // add vertex
+        void add_fvverts(const vector<obj_vertex>& verts) {
+            for (auto& vert : verts) {
+                if (!vert.position) continue;
+                auto pos_it = pos_map.find(vert.position);
+                if (pos_it != pos_map.end()) continue;
+                auto nverts = (int)positions.size();
+                pos_map.insert(pos_it, {vert.position, nverts});
+                positions.push_back(opos.at(vert.position - 1));
+            }
+            for (auto& vert : verts) {
+                if (!vert.texturecoord) continue;
+                auto texcoord_it = texcoord_map.find(vert.texturecoord);
+                if (texcoord_it != texcoord_map.end()) continue;
+                auto nverts = (int)texturecoords.size();
+                texcoord_map.insert(texcoord_it, {vert.texturecoord, nverts});
+                texturecoords.push_back(otexcoord.at(vert.texturecoord - 1));
+            }
+            for (auto& vert : verts) {
+                if (!vert.normal) continue;
+                auto norm_it = norm_map.find(vert.normal);
+                if (norm_it != norm_map.end()) continue;
+                auto nverts = (int)normals.size();
+                norm_map.insert(norm_it, {vert.normal, nverts});
+                normals.push_back(onorm.at(vert.normal - 1));
+            }
+        }
+
+        void vert(const vec3f& v) { opos.push_back(v); }
+        void norm(const vec3f& v) { onorm.push_back(v); }
+        void texcoord(const vec2f& v) { otexcoord.push_back(v); }
+        void face(const vector<obj_vertex>& verts) {
+            if (!facevarying) {
+                add_verts(verts);
+                if (verts.size() == 4) {
+                    quads.push_back(
+                        {vertex_map.at(verts[0]), vertex_map.at(verts[1]),
+                            vertex_map.at(verts[2]), vertex_map.at(verts[3])});
+                } else {
+                    for (auto i = 2; i < verts.size(); i++)
+                        triangles.push_back({vertex_map.at(verts[0]),
+                            vertex_map.at(verts[i - 1]),
+                            vertex_map.at(verts[i])});
+                }
+            } else {
+                add_fvverts(verts);
+                if (verts.size() == 4) {
+                    if (verts[0].position) {
+                        quads_positions.push_back(
+                            {pos_map.at(verts[0].position),
+                                pos_map.at(verts[1].position),
+                                pos_map.at(verts[2].position),
+                                pos_map.at(verts[3].position)});
+                    }
+                    if (verts[0].texturecoord) {
+                        quads_texturecoords.push_back(
+                            {texcoord_map.at(verts[0].texturecoord),
+                                texcoord_map.at(verts[1].texturecoord),
+                                texcoord_map.at(verts[2].texturecoord),
+                                texcoord_map.at(verts[3].texturecoord)});
+                    }
+                    if (verts[0].normal) {
+                        quads_normals.push_back({norm_map.at(verts[0].normal),
+                            norm_map.at(verts[1].normal),
+                            norm_map.at(verts[2].normal),
+                            norm_map.at(verts[3].normal)});
+                    }
+                    // quads_materials.push_back(current_material_id);
+                } else {
+                    if (verts[0].position) {
+                        for (auto i = 2; i < verts.size(); i++)
+                            quads_positions.push_back(
+                                {pos_map.at(verts[0].position),
+                                    pos_map.at(verts[1].position),
+                                    pos_map.at(verts[i].position),
+                                    pos_map.at(verts[i].position)});
+                    }
+                    if (verts[0].texturecoord) {
+                        for (auto i = 2; i < verts.size(); i++)
+                            quads_texturecoords.push_back(
+                                {texcoord_map.at(verts[0].texturecoord),
+                                    texcoord_map.at(verts[1].texturecoord),
+                                    texcoord_map.at(verts[i].texturecoord),
+                                    texcoord_map.at(verts[i].texturecoord)});
+                    }
+                    if (verts[0].normal) {
+                        for (auto i = 2; i < verts.size(); i++)
+                            quads_normals.push_back(
+                                {norm_map.at(verts[0].normal),
+                                    norm_map.at(verts[1].normal),
+                                    norm_map.at(verts[i].normal),
+                                    norm_map.at(verts[i].normal)});
+                    }
+                    //                    for (auto i = 2; i < verts.size();
+                    //                    i++)
+                    //                        quads_materials.push_back(current_material_id);
+                }
+            }
+        }
+        void line(const vector<obj_vertex>& verts) {
+            add_verts(verts);
+            for (auto i = 1; i < verts.size(); i++)
+                lines.push_back(
+                    {vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
+        }
+        void point(const vector<obj_vertex>& verts) {
+            add_verts(verts);
+            for (auto i = 0; i < verts.size(); i++)
+                points.push_back(vertex_map.at(verts[i]));
+        }
+        //        void usemtl(const string& name) {
+        //            auto pos = std::find(
+        //                                 material_group.begin(),
+        //                                 material_group.end(), name);
+        //            if (pos == material_group.end()) {
+        //                material_group.push_back(name);
+        //                current_material_id = (int)material_group.size() - 1;
+        //            } else {
+        //                current_material_id = (int)(pos -
+        //                material_group.begin());
+        //            }
+        //        }
+    };
+
+    try {
+        // load obj
+        auto obj_options          = load_obj_options();
+        obj_options.exit_on_error = false;
+        obj_options.geometry_only = true;
+        obj_options.flip_texcoord = flip_texcoord;
+        auto cb = parse_callbacks{points, lines, triangles, quads,
+            quads_positions, quads_normals, quads_texturecoords, positions,
+            normals, texturecoords, preserve_facevarying};
+        load_obj(filename, cb, obj_options);
+
+        // merging quads and triangles
+        if (!preserve_facevarying) {
+            merge_triangles_and_quads(triangles, quads, false);
+        }
+
+    } catch (const std::exception& e) {
+        throw shapeio_error("cannot load mesh " + filename + "\n" + e.what());
+    }
+}
+
+// Load ply mesh
+inline void save_obj_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    bool flip_texcoord) {
+    auto fs = output_file(filename);
+
+    // TODO: implement me
+
+    println_values(
+        fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n");
+
+    for (auto& p : positions) println_values(fs, "v", p);
+    for (auto& n : normals) println_values(fs, "vn", n);
+    for (auto& t : texturecoords)
+        println_values(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+
+    auto mask = obj_vertex{
+        1, texturecoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
+    auto vert = [mask](int i) {
+        return obj_vertex{(i + 1) * mask.position, (i + 1) * mask.texturecoord,
+            (i + 1) * mask.normal};
+    };
+
+    for (auto& p : points) {
+        println_values(fs, "p", vert(p));
+    }
+    for (auto& l : lines) {
+        println_values(fs, "l", vert(l.x), vert(l.y));
+    }
+    for (auto& t : triangles) {
+        println_values(fs, "f", vert(t.x), vert(t.y), vert(t.z));
+    }
+    for (auto& q : quads) {
+        if (q.z == q.w) {
+            println_values(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+        } else {
+            println_values(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+        }
+    }
+
+    auto fvmask = obj_vertex{
+        1, texturecoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
+    auto fvvert = [fvmask](int pi, int ti, int ni) {
+        return obj_vertex{(pi + 1) * fvmask.position,
+            (ti + 1) * fvmask.texturecoord, (ni + 1) * fvmask.normal};
+    };
+
+    // auto last_material_id = -1;
+    for (auto i = 0; i < quads_positions.size(); i++) {
+        //        if (!quads_materials.empty() &&
+        //            quads_materials[i] != last_material_id) {
+        //            last_material_id = quads_materials[i];
+        //            println_values(fs, "usemtl material_{}\n",
+        //            last_material_id);
+        //        }
+        auto qp = quads_positions.at(i);
+        auto qt = !quads_texturecoords.empty() ? quads_texturecoords.at(i)
+                                               : vec4i{-1, -1, -1, -1};
+        auto qn = !quads_normals.empty() ? quads_normals.at(i)
+                                         : vec4i{-1, -1, -1, -1};
+        if (qp.z != qp.w) {
+            println_values(fs, "f", fvvert(qp.x, qt.x, qn.x),
+                fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z),
+                fvvert(qp.w, qt.w, qn.w));
+        } else {
+            println_values(fs, "f", fvvert(qp.x, qt.x, qn.x),
+                fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z));
+        }
+    }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF CYHAIR
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+struct cyhair_strand {
+    vector<vec3f> positions;
+    vector<float> radius;
+    vector<float> transparency;
+    vector<vec3f> color;
+};
+
+struct cyhair_data {
+    vector<cyhair_strand> strands              = {};
+    float                 default_thickness    = 0;
+    float                 default_transparency = 0;
+    vec3f                 default_color        = zero3f;
+};
+
+inline void load_cyhair(const string& filename, cyhair_data& hair) {
+    // open file
+    hair    = {};
+    auto fs = input_file(filename, std::ios::binary);
+
+    // Bytes 0-3    Must be "HAIR" in ascii code (48 41 49 52)
+    // Bytes 4-7    Number of hair strands as unsigned int
+    // Bytes 8-11    Total number of points of all strands as unsigned int
+    // Bytes 12-15    Bit array of data in the file
+    // Bit-0 is 1 if the file has segments array.
+    // Bit-1 is 1 if the file has points array (this bit must be 1).
+    // Bit-2 is 1 if the file has radius array.
+    // Bit-3 is 1 if the file has transparency array.
+    // Bit-4 is 1 if the file has color array.
+    // Bit-5 to Bit-31 are reserved for future extension (must be 0).
+    // Bytes 16-19    Default number of segments of hair strands as unsigned int
+    // If the file does not have a segments array, this default value is used.
+    // Bytes 20-23    Default radius hair strands as float
+    // If the file does not have a radius array, this default value is used.
+    // Bytes 24-27    Default transparency hair strands as float
+    // If the file does not have a transparency array, this default value is
+    // used. Bytes 28-39    Default color hair strands as float array of size 3
+    // If the file does not have a radius array, this default value is used.
+    // Bytes 40-127    File information as char array of size 88 in ascii
+
+    // parse header
+    hair = cyhair_data{};
+    struct cyhair_header {
+        char         magic[4]             = {0};
+        unsigned int num_strands          = 0;
+        unsigned int num_points           = 0;
+        unsigned int flags                = 0;
+        unsigned int default_segments     = 0;
+        float        default_thickness    = 0;
+        float        default_transparency = 0;
+        vec3f        default_color        = zero3f;
+        char         info[88]             = {0};
+    };
+    static_assert(sizeof(cyhair_header) == 128);
+    auto header = cyhair_header{};
+    read_value(fs, header);
+    if (header.magic[0] != 'H' || header.magic[1] != 'A' ||
+        header.magic[2] != 'I' || header.magic[3] != 'R')
+        throw shapeio_error("bad cyhair header");
+
+    // set up data
+    hair.default_thickness    = header.default_thickness;
+    hair.default_transparency = header.default_transparency;
+    hair.default_color        = header.default_color;
+    hair.strands.resize(header.num_strands);
+
+    // get segments length
+    auto segments = vector<unsigned short>();
+    if (header.flags & 1) {
+        segments.resize(header.num_strands);
+        read_values(fs, segments);
+    } else {
+        segments.assign(header.num_strands, header.default_segments);
+    }
+
+    // check segment length
+    auto total_length = 0;
+    for (auto segment : segments) total_length += segment + 1;
+    if (total_length != header.num_points) {
+        throw shapeio_error("bad cyhair file");
+    }
+
+    // read positions data
+    if (header.flags & 2) {
+        for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+            auto strand_size = (int)segments[strand_id] + 1;
+            hair.strands[strand_id].positions.resize(strand_size);
+            read_values(fs, hair.strands[strand_id].positions);
+        }
+    }
+    // read radius data
+    if (header.flags & 4) {
+        for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+            auto strand_size = (int)segments[strand_id] + 1;
+            hair.strands[strand_id].radius.resize(strand_size);
+            read_values(fs, hair.strands[strand_id].radius);
+        }
+    }
+    // read transparency data
+    if (header.flags & 8) {
+        for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+            auto strand_size = (int)segments[strand_id] + 1;
+            hair.strands[strand_id].transparency.resize(strand_size);
+            read_values(fs, hair.strands[strand_id].transparency);
+        }
+    }
+    // read color data
+    if (header.flags & 16) {
+        for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+            auto strand_size = (int)segments[strand_id] + 1;
+            hair.strands[strand_id].color.resize(strand_size);
+            read_values(fs, hair.strands[strand_id].color);
+        }
+    }
+}
+
+inline void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
+    bool flip_texcoord) {
+    // load hair file
+    auto hair = cyhair_data();
+    load_cyhair(filename, hair);
+
+    // generate curve data
+    for (auto& strand : hair.strands) {
+        auto offset = (int)positions.size();
+        for (auto segment = 0; segment < (int)strand.positions.size() - 1;
+             segment++) {
+            lines.push_back({offset + segment, offset + segment + 1});
+        }
+        positions.insert(
+            positions.end(), strand.positions.begin(), strand.positions.end());
+        if (strand.radius.empty()) {
+            radius.insert(
+                radius.end(), strand.positions.size(), hair.default_thickness);
+        } else {
+            radius.insert(
+                radius.end(), strand.radius.begin(), strand.radius.end());
+        }
+        if (strand.color.empty()) {
+            color.insert(color.end(), strand.positions.size(),
+                {hair.default_color.x, hair.default_color.y,
+                    hair.default_color.z, 1});
+        } else {
+            for (auto i = 0; i < strand.color.size(); i++) {
+                auto scolor = strand.color[i];
+                color.push_back({scolor.x, scolor.y, scolor.z, 1});
+            }
+        }
+    }
+
+    // flip yz
+    for (auto& p : positions) std::swap(p.y, p.z);
+
+    // compute tangents
+    normals.resize(positions.size());
+    compute_vertex_tangents(normals, lines, positions);
+
+    // fix colors
+    for (auto& c : color) c = srgb_to_linear(c);
 }
 
 }  // namespace yocto
