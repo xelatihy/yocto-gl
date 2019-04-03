@@ -27,7 +27,6 @@
 //
 
 #include "yocto_sceneio.h"
-#include "yocto_imageio.h"
 #include "yocto_obj.h"
 #include "yocto_pbrt.h"
 #include "yocto_random.h"
