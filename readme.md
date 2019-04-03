@@ -68,8 +68,8 @@ See each header file for documentation.
    procedural shapes
 - `yocto/yocto_bvh.{h}`: ray intersection and closest point queries 
    using a two-level bounding volume hierarchy
-- `yocto/yocto_image.{h}`: color utilities, image manipulation, 
-   procedural images, procedural sun-sky
+- `yocto/yocto_image.{h,cpp}`: color utilities, image manipulation, 
+   procedural images, procedural sun-sky, image input/output
 - `yocto/yocto_scene.{h,cpp}`: simple scene storage, evaluation of scene 
    properties
 - `yocto/yocto_trace.{h,cpp}`: path tracing

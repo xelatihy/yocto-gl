@@ -1,5 +1,5 @@
 //
-// Compilation stub for stb_image_write.h
+// Implementation for Yocto/Image.
 //
 
 //
@@ -26,6 +26,8 @@
 // SOFTWARE.
 //
 
+#include "yocto_image.h"
+
 #ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -37,11 +39,22 @@
 
 // #ifndef __clang_analyzer__
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "ext/stb_image.h"
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include "ext/stb_image_write.h"
+
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include "ext/stb_image_resize.h"
+
+#define TINYEXR_IMPLEMENTATION
+#include "ext/tinyexr.h"
 
 // #endif
 
 #ifndef _WIN32
 #pragma GCC diagnostic pop
 #endif
+
+#include "ext/ArHosekSkyModel.cpp"
