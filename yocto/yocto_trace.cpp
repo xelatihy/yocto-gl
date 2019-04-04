@@ -1419,22 +1419,21 @@ vec3f sample_next_direction_volume(const yocto_scene& scene,
 }
 
 void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
-    const bvh_scene& bvh, float prob_light, float prob_light_volume,
-    rng_state& rng, trace_point& point, vec3f& outgoing, vec3f& next_direction,
-    vec3f& weight, vec3f& radiance) {
+    const bvh_scene& bvh, const vec3f volume_density, const vec3f& volume_albedo, const vec3f& volume_emission, float volume_phaseg, rng_state& rng, trace_point& point, vec3f& outgoing,
+    vec3f& next_direction, vec3f& weight, vec3f& radiance) {
     // Integrate weight while random walking inside the volume until exit.
 
+    // auto direction = next_direction_;
+
     auto      spectrum          = get_random_int(rng, 3);
-    auto      volume_density    = point.volume_density[spectrum];
-    auto      volume_albedo     = point.volume_albedo[spectrum];
-    auto      volume_emission   = point.volume_emission;
-    auto      volume_phaseg     = point.volume_phaseg;
+    auto      density    = volume_density[spectrum];
+    auto      albedo     = volume_albedo[spectrum];
     const int volume_max_bounce = 1000;  // @giacomo: hardcoded!
 
     for (auto volume_bounce = 0; volume_bounce < volume_max_bounce;
          volume_bounce++) {
         auto distance = sample_volume_distance(
-            volume_density, get_random_float(rng));
+            density, get_random_float(rng));
 
         auto isec = bvh_intersection{};
         if (!intersect_scene_bvh(
@@ -1452,12 +1451,12 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
 
             weight *= evaluate_volume_transmission(
                 point.volume_density, isec.distance);
-            weight /= sample_volume_distance_pdf(volume_density, isec.distance);
+            weight /= sample_volume_distance_pdf(density, isec.distance);
 
             point          = next_point;
             outgoing       = -next_direction;
             next_direction = sample_next_direction(
-                scene, lights, bvh, point, outgoing, prob_light, rng, weight);
+                scene, lights, bvh, point, outgoing, 0.5f, rng, weight);
 
             if (dot(next_direction, point.geometric_normal) > 0 !=
                 dot(outgoing, point.geometric_normal) > 0)
@@ -1468,24 +1467,24 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
 
         // medium interaction inside volume
         point.position += next_direction * distance;
-        weight /= sample_volume_distance_pdf(volume_density, distance);
+        weight /= sample_volume_distance_pdf(density, distance);
         weight *= evaluate_volume_transmission(point.volume_density, distance);
 
-        if (get_random_float(rng) < volume_albedo) {
+        if (get_random_float(rng) < albedo) {
             // scattering
-            weight /= volume_albedo;
+            weight /= albedo;
 
             outgoing       = -next_direction;
             next_direction = sample_next_direction_volume(scene, lights, bvh,
                 point.position, point.volume_albedo, volume_phaseg, outgoing,
-                prob_light_volume, rng, weight);
+                0.5f, rng, weight);
 
             // russian roulette
-            if (sample_russian_roulette(volume_albedo, weight, volume_bounce,
+            if (sample_russian_roulette(albedo, weight, volume_bounce,
                     get_random_float(rng)))
                 break;
             weight /= sample_russian_roulette_pdf(
-                volume_albedo, weight, volume_bounce);
+                albedo, weight, volume_bounce);
 
         } else {
             // absorption
@@ -1526,8 +1525,7 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // transmission
         if (dot(next_direction, point.geometric_normal) > 0 !=
             dot(outgoing, point.geometric_normal) > 0) {
-            integrate_volume(scene, lights, bvh, 0.5, 0.5, rng, point, outgoing,
-                next_direction, weight, radiance);
+            integrate_volume(scene, lights, bvh, point.volume_density, point.volume_albedo, point.volume_emission, point.volume_phaseg, rng, point, outgoing, next_direction, weight, radiance);
             if (weight == zero3f) return {radiance, true};
         }
 
@@ -1634,84 +1632,6 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     return {radiance, 1};
 }
 
-// Iterative volume naive path tracing
-vec4f trace_volnaive(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, const trace_image_options& options) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, options.max_bounces);
-    if (!point.hit) {
-        if (options.environments_hidden || scene.environments.empty())
-            return zero4f;
-        return {point.emission, 1};
-    }
-
-    // initialize
-    auto radiance = point.emission;
-    auto weight   = vec3f{1, 1, 1};
-    auto outgoing = -direction;
-
-    // trace  path
-    for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
-        // exit if needed
-        if (is_brdf_zero(point.brdf) || weight == zero3f) break;
-
-        // continue path
-        auto next_direction     = zero3f;
-        auto next_brdf_cosine   = zero3f;
-        auto next_direction_pdf = 0.0f;
-        if (!is_brdf_delta(point.brdf)) {
-            next_direction   = sample_brdf_direction(point.brdf, point.normal,
-                outgoing, get_random_float(rng), get_random_vec2f(rng));
-            next_brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction);
-            next_direction_pdf = sample_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing, next_direction);
-        } else {
-            next_direction   = sample_delta_brdf_direction(point.brdf,
-                point.normal, outgoing, get_random_float(rng),
-                get_random_vec2f(rng));
-            next_brdf_cosine = evaluate_delta_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction);
-            next_direction_pdf = sample_delta_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing, next_direction);
-        }
-
-        // exit if no hit
-        if (next_direction == zero3f || next_direction_pdf == 0 ||
-            next_brdf_cosine == zero3f)
-            break;
-
-        // transmission
-        if (dot(next_direction, point.normal) < 0) {
-            integrate_volume(scene, lights, bvh, 0.0, 0.0, rng, point, outgoing,
-                next_direction, weight, radiance);
-            if (weight == zero3f) return {radiance, 1};
-        }
-
-        // intersect next point
-        auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
-            next_direction, rng, options.max_bounces);
-        radiance += weight * next_brdf_cosine * next_point.emission /
-                    next_direction_pdf;
-        if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
-
-        // setup next iteration
-        point    = next_point;
-        outgoing = -next_direction;
-        weight *= next_brdf_cosine / next_direction_pdf;
-
-        // russian roulette
-        if (sample_russian_roulette(
-                get_albedo(point.brdf), weight, bounce, get_random_float(rng)))
-            break;
-        weight /= sample_russian_roulette_pdf(
-            get_albedo(point.brdf), weight, bounce);
-    }
-
-    return {radiance, 1};
-}
 
 // Recursive path tracing.
 vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
@@ -1903,7 +1823,6 @@ trace_sampler_func get_trace_sampler_func(const trace_image_options& options) {
     switch (options.sampler_type) {
         case trace_sampler_type::path: return trace_path;
         case trace_sampler_type::volpath: return trace_volpath;
-        case trace_sampler_type::volnaive: return trace_volnaive;
         case trace_sampler_type::naive: return trace_naive;
         case trace_sampler_type::eyelight: return trace_eyelight;
         case trace_sampler_type::falsecolor: return trace_falsecolor;
