@@ -753,7 +753,7 @@ inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     if (!overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1, uv, dist)) {
         hit      = true;
         uv       = 1 - uv;
-        dist_max = dist;
+        // dist_max = dist;
     }
     return hit;
 }

@@ -139,24 +139,15 @@
     ],
     "textures": [
         {
-            "name": "floor",
-            "filename": "textures/floor.png",
-            "gamma": 2.2,
-            "!!proc": {
-                "type": "grid",
-                "border": true
-            }
+            "name": "test-floor",
+            "filename": "textures/test-floor.ypreset"
         },
         {
-            "name": "uvgrid",
-            "filename": "textures/uvgrid.png",
-            "gamma": 2.2,
-            "!!proc": {
-                "type": "uvgrid"
-            }
+            "name": "test-uvgrid",
+            "filename": "textures/test-uvgrid.ypreset"
         },
         {
-            "name": "sky",
+            "name": "test-sky",
             "filename": "textures/sky.hdr",
             "!!proc": {
                 "type": "sky"
@@ -165,16 +156,16 @@
     ],
     "materials": [
         {
-            "name": "floor",
+            "name": "test-floor",
             "diffuse": [
                 0.7,
                 0.7,
                 0.7
             ],
-            "diffuse_texture": "floor"
+            "diffuse_texture": "test-floor"
         },
         {
-            "name": "uvgrid",
+            "name": "test-uvgrid",
             "diffuse": [
                 1,
                 1,
@@ -186,10 +177,10 @@
                 0.04
             ],
             "roughness": 0.1,
-            "diffuse_texture": "uvgrid"
+            "diffuse_texture": "test-uvgrid"
         },
         {
-            "name": "plastic-sharp",
+            "name": "test-plastic-sharp",
             "diffuse": [
                 0.5,
                 0.5,
@@ -203,7 +194,7 @@
             "roughness": 0.01
         },
         {
-            "name": "plastic-rough",
+            "name": "test-plastic-rough",
             "diffuse": [
                 0.5,
                 0.7,
@@ -217,7 +208,7 @@
             "roughness": 0.1
         },
         {
-            "name": "metal-sharp",
+            "name": "test-metal-sharp",
             "diffuse": [
                 0,
                 0,
@@ -231,7 +222,7 @@
             "roughness": 0
         },
         {
-            "name": "metal-rough",
+            "name": "test-metal-rough",
             "diffuse": [
                 0,
                 0,
@@ -245,7 +236,7 @@
             "roughness": 0.1
         },
         {
-            "name": "arealight1",
+            "name": "test-arealight1",
             "emission": [
                 20,
                 20,
@@ -253,7 +244,7 @@
             ]
         },
         {
-            "name": "arealight2",
+            "name": "test-arealight2",
             "emission": [
                 20,
                 20,
@@ -263,7 +254,7 @@
     ],
     "shapes": [
         {
-            "name": "floor",
+            "name": "test-floor",
             "filename": "models/test-floor.ply",
             "!!proc": {
                 "type": "floor",
@@ -274,11 +265,11 @@
             }
         },
         {
-            "name": "bunny",
+            "name": "test-bunny",
             "filename": "models/test-bunny.obj"
         },
         {
-            "name": "sphere",
+            "name": "test-sphere",
             "filename": "models/test-sphere.obj",
             "!!proc": {
                 "type": "sphere",
@@ -287,7 +278,7 @@
             }
         },
         {
-            "name": "arealight1",
+            "name": "test-arealight1",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -297,7 +288,7 @@
             }
         },
         {
-            "name": "arealight2",
+            "name": "test-arealight2",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -309,14 +300,14 @@
     ],
     "instances": [
         {
-            "name": "floor",
-            "shape": "floor",
-            "material": "floor"
+            "name": "test-floor",
+            "shape": "test-floor",
+            "material": "test-floor"
         },
         {
-            "name": "arealight1",
-            "shape": "arealight1",
-            "material": "arealight1",
+            "name": "test-arealight1",
+            "shape": "test-arealight1",
+            "material": "test-arealight1",
             "!!proc": {
                 "from": [
                     -0.4,
@@ -331,9 +322,9 @@
             }
         },
         {
-            "name": "arealight2",
-            "shape": "arealight2",
-            "material": "arealight2",
+            "name": "test-arealight2",
+            "shape": "test-arealight2",
+            "material": "test-arealight2",
             "!!proc": {
                 "from": [
                     0.4,
@@ -348,9 +339,9 @@
             }
         },
         {
-            "name": "bunny_uvgrid",
-            "shape": "bunny",
-            "material": "uvgrid",
+            "name": "test-bunny_test-uvgrid",
+            "shape": "test-bunny",
+            "material": "test-uvgrid",
             "frame": [
                 1,
                 0,
@@ -367,9 +358,9 @@
             ]
         },
         {
-            "name": "sphere_plastic-sharp",
-            "shape": "sphere",
-            "material": "plastic-sharp",
+            "name": "test-sphere_test-plastic-sharp",
+            "shape": "test-sphere",
+            "material": "test-plastic-sharp",
             "frame": [
                 1,
                 0,
@@ -386,9 +377,9 @@
             ]
         },
         {
-            "name": "bunny_metal-rough",
-            "shape": "bunny",
-            "material": "metal-rough",
+            "name": "test-bunny_test-metal-rough",
+            "shape": "test-bunny",
+            "material": "test-metal-rough",
             "frame": [
                 1,
                 0,
@@ -405,9 +396,9 @@
             ]
         },
         {
-            "name": "sphere_plastic-rough",
-            "shape": "sphere",
-            "material": "plastic-rough",
+            "name": "test-sphere_test-plastic-rough",
+            "shape": "test-sphere",
+            "material": "test-plastic-rough",
             "frame": [
                 1,
                 0,
@@ -424,9 +415,9 @@
             ]
         },
         {
-            "name": "bunny_metal-sharp",
-            "shape": "bunny",
-            "material": "metal-sharp",
+            "name": "test-bunny_test-metal-sharp",
+            "shape": "test-bunny",
+            "material": "test-metal-sharp",
             "frame": [
                 1,
                 0,
@@ -445,13 +436,13 @@
     ],
     "environments": [
         {
-            "name": "sky",
+            "name": "test-sky",
             "emission": [
                 2,
                 2,
                 2
             ],
-            "emission_texture": "sky"
+            "emission_texture": "test-sky"
         }
     ]
 }

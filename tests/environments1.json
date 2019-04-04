@@ -139,24 +139,11 @@
     ],
     "textures": [
         {
-            "name": "floor",
-            "filename": "textures/floor.png",
-            "gamma": 2.2,
-            "!!proc": {
-                "type": "grid",
-                "border": true
-            }
+            "name": "test-floor",
+            "filename": "textures/test-floor.ypreset"
         },
         {
-            "name": "uvgrid",
-            "filename": "textures/uvgrid.png",
-            "gamma": 2.2,
-            "!!proc": {
-                "type": "uvgrid"
-            }
-        },
-        {
-            "name": "sunsky",
+            "name": "test-sunsky",
             "filename": "textures/sky.hdr",
             "!!proc": {
                 "type": "sky",
@@ -168,89 +155,18 @@
     ],
     "materials": [
         {
-            "name": "floor",
+            "name": "test-floor",
             "diffuse": [
                 0.7,
                 0.7,
                 0.7
             ],
-            "diffuse_texture": "floor"
-        },
-        {
-            "name": "uvgrid",
-            "diffuse": [
-                1,
-                1,
-                1
-            ],
-            "specular": [
-                0.04,
-                0.04,
-                0.04
-            ],
-            "roughness": 0.1,
-            "diffuse_texture": "uvgrid"
-        },
-        {
-            "name": "plastic-sharp",
-            "diffuse": [
-                0.5,
-                0.5,
-                0.7
-            ],
-            "specular": [
-                0.04,
-                0.04,
-                0.04
-            ],
-            "roughness": 0.01
-        },
-        {
-            "name": "plastic-rough",
-            "diffuse": [
-                0.5,
-                0.7,
-                0.5
-            ],
-            "specular": [
-                0.04,
-                0.04,
-                0.04
-            ],
-            "roughness": 0.1
-        },
-        {
-            "name": "metal-sharp",
-            "diffuse": [
-                0,
-                0,
-                0
-            ],
-            "specular": [
-                0.7,
-                0.7,
-                0.7
-            ],
-            "roughness": 0
-        },
-        {
-            "name": "metal-rough",
-            "diffuse": [
-                0,
-                0,
-                0
-            ],
-            "specular": [
-                0.66,
-                0.45,
-                0.34
-            ],
-            "roughness": 0.1
+            "diffuse_texture": "test-floor"
         }
     ],
     "shapes": [
         {
-            "name": "floor",
+            "name": "test-floor",
             "filename": "models/test-floor.ply",
             "!!proc": {
                 "type": "floor",
@@ -259,26 +175,13 @@
                     4
                 ]
             }
-        },
-        {
-            "name": "bunny",
-            "filename": "models/test-bunny.obj"
-        },
-        {
-            "name": "sphere",
-            "filename": "models/test-sphere.obj",
-            "!!proc": {
-                "type": "sphere",
-                "size": 0.15,
-                "align_bottom": true
-            }
         }
     ],
     "instances": [
         {
-            "name": "floor",
-            "shape": "floor",
-            "material": "floor"
+            "name": "test-floor",
+            "shape": "test-floor",
+            "material": "test-floor"
         },
         {
             "name": "bunny_uvgrid",
@@ -378,13 +281,13 @@
     ],
     "environments": [
         {
-            "name": "sunsky",
+            "name": "test-sunsky",
             "emission": [
                 1,
                 1,
                 1
             ],
-            "emission_texture": "sunsky"
+            "emission_texture": "test-sunsky"
         }
     ]
 }

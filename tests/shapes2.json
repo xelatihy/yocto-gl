@@ -139,24 +139,11 @@
     ],
     "textures": [
         {
-            "name": "floor",
-            "filename": "textures/floor.png",
-            "gamma": 2.2,
-            "!!proc": {
-                "type": "grid",
-                "border": true
-            }
+            "name": "test-floor",
+            "filename": "textures/test-floor.ypreset"
         },
         {
-            "name": "uvgrid",
-            "filename": "textures/uvgrid.png",
-            "gamma": 2.2,
-            "!!proc": {
-                "type": "uvgrid"
-            }
-        },
-        {
-            "name": "sky",
+            "name": "test-sky",
             "filename": "textures/sky.hdr",
             "!!proc": {
                 "type": "sky"
@@ -165,45 +152,16 @@
     ],
     "materials": [
         {
-            "name": "floor",
+            "name": "test-floor",
             "diffuse": [
                 0.7,
                 0.7,
                 0.7
             ],
-            "diffuse_texture": "floor"
+            "diffuse_texture": "test-floor"
         },
         {
-            "name": "uvgrid",
-            "diffuse": [
-                1,
-                1,
-                1
-            ],
-            "specular": [
-                0.04,
-                0.04,
-                0.04
-            ],
-            "roughness": 0.1,
-            "diffuse_texture": "uvgrid"
-        },
-        {
-            "name": "plastic-sharp",
-            "diffuse": [
-                0.5,
-                0.5,
-                0.7
-            ],
-            "specular": [
-                0.04,
-                0.04,
-                0.04
-            ],
-            "roughness": 0.01
-        },
-        {
-            "name": "arealight1",
+            "name": "test-arealight1",
             "emission": [
                 20,
                 20,
@@ -211,7 +169,7 @@
             ]
         },
         {
-            "name": "arealight2",
+            "name": "test-arealight2",
             "emission": [
                 20,
                 20,
@@ -221,7 +179,7 @@
     ],
     "shapes": [
         {
-            "name": "floor",
+            "name": "test-floor",
             "filename": "models/test-floor.ply",
             "!!proc": {
                 "type": "floor",
@@ -232,44 +190,7 @@
             }
         },
         {
-            "name": "bunny",
-            "filename": "models/test-bunny.obj"
-        },
-        {
-            "name": "teapot",
-            "filename": "models/test-teapot.obj"
-        },
-        {
-            "name": "subdiv-cube",
-            "filename": "models/test-subdiv-cube.obj",
-            "subdivision_level": 4,
-            "catmull_clark": true,
-            "compute_normals": true,
-            "preserve_facevarying": true,
-            "!!proc": {
-                "type": "cube_facevarying",
-                "size": [
-                    0.15,
-                    0.15,
-                    0.15
-                ],
-                "align_bottom": true
-            }
-        },
-        {
-            "name": "subdiv-monkey",
-            "filename": "models/test-subdiv-monkey.obj",
-            "subdivision_level": 2,
-            "catmull_clark": true,
-            "compute_normals": true,
-            "!!proc": {
-                "type": "suzanne",
-                "size": 0.15,
-                "align_bottom": true
-            }
-        },
-        {
-            "name": "arealight1",
+            "name": "test-arealight1",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -279,7 +200,7 @@
             }
         },
         {
-            "name": "arealight2",
+            "name": "test-arealight2",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -291,14 +212,14 @@
     ],
     "instances": [
         {
-            "name": "floor",
-            "shape": "floor",
-            "material": "floor"
+            "name": "test-floor",
+            "shape": "test-floor",
+            "material": "test-floor"
         },
         {
-            "name": "arealight1",
-            "shape": "arealight1",
-            "material": "arealight1",
+            "name": "test-arealight1",
+            "shape": "test-arealight1",
+            "material": "test-arealight1",
             "!!proc": {
                 "from": [
                     -0.4,
@@ -313,9 +234,9 @@
             }
         },
         {
-            "name": "arealight2",
-            "shape": "arealight2",
-            "material": "arealight2",
+            "name": "test-arealight2",
+            "shape": "test-arealight2",
+            "material": "test-arealight2",
             "!!proc": {
                 "from": [
                     0.4,
@@ -427,13 +348,13 @@
     ],
     "environments": [
         {
-            "name": "sky",
+            "name": "test-sky",
             "emission": [
                 2,
                 2,
                 2
             ],
-            "emission_texture": "sky"
+            "emission_texture": "test-sky"
         }
     ]
 }

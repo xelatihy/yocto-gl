@@ -516,27 +516,20 @@ void load_json_image(const string& filename, image<vec<byte, N>>& img) {
 
 #endif
 
-// Check if an image is a preset based on filename.
-inline bool is_image_preset_filename(const string& filename) {
-    return get_filename(filename).find("yocto::") == 0;
-}
-inline string get_image_preset_type(const string& filename) {
-    return get_noextension(get_filename(filename).substr(7));
-}
-
 template <int N>
 inline void load_image_preset(
     const string& filename, image<vec<float, N>>& img) {
+    auto type = get_basename(filename);
     if constexpr (N == 4) {
         img.resize({1024, 1024});
-        if (get_image_preset_type(filename) == "images2")
+        if (type == "images2")
             img.resize({2048, 1024});
-        make_image_preset(img, get_image_preset_type(filename));
+        make_image_preset(img, type);
     } else {
         auto img4 = image<vec<float, 4>>({1024, 1024});
-        if (get_image_preset_type(filename) == "images2")
+        if (type == "images2")
             img4.resize({2048, 1024});
-        make_image_preset(img4, get_image_preset_type(filename));
+        make_image_preset(img4, type);
         img.resize(img4.size());
         rgba_to_color(img, img4);
     }
@@ -548,12 +541,6 @@ inline void load_image_preset(
     load_image_preset(filename, imgf);
     img.resize(imgf.size());
     linear_to_srgb8(img, imgf);
-}
-
-// check hdr extensions
-bool is_hdr_filename(const string& filename) {
-    auto ext = get_extension(filename);
-    return ext == "hdr" || ext == "exr" || ext == "pfm";
 }
 
 // Loads an hdr image.

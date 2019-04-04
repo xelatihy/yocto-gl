@@ -161,9 +161,13 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
 namespace yocto {
 
 // Check if an image is HDR based on filename.
-bool is_hdr_filename(const string& filename);
+inline bool is_hdr_filename(const string& filename) {
+    return get_extension(filename) == "hdr" || get_extension(filename) == "exr" || get_extension(filename) == "pfm";
+}
 // Check if an image is a preset based on filename.
-bool is_image_preset_filename(const string& filename);
+inline bool is_image_preset_filename(const string& filename) {
+    return get_extension(filename) == "ypreset";
+}
 
 // Loads/saves a 1-4 channels float image in linear color space.
 void load_image(const string& filename, image<float>& img);
@@ -184,6 +188,16 @@ void save_image(const string& filename, const image<byte>& img);
 void save_image(const string& filename, const image<vec2b>& img);
 void save_image(const string& filename, const image<vec3b>& img);
 void save_image(const string& filename, const image<vec4b>& img);
+
+// Convenience helper for loading HDR or LDR based on filename
+template <int N>
+    inline void load_image(const string& filename, image<vec<float, N>>& hdr, image<vec<byte, N>>& ldr) {
+    if(is_hdr_filename(filename)) {
+        load_image(filename, hdr);
+    } else {
+        load_image(filename, ldr);
+    }
+}
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
@@ -229,8 +243,7 @@ inline void set_image_region(
 template <typename T1, typename T2, typename Func>
 inline void apply(
     const Func& func, image<T1>& result, const image<T2>& source) {
-    if (result.size() != source.size())
-        throw out_of_range("different image sizes");
+    result.resize(source.size());
     for (auto j = 0; j < result.size().y; j++) {
         for (auto i = 0; i < result.size().x; i++) {
             result[{i, j}] = func(source[{i, j}]);
@@ -240,8 +253,7 @@ inline void apply(
 template <typename T1, typename T2, typename Func>
 inline void apply(const Func& func, image<T1>& result, const image<T2>& source,
     const image_region& region) {
-    if (result.size() != source.size())
-        throw out_of_range("different image sizes");
+    result.resize(source.size());
     for (auto j = region.min.y; j < region.max.y; j++) {
         for (auto i = region.min.x; i < region.max.x; i++) {
             result[{i, j}] = func(source[{i, j}]);
@@ -340,27 +352,27 @@ namespace yocto {
 // Make example images in linear color space. Takes as input images allocated
 // to the desired size and fill the pixel with expected values.
 template <typename T>
-inline void make_grid_image(image<T>& img, int tile, const T& c0, const T& c1);
+inline void make_grid_image(image<T>& img, const vec2i& size, int tile, const T& c0, const T& c1);
 template <typename T>
 inline void make_checker_image(
-    image<T>& img, int tile, const T& c0, const T& c1);
+    image<T>& img, const vec2i& size, int tile, const T& c0, const T& c1);
 template <typename T>
 inline void make_bumpdimple_image(
-    image<T>& img, int tile, const T& c0, const T& c1);
+    image<T>& img, const vec2i& size, int tile, const T& c0, const T& c1);
 template <typename T>
-inline void make_ramp_image(image<T>& img, const T& c0, const T& c1);
+inline void make_ramp_image(image<T>& img, const vec2i& size, const T& c0, const T& c1);
 template <typename T>
 inline void make_ramp_image(
-    image<T>& img, const T& c00, const T& c10, const T& c11, const T& c01);
+    image<T>& img, const vec2i& size, const T& c00, const T& c10, const T& c11, const T& c01);
 template <typename T>
-inline void make_gammaramp_image(image<T>& img, const T& c0, const T& c1);
+inline void make_gammaramp_image(image<T>& img, const vec2i& size, const T& c0, const T& c1);
 template <typename T>
-inline void make_uvramp_image(image<T>& img);
+inline void make_uvramp_image(image<T>& img, const vec2i& size);
 template <typename T, int N>
 inline void make_uvgrid_image(
-    image<vec<T, N>>& img, int tile = 8, bool colored = true);
+    image<vec<T, N>>& img, const vec2i& size, int tile = 8, bool colored = true);
 template <typename T, int N>
-inline void make_blackbodyramp_image(image<vec<T, N>>& img,
+inline void make_blackbodyramp_image(image<vec<T, N>>& img, const vec2i& size,
     float start_temperature = 1000, float end_temperature = 12000);
 
 // Comvert a bump map to a normal map. All linear color spaces.
@@ -374,37 +386,37 @@ inline void bump_to_normal_map(
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
 template <typename T, int N>
-inline void make_sunsky_image(image<vec<T, N>>& img, T sun_angle,
+inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size, T sun_angle,
     T turbidity = 3, bool has_sun = false, T sun_intensity = 1,
     T                sun_temperature = 0,
     const vec<T, 3>& ground_albedo   = {(T)0.2, (T)0.2, (T)0.2});
 // Make an image of multiple lights.
 template <typename T, int N>
-inline void make_lights_image(image<vec<T, N>>& img,
+inline void make_lights_image(image<vec<T, N>>& img, const vec2i& size,
     const vec<T, 3>& le = {1, 1, 1}, int nlights = 4, T langle = (T)pi / 4,
     T lwidth = (T)pi / 16, T lheight = (T)pi / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 template <typename T, typename T1>
 inline void make_noise_image(
-    image<T>& img, const T& c0, const T& c1, T1 scale = 1, bool wrap = true);
+    image<T>& img, const vec2i& size, const T& c0, const T& c1, T1 scale = 1, bool wrap = true);
 template <typename T, typename T1>
-inline void make_fbm_image(image<T>& img, const T& c0, const T& c1,
+inline void make_fbm_image(image<T>& img, const vec2i& size, const T& c0, const T& c1,
     T1 scale = 1, T1 lacunarity = 2, T1 gain = 0.5f, int octaves = 6,
     bool wrap = true);
 template <typename T, typename T1>
-inline void make_ridge_image(image<T>& img, const T& c0, const T& c1,
+inline void make_ridge_image(image<T>& img, const vec2i& size, const T& c0, const T& c1,
     T1 scale = 1, T1 lacunarity = 2, T1 gain = (T1)0.5, T1 offset = 1,
     int octaves = 6, bool wrap = true);
 template <typename T, typename T1>
-inline void make_turbulence_image(image<T>& img, const T& c0, const T& c1,
+inline void make_turbulence_image(image<T>& img, const vec2i& size, const T& c0, const T& c1,
     T1 scale = 1, T1 lacunarity = 2, T1 gain = (T1)0.5, int octaves = 6,
     bool wrap = true);
 
 // Add a border to an image
 template <typename T>
 inline void add_image_border(
-    image<T>& img, int border_width, const T& border_color);
+    image<T>& img, const vec2i& size, int border_width, const T& border_color);
 
 // Make logo images. Image is resized to proper size.
 template<typename T>
@@ -413,6 +425,7 @@ inline void make_logo_image(image<T>& img, const string& name);
 // Make an image preset, useful for testing. See implementation for types.
 inline void make_image_preset(image<vec<float, 4>>& img, const string& type);
 inline void make_image_preset(image<vec<byte, 4>>& img, const string& type);
+inline void make_image_preset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
 
 }  // namespace yocto
 
@@ -478,7 +491,7 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b) {
 
 // make a simple example volume
 inline void make_test_volume(
-    volume<float>& vol, float scale = 10, float exponent = 6);
+    volume<float>& vol, const vec3i& size, float scale = 10, float exponent = 6);
 
 }  // namespace yocto
 
@@ -1077,7 +1090,8 @@ namespace yocto {
 
 // Make an image by assign values to each pixel
 template <typename T, typename Func>
-inline void make_image_fromij(image<T>& img, const Func& func) {
+inline void make_image_fromij(image<T>& img, const vec2i& size, const Func& func) {
+    img.resize(size);
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
             img[{i, j}] = func(i, j);
@@ -1085,7 +1099,8 @@ inline void make_image_fromij(image<T>& img, const Func& func) {
     }
 }
 template <typename T, typename Func>
-inline void make_image_fromuv(image<T>& img, const Func& func) {
+inline void make_image_fromuv(image<T>& img, const vec2i& size, const Func& func) {
+    img.resize(size);
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
             auto u      = (float)i / (float)img.size().x;
@@ -1098,9 +1113,9 @@ inline void make_image_fromuv(image<T>& img, const Func& func) {
 // Make a grid image
 template <typename T>
 inline void make_grid_image(
-    image<T>& img, int tiles, const T& c0, const T& c1) {
+    image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
     make_image_fromij(
-        img, [tile = img.size().x / tiles, &c0, &c1](int i, int j) {
+        img, size, [tile = size.x / tiles, &c0, &c1](int i, int j) {
             auto c = i % tile == 0 || i % tile == tile - 1 || j % tile == 0 ||
                      j % tile == tile - 1;
             return (c) ? c0 : c1;
@@ -1110,9 +1125,9 @@ inline void make_grid_image(
 // Make a checkerboard image
 template <typename T>
 inline void make_checker_image(
-    image<T>& img, int tiles, const T& c0, const T& c1) {
+    image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
     make_image_fromij(
-        img, [tile = img.size().x / tiles, &c0, &c1](int i, int j) {
+        img, size, [tile = size.x / tiles, &c0, &c1](int i, int j) {
             auto c = (i / tile + j / tile) % 2 == 0;
             return (c) ? c0 : c1;
         });
@@ -1121,8 +1136,8 @@ inline void make_checker_image(
 // Make an image with bumps and dimples.
 template <typename T>
 inline void make_bumpdimple_image(
-    image<T>& img, int tiles, const T& c0, const T& c1) {
-    make_image_fromij(img, [tile = img.size().x / tiles, &c0, &c1](
+    image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
+    make_image_fromij(img, size, [tile = size.x / tiles, &c0, &c1](
                                int i, int j) {
         auto c  = (i / tile + j / tile) % 2 == 0;
         auto ii = i % tile - tile / 2, jj = j % tile - tile / 2;
@@ -1137,17 +1152,17 @@ inline void make_bumpdimple_image(
 
 // Make a uv colored grid
 template <typename T>
-inline void make_ramp_image(image<T>& img, const T& c0, const T& c1) {
-    make_image_fromij(img, [size = img.size(), &c0, &c1](int i, int j) {
+inline void make_ramp_image(image<T>& img, const vec2i& size, const T& c0, const T& c1) {
+    make_image_fromij(img, size, [size = img.size(), &c0, &c1](int i, int j) {
         auto u = (float)i / (float)size.x;
         return lerp_color(c0, c1, u);
     });
 }
 template <typename T>
 inline void make_ramp_image(
-    image<T>& img, const T& c00, const T& c10, const T& c11, const T& c01) {
+    image<T>& img, const vec2i& size, const T& c00, const T& c10, const T& c11, const T& c01) {
     make_image_fromij(
-        img, [size = img.size(), &c00, &c10, &c01, &c11](int i, int j) {
+        img, size, [size, &c00, &c10, &c01, &c11](int i, int j) {
             auto u = (float)i / (float)size.x;
             auto v = (float)j / (float)size.y;
             return bilerp_color(c00, c10, c11, c01, u, v);
@@ -1156,8 +1171,8 @@ inline void make_ramp_image(
 
 // Make a gamma ramp image
 template <typename T>
-inline void make_gammaramp_image(image<T>& img, const T& c0, const T& c1) {
-    make_image_fromij(img, [size = img.size(), &c0, &c1](int i, int j) {
+inline void make_gammaramp_image(image<T>& img, const vec2i& size, const T& c0, const T& c1) {
+    make_image_fromij(img, size, [size, &c0, &c1](int i, int j) {
         auto u = j / float(size.y - 1);
         if (i < size.x / 3) u = pow(u, 2.2f);
         if (i > (size.x * 2) / 3) u = pow(u, 1 / 2.2f);
@@ -1168,14 +1183,14 @@ inline void make_gammaramp_image(image<T>& img, const T& c0, const T& c1) {
 // Make an image color with red/green in the [0,1] range. Helpful to
 // visualize uv texture coordinate application.
 template <typename T, int N>
-inline void make_uvramp_image(image<vec<T, N>>& img) {
+inline void make_uvramp_image(image<vec<T, N>>& img, const vec2i& size) {
     if constexpr (N == 3) {
         // FIXME: not generic
-        return make_ramp_image(img, vec<T, N>{0, 0, 0}, vec<T, N>{1, 0, 0},
+        return make_ramp_image(img, size, vec<T, N>{0, 0, 0}, vec<T, N>{1, 0, 0},
             vec<T, N>{1, 1, 0}, vec<T, N>{0, 1, 0});
     } else if constexpr (N == 4) {
         // FIXME: not generic
-        return make_ramp_image(img, vec<T, N>{0, 0, 0, 0},
+        return make_ramp_image(img, size, vec<T, N>{0, 0, 0, 0},
             vec<T, N>{1, 0, 0, 0}, vec<T, N>{1, 1, 0, 0},
             vec<T, N>{0, 1, 0, 0});
     } else {
@@ -1185,8 +1200,8 @@ inline void make_uvramp_image(image<vec<T, N>>& img) {
 
 // Make a uv colored grid
 template <typename T, int N>
-inline void make_uvgrid_image(image<vec<T, N>>& img, int tiles, bool colored) {
-    make_image_fromij(img, [size = img.size(), tile = img.size().x / tiles,
+inline void make_uvgrid_image(image<vec<T, N>>& img, const vec2i& size, int tiles, bool colored) {
+    make_image_fromij(img, size, [size, tile = size.x / tiles,
                                colored](int i, int j) {
         j       = size.y - j - 1;
         auto ii = i / tile, jj = j / tile;
@@ -1219,9 +1234,9 @@ inline void make_uvgrid_image(image<vec<T, N>>& img, int tiles, bool colored) {
 // Makes a blackbody ramp
 template <typename T, int N>
 inline void make_blackbodyramp_image(
-    image<vec<T, N>>& img, float start_temperature, float end_temperature) {
-    make_image_fromij(img,
-        [size = img.size(), start_temperature, end_temperature](int i, int j) {
+    image<vec<T, N>>& img, const vec2i& size, float start_temperature, float end_temperature) {
+    make_image_fromij(img, size,
+        [size, start_temperature, end_temperature](int i, int j) {
             auto temperature = start_temperature +
                                (end_temperature - start_temperature) *
                                    (float)i / (float)(size.x - 1);
@@ -1239,10 +1254,10 @@ inline void make_blackbodyramp_image(
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
 inline void make_noise_image(
-    image<T>& img, const T& c0, const T& c1, T1 scale, bool wrap) {
+    image<T>& img, const vec2i& size, const T& c0, const T& c1, T1 scale, bool wrap) {
     make_image_fromij(
-        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
-                 size = img.size(), scale, &c0, &c1](int i, int j) {
+        img, size, [wrap3i  = (wrap) ? vec3i{size.x, size.y, 2} : zero3i,
+                 size, scale, &c0, &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_noise(p, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
@@ -1252,11 +1267,11 @@ inline void make_noise_image(
 
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
-inline void make_fbm_image(image<T>& img, const T& c0, const T& c1, T1 scale,
+inline void make_fbm_image(image<T>& img, const vec2i& size, const T& c0, const T& c1, T1 scale,
     T1 lacunarity, T1 gain, int octaves, bool wrap) {
     make_image_fromij(
-        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
-                 size = img.size(), scale, lacunarity, gain, octaves, &c0,
+        img, size, [wrap3i  = (wrap) ? vec3i{size.x, size.y, 2} : zero3i,
+                 size, scale, lacunarity, gain, octaves, &c0,
                  &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
@@ -1267,11 +1282,11 @@ inline void make_fbm_image(image<T>& img, const T& c0, const T& c1, T1 scale,
 
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
-inline void make_ridge_image(image<T>& img, const T& c0, const T& c1, T1 scale,
+inline void make_ridge_image(image<T>& img, const vec2i& size, const T& c0, const T& c1, T1 scale,
     T1 lacunarity, T1 gain, T1 offset, int octaves, bool wrap) {
     make_image_fromij(
-        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
-                 size = img.size(), scale, lacunarity, gain, offset, octaves,
+        img, size, [wrap3i  = (wrap) ? vec3i{size.x, size.y, 2} : zero3i,
+                 size, scale, lacunarity, gain, offset, octaves,
                  &c0, &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_ridge_noise(
@@ -1283,11 +1298,11 @@ inline void make_ridge_image(image<T>& img, const T& c0, const T& c1, T1 scale,
 
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
-inline void make_turbulence_image(image<T>& img, const T& c0, const T& c1,
+inline void make_turbulence_image(image<T>& img, const vec2i& size, const T& c0, const T& c1,
     T1 scale, T1 lacunarity, T1 gain, int octaves, bool wrap) {
     make_image_fromij(
-        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
-                 size = img.size(), scale, lacunarity, gain, octaves, &c0,
+        img, size, [wrap3i  = (wrap) ? vec3i{size.x, size.y, 2} : zero3i,
+                 size, scale, lacunarity, gain, octaves, &c0,
                  &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_turbulence_noise(
@@ -1301,12 +1316,7 @@ inline void make_turbulence_image(image<T>& img, const T& c0, const T& c1,
 template <typename T, int N>
 inline void bump_to_normal_map(
     image<vec<T, N>>& norm, const image<vec<T, N>>& img, T scale) {
-    if (img.size() != norm.size()) {
-        throw std::out_of_range{"Images should be the same size"};
-    }
-    if (&img == &norm) {
-        throw std::invalid_argument{"Images should be aliased"};
-    }
+    norm.resize(img.size());
     auto dx = 1.0f / img.size().x, dy = 1.0f / img.size().y;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
@@ -1347,7 +1357,7 @@ inline void add_image_border(
 
 // Implementation of sunsky modified heavily from pbrt
 template <typename T, int N>
-inline void make_sunsky_image(image<vec<T, N>>& img, T theta_sun, T turbidity,
+inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size, T theta_sun, T turbidity,
     bool has_sun, T sun_intensity, T sun_temperature,
     const vec<T, 3>& ground_albedo) {
     // idea adapted from pbrt
@@ -1370,6 +1380,7 @@ inline void make_sunsky_image(image<vec<T, N>>& img, T theta_sun, T turbidity,
     }
 
     // clear image
+    img.resize(size);
     if constexpr (N == 3) {
         for (auto& p : img) p = {0, 0, 0};
     } else if constexpr (N == 4) {
@@ -1568,8 +1579,9 @@ image<vec4f> make_sunsky_image(int width, int height, float theta_sun,
 
 // Make an image of multiple lights.
 template <typename T>
-inline void make_lights_image(image<vec<T, 4>>& img, const vec<T, 3>& le,
+inline void make_lights_image(image<vec<T, 4>>& img, const vec2i& size, const vec<T, 3>& le,
     int nlights, T langle, T lwidth, T lheight) {
+    img.resize(size);
     for (auto j = 0; j < img.size().y / 2; j++) {
         auto theta = (T)pi * ((j + (T)0.5) / img.size().y);
         theta      = clamp(theta, (T)0, (T)pi / 2 - float_epsilon);
@@ -1639,41 +1651,43 @@ inline void make_logo_image(image<vec<float, N>>& img, const string& type) {
 }
 
 inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
+    auto size = vec2i{1024, 1024};
+    if(type.find("sky") != type.npos) size = {1024, 2048};
     if (type == "grid") {
-        make_grid_image(img, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
+        make_grid_image(img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
     } else if (type == "checker") {
         make_checker_image(
-            img, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
+            img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
     } else if (type == "bump") {
-        make_bumpdimple_image(img, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+        make_bumpdimple_image(img, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
     } else if (type == "uvramp") {
-        make_uvramp_image(img);
+        make_uvramp_image(img, size);
     } else if (type == "gammaramp") {
-        make_gammaramp_image(img, {0, 0, 0, 1}, {1, 1, 1, 1});
+        make_gammaramp_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1});
     } else if (type == "blackbodyramp") {
-        make_blackbodyramp_image(img);
+        make_blackbodyramp_image(img, size);
     } else if (type == "uvgrid") {
-        make_uvgrid_image(img);
+        make_uvgrid_image(img, size);
     } else if (type == "sky") {
-        make_sunsky_image(img, pif / 4, 3.0f, false, 1.0f, 0.0f,
+        make_sunsky_image(img, size, pif / 4, 3.0f, false, 1.0f, 0.0f,
             vec<float, 3>{0.7f, 0.7f, 0.7f});
     } else if (type == "sunsky") {
-        make_sunsky_image(img, pif / 4, 3.0f, true, 1.0f, 0.0f,
+        make_sunsky_image(img, size, pif / 4, 3.0f, true, 1.0f, 0.0f,
             vec<float, 3>{0.7f, 0.7f, 0.7f});
     } else if (type == "noise") {
-        make_noise_image(img, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
+        make_noise_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
     } else if (type == "fbm") {
         make_fbm_image(
-            img, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
+            img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
     } else if (type == "ridge") {
         make_ridge_image(
-            img, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 1.0f, 6, true);
+            img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 1.0f, 6, true);
     } else if (type == "turbulence") {
         make_turbulence_image(
-            img, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
+            img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
     } else if (type == "bump-normal") {
-        auto bump = image<vec<float, 4>>{img.size()};
-        make_bumpdimple_image(bump, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+        auto bump = image<vec<float, 4>>{};
+        make_bumpdimple_image(bump, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
         bump_to_normal_map(img, bump);
     } else if (type == "logo-render") {
         make_logo_image(img, "logo-render");
@@ -1701,7 +1715,6 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
         auto sub_types = vector<string>{"sky", "sunsky"};
         auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
         for (auto i = 0; i < sub_imgs.size(); i++) {
-            sub_imgs.at(i).resize(img.size());
             make_image_preset(sub_imgs.at(i), sub_types.at(i));
         }
         auto montage_size = zero2i;
@@ -1715,6 +1728,39 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
             set_image_region(img, sub_img, {pos, 0});
             pos += sub_img.size().x;
         }
+    } else if (type == "test-floor") {
+        make_grid_image(img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
+        add_image_border(img, 2, {0,0,0,1});
+    } else if (type == "test-grid") {
+        make_grid_image(img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
+    } else if (type == "test-checker") {
+        make_checker_image(
+            img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
+    } else if (type == "test-bump") {
+        make_bumpdimple_image(img, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+    } else if (type == "test-uvramp") {
+        make_uvramp_image(img, size);
+    } else if (type == "test-gammaramp") {
+        make_gammaramp_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1});
+    } else if (type == "test-blackbodyramp") {
+        make_blackbodyramp_image(img, size);
+    } else if (type == "test-uvgrid") {
+        make_uvgrid_image(img, size);
+    } else if (type == "test-sky") {
+        make_sunsky_image(img, size, pif / 4, 3.0f, false, 1.0f, 0.0f,
+            vec<float, 3>{0.7f, 0.7f, 0.7f});
+    } else if (type == "test-sunsky") {
+        make_sunsky_image(img, size, pif / 4, 3.0f, true, 1.0f, 0.0f,
+            vec<float, 3>{0.7f, 0.7f, 0.7f});
+    } else if (type == "test-noise") {
+        make_noise_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
+    } else if (type == "test-fbm") {
+        make_fbm_image(
+            img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
+    } else if (type == "test-bump-normal") {
+        auto bump = image<vec<float, 4>>{};
+        make_bumpdimple_image(bump, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+        bump_to_normal_map(img, bump);
     } else {
         throw std::invalid_argument("unknown image preset" + type);
     }
@@ -1730,6 +1776,14 @@ inline void make_image_preset(image<vec<byte, 4>>& img, const string& type) {
     }
 } 
 
+inline void make_image_preset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
+    if(type.find("sky") == type.npos) {
+        make_image_preset(ldr, type);
+    } else {
+        make_image_preset(hdr, type);
+    }
+}
+    
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

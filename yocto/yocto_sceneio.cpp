@@ -240,6 +240,21 @@ void save_scene(const string& filename, const yocto_scene& scene,
     }
 }
 
+void load_scene_texture(yocto_texture& texture, const string& dirname) {
+    if (is_image_preset_filename(texture.filename)) {
+        make_image_preset(texture.hdr_image, texture.ldr_image,
+            get_basename(texture.filename));
+        if (!texture.hdr_image.empty()) {
+            texture.filename = get_noextension(texture.filename) + ".hdr";
+        } else {
+            texture.filename = get_noextension(texture.filename) + ".png";
+        }
+    } else {
+        load_image(
+            dirname + texture.filename, texture.hdr_image, texture.ldr_image);
+    }
+}
+
 void load_scene_textures(yocto_scene& scene, const string& dirname,
     const load_scene_options& options) {
     if (options.skip_textures) return;
@@ -251,12 +266,7 @@ void load_scene_textures(yocto_scene& scene, const string& dirname,
             if (texture.filename == "" || !texture.hdr_image.empty() ||
                 !texture.ldr_image.empty())
                 return;
-            auto filename = normalize_path(dirname + texture.filename);
-            if (is_hdr_filename(filename)) {
-                load_image(filename, texture.hdr_image);
-            } else {
-                load_image(filename, texture.ldr_image);
-            }
+            load_scene_texture(texture, dirname);
         },
         options.cancel_flag, options.run_serially);
 
@@ -422,52 +432,53 @@ void from_json_procedural(
     auto is_hdr = false;
     auto width  = js.value("width", 1024);
     auto height = js.value("height", 1024);
+    auto size = vec2i{width, height};
     if (type == "sky" && width < height * 2) width = height * 2;
     value.hdr_image.resize({width, height});
     if (type == "grid") {
-        make_grid_image(value.hdr_image, js.value("tile", 8),
+        make_grid_image(value.hdr_image, size, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "checker") {
-        make_checker_image(value.hdr_image, js.value("tile", 8),
+        make_checker_image(value.hdr_image, size, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "bump") {
-        make_bumpdimple_image(value.hdr_image, js.value("tile", 8),
+        make_bumpdimple_image(value.hdr_image, size, js.value("tile", 8),
             js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}));
     } else if (type == "uvramp") {
-        make_uvramp_image(value.hdr_image);
+        make_uvramp_image(value.hdr_image, size);
     } else if (type == "gammaramp") {
-        make_gammaramp_image(value.hdr_image, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_gammaramp_image(value.hdr_image, size, js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}));
     } else if (type == "blackbodyramp") {
-        make_blackbodyramp_image(value.hdr_image);
+        make_blackbodyramp_image(value.hdr_image, size);
     } else if (type == "uvgrid") {
-        make_uvgrid_image(value.hdr_image);
+        make_uvgrid_image(value.hdr_image, size);
     } else if (type == "sky") {
-        make_sunsky_image(value.hdr_image, js.value("sun_angle", pif / 4),
+        make_sunsky_image(value.hdr_image, size, js.value("sun_angle", pif / 4),
             js.value("turbidity", 3.0f), js.value("has_sun", false),
             js.value("sun_intensity", 1.0f), js.value("sun_temperature", 0.0f),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr = true;
     } else if (type == "noise") {
-        make_noise_image(value.hdr_image, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_noise_image(value.hdr_image, size, js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("wrap", true));
     } else if (type == "fbm") {
-        make_fbm_image(value.hdr_image, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_fbm_image(value.hdr_image, size, js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        make_ridge_image(value.hdr_image, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_ridge_image(value.hdr_image, size, js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        make_turbulence_image(value.hdr_image,
+        make_turbulence_image(value.hdr_image, size,
             js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
@@ -530,14 +541,6 @@ void from_json(const json& js, yocto_texture& value, yocto_scene& scene) {
     value.hdr_image        = js.value("hdr_image", def.hdr_image);
     value.ldr_image        = js.value("ldr_image", def.ldr_image);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
-    if (js.count("!!preset")) {
-        auto type = js.at("!!preset").get<string>();
-        if (type.find("sky") != type.npos) {
-            make_image_preset(value.hdr_image, type);
-        } else {
-            make_image_preset(value.ldr_image, type);
-        }
-    }
 }
 
 // Procedural commands for textures
@@ -898,15 +901,6 @@ void from_json(const json& js, yocto_shape& value, yocto_scene& scene) {
     value.radius        = js.value("radius", def.radius);
     value.tangentspaces = js.value("tangentspaces", def.tangentspaces);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
-    if (js.count("!!preset")) {
-        auto type = js.at("!!preset").get<string>();
-        if (type.find("sky") != type.npos) {
-            make_shape_preset(value.points, value.lines, value.triangles,
-                value.quads, value.quads_positions, value.quads_normals,
-                value.quads_texturecoords, value.positions, value.normals,
-                value.texturecoords, value.colors, value.radius, type);
-        }
-    }
 }
 
 // Procedural commands for instances

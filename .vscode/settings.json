@@ -77,7 +77,8 @@
         "typeindex": "cpp",
         "future": "cpp",
         "iomanip": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "__node_handle": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "Disabled",
     "cmake.buildDirectory": "${workspaceRoot}/build/vscode",

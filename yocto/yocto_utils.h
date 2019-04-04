@@ -247,8 +247,8 @@ inline string get_extension(const string& filename);
 inline string get_filename(const string& filename);
 // Get path without extension.
 inline string get_noextension(const string& filename);
-// Replace extension.
-inline string replace_extension(const string& filename, const string& ext);
+// Get filename without directory and extension.
+inline string get_basename(const string& filename);
 
 // Check if a file can be opened for reading.
 inline bool exists_file(const string& filename);
@@ -419,6 +419,11 @@ inline string get_filename(const string& filename_) {
     auto pos      = filename.rfind('/');
     if (pos == string::npos) return filename;
     return filename.substr(pos + 1);
+}
+
+// Get filename without directory and extension.
+inline string get_basename(const string& filename) {
+    return get_noextension(get_filename(filename));
 }
 
 // Get extension.
