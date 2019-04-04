@@ -722,50 +722,72 @@ inline bool read_line(const input_file& fs, char* buffer, size_t size) {
 }
 
 // Printing values
-inline void print_value(const output_file& fs, int value) {
+inline void print_value(const output_file& fs, int value, bool alt = false) {
     if (fprintf(fs.file, "%d", value) < 0)
         throw io_error("cannot write to file " + fs.filename);
 }
-inline void print_value(const output_file& fs, bool value) {
-    if (fprintf(fs.file, "%d", (int)value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
+inline void print_value(const output_file& fs, bool value, bool alt = false) {
+    if(alt) {
+        if (fprintf(fs.file, value ? "true" : "false"))
+            throw io_error("cannot write to file " + fs.filename);
+    } else {
+        if (fprintf(fs.file, "%d", (int)value) < 0)
+            throw io_error("cannot write to file " + fs.filename);
+    }
 }
-inline void print_value(const output_file& fs, float value) {
+inline void print_value(const output_file& fs, float value, bool alt = false) {
     if (fprintf(fs.file, "%g", value) < 0)
         throw io_error("cannot write to file " + fs.filename);
 }
-inline void print_value(const output_file& fs, char value) {
+inline void print_value(const output_file& fs, double value, bool alt = false) {
+    if (fprintf(fs.file, "%g", value) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, char value, bool alt = false) {
     if (fprintf(fs.file, "%c", value) < 0)
         throw io_error("cannot write to file " + fs.filename);
 }
-inline void print_value(const output_file& fs, const char* value) {
-    if (fprintf(fs.file, "%s", value) < 0)
+inline void print_value(
+    const output_file& fs, const char* value, bool alt = false) {
+    if (fprintf(fs.file, alt ? "\"%s\"" : "%s", value) < 0)
         throw io_error("cannot write to file " + fs.filename);
 }
-inline void print_value(const output_file& fs, const string& value) {
-    if (fprintf(fs.file, "%s", value.c_str()) < 0)
+inline void print_value(
+    const output_file& fs, const string& value, bool alt = false) {
+    if (fprintf(fs.file, alt ? "\"%s\"" : "%s", value.c_str()) < 0)
         throw io_error("cannot write to file " + fs.filename);
+}
+template <typename T, size_t N>
+inline void print_value(
+    const output_file& fs, const array<T, N>& value, bool alt = false) {
+    if (!alt) {
+        for (auto i = 0; i < N; i++) {
+            if (i) print_value(fs, ' ');
+            print_value(fs, value[i]);
+        }
+    } else {
+        print_value(fs, "[ ");
+        for (auto i = 0; i < N; i++) {
+            if (i) print_value(fs, ", ");
+            print_value(fs, value[i]);
+        }
+        print_value(fs, " ]");
+    }    
 }
 template <typename T, int N>
-inline void print_value(const output_file& fs, const vec<T, N>& value) {
-    for (auto i = 0; i < N; i++) {
-        if (i) print_value(fs, ' ');
-        print_value(fs, value[i]);
-    }
+inline void print_value(
+    const output_file& fs, const vec<T, N>& value, bool alt = false) {
+    print_value(fs, (const array<T, N>&)value, alt);
 }
 template <typename T, int N, int M>
-inline void print_value(const output_file& fs, const mat<T, N, M>& value) {
-    for (auto i = 0; i < M; i++) {
-        if (i) print_value(fs, ' ');
-        print_value(fs, value[i]);
-    }
+inline void print_value(
+    const output_file& fs, const mat<T, N, M>& value, bool alt = false) {
+    print_value(fs, (const array<T, N*M>&)value, alt);
 }
 template <typename T, int N>
-inline void print_value(const output_file& fs, const frame<T, N>& value) {
-    for (auto i = 0; i < N + 1; i++) {
-        if (i) print_value(fs, ' ');
-        print_value(fs, value[i]);
-    }
+inline void print_value(
+    const output_file& fs, const frame<T, N>& value, bool alt = false) {
+    print_value(fs, (const array<T, N*(N+1)>&)value, alt);
 }
 
 // print values to file

@@ -159,6 +159,12 @@ void load_json_scene(const string& filename, yocto_scene& scene,
 void save_json_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options);
 
+// Load/save a scene in the builtin YAML format.
+void load_yaml_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options);
+void save_yaml_scene(const string& filename, const yocto_scene& scene,
+    const save_scene_options& options);
+
 // Load/save a scene from/to OBJ.
 void load_obj_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options);
@@ -198,6 +204,8 @@ void load_scene(const string& filename, yocto_scene& scene,
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
         load_json_scene(filename, scene, options);
+    } else if (ext == "yaml" || ext == "YAML") {
+        load_yaml_scene(filename, scene, options);
     } else if (ext == "obj" || ext == "OBJ") {
         load_obj_scene(filename, scene, options);
     } else if (ext == "gltf" || ext == "GLTF") {
@@ -222,6 +230,8 @@ void save_scene(const string& filename, const yocto_scene& scene,
         save_json_scene(filename, scene, options);
     } else if (ext == "obj" || ext == "OBJ") {
         save_obj_scene(filename, scene, options);
+    } else if (ext == "yaml" || ext == "YAML") {
+        save_yaml_scene(filename, scene, options);
     } else if (ext == "gltf" || ext == "GLTF") {
         save_gltf_scene(filename, scene, options);
     } else if (ext == "pbrt" || ext == "PBRT") {
@@ -629,10 +639,10 @@ void to_json(
     }
 }
 void from_json(const json& js, yocto_voltexture& value, yocto_scene& scene) {
-    static const auto def  = yocto_voltexture();
-    value.name             = js.value("name", def.name);
-    value.filename         = js.value("filename", def.filename);
-    value.volume_data      = js.value("volume_data", def.volume_data);
+    static const auto def = yocto_voltexture();
+    value.name            = js.value("name", def.name);
+    value.filename        = js.value("filename", def.filename);
+    value.volume_data     = js.value("volume_data", def.volume_data);
 }
 
 #if 0
@@ -1323,6 +1333,183 @@ void print_json_camera(const yocto_camera& camera) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// YAML SUPPORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Save a scene in the builtin YAML format.
+void load_yaml_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options) {
+    throw runtime_error("not implemented");
+}
+
+// Save yaml
+void save_yaml(const string& filename, const yocto_scene& scene) {
+    // open file
+    auto fs = output_file(filename);
+
+    println_values(
+        fs, "# Saved by Yocto/GL\n# https://github.com/xelatihy/yocto-gl\n\n");
+
+    static const auto def_camera = yocto_camera{};
+    static const auto def_texture = yocto_texture{};
+    static const auto def_voltexture = yocto_voltexture{};
+    static const auto def_material = yocto_material{};
+    static const auto def_shape = yocto_shape{};
+    static const auto def_instance = yocto_instance{};
+    static const auto def_environment = yocto_environment{};
+
+    auto print_first = [](output_file& fs, const char* name, auto& value) {
+        print_value(fs, "- ");
+        print_value(fs, name);
+        print_value(fs, ": ");
+        print_value(fs, value, true);
+    };
+    auto print_optional = [](output_file& fs, const char* name, auto& value, auto& def) {
+        if(value == def) return;
+        print_value(fs, "  ");
+        print_value(fs, name);
+        print_value(fs, ": ");
+        print_value(fs, value, true);
+    };
+    auto print_ref = [as_int=false](output_file& fs, const char* name, int value, auto& refs) {
+        if(value < 1) return;
+        print_value(fs, "  ");
+        print_value(fs, name);
+        print_value(fs, ": ");
+        if(as_int) {
+            print_value(fs, value, true);
+        } else {
+            print_value(fs, refs[value].name, true);
+        }
+    };
+
+    if (!scene.cameras.empty()) print_value(fs, "\ncameras:\n");
+    for (auto& camera : scene.cameras) {
+        print_first(fs, "name", camera.name);
+        print_optional(fs, "frame", camera.frame, def_camera.frame);
+        print_optional(
+            fs, "orthographic", camera.orthographic, def_camera.orthographic);
+        print_optional(
+            fs, "film_width", camera.film_width, def_camera.film_width);
+        print_optional(
+            fs, "film_height", camera.film_height, def_camera.film_height);
+        print_optional(
+            fs, "focal_length", camera.focal_length, def_camera.focal_length);
+        print_optional(
+            fs, "focus_distance", camera.focus_distance, def_camera.focus_distance);
+        print_optional(
+            fs, "lens_aperture", camera.lens_aperture, def_camera.lens_aperture);
+    }
+
+    if (!scene.textures.empty()) print_value(fs, "\ntextures:\n");
+    for (auto& texture : scene.textures) {
+        print_first(fs, "name", texture.name);
+        print_optional(fs, "filename", texture.filename, def_texture.filename);
+    }
+
+    if (!scene.voltextures.empty()) print_value(fs, "\nvoltextures:\n");
+    for (auto& texture : scene.voltextures) {
+        print_first(fs, "name", texture.name);
+        print_optional(fs, "filename", texture.filename, def_voltexture.filename);
+    }
+
+    if (!scene.materials.empty()) print_value(fs, "\nmaterials:\n");
+    for (auto& material : scene.materials) {
+        print_first(fs, "name", material.name);
+        print_optional(
+            fs, "base_metallic", material.base_metallic, def_material.base_metallic);
+        print_optional(
+            fs, "gltf_textures", material.gltf_textures, def_material.gltf_textures);
+        print_optional(fs, "emission", material.emission, def_material.emission);
+        print_optional(fs, "diffuse", material.diffuse, def_material.diffuse);
+        print_optional(fs, "specular", material.specular, def_material.specular);
+        print_optional(
+            fs, "transmission", material.transmission, def_material.transmission);
+        print_optional(
+            fs, "roughness", material.roughness, def_material.roughness);
+        print_optional(fs, "opacity", material.opacity, def_material.opacity);
+        print_optional(fs, "fresnel", material.fresnel, def_material.fresnel);
+        print_optional(fs, "refract", material.refract, def_material.refract);
+        print_ref(fs, "emission_texture",
+            material.emission_texture, scene.textures);
+        print_ref(
+            fs, "diffuse_texture", material.diffuse_texture, scene.textures);
+        print_ref(fs, "specular_texture",
+            material.specular_texture, scene.textures);
+        print_ref(fs, "transmission_texture",
+            material.transmission_texture, scene.textures);
+        print_ref(fs, "roughness_texture",
+            material.roughness_texture, scene.textures);
+        print_ref(fs, "displacement_texture",
+            material.displacement_texture, scene.textures);
+        print_ref(
+            fs, "normal_texture", material.normal_texture, scene.textures);
+        print_optional(
+            fs, "volume_emission", material.volume_emission, def_material.volume_emission);
+        print_optional(
+            fs, "volume_albedo", material.volume_albedo, def_material.volume_albedo);
+        print_optional(
+            fs, "volume_density", material.volume_density, def_material.volume_density);
+        print_optional(
+            fs, "volume_phaseg", material.volume_phaseg, def_material.volume_phaseg);
+        print_ref(fs, "volume_density_texture",
+            material.volume_density_texture, scene.voltextures);
+        // TODO: add displacement scale
+    }
+
+    if (!scene.shapes.empty()) print_value(fs, "\nshapes:\n");
+    for (auto& shape : scene.shapes) {
+        print_first(fs, "name", shape.name);
+        print_optional(fs, "filename", shape.filename, def_shape.filename);
+        print_optional(fs, "subdivision_level",
+            shape.subdivision_level, def_shape.subdivision_level);
+        print_optional(
+            fs, "catmull_clark", shape.catmull_clark, def_shape.catmull_clark);
+        print_optional(
+            fs, "compute_normals", shape.compute_normals, def_shape.compute_normals);
+        print_optional(fs, "preserve_facevarying",
+            shape.preserve_facevarying, def_shape.preserve_facevarying);
+    }
+
+    if (!scene.instances.empty()) print_value(fs, "\ninstances:\n");
+    for (auto& instance : scene.instances) {
+        print_first(fs, "name", instance.name);
+        print_optional(fs, "frame", instance.frame, def_instance.frame);
+        print_ref(fs, "shape", instance.shape, scene.shapes);
+        print_ref(
+            fs, "material", instance.material, scene.materials);
+    }
+
+    if (!scene.environments.empty()) print_value(fs, "\nenvironments:\n");
+    for (auto& environment : scene.environments) {
+        print_first(fs, "name", environment.name);
+        print_optional(fs, "frame", environment.frame, def_environment.frame);
+        print_optional(fs, "emission", environment.emission, def_environment.emission);
+        print_ref(fs, "emission_texture",
+            environment.emission_texture, scene.textures);
+    }
+}
+
+// Save a scene in the builtin YAML format.
+void save_yaml_scene(const string& filename, const yocto_scene& scene,
+    const save_scene_options& options) {
+    try {
+        // save yaml file
+        save_yaml(filename, scene);
+
+        // save meshes and textures
+        auto dirname = get_dirname(filename);
+        save_scene_shapes(scene, dirname, options);
+        save_scene_textures(scene, dirname, options);
+    } catch (const std::exception& e) {
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
+    }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1396,9 +1583,9 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             }
 
             // create texture
-            auto texture          = yocto_texture{};
-            texture.name          = info.path;
-            texture.filename      = info.path;
+            auto texture     = yocto_texture{};
+            texture.name     = info.path;
+            texture.filename = info.path;
             scene.textures.push_back(texture);
             auto index      = (int)scene.textures.size() - 1;
             tmap[info.path] = index;
@@ -2044,7 +2231,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
     auto add_texture = [&imap](
                            const cgltf_texture_view& ginfo, bool force_linear) {
         if (!ginfo.texture || !ginfo.texture->image) return -1;
-        auto gtxt       = ginfo.texture;
+        auto gtxt = ginfo.texture;
         return imap.at(gtxt->image);
     };
 
