@@ -1484,14 +1484,6 @@ std::tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(
             direction = sample_next_direction_volume(scene, lights, bvh,
                 position, volume_albedo, volume_phaseg, outgoing, 0.5f, rng,
                 weight);
-
-            // russian roulette
-            if (sample_russian_roulette(
-                    albedo, weight, volume_bounce, get_random_float(rng)))
-                break;
-            weight /= sample_russian_roulette_pdf(
-                albedo, weight, volume_bounce);
-
         } else {
             // absorption
             radiance += weight * volume_emission;
