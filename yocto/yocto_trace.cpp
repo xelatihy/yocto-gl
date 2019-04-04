@@ -1418,28 +1418,30 @@ vec3f sample_next_direction_volume(const yocto_scene& scene,
     return next_direction;
 }
 
-void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
-    const bvh_scene& bvh, const vec3f volume_density, const vec3f& volume_albedo, const vec3f& volume_emission, float volume_phaseg, rng_state& rng, trace_point& point, vec3f& outgoing,
-    vec3f& next_direction, vec3f& weight, vec3f& radiance) {
+std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_scene& bvh,
+    const vec3f volume_density, const vec3f& volume_albedo,
+    const vec3f& volume_emission, float volume_phaseg, rng_state& rng,
+    trace_point& point, vec3f& outgoing, vec3f& next_direction, vec3f& weight,
+    vec3f& radiance) {
     // Integrate weight while random walking inside the volume until exit.
 
     // auto direction = next_direction_;
 
     auto      spectrum          = get_random_int(rng, 3);
-    auto      density    = volume_density[spectrum];
-    auto      albedo     = volume_albedo[spectrum];
+    auto      density           = volume_density[spectrum];
+    auto      albedo            = volume_albedo[spectrum];
     const int volume_max_bounce = 1000;  // @giacomo: hardcoded!
 
     for (auto volume_bounce = 0; volume_bounce < volume_max_bounce;
          volume_bounce++) {
-        auto distance = sample_volume_distance(
-            density, get_random_float(rng));
+        auto distance = sample_volume_distance(density, get_random_float(rng));
 
         auto isec = bvh_intersection{};
         if (!intersect_scene_bvh(
                 scene, bvh, make_ray(point.position, next_direction), isec)) {
             weight = zero3f;
-            return;
+            break;
         }
 
         auto next_point = make_trace_point(scene, isec.instance_id,
@@ -1480,8 +1482,8 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
                 0.5f, rng, weight);
 
             // russian roulette
-            if (sample_russian_roulette(albedo, weight, volume_bounce,
-                    get_random_float(rng)))
+            if (sample_russian_roulette(
+                    albedo, weight, volume_bounce, get_random_float(rng)))
                 break;
             weight /= sample_russian_roulette_pdf(
                 albedo, weight, volume_bounce);
@@ -1490,9 +1492,10 @@ void integrate_volume(const yocto_scene& scene, const trace_lights& lights,
             // absorption
             radiance += weight * volume_emission;
             weight = zero3f;
-            return;
+            break;
         }
     }
+    return {point.position, next_direction};
 }
 
 // Iterative volumetric path tracing.
@@ -1525,8 +1528,13 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // transmission
         if (dot(next_direction, point.geometric_normal) > 0 !=
             dot(outgoing, point.geometric_normal) > 0) {
-            integrate_volume(scene, lights, bvh, point.volume_density, point.volume_albedo, point.volume_emission, point.volume_phaseg, rng, point, outgoing, next_direction, weight, radiance);
+            auto [pos, dir] = integrate_volume(scene, lights, bvh,
+                point.volume_density, point.volume_albedo,
+                point.volume_emission, point.volume_phaseg, rng, point,
+                outgoing, next_direction, weight, radiance);
             if (weight == zero3f) return {radiance, true};
+            point.position = pos;
+            next_direction = dir;
         }
 
         // intersect next point
@@ -1631,7 +1639,6 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
     return {radiance, 1};
 }
-
 
 // Recursive path tracing.
 vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
