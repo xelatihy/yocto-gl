@@ -279,44 +279,44 @@ def make_tests():
         "shapes": [
             {
                 "name": "test-floor",
-                "filename": "models/test-floor.ply.ypreset"
+                "filename": "shapes/test-floor.ply.ypreset"
             },
             {
                 "name": "test-bunny",
-                "filename": "models/test-bunny.obj"
+                "filename": "shapes/test-bunny.obj"
             },
             {
                 "name": "test-teapot",
-                "filename": "models/test-teapot.obj"
+                "filename": "shapes/test-teapot.obj"
             },
             {
                 "name": "test-sphere",
-                "filename": "models/test-sphere.obj.ypreset"
+                "filename": "shapes/test-sphere.obj.ypreset"
             },
             {
                 "name": "test-cube",
-                "filename": "models/test-cube.obj.ypreset"
+                "filename": "shapes/test-cube.obj.ypreset"
             },
             {
                 "name": "test-disk",
-                "filename": "models/test-disk.obj.ypreset"
+                "filename": "shapes/test-disk.obj.ypreset"
             },
             {
                 "name": "test-uvsphere-flipcap",
-                "filename": "models/test-uvsphere-flipcap.obj.ypreset"
+                "filename": "shapes/test-uvsphere-flipcap.obj.ypreset"
             },
             {
                 "name": "test-uvcylinder",
-                "filename": "models/test-uvcylinder.obj.ypreset"
+                "filename": "shapes/test-uvcylinder.obj.ypreset"
             },
             {
                 "name": "test-sphere-displaced",
-                "filename": "models/test-sphere-displaced.obj.ypreset",
+                "filename": "shapes/test-sphere-displaced.obj.ypreset",
                 "preserve_facevarying": false
             },
             {
                 "name": "test-cube-subdiv",
-                "filename": "models/test-cube-subdiv.obj.ypreset",
+                "filename": "shapes/test-cube-subdiv.obj.ypreset",
                 "subdivision_level": 4,
                 "catmull_clark": true,
                 "compute_normals": true,
@@ -324,34 +324,34 @@ def make_tests():
             },
             {
                 "name": "test-suzanne-subdiv",
-                "filename": "models/test-suzanne-subdiv.obj.ypreset",
+                "filename": "shapes/test-suzanne-subdiv.obj.ypreset",
                 "subdivision_level": 2,
                 "catmull_clark": true,
                 "compute_normals": true
             },
             {
                 "name": "test-hairball1",
-                "filename": "models/test-hairball1.ply.ypreset"
+                "filename": "shapes/test-hairball1.ply.ypreset"
             },
             {
                 "name": "test-hairball2",
-                "filename": "models/test-hairball2.ply.ypreset"
+                "filename": "shapes/test-hairball2.ply.ypreset"
             },
             {
                 "name": "test-hairball3",
-                "filename": "models/test-hairball3.ply.ypreset"
+                "filename": "shapes/test-hairball3.ply.ypreset"
             },
             {
                 "name": "test-hairball-interior",
-                "filename": "models/test-hairball-interior.ply.ypreset"
+                "filename": "shapes/test-hairball-interior.ply.ypreset"
             },
             {
                 "name": "test-arealight1",
-                "filename": "models/test-arealight1.ply.ypreset"
+                "filename": "shapes/test-arealight1.ply.ypreset"
             },
             {
                 "name": "test-arealight2",
-                "filename": "models/test-arealight2.ply.ypreset"
+                "filename": "shapes/test-arealight2.ply.ypreset"
             }
         ],
         "instances": [
@@ -463,7 +463,24 @@ def make_tests():
                 for environment in scene['environments']:
                     if environment['emission_texture'] == texture['name']: used = True
                 if used: scene['textures'] += [texture] 
-        with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
+        # with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
+        def write_yaml_objects(f, name):
+            if name not in scene: return
+            if not scene[name]: return
+            f.write(name + ":\n")
+            for obj in scene[name]:
+                f.write('  - name: ' + obj['name'] + '\n')
+                for key, value in obj.items():
+                    if key == 'name': continue
+                    f.write('    ' + key + ': ' + str(value) + '\n')
+        with open(f'tests/{name}.yaml', 'wt') as f:
+            write_yaml_objects(f, 'cameras')
+            write_yaml_objects(f, 'textures')
+            write_yaml_objects(f, 'voltextures')
+            write_yaml_objects(f, 'materials')
+            write_yaml_objects(f, 'shapes')
+            write_yaml_objects(f, 'instances')
+            write_yaml_objects(f, 'environments')
     make_test('features1', ['test-bunny', 'test-sphere', 'test-bunny', 'test-sphere', 'test-bunny'], ['test-uvgrid', 'test-plastic-sharp', 'test-metal-rough', 'test-plastic-rough', 'test-metal-sharp'], mixed_lights)
     make_test('materials1', ['test-sphere'], ['test-plastic-sharp', 'test-plastic-rough', 'test-matte', 'test-metal-sharp', 'test-metal-rough'], mixed_lights)
     make_test('materials2', ['test-sphere'], ['test-glass-sharp', 'test-glass-rough', 'test-transparent', 'test-thinglass-sharp', 'test-thinglass-rough'], mixed_lights)

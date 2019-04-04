@@ -2,8 +2,8 @@
 // # Yocto/SceneIO: Tiny library for Yocto/Scene input and output
 //
 // Yocto/SceneIO provides loading and saving functionality for scenes
-// in Yocto/GL. We support a simple to use JSON format, PLY, OBJ and glTF.
-// The JSON serialization is a straight copy of the in-memory scene data.
+// in Yocto/GL. We support a simple to use YAML format, PLY, OBJ and glTF.
+// The YAML serialization is a straight copy of the in-memory scene data.
 // To speed up testing, we also support a binary format that is a dump of
 // the current scene. This format should not be use for archival though.
 //
@@ -11,13 +11,7 @@
 //
 // ## Scene Loading and Saving
 //
-// 1. load a scene with `load_json_scene()` and save it with `save_json_scene()`
-// 2. load and save OBJs with `load_obj_scene()` and `save_obj_scene()`
-// 3. load and save glTFs with `load_gltf_scene()` and `save_gltf_scene()`
-// 4. load and save binary dumps with `load_ybin_scene()`and `save_ybin_scene()`
-// 5. if desired, the function `load_scene()` and `save_scene()` will either
-//    load using the internal format or convert on the fly using on the
-//    supported conversions
+// 1. load a scene with `load_scene()` and save it with `save_scene()`
 //
 //
 

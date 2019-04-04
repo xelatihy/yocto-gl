@@ -6,7 +6,7 @@
 // low level parsing code. We support a few extensions such as camera and
 // environment map loading.
 //
-// Error reporting is done through exceptions using the `objio_error` exception.
+// Error reporting is done through exceptions using the `io_error` exception.
 //
 // ## Parse an OBJ file
 //
@@ -201,12 +201,6 @@ template <typename Callbacks>
 inline void load_obj(const string& filename, Callbacks& cb,
     const load_obj_options& options = {});
 
-// objio error
-struct objio_error : runtime_error {
-    explicit objio_error(const char* msg) : runtime_error{msg} {}
-    explicit objio_error(const std::string& msg) : runtime_error{msg} {}
-};
-
 }  // namespace yocto
 
 // ---------------------------------------------------------------------------//
@@ -216,86 +210,22 @@ struct objio_error : runtime_error {
 // ---------------------------------------------------------------------------//
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF FAST PARSING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// normalize obj line for simpler parsing
-inline void normalize_obj_line(char* str, char comment_char = '#') {
-    auto has_content = false;
-    auto start       = str;
-    while (*str) {
-        if (*str == comment_char) {
-            *str = 0;
-            break;
-        } else if (*str == ' ' || *str == '\t' || *str == '\r' ||
-                   *str == '\n') {
-            *str = ' ';
-        } else {
-            has_content = true;
-        }
-        str++;
-    }
-    if (!has_content) *start = 0;
-}
-
-// Parse values from a string
-inline void parse_value(char*& str, int& value) {
-    char* end = nullptr;
-    value     = (int)strtol(str, &end, 10);
-    if (str == end) throw objio_error("cannot parse value");
-    str = end;
-}
-inline void parse_value(char*& str, bool& value) {
-    auto valuei = 0;
-    parse_value(str, valuei);
-    value = (bool)valuei;
-}
-inline void parse_value(char*& str, float& value) {
-    char* end = nullptr;
-    value     = strtof(str, &end);
-    if (str == end) throw objio_error("cannot parse value");
-    str = end;
-}
-inline void parse_value(char*& str, string& value, bool ok_if_empty = false) {
-    value = "";
-    while (*str == ' ') str++;
-    if (!*str && !ok_if_empty) {
-        throw objio_error("cannot parse value");
-    }
-    while (*str && *str != ' ') {
-        value += *str;
-        str++;
-    }
-}
-template <typename T, int N>
-inline void parse_value(char*& str, vec<T, N>& value) {
-    for (auto i = 0; i < N; i++) parse_value(str, value[i]);
-}
-template <typename T, int N>
-inline void parse_value(char*& str, frame<T, N>& value) {
-    for (auto i = 0; i < N + 1; i++) parse_value(str, value[i]);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline void parse_value(char*& str, obj_vertex& value) {
+inline void parse_value(string_view& str, obj_vertex& value) {
     value = obj_vertex{0, 0, 0};
     parse_value(str, value.position);
-    if (*str == '/') {
-        str++;
-        if (*str == '/') {
-            str++;
+    if (!str.empty() && str.front() == '/') {
+        str.remove_prefix(1);
+        if (!str.empty() && str.front() == '/') {
+            str.remove_prefix(1);
             parse_value(str, value.normal);
         } else {
             parse_value(str, value.texturecoord);
-            if (*str == '/') {
-                str++;
+            if (!str.empty() && str.front() == '/') {
+                str.remove_prefix(1);
                 parse_value(str, value.normal);
             }
         }
@@ -303,20 +233,20 @@ inline void parse_value(char*& str, obj_vertex& value) {
 }
 
 // Input for OBJ textures
-inline void parse_value(char*& str, obj_texture_info& info) {
+inline void parse_value(string_view& str, obj_texture_info& info) {
     // initialize
     info = obj_texture_info();
 
     // get tokens
     auto tokens = vector<string>();
-    while (*str == ' ') str++;
-    while (*str) {
+    skip_whitespace(str);
+    while (!str.empty()) {
         auto token = ""s;
         parse_value(str, token);
         tokens.push_back(token);
-        while (*str == ' ') str++;
+        skip_whitespace(str);
     }
-    if (tokens.empty()) throw objio_error("cannot parse value");
+    if (tokens.empty()) throw io_error("cannot parse value");
 
     // texture name
     info.path = normalize_path(tokens.back());
@@ -334,10 +264,7 @@ template <typename Callbacks>
 void load_mtl(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
-    auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw objio_error("cannot load mtl " + filename);
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
+    auto fs = input_file(filename);
 
     // currently parsed material
     auto material = obj_material();
@@ -345,11 +272,12 @@ void load_mtl(
 
     // read the file line by line
     char buffer[4096];
-    while (fgets(buffer, sizeof(buffer), fs)) {
+    while (read_line(fs, buffer, sizeof(buffer))) {
         // line
-        auto line = buffer;
-        normalize_obj_line(line);
-        if (!*line) continue;
+        auto line = string_view{buffer};
+        remove_comment_and_newline(line);
+        skip_whitespace(line);
+        if (line.empty()) continue;
 
         // get command
         auto cmd = ""s;
@@ -432,18 +360,16 @@ template <typename Callbacks>
 inline void load_objx(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
-    auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw objio_error("cannot load objx " + filename);
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
+    auto fs = input_file(filename);
 
     // read the file line by line
     char buffer[4096];
-    while (fgets(buffer, sizeof(buffer), fs)) {
+    while (read_line(fs, buffer, sizeof(buffer))) {
         // line
-        auto line = buffer;
-        normalize_obj_line(line);
-        if (!*line) continue;
+        auto line = string_view{buffer};
+        remove_comment_and_newline(line);
+        skip_whitespace(line);
+        if (line.empty()) continue;
 
         // get command
         auto cmd = ""s;
@@ -490,10 +416,7 @@ template <typename Callbacks>
 inline void load_obj(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
-    auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw objio_error("cannot load obj " + filename);
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
+    auto fs = input_file(filename);
 
     // track vertex size
     auto vert_size = obj_vertex();
@@ -501,11 +424,12 @@ inline void load_obj(
 
     // read the file line by line
     char buffer[4096];
-    while (fgets(buffer, sizeof(buffer), fs)) {
+    while (read_line(fs, buffer, sizeof(buffer))) {
         // line
-        auto line = buffer;
-        normalize_obj_line(line);
-        if (!*line) continue;
+        auto line = string_view{buffer};
+        remove_comment_and_newline(line);
+        skip_whitespace(line);
+        if (line.empty()) continue;
 
         // get command
         auto cmd = ""s;
@@ -531,8 +455,8 @@ inline void load_obj(
             vert_size.texturecoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             verts.clear();
-            while (*line == ' ') line++;
-            while (*line) {
+            skip_whitespace(line);
+            while (!line.empty()) {
                 auto vert = obj_vertex{};
                 parse_value(line, vert);
                 if (!vert.position) break;
@@ -544,26 +468,26 @@ inline void load_obj(
                 if (vert.normal < 0)
                     vert.normal = vert_size.normal + vert.normal + 1;
                 verts.push_back(vert);
-                while (*line == ' ') line++;
+                skip_whitespace(line);
             }
             if (cmd == "f") cb.face(verts);
             if (cmd == "l") cb.line(verts);
             if (cmd == "p") cb.point(verts);
         } else if (cmd == "o") {
             auto name = ""s;
-            parse_value(line, name, true);
+            parse_value_or_empty(line, name);
             cb.object(name);
         } else if (cmd == "usemtl") {
             auto name = ""s;
-            parse_value(line, name, true);
+            parse_value_or_empty(line, name);
             cb.usemtl(name);
         } else if (cmd == "g") {
             auto name = ""s;
-            parse_value(line, name, true);
+            parse_value_or_empty(line, name);
             cb.group(name);
         } else if (cmd == "s") {
             auto name = ""s;
-            parse_value(line, name, true);
+            parse_value_or_empty(line, name);
             cb.smoothing(name);
         } else if (cmd == "mtllib") {
             if (options.geometry_only) continue;

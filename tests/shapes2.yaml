@@ -1,0 +1,134 @@
+cameras:
+  - name: default
+    focal_length: 0.05
+    lens_aperture: 0.0
+    film_width: 0.036
+    film_height: 0.015
+    focus_distance: 1.216809352363796
+    frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
+  - name: front
+    focal_length: 0.05
+    lens_aperture: 0.0
+    film_width: 0.036
+    film_height: 0.012
+    focus_distance: 0.5433461143691007
+    frame: [1.0, 0.0, 0.0, 0.0, 0.9363291775690445, -0.3511234415883917, 0.0, 0.35112344158839165, 0.9363291775690444, 0, 0.575, 1.4]
+  - name: back
+    focal_length: 0.05
+    lens_aperture: 0.0
+    film_width: 0.036
+    film_height: 0.012
+    focus_distance: 0.5433461143691007
+    frame: [-1.0, 0.0, 0.0, 0.0, 0.9363291775690445, 0.3511234415883917, 0.0, 0.35112344158839165, -0.9363291775690444, 0, 0.575, -1.4]
+  - name: perspective-sharp
+    focal_length: 0.05
+    lens_aperture: 0.0
+    film_width: 0.036
+    film_height: 0.015
+    focus_distance: 1.216809352363796
+    frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
+  - name: perspective-dof
+    focal_length: 0.05
+    lens_aperture: 0.025
+    film_width: 0.036
+    film_height: 0.015
+    focus_distance: 1.216809352363796
+    frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
+  - name: orthographic-sharp
+    focal_length: 0.05
+    lens_aperture: 0.0
+    film_width: 0.036
+    film_height: 0.015
+    orthographic: True
+    focus_distance: 1.216809352363796
+    frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
+  - name: orthographic-dof
+    focal_length: 0.05
+    lens_aperture: 0.02
+    film_width: 0.036
+    film_height: 0.015
+    orthographic: True
+    focus_distance: 1.216809352363796
+    frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
+textures:
+  - name: test-floor
+    filename: textures/test-floor.png.ypreset
+  - name: test-uvgrid
+    filename: textures/test-uvgrid.png.ypreset
+  - name: test-sky
+    filename: textures/test-sky.hdr.ypreset
+materials:
+  - name: test-floor
+    diffuse: [0.7, 0.7, 0.7]
+    diffuse_texture: test-floor
+  - name: test-uvgrid
+    diffuse: [1, 1, 1]
+    specular: [0.04, 0.04, 0.04]
+    roughness: 0.1
+    diffuse_texture: test-uvgrid
+  - name: test-plastic-sharp
+    diffuse: [0.5, 0.5, 0.7]
+    specular: [0.04, 0.04, 0.04]
+    roughness: 0.01
+  - name: test-arealight1
+    emission: [20, 20, 20]
+  - name: test-arealight2
+    emission: [20, 20, 20]
+shapes:
+  - name: test-floor
+    filename: shapes/test-floor.ply.ypreset
+  - name: test-bunny
+    filename: shapes/test-bunny.obj
+  - name: test-teapot
+    filename: shapes/test-teapot.obj
+  - name: test-cube-subdiv
+    filename: shapes/test-cube-subdiv.obj.ypreset
+    subdivision_level: 4
+    catmull_clark: True
+    compute_normals: True
+    preserve_facevarying: True
+  - name: test-suzanne-subdiv
+    filename: shapes/test-suzanne-subdiv.obj.ypreset
+    subdivision_level: 2
+    catmull_clark: True
+    compute_normals: True
+  - name: test-arealight1
+    filename: shapes/test-arealight1.ply.ypreset
+  - name: test-arealight2
+    filename: shapes/test-arealight2.ply.ypreset
+instances:
+  - name: test-floor
+    shape: test-floor
+    material: test-floor
+  - name: test-arealight1
+    shape: test-arealight1
+    material: test-arealight1
+    frame: [-0.8944271909999159, 0.0, -0.4472135954999579, 0.27562473083535527, 0.7874992309581578, -0.5512494616707105, 0.3521803625302495, -0.6163156344279367, -0.704360725060499, -0.4, 0.8, 0.8]
+  - name: test-arealight2
+    shape: test-arealight2
+    material: test-arealight2
+    frame: [-0.8944271909999159, -0.0, 0.4472135954999579, -0.27562473083535527, 0.7874992309581578, -0.5512494616707105, -0.3521803625302495, -0.6163156344279367, -0.704360725060499, 0.4, 0.8, 0.8]
+  - name: test-cube-subdiv_test-uvgrid
+    shape: test-cube-subdiv
+    material: test-uvgrid
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: test-suzanne-subdiv_test-plastic-sharp
+    shape: test-suzanne-subdiv
+    material: test-plastic-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: test-teapot_test-uvgrid
+    shape: test-teapot
+    material: test-uvgrid
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - name: test-bunny_test-plastic-sharp
+    shape: test-bunny
+    material: test-plastic-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
+  - name: test-cube-subdiv_test-uvgrid
+    shape: test-cube-subdiv
+    material: test-uvgrid
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
+environments:
+  - name: test-sky
+    emission: [2, 2, 2]
+    emission_texture: test-sky

@@ -153,10 +153,10 @@ inline void from_json(const json& js, volume<T>& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Load/save a scene in the builtin JSON format.
-void load_json_scene(const string& filename, yocto_scene& scene,
+// Load/save a scene in the builtin YAML format.
+void load_yaml_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options);
-void save_json_scene(const string& filename, const yocto_scene& scene,
+void save_yaml_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options);
 
 // Load/save a scene from/to OBJ.
@@ -196,8 +196,8 @@ void save_ybin_scene(const string& filename, const yocto_scene& scene,
 void load_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     auto ext = get_extension(filename);
-    if (ext == "json" || ext == "JSON") {
-        load_json_scene(filename, scene, options);
+    if (ext == "yaml" || ext == "YAML") {
+        load_yaml_scene(filename, scene, options);
     } else if (ext == "obj" || ext == "OBJ") {
         load_obj_scene(filename, scene, options);
     } else if (ext == "gltf" || ext == "GLTF") {
@@ -218,10 +218,12 @@ void load_scene(const string& filename, yocto_scene& scene,
 void save_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     auto ext = get_extension(filename);
-    if (ext == "json" || ext == "JSON") {
-        save_json_scene(filename, scene, options);
+    if (ext == "yaml" || ext == "YAML") {
+        save_yaml_scene(filename, scene, options);
     } else if (ext == "obj" || ext == "OBJ") {
         save_obj_scene(filename, scene, options);
+    } else if (ext == "yaml" || ext == "YAML") {
+        save_yaml_scene(filename, scene, options);
     } else if (ext == "gltf" || ext == "GLTF") {
         save_gltf_scene(filename, scene, options);
     } else if (ext == "pbrt" || ext == "PBRT") {
@@ -384,897 +386,416 @@ bool is_face_varying(const vector<vec4i>& quads_positions,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// BUILTIN JSON FORMAT
+// YAML SUPPORT
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Dumps a json value
-template <typename T>
-json ref_to_json(int value, const vector<T>& refs) {
-    return value >= 0 ? refs[value].name : ""s;
+struct yaml_value {
+    enum struct type_t { none_t, string_t, boolean_t, number_t, array_t };
+    type_t            type = type_t::none_t;
+    string            _string;
+    bool              _boolean = false;
+    array<double, 16> _numbers;
+    int               _size = 0;
+};
+
+inline void get_value(const yaml_value& yml, int& value) {
+    if (yml.type != yaml_value::type_t::number_t)
+        throw io_error("int expected");
+    value = (int)yml._numbers[0];
 }
-template <typename T>
-int ref_from_json(const json& js, const vector<T>& refs) {
-    if (js.is_null()) return -1;
-    if (js.is_number()) {
-        auto value = js.get<int>();
-        if (value < 0 || value >= refs.size())
-            throw runtime_error(
-                "invalid object reference \"" + std::to_string(value) + "\"");
-        return value;
-    }
-    auto name = js.get<string>();
-    if (name == "") return -1;
-    auto value = -1;
-    for (auto index = 0; index < refs.size(); index++) {
-        if (refs[index].name == name) {
-            value = index;
-            break;
+
+inline void get_value(const yaml_value& yml, float& value) {
+    if (yml.type != yaml_value::type_t::number_t)
+        throw io_error("number expected");
+    value = (float)yml._numbers[0];
+}
+
+inline void get_value(const yaml_value& yml, bool& value) {
+    if (yml.type != yaml_value::type_t::boolean_t)
+        throw io_error("string expected");
+    value = yml._boolean;
+}
+
+inline void get_value(const yaml_value& yml, string& value) {
+    if (yml.type != yaml_value::type_t::string_t)
+        throw io_error("string expected");
+    value = yml._string;
+}
+
+template <typename T, size_t N>
+inline void get_value(const yaml_value& yml, array<T, N>& value) {
+    if (yml.type != yaml_value::type_t::array_t || yml._size != N)
+        throw io_error("array expected");
+    for (auto i = 0; i < N; i++) value[i] = (T)yml._numbers[i];
+}
+
+template <typename T, int N>
+inline void get_value(const yaml_value& yml, vec<T, N>& value) {
+    get_value(yml, (array<T, N>&)value);
+}
+template <typename T, int N>
+inline void get_value(const yaml_value& yml, frame<T, N>& value) {
+    get_value(yml, (array<T, N*(N + 1)>&)value);
+}
+template <typename T, int N, int M>
+inline void get_value(const yaml_value& yml, mat<T, N, M>& value) {
+    get_value(yml, (array<T, N * M>&)value);
+}
+
+inline bool is_string_value(const yaml_value& yml) {
+    return yml.type == yaml_value::type_t::string_t;
+}
+
+struct yaml_callbacks {
+    void object_group(const string& key);
+    void object_begin();
+    void key_value(const string& key, const yaml_value& value);
+};
+
+inline void parse_value(string_view& str, yaml_value& value) {
+    skip_whitespace(str);
+    if (str.empty()) throw io_error("cannot parse value");
+    value = {};
+    if (str.front() == '[') {
+        str.remove_prefix(1);
+        value._size = 0;
+        while (true) {
+            skip_whitespace(str);
+            parse_value(str, value._numbers[value._size++]);
+            skip_whitespace(str);
+            if (str.empty()) throw io_error("cannot parse value");
+            if (str.front() == ']') {
+                str.remove_prefix(1);
+                break;
+            } else if (str.front() == ',') {
+                str.remove_prefix(1);
+            } else {
+                throw io_error("cannot parse value");
+            }
+            if (value._size >= 16) throw io_error("cannot parse value");
         }
-    }
-    if (value < 0)
-        throw runtime_error("invalid object reference \"" + name + "\"");
-    return value;
-}
-template <typename T>
-json refs_to_json(const vector<int>& values, const vector<T>& refs) {
-    auto js = json::array_t{};
-    for (auto value : values) {
-        js.push_back({});
-        js.back() = ref_to_json(value, refs);
-    }
-    return js;
-}
-template <typename T>
-vector<int> refs_from_json(const json& js, const vector<T>& refs) {
-    auto values = vector<int>{};
-    for (auto& js_ : js) {
-        values.push_back(-1);
-        values.back() = ref_from_json(js_, refs);
-    }
-    return values;
-}
-
-#if 0
-// Procedural commands for cameras
-void from_json_procedural(
-    const json& js, yocto_camera& value, yocto_scene& scene) {
-    if (js.count("from") || js.count("to")) {
-        auto from            = js.value("from", zero3f);
-        auto to              = js.value("to", zero3f);
-        auto up              = js.value("up", vec3f{0, 1, 0});
-        value.frame          = make_lookat_frame(from, to, up);
-        value.focus_distance = length(from - to);
-    }
-}
-#endif
-
-// Serialize struct
-void to_json(json& js, const yocto_camera& value, const yocto_scene& scene) {
-    static const auto def = yocto_camera();
-    js                    = json::object_t{};
-    if (value.name != def.name) js["name"] = value.name;
-    if (value.frame != def.frame) js["frame"] = value.frame;
-    if (value.orthographic != def.orthographic)
-        js["orthographic"] = value.orthographic;
-    if (value.film_width != def.film_width) js["film_width"] = value.film_width;
-    if (value.film_height != def.film_height)
-        js["film_height"] = value.film_height;
-    if (value.focal_length != def.focal_length)
-        js["focal_length"] = value.focal_length;
-    if (value.focus_distance != def.focus_distance)
-        js["focus_distance"] = value.focus_distance;
-    if (value.lens_aperture != def.lens_aperture)
-        js["lens_aperture"] = value.lens_aperture;
-}
-void from_json(const json& js, yocto_camera& value, yocto_scene& scene) {
-    static const auto def = yocto_camera();
-    value.name            = js.value("name", def.name);
-    value.frame           = js.value("frame", def.frame);
-    value.orthographic    = js.value("orthographic", def.orthographic);
-    value.film_width      = js.value("film_width", def.film_width);
-    value.film_height     = js.value("film_height", def.film_height);
-    value.focal_length    = js.value("focal_length", def.focal_length);
-    value.focus_distance  = js.value("focus_distance", def.focus_distance);
-    value.lens_aperture   = js.value("lens_aperture", def.lens_aperture);
-}
-
-#if 0
-// Procedural commands for textures
-void from_json_procedural(
-    const json& js, yocto_texture& value, yocto_scene& scene) {
-    auto type = js.value("type", ""s);
-    if (type == "")
-        throw std::invalid_argument("unknown procedural type " + type);
-    auto is_hdr = false;
-    auto width  = js.value("width", 1024);
-    auto height = js.value("height", 1024);
-    auto size   = vec2i{width, height};
-    if (type == "sky" && width < height * 2) width = height * 2;
-    value.hdr_image.resize({width, height});
-    if (type == "grid") {
-        make_grid_image(value.hdr_image, size, js.value("tile", 8),
-            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
-    } else if (type == "checker") {
-        make_checker_image(value.hdr_image, size, js.value("tile", 8),
-            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
-    } else if (type == "bump") {
-        make_bumpdimple_image(value.hdr_image, size, js.value("tile", 8),
-            js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}));
-    } else if (type == "uvramp") {
-        make_uvramp_image(value.hdr_image, size);
-    } else if (type == "gammaramp") {
-        make_gammaramp_image(value.hdr_image, size,
-            js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}));
-    } else if (type == "blackbodyramp") {
-        make_blackbodyramp_image(value.hdr_image, size);
-    } else if (type == "uvgrid") {
-        make_uvgrid_image(value.hdr_image, size);
-    } else if (type == "sky") {
-        make_sunsky_image(value.hdr_image, size, js.value("sun_angle", pif / 4),
-            js.value("turbidity", 3.0f), js.value("has_sun", false),
-            js.value("sun_intensity", 1.0f), js.value("sun_temperature", 0.0f),
-            js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
-        is_hdr = true;
-    } else if (type == "noise") {
-        make_noise_image(value.hdr_image, size,
-            js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
-            js.value("wrap", true));
-    } else if (type == "fbm") {
-        make_fbm_image(value.hdr_image, size, js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("octaves", 6), js.value("wrap", true));
-    } else if (type == "ridge") {
-        make_ridge_image(value.hdr_image, size,
-            js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("offset", 1.0f), js.value("octaves", 6),
-            js.value("wrap", true));
-    } else if (type == "turbulence") {
-        make_turbulence_image(value.hdr_image, size,
-            js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("octaves", 6), js.value("wrap", true));
+        value.type = yaml_value::type_t::array_t;
+    } else if (str.front() == '"') {
+        parse_value(str, value._string, true);
+        value.type = yaml_value::type_t::string_t;
+    } else if (is_alpha(str.front())) {
+        parse_value(str, value._string, false);
+        value.type = yaml_value::type_t::string_t;
+        if (value._string == "true" || value._string == "True") {
+            value._string  = {};
+            value._boolean = true;
+            value.type     = yaml_value::type_t::boolean_t;
+        } else if (value._string == "false" || value._string == "False") {
+            value._string  = {};
+            value._boolean = false;
+            value.type     = yaml_value::type_t::boolean_t;
+        }
     } else {
-        throw std::invalid_argument("unknown procedural type " + type);
+        parse_value(str, value._numbers[0]);
+        value._size = 1;
+        value.type  = yaml_value::type_t::number_t;
     }
-    if (js.value("border", false)) {
-        add_image_border(value.hdr_image, js.value("border_width", 2),
-            js.value("border_color", vec4f{0, 0, 0, 1}));
-    }
-    auto is_bump = false;
-    if (js.value("bump_to_normal", false)) {
-        auto buffer = value.hdr_image;
-        bump_to_normal_map(
-            value.hdr_image, buffer, js.value("bump_scale", 1.0f));
-        is_bump = true;
-    }
-    if (!is_hdr) {
-        value.ldr_image = {value.hdr_image.size()};
-        if (!is_bump) {
-            linear_to_srgb8(value.ldr_image, value.hdr_image);
+}
+
+struct load_yaml_options {};
+
+template <typename Callbacks>
+inline void load_yaml(const string& filename, Callbacks& callbacks,
+    const load_yaml_options& options) {
+    // open file
+    auto fs = input_file(filename);
+
+    // parsing state
+    auto in_objects = false;
+    auto in_object  = false;
+
+    // read the file line by line
+    char buffer[4096];
+    auto value = yaml_value{};
+    while (read_line(fs, buffer, sizeof(buffer))) {
+        // line
+        auto line = string_view{buffer};
+        remove_comment_and_newline(line);
+        if (line.empty()) continue;
+        if (is_whitespace(line)) continue;
+
+        // peek commands
+        if (is_space(line.front())) {
+            if (!in_objects) throw io_error("bad yaml");
+            // indented property
+            skip_whitespace(line);
+            if (line.empty()) throw io_error("bad yaml");
+            if (line.front() == '-') {
+                callbacks.object_begin();
+                line.remove_prefix(1);
+                skip_whitespace(line);
+                in_object = true;
+            }
+            auto key = ""s;
+            parse_varname(line, key);
+            skip_whitespace(line);
+            if (line.empty() || line.front() != ':') throw io_error("bad yaml");
+            line.remove_prefix(1);
+            skip_whitespace(line);
+            parse_value(line, value);
+            callbacks.key_value(key, value);
+        } else if (is_alpha(line.front())) {
+            // new group
+            auto key = ""s;
+            parse_varname(line, key);
+            skip_whitespace(line);
+            if (line.empty() || line.front() != ':') throw io_error("bad yaml");
+            line.remove_prefix(1);
+            if (!line.empty() && !is_whitespace(line))
+                throw io_error("bad yaml");
+            callbacks.object_group(key);
+            in_objects = true;
+            in_object  = false;
         } else {
-            float_to_byte(value.ldr_image, value.hdr_image);
-        }
-        value.hdr_image = {};
-    }
-    if (value.filename == "") {
-        auto ext       = (is_hdr) ? string("hdr") : string("png");
-        value.filename = "textures/" + value.name + "." + ext;
-    }
-}
-#endif
-
-// Serialize struct
-void to_json(json& js, const yocto_texture& value, const yocto_scene& scene) {
-    static const auto def = yocto_texture();
-    js                    = json::object_t{};
-    if (value.name != def.name) js["name"] = value.name;
-    if (value.filename != def.filename) js["filename"] = value.filename;
-    if (value.filename == "") {
-        if (value.hdr_image != def.hdr_image) js["hdr_image"] = value.hdr_image;
-        if (value.ldr_image != def.ldr_image) js["ldr_image"] = value.ldr_image;
-    }
-}
-void from_json(const json& js, yocto_texture& value, yocto_scene& scene) {
-    static const auto def = yocto_texture();
-    value.name            = js.value("name", def.name);
-    value.filename        = js.value("filename", def.filename);
-    value.hdr_image       = js.value("hdr_image", def.hdr_image);
-    value.ldr_image       = js.value("ldr_image", def.ldr_image);
-}
-
-#if 0
-// Procedural commands for textures
-void from_json_procedural(
-    const json& js, yocto_voltexture& value, yocto_scene& scene) {
-    auto type = js.value("type", ""s);
-    if (type == "")
-        throw std::invalid_argument("unknown procedural type " + type);
-    auto width  = js.value("width", 512);
-    auto height = js.value("height", 512);
-    auto depth  = js.value("depth", 512);
-    auto size   = vec3i{width, height, depth};
-    if (type == "test_volume") {
-        make_test_volume(value.volume_data, size, js.value("scale", 10.0f),
-            js.value("exponent", 6.0f));
-    } else {
-        throw std::invalid_argument("unknown procedural type " + type);
-    }
-    if (value.filename == "") {
-        auto ext       = string("vol");
-        value.filename = "textures/" + value.name + "." + ext;
-    }
-}
-#endif
-
-// Serialize struct
-void to_json(
-    json& js, const yocto_voltexture& value, const yocto_scene& scene) {
-    static const auto def = yocto_voltexture();
-    js                    = json::object_t{};
-    if (value.name != def.name) js["name"] = value.name;
-    if (value.filename != def.filename) js["filename"] = value.filename;
-    if (value.filename == "") {
-        if (value.volume_data != def.volume_data)
-            js["volume_data"] = value.volume_data;
-    }
-}
-void from_json(const json& js, yocto_voltexture& value, yocto_scene& scene) {
-    static const auto def  = yocto_voltexture();
-    value.name             = js.value("name", def.name);
-    value.filename         = js.value("filename", def.filename);
-    value.volume_data      = js.value("volume_data", def.volume_data);
-}
-
-#if 0
-// Procedural commands for materials
-void from_json_procedural(
-    const json& js, yocto_material& value, yocto_scene& scene) {}
-#endif
-
-// Serialize struct
-void to_json(json& js, const yocto_material& value, const yocto_scene& scene) {
-    static const auto def = yocto_material();
-    js                    = json::object_t{};
-    if (value.name != def.name) js["name"] = value.name;
-    if (value.base_metallic != def.base_metallic)
-        js["base_metallic"] = value.base_metallic;
-    if (value.gltf_textures != def.gltf_textures)
-        js["gltf_textures"] = value.gltf_textures;
-    if (value.emission != def.emission) js["emission"] = value.emission;
-    if (value.diffuse != def.diffuse) js["diffuse"] = value.diffuse;
-    if (value.specular != def.specular) js["specular"] = value.specular;
-    if (value.transmission != def.transmission)
-        js["transmission"] = value.transmission;
-    if (value.roughness != def.roughness) js["roughness"] = value.roughness;
-    if (value.opacity != def.opacity) js["opacity"] = value.opacity;
-    if (value.fresnel != def.fresnel) js["fresnel"] = value.fresnel;
-    if (value.refract != def.refract) js["refract"] = value.refract;
-    if (value.volume_density != def.volume_density)
-        js["volume_density"] = value.volume_density;
-    if (value.volume_emission != def.volume_emission)
-        js["volume_emission"] = value.volume_emission;
-    if (value.volume_albedo != def.volume_albedo)
-        js["volume_albedo"] = value.volume_albedo;
-    if (value.volume_phaseg != def.volume_phaseg)
-        js["volume_phaseg"] = value.volume_phaseg;
-
-    if (value.emission_texture != def.emission_texture)
-        js["emission_texture"] = ref_to_json(
-            value.emission_texture, scene.textures);
-    if (value.diffuse_texture != def.diffuse_texture)
-        js["diffuse_texture"] = ref_to_json(
-            value.diffuse_texture, scene.textures);
-    if (value.specular_texture != def.specular_texture)
-        js["specular_texture"] = ref_to_json(
-            value.specular_texture, scene.textures);
-    if (value.transmission_texture != def.transmission_texture)
-        js["transmission_texture"] = ref_to_json(
-            value.transmission_texture, scene.textures);
-    if (value.roughness_texture != def.roughness_texture)
-        js["roughness_texture"] = ref_to_json(
-            value.roughness_texture, scene.textures);
-    if (value.displacement_texture != def.displacement_texture)
-        js["displacement_texture"] = ref_to_json(
-            value.displacement_texture, scene.textures);
-    if (value.normal_texture != def.normal_texture)
-        js["normal_texture"] = ref_to_json(
-            value.normal_texture, scene.textures);
-    if (value.volume_density_texture != def.volume_density_texture)
-        js["volume_density_texture"] = ref_to_json(
-            value.volume_density_texture, scene.voltextures);
-    if (value.displacement_scale != def.displacement_scale)
-        js["displacement_scale"] = value.displacement_scale;
-}
-void from_json(const json& js, yocto_material& value, yocto_scene& scene) {
-    static const auto def  = yocto_material();
-    value.name             = js.value("name", def.name);
-    value.base_metallic    = js.value("base_metallic", def.base_metallic);
-    value.gltf_textures    = js.value("gltf_textures", def.gltf_textures);
-    value.emission         = js.value("emission", def.emission);
-    value.diffuse          = js.value("diffuse", def.diffuse);
-    value.specular         = js.value("specular", def.specular);
-    value.transmission     = js.value("transmission", def.transmission);
-    value.roughness        = js.value("roughness", def.roughness);
-    value.opacity          = js.value("opacity", def.opacity);
-    value.fresnel          = js.value("fresnel", def.fresnel);
-    value.refract          = js.value("refract", def.refract);
-    value.volume_density   = js.value("volume_density", def.volume_density);
-    value.volume_albedo    = js.value("volume_albedo", def.volume_albedo);
-    value.volume_phaseg    = js.value("volume_phaseg", def.volume_phaseg);
-    value.emission_texture = ref_from_json(
-        js.value("emission_texture", json{}), scene.textures);
-    value.diffuse_texture = ref_from_json(
-        js.value("diffuse_texture", json{}), scene.textures);
-    value.specular_texture = ref_from_json(
-        js.value("specular_texture", json{}), scene.textures);
-    value.transmission_texture = ref_from_json(
-        js.value("transmission_texture", json{}), scene.textures);
-    value.roughness_texture = ref_from_json(
-        js.value("roughness_texture", json{}), scene.textures);
-    value.displacement_texture = ref_from_json(
-        js.value("displacement_texture", json{}), scene.textures);
-    value.normal_texture = ref_from_json(
-        js.value("normal_texture", json{}), scene.textures);
-    value.volume_density_texture = ref_from_json(
-        js.value("volume_density_texture", json{}), scene.voltextures);
-    value.displacement_scale = js.value(
-        "displacement_scale", def.displacement_scale);
-}
-
-#if 0
-// Procedural commands for materials
-void from_json_procedural(
-    const json& js, yocto_shape& value, yocto_scene& scene) {
-    auto type = js.value("type", ""s);
-    if (type == "")
-        throw std::invalid_argument("unknown procedural type " + type);
-    value.points        = {};
-    value.lines         = {};
-    value.triangles     = {};
-    value.quads         = {};
-    value.positions     = {};
-    value.normals       = {};
-    value.texturecoords = {};
-    value.radius        = {};
-    if (type == "quad") {
-        make_quad_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}),
-            identity_frame3f);
-    } else if (type == "quady") {
-        make_quad_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}),
-            identity_frame3f);
-    } else if (type == "quad_stack") {
-        make_quad_stack_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec2f{1, 1}),
-            identity_frame3f);
-    } else if (type == "box") {
-        make_box_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), identity_frame3f);
-    } else if (type == "box_rounded") {
-        make_box_rounded_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{32, 32, 32}),
-            js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("rounded", 0.15f),
-            identity_frame3f);
-    } else if (type == "uvsphere") {
-        make_uvsphere_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
-            identity_frame3f);
-    } else if (type == "sphere") {
-        make_sphere_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), identity_frame3f);
-    } else if (type == "uvsphere_flipcap") {
-        make_uvsphere_flipcap_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
-            js.value("zflip", vec2f{-0.75f, +0.75f}), identity_frame3f);
-    } else if (type == "uvdisk") {
-        make_uvdisk_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{32, 16}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
-            identity_frame3f);
-    } else if (type == "disk") {
-        make_disk_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), identity_frame3f);
-    } else if (type == "disk_bulged") {
-        make_disk_bulged_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), js.value("height", 0.25f),
-            identity_frame3f);
-    } else if (type == "quad_bulged") {
-        make_quad_bulged_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), js.value("height", 0.25f),
-            identity_frame3f);
-    } else if (type == "uvcylinder") {
-        make_uvcylinder_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{64, 32, 16}),
-            js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}), identity_frame3f);
-    } else if (type == "uvcylinder_rounded") {
-        make_uvcylinder_rounded_shape(value.quads, value.positions,
-            value.normals, value.texturecoords,
-            js.value("steps", vec3i{64, 32, 16}),
-            js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("rounded", 0.075f),
-            identity_frame3f);
-    } else if (type == "sphere_geodesic") {
-        make_geodesic_sphere_shape(value.triangles, value.positions,
-            value.normals, js.value("tesselation", 4), js.value("size", 2.0f),
-            identity_frame3f);
-    } else if (type == "floor") {
-        make_floor_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{40, 40}), js.value("uvsize", vec2f{20, 20}),
-            identity_frame3f);
-    } else if (type == "floor_bent") {
-        make_floor_bent_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{1, 40}),
-            js.value("size", vec2f{40, 40}), js.value("uvsize", vec2f{20, 20}),
-            js.value("radius", 10.0f), identity_frame3f);
-    } else if (type == "matball") {
-        make_sphere_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), identity_frame3f);
-    } else if (type == "hairball") {
-        auto base_quads         = vector<vec4i>{};
-        auto base_positions     = vector<vec3f>{};
-        auto base_normals       = vector<vec3f>{};
-        auto base_texturecoords = vector<vec2f>{};
-        make_sphere_shape(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1.0f,
-            identity_frame3f);
-        make_hair_shape(value.lines, value.positions, value.normals,
-            value.texturecoords, value.radius,
-            js.value("steps", vec2i{4, 65536}), {}, base_quads, base_positions,
-            base_normals, base_texturecoords,
-            js.value("length", vec2f{0.1f, 0.1f}) * js.value("size", 2.0f),
-            js.value("radius", vec2f{0.001f, 0.0005f}) * js.value("size", 2.0f),
-            js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}),
-            js.value("rotation", vec2f{0, 0}));
-    } else if (type == "hairball_interior") {
-        make_sphere_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1.0f,
-            identity_frame3f);
-    } else if (type == "suzanne") {
-        make_suzanne_shape(value.quads, value.positions, js.value("size", 2.0f),
-            identity_frame3f);
-    } else if (type == "cube_posonly") {
-        auto ignore1 = vector<vec4i>{};
-        auto ignore2 = vector<vec4i>{};
-        auto ignore3 = vector<vec3f>{};
-        auto ignore4 = vector<vec2f>{};
-        make_box_fvshape(value.quads, ignore1, ignore2, value.positions,
-            ignore3, ignore4, js.value("steps", vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), identity_frame3f);
-    } else if (type == "cube_facevarying") {
-        make_box_fvshape(value.quads_positions, value.quads_normals,
-            value.quads_texturecoords, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), identity_frame3f);
-    } else if (type == "sphere_facevarying") {
-        make_sphere_fvshape(value.quads_positions, value.quads_normals,
-            value.quads_texturecoords, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), identity_frame3f);
-    } else {
-        throw std::invalid_argument("unknown procedural type " + type);
-    }
-    if (!value.quads.empty() && js.value("shell_thickness", 0.0f) > 0) {
-        make_shell_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("shell_thickness", 0.0f));
-    }
-    if (!value.quads.empty() && js.value("as_triangles", false)) {
-        convert_quads_to_triangles(value.triangles, value.quads);
-        value.quads = {};
-    }
-    if (js.value("flip_normals", false)) {
-        flip_vertex_normals(value.normals);
-    }
-    if (js.value("flip_faces", false)) {
-        flip_triangles_orientation(value.triangles);
-        flip_quads_orientation(value.quads);
-    }
-    if (js.value("flip_yz", false)) {
-        for (auto& p : value.positions) p = {p.x, p.z, p.y};
-        for (auto& n : value.normals) n = {n.x, n.z, n.y};
-    }
-    if (js.value("align_bottom", false)) {
-        align_vertices(value.positions, {0, 1, 0});
-    }
-}
-#endif
-
-// Serialize struct
-void to_json(json& js, const yocto_shape& value, const yocto_scene& scene) {
-    static const auto def = yocto_shape();
-    js                    = json::object_t{};
-    if (value.name != def.name) js["name"] = value.name;
-    if (value.filename != def.filename) js["filename"] = value.filename;
-    if (value.subdivision_level != def.subdivision_level)
-        js["subdivision_level"] = value.subdivision_level;
-    if (value.catmull_clark != def.catmull_clark)
-        js["catmull_clark"] = value.catmull_clark;
-    if (value.compute_normals != def.compute_normals)
-        js["compute_normals"] = value.compute_normals;
-    if (value.preserve_facevarying != def.preserve_facevarying)
-        js["preserve_facevarying"] = value.preserve_facevarying;
-    if (value.filename == "") {
-        if (value.points != def.points) js["points"] = value.points;
-        if (value.lines != def.lines) js["lines"] = value.lines;
-        if (value.triangles != def.triangles) js["triangles"] = value.triangles;
-        if (value.quads != def.quads) js["quads"] = value.quads;
-        if (value.quads_positions != def.quads_positions)
-            js["quads_positions"] = value.quads_positions;
-        if (value.quads_normals != def.quads_normals)
-            js["quads_normals"] = value.quads_normals;
-        if (value.quads_texturecoords != def.quads_texturecoords)
-            js["quads_texturecoords"] = value.quads_texturecoords;
-        if (value.positions != def.positions) js["positions"] = value.positions;
-        if (value.normals != def.normals) js["normals"] = value.normals;
-        if (value.texturecoords != def.texturecoords)
-            js["texturecoords"] = value.texturecoords;
-        if (value.colors != def.colors) js["colors"] = value.colors;
-        if (value.radius != def.radius) js["radius"] = value.radius;
-        if (value.tangentspaces != def.tangentspaces)
-            js["tangentspaces"] = value.tangentspaces;
-    }
-}
-void from_json(const json& js, yocto_shape& value, yocto_scene& scene) {
-    static const auto def   = yocto_shape();
-    value.name              = js.value("name", def.name);
-    value.filename          = js.value("filename", def.filename);
-    value.subdivision_level = js.value(
-        "subdivision_level", def.subdivision_level);
-    value.catmull_clark   = js.value("catmull_clark", def.catmull_clark);
-    value.compute_normals = js.value("compute_normals", def.compute_normals);
-    value.preserve_facevarying = js.value(
-        "preserve_facevarying", def.preserve_facevarying);
-    value.points          = js.value("points", def.points);
-    value.lines           = js.value("lines", def.lines);
-    value.triangles       = js.value("triangles", def.triangles);
-    value.quads           = js.value("quads", def.quads);
-    value.quads_positions = js.value("quads_positions", def.quads_positions);
-    value.quads_normals   = js.value("quads_normals", def.quads_normals);
-    value.quads_texturecoords = js.value(
-        "quads_texturecoords", def.quads_texturecoords);
-    value.positions     = js.value("positions", def.positions);
-    value.normals       = js.value("normals", def.normals);
-    value.texturecoords = js.value("texturecoords", def.texturecoords);
-    value.colors        = js.value("colors", def.colors);
-    value.radius        = js.value("radius", def.radius);
-    value.tangentspaces = js.value("tangentspaces", def.tangentspaces);
-}
-
-#if 0
-// Procedural commands for instances
-void from_json_procedural(
-    const json& js, yocto_instance& value, yocto_scene& scene) {
-    if (js.count("from")) {
-        auto from   = js.value("from", zero3f);
-        auto to     = js.value("to", zero3f);
-        auto up     = js.value("up", vec3f{0, 1, 0});
-        value.frame = make_lookat_frame(from, to, up, true);
-    }
-    if (js.count("translation") || js.count("rotation") || js.count("scale")) {
-        auto translation = js.value("translation", zero3f);
-        auto rotation    = js.value("rotation", zero4f);
-        auto scaling     = js.value("scale", vec3f{1, 1, 1});
-        value.frame      = make_translation_frame(translation) *
-                      make_scaling_frame(scaling) *
-                      make_rotation_frame(rotation.xyz, rotation.w);
-    }
-}
-#endif
-
-// Serialize struct
-void to_json(json& js, const yocto_instance& value, const yocto_scene& scene) {
-    static const auto def = yocto_instance();
-    js                    = json::object_t{};
-    if (value.name != def.name) js["name"] = value.name;
-    if (value.frame != def.frame) js["frame"] = value.frame;
-    if (value.shape != def.shape)
-        js["shape"] = ref_to_json(value.shape, scene.shapes);
-    if (value.material != def.material)
-        js["material"] = ref_to_json(value.material, scene.materials);
-}
-void from_json(const json& js, yocto_instance& value, yocto_scene& scene) {
-    static const auto def = yocto_instance();
-    value.name            = js.value("name", def.name);
-    value.frame           = js.value("frame", def.frame);
-    value.shape    = ref_from_json(js.value("shape", json{}), scene.shapes);
-    value.material = ref_from_json(
-        js.value("material", json{}), scene.materials);
-}
-
-#if 0
-// Procedural commands for materials
-void from_json_procedural(
-    const json& js, yocto_environment& value, yocto_scene& scene) {
-    if (js.count("rotation")) {
-        auto rotation = js.value("rotation", zero4f);
-        value.frame   = make_rotation_frame(rotation.xyz, rotation.w);
-    }
-}
-#endif
-
-// Serialize struct
-void to_json(
-    json& js, const yocto_environment& value, const yocto_scene& scene) {
-    static const auto def = yocto_environment();
-    js                    = json::object_t{};
-    if (value.name != def.name) js["name"] = value.name;
-    if (value.frame != def.frame) js["frame"] = value.frame;
-    if (value.emission != def.emission) js["emission"] = value.emission;
-    if (value.emission_texture != def.emission_texture)
-        js["emission_texture"] = ref_to_json(
-            value.emission_texture, scene.textures);
-}
-void from_json(const json& js, yocto_environment& value, yocto_scene& scene) {
-    static const auto def  = yocto_environment();
-    value.name             = js.value("name", def.name);
-    value.frame            = js.value("frame", def.frame);
-    value.emission         = js.value("emission", def.emission);
-    value.emission_texture = ref_from_json(
-        js.value("emission_texture", json{}), scene.textures);
-}
-
-#if 0
-// Procedural commands for nodes
-void from_json_procedural(
-    const json& js, yocto_scene_node& value, yocto_scene& scene) {
-    if (js.count("from")) {
-        auto from   = js.value("from", zero3f);
-        auto to     = js.value("to", zero3f);
-        auto up     = js.value("up", vec3f{0, 1, 0});
-        value.local = make_lookat_frame(from, to, up, true);
-    }
-}
-#endif
-
-// Serialize struct
-void to_json(
-    json& js, const yocto_scene_node& value, const yocto_scene& scene) {
-    static const auto def = yocto_scene_node();
-    js                    = json::object_t{};
-    if (value.name != def.name) js["name"] = value.name;
-    if (value.local != def.local) js["local"] = value.local;
-    if (value.translation != def.translation)
-        js["translation"] = value.translation;
-    if (value.rotation != def.rotation) js["rotation"] = value.rotation;
-    if (value.scale != def.scale) js["scale"] = value.scale;
-    if (value.weights != def.weights) js["weights"] = value.weights;
-    if (value.parent != def.parent)
-        js["parent"] = ref_to_json(value.parent, scene.nodes);
-    if (value.camera != def.camera)
-        js["camera"] = ref_to_json(value.camera, scene.cameras);
-    if (value.instance != def.instance)
-        js["instance"] = ref_to_json(value.instance, scene.instances);
-    if (value.environment != def.environment)
-        js["environment"] = ref_to_json(value.environment, scene.environments);
-}
-void from_json(const json& js, yocto_scene_node& value, yocto_scene& scene) {
-    static const auto def = yocto_scene_node();
-    value.name            = js.value("name", def.name);
-    value.local           = js.value("local", def.local);
-    value.translation     = js.value("translation", def.translation);
-    value.rotation        = js.value("rotation", def.rotation);
-    value.scale           = js.value("scale", def.scale);
-    value.weights         = js.value("weights", def.weights);
-    value.parent   = ref_from_json(js.value("parent", json{}), scene.nodes);
-    value.camera   = ref_from_json(js.value("camera", json{}), scene.cameras);
-    value.instance = ref_from_json(
-        js.value("instance", json{}), scene.instances);
-    value.environment = ref_from_json(
-        js.value("environment", json{}), scene.environments);
-}
-
-// Serialize enum
-void to_json(json& js, const yocto_interpolation_type& value) {
-    static auto names = unordered_map<int, string>{
-        {(int)yocto_interpolation_type::linear, "linear"},
-        {(int)yocto_interpolation_type::step, "step"},
-        {(int)yocto_interpolation_type::bezier, "bezier"},
-    };
-    js = names.at((int)value);
-}
-void from_json(const json& js, yocto_interpolation_type& value) {
-    static auto names = unordered_map<string, int>{
-        {"linear", (int)yocto_interpolation_type::linear},
-        {"step", (int)yocto_interpolation_type::step},
-        {"bezier", (int)yocto_interpolation_type::bezier},
-    };
-    value = (yocto_interpolation_type)names.at(js.get<string>());
-}
-
-#if 0
-// Procedural commands for animations
-void from_json_procedural(
-    const json& js, yocto_animation& value, yocto_scene& scene) {
-    if (js.count("make_rotation_axisangle")) {
-        for (auto& j : js.at("make_rotation_axisangle")) {
-            value.rotation_keyframes.push_back(
-                make_rotation_quat(j.get<vec4f>()));
+            throw io_error("bad yaml");
         }
     }
 }
-#endif
 
-// Serialize struct
-void to_json(json& js, const yocto_animation& value, const yocto_scene& scene) {
-    static const auto def = yocto_animation();
-    js                    = json::object_t{};
-    if (value.name != def.name) js["name"] = value.name;
-    if (value.filename != def.filename) js["filename"] = value.filename;
-    if (value.animation_group != def.animation_group)
-        js["animation_group"] = value.animation_group;
-    if (value.interpolation_type != def.interpolation_type)
-        js["interpolation_type"] = value.interpolation_type;
-    if (value.filename == "") {
-        if (value.keyframes_times != def.keyframes_times)
-            js["keyframes_times"] = value.keyframes_times;
-        if (value.translation_keyframes != def.translation_keyframes)
-            js["translation_keyframes"] = value.translation_keyframes;
-        if (value.rotation_keyframes != def.rotation_keyframes)
-            js["rotation_keyframes"] = value.rotation_keyframes;
-        if (value.scale_keyframes != def.scale_keyframes)
-            js["scale_keyframes"] = value.scale_keyframes;
-    }
-    if (value.node_targets != def.node_targets)
-        js["node_targets"] = refs_to_json(value.node_targets, scene.nodes);
-}
-void from_json(const json& js, yocto_animation& value, yocto_scene& scene) {
-    static const auto def    = yocto_animation();
-    value.name               = js.value("name", def.name);
-    value.filename           = js.value("filename", def.filename);
-    value.animation_group    = js.value("animation_group", def.animation_group);
-    value.interpolation_type = js.value(
-        "interpolation_type", def.interpolation_type);
-    value.keyframes_times = js.value("keyframes_times", def.keyframes_times);
-    value.translation_keyframes = js.value(
-        "translation_keyframes", def.translation_keyframes);
-    value.rotation_keyframes = js.value(
-        "rotation_keyframes", def.rotation_keyframes);
-    value.scale_keyframes = js.value("scale_keyframes", def.scale_keyframes);
-    value.node_targets    = refs_from_json(
-        js.value("node_targets", vector<string>{}), scene.nodes);
-}
-
-#if 0
-// Procedural commands for scenes
-void from_json_procedural(
-    const json& js, yocto_scene& value, yocto_scene& scene) {
-    if (js.count("random_instances")) {
-        auto& jjs          = js.at("random_instances");
-        auto  num          = jjs.value("num", 100);
-        auto  seed         = jjs.value("seed", 13);
-        auto  shape_offset = (int)scene.shapes.size();
-        auto  num_shapes   = 0;
-        auto  base         = yocto_shape();
-        from_json((json&)jjs.at("base"), base, scene);
-        for (auto& j : jjs.at("shapes")) {
-            value.shapes.push_back({});
-            from_json((json&)j, value.shapes.back(), scene);
-            num_shapes++;
-        }
-
-        auto pos      = vector<vec3f>{};
-        auto norm     = vector<vec3f>{};
-        auto texcoord = vector<vec2f>{};
-        sample_triangles_points(pos, norm, texcoord, base.triangles,
-            base.positions, base.normals, base.texturecoords, num, seed);
-
-        auto rng = make_rng(seed, 17);
-        for (auto i = 0; i < num; i++) {
-            auto shape = get_random_int(rng, num_shapes - 1);
-            value.instances.push_back({});
-            value.instances.back().name  = "random_" + std::to_string(i);
-            value.instances.back().frame = make_translation_frame(pos[i]);
-            value.instances.back().shape = shape + shape_offset;
-        }
-    }
-}
-#endif
-
-// serialize array of structs
-template <typename T>
-void to_json(json& js, const vector<T>& values, const yocto_scene& scene) {
-    js = json::array_t{};
-    for (auto& value : values) {
-        js.push_back({});
-        to_json(js.back(), value, scene);
-    }
-}
-template <typename T>
-void from_json(const json& js, vector<T>& values, yocto_scene& scene) {
-    values.clear();
-    for (auto& js_ : js) {
-        values.push_back({});
-        from_json(js_, values.back(), scene);
-    }
-}
-
-// Serialize struct
-void to_json(json& js, const yocto_scene& value, const yocto_scene& scene) {
-    static const auto def = yocto_scene();
-    js                    = json::object_t{};
-    if (value.name != def.name) js["name"] = value.name;
-    if (!value.cameras.empty()) to_json(js["cameras"], value.cameras, scene);
-    if (!value.textures.empty()) to_json(js["textures"], value.textures, scene);
-    if (!value.voltextures.empty())
-        to_json(js["voltextures"], value.voltextures, scene);
-    if (!value.materials.empty())
-        to_json(js["materials"], value.materials, scene);
-    if (!value.shapes.empty()) to_json(js["shapes"], value.shapes, scene);
-    if (!value.instances.empty())
-        to_json(js["instances"], value.instances, scene);
-    if (!value.environments.empty())
-        to_json(js["environments"], value.environments, scene);
-    if (!value.nodes.empty()) to_json(js["nodes"], value.nodes, scene);
-    if (!value.animations.empty())
-        to_json(js["animations"], value.animations, scene);
-}
-void from_json(const json& js, yocto_scene& value, yocto_scene& scene) {
-    static const auto def = yocto_scene();
-    value.name            = js.value("name", def.name);
-    if (js.count("cameras")) from_json(js.at("cameras"), value.cameras, scene);
-    if (js.count("textures"))
-        from_json(js.at("textures"), value.textures, scene);
-    if (js.count("voltextures"))
-        from_json(js.at("voltextures"), value.voltextures, scene);
-    if (js.count("materials"))
-        from_json(js.at("materials"), value.materials, scene);
-    if (js.count("shapes")) from_json(js.at("shapes"), value.shapes, scene);
-    if (js.count("instances"))
-        from_json(js.at("instances"), value.instances, scene);
-    if (js.count("environments"))
-        from_json(js.at("environments"), value.environments, scene);
-    if (js.count("nodes")) from_json(js.at("nodes"), value.nodes, scene);
-    if (js.count("animations"))
-        from_json(js.at("animations"), value.animations, scene);
-}
-
-// Load a scene in the builtin JSON format.
-void load_json_scene(const string& filename, yocto_scene& scene,
+// Save a scene in the builtin YAML format.
+void load_yaml_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
-    // initialize
     scene = {};
 
-    // wrap to rethrow better error
+    struct parse_callbacks : yaml_callbacks {
+        yocto_scene&              scene;
+        const load_scene_options& options;
+
+        enum struct parsing_type {
+            none,
+            camera,
+            texture,
+            voltexture,
+            material,
+            shape,
+            instance,
+            environment
+        };
+        parsing_type type = parsing_type::none;
+
+        unordered_map<string, int> tmap = {{"", -1}};
+        unordered_map<string, int> vmap = {{"", -1}};
+        unordered_map<string, int> mmap = {{"", -1}};
+        unordered_map<string, int> smap = {{"", -1}};
+
+        parse_callbacks(yocto_scene& scene, const load_scene_options& options)
+            : scene{scene}, options{options} {}
+
+        void get_ref(const yaml_value& yml, int& value,
+            const unordered_map<string, int>& refs) const {
+            if (is_string_value(yml)) {
+                auto name = ""s;
+                get_value(yml, name);
+                value = refs.at(name);
+            } else {
+                get_value(yml, value);
+            }
+        }
+
+        void object_group(const string& key) {
+            if (key == "cameras") {
+                type = parsing_type::camera;
+            } else if (key == "textures") {
+                type = parsing_type::texture;
+            } else if (key == "voltextures") {
+                type = parsing_type::voltexture;
+            } else if (key == "materials") {
+                type = parsing_type::material;
+            } else if (key == "shapes") {
+                type = parsing_type::shape;
+            } else if (key == "instances") {
+                type = parsing_type::instance;
+            } else if (key == "environments") {
+                type = parsing_type::environment;
+            } else {
+                type = parsing_type::none;
+                throw io_error("unknown object type");
+            }
+        }
+        void object_begin() {
+            switch (type) {
+                case parsing_type::camera: scene.cameras.push_back({}); break;
+                case parsing_type::texture: scene.textures.push_back({}); break;
+                case parsing_type::voltexture:
+                    scene.voltextures.push_back({});
+                    break;
+                case parsing_type::material:
+                    scene.materials.push_back({});
+                    break;
+                case parsing_type::shape: scene.shapes.push_back({}); break;
+                case parsing_type::instance:
+                    scene.instances.push_back({});
+                    break;
+                case parsing_type::environment:
+                    scene.environments.push_back({});
+                    break;
+                default: throw io_error("unknown object type");
+            }
+        }
+        void key_value(const string& key, const yaml_value& value) {
+            switch (type) {
+                case parsing_type::camera: {
+                    auto& camera = scene.cameras.back();
+                    if (key == "name") {
+                        get_value(value, camera.name);
+                    } else if (key == "frame") {
+                        get_value(value, camera.frame);
+                    } else if (key == "orthographic") {
+                        get_value(value, camera.orthographic);
+                    } else if (key == "film_width") {
+                        get_value(value, camera.film_width);
+                    } else if (key == "film_height") {
+                        get_value(value, camera.film_height);
+                    } else if (key == "focal_length") {
+                        get_value(value, camera.focal_length);
+                    } else if (key == "focus_distance") {
+                        get_value(value, camera.focus_distance);
+                    } else if (key == "lens_aperture") {
+                        get_value(value, camera.lens_aperture);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::texture: {
+                    auto& texture = scene.textures.back();
+                    if (key == "name") {
+                        get_value(value, texture.name);
+                        tmap[texture.name] = (int)scene.textures.size() - 1;
+                    } else if (key == "filename") {
+                        get_value(value, texture.filename);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::voltexture: {
+                    auto& texture = scene.voltextures.back();
+                    if (key == "name") {
+                        get_value(value, texture.name);
+                        vmap[texture.name] = (int)scene.voltextures.size() - 1;
+                    } else if (key == "filename") {
+                        get_value(value, texture.filename);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::material: {
+                    auto& material = scene.materials.back();
+                    if (key == "name") {
+                        get_value(value, material.name);
+                        mmap[material.name] = (int)scene.materials.size() - 1;
+                    } else if (key == "base_metallic") {
+                        get_value(value, material.base_metallic);
+                    } else if (key == "gltf_textures") {
+                        get_value(value, material.gltf_textures);
+                    } else if (key == "emission") {
+                        get_value(value, material.emission);
+                    } else if (key == "diffuse") {
+                        get_value(value, material.diffuse);
+                    } else if (key == "specular") {
+                        get_value(value, material.specular);
+                    } else if (key == "transmission") {
+                        get_value(value, material.transmission);
+                    } else if (key == "roughness") {
+                        get_value(value, material.roughness);
+                    } else if (key == "opacity") {
+                        get_value(value, material.opacity);
+                    } else if (key == "fresnel") {
+                        get_value(value, material.fresnel);
+                    } else if (key == "refract") {
+                        get_value(value, material.refract);
+                    } else if (key == "volume_density") {
+                        get_value(value, material.volume_density);
+                    } else if (key == "volume_albedo") {
+                        get_value(value, material.volume_albedo);
+                    } else if (key == "volume_phaseg") {
+                        get_value(value, material.volume_phaseg);
+                    } else if (key == "emission_texture") {
+                        get_ref(value, material.emission_texture, tmap);
+                    } else if (key == "diffuse_texture") {
+                        get_ref(value, material.diffuse_texture, tmap);
+                    } else if (key == "specular_texture") {
+                        get_ref(value, material.specular_texture, tmap);
+                    } else if (key == "transmission_texture") {
+                        get_ref(value, material.transmission_texture, tmap);
+                    } else if (key == "roughness_texture") {
+                        get_ref(value, material.roughness_texture, tmap);
+                    } else if (key == "displacement_texture") {
+                        get_ref(value, material.displacement_texture, tmap);
+                    } else if (key == "normal_texture") {
+                        get_ref(value, material.normal_texture, tmap);
+                    } else if (key == "volume_density_texture") {
+                        get_ref(value, material.volume_density_texture, vmap);
+                    } else if (key == "displacement_scale") {
+                        get_value(value, material.displacement_scale);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::shape: {
+                    auto& shape = scene.shapes.back();
+                    if (key == "name") {
+                        get_value(value, shape.name);
+                        smap[shape.name] = (int)scene.shapes.size() - 1;
+                    } else if (key == "filename") {
+                        get_value(value, shape.filename);
+                    } else if (key == "subdivision_level") {
+                        get_value(value, shape.subdivision_level);
+                    } else if (key == "catmull_clark") {
+                        get_value(value, shape.catmull_clark);
+                    } else if (key == "compute_normals") {
+                        get_value(value, shape.compute_normals);
+                    } else if (key == "preserve_facevarying") {
+                        get_value(value, shape.preserve_facevarying);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::instance: {
+                    auto& instance = scene.instances.back();
+                    if (key == "name") {
+                        get_value(value, instance.name);
+                    } else if (key == "frame") {
+                        get_value(value, instance.frame);
+                    } else if (key == "shape") {
+                        get_ref(value, instance.shape, smap);
+                    } else if (key == "material") {
+                        get_ref(value, instance.material, mmap);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::environment: {
+                    auto& environment = scene.environments.back();
+                    if (key == "name") {
+                        get_value(value, environment.name);
+                    } else if (key == "frame") {
+                        get_value(value, environment.frame);
+                    } else if (key == "emission") {
+                        get_value(value, environment.emission);
+                    } else if (key == "emission_texture") {
+                        get_ref(value, environment.emission_texture, tmap);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                default: throw io_error("unknown object type");
+            }
+        }
+    };
+
     try {
-        // load jsonz
-        auto js = json();
-        load_json(filename, js);
+        // Parse obj
+        auto yaml_options = load_yaml_options();
+        auto cb           = parse_callbacks{scene, options};
+        load_yaml(filename, cb, yaml_options);
 
-        // deserialize json
-        from_json(js, scene, scene);
-
-        // clear json memory
-        js.clear();
-        js = {};
-
-        // load meshes and textures
+        // load shape and textures
         auto dirname = get_dirname(filename);
         load_scene_shapes(scene, dirname, options);
         load_scene_textures(scene, dirname, options);
@@ -1283,7 +804,7 @@ void load_json_scene(const string& filename, yocto_scene& scene,
     }
 
     // fix scene
-    if (scene.name == "") scene.name = get_filename(filename);
+    scene.name = get_filename(filename);
     add_missing_cameras(scene);
     add_missing_materials(scene);
     add_missing_names(scene);
@@ -1291,18 +812,192 @@ void load_json_scene(const string& filename, yocto_scene& scene,
     update_transforms(scene);
 }
 
-// Save a scene in the builtin JSON format.
-void save_json_scene(const string& filename, const yocto_scene& scene,
+inline void print_yaml_value(output_file& fs, int value) {
+    print_value(fs, value);
+}
+inline void print_yaml_value(output_file& fs, float value) {
+    print_value(fs, value);
+}
+inline void print_yaml_value(output_file& fs, const string& value) {
+    print_value(fs, value);
+}
+inline void print_yaml_value(output_file& fs, const char* value) {
+    print_value(fs, value);
+}
+inline void print_yaml_value(output_file& fs, bool value) {
+    print_value(fs, value, true);
+}
+template <typename T, int N>
+inline void print_yaml_value(output_file& fs, const vec<T, N>& value) {
+    print_value(fs, value, true);
+}
+template <typename T, int N>
+inline void print_yaml_value(output_file& fs, const frame<T, N>& value) {
+    print_value(fs, value, true);
+}
+
+// Save yaml
+void save_yaml(const string& filename, const yocto_scene& scene) {
+    // open file
+    auto fs = output_file(filename);
+
+    print_value(
+        fs, "# Written by Yocto/GL\n# https://github.com/xelatihy/yocto-gl\n");
+
+    static const auto def_camera      = yocto_camera{};
+    static const auto def_texture     = yocto_texture{};
+    static const auto def_voltexture  = yocto_voltexture{};
+    static const auto def_material    = yocto_material{};
+    static const auto def_shape       = yocto_shape{};
+    static const auto def_instance    = yocto_instance{};
+    static const auto def_environment = yocto_environment{};
+
+    auto print_first = [](output_file& fs, const char* name, auto& value) {
+        print_value(fs, "  - ");
+        print_value(fs, name);
+        print_value(fs, ": ");
+        print_yaml_value(fs, value);
+        print_value(fs, "\n");
+    };
+    auto print_optional = [](output_file& fs, const char* name, auto& value,
+                              auto& def) {
+        if (value == def) return;
+        print_value(fs, "    ");
+        print_value(fs, name);
+        print_value(fs, ": ");
+        print_yaml_value(fs, value);
+        print_value(fs, "\n");
+    };
+    auto print_ref = [as_int = false](output_file& fs, const char* name,
+                         int value, auto& refs) {
+        if (value < 0) return;
+        print_value(fs, "    ");
+        print_value(fs, name);
+        print_value(fs, ": ");
+        if (as_int) {
+            print_yaml_value(fs, value);
+        } else {
+            print_yaml_value(fs, refs[value].name);
+        }
+        print_value(fs, "\n");
+    };
+
+    if (!scene.cameras.empty()) print_value(fs, "\n\ncameras:\n");
+    for (auto& camera : scene.cameras) {
+        print_first(fs, "name", camera.name);
+        print_optional(fs, "frame", camera.frame, def_camera.frame);
+        print_optional(
+            fs, "orthographic", camera.orthographic, def_camera.orthographic);
+        print_optional(
+            fs, "film_width", camera.film_width, def_camera.film_width);
+        print_optional(
+            fs, "film_height", camera.film_height, def_camera.film_height);
+        print_optional(
+            fs, "focal_length", camera.focal_length, def_camera.focal_length);
+        print_optional(fs, "focus_distance", camera.focus_distance,
+            def_camera.focus_distance);
+        print_optional(fs, "lens_aperture", camera.lens_aperture,
+            def_camera.lens_aperture);
+    }
+
+    if (!scene.textures.empty()) print_value(fs, "\n\ntextures:\n");
+    for (auto& texture : scene.textures) {
+        print_first(fs, "name", texture.name);
+        print_optional(fs, "filename", texture.filename, def_texture.filename);
+    }
+
+    if (!scene.voltextures.empty()) print_value(fs, "\n\nvoltextures:\n");
+    for (auto& texture : scene.voltextures) {
+        print_first(fs, "name", texture.name);
+        print_optional(
+            fs, "filename", texture.filename, def_voltexture.filename);
+    }
+
+    if (!scene.materials.empty()) print_value(fs, "\n\nmaterials:\n");
+    for (auto& material : scene.materials) {
+        print_first(fs, "name", material.name);
+        print_optional(fs, "base_metallic", material.base_metallic,
+            def_material.base_metallic);
+        print_optional(fs, "gltf_textures", material.gltf_textures,
+            def_material.gltf_textures);
+        print_optional(
+            fs, "emission", material.emission, def_material.emission);
+        print_optional(fs, "diffuse", material.diffuse, def_material.diffuse);
+        print_optional(
+            fs, "specular", material.specular, def_material.specular);
+        print_optional(fs, "transmission", material.transmission,
+            def_material.transmission);
+        print_optional(
+            fs, "roughness", material.roughness, def_material.roughness);
+        print_optional(fs, "opacity", material.opacity, def_material.opacity);
+        print_optional(fs, "fresnel", material.fresnel, def_material.fresnel);
+        print_optional(fs, "refract", material.refract, def_material.refract);
+        print_ref(
+            fs, "emission_texture", material.emission_texture, scene.textures);
+        print_ref(
+            fs, "diffuse_texture", material.diffuse_texture, scene.textures);
+        print_ref(
+            fs, "specular_texture", material.specular_texture, scene.textures);
+        print_ref(fs, "transmission_texture", material.transmission_texture,
+            scene.textures);
+        print_ref(fs, "roughness_texture", material.roughness_texture,
+            scene.textures);
+        print_ref(fs, "displacement_texture", material.displacement_texture,
+            scene.textures);
+        print_ref(
+            fs, "normal_texture", material.normal_texture, scene.textures);
+        print_optional(fs, "volume_emission", material.volume_emission,
+            def_material.volume_emission);
+        print_optional(fs, "volume_albedo", material.volume_albedo,
+            def_material.volume_albedo);
+        print_optional(fs, "volume_density", material.volume_density,
+            def_material.volume_density);
+        print_optional(fs, "volume_phaseg", material.volume_phaseg,
+            def_material.volume_phaseg);
+        print_ref(fs, "volume_density_texture", material.volume_density_texture,
+            scene.voltextures);
+        // TODO: add displacement scale
+    }
+
+    if (!scene.shapes.empty()) print_value(fs, "\n\nshapes:\n");
+    for (auto& shape : scene.shapes) {
+        print_first(fs, "name", shape.name);
+        print_optional(fs, "filename", shape.filename, def_shape.filename);
+        print_optional(fs, "subdivision_level", shape.subdivision_level,
+            def_shape.subdivision_level);
+        print_optional(
+            fs, "catmull_clark", shape.catmull_clark, def_shape.catmull_clark);
+        print_optional(fs, "compute_normals", shape.compute_normals,
+            def_shape.compute_normals);
+        print_optional(fs, "preserve_facevarying", shape.preserve_facevarying,
+            def_shape.preserve_facevarying);
+    }
+
+    if (!scene.instances.empty()) print_value(fs, "\n\ninstances:\n");
+    for (auto& instance : scene.instances) {
+        print_first(fs, "name", instance.name);
+        print_optional(fs, "frame", instance.frame, def_instance.frame);
+        print_ref(fs, "shape", instance.shape, scene.shapes);
+        print_ref(fs, "material", instance.material, scene.materials);
+    }
+
+    if (!scene.environments.empty()) print_value(fs, "\n\nenvironments:\n");
+    for (auto& environment : scene.environments) {
+        print_first(fs, "name", environment.name);
+        print_optional(fs, "frame", environment.frame, def_environment.frame);
+        print_optional(
+            fs, "emission", environment.emission, def_environment.emission);
+        print_ref(fs, "emission_texture", environment.emission_texture,
+            scene.textures);
+    }
+}
+
+// Save a scene in the builtin YAML format.
+void save_yaml_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     try {
-        // save json
-        auto js               = json::object();
-        js["asset"]           = json::object();
-        js["asset"]["format"] = "Yocto/Scene";
-        js["asset"]["generator"] =
-            "Yocto/GL - https://github.com/xelatihy/yocto-gl";
-        to_json(js, scene, scene);
-        save_json(filename, js);
+        // save yaml file
+        save_yaml(filename, scene);
 
         // save meshes and textures
         auto dirname = get_dirname(filename);
@@ -1311,13 +1006,6 @@ void save_json_scene(const string& filename, const yocto_scene& scene,
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
-}
-
-void print_json_camera(const yocto_camera& camera) {
-    auto scene = yocto_scene{};
-    auto js    = json{};
-    to_json(js, camera, scene);
-    printf("%s\n", js.dump(4).c_str());
 }
 
 }  // namespace yocto
@@ -1396,9 +1084,9 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             }
 
             // create texture
-            auto texture          = yocto_texture{};
-            texture.name          = info.path;
-            texture.filename      = info.path;
+            auto texture     = yocto_texture{};
+            texture.name     = info.path;
+            texture.filename = info.path;
             scene.textures.push_back(texture);
             auto index      = (int)scene.textures.size() - 1;
             tmap[info.path] = index;
@@ -2044,7 +1732,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
     auto add_texture = [&imap](
                            const cgltf_texture_view& ginfo, bool force_linear) {
         if (!ginfo.texture || !ginfo.texture->image) return -1;
-        auto gtxt       = ginfo.texture;
+        auto gtxt = ginfo.texture;
         return imap.at(gtxt->image);
     };
 
@@ -3518,9 +3206,9 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
     // save renderer
     println_values(fs, "Sampler \"random\" \"integer pixelsamples\" [64]");
     // fprintf(f, "Sampler \"sobol\" \"interger pixelsamples\" [64]\n");
-    println_values(fs, "Integrator \"path\"\n");
-    println_values(fs, "Film \"image\" \"string filename\" [\"{}\"] ",
-        replace_extension(filename, "exr"), "\"integer xresolution\" [",
+    println_values(fs, "Integrator \"path\"");
+    println_values(fs, "Film \"image\" \"string filename\" [\"",
+        replace_extension(filename, "exr"), "\"] \"integer xresolution\" [",
         image_size.x, "] \"integer yresolution\" [", image_size.y, "]");
 
     // start world
@@ -3528,27 +3216,30 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
 
     // convert textures
     for (auto& texture : scene.textures) {
-        println_values(fs, "Texture \"", texture.name,
-            "\" \"spectrum\" \"imagemap\" "
-            "\"string filename\" [\"",
-            texture.filename, "\"]");
+        println_values(fs, "Texture \"" + texture.name +
+                               "\" \"spectrum\" \"imagemap\" "
+                               "\"string filename\" [\"" +
+                               texture.filename + "\"]");
     }
 
     // convert materials
     for (auto& material : scene.materials) {
-        println_values(fs, "MakeNamedMaterial \"", material.name, "\" ");
-        println_values(fs, "\"string type\" \"uber\" ");
+        println_values(fs, "MakeNamedMaterial \"" + material.name + "\" ");
+        println_values(fs, "    \"string type\" \"uber\" ");
         if (material.diffuse_texture >= 0)
-            println_values(fs, "\"texture Kd\" [\"",
-                scene.textures[material.diffuse_texture].name, "\"] ");
+            println_values(
+                fs, "    \"texture Kd\" [\"" +
+                        scene.textures[material.diffuse_texture].name + "\"] ");
         else
-            println_values(fs, "\"rgb Kd\" [", material.diffuse, "] ");
+            println_values(fs, "    \"rgb Kd\" [", material.diffuse, "] ");
         if (material.specular_texture >= 0)
-            println_values(fs, "\"texture Ks\" [\"",
-                scene.textures[material.specular_texture].name, "\"] ");
+            println_values(fs,
+                "    \"texture Ks\" [\"" +
+                    scene.textures[material.specular_texture].name + "\"] ");
         else
-            println_values(fs, "\"rgb Ks\" [", material.specular, "] ");
-        println_values(fs, "\"float roughness\" [", material.roughness, "] ");
+            println_values(fs, "    \"rgb Ks\" [", material.specular, "] ");
+        println_values(
+            fs, "    \"float roughness\" [", material.roughness, "] ");
     }
 
     // convert instances
@@ -3556,15 +3247,62 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[instance.material];
         println_values(fs, "AttributeBegin");
-        println_values(fs, "TransformBegin");
-        println_values(fs, "ConcatTransform [", mat4f(instance.frame), "]");
+        println_values(fs, "  TransformBegin");
+        println_values(fs, "    ConcatTransform [", mat4f(instance.frame), "]");
+        println_values(fs, "    NamedMaterial \"" + material.name + "\"");
         if (material.emission != zero3f)
-            println_values(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ ",
+            println_values(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [ ",
                 material.emission, " ]");
-        println_values(fs, "NamedMaterial \"", material.name, "\"");
-        println_values(fs, "Shape \"plymesh\" \"string filename\" [\"",
-            shape.filename, "\"]");
-        println_values(fs, "TransformEnd");
+        if (shape.filename == "") {
+            auto triangles     = shape.triangles;
+            auto positions     = shape.positions;
+            auto normals       = shape.normals;
+            auto texturecoords = shape.texturecoords;
+            if (!shape.quads_positions.empty()) {
+                auto quads = shape.quads;
+                convert_facevarying(quads, positions, normals, texturecoords,
+                    shape.quads_positions, shape.quads_normals,
+                    shape.quads_texturecoords, shape.positions, shape.normals,
+                    shape.texturecoords);
+                convert_quads_to_triangles(triangles, quads);
+            }
+            if (!shape.quads.empty()) {
+                convert_quads_to_triangles(triangles, shape.quads);
+            }
+            print_value(fs, "    Shape \"trianglemesh\" \n");
+            print_value(fs, "        \"point P\" [");
+            for (auto& p : positions) {
+                print_value(fs, p);
+                print_value(fs, ' ');
+            }
+            print_value(fs, " ]\n");
+            if (!normals.empty()) {
+                print_value(fs, "        \"normal N\" [");
+                for (auto& n : normals) {
+                    print_value(fs, n);
+                    print_value(fs, ' ');
+                }
+                print_value(fs, " ]\n");
+            }
+            if (!texturecoords.empty()) {
+                print_value(fs, "        \"float uv\" [");
+                for (auto& t : texturecoords) {
+                    print_value(fs, t);
+                    print_value(fs, ' ');
+                }
+                print_value(fs, " ]\n");
+            }
+            print_value(fs, "        \"integer indices\" [");
+            for (auto& t : triangles) {
+                print_value(fs, t);
+                print_value(fs, ' ');
+            }
+            print_value(fs, " ]\n");
+        } else {
+            println_values(fs, "    Shape \"plymesh\" \"string filename\" [\"" +
+                                   shape.filename + "\"]");
+        }
+        println_values(fs, "  TransformEnd");
         println_values(fs, "AttributeEnd");
     }
 
@@ -3914,6 +3652,108 @@ void save_ybin_scene(const string& filename, const yocto_scene& scene,
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// EXAMPLE SCENES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+void make_cornellbox_scene(yocto_scene& scene) {
+    scene.name             = "cornellbox";
+    auto& camera           = scene.cameras.emplace_back();
+    camera.name            = "cam";
+    camera.frame           = frame3f{{0, 1, 3.9}};
+    camera.focal_length    = 0.035;
+    camera.lens_aperture   = 0.0;
+    camera.film_width      = 0.024;
+    camera.film_height     = 0.024;
+    auto& floor_mat        = scene.materials.emplace_back();
+    floor_mat.name         = "floor";
+    floor_mat.diffuse      = {0.725, 0.71, 0.68};
+    auto& ceiling_mat      = scene.materials.emplace_back();
+    ceiling_mat.name       = "ceiling";
+    ceiling_mat.diffuse    = {0.725, 0.71, 0.68};
+    auto& backwall_mat     = scene.materials.emplace_back();
+    backwall_mat.name      = "backwall";
+    backwall_mat.diffuse   = {0.725, 0.71, 0.68};
+    auto& rightwall_mat    = scene.materials.emplace_back();
+    rightwall_mat.name     = "rightwall";
+    rightwall_mat.diffuse  = {0.14, 0.45, 0.091};
+    auto& leftwall_mat     = scene.materials.emplace_back();
+    leftwall_mat.name      = "leftwall";
+    leftwall_mat.diffuse   = {0.63, 0.065, 0.05};
+    auto& shortbox_mat     = scene.materials.emplace_back();
+    shortbox_mat.name      = "shortbox";
+    shortbox_mat.diffuse   = {0.725, 0.71, 0.68};
+    auto& tallbox_mat      = scene.materials.emplace_back();
+    tallbox_mat.name       = "tallbox";
+    tallbox_mat.diffuse    = {0.725, 0.71, 0.68};
+    auto& light_mat        = scene.materials.emplace_back();
+    light_mat.name         = "light";
+    light_mat.emission     = {17, 12, 4};
+    auto& floor_shp        = scene.shapes.emplace_back();
+    floor_shp.name         = "floor";
+    floor_shp.positions    = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
+    floor_shp.triangles    = {{0, 1, 2}, {2, 3, 0}};
+    auto& ceiling_shp      = scene.shapes.emplace_back();
+    ceiling_shp.name       = "ceiling";
+    ceiling_shp.positions  = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
+    ceiling_shp.triangles  = {{0, 1, 2}, {2, 3, 0}};
+    auto& backwall_shp     = scene.shapes.emplace_back();
+    backwall_shp.name      = "backwall";
+    backwall_shp.positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
+    backwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
+    auto& rightwall_shp    = scene.shapes.emplace_back();
+    rightwall_shp.name     = "rightwall";
+    rightwall_shp.positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
+    rightwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
+    auto& leftwall_shp      = scene.shapes.emplace_back();
+    leftwall_shp.name       = "leftwall";
+    leftwall_shp.positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
+    leftwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
+    auto& shortbox_shp     = scene.shapes.emplace_back();
+    shortbox_shp.name      = "shortbox";
+    shortbox_shp.positions = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
+        {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
+        {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0},
+        {0.53, 0.0, 0.75}, {0.53, 0.6, 0.75}, {-0.05, 0.6, 0.57},
+        {-0.05, 0.0, 0.57}, {0.7, 0.0, 0.17}, {0.7, 0.6, 0.17},
+        {0.53, 0.6, 0.75}, {0.53, 0.0, 0.75}, {0.13, 0.0, 0.0},
+        {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17}, {0.53, 0.0, 0.75},
+        {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0}, {-0.05, 0.0, 0.57}};
+    shortbox_shp.triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+        {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+        {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+    auto& tallbox_shp      = scene.shapes.emplace_back();
+    tallbox_shp.name       = "tallbox";
+    tallbox_shp.positions  = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
+        {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
+        {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
+        {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
+        {-0.14, 0.0, -0.67}, {-0.14, 0.0, -0.67}, {-0.14, 1.2, -0.67},
+        {0.04, 1.2, -0.09}, {0.04, 0.0, -0.09}, {0.04, 0.0, -0.09},
+        {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09}, {-0.53, 0.0, 0.09},
+        {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
+        {-0.71, 0.0, -0.49}};
+    tallbox_shp.triangles  = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+        {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+        {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+    auto& light_shp        = scene.shapes.emplace_back();
+    light_shp.name         = "light";
+    light_shp.positions    = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
+        {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
+    light_shp.triangles    = {{0, 1, 2}, {2, 3, 0}};
+    scene.instances.push_back({"floor", identity_frame3f, 0, 0});
+    scene.instances.push_back({"ceiling", identity_frame3f, 1, 1});
+    scene.instances.push_back({"backwall", identity_frame3f, 2, 2});
+    scene.instances.push_back({"rightwall", identity_frame3f, 3, 3});
+    scene.instances.push_back({"leftwall", identity_frame3f, 4, 4});
+    scene.instances.push_back({"shortbox", identity_frame3f, 5, 5});
+    scene.instances.push_back({"tallbox", identity_frame3f, 6, 6});
+    scene.instances.push_back({"light", identity_frame3f, 7, 7});
 }
 
 }  // namespace yocto

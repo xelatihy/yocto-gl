@@ -54,8 +54,8 @@ int main(int argc, char** argv) {
     // command line parameters
     auto skip_textures  = false;
     auto skip_meshes    = false;
-    auto mesh_filenames = true;
-    auto mesh_directory = "models/"s;
+    auto mesh_filenames = false;
+    auto mesh_directory = "shapes/"s;
     auto uniform_txt    = false;
     auto validate       = false;
     auto print_info     = false;
@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
         mesh_directory += '/';
-    if (mesh_filenames && get_extension(output) == "json") {
+    if (mesh_filenames && get_extension(output) == "yaml") {
         for (auto& shape : scene.shapes) {
             shape.filename = "";
             if (shape.positions.size() <= 16) continue;

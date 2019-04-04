@@ -295,6 +295,10 @@ using vec1b = vec<byte, 1>;
 using vec2b = vec<byte, 2>;
 using vec3b = vec<byte, 3>;
 using vec4b = vec<byte, 4>;
+using vec1d = vec<double, 1>;
+using vec2d = vec<double, 2>;
+using vec3d = vec<double, 3>;
+using vec4d = vec<double, 4>;
 
 // Zero vector constants.
 template <typename T, int N>
@@ -1003,6 +1007,9 @@ struct mat<T, N, 4> {
 using mat2f = mat<float, 2, 2>;
 using mat3f = mat<float, 3, 3>;
 using mat4f = mat<float, 4, 4>;
+using mat2d = mat<double, 2, 2>;
+using mat3d = mat<double, 3, 3>;
+using mat4d = mat<double, 4, 4>;
 
 // Identity matrix
 template <typename T, int N>
@@ -1435,6 +1442,8 @@ struct frame<T, 3> {
 // Typedefs
 using frame2f = frame<float, 2>;
 using frame3f = frame<float, 3>;
+using frame2d = frame<double, 2>;
+using frame3d = frame<double, 3>;
 
 // Indentity frames.
 template <typename T, int N>

@@ -954,8 +954,8 @@ vec4f lookup_texture(
 }
 
 // Evaluate a texture
-vec4f evaluate_texture(
-    const yocto_texture& texture, const vec2f& texcoord, bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
+vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord,
+    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
     if (texture.hdr_image.empty() && texture.ldr_image.empty())
         return {1, 1, 1, 1};
 
@@ -980,7 +980,7 @@ vec4f evaluate_texture(
     auto ii = (i + 1) % width, jj = (j + 1) % height;
     auto u = s - i, v = t - j;
 
-    if(no_interpolation) return lookup_texture(texture, i, j, ldr_as_linear);
+    if (no_interpolation) return lookup_texture(texture, i, j, ldr_as_linear);
 
     // handle interpolation
     return lookup_texture(texture, i, j, ldr_as_linear) * (1 - u) * (1 - v) +
@@ -990,7 +990,8 @@ vec4f evaluate_texture(
 }
 
 // Lookup a texture value
-float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear) {
+float lookup_voltexture(
+    const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear) {
     if (!texture.volume_data.empty()) {
         return texture.volume_data[{i, j, k}];
     } else {
@@ -999,8 +1000,9 @@ float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k, bo
 }
 
 // Evaluate a volume texture
-float evaluate_voltexture(
-    const yocto_voltexture& texture, const vec3f& texcoord, bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
+float evaluate_voltexture(const yocto_voltexture& texture,
+    const vec3f& texcoord, bool ldr_as_linear, bool no_interpolation,
+    bool clamp_to_edge) {
     if (texture.volume_data.empty()) return 1;
 
     // get image width/height
@@ -1029,13 +1031,20 @@ float evaluate_voltexture(
     }
 
     // trilinear interpolation
-    return lookup_voltexture(texture, i, j, k, ldr_as_linear) * (1 - u) * (1 - v) * (1 - w) +
-           lookup_voltexture(texture, ii, j, k, ldr_as_linear) * u * (1 - v) * (1 - w) +
-           lookup_voltexture(texture, i, jj, k, ldr_as_linear) * (1 - u) * v * (1 - w) +
-           lookup_voltexture(texture, i, j, kk, ldr_as_linear) * (1 - u) * (1 - v) * w +
-           lookup_voltexture(texture, i, jj, kk, ldr_as_linear) * (1 - u) * v * w +
-           lookup_voltexture(texture, ii, j, kk, ldr_as_linear) * u * (1 - v) * w +
-           lookup_voltexture(texture, ii, jj, k, ldr_as_linear) * u * v * (1 - w) +
+    return lookup_voltexture(texture, i, j, k, ldr_as_linear) * (1 - u) *
+               (1 - v) * (1 - w) +
+           lookup_voltexture(texture, ii, j, k, ldr_as_linear) * u * (1 - v) *
+               (1 - w) +
+           lookup_voltexture(texture, i, jj, k, ldr_as_linear) * (1 - u) * v *
+               (1 - w) +
+           lookup_voltexture(texture, i, j, kk, ldr_as_linear) * (1 - u) *
+               (1 - v) * w +
+           lookup_voltexture(texture, i, jj, kk, ldr_as_linear) * (1 - u) * v *
+               w +
+           lookup_voltexture(texture, ii, j, kk, ldr_as_linear) * u * (1 - v) *
+               w +
+           lookup_voltexture(texture, ii, jj, k, ldr_as_linear) * u * v *
+               (1 - w) +
            lookup_voltexture(texture, ii, jj, kk, ldr_as_linear) * u * v * w;
 }
 
