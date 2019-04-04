@@ -1459,10 +1459,48 @@ std::tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(
                 volume_density, isec.distance);
             weight /= sample_volume_distance_pdf(density, isec.distance);
 
-            position  = point.position;
-            outgoing  = -direction;
-            direction = sample_next_direction(
-                scene, lights, bvh, point, outgoing, 0.5f, rng, weight);
+            position = point.position;
+            outgoing = -direction;
+            // direction = sample_next_direction(
+            //     scene, lights, bvh, point, outgoing, 0.5f, rng, weight);
+            {
+                auto next_direction     = zero3f;
+                auto next_brdf_cosine   = zero3f;
+                auto next_direction_pdf = 0.0f;
+                if (!is_brdf_delta(point.brdf)) {
+                    if (get_random_float(rng) < 0.5f) {
+                        next_direction = sample_brdf_direction(point.brdf,
+                            point.normal, outgoing, get_random_float(rng),
+                            get_random_vec2f(rng));
+                    } else {
+                        next_direction = sample_lights_direction(scene, lights,
+                            bvh, point.position, get_random_float(rng),
+                            get_random_float(rng), get_random_vec2f(rng));
+                    }
+                    next_brdf_cosine = evaluate_brdf_cosine(
+                        point.brdf, point.normal, outgoing, next_direction);
+                    next_direction_pdf =
+                        0.5f * sample_brdf_direction_pdf(point.brdf,
+                                   point.normal, outgoing, next_direction) +
+                        0.5f * sample_lights_direction_pdf(scene, lights, bvh,
+                                   point.position, next_direction);
+                } else {
+                    next_direction   = sample_delta_brdf_direction(point.brdf,
+                        point.normal, outgoing, get_random_float(rng),
+                        get_random_vec2f(rng));
+                    next_brdf_cosine = evaluate_delta_brdf_cosine(
+                        point.brdf, point.normal, outgoing, next_direction);
+                    next_direction_pdf = sample_delta_brdf_direction_pdf(
+                        point.brdf, point.normal, outgoing, next_direction);
+                }
+
+                // exit if no hit
+                if (next_direction == zero3f || next_direction_pdf == 0 ||
+                    next_brdf_cosine == zero3f)
+                    break;
+
+                direction = next_direction;
+            }
 
             if (dot(direction, point.geometric_normal) > 0 !=
                 dot(outgoing, point.geometric_normal) > 0)
