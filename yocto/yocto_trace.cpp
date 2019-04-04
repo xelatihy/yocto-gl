@@ -1688,18 +1688,34 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (next_direction == zero3f || next_direction_pdf == 0 ||
             next_brdf_cosine == zero3f)
             break;
+        weight *= next_brdf_cosine / next_direction_pdf;
+
+        // transmission
+        if (point.volume_density != zero3f &&
+            dot(next_direction, point.geometric_normal) > 0 !=
+                dot(outgoing, point.geometric_normal) > 0) {
+            auto [pos, dir, rad, w] = integrate_volume(scene, lights, bvh,
+                point.volume_density, point.volume_albedo,
+                point.volume_emission, point.volume_phaseg, point.position,
+                outgoing, next_direction, rng);
+
+            radiance += weight * rad;
+            weight *= w;
+
+            if (weight == zero3f) break;
+            point.position = pos;
+            next_direction = dir;
+        }
 
         // intersect next point
         auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
             next_direction, rng, options.max_bounces);
-        radiance += weight * next_brdf_cosine * next_point.emission /
-                    next_direction_pdf;
+        radiance += weight * next_point.emission;
         if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
 
         // setup next iteration
         point    = next_point;
         outgoing = -next_direction;
-        weight *= next_brdf_cosine / next_direction_pdf;
 
         // russian roulette
         if (sample_russian_roulette(
