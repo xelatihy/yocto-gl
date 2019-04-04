@@ -3790,35 +3790,23 @@ void write_object(output_file& fs, const yocto_texture& texture) {
     write_value(fs, texture.filename);
     write_value(fs, texture.hdr_image);
     write_value(fs, texture.ldr_image);
-    write_value(fs, texture.clamp_to_edge);
-    write_value(fs, false);  // TODO: remove me
-    write_value(fs, 0.0f);   // TODO: remove me
-    write_value(fs, false);  // TODO: remove me
 }
 void read_object(input_file& fs, yocto_texture& texture) {
     read_value(fs, texture.name);
     read_value(fs, texture.filename);
     read_value(fs, texture.hdr_image);
     read_value(fs, texture.ldr_image);
-    read_value(fs, texture.clamp_to_edge);
-    auto _auxb = false;
-    auto _auxf = 0.0f;
-    read_value(fs, _auxb);  // TODO: remove me
-    read_value(fs, _auxf);  // TODO: remove me
-    read_value(fs, _auxb);  // TODO: remove me
 }
 
 void write_object(output_file& fs, const yocto_voltexture& texture) {
     write_value(fs, texture.name);
     write_value(fs, texture.filename);
     write_value(fs, texture.volume_data);
-    write_value(fs, texture.clamp_to_edge);
 }
 void read_object(input_file& fs, yocto_voltexture& texture) {
     read_value(fs, texture.name);
     read_value(fs, texture.filename);
     read_value(fs, texture.volume_data);
-    read_value(fs, texture.clamp_to_edge);
 }
 
 void write_object(output_file& fs, const yocto_environment& environment) {
