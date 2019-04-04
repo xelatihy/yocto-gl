@@ -369,7 +369,7 @@ inline void load_objx(
         auto line = string_view{buffer};
         remove_comment_and_newline(line);
         skip_whitespace(line);
-        if(line.empty()) continue;
+        if (line.empty()) continue;
 
         // get command
         auto cmd = ""s;
@@ -429,7 +429,7 @@ inline void load_obj(
         auto line = string_view{buffer};
         remove_comment_and_newline(line);
         skip_whitespace(line);
-        if(line.empty()) continue;
+        if (line.empty()) continue;
 
         // get command
         auto cmd = ""s;

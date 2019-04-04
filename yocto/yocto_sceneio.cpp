@@ -1339,53 +1339,58 @@ namespace yocto {
 
 struct yaml_value {
     enum struct type_t { none_t, string_t, boolean_t, number_t, array_t };
-    type_t type = type_t::none_t;
+    type_t            type = type_t::none_t;
     string            _string;
-    bool              _boolean   = false;
+    bool              _boolean = false;
     array<double, 16> _numbers;
     int               _size = 0;
 };
 
 inline void get_value(const yaml_value& yml, int& value) {
-    if(yml.type != yaml_value::type_t::number_t) throw io_error("int expected");
+    if (yml.type != yaml_value::type_t::number_t)
+        throw io_error("int expected");
     value = (int)yml._numbers[0];
 }
 
 inline void get_value(const yaml_value& yml, float& value) {
-    if(yml.type != yaml_value::type_t::number_t) throw io_error("number expected");
+    if (yml.type != yaml_value::type_t::number_t)
+        throw io_error("number expected");
     value = (float)yml._numbers[0];
 }
 
 inline void get_value(const yaml_value& yml, bool& value) {
-    if(yml.type != yaml_value::type_t::boolean_t) throw io_error("string expected");
+    if (yml.type != yaml_value::type_t::boolean_t)
+        throw io_error("string expected");
     value = yml._boolean;
 }
 
 inline void get_value(const yaml_value& yml, string& value) {
-    if(yml.type != yaml_value::type_t::string_t) throw io_error("string expected");
+    if (yml.type != yaml_value::type_t::string_t)
+        throw io_error("string expected");
     value = yml._string;
 }
 
-template<typename T, size_t N>
-inline void get_value(const yaml_value& yml, array<T , N>& value)  {
-    if(yml.type != yaml_value::type_t::array_t || yml._size != N) throw io_error("array expected");
-    for(auto i = 0; i < N; i ++) value[i] = (T)yml._numbers[i];
+template <typename T, size_t N>
+inline void get_value(const yaml_value& yml, array<T, N>& value) {
+    if (yml.type != yaml_value::type_t::array_t || yml._size != N)
+        throw io_error("array expected");
+    for (auto i = 0; i < N; i++) value[i] = (T)yml._numbers[i];
 }
 
-template<typename T, int N>
-inline void get_value(const yaml_value& yml, vec<T, N>& value)  {
+template <typename T, int N>
+inline void get_value(const yaml_value& yml, vec<T, N>& value) {
     get_value(yml, (array<T, N>&)value);
-} 
-template<typename T, int N>
-inline void get_value(const yaml_value& yml, frame<T, N>& value)  {
-    get_value(yml, (array<T, N*(N+1)>&)value);
-} 
-template<typename T, int N, int M>
-inline void get_value(const yaml_value& yml, mat<T, N, M>& value)  {
-    get_value(yml, (array<T, N*M>&)value);
-} 
+}
+template <typename T, int N>
+inline void get_value(const yaml_value& yml, frame<T, N>& value) {
+    get_value(yml, (array<T, N*(N + 1)>&)value);
+}
+template <typename T, int N, int M>
+inline void get_value(const yaml_value& yml, mat<T, N, M>& value) {
+    get_value(yml, (array<T, N * M>&)value);
+}
 
-inline bool is_string_value(const yaml_value& yml)  {
+inline bool is_string_value(const yaml_value& yml) {
     return yml.type == yaml_value::type_t::string_t;
 }
 
@@ -1402,7 +1407,7 @@ inline void parse_value(string_view& str, yaml_value& value) {
     if (str.front() == '[') {
         str.remove_prefix(1);
         value._size = 0;
-        while(true) {
+        while (true) {
             skip_whitespace(str);
             parse_value(str, value._numbers[value._size++]);
             skip_whitespace(str);
@@ -1415,7 +1420,7 @@ inline void parse_value(string_view& str, yaml_value& value) {
             } else {
                 throw io_error("cannot parse value");
             }
-            if(value._size >= 16) throw io_error("cannot parse value");
+            if (value._size >= 16) throw io_error("cannot parse value");
         }
         value.type = yaml_value::type_t::array_t;
     } else if (str.front() == '"') {
@@ -1425,18 +1430,18 @@ inline void parse_value(string_view& str, yaml_value& value) {
         parse_value(str, value._string, false);
         value.type = yaml_value::type_t::string_t;
         if (value._string == "true" || value._string == "True") {
-            value._string = {};
-            value._boolean   = true;
-            value.type = yaml_value::type_t::boolean_t;
+            value._string  = {};
+            value._boolean = true;
+            value.type     = yaml_value::type_t::boolean_t;
         } else if (value._string == "false" || value._string == "False") {
-            value._string = {};
-            value._boolean   = false;
-            value.type = yaml_value::type_t::boolean_t;
+            value._string  = {};
+            value._boolean = false;
+            value.type     = yaml_value::type_t::boolean_t;
         }
     } else {
         parse_value(str, value._numbers[0]);
         value._size = 1;
-        value.type = yaml_value::type_t::number_t;
+        value.type  = yaml_value::type_t::number_t;
     }
 }
 
@@ -1447,10 +1452,10 @@ inline void load_yaml(const string& filename, Callbacks& callbacks,
     const load_yaml_options& options) {
     // open file
     auto fs = input_file(filename);
-    
+
     // parsing state
     auto in_objects = false;
-    auto in_object = false;
+    auto in_object  = false;
 
     // read the file line by line
     char buffer[4096];
@@ -1464,7 +1469,7 @@ inline void load_yaml(const string& filename, Callbacks& callbacks,
 
         // peek commands
         if (is_space(line.front())) {
-            if(! in_objects) throw io_error("bad yaml");
+            if (!in_objects) throw io_error("bad yaml");
             // indented property
             skip_whitespace(line);
             if (line.empty()) throw io_error("bad yaml");
@@ -1489,10 +1494,11 @@ inline void load_yaml(const string& filename, Callbacks& callbacks,
             skip_whitespace(line);
             if (line.empty() || line.front() != ':') throw io_error("bad yaml");
             line.remove_prefix(1);
-            if(!line.empty() && !is_whitespace(line)) throw io_error("bad yaml");
+            if (!line.empty() && !is_whitespace(line))
+                throw io_error("bad yaml");
             callbacks.object_group(key);
             in_objects = true;
-            in_object = false;
+            in_object  = false;
         } else {
             throw io_error("bad yaml");
         }
@@ -1519,17 +1525,18 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
             environment
         };
         parsing_type type = parsing_type::none;
-        
-        unordered_map<string, int> tmap = { {"", -1} };
-        unordered_map<string, int> vmap = { {"", -1} };
-        unordered_map<string, int> mmap = { {"", -1} };
-        unordered_map<string, int> smap = { {"", -1} };
+
+        unordered_map<string, int> tmap = {{"", -1}};
+        unordered_map<string, int> vmap = {{"", -1}};
+        unordered_map<string, int> mmap = {{"", -1}};
+        unordered_map<string, int> smap = {{"", -1}};
 
         parse_callbacks(yocto_scene& scene, const load_scene_options& options)
             : scene{scene}, options{options} {}
-        
-        void get_ref(const yaml_value& yml, int& value, const unordered_map<string, int>& refs) const {
-            if(is_string_value(yml)) {
+
+        void get_ref(const yaml_value& yml, int& value,
+            const unordered_map<string, int>& refs) const {
+            if (is_string_value(yml)) {
                 auto name = ""s;
                 get_value(yml, name);
                 value = refs.at(name);
@@ -1681,7 +1688,7 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                     auto& shape = scene.shapes.back();
                     if (key == "name") {
                         get_value(value, shape.name);
-                        smap[shape.name] = (int)scene.shapes.size()-1;
+                        smap[shape.name] = (int)scene.shapes.size() - 1;
                     } else if (key == "filename") {
                         get_value(value, shape.filename);
                     } else if (key == "subdivision_level") {

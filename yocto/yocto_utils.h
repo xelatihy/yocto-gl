@@ -99,9 +99,9 @@
 #include <initializer_list>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
-#include <string_view>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -730,7 +730,7 @@ inline void print_value(const output_file& fs, int value) {
         throw io_error("cannot write to file " + fs.filename);
 }
 inline void print_value(const output_file& fs, bool value, bool alpha = false) {
-    if(alpha) {
+    if (alpha) {
         if (fprintf(fs.file, value ? "true" : "false"))
             throw io_error("cannot write to file " + fs.filename);
     } else {
@@ -775,7 +775,7 @@ inline void print_value(
             print_value(fs, value[i]);
         }
         print_value(fs, " ]");
-    }    
+    }
 }
 template <typename T, int N>
 inline void print_value(
@@ -783,14 +783,14 @@ inline void print_value(
     print_value(fs, (const array<T, N>&)value, in_brackets);
 }
 template <typename T, int N, int M>
-inline void print_value(
-    const output_file& fs, const mat<T, N, M>& value, bool in_brackets = false) {
-    print_value(fs, (const array<T, N*M>&)value, in_brackets);
+inline void print_value(const output_file& fs, const mat<T, N, M>& value,
+    bool in_brackets = false) {
+    print_value(fs, (const array<T, N * M>&)value, in_brackets);
 }
 template <typename T, int N>
 inline void print_value(
     const output_file& fs, const frame<T, N>& value, bool in_brackets = false) {
-    print_value(fs, (const array<T, N*(N+1)>&)value, in_brackets);
+    print_value(fs, (const array<T, N*(N + 1)>&)value, in_brackets);
 }
 
 // print values to file
@@ -815,22 +815,23 @@ namespace yocto {
 
 inline void skip_whitespace(string_view& str) {
     auto pos = str.find_first_not_of(" \t\r\n");
-    if(pos == str.npos) {
+    if (pos == str.npos) {
         str.remove_prefix(str.size());
     } else {
         str.remove_prefix(pos);
     }
 }
-inline void remove_comment_(string_view& str, char comment_char='#') {
+inline void remove_comment_(string_view& str, char comment_char = '#') {
     auto pos = str.find(comment_char);
-    if(pos == str.npos) return;
-    str.remove_suffix(str.length()-pos);
+    if (pos == str.npos) return;
+    str.remove_suffix(str.length() - pos);
 }
-inline void remove_comment_and_newline(string_view& str, char comment_char='#') {
+inline void remove_comment_and_newline(
+    string_view& str, char comment_char = '#') {
     str.remove_suffix(1);
     auto pos = str.find(comment_char);
-    if(pos == str.npos) return;
-    str.remove_suffix(str.length()-pos);
+    if (pos == str.npos) return;
+    str.remove_suffix(str.length() - pos);
 }
 
 // Parse values from a string
@@ -838,7 +839,7 @@ inline void parse_value(string_view& str, int& value) {
     char* end = nullptr;
     value     = (int)strtol(str.data(), &end, 10);
     if (str == end) throw io_error("cannot parse value");
-    str.remove_prefix(end-str.data());
+    str.remove_prefix(end - str.data());
 }
 inline void parse_value(string_view& str, bool& value) {
     auto valuei = 0;
@@ -849,20 +850,20 @@ inline void parse_value(string_view& str, float& value) {
     char* end = nullptr;
     value     = strtof(str.data(), &end);
     if (str == end) throw io_error("cannot parse value");
-    str.remove_prefix(end-str.data());
+    str.remove_prefix(end - str.data());
 }
 inline void parse_value(string_view& str, double& value) {
     char* end = nullptr;
     value     = strtod(str.data(), &end);
     if (str == end) throw io_error("cannot parse value");
-    str.remove_prefix(end-str.data());
+    str.remove_prefix(end - str.data());
 }
 inline void parse_value(string_view& str, string& value, bool quoted = false) {
     skip_whitespace(str);
-    if(str.empty()) throw io_error("cannot parse value");
-    if(!quoted) {
+    if (str.empty()) throw io_error("cannot parse value");
+    if (!quoted) {
         auto pos = str.find_first_of(" \t\r\n");
-        if(pos == str.npos) {
+        if (pos == str.npos) {
             value = str;
             str.remove_prefix(str.length());
         } else {
@@ -870,50 +871,57 @@ inline void parse_value(string_view& str, string& value, bool quoted = false) {
             str.remove_prefix(pos);
         }
     } else {
-        if(str.front() != '"') throw io_error("cannot parse value");
+        if (str.front() != '"') throw io_error("cannot parse value");
         str.remove_prefix(1);
-        if(str.empty()) throw io_error("cannot parse value");
+        if (str.empty()) throw io_error("cannot parse value");
         auto pos = str.find('"');
-        if(pos == str.npos) throw io_error("cannot parse value");
+        if (pos == str.npos) throw io_error("cannot parse value");
         value = str.substr(0, pos);
-        str.remove_prefix(pos+1);
+        str.remove_prefix(pos + 1);
     }
 }
 template <typename T, size_t N>
-inline void parse_value(string_view& str, array<T, N>& value, bool in_brackets = false) {
-    if(!in_brackets) {
+inline void parse_value(
+    string_view& str, array<T, N>& value, bool in_brackets = false) {
+    if (!in_brackets) {
         for (auto i = 0; i < N; i++) parse_value(str, value[i]);
     } else {
         skip_whitespace(str);
-        if(str.empty() || str.front() != '[') throw io_error("cannot parse value");
+        if (str.empty() || str.front() != '[')
+            throw io_error("cannot parse value");
         for (auto i = 0; i < N; i++) {
-            if(i) {
+            if (i) {
                 skip_whitespace(str);
-                if(str.empty() || str.front() != ',') throw io_error("cannot parse value");
+                if (str.empty() || str.front() != ',')
+                    throw io_error("cannot parse value");
             }
             parse_value(str, value[i]);
         }
         skip_whitespace(str);
-        if(str.empty() || str.front() != ']') throw io_error("cannot parse value");
+        if (str.empty() || str.front() != ']')
+            throw io_error("cannot parse value");
     }
 }
 template <typename T, int N>
-inline void parse_value(string_view& str, vec<T, N>& value, bool in_brackets = false) {
+inline void parse_value(
+    string_view& str, vec<T, N>& value, bool in_brackets = false) {
     parse_value(str, (array<T, N>&)value, in_brackets);
 }
 template <typename T, int N>
-inline void parse_value(string_view& str, frame<T, N>& value, bool in_brackets = false) {
-    parse_value(str, (array<T, N*(N+1)>&)value, in_brackets);
+inline void parse_value(
+    string_view& str, frame<T, N>& value, bool in_brackets = false) {
+    parse_value(str, (array<T, N*(N + 1)>&)value, in_brackets);
 }
 template <typename T, int N, int M>
-inline void parse_value(string_view& str, mat<T, N, M>& value, bool in_brackets = false) {
-    parse_value(str, (array<T, N*M>&)value, in_brackets);
+inline void parse_value(
+    string_view& str, mat<T, N, M>& value, bool in_brackets = false) {
+    parse_value(str, (array<T, N * M>&)value, in_brackets);
 }
 
 template <typename T>
 inline void parse_value_or_empty(string_view& str, T& value) {
     skip_whitespace(str);
-    if(str.empty()) {
+    if (str.empty()) {
         value = T{};
     } else {
         parse_value(str, value);
@@ -923,18 +931,22 @@ inline void parse_value_or_empty(string_view& str, T& value) {
 inline bool is_whitespace(const string_view& str) {
     return str.find_first_not_of(" \t\r\n") == str.npos;
 }
-inline bool is_space(char c) { return c == ' ' || c == '\t'|| c == '\r'|| c == '\n'; }
-inline bool is_alpha(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
+inline bool is_space(char c) {
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+inline bool is_alpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
 inline bool is_digit(char c) { return c >= 0 && c <= 9; }
 
 inline void parse_varname(string_view& str, string& value) {
     skip_whitespace(str);
-    if(str.empty()) throw io_error("cannot parse value");
-    if(!is_alpha(str.front())) throw io_error("cannot parse value");
+    if (str.empty()) throw io_error("cannot parse value");
+    if (!is_alpha(str.front())) throw io_error("cannot parse value");
     auto pos = 0;
-    while(is_alpha(str[pos]) || str[pos] == '_' || is_digit(str[pos])) {
+    while (is_alpha(str[pos]) || str[pos] == '_' || is_digit(str[pos])) {
         pos += 1;
-        if(pos >= str.size()) break;
+        if (pos >= str.size()) break;
     }
     value = str.substr(0, pos);
     str.remove_prefix(pos);

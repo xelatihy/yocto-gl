@@ -26,11 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_obj.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
-#include "../yocto/yocto_utils.h"
-#include "../yocto/yocto_obj.h"
 #include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_utils.h"
 using namespace yocto;
 
 #include "ext/CLI11.hpp"
@@ -870,7 +870,8 @@ void load_disney_island_elements(const string& filename, yocto_scene& scene,
     }
 }
 
-void load_scene_textures(yocto_scene& scene, const string& dirname, const load_scene_options& options);
+void load_scene_textures(yocto_scene& scene, const string& dirname,
+    const load_scene_options& options);
 
 void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
     const load_scene_options& options) {

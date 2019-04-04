@@ -103,18 +103,18 @@ struct yocto_camera {
 // conversion can be disabled with `ldr_as_linear` for example to render
 // normal maps.
 struct yocto_texture {
-    string       name          = "";
-    string       filename      = "";
-    image<vec4f> hdr_image     = {};
-    image<vec4b> ldr_image     = {};
+    string       name      = "";
+    string       filename  = "";
+    image<vec4f> hdr_image = {};
+    image<vec4b> ldr_image = {};
 };
 
 // Volumetric texture containing a float only volume data. See texture
 // above for other propoerties.
 struct yocto_voltexture {
-    string        name             = "";
-    string        filename         = "";
-    volume<float> volume_data      = {};
+    string        name        = "";
+    string        filename    = "";
+    volume<float> volume_data = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -375,10 +375,13 @@ vec2i evaluate_texture_size(const yocto_texture& texture);
 vec4f lookup_texture(
     const yocto_texture& texture, int i, int j, bool ldr_as_linear = false);
 vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord,
-    bool ldr_as_linear = false, bool no_interpolation = false, bool clamp_to_edge = false);
-float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear);
-float evaluate_voltexture(
-    const yocto_voltexture& texture, const vec3f& texcoord, bool ldr_as_linear = false, bool no_interpolation = false, bool clamp_to_edge = false);
+    bool ldr_as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
+float lookup_voltexture(
+    const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear);
+float evaluate_voltexture(const yocto_voltexture& texture,
+    const vec3f& texcoord, bool ldr_as_linear = false,
+    bool no_interpolation = false, bool clamp_to_edge = false);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float get_camera_fovx(const yocto_camera& camera);
