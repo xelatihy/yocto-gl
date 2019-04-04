@@ -111,6 +111,7 @@ def make_tests():
             },
             {
                 "name": "test-bump-normal",
+                # "filename": "textures/test-bump-normal.ypreset"
                 "filename": "textures/bump-normal.png",
                 "!!proc": { "type": "bump", "bump_to_normal": true, "bump_scale": 0.05 }
             },

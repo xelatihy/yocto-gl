@@ -1688,7 +1688,7 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
     } else if (type == "bump-normal") {
         auto bump = image<vec<float, 4>>{};
         make_bumpdimple_image(bump, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
-        bump_to_normal_map(img, bump);
+        bump_to_normal_map(img, bump, 0.05f);
     } else if (type == "logo-render") {
         make_logo_image(img, "logo-render");
     } else if (type == "images1") {
