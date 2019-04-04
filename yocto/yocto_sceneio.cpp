@@ -37,7 +37,6 @@
 #define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
 #include "ext/json.hpp"
-#include "ext/sajson.h"
 
 #include <array>
 #include <climits>
@@ -580,8 +579,6 @@ void to_json(json& js, const yocto_texture& value, const yocto_scene& scene) {
     js                    = json::object_t{};
     if (value.name != def.name) js["name"] = value.name;
     if (value.filename != def.filename) js["filename"] = value.filename;
-    if (value.clamp_to_edge != def.clamp_to_edge)
-        js["clamp_to_edge"] = value.clamp_to_edge;
     if (value.filename == "") {
         if (value.hdr_image != def.hdr_image) js["hdr_image"] = value.hdr_image;
         if (value.ldr_image != def.ldr_image) js["ldr_image"] = value.ldr_image;
@@ -591,7 +588,6 @@ void from_json(const json& js, yocto_texture& value, yocto_scene& scene) {
     static const auto def = yocto_texture();
     value.name            = js.value("name", def.name);
     value.filename        = js.value("filename", def.filename);
-    value.clamp_to_edge   = js.value("clamp_to_edge", def.clamp_to_edge);
     value.hdr_image       = js.value("hdr_image", def.hdr_image);
     value.ldr_image       = js.value("ldr_image", def.ldr_image);
 }
@@ -627,10 +623,6 @@ void to_json(
     js                    = json::object_t{};
     if (value.name != def.name) js["name"] = value.name;
     if (value.filename != def.filename) js["filename"] = value.filename;
-    if (value.clamp_to_edge != def.clamp_to_edge)
-        js["clamp_to_edge"] = value.clamp_to_edge;
-    if (value.no_interpolation != def.no_interpolation)
-        js["no_interpolation"] = value.no_interpolation;
     if (value.filename == "") {
         if (value.volume_data != def.volume_data)
             js["volume_data"] = value.volume_data;
@@ -640,8 +632,6 @@ void from_json(const json& js, yocto_voltexture& value, yocto_scene& scene) {
     static const auto def  = yocto_voltexture();
     value.name             = js.value("name", def.name);
     value.filename         = js.value("filename", def.filename);
-    value.clamp_to_edge    = js.value("clamp_to_edge", def.clamp_to_edge);
-    value.no_interpolation = js.value("no_interpolation", def.no_interpolation);
     value.volume_data      = js.value("volume_data", def.volume_data);
 }
 
@@ -1409,7 +1399,6 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             auto texture          = yocto_texture{};
             texture.name          = info.path;
             texture.filename      = info.path;
-            texture.clamp_to_edge = info.clamp;
             scene.textures.push_back(texture);
             auto index      = (int)scene.textures.size() - 1;
             tmap[info.path] = index;
@@ -2052,16 +2041,11 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
     }
 
     // add a texture
-    auto add_texture = [&scene, &imap](
+    auto add_texture = [&imap](
                            const cgltf_texture_view& ginfo, bool force_linear) {
         if (!ginfo.texture || !ginfo.texture->image) return -1;
         auto gtxt       = ginfo.texture;
-        auto texture_id = imap.at(gtxt->image);
-        if (!gtxt->sampler) return texture_id;
-        auto gsmp = gtxt->sampler;
-        scene.textures[texture_id].clamp_to_edge =
-            gsmp->wrap_s == 33071 || gsmp->wrap_t == 33071;  // clamp to edge
-        return texture_id;
+        return imap.at(gtxt->image);
     };
 
     // convert materials

@@ -373,7 +373,7 @@ float            sample_shape_element_pdf(const yocto_shape& shape,
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture& texture);
 vec4f lookup_texture(
-    const yocto_texture& texture, int i, int j, bool ldr_as_linear = false, bool no_interpolation = false, bool clamp_to_edge = false);
+    const yocto_texture& texture, int i, int j, bool ldr_as_linear = false);
 vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord,
     bool ldr_as_linear = false, bool no_interpolation = false, bool clamp_to_edge = false);
 float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear);
