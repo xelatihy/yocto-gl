@@ -1418,19 +1418,18 @@ vec3f sample_next_direction_volume(const yocto_scene& scene,
     return next_direction;
 }
 
-std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh,
+std::tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(
+    const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
     const vec3f volume_density, const vec3f& volume_albedo,
-    const vec3f& volume_emission, float volume_phaseg, rng_state& rng,
-    const vec3f& position_, const vec3f& outgoing_, const vec3f& direction_,
-    vec3f& weight_, vec3f& radiance_) {
+    const vec3f& volume_emission, float volume_phaseg, const vec3f& position_,
+    const vec3f& outgoing_, const vec3f& direction_, rng_state& rng) {
     // Integrate weight while random walking inside the volume until exit.
-    auto position = position_;
+    auto position  = position_;
     auto direction = direction_;
-    auto outgoing = outgoing_;
-    auto weight = vec3f{1,1,1};
-    auto radiance = zero3f;
-    
+    auto outgoing  = outgoing_;
+    auto weight    = vec3f{1, 1, 1};
+    auto radiance  = zero3f;
+
     // auto direction = next_direction_;
 
     auto      spectrum          = get_random_int(rng, 3);
@@ -1449,8 +1448,8 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
             break;
         }
 
-        auto point = make_trace_point(scene, isec.instance_id,
-            isec.element_id, isec.element_uv, direction);
+        auto point = make_trace_point(scene, isec.instance_id, isec.element_id,
+            isec.element_uv, direction);
 
         if (isec.distance < distance) {
             // intersection with surface of volume
@@ -1460,8 +1459,8 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
                 volume_density, isec.distance);
             weight /= sample_volume_distance_pdf(density, isec.distance);
 
-            position       = point.position;
-            outgoing       = -direction;
+            position  = point.position;
+            outgoing  = -direction;
             direction = sample_next_direction(
                 scene, lights, bvh, point, outgoing, 0.5f, rng, weight);
 
@@ -1477,11 +1476,11 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
         weight /= sample_volume_distance_pdf(density, distance);
         weight *= evaluate_volume_transmission(volume_density, distance);
 
-        if (get_random_float(rng) < albedo) {
+        if (get_random_float(rng) < min(albedo, 0.95f)) {
             // scattering
-            weight /= albedo;
+            weight /= min(albedo, 0.95f);
 
-            outgoing       = -direction;
+            outgoing  = -direction;
             direction = sample_next_direction_volume(scene, lights, bvh,
                 position, volume_albedo, volume_phaseg, outgoing, 0.5f, rng,
                 weight);
@@ -1500,10 +1499,8 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
             break;
         }
     }
-    radiance_ += weight_ * radiance;
-    weight_ *= weight;
-    
-    return {position, direction};
+
+    return {position, direction, radiance, weight};
 }
 
 // Iterative volumetric path tracing.
@@ -1536,11 +1533,15 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // transmission
         if (dot(next_direction, point.geometric_normal) > 0 !=
             dot(outgoing, point.geometric_normal) > 0) {
-            auto [pos, dir] = integrate_volume(scene, lights, bvh,
+            auto [pos, dir, rad, w] = integrate_volume(scene, lights, bvh,
                 point.volume_density, point.volume_albedo,
-                point.volume_emission, point.volume_phaseg, rng, point.position,
-                outgoing, next_direction, weight, radiance);
-            if (weight == zero3f) return {radiance, true};
+                point.volume_emission, point.volume_phaseg, point.position,
+                outgoing, next_direction, rng);
+
+            radiance += weight * rad;
+            weight *= w;
+
+            if (weight == zero3f) break;
             point.position = pos;
             next_direction = dir;
         }
