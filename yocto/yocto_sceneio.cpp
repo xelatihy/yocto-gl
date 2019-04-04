@@ -4130,9 +4130,9 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
     // save renderer
     println_values(fs, "Sampler \"random\" \"integer pixelsamples\" [64]");
     // fprintf(f, "Sampler \"sobol\" \"interger pixelsamples\" [64]\n");
-    println_values(fs, "Integrator \"path\"\n");
-    println_values(fs, "Film \"image\" \"string filename\" [\"{}\"] ",
-        replace_extension(filename, "exr"), "\"integer xresolution\" [",
+    println_values(fs, "Integrator \"path\"");
+    println_values(fs, "Film \"image\" \"string filename\" [\"",
+        replace_extension(filename, "exr"), "\"] \"integer xresolution\" [",
         image_size.x, "] \"integer yresolution\" [", image_size.y, "]");
 
     // start world
@@ -4140,27 +4140,30 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
 
     // convert textures
     for (auto& texture : scene.textures) {
-        println_values(fs, "Texture \"", texture.name,
-            "\" \"spectrum\" \"imagemap\" "
-            "\"string filename\" [\"",
-            texture.filename, "\"]");
+        println_values(fs, "Texture \"" + texture.name +
+                               "\" \"spectrum\" \"imagemap\" "
+                               "\"string filename\" [\"" +
+                               texture.filename + "\"]");
     }
 
     // convert materials
     for (auto& material : scene.materials) {
-        println_values(fs, "MakeNamedMaterial \"", material.name, "\" ");
-        println_values(fs, "\"string type\" \"uber\" ");
+        println_values(fs, "MakeNamedMaterial \"" + material.name + "\" ");
+        println_values(fs, "    \"string type\" \"uber\" ");
         if (material.diffuse_texture >= 0)
-            println_values(fs, "\"texture Kd\" [\"",
-                scene.textures[material.diffuse_texture].name, "\"] ");
+            println_values(
+                fs, "    \"texture Kd\" [\"" +
+                        scene.textures[material.diffuse_texture].name + "\"] ");
         else
-            println_values(fs, "\"rgb Kd\" [", material.diffuse, "] ");
+            println_values(fs, "    \"rgb Kd\" [", material.diffuse, "] ");
         if (material.specular_texture >= 0)
-            println_values(fs, "\"texture Ks\" [\"",
-                scene.textures[material.specular_texture].name, "\"] ");
+            println_values(fs,
+                "    \"texture Ks\" [\"" +
+                    scene.textures[material.specular_texture].name + "\"] ");
         else
-            println_values(fs, "\"rgb Ks\" [", material.specular, "] ");
-        println_values(fs, "\"float roughness\" [", material.roughness, "] ");
+            println_values(fs, "    \"rgb Ks\" [", material.specular, "] ");
+        println_values(
+            fs, "    \"float roughness\" [", material.roughness, "] ");
     }
 
     // convert instances
@@ -4168,15 +4171,62 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[instance.material];
         println_values(fs, "AttributeBegin");
-        println_values(fs, "TransformBegin");
-        println_values(fs, "ConcatTransform [", mat4f(instance.frame), "]");
+        println_values(fs, "  TransformBegin");
+        println_values(fs, "    ConcatTransform [", mat4f(instance.frame), "]");
+        println_values(fs, "    NamedMaterial \"" + material.name + "\"");
         if (material.emission != zero3f)
-            println_values(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ ",
+            println_values(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [ ",
                 material.emission, " ]");
-        println_values(fs, "NamedMaterial \"", material.name, "\"");
-        println_values(fs, "Shape \"plymesh\" \"string filename\" [\"",
-            shape.filename, "\"]");
-        println_values(fs, "TransformEnd");
+        if (shape.filename == "") {
+            auto triangles     = shape.triangles;
+            auto positions     = shape.positions;
+            auto normals       = shape.normals;
+            auto texturecoords = shape.texturecoords;
+            if (!shape.quads_positions.empty()) {
+                auto quads = shape.quads;
+                convert_facevarying(quads, positions, normals, texturecoords,
+                    shape.quads_positions, shape.quads_normals,
+                    shape.quads_texturecoords, shape.positions, shape.normals,
+                    shape.texturecoords);
+                convert_quads_to_triangles(triangles, quads);
+            }
+            if (!shape.quads.empty()) {
+                convert_quads_to_triangles(triangles, shape.quads);
+            }
+            print_value(fs, "    Shape \"trianglemesh\" \n");
+            print_value(fs, "        \"point P\" [");
+            for (auto& p : positions) {
+                print_value(fs, p);
+                print_value(fs, ' ');
+            }
+            print_value(fs, " ]\n");
+            if (!normals.empty()) {
+                print_value(fs, "        \"normal N\" [");
+                for (auto& n : normals) {
+                    print_value(fs, n);
+                    print_value(fs, ' ');
+                }
+                print_value(fs, " ]\n");
+            }
+            if (!texturecoords.empty()) {
+                print_value(fs, "        \"float uv\" [");
+                for (auto& t : texturecoords) {
+                    print_value(fs, t);
+                    print_value(fs, ' ');
+                }
+                print_value(fs, " ]\n");
+            }
+            print_value(fs, "        \"integer indices\" [");
+            for (auto& t : triangles) {
+                print_value(fs, t);
+                print_value(fs, ' ');
+            }
+            print_value(fs, " ]\n");
+        } else {
+            println_values(fs, "    Shape \"plymesh\" \"string filename\" [\"" +
+                                   shape.filename + "\"]");
+        }
+        println_values(fs, "  TransformEnd");
         println_values(fs, "AttributeEnd");
     }
 

@@ -196,8 +196,16 @@ foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json")
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # obj output
-foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json")
+foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json" "cornellbox1.json" "cornellbox2.json")
     set(format "obj")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME yscnproc-${format}-${filename}
+            COMMAND ${test-yscnproc} ${testdir}/${filename} ${outdir}/${format}/${name} ${outdir}/${format}/${name}/${name}.${format} ${outdir}/yscnproc-${format}-${name}.png ${resdir}/yscnproc-${format}-${name}.png ${diffdir}/yscnproc-${format}-${name}.png "-t path -s 8 -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+# pbrt output
+foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json" "cornellbox1.json" "cornellbox2.json")
+    set(format "pbrt")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yscnproc-${format}-${filename}
             COMMAND ${test-yscnproc} ${testdir}/${filename} ${outdir}/${format}/${name} ${outdir}/${format}/${name}/${name}.${format} ${outdir}/yscnproc-${format}-${name}.png ${resdir}/yscnproc-${format}-${name}.png ${diffdir}/yscnproc-${format}-${name}.png "-t path -s 8 -r 360"
