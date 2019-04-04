@@ -1452,7 +1452,7 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
             if (is_brdf_zero(next_point.brdf)) break;
 
             weight *= evaluate_volume_transmission(
-                point.volume_density, isec.distance);
+                volume_density, isec.distance);
             weight /= sample_volume_distance_pdf(density, isec.distance);
 
             point          = next_point;
@@ -1470,7 +1470,7 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
         // medium interaction inside volume
         point.position += next_direction * distance;
         weight /= sample_volume_distance_pdf(density, distance);
-        weight *= evaluate_volume_transmission(point.volume_density, distance);
+        weight *= evaluate_volume_transmission(volume_density, distance);
 
         if (get_random_float(rng) < albedo) {
             // scattering
@@ -1478,7 +1478,7 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
 
             outgoing       = -next_direction;
             next_direction = sample_next_direction_volume(scene, lights, bvh,
-                point.position, point.volume_albedo, volume_phaseg, outgoing,
+                point.position, volume_albedo, volume_phaseg, outgoing,
                 0.5f, rng, weight);
 
             // russian roulette
