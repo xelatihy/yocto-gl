@@ -1422,10 +1422,10 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
     const vec3f volume_density, const vec3f& volume_albedo,
     const vec3f& volume_emission, float volume_phaseg, rng_state& rng,
-    trace_point& point, vec3f& outgoing, vec3f& next_direction, vec3f& weight,
-    vec3f& radiance) {
+    const vec3f& position_, vec3f& outgoing, vec3f& next_direction,
+    vec3f& weight, vec3f& radiance) {
     // Integrate weight while random walking inside the volume until exit.
-
+    auto position = position_;
     // auto direction = next_direction_;
 
     auto      spectrum          = get_random_int(rng, 3);
@@ -1439,7 +1439,7 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
 
         auto isec = bvh_intersection{};
         if (!intersect_scene_bvh(
-                scene, bvh, make_ray(point.position, next_direction), isec)) {
+                scene, bvh, make_ray(position, next_direction), isec)) {
             weight = zero3f;
             break;
         }
@@ -1455,20 +1455,20 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
                 volume_density, isec.distance);
             weight /= sample_volume_distance_pdf(density, isec.distance);
 
-            point          = next_point;
+            position       = next_point.position;
             outgoing       = -next_direction;
             next_direction = sample_next_direction(
-                scene, lights, bvh, point, outgoing, 0.5f, rng, weight);
+                scene, lights, bvh, next_point, outgoing, 0.5f, rng, weight);
 
-            if (dot(next_direction, point.geometric_normal) > 0 !=
-                dot(outgoing, point.geometric_normal) > 0)
+            if (dot(next_direction, next_point.geometric_normal) > 0 !=
+                dot(outgoing, next_point.geometric_normal) > 0)
                 break;  // exit from volume
             else
                 continue;  // internal reflection
         }
 
         // medium interaction inside volume
-        point.position += next_direction * distance;
+        position += next_direction * distance;
         weight /= sample_volume_distance_pdf(density, distance);
         weight *= evaluate_volume_transmission(volume_density, distance);
 
@@ -1478,8 +1478,8 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
 
             outgoing       = -next_direction;
             next_direction = sample_next_direction_volume(scene, lights, bvh,
-                point.position, volume_albedo, volume_phaseg, outgoing,
-                0.5f, rng, weight);
+                position, volume_albedo, volume_phaseg, outgoing, 0.5f, rng,
+                weight);
 
             // russian roulette
             if (sample_russian_roulette(
@@ -1495,7 +1495,7 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
             break;
         }
     }
-    return {point.position, next_direction};
+    return {position, next_direction};
 }
 
 // Iterative volumetric path tracing.
@@ -1530,7 +1530,7 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             dot(outgoing, point.geometric_normal) > 0) {
             auto [pos, dir] = integrate_volume(scene, lights, bvh,
                 point.volume_density, point.volume_albedo,
-                point.volume_emission, point.volume_phaseg, rng, point,
+                point.volume_emission, point.volume_phaseg, rng, point.position,
                 outgoing, next_direction, weight, radiance);
             if (weight == zero3f) return {radiance, true};
             point.position = pos;
