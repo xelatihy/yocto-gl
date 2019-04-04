@@ -1422,10 +1422,15 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
     const vec3f volume_density, const vec3f& volume_albedo,
     const vec3f& volume_emission, float volume_phaseg, rng_state& rng,
-    const vec3f& position_, vec3f& outgoing, vec3f& next_direction,
-    vec3f& weight, vec3f& radiance) {
+    const vec3f& position_, const vec3f& outgoing_, const vec3f& direction_,
+    vec3f& weight_, vec3f& radiance_) {
     // Integrate weight while random walking inside the volume until exit.
     auto position = position_;
+    auto direction = direction_;
+    auto outgoing = outgoing_;
+    auto weight = vec3f{1,1,1};
+    auto radiance = zero3f;
+    
     // auto direction = next_direction_;
 
     auto      spectrum          = get_random_int(rng, 3);
@@ -1439,36 +1444,36 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
 
         auto isec = bvh_intersection{};
         if (!intersect_scene_bvh(
-                scene, bvh, make_ray(position, next_direction), isec)) {
+                scene, bvh, make_ray(position, direction), isec)) {
             weight = zero3f;
             break;
         }
 
-        auto next_point = make_trace_point(scene, isec.instance_id,
-            isec.element_id, isec.element_uv, next_direction);
+        auto point = make_trace_point(scene, isec.instance_id,
+            isec.element_id, isec.element_uv, direction);
 
         if (isec.distance < distance) {
             // intersection with surface of volume
-            if (is_brdf_zero(next_point.brdf)) break;
+            if (is_brdf_zero(point.brdf)) break;
 
             weight *= evaluate_volume_transmission(
                 volume_density, isec.distance);
             weight /= sample_volume_distance_pdf(density, isec.distance);
 
-            position       = next_point.position;
-            outgoing       = -next_direction;
-            next_direction = sample_next_direction(
-                scene, lights, bvh, next_point, outgoing, 0.5f, rng, weight);
+            position       = point.position;
+            outgoing       = -direction;
+            direction = sample_next_direction(
+                scene, lights, bvh, point, outgoing, 0.5f, rng, weight);
 
-            if (dot(next_direction, next_point.geometric_normal) > 0 !=
-                dot(outgoing, next_point.geometric_normal) > 0)
+            if (dot(direction, point.geometric_normal) > 0 !=
+                dot(outgoing, point.geometric_normal) > 0)
                 break;  // exit from volume
             else
                 continue;  // internal reflection
         }
 
         // medium interaction inside volume
-        position += next_direction * distance;
+        position += direction * distance;
         weight /= sample_volume_distance_pdf(density, distance);
         weight *= evaluate_volume_transmission(volume_density, distance);
 
@@ -1476,8 +1481,8 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
             // scattering
             weight /= albedo;
 
-            outgoing       = -next_direction;
-            next_direction = sample_next_direction_volume(scene, lights, bvh,
+            outgoing       = -direction;
+            direction = sample_next_direction_volume(scene, lights, bvh,
                 position, volume_albedo, volume_phaseg, outgoing, 0.5f, rng,
                 weight);
 
@@ -1495,7 +1500,10 @@ std::tuple<vec3f, vec3f> integrate_volume(const yocto_scene& scene,
             break;
         }
     }
-    return {position, next_direction};
+    radiance_ += weight_ * radiance;
+    weight_ *= weight;
+    
+    return {position, direction};
 }
 
 // Iterative volumetric path tracing.
