@@ -442,6 +442,7 @@ vector<int> refs_from_json(const json& js, const vector<T>& refs) {
     return values;
 }
 
+#if 0
 // Procedural commands for cameras
 void from_json_procedural(
     const json& js, yocto_camera& value, yocto_scene& scene) {
@@ -453,6 +454,7 @@ void from_json_procedural(
         value.focus_distance = length(from - to);
     }
 }
+#endif
 
 // Serialize struct
 void to_json(json& js, const yocto_camera& value, const yocto_scene& scene) {
@@ -482,9 +484,9 @@ void from_json(const json& js, yocto_camera& value, yocto_scene& scene) {
     value.focal_length    = js.value("focal_length", def.focal_length);
     value.focus_distance  = js.value("focus_distance", def.focus_distance);
     value.lens_aperture   = js.value("lens_aperture", def.lens_aperture);
-    if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
+#if 0
 // Procedural commands for textures
 void from_json_procedural(
     const json& js, yocto_texture& value, yocto_scene& scene) {
@@ -576,6 +578,7 @@ void from_json_procedural(
         value.filename = "textures/" + value.name + "." + ext;
     }
 }
+#endif
 
 // Serialize struct
 void to_json(json& js, const yocto_texture& value, const yocto_scene& scene) {
@@ -597,9 +600,9 @@ void from_json(const json& js, yocto_texture& value, yocto_scene& scene) {
     value.clamp_to_edge   = js.value("clamp_to_edge", def.clamp_to_edge);
     value.hdr_image       = js.value("hdr_image", def.hdr_image);
     value.ldr_image       = js.value("ldr_image", def.ldr_image);
-    if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
+#if 0
 // Procedural commands for textures
 void from_json_procedural(
     const json& js, yocto_voltexture& value, yocto_scene& scene) {
@@ -621,6 +624,7 @@ void from_json_procedural(
         value.filename = "textures/" + value.name + "." + ext;
     }
 }
+#endif
 
 // Serialize struct
 void to_json(
@@ -645,12 +649,13 @@ void from_json(const json& js, yocto_voltexture& value, yocto_scene& scene) {
     value.clamp_to_edge    = js.value("clamp_to_edge", def.clamp_to_edge);
     value.no_interpolation = js.value("no_interpolation", def.no_interpolation);
     value.volume_data      = js.value("volume_data", def.volume_data);
-    if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
+#if 0
 // Procedural commands for materials
 void from_json_procedural(
     const json& js, yocto_material& value, yocto_scene& scene) {}
+#endif
 
 // Serialize struct
 void to_json(json& js, const yocto_material& value, const yocto_scene& scene) {
@@ -740,9 +745,9 @@ void from_json(const json& js, yocto_material& value, yocto_scene& scene) {
         js.value("volume_density_texture", json{}), scene.voltextures);
     value.displacement_scale = js.value(
         "displacement_scale", def.displacement_scale);
-    if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
+#if 0
 // Procedural commands for materials
 void from_json_procedural(
     const json& js, yocto_shape& value, yocto_scene& scene) {
@@ -915,6 +920,7 @@ void from_json_procedural(
         align_vertices(value.positions, {0, 1, 0});
     }
 }
+#endif
 
 // Serialize struct
 void to_json(json& js, const yocto_shape& value, const yocto_scene& scene) {
@@ -975,9 +981,9 @@ void from_json(const json& js, yocto_shape& value, yocto_scene& scene) {
     value.colors        = js.value("colors", def.colors);
     value.radius        = js.value("radius", def.radius);
     value.tangentspaces = js.value("tangentspaces", def.tangentspaces);
-    if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
+#if 0
 // Procedural commands for instances
 void from_json_procedural(
     const json& js, yocto_instance& value, yocto_scene& scene) {
@@ -996,6 +1002,7 @@ void from_json_procedural(
                       make_rotation_frame(rotation.xyz, rotation.w);
     }
 }
+#endif
 
 // Serialize struct
 void to_json(json& js, const yocto_instance& value, const yocto_scene& scene) {
@@ -1015,9 +1022,9 @@ void from_json(const json& js, yocto_instance& value, yocto_scene& scene) {
     value.shape    = ref_from_json(js.value("shape", json{}), scene.shapes);
     value.material = ref_from_json(
         js.value("material", json{}), scene.materials);
-    if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
+#if 0
 // Procedural commands for materials
 void from_json_procedural(
     const json& js, yocto_environment& value, yocto_scene& scene) {
@@ -1026,6 +1033,7 @@ void from_json_procedural(
         value.frame   = make_rotation_frame(rotation.xyz, rotation.w);
     }
 }
+#endif
 
 // Serialize struct
 void to_json(
@@ -1046,9 +1054,9 @@ void from_json(const json& js, yocto_environment& value, yocto_scene& scene) {
     value.emission         = js.value("emission", def.emission);
     value.emission_texture = ref_from_json(
         js.value("emission_texture", json{}), scene.textures);
-    if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
+#if 0
 // Procedural commands for nodes
 void from_json_procedural(
     const json& js, yocto_scene_node& value, yocto_scene& scene) {
@@ -1059,6 +1067,7 @@ void from_json_procedural(
         value.local = make_lookat_frame(from, to, up, true);
     }
 }
+#endif
 
 // Serialize struct
 void to_json(
@@ -1095,7 +1104,6 @@ void from_json(const json& js, yocto_scene_node& value, yocto_scene& scene) {
         js.value("instance", json{}), scene.instances);
     value.environment = ref_from_json(
         js.value("environment", json{}), scene.environments);
-    if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
 // Serialize enum
@@ -1116,6 +1124,7 @@ void from_json(const json& js, yocto_interpolation_type& value) {
     value = (yocto_interpolation_type)names.at(js.get<string>());
 }
 
+#if 0
 // Procedural commands for animations
 void from_json_procedural(
     const json& js, yocto_animation& value, yocto_scene& scene) {
@@ -1126,6 +1135,7 @@ void from_json_procedural(
         }
     }
 }
+#endif
 
 // Serialize struct
 void to_json(json& js, const yocto_animation& value, const yocto_scene& scene) {
@@ -1165,9 +1175,9 @@ void from_json(const json& js, yocto_animation& value, yocto_scene& scene) {
     value.scale_keyframes = js.value("scale_keyframes", def.scale_keyframes);
     value.node_targets    = refs_from_json(
         js.value("node_targets", vector<string>{}), scene.nodes);
-    if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
+#if 0
 // Procedural commands for scenes
 void from_json_procedural(
     const json& js, yocto_scene& value, yocto_scene& scene) {
@@ -1201,6 +1211,7 @@ void from_json_procedural(
         }
     }
 }
+#endif
 
 // serialize array of structs
 template <typename T>
@@ -1258,7 +1269,6 @@ void from_json(const json& js, yocto_scene& value, yocto_scene& scene) {
     if (js.count("nodes")) from_json(js.at("nodes"), value.nodes, scene);
     if (js.count("animations"))
         from_json(js.at("animations"), value.animations, scene);
-    if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
 // Load a scene in the builtin JSON format.

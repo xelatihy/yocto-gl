@@ -30,6 +30,30 @@ def format():
         with open(filename, 'r') as f: js = json.load(f, object_pairs_hook=OrderedDict)
         with open(filename, 'w') as f: json.dump(js, f, indent=4)
 
+def distance(eye, center):
+    def length(a):
+        from math import sqrt
+        return sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
+    return length([eye[0] - center[0], eye[1] - center[1], eye[2] - center[2]])
+
+def lookat(eye, center, up, flipped=False):
+    def length(a):
+        from math import sqrt
+        return sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
+    def normalize(a):
+        l = length(a)
+        return [ a[0] / l, a[1] / l, a[2] / l ]
+    def cross(a, b):
+        return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+
+    w = normalize([eye[0] - center[0], eye[1] - center[1], eye[2] - center[2]])
+    u = normalize(cross(up, w))
+    v = normalize(cross(w, u))
+    if flipped:
+        w = [-w[0], -w[1], -w[2] ]
+        u = [-u[0], -u[1], -u[2] ]
+    return [ u[0], u[1], u[2], v[0], v[1], v[2], w[0], w[1], w[2], eye[0], eye[1], eye[2] ]
+
 @cli.command()
 def make_tests():
     true = True   # to cut and paste from json
@@ -43,7 +67,8 @@ def make_tests():
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
                 "film_height": 0.015,
-                "!!proc": { "from": [-0.75, 0.4, 0.9], "to": [-0.075, 0.05, -0.05] }
+                "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
+                "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
                 "name": "front",
@@ -51,7 +76,8 @@ def make_tests():
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
                 "film_height": 0.012,
-                "!!proc": { "from": [0, 0.575, 0.14], "to": [0, 0.05, 0] }
+                "focus_distance": distance([0, 0.575, 0.14], [0, 0.05, 0]),
+                "frame": lookat([0, 0.575, 1.4], [0, 0.05, 0], [0,1,0])
             },
             {
                 "name": "back",
@@ -59,7 +85,8 @@ def make_tests():
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
                 "film_height": 0.012,
-                "!!proc": { "from": [0, 0.575, -0.14], "to": [0, 0.05, 0] }
+                "focus_distance": distance([0, 0.575, -0.14], [0, 0.05, 0]),
+                "frame": lookat([0, 0.575, -1.4], [0, 0.05, 0], [0,1,0])
             },
             {
                 "name": "perspective-sharp",
@@ -67,33 +94,37 @@ def make_tests():
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
                 "film_height": 0.015,
-                "!!proc": { "from": [-0.75, 0.4, 0.9], "to": [-0.075, 0.05, -0.05] }
+                "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
+                "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
                 "name": "perspective-dof",
                 "focal_length": 0.05,
-                "lens_aperture": 0.25,
+                "lens_aperture": 0.025,
                 "film_width": 0.036,
                 "film_height": 0.015,
-                "!!proc": { "from": [-0.75, 0.4, 0.9], "to": [-0.075, 0.05, -0.05] }
+                "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
+                "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
                 "name": "orthographic-sharp",
-                "focal_length": 0.005,
+                "focal_length": 0.05,
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
                 "film_height": 0.015,
                 "orthographic": true,
-                "!!proc": { "from": [-0.75, 0.4, 0.9], "to": [-0.075, 0.05, -0.05] }
+                "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
+                "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
                 "name": "orthographic-dof",
-                "focal_length": 0.005,
-                "lens_aperture": 0.2,
+                "focal_length": 0.05,
+                "lens_aperture": 0.02,
                 "film_width": 0.036,
                 "film_height": 0.015,
                 "orthographic": true,
-                "!!proc": { "from": [-0.75, 0.4, 0.9], "to": [-0.075, 0.05, -0.05] }
+                "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
+                "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
         ],
         "textures": [
@@ -111,9 +142,7 @@ def make_tests():
             },
             {
                 "name": "test-bump-normal",
-                # "filename": "textures/test-bump-normal.png.ypreset"
-                "filename": "textures/bump-normal.png",
-                "!!proc": { "type": "bump", "bump_to_normal": true, "bump_scale": 0.05 }
+                "filename": "textures/test-bump-normal.png.ypreset"
             },
             {
                 "name": "test-fbm-displacement",
@@ -303,17 +332,14 @@ def make_tests():
             {
                 "name": "test-hairball1",
                 "filename": "models/test-hairball1.ply.ypreset"
-                # "!!proc": { "type": "hairball", "size": 0.15, "noise": [ 0.03, 100 ] }
             },
             {
                 "name": "test-hairball2",
                 "filename": "models/test-hairball2.ply.ypreset"
-                # "!!proc": { "type": "hairball", "size": 0.15 }
             },
             {
                 "name": "test-hairball3",
                 "filename": "models/test-hairball3.ply.ypreset"
-                # "!!proc": { "type": "hairball",  "size": 0.15, "clump": [ 0.5, 128 ] }
             },
             {
                 "name": "test-hairball-interior",
@@ -345,13 +371,13 @@ def make_tests():
                 "name": "test-arealight1",
                 "shape": "test-arealight1",
                 "material": "test-arealight1",
-                "!!proc": { "from": [ -0.4, 0.8, 0.8 ], "to": [ 0, 0.1, 0 ] }
+                "frame": lookat([ -0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             },
             {
                 "name": "test-arealight2",
                 "shape": "test-arealight2",
                 "material": "test-arealight2",
-                "!!proc": { "from": [ 0.4, 0.8, 0.8 ], "to": [ 0, 0.1, 0 ] }
+                "frame": lookat([ 0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             }
         ],
         "environments": []
@@ -362,13 +388,13 @@ def make_tests():
                 "name": "test-arealight1",
                 "shape": "test-arealight1",
                 "material": "test-arealight1",
-                "!!proc": { "from": [ -0.4, 0.8, 0.8 ], "to": [ 0, 0.1, 0 ] }
+                "frame": lookat([ -0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             },
             {
                 "name": "test-arealight2",
                 "shape": "test-arealight2",
                 "material": "test-arealight2",
-                "!!proc": { "from": [ 0.4, 0.8, 0.8 ], "to": [ 0, 0.1, 0 ] }
+                "frame": lookat([ 0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             }
         ],
         "environments": [
