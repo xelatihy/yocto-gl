@@ -463,7 +463,7 @@ def make_tests():
                 for environment in scene['environments']:
                     if environment['emission_texture'] == texture['name']: used = True
                 if used: scene['textures'] += [texture] 
-        with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
+        # with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
         def write_yaml_objects(f, name):
             if name not in scene: return
             if not scene[name]: return

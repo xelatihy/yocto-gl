@@ -138,7 +138,7 @@ foreach(name "images1" "images2")
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # eyelight
-foreach(filename "features1.yaml" "cornellbox1.obj" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "eyelight")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -146,7 +146,7 @@ foreach(filename "features1.yaml" "cornellbox1.obj" "materials1.yaml" "materials
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # path
-foreach(filename "features1.yaml" "cornellbox1.obj" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -154,7 +154,7 @@ foreach(filename "features1.yaml" "cornellbox1.obj" "materials1.yaml" "materials
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # volpath
-foreach(filename "features1.yaml" "cornellbox1.obj" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "volpath")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -162,7 +162,7 @@ foreach(filename "features1.yaml" "cornellbox1.obj" "materials1.yaml" "materials
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # volnaive
-foreach(filename "features1.yaml" "cornellbox1.obj" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "volnaive")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -170,7 +170,7 @@ foreach(filename "features1.yaml" "cornellbox1.obj" "materials1.yaml" "materials
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # naive
-foreach(filename "features1.yaml" "cornellbox1.obj" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "naive")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -179,7 +179,7 @@ foreach(filename "features1.yaml" "cornellbox1.obj" "materials1.yaml" "materials
 endforeach()
 if(YOCTO_EMBREE)
 # embree
-foreach(filename "features1.yaml" "cornellbox1.obj" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-embree-${tracer}-${filename}
