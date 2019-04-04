@@ -5,7 +5,7 @@
 // We make no attempt to provide a simple interface for pbrt but just the
 // low level parsing code.
 //
-// Error reporting is done through exceptions using the `pbrtio_error`
+// Error reporting is done through exceptions using the `io_error`
 // exception.
 //
 // ## Parse an pbrt file
@@ -750,12 +750,6 @@ template <typename Callbacks>
 inline void load_pbrt(const string& filename, Callbacks& cb,
     const load_pbrt_options& options = {});
 
-// objio error
-struct pbrtio_error : runtime_error {
-    explicit pbrtio_error(const char* msg) : runtime_error{msg} {}
-    explicit pbrtio_error(const std::string& msg) : runtime_error{msg} {}
-};
-
 }  // namespace yocto
 
 // ---------------------------------------------------------------------------//
@@ -805,12 +799,12 @@ static inline void parse_value(pbrt_token_stream& stream, string& value) {
     skip_whitespace_or_comment(stream);
     auto& str = stream.str;
     if (str.front() != '"') {
-        throw pbrtio_error("bad string");
+        throw io_error("bad string");
     }
     str.remove_prefix(1);
     auto pos = str.find('"');
     if (pos == string_view::npos) {
-        throw pbrtio_error("bad string");
+        throw io_error("bad string");
     }
     value.assign(str.substr(0, pos));
     str.remove_prefix(pos + 1);
@@ -821,7 +815,7 @@ static inline void parse_command(pbrt_token_stream& stream, string& value) {
     skip_whitespace_or_comment(stream);
     auto& str = stream.str;
     if (!std::isalpha((int)str.front())) {
-        throw pbrtio_error("bad command");
+        throw io_error("bad command");
     }
     auto pos = str.find_first_not_of(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
@@ -838,10 +832,10 @@ static inline void parse_command(pbrt_token_stream& stream, string& value) {
 static inline void parse_value(pbrt_token_stream& stream, float& value) {
     skip_whitespace_or_comment(stream);
     auto& str = stream.str;
-    if (str.empty()) throw pbrtio_error("number expected");
+    if (str.empty()) throw io_error("number expected");
     auto next = (char*)nullptr;
     value     = strtof(str.data(), &next);
-    if (str.data() == next) throw pbrtio_error("number expected");
+    if (str.data() == next) throw io_error("number expected");
     str.remove_prefix(next - str.data());
 }
 
@@ -849,10 +843,10 @@ static inline void parse_value(pbrt_token_stream& stream, float& value) {
 static inline void parse_value(pbrt_token_stream& stream, int& value) {
     skip_whitespace_or_comment(stream);
     auto& str = stream.str;
-    if (str.empty()) throw pbrtio_error("number expected");
+    if (str.empty()) throw io_error("number expected");
     auto next = (char*)nullptr;
     value     = strtol(str.data(), &next, 10);
-    if (str.data() == next) throw pbrtio_error("number expected");
+    if (str.data() == next) throw io_error("number expected");
     str.remove_prefix(next - str.data());
 }
 static inline void parse_value(pbrt_token_stream& stream, bool& value) {
@@ -863,7 +857,7 @@ static inline void parse_value(pbrt_token_stream& stream, bool& value) {
     } else if (value_name == "false") {
         value = false;
     } else {
-        throw pbrtio_error("expected boolean");
+        throw io_error("expected boolean");
     }
 }
 template <typename T>
@@ -874,7 +868,7 @@ static inline void parse_value(pbrt_token_stream& stream, T& value,
     try {
         value = value_names.at(value_name);
     } catch (std::out_of_range&) {
-        throw pbrtio_error("expected enum value");
+        throw io_error("expected enum value");
     }
 }
 static inline void parse_value(
@@ -1034,25 +1028,25 @@ static inline void parse_nametype(
     auto str  = string_view{value};
     auto pos1 = str.find(' ');
     if (pos1 == string_view::npos) {
-        throw pbrtio_error("bad type " + value);
+        throw io_error("bad type " + value);
     }
     type = string(str.substr(0, pos1));
     str.remove_prefix(pos1);
     auto pos2 = str.find_first_not_of(' ');
     if (pos2 == string_view::npos) {
-        throw pbrtio_error("bad type " + value);
+        throw io_error("bad type " + value);
     }
     str.remove_prefix(pos2);
     name = string(str);
 }
 
 static inline void skip_open_bracket(pbrt_token_stream& stream) {
-    if (!is_open_bracket(stream)) throw pbrtio_error("expected bracket");
+    if (!is_open_bracket(stream)) throw io_error("expected bracket");
     stream.str.remove_prefix(1);
     skip_whitespace_or_comment(stream);
 }
 static inline void skip_close_bracket(pbrt_token_stream& stream) {
-    if (!is_close_bracket(stream)) throw pbrtio_error("expected bracket");
+    if (!is_close_bracket(stream)) throw io_error("expected bracket");
     stream.str.remove_prefix(1);
     skip_whitespace_or_comment(stream);
 }
@@ -1111,7 +1105,7 @@ template <typename T>
 static inline void parse_param(
     pbrt_token_stream& stream, const string& type, T& value) {
     if (!is_type_compatible<T>(type)) {
-        throw pbrtio_error("incompatible type " + type);
+        throw io_error("incompatible type " + type);
     }
     parse_param(stream, value);
 }
@@ -1238,10 +1232,10 @@ static inline void parse_param(
                              .second;
                 value = {k.x, k.y, k.z};
             } else {
-                throw pbrtio_error("unknown spectrum file " + filename);
+                throw io_error("unknown spectrum file " + filename);
             }
         } else {
-            throw pbrtio_error("unsupported spectrum format");
+            throw io_error("unsupported spectrum format");
             // value = {1, 0, 0};
         }
     } else if (type == "spectrum" && !is_string(stream)) {
@@ -1250,7 +1244,7 @@ static inline void parse_param(
         parse_param(stream, values);
         value = {1, 0, 0};
     } else {
-        throw pbrtio_error("unsupported spectrum type");
+        throw io_error("unsupported spectrum type");
     }
 }
 
@@ -1258,7 +1252,7 @@ template <typename T>
 static inline void parse_param(
     pbrt_token_stream& stream, const string& type, vector<T>& value) {
     if (!is_type_compatible<T>(type)) {
-        throw pbrtio_error("incompatible type " + type);
+        throw io_error("incompatible type " + type);
     }
     parse_param(stream, value);
 }
@@ -1353,7 +1347,7 @@ static inline void parse_pbrt_accelerator(
             } else if (pname == "splitmethod") {
                 parse_param(stream, ptype, tvalue.splitmethod);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1372,12 +1366,12 @@ static inline void parse_pbrt_accelerator(
             } else if (pname == "maxdepth") {
                 parse_param(stream, ptype, tvalue.maxdepth);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown Accelerator " + type);
+        throw io_error("unknown Accelerator " + type);
     }
 }
 
@@ -1398,7 +1392,7 @@ static inline void parse_pbrt_integrator(
             } else if (pname == "lightsamplestrategy") {
                 parse_param(stream, ptype, tvalue.lightsamplestrategy);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
             // parse_optional_param(stream, "lightsamplestrategy",
             // tvalue.lightsamplestrategy); // TODO: enums
@@ -1417,7 +1411,7 @@ static inline void parse_pbrt_integrator(
             } else if (pname == "lightsamplestrategy") {
                 parse_param(stream, ptype, tvalue.lightsamplestrategy);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1432,7 +1426,7 @@ static inline void parse_pbrt_integrator(
             } else if (pname == "strategy") {
                 parse_param(stream, ptype, tvalue.strategy);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1451,7 +1445,7 @@ static inline void parse_pbrt_integrator(
             } else if (pname == "visualizeweights") {
                 parse_param(stream, ptype, tvalue.visualizeweights);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1474,7 +1468,7 @@ static inline void parse_pbrt_integrator(
             } else if (pname == "sigma") {
                 parse_param(stream, ptype, tvalue.sigma);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1497,7 +1491,7 @@ static inline void parse_pbrt_integrator(
             } else if (pname == "radius") {
                 parse_param(stream, ptype, tvalue.radius);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1510,12 +1504,12 @@ static inline void parse_pbrt_integrator(
             } else if (pname == "pixelbounds") {
                 parse_param(stream, ptype, tvalue.pixelbounds);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown Integrator " + type);
+        throw io_error("unknown Integrator " + type);
     }
 }
 
@@ -1530,7 +1524,7 @@ static inline void parse_pbrt_sampler(
             if (pname == "pixelsamples") {
                 parse_param(stream, ptype, tvalue.pixelsamples);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1541,7 +1535,7 @@ static inline void parse_pbrt_sampler(
             if (pname == "pixelsamples") {
                 parse_param(stream, ptype, tvalue.pixelsamples);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1552,7 +1546,7 @@ static inline void parse_pbrt_sampler(
             if (pname == "pixelsamples") {
                 parse_param(stream, ptype, tvalue.pixelsamples);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1563,7 +1557,7 @@ static inline void parse_pbrt_sampler(
             if (pname == "pixelsamples") {
                 parse_param(stream, ptype, tvalue.pixelsamples);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1574,7 +1568,7 @@ static inline void parse_pbrt_sampler(
             if (pname == "pixelsamples") {
                 parse_param(stream, ptype, tvalue.pixelsamples);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1585,7 +1579,7 @@ static inline void parse_pbrt_sampler(
             if (pname == "pixelsamples") {
                 parse_param(stream, ptype, tvalue.pixelsamples);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1600,12 +1594,12 @@ static inline void parse_pbrt_sampler(
             } else if (pname == "jitter") {
                 parse_param(stream, ptype, tvalue.jitter);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown Sampler " + type);
+        throw io_error("unknown Sampler " + type);
     }
 }
 
@@ -1622,7 +1616,7 @@ static inline void parse_pbrt_filter(
             } else if (pname == "ywidth") {
                 parse_param(stream, ptype, tvalue.ywidth);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1637,7 +1631,7 @@ static inline void parse_pbrt_filter(
             } else if (pname == "alpha") {
                 parse_param(stream, ptype, tvalue.alpha);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1654,7 +1648,7 @@ static inline void parse_pbrt_filter(
             } else if (pname == "C") {
                 parse_param(stream, ptype, tvalue.C);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1669,7 +1663,7 @@ static inline void parse_pbrt_filter(
             } else if (pname == "tau") {
                 parse_param(stream, ptype, tvalue.tau);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1682,12 +1676,12 @@ static inline void parse_pbrt_filter(
             } else if (pname == "ywidth") {
                 parse_param(stream, ptype, tvalue.ywidth);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown PixelFilter " + type);
+        throw io_error("unknown PixelFilter " + type);
     }
 }
 
@@ -1716,12 +1710,12 @@ static inline void parse_pbrt_film(
             } else if (pname == "filename") {
                 parse_param(stream, ptype, tvalue.filename);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown Film " + type);
+        throw io_error("unknown Film " + type);
     }
 }
 
@@ -1748,7 +1742,7 @@ static inline void parse_pbrt_camera(
             } else if (pname == "shutterclose") {
                 parse_param(stream, ptype, tvalue.shutterclose);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1769,7 +1763,7 @@ static inline void parse_pbrt_camera(
             } else if (pname == "shutterclose") {
                 parse_param(stream, ptype, tvalue.shutterclose);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1782,7 +1776,7 @@ static inline void parse_pbrt_camera(
             } else if (pname == "shutterclose") {
                 parse_param(stream, ptype, tvalue.shutterclose);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1809,12 +1803,12 @@ static inline void parse_pbrt_camera(
             } else if (pname == "shutterclose") {
                 parse_param(stream, ptype, tvalue.shutterclose);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown Film " + type);
+        throw io_error("unknown Film " + type);
     }
 }
 
@@ -1829,7 +1823,7 @@ static inline void parse_pbrt_texture(
             if (pname == "value") {
                 parse_param(stream, ptype, tvalue.value);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1860,7 +1854,7 @@ static inline void parse_pbrt_texture(
             } else if (pname == "v2") {
                 parse_param(stream, ptype, tvalue.v2);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1891,7 +1885,7 @@ static inline void parse_pbrt_texture(
             } else if (pname == "v2") {
                 parse_param(stream, ptype, tvalue.v2);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1918,7 +1912,7 @@ static inline void parse_pbrt_texture(
             } else if (pname == "v2") {
                 parse_param(stream, ptype, tvalue.v2);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1953,7 +1947,7 @@ static inline void parse_pbrt_texture(
             } else if (pname == "v2") {
                 parse_param(stream, ptype, tvalue.v2);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1968,7 +1962,7 @@ static inline void parse_pbrt_texture(
             } else if (pname == "amount") {
                 parse_param(stream, ptype, tvalue.amount);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1981,7 +1975,7 @@ static inline void parse_pbrt_texture(
             } else if (pname == "tex2") {
                 parse_param(stream, ptype, tvalue.tex2);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -1994,7 +1988,7 @@ static inline void parse_pbrt_texture(
             } else if (pname == "roughness") {
                 parse_param(stream, ptype, tvalue.roughness);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2007,7 +2001,7 @@ static inline void parse_pbrt_texture(
             } else if (pname == "roughness") {
                 parse_param(stream, ptype, tvalue.roughness);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2018,7 +2012,7 @@ static inline void parse_pbrt_texture(
             if (pname == "") {
                 // TODO: missing params
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2035,7 +2029,7 @@ static inline void parse_pbrt_texture(
             } else if (pname == "variation") {
                 parse_param(stream, ptype, tvalue.variation);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2058,12 +2052,12 @@ static inline void parse_pbrt_texture(
             } else if (pname == "v2") {
                 parse_param(stream, ptype, tvalue.v2);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown Texture " + type);
+        throw io_error("unknown Texture " + type);
     }
 }
 
@@ -2119,7 +2113,7 @@ pbrt_approximate_fourier_material(const string& filename) {
         metal.vroughness = 0.2f;
         return metal;
     } else {
-        throw pbrtio_error("unknown pbrt bsdf filename " + filename);
+        throw io_error("unknown pbrt bsdf filename " + filename);
     }
 }
 
@@ -2228,7 +2222,7 @@ static inline void parse_typeparam(pbrt_token_stream& stream, string& value) {
             skip_param(stream);
         }
     }
-    if (value == "") throw pbrtio_error("type not found");
+    if (value == "") throw io_error("type not found");
     restore_stream_position(stream);
 }
 
@@ -2249,9 +2243,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2266,9 +2260,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2296,9 +2290,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2328,9 +2322,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2362,9 +2356,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2396,9 +2390,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2436,9 +2430,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2490,9 +2484,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2523,9 +2517,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2561,9 +2555,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2582,9 +2576,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2601,9 +2595,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2633,9 +2627,9 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2680,14 +2674,14 @@ static inline void parse_pbrt_material(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown Material " + type);
+        throw io_error("unknown Material " + type);
     }
 }
 
@@ -2716,7 +2710,7 @@ static inline void parse_pbrt_shape(
             } else if (pname == "shadowalpha") {
                 parse_param(stream, ptype, tvalue.shadowalpha);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2735,7 +2729,7 @@ static inline void parse_pbrt_shape(
                 auto value = false;
                 parse_param(stream, ptype, value);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2765,7 +2759,7 @@ static inline void parse_pbrt_shape(
             } else if (pname == "splitdepth") {
                 parse_param(stream, ptype, tvalue.splitdepth);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2782,7 +2776,7 @@ static inline void parse_pbrt_shape(
             } else if (pname == "nlevels") {
                 parse_param(stream, ptype, tvalue.levels);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2811,7 +2805,7 @@ static inline void parse_pbrt_shape(
             } else if (pname == "Pw") {
                 parse_param(stream, ptype, tvalue.Pw);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2828,7 +2822,7 @@ static inline void parse_pbrt_shape(
             } else if (pname == "phimax") {
                 parse_param(stream, ptype, tvalue.phimax);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2845,7 +2839,7 @@ static inline void parse_pbrt_shape(
             } else if (pname == "phimax") {
                 parse_param(stream, ptype, tvalue.phimax);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2860,7 +2854,7 @@ static inline void parse_pbrt_shape(
             } else if (pname == "phimax") {
                 parse_param(stream, ptype, tvalue.phimax);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2877,7 +2871,7 @@ static inline void parse_pbrt_shape(
             } else if (pname == "phimax") {
                 parse_param(stream, ptype, tvalue.phimax);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2892,7 +2886,7 @@ static inline void parse_pbrt_shape(
             } else if (pname == "phimax") {
                 parse_param(stream, ptype, tvalue.phimax);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2909,7 +2903,7 @@ static inline void parse_pbrt_shape(
             } else if (pname == "phimax") {
                 parse_param(stream, ptype, tvalue.phimax);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2924,12 +2918,12 @@ static inline void parse_pbrt_shape(
             } else if (pname == "Pz") {
                 parse_param(stream, ptype, tvalue.Pz);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown Shape " + type);
+        throw io_error("unknown Shape " + type);
     }
 }
 
@@ -2952,12 +2946,12 @@ static inline void parse_pbrt_arealight(
             } else if (pname == "nsamples") {
                 parse_param(stream, ptype, tvalue.samples);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown Film " + type);
+        throw io_error("unknown Film " + type);
     }
 }
 
@@ -2978,7 +2972,7 @@ static inline void parse_pbrt_light(
             } else if (pname == "to") {
                 parse_param(stream, ptype, tvalue.to);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -2993,7 +2987,7 @@ static inline void parse_pbrt_light(
             } else if (pname == "mapname") {
                 parse_param(stream, ptype, tvalue.mapname);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -3012,7 +3006,7 @@ static inline void parse_pbrt_light(
             } else if (pname == "mapname") {
                 parse_param(stream, ptype, tvalue.mapname);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -3027,7 +3021,7 @@ static inline void parse_pbrt_light(
             } else if (pname == "from") {
                 parse_param(stream, ptype, tvalue.from);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -3044,7 +3038,7 @@ static inline void parse_pbrt_light(
             } else if (pname == "mapname") {
                 parse_param(stream, ptype, tvalue.mapname);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -3065,7 +3059,7 @@ static inline void parse_pbrt_light(
             } else if (pname == "conedeltaangle") {
                 parse_param(stream, ptype, tvalue.conedeltaangle);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -3080,12 +3074,12 @@ static inline void parse_pbrt_light(
             } else if (pname == "from") {
                 parse_param(stream, ptype, tvalue.from);
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown LightSource " + type);
+        throw io_error("unknown LightSource " + type);
     }
 }
 
@@ -3110,9 +3104,9 @@ static inline void parse_pbrt_medium(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
@@ -3143,14 +3137,14 @@ static inline void parse_pbrt_medium(
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
-                if (ttype != type) throw pbrtio_error("inconsistent types");
+                if (ttype != type) throw io_error("inconsistent types");
             } else {
-                throw pbrtio_error("unknown parameter " + pname);
+                throw io_error("unknown parameter " + pname);
             }
         }
         value = tvalue;
     } else {
-        throw pbrtio_error("unknown Medium " + type);
+        throw io_error("unknown Medium " + type);
     }
 }
 
@@ -3188,7 +3182,7 @@ inline void load_pbrt(
             stack.push_back({});
         } else if (cmd == "WorldEnd") {
             stack.pop_back();
-            if (stack.size() != 1) throw pbrtio_error("bad stack");
+            if (stack.size() != 1) throw io_error("bad stack");
         } else if (cmd == "AttributeBegin") {
             stack.push_back(stack.back());
         } else if (cmd == "AttributeEnd") {
@@ -3222,7 +3216,7 @@ inline void load_pbrt(
                 stack.back().active_transform_start = true;
                 stack.back().active_transform_end   = true;
             } else {
-                throw pbrtio_error("bad active transform");
+                throw io_error("bad active transform");
             }
         } else if (cmd == "Transform") {
             auto xf = identity_mat4f;
@@ -3380,7 +3374,7 @@ inline void load_pbrt(
             parse_value(stream, inputname);
             load_token_stream(get_dirname(filename) + inputname, streams);
         } else {
-            throw pbrtio_error("unknown command " + cmd);
+            throw io_error("unknown command " + cmd);
         }
         // go to next file if needed
         skip_whitespace_or_comment_to_next_file(streams);

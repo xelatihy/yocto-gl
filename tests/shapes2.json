@@ -7,18 +7,21 @@
             "lens_aperture": 0.0,
             "film_width": 0.036,
             "film_height": 0.015,
-            "!!proc": {
-                "from": [
-                    -0.75,
-                    0.4,
-                    0.9
-                ],
-                "to": [
-                    -0.075,
-                    0.05,
-                    -0.05
-                ]
-            }
+            "focus_distance": 1.216809352363796,
+            "frame": [
+                0.8151804082662738,
+                -0.0,
+                0.5792071321891945,
+                0.16660169144197134,
+                0.9577393531836079,
+                -0.23447645462203376,
+                -0.5547294641422116,
+                0.2876374999255912,
+                0.7807303569408904,
+                -0.75,
+                0.4,
+                0.9
+            ]
         },
         {
             "name": "front",
@@ -26,18 +29,21 @@
             "lens_aperture": 0.0,
             "film_width": 0.036,
             "film_height": 0.012,
-            "!!proc": {
-                "from": [
-                    0,
-                    0.575,
-                    0.14
-                ],
-                "to": [
-                    0,
-                    0.05,
-                    0
-                ]
-            }
+            "focus_distance": 0.5433461143691007,
+            "frame": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.9363291775690445,
+                -0.3511234415883917,
+                0.0,
+                0.35112344158839165,
+                0.9363291775690444,
+                0,
+                0.575,
+                1.4
+            ]
         },
         {
             "name": "back",
@@ -45,18 +51,21 @@
             "lens_aperture": 0.0,
             "film_width": 0.036,
             "film_height": 0.012,
-            "!!proc": {
-                "from": [
-                    0,
-                    0.575,
-                    -0.14
-                ],
-                "to": [
-                    0,
-                    0.05,
-                    0
-                ]
-            }
+            "focus_distance": 0.5433461143691007,
+            "frame": [
+                -1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.9363291775690445,
+                0.3511234415883917,
+                0.0,
+                0.35112344158839165,
+                -0.9363291775690444,
+                0,
+                0.575,
+                -1.4
+            ]
         },
         {
             "name": "perspective-sharp",
@@ -64,117 +73,117 @@
             "lens_aperture": 0.0,
             "film_width": 0.036,
             "film_height": 0.015,
-            "!!proc": {
-                "from": [
-                    -0.75,
-                    0.4,
-                    0.9
-                ],
-                "to": [
-                    -0.075,
-                    0.05,
-                    -0.05
-                ]
-            }
+            "focus_distance": 1.216809352363796,
+            "frame": [
+                0.8151804082662738,
+                -0.0,
+                0.5792071321891945,
+                0.16660169144197134,
+                0.9577393531836079,
+                -0.23447645462203376,
+                -0.5547294641422116,
+                0.2876374999255912,
+                0.7807303569408904,
+                -0.75,
+                0.4,
+                0.9
+            ]
         },
         {
             "name": "perspective-dof",
             "focal_length": 0.05,
-            "lens_aperture": 0.25,
+            "lens_aperture": 0.025,
             "film_width": 0.036,
             "film_height": 0.015,
-            "!!proc": {
-                "from": [
-                    -0.75,
-                    0.4,
-                    0.9
-                ],
-                "to": [
-                    -0.075,
-                    0.05,
-                    -0.05
-                ]
-            }
+            "focus_distance": 1.216809352363796,
+            "frame": [
+                0.8151804082662738,
+                -0.0,
+                0.5792071321891945,
+                0.16660169144197134,
+                0.9577393531836079,
+                -0.23447645462203376,
+                -0.5547294641422116,
+                0.2876374999255912,
+                0.7807303569408904,
+                -0.75,
+                0.4,
+                0.9
+            ]
         },
         {
             "name": "orthographic-sharp",
-            "focal_length": 0.005,
+            "focal_length": 0.05,
             "lens_aperture": 0.0,
             "film_width": 0.036,
             "film_height": 0.015,
             "orthographic": true,
-            "!!proc": {
-                "from": [
-                    -0.75,
-                    0.4,
-                    0.9
-                ],
-                "to": [
-                    -0.075,
-                    0.05,
-                    -0.05
-                ]
-            }
+            "focus_distance": 1.216809352363796,
+            "frame": [
+                0.8151804082662738,
+                -0.0,
+                0.5792071321891945,
+                0.16660169144197134,
+                0.9577393531836079,
+                -0.23447645462203376,
+                -0.5547294641422116,
+                0.2876374999255912,
+                0.7807303569408904,
+                -0.75,
+                0.4,
+                0.9
+            ]
         },
         {
             "name": "orthographic-dof",
-            "focal_length": 0.005,
-            "lens_aperture": 0.2,
+            "focal_length": 0.05,
+            "lens_aperture": 0.02,
             "film_width": 0.036,
             "film_height": 0.015,
             "orthographic": true,
-            "!!proc": {
-                "from": [
-                    -0.75,
-                    0.4,
-                    0.9
-                ],
-                "to": [
-                    -0.075,
-                    0.05,
-                    -0.05
-                ]
-            }
+            "focus_distance": 1.216809352363796,
+            "frame": [
+                0.8151804082662738,
+                -0.0,
+                0.5792071321891945,
+                0.16660169144197134,
+                0.9577393531836079,
+                -0.23447645462203376,
+                -0.5547294641422116,
+                0.2876374999255912,
+                0.7807303569408904,
+                -0.75,
+                0.4,
+                0.9
+            ]
         }
     ],
     "textures": [
         {
-            "name": "floor",
-            "filename": "textures/floor.png",
-            "gamma": 2.2,
-            "!!proc": {
-                "type": "grid",
-                "border": true
-            }
+            "name": "test-floor",
+            "filename": "textures/test-floor.png.ypreset"
         },
         {
-            "name": "uvgrid",
-            "filename": "textures/uvgrid.png",
-            "gamma": 2.2,
-            "!!proc": {
-                "type": "uvgrid"
-            }
+            "name": "test-uvgrid",
+            "filename": "textures/test-uvgrid.png.ypreset"
         },
         {
-            "name": "sky",
-            "filename": "textures/sky.hdr",
-            "!!proc": {
-                "type": "sky"
-            }
+            "name": "test-sky",
+            "filename": "textures/test-sky.hdr.ypreset"
         }
     ],
     "materials": [
         {
-            "name": "floor",
+            "name": "test-floor",
             "diffuse": [
                 0.7,
                 0.7,
                 0.7
             ],
-            "diffuse_texture": "floor"
+            "diffuse_texture": "test-floor"
         },
         {
-            "name": "uvgrid",
+            "name": "test-uvgrid",
             "diffuse": [
                 1,
                 1,
@@ -186,10 +195,10 @@
                 0.04
             ],
             "roughness": 0.1,
-            "diffuse_texture": "uvgrid"
+            "diffuse_texture": "test-uvgrid"
         },
         {
-            "name": "plastic-sharp",
+            "name": "test-plastic-sharp",
             "diffuse": [
                 0.5,
                 0.5,
@@ -203,7 +212,7 @@
             "roughness": 0.01
         },
         {
-            "name": "arealight1",
+            "name": "test-arealight1",
             "emission": [
                 20,
                 20,
@@ -211,7 +220,7 @@
             ]
         },
         {
-            "name": "arealight2",
+            "name": "test-arealight2",
             "emission": [
                 20,
                 20,
@@ -221,118 +230,89 @@
     ],
     "shapes": [
         {
-            "name": "floor",
-            "filename": "models/test-floor.ply",
-            "!!proc": {
-                "type": "floor",
-                "size": [
-                    4,
-                    4
-                ]
-            }
+            "name": "test-floor",
+            "filename": "models/test-floor.ply.ypreset"
         },
         {
-            "name": "bunny",
+            "name": "test-bunny",
             "filename": "models/test-bunny.obj"
         },
         {
-            "name": "teapot",
+            "name": "test-teapot",
             "filename": "models/test-teapot.obj"
         },
         {
-            "name": "subdiv-cube",
-            "filename": "models/test-subdiv-cube.obj",
+            "name": "test-cube-subdiv",
+            "filename": "models/test-cube-subdiv.obj.ypreset",
             "subdivision_level": 4,
             "catmull_clark": true,
             "compute_normals": true,
-            "preserve_facevarying": true,
-            "!!proc": {
-                "type": "cube_facevarying",
-                "size": [
-                    0.15,
-                    0.15,
-                    0.15
-                ],
-                "align_bottom": true
-            }
+            "preserve_facevarying": true
         },
         {
-            "name": "subdiv-monkey",
-            "filename": "models/test-subdiv-monkey.obj",
+            "name": "test-suzanne-subdiv",
+            "filename": "models/test-suzanne-subdiv.obj.ypreset",
             "subdivision_level": 2,
             "catmull_clark": true,
-            "compute_normals": true,
-            "!!proc": {
-                "type": "suzanne",
-                "size": 0.15,
-                "align_bottom": true
-            }
+            "compute_normals": true
         },
         {
-            "name": "arealight1",
-            "!!proc": {
-                "type": "quad",
-                "size": [
-                    0.4,
-                    0.4
-                ]
-            }
+            "name": "test-arealight1",
+            "filename": "models/test-arealight1.ply.ypreset"
         },
         {
-            "name": "arealight2",
-            "!!proc": {
-                "type": "quad",
-                "size": [
-                    0.4,
-                    0.4
-                ]
-            }
+            "name": "test-arealight2",
+            "filename": "models/test-arealight2.ply.ypreset"
         }
     ],
     "instances": [
         {
-            "name": "floor",
-            "shape": "floor",
-            "material": "floor"
+            "name": "test-floor",
+            "shape": "test-floor",
+            "material": "test-floor"
         },
         {
-            "name": "arealight1",
-            "shape": "arealight1",
-            "material": "arealight1",
-            "!!proc": {
-                "from": [
-                    -0.4,
-                    0.8,
-                    0.8
-                ],
-                "to": [
-                    0,
-                    0.1,
-                    0
-                ]
-            }
+            "name": "test-arealight1",
+            "shape": "test-arealight1",
+            "material": "test-arealight1",
+            "frame": [
+                -0.8944271909999159,
+                0.0,
+                -0.4472135954999579,
+                0.27562473083535527,
+                0.7874992309581578,
+                -0.5512494616707105,
+                0.3521803625302495,
+                -0.6163156344279367,
+                -0.704360725060499,
+                -0.4,
+                0.8,
+                0.8
+            ]
         },
         {
-            "name": "arealight2",
-            "shape": "arealight2",
-            "material": "arealight2",
-            "!!proc": {
-                "from": [
-                    0.4,
-                    0.8,
-                    0.8
-                ],
-                "to": [
-                    0,
-                    0.1,
-                    0
-                ]
-            }
+            "name": "test-arealight2",
+            "shape": "test-arealight2",
+            "material": "test-arealight2",
+            "frame": [
+                -0.8944271909999159,
+                -0.0,
+                0.4472135954999579,
+                -0.27562473083535527,
+                0.7874992309581578,
+                -0.5512494616707105,
+                -0.3521803625302495,
+                -0.6163156344279367,
+                -0.704360725060499,
+                0.4,
+                0.8,
+                0.8
+            ]
         },
         {
-            "name": "subdiv-cube_uvgrid",
-            "shape": "subdiv-cube",
-            "material": "uvgrid",
+            "name": "test-cube-subdiv_test-uvgrid",
+            "shape": "test-cube-subdiv",
+            "material": "test-uvgrid",
             "frame": [
                 1,
                 0,
@@ -349,9 +329,9 @@
             ]
         },
         {
-            "name": "subdiv-monkey_plastic-sharp",
-            "shape": "subdiv-monkey",
-            "material": "plastic-sharp",
+            "name": "test-suzanne-subdiv_test-plastic-sharp",
+            "shape": "test-suzanne-subdiv",
+            "material": "test-plastic-sharp",
             "frame": [
                 1,
                 0,
@@ -368,9 +348,9 @@
             ]
         },
         {
-            "name": "teapot_uvgrid",
-            "shape": "teapot",
-            "material": "uvgrid",
+            "name": "test-teapot_test-uvgrid",
+            "shape": "test-teapot",
+            "material": "test-uvgrid",
             "frame": [
                 1,
                 0,
@@ -387,9 +367,9 @@
             ]
         },
         {
-            "name": "bunny_plastic-sharp",
-            "shape": "bunny",
-            "material": "plastic-sharp",
+            "name": "test-bunny_test-plastic-sharp",
+            "shape": "test-bunny",
+            "material": "test-plastic-sharp",
             "frame": [
                 1,
                 0,
@@ -406,9 +386,9 @@
             ]
         },
         {
-            "name": "subdiv-cube_uvgrid",
-            "shape": "subdiv-cube",
-            "material": "uvgrid",
+            "name": "test-cube-subdiv_test-uvgrid",
+            "shape": "test-cube-subdiv",
+            "material": "test-uvgrid",
             "frame": [
                 1,
                 0,
@@ -427,13 +407,13 @@
     ],
     "environments": [
         {
-            "name": "sky",
+            "name": "test-sky",
             "emission": [
                 2,
                 2,
                 2
             ],
-            "emission_texture": "sky"
+            "emission_texture": "test-sky"
         }
     ]
 }

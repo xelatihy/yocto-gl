@@ -719,7 +719,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
                 true, true, true);
         } else if (!texture.ldr_image.empty()) {
             init_opengl_texture(state.textures[texture_id], texture.ldr_image,
-                !texture.ldr_as_linear, true, true);
+                true, true, true);
         } else {
             throw runtime_error("bad texture");
         }

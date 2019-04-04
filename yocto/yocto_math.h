@@ -83,10 +83,10 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <memory>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -123,9 +123,9 @@ using std::out_of_range;
 using std::pair;
 using std::runtime_error;
 using std::string;
+using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
-using std::unique_ptr;
 using namespace std::literals::string_literals;
 
 }  // namespace yocto
@@ -1381,6 +1381,7 @@ struct frame<T, 2> {
     constexpr frame() : x{}, y{}, o{} {}
     constexpr frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
         : x{x}, y{y}, o{o} {}
+    constexpr explicit frame(const vec<T, 2>& o) : x{1, 0}, y{0, 1}, o{o} {}
     constexpr frame(const mat<T, 2, 2>& m, const vec<T, 2>& t)
         : x{m.x}, y{m.y}, o{t} {}
     constexpr explicit frame(const affine<T, 2>& m) : x{m.x}, y{m.y}, o{m.o} {}
@@ -1411,6 +1412,8 @@ struct frame<T, 3> {
     constexpr frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
         const vec<T, 3>& o)
         : x{x}, y{y}, z{z}, o{o} {}
+    constexpr explicit frame(const vec<T, 3>& o)
+        : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
     constexpr frame(const mat<T, 3, 3>& m, const vec<T, 3>& t)
         : x{m.x}, y{m.y}, z{m.z}, o{t} {}
     constexpr explicit frame(const affine<T, 3>& m)
@@ -1434,6 +1437,17 @@ using frame2f = frame<float, 2>;
 using frame3f = frame<float, 3>;
 
 // Indentity frames.
+template <typename T, int N>
+constexpr inline frame<T, N> _identity_frame() {
+    if constexpr (N == 2) {
+        return {{1, 0}, {0, 1}, {0, 0}};
+    } else if constexpr (N == 3) {
+        return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+    } else {
+    }
+}
+template <typename T, int N>
+constexpr const auto identity_frame   = _identity_frame<T, N>();
 constexpr const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
 constexpr const auto identity_frame3f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};

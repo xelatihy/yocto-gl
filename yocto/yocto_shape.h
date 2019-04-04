@@ -65,6 +65,13 @@
 // 14. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
 //
 //
+// ## Shape IO
+//
+// We support reading and writing shapes in OBJ and PLY.
+//
+// 1. load/save shapes with `load_shape()`/`save_shape()`
+//
+//
 
 //
 // LICENSE:
@@ -214,6 +221,48 @@ inline T interpolate_bezier_derivative(
     return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
            (p3 - p2) * 3 * u * u;
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE IO FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Return the shape preset type and the remaining filename
+inline bool is_shape_preset_filename(const string& filename) {
+    return get_extension(filename) == "ypreset";
+}
+inline pair<string, string> get_shape_preset_type(const string& filename) {
+    if (get_extension(filename) == "ypreset") {
+        return {get_noextension(get_noextension(get_filename(filename))),
+            get_noextension(filename)};
+    } else {
+        return {"", filename};
+    }
+}
+
+// Load/Save a shape
+void load_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius, bool preserve_facevarying);
+void save_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<vec4f>& colors, const vector<float>& radius,
+    bool ascii = false);
+
+// shapeio error
+struct shapeio_error : runtime_error {
+    explicit shapeio_error(const char* msg) : runtime_error{msg} {}
+    explicit shapeio_error(const std::string& msg) : runtime_error{msg} {}
+};
 
 }  // namespace yocto
 
@@ -418,6 +467,10 @@ inline void merge_quads(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     const vector<vec<T, 3>>& merge_normals,
     const vector<vec<T, 2>>& merge_texturecoords);
 
+// Merge quads and triangles
+inline void merge_triangles_and_quads(
+    vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -570,83 +623,89 @@ namespace yocto {
 template <typename T>
 inline void make_quad_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize);
+    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize,
+    const frame<T, 3>& frame);
 template <typename T>
 inline void make_quad_stack_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 2>& uvsize);
+    const vec<T, 2>& uvsize, const frame<T, 3>& frame);
 template <typename T>
 inline void make_floor_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize);
+    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize,
+    const frame<T, 3>& frame);
 template <typename T>
 inline void make_floor_bent_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, const vec<T, 2>& size,
-    const vec<T, 2>& uvsize, T radius);
+    const vec<T, 2>& uvsize, T radius, const frame<T, 3>& frame);
 template <typename T>
 inline void make_box_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    const vec3i& steps, const vec<T, 3>& size, const vec<T, 3>& uvsize);
+    const vec3i& steps, const vec<T, 3>& size, const vec<T, 3>& uvsize,
+    const frame<T, 3>& frame);
 template <typename T>
 inline void make_box_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 3>& uvsize, T rounded);
+    const vec<T, 3>& uvsize, T rounded, const frame<T, 3>& frame);
 template <typename T>
 inline void make_uvsphere_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize);
+    const vec<T, 2>& uvsize, const frame<T, 3>& frame);
 template <typename T>
 inline void make_sphere_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize);
+    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize,
+    const frame<T, 3>& frame);
 template <typename T>
 inline void make_uvsphere_flipcap_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize, const vec<T, 2>& zflip);
+    const vec<T, 2>& uvsize, const vec<T, 2>& zflip, const frame<T, 3>& frame);
 template <typename T>
 inline void make_uvdisk_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize);
+    const vec<T, 2>& uvsize, const frame<T, 3>& frame);
 template <typename T>
 inline void make_disk_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords, int steps,
-    T size, T uvsize);
+    T size, T uvsize, const frame<T, 3>& frame);
 template <typename T>
 inline void make_disk_bulged_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize, T height);
+    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize, T height,
+    const frame<T, 3>& frame);
 template <typename T>
 inline void make_quad_bulged_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize, T height);
+    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize, T height,
+    const frame<T, 3>& frame);
 template <typename T>
 inline void make_uvcylinder_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 2>& size,
-    const vec<T, 3>& uvsize);
+    const vec<T, 3>& uvsize, const frame<T, 3>& frame);
 template <typename T>
 inline void make_uvcylinder_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 2>& size,
-    const vec<T, 3>& uvsize, T rounded);
+    const vec<T, 3>& uvsize, T rounded, const frame<T, 3>& frame);
 template <typename T>
 inline void make_geodesic_sphere_shape(vector<vec3i>& triangles,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals, int tesselation,
-    T size);
+    T size, const frame<T, 3>& frame);
 
 // Make examples shapes with are watertight (good for subdivs).
 template <typename T>
-inline void make_suzanne_shape(
-    vector<vec4i>& quads, vector<vec<T, 3>>& positions, T size);
+inline void make_suzanne_shape(vector<vec4i>& quads,
+    vector<vec<T, 3>>& positions, T size, const frame<T, 3>& frame);
 template <typename T>
-inline void make_box_shape(
-    vector<vec4i>& quads, vector<vec<T, 3>>& positions, const vec<T, 3>& size);
+inline void make_box_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    const vec<T, 3>& size, const frame<T, 3>& frame);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
 template <typename T>
@@ -654,40 +713,43 @@ inline void make_box_fvshape(vector<vec4i>& quads_positions,
     vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 3>& uvsize);
+    const vec<T, 3>& uvsize, const frame<T, 3>& frame);
 template <typename T>
 inline void make_sphere_fvshape(vector<vec4i>& quads_positions,
     vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize);
+    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize,
+    const frame<T, 3>& frame);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 template <typename T>
 inline void make_lines_shape(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
     vector<T>& radius, const vec2i& steps, const vec<T, 2>& size,
-    const vec<T, 2>& uvsize, const vec<T, 2>& line_radius = {0.001f, 0.001f});
+    const vec<T, 2>& uvsize, const vec<T, 2>& line_radius,
+    const frame<T, 3>& frame);
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
 template <typename T>
 inline void make_point_shape(vector<int>& points, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    vector<T>& radius, T point_radius = 0.001f);
+    vector<T>& radius, T point_radius, const frame<T, 3>& frame);
 template <typename T>
 inline void make_points_shape(vector<int>& points, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    vector<T>& radius, int num, T uvsize, T point_radius = 0.001f);
+    vector<T>& radius, int num, T uvsize, T point_radius,
+    const frame<T, 3>& frame);
 template <typename T>
 inline void make_random_points_shape(vector<int>& points,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, vector<T>& radius, int num,
-    const vec<T, 3>& size, T uvsize, T point_radius = 0.001f,
-    uint64_t seed = 0);
+    const vec<T, 3>& size, T uvsize, T point_radius, uint64_t seed,
+    const frame<T, 3>& frame);
 
 // Make a bezier circle. Returns bezier, pos.
 template <typename T>
-inline void make_bezier_circle_shape(
-    vector<vec4i>& beziers, vector<vec<T, 3>>& positions, T size);
+inline void make_bezier_circle_shape(vector<vec4i>& beziers,
+    vector<vec<T, 3>>& positions, T size, const frame<T, 3>& frame);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
@@ -701,10 +763,8 @@ inline void make_hair_shape(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
     vector<T>& radius, const vec2i& steps, const vector<vec3i>& striangles,
     const vector<vec4i>& squads, const vector<vec<T, 3>>& spos,
     const vector<vec<T, 3>>& snorm, const vector<vec<T, 2>>& stexcoord,
-    const vec<T, 2>& length = {0.1f, 0.1f},
-    const vec<T, 2>& rad = {0.001f, 0.001f}, const vec<T, 2>& noise = zero2f,
-    const vec<T, 2>& clump = zero2f, const vec<T, 2>& rotation = zero2f,
-    int seed = 7);
+    const vec<T, 2>& length, const vec<T, 2>& rad, const vec<T, 2>& noise,
+    const vec<T, 2>& clump, const vec<T, 2>& rotation, int seed = 7);
 
 // Thickens a shape by copy9ing the shape content, rescaling it and flipping its
 // normals. Note that this is very much not robust and only useful for trivial
@@ -712,6 +772,15 @@ inline void make_hair_shape(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
 template <typename T>
 inline void make_shell_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords, T thickness);
+
+// Shape presets used ofr testing.
+template <typename T>
+inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
+    vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
+    vector<vec<T, 4>>& colors, vector<T>& radius, const string& type);
 
 }  // namespace yocto
 
@@ -1384,6 +1453,22 @@ inline void merge_quads(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
     texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
         merge_texturecoords.end());
+}
+
+inline void merge_triangles_and_quads(
+    vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
+    if (quads.empty()) return;
+    if (force_triangles) {
+        auto qtriangles = vector<vec3i>{};
+        convert_quads_to_triangles(qtriangles, quads);
+        triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
+        quads = {};
+    } else {
+        auto tquads = vector<vec4i>{};
+        convert_triangles_to_quads(tquads, triangles);
+        quads.insert(quads.end(), tquads.begin(), tquads.end());
+        triangles = {};
+    }
 }
 
 }  // namespace yocto
@@ -2208,11 +2293,19 @@ inline void convert_distance_to_color(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+template <typename T, int N>
+inline void _transform_points_inplace(
+    const frame<T, N>& frame, vector<vec<T, N>>& positions) {
+    if (frame == identity_frame<T, 3>) return;
+    for (auto& p : positions) p = transform_point(frame, p);
+}
+
 // Make a quad.
 template <typename T>
 inline void make_quad_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize) {
+    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize,
+    const frame<T, 3>& frame) {
     positions.resize((steps.x + 1) * (steps.y + 1));
     normals.resize((steps.x + 1) * (steps.y + 1));
     texturecoords.resize((steps.x + 1) * (steps.y + 1));
@@ -2227,6 +2320,7 @@ inline void make_quad_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     }
 
     for (auto& uv : texturecoords) uv.y = 1 - uv.y;
+    _transform_points_inplace(frame, positions);
 
     quads.resize(steps.x * steps.y);
     for (auto j = 0; j < steps.y; j++) {
@@ -2252,12 +2346,14 @@ inline void make_quad_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
 template <typename T>
 inline void make_floor_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize) {
-    make_quad_shape(
-        quads, positions, normals, texturecoords, steps, size, uvsize);
+    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize,
+    const frame<T, 3>& frame) {
+    make_quad_shape(quads, positions, normals, texturecoords, steps, size,
+        uvsize, identity_frame<T, 3>);
     for (auto& p : positions) p = {p.x, p.z, p.y};
     for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
     for (auto& q : quads) swap(q.y, q.w);
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a rounded cube.
@@ -2265,9 +2361,9 @@ template <typename T>
 inline void make_floor_bent_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, const vec<T, 2>& size,
-    const vec<T, 2>& uvsize, T radius) {
-    make_floor_shape(
-        quads, positions, normals, texturecoords, steps, size, uvsize);
+    const vec<T, 2>& uvsize, T radius, const frame<T, 3>& frame) {
+    make_floor_shape(quads, positions, normals, texturecoords, steps, size,
+        uvsize, identity_frame<T, 3>);
     auto start = (size.y / 2 - radius) / 2;
     auto end   = start + radius;
     for (auto i = 0; i < positions.size(); i++) {
@@ -2283,6 +2379,7 @@ inline void make_floor_bent_shape(vector<vec4i>& quads,
         } else {
         }
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a stack of quads
@@ -2290,7 +2387,7 @@ template <typename T>
 inline void make_quad_stack_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 2>& uvsize) {
+    const vec<T, 2>& uvsize, const frame<T, 3>& frame) {
     quads.clear();
     positions.clear();
     normals.clear();
@@ -2301,18 +2398,20 @@ inline void make_quad_stack_shape(vector<vec4i>& quads,
     auto qtexturecoords = vector<vec<T, 2>>{};
     for (auto i = 0; i <= steps.z; i++) {
         make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
-            {steps.x, steps.y}, {size.x, size.y}, uvsize);
+            {steps.x, steps.y}, {size.x, size.y}, uvsize, identity_frame<T, 3>);
         for (auto& p : qpositions) p.z = (-0.5f + (T)i / steps.z) * size.z;
         merge_quads(quads, positions, normals, texturecoords, qquads,
             qpositions, qnormals, qtexturecoords);
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a cube.
 template <typename T>
 inline void make_box_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    const vec3i& steps, const vec<T, 3>& size, const vec<T, 3>& uvsize) {
+    const vec3i& steps, const vec<T, 3>& size, const vec<T, 3>& uvsize,
+    const frame<T, 3>& frame) {
     quads.clear();
     positions.clear();
     normals.clear();
@@ -2323,35 +2422,40 @@ inline void make_box_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     auto qtexturecoords = vector<vec<T, 2>>{};
     // + z
     make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
+        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
+        identity_frame<T, 3>);
     for (auto& p : qpositions) p = {p.x, p.y, size.z / 2};
     for (auto& n : qnormals) n = {0, 0, 1};
     merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // - z
     make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
+        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
+        identity_frame<T, 3>);
     for (auto& p : qpositions) p = {-p.x, p.y, -size.z / 2};
     for (auto& n : qnormals) n = {0, 0, -1};
     merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // + x
     make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.z, steps.y}, {size.z, size.y}, {uvsize.z, uvsize.y});
+        {steps.z, steps.y}, {size.z, size.y}, {uvsize.z, uvsize.y},
+        identity_frame<T, 3>);
     for (auto& p : qpositions) p = {size.x / 2, p.y, -p.x};
     for (auto& n : qnormals) n = {1, 0, 0};
     merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // - x
     make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.z, steps.y}, {size.z, size.y}, {uvsize.z, uvsize.y});
+        {steps.z, steps.y}, {size.z, size.y}, {uvsize.z, uvsize.y},
+        identity_frame<T, 3>);
     for (auto& p : qpositions) p = {-size.x / 2, p.y, p.x};
     for (auto& n : qnormals) n = {-1, 0, 0};
     merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // + y
     make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.z}, {size.x, size.z}, {uvsize.x, uvsize.z});
+        {steps.x, steps.z}, {size.x, size.z}, {uvsize.x, uvsize.z},
+        identity_frame<T, 3>);
     for (auto i = 0; i < qpositions.size(); i++) {
         qpositions[i] = {qpositions[i].x, size.y / 2, -qpositions[i].y};
         qnormals[i]   = {0, 1, 0};
@@ -2360,13 +2464,15 @@ inline void make_box_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
         qnormals, qtexturecoords);
     // - y
     make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.z}, {size.x, size.z}, {uvsize.x, uvsize.z});
+        {steps.x, steps.z}, {size.x, size.z}, {uvsize.x, uvsize.z},
+        identity_frame<T, 3>);
     for (auto i = 0; i < qpositions.size(); i++) {
         qpositions[i] = {qpositions[i].x, -size.y / 2, qpositions[i].y};
         qnormals[i]   = {0, -1, 0};
     }
     merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a rounded cube.
@@ -2374,9 +2480,9 @@ template <typename T>
 inline void make_box_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 3>& uvsize, T rounded) {
-    make_box_shape(
-        quads, positions, normals, texturecoords, steps, size, uvsize);
+    const vec<T, 3>& uvsize, T rounded, const frame<T, 3>& frame) {
+    make_box_shape(quads, positions, normals, texturecoords, steps, size,
+        uvsize, identity_frame<T, 3>);
     auto radius = rounded * min(size) / 2;
     auto c      = size / 2 - vec<T, 3>{radius, radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
@@ -2407,6 +2513,7 @@ inline void make_box_rounded_shape(vector<vec4i>& quads,
         positions[i] *= ps;
         normals[i] *= ps;
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a sphere.
@@ -2414,9 +2521,9 @@ template <typename T>
 inline void make_uvsphere_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize) {
-    make_quad_shape(
-        quads, positions, normals, texturecoords, steps, {1, 1}, {1, 1});
+    const vec<T, 2>& uvsize, const frame<T, 3>& frame) {
+    make_quad_shape(quads, positions, normals, texturecoords, steps, {1, 1},
+        {1, 1}, identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
         auto uv = texturecoords[i];
         auto a  = vec<T, 2>{2 * pif * uv.x, pif * (1 - uv.y)};
@@ -2425,20 +2532,24 @@ inline void make_uvsphere_shape(vector<vec4i>& quads,
         normals[i]       = normalize(p);
         texturecoords[i] = uv * uvsize;
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a spherecube.
 template <typename T>
 inline void make_sphere_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize) {
+    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize,
+    const frame<T, 3>& frame) {
     make_box_shape(quads, positions, normals, texturecoords,
-        {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize});
+        {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize},
+        identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
         auto p       = positions[i];
         positions[i] = normalize(p) * (size / 2);
         normals[i]   = normalize(p);
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a flipped sphere. This is not watertight.
@@ -2446,9 +2557,10 @@ template <typename T>
 inline void make_uvsphere_flipcap_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize, const vec<T, 2>& zflip_) {
-    make_uvsphere_shape(
-        quads, positions, normals, texturecoords, steps, size, uvsize);
+    const vec<T, 2>& uvsize, const vec<T, 2>& zflip_,
+    const frame<T, 3>& frame) {
+    make_uvsphere_shape(quads, positions, normals, texturecoords, steps, size,
+        uvsize, identity_frame<T, 3>);
     auto zflip = zflip_ * size / 2;
     for (auto i = 0; i < positions.size(); i++) {
         if (positions[i].z > zflip.y) {
@@ -2461,6 +2573,7 @@ inline void make_uvsphere_flipcap_shape(vector<vec4i>& quads,
             normals[i].y   = -normals[i].y;
         }
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a disk.
@@ -2468,9 +2581,9 @@ template <typename T>
 inline void make_uvdisk_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize) {
-    make_quad_shape(
-        quads, positions, normals, texturecoords, steps, {1, 1}, {1, 1});
+    const vec<T, 2>& uvsize, const frame<T, 3>& frame) {
+    make_quad_shape(quads, positions, normals, texturecoords, steps, {1, 1},
+        {1, 1}, identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
         auto uv      = texturecoords[i];
         auto phi     = 2 * pif * uv.x;
@@ -2479,15 +2592,16 @@ inline void make_uvdisk_shape(vector<vec4i>& quads,
         normals[i]       = {0, 0, 1};
         texturecoords[i] = uv * uvsize;
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a disk from a quad.
 template <typename T>
 inline void make_disk_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords, int steps,
-    T size, T uvsize) {
+    T size, T uvsize, const frame<T, 3>& frame) {
     make_quad_shape(quads, positions, normals, texturecoords, {steps, steps},
-        {2, 2}, {uvsize, uvsize});
+        {2, 2}, {uvsize, uvsize}, identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
@@ -2496,15 +2610,17 @@ inline void make_disk_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
             xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
         positions[i] = {uv.x * size / 2, uv.y * size / 2, 0};
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a bulged disk from a quad.
 template <typename T>
 inline void make_disk_bulged_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize, T height) {
-    make_disk_shape(
-        quads, positions, normals, texturecoords, steps, size, uvsize);
+    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize, T height,
+    const frame<T, 3>& frame) {
+    make_disk_shape(quads, positions, normals, texturecoords, steps, size,
+        uvsize, identity_frame<T, 3>);
     if (height == 0) return;
     auto radius = (size * size / 4 + height * height) / (2 * height);
     auto center = vec<T, 3>{0, 0, -radius + height};
@@ -2513,15 +2629,17 @@ inline void make_disk_bulged_shape(vector<vec4i>& quads,
         positions[i] = center + pn * radius;
         normals[i]   = pn;
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a bulged quad.
 template <typename T>
 inline void make_quad_bulged_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize, T height) {
+    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize, T height,
+    const frame<T, 3>& frame) {
     make_quad_shape(quads, positions, normals, texturecoords, {steps, steps},
-        {size, size}, {uvsize, uvsize});
+        {size, size}, {uvsize, uvsize}, identity_frame<T, 3>);
     if (height == 0) return;
     auto radius = (size * size / 4 + height * height) / (2 * height);
     auto center = vec<T, 3>{0, 0, -radius + height};
@@ -2530,6 +2648,7 @@ inline void make_quad_bulged_shape(vector<vec4i>& quads,
         positions[i] = center + pn * radius;
         normals[i]   = pn;
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a cylinder (side-only).
@@ -2537,9 +2656,9 @@ template <typename T>
 inline void make_cylinder_side_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec2i& steps, const vec<T, 2>& size,
-    const vec<T, 2>& uvsize) {
-    make_quad_shape(
-        quads, positions, normals, texturecoords, steps, {1, 1}, {1, 1});
+    const vec<T, 2>& uvsize, const frame<T, 3>& frame) {
+    make_quad_shape(quads, positions, normals, texturecoords, steps, {1, 1},
+        {1, 1}, identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
         auto uv          = texturecoords[i];
         auto phi         = 2 * pif * uv.x;
@@ -2548,6 +2667,7 @@ inline void make_cylinder_side_shape(vector<vec4i>& quads,
         normals[i]       = {cos(phi), sin(phi), 0};
         texturecoords[i] = uv * uvsize;
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a cylinder.
@@ -2555,7 +2675,7 @@ template <typename T>
 inline void make_uvcylinder_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 2>& size,
-    const vec<T, 3>& uvsize) {
+    const vec<T, 3>& uvsize, const frame<T, 3>& frame) {
     quads.clear();
     positions.clear();
     normals.clear();
@@ -2566,12 +2686,13 @@ inline void make_uvcylinder_shape(vector<vec4i>& quads,
     auto qtexturecoords = vector<vec<T, 2>>{};
     // side
     make_cylinder_side_shape(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
+        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
+        identity_frame<T, 3>);
     merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // top
     make_uvdisk_shape(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z});
+        {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, identity_frame<T, 3>);
     for (auto i = 0; i < qpositions.size(); i++) {
         qpositions[i].z = size.y / 2;
     }
@@ -2579,7 +2700,7 @@ inline void make_uvcylinder_shape(vector<vec4i>& quads,
         qnormals, qtexturecoords);
     // bottom
     make_uvdisk_shape(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z});
+        {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, identity_frame<T, 3>);
     for (auto i = 0; i < qpositions.size(); i++) {
         qpositions[i].z = -size.y / 2;
         qnormals[i]     = -qnormals[i];
@@ -2587,6 +2708,7 @@ inline void make_uvcylinder_shape(vector<vec4i>& quads,
     for (auto i = 0; i < qquads.size(); i++) swap(qquads[i].x, qquads[i].z);
     merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a rounded cylinder.
@@ -2594,9 +2716,9 @@ template <typename T>
 inline void make_uvcylinder_rounded_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 2>& size,
-    const vec<T, 3>& uvsize, T rounded) {
-    make_uvcylinder_shape(
-        quads, positions, normals, texturecoords, steps, size, uvsize);
+    const vec<T, 3>& uvsize, T rounded, const frame<T, 3>& frame) {
+    make_uvcylinder_shape(quads, positions, normals, texturecoords, steps, size,
+        uvsize, identity_frame<T, 3>);
     auto radius = rounded * max(size) / 2;
     auto c      = size / 2 - vec<T, 2>{radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
@@ -2614,13 +2736,14 @@ inline void make_uvcylinder_rounded_shape(vector<vec4i>& quads,
             continue;
         }
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a geodesic sphere.
 template <typename T>
 inline void make_geodesic_sphere_shape(vector<vec3i>& triangles,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals, int tesselation,
-    T size) {
+    T size, const frame<T, 3>& frame) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
     const T     X                = 0.525731112119133606f;
     const T     Z                = 0.850650808352039932f;
@@ -2638,6 +2761,7 @@ inline void make_geodesic_sphere_shape(vector<vec3i>& triangles,
     }
     for (auto& p : positions) p = normalize(p) * size / 2;
     normals = positions;
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a facevarying cube.
@@ -2646,14 +2770,15 @@ inline void make_box_fvshape(vector<vec4i>& quads_positions,
     vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 3>& uvsize) {
+    const vec<T, 3>& uvsize, const frame<T, 3>& frame) {
     make_box_shape(quads_positions, positions, normals, texturecoords, steps,
-        size, uvsize);
+        size, uvsize, identity_frame<T, 3>);
     quads_normals       = quads_positions;
     quads_texturecoords = quads_positions;
     auto positions_     = positions;
     weld_quads(quads_positions, positions,
         min(0.1f * size / vec<T, 3>{(T)steps.x, (T)steps.y, (T)steps.z}));
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a faceavrying spherecube.
@@ -2661,10 +2786,11 @@ template <typename T>
 inline void make_sphere_fvshape(vector<vec4i>& quads_positions,
     vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize) {
+    vector<vec<T, 2>>& texturecoords, int steps, T size, T uvsize,
+    const frame<T, 3>& frame) {
     make_box_fvshape(quads_positions, quads_normals, quads_texturecoords,
         positions, normals, texturecoords, {steps, steps, steps}, {1, 1, 1},
-        {uvsize, uvsize, uvsize});
+        {uvsize, uvsize, uvsize}, identity_frame<T, 3>);
     quads_normals = quads_positions;
     normals       = positions;
     for (auto i = 0; i < positions.size(); i++) {
@@ -2672,443 +2798,30 @@ inline void make_sphere_fvshape(vector<vec4i>& quads_positions,
         positions[i] = normalize(p) * (size / 2);
         normals[i]   = normalize(p);
     }
+    _transform_points_inplace(frame, positions);
 }
 
-// Make a suzanne monkey model for testing. Note that some quads are
-// degenerate.
-template <typename T>
-inline void make_suzanne_shape(
-    vector<vec4i>& quads, vector<vec<T, 3>>& positions, T size) {
-    static auto suzanne_pos = vector<vec<T, 3>>{{0.4375, 0.1640625, 0.765625},
-        {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875},
-        {-0.5, 0.09375, 0.6875}, {0.546875, 0.0546875, 0.578125},
-        {-0.546875, 0.0546875, 0.578125}, {0.3515625, -0.0234375, 0.6171875},
-        {-0.3515625, -0.0234375, 0.6171875}, {0.3515625, 0.03125, 0.71875},
-        {-0.3515625, 0.03125, 0.71875}, {0.3515625, 0.1328125, 0.78125},
-        {-0.3515625, 0.1328125, 0.78125}, {0.2734375, 0.1640625, 0.796875},
-        {-0.2734375, 0.1640625, 0.796875}, {0.203125, 0.09375, 0.7421875},
-        {-0.203125, 0.09375, 0.7421875}, {0.15625, 0.0546875, 0.6484375},
-        {-0.15625, 0.0546875, 0.6484375}, {0.078125, 0.2421875, 0.65625},
-        {-0.078125, 0.2421875, 0.65625}, {0.140625, 0.2421875, 0.7421875},
-        {-0.140625, 0.2421875, 0.7421875}, {0.2421875, 0.2421875, 0.796875},
-        {-0.2421875, 0.2421875, 0.796875}, {0.2734375, 0.328125, 0.796875},
-        {-0.2734375, 0.328125, 0.796875}, {0.203125, 0.390625, 0.7421875},
-        {-0.203125, 0.390625, 0.7421875}, {0.15625, 0.4375, 0.6484375},
-        {-0.15625, 0.4375, 0.6484375}, {0.3515625, 0.515625, 0.6171875},
-        {-0.3515625, 0.515625, 0.6171875}, {0.3515625, 0.453125, 0.71875},
-        {-0.3515625, 0.453125, 0.71875}, {0.3515625, 0.359375, 0.78125},
-        {-0.3515625, 0.359375, 0.78125}, {0.4375, 0.328125, 0.765625},
-        {-0.4375, 0.328125, 0.765625}, {0.5, 0.390625, 0.6875},
-        {-0.5, 0.390625, 0.6875}, {0.546875, 0.4375, 0.578125},
-        {-0.546875, 0.4375, 0.578125}, {0.625, 0.2421875, 0.5625},
-        {-0.625, 0.2421875, 0.5625}, {0.5625, 0.2421875, 0.671875},
-        {-0.5625, 0.2421875, 0.671875}, {0.46875, 0.2421875, 0.7578125},
-        {-0.46875, 0.2421875, 0.7578125}, {0.4765625, 0.2421875, 0.7734375},
-        {-0.4765625, 0.2421875, 0.7734375}, {0.4453125, 0.3359375, 0.78125},
-        {-0.4453125, 0.3359375, 0.78125}, {0.3515625, 0.375, 0.8046875},
-        {-0.3515625, 0.375, 0.8046875}, {0.265625, 0.3359375, 0.8203125},
-        {-0.265625, 0.3359375, 0.8203125}, {0.2265625, 0.2421875, 0.8203125},
-        {-0.2265625, 0.2421875, 0.8203125}, {0.265625, 0.15625, 0.8203125},
-        {-0.265625, 0.15625, 0.8203125}, {0.3515625, 0.2421875, 0.828125},
-        {-0.3515625, 0.2421875, 0.828125}, {0.3515625, 0.1171875, 0.8046875},
-        {-0.3515625, 0.1171875, 0.8046875}, {0.4453125, 0.15625, 0.78125},
-        {-0.4453125, 0.15625, 0.78125}, {0.0, 0.4296875, 0.7421875},
-        {0.0, 0.3515625, 0.8203125}, {0.0, -0.6796875, 0.734375},
-        {0.0, -0.3203125, 0.78125}, {0.0, -0.1875, 0.796875},
-        {0.0, -0.7734375, 0.71875}, {0.0, 0.40625, 0.6015625},
-        {0.0, 0.5703125, 0.5703125}, {0.0, 0.8984375, -0.546875},
-        {0.0, 0.5625, -0.8515625}, {0.0, 0.0703125, -0.828125},
-        {0.0, -0.3828125, -0.3515625}, {0.203125, -0.1875, 0.5625},
-        {-0.203125, -0.1875, 0.5625}, {0.3125, -0.4375, 0.5703125},
-        {-0.3125, -0.4375, 0.5703125}, {0.3515625, -0.6953125, 0.5703125},
-        {-0.3515625, -0.6953125, 0.5703125}, {0.3671875, -0.890625, 0.53125},
-        {-0.3671875, -0.890625, 0.53125}, {0.328125, -0.9453125, 0.5234375},
-        {-0.328125, -0.9453125, 0.5234375}, {0.1796875, -0.96875, 0.5546875},
-        {-0.1796875, -0.96875, 0.5546875}, {0.0, -0.984375, 0.578125},
-        {0.4375, -0.140625, 0.53125}, {-0.4375, -0.140625, 0.53125},
-        {0.6328125, -0.0390625, 0.5390625}, {-0.6328125, -0.0390625, 0.5390625},
-        {0.828125, 0.1484375, 0.4453125}, {-0.828125, 0.1484375, 0.4453125},
-        {0.859375, 0.4296875, 0.59375}, {-0.859375, 0.4296875, 0.59375},
-        {0.7109375, 0.484375, 0.625}, {-0.7109375, 0.484375, 0.625},
-        {0.4921875, 0.6015625, 0.6875}, {-0.4921875, 0.6015625, 0.6875},
-        {0.3203125, 0.7578125, 0.734375}, {-0.3203125, 0.7578125, 0.734375},
-        {0.15625, 0.71875, 0.7578125}, {-0.15625, 0.71875, 0.7578125},
-        {0.0625, 0.4921875, 0.75}, {-0.0625, 0.4921875, 0.75},
-        {0.1640625, 0.4140625, 0.7734375}, {-0.1640625, 0.4140625, 0.7734375},
-        {0.125, 0.3046875, 0.765625}, {-0.125, 0.3046875, 0.765625},
-        {0.203125, 0.09375, 0.7421875}, {-0.203125, 0.09375, 0.7421875},
-        {0.375, 0.015625, 0.703125}, {-0.375, 0.015625, 0.703125},
-        {0.4921875, 0.0625, 0.671875}, {-0.4921875, 0.0625, 0.671875},
-        {0.625, 0.1875, 0.6484375}, {-0.625, 0.1875, 0.6484375},
-        {0.640625, 0.296875, 0.6484375}, {-0.640625, 0.296875, 0.6484375},
-        {0.6015625, 0.375, 0.6640625}, {-0.6015625, 0.375, 0.6640625},
-        {0.4296875, 0.4375, 0.71875}, {-0.4296875, 0.4375, 0.71875},
-        {0.25, 0.46875, 0.7578125}, {-0.25, 0.46875, 0.7578125},
-        {0.0, -0.765625, 0.734375}, {0.109375, -0.71875, 0.734375},
-        {-0.109375, -0.71875, 0.734375}, {0.1171875, -0.8359375, 0.7109375},
-        {-0.1171875, -0.8359375, 0.7109375}, {0.0625, -0.8828125, 0.6953125},
-        {-0.0625, -0.8828125, 0.6953125}, {0.0, -0.890625, 0.6875},
-        {0.0, -0.1953125, 0.75}, {0.0, -0.140625, 0.7421875},
-        {0.1015625, -0.1484375, 0.7421875}, {-0.1015625, -0.1484375, 0.7421875},
-        {0.125, -0.2265625, 0.75}, {-0.125, -0.2265625, 0.75},
-        {0.0859375, -0.2890625, 0.7421875}, {-0.0859375, -0.2890625, 0.7421875},
-        {0.3984375, -0.046875, 0.671875}, {-0.3984375, -0.046875, 0.671875},
-        {0.6171875, 0.0546875, 0.625}, {-0.6171875, 0.0546875, 0.625},
-        {0.7265625, 0.203125, 0.6015625}, {-0.7265625, 0.203125, 0.6015625},
-        {0.7421875, 0.375, 0.65625}, {-0.7421875, 0.375, 0.65625},
-        {0.6875, 0.4140625, 0.7265625}, {-0.6875, 0.4140625, 0.7265625},
-        {0.4375, 0.546875, 0.796875}, {-0.4375, 0.546875, 0.796875},
-        {0.3125, 0.640625, 0.8359375}, {-0.3125, 0.640625, 0.8359375},
-        {0.203125, 0.6171875, 0.8515625}, {-0.203125, 0.6171875, 0.8515625},
-        {0.1015625, 0.4296875, 0.84375}, {-0.1015625, 0.4296875, 0.84375},
-        {0.125, -0.1015625, 0.8125}, {-0.125, -0.1015625, 0.8125},
-        {0.2109375, -0.4453125, 0.7109375}, {-0.2109375, -0.4453125, 0.7109375},
-        {0.25, -0.703125, 0.6875}, {-0.25, -0.703125, 0.6875},
-        {0.265625, -0.8203125, 0.6640625}, {-0.265625, -0.8203125, 0.6640625},
-        {0.234375, -0.9140625, 0.6328125}, {-0.234375, -0.9140625, 0.6328125},
-        {0.1640625, -0.9296875, 0.6328125}, {-0.1640625, -0.9296875, 0.6328125},
-        {0.0, -0.9453125, 0.640625}, {0.0, 0.046875, 0.7265625},
-        {0.0, 0.2109375, 0.765625}, {0.328125, 0.4765625, 0.7421875},
-        {-0.328125, 0.4765625, 0.7421875}, {0.1640625, 0.140625, 0.75},
-        {-0.1640625, 0.140625, 0.75}, {0.1328125, 0.2109375, 0.7578125},
-        {-0.1328125, 0.2109375, 0.7578125}, {0.1171875, -0.6875, 0.734375},
-        {-0.1171875, -0.6875, 0.734375}, {0.078125, -0.4453125, 0.75},
-        {-0.078125, -0.4453125, 0.75}, {0.0, -0.4453125, 0.75},
-        {0.0, -0.328125, 0.7421875}, {0.09375, -0.2734375, 0.78125},
-        {-0.09375, -0.2734375, 0.78125}, {0.1328125, -0.2265625, 0.796875},
-        {-0.1328125, -0.2265625, 0.796875}, {0.109375, -0.1328125, 0.78125},
-        {-0.109375, -0.1328125, 0.78125}, {0.0390625, -0.125, 0.78125},
-        {-0.0390625, -0.125, 0.78125}, {0.0, -0.203125, 0.828125},
-        {0.046875, -0.1484375, 0.8125}, {-0.046875, -0.1484375, 0.8125},
-        {0.09375, -0.15625, 0.8125}, {-0.09375, -0.15625, 0.8125},
-        {0.109375, -0.2265625, 0.828125}, {-0.109375, -0.2265625, 0.828125},
-        {0.078125, -0.25, 0.8046875}, {-0.078125, -0.25, 0.8046875},
-        {0.0, -0.2890625, 0.8046875}, {0.2578125, -0.3125, 0.5546875},
-        {-0.2578125, -0.3125, 0.5546875}, {0.1640625, -0.2421875, 0.7109375},
-        {-0.1640625, -0.2421875, 0.7109375}, {0.1796875, -0.3125, 0.7109375},
-        {-0.1796875, -0.3125, 0.7109375}, {0.234375, -0.25, 0.5546875},
-        {-0.234375, -0.25, 0.5546875}, {0.0, -0.875, 0.6875},
-        {0.046875, -0.8671875, 0.6875}, {-0.046875, -0.8671875, 0.6875},
-        {0.09375, -0.8203125, 0.7109375}, {-0.09375, -0.8203125, 0.7109375},
-        {0.09375, -0.7421875, 0.7265625}, {-0.09375, -0.7421875, 0.7265625},
-        {0.0, -0.78125, 0.65625}, {0.09375, -0.75, 0.6640625},
-        {-0.09375, -0.75, 0.6640625}, {0.09375, -0.8125, 0.640625},
-        {-0.09375, -0.8125, 0.640625}, {0.046875, -0.8515625, 0.6328125},
-        {-0.046875, -0.8515625, 0.6328125}, {0.0, -0.859375, 0.6328125},
-        {0.171875, 0.21875, 0.78125}, {-0.171875, 0.21875, 0.78125},
-        {0.1875, 0.15625, 0.7734375}, {-0.1875, 0.15625, 0.7734375},
-        {0.3359375, 0.4296875, 0.7578125}, {-0.3359375, 0.4296875, 0.7578125},
-        {0.2734375, 0.421875, 0.7734375}, {-0.2734375, 0.421875, 0.7734375},
-        {0.421875, 0.3984375, 0.7734375}, {-0.421875, 0.3984375, 0.7734375},
-        {0.5625, 0.3515625, 0.6953125}, {-0.5625, 0.3515625, 0.6953125},
-        {0.5859375, 0.2890625, 0.6875}, {-0.5859375, 0.2890625, 0.6875},
-        {0.578125, 0.1953125, 0.6796875}, {-0.578125, 0.1953125, 0.6796875},
-        {0.4765625, 0.1015625, 0.71875}, {-0.4765625, 0.1015625, 0.71875},
-        {0.375, 0.0625, 0.7421875}, {-0.375, 0.0625, 0.7421875},
-        {0.2265625, 0.109375, 0.78125}, {-0.2265625, 0.109375, 0.78125},
-        {0.1796875, 0.296875, 0.78125}, {-0.1796875, 0.296875, 0.78125},
-        {0.2109375, 0.375, 0.78125}, {-0.2109375, 0.375, 0.78125},
-        {0.234375, 0.359375, 0.7578125}, {-0.234375, 0.359375, 0.7578125},
-        {0.1953125, 0.296875, 0.7578125}, {-0.1953125, 0.296875, 0.7578125},
-        {0.2421875, 0.125, 0.7578125}, {-0.2421875, 0.125, 0.7578125},
-        {0.375, 0.0859375, 0.7265625}, {-0.375, 0.0859375, 0.7265625},
-        {0.4609375, 0.1171875, 0.703125}, {-0.4609375, 0.1171875, 0.703125},
-        {0.546875, 0.2109375, 0.671875}, {-0.546875, 0.2109375, 0.671875},
-        {0.5546875, 0.28125, 0.671875}, {-0.5546875, 0.28125, 0.671875},
-        {0.53125, 0.3359375, 0.6796875}, {-0.53125, 0.3359375, 0.6796875},
-        {0.4140625, 0.390625, 0.75}, {-0.4140625, 0.390625, 0.75},
-        {0.28125, 0.3984375, 0.765625}, {-0.28125, 0.3984375, 0.765625},
-        {0.3359375, 0.40625, 0.75}, {-0.3359375, 0.40625, 0.75},
-        {0.203125, 0.171875, 0.75}, {-0.203125, 0.171875, 0.75},
-        {0.1953125, 0.2265625, 0.75}, {-0.1953125, 0.2265625, 0.75},
-        {0.109375, 0.4609375, 0.609375}, {-0.109375, 0.4609375, 0.609375},
-        {0.1953125, 0.6640625, 0.6171875}, {-0.1953125, 0.6640625, 0.6171875},
-        {0.3359375, 0.6875, 0.59375}, {-0.3359375, 0.6875, 0.59375},
-        {0.484375, 0.5546875, 0.5546875}, {-0.484375, 0.5546875, 0.5546875},
-        {0.6796875, 0.453125, 0.4921875}, {-0.6796875, 0.453125, 0.4921875},
-        {0.796875, 0.40625, 0.4609375}, {-0.796875, 0.40625, 0.4609375},
-        {0.7734375, 0.1640625, 0.375}, {-0.7734375, 0.1640625, 0.375},
-        {0.6015625, 0.0, 0.4140625}, {-0.6015625, 0.0, 0.4140625},
-        {0.4375, -0.09375, 0.46875}, {-0.4375, -0.09375, 0.46875},
-        {0.0, 0.8984375, 0.2890625}, {0.0, 0.984375, -0.078125},
-        {0.0, -0.1953125, -0.671875}, {0.0, -0.4609375, 0.1875},
-        {0.0, -0.9765625, 0.4609375}, {0.0, -0.8046875, 0.34375},
-        {0.0, -0.5703125, 0.3203125}, {0.0, -0.484375, 0.28125},
-        {0.8515625, 0.234375, 0.0546875}, {-0.8515625, 0.234375, 0.0546875},
-        {0.859375, 0.3203125, -0.046875}, {-0.859375, 0.3203125, -0.046875},
-        {0.7734375, 0.265625, -0.4375}, {-0.7734375, 0.265625, -0.4375},
-        {0.4609375, 0.4375, -0.703125}, {-0.4609375, 0.4375, -0.703125},
-        {0.734375, -0.046875, 0.0703125}, {-0.734375, -0.046875, 0.0703125},
-        {0.59375, -0.125, -0.1640625}, {-0.59375, -0.125, -0.1640625},
-        {0.640625, -0.0078125, -0.4296875}, {-0.640625, -0.0078125, -0.4296875},
-        {0.3359375, 0.0546875, -0.6640625}, {-0.3359375, 0.0546875, -0.6640625},
-        {0.234375, -0.3515625, 0.40625}, {-0.234375, -0.3515625, 0.40625},
-        {0.1796875, -0.4140625, 0.2578125}, {-0.1796875, -0.4140625, 0.2578125},
-        {0.2890625, -0.7109375, 0.3828125}, {-0.2890625, -0.7109375, 0.3828125},
-        {0.25, -0.5, 0.390625}, {-0.25, -0.5, 0.390625},
-        {0.328125, -0.9140625, 0.3984375}, {-0.328125, -0.9140625, 0.3984375},
-        {0.140625, -0.7578125, 0.3671875}, {-0.140625, -0.7578125, 0.3671875},
-        {0.125, -0.5390625, 0.359375}, {-0.125, -0.5390625, 0.359375},
-        {0.1640625, -0.9453125, 0.4375}, {-0.1640625, -0.9453125, 0.4375},
-        {0.21875, -0.28125, 0.4296875}, {-0.21875, -0.28125, 0.4296875},
-        {0.2109375, -0.2265625, 0.46875}, {-0.2109375, -0.2265625, 0.46875},
-        {0.203125, -0.171875, 0.5}, {-0.203125, -0.171875, 0.5},
-        {0.2109375, -0.390625, 0.1640625}, {-0.2109375, -0.390625, 0.1640625},
-        {0.296875, -0.3125, -0.265625}, {-0.296875, -0.3125, -0.265625},
-        {0.34375, -0.1484375, -0.5390625}, {-0.34375, -0.1484375, -0.5390625},
-        {0.453125, 0.8671875, -0.3828125}, {-0.453125, 0.8671875, -0.3828125},
-        {0.453125, 0.9296875, -0.0703125}, {-0.453125, 0.9296875, -0.0703125},
-        {0.453125, 0.8515625, 0.234375}, {-0.453125, 0.8515625, 0.234375},
-        {0.4609375, 0.5234375, 0.4296875}, {-0.4609375, 0.5234375, 0.4296875},
-        {0.7265625, 0.40625, 0.3359375}, {-0.7265625, 0.40625, 0.3359375},
-        {0.6328125, 0.453125, 0.28125}, {-0.6328125, 0.453125, 0.28125},
-        {0.640625, 0.703125, 0.0546875}, {-0.640625, 0.703125, 0.0546875},
-        {0.796875, 0.5625, 0.125}, {-0.796875, 0.5625, 0.125},
-        {0.796875, 0.6171875, -0.1171875}, {-0.796875, 0.6171875, -0.1171875},
-        {0.640625, 0.75, -0.1953125}, {-0.640625, 0.75, -0.1953125},
-        {0.640625, 0.6796875, -0.4453125}, {-0.640625, 0.6796875, -0.4453125},
-        {0.796875, 0.5390625, -0.359375}, {-0.796875, 0.5390625, -0.359375},
-        {0.6171875, 0.328125, -0.5859375}, {-0.6171875, 0.328125, -0.5859375},
-        {0.484375, 0.0234375, -0.546875}, {-0.484375, 0.0234375, -0.546875},
-        {0.8203125, 0.328125, -0.203125}, {-0.8203125, 0.328125, -0.203125},
-        {0.40625, -0.171875, 0.1484375}, {-0.40625, -0.171875, 0.1484375},
-        {0.4296875, -0.1953125, -0.2109375},
-        {-0.4296875, -0.1953125, -0.2109375}, {0.890625, 0.40625, -0.234375},
-        {-0.890625, 0.40625, -0.234375}, {0.7734375, -0.140625, -0.125},
-        {-0.7734375, -0.140625, -0.125}, {1.0390625, -0.1015625, -0.328125},
-        {-1.0390625, -0.1015625, -0.328125}, {1.28125, 0.0546875, -0.4296875},
-        {-1.28125, 0.0546875, -0.4296875}, {1.3515625, 0.3203125, -0.421875},
-        {-1.3515625, 0.3203125, -0.421875}, {1.234375, 0.5078125, -0.421875},
-        {-1.234375, 0.5078125, -0.421875}, {1.0234375, 0.4765625, -0.3125},
-        {-1.0234375, 0.4765625, -0.3125}, {1.015625, 0.4140625, -0.2890625},
-        {-1.015625, 0.4140625, -0.2890625}, {1.1875, 0.4375, -0.390625},
-        {-1.1875, 0.4375, -0.390625}, {1.265625, 0.2890625, -0.40625},
-        {-1.265625, 0.2890625, -0.40625}, {1.2109375, 0.078125, -0.40625},
-        {-1.2109375, 0.078125, -0.40625}, {1.03125, -0.0390625, -0.3046875},
-        {-1.03125, -0.0390625, -0.3046875}, {0.828125, -0.0703125, -0.1328125},
-        {-0.828125, -0.0703125, -0.1328125}, {0.921875, 0.359375, -0.21875},
-        {-0.921875, 0.359375, -0.21875}, {0.9453125, 0.3046875, -0.2890625},
-        {-0.9453125, 0.3046875, -0.2890625},
-        {0.8828125, -0.0234375, -0.2109375},
-        {-0.8828125, -0.0234375, -0.2109375}, {1.0390625, 0.0, -0.3671875},
-        {-1.0390625, 0.0, -0.3671875}, {1.1875, 0.09375, -0.4453125},
-        {-1.1875, 0.09375, -0.4453125}, {1.234375, 0.25, -0.4453125},
-        {-1.234375, 0.25, -0.4453125}, {1.171875, 0.359375, -0.4375},
-        {-1.171875, 0.359375, -0.4375}, {1.0234375, 0.34375, -0.359375},
-        {-1.0234375, 0.34375, -0.359375}, {0.84375, 0.2890625, -0.2109375},
-        {-0.84375, 0.2890625, -0.2109375}, {0.8359375, 0.171875, -0.2734375},
-        {-0.8359375, 0.171875, -0.2734375}, {0.7578125, 0.09375, -0.2734375},
-        {-0.7578125, 0.09375, -0.2734375}, {0.8203125, 0.0859375, -0.2734375},
-        {-0.8203125, 0.0859375, -0.2734375}, {0.84375, 0.015625, -0.2734375},
-        {-0.84375, 0.015625, -0.2734375}, {0.8125, -0.015625, -0.2734375},
-        {-0.8125, -0.015625, -0.2734375}, {0.7265625, 0.0, -0.0703125},
-        {-0.7265625, 0.0, -0.0703125}, {0.71875, -0.0234375, -0.171875},
-        {-0.71875, -0.0234375, -0.171875}, {0.71875, 0.0390625, -0.1875},
-        {-0.71875, 0.0390625, -0.1875}, {0.796875, 0.203125, -0.2109375},
-        {-0.796875, 0.203125, -0.2109375}, {0.890625, 0.2421875, -0.265625},
-        {-0.890625, 0.2421875, -0.265625}, {0.890625, 0.234375, -0.3203125},
-        {-0.890625, 0.234375, -0.3203125}, {0.8125, -0.015625, -0.3203125},
-        {-0.8125, -0.015625, -0.3203125}, {0.8515625, 0.015625, -0.3203125},
-        {-0.8515625, 0.015625, -0.3203125}, {0.828125, 0.078125, -0.3203125},
-        {-0.828125, 0.078125, -0.3203125}, {0.765625, 0.09375, -0.3203125},
-        {-0.765625, 0.09375, -0.3203125}, {0.84375, 0.171875, -0.3203125},
-        {-0.84375, 0.171875, -0.3203125}, {1.0390625, 0.328125, -0.4140625},
-        {-1.0390625, 0.328125, -0.4140625}, {1.1875, 0.34375, -0.484375},
-        {-1.1875, 0.34375, -0.484375}, {1.2578125, 0.2421875, -0.4921875},
-        {-1.2578125, 0.2421875, -0.4921875}, {1.2109375, 0.0859375, -0.484375},
-        {-1.2109375, 0.0859375, -0.484375}, {1.046875, 0.0, -0.421875},
-        {-1.046875, 0.0, -0.421875}, {0.8828125, -0.015625, -0.265625},
-        {-0.8828125, -0.015625, -0.265625}, {0.953125, 0.2890625, -0.34375},
-        {-0.953125, 0.2890625, -0.34375}, {0.890625, 0.109375, -0.328125},
-        {-0.890625, 0.109375, -0.328125}, {0.9375, 0.0625, -0.3359375},
-        {-0.9375, 0.0625, -0.3359375}, {1.0, 0.125, -0.3671875},
-        {-1.0, 0.125, -0.3671875}, {0.9609375, 0.171875, -0.3515625},
-        {-0.9609375, 0.171875, -0.3515625}, {1.015625, 0.234375, -0.375},
-        {-1.015625, 0.234375, -0.375}, {1.0546875, 0.1875, -0.3828125},
-        {-1.0546875, 0.1875, -0.3828125}, {1.109375, 0.2109375, -0.390625},
-        {-1.109375, 0.2109375, -0.390625}, {1.0859375, 0.2734375, -0.390625},
-        {-1.0859375, 0.2734375, -0.390625}, {1.0234375, 0.4375, -0.484375},
-        {-1.0234375, 0.4375, -0.484375}, {1.25, 0.46875, -0.546875},
-        {-1.25, 0.46875, -0.546875}, {1.3671875, 0.296875, -0.5},
-        {-1.3671875, 0.296875, -0.5}, {1.3125, 0.0546875, -0.53125},
-        {-1.3125, 0.0546875, -0.53125}, {1.0390625, -0.0859375, -0.4921875},
-        {-1.0390625, -0.0859375, -0.4921875}, {0.7890625, -0.125, -0.328125},
-        {-0.7890625, -0.125, -0.328125}, {0.859375, 0.3828125, -0.3828125},
-        {-0.859375, 0.3828125, -0.3828125}};
-    static auto suzanne_triangles = vector<vec3i>{{60, 64, 48}, {49, 65, 61},
-        {62, 64, 60}, {61, 65, 63}, {60, 58, 62}, {63, 59, 61}, {60, 56, 58},
-        {59, 57, 61}, {60, 54, 56}, {57, 55, 61}, {60, 52, 54}, {55, 53, 61},
-        {60, 50, 52}, {53, 51, 61}, {60, 48, 50}, {51, 49, 61}, {224, 228, 226},
-        {227, 229, 225}, {72, 283, 73}, {73, 284, 72}, {341, 347, 383},
-        {384, 348, 342}, {299, 345, 343}, {344, 346, 300}, {323, 379, 351},
-        {352, 380, 324}, {441, 443, 445}, {446, 444, 442}, {463, 491, 465},
-        {466, 492, 464}, {495, 497, 499}, {500, 498, 496}};
-    static auto suzanne_quads = vector<vec4i>{{46, 0, 2, 44}, {3, 1, 47, 45},
-        {44, 2, 4, 42}, {5, 3, 45, 43}, {2, 8, 6, 4}, {7, 9, 3, 5},
-        {0, 10, 8, 2}, {9, 11, 1, 3}, {10, 12, 14, 8}, {15, 13, 11, 9},
-        {8, 14, 16, 6}, {17, 15, 9, 7}, {14, 20, 18, 16}, {19, 21, 15, 17},
-        {12, 22, 20, 14}, {21, 23, 13, 15}, {22, 24, 26, 20}, {27, 25, 23, 21},
-        {20, 26, 28, 18}, {29, 27, 21, 19}, {26, 32, 30, 28}, {31, 33, 27, 29},
-        {24, 34, 32, 26}, {33, 35, 25, 27}, {34, 36, 38, 32}, {39, 37, 35, 33},
-        {32, 38, 40, 30}, {41, 39, 33, 31}, {38, 44, 42, 40}, {43, 45, 39, 41},
-        {36, 46, 44, 38}, {45, 47, 37, 39}, {46, 36, 50, 48}, {51, 37, 47, 49},
-        {36, 34, 52, 50}, {53, 35, 37, 51}, {34, 24, 54, 52}, {55, 25, 35, 53},
-        {24, 22, 56, 54}, {57, 23, 25, 55}, {22, 12, 58, 56}, {59, 13, 23, 57},
-        {12, 10, 62, 58}, {63, 11, 13, 59}, {10, 0, 64, 62}, {65, 1, 11, 63},
-        {0, 46, 48, 64}, {49, 47, 1, 65}, {88, 173, 175, 90},
-        {175, 174, 89, 90}, {86, 171, 173, 88}, {174, 172, 87, 89},
-        {84, 169, 171, 86}, {172, 170, 85, 87}, {82, 167, 169, 84},
-        {170, 168, 83, 85}, {80, 165, 167, 82}, {168, 166, 81, 83},
-        {78, 91, 145, 163}, {146, 92, 79, 164}, {91, 93, 147, 145},
-        {148, 94, 92, 146}, {93, 95, 149, 147}, {150, 96, 94, 148},
-        {95, 97, 151, 149}, {152, 98, 96, 150}, {97, 99, 153, 151},
-        {154, 100, 98, 152}, {99, 101, 155, 153}, {156, 102, 100, 154},
-        {101, 103, 157, 155}, {158, 104, 102, 156}, {103, 105, 159, 157},
-        {160, 106, 104, 158}, {105, 107, 161, 159}, {162, 108, 106, 160},
-        {107, 66, 67, 161}, {67, 66, 108, 162}, {109, 127, 159, 161},
-        {160, 128, 110, 162}, {127, 178, 157, 159}, {158, 179, 128, 160},
-        {125, 155, 157, 178}, {158, 156, 126, 179}, {123, 153, 155, 125},
-        {156, 154, 124, 126}, {121, 151, 153, 123}, {154, 152, 122, 124},
-        {119, 149, 151, 121}, {152, 150, 120, 122}, {117, 147, 149, 119},
-        {150, 148, 118, 120}, {115, 145, 147, 117}, {148, 146, 116, 118},
-        {113, 163, 145, 115}, {146, 164, 114, 116}, {113, 180, 176, 163},
-        {176, 181, 114, 164}, {109, 161, 67, 111}, {67, 162, 110, 112},
-        {111, 67, 177, 182}, {177, 67, 112, 183}, {176, 180, 182, 177},
-        {183, 181, 176, 177}, {134, 136, 175, 173}, {175, 136, 135, 174},
-        {132, 134, 173, 171}, {174, 135, 133, 172}, {130, 132, 171, 169},
-        {172, 133, 131, 170}, {165, 186, 184, 167}, {185, 187, 166, 168},
-        {130, 169, 167, 184}, {168, 170, 131, 185}, {143, 189, 188, 186},
-        {188, 189, 144, 187}, {184, 186, 188, 68}, {188, 187, 185, 68},
-        {129, 130, 184, 68}, {185, 131, 129, 68}, {141, 192, 190, 143},
-        {191, 193, 142, 144}, {139, 194, 192, 141}, {193, 195, 140, 142},
-        {138, 196, 194, 139}, {195, 197, 138, 140}, {137, 70, 196, 138},
-        {197, 70, 137, 138}, {189, 143, 190, 69}, {191, 144, 189, 69},
-        {69, 190, 205, 207}, {206, 191, 69, 207}, {70, 198, 199, 196},
-        {200, 198, 70, 197}, {196, 199, 201, 194}, {202, 200, 197, 195},
-        {194, 201, 203, 192}, {204, 202, 195, 193}, {192, 203, 205, 190},
-        {206, 204, 193, 191}, {198, 203, 201, 199}, {202, 204, 198, 200},
-        {198, 207, 205, 203}, {206, 207, 198, 204}, {138, 139, 163, 176},
-        {164, 140, 138, 176}, {139, 141, 210, 163}, {211, 142, 140, 164},
-        {141, 143, 212, 210}, {213, 144, 142, 211}, {143, 186, 165, 212},
-        {166, 187, 144, 213}, {80, 208, 212, 165}, {213, 209, 81, 166},
-        {208, 214, 210, 212}, {211, 215, 209, 213}, {78, 163, 210, 214},
-        {211, 164, 79, 215}, {130, 129, 71, 221}, {71, 129, 131, 222},
-        {132, 130, 221, 219}, {222, 131, 133, 220}, {134, 132, 219, 217},
-        {220, 133, 135, 218}, {136, 134, 217, 216}, {218, 135, 136, 216},
-        {216, 217, 228, 230}, {229, 218, 216, 230}, {217, 219, 226, 228},
-        {227, 220, 218, 229}, {219, 221, 224, 226}, {225, 222, 220, 227},
-        {221, 71, 223, 224}, {223, 71, 222, 225}, {223, 230, 228, 224},
-        {229, 230, 223, 225}, {182, 180, 233, 231}, {234, 181, 183, 232},
-        {111, 182, 231, 253}, {232, 183, 112, 254}, {109, 111, 253, 255},
-        {254, 112, 110, 256}, {180, 113, 251, 233}, {252, 114, 181, 234},
-        {113, 115, 249, 251}, {250, 116, 114, 252}, {115, 117, 247, 249},
-        {248, 118, 116, 250}, {117, 119, 245, 247}, {246, 120, 118, 248},
-        {119, 121, 243, 245}, {244, 122, 120, 246}, {121, 123, 241, 243},
-        {242, 124, 122, 244}, {123, 125, 239, 241}, {240, 126, 124, 242},
-        {125, 178, 235, 239}, {236, 179, 126, 240}, {178, 127, 237, 235},
-        {238, 128, 179, 236}, {127, 109, 255, 237}, {256, 110, 128, 238},
-        {237, 255, 257, 275}, {258, 256, 238, 276}, {235, 237, 275, 277},
-        {276, 238, 236, 278}, {239, 235, 277, 273}, {278, 236, 240, 274},
-        {241, 239, 273, 271}, {274, 240, 242, 272}, {243, 241, 271, 269},
-        {272, 242, 244, 270}, {245, 243, 269, 267}, {270, 244, 246, 268},
-        {247, 245, 267, 265}, {268, 246, 248, 266}, {249, 247, 265, 263},
-        {266, 248, 250, 264}, {251, 249, 263, 261}, {264, 250, 252, 262},
-        {233, 251, 261, 279}, {262, 252, 234, 280}, {255, 253, 259, 257},
-        {260, 254, 256, 258}, {253, 231, 281, 259}, {282, 232, 254, 260},
-        {231, 233, 279, 281}, {280, 234, 232, 282}, {66, 107, 283, 72},
-        {284, 108, 66, 72}, {107, 105, 285, 283}, {286, 106, 108, 284},
-        {105, 103, 287, 285}, {288, 104, 106, 286}, {103, 101, 289, 287},
-        {290, 102, 104, 288}, {101, 99, 291, 289}, {292, 100, 102, 290},
-        {99, 97, 293, 291}, {294, 98, 100, 292}, {97, 95, 295, 293},
-        {296, 96, 98, 294}, {95, 93, 297, 295}, {298, 94, 96, 296},
-        {93, 91, 299, 297}, {300, 92, 94, 298}, {307, 308, 327, 337},
-        {328, 308, 307, 338}, {306, 307, 337, 335}, {338, 307, 306, 336},
-        {305, 306, 335, 339}, {336, 306, 305, 340}, {88, 90, 305, 339},
-        {305, 90, 89, 340}, {86, 88, 339, 333}, {340, 89, 87, 334},
-        {84, 86, 333, 329}, {334, 87, 85, 330}, {82, 84, 329, 331},
-        {330, 85, 83, 332}, {329, 335, 337, 331}, {338, 336, 330, 332},
-        {329, 333, 339, 335}, {340, 334, 330, 336}, {325, 331, 337, 327},
-        {338, 332, 326, 328}, {80, 82, 331, 325}, {332, 83, 81, 326},
-        {208, 341, 343, 214}, {344, 342, 209, 215}, {80, 325, 341, 208},
-        {342, 326, 81, 209}, {78, 214, 343, 345}, {344, 215, 79, 346},
-        {78, 345, 299, 91}, {300, 346, 79, 92}, {76, 323, 351, 303},
-        {352, 324, 76, 303}, {303, 351, 349, 77}, {350, 352, 303, 77},
-        {77, 349, 347, 304}, {348, 350, 77, 304}, {304, 347, 327, 308},
-        {328, 348, 304, 308}, {325, 327, 347, 341}, {348, 328, 326, 342},
-        {295, 297, 317, 309}, {318, 298, 296, 310}, {75, 315, 323, 76},
-        {324, 316, 75, 76}, {301, 357, 355, 302}, {356, 358, 301, 302},
-        {302, 355, 353, 74}, {354, 356, 302, 74}, {74, 353, 315, 75},
-        {316, 354, 74, 75}, {291, 293, 361, 363}, {362, 294, 292, 364},
-        {363, 361, 367, 365}, {368, 362, 364, 366}, {365, 367, 369, 371},
-        {370, 368, 366, 372}, {371, 369, 375, 373}, {376, 370, 372, 374},
-        {313, 377, 373, 375}, {374, 378, 314, 376}, {315, 353, 373, 377},
-        {374, 354, 316, 378}, {353, 355, 371, 373}, {372, 356, 354, 374},
-        {355, 357, 365, 371}, {366, 358, 356, 372}, {357, 359, 363, 365},
-        {364, 360, 358, 366}, {289, 291, 363, 359}, {364, 292, 290, 360},
-        {73, 359, 357, 301}, {358, 360, 73, 301}, {283, 285, 287, 289},
-        {288, 286, 284, 290}, {283, 289, 359, 73}, {360, 290, 284, 73},
-        {293, 295, 309, 361}, {310, 296, 294, 362}, {309, 311, 367, 361},
-        {368, 312, 310, 362}, {311, 381, 369, 367}, {370, 382, 312, 368},
-        {313, 375, 369, 381}, {370, 376, 314, 382}, {347, 349, 385, 383},
-        {386, 350, 348, 384}, {317, 383, 385, 319}, {386, 384, 318, 320},
-        {297, 299, 383, 317}, {384, 300, 298, 318}, {299, 343, 341, 383},
-        {342, 344, 300, 384}, {313, 321, 379, 377}, {380, 322, 314, 378},
-        {315, 377, 379, 323}, {380, 378, 316, 324}, {319, 385, 379, 321},
-        {380, 386, 320, 322}, {349, 351, 379, 385}, {380, 352, 350, 386},
-        {399, 387, 413, 401}, {414, 388, 400, 402}, {399, 401, 403, 397},
-        {404, 402, 400, 398}, {397, 403, 405, 395}, {406, 404, 398, 396},
-        {395, 405, 407, 393}, {408, 406, 396, 394}, {393, 407, 409, 391},
-        {410, 408, 394, 392}, {391, 409, 411, 389}, {412, 410, 392, 390},
-        {409, 419, 417, 411}, {418, 420, 410, 412}, {407, 421, 419, 409},
-        {420, 422, 408, 410}, {405, 423, 421, 407}, {422, 424, 406, 408},
-        {403, 425, 423, 405}, {424, 426, 404, 406}, {401, 427, 425, 403},
-        {426, 428, 402, 404}, {401, 413, 415, 427}, {416, 414, 402, 428},
-        {317, 319, 443, 441}, {444, 320, 318, 442}, {319, 389, 411, 443},
-        {412, 390, 320, 444}, {309, 317, 441, 311}, {442, 318, 310, 312},
-        {381, 429, 413, 387}, {414, 430, 382, 388}, {411, 417, 439, 443},
-        {440, 418, 412, 444}, {437, 445, 443, 439}, {444, 446, 438, 440},
-        {433, 445, 437, 435}, {438, 446, 434, 436}, {431, 447, 445, 433},
-        {446, 448, 432, 434}, {429, 447, 431, 449}, {432, 448, 430, 450},
-        {413, 429, 449, 415}, {450, 430, 414, 416}, {311, 447, 429, 381},
-        {430, 448, 312, 382}, {311, 441, 445, 447}, {446, 442, 312, 448},
-        {415, 449, 451, 475}, {452, 450, 416, 476}, {449, 431, 461, 451},
-        {462, 432, 450, 452}, {431, 433, 459, 461}, {460, 434, 432, 462},
-        {433, 435, 457, 459}, {458, 436, 434, 460}, {435, 437, 455, 457},
-        {456, 438, 436, 458}, {437, 439, 453, 455}, {454, 440, 438, 456},
-        {439, 417, 473, 453}, {474, 418, 440, 454}, {427, 415, 475, 463},
-        {476, 416, 428, 464}, {425, 427, 463, 465}, {464, 428, 426, 466},
-        {423, 425, 465, 467}, {466, 426, 424, 468}, {421, 423, 467, 469},
-        {468, 424, 422, 470}, {419, 421, 469, 471}, {470, 422, 420, 472},
-        {417, 419, 471, 473}, {472, 420, 418, 474}, {457, 455, 479, 477},
-        {480, 456, 458, 478}, {477, 479, 481, 483}, {482, 480, 478, 484},
-        {483, 481, 487, 485}, {488, 482, 484, 486}, {485, 487, 489, 491},
-        {490, 488, 486, 492}, {463, 475, 485, 491}, {486, 476, 464, 492},
-        {451, 483, 485, 475}, {486, 484, 452, 476}, {451, 461, 477, 483},
-        {478, 462, 452, 484}, {457, 477, 461, 459}, {462, 478, 458, 460},
-        {453, 473, 479, 455}, {480, 474, 454, 456}, {471, 481, 479, 473},
-        {480, 482, 472, 474}, {469, 487, 481, 471}, {482, 488, 470, 472},
-        {467, 489, 487, 469}, {488, 490, 468, 470}, {465, 491, 489, 467},
-        {490, 492, 466, 468}, {391, 389, 503, 501}, {504, 390, 392, 502},
-        {393, 391, 501, 499}, {502, 392, 394, 500}, {395, 393, 499, 497},
-        {500, 394, 396, 498}, {397, 395, 497, 495}, {498, 396, 398, 496},
-        {399, 397, 495, 493}, {496, 398, 400, 494}, {387, 399, 493, 505},
-        {494, 400, 388, 506}, {493, 501, 503, 505}, {504, 502, 494, 506},
-        {493, 495, 499, 501}, {500, 496, 494, 502}, {313, 381, 387, 505},
-        {388, 382, 314, 506}, {313, 505, 503, 321}, {504, 506, 314, 322},
-        {319, 321, 503, 389}, {504, 322, 320, 390}};
+extern const vector<vec3f> suzanne_positions;
+extern const vector<vec4i> suzanne_quads;
+extern const vector<vec3i> suzanne_triangles;
 
-    positions = suzanne_pos;
+// Make a suzanne monkey model for testing.
+template <typename T>
+inline void make_suzanne_shape(vector<vec4i>& quads,
+    vector<vec<T, 3>>& positions, T size, const frame<T, 3>& frame) {
+    positions = suzanne_positions;
     for (auto& p : positions) p *= size / 2;
     quads = suzanne_quads;
     for (auto& t : suzanne_triangles) {
         quads.push_back({t.x, t.y, t.z, t.z});
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Watertight cube
 template <typename T>
-inline void make_box_shape(
-    vector<vec4i>& quads, vector<vec<T, 3>>& positions, const vec<T, 3>& size) {
+inline void make_box_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    const vec<T, 3>& size, const frame<T, 3>& frame) {
     static auto cube_pos     = vector<vec<T, 3>>{{-1, -1, -1}, {-1, +1, -1},
         {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1},
         {+1, -1, +1}};
@@ -3119,6 +2832,7 @@ inline void make_box_shape(
     positions = cube_pos;
     for (auto& p : positions) p *= size / 2;
     quads = cube_quads;
+    _transform_points_inplace(frame, positions);
 }
 
 // Generate lines set along a quad.
@@ -3126,7 +2840,8 @@ template <typename T>
 inline void make_lines_shape(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
     vector<T>& radius, const vec2i& steps, const vec<T, 2>& size,
-    const vec<T, 2>& uvsize, const vec<T, 2>& line_radius) {
+    const vec<T, 2>& uvsize, const vec<T, 2>& line_radius,
+    const frame<T, 3>& frame) {
     auto nverts = (steps.x + 1) * steps.y;
     auto nlines = steps.x * steps.y;
     auto vid    = [steps](int i, int j) { return j * (steps.x + 1) + i; };
@@ -3162,6 +2877,8 @@ inline void make_lines_shape(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
             lines[fid(i, j)] = {vid(i, j), vid(i + 1, j)};
         }
     }
+
+    _transform_points_inplace(frame, positions);
 }
 
 // Generate a point set with points placed at the origin with texcoords
@@ -3169,7 +2886,8 @@ inline void make_lines_shape(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
 template <typename T>
 inline void make_points_shape(vector<int>& points, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    vector<T>& radius, int num, T uvsize, T point_radius) {
+    vector<T>& radius, int num, T uvsize, T point_radius,
+    const frame<T, 3>& frame) {
     points.resize(num);
     for (auto i = 0; i < num; i++) points[i] = i;
     positions.assign(num, {0, 0, 0});
@@ -3178,6 +2896,8 @@ inline void make_points_shape(vector<int>& points, vector<vec<T, 3>>& positions,
     radius.assign(num, point_radius);
     for (auto i = 0; i < texturecoords.size(); i++)
         texturecoords[i] = {(T)i / (T)num, 0};
+
+    _transform_points_inplace(frame, positions);
 }
 
 // Generate a point set.
@@ -3185,7 +2905,8 @@ template <typename T>
 inline void make_random_points_shape(vector<int>& points,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texturecoords, vector<T>& radius, int num,
-    const vec<T, 3>& size, T uvsize, T point_radius, uint64_t seed) {
+    const vec<T, 3>& size, T uvsize, T point_radius, uint64_t seed,
+    const frame<T, 3>& frame) {
     make_points_shape(points, positions, normals, texturecoords, radius, num,
         uvsize, point_radius);
     auto rng = make_rng(seed);
@@ -3193,24 +2914,26 @@ inline void make_random_points_shape(vector<int>& points,
         positions[i] = (get_random_vec3f(rng) - vec<T, 3>{0.5f, 0.5f, 0.5f}) *
                        size;
     }
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a point.
 template <typename T>
 inline void make_point_shape(vector<int>& points, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    vector<T>& radius, T point_radius) {
+    vector<T>& radius, T point_radius, const frame<T, 3>& frame) {
     points        = {0};
     positions     = {{0, 0, 0}};
     normals       = {{0, 0, 1}};
     texturecoords = {{0, 0}};
     radius        = {point_radius};
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a bezier circle. Returns bezier, pos.
 template <typename T>
-inline void make_bezier_circle_shape(
-    vector<vec4i>& beziers, vector<vec<T, 3>>& positions, T size) {
+inline void make_bezier_circle_shape(vector<vec4i>& beziers,
+    vector<vec<T, 3>>& positions, T size, const frame<T, 3>& frame) {
     // constant from http://spencermortensen.com/articles/bezier-circle/
     const auto  c          = 0.551915024494f;
     static auto circle_pos = vector<vec<T, 3>>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
@@ -3221,6 +2944,7 @@ inline void make_bezier_circle_shape(
     positions = circle_pos;
     beziers   = circle_beziers;
     for (auto& p : positions) p *= size;
+    _transform_points_inplace(frame, positions);
 }
 
 // Make a hair ball around a shape
@@ -3263,7 +2987,7 @@ inline void make_hair_shape(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
     }
 
     make_lines_shape(lines, positions, normals, texturecoords, radius, steps,
-        {1, 1}, {1, 1});
+        {1, 1}, {1, 1}, {1, 1}, identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
         auto u       = texturecoords[i].x;
         auto bidx    = i / (steps.x + 1);
@@ -3312,6 +3036,190 @@ inline void make_shell_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     for (auto& n : inner_normals) n = -n;
     merge_quads(quads, positions, normals, texturecoords, inner_quads,
         inner_positions, inner_normals, inner_texturecoords);
+}
+
+// Shape presets used ofr testing.
+template <typename T>
+inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
+    vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
+    vector<vec<T, 4>>& colors, vector<T>& radius, const string& type) {
+    if (type == "default-quad") {
+        make_quad_shape<T>(quads, positions, normals, texturecoords, {1, 1},
+            {2, 2}, {1, 1}, identity_frame<T, 3>);
+    } else if (type == "default-quady") {
+        make_quad_shape<T>(quads, positions, normals, texturecoords, {1, 1},
+            {2, 2}, {1, 1}, identity_frame<T, 3>);
+    } else if (type == "default-quad-stack") {
+        make_quad_stack_shape<T>(quads, positions, normals, texturecoords,
+            {1, 1, 1}, {2, 2, 2}, {1, 1}, identity_frame<T, 3>);
+    } else if (type == "default-box") {
+        make_box_shape<T>(quads, positions, normals, texturecoords, {1, 1, 1},
+            {2, 2, 2}, {1, 1, 1}, identity_frame<T, 3>);
+    } else if (type == "default-box-rounded") {
+        make_box_rounded_shape<T>(quads, positions, normals, texturecoords,
+            {32, 32, 32}, {2, 2, 2}, {1, 1, 1}, (T)0.15, identity_frame<T, 3>);
+    } else if (type == "default-uvsphere") {
+        make_uvsphere_shape<T>(quads, positions, normals, texturecoords,
+            {64, 32}, 2, {1, 1}, identity_frame<T, 3>);
+    } else if (type == "default-sphere") {
+        make_sphere_shape<T>(quads, positions, normals, texturecoords, 32, 2, 1,
+            identity_frame<T, 3>);
+    } else if (type == "default-uvsphere-flipcap") {
+        make_uvsphere_flipcap_shape<T>(quads, positions, normals, texturecoords,
+            {64, 32}, (T)2, {1, 1}, {(T)-0.75, (T)0.75}, identity_frame<T, 3>);
+    } else if (type == "default-uvdisk") {
+        make_uvdisk_shape<T>(quads, positions, normals, texturecoords, {32, 16},
+            2, {1, 1}, identity_frame<T, 3>);
+    } else if (type == "default-disk") {
+        make_disk_shape<T>(quads, positions, normals, texturecoords, 32, 2, 1,
+            identity_frame<T, 3>);
+    } else if (type == "default-disk-bulged") {
+        make_disk_bulged_shape<T>(quads, positions, normals, texturecoords, 32,
+            2, 1, (T)0.25, identity_frame<T, 3>);
+    } else if (type == "default-quad-bulged") {
+        make_quad_bulged_shape<T>(quads, positions, normals, texturecoords, 32,
+            2, 1, (T)0.25, identity_frame<T, 3>);
+    } else if (type == "default-uvcylinder") {
+        make_uvcylinder_shape<T>(quads, positions, normals, texturecoords,
+            {64, 32, 16}, {2, 2}, {1, 1, 1}, identity_frame<T, 3>);
+    } else if (type == "default-uvcylinder-rounded") {
+        make_uvcylinder_rounded_shape<T>(quads, positions, normals,
+            texturecoords, {64, 32, 16}, {2, 2}, {1, 1, 1}, (T)0.075,
+            identity_frame<T, 3>);
+    } else if (type == "default-sphere-geodesic") {
+        make_geodesic_sphere_shape<T>(
+            triangles, positions, normals, 4, (T)2, identity_frame<T, 3>);
+    } else if (type == "default-floor") {
+        make_floor_shape<T>(quads, positions, normals, texturecoords, {1, 1},
+            {40, 40}, {20, 20}, identity_frame<T, 3>);
+    } else if (type == "default-floor-bent") {
+        make_floor_bent_shape<T>(quads, positions, normals, texturecoords,
+            {1, 40}, {40, 40}, {20, 20}, (T)10, identity_frame<T, 3>);
+    } else if (type == "default-matball") {
+        make_sphere_shape<T>(quads, positions, normals, texturecoords, 32, 2, 1,
+            identity_frame<T, 3>);
+    } else if (type == "default-hairball") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere_shape<T>(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 2 * (T)0.8, 1, identity_frame<T, 3>);
+        make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
+            {4, 65536}, {}, base_quads, base_positions, base_normals,
+            base_texturecoords, {(T)0.2, (T)0.2}, {(T)0.002, (T)0.001}, {0, 0},
+            {0, 0}, {0, 0});
+    } else if (type == "default-hairball-interior") {
+        make_sphere_shape<T>(quads, positions, normals, texturecoords, 32,
+            2 * (T)0.8, 1, identity_frame<T, 3>);
+    } else if (type == "default-suzanne") {
+        make_suzanne_shape<T>(quads, positions, 2, identity_frame<T, 3>);
+    } else if (type == "default-cube-posonly") {
+        auto ignore1 = vector<vec4i>{};
+        auto ignore2 = vector<vec4i>{};
+        auto ignore3 = vector<vec3f>{};
+        auto ignore4 = vector<vec2f>{};
+        make_box_fvshape<T>(quads, ignore1, ignore2, positions, ignore3,
+            ignore4, {1, 1, 1}, {2, 2, 2}, {1, 1, 1}, identity_frame<T, 3>);
+    } else if (type == "default-cube-facevarying") {
+        make_box_fvshape<T>(quads_positions, quads_normals, quads_texturecoords,
+            positions, normals, texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1},
+            identity_frame<T, 3>);
+    } else if (type == "default-sphere-facevarying") {
+        make_sphere_fvshape<T>(quads_positions, quads_normals,
+            quads_texturecoords, positions, normals, texturecoords, 32, (T)2.0,
+            (T)1.0, identity_frame<T, 3>);
+    } else if (type == "test-cube") {
+        make_box_rounded_shape<T>(quads, positions, normals, texturecoords,
+            {32, 32, 32}, {(T)0.15, (T)0.15, (T)0.15}, {1, 1, 1}, (T)0.3,
+            frame<T, 3>{{0, (T)0.075, 0}});
+    } else if (type == "test-uvsphere") {
+        make_uvsphere_shape<T>(quads, positions, normals, texturecoords,
+            {64, 32}, (T)0.15, {1, 1}, frame<T, 3>{{0, (T)0.075, 0}});
+    } else if (type == "test-uvsphere-flipcap") {
+        make_uvsphere_flipcap_shape<T>(quads, positions, normals, texturecoords,
+            {64, 32}, (T)0.15, {1, 1}, {(T)-0.75, (T)0.75},
+            frame<T, 3>{{0, (T)0.075, 0}});
+    } else if (type == "test-sphere") {
+        make_sphere_shape<T>(quads, positions, normals, texturecoords, 32,
+            (T)0.15, (T)1.0, frame<T, 3>{{0, (T)0.075, 0}});
+    } else if (type == "test-sphere-displaced") {
+        make_sphere_shape<T>(quads, positions, normals, texturecoords, 32,
+            (T)0.15, (T)1.0, frame<T, 3>{{0, (T)0.075, 0}});
+    } else if (type == "test-disk") {
+        make_disk_shape<T>(quads, positions, normals, texturecoords, 32,
+            (T)0.15, (T)1.0, frame<T, 3>{{0, (T)0.075, 0}});
+    } else if (type == "test-uvcylinder") {
+        make_uvcylinder_rounded_shape<T>(quads, positions, normals,
+            texturecoords, {64, 32, 16}, {(T)0.15, (T)0.15}, {1, 1, 1}, (T)0.3,
+            frame<T, 3>{{0, (T)0.075, 0}});
+    } else if (type == "test-floor") {
+        make_floor_shape<T>(quads, positions, normals, texturecoords, {1, 1},
+            {4, 4}, {20, 20}, identity_frame<T, 3>);
+    } else if (type == "test-matball") {
+        make_sphere_shape<T>(quads, positions, normals, texturecoords, 32,
+            (T)0.15, (T)1, frame<T, 3>{{0, (T)0.075, 0}});
+    } else if (type == "test-hairball1") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere_shape<T>(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, (T)0.15 * (T)0.8, 1,
+            frame<T, 3>{{0, (T)0.075, 0}});
+        make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
+            {4, 65536}, {}, base_quads, base_positions, base_normals,
+            base_texturecoords, vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
+            vec<T, 2>{(T)0.001, (T)0.0005} * (T)0.15, {(T)0.03, 100}, {0, 0},
+            {0, 0});
+    } else if (type == "test-hairball2") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere_shape<T>(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, (T)0.15 * (T)0.8, 1,
+            frame<T, 3>{{0, (T)0.075, 0}});
+        make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
+            {4, 65536}, {}, base_quads, base_positions, base_normals,
+            base_texturecoords, vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
+            vec<T, 2>{(T)0.001, (T)0.0005} * (T)0.15, {0, 0}, {0, 0}, {0, 0});
+    } else if (type == "test-hairball3") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere_shape<T>(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, (T)0.15 * (T)0.8, 1,
+            frame<T, 3>{{0, (T)0.075, 0}});
+        make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
+            {4, 65536}, {}, base_quads, base_positions, base_normals,
+            base_texturecoords, vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
+            vec<T, 2>{(T)0.001, (T)0.0005} * (T)0.15, {0, 0}, {(T)0.5, 128},
+            {0, 0});
+    } else if (type == "test-hairball-interior") {
+        make_sphere_shape<T>(quads, positions, normals, texturecoords, 32,
+            (T)0.15 * (T)0.8, 1, frame<T, 3>{{0, (T)0.075, 0}});
+    } else if (type == "test-suzanne-subdiv") {
+        make_suzanne_shape<T>(
+            quads, positions, (T)0.15, frame<T, 3>{{0, (T)0.075, 0}});
+    } else if (type == "test-cube-subdiv") {
+        make_box_fvshape<T>(quads_positions, quads_normals, quads_texturecoords,
+            positions, normals, texturecoords, {1, 1, 1},
+            {(T)0.15, (T)0.15, (T)0.15}, {1, 1, 1},
+            frame<T, 3>{{0, (T)0.075, 0}});
+    } else if (type == "test-arealight1") {
+        make_quad_shape<T>(quads, positions, normals, texturecoords, {1, 1},
+            {(T)0.4, (T)0.4}, {1, 1}, identity_frame<T, 3>);
+    } else if (type == "test-arealight2") {
+        make_quad_shape<T>(quads, positions, normals, texturecoords, {1, 1},
+            {(T)0.4, (T)0.4}, {1, 1}, identity_frame<T, 3>);
+    } else {
+        throw std::invalid_argument("unknown procedural type " + type);
+    }
 }
 
 }  // namespace yocto

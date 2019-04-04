@@ -103,24 +103,21 @@ struct yocto_camera {
 // conversion can be disabled with `ldr_as_linear` for example to render
 // normal maps.
 struct yocto_texture {
-    string       name             = "";
-    string       filename         = "";
-    image<vec4f> hdr_image        = {};
-    image<vec4b> ldr_image        = {};
-    bool         clamp_to_edge    = false;
-    bool         no_interpolation = false;
-    float        height_scale     = 1;
-    bool         ldr_as_linear    = false;
+    string       name          = "";
+    string       filename      = "";
+    image<vec4f> hdr_image     = {};
+    image<vec4b> ldr_image     = {};
+    bool         clamp_to_edge = false;
 };
 
 // Volumetric texture containing a float only volume data. See texture
 // above for other propoerties.
 struct yocto_voltexture {
-    string   name             = "";
-    string   filename         = "";
-    volume1f volume_data      = {};
-    bool     clamp_to_edge    = false;
-    bool     no_interpolation = false;
+    string        name             = "";
+    string        filename         = "";
+    volume<float> volume_data      = {};
+    bool          clamp_to_edge    = false;
+    bool          no_interpolation = false;
 };
 
 // Material for surfaces, lines and triangles.
@@ -150,6 +147,9 @@ struct yocto_material {
     int roughness_texture    = -1;
     int displacement_texture = -1;
     int normal_texture       = -1;
+
+    // texture properties
+    float displacement_scale = 1;
 
     // volume properties
     // albedo = scattering / (absorption + scattering)
@@ -375,8 +375,10 @@ float            sample_shape_element_pdf(const yocto_shape& shape,
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture& texture);
-vec4f lookup_texture(const yocto_texture& texture, int i, int j);
-vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord);
+vec4f lookup_texture(
+    const yocto_texture& texture, int i, int j, bool ldr_as_linear = false);
+vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord,
+    bool ldr_as_linear = false);
 float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k);
 float evaluate_voltexture(
     const yocto_voltexture& texture, const vec3f& texcoord);

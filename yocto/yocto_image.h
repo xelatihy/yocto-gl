@@ -4,11 +4,11 @@
 //
 // Yocto/Image is a collection of image utilities useful when writing rendering
 // algorithms. These include a simple image data structure, color conversion
-// utilities and tone mapping. We provinde loading and saving functionality for 
+// utilities and tone mapping. We provinde loading and saving functionality for
 // images and support PNG, JPG, TGA, BMP, HDR, EXR formats.
 //
-// This library depends on stb_image.h, stb_image_write.h, stb_image_resize.h, 
-// tinyexr.h for the IO features. If thoese are not needed, it can be safely 
+// This library depends on stb_image.h, stb_image_write.h, stb_image_resize.h,
+// tinyexr.h for the IO features. If thoese are not needed, it can be safely
 // used without dependencies.
 //
 //
@@ -153,7 +153,7 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
     return a.size() != b.size() || a._pixels != b._pixels;
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE IO
@@ -161,30 +161,62 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
 namespace yocto {
 
 // Check if an image is HDR based on filename.
-inline bool is_hdr_filename(const string& filename);
-// Check if an image is a preset based on filename.
-inline bool is_image_preset_filename(const string& filename);
+inline bool is_hdr_filename(const string& filename) {
+    return get_extension(filename) == "hdr" ||
+           get_extension(filename) == "exr" || get_extension(filename) == "pfm";
+}
+// Return the image preset type and the remaining filename
+inline bool is_image_preset_filename(const string& filename) {
+    return get_extension(filename) == "ypreset";
+}
+inline pair<string, string> get_image_preset_type(const string& filename) {
+    if (get_extension(filename) == "ypreset") {
+        return {get_noextension(get_noextension(get_filename(filename))),
+            get_noextension(filename)};
+    } else {
+        return {"", filename};
+    }
+}
 
 // Loads/saves a 1-4 channels float image in linear color space.
-template <int N>
-inline void load_image(const string& filename, image<vec<float, N>>& img);
-template <int N>
-inline void save_image(const string& filename, const image<vec<float, N>>& img);
-template <int N>
-inline void load_image_from_memory(
-    const byte* data, int data_size, image<vec<float, N>>& img);
+void load_image(const string& filename, image<float>& img);
+void load_image(const string& filename, image<vec2f>& img);
+void load_image(const string& filename, image<vec3f>& img);
+void load_image(const string& filename, image<vec4f>& img);
+void save_image(const string& filename, const image<float>& img);
+void save_image(const string& filename, const image<vec2f>& img);
+void save_image(const string& filename, const image<vec3f>& img);
+void save_image(const string& filename, const image<vec4f>& img);
 
 // Loads/saves a 1-4 byte image in sRGB color space.
+void load_image(const string& filename, image<byte>& img);
+void load_image(const string& filename, image<vec2b>& img);
+void load_image(const string& filename, image<vec3b>& img);
+void load_image(const string& filename, image<vec4b>& img);
+void save_image(const string& filename, const image<byte>& img);
+void save_image(const string& filename, const image<vec2b>& img);
+void save_image(const string& filename, const image<vec3b>& img);
+void save_image(const string& filename, const image<vec4b>& img);
+
+// Convenience helper for loading HDR or LDR based on filename
 template <int N>
-inline void load_image(const string& filename, image<vec<byte, N>>& img);
+inline void load_image(const string& filename, image<vec<float, N>>& hdr,
+    image<vec<byte, N>>& ldr) {
+    if (is_hdr_filename(filename)) {
+        load_image(filename, hdr);
+    } else {
+        load_image(filename, ldr);
+    }
+}
 template <int N>
-inline void save_image(const string& filename, const image<vec<byte, N>>& img);
-template <int N>
-inline void load_image_from_memory(
-    const byte* data, int data_size, image<vec<byte, N>>& img);
-template <int N>
-inline void load_image_from_memory(
-    const byte* data, int data_size, image<vec<byte, N>>& img);
+inline void save_image(const string& filename, const image<vec<float, N>>& hdr,
+    const image<vec<byte, N>>& ldr) {
+    if (!hdr.empty()) {
+        save_image(filename, hdr);
+    } else {
+        save_image(filename, ldr);
+    }
+}
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
@@ -199,12 +231,6 @@ inline void save_tonemapped_image(const string& filename,
         save_image(filename, ldr);
     }
 }
-
-// imageio error
-struct imageio_error : runtime_error {
-    explicit imageio_error(const char* msg) : runtime_error{msg} {}
-    explicit imageio_error(const std::string& msg) : runtime_error{msg} {}
-};
 
 }  // namespace yocto
 
@@ -236,8 +262,7 @@ inline void set_image_region(
 template <typename T1, typename T2, typename Func>
 inline void apply(
     const Func& func, image<T1>& result, const image<T2>& source) {
-    if (result.size() != source.size())
-        throw out_of_range("different image sizes");
+    result.resize(source.size());
     for (auto j = 0; j < result.size().y; j++) {
         for (auto i = 0; i < result.size().x; i++) {
             result[{i, j}] = func(source[{i, j}]);
@@ -247,8 +272,7 @@ inline void apply(
 template <typename T1, typename T2, typename Func>
 inline void apply(const Func& func, image<T1>& result, const image<T2>& source,
     const image_region& region) {
-    if (result.size() != source.size())
-        throw out_of_range("different image sizes");
+    result.resize(source.size());
     for (auto j = region.min.y; j < region.max.y; j++) {
         for (auto i = region.min.x; i < region.max.x; i++) {
             result[{i, j}] = func(source[{i, j}]);
@@ -347,27 +371,30 @@ namespace yocto {
 // Make example images in linear color space. Takes as input images allocated
 // to the desired size and fill the pixel with expected values.
 template <typename T>
-inline void make_grid_image(image<T>& img, int tile, const T& c0, const T& c1);
+inline void make_grid_image(
+    image<T>& img, const vec2i& size, int tile, const T& c0, const T& c1);
 template <typename T>
 inline void make_checker_image(
-    image<T>& img, int tile, const T& c0, const T& c1);
+    image<T>& img, const vec2i& size, int tile, const T& c0, const T& c1);
 template <typename T>
 inline void make_bumpdimple_image(
-    image<T>& img, int tile, const T& c0, const T& c1);
-template <typename T>
-inline void make_ramp_image(image<T>& img, const T& c0, const T& c1);
+    image<T>& img, const vec2i& size, int tile, const T& c0, const T& c1);
 template <typename T>
 inline void make_ramp_image(
-    image<T>& img, const T& c00, const T& c10, const T& c11, const T& c01);
+    image<T>& img, const vec2i& size, const T& c0, const T& c1);
 template <typename T>
-inline void make_gammaramp_image(image<T>& img, const T& c0, const T& c1);
+inline void make_ramp_image(image<T>& img, const vec2i& size, const T& c00,
+    const T& c10, const T& c11, const T& c01);
 template <typename T>
-inline void make_uvramp_image(image<T>& img);
+inline void make_gammaramp_image(
+    image<T>& img, const vec2i& size, const T& c0, const T& c1);
+template <typename T>
+inline void make_uvramp_image(image<T>& img, const vec2i& size);
 template <typename T, int N>
-inline void make_uvgrid_image(
-    image<vec<T, N>>& img, int tile = 8, bool colored = true);
+inline void make_uvgrid_image(image<vec<T, N>>& img, const vec2i& size,
+    int tile = 8, bool colored = true);
 template <typename T, int N>
-inline void make_blackbodyramp_image(image<vec<T, N>>& img,
+inline void make_blackbodyramp_image(image<vec<T, N>>& img, const vec2i& size,
     float start_temperature = 1000, float end_temperature = 12000);
 
 // Comvert a bump map to a normal map. All linear color spaces.
@@ -381,40 +408,47 @@ inline void bump_to_normal_map(
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
 template <typename T, int N>
-inline void make_sunsky_image(image<vec<T, N>>& img, T sun_angle,
-    T turbidity = 3, bool has_sun = false, T sun_intensity = 1,
+inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size,
+    T sun_angle, T turbidity = 3, bool has_sun = false, T sun_intensity = 1,
     T                sun_temperature = 0,
     const vec<T, 3>& ground_albedo   = {(T)0.2, (T)0.2, (T)0.2});
 // Make an image of multiple lights.
 template <typename T, int N>
-inline void make_lights_image(image<vec<T, N>>& img,
+inline void make_lights_image(image<vec<T, N>>& img, const vec2i& size,
     const vec<T, 3>& le = {1, 1, 1}, int nlights = 4, T langle = (T)pi / 4,
     T lwidth = (T)pi / 16, T lheight = (T)pi / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 template <typename T, typename T1>
-inline void make_noise_image(
-    image<T>& img, const T& c0, const T& c1, T1 scale = 1, bool wrap = true);
+inline void make_noise_image(image<T>& img, const vec2i& size, const T& c0,
+    const T& c1, T1 scale = 1, bool wrap = true);
 template <typename T, typename T1>
-inline void make_fbm_image(image<T>& img, const T& c0, const T& c1,
-    T1 scale = 1, T1 lacunarity = 2, T1 gain = 0.5f, int octaves = 6,
-    bool wrap = true);
-template <typename T, typename T1>
-inline void make_ridge_image(image<T>& img, const T& c0, const T& c1,
-    T1 scale = 1, T1 lacunarity = 2, T1 gain = (T1)0.5, T1 offset = 1,
+inline void make_fbm_image(image<T>& img, const vec2i& size, const T& c0,
+    const T& c1, T1 scale = 1, T1 lacunarity = 2, T1 gain = 0.5f,
     int octaves = 6, bool wrap = true);
 template <typename T, typename T1>
-inline void make_turbulence_image(image<T>& img, const T& c0, const T& c1,
-    T1 scale = 1, T1 lacunarity = 2, T1 gain = (T1)0.5, int octaves = 6,
-    bool wrap = true);
+inline void make_ridge_image(image<T>& img, const vec2i& size, const T& c0,
+    const T& c1, T1 scale = 1, T1 lacunarity = 2, T1 gain = (T1)0.5,
+    T1 offset = 1, int octaves = 6, bool wrap = true);
+template <typename T, typename T1>
+inline void make_turbulence_image(image<T>& img, const vec2i& size, const T& c0,
+    const T& c1, T1 scale = 1, T1 lacunarity = 2, T1 gain = (T1)0.5,
+    int octaves = 6, bool wrap = true);
 
 // Add a border to an image
 template <typename T>
 inline void add_image_border(
-    image<T>& img, int border_width, const T& border_color);
+    image<T>& img, const vec2i& size, int border_width, const T& border_color);
+
+// Make logo images. Image is resized to proper size.
+template <typename T>
+inline void make_logo_image(image<T>& img, const string& name);
 
 // Make an image preset, useful for testing. See implementation for types.
 inline void make_image_preset(image<vec<float, 4>>& img, const string& type);
+inline void make_image_preset(image<vec<byte, 4>>& img, const string& type);
+inline void make_image_preset(
+    image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
 
 }  // namespace yocto
 
@@ -468,9 +502,6 @@ struct volume {
     vector<float> _voxels = {};
 };
 
-// Typedefs
-using volume1f = volume<float>;
-
 // equality
 template <typename T>
 inline bool operator==(const volume<T>& a, const volume<T>& b) {
@@ -482,8 +513,9 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b) {
 }
 
 // make a simple example volume
-inline void make_test_volume(
-    volume1f& vol, float scale = 10, float exponent = 6);
+inline void make_test_volume(volume<float>& vol, const vec3i& size,
+    float scale = 10, float exponent = 6);
+inline void make_volume_preset(volume<float>& vol, const string& type);
 
 }  // namespace yocto
 
@@ -492,9 +524,14 @@ inline void make_test_volume(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Check if an image is a preset based on filename.
+inline bool is_volume_preset_filename(const string& filename) {
+    return get_extension(filename) == "ypreset";
+}
+
 // Loads/saves a 1 channel volume.
-void load_volume(const string& filename, volume1f& vol);
-void save_volume(const string& filename, const volume1f& vol);
+void load_volume(const string& filename, volume<float>& vol);
+void save_volume(const string& filename, const volume<float>& vol);
 
 }  // namespace yocto
 
@@ -607,6 +644,20 @@ inline byte luminance(const vec<byte, N>& a) {
 }
 
 template <typename T, int N>
+inline vec<T, N> gray_to_color(T a) {
+    if constexpr (N == 1) {
+        return a;
+    } else if constexpr (N == 2) {
+        return {a, default_alpha<T>};
+    } else if constexpr (N == 3) {
+        return {a, a, a};
+    } else if constexpr (N == 4) {
+        return {a, a, a, default_alpha<T>};
+    } else {
+        throw runtime_error("Bad number of arguments");
+    }
+}
+template <typename T, int N>
 inline vec<T, N> rgba_to_color(const vec<T, 4>& a) {
     if constexpr (N == 1) {
         return {luminance(a)};
@@ -621,6 +672,10 @@ inline vec<T, N> rgba_to_color(const vec<T, 4>& a) {
     }
 }
 
+template <typename T, int N>
+inline void gray_to_color(image<vec<T, N>>& col, const image<T>& gray) {
+    return apply([](auto& a) { return gray_to_color<T, N>(a); }, col, gray);
+}
 template <typename T, int N>
 inline void rgba_to_color(image<vec<T, N>>& col, const image<vec<T, 4>>& rgba) {
     return apply([](auto& a) { return rgba_to_color<T, N>(a); }, col, rgba);
@@ -815,18 +870,12 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Loads/saves a 1-4 channel builtin image.
-template <int N>
-void load_builtin_image(const string& name, image<vec<byte, N>>& img);
-template <int N>
-void load_builtin_image(const string& name, image<vec<float, N>>& img);
-
 // Save with a logo embedded
 template <typename T, int N>
 inline void save_image_with_logo(
     const string& filename, const image<vec<T, N>>& img) {
     auto logo = image<vec<T, N>>{};
-    load_builtin_image("logo-render", logo);
+    make_logo_image(logo, "logo-render");
     auto img_copy = img;
     auto offset   = img.size() - logo.size() - 8;
     set_image_region(img_copy, logo, offset);
@@ -1070,7 +1119,9 @@ namespace yocto {
 
 // Make an image by assign values to each pixel
 template <typename T, typename Func>
-inline void make_image_fromij(image<T>& img, const Func& func) {
+inline void make_image_fromij(
+    image<T>& img, const vec2i& size, const Func& func) {
+    img.resize(size);
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
             img[{i, j}] = func(i, j);
@@ -1078,7 +1129,9 @@ inline void make_image_fromij(image<T>& img, const Func& func) {
     }
 }
 template <typename T, typename Func>
-inline void make_image_fromuv(image<T>& img, const Func& func) {
+inline void make_image_fromuv(
+    image<T>& img, const vec2i& size, const Func& func) {
+    img.resize(size);
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
             auto u      = (float)i / (float)img.size().x;
@@ -1091,9 +1144,9 @@ inline void make_image_fromuv(image<T>& img, const Func& func) {
 // Make a grid image
 template <typename T>
 inline void make_grid_image(
-    image<T>& img, int tiles, const T& c0, const T& c1) {
+    image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
     make_image_fromij(
-        img, [tile = img.size().x / tiles, &c0, &c1](int i, int j) {
+        img, size, [tile = size.x / tiles, &c0, &c1](int i, int j) {
             auto c = i % tile == 0 || i % tile == tile - 1 || j % tile == 0 ||
                      j % tile == tile - 1;
             return (c) ? c0 : c1;
@@ -1103,9 +1156,9 @@ inline void make_grid_image(
 // Make a checkerboard image
 template <typename T>
 inline void make_checker_image(
-    image<T>& img, int tiles, const T& c0, const T& c1) {
+    image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
     make_image_fromij(
-        img, [tile = img.size().x / tiles, &c0, &c1](int i, int j) {
+        img, size, [tile = size.x / tiles, &c0, &c1](int i, int j) {
             auto c = (i / tile + j / tile) % 2 == 0;
             return (c) ? c0 : c1;
         });
@@ -1114,43 +1167,45 @@ inline void make_checker_image(
 // Make an image with bumps and dimples.
 template <typename T>
 inline void make_bumpdimple_image(
-    image<T>& img, int tiles, const T& c0, const T& c1) {
-    make_image_fromij(img, [tile = img.size().x / tiles, &c0, &c1](
-                               int i, int j) {
-        auto c  = (i / tile + j / tile) % 2 == 0;
-        auto ii = i % tile - tile / 2, jj = j % tile - tile / 2;
-        auto r = sqrt(float(ii * ii + jj * jj)) / sqrt(float(tile * tile) / 4);
-        auto h = 0.5f;
-        if (r < 0.5f) {
-            h += (c) ? (0.5f - r) : -(0.5f - r);
-        }
-        return lerp_color(c0, c1, h);
-    });
+    image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
+    make_image_fromij(
+        img, size, [tile = size.x / tiles, &c0, &c1](int i, int j) {
+            auto c  = (i / tile + j / tile) % 2 == 0;
+            auto ii = i % tile - tile / 2, jj = j % tile - tile / 2;
+            auto r = sqrt(float(ii * ii + jj * jj)) /
+                     sqrt(float(tile * tile) / 4);
+            auto h = 0.5f;
+            if (r < 0.5f) {
+                h += (c) ? (0.5f - r) : -(0.5f - r);
+            }
+            return lerp_color(c0, c1, h);
+        });
 }
 
 // Make a uv colored grid
 template <typename T>
-inline void make_ramp_image(image<T>& img, const T& c0, const T& c1) {
-    make_image_fromij(img, [size = img.size(), &c0, &c1](int i, int j) {
+inline void make_ramp_image(
+    image<T>& img, const vec2i& size, const T& c0, const T& c1) {
+    make_image_fromij(img, size, [size = img.size(), &c0, &c1](int i, int j) {
         auto u = (float)i / (float)size.x;
         return lerp_color(c0, c1, u);
     });
 }
 template <typename T>
-inline void make_ramp_image(
-    image<T>& img, const T& c00, const T& c10, const T& c11, const T& c01) {
-    make_image_fromij(
-        img, [size = img.size(), &c00, &c10, &c01, &c11](int i, int j) {
-            auto u = (float)i / (float)size.x;
-            auto v = (float)j / (float)size.y;
-            return bilerp_color(c00, c10, c11, c01, u, v);
-        });
+inline void make_ramp_image(image<T>& img, const vec2i& size, const T& c00,
+    const T& c10, const T& c11, const T& c01) {
+    make_image_fromij(img, size, [size, &c00, &c10, &c01, &c11](int i, int j) {
+        auto u = (float)i / (float)size.x;
+        auto v = (float)j / (float)size.y;
+        return bilerp_color(c00, c10, c11, c01, u, v);
+    });
 }
 
 // Make a gamma ramp image
 template <typename T>
-inline void make_gammaramp_image(image<T>& img, const T& c0, const T& c1) {
-    make_image_fromij(img, [size = img.size(), &c0, &c1](int i, int j) {
+inline void make_gammaramp_image(
+    image<T>& img, const vec2i& size, const T& c0, const T& c1) {
+    make_image_fromij(img, size, [size, &c0, &c1](int i, int j) {
         auto u = j / float(size.y - 1);
         if (i < size.x / 3) u = pow(u, 2.2f);
         if (i > (size.x * 2) / 3) u = pow(u, 1 / 2.2f);
@@ -1161,14 +1216,14 @@ inline void make_gammaramp_image(image<T>& img, const T& c0, const T& c1) {
 // Make an image color with red/green in the [0,1] range. Helpful to
 // visualize uv texture coordinate application.
 template <typename T, int N>
-inline void make_uvramp_image(image<vec<T, N>>& img) {
+inline void make_uvramp_image(image<vec<T, N>>& img, const vec2i& size) {
     if constexpr (N == 3) {
         // FIXME: not generic
-        return make_ramp_image(img, vec<T, N>{0, 0, 0}, vec<T, N>{1, 0, 0},
-            vec<T, N>{1, 1, 0}, vec<T, N>{0, 1, 0});
+        return make_ramp_image(img, size, vec<T, N>{0, 0, 0},
+            vec<T, N>{1, 0, 0}, vec<T, N>{1, 1, 0}, vec<T, N>{0, 1, 0});
     } else if constexpr (N == 4) {
         // FIXME: not generic
-        return make_ramp_image(img, vec<T, N>{0, 0, 0, 0},
+        return make_ramp_image(img, size, vec<T, N>{0, 0, 0, 0},
             vec<T, N>{1, 0, 0, 0}, vec<T, N>{1, 1, 0, 0},
             vec<T, N>{0, 1, 0, 0});
     } else {
@@ -1178,43 +1233,44 @@ inline void make_uvramp_image(image<vec<T, N>>& img) {
 
 // Make a uv colored grid
 template <typename T, int N>
-inline void make_uvgrid_image(image<vec<T, N>>& img, int tiles, bool colored) {
-    make_image_fromij(img, [size = img.size(), tile = img.size().x / tiles,
-                               colored](int i, int j) {
-        j       = size.y - j - 1;
-        auto ii = i / tile, jj = j / tile;
-        auto ww = size.x / tile, hh = size.y / tile;
-        auto ph = (((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256) /
-                  360.f;
-        auto pv = 0.5f;
-        auto ps = 0.8f;
-        if (i % (tile / 2) && j % (tile / 2)) {
-            if ((i / tile + j / tile) % 2)
-                pv += 0.05f;
-            else
-                pv -= 0.05f;
-        } else {
-            pv = 0.8f;
-            ps = 0.2f;
-        }
-        auto rgb = (colored) ? hsv_to_rgb(vec<T, 3>{ph, ps, pv})
-                             : vec<T, 3>{pv, pv, pv};
-        if constexpr (N == 3) {
-            return vec<T, 3>{rgb.x, rgb.y, rgb.z};
-        } else if constexpr (N == 4) {
-            return vec<T, 4>{rgb.x, rgb.y, rgb.z, 1};
-        } else {
-            throw runtime_error("bad number of channels");
-        }
-    });
+inline void make_uvgrid_image(
+    image<vec<T, N>>& img, const vec2i& size, int tiles, bool colored) {
+    make_image_fromij(
+        img, size, [size, tile = size.x / tiles, colored](int i, int j) {
+            j       = size.y - j - 1;
+            auto ii = i / tile, jj = j / tile;
+            auto ww = size.x / tile, hh = size.y / tile;
+            auto ph = (((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256) /
+                      360.f;
+            auto pv = 0.5f;
+            auto ps = 0.8f;
+            if (i % (tile / 2) && j % (tile / 2)) {
+                if ((i / tile + j / tile) % 2)
+                    pv += 0.05f;
+                else
+                    pv -= 0.05f;
+            } else {
+                pv = 0.8f;
+                ps = 0.2f;
+            }
+            auto rgb = (colored) ? hsv_to_rgb(vec<T, 3>{ph, ps, pv})
+                                 : vec<T, 3>{pv, pv, pv};
+            if constexpr (N == 3) {
+                return vec<T, 3>{rgb.x, rgb.y, rgb.z};
+            } else if constexpr (N == 4) {
+                return vec<T, 4>{rgb.x, rgb.y, rgb.z, 1};
+            } else {
+                throw runtime_error("bad number of channels");
+            }
+        });
 }
 
 // Makes a blackbody ramp
 template <typename T, int N>
-inline void make_blackbodyramp_image(
-    image<vec<T, N>>& img, float start_temperature, float end_temperature) {
-    make_image_fromij(img,
-        [size = img.size(), start_temperature, end_temperature](int i, int j) {
+inline void make_blackbodyramp_image(image<vec<T, N>>& img, const vec2i& size,
+    float start_temperature, float end_temperature) {
+    make_image_fromij(
+        img, size, [size, start_temperature, end_temperature](int i, int j) {
             auto temperature = start_temperature +
                                (end_temperature - start_temperature) *
                                    (float)i / (float)(size.x - 1);
@@ -1231,11 +1287,11 @@ inline void make_blackbodyramp_image(
 
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
-inline void make_noise_image(
-    image<T>& img, const T& c0, const T& c1, T1 scale, bool wrap) {
-    make_image_fromij(
-        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
-                 size = img.size(), scale, &c0, &c1](int i, int j) {
+inline void make_noise_image(image<T>& img, const vec2i& size, const T& c0,
+    const T& c1, T1 scale, bool wrap) {
+    make_image_fromij(img, size,
+        [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale, &c0,
+            &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_noise(p, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
@@ -1245,12 +1301,11 @@ inline void make_noise_image(
 
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
-inline void make_fbm_image(image<T>& img, const T& c0, const T& c1, T1 scale,
-    T1 lacunarity, T1 gain, int octaves, bool wrap) {
-    make_image_fromij(
-        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
-                 size = img.size(), scale, lacunarity, gain, octaves, &c0,
-                 &c1](int i, int j) {
+inline void make_fbm_image(image<T>& img, const vec2i& size, const T& c0,
+    const T& c1, T1 scale, T1 lacunarity, T1 gain, int octaves, bool wrap) {
+    make_image_fromij(img, size,
+        [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale,
+            lacunarity, gain, octaves, &c0, &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
@@ -1260,12 +1315,12 @@ inline void make_fbm_image(image<T>& img, const T& c0, const T& c1, T1 scale,
 
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
-inline void make_ridge_image(image<T>& img, const T& c0, const T& c1, T1 scale,
-    T1 lacunarity, T1 gain, T1 offset, int octaves, bool wrap) {
-    make_image_fromij(
-        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
-                 size = img.size(), scale, lacunarity, gain, offset, octaves,
-                 &c0, &c1](int i, int j) {
+inline void make_ridge_image(image<T>& img, const vec2i& size, const T& c0,
+    const T& c1, T1 scale, T1 lacunarity, T1 gain, T1 offset, int octaves,
+    bool wrap) {
+    make_image_fromij(img, size,
+        [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale,
+            lacunarity, gain, offset, octaves, &c0, &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
@@ -1276,12 +1331,11 @@ inline void make_ridge_image(image<T>& img, const T& c0, const T& c1, T1 scale,
 
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
-inline void make_turbulence_image(image<T>& img, const T& c0, const T& c1,
-    T1 scale, T1 lacunarity, T1 gain, int octaves, bool wrap) {
-    make_image_fromij(
-        img, [wrap3i  = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i,
-                 size = img.size(), scale, lacunarity, gain, octaves, &c0,
-                 &c1](int i, int j) {
+inline void make_turbulence_image(image<T>& img, const vec2i& size, const T& c0,
+    const T& c1, T1 scale, T1 lacunarity, T1 gain, int octaves, bool wrap) {
+    make_image_fromij(img, size,
+        [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale,
+            lacunarity, gain, octaves, &c0, &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);
@@ -1294,12 +1348,7 @@ inline void make_turbulence_image(image<T>& img, const T& c0, const T& c1,
 template <typename T, int N>
 inline void bump_to_normal_map(
     image<vec<T, N>>& norm, const image<vec<T, N>>& img, T scale) {
-    if (img.size() != norm.size()) {
-        throw std::out_of_range{"Images should be the same size"};
-    }
-    if (&img == &norm) {
-        throw std::invalid_argument{"Images should be aliased"};
-    }
+    norm.resize(img.size());
     auto dx = 1.0f / img.size().x, dy = 1.0f / img.size().y;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
@@ -1340,8 +1389,8 @@ inline void add_image_border(
 
 // Implementation of sunsky modified heavily from pbrt
 template <typename T, int N>
-inline void make_sunsky_image(image<vec<T, N>>& img, T theta_sun, T turbidity,
-    bool has_sun, T sun_intensity, T sun_temperature,
+inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size,
+    T theta_sun, T turbidity, bool has_sun, T sun_intensity, T sun_temperature,
     const vec<T, 3>& ground_albedo) {
     // idea adapted from pbrt
 
@@ -1363,6 +1412,7 @@ inline void make_sunsky_image(image<vec<T, N>>& img, T theta_sun, T turbidity,
     }
 
     // clear image
+    img.resize(size);
     if constexpr (N == 3) {
         for (auto& p : img) p = {0, 0, 0};
     } else if constexpr (N == 4) {
@@ -1561,8 +1611,9 @@ image<vec4f> make_sunsky_image(int width, int height, float theta_sun,
 
 // Make an image of multiple lights.
 template <typename T>
-inline void make_lights_image(image<vec<T, 4>>& img, const vec<T, 3>& le,
-    int nlights, T langle, T lwidth, T lheight) {
+inline void make_lights_image(image<vec<T, 4>>& img, const vec2i& size,
+    const vec<T, 3>& le, int nlights, T langle, T lwidth, T lheight) {
+    img.resize(size);
     for (auto j = 0; j < img.size().y / 2; j++) {
         auto theta = (T)pi * ((j + (T)0.5) / img.size().y);
         theta      = clamp(theta, (T)0, (T)pi / 2 - float_epsilon);
@@ -1579,57 +1630,105 @@ inline void make_lights_image(image<vec<T, 4>>& img, const vec<T, 3>& le,
     }
 }
 
+template <int N>
+inline void make_logo_image(image<vec<byte, N>>& img, const string& type) {
+    static const auto size = vec2i{144, 28};
+    // clang-format off
+    static const auto logo_render = vector<byte>{
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 212, 87, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 255, 62, 0, 0, 0, 0, 0, 14, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 187, 245, 13, 0, 0, 0, 80, 255, 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 29, 88, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 88, 251, 10, 0, 0, 0, 40, 200, 253, 255, 234, 106, 0, 0, 6, 255, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 147, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 90, 69, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 144, 125, 0, 0, 0, 0, 0, 117, 37, 0, 0, 0, 0, 0, 0, 0, 79, 255, 101, 0, 0, 0, 178, 232, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 115, 255, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 145, 205, 0, 0, 0, 47, 239, 210, 74, 57, 144, 232, 24, 0, 6, 255, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 251, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 146, 123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 43, 35, 0, 61, 87, 0, 0, 208, 61, 0, 0, 0, 0, 0, 0, 0, 3, 224, 199, 0, 0, 24, 251, 129, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 115, 255, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 201, 149, 0, 0, 0, 180, 238, 20, 0, 0, 0, 16, 0, 0, 6, 255, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 251, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 146, 123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 119, 150, 0, 0, 208, 61, 0, 0, 0, 0, 0, 0, 0, 0, 118, 255, 41, 0, 117, 250, 26, 0, 7, 147, 223, 232, 167, 19, 0, 0, 0, 5, 143, 224, 234, 162, 20, 166, 227, 255, 210, 201, 3, 0, 7, 147, 223, 232, 167, 19, 0, 0, 0, 0, 8, 249, 93, 0, 0, 45, 255, 146, 0, 0, 0, 0, 0, 0, 0, 6, 255, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 14, 192, 114, 207, 0, 84, 224, 220, 61, 0, 68, 143, 166, 220, 78, 0, 0, 142, 234, 160, 251, 0, 0, 134, 234, 195, 25, 0, 123, 105, 211, 89, 12, 177, 236, 158, 4, 0, 44, 217, 214, 189, 123, 0, 0, 0, 149, 76, 0, 189, 108, 0, 160, 55, 123, 107, 83, 236, 240, 179, 0, 208, 128, 220, 174, 6, 0, 0, 0, 0, 0, 19, 247, 140, 0, 214, 168, 0, 0, 176, 248, 122, 111, 237, 212, 2, 0, 0, 167, 251, 128, 127, 223, 59, 103, 185, 255, 143, 117, 0, 0, 176, 248, 122, 111, 237, 212, 2, 0, 0, 0, 58, 255, 36, 0, 0, 97, 255, 77, 0, 0, 0, 0, 0, 0, 0, 6, 255, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 16, 248, 166, 36, 13, 234, 44, 73, 215, 0, 80, 248, 65, 80, 193, 0, 66, 222, 32, 97, 251, 0, 65, 207, 21, 135, 152, 0, 144, 230, 81, 12, 129, 157, 17, 189, 88, 0, 194, 126, 17, 208, 123, 0, 0, 0, 131, 125, 7, 228, 164, 0, 224, 23, 144, 125, 5, 127, 156, 10, 0, 208, 179, 13, 205, 65, 0, 0, 0, 0, 0, 0, 158, 233, 61, 255, 59, 0, 46, 255, 121, 0, 0, 91, 255, 83, 0, 40, 254, 134, 0, 0, 0, 0, 0, 115, 255, 33, 0, 0, 46, 255, 121, 0, 0, 91, 255, 83, 0, 0, 0, 114, 235, 0, 0, 0, 130, 255, 51, 0, 2, 17, 17, 17, 7, 0, 6, 255, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 16, 255, 43, 0, 76, 191, 0, 1, 242, 20, 80, 192, 0, 36, 235, 0, 138, 142, 0, 18, 251, 0, 140, 127, 0, 52, 212, 0, 144, 171, 0, 0, 204, 63, 0, 116, 148, 11, 255, 14, 0, 146, 123, 0, 0, 0, 84, 164, 46, 155, 201, 9, 231, 0, 144, 125, 0, 119, 150, 0, 0, 208, 64, 0, 164, 107, 0, 0, 0, 0, 0, 0, 49, 255, 220, 206, 0, 0, 114, 255, 46, 0, 0, 17, 255, 148, 0, 111, 255, 54, 0, 0, 0, 0, 0, 115, 255, 33, 0, 0, 114, 255, 46, 0, 0, 17, 255, 148, 0, 0, 0, 171, 179, 0, 0, 0, 159, 255, 29, 0, 20, 255, 255, 255, 109, 0, 6, 255, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 16, 253, 0, 0, 101, 242, 214, 214, 249, 40, 80, 189, 0, 34, 236, 0, 162, 121, 0, 18, 251, 0, 165, 232, 214, 219, 232, 0, 144, 126, 0, 0, 229, 222, 214, 229, 168, 34, 249, 0, 0, 146, 123, 0, 0, 0, 38, 203, 88, 107, 206, 48, 187, 0, 144, 125, 0, 119, 150, 0, 0, 208, 61, 0, 162, 108, 0, 0, 0, 0, 0, 0, 0, 197, 255, 98, 0, 0, 144, 255, 22, 0, 0, 0, 249, 177, 0, 141, 255, 28, 0, 0, 0, 0, 0, 115, 255, 33, 0, 0, 144, 255, 22, 0, 0, 0, 249, 177, 0, 0, 0, 227, 123, 0, 0, 0, 143, 255, 40, 0, 0, 79, 108, 255, 109, 0, 6, 255, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 16, 253, 0, 0, 85, 188, 4, 4, 4, 0, 80, 189, 0, 34, 236, 0, 149, 132, 0, 18, 251, 0, 149, 125, 4, 4, 3, 0, 144, 125, 0, 0, 213, 62, 4, 4, 2, 21, 255, 4, 0, 146, 123, 0, 0, 0, 2, 230, 130, 67, 178, 116, 141, 0, 144, 125, 0, 119, 150, 0, 0, 208, 61, 0, 162, 108, 0, 0, 0, 0, 0, 0, 0, 130, 255, 33, 0, 0, 151, 255, 17, 0, 0, 0, 245, 183, 0, 152, 255, 21, 0, 0, 0, 0, 0, 115, 255, 33, 0, 0, 151, 255, 17, 0, 0, 0, 245, 183, 0, 0, 28, 255, 67, 0, 0, 0, 116, 255, 59, 0, 0, 0, 39, 255, 109, 0, 6, 255, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 16, 253, 0, 0, 32, 236, 19, 2, 33, 0, 80, 189, 0, 34, 236, 0, 98, 195, 4, 64, 251, 0, 93, 191, 4, 11, 24, 0, 144, 125, 0, 0, 157, 131, 0, 27, 8, 1, 225, 72, 1, 190, 123, 0, 0, 0, 0, 201, 196, 26, 137, 197, 96, 0, 144, 125, 0, 109, 159, 0, 0, 208, 61, 0, 162, 108, 0, 0, 0, 0, 0, 0, 0, 130, 255, 33, 0, 0, 122, 255, 36, 0, 0, 8, 255, 152, 0, 124, 255, 42, 0, 0, 0, 0, 0, 115, 255, 33, 0, 0, 122, 255, 36, 0, 0, 8, 255, 152, 0, 0, 84, 253, 13, 0, 0, 0, 79, 255, 108, 0, 0, 0, 39, 255, 109, 0, 6, 255, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 16, 253, 0, 0, 0, 123, 238, 224, 155, 0, 80, 189, 0, 34, 236, 0, 11, 201, 218, 156, 248, 0, 6, 178, 225, 234, 97, 0, 144, 125, 0, 0, 31, 216, 214, 228, 49, 0, 89, 244, 198, 179, 123, 0, 0, 0, 0, 154, 239, 0, 96, 253, 50, 0, 144, 125, 0, 34, 224, 201, 25, 208, 61, 0, 162, 108, 0, 0, 0, 0, 0, 0, 0, 130, 255, 33, 0, 0, 70, 255, 96, 0, 0, 67, 255, 97, 0, 76, 255, 104, 0, 0, 0, 0, 0, 113, 255, 35, 0, 0, 70, 255, 96, 0, 0, 67, 255, 97, 0, 0, 141, 210, 0, 0, 0, 0, 5, 230, 200, 2, 0, 0, 39, 255, 109, 0, 6, 255, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 0, 0, 19, 6, 0, 0, 0, 0, 0, 0, 0, 0, 23, 1, 0, 0, 0, 12, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 130, 255, 33, 0, 0, 1, 211, 223, 54, 44, 205, 229, 7, 0, 2, 216, 230, 69, 74, 169, 31, 0, 55, 255, 120, 59, 26, 1, 211, 223, 54, 44, 205, 229, 7, 0, 0, 197, 154, 0, 0, 0, 0, 0, 109, 255, 166, 59, 78, 165, 255, 109, 0, 6, 255, 201, 113, 113, 113, 105, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 130, 255, 33, 0, 0, 0, 30, 204, 255, 255, 214, 40, 0, 0, 0, 35, 208, 255, 255, 212, 47, 0, 1, 174, 252, 243, 102, 0, 30, 204, 255, 255, 214, 40, 0, 0, 6, 247, 97, 0, 0, 0, 0, 0, 0, 103, 235, 255, 255, 242, 146, 24, 0, 6, 255, 255, 255, 255, 255, 213, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 29, 0, 0, 0, 0, 0, 0, 0, 25, 31, 0, 0, 0, 0, 0, 23, 9, 0, 0, 0, 0, 24, 29, 0, 0, 0, 0, 54, 255, 41, 0, 0, 0, 0, 0, 0, 0, 0, 33, 30, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 188, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    };
+    // clang-format on
+    if (type == "logo-render") {
+        auto img1 = image<byte>{size, logo_render.data()};
+        img.resize(size);
+        gray_to_color(img, img1);
+    } else {
+        throw io_error("unknown builtin image " + type);
+    }
+}
+
+template <int N>
+inline void make_logo_image(image<vec<float, N>>& img, const string& type) {
+    auto img8 = image<vec<byte, N>>();
+    make_logo_image(img8, type);
+    img.resize(img8.size());
+    srgb8_to_linear(img, img8);
+}
+
 inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
+    auto size = vec2i{1024, 1024};
+    if (type.find("sky") != type.npos) size = {2048, 1024};
     if (type == "grid") {
-        make_grid_image(img, 8,
-            {0.2f, 0.2f, 0.2f, 1},
-            {0.5f, 0.5f, 0.5f, 1});
+        make_grid_image(
+            img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
     } else if (type == "checker") {
-        make_checker_image(img, 8,
-            {0.2f, 0.2f, 0.2f, 1},
-            {0.5f, 0.5f, 0.5f, 1});
+        make_checker_image(
+            img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
     } else if (type == "bump") {
-        make_bumpdimple_image(img, 8,
-            {0, 0, 0, 1},
-            {1, 1, 1, 1});
+        make_bumpdimple_image(img, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
     } else if (type == "uvramp") {
-        make_uvramp_image(img);
+        make_uvramp_image(img, size);
     } else if (type == "gammaramp") {
-        make_gammaramp_image(img, {0, 0, 0, 1},
-            {1, 1, 1, 1});
+        make_gammaramp_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1});
     } else if (type == "blackbodyramp") {
-        make_blackbodyramp_image(img);
+        make_blackbodyramp_image(img, size);
     } else if (type == "uvgrid") {
-        make_uvgrid_image(img);
+        make_uvgrid_image(img, size);
     } else if (type == "sky") {
-        make_sunsky_image(img, pif / 4, 3.0f, false,
-            1.0f, 0.0f, vec<float, 3>{0.7f, 0.7f, 0.7f});
+        make_sunsky_image(img, size, pif / 4, 3.0f, false, 1.0f, 0.0f,
+            vec<float, 3>{0.7f, 0.7f, 0.7f});
     } else if (type == "sunsky") {
-        make_sunsky_image(img, pif / 4, 3.0f, true,
-                          1.0f, 0.0f, vec<float, 3>{0.7f, 0.7f, 0.7f});
+        make_sunsky_image(img, size, pif / 4, 3.0f, true, 1.0f, 0.0f,
+            vec<float, 3>{0.7f, 0.7f, 0.7f});
     } else if (type == "noise") {
-        make_noise_image(img, {0, 0, 0, 1},
-            {1, 1, 1, 1}, 1.0f, true);
+        make_noise_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
     } else if (type == "fbm") {
-        make_fbm_image(img, {0, 0, 0, 1},
-            {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
+        make_fbm_image(
+            img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
     } else if (type == "ridge") {
-        make_ridge_image(img, {0, 0, 0, 1},
-            {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 1.0f, 6,
-            true);
+        make_ridge_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f,
+            0.5f, 1.0f, 6, true);
     } else if (type == "turbulence") {
-        make_turbulence_image(img, {0, 0, 0, 1},
-            {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
+        make_turbulence_image(
+            img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
     } else if (type == "bump-normal") {
-        auto bump = image<vec<float, 4>>{img.size()};
-        make_bumpdimple_image(bump, 8,
-                              {0, 0, 0, 1},
-                              {1, 1, 1, 1});
-        bump_to_normal_map(img, bump);
+        auto bump = image<vec<float, 4>>{};
+        make_bumpdimple_image(bump, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+        bump_to_normal_map(img, bump, 0.05f);
+    } else if (type == "logo-render") {
+        make_logo_image(img, "logo-render");
     } else if (type == "images1") {
-        auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp", 
-            "bump", "bump-normal", "noise", "fbm", "blackbodyramp" };
-        auto sub_imgs = vector<image<vec4f>>(sub_types.size());
+        auto sub_types = vector<string>{"grid", "uvgrid", "checker",
+            "gammaramp", "bump", "bump-normal", "noise", "fbm",
+            "blackbodyramp"};
+        auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
         for (auto i = 0; i < sub_imgs.size(); i++) {
             sub_imgs.at(i).resize(img.size());
             make_image_preset(sub_imgs.at(i), sub_types.at(i));
@@ -1647,9 +1746,8 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
         }
     } else if (type == "images2") {
         auto sub_types = vector<string>{"sky", "sunsky"};
-        auto sub_imgs = vector<image<vec4f>>(sub_types.size());
+        auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
         for (auto i = 0; i < sub_imgs.size(); i++) {
-            sub_imgs.at(i).resize(img.size());
             make_image_preset(sub_imgs.at(i), sub_types.at(i));
         }
         auto montage_size = zero2i;
@@ -1663,8 +1761,65 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
             set_image_region(img, sub_img, {pos, 0});
             pos += sub_img.size().x;
         }
+    } else if (type == "test-floor") {
+        make_grid_image(
+            img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
+        add_image_border(img, 2, {0, 0, 0, 1});
+    } else if (type == "test-grid") {
+        make_grid_image(
+            img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
+    } else if (type == "test-checker") {
+        make_checker_image(
+            img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
+    } else if (type == "test-bump") {
+        make_bumpdimple_image(img, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+    } else if (type == "test-uvramp") {
+        make_uvramp_image(img, size);
+    } else if (type == "test-gammaramp") {
+        make_gammaramp_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1});
+    } else if (type == "test-blackbodyramp") {
+        make_blackbodyramp_image(img, size);
+    } else if (type == "test-uvgrid") {
+        make_uvgrid_image(img, size);
+    } else if (type == "test-sky") {
+        make_sunsky_image(img, size, pif / 4, 3.0f, false, 1.0f, 0.0f,
+            vec<float, 3>{0.7f, 0.7f, 0.7f});
+    } else if (type == "test-sunsky") {
+        make_sunsky_image(img, size, pif / 4, 3.0f, true, 1.0f, 0.0f,
+            vec<float, 3>{0.7f, 0.7f, 0.7f});
+    } else if (type == "test-noise") {
+        make_noise_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
+    } else if (type == "test-fbm") {
+        make_fbm_image(
+            img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
+    } else if (type == "test-bump-normal") {
+        auto bump = image<vec<float, 4>>{};
+        make_bumpdimple_image(bump, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+        bump_to_normal_map(img, bump, 0.05f);
+    } else if (type == "test-fbm-displacement") {
+        make_fbm_image(
+            img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 10.0f, 2.0f, 0.5f, 6, true);
     } else {
         throw std::invalid_argument("unknown image preset" + type);
+    }
+}
+
+inline void make_image_preset(image<vec<byte, 4>>& img, const string& type) {
+    auto imgf = image<vec4f>{};
+    make_image_preset(imgf, type);
+    if (type.find("-normal") == type.npos) {
+        linear_to_srgb8(img, imgf);
+    } else {
+        float_to_byte(img, imgf);
+    }
+}
+
+inline void make_image_preset(
+    image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
+    if (type.find("sky") == type.npos) {
+        make_image_preset(ldr, type);
+    } else {
+        make_image_preset(hdr, type);
     }
 }
 
@@ -1676,7 +1831,9 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
 namespace yocto {
 
 // make a simple example volume
-inline void make_test_volume(volume1f& vol, float scale, float exponent) {
+inline void make_test_volume(
+    volume<float>& vol, const vec3i& size, float scale, float exponent) {
+    vol.resize(size);
     for (auto k = 0; k < vol.size().z; k++) {
         for (auto j = 0; j < vol.size().y; j++) {
             for (auto i = 0; i < vol.size().x; i++) {
@@ -1691,1123 +1848,13 @@ inline void make_test_volume(volume1f& vol, float scale, float exponent) {
     }
 }
 
-}  // namespace yocto
-
-#include "ext/stb_image.h"
-#include "ext/stb_image_write.h"
-#include "ext/tinyexr.h"
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR IMAGEIO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Split a string
-static inline vector<string> _image_split_string(const string& str) {
-    auto ret = vector<string>();
-    if (str.empty()) return ret;
-    auto lpos = (size_t)0;
-    while (lpos != str.npos) {
-        auto pos = str.find_first_of(" \t\n\r", lpos);
-        if (pos != str.npos) {
-            if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
-            lpos = pos + 1;
-        } else {
-            if (lpos < str.size()) ret.push_back(str.substr(lpos));
-            lpos = pos;
-        }
-    }
-    return ret;
-}
-
-// Pfm load
-static inline float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
-    auto fs = fopen(filename, "rb");
-    if (!fs) return nullptr;
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
-
-    // buffer
-    char buffer[4096];
-    auto toks = vector<string>();
-
-    // read magic
-    if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
-    toks = _image_split_string(buffer);
-    if (toks[0] == "Pf")
-        *nc = 1;
-    else if (toks[0] == "PF")
-        *nc = 3;
-    else
-        return nullptr;
-
-    // read w, h
-    if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
-    toks = _image_split_string(buffer);
-    *w   = atoi(toks[0].c_str());
-    *h   = atoi(toks[1].c_str());
-
-    // read scale
-    if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
-    toks   = _image_split_string(buffer);
-    auto s = atof(toks[0].c_str());
-
-    // read the data (flip y)
-    auto npixels = (size_t)(*w) * (size_t)(*h);
-    auto nvalues = npixels * (size_t)(*nc);
-    auto nrow    = (size_t)(*w) * (size_t)(*nc);
-    auto pixels  = unique_ptr<float[]>(new float[nvalues]);
-    for (auto j = *h - 1; j >= 0; j--) {
-        if (fread(pixels.get() + j * nrow, sizeof(float), nrow, fs) != nrow)
-            return nullptr;
-    }
-
-    // endian conversion
-    if (s > 0) {
-        for (auto i = 0; i < nvalues; ++i) {
-            auto dta = (uint8_t*)(pixels.get() + i);
-            swap(dta[0], dta[3]);
-            swap(dta[1], dta[2]);
-        }
-    }
-
-    // scale
-    auto scl = (s > 0) ? s : -s;
-    if (scl != 1) {
-        for (auto i = 0; i < nvalues; i++) pixels[i] *= scl;
-    }
-
-    // proper number of channels
-    if (!req || *nc == req) return pixels.release();
-
-    // pack into channels
-    if (req < 0 || req > 4) {
-        return nullptr;
-    }
-    auto cpixels = unique_ptr<float[]>(new float[req * npixels]);
-    for (auto i = 0ull; i < npixels; i++) {
-        auto vp = pixels.get() + i * (*nc);
-        auto cp = cpixels.get() + i * req;
-        if (*nc == 1) {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    cp[2] = vp[0];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    cp[2] = vp[0];
-                    cp[3] = 1;
-                    break;
-            }
-        } else {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    cp[3] = 1;
-                    break;
-            }
-        }
-    }
-    return cpixels.release();
-}
-
-// save pfm
-static inline bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
-    auto fs = fopen(filename, "wb");
-    if (!fs) return false;
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
-
-    if (fprintf(fs, "%s\n", (nc == 1) ? "Pf" : "PF") < 0) return false;
-    if (fprintf(fs, "%d %d\n", w, h) < 0) return false;
-    if (fprintf(fs, "-1\n") < 0) return false;
-    if (nc == 1 || nc == 3) {
-        if (fwrite(pixels, sizeof(float), w * h * nc, fs) != w * h * nc)
-            return false;
+inline void make_volume_preset(volume<float>& vol, const string& type) {
+    auto size = vec3i{256, 256, 256};
+    if (type == "test-volume") {
+        make_test_volume(vol, size, 6, 10);
     } else {
-        for (auto i = 0; i < w * h; i++) {
-            auto vz = 0.0f;
-            auto v  = pixels + i * nc;
-            if (fwrite(v + 0, sizeof(float), 1, fs) != 1) return false;
-            if (fwrite(v + 1, sizeof(float), 1, fs) != 1) return false;
-            if (nc == 2) {
-                if (fwrite(&vz, sizeof(float), 1, fs) != 1) return false;
-            } else {
-                if (fwrite(v + 2, sizeof(float), 1, fs) != 1) return false;
-            }
-        }
+        throw runtime_error("unknown volume preset " + type);
     }
-
-    return true;
-}
-
-// Pnm load
-static inline byte* load_pnm(const char* filename, int* w, int* h, int* nc, int req) {
-    auto fs = fopen(filename, "rb");
-    if (!fs) return nullptr;
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
-
-    // read magic
-    char magic[2];
-    if (fscanf(fs, "%c%c", magic + 0, magic + 1) != 2) return nullptr;
-    if (magic[0] == 'P' && magic[1] == '2')
-        *nc = 1;
-    else if (magic[0] == 'P' && magic[1] == '3')
-        *nc = 3;
-    else
-        return nullptr;
-
-    // read w, h, nc
-    if (fscanf(fs, "%d %d", w, h) != 2) return nullptr;
-
-    // read max
-    auto max = 0;
-    if (fscanf(fs, "%d", &max) != 1) return nullptr;
-    if (max > 255) return nullptr;
-
-    // read the data (flip y)
-    auto npixels = (size_t)(*w) * (size_t)(*h);
-    auto nvalues = npixels * (size_t)(*nc);
-    auto pixels  = unique_ptr<byte[]>(new byte[nvalues]);
-    for (auto i = 0; i < nvalues; i++) {
-        if (fscanf(fs, "%hhu", &pixels[i]) != 1) return nullptr;
-    }
-
-    // proper number of channels
-    if (!req || *nc == req) return pixels.release();
-
-    // pack into channels
-    if (req < 0 || req > 4) {
-        return nullptr;
-    }
-    auto cpixels = unique_ptr<byte[]>(new byte[req * npixels]);
-    for (auto i = 0ull; i < npixels; i++) {
-        auto vp = pixels.get() + i * (*nc);
-        auto cp = cpixels.get() + i * req;
-        if (*nc == 1) {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    cp[2] = vp[0];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    cp[2] = vp[0];
-                    cp[3] = (byte)255;
-                    break;
-            }
-        } else {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    cp[3] = (byte)255;
-                    break;
-            }
-        }
-    }
-    return cpixels.release();
-}
-
-// Pnm load
-static inline byte* load_pnm_from_string(const char* data, int* w, int* h, int* nc, int req) {
-    // read magic
-    auto offset = 0;
-    char magic[256];
-    if (sscanf(data, "%s%n", magic, &offset) != 1) return nullptr;
-    if (magic == "P2"s)
-        *nc = 1;
-    else if (magic == "P3"s)
-        *nc = 3;
-    else
-        return nullptr;
-
-    // read w, h, nc
-    data += offset + 1;
-    if (sscanf(data, "%d %d%n", w, h, &offset) != 2) return nullptr;
-
-    // read max
-    data += offset + 1;
-    auto max = 0;
-    if (sscanf(data, "%d%n", &max, &offset) != 1) return nullptr;
-    if (max > 255) return nullptr;
-
-    // read the data (flip y)
-    auto npixels = (size_t)(*w) * (size_t)(*h);
-    auto nvalues = npixels * (size_t)(*nc);
-    auto pixels  = unique_ptr<byte[]>(new byte[nvalues]);
-    for (auto i = 0; i < nvalues; i++) {
-        data += offset + 1;
-        if (sscanf(data, "%hhu%n", &pixels[i], &offset) != 1) return nullptr;
-    }
-
-    // proper number of channels
-    if (!req || *nc == req) return pixels.release();
-
-    // pack into channels
-    if (req < 0 || req > 4) {
-        return nullptr;
-    }
-    auto cpixels = unique_ptr<byte[]>(new byte[req * npixels]);
-    for (auto i = 0ull; i < npixels; i++) {
-        auto vp = pixels.get() + i * (*nc);
-        auto cp = cpixels.get() + i * req;
-        if (*nc == 1) {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    cp[2] = vp[0];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    cp[2] = vp[0];
-                    cp[3] = (byte)255;
-                    break;
-            }
-        } else {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    cp[3] = (byte)255;
-                    break;
-            }
-        }
-    }
-    return cpixels.release();
-}
-
-// save pnm
-static inline bool save_pnm(const char* filename, int w, int h, int nc, const byte* pixels) {
-    auto fs = fopen(filename, "wb");
-    if (!fs) return false;
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
-
-    if (fprintf(fs, "%s\n", (nc == 1) ? "P2" : "P3") < 0) return false;
-    if (fprintf(fs, "%d %d\n", w, h) < 0) return false;
-    if (fprintf(fs, "255\n") < 0) return false;
-    for (auto j = 0; j < h; j++) {
-        for (auto i = 0; i < w; i++) {
-            auto v = pixels + (j * w + i) * nc;
-            if (nc == 1 || nc == 2) {
-                if (fprintf(fs, "%d ", (int)v[0]) < 0) return false;
-            } else {
-                if (fprintf(fs, "%d %d %d ", (int)v[0], (int)v[1], (int)v[2]) <
-                    0)
-                    return false;
-            }
-        }
-        if (fprintf(fs, "\n") < 0) return false;
-    }
-
-    return true;
-}
-
-// load pfm image
-template <int N>
-static inline void load_pfm_image(const string& filename, image<vec<float, N>>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, N);
-    if (!pixels) {
-        throw imageio_error("error loading image " + filename);
-    }
-    img = image{{width, height}, (const vec<float, N>*)pixels};
-    delete[] pixels;
-}
-template <int N>
-static inline void save_pfm_image(const string& filename, const image<vec<float, N>>& img) {
-    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, N,
-            (float*)img.data())) {
-        throw imageio_error("error saving image " + filename);
-    }
-}
-
-// load pfm image
-template <int N>
-static inline void load_pnm_image(const string& filename, image<vec<byte, N>>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pnm(filename.c_str(), &width, &height, &ncomp, N);
-    if (!pixels) {
-        throw imageio_error("error loading image " + filename);
-    }
-    img = image{{width, height}, (const vec<byte, N>*)pixels};
-    delete[] pixels;
-}
-template <int N>
-static inline void save_pnm_image(const string& filename, const image<vec<byte, N>>& img) {
-    if (!save_pnm(filename.c_str(), img.size().x, img.size().y, N,
-            (byte*)img.data())) {
-        throw imageio_error("error saving image " + filename);
-    }
-}
-template <int N>
-static inline void load_pnm_image_from_string(const char* data, image<vec<byte, N>>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pnm_from_string(data, &width, &height, &ncomp, N);
-    if (!pixels) {
-        throw imageio_error("error loading image from string");
-    }
-    img = image{{width, height}, (const vec<byte, N>*)pixels};
-    delete[] pixels;
-}
-
-// load exr image weith tiny exr
-static inline const char* get_tinyexr_error(int error) {
-    switch (error) {
-        case TINYEXR_ERROR_INVALID_MAGIC_NUMBER: return "INVALID_MAGIC_NUMBER";
-        case TINYEXR_ERROR_INVALID_EXR_VERSION: return "INVALID_EXR_VERSION";
-        case TINYEXR_ERROR_INVALID_ARGUMENT: return "INVALID_ARGUMENT";
-        case TINYEXR_ERROR_INVALID_DATA: return "INVALID_DATA";
-        case TINYEXR_ERROR_INVALID_FILE: return "INVALID_FILE";
-        // case TINYEXR_ERROR_INVALID_PARAMETER: return "INVALID_PARAMETER";
-        case TINYEXR_ERROR_CANT_OPEN_FILE: return "CANT_OPEN_FILE";
-        case TINYEXR_ERROR_UNSUPPORTED_FORMAT: return "UNSUPPORTED_FORMAT";
-        case TINYEXR_ERROR_INVALID_HEADER: return "INVALID_HEADER";
-        default: throw imageio_error("unknown tinyexr error");
-    }
-}
-
-template <int N>
-static inline void load_exr_image(const string& filename, image<vec<float, N>>& img) {
-    // TODO
-    if (N != 4) throw runtime_error("bad number of channels");
-    auto width = 0, height = 0;
-    auto pixels = (float*)nullptr;
-    if (auto error = LoadEXR(
-            &pixels, &width, &height, filename.c_str(), nullptr);
-        error < 0) {
-        throw imageio_error("error loading image " + filename + "("s +
-                            get_tinyexr_error(error) + ")"s);
-    }
-    if (!pixels) {
-        throw imageio_error("error loading image " + filename);
-    }
-    img = image{{width, height}, (const vec<float, N>*)pixels};
-    free(pixels);
-}
-template <int N>
-static inline void save_exr_image(const string& filename, const image<vec<float, N>>& img) {
-    // TODO
-    if (N != 4) throw runtime_error("bad number of channels");
-    if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, N,
-            filename.c_str())) {
-        throw imageio_error("error saving image " + filename);
-    }
-}
-
-// load an image using stbi library
-template <int N>
-static inline void load_stb_image(const string& filename, image<vec<byte, N>>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, N);
-    if (!pixels) {
-        throw imageio_error("error loading image " + filename);
-    }
-    img = image{{width, height}, (const vec<byte, N>*)pixels};
-    free(pixels);
-}
-template <int N>
-static inline void load_stb_image(const string& filename, image<vec<float, N>>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, N);
-    if (!pixels) {
-        throw imageio_error("error loading image " + filename);
-    }
-    img = image{{width, height}, (const vec<float, N>*)pixels};
-    free(pixels);
-}
-
-// save an image with stbi
-template <int N>
-static inline void save_png_image(const string& filename, const image<vec<byte, N>>& img) {
-    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, N,
-            img.data(), img.size().x * 4)) {
-        throw imageio_error("error saving image " + filename);
-    }
-}
-template <int N>
-static inline void save_jpg_image(const string& filename, const image<vec<byte, N>>& img) {
-    if (!stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
-        throw imageio_error("error saving image " + filename);
-    }
-}
-template <int N>
-static inline void save_tga_image(const string& filename, const image<vec<byte, N>>& img) {
-    if (!stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-        throw imageio_error("error saving image " + filename);
-    }
-}
-template <int N>
-static inline void save_bmp_image(const string& filename, const image<vec<byte, N>>& img) {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-        throw imageio_error("error saving image " + filename);
-    }
-}
-template <int N>
-static inline void save_hdr_image(const string& filename, const image<vec<float, N>>& img) {
-    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data())) {
-        throw imageio_error("error saving image " + filename);
-    }
-}
-
-// load an image using stbi library
-template <int N>
-static inline void load_stb_image_from_memory(
-    const byte* data, int data_size, image<vec<byte, N>>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
-    if (!pixels) {
-        throw imageio_error("error loading in-memory image");
-    }
-    img = image{{width, height}, (const vec<byte, N>*)pixels};
-    free(pixels);
-}
-template <int N>
-static inline void load_stb_image_from_memory(
-    const byte* data, int data_size, image<vec<float, N>>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
-    if (!pixels) {
-        throw imageio_error("error loading in-memory image {}");
-    }
-    img = image{{width, height}, (const vec<float, N>*)pixels};
-    free(pixels);
-}
-
-#if 0
-static inline void apply_json_procedural(const json& js, image<vec4f>& img) {
-    auto type   = js.value("type", ""s);
-    auto width  = js.value("width", 1024);
-    auto height = js.value("height", 1024);
-    if (type == "sky" && width < height * 2) width = height * 2;
-    img.resize({width, height});
-    if (type == "") {
-        img = image{{width, height}, zero4f};
-    } else if (type == "grid") {
-        make_grid_image(img, js.value("tile", 8),
-            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
-    } else if (type == "checker") {
-        make_checker_image(img, js.value("tile", 8),
-            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
-    } else if (type == "bump") {
-        make_bumpdimple_image(img, js.value("tile", 8),
-            js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}));
-    } else if (type == "uvramp") {
-        make_uvramp_image(img);
-    } else if (type == "gammaramp") {
-        make_gammaramp_image(img, js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}));
-    } else if (type == "blackbodyramp") {
-        make_blackbodyramp_image(img);
-    } else if (type == "uvgrid") {
-        make_uvgrid_image(img);
-    } else if (type == "sky") {
-        make_sunsky_image(img, js.value("sun_angle", pif / 4),
-            js.value("turbidity", 3.0f), js.value("has_sun", false),
-            js.value("sun_intensity", 1.0f), js.value("sun_temperature", 0.0f),
-            js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
-    } else if (type == "noise") {
-        make_noise_image(img, js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
-            js.value("wrap", true));
-    } else if (type == "fbm") {
-        make_fbm_image(img, js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("octaves", 6), js.value("wrap", true));
-    } else if (type == "ridge") {
-        make_ridge_image(img, js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("offset", 1.0f), js.value("octaves", 6),
-            js.value("wrap", true));
-    } else if (type == "turbulence") {
-        make_turbulence_image(img, js.value("c0", vec4f{0, 0, 0, 1}),
-            js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("octaves", 6), js.value("wrap", true));
-    } else if (type == "montage") {
-        auto sub_imgs = vector<image<vec4f>>(js.at("images").size());
-        for (auto i = 0; i < sub_imgs.size(); i++) {
-            apply_json_procedural(js.at("images").at(i), sub_imgs.at(i));
-        }
-        auto size = zero2i;
-        for (auto& sub_img : sub_imgs) {
-            size.x += sub_img.size().x;
-            size.y = max(size.y, sub_img.size().y);
-        }
-        img.resize(size);
-        auto pos = 0;
-        for (auto& sub_img : sub_imgs) {
-            set_image_region(img, sub_img, {pos, 0});
-            pos += sub_img.size().x;
-        }
-    } else {
-        throw std::invalid_argument("unknown image type" + type);
-    }
-    if (js.value("border", false)) {
-        add_image_border(img, js.value("border_width", 2),
-            js.value("border_color", vec4f{0, 0, 0, 1}));
-    }
-    if (js.value("bump_to_normal", false)) {
-        auto buffer = img;
-        bump_to_normal_map(img, buffer, js.value("bump_scale", 1.0f));
-    }
-}
-
-void apply_json_procedural(const json& js, image<vec4b>& img) {
-    auto imgf = image<vec4f>{};
-    apply_json_procedural(js, imgf);
-    auto srgb = js.value("srgb", true);
-    if (srgb) {
-        auto srgb = imgf;
-        linear_to_srgb(srgb, imgf);
-        imgf = srgb;
-    }
-    float_to_byte(img, imgf);
-}
-
-// load a JSON image
-template <int N>
-void load_json_image(const string& filename, image<vec<float, N>>& img) {
-    if constexpr (N == 4) {
-        auto js = json();
-        load_json(filename, js);
-        apply_json_procedural(js, img);
-    } else {
-        auto js = json();
-        load_json(filename, js);
-        auto img_rgba = image{img.size(), vec<float, 4>{}};
-        apply_json_procedural(js, img_rgba);
-        rgba_to_color(img, img_rgba);
-    }
-}
-template <int N>
-void load_json_image(const string& filename, image<vec<byte, N>>& img) {
-    if constexpr (N == 4) {
-        auto js = json();
-        load_json(filename, js);
-        apply_json_procedural(js, img);
-    } else {
-        auto js = json();
-        load_json(filename, js);
-        auto img_rgba = image{img.size(), vec<byte, 4>{}};
-        apply_json_procedural(js, img_rgba);
-        rgba_to_color(img, img_rgba);
-    }
-}
-
-#endif
-    
-// Check if an image is a preset based on filename.
-inline bool is_image_preset_filename(const string& filename) {
-    return get_filename(filename).find("yocto::") == 0;
-}
-inline string get_image_preset_type(const string& filename) {
-    return get_noextension(get_filename(filename).substr(7));
-}
-
-template<int N>
-inline void load_image_preset(const string& filename, image<vec<float, N>>& img) {
-    if constexpr(N == 4) {
-        img.resize({1024, 1024});
-        if(get_image_preset_type(filename) == "images2") img.resize({2048,1024});
-        make_image_preset(img, get_image_preset_type(filename));
-    } else {
-        auto img4 = image<vec<float, 4>>({1024, 1024});
-        if(get_image_preset_type(filename) == "images2") img4.resize({2048,1024});
-        make_image_preset(img4, get_image_preset_type(filename));
-        img.resize(img4.size());
-        rgba_to_color(img, img4);
-    }
-}
-template<int N>
-inline void load_image_preset(const string& filename, image<vec<byte, N>>& img) {
-    auto imgf = image<vec<float, N>>{};
-    load_image_preset(filename,imgf);
-    img.resize(imgf.size());
-    linear_to_srgb8(img, imgf);
-}
-    
-// check hdr extensions
-inline bool is_hdr_filename(const string& filename) {
-    auto ext = get_extension(filename);
-    return ext == "hdr" || ext == "exr" || ext == "pfm";
-}
-
-// Loads an hdr image.
-template <int N>
-inline void load_image(const string& filename, image<vec<float, N>>& img) {
-    if (is_image_preset_filename(filename)) {
-        return load_image_preset(filename, img);
-    }
-    auto ext = get_extension(filename);
-    if (ext == "exr" || ext == "EXR") {
-        load_exr_image(filename, img);
-    } else if (ext == "pfm" || ext == "PFM") {
-        load_pfm_image(filename, img);
-    } else if (ext == "hdr" || ext == "HDR") {
-        load_stb_image(filename, img);
-    } else if (ext == "png" || ext == "PNG") {
-        auto img8 = image<vec<byte, N>>{};
-        load_stb_image(filename, img8);
-        img.resize(img8.size());
-        srgb8_to_linear(img, img8);
-    } else if (ext == "jpg" || ext == "JPG") {
-        auto img8 = image<vec<byte, N>>{};
-        load_stb_image(filename, img8);
-        img.resize(img8.size());
-        srgb8_to_linear(img, img8);
-    } else if (ext == "tga" || ext == "TGA") {
-        auto img8 = image<vec<byte, N>>{};
-        load_stb_image(filename, img8);
-        img.resize(img8.size());
-        srgb8_to_linear(img, img8);
-    } else if (ext == "bmp" || ext == "BMP") {
-        auto img8 = image<vec<byte, N>>{};
-        load_stb_image(filename, img8);
-        img.resize(img8.size());
-        srgb8_to_linear(img, img8);
-    } else if (ext == "ppm" || ext == "PPM") {
-        auto img8 = image<vec<byte, N>>{};
-        load_pnm_image(filename, img8);
-        // load_stb_image(filename, img8);
-        img.resize(img8.size());
-        srgb8_to_linear(img, img8);
-    } else if (ext == "pgm" || ext == "PGM") {
-        auto img8 = image<vec<byte, N>>{};
-        load_pnm_image(filename, img8);
-        // load_stb_image(filename, img8);
-        img.resize(img8.size());
-        srgb8_to_linear(img, img8);
-#if 0
-    } else if (ext == "json" || ext == "JSON") {
-        load_json_image(filename, img);
-#endif
-    } else {
-        throw imageio_error("unsupported image format " + ext);
-    }
-}
-
-// Saves an hdr image.
-template <int N>
-inline void save_image(const string& filename, const image<vec<float, N>>& img) {
-    auto ext = get_extension(filename);
-    if (ext == "png" || ext == "PNG") {
-        auto img8 = image<vec<byte, N>>{img.size()};
-        linear_to_srgb8(img8, img);
-        save_png_image(filename, img8);
-    } else if (ext == "jpg" || ext == "JPG") {
-        auto img8 = image<vec<byte, N>>{img.size()};
-        linear_to_srgb8(img8, img);
-        save_jpg_image(filename, img8);
-    } else if (ext == "tga" || ext == "TGA") {
-        auto img8 = image<vec<byte, N>>{img.size()};
-        linear_to_srgb8(img8, img);
-        save_tga_image(filename, img8);
-    } else if (ext == "bmp" || ext == "BMP") {
-        auto img8 = image<vec<byte, N>>{img.size()};
-        linear_to_srgb8(img8, img);
-        save_bmp_image(filename, img8);
-    } else if (ext == "ppm" || ext == "PPM") {
-        auto img8 = image<vec<byte, N>>{img.size()};
-        linear_to_srgb8(img8, img);
-        save_pnm_image(filename, img8);
-    } else if (ext == "pgm" || ext == "PGM") {
-        auto img8 = image<vec<byte, N>>{img.size()};
-        linear_to_srgb8(img8, img);
-        save_pnm_image(filename, img8);
-    } else if (ext == "hdr" || ext == "HDR") {
-        auto img8 = image<vec<byte, N>>{img.size()};
-        linear_to_srgb8(img8, img);
-        save_hdr_image(filename, img);
-    } else if (ext == "pfm" || ext == "PFM") {
-        save_pfm_image(filename, img);
-    } else if (ext == "exr" || ext == "EXR") {
-        save_exr_image(filename, img);
-    } else {
-        throw imageio_error("unsupported image format " + ext);
-    }
-}
-
-// Loads an hdr image.
-template <int N>
-inline void load_image_from_memory(
-    const byte* data, int data_size, image<vec<float, N>>& img) {
-    load_stb_image_from_memory(data, data_size, img);
-}
-
-// Loads an hdr image.
-template <int N>
-inline void load_image(const string& filename, image<vec<byte, N>>& img) {
-    if (is_image_preset_filename(filename)) {
-        return load_image_preset(filename, img);
-    }
-    auto ext = get_extension(filename);
-    if (ext == "exr" || ext == "EXR") {
-        auto imgf = image<vec<float, N>>{};
-        load_exr_image(filename, imgf);
-        img.resize(imgf.size());
-        linear_to_srgb8(img, imgf);
-    } else if (ext == "pfm" || ext == "PFM") {
-        auto imgf = image<vec<float, N>>{};
-        load_pfm_image(filename, imgf);
-        img.resize(imgf.size());
-        linear_to_srgb8(img, imgf);
-    } else if (ext == "hdr" || ext == "HDR") {
-        auto imgf = image<vec<float, N>>{};
-        load_stb_image(filename, imgf);
-        img.resize(imgf.size());
-        linear_to_srgb8(img, imgf);
-    } else if (ext == "png" || ext == "PNG") {
-        load_stb_image(filename, img);
-    } else if (ext == "jpg" || ext == "JPG") {
-        load_stb_image(filename, img);
-    } else if (ext == "tga" || ext == "TGA") {
-        load_stb_image(filename, img);
-    } else if (ext == "bmp" || ext == "BMP") {
-        load_stb_image(filename, img);
-    } else if (ext == "ppm" || ext == "PPM") {
-        load_pnm_image(filename, img);
-    } else if (ext == "pgm" || ext == "PGM") {
-        load_pnm_image(filename, img);
-#if 0
-    } else if (ext == "json" || ext == "JSON") {
-        load_json_image(filename, img);
-#endif
-    } else {
-        throw imageio_error("unsupported image format " + ext);
-    }
-}
-
-// Saves an ldr image.
-template <int N>
-inline void save_image(const string& filename, const image<vec<byte, N>>& img) {
-    auto ext = get_extension(filename);
-    if (ext == "png" || ext == "PNG") {
-        save_png_image(filename, img);
-    } else if (ext == "jpg" || ext == "JPG") {
-        save_jpg_image(filename, img);
-    } else if (ext == "tga" || ext == "TGA") {
-        save_tga_image(filename, img);
-    } else if (ext == "bmp" || ext == "BMP") {
-        save_bmp_image(filename, img);
-    } else if (ext == "ppm" || ext == "PPM") {
-        save_pnm_image(filename, img);
-    } else if (ext == "pgm" || ext == "PGM") {
-        save_pnm_image(filename, img);
-    } else if (ext == "hdr" || ext == "HDR") {
-        auto imgf = image<vec<float, N>>{img.size()};
-        srgb8_to_linear(imgf, img);
-        save_hdr_image(filename, imgf);
-    } else if (ext == "pfm" || ext == "PFM") {
-        auto imgf = image<vec<float, N>>{img.size()};
-        srgb8_to_linear(imgf, img);
-        save_pfm_image(filename, imgf);
-    } else if (ext == "exr" || ext == "EXR") {
-        auto imgf = image<vec<float, N>>{img.size()};
-        srgb8_to_linear(imgf, img);
-        save_exr_image(filename, imgf);
-    } else {
-        throw imageio_error("unsupported image format " + ext);
-    }
-}
-
-// Loads an hdr image.
-template <int N>
-inline void load_image_from_memory(
-    const byte* data, int data_size, image<vec<byte, N>>& img) {
-    load_stb_image_from_memory(data, data_size, img);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR VOLUME IMAGE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Volume load
-static inline float* load_yvol(
-    const char* filename, int* w, int* h, int* d, int* nc, int req) {
-    auto fs = fopen(filename, "rb");
-    if (!fs) return nullptr;
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
-
-    // buffer
-    char buffer[4096];
-    auto toks = vector<string>();
-
-    // read magic
-    if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
-    toks = _image_split_string(buffer);
-    if (toks[0] != "YVOL") return nullptr;
-
-    // read w, h
-    if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
-    toks = _image_split_string(buffer);
-    *w   = atoi(toks[0].c_str());
-    *h   = atoi(toks[1].c_str());
-    *d   = atoi(toks[2].c_str());
-    *nc  = atoi(toks[3].c_str());
-
-    // read data
-    auto nvoxels = (size_t)(*w) * (size_t)(*h) * (size_t)(*d);
-    auto nvalues = nvoxels * (size_t)(*nc);
-    auto voxels  = unique_ptr<float[]>(new float[nvalues]);
-    if (fread(voxels.get(), sizeof(float), nvalues, fs) != nvalues)
-        return nullptr;
-
-    // proper number of channels
-    if (!req || *nc == req) return voxels.release();
-
-    // pack into channels
-    if (req < 0 || req > 4) {
-        return nullptr;
-    }
-    auto cvoxels = unique_ptr<float[]>(new float[req * nvoxels]);
-    for (auto i = 0; i < nvoxels; i++) {
-        auto vp = voxels.get() + i * (*nc);
-        auto cp = cvoxels.get() + i * req;
-        if (*nc == 1) {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    cp[2] = vp[0];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    cp[2] = vp[0];
-                    cp[3] = 1;
-                    break;
-            }
-        } else if (*nc == 2) {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    break;
-            }
-        } else if (*nc == 3) {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    cp[3] = 1;
-                    break;
-            }
-        } else if (*nc == 4) {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    cp[3] = vp[3];
-                    break;
-            }
-        }
-    }
-    return cvoxels.release();
-}
-
-// save pfm
-static inline bool save_yvol(
-    const char* filename, int w, int h, int d, int nc, const float* voxels) {
-    auto fs = fopen(filename, "wb");
-    if (!fs) return false;
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
-
-    if (fprintf(fs, "YVOL\n") < 0) return false;
-    if (fprintf(fs, "%d %d %d %d\n", w, h, d, nc) < 0) return false;
-    auto nvalues = (size_t)w * (size_t)h * (size_t)d * (size_t)nc;
-    if (fwrite(voxels, sizeof(float), nvalues, fs) != nvalues) return false;
-
-    return true;
-}
-
-// Loads volume data from binary format.
-inline void load_volume(const string& filename, volume1f& vol) {
-    auto width = 0, height = 0, depth = 0, ncomp = 0;
-    auto voxels = load_yvol(
-        filename.c_str(), &width, &height, &depth, &ncomp, 1);
-    if (!voxels) {
-        throw imageio_error("error loading volume " + filename);
-    }
-    vol = volume{{width, height, depth}, (const float*)voxels};
-    delete[] voxels;
-}
-
-// Saves volume data in binary format.
-inline void save_volume(const string& filename, const volume1f& vol) {
-    if (!save_yvol(filename.c_str(), vol.size().x, vol.size().y, vol.size().z,
-            1, vol.data())) {
-        throw imageio_error("error saving volume " + filename);
-    }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BUILTIN IMAGES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Loads/saves a 1-4 channel builtin image.
-template <int N>
-inline void load_builtin_image(const string& name, image<vec<byte, N>>& img) {
-    static const char* logo_render = R"(
-        P2
-        144 28
-        255
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 212 87 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 32 255 62 0 0 0 0 0 14 27 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 187 245 13 0 0 0 80 255 90 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 29 88 14 0 0 0 0 0 0 0 0 0 0 0 0 0 0 88 251 10 0 0 0 40 200 253 255 234 106 0 0 6 255 157 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12 147 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 90 69 0 0 0 0 0 0 0 0 0 0 0 144 125 0 0 0 0 0 117 37 0 0 0 0 0 0 0 79 255 101 0 0 0 178 232 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 115 255 33 0 0 0 0 0 0 0 0 0 0 0 0 0 0 145 205 0 0 0 47 239 210 74 57 144 232 24 0 6 255 157 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 18 251 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 146 123 0 0 0 0 0 0 0 0 0 0 0 43 35 0 61 87 0 0 208 61 0 0 0 0 0 0 0 3 224 199 0 0 24 251 129 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 115 255 33 0 0 0 0 0 0 0 0 0 0 0 0 0 0 201 149 0 0 0 180 238 20 0 0 0 16 0 0 6 255 157 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 18 251 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 146 123 0 0 0 0 0 0 0 0 0 0 0 0 0 0 119 150 0 0 208 61 0 0 0 0 0 0 0 0 118 255 41 0 117 250 26 0 7 147 223 232 167 19 0 0 0 5 143 224 234 162 20 166 227 255 210 201 3 0 7 147 223 232 167 19 0 0 0 0 8 249 93 0 0 45 255 146 0 0 0 0 0 0 0 6 255 157 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 14 192 114 207 0 84 224 220 61 0 68 143 166 220 78 0 0 142 234 160 251 0 0 134 234 195 25 0 123 105 211 89 12 177 236 158 4 0 44 217 214 189 123 0 0 0 149 76 0 189 108 0 160 55 123 107 83 236 240 179 0 208 128 220 174 6 0 0 0 0 0 19 247 140 0 214 168 0 0 176 248 122 111 237 212 2 0 0 167 251 128 127 223 59 103 185 255 143 117 0 0 176 248 122 111 237 212 2 0 0 0 58 255 36 0 0 97 255 77 0 0 0 0 0 0 0 6 255 157 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 16 248 166 36 13 234 44 73 215 0 80 248 65 80 193 0 66 222 32 97 251 0 65 207 21 135 152 0 144 230 81 12 129 157 17 189 88 0 194 126 17 208 123 0 0 0 131 125 7 228 164 0 224 23 144 125 5 127 156 10 0 208 179 13 205 65 0 0 0 0 0 0 158 233 61 255 59 0 46 255 121 0 0 91 255 83 0 40 254 134 0 0 0 0 0 115 255 33 0 0 46 255 121 0 0 91 255 83 0 0 0 114 235 0 0 0 130 255 51 0 2 17 17 17 7 0 6 255 157 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 16 255 43 0 76 191 0 1 242 20 80 192 0 36 235 0 138 142 0 18 251 0 140 127 0 52 212 0 144 171 0 0 204 63 0 116 148 11 255 14 0 146 123 0 0 0 84 164 46 155 201 9 231 0 144 125 0 119 150 0 0 208 64 0 164 107 0 0 0 0 0 0 49 255 220 206 0 0 114 255 46 0 0 17 255 148 0 111 255 54 0 0 0 0 0 115 255 33 0 0 114 255 46 0 0 17 255 148 0 0 0 171 179 0 0 0 159 255 29 0 20 255 255 255 109 0 6 255 157 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 16 253 0 0 101 242 214 214 249 40 80 189 0 34 236 0 162 121 0 18 251 0 165 232 214 219 232 0 144 126 0 0 229 222 214 229 168 34 249 0 0 146 123 0 0 0 38 203 88 107 206 48 187 0 144 125 0 119 150 0 0 208 61 0 162 108 0 0 0 0 0 0 0 197 255 98 0 0 144 255 22 0 0 0 249 177 0 141 255 28 0 0 0 0 0 115 255 33 0 0 144 255 22 0 0 0 249 177 0 0 0 227 123 0 0 0 143 255 40 0 0 79 108 255 109 0 6 255 157 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 16 253 0 0 85 188 4 4 4 0 80 189 0 34 236 0 149 132 0 18 251 0 149 125 4 4 3 0 144 125 0 0 213 62 4 4 2 21 255 4 0 146 123 0 0 0 2 230 130 67 178 116 141 0 144 125 0 119 150 0 0 208 61 0 162 108 0 0 0 0 0 0 0 130 255 33 0 0 151 255 17 0 0 0 245 183 0 152 255 21 0 0 0 0 0 115 255 33 0 0 151 255 17 0 0 0 245 183 0 0 28 255 67 0 0 0 116 255 59 0 0 0 39 255 109 0 6 255 157 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 16 253 0 0 32 236 19 2 33 0 80 189 0 34 236 0 98 195 4 64 251 0 93 191 4 11 24 0 144 125 0 0 157 131 0 27 8 1 225 72 1 190 123 0 0 0 0 201 196 26 137 197 96 0 144 125 0 109 159 0 0 208 61 0 162 108 0 0 0 0 0 0 0 130 255 33 0 0 122 255 36 0 0 8 255 152 0 124 255 42 0 0 0 0 0 115 255 33 0 0 122 255 36 0 0 8 255 152 0 0 84 253 13 0 0 0 79 255 108 0 0 0 39 255 109 0 6 255 157 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 16 253 0 0 0 123 238 224 155 0 80 189 0 34 236 0 11 201 218 156 248 0 6 178 225 234 97 0 144 125 0 0 31 216 214 228 49 0 89 244 198 179 123 0 0 0 0 154 239 0 96 253 50 0 144 125 0 34 224 201 25 208 61 0 162 108 0 0 0 0 0 0 0 130 255 33 0 0 70 255 96 0 0 67 255 97 0 76 255 104 0 0 0 0 0 113 255 35 0 0 70 255 96 0 0 67 255 97 0 0 141 210 0 0 0 0 5 230 200 2 0 0 39 255 109 0 6 255 157 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 11 14 0 0 0 0 0 0 0 0 0 0 18 0 0 0 0 0 19 6 0 0 0 0 0 0 0 0 23 1 0 0 0 12 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 9 0 0 0 0 0 0 0 0 0 0 0 0 0 130 255 33 0 0 1 211 223 54 44 205 229 7 0 2 216 230 69 74 169 31 0 55 255 120 59 26 1 211 223 54 44 205 229 7 0 0 197 154 0 0 0 0 0 109 255 166 59 78 165 255 109 0 6 255 201 113 113 113 105 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 130 255 33 0 0 0 30 204 255 255 214 40 0 0 0 35 208 255 255 212 47 0 1 174 252 243 102 0 30 204 255 255 214 40 0 0 6 247 97 0 0 0 0 0 0 103 235 255 255 242 146 24 0 6 255 255 255 255 255 213 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 24 29 0 0 0 0 0 0 0 25 31 0 0 0 0 0 23 9 0 0 0 0 24 29 0 0 0 0 54 255 41 0 0 0 0 0 0 0 0 33 30 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 63 188 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
-        )";
-    if (name == "logo-render") {
-        load_pnm_image_from_string(logo_render, img);
-    } else {
-        throw imageio_error("unknown builtin image " + name);
-    }
-}
-
-// Loads/saves a 1-4 channel builtin image.
-template <int N>
-inline void load_builtin_image(const string& name, image<vec<float, N>>& img) {
-    auto img8 = image<vec<byte, N>>();
-    load_builtin_image(name, img8);
-    img.resize(img8.size());
-    srgb8_to_linear(img, img8);
 }
 
 }  // namespace yocto

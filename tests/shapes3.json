@@ -7,18 +7,21 @@
             "lens_aperture": 0.0,
             "film_width": 0.036,
             "film_height": 0.015,
-            "!!proc": {
-                "from": [
-                    -0.75,
-                    0.4,
-                    0.9
-                ],
-                "to": [
-                    -0.075,
-                    0.05,
-                    -0.05
-                ]
-            }
+            "focus_distance": 1.216809352363796,
+            "frame": [
+                0.8151804082662738,
+                -0.0,
+                0.5792071321891945,
+                0.16660169144197134,
+                0.9577393531836079,
+                -0.23447645462203376,
+                -0.5547294641422116,
+                0.2876374999255912,
+                0.7807303569408904,
+                -0.75,
+                0.4,
+                0.9
+            ]
         },
         {
             "name": "front",
@@ -26,18 +29,21 @@
             "lens_aperture": 0.0,
             "film_width": 0.036,
             "film_height": 0.012,
-            "!!proc": {
-                "from": [
-                    0,
-                    0.575,
-                    0.14
-                ],
-                "to": [
-                    0,
-                    0.05,
-                    0
-                ]
-            }
+            "focus_distance": 0.5433461143691007,
+            "frame": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.9363291775690445,
+                -0.3511234415883917,
+                0.0,
+                0.35112344158839165,
+                0.9363291775690444,
+                0,
+                0.575,
+                1.4
+            ]
         },
         {
             "name": "back",
@@ -45,18 +51,21 @@
             "lens_aperture": 0.0,
             "film_width": 0.036,
             "film_height": 0.012,
-            "!!proc": {
-                "from": [
-                    0,
-                    0.575,
-                    -0.14
-                ],
-                "to": [
-                    0,
-                    0.05,
-                    0
-                ]
-            }
+            "focus_distance": 0.5433461143691007,
+            "frame": [
+                -1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.9363291775690445,
+                0.3511234415883917,
+                0.0,
+                0.35112344158839165,
+                -0.9363291775690444,
+                0,
+                0.575,
+                -1.4
+            ]
         },
         {
             "name": "perspective-sharp",
@@ -64,123 +73,113 @@
             "lens_aperture": 0.0,
             "film_width": 0.036,
             "film_height": 0.015,
-            "!!proc": {
-                "from": [
-                    -0.75,
-                    0.4,
-                    0.9
-                ],
-                "to": [
-                    -0.075,
-                    0.05,
-                    -0.05
-                ]
-            }
+            "focus_distance": 1.216809352363796,
+            "frame": [
+                0.8151804082662738,
+                -0.0,
+                0.5792071321891945,
+                0.16660169144197134,
+                0.9577393531836079,
+                -0.23447645462203376,
+                -0.5547294641422116,
+                0.2876374999255912,
+                0.7807303569408904,
+                -0.75,
+                0.4,
+                0.9
+            ]
         },
         {
             "name": "perspective-dof",
             "focal_length": 0.05,
-            "lens_aperture": 0.25,
+            "lens_aperture": 0.025,
             "film_width": 0.036,
             "film_height": 0.015,
-            "!!proc": {
-                "from": [
-                    -0.75,
-                    0.4,
-                    0.9
-                ],
-                "to": [
-                    -0.075,
-                    0.05,
-                    -0.05
-                ]
-            }
+            "focus_distance": 1.216809352363796,
+            "frame": [
+                0.8151804082662738,
+                -0.0,
+                0.5792071321891945,
+                0.16660169144197134,
+                0.9577393531836079,
+                -0.23447645462203376,
+                -0.5547294641422116,
+                0.2876374999255912,
+                0.7807303569408904,
+                -0.75,
+                0.4,
+                0.9
+            ]
         },
         {
             "name": "orthographic-sharp",
-            "focal_length": 0.005,
+            "focal_length": 0.05,
             "lens_aperture": 0.0,
             "film_width": 0.036,
             "film_height": 0.015,
             "orthographic": true,
-            "!!proc": {
-                "from": [
-                    -0.75,
-                    0.4,
-                    0.9
-                ],
-                "to": [
-                    -0.075,
-                    0.05,
-                    -0.05
-                ]
-            }
+            "focus_distance": 1.216809352363796,
+            "frame": [
+                0.8151804082662738,
+                -0.0,
+                0.5792071321891945,
+                0.16660169144197134,
+                0.9577393531836079,
+                -0.23447645462203376,
+                -0.5547294641422116,
+                0.2876374999255912,
+                0.7807303569408904,
+                -0.75,
+                0.4,
+                0.9
+            ]
         },
         {
             "name": "orthographic-dof",
-            "focal_length": 0.005,
-            "lens_aperture": 0.2,
+            "focal_length": 0.05,
+            "lens_aperture": 0.02,
             "film_width": 0.036,
             "film_height": 0.015,
             "orthographic": true,
-            "!!proc": {
-                "from": [
-                    -0.75,
-                    0.4,
-                    0.9
-                ],
-                "to": [
-                    -0.075,
-                    0.05,
-                    -0.05
-                ]
-            }
+            "focus_distance": 1.216809352363796,
+            "frame": [
+                0.8151804082662738,
+                -0.0,
+                0.5792071321891945,
+                0.16660169144197134,
+                0.9577393531836079,
+                -0.23447645462203376,
+                -0.5547294641422116,
+                0.2876374999255912,
+                0.7807303569408904,
+                -0.75,
+                0.4,
+                0.9
+            ]
         }
     ],
     "textures": [
         {
-            "name": "floor",
-            "filename": "textures/floor.png",
-            "gamma": 2.2,
-            "!!proc": {
-                "type": "grid",
-                "border": true
-            }
+            "name": "test-floor",
+            "filename": "textures/test-floor.png.ypreset"
         },
         {
-            "name": "sky",
-            "filename": "textures/sky.hdr",
-            "!!proc": {
-                "type": "sky"
-            }
+            "name": "test-sky",
+            "filename": "textures/test-sky.hdr.ypreset"
         }
     ],
     "materials": [
         {
-            "name": "floor",
+            "name": "test-floor",
             "diffuse": [
                 0.7,
                 0.7,
                 0.7
             ],
-            "diffuse_texture": "floor"
+            "diffuse_texture": "test-floor"
         },
         {
-            "name": "matte",
-            "diffuse": [
-                0.7,
-                0.7,
-                0.7
-            ],
-            "specular": [
-                0,
-                0,
-                0
-            ],
-            "roughness": 1
-        },
-        {
-            "name": "hair",
+            "name": "test-matte",
             "diffuse": [
                 0.7,
                 0.7,
@@ -194,7 +193,21 @@
             "roughness": 1
         },
         {
-            "name": "arealight1",
+            "name": "test-hair",
+            "diffuse": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "specular": [
+                0,
+                0,
+                0
+            ],
+            "roughness": 1
+        },
+        {
+            "name": "test-arealight1",
             "emission": [
                 20,
                 20,
@@ -202,7 +215,7 @@
             ]
         },
         {
-            "name": "arealight2",
+            "name": "test-arealight2",
             "emission": [
                 20,
                 20,
@@ -212,130 +225,86 @@
     ],
     "shapes": [
         {
-            "name": "floor",
-            "filename": "models/test-floor.ply",
-            "!!proc": {
-                "type": "floor",
-                "size": [
-                    4,
-                    4
-                ]
-            }
+            "name": "test-floor",
+            "filename": "models/test-floor.ply.ypreset"
         },
         {
-            "name": "sphere",
-            "filename": "models/test-sphere.obj",
-            "!!proc": {
-                "type": "sphere",
-                "size": 0.15,
-                "align_bottom": true
-            }
+            "name": "test-sphere",
+            "filename": "models/test-sphere.obj.ypreset"
         },
         {
-            "name": "hairball1",
-            "filename": "models/test-hairball1.ply",
-            "!!proc": {
-                "type": "hairball",
-                "size": 0.15,
-                "noise": [
-                    0.03,
-                    100
-                ]
-            }
+            "name": "test-hairball1",
+            "filename": "models/test-hairball1.ply.ypreset"
         },
         {
-            "name": "hairball2",
-            "filename": "models/test-hairball2.ply",
-            "!!proc": {
-                "type": "hairball",
-                "size": 0.15
-            }
+            "name": "test-hairball2",
+            "filename": "models/test-hairball2.ply.ypreset"
         },
         {
-            "name": "hairball3",
-            "filename": "models/test-hairball3.ply",
-            "!!proc": {
-                "type": "hairball",
-                "size": 0.15,
-                "clump": [
-                    0.5,
-                    128
-                ]
-            }
+            "name": "test-hairball3",
+            "filename": "models/test-hairball3.ply.ypreset"
         },
         {
-            "name": "hairballi",
-            "filename": "models/test-hairballi.ply",
-            "!!proc": {
-                "type": "hairball_interior",
-                "size": 0.15
-            }
+            "name": "test-hairball-interior",
+            "filename": "models/test-hairball-interior.ply.ypreset"
         },
         {
-            "name": "arealight1",
-            "!!proc": {
-                "type": "quad",
-                "size": [
-                    0.4,
-                    0.4
-                ]
-            }
+            "name": "test-arealight1",
+            "filename": "models/test-arealight1.ply.ypreset"
         },
         {
-            "name": "arealight2",
-            "!!proc": {
-                "type": "quad",
-                "size": [
-                    0.4,
-                    0.4
-                ]
-            }
+            "name": "test-arealight2",
+            "filename": "models/test-arealight2.ply.ypreset"
         }
     ],
     "instances": [
         {
-            "name": "floor",
-            "shape": "floor",
-            "material": "floor"
+            "name": "test-floor",
+            "shape": "test-floor",
+            "material": "test-floor"
         },
         {
-            "name": "arealight1",
-            "shape": "arealight1",
-            "material": "arealight1",
-            "!!proc": {
-                "from": [
-                    -0.4,
-                    0.8,
-                    0.8
-                ],
-                "to": [
-                    0,
-                    0.1,
-                    0
-                ]
-            }
+            "name": "test-arealight1",
+            "shape": "test-arealight1",
+            "material": "test-arealight1",
+            "frame": [
+                -0.8944271909999159,
+                0.0,
+                -0.4472135954999579,
+                0.27562473083535527,
+                0.7874992309581578,
+                -0.5512494616707105,
+                0.3521803625302495,
+                -0.6163156344279367,
+                -0.704360725060499,
+                -0.4,
+                0.8,
+                0.8
+            ]
         },
         {
-            "name": "arealight2",
-            "shape": "arealight2",
-            "material": "arealight2",
-            "!!proc": {
-                "from": [
-                    0.4,
-                    0.8,
-                    0.8
-                ],
-                "to": [
-                    0,
-                    0.1,
-                    0
-                ]
-            }
+            "name": "test-arealight2",
+            "shape": "test-arealight2",
+            "material": "test-arealight2",
+            "frame": [
+                -0.8944271909999159,
+                -0.0,
+                0.4472135954999579,
+                -0.27562473083535527,
+                0.7874992309581578,
+                -0.5512494616707105,
+                -0.3521803625302495,
+                -0.6163156344279367,
+                -0.704360725060499,
+                0.4,
+                0.8,
+                0.8
+            ]
         },
         {
-            "name": "sphere_matte",
-            "shape": "sphere",
-            "material": "matte",
+            "name": "test-sphere_test-matte",
+            "shape": "test-sphere",
+            "material": "test-matte",
             "frame": [
                 0.5,
                 0,
@@ -352,9 +321,9 @@
             ]
         },
         {
-            "name": "hairball1_hair",
-            "shape": "hairball1",
-            "material": "hair",
+            "name": "test-hairball1_test-hair",
+            "shape": "test-hairball1",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,
@@ -366,14 +335,14 @@
                 0,
                 1,
                 -0.2,
-                0.075,
+                0,
                 0
             ]
         },
         {
-            "name": "hairball2_hair",
-            "shape": "hairball2",
-            "material": "hair",
+            "name": "test-hairball2_test-hair",
+            "shape": "test-hairball2",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,
@@ -385,14 +354,14 @@
                 0,
                 1,
                 0,
-                0.075,
+                0,
                 0
             ]
         },
         {
-            "name": "hairball3_hair",
-            "shape": "hairball3",
-            "material": "hair",
+            "name": "test-hairball3_test-hair",
+            "shape": "test-hairball3",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,
@@ -404,14 +373,14 @@
                 0,
                 1,
                 0.2,
-                0.075,
+                0,
                 0
             ]
         },
         {
-            "name": "sphere_matte",
-            "shape": "sphere",
-            "material": "matte",
+            "name": "test-sphere_test-matte",
+            "shape": "test-sphere",
+            "material": "test-matte",
             "frame": [
                 0.5,
                 0,
@@ -428,9 +397,9 @@
             ]
         },
         {
-            "name": "hairballi_hair",
-            "shape": "hairballi",
-            "material": "hair",
+            "name": "test-hairball-interior_test-hair",
+            "shape": "test-hairball-interior",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,
@@ -442,14 +411,14 @@
                 0,
                 1,
                 -0.2,
-                0.075,
+                0,
                 0
             ]
         },
         {
-            "name": "hairballi_hair",
-            "shape": "hairballi",
-            "material": "hair",
+            "name": "test-hairball-interior_test-hair",
+            "shape": "test-hairball-interior",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,
@@ -461,14 +430,14 @@
                 0,
                 1,
                 0,
-                0.075,
+                0,
                 0
             ]
         },
         {
-            "name": "hairballi_hair",
-            "shape": "hairballi",
-            "material": "hair",
+            "name": "test-hairball-interior_test-hair",
+            "shape": "test-hairball-interior",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,
@@ -480,20 +449,20 @@
                 0,
                 1,
                 0.2,
-                0.075,
+                0,
                 0
             ]
         }
     ],
     "environments": [
         {
-            "name": "sky",
+            "name": "test-sky",
             "emission": [
                 2,
                 2,
                 2
             ],
-            "emission_texture": "sky"
+            "emission_texture": "test-sky"
         }
     ]
 }

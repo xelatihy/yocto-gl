@@ -76,6 +76,11 @@ struct obj_vertex {
     int normal       = 0;
 };
 
+inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
+    return a.position == b.position && a.texturecoord == b.texturecoord &&
+           a.normal == b.normal;
+}
+
 // Obj texture information.
 struct obj_texture_info {
     string path  = "";     // file path
@@ -583,5 +588,22 @@ inline void load_obj(
 }
 
 }  // namespace yocto
+
+namespace std {
+
+// Hash functor for vector for use with unordered_map
+template <>
+struct hash<yocto::obj_vertex> {
+    static constexpr std::hash<int> hasher = std::hash<int>();
+
+    size_t operator()(const yocto::obj_vertex& v) const {
+        auto h = (size_t)0;
+        for (auto i = 0; i < 3; i++)
+            h ^= hasher((&v.position)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
+};
+
+}  // namespace std
 
 #endif
