@@ -257,15 +257,15 @@
     "shapes": [
         {
             "name": "test-floor",
-            "filename": "models/test-floor.ply.ypreset"
+            "filename": "shapes/test-floor.ply.ypreset"
         },
         {
             "name": "test-bunny",
-            "filename": "models/test-bunny.obj"
+            "filename": "shapes/test-bunny.obj"
         },
         {
             "name": "test-sphere",
-            "filename": "models/test-sphere.obj.ypreset"
+            "filename": "shapes/test-sphere.obj.ypreset"
         }
     ],
     "instances": [

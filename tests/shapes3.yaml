@@ -73,21 +73,21 @@ materials:
     emission: [20, 20, 20]
 shapes:
   - name: test-floor
-    filename: models/test-floor.ply.ypreset
+    filename: shapes/test-floor.ply.ypreset
   - name: test-sphere
-    filename: models/test-sphere.obj.ypreset
+    filename: shapes/test-sphere.obj.ypreset
   - name: test-hairball1
-    filename: models/test-hairball1.ply.ypreset
+    filename: shapes/test-hairball1.ply.ypreset
   - name: test-hairball2
-    filename: models/test-hairball2.ply.ypreset
+    filename: shapes/test-hairball2.ply.ypreset
   - name: test-hairball3
-    filename: models/test-hairball3.ply.ypreset
+    filename: shapes/test-hairball3.ply.ypreset
   - name: test-hairball-interior
-    filename: models/test-hairball-interior.ply.ypreset
+    filename: shapes/test-hairball-interior.ply.ypreset
   - name: test-arealight1
-    filename: models/test-arealight1.ply.ypreset
+    filename: shapes/test-arealight1.ply.ypreset
   - name: test-arealight2
-    filename: models/test-arealight2.ply.ypreset
+    filename: shapes/test-arealight2.ply.ypreset
 instances:
   - name: test-floor
     shape: test-floor

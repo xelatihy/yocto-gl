@@ -231,19 +231,19 @@
     "shapes": [
         {
             "name": "test-floor",
-            "filename": "models/test-floor.ply.ypreset"
+            "filename": "shapes/test-floor.ply.ypreset"
         },
         {
             "name": "test-bunny",
-            "filename": "models/test-bunny.obj"
+            "filename": "shapes/test-bunny.obj"
         },
         {
             "name": "test-teapot",
-            "filename": "models/test-teapot.obj"
+            "filename": "shapes/test-teapot.obj"
         },
         {
             "name": "test-cube-subdiv",
-            "filename": "models/test-cube-subdiv.obj.ypreset",
+            "filename": "shapes/test-cube-subdiv.obj.ypreset",
             "subdivision_level": 4,
             "catmull_clark": true,
             "compute_normals": true,
@@ -251,18 +251,18 @@
         },
         {
             "name": "test-suzanne-subdiv",
-            "filename": "models/test-suzanne-subdiv.obj.ypreset",
+            "filename": "shapes/test-suzanne-subdiv.obj.ypreset",
             "subdivision_level": 2,
             "catmull_clark": true,
             "compute_normals": true
         },
         {
             "name": "test-arealight1",
-            "filename": "models/test-arealight1.ply.ypreset"
+            "filename": "shapes/test-arealight1.ply.ypreset"
         },
         {
             "name": "test-arealight2",
-            "filename": "models/test-arealight2.ply.ypreset"
+            "filename": "shapes/test-arealight2.ply.ypreset"
         }
     ],
     "instances": [
