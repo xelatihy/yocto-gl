@@ -213,35 +213,15 @@
         },
         {
             "name": "test-hairball1",
-            "filename": "models/test-hairball1.ply",
-            "!!proc": {
-                "type": "hairball",
-                "size": 0.15,
-                "noise": [
-                    0.03,
-                    100
-                ]
-            }
+            "filename": "models/test-hairball1.ply.ypreset"
         },
         {
             "name": "test-hairball2",
-            "filename": "models/test-hairball2.ply",
-            "!!proc": {
-                "type": "hairball",
-                "size": 0.15
-            }
+            "filename": "models/test-hairball2.ply.ypreset"
         },
         {
             "name": "test-hairball3",
-            "filename": "models/test-hairball3.ply",
-            "!!proc": {
-                "type": "hairball",
-                "size": 0.15,
-                "clump": [
-                    0.5,
-                    128
-                ]
-            }
+            "filename": "models/test-hairball3.ply.ypreset"
         },
         {
             "name": "test-hairball-interior",

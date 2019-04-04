@@ -763,10 +763,8 @@ inline void make_hair_shape(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
     vector<T>& radius, const vec2i& steps, const vector<vec3i>& striangles,
     const vector<vec4i>& squads, const vector<vec<T, 3>>& spos,
     const vector<vec<T, 3>>& snorm, const vector<vec<T, 2>>& stexcoord,
-    const vec<T, 2>& length = {0.1f, 0.1f},
-    const vec<T, 2>& rad = {0.001f, 0.001f}, const vec<T, 2>& noise = zero2f,
-    const vec<T, 2>& clump = zero2f, const vec<T, 2>& rotation = zero2f,
-    int seed = 7);
+    const vec<T, 2>& length, const vec<T, 2>& rad, const vec<T, 2>& noise,
+    const vec<T, 2>& clump, const vec<T, 2>& rotation, int seed = 7);
 
 // Thickens a shape by copy9ing the shape content, rescaling it and flipping its
 // normals. Note that this is very much not robust and only useful for trivial
@@ -3113,7 +3111,7 @@ inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
         make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
             {4, 65536}, {}, base_quads, base_positions, base_normals,
             base_texturecoords, {(T)0.2, (T)0.2}, {(T)0.002, (T)0.001}, {0, 0},
-            {0, 0});
+            {0, 0}, {0, 0});
     } else if (type == "default-hairball-interior") {
         make_sphere_shape<T>(quads, positions, normals, texturecoords, 32,
             2 * (T)0.8, 1, identity_frame<T, 3>);
@@ -3154,10 +3152,10 @@ inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     } else if (type == "test-disk") {
         make_disk_shape<T>(quads, positions, normals, texturecoords, 32,
             (T)0.15, (T)1.0, frame<T, 3>{{0, (T)0.075, 0}});
-    } else if (type == "test-cylinder") {
+    } else if (type == "test-uvcylinder") {
         make_uvcylinder_rounded_shape<T>(quads, positions, normals,
-            texturecoords, {64, 32, 16}, {(T)0.15, (T)0.15}, {1, 1, 1},
-            (T)0.075, frame<T, 3>{{0, (T)0.75, 0}});
+            texturecoords, {64, 32, 16}, {(T)0.15, (T)0.15}, {1, 1, 1}, (T)0.3,
+            frame<T, 3>{{0, (T)0.075, 0}});
     } else if (type == "test-floor") {
         make_floor_shape<T>(quads, positions, normals, texturecoords, {1, 1},
             {4, 4}, {20, 20}, identity_frame<T, 3>);
@@ -3174,8 +3172,9 @@ inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
             frame<T, 3>{{0, (T)0.075, 0}});
         make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
             {4, 65536}, {}, base_quads, base_positions, base_normals,
-            base_texturecoords, {2 * (T)0.1, 2 * (T)0.1},
-            {2 * (T)0.001, 2 * (T)0.0005}, {0, 0}, {0, 0});
+            base_texturecoords, vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
+            vec<T, 2>{(T)0.001, (T)0.0005} * (T)0.15, {(T)0.03, 100}, {0, 0},
+            {0, 0});
     } else if (type == "test-hairball2") {
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
@@ -3186,8 +3185,8 @@ inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
             frame<T, 3>{{0, (T)0.075, 0}});
         make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
             {4, 65536}, {}, base_quads, base_positions, base_normals,
-            base_texturecoords, {2 * (T)0.1, 2 * (T)0.1},
-            {2 * (T)0.001, 2 * (T)0.0005}, {0, 0}, {0, 0});
+            base_texturecoords, vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
+            vec<T, 2>{(T)0.001, (T)0.0005} * (T)0.15, {0, 0}, {0, 0}, {0, 0});
     } else if (type == "test-hairball3") {
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
@@ -3198,7 +3197,8 @@ inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
             frame<T, 3>{{0, (T)0.075, 0}});
         make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
             {4, 65536}, {}, base_quads, base_positions, base_normals,
-            base_texturecoords, {(T)0.2, (T)0.2}, {(T)0.002, (T)0.001}, {0, 0},
+            base_texturecoords, vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
+            vec<T, 2>{(T)0.001, (T)0.0005} * (T)0.15, {0, 0}, {(T)0.5, 128},
             {0, 0});
     } else if (type == "test-hairball-interior") {
         make_sphere_shape<T>(quads, positions, normals, texturecoords, 32,
@@ -3208,7 +3208,8 @@ inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
             quads, positions, (T)0.15, frame<T, 3>{{0, (T)0.075, 0}});
     } else if (type == "test-cube-subdiv") {
         make_box_fvshape<T>(quads_positions, quads_normals, quads_texturecoords,
-            positions, normals, texturecoords, {1, 1, 1}, {(T)0.15, (T)0.15, (T)0.15}, {1, 1, 1},
+            positions, normals, texturecoords, {1, 1, 1},
+            {(T)0.15, (T)0.15, (T)0.15}, {1, 1, 1},
             frame<T, 3>{{0, (T)0.075, 0}});
     } else if (type == "test-arealight1") {
         make_quad_shape<T>(quads, positions, normals, texturecoords, {1, 1},

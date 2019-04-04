@@ -267,28 +267,23 @@ def make_tests():
             {
                 "name": "test-cube",
                 "filename": "models/test-cube.obj.ypreset"
-                # "!!proc": { "type": "box_rounded", "size": [0.15, 0.15, 0.15], "rounded": 0.3, "align_bottom": true }
             },
             {
                 "name": "test-disk",
                 "filename": "models/test-disk.obj.ypreset"
-                # "!!proc": { "type": "disk", "size": 0.15, "align_bottom": true }
             },
             {
                 "name": "test-uvsphere-flipcap",
                 "filename": "models/test-uvsphere-flipcap.obj.ypreset"
-                # "!!proc": { "type": "uvsphere_flipcap", "size": 0.15, "align_bottom": true }
             },
             {
-                "name": "test-cylinder",
-                "filename": "models/test-cylinder.obj.ypreset"
-                # "!!proc": { "type": "uvcylinder_rounded", "size": [0.15, 0.15, 0.15], "align_bottom": true }
+                "name": "test-uvcylinder",
+                "filename": "models/test-uvcylinder.obj.ypreset"
             },
             {
                 "name": "test-sphere-displaced",
                 "filename": "models/test-sphere-displaced.obj.ypreset",
                 "preserve_facevarying": false
-                # "!!proc": { "type": "sphere", "size": 0.15, "align_bottom": true }
             },
             {
                 "name": "test-cube-subdiv",
@@ -307,18 +302,18 @@ def make_tests():
             },
             {
                 "name": "test-hairball1",
-                "filename": "models/test-hairball1.ply",
-                "!!proc": { "type": "hairball", "size": 0.15, "noise": [ 0.03, 100 ] }
+                "filename": "models/test-hairball1.ply.ypreset"
+                # "!!proc": { "type": "hairball", "size": 0.15, "noise": [ 0.03, 100 ] }
             },
             {
                 "name": "test-hairball2",
-                "filename": "models/test-hairball2.ply",
-                "!!proc": { "type": "hairball", "size": 0.15 }
+                "filename": "models/test-hairball2.ply.ypreset"
+                # "!!proc": { "type": "hairball", "size": 0.15 }
             },
             {
                 "name": "test-hairball3",
-                "filename": "models/test-hairball3.ply",
-                "!!proc": { "type": "hairball",  "size": 0.15, "clump": [ 0.5, 128 ] }
+                "filename": "models/test-hairball3.ply.ypreset"
+                # "!!proc": { "type": "hairball",  "size": 0.15, "clump": [ 0.5, 128 ] }
             },
             {
                 "name": "test-hairball-interior",
@@ -449,7 +444,7 @@ def make_tests():
     make_test('materials1', ['test-sphere'], ['test-plastic-sharp', 'test-plastic-rough', 'test-matte', 'test-metal-sharp', 'test-metal-rough'], mixed_lights)
     make_test('materials2', ['test-sphere'], ['test-glass-sharp', 'test-glass-rough', 'test-transparent', 'test-thinglass-sharp', 'test-thinglass-rough'], mixed_lights)
     make_test('materials3', ['test-sphere', 'test-sphere', 'test-sphere-displaced', 'test-sphere', 'test-sphere'], ['test-plastic-sharp-bumped', 'test-plastic-sharp-bumped', 'test-matte-displaced', 'test-metal-sharp-bumped', 'test-metal-sharp-bumped'], mixed_lights)
-    make_test('shapes1', ['test-sphere', "test-uvsphere-flipcap", "test-disk", "test-cylinder", "test-cube"], ['test-uvgrid'], mixed_lights)
+    make_test('shapes1', ['test-sphere', "test-uvsphere-flipcap", "test-disk", "test-uvcylinder", "test-cube"], ['test-uvgrid'], mixed_lights)
     make_test('shapes2', ['test-cube-subdiv', "test-suzanne-subdiv", "test-teapot", "test-bunny", "test-cube-subdiv"], ['test-uvgrid', 'test-plastic-sharp'], mixed_lights)
     make_test('shapes3', ['test-sphere', "test-hairball1", "test-hairball2", "test-hairball3", "test-sphere", "", "test-hairball-interior", "test-hairball-interior", "test-hairball-interior", ""], ['test-matte', 'test-hair', 'test-hair', 'test-hair', 'test-matte'], mixed_lights, xscales=[ 0.5, 1, 1, 1, 0.5 ])
     make_test('arealights1', ['test-bunny', 'test-sphere', 'test-bunny', 'test-sphere', 'test-bunny'], ['test-uvgrid', 'test-plastic-sharp', 'test-metal-rough', 'test-plastic-rough', 'test-metal-sharp'], area_lights)

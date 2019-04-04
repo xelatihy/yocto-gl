@@ -215,8 +215,8 @@
             "filename": "models/test-uvsphere-flipcap.obj.ypreset"
         },
         {
-            "name": "test-cylinder",
-            "filename": "models/test-cylinder.obj.ypreset"
+            "name": "test-uvcylinder",
+            "filename": "models/test-uvcylinder.obj.ypreset"
         },
         {
             "name": "test-arealight1",
@@ -339,8 +339,8 @@
             ]
         },
         {
-            "name": "test-cylinder_test-uvgrid",
-            "shape": "test-cylinder",
+            "name": "test-uvcylinder_test-uvgrid",
+            "shape": "test-uvcylinder",
             "material": "test-uvgrid",
             "frame": [
                 1,
