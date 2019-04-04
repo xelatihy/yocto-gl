@@ -148,10 +148,7 @@
         },
         {
             "name": "test-sky",
-            "filename": "textures/sky.hdr",
-            "!!proc": {
-                "type": "sky"
-            }
+            "filename": "textures/test-sky.ypreset"
         }
     ],
     "materials": [

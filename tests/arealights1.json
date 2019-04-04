@@ -141,6 +141,10 @@
         {
             "name": "test-floor",
             "filename": "textures/test-floor.ypreset"
+        },
+        {
+            "name": "test-uvgrid",
+            "filename": "textures/test-uvgrid.ypreset"
         }
     ],
     "materials": [
@@ -152,6 +156,77 @@
                 0.7
             ],
             "diffuse_texture": "test-floor"
+        },
+        {
+            "name": "test-uvgrid",
+            "diffuse": [
+                1,
+                1,
+                1
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "test-uvgrid"
+        },
+        {
+            "name": "test-plastic-sharp",
+            "diffuse": [
+                0.5,
+                0.5,
+                0.7
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.01
+        },
+        {
+            "name": "test-plastic-rough",
+            "diffuse": [
+                0.5,
+                0.7,
+                0.5
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1
+        },
+        {
+            "name": "test-metal-sharp",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "roughness": 0
+        },
+        {
+            "name": "test-metal-rough",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.66,
+                0.45,
+                0.34
+            ],
+            "roughness": 0.1
         },
         {
             "name": "test-arealight1",
@@ -180,6 +255,19 @@
                     4,
                     4
                 ]
+            }
+        },
+        {
+            "name": "test-bunny",
+            "filename": "models/test-bunny.obj"
+        },
+        {
+            "name": "test-sphere",
+            "filename": "models/test-sphere.obj",
+            "!!proc": {
+                "type": "sphere",
+                "size": 0.15,
+                "align_bottom": true
             }
         },
         {
@@ -244,9 +332,9 @@
             }
         },
         {
-            "name": "bunny_uvgrid",
-            "shape": "bunny",
-            "material": "uvgrid",
+            "name": "test-bunny_test-uvgrid",
+            "shape": "test-bunny",
+            "material": "test-uvgrid",
             "frame": [
                 1,
                 0,
@@ -263,9 +351,9 @@
             ]
         },
         {
-            "name": "sphere_plastic-sharp",
-            "shape": "sphere",
-            "material": "plastic-sharp",
+            "name": "test-sphere_test-plastic-sharp",
+            "shape": "test-sphere",
+            "material": "test-plastic-sharp",
             "frame": [
                 1,
                 0,
@@ -282,9 +370,9 @@
             ]
         },
         {
-            "name": "bunny_metal-rough",
-            "shape": "bunny",
-            "material": "metal-rough",
+            "name": "test-bunny_test-metal-rough",
+            "shape": "test-bunny",
+            "material": "test-metal-rough",
             "frame": [
                 1,
                 0,
@@ -301,9 +389,9 @@
             ]
         },
         {
-            "name": "sphere_plastic-rough",
-            "shape": "sphere",
-            "material": "plastic-rough",
+            "name": "test-sphere_test-plastic-rough",
+            "shape": "test-sphere",
+            "material": "test-plastic-rough",
             "frame": [
                 1,
                 0,
@@ -320,9 +408,9 @@
             ]
         },
         {
-            "name": "bunny_metal-sharp",
-            "shape": "bunny",
-            "material": "metal-sharp",
+            "name": "test-bunny_test-metal-sharp",
+            "shape": "test-bunny",
+            "material": "test-metal-sharp",
             "frame": [
                 1,
                 0,

@@ -143,11 +143,12 @@
             "filename": "textures/test-floor.ypreset"
         },
         {
+            "name": "test-uvgrid",
+            "filename": "textures/test-uvgrid.ypreset"
+        },
+        {
             "name": "test-sky",
-            "filename": "textures/sky.hdr",
-            "!!proc": {
-                "type": "sky"
-            }
+            "filename": "textures/test-sky.ypreset"
         }
     ],
     "materials": [
@@ -159,6 +160,35 @@
                 0.7
             ],
             "diffuse_texture": "test-floor"
+        },
+        {
+            "name": "test-uvgrid",
+            "diffuse": [
+                1,
+                1,
+                1
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "test-uvgrid"
+        },
+        {
+            "name": "test-plastic-sharp",
+            "diffuse": [
+                0.5,
+                0.5,
+                0.7
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.01
         },
         {
             "name": "test-arealight1",
@@ -187,6 +217,43 @@
                     4,
                     4
                 ]
+            }
+        },
+        {
+            "name": "test-bunny",
+            "filename": "models/test-bunny.obj"
+        },
+        {
+            "name": "test-teapot",
+            "filename": "models/test-teapot.obj"
+        },
+        {
+            "name": "test-subdiv-cube",
+            "filename": "models/test-subdiv-cube.obj",
+            "subdivision_level": 4,
+            "catmull_clark": true,
+            "compute_normals": true,
+            "preserve_facevarying": true,
+            "!!proc": {
+                "type": "cube_facevarying",
+                "size": [
+                    0.15,
+                    0.15,
+                    0.15
+                ],
+                "align_bottom": true
+            }
+        },
+        {
+            "name": "test-subdiv-monkey",
+            "filename": "models/test-subdiv-monkey.obj",
+            "subdivision_level": 2,
+            "catmull_clark": true,
+            "compute_normals": true,
+            "!!proc": {
+                "type": "suzanne",
+                "size": 0.15,
+                "align_bottom": true
             }
         },
         {
@@ -251,9 +318,9 @@
             }
         },
         {
-            "name": "subdiv-cube_uvgrid",
-            "shape": "subdiv-cube",
-            "material": "uvgrid",
+            "name": "test-subdiv-cube_test-uvgrid",
+            "shape": "test-subdiv-cube",
+            "material": "test-uvgrid",
             "frame": [
                 1,
                 0,
@@ -270,9 +337,9 @@
             ]
         },
         {
-            "name": "subdiv-monkey_plastic-sharp",
-            "shape": "subdiv-monkey",
-            "material": "plastic-sharp",
+            "name": "test-subdiv-monkey_test-plastic-sharp",
+            "shape": "test-subdiv-monkey",
+            "material": "test-plastic-sharp",
             "frame": [
                 1,
                 0,
@@ -289,9 +356,9 @@
             ]
         },
         {
-            "name": "teapot_uvgrid",
-            "shape": "teapot",
-            "material": "uvgrid",
+            "name": "test-teapot_test-uvgrid",
+            "shape": "test-teapot",
+            "material": "test-uvgrid",
             "frame": [
                 1,
                 0,
@@ -308,9 +375,9 @@
             ]
         },
         {
-            "name": "bunny_plastic-sharp",
-            "shape": "bunny",
-            "material": "plastic-sharp",
+            "name": "test-bunny_test-plastic-sharp",
+            "shape": "test-bunny",
+            "material": "test-plastic-sharp",
             "frame": [
                 1,
                 0,
@@ -327,9 +394,9 @@
             ]
         },
         {
-            "name": "subdiv-cube_uvgrid",
-            "shape": "subdiv-cube",
-            "material": "uvgrid",
+            "name": "test-subdiv-cube_test-uvgrid",
+            "shape": "test-subdiv-cube",
+            "material": "test-uvgrid",
             "frame": [
                 1,
                 0,

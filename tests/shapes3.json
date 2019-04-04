@@ -144,10 +144,7 @@
         },
         {
             "name": "test-sky",
-            "filename": "textures/sky.hdr",
-            "!!proc": {
-                "type": "sky"
-            }
+            "filename": "textures/test-sky.ypreset"
         }
     ],
     "materials": [
@@ -159,6 +156,34 @@
                 0.7
             ],
             "diffuse_texture": "test-floor"
+        },
+        {
+            "name": "test-matte",
+            "diffuse": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "specular": [
+                0,
+                0,
+                0
+            ],
+            "roughness": 1
+        },
+        {
+            "name": "test-hair",
+            "diffuse": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "specular": [
+                0,
+                0,
+                0
+            ],
+            "roughness": 1
         },
         {
             "name": "test-arealight1",
@@ -187,6 +212,55 @@
                     4,
                     4
                 ]
+            }
+        },
+        {
+            "name": "test-sphere",
+            "filename": "models/test-sphere.obj",
+            "!!proc": {
+                "type": "sphere",
+                "size": 0.15,
+                "align_bottom": true
+            }
+        },
+        {
+            "name": "test-hairball1",
+            "filename": "models/test-hairball1.ply",
+            "!!proc": {
+                "type": "hairball",
+                "size": 0.15,
+                "noise": [
+                    0.03,
+                    100
+                ]
+            }
+        },
+        {
+            "name": "test-hairball2",
+            "filename": "models/test-hairball2.ply",
+            "!!proc": {
+                "type": "hairball",
+                "size": 0.15
+            }
+        },
+        {
+            "name": "test-hairball3",
+            "filename": "models/test-hairball3.ply",
+            "!!proc": {
+                "type": "hairball",
+                "size": 0.15,
+                "clump": [
+                    0.5,
+                    128
+                ]
+            }
+        },
+        {
+            "name": "test-hairballi",
+            "filename": "models/test-hairballi.ply",
+            "!!proc": {
+                "type": "hairball_interior",
+                "size": 0.15
             }
         },
         {
@@ -251,9 +325,9 @@
             }
         },
         {
-            "name": "sphere_matte",
-            "shape": "sphere",
-            "material": "matte",
+            "name": "test-sphere_test-matte",
+            "shape": "test-sphere",
+            "material": "test-matte",
             "frame": [
                 0.5,
                 0,
@@ -270,9 +344,9 @@
             ]
         },
         {
-            "name": "hairball1_hair",
-            "shape": "hairball1",
-            "material": "hair",
+            "name": "test-hairball1_test-hair",
+            "shape": "test-hairball1",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,
@@ -289,9 +363,9 @@
             ]
         },
         {
-            "name": "hairball2_hair",
-            "shape": "hairball2",
-            "material": "hair",
+            "name": "test-hairball2_test-hair",
+            "shape": "test-hairball2",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,
@@ -308,9 +382,9 @@
             ]
         },
         {
-            "name": "hairball3_hair",
-            "shape": "hairball3",
-            "material": "hair",
+            "name": "test-hairball3_test-hair",
+            "shape": "test-hairball3",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,
@@ -327,9 +401,9 @@
             ]
         },
         {
-            "name": "sphere_matte",
-            "shape": "sphere",
-            "material": "matte",
+            "name": "test-sphere_test-matte",
+            "shape": "test-sphere",
+            "material": "test-matte",
             "frame": [
                 0.5,
                 0,
@@ -346,9 +420,9 @@
             ]
         },
         {
-            "name": "hairballi_hair",
-            "shape": "hairballi",
-            "material": "hair",
+            "name": "test-hairballi_test-hair",
+            "shape": "test-hairballi",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,
@@ -365,9 +439,9 @@
             ]
         },
         {
-            "name": "hairballi_hair",
-            "shape": "hairballi",
-            "material": "hair",
+            "name": "test-hairballi_test-hair",
+            "shape": "test-hairballi",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,
@@ -384,9 +458,9 @@
             ]
         },
         {
-            "name": "hairballi_hair",
-            "shape": "hairballi",
-            "material": "hair",
+            "name": "test-hairballi_test-hair",
+            "shape": "test-hairballi",
+            "material": "test-hair",
             "frame": [
                 1,
                 0,

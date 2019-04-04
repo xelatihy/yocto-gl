@@ -143,11 +143,22 @@
             "filename": "textures/test-floor.ypreset"
         },
         {
-            "name": "test-sky",
-            "filename": "textures/sky.hdr",
+            "name": "test-bump-normal",
+            "filename": "textures/bump-normal.png",
             "!!proc": {
-                "type": "sky"
+                "type": "bump",
+                "bump_to_normal": true,
+                "bump_scale": 0.05
             }
+        },
+        {
+            "name": "test-fbm-displacement",
+            "filename": "textures/test-fbm-displacement.ypreset",
+            "height_scale": 0.025
+        },
+        {
+            "name": "test-sky",
+            "filename": "textures/test-sky.ypreset"
         }
     ],
     "materials": [
@@ -159,6 +170,51 @@
                 0.7
             ],
             "diffuse_texture": "test-floor"
+        },
+        {
+            "name": "test-matte-displaced",
+            "diffuse": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "specular": [
+                0,
+                0,
+                0
+            ],
+            "roughness": 1,
+            "displacement_texture": "test-fbm-displacement"
+        },
+        {
+            "name": "test-plastic-sharp-bumped",
+            "diffuse": [
+                0.5,
+                0.5,
+                0.7
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.01,
+            "normal_texture": "test-bump-normal"
+        },
+        {
+            "name": "test-metal-sharp-bumped",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "roughness": 0,
+            "normal_texture": "test-bump-normal"
         },
         {
             "name": "test-arealight1",
@@ -187,6 +243,25 @@
                     4,
                     4
                 ]
+            }
+        },
+        {
+            "name": "test-sphere",
+            "filename": "models/test-sphere.obj",
+            "!!proc": {
+                "type": "sphere",
+                "size": 0.15,
+                "align_bottom": true
+            }
+        },
+        {
+            "name": "test-sphere-displaced",
+            "filename": "models/test-sphere-displaced.obj",
+            "preserve_facevarying": false,
+            "!!proc": {
+                "type": "sphere",
+                "size": 0.15,
+                "align_bottom": true
             }
         },
         {
@@ -251,9 +326,9 @@
             }
         },
         {
-            "name": "sphere_plastic-sharp-bumped",
-            "shape": "sphere",
-            "material": "plastic-sharp-bumped",
+            "name": "test-sphere_test-plastic-sharp-bumped",
+            "shape": "test-sphere",
+            "material": "test-plastic-sharp-bumped",
             "frame": [
                 1,
                 0,
@@ -270,9 +345,9 @@
             ]
         },
         {
-            "name": "sphere_plastic-sharp-bumped",
-            "shape": "sphere",
-            "material": "plastic-sharp-bumped",
+            "name": "test-sphere_test-plastic-sharp-bumped",
+            "shape": "test-sphere",
+            "material": "test-plastic-sharp-bumped",
             "frame": [
                 1,
                 0,
@@ -289,9 +364,9 @@
             ]
         },
         {
-            "name": "sphere-displaced_matte-displaced",
-            "shape": "sphere-displaced",
-            "material": "matte-displaced",
+            "name": "test-sphere-displaced_test-matte-displaced",
+            "shape": "test-sphere-displaced",
+            "material": "test-matte-displaced",
             "frame": [
                 1,
                 0,
@@ -308,9 +383,9 @@
             ]
         },
         {
-            "name": "sphere_metal-sharp-bumped",
-            "shape": "sphere",
-            "material": "metal-sharp-bumped",
+            "name": "test-sphere_test-metal-sharp-bumped",
+            "shape": "test-sphere",
+            "material": "test-metal-sharp-bumped",
             "frame": [
                 1,
                 0,
@@ -327,9 +402,9 @@
             ]
         },
         {
-            "name": "sphere_metal-sharp-bumped",
-            "shape": "sphere",
-            "material": "metal-sharp-bumped",
+            "name": "test-sphere_test-metal-sharp-bumped",
+            "shape": "test-sphere",
+            "material": "test-metal-sharp-bumped",
             "frame": [
                 1,
                 0,

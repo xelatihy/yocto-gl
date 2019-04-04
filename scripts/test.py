@@ -106,30 +106,26 @@ def make_tests():
                 "filename": "textures/test-uvgrid.ypreset"
             },
             {
-                "name": "test-bumps",
-                "filename": "textures/bumps.png",
-                "!!proc": { "type": "bump", "bump_scale": 0.05 }
+                "name": "test-bump",
+                "filename": "textures/test-bump.ypreset"
             },
             {
-                "name": "test-bumps-normal",
-                "filename": "textures/bumps-normal.png",
+                "name": "test-bump-normal",
+                "filename": "textures/bump-normal.png",
                 "!!proc": { "type": "bump", "bump_to_normal": true, "bump_scale": 0.05 }
             },
             {
                 "name": "test-fbm-displacement",
-                "filename": "textures/fbm-displacement.png",
-                "height_scale": 0.025,
-                "!!proc": { "type": "fbm", "scale": 10 }
+                "filename": "textures/test-fbm-displacement.ypreset",
+                "height_scale": 0.025
             },
             {
                 "name": "test-sky",
-                "filename": "textures/sky.hdr",
-                "!!proc": { "type": "sky" }
+                "filename": "textures/test-sky.ypreset"
             },
             {
                 "name": "test-sunsky",
-                "filename": "textures/sky.hdr",
-                "!!proc": { "type": "sky", "has_sun": true, "width": 2048, "height": 1024 }
+                "filename": "textures/test-sunsky.ypreset"
             }
         ],
         "materials": [
@@ -180,21 +176,21 @@ def make_tests():
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "specular": [ 0, 0, 0 ],
                 "roughness": 1,
-                "displacement_texture": "fbm-displacement"
+                "displacement_texture": "test-fbm-displacement"
             },
             {
                 "name": "test-plastic-sharp-bumped",
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "roughness": 0.01,
-                "normal_texture": "bumps-normal"
+                "normal_texture": "test-bump-normal"
             },
             {
                 "name": "test-metal-sharp-bumped",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.7, 0.7, 0.7 ],
                 "roughness": 0,
-                "normal_texture": "bumps-normal"
+                "normal_texture": "test-bump-normal"
             },
             {
                 "name": "test-transparent",
@@ -452,14 +448,14 @@ def make_tests():
                 if used: scene['textures'] += [texture] 
         with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
     make_test('features1', ['test-bunny', 'test-sphere', 'test-bunny', 'test-sphere', 'test-bunny'], ['test-uvgrid', 'test-plastic-sharp', 'test-metal-rough', 'test-plastic-rough', 'test-metal-sharp'], mixed_lights)
-    make_test('materials1', ['sphere'], ['plastic-sharp', 'plastic-rough', 'matte', 'metal-sharp', 'metal-rough'], mixed_lights)
-    make_test('materials2', ['sphere'], ['glass-sharp', 'glass-rough', 'transparent', 'thinglass-sharp', 'thinglass-rough'], mixed_lights)
-    make_test('materials3', ['sphere', 'sphere', 'sphere-displaced', 'sphere', 'sphere'], ['plastic-sharp-bumped', 'plastic-sharp-bumped', 'matte-displaced', 'metal-sharp-bumped', 'metal-sharp-bumped'], mixed_lights)
-    make_test('shapes1', ['sphere', "sphere-flipcap", "disk", "cylinder", "cube"], ['uvgrid'], mixed_lights)
-    make_test('shapes2', ['subdiv-cube', "subdiv-monkey", "teapot", "bunny", "subdiv-cube"], ['uvgrid', 'plastic-sharp'], mixed_lights)
-    make_test('shapes3', ['sphere', "hairball1", "hairball2", "hairball3", "sphere", "", "hairballi", "hairballi", "hairballi", ""], ['matte', 'hair', 'hair', 'hair', 'matte'], mixed_lights,
+    make_test('materials1', ['test-sphere'], ['test-plastic-sharp', 'test-plastic-rough', 'test-matte', 'test-metal-sharp', 'test-metal-rough'], mixed_lights)
+    make_test('materials2', ['test-sphere'], ['test-glass-sharp', 'test-glass-rough', 'test-transparent', 'test-thinglass-sharp', 'test-thinglass-rough'], mixed_lights)
+    make_test('materials3', ['test-sphere', 'test-sphere', 'test-sphere-displaced', 'test-sphere', 'test-sphere'], ['test-plastic-sharp-bumped', 'test-plastic-sharp-bumped', 'test-matte-displaced', 'test-metal-sharp-bumped', 'test-metal-sharp-bumped'], mixed_lights)
+    make_test('shapes1', ['test-sphere', "test-sphere-flipcap", "test-disk", "test-cylinder", "test-cube"], ['test-uvgrid'], mixed_lights)
+    make_test('shapes2', ['test-subdiv-cube', "test-subdiv-monkey", "test-teapot", "test-bunny", "test-subdiv-cube"], ['test-uvgrid', 'test-plastic-sharp'], mixed_lights)
+    make_test('shapes3', ['test-sphere', "test-hairball1", "test-hairball2", "test-hairball3", "test-sphere", "", "test-hairballi", "test-hairballi", "test-hairballi", ""], ['test-matte', 'test-hair', 'test-hair', 'test-hair', 'test-matte'], mixed_lights,
         yoffsets=[ 0, 0.075, 0.075, 0.075, 0 ], xscales=[ 0.5, 1, 1, 1, 0.5 ])
-    make_test('arealights1', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ['uvgrid', 'plastic-sharp', 'metal-rough', 'plastic-rough', 'metal-sharp'], area_lights)
-    make_test('environments1', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ['uvgrid', 'plastic-sharp', 'metal-rough', 'plastic-rough', 'metal-sharp'], sunsky_lights)
+    make_test('arealights1', ['test-bunny', 'test-sphere', 'test-bunny', 'test-sphere', 'test-bunny'], ['test-uvgrid', 'test-plastic-sharp', 'test-metal-rough', 'test-plastic-rough', 'test-metal-sharp'], area_lights)
+    make_test('environments1', ['test-bunny', 'test-sphere', 'test-bunny', 'test-sphere', 'test-bunny'], ['test-uvgrid', 'test-plastic-sharp', 'test-metal-rough', 'test-plastic-rough', 'test-metal-sharp'], sunsky_lights)
 
 cli()

@@ -144,10 +144,7 @@
         },
         {
             "name": "test-sky",
-            "filename": "textures/sky.hdr",
-            "!!proc": {
-                "type": "sky"
-            }
+            "filename": "textures/test-sky.ypreset"
         }
     ],
     "materials": [
@@ -159,6 +156,101 @@
                 0.7
             ],
             "diffuse_texture": "test-floor"
+        },
+        {
+            "name": "test-transparent",
+            "diffuse": [
+                0.7,
+                0.5,
+                0.5
+            ],
+            "specular": [
+                0,
+                0,
+                0
+            ],
+            "roughness": 1,
+            "opacity": 0.2
+        },
+        {
+            "name": "test-glass-sharp",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "transmission": [
+                1,
+                1,
+                1
+            ],
+            "roughness": 0,
+            "refract": true
+        },
+        {
+            "name": "test-glass-rough",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "transmission": [
+                1,
+                0.7,
+                0.7
+            ],
+            "roughness": 0.1,
+            "refract": true
+        },
+        {
+            "name": "test-thinglass-sharp",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "transmission": [
+                1,
+                1,
+                1
+            ],
+            "roughness": 0,
+            "refract": false
+        },
+        {
+            "name": "test-thinglass-rough",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "transmission": [
+                1,
+                0.7,
+                0.7
+            ],
+            "roughness": 0.05,
+            "refract": false
         },
         {
             "name": "test-arealight1",
@@ -187,6 +279,15 @@
                     4,
                     4
                 ]
+            }
+        },
+        {
+            "name": "test-sphere",
+            "filename": "models/test-sphere.obj",
+            "!!proc": {
+                "type": "sphere",
+                "size": 0.15,
+                "align_bottom": true
             }
         },
         {
@@ -251,9 +352,9 @@
             }
         },
         {
-            "name": "sphere_glass-sharp",
-            "shape": "sphere",
-            "material": "glass-sharp",
+            "name": "test-sphere_test-glass-sharp",
+            "shape": "test-sphere",
+            "material": "test-glass-sharp",
             "frame": [
                 1,
                 0,
@@ -270,9 +371,9 @@
             ]
         },
         {
-            "name": "sphere_glass-rough",
-            "shape": "sphere",
-            "material": "glass-rough",
+            "name": "test-sphere_test-glass-rough",
+            "shape": "test-sphere",
+            "material": "test-glass-rough",
             "frame": [
                 1,
                 0,
@@ -289,9 +390,9 @@
             ]
         },
         {
-            "name": "sphere_transparent",
-            "shape": "sphere",
-            "material": "transparent",
+            "name": "test-sphere_test-transparent",
+            "shape": "test-sphere",
+            "material": "test-transparent",
             "frame": [
                 1,
                 0,
@@ -308,9 +409,9 @@
             ]
         },
         {
-            "name": "sphere_thinglass-sharp",
-            "shape": "sphere",
-            "material": "thinglass-sharp",
+            "name": "test-sphere_test-thinglass-sharp",
+            "shape": "test-sphere",
+            "material": "test-thinglass-sharp",
             "frame": [
                 1,
                 0,
@@ -327,9 +428,9 @@
             ]
         },
         {
-            "name": "sphere_thinglass-rough",
-            "shape": "sphere",
-            "material": "thinglass-rough",
+            "name": "test-sphere_test-thinglass-rough",
+            "shape": "test-sphere",
+            "material": "test-thinglass-rough",
             "frame": [
                 1,
                 0,

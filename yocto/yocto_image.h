@@ -1760,7 +1760,10 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
     } else if (type == "test-bump-normal") {
         auto bump = image<vec<float, 4>>{};
         make_bumpdimple_image(bump, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
-        bump_to_normal_map(img, bump);
+        bump_to_normal_map(img, bump, 0.05f);
+    } else if (type == "test-fbm-displacement") {
+        make_fbm_image(
+            img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 10.0f, 2.0f, 0.5f, 6, true);
     } else {
         throw std::invalid_argument("unknown image preset" + type);
     }
@@ -1770,9 +1773,9 @@ inline void make_image_preset(image<vec<byte, 4>>& img, const string& type) {
     auto imgf = image<vec4f>{};
     make_image_preset(imgf, type);
     if(type.find("-normal") == type.npos) {
-        float_to_byte(img, imgf);
-    } else {
         linear_to_srgb8(img, imgf);
+    } else {
+        float_to_byte(img, imgf);
     }
 } 
 
