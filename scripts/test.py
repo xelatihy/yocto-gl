@@ -99,33 +99,33 @@ def make_tests():
         "textures": [
             {
                 "name": "test-floor",
-                "filename": "textures/test-floor.ypreset"
+                "filename": "textures/test-floor.png.ypreset"
             },
             {
                 "name": "test-uvgrid",
-                "filename": "textures/test-uvgrid.ypreset"
+                "filename": "textures/test-uvgrid.png.ypreset"
             },
             {
                 "name": "test-bump",
-                "filename": "textures/test-bump.ypreset"
+                "filename": "textures/test-bump.png.ypreset"
             },
             {
                 "name": "test-bump-normal",
-                # "filename": "textures/test-bump-normal.ypreset"
+                # "filename": "textures/test-bump-normal.png.ypreset"
                 "filename": "textures/bump-normal.png",
                 "!!proc": { "type": "bump", "bump_to_normal": true, "bump_scale": 0.05 }
             },
             {
                 "name": "test-fbm-displacement",
-                "filename": "textures/test-fbm-displacement.ypreset"
+                "filename": "textures/test-fbm-displacement.png.ypreset"
             },
             {
                 "name": "test-sky",
-                "filename": "textures/test-sky.ypreset"
+                "filename": "textures/test-sky.hdr.ypreset"
             },
             {
                 "name": "test-sunsky",
-                "filename": "textures/test-sunsky.ypreset"
+                "filename": "textures/test-sunsky.hdr.ypreset"
             }
         ],
         "materials": [

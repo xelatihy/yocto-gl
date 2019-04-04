@@ -164,9 +164,16 @@ namespace yocto {
 inline bool is_hdr_filename(const string& filename) {
     return get_extension(filename) == "hdr" || get_extension(filename) == "exr" || get_extension(filename) == "pfm";
 }
-// Check if an image is a preset based on filename.
+// Return the image preset type and the remaining filename
 inline bool is_image_preset_filename(const string& filename) {
     return get_extension(filename) == "ypreset";
+}
+inline pair<string, string> get_image_preset_type(const string& filename) {
+    if(get_extension(filename) == "ypreset") {
+        return {get_noextension(get_noextension(get_filename(filename))), get_noextension(filename)};
+    } else {
+        return {"", filename};
+    }
 }
 
 // Loads/saves a 1-4 channels float image in linear color space.

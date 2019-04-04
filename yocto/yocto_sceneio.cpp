@@ -242,13 +242,9 @@ void save_scene(const string& filename, const yocto_scene& scene,
 
 void load_scene_texture(yocto_texture& texture, const string& dirname) {
     if (is_image_preset_filename(texture.filename)) {
-        make_image_preset(texture.hdr_image, texture.ldr_image,
-            get_basename(texture.filename));
-        if (!texture.hdr_image.empty()) {
-            texture.filename = get_noextension(texture.filename) + ".hdr";
-        } else {
-            texture.filename = get_noextension(texture.filename) + ".png";
-        }
+        auto [type, nfilename] = get_image_preset_type(texture.filename);
+        make_image_preset(texture.hdr_image, texture.ldr_image, type);
+        texture.filename = nfilename;
     } else {
         load_image(
             dirname + texture.filename, texture.hdr_image, texture.ldr_image);

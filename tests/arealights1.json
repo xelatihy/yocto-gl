@@ -140,11 +140,11 @@
     "textures": [
         {
             "name": "test-floor",
-            "filename": "textures/test-floor.ypreset"
+            "filename": "textures/test-floor.png.ypreset"
         },
         {
             "name": "test-uvgrid",
-            "filename": "textures/test-uvgrid.ypreset"
+            "filename": "textures/test-uvgrid.png.ypreset"
         }
     ],
     "materials": [

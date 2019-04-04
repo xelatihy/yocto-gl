@@ -140,15 +140,15 @@
     "textures": [
         {
             "name": "test-floor",
-            "filename": "textures/test-floor.ypreset"
+            "filename": "textures/test-floor.png.ypreset"
         },
         {
             "name": "test-uvgrid",
-            "filename": "textures/test-uvgrid.ypreset"
+            "filename": "textures/test-uvgrid.png.ypreset"
         },
         {
             "name": "test-sunsky",
-            "filename": "textures/test-sunsky.ypreset"
+            "filename": "textures/test-sunsky.hdr.ypreset"
         }
     ],
     "materials": [

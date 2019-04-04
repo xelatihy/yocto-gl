@@ -140,7 +140,7 @@
     "textures": [
         {
             "name": "test-floor",
-            "filename": "textures/test-floor.ypreset"
+            "filename": "textures/test-floor.png.ypreset"
         },
         {
             "name": "test-bump-normal",
@@ -153,11 +153,11 @@
         },
         {
             "name": "test-fbm-displacement",
-            "filename": "textures/test-fbm-displacement.ypreset"
+            "filename": "textures/test-fbm-displacement.png.ypreset"
         },
         {
             "name": "test-sky",
-            "filename": "textures/test-sky.ypreset"
+            "filename": "textures/test-sky.hdr.ypreset"
         }
     ],
     "materials": [
