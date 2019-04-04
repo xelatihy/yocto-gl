@@ -1774,11 +1774,11 @@ inline void print_yaml_value(output_file& fs, const char* value) {
 inline void print_yaml_value(output_file& fs, bool value) {
     print_value(fs, value, true);
 }
-template<typename T, int N>
+template <typename T, int N>
 inline void print_yaml_value(output_file& fs, const vec<T, N>& value) {
     print_value(fs, value, true);
 }
-template<typename T, int N>
+template <typename T, int N>
 inline void print_yaml_value(output_file& fs, const frame<T, N>& value) {
     print_value(fs, value, true);
 }
@@ -4599,6 +4599,108 @@ void save_ybin_scene(const string& filename, const yocto_scene& scene,
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// EXAMPLE SCENES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+void make_cornellbox_scene(yocto_scene& scene) {
+    scene.name             = "cornellbox";
+    auto& camera           = scene.cameras.emplace_back();
+    camera.name            = "cam";
+    camera.frame           = frame3f{{0, 1, 3.9}};
+    camera.focal_length    = 0.035;
+    camera.lens_aperture   = 0.0;
+    camera.film_width      = 0.024;
+    camera.film_height     = 0.024;
+    auto& floor_mat        = scene.materials.emplace_back();
+    floor_mat.name         = "floor";
+    floor_mat.diffuse      = {0.725, 0.71, 0.68};
+    auto& ceiling_mat      = scene.materials.emplace_back();
+    ceiling_mat.name       = "ceiling";
+    ceiling_mat.diffuse    = {0.725, 0.71, 0.68};
+    auto& backwall_mat     = scene.materials.emplace_back();
+    backwall_mat.name      = "backwall";
+    backwall_mat.diffuse   = {0.725, 0.71, 0.68};
+    auto& rightwall_mat    = scene.materials.emplace_back();
+    rightwall_mat.name     = "rightwall";
+    rightwall_mat.diffuse  = {0.14, 0.45, 0.091};
+    auto& leftwall_mat     = scene.materials.emplace_back();
+    leftwall_mat.name      = "leftwall";
+    leftwall_mat.diffuse   = {0.63, 0.065, 0.05};
+    auto& shortbox_mat     = scene.materials.emplace_back();
+    shortbox_mat.name      = "shortbox";
+    shortbox_mat.diffuse   = {0.725, 0.71, 0.68};
+    auto& tallbox_mat      = scene.materials.emplace_back();
+    tallbox_mat.name       = "tallbox";
+    tallbox_mat.diffuse    = {0.725, 0.71, 0.68};
+    auto& light_mat        = scene.materials.emplace_back();
+    light_mat.name         = "light";
+    light_mat.emission     = {17, 12, 4};
+    auto& floor_shp        = scene.shapes.emplace_back();
+    floor_shp.name         = "floor";
+    floor_shp.positions    = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
+    floor_shp.triangles    = {{0, 1, 2}, {2, 3, 0}};
+    auto& ceiling_shp      = scene.shapes.emplace_back();
+    ceiling_shp.name       = "ceiling";
+    ceiling_shp.positions  = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
+    ceiling_shp.triangles  = {{0, 1, 2}, {2, 3, 0}};
+    auto& backwall_shp     = scene.shapes.emplace_back();
+    backwall_shp.name      = "backwall";
+    backwall_shp.positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
+    backwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
+    auto& rightwall_shp    = scene.shapes.emplace_back();
+    rightwall_shp.name     = "rightwall";
+    rightwall_shp.positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
+    rightwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
+    auto& leftwall_shp      = scene.shapes.emplace_back();
+    leftwall_shp.name       = "leftwall";
+    leftwall_shp.positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
+    leftwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
+    auto& shortbox_shp     = scene.shapes.emplace_back();
+    shortbox_shp.name      = "shortbox";
+    shortbox_shp.positions = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
+        {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
+        {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0},
+        {0.53, 0.0, 0.75}, {0.53, 0.6, 0.75}, {-0.05, 0.6, 0.57},
+        {-0.05, 0.0, 0.57}, {0.7, 0.0, 0.17}, {0.7, 0.6, 0.17},
+        {0.53, 0.6, 0.75}, {0.53, 0.0, 0.75}, {0.13, 0.0, 0.0},
+        {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17}, {0.53, 0.0, 0.75},
+        {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0}, {-0.05, 0.0, 0.57}};
+    shortbox_shp.triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+        {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+        {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+    auto& tallbox_shp      = scene.shapes.emplace_back();
+    tallbox_shp.name       = "tallbox";
+    tallbox_shp.positions  = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
+        {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
+        {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
+        {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
+        {-0.14, 0.0, -0.67}, {-0.14, 0.0, -0.67}, {-0.14, 1.2, -0.67},
+        {0.04, 1.2, -0.09}, {0.04, 0.0, -0.09}, {0.04, 0.0, -0.09},
+        {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09}, {-0.53, 0.0, 0.09},
+        {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
+        {-0.71, 0.0, -0.49}};
+    tallbox_shp.triangles  = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+        {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+        {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+    auto& light_shp        = scene.shapes.emplace_back();
+    light_shp.name         = "light";
+    light_shp.positions    = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
+        {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
+    light_shp.triangles    = {{0, 1, 2}, {2, 3, 0}};
+    scene.instances.push_back({"floor", identity_frame3f, 0, 0});
+    scene.instances.push_back({"ceiling", identity_frame3f, 1, 1});
+    scene.instances.push_back({"backwall", identity_frame3f, 2, 2});
+    scene.instances.push_back({"rightwall", identity_frame3f, 3, 3});
+    scene.instances.push_back({"leftwall", identity_frame3f, 4, 4});
+    scene.instances.push_back({"shortbox", identity_frame3f, 5, 5});
+    scene.instances.push_back({"tallbox", identity_frame3f, 6, 6});
+    scene.instances.push_back({"light", identity_frame3f, 7, 7});
 }
 
 }  // namespace yocto
