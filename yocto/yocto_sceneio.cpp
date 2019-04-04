@@ -521,8 +521,6 @@ void to_json(json& js, const yocto_texture& value, const yocto_scene& scene) {
         js["clamp_to_edge"] = value.clamp_to_edge;
     if (value.no_interpolation != def.no_interpolation)
         js["no_interpolation"] = value.no_interpolation;
-    if (value.height_scale != def.height_scale)
-        js["height_scale"] = value.height_scale;
     if (value.ldr_as_linear != def.ldr_as_linear)
         js["ldr_as_linear"] = value.ldr_as_linear;
     if (value.filename == "") {
@@ -536,7 +534,6 @@ void from_json(const json& js, yocto_texture& value, yocto_scene& scene) {
     value.filename         = js.value("filename", def.filename);
     value.clamp_to_edge    = js.value("clamp_to_edge", def.clamp_to_edge);
     value.no_interpolation = js.value("no_interpolation", def.no_interpolation);
-    value.height_scale     = js.value("height_scale", def.height_scale);
     value.ldr_as_linear    = js.value("ldr_as_linear", def.ldr_as_linear);
     value.hdr_image        = js.value("hdr_image", def.hdr_image);
     value.ldr_image        = js.value("ldr_image", def.ldr_image);
@@ -646,6 +643,8 @@ void to_json(json& js, const yocto_material& value, const yocto_scene& scene) {
     if (value.volume_density_texture != def.volume_density_texture)
         js["volume_density_texture"] = ref_to_json(
             value.volume_density_texture, scene.voltextures);
+    if (value.displacement_scale != def.displacement_scale)
+        js["displacement_scale"] = value.displacement_scale;
 }
 void from_json(const json& js, yocto_material& value, yocto_scene& scene) {
     static const auto def  = yocto_material();
@@ -679,6 +678,7 @@ void from_json(const json& js, yocto_material& value, yocto_scene& scene) {
         js.value("normal_texture", json{}), scene.textures);
     value.volume_density_texture = ref_from_json(
         js.value("volume_density_texture", json{}), scene.voltextures);
+    value.displacement_scale     = js.value("displacement_scale", def.displacement_scale);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
@@ -1370,7 +1370,6 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             texture.name          = info.path;
             texture.filename      = info.path;
             texture.clamp_to_edge = info.clamp;
-            texture.height_scale  = info.scale;
             texture.ldr_as_linear = force_linear || is_hdr_filename(info.path);
             scene.textures.push_back(texture);
             auto index      = (int)scene.textures.size() - 1;
@@ -2022,7 +2021,6 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
         auto gsmp = gtxt->sampler;
         scene.textures[texture_id].clamp_to_edge =
             gsmp->wrap_s == 33071 || gsmp->wrap_t == 33071;  // clamp to edge
-        scene.textures[texture_id].height_scale = ginfo.scale;
         scene.textures[texture_id].ldr_as_linear =
             force_linear ||
             is_hdr_filename(scene.textures[texture_id].filename);
@@ -3754,7 +3752,10 @@ void write_object(output_file& fs, const yocto_texture& texture) {
     write_value(fs, texture.ldr_image);
     write_value(fs, texture.clamp_to_edge);
     write_value(fs, texture.no_interpolation);
-    write_value(fs, texture.height_scale);
+    // write_value(fs, texture.height_scale);
+    // TODO: remove me
+    auto height_scale = (float)0;
+    write_value(fs, height_scale);
     write_value(fs, texture.ldr_as_linear);
 }
 void read_object(input_file& fs, yocto_texture& texture) {
@@ -3764,7 +3765,10 @@ void read_object(input_file& fs, yocto_texture& texture) {
     read_value(fs, texture.ldr_image);
     read_value(fs, texture.clamp_to_edge);
     read_value(fs, texture.no_interpolation);
-    read_value(fs, texture.height_scale);
+    // write_value(fs, texture.height_scale);
+    // TODO: remove me
+    auto height_scale = (float)0;
+    read_value(fs, height_scale);
     read_value(fs, texture.ldr_as_linear);
 }
 
@@ -3818,6 +3822,7 @@ void write_object(output_file& fs, const yocto_material& material) {
     write_value(fs, material.volume_density);
     write_value(fs, material.volume_phaseg);
     write_value(fs, material.volume_density_texture);
+    // TODO: add displacement scale
 };
 void read_object(input_file& fs, yocto_material& material) {
     read_value(fs, material.name);
@@ -3843,6 +3848,7 @@ void read_object(input_file& fs, yocto_material& material) {
     read_value(fs, material.volume_density);
     read_value(fs, material.volume_phaseg);
     read_value(fs, material.volume_density_texture);
+    // TODO: add displacement scale
 };
 
 void write_object(output_file& fs, const yocto_instance& instance) {

@@ -117,8 +117,7 @@ def make_tests():
             },
             {
                 "name": "test-fbm-displacement",
-                "filename": "textures/test-fbm-displacement.ypreset",
-                "height_scale": 0.025
+                "filename": "textures/test-fbm-displacement.ypreset"
             },
             {
                 "name": "test-sky",
@@ -177,7 +176,8 @@ def make_tests():
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "specular": [ 0, 0, 0 ],
                 "roughness": 1,
-                "displacement_texture": "test-fbm-displacement"
+                "displacement_texture": "test-fbm-displacement",
+                "displacement_scale": 0.025
             },
             {
                 "name": "test-plastic-sharp-bumped",

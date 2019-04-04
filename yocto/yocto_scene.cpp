@@ -133,7 +133,7 @@ void subdivide_shape(yocto_shape& shape) {
     shape.subdivision_level = 0;
 }
 // Apply displacement to a shape
-void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
+void displace_shape(yocto_shape& shape, const yocto_texture& displacement, float scale) {
     if (shape.texturecoords.empty()) {
         throw runtime_error("missing texture coordinates");
         return;
@@ -145,7 +145,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
         if (shape.normals.empty()) compute_shape_normals(shape, normals);
         for (auto vid = 0; vid < shape.positions.size(); vid++) {
             shape.positions[vid] +=
-                normals[vid] * displacement.height_scale *
+                normals[vid] * scale *
                 mean(evaluate_texture(displacement, shape.texturecoords[vid])
                          .xyz);
         }
@@ -160,7 +160,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
             auto qpos = shape.quads_positions[fid];
             auto qtxt = shape.quads_texturecoords[fid];
             for (auto i = 0; i < 4; i++) {
-                offset[qpos[i]] += displacement.height_scale *
+                offset[qpos[i]] += scale *
                                    mean(evaluate_texture(displacement,
                                        shape.texturecoords[qtxt[i]])
                                             .xyz);
@@ -182,11 +182,14 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
 // Updates tesselation.
 void tesselate_shapes(yocto_scene& scene) {
     auto displacements = vector<int>(scene.shapes.size(), -2);
+    auto displacements_scale = vector<float>(scene.shapes.size(), 1);
     for (auto& instance : scene.instances) {
         auto& material     = scene.materials[instance.material];
         auto& displacement = displacements[instance.shape];
+        auto& displacement_scale = displacements_scale[instance.shape];
         if (displacement == -2) {
             displacement = material.displacement_texture;
+            displacement_scale = material.displacement_scale;
         } else if (displacement != material.displacement_texture) {
             throw runtime_error(
                 "different displacements applied to the same shape");
@@ -195,12 +198,14 @@ void tesselate_shapes(yocto_scene& scene) {
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
         auto& shape                = scene.shapes[shape_id];
         auto  displacement_texture = displacements[shape_id];
+        auto  displacement_scale = displacements_scale[shape_id];
         if (!shape.subdivision_level && displacement_texture < 0) continue;
         if (shape.subdivision_level) {
             subdivide_shape(shape);
         }
         if (displacement_texture >= 0) {
-            displace_shape(shape, scene.textures[displacement_texture]);
+            displace_shape(shape, scene.textures[displacement_texture], 
+                displacement_scale);
         }
     }
 }

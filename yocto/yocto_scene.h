@@ -109,7 +109,6 @@ struct yocto_texture {
     image<vec4b> ldr_image        = {};
     bool         clamp_to_edge    = false;
     bool         no_interpolation = false;
-    float        height_scale     = 1;
     bool         ldr_as_linear    = false;
 };
 
@@ -150,6 +149,9 @@ struct yocto_material {
     int roughness_texture    = -1;
     int displacement_texture = -1;
     int normal_texture       = -1;
+
+    // texture properties
+    float displacement_scale = 1;
 
     // volume properties
     // albedo = scattering / (absorption + scattering)
