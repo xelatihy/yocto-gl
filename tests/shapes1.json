@@ -200,60 +200,27 @@
         },
         {
             "name": "test-sphere",
-            "filename": "models/test-sphere.obj",
-            "!!proc": {
-                "type": "sphere",
-                "size": 0.15,
-                "align_bottom": true
-            }
+            "filename": "models/test-sphere.obj.ypreset"
         },
         {
             "name": "test-cube",
-            "filename": "models/test-cube.obj",
-            "!!proc": {
-                "type": "box_rounded",
-                "size": [
-                    0.15,
-                    0.15,
-                    0.15
-                ],
-                "rounded": 0.3,
-                "align_bottom": true
-            }
+            "filename": "models/test-cube.obj.ypreset"
         },
         {
             "name": "test-disk",
-            "filename": "models/test-disk.obj",
-            "!!proc": {
-                "type": "disk",
-                "size": 0.15,
-                "align_bottom": true
-            }
+            "filename": "models/test-disk.obj.ypreset"
         },
         {
-            "name": "test-sphere-flipcap",
-            "filename": "models/test-flipcap.obj",
-            "!!proc": {
-                "type": "uvsphere_flipcap",
-                "size": 0.15,
-                "align_bottom": true
-            }
+            "name": "test-uvsphere-flipcap",
+            "filename": "models/test-uvsphere-flipcap.obj.ypreset"
         },
         {
             "name": "test-cylinder",
-            "filename": "models/test-cylinder.obj",
-            "!!proc": {
-                "type": "uvcylinder_rounded",
-                "size": [
-                    0.15,
-                    0.15,
-                    0.15
-                ],
-                "align_bottom": true
-            }
+            "filename": "models/test-cylinder.obj.ypreset"
         },
         {
             "name": "test-arealight1",
+            "filename": "models/test-arealight1.ply.ypreset",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -264,6 +231,7 @@
         },
         {
             "name": "test-arealight2",
+            "filename": "models/test-arealight2.ply.ypreset",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -333,8 +301,8 @@
             ]
         },
         {
-            "name": "test-sphere-flipcap_test-uvgrid",
-            "shape": "test-sphere-flipcap",
+            "name": "test-uvsphere-flipcap_test-uvgrid",
+            "shape": "test-uvsphere-flipcap",
             "material": "test-uvgrid",
             "frame": [
                 1,

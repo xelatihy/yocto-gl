@@ -244,12 +244,7 @@
         },
         {
             "name": "test-sphere",
-            "filename": "models/test-sphere.obj",
-            "!!proc": {
-                "type": "sphere",
-                "size": 0.15,
-                "align_bottom": true
-            }
+            "filename": "models/test-sphere.obj.ypreset"
         }
     ],
     "instances": [

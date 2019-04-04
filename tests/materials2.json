@@ -276,15 +276,11 @@
         },
         {
             "name": "test-sphere",
-            "filename": "models/test-sphere.obj",
-            "!!proc": {
-                "type": "sphere",
-                "size": 0.15,
-                "align_bottom": true
-            }
+            "filename": "models/test-sphere.obj.ypreset"
         },
         {
             "name": "test-arealight1",
+            "filename": "models/test-arealight1.ply.ypreset",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -295,6 +291,7 @@
         },
         {
             "name": "test-arealight2",
+            "filename": "models/test-arealight2.ply.ypreset",
             "!!proc": {
                 "type": "quad",
                 "size": [

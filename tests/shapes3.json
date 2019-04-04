@@ -209,12 +209,7 @@
         },
         {
             "name": "test-sphere",
-            "filename": "models/test-sphere.obj",
-            "!!proc": {
-                "type": "sphere",
-                "size": 0.15,
-                "align_bottom": true
-            }
+            "filename": "models/test-sphere.obj.ypreset"
         },
         {
             "name": "test-hairball1",
@@ -249,15 +244,12 @@
             }
         },
         {
-            "name": "test-hairballi",
-            "filename": "models/test-hairballi.ply",
-            "!!proc": {
-                "type": "hairball_interior",
-                "size": 0.15
-            }
+            "name": "test-hairball-interior",
+            "filename": "models/test-hairball-interior.ply.ypreset"
         },
         {
             "name": "test-arealight1",
+            "filename": "models/test-arealight1.ply.ypreset",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -268,6 +260,7 @@
         },
         {
             "name": "test-arealight2",
+            "filename": "models/test-arealight2.ply.ypreset",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -351,7 +344,7 @@
                 0,
                 1,
                 -0.2,
-                0.075,
+                0,
                 0
             ]
         },
@@ -370,7 +363,7 @@
                 0,
                 1,
                 0,
-                0.075,
+                0,
                 0
             ]
         },
@@ -389,7 +382,7 @@
                 0,
                 1,
                 0.2,
-                0.075,
+                0,
                 0
             ]
         },
@@ -413,8 +406,8 @@
             ]
         },
         {
-            "name": "test-hairballi_test-hair",
-            "shape": "test-hairballi",
+            "name": "test-hairball-interior_test-hair",
+            "shape": "test-hairball-interior",
             "material": "test-hair",
             "frame": [
                 1,
@@ -427,13 +420,13 @@
                 0,
                 1,
                 -0.2,
-                0.075,
+                0,
                 0
             ]
         },
         {
-            "name": "test-hairballi_test-hair",
-            "shape": "test-hairballi",
+            "name": "test-hairball-interior_test-hair",
+            "shape": "test-hairball-interior",
             "material": "test-hair",
             "frame": [
                 1,
@@ -446,13 +439,13 @@
                 0,
                 1,
                 0,
-                0.075,
+                0,
                 0
             ]
         },
         {
-            "name": "test-hairballi_test-hair",
-            "shape": "test-hairballi",
+            "name": "test-hairball-interior_test-hair",
+            "shape": "test-hairball-interior",
             "material": "test-hair",
             "frame": [
                 1,
@@ -465,7 +458,7 @@
                 0,
                 1,
                 0.2,
-                0.075,
+                0,
                 0
             ]
         }

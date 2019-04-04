@@ -221,36 +221,23 @@
             "filename": "models/test-teapot.obj"
         },
         {
-            "name": "test-subdiv-cube",
-            "filename": "models/test-subdiv-cube.obj",
+            "name": "test-cube-subdiv",
+            "filename": "models/test-cube-subdiv.obj.ypreset",
             "subdivision_level": 4,
             "catmull_clark": true,
             "compute_normals": true,
-            "preserve_facevarying": true,
-            "!!proc": {
-                "type": "cube_facevarying",
-                "size": [
-                    0.15,
-                    0.15,
-                    0.15
-                ],
-                "align_bottom": true
-            }
+            "preserve_facevarying": true
         },
         {
-            "name": "test-subdiv-monkey",
-            "filename": "models/test-subdiv-monkey.obj",
+            "name": "test-suzanne-subdiv",
+            "filename": "models/test-suzanne-subdiv.obj.ypreset",
             "subdivision_level": 2,
             "catmull_clark": true,
-            "compute_normals": true,
-            "!!proc": {
-                "type": "suzanne",
-                "size": 0.15,
-                "align_bottom": true
-            }
+            "compute_normals": true
         },
         {
             "name": "test-arealight1",
+            "filename": "models/test-arealight1.ply.ypreset",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -261,6 +248,7 @@
         },
         {
             "name": "test-arealight2",
+            "filename": "models/test-arealight2.ply.ypreset",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -311,8 +299,8 @@
             }
         },
         {
-            "name": "test-subdiv-cube_test-uvgrid",
-            "shape": "test-subdiv-cube",
+            "name": "test-cube-subdiv_test-uvgrid",
+            "shape": "test-cube-subdiv",
             "material": "test-uvgrid",
             "frame": [
                 1,
@@ -330,8 +318,8 @@
             ]
         },
         {
-            "name": "test-subdiv-monkey_test-plastic-sharp",
-            "shape": "test-subdiv-monkey",
+            "name": "test-suzanne-subdiv_test-plastic-sharp",
+            "shape": "test-suzanne-subdiv",
             "material": "test-plastic-sharp",
             "frame": [
                 1,
@@ -387,8 +375,8 @@
             ]
         },
         {
-            "name": "test-subdiv-cube_test-uvgrid",
-            "shape": "test-subdiv-cube",
+            "name": "test-cube-subdiv_test-uvgrid",
+            "shape": "test-cube-subdiv",
             "material": "test-uvgrid",
             "frame": [
                 1,
