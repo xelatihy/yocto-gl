@@ -51,6 +51,7 @@
 #include "yocto_utils.h"
 
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 
 // -----------------------------------------------------------------------------
@@ -61,6 +62,7 @@ namespace yocto {
 using std::function;
 using std::unique_ptr;
 using std::unordered_map;
+using std::string_view;
 
 }  // namespace yocto
 
@@ -220,6 +222,26 @@ struct objio_error : runtime_error {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+inline void skip_whitespace(string_view& str) {
+    auto pos = str.find_first_not_of(" \t\r\n");
+    if(pos == str.npos) {
+        str.remove_prefix(str.size());
+    } else {
+        str.remove_prefix(pos);
+    }
+}
+inline void remove_comment_(string_view& str, char comment_char='#') {
+    auto pos = str.find(comment_char);
+    if(pos == str.npos) return;
+    str.remove_suffix(str.length()-pos);
+}
+inline void remove_comment_and_newline(string_view& str, char comment_char='#') {
+    str.remove_suffix(1);
+    auto pos = str.find(comment_char);
+    if(pos == str.npos) return;
+    str.remove_suffix(str.length()-pos);
+}
+
 // normalize obj line for simpler parsing
 inline void normalize_obj_line(char* str, char comment_char = '#') {
     auto has_content = false;
@@ -240,41 +262,54 @@ inline void normalize_obj_line(char* str, char comment_char = '#') {
 }
 
 // Parse values from a string
-inline void parse_value(char*& str, int& value) {
+inline void parse_value(string_view& str, int& value) {
     char* end = nullptr;
-    value     = (int)strtol(str, &end, 10);
+    value     = (int)strtol(str.data(), &end, 10);
     if (str == end) throw objio_error("cannot parse value");
-    str = end;
+    str.remove_prefix(end-str.data());
 }
-inline void parse_value(char*& str, bool& value) {
+inline void parse_value(string_view& str, bool& value) {
     auto valuei = 0;
     parse_value(str, valuei);
     value = (bool)valuei;
 }
-inline void parse_value(char*& str, float& value) {
+inline void parse_value(string_view& str, float& value) {
     char* end = nullptr;
-    value     = strtof(str, &end);
+    value     = strtof(str.data(), &end);
     if (str == end) throw objio_error("cannot parse value");
-    str = end;
+    str.remove_prefix(end-str.data());
 }
-inline void parse_value(char*& str, string& value, bool ok_if_empty = false) {
-    value = "";
-    while (*str == ' ') str++;
-    if (!*str && !ok_if_empty) {
+inline void parse_value(string_view& str, string& value) {
+    skip_whitespace(str);
+    if(str.empty()) {
         throw objio_error("cannot parse value");
     }
-    while (*str && *str != ' ') {
-        value += *str;
-        str++;
+    auto pos = str.find_first_of(" \t\r\n");
+    if(pos == str.npos) {
+        value = str;
+        str.remove_prefix(str.length());
+    } else {
+        value = str.substr(0, pos);
+        str.remove_prefix(pos);
     }
 }
 template <typename T, int N>
-inline void parse_value(char*& str, vec<T, N>& value) {
+inline void parse_value(string_view& str, vec<T, N>& value) {
     for (auto i = 0; i < N; i++) parse_value(str, value[i]);
 }
 template <typename T, int N>
-inline void parse_value(char*& str, frame<T, N>& value) {
+inline void parse_value(string_view& str, frame<T, N>& value) {
     for (auto i = 0; i < N + 1; i++) parse_value(str, value[i]);
+}
+
+template <typename T>
+inline void parse_value_or_empty(string_view& str, T& value) {
+    skip_whitespace(str);
+    if(str.empty()) {
+        value = T{};
+    } else {
+        parse_value(str, value);
+    }
 }
 
 }  // namespace yocto
@@ -284,18 +319,18 @@ inline void parse_value(char*& str, frame<T, N>& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline void parse_value(char*& str, obj_vertex& value) {
+inline void parse_value(string_view& str, obj_vertex& value) {
     value = obj_vertex{0, 0, 0};
     parse_value(str, value.position);
-    if (*str == '/') {
-        str++;
-        if (*str == '/') {
-            str++;
+    if (!str.empty() && str.front() == '/') {
+        str.remove_prefix(1);
+        if (!str.empty() && str.front() == '/') {
+            str.remove_prefix(1);
             parse_value(str, value.normal);
         } else {
             parse_value(str, value.texturecoord);
-            if (*str == '/') {
-                str++;
+            if (!str.empty() && str.front() == '/') {
+                str.remove_prefix(1);
                 parse_value(str, value.normal);
             }
         }
@@ -303,18 +338,18 @@ inline void parse_value(char*& str, obj_vertex& value) {
 }
 
 // Input for OBJ textures
-inline void parse_value(char*& str, obj_texture_info& info) {
+inline void parse_value(string_view& str, obj_texture_info& info) {
     // initialize
     info = obj_texture_info();
 
     // get tokens
     auto tokens = vector<string>();
-    while (*str == ' ') str++;
-    while (*str) {
+    skip_whitespace(str);
+    while (!str.empty()) {
         auto token = ""s;
         parse_value(str, token);
         tokens.push_back(token);
-        while (*str == ' ') str++;
+        skip_whitespace(str);
     }
     if (tokens.empty()) throw objio_error("cannot parse value");
 
@@ -347,9 +382,10 @@ void load_mtl(
     char buffer[4096];
     while (fgets(buffer, sizeof(buffer), fs)) {
         // line
-        auto line = buffer;
-        normalize_obj_line(line);
-        if (!*line) continue;
+        auto line = string_view{buffer};
+        remove_comment_and_newline(line);
+        skip_whitespace(line);
+        if (line.empty()) continue;
 
         // get command
         auto cmd = ""s;
@@ -441,9 +477,10 @@ inline void load_objx(
     char buffer[4096];
     while (fgets(buffer, sizeof(buffer), fs)) {
         // line
-        auto line = buffer;
-        normalize_obj_line(line);
-        if (!*line) continue;
+        auto line = string_view{buffer};
+        remove_comment_and_newline(line);
+        skip_whitespace(line);
+        if(line.empty()) continue;
 
         // get command
         auto cmd = ""s;
@@ -503,9 +540,10 @@ inline void load_obj(
     char buffer[4096];
     while (fgets(buffer, sizeof(buffer), fs)) {
         // line
-        auto line = buffer;
-        normalize_obj_line(line);
-        if (!*line) continue;
+        auto line = string_view{buffer};
+        remove_comment_and_newline(line);
+        skip_whitespace(line);
+        if(line.empty()) continue;
 
         // get command
         auto cmd = ""s;
@@ -531,8 +569,8 @@ inline void load_obj(
             vert_size.texturecoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             verts.clear();
-            while (*line == ' ') line++;
-            while (*line) {
+            skip_whitespace(line);
+            while (!line.empty()) {
                 auto vert = obj_vertex{};
                 parse_value(line, vert);
                 if (!vert.position) break;
@@ -544,26 +582,26 @@ inline void load_obj(
                 if (vert.normal < 0)
                     vert.normal = vert_size.normal + vert.normal + 1;
                 verts.push_back(vert);
-                while (*line == ' ') line++;
+                skip_whitespace(line);
             }
             if (cmd == "f") cb.face(verts);
             if (cmd == "l") cb.line(verts);
             if (cmd == "p") cb.point(verts);
         } else if (cmd == "o") {
             auto name = ""s;
-            parse_value(line, name, true);
+            parse_value_or_empty(line, name);
             cb.object(name);
         } else if (cmd == "usemtl") {
             auto name = ""s;
-            parse_value(line, name, true);
+            parse_value_or_empty(line, name);
             cb.usemtl(name);
         } else if (cmd == "g") {
             auto name = ""s;
-            parse_value(line, name, true);
+            parse_value_or_empty(line, name);
             cb.group(name);
         } else if (cmd == "s") {
             auto name = ""s;
-            parse_value(line, name, true);
+            parse_value_or_empty(line, name);
             cb.smoothing(name);
         } else if (cmd == "mtllib") {
             if (options.geometry_only) continue;
