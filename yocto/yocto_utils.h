@@ -101,6 +101,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <string_view>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -115,9 +116,11 @@ using std::lock_guard;
 using std::mutex;
 using std::runtime_error;
 using std::string;
+using std::string_view;
 using std::thread;
 using std::vector;
 using namespace std::string_literals;
+using namespace std::string_view_literals;
 using namespace std::chrono_literals;
 
 }  // namespace yocto
@@ -800,6 +803,84 @@ inline void println_values(
         println_values(fs, values...);
     } else {
         print_value(fs, '\n');
+    }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF FAST PARSING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+inline void skip_whitespace(string_view& str) {
+    auto pos = str.find_first_not_of(" \t\r\n");
+    if(pos == str.npos) {
+        str.remove_prefix(str.size());
+    } else {
+        str.remove_prefix(pos);
+    }
+}
+inline void remove_comment_(string_view& str, char comment_char='#') {
+    auto pos = str.find(comment_char);
+    if(pos == str.npos) return;
+    str.remove_suffix(str.length()-pos);
+}
+inline void remove_comment_and_newline(string_view& str, char comment_char='#') {
+    str.remove_suffix(1);
+    auto pos = str.find(comment_char);
+    if(pos == str.npos) return;
+    str.remove_suffix(str.length()-pos);
+}
+
+// Parse values from a string
+inline void parse_value(string_view& str, int& value) {
+    char* end = nullptr;
+    value     = (int)strtol(str.data(), &end, 10);
+    if (str == end) throw io_error("cannot parse value");
+    str.remove_prefix(end-str.data());
+}
+inline void parse_value(string_view& str, bool& value) {
+    auto valuei = 0;
+    parse_value(str, valuei);
+    value = (bool)valuei;
+}
+inline void parse_value(string_view& str, float& value) {
+    char* end = nullptr;
+    value     = strtof(str.data(), &end);
+    if (str == end) throw io_error("cannot parse value");
+    str.remove_prefix(end-str.data());
+}
+inline void parse_value(string_view& str, string& value) {
+    skip_whitespace(str);
+    if(str.empty()) {
+        throw io_error("cannot parse value");
+    }
+    auto pos = str.find_first_of(" \t\r\n");
+    if(pos == str.npos) {
+        value = str;
+        str.remove_prefix(str.length());
+    } else {
+        value = str.substr(0, pos);
+        str.remove_prefix(pos);
+    }
+}
+template <typename T, int N>
+inline void parse_value(string_view& str, vec<T, N>& value) {
+    for (auto i = 0; i < N; i++) parse_value(str, value[i]);
+}
+template <typename T, int N>
+inline void parse_value(string_view& str, frame<T, N>& value) {
+    for (auto i = 0; i < N + 1; i++) parse_value(str, value[i]);
+}
+
+template <typename T>
+inline void parse_value_or_empty(string_view& str, T& value) {
+    skip_whitespace(str);
+    if(str.empty()) {
+        value = T{};
+    } else {
+        parse_value(str, value);
     }
 }
 

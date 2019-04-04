@@ -6,7 +6,7 @@
 // low level parsing code. We support a few extensions such as camera and
 // environment map loading.
 //
-// Error reporting is done through exceptions using the `objio_error` exception.
+// Error reporting is done through exceptions using the `io_error` exception.
 //
 // ## Parse an OBJ file
 //
@@ -51,7 +51,6 @@
 #include "yocto_utils.h"
 
 #include <memory>
-#include <string_view>
 #include <unordered_map>
 
 // -----------------------------------------------------------------------------
@@ -62,7 +61,6 @@ namespace yocto {
 using std::function;
 using std::unique_ptr;
 using std::unordered_map;
-using std::string_view;
 
 }  // namespace yocto
 
@@ -203,12 +201,6 @@ template <typename Callbacks>
 inline void load_obj(const string& filename, Callbacks& cb,
     const load_obj_options& options = {});
 
-// objio error
-struct objio_error : runtime_error {
-    explicit objio_error(const char* msg) : runtime_error{msg} {}
-    explicit objio_error(const std::string& msg) : runtime_error{msg} {}
-};
-
 }  // namespace yocto
 
 // ---------------------------------------------------------------------------//
@@ -216,103 +208,6 @@ struct objio_error : runtime_error {
 //                             IMPLEMENTATION                                 //
 //                                                                            //
 // ---------------------------------------------------------------------------//
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF FAST PARSING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-inline void skip_whitespace(string_view& str) {
-    auto pos = str.find_first_not_of(" \t\r\n");
-    if(pos == str.npos) {
-        str.remove_prefix(str.size());
-    } else {
-        str.remove_prefix(pos);
-    }
-}
-inline void remove_comment_(string_view& str, char comment_char='#') {
-    auto pos = str.find(comment_char);
-    if(pos == str.npos) return;
-    str.remove_suffix(str.length()-pos);
-}
-inline void remove_comment_and_newline(string_view& str, char comment_char='#') {
-    str.remove_suffix(1);
-    auto pos = str.find(comment_char);
-    if(pos == str.npos) return;
-    str.remove_suffix(str.length()-pos);
-}
-
-// normalize obj line for simpler parsing
-inline void normalize_obj_line(char* str, char comment_char = '#') {
-    auto has_content = false;
-    auto start       = str;
-    while (*str) {
-        if (*str == comment_char) {
-            *str = 0;
-            break;
-        } else if (*str == ' ' || *str == '\t' || *str == '\r' ||
-                   *str == '\n') {
-            *str = ' ';
-        } else {
-            has_content = true;
-        }
-        str++;
-    }
-    if (!has_content) *start = 0;
-}
-
-// Parse values from a string
-inline void parse_value(string_view& str, int& value) {
-    char* end = nullptr;
-    value     = (int)strtol(str.data(), &end, 10);
-    if (str == end) throw objio_error("cannot parse value");
-    str.remove_prefix(end-str.data());
-}
-inline void parse_value(string_view& str, bool& value) {
-    auto valuei = 0;
-    parse_value(str, valuei);
-    value = (bool)valuei;
-}
-inline void parse_value(string_view& str, float& value) {
-    char* end = nullptr;
-    value     = strtof(str.data(), &end);
-    if (str == end) throw objio_error("cannot parse value");
-    str.remove_prefix(end-str.data());
-}
-inline void parse_value(string_view& str, string& value) {
-    skip_whitespace(str);
-    if(str.empty()) {
-        throw objio_error("cannot parse value");
-    }
-    auto pos = str.find_first_of(" \t\r\n");
-    if(pos == str.npos) {
-        value = str;
-        str.remove_prefix(str.length());
-    } else {
-        value = str.substr(0, pos);
-        str.remove_prefix(pos);
-    }
-}
-template <typename T, int N>
-inline void parse_value(string_view& str, vec<T, N>& value) {
-    for (auto i = 0; i < N; i++) parse_value(str, value[i]);
-}
-template <typename T, int N>
-inline void parse_value(string_view& str, frame<T, N>& value) {
-    for (auto i = 0; i < N + 1; i++) parse_value(str, value[i]);
-}
-
-template <typename T>
-inline void parse_value_or_empty(string_view& str, T& value) {
-    skip_whitespace(str);
-    if(str.empty()) {
-        value = T{};
-    } else {
-        parse_value(str, value);
-    }
-}
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
@@ -351,7 +246,7 @@ inline void parse_value(string_view& str, obj_texture_info& info) {
         tokens.push_back(token);
         skip_whitespace(str);
     }
-    if (tokens.empty()) throw objio_error("cannot parse value");
+    if (tokens.empty()) throw io_error("cannot parse value");
 
     // texture name
     info.path = normalize_path(tokens.back());
@@ -370,7 +265,7 @@ void load_mtl(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw objio_error("cannot load mtl " + filename);
+    if (!fs) throw io_error("cannot load mtl " + filename);
     auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
         fs, [](FILE* f) { fclose(f); }};
 
@@ -469,7 +364,7 @@ inline void load_objx(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw objio_error("cannot load objx " + filename);
+    if (!fs) throw io_error("cannot load objx " + filename);
     auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
         fs, [](FILE* f) { fclose(f); }};
 
@@ -528,7 +423,7 @@ inline void load_obj(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw objio_error("cannot load obj " + filename);
+    if (!fs) throw io_error("cannot load obj " + filename);
     auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
         fs, [](FILE* f) { fclose(f); }};
 
