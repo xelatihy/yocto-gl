@@ -725,12 +725,12 @@ inline bool read_line(const input_file& fs, char* buffer, size_t size) {
 }
 
 // Printing values
-inline void print_value(const output_file& fs, int value, bool alt = false) {
+inline void print_value(const output_file& fs, int value) {
     if (fprintf(fs.file, "%d", value) < 0)
         throw io_error("cannot write to file " + fs.filename);
 }
-inline void print_value(const output_file& fs, bool value, bool alt = false) {
-    if(alt) {
+inline void print_value(const output_file& fs, bool value, bool alpha = false) {
+    if(alpha) {
         if (fprintf(fs.file, value ? "true" : "false"))
             throw io_error("cannot write to file " + fs.filename);
     } else {
@@ -738,32 +738,32 @@ inline void print_value(const output_file& fs, bool value, bool alt = false) {
             throw io_error("cannot write to file " + fs.filename);
     }
 }
-inline void print_value(const output_file& fs, float value, bool alt = false) {
+inline void print_value(const output_file& fs, float value) {
     if (fprintf(fs.file, "%g", value) < 0)
         throw io_error("cannot write to file " + fs.filename);
 }
-inline void print_value(const output_file& fs, double value, bool alt = false) {
+inline void print_value(const output_file& fs, double value) {
     if (fprintf(fs.file, "%g", value) < 0)
         throw io_error("cannot write to file " + fs.filename);
 }
-inline void print_value(const output_file& fs, char value, bool alt = false) {
+inline void print_value(const output_file& fs, char value) {
     if (fprintf(fs.file, "%c", value) < 0)
         throw io_error("cannot write to file " + fs.filename);
 }
 inline void print_value(
-    const output_file& fs, const char* value, bool alt = false) {
-    if (fprintf(fs.file, alt ? "\"%s\"" : "%s", value) < 0)
+    const output_file& fs, const char* value, bool quoted = false) {
+    if (fprintf(fs.file, quoted ? "\"%s\"" : "%s", value) < 0)
         throw io_error("cannot write to file " + fs.filename);
 }
 inline void print_value(
-    const output_file& fs, const string& value, bool alt = false) {
-    if (fprintf(fs.file, alt ? "\"%s\"" : "%s", value.c_str()) < 0)
+    const output_file& fs, const string& value, bool quoted = false) {
+    if (fprintf(fs.file, quoted ? "\"%s\"" : "%s", value.c_str()) < 0)
         throw io_error("cannot write to file " + fs.filename);
 }
 template <typename T, size_t N>
 inline void print_value(
-    const output_file& fs, const array<T, N>& value, bool alt = false) {
-    if (!alt) {
+    const output_file& fs, const array<T, N>& value, bool in_brackets = false) {
+    if (!in_brackets) {
         for (auto i = 0; i < N; i++) {
             if (i) print_value(fs, ' ');
             print_value(fs, value[i]);
@@ -779,18 +779,18 @@ inline void print_value(
 }
 template <typename T, int N>
 inline void print_value(
-    const output_file& fs, const vec<T, N>& value, bool alt = false) {
-    print_value(fs, (const array<T, N>&)value, alt);
+    const output_file& fs, const vec<T, N>& value, bool in_brackets = false) {
+    print_value(fs, (const array<T, N>&)value, in_brackets);
 }
 template <typename T, int N, int M>
 inline void print_value(
-    const output_file& fs, const mat<T, N, M>& value, bool alt = false) {
-    print_value(fs, (const array<T, N*M>&)value, alt);
+    const output_file& fs, const mat<T, N, M>& value, bool in_brackets = false) {
+    print_value(fs, (const array<T, N*M>&)value, in_brackets);
 }
 template <typename T, int N>
 inline void print_value(
-    const output_file& fs, const frame<T, N>& value, bool alt = false) {
-    print_value(fs, (const array<T, N*(N+1)>&)value, alt);
+    const output_file& fs, const frame<T, N>& value, bool in_brackets = false) {
+    print_value(fs, (const array<T, N*(N+1)>&)value, in_brackets);
 }
 
 // print values to file
@@ -865,13 +865,35 @@ inline void parse_value(string_view& str, string& value) {
         str.remove_prefix(pos);
     }
 }
-template <typename T, int N>
-inline void parse_value(string_view& str, vec<T, N>& value) {
-    for (auto i = 0; i < N; i++) parse_value(str, value[i]);
+template <typename T, size_t N>
+inline void parse_value(string_view& str, array<T, N>& value, bool in_brackets = false) {
+    if(!in_brackets) {
+        for (auto i = 0; i < N; i++) parse_value(str, value[i]);
+    } else {
+        skip_whitespace(str);
+        if(str.empty() || str.front() != '[') throw io_error("cannot parse value");
+        for (auto i = 0; i < N; i++) {
+            if(i) {
+                skip_whitespace(str);
+                if(str.empty() || str.front() != ',') throw io_error("cannot parse value");
+            }
+            parse_value(str, value[i]);
+        }
+        skip_whitespace(str);
+        if(str.empty() || str.front() != ']') throw io_error("cannot parse value");
+    }
 }
 template <typename T, int N>
-inline void parse_value(string_view& str, frame<T, N>& value) {
-    for (auto i = 0; i < N + 1; i++) parse_value(str, value[i]);
+inline void parse_value(string_view& str, vec<T, N>& value, bool in_brackets = false) {
+    parse_value(str, (array<T, N>&)value, in_brackets);
+}
+template <typename T, int N>
+inline void parse_value(string_view& str, frame<T, N>& value, bool in_brackets = false) {
+    parse_value(str, (array<T, N*(N+1)>&)value, in_brackets);
+}
+template <typename T, int N, int M>
+inline void parse_value(string_view& str, mat<T, N, M>& value, bool in_brackets = false) {
+    parse_value(str, (array<T, N*M>&)value, in_brackets);
 }
 
 template <typename T>
