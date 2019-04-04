@@ -412,6 +412,7 @@ inline void make_logo_image(image<T>& img, const string& name);
 
 // Make an image preset, useful for testing. See implementation for types.
 inline void make_image_preset(image<vec<float, 4>>& img, const string& type);
+inline void make_image_preset(image<vec<byte, 4>>& img, const string& type);
 
 }  // namespace yocto
 
@@ -1718,6 +1719,16 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
         throw std::invalid_argument("unknown image preset" + type);
     }
 }
+
+inline void make_image_preset(image<vec<byte, 4>>& img, const string& type) {
+    auto imgf = image<vec4f>{};
+    make_image_preset(imgf, type);
+    if(type.find("-normal") == type.npos) {
+        float_to_byte(img, imgf);
+    } else {
+        linear_to_srgb8(img, imgf);
+    }
+} 
 
 }  // namespace yocto
 

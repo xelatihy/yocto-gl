@@ -754,12 +754,12 @@ inline void make_shell_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
 
 // Shape presets used ofr testing.
 template <typename T>
-inline void make_shape_presets(vector<vec4i>& points, vector<vec2i>& lines,
+inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    vector<T>& radius, const string& type);
+    vector<vec<T, 4>>& colors, vector<T>& radius, const string& type);
 
 }  // namespace yocto
 
@@ -2965,120 +2965,120 @@ inline void make_shell_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
 
 // Shape presets used ofr testing.
 template <typename T>
-inline void make_shape_presets(vector<vec4i>& points, vector<vec2i>& lines,
+inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords,
-    vector<T>& radius, const string& type) {
+    vector<vec<T, 4>>& colors, vector<T>& radius, const string& type) {
     if (type == "default-quad") {
-        make_quad_shape(
+        make_quad_shape<T>(
             quads, positions, normals, texturecoords, {1, 1}, {2, 2}, {1, 1});
     } else if (type == "default-quady") {
-        make_quad_shape(
+        make_quad_shape<T>(
             quads, positions, normals, texturecoords, {1, 1}, {2, 2}, {1, 1});
     } else if (type == "default-quad-stack") {
-        make_quad_stack_shape(quads, positions, normals, texturecoords,
+        make_quad_stack_shape<T>(quads, positions, normals, texturecoords,
             {1, 1, 1}, {2, 2, 2}, {1, 1});
     } else if (type == "default-box") {
-        make_box_shape(quads, positions, normals, texturecoords, {1, 1, 1},
+        make_box_shape<T>(quads, positions, normals, texturecoords, {1, 1, 1},
             {2, 2, 2}, {1, 1, 1});
     } else if (type == "default-box-rounded") {
-        make_box_rounded_shape(quads, positions, normals, texturecoords,
-            {32, 32, 32}, {2, 2, 2}, {1, 1, 1}, 0.15f);
+        make_box_rounded_shape<T>(quads, positions, normals, texturecoords,
+            {32, 32, 32}, {2, 2, 2}, {1, 1, 1}, (T)0.15);
     } else if (type == "default-uvsphere") {
-        make_uvsphere_shape(
+        make_uvsphere_shape<T>(
             quads, positions, normals, texturecoords, {64, 32}, 2, {1, 1});
     } else if (type == "default-sphere") {
-        make_sphere_shape(quads, positions, normals, texturecoords, 32, 2, 1);
+        make_sphere_shape<T>(quads, positions, normals, texturecoords, 32, 2, 1);
     } else if (type == "default-uvsphere-flipcap") {
-        make_uvsphere_flipcap_shape(quads, positions, normals, texturecoords,
-            {64, 32}, 2, {1, 1}, {(T)-0.75, (T) + 0.75});
+        make_uvsphere_flipcap_shape<T>(quads, positions, normals, texturecoords,
+            {64, 32}, (T)2, {1, 1}, {(T)-0.75, (T)0.75});
     } else if (type == "default-uvdisk") {
-        make_uvdisk_shape(
+        make_uvdisk_shape<T>(
             quads, positions, normals, texturecoords, {32, 16}, 2, {1, 1});
     } else if (type == "default-disk") {
-        make_disk_shape(quads, positions, normals, texturecoords, 32, 2, 1);
+        make_disk_shape<T>(quads, positions, normals, texturecoords, 32, 2, 1);
     } else if (type == "default-disk-bulged") {
-        make_disk_bulged_shape(
+        make_disk_bulged_shape<T>(
             quads, positions, normals, texturecoords, 32, 2, 1, (T)0.25);
     } else if (type == "default-quad-bulged") {
-        make_quad_bulged_shape(
+        make_quad_bulged_shape<T>(
             quads, positions, normals, texturecoords, 32, 2, 1, (T)0.25);
     } else if (type == "default-uvcylinder") {
-        make_uvcylinder_shape(quads, positions, normals, texturecoords,
+        make_uvcylinder_shape<T>(quads, positions, normals, texturecoords,
             {64, 32, 16}, {2, 2}, {1, 1, 1});
     } else if (type == "default-uvcylinder-rounded") {
-        make_uvcylinder_rounded_shape(quads, positions, normals, texturecoords,
+        make_uvcylinder_rounded_shape<T>(quads, positions, normals, texturecoords,
             {64, 32, 16}, {2, 2}, {1, 1, 1}, (T)0.075);
     } else if (type == "default-sphere-geodesic") {
-        make_geodesic_sphere_shape(triangles, positions, normals, 4, 2);
+        make_geodesic_sphere_shape<T>(triangles, positions, normals, 4, (T)2);
     } else if (type == "default-floor") {
-        make_floor_shape(quads, positions, normals, texturecoords, {1, 1},
+        make_floor_shape<T>(quads, positions, normals, texturecoords, {1, 1},
             {40, 40}, {20, 20});
     } else if (type == "default-floor-bent") {
-        make_floor_bent_shape(quads, positions, normals, texturecoords, {1, 40},
-            {40, 40}, {20, 20}, 10);
+        make_floor_bent_shape<T>(quads, positions, normals, texturecoords, {1, 40},
+            {40, 40}, {20, 20}, (T)10);
     } else if (type == "default-matball") {
-        make_sphere_shape(quads, positions, normals, texturecoords, 32, 2, 1);
+        make_sphere_shape<T>(quads, positions, normals, texturecoords, 32, 2, 1);
     } else if (type == "default-hairball") {
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
         auto base_normals       = vector<vec3f>{};
         auto base_texturecoords = vector<vec2f>{};
-        make_sphere_shape(base_quads, base_positions, base_normals,
+        make_sphere_shape<T>(base_quads, base_positions, base_normals,
             base_texturecoords, 32, 2 * (T)0.8, 1);
-        make_hair_shape(lines, positions, normals, texturecoords, radius,
+        make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
             {4, 65536}, {}, base_quads, base_positions, base_normals,
             base_texturecoords, {(T)0.2, (T)0.2}, {(T)0.002, (T)0.001}, {0, 0},
             {0, 0});
     } else if (type == "default-hairball-interior") {
-        make_sphere_shape(
+        make_sphere_shape<T>(
             quads, positions, normals, texturecoords, 32, 2 * (T)0.8, 1);
     } else if (type == "default-suzanne") {
-        make_suzanne_shape(quads, positions, 2);
+        make_suzanne_shape<T>(quads, positions, 2);
     } else if (type == "default-cube-posonly") {
         auto ignore1 = vector<vec4i>{};
         auto ignore2 = vector<vec4i>{};
         auto ignore3 = vector<vec3f>{};
         auto ignore4 = vector<vec2f>{};
-        make_box_fvshape(quads, ignore1, ignore2, positions, ignore3, ignore4,
+        make_box_fvshape<T>(quads, ignore1, ignore2, positions, ignore3, ignore4,
             {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
     } else if (type == "default-cube-facevarying") {
-        make_box_fvshape(quads_positions, quads_normals, quads_texturecoords,
+        make_box_fvshape<T>(quads_positions, quads_normals, quads_texturecoords,
             positions, normals, texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
     } else if (type == "default-sphere-facevarying") {
-        make_sphere_fvshape(quads_positions, quads_normals, quads_texturecoords,
-            positions, normals, texturecoords, 32, 2.0f, 1.0f);
+        make_sphere_fvshape<T>(quads_positions, quads_normals, quads_texturecoords,
+            positions, normals, texturecoords, 32, (T)2.0, (T)1.0);
     } else if (type == "test-cube") {
-        make_box_rounded_shape(quads, positions, normals, texturecoords,
+        make_box_rounded_shape<T>(quads, positions, normals, texturecoords,
             {32, 32, 32}, {2, 2, 2}, {1, 1, 1}, 0.15f);
     } else if (type == "test-uvsphere") {
-        make_uvsphere_shape(
-            quads, positions, normals, texturecoords, {64, 32}, 2.0f, {1, 1});
+        make_uvsphere_shape<T>(
+            quads, positions, normals, texturecoords, {64, 32}, (T)2.0, {1, 1});
     } else if (type == "test-sphere") {
-        make_sphere_shape(
-            quads, positions, normals, texturecoords, 32, 2.0f, 1.0f);
+        make_sphere_shape<T>(
+            quads, positions, normals, texturecoords, 32, (T)2.0, (T)1.0);
     } else if (type == "test-disk") {
-        make_disk_shape(
-            quads, positions, normals, texturecoords, 32, 2.0f, 1.0f);
+        make_disk_shape<T>(
+            quads, positions, normals, texturecoords, 32, (T)2.0, (T)1.0);
     } else if (type == "test-cylinder") {
-        make_uvcylinder_rounded_shape(quads, positions, normals, texturecoords,
-            {64, 32, 16}, vec2f{2.0f, 2.0f}, {1, 1, 1}, 0.075f);
+        make_uvcylinder_rounded_shape<T>(quads, positions, normals, texturecoords,
+            {64, 32, 16}, {2, 2}, {1, 1, 1}, (T)0.075);
     } else if (type == "test-floor") {
-        make_floor_shape(quads, positions, normals, texturecoords, {1, 1},
+        make_floor_shape<T>(quads, positions, normals, texturecoords, {1, 1},
             {40, 40}, {20, 20});
     } else if (type == "test-matball") {
-        make_sphere_shape(
-            quads, positions, normals, texturecoords, 32, 2.0f, 1.0f);
+        make_sphere_shape<T>(
+            quads, positions, normals, texturecoords, 32, 2, 1);
     } else if (type == "test-hairball1") {
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
         auto base_normals       = vector<vec3f>{};
         auto base_texturecoords = vector<vec2f>{};
-        make_sphere_shape(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, 2.0f * 0.8f, 1.0f);
-        make_hair_shape(lines, positions, normals, texturecoords, radius,
+        make_sphere_shape<T>(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 2 * (T)0.8, 1);
+        make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
             {4, 65536}, {}, base_quads, base_positions, base_normals,
             base_texturecoords, {2 * (T)0.1, 2 * (T)0.1},
             {2 * (T)0.001, 2 * (T)0.0005}, {0, 0}, {0, 0});
@@ -3087,9 +3087,9 @@ inline void make_shape_presets(vector<vec4i>& points, vector<vec2i>& lines,
         auto base_positions     = vector<vec3f>{};
         auto base_normals       = vector<vec3f>{};
         auto base_texturecoords = vector<vec2f>{};
-        make_sphere_shape(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, 2.0f * 0.8f, 1.0f);
-        make_hair_shape(lines, positions, normals, texturecoords, radius,
+        make_sphere_shape<T>(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 2 * (T)0.8, 1);
+        make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
             {4, 65536}, {}, base_quads, base_positions, base_normals,
             base_texturecoords, {2 * (T)0.1, 2 * (T)0.1},
             {2 * (T)0.001, 2 * (T)0.0005}, {0, 0}, {0, 0});
@@ -3098,19 +3098,19 @@ inline void make_shape_presets(vector<vec4i>& points, vector<vec2i>& lines,
         auto base_positions     = vector<vec3f>{};
         auto base_normals       = vector<vec3f>{};
         auto base_texturecoords = vector<vec2f>{};
-        make_sphere_shape(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, 2.0f * 0.8f, 1.0f);
-        make_hair_shape(lines, positions, normals, texturecoords, radius,
+        make_sphere_shape<T>(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 2 * (T)0.8, 1);
+        make_hair_shape<T>(lines, positions, normals, texturecoords, radius,
             {4, 65536}, {}, base_quads, base_positions, base_normals,
-            base_texturecoords, vec2f{0.1f, 0.1f} * 2.0f,
-            vec2f{0.001f, 0.0005f} * 2.0f, {0, 0}, {0, 0});
+            base_texturecoords, {(T)0.2, (T)0.2},
+            {(T)0.002, (T)0.001}, {0, 0}, {0, 0});
     } else if (type == "test-hairball-interior") {
-        make_sphere_shape(
-            quads, positions, normals, texturecoords, 32, 2.0f * 0.8f, 1.0f);
+        make_sphere_shape<T>(
+            quads, positions, normals, texturecoords, 32, 2 * (T)0.8, 1);
     } else if (type == "test-suzanne-subdiv") {
-        make_suzanne_shape(quads, positions, 2.0f);
+        make_suzanne_shape<T>(quads, positions, 2);
     } else if (type == "test-cube-subdiv") {
-        make_box_fvshape(quads_positions, quads_normals, quads_texturecoords,
+        make_box_fvshape<T>(quads_positions, quads_normals, quads_texturecoords,
             positions, normals, texturecoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1});
     } else {
         throw std::invalid_argument("unknown procedural type " + type);

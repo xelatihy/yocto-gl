@@ -571,15 +571,4 @@ inline T evaluate_keyframed_bezier(
 
 }  // namespace yocto
 
-// -----------------------------------------------------------------------------
-// SCENE PRESETS FOR TESTS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Scene elements presets
-void make_shape_preset(yocto_shape& shape, const string& type);
-void make_texture_preset(yocto_texture& texture, const string& type);
-
-}  // namespace yocto
-
 #endif

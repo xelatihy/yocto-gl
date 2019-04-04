@@ -530,6 +530,14 @@ void from_json(const json& js, yocto_texture& value, yocto_scene& scene) {
     value.hdr_image        = js.value("hdr_image", def.hdr_image);
     value.ldr_image        = js.value("ldr_image", def.ldr_image);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
+    if (js.count("!!preset")) {
+        auto type = js.at("!!preset").get<string>();
+        if (type.find("sky") != type.npos) {
+            make_image_preset(value.hdr_image, type);
+        } else {
+            make_image_preset(value.ldr_image, type);
+        }
+    }
 }
 
 // Procedural commands for textures
@@ -890,6 +898,15 @@ void from_json(const json& js, yocto_shape& value, yocto_scene& scene) {
     value.radius        = js.value("radius", def.radius);
     value.tangentspaces = js.value("tangentspaces", def.tangentspaces);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
+    if (js.count("!!preset")) {
+        auto type = js.at("!!preset").get<string>();
+        if (type.find("sky") != type.npos) {
+            make_shape_preset(value.points, value.lines, value.triangles,
+                value.quads, value.quads_positions, value.quads_normals,
+                value.quads_texturecoords, value.positions, value.normals,
+                value.texturecoords, value.colors, value.radius, type);
+        }
+    }
 }
 
 // Procedural commands for instances
@@ -1919,8 +1936,9 @@ void load_ply_scene(const string& filename, yocto_scene& scene,
         scene.shapes.push_back({});
         auto& shape = scene.shapes.back();
         load_shape(filename, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.quads_positions, shape.quads_normals, shape.quads_texturecoords, shape.positions, shape.normals, shape.texturecoords,
-            shape.colors, shape.radius, false);
+            shape.quads, shape.quads_positions, shape.quads_normals,
+            shape.quads_texturecoords, shape.positions, shape.normals,
+            shape.texturecoords, shape.colors, shape.radius, false);
 
         // add instance
         auto instance  = yocto_instance{};
@@ -1949,8 +1967,9 @@ void save_ply_scene(const string& filename, const yocto_scene& scene,
     try {
         auto& shape = scene.shapes.front();
         save_shape(filename, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.quads_positions, shape.quads_normals, shape.quads_texturecoords, shape.positions, shape.normals, shape.texturecoords,
-            shape.colors, shape.radius);
+            shape.quads, shape.quads_positions, shape.quads_normals,
+            shape.quads_texturecoords, shape.positions, shape.normals,
+            shape.texturecoords, shape.colors, shape.radius);
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
@@ -2993,9 +3012,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 if (!options.skip_meshes) {
                     load_shape(get_dirname(filename) + mesh.filename,
                         shape.points, shape.lines, shape.triangles, shape.quads,
-                               shape.quads_positions, shape.quads_normals, shape.quads_texturecoords,
-                        shape.positions, shape.normals, shape.texturecoords,
-                        shape.colors, shape.radius, false);
+                        shape.quads_positions, shape.quads_normals,
+                        shape.quads_texturecoords, shape.positions,
+                        shape.normals, shape.texturecoords, shape.colors,
+                        shape.radius, false);
                 }
             } else if (holds_alternative<pbrt_sphere_shape>(pshape)) {
                 auto& sphere = get<pbrt_sphere_shape>(pshape);
@@ -3549,7 +3569,8 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
             if (shape.filename == "") continue;
             auto filename = normalize_path(dirname + shape.filename);
             save_shape(filename, shape.points, shape.lines, shape.triangles,
-                shape.quads, shape.quads_positions, shape.quads_normals, shape.quads_texturecoords, shape.positions, shape.normals,
+                shape.quads, shape.quads_positions, shape.quads_normals,
+                shape.quads_texturecoords, shape.positions, shape.normals,
                 shape.texturecoords, shape.colors, shape.radius);
         }
 
