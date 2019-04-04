@@ -290,7 +290,8 @@ inline bool draw_opengl_widgets_scene_inspector(
         value.displacement_texture, scene.textures, true);
     edited += draw_combobox_opengl_widget(
         win, "normal_texture", value.normal_texture, scene.textures, true);
-    edited += draw_slider_opengl_widget(win, "displacement_scale", value.displacement_scale, 0, 1);
+    edited += draw_slider_opengl_widget(
+        win, "displacement_scale", value.displacement_scale, 0, 1);
     edited += draw_checkbox_opengl_widget(
         win, "base metallic", value.base_metallic);
     edited += draw_checkbox_opengl_widget(

@@ -347,13 +347,11 @@ def make_tests():
             },
             {
                 "name": "test-arealight1",
-                "filename": "models/test-arealight1.ply.ypreset",
-                "!!proc": { "type": "quad", "size": [ 0.4, 0.4 ] }
+                "filename": "models/test-arealight1.ply.ypreset"
             },
             {
                 "name": "test-arealight2",
-                "filename": "models/test-arealight2.ply.ypreset",
-                "!!proc": { "type": "quad", "size": [ 0.4, 0.4 ] }
+                "filename": "models/test-arealight2.ply.ypreset"
             }
         ],
         "instances": [

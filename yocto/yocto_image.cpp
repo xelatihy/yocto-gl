@@ -277,7 +277,7 @@ static inline void load_exr_image(
             &pixels, &width, &height, filename.c_str(), nullptr);
         error < 0) {
         throw io_error("error loading image " + filename + "("s +
-                            get_tinyexr_error(error) + ")"s);
+                       get_tinyexr_error(error) + ")"s);
     }
     if (!pixels) {
         throw io_error("error loading image " + filename);
@@ -522,13 +522,11 @@ inline void load_image_preset(
     auto [type, nfilename] = get_image_preset_type(filename);
     if constexpr (N == 4) {
         img.resize({1024, 1024});
-        if (type == "images2")
-            img.resize({2048, 1024});
+        if (type == "images2") img.resize({2048, 1024});
         make_image_preset(img, type);
     } else {
         auto img4 = image<vec<float, 4>>({1024, 1024});
-        if (type == "images2")
-            img4.resize({2048, 1024});
+        if (type == "images2") img4.resize({2048, 1024});
         make_image_preset(img4, type);
         img.resize(img4.size());
         rgba_to_color(img, img4);
@@ -545,7 +543,8 @@ inline void load_image_preset(
 
 // Loads an hdr image.
 template <int N>
-inline void load_channel_image(const string& filename, image<vec<float, N>>& img) {
+inline void load_channel_image(
+    const string& filename, image<vec<float, N>>& img) {
     if (is_image_preset_filename(filename)) {
         return load_image_preset(filename, img);
     }
@@ -617,7 +616,8 @@ inline void save_channel_image(
 
 // Loads an hdr image.
 template <int N>
-inline void load_channel_image(const string& filename, image<vec<byte, N>>& img) {
+inline void load_channel_image(
+    const string& filename, image<vec<byte, N>>& img) {
     if (is_image_preset_filename(filename)) {
         return load_image_preset(filename, img);
     }
@@ -652,7 +652,8 @@ inline void load_channel_image(const string& filename, image<vec<byte, N>>& img)
 
 // Saves an ldr image.
 template <int N>
-inline void save_channel_image(const string& filename, const image<vec<byte, N>>& img) {
+inline void save_channel_image(
+    const string& filename, const image<vec<byte, N>>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
         save_png_image(filename, img);

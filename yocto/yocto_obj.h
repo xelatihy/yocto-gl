@@ -592,18 +592,18 @@ inline void load_obj(
 namespace std {
 
 // Hash functor for vector for use with unordered_map
-template<>
+template <>
 struct hash<yocto::obj_vertex> {
     static constexpr std::hash<int> hasher = std::hash<int>();
 
     size_t operator()(const yocto::obj_vertex& v) const {
-        auto h  = (size_t)0;
+        auto h = (size_t)0;
         for (auto i = 0; i < 3; i++)
             h ^= hasher((&v.position)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
     }
 };
 
-}
+}  // namespace std
 
 #endif
