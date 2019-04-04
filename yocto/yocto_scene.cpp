@@ -940,12 +940,12 @@ vec2i evaluate_texture_size(const yocto_texture& texture) {
 }
 
 // Lookup a texture value
-vec4f lookup_texture(const yocto_texture& texture, int i, int j) {
+vec4f lookup_texture(const yocto_texture& texture, int i, int j, bool ldr_as_linear) {
     if (!texture.hdr_image.empty()) {
         return texture.hdr_image[{i, j}];
-    } else if (!texture.ldr_image.empty() && !texture.ldr_as_linear) {
+    } else if (!texture.ldr_image.empty() && !ldr_as_linear) {
         return srgb_to_linear(byte_to_float(texture.ldr_image[{i, j}]));
-    } else if (!texture.ldr_image.empty() && texture.ldr_as_linear) {
+    } else if (!texture.ldr_image.empty() && ldr_as_linear) {
         return byte_to_float(texture.ldr_image[{i, j}]);
     } else {
         return zero4f;
@@ -953,7 +953,7 @@ vec4f lookup_texture(const yocto_texture& texture, int i, int j) {
 }
 
 // Evaluate a texture
-vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord) {
+vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord, bool ldr_as_linear) {
     if (texture.hdr_image.empty() && texture.ldr_image.empty())
         return {1, 1, 1, 1};
 
@@ -978,18 +978,11 @@ vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord) {
     auto ii = (i + 1) % width, jj = (j + 1) % height;
     auto u = s - i, v = t - j;
 
-    // nearest-neighbor interpolation
-    if (texture.no_interpolation) {
-        i = u < 0.5 ? i : min(i + 1, width - 1);
-        j = v < 0.5 ? j : min(j + 1, height - 1);
-        return lookup_texture(texture, i, j);
-    }
-
     // handle interpolation
-    return lookup_texture(texture, i, j) * (1 - u) * (1 - v) +
-           lookup_texture(texture, i, jj) * (1 - u) * v +
-           lookup_texture(texture, ii, j) * u * (1 - v) +
-           lookup_texture(texture, ii, jj) * u * v;
+    return lookup_texture(texture, i, j, ldr_as_linear) * (1 - u) * (1 - v) +
+           lookup_texture(texture, i, jj, ldr_as_linear) * (1 - u) * v +
+           lookup_texture(texture, ii, j, ldr_as_linear) * u * (1 - v) +
+           lookup_texture(texture, ii, jj, ldr_as_linear) * u * v;
 }
 
 // Lookup a texture value
@@ -1229,7 +1222,7 @@ vec3f evaluate_material_normalmap(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord) {
     if (material.normal_texture >= 0) {
         auto& normal_texture = scene.textures[material.normal_texture];
-        auto  normalmap = evaluate_texture(normal_texture, texturecoord).xyz;
+        auto  normalmap = evaluate_texture(normal_texture, texturecoord, true).xyz;
         normalmap       = normalmap * 2 - vec3f{1, 1, 1};
         normalmap.y = -normalmap.y;  // flip vertical axis to align green with
                                      // image up

@@ -555,15 +555,16 @@ void from_json_procedural(
         add_image_border(value.hdr_image, js.value("border_width", 2),
             js.value("border_color", vec4f{0, 0, 0, 1}));
     }
+    auto is_bump = false;
     if (js.value("bump_to_normal", false)) {
         auto buffer = value.hdr_image;
         bump_to_normal_map(
             value.hdr_image, buffer, js.value("bump_scale", 1.0f));
-        value.ldr_as_linear = true;
+        is_bump = true;
     }
     if (!is_hdr) {
         value.ldr_image = {value.hdr_image.size()};
-        if (!value.ldr_as_linear) {
+        if (!is_bump) {
             linear_to_srgb8(value.ldr_image, value.hdr_image);
         } else {
             float_to_byte(value.ldr_image, value.hdr_image);
@@ -584,24 +585,18 @@ void to_json(json& js, const yocto_texture& value, const yocto_scene& scene) {
     if (value.filename != def.filename) js["filename"] = value.filename;
     if (value.clamp_to_edge != def.clamp_to_edge)
         js["clamp_to_edge"] = value.clamp_to_edge;
-    if (value.no_interpolation != def.no_interpolation)
-        js["no_interpolation"] = value.no_interpolation;
-    if (value.ldr_as_linear != def.ldr_as_linear)
-        js["ldr_as_linear"] = value.ldr_as_linear;
     if (value.filename == "") {
         if (value.hdr_image != def.hdr_image) js["hdr_image"] = value.hdr_image;
         if (value.ldr_image != def.ldr_image) js["ldr_image"] = value.ldr_image;
     }
 }
 void from_json(const json& js, yocto_texture& value, yocto_scene& scene) {
-    static const auto def  = yocto_texture();
-    value.name             = js.value("name", def.name);
-    value.filename         = js.value("filename", def.filename);
-    value.clamp_to_edge    = js.value("clamp_to_edge", def.clamp_to_edge);
-    value.no_interpolation = js.value("no_interpolation", def.no_interpolation);
-    value.ldr_as_linear    = js.value("ldr_as_linear", def.ldr_as_linear);
-    value.hdr_image        = js.value("hdr_image", def.hdr_image);
-    value.ldr_image        = js.value("ldr_image", def.ldr_image);
+    static const auto def = yocto_texture();
+    value.name            = js.value("name", def.name);
+    value.filename        = js.value("filename", def.filename);
+    value.clamp_to_edge   = js.value("clamp_to_edge", def.clamp_to_edge);
+    value.hdr_image       = js.value("hdr_image", def.hdr_image);
+    value.ldr_image       = js.value("ldr_image", def.ldr_image);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
@@ -765,15 +760,18 @@ void from_json_procedural(
     if (type == "quad") {
         make_quad_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}), identity_frame3f);
+            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}),
+            identity_frame3f);
     } else if (type == "quady") {
         make_quad_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}), identity_frame3f);
+            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}),
+            identity_frame3f);
     } else if (type == "quad_stack") {
         make_quad_stack_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec2f{1, 1}), identity_frame3f);
+            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec2f{1, 1}),
+            identity_frame3f);
     } else if (type == "box") {
         make_box_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
@@ -783,11 +781,13 @@ void from_json_procedural(
         make_box_rounded_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec3i{32, 32, 32}),
             js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("rounded", 0.15f), identity_frame3f);
+            js.value("uvsize", vec3f{1, 1, 1}), js.value("rounded", 0.15f),
+            identity_frame3f);
     } else if (type == "uvsphere") {
         make_uvsphere_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}), identity_frame3f);
+            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
+            identity_frame3f);
     } else if (type == "sphere") {
         make_sphere_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
@@ -800,7 +800,8 @@ void from_json_procedural(
     } else if (type == "uvdisk") {
         make_uvdisk_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec2i{32, 16}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}), identity_frame3f);
+            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
+            identity_frame3f);
     } else if (type == "disk") {
         make_disk_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
@@ -808,11 +809,13 @@ void from_json_procedural(
     } else if (type == "disk_bulged") {
         make_disk_bulged_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), js.value("height", 0.25f), identity_frame3f);
+            js.value("uvsize", 1.0f), js.value("height", 0.25f),
+            identity_frame3f);
     } else if (type == "quad_bulged") {
         make_quad_bulged_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), js.value("height", 0.25f), identity_frame3f);
+            js.value("uvsize", 1.0f), js.value("height", 0.25f),
+            identity_frame3f);
     } else if (type == "uvcylinder") {
         make_uvcylinder_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec3i{64, 32, 16}),
@@ -823,14 +826,17 @@ void from_json_procedural(
             value.normals, value.texturecoords,
             js.value("steps", vec3i{64, 32, 16}),
             js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("rounded", 0.075f), identity_frame3f);
+            js.value("uvsize", vec3f{1, 1, 1}), js.value("rounded", 0.075f),
+            identity_frame3f);
     } else if (type == "sphere_geodesic") {
         make_geodesic_sphere_shape(value.triangles, value.positions,
-            value.normals, js.value("tesselation", 4), js.value("size", 2.0f), identity_frame3f);
+            value.normals, js.value("tesselation", 4), js.value("size", 2.0f),
+            identity_frame3f);
     } else if (type == "floor") {
         make_floor_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{40, 40}), js.value("uvsize", vec2f{20, 20}), identity_frame3f);
+            js.value("size", vec2f{40, 40}), js.value("uvsize", vec2f{20, 20}),
+            identity_frame3f);
     } else if (type == "floor_bent") {
         make_floor_bent_shape(value.quads, value.positions, value.normals,
             value.texturecoords, js.value("steps", vec2i{1, 40}),
@@ -846,20 +852,23 @@ void from_json_procedural(
         auto base_normals       = vector<vec3f>{};
         auto base_texturecoords = vector<vec2f>{};
         make_sphere_shape(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1.0f, identity_frame3f);
+            base_texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1.0f,
+            identity_frame3f);
         make_hair_shape(value.lines, value.positions, value.normals,
             value.texturecoords, value.radius,
             js.value("steps", vec2i{4, 65536}), {}, base_quads, base_positions,
             base_normals, base_texturecoords,
             js.value("length", vec2f{0.1f, 0.1f}) * js.value("size", 2.0f),
             js.value("radius", vec2f{0.001f, 0.0005f}) * js.value("size", 2.0f),
-            js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}), js.value("rotation", vec2f{0, 0}));
+            js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}),
+            js.value("rotation", vec2f{0, 0}));
     } else if (type == "hairball_interior") {
         make_sphere_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1.0f, identity_frame3f);
+            value.texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1.0f,
+            identity_frame3f);
     } else if (type == "suzanne") {
-        make_suzanne_shape(
-            value.quads, value.positions, js.value("size", 2.0f), identity_frame3f);
+        make_suzanne_shape(value.quads, value.positions, js.value("size", 2.0f),
+            identity_frame3f);
     } else if (type == "cube_posonly") {
         auto ignore1 = vector<vec4i>{};
         auto ignore2 = vector<vec4i>{};
@@ -1397,7 +1406,6 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             texture.name          = info.path;
             texture.filename      = info.path;
             texture.clamp_to_edge = info.clamp;
-            texture.ldr_as_linear = force_linear || is_hdr_filename(info.path);
             scene.textures.push_back(texture);
             auto index      = (int)scene.textures.size() - 1;
             tmap[info.path] = index;
@@ -1635,7 +1643,8 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
                     shape.texturecoords,
                     {oproc.level < 0 ? 1 : pow2(oproc.level),
                         oproc.level < 0 ? 20 : pow2(oproc.level)},
-                    {oproc.size, oproc.size}, {oproc.size / 2, oproc.size / 2}, identity_frame3f);
+                    {oproc.size, oproc.size}, {oproc.size / 2, oproc.size / 2},
+                    identity_frame3f);
             } else {
                 throw io_error("unknown obj procedural");
             }
@@ -2048,9 +2057,6 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
         auto gsmp = gtxt->sampler;
         scene.textures[texture_id].clamp_to_edge =
             gsmp->wrap_s == 33071 || gsmp->wrap_t == 33071;  // clamp to edge
-        scene.textures[texture_id].ldr_as_linear =
-            force_linear ||
-            is_hdr_filename(scene.textures[texture_id].filename);
         return texture_id;
     };
 
@@ -3039,11 +3045,13 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             } else if (holds_alternative<pbrt_sphere_shape>(pshape)) {
                 auto& sphere = get<pbrt_sphere_shape>(pshape);
                 make_uvsphere_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, {64, 32}, 2 * sphere.radius, {1, 1}, identity_frame3f);
+                    shape.texturecoords, {64, 32}, 2 * sphere.radius, {1, 1},
+                    identity_frame3f);
             } else if (holds_alternative<pbrt_disk_shape>(pshape)) {
                 auto& disk = get<pbrt_disk_shape>(pshape);
                 make_uvdisk_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, {32, 16}, 2 * disk.radius, {1, 1}, identity_frame3f);
+                    shape.texturecoords, {32, 16}, 2 * disk.radius, {1, 1},
+                    identity_frame3f);
             } else {
                 throw io_error(
                     "unsupported shape type " + std::to_string(pshape.index()));
@@ -3383,7 +3391,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto dir    = normalize(distant.from - distant.to);
                 auto size   = distant_dist * sin(5 * pif / 180);
                 make_quad_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, {1, 1}, {size, size}, {1, 1}, identity_frame3f);
+                    shape.texturecoords, {1, 1}, {size, size}, {1, 1},
+                    identity_frame3f);
                 scene.materials.push_back({});
                 auto& material    = scene.materials.back();
                 material.name     = shape.name;
@@ -3778,12 +3787,9 @@ void write_object(output_file& fs, const yocto_texture& texture) {
     write_value(fs, texture.hdr_image);
     write_value(fs, texture.ldr_image);
     write_value(fs, texture.clamp_to_edge);
-    write_value(fs, texture.no_interpolation);
-    // write_value(fs, texture.height_scale);
-    // TODO: remove me
-    auto height_scale = (float)0;
-    write_value(fs, height_scale);
-    write_value(fs, texture.ldr_as_linear);
+    write_value(fs, false);  // TODO: remove me
+    write_value(fs, 0.0f);   // TODO: remove me
+    write_value(fs, false);  // TODO: remove me
 }
 void read_object(input_file& fs, yocto_texture& texture) {
     read_value(fs, texture.name);
@@ -3791,12 +3797,11 @@ void read_object(input_file& fs, yocto_texture& texture) {
     read_value(fs, texture.hdr_image);
     read_value(fs, texture.ldr_image);
     read_value(fs, texture.clamp_to_edge);
-    read_value(fs, texture.no_interpolation);
-    // write_value(fs, texture.height_scale);
-    // TODO: remove me
-    auto height_scale = (float)0;
-    read_value(fs, height_scale);
-    read_value(fs, texture.ldr_as_linear);
+    auto _auxb = false;
+    auto _auxf = 0.0f;
+    read_value(fs, _auxb);  // TODO: remove me
+    read_value(fs, _auxf);  // TODO: remove me
+    read_value(fs, _auxb);  // TODO: remove me
 }
 
 void write_object(output_file& fs, const yocto_voltexture& texture) {

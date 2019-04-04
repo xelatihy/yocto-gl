@@ -247,8 +247,6 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_textinput_opengl_widget(win, "path", value.filename);
     edited += draw_checkbox_opengl_widget(
         win, "clamp_to_edge", value.clamp_to_edge);
-    edited += draw_checkbox_opengl_widget(
-        win, "ldr_as_linear", value.ldr_as_linear);
     draw_label_opengl_widget(win, "hdr_image", "%d x %d",
         value.hdr_image.size().x, value.hdr_image.size().y);
     draw_label_opengl_widget(win, "ldr_image", "%d x %d",

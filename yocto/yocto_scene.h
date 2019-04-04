@@ -108,8 +108,6 @@ struct yocto_texture {
     image<vec4f> hdr_image        = {};
     image<vec4b> ldr_image        = {};
     bool         clamp_to_edge    = false;
-    bool         no_interpolation = false;
-    bool         ldr_as_linear    = false;
 };
 
 // Volumetric texture containing a float only volume data. See texture
@@ -377,8 +375,8 @@ float            sample_shape_element_pdf(const yocto_shape& shape,
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture& texture);
-vec4f lookup_texture(const yocto_texture& texture, int i, int j);
-vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord);
+vec4f lookup_texture(const yocto_texture& texture, int i, int j, bool ldr_as_linear = false);
+vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord, bool ldr_as_linear = false);
 float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k);
 float evaluate_voltexture(
     const yocto_voltexture& texture, const vec3f& texcoord);
