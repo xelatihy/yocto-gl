@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
     // command line parameters
     auto skip_textures  = false;
     auto skip_meshes    = false;
-    auto mesh_filenames = true;
+    auto mesh_filenames = false;
     auto mesh_directory = "shapes/"s;
     auto uniform_txt    = false;
     auto validate       = false;

@@ -731,7 +731,7 @@ inline void print_value(const output_file& fs, int value) {
 }
 inline void print_value(const output_file& fs, bool value, bool alpha = false) {
     if (alpha) {
-        if (fprintf(fs.file, value ? "true" : "false"))
+        if (fprintf(fs.file, value ? "true" : "false") < 0)
             throw io_error("cannot write to file " + fs.filename);
     } else {
         if (fprintf(fs.file, "%d", (int)value) < 0)

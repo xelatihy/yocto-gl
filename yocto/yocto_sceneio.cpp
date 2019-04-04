@@ -1759,13 +1759,37 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
     update_transforms(scene);
 }
 
+inline void print_yaml_value(output_file& fs, int value) {
+    print_value(fs, value);
+}
+inline void print_yaml_value(output_file& fs, float value) {
+    print_value(fs, value);
+}
+inline void print_yaml_value(output_file& fs, const string& value) {
+    print_value(fs, value);
+}
+inline void print_yaml_value(output_file& fs, const char* value) {
+    print_value(fs, value);
+}
+inline void print_yaml_value(output_file& fs, bool value) {
+    print_value(fs, value, true);
+}
+template<typename T, int N>
+inline void print_yaml_value(output_file& fs, const vec<T, N>& value) {
+    print_value(fs, value, true);
+}
+template<typename T, int N>
+inline void print_yaml_value(output_file& fs, const frame<T, N>& value) {
+    print_value(fs, value, true);
+}
+
 // Save yaml
 void save_yaml(const string& filename, const yocto_scene& scene) {
     // open file
     auto fs = output_file(filename);
 
-    println_values(
-        fs, "# Saved by Yocto/GL\n# https://github.com/xelatihy/yocto-gl\n\n");
+    print_value(
+        fs, "# Written by Yocto/GL\n# https://github.com/xelatihy/yocto-gl\n");
 
     static const auto def_camera      = yocto_camera{};
     static const auto def_texture     = yocto_texture{};
@@ -1776,37 +1800,36 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
     static const auto def_environment = yocto_environment{};
 
     auto print_first = [](output_file& fs, const char* name, auto& value) {
-        print_value(fs, "- ");
+        print_value(fs, "  - ");
         print_value(fs, name);
         print_value(fs, ": ");
-        print_value(fs, value, true);
+        print_yaml_value(fs, value);
+        print_value(fs, "\n");
     };
     auto print_optional = [](output_file& fs, const char* name, auto& value,
                               auto& def) {
         if (value == def) return;
-        print_value(fs, "  ");
+        print_value(fs, "    ");
         print_value(fs, name);
         print_value(fs, ": ");
-        if constexpr (std::is_same_v<bool, decltype(value)>) {
-            print_value(fs, value, true);
-        } else {
-            print_value(fs, value);
-        }
+        print_yaml_value(fs, value);
+        print_value(fs, "\n");
     };
     auto print_ref = [as_int = false](output_file& fs, const char* name,
                          int value, auto& refs) {
-        if (value < 1) return;
-        print_value(fs, "  ");
+        if (value < 0) return;
+        print_value(fs, "    ");
         print_value(fs, name);
         print_value(fs, ": ");
         if (as_int) {
-            print_value(fs, value);
+            print_yaml_value(fs, value);
         } else {
-            print_value(fs, refs[value].name);
+            print_yaml_value(fs, refs[value].name);
         }
+        print_value(fs, "\n");
     };
 
-    if (!scene.cameras.empty()) print_value(fs, "\ncameras:\n");
+    if (!scene.cameras.empty()) print_value(fs, "\n\ncameras:\n");
     for (auto& camera : scene.cameras) {
         print_first(fs, "name", camera.name);
         print_optional(fs, "frame", camera.frame, def_camera.frame);
@@ -1824,20 +1847,20 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
             def_camera.lens_aperture);
     }
 
-    if (!scene.textures.empty()) print_value(fs, "\ntextures:\n");
+    if (!scene.textures.empty()) print_value(fs, "\n\ntextures:\n");
     for (auto& texture : scene.textures) {
         print_first(fs, "name", texture.name);
         print_optional(fs, "filename", texture.filename, def_texture.filename);
     }
 
-    if (!scene.voltextures.empty()) print_value(fs, "\nvoltextures:\n");
+    if (!scene.voltextures.empty()) print_value(fs, "\n\nvoltextures:\n");
     for (auto& texture : scene.voltextures) {
         print_first(fs, "name", texture.name);
         print_optional(
             fs, "filename", texture.filename, def_voltexture.filename);
     }
 
-    if (!scene.materials.empty()) print_value(fs, "\nmaterials:\n");
+    if (!scene.materials.empty()) print_value(fs, "\n\nmaterials:\n");
     for (auto& material : scene.materials) {
         print_first(fs, "name", material.name);
         print_optional(fs, "base_metallic", material.base_metallic,
@@ -1883,7 +1906,7 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
         // TODO: add displacement scale
     }
 
-    if (!scene.shapes.empty()) print_value(fs, "\nshapes:\n");
+    if (!scene.shapes.empty()) print_value(fs, "\n\nshapes:\n");
     for (auto& shape : scene.shapes) {
         print_first(fs, "name", shape.name);
         print_optional(fs, "filename", shape.filename, def_shape.filename);
@@ -1897,7 +1920,7 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
             def_shape.preserve_facevarying);
     }
 
-    if (!scene.instances.empty()) print_value(fs, "\ninstances:\n");
+    if (!scene.instances.empty()) print_value(fs, "\n\ninstances:\n");
     for (auto& instance : scene.instances) {
         print_first(fs, "name", instance.name);
         print_optional(fs, "frame", instance.frame, def_instance.frame);
@@ -1905,7 +1928,7 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
         print_ref(fs, "material", instance.material, scene.materials);
     }
 
-    if (!scene.environments.empty()) print_value(fs, "\nenvironments:\n");
+    if (!scene.environments.empty()) print_value(fs, "\n\nenvironments:\n");
     for (auto& environment : scene.environments) {
         print_first(fs, "name", environment.name);
         print_optional(fs, "frame", environment.frame, def_environment.frame);
