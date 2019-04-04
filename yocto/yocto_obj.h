@@ -264,10 +264,7 @@ template <typename Callbacks>
 void load_mtl(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
-    auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw io_error("cannot load mtl " + filename);
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
+    auto fs = input_file(filename);
 
     // currently parsed material
     auto material = obj_material();
@@ -275,7 +272,7 @@ void load_mtl(
 
     // read the file line by line
     char buffer[4096];
-    while (fgets(buffer, sizeof(buffer), fs)) {
+    while (read_line(fs, buffer, sizeof(buffer))) {
         // line
         auto line = string_view{buffer};
         remove_comment_and_newline(line);
@@ -363,14 +360,11 @@ template <typename Callbacks>
 inline void load_objx(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
-    auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw io_error("cannot load objx " + filename);
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
+    auto fs = input_file(filename);
 
     // read the file line by line
     char buffer[4096];
-    while (fgets(buffer, sizeof(buffer), fs)) {
+    while (read_line(fs, buffer, sizeof(buffer))) {
         // line
         auto line = string_view{buffer};
         remove_comment_and_newline(line);
@@ -422,10 +416,7 @@ template <typename Callbacks>
 inline void load_obj(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
-    auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw io_error("cannot load obj " + filename);
-    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
-        fs, [](FILE* f) { fclose(f); }};
+    auto fs = input_file(filename);
 
     // track vertex size
     auto vert_size = obj_vertex();
@@ -433,7 +424,7 @@ inline void load_obj(
 
     // read the file line by line
     char buffer[4096];
-    while (fgets(buffer, sizeof(buffer), fs)) {
+    while (read_line(fs, buffer, sizeof(buffer))) {
         // line
         auto line = string_view{buffer};
         remove_comment_and_newline(line);

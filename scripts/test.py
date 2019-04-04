@@ -464,6 +464,23 @@ def make_tests():
                     if environment['emission_texture'] == texture['name']: used = True
                 if used: scene['textures'] += [texture] 
         with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
+        def write_yaml_objects(f, name):
+            if name not in scene: return
+            if not scene[name]: return
+            f.write(name + ":\n")
+            for obj in scene[name]:
+                f.write('  - name: ' + obj['name'] + '\n')
+                for key, value in obj.items():
+                    if key == 'name': continue
+                    f.write('    ' + key + ': ' + str(value) + '\n')
+        with open(f'tests/{name}.yaml', 'wt') as f:
+            write_yaml_objects(f, 'cameras')
+            write_yaml_objects(f, 'textures')
+            write_yaml_objects(f, 'voltextures')
+            write_yaml_objects(f, 'materials')
+            write_yaml_objects(f, 'shapes')
+            write_yaml_objects(f, 'instances')
+            write_yaml_objects(f, 'environments')
     make_test('features1', ['test-bunny', 'test-sphere', 'test-bunny', 'test-sphere', 'test-bunny'], ['test-uvgrid', 'test-plastic-sharp', 'test-metal-rough', 'test-plastic-rough', 'test-metal-sharp'], mixed_lights)
     make_test('materials1', ['test-sphere'], ['test-plastic-sharp', 'test-plastic-rough', 'test-matte', 'test-metal-sharp', 'test-metal-rough'], mixed_lights)
     make_test('materials2', ['test-sphere'], ['test-glass-sharp', 'test-glass-rough', 'test-transparent', 'test-thinglass-sharp', 'test-thinglass-rough'], mixed_lights)

@@ -851,18 +851,32 @@ inline void parse_value(string_view& str, float& value) {
     if (str == end) throw io_error("cannot parse value");
     str.remove_prefix(end-str.data());
 }
-inline void parse_value(string_view& str, string& value) {
+inline void parse_value(string_view& str, double& value) {
+    char* end = nullptr;
+    value     = strtod(str.data(), &end);
+    if (str == end) throw io_error("cannot parse value");
+    str.remove_prefix(end-str.data());
+}
+inline void parse_value(string_view& str, string& value, bool quoted = false) {
     skip_whitespace(str);
-    if(str.empty()) {
-        throw io_error("cannot parse value");
-    }
-    auto pos = str.find_first_of(" \t\r\n");
-    if(pos == str.npos) {
-        value = str;
-        str.remove_prefix(str.length());
+    if(str.empty()) throw io_error("cannot parse value");
+    if(!quoted) {
+        auto pos = str.find_first_of(" \t\r\n");
+        if(pos == str.npos) {
+            value = str;
+            str.remove_prefix(str.length());
+        } else {
+            value = str.substr(0, pos);
+            str.remove_prefix(pos);
+        }
     } else {
+        if(str.front() != '"') throw io_error("cannot parse value");
+        str.remove_prefix(1);
+        if(str.empty()) throw io_error("cannot parse value");
+        auto pos = str.find('"');
+        if(pos == str.npos) throw io_error("cannot parse value");
         value = str.substr(0, pos);
-        str.remove_prefix(pos);
+        str.remove_prefix(pos+1);
     }
 }
 template <typename T, size_t N>
@@ -904,6 +918,26 @@ inline void parse_value_or_empty(string_view& str, T& value) {
     } else {
         parse_value(str, value);
     }
+}
+
+inline bool is_whitespace(const string_view& str) {
+    return str.find_first_not_of(" \t\r\n") == str.npos;
+}
+inline bool is_space(char c) { return c == ' ' || c == '\t'|| c == '\r'|| c == '\n'; }
+inline bool is_alpha(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
+inline bool is_digit(char c) { return c >= 0 && c <= 9; }
+
+inline void parse_varname(string_view& str, string& value) {
+    skip_whitespace(str);
+    if(str.empty()) throw io_error("cannot parse value");
+    if(!is_alpha(str.front())) throw io_error("cannot parse value");
+    auto pos = 0;
+    while(is_alpha(str[pos]) || str[pos] == '_' || is_digit(str[pos])) {
+        pos += 1;
+        if(pos >= str.size()) break;
+    }
+    value = str.substr(0, pos);
+    str.remove_prefix(pos);
 }
 
 }  // namespace yocto
