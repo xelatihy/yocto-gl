@@ -196,14 +196,7 @@
     "shapes": [
         {
             "name": "test-floor",
-            "filename": "models/test-floor.ply",
-            "!!proc": {
-                "type": "floor",
-                "size": [
-                    4,
-                    4
-                ]
-            }
+            "filename": "models/test-floor.ply.ypreset"
         },
         {
             "name": "test-sphere",

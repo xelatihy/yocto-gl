@@ -250,8 +250,7 @@ def make_tests():
         "shapes": [
             {
                 "name": "test-floor",
-                "filename": "models/test-floor.ply",
-                "!!proc": { "type": "floor", "size": [ 4, 4 ] }
+                "filename": "models/test-floor.ply.ypreset"
             },
             {
                 "name": "test-bunny",
@@ -263,8 +262,7 @@ def make_tests():
             },
             {
                 "name": "test-sphere",
-                "filename": "models/test-sphere.obj",
-                "!!proc": { "type": "sphere", "size": 0.15, "align_bottom": true }
+                "filename": "models/test-sphere.obj.ypreset"
             },
             {
                 "name": "test-cube",

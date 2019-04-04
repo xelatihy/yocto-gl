@@ -3070,7 +3070,8 @@ inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
             quads, positions, normals, texturecoords, {64, 32}, (T)2.0, {1, 1});
     } else if (type == "test-sphere") {
         make_sphere_shape<T>(
-            quads, positions, normals, texturecoords, 32, (T)2.0, (T)1.0);
+            quads, positions, normals, texturecoords, 32, (T)0.15, (T)1.0);
+        align_vertices(positions, {0,1,0});
     } else if (type == "test-disk") {
         make_disk_shape<T>(
             quads, positions, normals, texturecoords, 32, (T)2.0, (T)1.0);
@@ -3079,7 +3080,7 @@ inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
             {64, 32, 16}, {2, 2}, {1, 1, 1}, (T)0.075);
     } else if (type == "test-floor") {
         make_floor_shape<T>(quads, positions, normals, texturecoords, {1, 1},
-            {40, 40}, {20, 20});
+            {4, 4}, {20, 20});
     } else if (type == "test-matball") {
         make_sphere_shape<T>(
             quads, positions, normals, texturecoords, 32, 2, 1);
