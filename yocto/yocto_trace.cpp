@@ -1498,6 +1498,8 @@ std::tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(
                 if (next_direction == zero3f || next_direction_pdf == 0 ||
                     next_brdf_cosine == zero3f)
                     break;
+                else
+                    weight *= next_brdf_cosine / next_direction_pdf;
 
                 direction = next_direction;
             }
