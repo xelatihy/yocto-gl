@@ -255,6 +255,15 @@ void load_scene_texture(yocto_texture& texture, const string& dirname) {
     }
 }
 
+void load_scene_voltexture(yocto_voltexture& texture, const string& dirname) {
+    if (is_volume_preset_filename(texture.filename)) {
+        make_volume_preset(texture.volume_data, get_basename(texture.filename));
+        texture.filename = get_noextension(texture.filename) + ".yvol";
+    } else {
+        load_volume(dirname + texture.filename, texture.volume_data);
+    }
+}
+
 void load_scene_textures(yocto_scene& scene, const string& dirname,
     const load_scene_options& options) {
     if (options.skip_textures) return;
@@ -275,8 +284,7 @@ void load_scene_textures(yocto_scene& scene, const string& dirname,
         scene.voltextures,
         [&dirname](yocto_voltexture& texture) {
             if (texture.filename == "" || !texture.volume_data.empty()) return;
-            auto filename = normalize_path(dirname + texture.filename);
-            load_volume(filename, texture.volume_data);
+            load_scene_voltexture(texture, dirname);
         },
         options.cancel_flag, options.run_serially);
 }
@@ -307,6 +315,45 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
             if (texture.volume_data.empty()) return;
             auto filename = normalize_path(dirname + texture.filename);
             save_volume(filename, texture.volume_data);
+        },
+        options.cancel_flag, options.run_serially);
+}
+
+// Load json meshes
+void load_scene_shapes(yocto_scene& scene, const string& dirname,
+    const load_scene_options& options) {
+    if (options.skip_meshes) return;
+
+    // load shapes
+    parallel_foreach(
+        scene.shapes,
+        [&dirname](yocto_shape& shape) {
+            if (shape.filename == "" || !shape.positions.empty()) return;
+            auto filename = normalize_path(dirname + shape.filename);
+            load_shape(filename, shape.points, shape.lines, shape.triangles,
+                shape.quads, shape.quads_positions, shape.quads_normals,
+                shape.quads_texturecoords, shape.positions, shape.normals,
+                shape.texturecoords, shape.colors, shape.radius,
+                shape.preserve_facevarying);
+        },
+        options.cancel_flag, options.run_serially);
+}
+
+// Save json meshes
+void save_scene_shapes(const yocto_scene& scene, const string& dirname,
+    const save_scene_options& options) {
+    if (options.skip_meshes) return;
+
+    // save shapes
+    parallel_foreach(
+        scene.shapes,
+        [&dirname](const yocto_shape& shape) {
+            if (shape.filename == "") return;
+            auto filename = normalize_path(dirname + shape.filename);
+            save_shape(filename, shape.points, shape.lines, shape.triangles,
+                shape.quads, shape.quads_positions, shape.quads_normals,
+                shape.quads_texturecoords, shape.positions, shape.normals,
+                shape.texturecoords, shape.colors, shape.radius);
         },
         options.cancel_flag, options.run_serially);
 }
@@ -549,9 +596,9 @@ void from_json_procedural(
     auto width  = js.value("width", 512);
     auto height = js.value("height", 512);
     auto depth  = js.value("depth", 512);
-    value.volume_data.resize({width, height, depth});
+    auto size = vec3i{width, height, depth};
     if (type == "test_volume") {
-        make_test_volume(value.volume_data, js.value("scale", 10.0f),
+        make_test_volume(value.volume_data, size, js.value("scale", 10.0f),
             js.value("exponent", 6.0f));
     } else {
         throw std::invalid_argument("unknown procedural type " + type);
@@ -1186,26 +1233,6 @@ void from_json(const json& js, yocto_scene& value, yocto_scene& scene) {
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
-// Load json meshes
-void load_json_meshes(yocto_scene& scene, const string& dirname,
-    const load_scene_options& options) {
-    if (options.skip_meshes) return;
-
-    // load shapes
-    parallel_foreach(
-        scene.shapes,
-        [&dirname](yocto_shape& shape) {
-            if (shape.filename == "" || !shape.positions.empty()) return;
-            auto filename = normalize_path(dirname + shape.filename);
-            load_shape(filename, shape.points, shape.lines, shape.triangles,
-                shape.quads, shape.quads_positions, shape.quads_normals,
-                shape.quads_texturecoords, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius,
-                shape.preserve_facevarying);
-        },
-        options.cancel_flag, options.run_serially);
-}
-
 // Load a scene in the builtin JSON format.
 void load_json_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
@@ -1227,7 +1254,7 @@ void load_json_scene(const string& filename, yocto_scene& scene,
 
         // load meshes and textures
         auto dirname = get_dirname(filename);
-        load_json_meshes(scene, dirname, options);
+        load_scene_shapes(scene, dirname, options);
         load_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
@@ -1240,25 +1267,6 @@ void load_json_scene(const string& filename, yocto_scene& scene,
     add_missing_names(scene);
     trim_memory(scene);
     update_transforms(scene);
-}
-
-// Save json meshes
-void save_json_meshes(const yocto_scene& scene, const string& dirname,
-    const save_scene_options& options) {
-    if (options.skip_meshes) return;
-
-    // save shapes
-    parallel_foreach(
-        scene.shapes,
-        [&dirname](const yocto_shape& shape) {
-            if (shape.filename == "") return;
-            auto filename = normalize_path(dirname + shape.filename);
-            save_shape(filename, shape.points, shape.lines, shape.triangles,
-                shape.quads, shape.quads_positions, shape.quads_normals,
-                shape.quads_texturecoords, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius);
-        },
-        options.cancel_flag, options.run_serially);
 }
 
 // Save a scene in the builtin JSON format.
@@ -1276,7 +1284,7 @@ void save_json_scene(const string& filename, const yocto_scene& scene,
 
         // save meshes and textures
         auto dirname = get_dirname(filename);
-        save_json_meshes(scene, dirname, options);
+        save_scene_shapes(scene, dirname, options);
         save_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());

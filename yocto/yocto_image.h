@@ -492,6 +492,7 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b) {
 // make a simple example volume
 inline void make_test_volume(
     volume<float>& vol, const vec3i& size, float scale = 10, float exponent = 6);
+inline void make_volume_preset(volume<float>& vol, const string& type);
 
 }  // namespace yocto
 
@@ -499,6 +500,11 @@ inline void make_test_volume(
 // VOLUME IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Check if an image is a preset based on filename.
+inline bool is_volume_preset_filename(const string& filename) {
+    return get_extension(filename) == "ypreset";
+}
 
 // Loads/saves a 1 channel volume.
 void load_volume(const string& filename, volume<float>& vol);
@@ -1795,7 +1801,8 @@ inline void make_image_preset(image<vec4f>& hdr, image<vec4b>& ldr, const string
 namespace yocto {
 
 // make a simple example volume
-inline void make_test_volume(volume<float>& vol, float scale, float exponent) {
+inline void make_test_volume(volume<float>& vol, const vec3i& size, float scale, float exponent) {
+    vol.resize(size);
     for (auto k = 0; k < vol.size().z; k++) {
         for (auto j = 0; j < vol.size().y; j++) {
             for (auto i = 0; i < vol.size().x; i++) {
@@ -1807,6 +1814,15 @@ inline void make_test_volume(volume<float>& vol, float scale, float exponent) {
                 vol[{i, j, k}] = clamp(value, 0.0f, 1.0f);
             }
         }
+    }
+}
+
+inline void make_volume_preset(volume<float>& vol, const string& type) {
+    auto size = vec3i{256, 256, 256};
+    if(type == "test-volume") {
+        make_test_volume(vol, size, 6, 10);
+    } else {
+        throw runtime_error("unknown volume preset " + type);
     }
 }
 
