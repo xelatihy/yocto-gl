@@ -130,10 +130,9 @@ foreach(filename "uvgrid.png")
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # procedurla images
-foreach(filename "images1.json" "images2.json")
-    get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME yimproc-${filename}
-             COMMAND ${test-yimproc} yocto::${name} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
+foreach(name "images1" "images2")
+    add_test(NAME yimproc-${name}
+             COMMAND ${test-yimproc} ${testdir}/${name}.png.ypreset ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # eyelight

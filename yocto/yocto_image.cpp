@@ -519,7 +519,7 @@ void load_json_image(const string& filename, image<vec<byte, N>>& img) {
 template <int N>
 inline void load_image_preset(
     const string& filename, image<vec<float, N>>& img) {
-    auto type = get_basename(filename);
+    auto [type, nfilename] = get_image_preset_type(filename);
     if constexpr (N == 4) {
         img.resize({1024, 1024});
         if (type == "images2")

@@ -1673,7 +1673,7 @@ inline void make_logo_image(image<vec<float, N>>& img, const string& type) {
 
 inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
     auto size = vec2i{1024, 1024};
-    if(type.find("sky") != type.npos) size = {1024, 2048};
+    if(type.find("sky") != type.npos) size = {2048, 1024};
     if (type == "grid") {
         make_grid_image(img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
     } else if (type == "checker") {
