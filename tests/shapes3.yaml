@@ -1,40 +1,40 @@
 cameras:
-  - name: default
+  - name: cameras/default.ycam
     focal_length: 0.05
     lens_aperture: 0.0
     film_width: 0.036
     film_height: 0.015
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
-  - name: front
+  - name: cameras/front.ycam
     focal_length: 0.05
     lens_aperture: 0.0
     film_width: 0.036
     film_height: 0.012
     focus_distance: 0.5433461143691007
     frame: [1.0, 0.0, 0.0, 0.0, 0.9363291775690445, -0.3511234415883917, 0.0, 0.35112344158839165, 0.9363291775690444, 0, 0.575, 1.4]
-  - name: back
+  - name: cameras/back.ycam
     focal_length: 0.05
     lens_aperture: 0.0
     film_width: 0.036
     film_height: 0.012
     focus_distance: 0.5433461143691007
     frame: [-1.0, 0.0, 0.0, 0.0, 0.9363291775690445, 0.3511234415883917, 0.0, 0.35112344158839165, -0.9363291775690444, 0, 0.575, -1.4]
-  - name: perspective-sharp
+  - name: cameras/perspective-sharp.ycam
     focal_length: 0.05
     lens_aperture: 0.0
     film_width: 0.036
     film_height: 0.015
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
-  - name: perspective-dof
+  - name: cameras/perspective-dof.ycam
     focal_length: 0.05
     lens_aperture: 0.025
     film_width: 0.036
     film_height: 0.015
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
-  - name: orthographic-sharp
+  - name: cameras/orthographic-sharp.ycam
     focal_length: 0.05
     lens_aperture: 0.0
     film_width: 0.036
@@ -42,7 +42,7 @@ cameras:
     orthographic: True
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
-  - name: orthographic-dof
+  - name: cameras/orthographic-dof.ycam
     focal_length: 0.05
     lens_aperture: 0.02
     film_width: 0.036
@@ -51,25 +51,23 @@ cameras:
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
 textures:
-  - name: test-floor
-    filename: textures/test-floor.png.ypreset
-  - name: test-sky
-    filename: textures/test-sky.hdr.ypreset
+  - name: textures/test-floor.png.ypreset
+  - name: textures/test-sky.hdr.ypreset
 materials:
-  - name: test-floor
+  - name: materials/test-floor.ymat
     diffuse: [0.7, 0.7, 0.7]
-    diffuse_texture: test-floor
-  - name: test-matte
-    diffuse: [0.7, 0.7, 0.7]
-    specular: [0, 0, 0]
-    roughness: 1
-  - name: test-hair
+    diffuse_texture: textures/test-floor.png
+  - name: materials/test-matte.ymat
     diffuse: [0.7, 0.7, 0.7]
     specular: [0, 0, 0]
     roughness: 1
-  - name: test-arealight1
+  - name: materials/test-hair.ymat
+    diffuse: [0.7, 0.7, 0.7]
+    specular: [0, 0, 0]
+    roughness: 1
+  - name: materials/test-arealight1.ymat
     emission: [20, 20, 20]
-  - name: test-arealight2
+  - name: materials/test-arealight2.ymat
     emission: [20, 20, 20]
 shapes:
   - name: test-floor
@@ -89,50 +87,50 @@ shapes:
   - name: test-arealight2
     filename: shapes/test-arealight2.ply.ypreset
 instances:
-  - name: test-floor
+  - name: instances/test-floor.yist
     shape: test-floor
-    material: test-floor
+    material: materials/test-floor.ymat
   - name: test-arealight1
     shape: test-arealight1
-    material: test-arealight1
+    material: materials/test-arealight1.ymat
     frame: [-0.8944271909999159, 0.0, -0.4472135954999579, 0.27562473083535527, 0.7874992309581578, -0.5512494616707105, 0.3521803625302495, -0.6163156344279367, -0.704360725060499, -0.4, 0.8, 0.8]
   - name: test-arealight2
     shape: test-arealight2
-    material: test-arealight2
+    material: materials/test-arealight2.ymat
     frame: [-0.8944271909999159, -0.0, 0.4472135954999579, -0.27562473083535527, 0.7874992309581578, -0.5512494616707105, -0.3521803625302495, -0.6163156344279367, -0.704360725060499, 0.4, 0.8, 0.8]
-  - name: test-sphere_test-matte
+  - name: instances/test-sphere_materials/test-matte.ymat.yist
     shape: test-sphere
-    material: test-matte
+    material: materials/test-matte.ymat
     frame: [0.5, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: test-hairball1_test-hair
+  - name: instances/test-hairball1_materials/test-hair.ymat.yist
     shape: test-hairball1
-    material: test-hair
+    material: materials/test-hair.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: test-hairball2_test-hair
+  - name: instances/test-hairball2_materials/test-hair.ymat.yist
     shape: test-hairball2
-    material: test-hair
+    material: materials/test-hair.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: test-hairball3_test-hair
+  - name: instances/test-hairball3_materials/test-hair.ymat.yist
     shape: test-hairball3
-    material: test-hair
+    material: materials/test-hair.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: test-sphere_test-matte
+  - name: instances/test-sphere_materials/test-matte.ymat.yist
     shape: test-sphere
-    material: test-matte
+    material: materials/test-matte.ymat
     frame: [0.5, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: test-hairball-interior_test-hair
+  - name: instances/test-hairball-interior_materials/test-hair.ymat.yist
     shape: test-hairball-interior
-    material: test-hair
+    material: materials/test-hair.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: test-hairball-interior_test-hair
+  - name: instances/test-hairball-interior_materials/test-hair.ymat.yist
     shape: test-hairball-interior
-    material: test-hair
+    material: materials/test-hair.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: test-hairball-interior_test-hair
+  - name: instances/test-hairball-interior_materials/test-hair.ymat.yist
     shape: test-hairball-interior
-    material: test-hair
+    material: materials/test-hair.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
 environments:
   - name: test-sky
     emission: [2, 2, 2]
-    emission_texture: test-sky
+    emission_texture: textures/test-sky.hdr

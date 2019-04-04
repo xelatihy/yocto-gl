@@ -244,7 +244,6 @@ inline bool draw_opengl_widgets_scene_inspector(
     const opengl_window& win, yocto_texture& value, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_opengl_widget(win, "name", value.name);
-    edited += draw_textinput_opengl_widget(win, "path", value.filename);
     draw_label_opengl_widget(win, "hdr_image", "%d x %d",
         value.hdr_image.size().x, value.hdr_image.size().y);
     draw_label_opengl_widget(win, "ldr_image", "%d x %d",

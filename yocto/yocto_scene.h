@@ -104,7 +104,6 @@ struct yocto_camera {
 // normal maps.
 struct yocto_texture {
     string       name      = "";
-    string       filename  = "";
     image<vec4f> hdr_image = {};
     image<vec4b> ldr_image = {};
 };
@@ -113,7 +112,6 @@ struct yocto_texture {
 // above for other propoerties.
 struct yocto_voltexture {
     string        name        = "";
-    string        filename    = "";
     volume<float> volume_data = {};
 };
 

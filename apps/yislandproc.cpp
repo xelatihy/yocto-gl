@@ -150,8 +150,8 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
             scene.instances.push_back(instance);
         } else if (ljs.at("type") == "dome") {
             auto texture     = yocto_texture{};
-            texture.filename = ljs.at("map");
-            load_image(texture.filename, texture.hdr_image);
+            texture.name = ljs.at("map");
+            load_image(texture.name, texture.hdr_image);
             scene.textures.push_back(texture);
             auto environment     = yocto_environment{};
             environment.emission = ljs.at("color").get<vec4f>().xyz *
@@ -279,7 +279,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         int add_texture(const string& mapname) {
             if (tmap.find(mapname) == tmap.end()) {
                 scene.textures.push_back({});
-                scene.textures.back().filename = mapname;
+                scene.textures.back().name = mapname;
                 tmap[mapname]                  = scene.textures.size() - 1;
             }
             return tmap.at(mapname);
@@ -998,8 +998,8 @@ int main(int argc, char** argv) {
     // change texture names
     if (uniform_txt) {
         for (auto& texture : scene.textures) {
-            auto ext = get_extension(texture.filename);
-            if (is_hdr_filename(texture.filename)) {
+            auto ext = get_extension(texture.name);
+            if (is_hdr_filename(texture.name)) {
                 if (ext == "hdr" || ext == "exr") continue;
                 if (ext == "pfm") {
                     replace_extension(filename, "hdr");

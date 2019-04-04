@@ -144,14 +144,16 @@ int main(int argc, char** argv) {
     // add missing textures names if necessary
     if (!texture_directory.empty() && texture_directory.back() != '/')
         texture_directory += '/';
-    if (get_extension(output) == "json") {
+    if (get_extension(output) == "yaml") {
+        auto tid = 0;
         for (auto& texture : scene.textures) {
-            if (texture.filename.empty()) {
-                texture.filename = texture_directory + texture.name + ".ply";
+            if (texture.name.empty()) {
+                texture.name = texture_directory + "ytexture#" + std::to_string(tid) + ".png";
             } else if (texture_filenames) {
-                texture.filename = texture_directory +
-                                   get_filename(texture.filename);
+                texture.name = texture_directory +
+                                   get_filename(texture.name);
             }
+            tid++;
         }
     }
 

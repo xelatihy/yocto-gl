@@ -119,21 +119,13 @@ int main(int argc, char** argv) {
     // change texture names
     if (uniform_txt) {
         for (auto& texture : scene.textures) {
-            auto ext = get_extension(texture.filename);
-            if (is_hdr_filename(texture.filename)) {
-                if (ext == "hdr" || ext == "exr") continue;
-                if (ext == "pfm") {
-                    replace_extension(filename, "hdr");
-                } else {
-                    throw runtime_error("unknown texture format " + ext);
-                }
+            auto ext = get_extension(texture.name);
+            if (is_hdr_filename(texture.name)) {
+                if (ext == "hdr") continue;
+                replace_extension(filename, "hdr");
             } else {
-                if (ext == "png" || ext == "jpg") continue;
-                if (ext == "tga" || ext == "bmp") {
-                    replace_extension(filename, "png");
-                } else {
-                    throw runtime_error("unknown texture format " + ext);
-                }
+                if (ext == "png") continue;
+                replace_extension(filename, "png");
             }
         }
     }
