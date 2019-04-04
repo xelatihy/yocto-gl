@@ -229,7 +229,19 @@ inline T interpolate_bezier_derivative(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Load/Save a mesh
+// Return the shape preset type and the remaining filename
+inline bool is_shape_preset_filename(const string& filename) {
+    return get_extension(filename) == "ypreset";
+}
+inline pair<string, string> get_shape_preset_type(const string& filename) {
+    if(get_extension(filename) == "ypreset") {
+        return {get_noextension(get_noextension(get_filename(filename))), get_noextension(filename)};
+    } else {
+        return {"", filename};
+    }
+}
+
+// Load/Save a shape
 void load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,

@@ -205,6 +205,14 @@ template <int N>
         load_image(filename, ldr);
     }
 }
+template <int N>
+inline void save_image(const string& filename, const image<vec<float, N>>& hdr, const image<vec<byte, N>>& ldr) {
+    if(!hdr.empty()) {
+        save_image(filename, hdr);
+    } else {
+        save_image(filename, ldr);
+    }
+}
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name

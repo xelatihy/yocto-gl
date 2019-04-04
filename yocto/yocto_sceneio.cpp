@@ -285,6 +285,16 @@ void load_scene_textures(yocto_scene& scene, const string& dirname,
         options.cancel_flag, options.run_serially);
 }
 
+void save_scene_texture(const yocto_texture& texture, const string& dirname) {
+    save_image(
+        dirname + texture.filename, texture.hdr_image, texture.ldr_image);
+}
+
+void save_scene_voltexture(
+    const yocto_voltexture& texture, const string& dirname) {
+    save_volume(dirname + texture.filename, texture.volume_data);
+}
+
 // helper to save textures
 void save_scene_textures(const yocto_scene& scene, const string& dirname,
     const save_scene_options& options) {
@@ -295,12 +305,7 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
         scene.textures,
         [&dirname](const yocto_texture& texture) {
             if (texture.hdr_image.empty() && texture.ldr_image.empty()) return;
-            auto filename = normalize_path(dirname + texture.filename);
-            if (is_hdr_filename(filename)) {
-                save_image(filename, texture.hdr_image);
-            } else {
-                save_image(filename, texture.ldr_image);
-            }
+            save_scene_texture(texture, dirname);
         },
         options.cancel_flag, options.run_serially);
 
@@ -309,10 +314,33 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
         scene.voltextures,
         [&dirname](const yocto_voltexture& texture) {
             if (texture.volume_data.empty()) return;
-            auto filename = normalize_path(dirname + texture.filename);
-            save_volume(filename, texture.volume_data);
+            save_scene_voltexture(texture, dirname);
         },
         options.cancel_flag, options.run_serially);
+}
+
+void load_scene_shape(yocto_shape& shape, const string& dirname) {
+    if (is_shape_preset_filename(shape.filename)) {
+        auto [type, nfilename] = get_shape_preset_type(shape.filename);
+        make_shape_preset(shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.quads_positions, shape.quads_normals,
+            shape.quads_texturecoords, shape.positions, shape.normals,
+            shape.texturecoords, shape.colors, shape.radius, type);
+        shape.filename = nfilename;
+    } else {
+        load_shape(dirname + shape.filename, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.quads_positions,
+            shape.quads_normals, shape.quads_texturecoords, shape.positions,
+            shape.normals, shape.texturecoords, shape.colors, shape.radius,
+            shape.preserve_facevarying);
+    }
+}
+
+void save_scene_shape(const yocto_shape& shape, const string& dirname) {
+    save_shape(dirname + shape.filename, shape.points, shape.lines,
+        shape.triangles, shape.quads, shape.quads_positions,
+        shape.quads_normals, shape.quads_texturecoords, shape.positions,
+        shape.normals, shape.texturecoords, shape.colors, shape.radius);
 }
 
 // Load json meshes
@@ -325,12 +353,7 @@ void load_scene_shapes(yocto_scene& scene, const string& dirname,
         scene.shapes,
         [&dirname](yocto_shape& shape) {
             if (shape.filename == "" || !shape.positions.empty()) return;
-            auto filename = normalize_path(dirname + shape.filename);
-            load_shape(filename, shape.points, shape.lines, shape.triangles,
-                shape.quads, shape.quads_positions, shape.quads_normals,
-                shape.quads_texturecoords, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius,
-                shape.preserve_facevarying);
+            load_scene_shape(shape, dirname);
         },
         options.cancel_flag, options.run_serially);
 }
@@ -345,11 +368,7 @@ void save_scene_shapes(const yocto_scene& scene, const string& dirname,
         scene.shapes,
         [&dirname](const yocto_shape& shape) {
             if (shape.filename == "") return;
-            auto filename = normalize_path(dirname + shape.filename);
-            save_shape(filename, shape.points, shape.lines, shape.triangles,
-                shape.quads, shape.quads_positions, shape.quads_normals,
-                shape.quads_texturecoords, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius);
+            save_scene_shape(shape, dirname);
         },
         options.cancel_flag, options.run_serially);
 }
@@ -475,7 +494,7 @@ void from_json_procedural(
     auto is_hdr = false;
     auto width  = js.value("width", 1024);
     auto height = js.value("height", 1024);
-    auto size = vec2i{width, height};
+    auto size   = vec2i{width, height};
     if (type == "sky" && width < height * 2) width = height * 2;
     value.hdr_image.resize({width, height});
     if (type == "grid") {
@@ -493,7 +512,8 @@ void from_json_procedural(
     } else if (type == "uvramp") {
         make_uvramp_image(value.hdr_image, size);
     } else if (type == "gammaramp") {
-        make_gammaramp_image(value.hdr_image, size, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_gammaramp_image(value.hdr_image, size,
+            js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}));
     } else if (type == "blackbodyramp") {
         make_blackbodyramp_image(value.hdr_image, size);
@@ -506,7 +526,8 @@ void from_json_procedural(
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr = true;
     } else if (type == "noise") {
-        make_noise_image(value.hdr_image, size, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_noise_image(value.hdr_image, size,
+            js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("wrap", true));
     } else if (type == "fbm") {
@@ -515,7 +536,8 @@ void from_json_procedural(
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        make_ridge_image(value.hdr_image, size, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_ridge_image(value.hdr_image, size,
+            js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
@@ -592,7 +614,7 @@ void from_json_procedural(
     auto width  = js.value("width", 512);
     auto height = js.value("height", 512);
     auto depth  = js.value("depth", 512);
-    auto size = vec3i{width, height, depth};
+    auto size   = vec3i{width, height, depth};
     if (type == "test_volume") {
         make_test_volume(value.volume_data, size, js.value("scale", 10.0f),
             js.value("exponent", 6.0f));
@@ -721,7 +743,8 @@ void from_json(const json& js, yocto_material& value, yocto_scene& scene) {
         js.value("normal_texture", json{}), scene.textures);
     value.volume_density_texture = ref_from_json(
         js.value("volume_density_texture", json{}), scene.voltextures);
-    value.displacement_scale     = js.value("displacement_scale", def.displacement_scale);
+    value.displacement_scale = js.value(
+        "displacement_scale", def.displacement_scale);
     if (js.count("!!proc")) from_json_procedural(js.at("!!proc"), value, scene);
 }
 
