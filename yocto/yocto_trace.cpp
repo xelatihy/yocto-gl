@@ -1520,10 +1520,41 @@ std::tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(
             // scattering
             weight /= min(albedo, 0.95f);
 
-            outgoing  = -direction;
-            direction = sample_next_direction_volume(scene, lights, bvh,
-                position, volume_albedo, volume_phaseg, outgoing, 0.5f, rng,
-                weight);
+            outgoing = -direction;
+            // direction = sample_next_direction_volume(scene, lights, bvh,
+            //     position, volume_albedo, volume_phaseg, outgoing, 0.5f, rng,
+            //     weight);
+            {
+                auto next_direction     = zero3f;
+                auto next_direction_pdf = 0.0f;
+
+                if (get_random_float(rng) < 0.5f) {
+                    next_direction = sample_lights_direction(scene, lights, bvh,
+                        position, get_random_float(rng), get_random_float(rng),
+                        get_random_vec2f(rng));
+                } else {
+                    next_direction = sample_phase_function(
+                        volume_phaseg, get_random_vec2f(rng));
+                    next_direction = make_basis_fromz(-outgoing) *
+                                     next_direction;
+                }
+                auto cos_theta      = dot(outgoing, next_direction);
+                auto phase_function = evaluate_phase_function(
+                    cos_theta, volume_phaseg);
+                next_direction_pdf = 0.5f * phase_function +
+                                     0.5f * sample_lights_direction_pdf(scene,
+                                                lights, bvh, position,
+                                                next_direction);
+
+                if (next_direction == zero3f || next_direction_pdf == 0 ||
+                    phase_function == 0.0f)
+                    break;
+                else
+                    weight *= volume_albedo * phase_function /
+                              next_direction_pdf;
+
+                direction = next_direction;
+            }
         } else {
             // absorption
             radiance += weight * volume_emission;
