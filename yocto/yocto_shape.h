@@ -2804,20 +2804,16 @@ inline void make_sphere_fvshape(vector<vec4i>& quads_positions,
     _transform_points_inplace(frame, positions);
 }
 
-extern const vector<vec3f> suzanne_positions;
-extern const vector<vec4i> suzanne_quads;
-extern const vector<vec3i> suzanne_triangles;
+const vector<vec3f>& get_suzanne_positions();
+const vector<vec4i>& get_suzanne_quads();
 
 // Make a suzanne monkey model for testing.
 template <typename T>
 inline void make_suzanne_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, T size, const frame<T, 3>& frame) {
-    positions = suzanne_positions;
+    positions = get_suzanne_positions();
     for (auto& p : positions) p *= size / 2;
-    quads = suzanne_quads;
-    for (auto& t : suzanne_triangles) {
-        quads.push_back({t.x, t.y, t.z, t.z});
-    }
+    quads = get_suzanne_quads();
     _transform_points_inplace(frame, positions);
 }
 
