@@ -83,7 +83,8 @@ void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals) {
 }
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape& shape, int subdivision_level, bool catmull_clark, bool compute_normals) {
+void subdivide_shape(yocto_shape& shape, int subdivision_level,
+    bool catmull_clark, bool compute_normals) {
     if (!subdivision_level) return;
     if (!shape.points.empty()) {
         throw runtime_error("point subdivision not supported");
@@ -131,8 +132,8 @@ void subdivide_shape(yocto_shape& shape, int subdivision_level, bool catmull_cla
     }
 }
 // Apply displacement to a shape
-void displace_shape(
-    yocto_shape& shape, const yocto_texture& displacement, float scale, bool compute_normals) {
+void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
+    float scale, bool compute_normals) {
     if (shape.texturecoords.empty()) {
         throw runtime_error("missing texture coordinates");
         return;
@@ -180,22 +181,23 @@ void displace_shape(
 // Updates tesselation.
 void tesselate_subdivs(yocto_scene& scene) {
     for (auto& subdiv : scene.subdivs) {
-        auto& shape = scene.shapes[subdiv.tesselated_shape];
-        shape.positions = subdiv.positions;
-        shape.normals = subdiv.normals;
-        shape.texturecoords = subdiv.texturecoords;
-        shape.colors = subdiv.colors;
-        shape.radius = subdiv.radius;
-        shape.points = subdiv.points;
-        shape.lines = subdiv.lines;
-        shape.triangles = subdiv.triangles;
-        shape.quads = subdiv.quads;
-        shape.quads_positions = subdiv.quads_positions;
-        shape.quads_normals = subdiv.quads_normals;
+        auto& shape               = scene.shapes[subdiv.tesselated_shape];
+        shape.positions           = subdiv.positions;
+        shape.normals             = subdiv.normals;
+        shape.texturecoords       = subdiv.texturecoords;
+        shape.colors              = subdiv.colors;
+        shape.radius              = subdiv.radius;
+        shape.points              = subdiv.points;
+        shape.lines               = subdiv.lines;
+        shape.triangles           = subdiv.triangles;
+        shape.quads               = subdiv.quads;
+        shape.quads_positions     = subdiv.quads_positions;
+        shape.quads_normals       = subdiv.quads_normals;
         shape.quads_texturecoords = subdiv.quads_texturecoords;
-        shape.lines = subdiv.lines;
+        shape.lines               = subdiv.lines;
         if (subdiv.subdivision_level) {
-            subdivide_shape(shape, subdiv.subdivision_level, subdiv.catmull_clark, subdiv.compute_normals);
+            subdivide_shape(shape, subdiv.subdivision_level,
+                subdiv.catmull_clark, subdiv.compute_normals);
         }
         if (subdiv.displacement_texture >= 0) {
             displace_shape(shape, scene.textures[subdiv.displacement_texture],
@@ -1369,7 +1371,7 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
     auto offset_voltextures  = scene.voltextures.size();
     auto offset_materials    = scene.materials.size();
     auto offset_shapes       = scene.shapes.size();
-    auto offset_subdivs       = scene.subdivs.size();
+    auto offset_subdivs      = scene.subdivs.size();
     auto offset_instances    = scene.instances.size();
     auto offset_environments = scene.environments.size();
     auto offset_nodes        = scene.nodes.size();
@@ -1402,8 +1404,8 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
         if (material.volume_density_texture >= 0)
             material.volume_density_texture += offset_voltextures;
     }
-    for (auto subdiv_id = offset_subdivs;
-         subdiv_id < scene.subdivs.size(); subdiv_id++) {
+    for (auto subdiv_id = offset_subdivs; subdiv_id < scene.subdivs.size();
+         subdiv_id++) {
         auto& subdiv = scene.subdivs[subdiv_id];
         if (subdiv.tesselated_shape >= 0)
             subdiv.tesselated_shape += offset_shapes;

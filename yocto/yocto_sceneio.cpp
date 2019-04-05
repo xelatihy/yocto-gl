@@ -351,10 +351,10 @@ void load_scene_subdiv(yocto_subdiv& subdiv, const string& dirname) {
 }
 
 void save_scene_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
-    save_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines, subdiv.triangles,
-        subdiv.quads, subdiv.quads_positions, subdiv.quads_normals,
-        subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
-        subdiv.texturecoords, subdiv.colors, subdiv.radius);
+    save_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines,
+        subdiv.triangles, subdiv.quads, subdiv.quads_positions,
+        subdiv.quads_normals, subdiv.quads_texturecoords, subdiv.positions,
+        subdiv.normals, subdiv.texturecoords, subdiv.colors, subdiv.radius);
 }
 
 // Load json meshes
@@ -370,9 +370,10 @@ void load_scene_shapes(yocto_scene& scene, const string& dirname,
 
     // load subdivs
     parallel_foreach(
-                     scene.subdivs,
-                     [&dirname](yocto_subdiv& subdiv) { load_scene_subdiv(subdiv, dirname); },
-                     options.cancel_flag, options.run_serially);
+        scene.subdivs,
+        [&dirname](
+            yocto_subdiv& subdiv) { load_scene_subdiv(subdiv, dirname); },
+        options.cancel_flag, options.run_serially);
 }
 
 // Save json meshes
@@ -388,10 +389,11 @@ void save_scene_shapes(const yocto_scene& scene, const string& dirname,
         options.cancel_flag, options.run_serially);
     // save subdivs
     parallel_foreach(
-                     scene.subdivs,
-                     [&dirname](
-                                const yocto_subdiv& subdivs) { save_scene_subdiv(subdivs, dirname); },
-                     options.cancel_flag, options.run_serially);
+        scene.subdivs,
+        [&dirname](const yocto_subdiv& subdivs) {
+            save_scene_subdiv(subdivs, dirname);
+        },
+        options.cancel_flag, options.run_serially);
 }
 
 // check if it is really face varying
@@ -1025,8 +1027,8 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
         print_first(fs, "uri", subdiv.uri);
         print_optional(fs, "subdivision_level", subdiv.subdivision_level,
             def_subdiv.subdivision_level);
-        print_optional(
-            fs, "catmull_clark", subdiv.catmull_clark, def_subdiv.catmull_clark);
+        print_optional(fs, "catmull_clark", subdiv.catmull_clark,
+            def_subdiv.catmull_clark);
         print_optional(fs, "compute_normals", subdiv.compute_normals,
             def_subdiv.compute_normals);
         print_optional(fs, "preserve_facevarying", subdiv.preserve_facevarying,
@@ -1127,11 +1129,11 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
 
         // add object if needed
         void add_shape() {
-            auto shape = yocto_shape{};
-            shape.uri  = oname + gname;
-            preserve_facevarying_now =
-                options.obj_preserve_face_varying ||
-                shape.uri.find("[yocto::facevarying]") != string::npos;
+            auto shape               = yocto_shape{};
+            shape.uri                = oname + gname;
+            preserve_facevarying_now = options.obj_preserve_face_varying ||
+                                       shape.uri.find("[yocto::facevarying]") !=
+                                           string::npos;
             scene.shapes.push_back(shape);
             auto instance     = yocto_instance{};
             instance.uri      = shape.uri;
@@ -1314,7 +1316,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
                 scene.shapes.back().lines.empty()) {
                 add_shape();
             }
-            auto& shape                = scene.shapes.back();
+            auto& shape = scene.shapes.back();
             add_verts(verts, shape);
             for (auto i = 1; i < verts.size(); i++)
                 shape.lines.push_back(
@@ -1326,7 +1328,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
                 scene.shapes.back().points.empty()) {
                 add_shape();
             }
-            auto& shape                = scene.shapes.back();
+            auto& shape = scene.shapes.back();
             add_verts(verts, shape);
             for (auto i = 0; i < verts.size(); i++)
                 shape.points.push_back(vertex_map.at(verts[i]));

@@ -183,10 +183,10 @@ struct yocto_shape {
 };
 
 // Shape data represented as an indexed meshes of elements.
-// This object exists only to allow for further subdivision. The current 
+// This object exists only to allow for further subdivision. The current
 // subdiviion data is stored in the pointed to shape, so the rest of the system
-// does not need to known about subdivs. While this is mostly helpful for 
-// subdivision surfaces, we store here all data that we possibly may want to 
+// does not need to known about subdivs. While this is mostly helpful for
+// subdivision surfaces, we store here all data that we possibly may want to
 // subdivide, for later use.
 struct yocto_subdiv {
     // shape data
@@ -202,8 +202,8 @@ struct yocto_subdiv {
     bool preserve_facevarying = false;
 
     // displacement information
-    int displacement_texture = -1;
-    float displacement_scale = 1;
+    int   displacement_texture = -1;
+    float displacement_scale   = 1;
 
     // primitives
     vector<int>   points    = {};
@@ -290,7 +290,7 @@ struct yocto_scene {
     vector<yocto_material>    materials    = {};
     vector<yocto_texture>     textures     = {};
     vector<yocto_environment> environments = {};
-    vector<yocto_subdiv>      subdivs       = {};
+    vector<yocto_subdiv>      subdivs      = {};
     vector<yocto_voltexture>  voltextures  = {};
     vector<yocto_scene_node>  nodes        = {};
     vector<yocto_animation>   animations   = {};
@@ -353,8 +353,10 @@ bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     bool find_any = false, bool non_rigid_frames = true);
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape& shape, int subdivision_level, bool catmull_clark, bool compute_normals);
-void displace_shape(yocto_shape& shape, const yocto_texture& displacement, float scale, bool compute_normals);
+void subdivide_shape(yocto_shape& shape, int subdivision_level,
+    bool catmull_clark, bool compute_normals);
+void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
+    float scale, bool compute_normals);
 void tesselate_subdivs(yocto_scene& scene);
 
 // Add missing names, normals, tangents and hierarchy.

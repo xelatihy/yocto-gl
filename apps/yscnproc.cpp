@@ -47,16 +47,16 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
     // command line parameters
-    auto skip_textures  = false;
-    auto skip_meshes    = false;
-    auto mesh_filenames = false;
-    auto shape_directory = "shapes/"s;
+    auto skip_textures    = false;
+    auto skip_meshes      = false;
+    auto mesh_filenames   = false;
+    auto shape_directory  = "shapes/"s;
     auto subdiv_directory = "subdivs/"s;
-    auto uniform_txt    = false;
-    auto validate       = false;
-    auto print_info     = false;
-    auto output         = "out.json"s;
-    auto filename       = "scene.json"s;
+    auto uniform_txt      = false;
+    auto validate         = false;
+    auto print_info       = false;
+    auto output           = "out.json"s;
+    auto filename         = "scene.json"s;
 
     // parse command line
     auto parser = CLI::App{"Process scene"};
@@ -157,11 +157,11 @@ int main(int argc, char** argv) {
         auto sid = 0;
         for (auto& subdiv : scene.subdivs) {
             if (!subdiv.quads_positions.empty()) {
-                subdiv.uri = subdiv_directory + "subdiv_" + std::to_string(sid) +
-                            ".obj";
+                subdiv.uri = subdiv_directory + "subdiv_" +
+                             std::to_string(sid) + ".obj";
             } else {
-                subdiv.uri = subdiv_directory + "subdiv_" + std::to_string(sid) +
-                            ".ply";
+                subdiv.uri = subdiv_directory + "subdiv_" +
+                             std::to_string(sid) + ".ply";
             }
             sid++;
         }

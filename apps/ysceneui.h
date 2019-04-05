@@ -85,8 +85,8 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_subdiv& value,
     pair<type_index, int>& sel) {
-    draw_opengl_widgets_scene_tree(win, "shapes", scene,
-        value.tesselated_shape, scene.shapes, sel);
+    draw_opengl_widgets_scene_tree(
+        win, "shapes", scene, value.tesselated_shape, scene.shapes, sel);
     draw_opengl_widgets_scene_tree(win, "displament", scene,
         value.displacement_texture, scene.textures, sel);
 }
@@ -333,8 +333,8 @@ inline bool draw_opengl_widgets_scene_inspector(
         win, "compute_normals", value.compute_normals);
     edited += draw_checkbox_opengl_widget(
         win, "preserve_facevarying", value.preserve_facevarying);
-    edited += draw_combobox_opengl_widget(win, "tesselated_shape",
-        value.tesselated_shape, scene.textures, true);
+    edited += draw_combobox_opengl_widget(
+        win, "tesselated_shape", value.tesselated_shape, scene.textures, true);
     edited += draw_combobox_opengl_widget(win, "displacement_texture",
         value.displacement_texture, scene.textures, true);
     edited += draw_slider_opengl_widget(
