@@ -3298,7 +3298,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
             print_value(fs, " ]\n");
         } else {
             println_values(fs, "    Shape \"plymesh\" \"string filename\" [\"" +
-                                   shape.name + "\"]");
+                                   replace_extension(shape.name, "ply") + "\"]");
         }
         println_values(fs, "  TransformEnd");
         println_values(fs, "AttributeEnd");
@@ -3318,9 +3318,7 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
         // save meshes
         auto dirname = get_dirname(filename);
         for (auto& shape : scene.shapes) {
-            if (shape.name == "") continue;
-            auto filename = normalize_path(dirname + shape.name);
-            save_shape(filename, shape.points, shape.lines, shape.triangles,
+            save_shape(replace_extension(dirname + shape.name, "ply"), shape.points, shape.lines, shape.triangles,
                 shape.quads, shape.quads_positions, shape.quads_normals,
                 shape.quads_texturecoords, shape.positions, shape.normals,
                 shape.texturecoords, shape.colors, shape.radius);
