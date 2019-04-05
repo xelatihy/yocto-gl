@@ -53,6 +53,7 @@ cameras:
 textures:
   - uri: ::yocto::test-floor::textures/test-floor.png
   - uri: ::yocto::test-uvgrid::textures/test-uvgrid.png
+  - uri: ::yocto::test-fbm-displacement::textures/test-fbm-displacement.png
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
@@ -63,14 +64,14 @@ materials:
     specular: [0.04, 0.04, 0.04]
     roughness: 0.1
     diffuse_texture: textures/test-uvgrid.png
+  - uri: materials/test-matte.yaml
+    diffuse: [0.7, 0.7, 0.7]
+    specular: [0, 0, 0]
+    roughness: 1
   - uri: materials/test-plastic-sharp.yaml
     diffuse: [0.5, 0.5, 0.7]
     specular: [0.04, 0.04, 0.04]
     roughness: 0.01
-  - uri: materials/test-matte-displaced.yaml
-    diffuse: [0.7, 0.7, 0.7]
-    specular: [0, 0, 0]
-    roughness: 1
   - uri: materials/test-arealight1.yaml
     emission: [20, 20, 20]
   - uri: materials/test-arealight2.yaml
@@ -85,6 +86,11 @@ shapes:
   - uri: ::yocto::test-arealight1::shapes/test-arealight1.ply
   - uri: ::yocto::test-arealight2::shapes/test-arealight2.ply
 subdivs:
+  - uri: ::yocto::test-sphere-displaced::subdivs/test-sphere-displaced.obj
+    tesselated_shape: shapes/test-sphere-displaced.obj
+    preserve_facevarying: True
+    displacement_texture: textures/test-fbm-displacement.png
+    displacement_scale: 0.025
   - uri: ::yocto::test-cube-subdiv::subdivs/test-cube-subdiv.obj
     tesselated_shape: shapes/test-cube-subdiv.obj
     subdivision_level: 4
@@ -116,9 +122,9 @@ instances:
     shape: shapes/test-suzanne-subdiv.obj
     material: materials/test-plastic-sharp.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - uri: instances/test-sphere-displaced_test-matte-displaced.yaml
+  - uri: instances/test-sphere-displaced_test-matte.yaml
     shape: shapes/test-sphere-displaced.obj
-    material: materials/test-matte-displaced.yaml
+    material: materials/test-matte.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - uri: instances/test-bunny_test-uvgrid.yaml
     shape: shapes/test-bunny.obj
