@@ -448,7 +448,7 @@ def make_tests():
             if not scene[name]: return
             f.write(name + ":\n")
             for obj in scene[name]:
-                f.write('  - name: ' + obj['uri'] + '\n')
+                f.write('  - uri: ' + obj['uri'] + '\n')
                 for key, value in obj.items():
                     if key == 'uri': continue
                     f.write('    ' + key + ': ' + str(value) + '\n')
