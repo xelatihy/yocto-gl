@@ -2726,12 +2726,18 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             }
         }
 
-        float pbrt_remap_roughness(float roughness) {
+        float get_pbrt_roughness(
+            float uroughness, float vroughness, bool remap) {
+            auto roughness = (uroughness + vroughness) / 2;
             // from pbrt code
-            roughness = max(roughness, 1e-3f);
-            float x   = log(roughness);
-            return 1.62142f + 0.819955f * x + 0.1734f * x * x +
-                   0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
+            if (remap) {
+                roughness = max(roughness, 1e-3f);
+                auto x    = log(roughness);
+                roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
+                            0.0171201f * x * x * x +
+                            0.000640711f * x * x * x * x;
+            }
+            return sqrt(roughness);
         }
 
         void camera(const pbrt_camera& pcamera, const pbrt_context& ctx) {
@@ -2955,12 +2961,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto op     = vec3f{0, 0, 0};
                 auto op_txt = -1;
                 get_scaled_texture3f(uber.opacity, op, op_txt);
-                material.opacity = (op.x + op.y + op.z) / 3;
-                material.roughness =
-                    (uber.uroughness.value + uber.vroughness.value) / 2;
-                if (uber.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.opacity   = (op.x + op.y + op.z) / 3;
+                material.roughness = get_pbrt_roughness(uber.uroughness.value,
+                    uber.vroughness.value, uber.remaproughness);
             } else if (holds_alternative<pbrt_plastic_material>(pmaterial)) {
                 auto& plastic = get<pbrt_plastic_material>(pmaterial);
                 get_scaled_texture3f(
@@ -2968,12 +2971,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // get_scaled_texture3f(
                 //     plastic.Ks, material.specular,
                 //     material.specular_texture);
-                material.specular = {0.04f, 0.04f, 0.04f};
-                material.roughness =
-                    (plastic.uroughness.value + plastic.vroughness.value) / 2;
-                if (plastic.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.specular  = {0.04f, 0.04f, 0.04f};
+                material.roughness = get_pbrt_roughness(
+                    plastic.uroughness.value, plastic.vroughness.value,
+                    plastic.remaproughness);
             } else if (holds_alternative<pbrt_translucent_material>(
                            pmaterial)) {
                 auto& translucent = get<pbrt_translucent_material>(pmaterial);
@@ -2982,12 +2983,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // get_scaled_texture3f(translucent.Ks, material.specular,
                 //     material.specular_texture);
                 material.specular  = {0.04f, 0.04f, 0.04f};
-                material.roughness = (translucent.uroughness.value +
-                                         translucent.vroughness.value) /
-                                     2;
-                if (translucent.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.roughness = get_pbrt_roughness(
+                    translucent.uroughness.value, translucent.vroughness.value,
+                    translucent.remaproughness);
             } else if (holds_alternative<pbrt_matte_material>(pmaterial)) {
                 auto& matte = get<pbrt_matte_material>(pmaterial);
                 get_scaled_texture3f(
@@ -3005,12 +3003,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto  eta_texture = -1, k_texture = -1;
                 get_scaled_texture3f(metal.eta, eta, eta_texture);
                 get_scaled_texture3f(metal.k, k, k_texture);
-                material.specular = pbrt_fresnel_metal(1, eta, k);
-                material.roughness =
-                    (metal.uroughness.value + metal.vroughness.value) / 2;
-                if (metal.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.specular  = pbrt_fresnel_metal(1, eta, k);
+                material.roughness = get_pbrt_roughness(metal.uroughness.value,
+                    metal.vroughness.value, metal.remaproughness);
             } else if (holds_alternative<pbrt_substrate_material>(pmaterial)) {
                 auto& substrate = get<pbrt_substrate_material>(pmaterial);
                 get_scaled_texture3f(
@@ -3018,13 +3013,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // get_scaled_texture3f(
                 //     substrate.Ks, material.specular,
                 //     material.specular_texture);
-                material.specular = {0.04f, 0.04f, 0.04f};
-                material.roughness =
-                    (substrate.uroughness.value + substrate.vroughness.value) /
-                    2;
-                if (substrate.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.specular  = {0.04f, 0.04f, 0.04f};
+                material.roughness = get_pbrt_roughness(
+                    substrate.uroughness.value, substrate.vroughness.value,
+                    substrate.remaproughness);
             } else if (holds_alternative<pbrt_glass_material>(pmaterial)) {
                 // auto& glass       = get<pbrt_glass_material>(pmaterial);
                 material.specular     = {0.04f, 0.04f, 0.04f};
@@ -3056,12 +3048,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // get_scaled_texture3f(kdsubdurface.Kr, material.specular,
                 //     material.specular_texture);
                 material.specular  = {0.04f, 0.04f, 0.04f};
-                material.roughness = (kdsubdurface.uroughness.value +
-                                         kdsubdurface.vroughness.value) /
-                                     2;
-                if (kdsubdurface.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.roughness = get_pbrt_roughness(
+                    kdsubdurface.uroughness.value,
+                    kdsubdurface.vroughness.value, kdsubdurface.remaproughness);
                 if (verbose)
                     printf("kdsubsurface material not properly supported\n");
             } else if (holds_alternative<pbrt_subsurface_material>(pmaterial)) {
@@ -3086,13 +3075,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                         plastic.Kd, material.diffuse, material.diffuse_texture);
                     // get_scaled_texture3f(plastic.Ks, material.specular,
                     //     material.specular_texture);
-                    material.specular = {0.04f, 0.04f, 0.04f};
-                    material.roughness =
-                        (plastic.uroughness.value + plastic.vroughness.value) /
-                        2;
-                    if (plastic.remaproughness)
-                        material.roughness = pbrt_remap_roughness(
-                            material.roughness);
+                    material.specular  = {0.04f, 0.04f, 0.04f};
+                    material.roughness = get_pbrt_roughness(
+                        plastic.uroughness.value, plastic.vroughness.value,
+                        plastic.remaproughness);
                 } else if (holds_alternative<pbrt_metal_material>(
                                fourier.approx)) {
                     auto& metal = get<pbrt_metal_material>(fourier.approx);
@@ -3100,12 +3086,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     auto  eta_texture = -1, k_texture = -1;
                     get_scaled_texture3f(metal.eta, eta, eta_texture);
                     get_scaled_texture3f(metal.k, k, k_texture);
-                    material.specular = pbrt_fresnel_metal(1, eta, k);
-                    material.roughness =
-                        (metal.uroughness.value + metal.vroughness.value) / 2;
-                    if (metal.remaproughness)
-                        material.roughness = pbrt_remap_roughness(
-                            material.roughness);
+                    material.specular  = pbrt_fresnel_metal(1, eta, k);
+                    material.roughness = get_pbrt_roughness(
+                        metal.uroughness.value, metal.vroughness.value,
+                        metal.remaproughness);
                 } else if (holds_alternative<pbrt_glass_material>(
                                fourier.approx)) {
                     // auto& glass = get<pbrt_metal_glass>(fourier.approx);
@@ -3341,8 +3325,8 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
                         "\"] ");
         else
             println_values(fs, "    \"rgb Ks\" [", material.specular, "] ");
-        println_values(
-            fs, "    \"float roughness\" [", material.roughness, "] ");
+        println_values(fs, "    \"float roughness\" [",
+            material.roughness * material.roughness, "] ");
     }
 
     // convert instances
