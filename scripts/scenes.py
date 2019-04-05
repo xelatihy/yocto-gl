@@ -103,6 +103,7 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='pa
         if 'landscape' in dirname and outformat == 'obj': continue
         if 'fractal' in dirname and outformat == 'obj': continue
         if 'pavilion' in dirname and outformat == 'obj': continue
+        if 'sanmiguel' in dirname and outformat == 'obj': continue
         outdirname = dirname.replace(f'/{format}/',f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
