@@ -1130,11 +1130,15 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
                         otexcoord.at(vert.texturecoord - 1));
                 if (vert.normal)
                     shape.normals.push_back(onorm.at(vert.normal - 1));
-                if(shape.normals.size() != 0 && shape.normals.size() != shape.positions.size()) {
-                    while(shape.normals.size() != shape.positions.size()) shape.normals.push_back({0,0,1});
+                if (shape.normals.size() != 0 &&
+                    shape.normals.size() != shape.positions.size()) {
+                    while (shape.normals.size() != shape.positions.size())
+                        shape.normals.push_back({0, 0, 1});
                 }
-                if(shape.texturecoords.size() != 0 && shape.texturecoords.size() != shape.positions.size()) {
-                    while(shape.texturecoords.size() != shape.positions.size()) shape.texturecoords.push_back({0,0});
+                if (shape.texturecoords.size() != 0 &&
+                    shape.texturecoords.size() != shape.positions.size()) {
+                    while (shape.texturecoords.size() != shape.positions.size())
+                        shape.texturecoords.push_back({0, 0});
                 }
             }
         }
@@ -1370,8 +1374,9 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         }
 
         // check if any empty shape is left
-        for(auto& shape : scene.shapes) {
-            if(shape.positions.empty()) throw io_error("empty shapes not supported");
+        for (auto& shape : scene.shapes) {
+            if (shape.positions.empty())
+                throw io_error("empty shapes not supported");
         }
 
         // merging quads and triangles
@@ -2626,11 +2631,15 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         float last_film_aspect = -1.0f;
 
         int get_material(const pbrt_context& ctx) {
-            auto lookup_name = ctx.material + "_______" + ctx.arealight;
+            static auto light_id    = 0;
+            auto        lookup_name = ctx.material + "_______" + ctx.arealight;
             if (ammap.find(lookup_name) != ammap.end())
                 return ammap.at(lookup_name);
             auto material     = mmap.at(ctx.material);
             material.emission = amap.at(ctx.arealight);
+            if (material.emission != zero3f) {
+                material.uri += "_arealight_" + to_string(light_id++);
+            }
             scene.materials.push_back(material);
             ammap[lookup_name] = (int)scene.materials.size() - 1;
             return (int)scene.materials.size() - 1;
@@ -2708,7 +2717,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         void shape(const pbrt_shape& pshape, const pbrt_context& ctx) {
             static auto shape_id = 0;
             auto        shape    = yocto_shape{};
-            shape.uri            = "shapes/" + to_string(shape_id++) + ".ply";
+            shape.uri = "shapes/shape__" + to_string(shape_id++) + ".ply";
             if (holds_alternative<pbrt_trianglemesh_shape>(pshape)) {
                 auto& mesh          = get<pbrt_trianglemesh_shape>(pshape);
                 shape.positions     = mesh.P;
@@ -2762,7 +2771,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         void texture(const pbrt_texture& ptexture, const string& name,
             const pbrt_context& ctx) {
             auto texture = yocto_texture{};
-            texture.uri  = "textures/" + texture.uri + ".png";
+            texture.uri  = "textures/" + name + ".png";
             if (holds_alternative<pbrt_imagemap_texture>(ptexture)) {
                 auto& imagemap = get<pbrt_imagemap_texture>(ptexture);
                 texture.uri    = imagemap.filename;
@@ -2777,10 +2786,16 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
                 if (verbose) printf("texture bilerp not supported well");
             } else if (holds_alternative<pbrt_checkerboard_texture>(ptexture)) {
-                // auto& checkerboard   =
-                // get<pbrt_checkerboard_texture>(ptexture);
-                texture.ldr_image.resize({1, 1});
-                texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+                auto& checkerboard = get<pbrt_checkerboard_texture>(ptexture);
+                auto  rgb1         = checkerboard.tex1.texture == ""
+                                ? checkerboard.tex1.value
+                                : spectrum3f{0.4f, 0.4f, 0.4f};
+                auto rgb2 = checkerboard.tex1.texture == ""
+                                ? checkerboard.tex2.value
+                                : spectrum3f{0.6f, 0.6f, 0.6f};
+                make_checker_image(texture.ldr_image, {1024, 1024}, 16,
+                    {float_to_byte(vec3f{rgb1.x, rgb1.y, rgb1.z}), 255},
+                    {float_to_byte(vec3f{rgb2.x, rgb2.y, rgb2.z}), 255});
                 if (verbose) printf("texture checkerboard not supported well");
             } else if (holds_alternative<pbrt_dots_texture>(ptexture)) {
                 // auto& dots   = get<pbrt_dots_texture>(ptexture);
@@ -2936,7 +2951,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 material.specular     = {0.04f, 0.04f, 0.04f};
                 material.transmission = {1, 1, 1};
                 // get_scaled_texture3f(
-                //     glass.Kr, material.specular, material.specular_texture);
+                //     glass.Kr, material.specular,
+                //     material.specular_texture);
                 // get_scaled_texture3f(
                 //     glass.Kt, material.transmission,
                 //     material.transmission_texture);

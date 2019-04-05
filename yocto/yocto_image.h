@@ -1800,7 +1800,7 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
         make_fbm_image(
             img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 10.0f, 2.0f, 0.5f, 6, true);
     } else {
-        throw std::invalid_argument("unknown image preset" + type);
+        throw std::invalid_argument("unknown image preset " + type);
     }
 }
 

@@ -3218,7 +3218,7 @@ inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
         make_quad_shape<T>(quads, positions, normals, texturecoords, {1, 1},
             {(T)0.4, (T)0.4}, {1, 1}, identity_frame<T, 3>);
     } else {
-        throw std::invalid_argument("unknown procedural type " + type);
+        throw std::invalid_argument("unknown shape preset " + type);
     }
 }
 
