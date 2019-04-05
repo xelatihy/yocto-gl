@@ -823,7 +823,7 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
     scene.name = get_filename(filename);
     add_missing_cameras(scene);
     add_missing_materials(scene);
-    add_missing_names(scene);
+    normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
 }
@@ -1386,7 +1386,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
     scene.name = get_filename(filename);
     add_missing_cameras(scene);
     add_missing_materials(scene);
-    add_missing_names(scene);
+    normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
 }
@@ -1675,7 +1675,7 @@ void load_ply_scene(const string& filename, yocto_scene& scene,
     scene.name = get_filename(filename);
     add_missing_cameras(scene);
     add_missing_materials(scene);
-    add_missing_names(scene);
+    normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
 }
@@ -2216,7 +2216,7 @@ void load_gltf_scene(const string& filename, yocto_scene& scene,
     scene.name = get_filename(filename);
     add_missing_cameras(scene);
     add_missing_materials(scene);
-    add_missing_names(scene);
+    normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
 
@@ -3182,7 +3182,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     scene.name = get_filename(filename);
     add_missing_cameras(scene);
     add_missing_materials(scene);
-    add_missing_names(scene);
+    normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
 }
@@ -3251,55 +3251,8 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
         if (material.emission != zero3f)
             println_values(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [ ",
                 material.emission, " ]");
-        if (shape.name == "") {
-            auto triangles     = shape.triangles;
-            auto positions     = shape.positions;
-            auto normals       = shape.normals;
-            auto texturecoords = shape.texturecoords;
-            if (!shape.quads_positions.empty()) {
-                auto quads = shape.quads;
-                convert_facevarying(quads, positions, normals, texturecoords,
-                    shape.quads_positions, shape.quads_normals,
-                    shape.quads_texturecoords, shape.positions, shape.normals,
-                    shape.texturecoords);
-                convert_quads_to_triangles(triangles, quads);
-            }
-            if (!shape.quads.empty()) {
-                convert_quads_to_triangles(triangles, shape.quads);
-            }
-            print_value(fs, "    Shape \"trianglemesh\" \n");
-            print_value(fs, "        \"point P\" [");
-            for (auto& p : positions) {
-                print_value(fs, p);
-                print_value(fs, ' ');
-            }
-            print_value(fs, " ]\n");
-            if (!normals.empty()) {
-                print_value(fs, "        \"normal N\" [");
-                for (auto& n : normals) {
-                    print_value(fs, n);
-                    print_value(fs, ' ');
-                }
-                print_value(fs, " ]\n");
-            }
-            if (!texturecoords.empty()) {
-                print_value(fs, "        \"float uv\" [");
-                for (auto& t : texturecoords) {
-                    print_value(fs, t);
-                    print_value(fs, ' ');
-                }
-                print_value(fs, " ]\n");
-            }
-            print_value(fs, "        \"integer indices\" [");
-            for (auto& t : triangles) {
-                print_value(fs, t);
-                print_value(fs, ' ');
-            }
-            print_value(fs, " ]\n");
-        } else {
-            println_values(fs, "    Shape \"plymesh\" \"string filename\" [\"" +
-                                   replace_extension(shape.name, "ply") + "\"]");
-        }
+        println_values(fs, "    Shape \"plymesh\" \"string filename\" [\"" +
+                                replace_extension(shape.name, "ply") + "\"]");
         println_values(fs, "  TransformEnd");
         println_values(fs, "AttributeEnd");
     }

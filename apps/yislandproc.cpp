@@ -901,7 +901,7 @@ void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
     if (scene.name == "") scene.name = get_filename(filename);
     add_missing_cameras(scene);
     add_missing_materials(scene);
-    add_missing_names(scene);
+    normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
 

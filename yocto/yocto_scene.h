@@ -323,11 +323,13 @@ bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
 void tesselate_shapes(yocto_scene& scene);
 
 // Add missing names, normals, tangents and hierarchy.
-void add_missing_names(yocto_scene& scene);
 void add_missing_normals(yocto_scene& scene);
 void add_missing_tangent_space(yocto_scene& scene);
 void add_missing_materials(yocto_scene& scene);
 void add_missing_cameras(yocto_scene& scene);
+
+// Normalize URIs and add missing ones. Assumes names are unique.
+void normalize_uris(yocto_scene& sceme);
 
 // Add a sky environment
 void add_sky_environment(yocto_scene& scene, float sun_angle = pif / 4);

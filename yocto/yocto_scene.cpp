@@ -495,29 +495,29 @@ bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Add missing names and resolve duplicated names.
-void add_missing_names(yocto_scene& scene) {
-    auto fix_names = [](auto& vals, const string& base) {
-        auto nmap = unordered_map<string, int>();
-        for (auto& value : vals) {
-            if (value.name == "") value.name = base;
-            if (nmap.find(value.name) == nmap.end()) {
-                nmap[value.name] = 0;
-            } else {
-                nmap[value.name] += 1;
-                value.name = value.name + "[" +
-                             std::to_string(nmap[value.name]) + "]";
-            }
-        }
+void normalize_uris(yocto_scene& scene) {
+    auto normalize = [](string& name, const string& base, const string& ext,
+                         int num) {
+        if (name.empty()) name = base + "_" + std::to_string(num);
+        if (get_dirname(name).empty()) name = base + "s/" + name;
+        if (get_extension(name).empty()) name = name + "." + ext;
     };
-    fix_names(scene.cameras, "camera");
-    fix_names(scene.shapes, "shape");
-    fix_names(scene.textures, "texture");
-    fix_names(scene.voltextures, "voltexture");
-    fix_names(scene.materials, "material");
-    fix_names(scene.instances, "instance");
-    fix_names(scene.environments, "environment");
-    fix_names(scene.nodes, "node");
-    fix_names(scene.animations, "animation");
+    for (auto id = 0; id < scene.cameras.size(); id++)
+        normalize(scene.cameras[id].name, "camera", "yaml", id);
+    for (auto id = 0; id < scene.textures.size(); id++)
+        normalize(scene.textures[id].name, "texture", "png", id);
+    for (auto id = 0; id < scene.voltextures.size(); id++)
+        normalize(scene.voltextures[id].name, "volume", "yvol", id);
+    for (auto id = 0; id < scene.materials.size(); id++)
+        normalize(scene.materials[id].name, "material", "yaml", id);
+    for (auto id = 0; id < scene.shapes.size(); id++)
+        normalize(scene.shapes[id].name, "shape", "ply", id);
+    for (auto id = 0; id < scene.instances.size(); id++)
+        normalize(scene.instances[id].name, "instance", "yaml", id);
+    for (auto id = 0; id < scene.animations.size(); id++)
+        normalize(scene.animations[id].name, "animation", "yaml", id);
+    for (auto id = 0; id < scene.nodes.size(); id++)
+        normalize(scene.nodes[id].name, "node", "yaml", id);
 }
 
 // Add missing tangent space if needed.
@@ -572,7 +572,7 @@ void add_missing_cameras(yocto_scene& scene) {
 
 // Add a sky environment
 void add_sky_environment(yocto_scene& scene, float sun_angle) {
-    auto texture     = yocto_texture{};
+    auto texture = yocto_texture{};
     texture.name = "textures/sky.hdr";
     make_sunsky_image(texture.hdr_image, {1024, 512}, sun_angle);
     scene.textures.push_back(texture);

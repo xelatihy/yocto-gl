@@ -67,7 +67,6 @@ struct app_state {
     yocto_scene scene      = {};
     bvh_scene   bvh        = {};
     bool        add_skyenv = false;
-    bool        validate   = false;
 
     // rendering state
     trace_lights                   lights  = {};
@@ -158,14 +157,6 @@ bool load_scene_sync(app_state& app) {
 
     // add sky
     if (app.add_skyenv) add_sky_environment(app.scene);
-
-    // add components
-    add_missing_cameras(app.scene);
-    add_missing_names(app.scene);
-    if (app.validate) {
-        app.status = "validating scene";
-        print_validation_errors(app.scene);
-    }
 
     // build bvh
     app.status = "computing bvh";
@@ -520,8 +511,6 @@ int main(int argc, char* argv[]) {
         app.trace_options.double_sided, "Double-sided rendering.");
     parser.add_flag(
         "--add-skyenv,!--no-add-skyenv", app.add_skyenv, "Add sky envmap");
-    parser.add_flag(
-        "--validate,!--no-validate", app.validate, "Validate scene");
     parser.add_option("--output-image,-o", app.imfilename, "Image filename");
     parser.add_option("scene", app.filename, "Scene filename")->required(true);
     try {

@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
         mesh_directory += '/';
-    if (mesh_filenames && get_extension(output) == "yaml") {
+    if (mesh_filenames) {
         auto sid = 0;
         for (auto& shape : scene.shapes) {
             if (shape.preserve_facevarying) {

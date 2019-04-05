@@ -170,11 +170,6 @@ bool load_scene_sync(app_state& app) {
     app.status = "tesselating surfaces";
     tesselate_shapes(app.scene);
 
-    // add components
-    add_missing_cameras(app.scene);
-    add_missing_names(app.scene);
-    print_validation_errors(app.scene);
-
     // init renderer
     app.status = "initializing lights";
     app.lights = make_drawgl_lights(app.scene);
