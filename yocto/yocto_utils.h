@@ -38,7 +38,7 @@
 //
 // 1. Get paths components with `get_dirname()`, `get_filename()` and
 //   `get_extension()`
-// 2. Replace the extension with `replace_path_extension()`
+// 2. Remove parts of a path with get_noextension() and `get_basename()`
 // 3. check if a file exists with `exists_file()`
 //
 //
@@ -99,6 +99,7 @@
 #include <initializer_list>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -113,10 +114,13 @@ using std::future;
 using std::initializer_list;
 using std::lock_guard;
 using std::mutex;
+using std::runtime_error;
 using std::string;
+using std::string_view;
 using std::thread;
 using std::vector;
 using namespace std::string_literals;
+using namespace std::string_view_literals;
 using namespace std::chrono_literals;
 
 }  // namespace yocto
@@ -229,6 +233,31 @@ inline int64_t get_time() {
     return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
+// Timer that print once it is crated and destroyed
+struct print_timer {
+    print_timer(const string& msg) : _msg{msg}, _start{get_time()} {
+        printf("%s ...\n", _msg.c_str());
+    }
+    ~print_timer() {
+        printf("%s in %s\n", _msg.c_str(),
+            format_duration(get_time() - _start).c_str());
+    }
+
+   private:
+    string  _msg;
+    int64_t _start;
+};
+
+// print info
+inline void print_info(const string& str) { printf("%s\n", str.c_str()); }
+inline print_timer print_timed(const string& str) { return print_timer(str); }
+
+// Exits printing and error
+inline void exit_error(const string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -246,8 +275,8 @@ inline string get_extension(const string& filename);
 inline string get_filename(const string& filename);
 // Get path without extension.
 inline string get_noextension(const string& filename);
-// Replace extension.
-inline string replace_extension(const string& filename, const string& ext);
+// Get filename without directory and extension.
+inline string get_basename(const string& filename);
 
 // Check if a file can be opened for reading.
 inline bool exists_file(const string& filename);
@@ -266,6 +295,12 @@ inline void save_text(const string& filename, const string& str);
 // Load/save a binary file
 inline void load_binary(const string& filename, vector<byte>& data);
 inline void save_binary(const string& filename, const vector<byte>& data);
+
+// Io error
+struct io_error : runtime_error {
+    explicit io_error(const char* msg) : runtime_error{msg} {}
+    explicit io_error(const std::string& msg) : runtime_error{msg} {}
+};
 
 }  // namespace yocto
 
@@ -360,8 +395,8 @@ inline string format_duration(int64_t duration) {
 inline string format_num(uint64_t num) {
     auto rem = num % 1000;
     auto div = num / 1000;
-    if (div > 0) return format_num(div) + "," + std::to_string(rem);
-    return std::to_string(rem);
+    if (div > 0) return format_num(div) + "," + to_string(rem);
+    return to_string(rem);
 }
 
 }  // namespace yocto
@@ -414,22 +449,17 @@ inline string get_filename(const string& filename_) {
     return filename.substr(pos + 1);
 }
 
+// Get filename without directory and extension.
+inline string get_basename(const string& filename) {
+    return get_noextension(get_filename(filename));
+}
+
 // Get extension.
 inline string get_noextension(const string& filename_) {
     auto filename = normalize_path(filename_);
     auto pos      = filename.rfind('.');
     if (pos == string::npos) return filename;
     return filename.substr(0, pos);
-}
-
-    // Replace extension.
-inline string replace_extension(const string& filename_, const string& ext_) {
-    auto filename = normalize_path(filename_);
-    auto ext      = normalize_path(ext_);
-    if (ext.at(0) == '.') ext = ext.substr(1);
-    auto pos = filename.rfind('.');
-    if (pos == string::npos) return filename;
-    return filename.substr(0, pos) + "." + ext;
 }
 
 // Check if a file can be opened for reading.
@@ -575,6 +605,366 @@ inline void parallel_for(size_t begin, size_t end, const Func& func,
         }
         for (auto& f : futures) f.get();
     }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// file inout stream
+struct input_file {
+    input_file(const string& filename, bool binary = false) {
+        this->filename = filename;
+        file           = fopen(filename.c_str(), binary ? "rb" : "rt");
+        if (!file) throw io_error("could not open " + filename);
+    }
+    input_file(FILE* fs) {
+        file  = fs;
+        owned = false;
+    }
+
+    input_file(const input_file&) = delete;
+    input_file& operator=(const input_file&) = delete;
+
+    ~input_file() {
+        if (file && owned) fclose(file);
+    }
+
+    string filename = "";
+    FILE*  file     = nullptr;
+    bool   owned    = true;
+};
+
+// file writer
+struct output_file {
+    output_file(const string& filename, bool binary = false) {
+        this->filename = filename;
+        file           = fopen(filename.c_str(), binary ? "wb" : "wt");
+        if (!file) throw io_error("could not open " + filename);
+    }
+    output_file(FILE* fs) {
+        file  = fs;
+        owned = false;
+    }
+
+    output_file(const output_file&) = delete;
+    output_file& operator=(const output_file&) = delete;
+
+    ~output_file() {
+        if (file && owned) fclose(file);
+    }
+
+    string filename = "";
+    FILE*  file     = nullptr;
+    bool   owned    = true;
+};
+
+// write a value to a file
+template <typename T>
+inline void write_value(const output_file& fs, const T& value) {
+    if (fwrite(&value, sizeof(value), 1, fs.file) != 1) {
+        throw io_error("cannot write to " + fs.filename);
+    }
+}
+
+// write values to a file
+template <typename T>
+inline void write_values(const output_file& fs, const vector<T>& values) {
+    if (values.empty()) return;
+    if (fwrite(values.data(), sizeof(values[0]), values.size(), fs.file) !=
+        values.size()) {
+        throw io_error("cannot write to " + fs.filename);
+    }
+}
+template <typename T>
+inline void write_values(const output_file& fs, const T* values, size_t count) {
+    if (!count) return;
+    if (fwrite(values, sizeof(values[0]), count, fs.file) != count) {
+        throw io_error("cannot write to " + fs.filename);
+    }
+}
+
+// write text to a file
+inline void write_text(const output_file& fs, const std::string& str) {
+    if (fprintf(fs.file, "%s", str.c_str()) < 0) {
+        throw io_error("cannot write to " + fs.filename);
+    }
+}
+
+// read a value from a file
+template <typename T>
+inline void read_value(const input_file& fs, T& value) {
+    if (fread(&value, sizeof(value), 1, fs.file) != 1) {
+        throw io_error("cannot read from " + fs.filename);
+    }
+}
+
+// read values from a file
+template <typename T>
+inline void read_values(const input_file& fs, T* values, size_t count) {
+    if (!count) return;
+    if (fread(values, sizeof(values[0]), count, fs.file) != count) {
+        throw io_error("cannot read from " + fs.filename);
+    }
+}
+template <typename T>
+inline void read_values(const input_file& fs, vector<T>& values) {
+    if (values.empty()) return;
+    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
+        values.size()) {
+        throw io_error("cannot read from " + fs.filename);
+    }
+}
+// read characters from a file
+inline void read_values(const input_file& fs, string& values) {
+    if (values.empty()) return;
+    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
+        values.size()) {
+        throw io_error("cannot read from " + fs.filename);
+    }
+}
+
+// read a line of text
+inline bool read_line(const input_file& fs, string& str) {
+    char buffer[4096];
+    if (fgets(buffer, sizeof(buffer), fs.file) == nullptr) return false;
+    str = buffer;
+    return true;
+}
+inline bool read_line(const input_file& fs, char* buffer, size_t size) {
+    if (fgets(buffer, size, fs.file) == nullptr) return false;
+    return true;
+}
+
+// Printing values
+inline void print_value(const output_file& fs, int value) {
+    if (fprintf(fs.file, "%d", value) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, bool value, bool alpha = false) {
+    if (alpha) {
+        if (fprintf(fs.file, value ? "true" : "false") < 0)
+            throw io_error("cannot write to file " + fs.filename);
+    } else {
+        if (fprintf(fs.file, "%d", (int)value) < 0)
+            throw io_error("cannot write to file " + fs.filename);
+    }
+}
+inline void print_value(const output_file& fs, float value) {
+    if (fprintf(fs.file, "%g", value) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, double value) {
+    if (fprintf(fs.file, "%g", value) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, char value) {
+    if (fprintf(fs.file, "%c", value) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(
+    const output_file& fs, const char* value, bool quoted = false) {
+    if (fprintf(fs.file, quoted ? "\"%s\"" : "%s", value) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(
+    const output_file& fs, const string& value, bool quoted = false) {
+    if (fprintf(fs.file, quoted ? "\"%s\"" : "%s", value.c_str()) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+template <typename T, size_t N>
+inline void print_value(
+    const output_file& fs, const array<T, N>& value, bool in_brackets = false) {
+    if (!in_brackets) {
+        for (auto i = 0; i < N; i++) {
+            if (i) print_value(fs, ' ');
+            print_value(fs, value[i]);
+        }
+    } else {
+        print_value(fs, "[ ");
+        for (auto i = 0; i < N; i++) {
+            if (i) print_value(fs, ", ");
+            print_value(fs, value[i]);
+        }
+        print_value(fs, " ]");
+    }
+}
+template <typename T, int N>
+inline void print_value(
+    const output_file& fs, const vec<T, N>& value, bool in_brackets = false) {
+    print_value(fs, (const array<T, N>&)value, in_brackets);
+}
+template <typename T, int N, int M>
+inline void print_value(const output_file& fs, const mat<T, N, M>& value,
+    bool in_brackets = false) {
+    print_value(fs, (const array<T, N * M>&)value, in_brackets);
+}
+template <typename T, int N>
+inline void print_value(
+    const output_file& fs, const frame<T, N>& value, bool in_brackets = false) {
+    print_value(fs, (const array<T, N*(N + 1)>&)value, in_brackets);
+}
+
+// print values to file
+template <typename Arg, typename... Args>
+inline void println_values(
+    const output_file& fs, const Arg& value, const Args&... values) {
+    print_value(fs, value);
+    if constexpr (sizeof...(values) > 0) {
+        print_value(fs, ' ');
+        println_values(fs, values...);
+    } else {
+        print_value(fs, '\n');
+    }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF FAST PARSING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+inline void skip_whitespace(string_view& str) {
+    auto pos = str.find_first_not_of(" \t\r\n");
+    if (pos == str.npos) {
+        str.remove_prefix(str.size());
+    } else {
+        str.remove_prefix(pos);
+    }
+}
+inline void remove_comment_(string_view& str, char comment_char = '#') {
+    auto pos = str.find(comment_char);
+    if (pos == str.npos) return;
+    str.remove_suffix(str.length() - pos);
+}
+inline void remove_comment_and_newline(
+    string_view& str, char comment_char = '#') {
+    str.remove_suffix(1);
+    auto pos = str.find(comment_char);
+    if (pos == str.npos) return;
+    str.remove_suffix(str.length() - pos);
+}
+
+// Parse values from a string
+inline void parse_value(string_view& str, int& value) {
+    char* end = nullptr;
+    value     = (int)strtol(str.data(), &end, 10);
+    if (str == end) throw io_error("cannot parse value");
+    str.remove_prefix(end - str.data());
+}
+inline void parse_value(string_view& str, bool& value) {
+    auto valuei = 0;
+    parse_value(str, valuei);
+    value = (bool)valuei;
+}
+inline void parse_value(string_view& str, float& value) {
+    char* end = nullptr;
+    value     = strtof(str.data(), &end);
+    if (str == end) throw io_error("cannot parse value");
+    str.remove_prefix(end - str.data());
+}
+inline void parse_value(string_view& str, double& value) {
+    char* end = nullptr;
+    value     = strtod(str.data(), &end);
+    if (str == end) throw io_error("cannot parse value");
+    str.remove_prefix(end - str.data());
+}
+inline void parse_value(string_view& str, string& value, bool quoted = false) {
+    skip_whitespace(str);
+    if (str.empty()) throw io_error("cannot parse value");
+    if (!quoted) {
+        auto pos = str.find_first_of(" \t\r\n");
+        if (pos == str.npos) {
+            value = str;
+            str.remove_prefix(str.length());
+        } else {
+            value = str.substr(0, pos);
+            str.remove_prefix(pos);
+        }
+    } else {
+        if (str.front() != '"') throw io_error("cannot parse value");
+        str.remove_prefix(1);
+        if (str.empty()) throw io_error("cannot parse value");
+        auto pos = str.find('"');
+        if (pos == str.npos) throw io_error("cannot parse value");
+        value = str.substr(0, pos);
+        str.remove_prefix(pos + 1);
+    }
+}
+template <typename T, size_t N>
+inline void parse_value(
+    string_view& str, array<T, N>& value, bool in_brackets = false) {
+    if (!in_brackets) {
+        for (auto i = 0; i < N; i++) parse_value(str, value[i]);
+    } else {
+        skip_whitespace(str);
+        if (str.empty() || str.front() != '[')
+            throw io_error("cannot parse value");
+        for (auto i = 0; i < N; i++) {
+            if (i) {
+                skip_whitespace(str);
+                if (str.empty() || str.front() != ',')
+                    throw io_error("cannot parse value");
+            }
+            parse_value(str, value[i]);
+        }
+        skip_whitespace(str);
+        if (str.empty() || str.front() != ']')
+            throw io_error("cannot parse value");
+    }
+}
+template <typename T, int N>
+inline void parse_value(
+    string_view& str, vec<T, N>& value, bool in_brackets = false) {
+    parse_value(str, (array<T, N>&)value, in_brackets);
+}
+template <typename T, int N>
+inline void parse_value(
+    string_view& str, frame<T, N>& value, bool in_brackets = false) {
+    parse_value(str, (array<T, N*(N + 1)>&)value, in_brackets);
+}
+template <typename T, int N, int M>
+inline void parse_value(
+    string_view& str, mat<T, N, M>& value, bool in_brackets = false) {
+    parse_value(str, (array<T, N * M>&)value, in_brackets);
+}
+
+template <typename T>
+inline void parse_value_or_empty(string_view& str, T& value) {
+    skip_whitespace(str);
+    if (str.empty()) {
+        value = T{};
+    } else {
+        parse_value(str, value);
+    }
+}
+
+inline bool is_whitespace(const string_view& str) {
+    return str.find_first_not_of(" \t\r\n") == str.npos;
+}
+inline bool is_space(char c) {
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+inline bool is_alpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
+
+inline void parse_varname(string_view& str, string& value) {
+    skip_whitespace(str);
+    if (str.empty()) throw io_error("cannot parse value");
+    if (!is_alpha(str.front())) throw io_error("cannot parse value");
+    auto pos = 0;
+    while (is_alpha(str[pos]) || str[pos] == '_' || is_digit(str[pos])) {
+        pos += 1;
+        if (pos >= str.size()) break;
+    }
+    value = str.substr(0, pos);
+    str.remove_prefix(pos);
 }
 
 }  // namespace yocto

@@ -86,7 +86,7 @@ namespace yocto {
 // To compute good apertures, one can use the F-stop number from phostography
 // and set the aperture to focal_leangth/f_stop.
 struct yocto_camera {
-    string  name           = "";
+    string  uri            = "";
     frame3f frame          = identity_frame3f;
     bool    orthographic   = false;
     float   film_width     = 0.036f;
@@ -103,24 +103,16 @@ struct yocto_camera {
 // conversion can be disabled with `ldr_as_linear` for example to render
 // normal maps.
 struct yocto_texture {
-    string       name             = "";
-    string       filename         = "";
-    image<vec4f> hdr_image        = {};
-    image<vec4b> ldr_image        = {};
-    bool         clamp_to_edge    = false;
-    bool         no_interpolation = false;
-    float        height_scale     = 1;
-    bool         ldr_as_linear    = false;
+    string       uri       = "";
+    image<vec4f> hdr_image = {};
+    image<vec4b> ldr_image = {};
 };
 
 // Volumetric texture containing a float only volume data. See texture
 // above for other propoerties.
 struct yocto_voltexture {
-    string   name             = "";
-    string   filename         = "";
-    volume1f volume_data      = {};
-    bool     clamp_to_edge    = false;
-    bool     no_interpolation = false;
+    string        uri         = "";
+    volume<float> volume_data = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -128,7 +120,7 @@ struct yocto_voltexture {
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct yocto_material {
-    string name          = "";
+    string uri           = "";
     bool   base_metallic = false;  // base-metallic parametrization
     bool   gltf_textures = false;  // glTF packed textures
 
@@ -148,7 +140,6 @@ struct yocto_material {
     int specular_texture     = -1;
     int transmission_texture = -1;
     int roughness_texture    = -1;
-    int displacement_texture = -1;
     int normal_texture       = -1;
 
     // volume properties
@@ -169,14 +160,7 @@ struct yocto_material {
 // has its own topology.
 struct yocto_shape {
     // shape data
-    string name     = "";
-    string filename = "";
-
-    // subdision properties
-    int  subdivision_level    = 0;
-    bool catmull_clark        = false;
-    bool compute_normals      = false;
-    bool preserve_facevarying = false;
+    string uri = "";
 
     // primitives
     vector<int>   points    = {};
@@ -198,9 +182,51 @@ struct yocto_shape {
     vector<vec4f> tangentspaces = {};
 };
 
+// Shape data represented as an indexed meshes of elements.
+// This object exists only to allow for further subdivision. The current
+// subdiviion data is stored in the pointed to shape, so the rest of the system
+// does not need to known about subdivs. While this is mostly helpful for
+// subdivision surfaces, we store here all data that we possibly may want to
+// subdivide, for later use.
+struct yocto_subdiv {
+    // shape data
+    string uri = "";
+
+    // tesselated shape
+    int tesselated_shape = -1;
+
+    // subdision properties
+    int  subdivision_level    = 0;
+    bool catmull_clark        = false;
+    bool compute_normals      = false;
+    bool preserve_facevarying = false;
+
+    // displacement information
+    int   displacement_texture = -1;
+    float displacement_scale   = 1;
+
+    // primitives
+    vector<int>   points    = {};
+    vector<vec2i> lines     = {};
+    vector<vec3i> triangles = {};
+    vector<vec4i> quads     = {};
+
+    // face-varying primitives
+    vector<vec4i> quads_positions     = {};
+    vector<vec4i> quads_normals       = {};
+    vector<vec4i> quads_texturecoords = {};
+
+    // vertex data
+    vector<vec3f> positions     = {};
+    vector<vec3f> normals       = {};
+    vector<vec2f> texturecoords = {};
+    vector<vec4f> colors        = {};
+    vector<float> radius        = {};
+};
+
 // Instance of a visible shape in the scene.
 struct yocto_instance {
-    string  name     = "";
+    string  uri      = "";
     frame3f frame    = identity_frame3f;
     int     shape    = -1;
     int     material = -1;
@@ -208,7 +234,7 @@ struct yocto_instance {
 
 // Environment map.
 struct yocto_environment {
-    string  name             = "";
+    string  uri              = "";
     frame3f frame            = identity_frame3f;
     vec3f   emission         = {0, 0, 0};
     int     emission_texture = -1;
@@ -216,7 +242,7 @@ struct yocto_environment {
 
 // Node in a transform hierarchy.
 struct yocto_scene_node {
-    string        name        = "";
+    string        uri         = "";
     int           parent      = -1;
     frame3f       local       = identity_frame3f;
     vec3f         translation = {0, 0, 0};
@@ -236,7 +262,7 @@ enum struct yocto_interpolation_type { linear, step, bezier };
 
 // Keyframe data.
 struct yocto_animation {
-    string                   name            = "";
+    string                   uri             = "";
     string                   filename        = "";
     string                   animation_group = "";
     yocto_interpolation_type interpolation_type =
@@ -257,13 +283,14 @@ struct yocto_animation {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct yocto_scene {
-    string                    name         = "";
+    string                    uri          = "";
     vector<yocto_camera>      cameras      = {};
     vector<yocto_shape>       shapes       = {};
     vector<yocto_instance>    instances    = {};
     vector<yocto_material>    materials    = {};
     vector<yocto_texture>     textures     = {};
     vector<yocto_environment> environments = {};
+    vector<yocto_subdiv>      subdivs      = {};
     vector<yocto_voltexture>  voltextures  = {};
     vector<yocto_scene_node>  nodes        = {};
     vector<yocto_animation>   animations   = {};
@@ -326,14 +353,20 @@ bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     bool find_any = false, bool non_rigid_frames = true);
 
 // Apply subdivision and displacement rules.
-void tesselate_shapes(yocto_scene& scene);
+void subdivide_shape(yocto_shape& shape, int subdivision_level,
+    bool catmull_clark, bool compute_normals);
+void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
+    float scale, bool compute_normals);
+void tesselate_subdivs(yocto_scene& scene);
 
 // Add missing names, normals, tangents and hierarchy.
-void add_missing_names(yocto_scene& scene);
 void add_missing_normals(yocto_scene& scene);
 void add_missing_tangent_space(yocto_scene& scene);
 void add_missing_materials(yocto_scene& scene);
 void add_missing_cameras(yocto_scene& scene);
+
+// Normalize URIs and add missing ones. Assumes names are unique.
+void normalize_uris(yocto_scene& sceme);
 
 // Add a sky environment
 void add_sky_environment(yocto_scene& scene, float sun_angle = pif / 4);
@@ -375,11 +408,16 @@ float            sample_shape_element_pdf(const yocto_shape& shape,
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture& texture);
-vec4f lookup_texture(const yocto_texture& texture, int i, int j);
-vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord);
-float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k);
-float evaluate_voltexture(
-    const yocto_voltexture& texture, const vec3f& texcoord);
+vec4f lookup_texture(
+    const yocto_texture& texture, int i, int j, bool ldr_as_linear = false);
+vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord,
+    bool ldr_as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
+float lookup_voltexture(
+    const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear);
+float evaluate_voltexture(const yocto_voltexture& texture,
+    const vec3f& texcoord, bool ldr_as_linear = false,
+    bool no_interpolation = false, bool clamp_to_edge = false);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float get_camera_fovx(const yocto_camera& camera);

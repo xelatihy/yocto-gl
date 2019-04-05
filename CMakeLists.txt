@@ -46,8 +46,8 @@ endif(MSVC)
 
 add_library(yocto 
     yocto/yocto_math.h yocto/yocto_random.h
-    yocto/yocto_utils.h 
-    yocto/yocto_shape.h yocto/yocto_bvh.h 
+    yocto/yocto_utils.h yocto/yocto_bvh.h
+    yocto/yocto_shape.h yocto/yocto_shape.cpp 
     yocto/yocto_image.h yocto/yocto_image.cpp
     yocto/yocto_scene.h yocto/yocto_scene.cpp
     yocto/yocto_trace.h yocto/yocto_trace.cpp
@@ -69,12 +69,14 @@ add_executable(yscnproc apps/yscnproc.cpp)
 add_executable(yscnmerge apps/yscnmerge.cpp)
 add_executable(yimproc apps/yimproc.cpp)
 add_executable(ymshproc apps/ymshproc.cpp)
+add_executable(yislandproc apps/yislandproc.cpp)
 
 target_link_libraries(ytrace yocto)
 target_link_libraries(yscnproc yocto)
 target_link_libraries(yscnmerge yocto)
 target_link_libraries(yimproc yocto)
 target_link_libraries(ymshproc yocto)
+target_link_libraries(yislandproc yocto)
 
 if(YOCTO_OPENGL)
     find_package(OpenGL REQUIRED)
@@ -130,14 +132,13 @@ foreach(filename "uvgrid.png")
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # procedurla images
-foreach(filename "images1.json" "images2.json")
-    get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME yimproc-${filename}
-             COMMAND ${test-yimproc} yocto::${name} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
+foreach(name "images1" "images2")
+    add_test(NAME yimproc-${name}
+             COMMAND ${test-yimproc} ::yocto::${name}::/${testdir}/${name}.png ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # eyelight
-foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "eyelight")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -145,7 +146,7 @@ foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "material
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # path
-foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -153,7 +154,7 @@ foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "material
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # volpath
-foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "volpath")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -161,7 +162,7 @@ foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "material
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # volnaive
-foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "volnaive")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -169,7 +170,7 @@ foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "material
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # naive
-foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "naive")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -178,7 +179,7 @@ foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "material
 endforeach()
 if(YOCTO_EMBREE)
 # embree
-foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "materials2.json" "materials3.json" "shapes1.json" "shapes2.json" "shapes3.json" "arealights1.json" "environments1.json")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-embree-${tracer}-${filename}
@@ -186,24 +187,32 @@ foreach(filename "features1.json" "cornellbox1.json" "materials1.json" "material
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 endif(YOCTO_EMBREE)
-# json output
-foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json")
-    set(format "json")
+# yaml output
+foreach(filename "features1.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml")
+    set(format "yaml")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yscnproc-${format}-${filename}
             COMMAND ${test-yscnproc} ${testdir}/${filename} ${outdir}/${format}/${name} ${outdir}/${format}/${name}/${name}.${format} ${outdir}/yscnproc-${format}-${name}.png ${resdir}/yscnproc-${format}-${name}.png ${diffdir}/yscnproc-${format}-${name}.png "-t path -s 8 -r 360"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # obj output
-foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json")
+foreach(filename "features1.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml")
     set(format "obj")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yscnproc-${format}-${filename}
             COMMAND ${test-yscnproc} ${testdir}/${filename} ${outdir}/${format}/${name} ${outdir}/${format}/${name}/${name}.${format} ${outdir}/yscnproc-${format}-${name}.png ${resdir}/yscnproc-${format}-${name}.png ${diffdir}/yscnproc-${format}-${name}.png "-t path -s 8 -r 360"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
+# pbrt output
+foreach(filename "features1.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml")
+    set(format "pbrt")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME yscnproc-${format}-${filename}
+            COMMAND ${test-yscnproc} ${testdir}/${filename} ${outdir}/${format}/${name} ${outdir}/${format}/${name}/${name}.${format} ${outdir}/yscnproc-${format}-${name}.png ${resdir}/yscnproc-${format}-${name}.png ${diffdir}/yscnproc-${format}-${name}.png "-t path -s 8 -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
 # ybin output
-foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json")
+foreach(filename "features1.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml")
     set(format "ybin")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yscnproc-${format}-${filename}
@@ -211,7 +220,7 @@ foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json")
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # gltf output
-foreach(filename "features1.json" "shapes1.json" "shapes2.json" "shapes3.json")
+foreach(filename "features1.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml")
     set(format "gltf")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yscnproc-${format}-${filename}

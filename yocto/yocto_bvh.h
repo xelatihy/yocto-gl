@@ -171,7 +171,7 @@ struct bvh_build_options {
 #if YOCTO_EMBREE
     bool use_embree     = false;
     bool embree_flatten = false;
-    bool embree_shared  = false;
+    bool embree_compact  = false;
 #endif
     bool          run_serially = false;
     atomic<bool>* cancel_flag  = nullptr;
@@ -751,9 +751,9 @@ inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
         dist_max = dist;
     }
     if (!overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1, uv, dist)) {
-        hit      = true;
-        uv       = 1 - uv;
-        dist_max = dist;
+        hit = true;
+        uv  = 1 - uv;
+        // dist_max = dist;
     }
     return hit;
 }
@@ -857,7 +857,7 @@ inline void build_embree_shape_bvh(bvh_shape& bvh, const vector<int>& points,
     const bvh_build_options& options) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
-    if (options.embree_shared) {
+    if (options.embree_compact) {
         rtcSetSceneFlags(embree_scene, RTC_SCENE_FLAG_COMPACT);
     }
     // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
@@ -894,7 +894,7 @@ inline void build_embree_shape_bvh(bvh_shape& bvh, const vector<int>& points,
         embree_geom = rtcNewGeometry(
             get_embree_device(), RTC_GEOMETRY_TYPE_TRIANGLE);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
-        if (options.embree_shared) {
+        if (options.embree_compact) {
             rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX, 0,
                 RTC_FORMAT_FLOAT3, positions.data(), 0, 3 * 4,
                 positions.size());
@@ -914,7 +914,7 @@ inline void build_embree_shape_bvh(bvh_shape& bvh, const vector<int>& points,
         embree_geom = rtcNewGeometry(
             get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
-        if (options.embree_shared) {
+        if (options.embree_compact) {
             rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX, 0,
                 RTC_FORMAT_FLOAT3, positions.data(), 0, 3 * 4,
                 positions.size());
@@ -934,7 +934,7 @@ inline void build_embree_shape_bvh(bvh_shape& bvh, const vector<int>& points,
         embree_geom = rtcNewGeometry(
             get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
-        if (options.embree_shared) {
+        if (options.embree_compact) {
             rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX, 0,
                 RTC_FORMAT_FLOAT3, positions.data(), 0, 3 * 4,
                 positions.size());
@@ -965,7 +965,7 @@ inline void build_embree_instances_bvh(bvh_scene& bvh, int num_instances,
     // scene bvh
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
-    if (options.embree_shared) {
+    if (options.embree_compact) {
         rtcSetSceneFlags(embree_scene, RTC_SCENE_FLAG_COMPACT);
     }
     // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
@@ -2143,27 +2143,27 @@ inline string print_scene_bvh_stats(const bvh_scene& bvh) {
 
     auto str = ""s;
 
-    str += "num_shapes: " + std::to_string(num_shapes) + "\n";
-    str += "num_instances: " + std::to_string(num_instances) + "\n";
+    str += "num_shapes: " + to_string(num_shapes) + "\n";
+    str += "num_instances: " + to_string(num_instances) + "\n";
 
-    str += "elem_points: " + std::to_string(elem_points) + "\n";
-    str += "elem_lines: " + std::to_string(elem_lines) + "\n";
-    str += "elem_triangles: " + std::to_string(elem_triangles) + "\n";
-    str += "elem_quads: " + std::to_string(elem_quads) + "\n";
-    str += "vert_pos: " + std::to_string(vert_pos) + "\n";
-    str += "vert_radius: " + std::to_string(vert_radius) + "\n";
+    str += "elem_points: " + to_string(elem_points) + "\n";
+    str += "elem_lines: " + to_string(elem_lines) + "\n";
+    str += "elem_triangles: " + to_string(elem_triangles) + "\n";
+    str += "elem_quads: " + to_string(elem_quads) + "\n";
+    str += "vert_pos: " + to_string(vert_pos) + "\n";
+    str += "vert_radius: " + to_string(vert_radius) + "\n";
 
-    str += "shape_nodes: " + std::to_string(shape_nodes) + "\n";
-    str += "scene_nodes: " + std::to_string(scene_nodes) + "\n";
+    str += "shape_nodes: " + to_string(shape_nodes) + "\n";
+    str += "scene_nodes: " + to_string(scene_nodes) + "\n";
 
-    str += "memory_elems: " + std::to_string(memory_elems) + "\n";
-    str += "memory_verts: " + std::to_string(memory_verts) + "\n";
-    str += "memory_ists: " + std::to_string(memory_ists) + "\n";
-    str += "memory_shape_nodes: " + std::to_string(memory_shape_nodes) + "\n";
-    str += "memory_scene_nodes: " + std::to_string(memory_scene_nodes) + "\n";
+    str += "memory_elems: " + to_string(memory_elems) + "\n";
+    str += "memory_verts: " + to_string(memory_verts) + "\n";
+    str += "memory_ists: " + to_string(memory_ists) + "\n";
+    str += "memory_shape_nodes: " + to_string(memory_shape_nodes) + "\n";
+    str += "memory_scene_nodes: " + to_string(memory_scene_nodes) + "\n";
 
 #if YOCTO_EMBREE
-    str += "memory_embree: " + std::to_string(embree_memory) + "\n";
+    str += "memory_embree: " + to_string(embree_memory) + "\n";
 #endif
 #endif
     // TODO

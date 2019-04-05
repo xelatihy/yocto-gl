@@ -1,7 +1,0 @@
-{
-    "type": "montage",
-    "images": [
-        { "type": "sky" },
-        { "type": "sky", "has_sun": true }
-    ]
-}

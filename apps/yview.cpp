@@ -39,11 +39,6 @@ namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
 };
 
-void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
-}
-
 struct drawgl_shape {
     opengl_array_buffer  positions_buffer     = {};
     opengl_array_buffer  normals_buffer       = {};
@@ -168,12 +163,7 @@ bool load_scene_sync(app_state& app) {
 
     // tesselate
     app.status = "tesselating surfaces";
-    tesselate_shapes(app.scene);
-
-    // add components
-    add_missing_cameras(app.scene);
-    add_missing_names(app.scene);
-    print_validation_errors(app.scene);
+    tesselate_subdivs(app.scene);
 
     // init renderer
     app.status = "initializing lights";
@@ -719,7 +709,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
                 true, true, true);
         } else if (!texture.ldr_image.empty()) {
             init_opengl_texture(state.textures[texture_id], texture.ldr_image,
-                !texture.ldr_as_linear, true, true);
+                true, true, true);
         } else {
             throw runtime_error("bad texture");
         }

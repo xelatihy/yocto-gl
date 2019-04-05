@@ -45,22 +45,18 @@ bool mkdir(const string& dir) {
 #endif
 }
 
-void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
-}
-
 int main(int argc, char** argv) {
     // command line parameters
-    auto skip_textures  = false;
-    auto skip_meshes    = false;
-    auto mesh_filenames = true;
-    auto mesh_directory = "models/"s;
-    auto uniform_txt    = false;
-    auto validate       = false;
-    auto print_info     = false;
-    auto output         = "out.json"s;
-    auto filename       = "scene.json"s;
+    auto skip_textures    = false;
+    auto skip_meshes      = false;
+    auto mesh_filenames   = false;
+    auto shape_directory  = "shapes/"s;
+    auto subdiv_directory = "subdivs/"s;
+    auto uniform_txt      = false;
+    auto validate         = false;
+    auto print_info       = false;
+    auto output           = "out.json"s;
+    auto filename         = "scene.json"s;
 
     // parse command line
     auto parser = CLI::App{"Process scene"};
@@ -70,8 +66,10 @@ int main(int argc, char** argv) {
         "--skip-meshes,!--no-skip-meshes", skip_meshes, "Disable meshes.");
     parser.add_flag("--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
         "Add mesh filenames.");
-    parser.add_option("--mesh-directory", mesh_directory,
-        "Mesh directory when adding names.");
+    parser.add_option("--shape-directory", shape_directory,
+        "Shape directory when adding names.");
+    parser.add_option("--subdiv-directory", subdiv_directory,
+        "Subdiv directory when adding names.");
     parser.add_flag("--uniform-texture,!--no-uniform-textures", uniform_txt,
         "uniform texture formats");
     parser.add_flag("--print-info,-i", print_info, "print scene info");
@@ -119,43 +117,53 @@ int main(int argc, char** argv) {
     // change texture names
     if (uniform_txt) {
         for (auto& texture : scene.textures) {
-            auto ext = get_extension(texture.filename);
-            if (is_hdr_filename(texture.filename)) {
-                if (ext == "hdr" || ext == "exr") continue;
-                if (ext == "pfm") {
-                    replace_extension(filename, "hdr");
-                } else {
-                    throw runtime_error("unknown texture format " + ext);
-                }
+            auto ext = get_extension(texture.uri);
+            if (is_hdr_filename(texture.uri)) {
+                if (ext == "hdr") continue;
+                get_noextension(filename) + ".hdr";
             } else {
-                if (ext == "png" || ext == "jpg") continue;
-                if (ext == "tga" || ext == "bmp") {
-                    replace_extension(filename, "png");
-                } else {
-                    throw runtime_error("unknown texture format " + ext);
-                }
+                if (ext == "png") continue;
+                get_noextension(filename) + ".png";
             }
         }
     }
 
+    printf("tesselating scene ...\n");
+    auto start_tess = get_time();
+    tesselate_subdivs(scene);
+    printf("tesselating scene [%s]\n",
+        format_duration(get_time() - start_tess).c_str());
+
     // add missing mesh names if necessary
-    if (!mesh_directory.empty() && mesh_directory.back() != '/')
-        mesh_directory += '/';
-    if (mesh_filenames && get_extension(output) == "json") {
+    if (!shape_directory.empty() && shape_directory.back() != '/')
+        shape_directory += '/';
+    if (mesh_filenames) {
+        auto sid = 0;
         for (auto& shape : scene.shapes) {
-            shape.filename = "";
-            if (shape.positions.size() <= 16) continue;
-            if (shape.preserve_facevarying) {
-                shape.filename = mesh_directory + shape.name + ".obj";
+            if (!shape.quads_positions.empty()) {
+                shape.uri = shape_directory + "shape_" + std::to_string(sid) +
+                            ".obj";
             } else {
-                shape.filename = mesh_directory + shape.name + ".ply";
+                shape.uri = shape_directory + "shape_" + std::to_string(sid) +
+                            ".ply";
             }
+            sid++;
         }
     }
-    // gltf does not support embedded data
-    if (get_extension(output) == "gltf") {
-        for (auto& shape : scene.shapes) {
-            shape.filename = mesh_directory + shape.name + ".bin";
+    // add missing mesh names if necessary
+    if (!subdiv_directory.empty() && subdiv_directory.back() != '/')
+        subdiv_directory += '/';
+    if (mesh_filenames) {
+        auto sid = 0;
+        for (auto& subdiv : scene.subdivs) {
+            if (!subdiv.quads_positions.empty()) {
+                subdiv.uri = subdiv_directory + "subdiv_" +
+                             std::to_string(sid) + ".obj";
+            } else {
+                subdiv.uri = subdiv_directory + "subdiv_" +
+                             std::to_string(sid) + ".ply";
+            }
+            sid++;
         }
     }
 

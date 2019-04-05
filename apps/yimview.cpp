@@ -158,7 +158,7 @@ void add_new_image(app_state& app, const string& filename,
     app.imgs.emplace_back();
     auto& img    = app.imgs.back();
     img.filename = filename;
-    img.outname  = (outname == "") ? replace_extension(filename, ".display.png")
+    img.outname  = (outname == "") ? get_noextension(filename) + ".display.png"
                                   : outname;
     img.name         = get_filename(filename);
     img.exposure     = exposure;
@@ -337,11 +337,6 @@ void run_ui(app_state& app) {
 
     // cleanup
     delete_opengl_window(win);
-}
-
-void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
 }
 
 int main(int argc, char* argv[]) {

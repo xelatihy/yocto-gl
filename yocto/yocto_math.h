@@ -83,10 +83,10 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <memory>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -123,9 +123,9 @@ using std::out_of_range;
 using std::pair;
 using std::runtime_error;
 using std::string;
+using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
-using std::unique_ptr;
 using namespace std::literals::string_literals;
 
 }  // namespace yocto
@@ -295,6 +295,10 @@ using vec1b = vec<byte, 1>;
 using vec2b = vec<byte, 2>;
 using vec3b = vec<byte, 3>;
 using vec4b = vec<byte, 4>;
+using vec1d = vec<double, 1>;
+using vec2d = vec<double, 2>;
+using vec3d = vec<double, 3>;
+using vec4d = vec<double, 4>;
 
 // Zero vector constants.
 template <typename T, int N>
@@ -1003,6 +1007,9 @@ struct mat<T, N, 4> {
 using mat2f = mat<float, 2, 2>;
 using mat3f = mat<float, 3, 3>;
 using mat4f = mat<float, 4, 4>;
+using mat2d = mat<double, 2, 2>;
+using mat3d = mat<double, 3, 3>;
+using mat4d = mat<double, 4, 4>;
 
 // Identity matrix
 template <typename T, int N>
@@ -1381,6 +1388,7 @@ struct frame<T, 2> {
     constexpr frame() : x{}, y{}, o{} {}
     constexpr frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
         : x{x}, y{y}, o{o} {}
+    constexpr explicit frame(const vec<T, 2>& o) : x{1, 0}, y{0, 1}, o{o} {}
     constexpr frame(const mat<T, 2, 2>& m, const vec<T, 2>& t)
         : x{m.x}, y{m.y}, o{t} {}
     constexpr explicit frame(const affine<T, 2>& m) : x{m.x}, y{m.y}, o{m.o} {}
@@ -1411,6 +1419,8 @@ struct frame<T, 3> {
     constexpr frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
         const vec<T, 3>& o)
         : x{x}, y{y}, z{z}, o{o} {}
+    constexpr explicit frame(const vec<T, 3>& o)
+        : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
     constexpr frame(const mat<T, 3, 3>& m, const vec<T, 3>& t)
         : x{m.x}, y{m.y}, z{m.z}, o{t} {}
     constexpr explicit frame(const affine<T, 3>& m)
@@ -1432,8 +1442,21 @@ struct frame<T, 3> {
 // Typedefs
 using frame2f = frame<float, 2>;
 using frame3f = frame<float, 3>;
+using frame2d = frame<double, 2>;
+using frame3d = frame<double, 3>;
 
 // Indentity frames.
+template <typename T, int N>
+constexpr inline frame<T, N> _identity_frame() {
+    if constexpr (N == 2) {
+        return {{1, 0}, {0, 1}, {0, 0}};
+    } else if constexpr (N == 3) {
+        return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+    } else {
+    }
+}
+template <typename T, int N>
+constexpr const auto identity_frame   = _identity_frame<T, N>();
 constexpr const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
 constexpr const auto identity_frame3f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
@@ -2151,6 +2174,43 @@ constexpr inline void update_image_view(vec<T, 2>& center, T& scale,
         if (winsize.x >= imsize.x * scale) center.x = winsize.x / 2;
         if (winsize.y >= imsize.y * scale) center.y = winsize.y / 2;
     }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VALUES TO STRING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+template <typename T>
+inline string to_string(const T& value) {
+    return std::to_string(value);
+}
+template <typename T, size_t N>
+inline string to_string(const array<T, N>& value) {
+    auto str = ""s;
+    for (auto i = 0; i < N; i++) {
+        if (i) str += ' ';
+        str += to_string(value[i]);
+    }
+    return str;
+}
+template <typename T, int N>
+inline string to_string(const vec<T, N>& value) {
+    return to_string((const array<T, N>&)value);
+}
+template <typename T, int N>
+inline string to_string(const frame<T, N>& value) {
+    return to_string((const array<T, N*(N + 1)>&)value);
+}
+template <typename T, int N>
+inline string to_string(const affine<T, N>& value) {
+    return to_string((const array<T, N*(N + 1)>&)value);
+}
+template <typename T, int N, int M>
+inline string to_string(const mat<T, N, M>& value) {
+    return to_string((const array<T, N * M>&)value);
 }
 
 }  // namespace yocto

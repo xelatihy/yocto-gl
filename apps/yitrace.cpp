@@ -40,13 +40,7 @@ using namespace yocto;
 
 namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
-void print_json_camera(const yocto_camera& camera);
 };  // namespace yocto
-
-void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
-}
 
 // Application state
 struct app_state {
@@ -68,7 +62,6 @@ struct app_state {
     yocto_scene scene      = {};
     bvh_scene   bvh        = {};
     bool        add_skyenv = false;
-    bool        validate   = false;
 
     // rendering state
     trace_lights                   lights  = {};
@@ -155,18 +148,10 @@ bool load_scene_sync(app_state& app) {
 
     // tesselate
     app.status = "tesselating shapes";
-    tesselate_shapes(app.scene);
+    tesselate_subdivs(app.scene);
 
     // add sky
     if (app.add_skyenv) add_sky_environment(app.scene);
-
-    // add components
-    add_missing_cameras(app.scene);
-    add_missing_names(app.scene);
-    if (app.validate) {
-        app.status = "validating scene";
-        print_validation_errors(app.scene);
-    }
 
     // build bvh
     app.status = "computing bvh";
@@ -229,7 +214,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                     (int)app.trace_sample);
                 auto cam_names = vector<string>();
                 for (auto& camera : app.scene.cameras)
-                    cam_names.push_back(camera.name);
+                    cam_names.push_back(camera.uri);
                 auto edited = 0;
                 if (app.load_done) {
                     edited += draw_combobox_opengl_widget(
@@ -272,9 +257,6 @@ void draw_opengl_widgets(const opengl_window& win) {
                 if (draw_button_opengl_widget(win, "print cams")) {
                     for (auto& camera : app.scene.cameras) {
                         print_obj_camera(camera);
-                    }
-                    for (auto& camera : app.scene.cameras) {
-                        print_json_camera(camera);
                     }
                 }
                 continue_opengl_widget_line(win);
@@ -517,15 +499,13 @@ int main(int argc, char* argv[]) {
         "Use Embree ratracer");
     parser.add_flag("--embree-flatten,!--no-embree-flatten",
         app.bvh_options.embree_flatten, "Flatten embree scene");
-    parser.add_flag("--embree-shared,!--no-embree-shared",
-        app.bvh_options.embree_shared, "Embree runs in shared memory");
+    parser.add_flag("--embree-compact,!--no-embree-compact",
+        app.bvh_options.embree_compact, "Embree runs in compact memory");
 #endif
     parser.add_flag("--double-sided,!--no-double-sided",
         app.trace_options.double_sided, "Double-sided rendering.");
     parser.add_flag(
         "--add-skyenv,!--no-add-skyenv", app.add_skyenv, "Add sky envmap");
-    parser.add_flag(
-        "--validate,!--no-validate", app.validate, "Validate scene");
     parser.add_option("--output-image,-o", app.imfilename, "Image filename");
     parser.add_option("scene", app.filename, "Scene filename")->required(true);
     try {

@@ -68,11 +68,6 @@ image<vec4f> display_diff(const image<vec4f>& diff) {
     return display;
 }
 
-void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
-}
-
 int main(int argc, char* argv[]) {
     // Application values
     auto threshold = 0.1f;
@@ -114,8 +109,7 @@ int main(int argc, char* argv[]) {
         }
     }
     if (max(max_diff) > threshold) {
-        printf("image max difference: %f %f %f %f\n", max_diff.x, max_diff.y,
-            max_diff.z, max_diff.w);
+        print_info("image max difference: " + to_string(max_diff));
         exit_error("image content differs");
     }
 
