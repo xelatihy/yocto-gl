@@ -162,7 +162,7 @@ def backup(directory='mcguire',scene='*',format='obj',mode='default'):
         outdir = f'{directory}/backup-{format}'
         os.system(f'mkdir -p {outdir}')
         outname = dirname.replace(f'/{format}/',f'/backup-{format}/') + '.zip'
-        os.system(f'rm {outname}.zip')
+        os.system(f'rm {outname}')
         cmd = f'zip {options} {outname} {dirname}'
         print(cmd)
         os.system(cmd)

@@ -466,10 +466,14 @@ inline void parse_value(string_view& str, yaml_value& value) {
             if (value._size >= 16) throw io_error("cannot parse value");
         }
         value.type = yaml_value::type_t::array_t;
+    } else if (str.front() == '-' || str.front() == '+' || is_digit(str.front())) {
+        parse_value(str, value._numbers[0]);
+        value._size = 1;
+        value.type  = yaml_value::type_t::number_t;
     } else if (str.front() == '"') {
         parse_value(str, value._string, true);
         value.type = yaml_value::type_t::string_t;
-    } else if (is_alpha(str.front())) {
+    } else {
         parse_value(str, value._string, false);
         value.type = yaml_value::type_t::string_t;
         if (value._string == "true" || value._string == "True") {
@@ -481,10 +485,6 @@ inline void parse_value(string_view& str, yaml_value& value) {
             value._boolean = false;
             value.type     = yaml_value::type_t::boolean_t;
         }
-    } else {
-        parse_value(str, value._numbers[0]);
-        value._size = 1;
-        value.type  = yaml_value::type_t::number_t;
     }
 }
 

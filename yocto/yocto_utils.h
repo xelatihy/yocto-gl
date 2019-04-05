@@ -952,7 +952,7 @@ inline bool is_space(char c) {
 inline bool is_alpha(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
-inline bool is_digit(char c) { return c >= 0 && c <= 9; }
+inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
 
 inline void parse_varname(string_view& str, string& value) {
     skip_whitespace(str);
