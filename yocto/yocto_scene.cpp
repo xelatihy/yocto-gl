@@ -425,7 +425,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 void build_shape_bvh(
     yocto_shape& shape, bvh_shape& bvh, const bvh_build_options& options) {
 #if YOCTO_EMBREE
-    if (options.embree_shared &&
+    if (options.embree_compact &&
         shape.positions.size() == shape.positions.capacity()) {
         shape.positions.reserve(shape.positions.size() + 1);
     }
