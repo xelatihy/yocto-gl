@@ -2226,20 +2226,43 @@ static inline void parse_typeparam(pbrt_token_stream& stream, string& value) {
     restore_stream_position(stream);
 }
 
+// Parse param and resolve constant textures
+static inline void parse_textured_param(pbrt_token_stream& stream,
+    const string& ptype, pbrt_textured<spectrum3f>& value,
+    const unordered_map<string, spectrum3f>& constant_values) {
+    parse_param(stream, ptype, value);
+    if (value.texture == "") return;
+    if (constant_values.find(value.texture) == constant_values.end()) return;
+    value.value   = constant_values.at(value.texture);
+    value.texture = "";
+}
+static inline void parse_textured_param(pbrt_token_stream& stream,
+    const string& ptype, pbrt_textured<float>& value,
+    const unordered_map<string, spectrum3f>& constant_values) {
+    parse_param(stream, ptype, value);
+    if (value.texture == "") return;
+    if (constant_values.find(value.texture) == constant_values.end()) return;
+    auto col      = constant_values.at(value.texture);
+    value.value   = (col.x + col.y + col.z) / 3;
+    value.texture = "";
+}
+
 // Parse Material
-static inline void parse_pbrt_material(
-    pbrt_token_stream& stream, const string& type, pbrt_material& value) {
+static inline void parse_pbrt_material(pbrt_token_stream& stream,
+    const string& type, pbrt_material& value,
+    const unordered_map<string, spectrum3f>& constant_values) {
     auto pname = ""s, ptype = ""s;
     if (type == "matte") {
         auto tvalue = pbrt_matte_material{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
-                parse_param(stream, ptype, tvalue.Kd);
+                parse_textured_param(stream, ptype, tvalue.Kd, constant_values);
             } else if (pname == "sigma") {
                 parse_param(stream, ptype, tvalue.sigma);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2254,9 +2277,10 @@ static inline void parse_pbrt_material(
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kr") {
-                parse_param(stream, ptype, tvalue.Kr);
+                parse_textured_param(stream, ptype, tvalue.Kr, constant_values);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2271,22 +2295,25 @@ static inline void parse_pbrt_material(
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
-                parse_param(stream, ptype, tvalue.Kd);
+                parse_textured_param(stream, ptype, tvalue.Kd, constant_values);
             } else if (pname == "Ks") {
-                parse_param(stream, ptype, tvalue.Ks);
+                parse_textured_param(stream, ptype, tvalue.Ks, constant_values);
             } else if (pname == "roughness") {
                 pbrt_textured<float> roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_param(stream, ptype, tvalue.uroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_param(stream, ptype, tvalue.vroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2301,24 +2328,29 @@ static inline void parse_pbrt_material(
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "eta") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "k") {
-                parse_param(stream, ptype, tvalue.k);
+                parse_textured_param(stream, ptype, tvalue.k, constant_values);
             } else if (pname == "index") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "roughness") {
                 pbrt_textured<float> roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_param(stream, ptype, tvalue.uroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_param(stream, ptype, tvalue.vroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2333,26 +2365,31 @@ static inline void parse_pbrt_material(
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kr") {
-                parse_param(stream, ptype, tvalue.Kr);
+                parse_textured_param(stream, ptype, tvalue.Kr, constant_values);
             } else if (pname == "Kt") {
-                parse_param(stream, ptype, tvalue.Kt);
+                parse_textured_param(stream, ptype, tvalue.Kt, constant_values);
             } else if (pname == "eta") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "index") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "roughness") {
                 pbrt_textured<float> roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_param(stream, ptype, tvalue.uroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_param(stream, ptype, tvalue.vroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2367,26 +2404,31 @@ static inline void parse_pbrt_material(
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
-                parse_param(stream, ptype, tvalue.Kd);
+                parse_textured_param(stream, ptype, tvalue.Kd, constant_values);
             } else if (pname == "Ks") {
-                parse_param(stream, ptype, tvalue.Ks);
+                parse_textured_param(stream, ptype, tvalue.Ks, constant_values);
             } else if (pname == "reflect") {
-                parse_param(stream, ptype, tvalue.reflect);
+                parse_textured_param(
+                    stream, ptype, tvalue.reflect, constant_values);
             } else if (pname == "transmit") {
-                parse_param(stream, ptype, tvalue.transmit);
+                parse_textured_param(
+                    stream, ptype, tvalue.transmit, constant_values);
             } else if (pname == "roughness") {
                 pbrt_textured<float> roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_param(stream, ptype, tvalue.uroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_param(stream, ptype, tvalue.vroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2401,32 +2443,38 @@ static inline void parse_pbrt_material(
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
-                parse_param(stream, ptype, tvalue.Kd);
+                parse_textured_param(stream, ptype, tvalue.Kd, constant_values);
             } else if (pname == "Ks") {
-                parse_param(stream, ptype, tvalue.Ks);
+                parse_textured_param(stream, ptype, tvalue.Ks, constant_values);
             } else if (pname == "Kr") {
-                parse_param(stream, ptype, tvalue.Kr);
+                parse_textured_param(stream, ptype, tvalue.Kr, constant_values);
             } else if (pname == "Kt") {
-                parse_param(stream, ptype, tvalue.Kt);
+                parse_textured_param(stream, ptype, tvalue.Kt, constant_values);
             } else if (pname == "eta") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "index") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "opacity") {
-                parse_param(stream, ptype, tvalue.opacity);
+                parse_textured_param(
+                    stream, ptype, tvalue.opacity, constant_values);
             } else if (pname == "roughness") {
                 pbrt_textured<float> roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_param(stream, ptype, tvalue.uroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_param(stream, ptype, tvalue.vroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2441,46 +2489,62 @@ static inline void parse_pbrt_material(
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "color") {
-                parse_param(stream, ptype, tvalue.color);
+                parse_textured_param(
+                    stream, ptype, tvalue.color, constant_values);
             } else if (pname == "anisotropic") {
-                parse_param(stream, ptype, tvalue.anisotropic);
+                parse_textured_param(
+                    stream, ptype, tvalue.anisotropic, constant_values);
             } else if (pname == "clearcoat") {
-                parse_param(stream, ptype, tvalue.clearcoat);
+                parse_textured_param(
+                    stream, ptype, tvalue.clearcoat, constant_values);
             } else if (pname == "clearcoatgloss") {
-                parse_param(stream, ptype, tvalue.clearcoatgloss);
+                parse_textured_param(
+                    stream, ptype, tvalue.clearcoatgloss, constant_values);
             } else if (pname == "eta") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "index") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "metallic") {
-                parse_param(stream, ptype, tvalue.metallic);
+                parse_textured_param(
+                    stream, ptype, tvalue.metallic, constant_values);
             } else if (pname == "roughness") {
                 pbrt_textured<float> roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_param(stream, ptype, tvalue.uroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_param(stream, ptype, tvalue.vroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "scatterdistance") {
-                parse_param(stream, ptype, tvalue.scatterdistance);
+                parse_textured_param(
+                    stream, ptype, tvalue.scatterdistance, constant_values);
             } else if (pname == "sheen") {
-                parse_param(stream, ptype, tvalue.sheen);
+                parse_textured_param(
+                    stream, ptype, tvalue.sheen, constant_values);
             } else if (pname == "sheentint") {
-                parse_param(stream, ptype, tvalue.sheentint);
+                parse_textured_param(
+                    stream, ptype, tvalue.sheentint, constant_values);
             } else if (pname == "spectrans") {
-                parse_param(stream, ptype, tvalue.spectrans);
+                parse_textured_param(
+                    stream, ptype, tvalue.spectrans, constant_values);
             } else if (pname == "thin") {
                 parse_param(stream, ptype, tvalue.thin);
             } else if (pname == "difftrans") {
-                parse_param(stream, ptype, tvalue.difftrans);
+                parse_textured_param(
+                    stream, ptype, tvalue.difftrans, constant_values);
             } else if (pname == "flatness") {
-                parse_param(stream, ptype, tvalue.flatness);
+                parse_textured_param(
+                    stream, ptype, tvalue.flatness, constant_values);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2495,25 +2559,35 @@ static inline void parse_pbrt_material(
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "color") {
-                parse_param(stream, ptype, tvalue.color);
+                parse_textured_param(
+                    stream, ptype, tvalue.color, constant_values);
             } else if (pname == "sigma_a") {
-                parse_param(stream, ptype, tvalue.sigma_a);
+                parse_textured_param(
+                    stream, ptype, tvalue.sigma_a, constant_values);
             } else if (pname == "eumelanin") {
-                parse_param(stream, ptype, tvalue.eumelanin);
+                parse_textured_param(
+                    stream, ptype, tvalue.eumelanin, constant_values);
             } else if (pname == "pheomelanin") {
-                parse_param(stream, ptype, tvalue.pheomelanin);
+                parse_textured_param(
+                    stream, ptype, tvalue.pheomelanin, constant_values);
             } else if (pname == "eta") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "index") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "beta_m") {
-                parse_param(stream, ptype, tvalue.beta_m);
+                parse_textured_param(
+                    stream, ptype, tvalue.beta_m, constant_values);
             } else if (pname == "beta_n") {
-                parse_param(stream, ptype, tvalue.beta_n);
+                parse_textured_param(
+                    stream, ptype, tvalue.beta_n, constant_values);
             } else if (pname == "alpha") {
-                parse_param(stream, ptype, tvalue.alpha);
+                parse_textured_param(
+                    stream, ptype, tvalue.alpha, constant_values);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2528,30 +2602,36 @@ static inline void parse_pbrt_material(
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
-                parse_param(stream, ptype, tvalue.Kd);
+                parse_textured_param(stream, ptype, tvalue.Kd, constant_values);
             } else if (pname == "Kr") {
-                parse_param(stream, ptype, tvalue.Kr);
+                parse_textured_param(stream, ptype, tvalue.Kr, constant_values);
             } else if (pname == "Kt") {
-                parse_param(stream, ptype, tvalue.Kt);
+                parse_textured_param(stream, ptype, tvalue.Kt, constant_values);
             } else if (pname == "mfp") {
-                parse_param(stream, ptype, tvalue.mfp);
+                parse_textured_param(
+                    stream, ptype, tvalue.mfp, constant_values);
             } else if (pname == "eta") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "index") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "roughness") {
                 pbrt_textured<float> roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_param(stream, ptype, tvalue.uroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_param(stream, ptype, tvalue.vroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2566,13 +2646,15 @@ static inline void parse_pbrt_material(
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "amount") {
-                parse_param(stream, ptype, tvalue.amount);
+                parse_textured_param(
+                    stream, ptype, tvalue.amount, constant_values);
             } else if (pname == "namedmaterial1") {
                 parse_param(stream, ptype, tvalue.namedmaterial1);
             } else if (pname == "namedmaterial2") {
                 parse_param(stream, ptype, tvalue.namedmaterial2);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2591,7 +2673,8 @@ static inline void parse_pbrt_material(
                 tvalue.approx = pbrt_approximate_fourier_material(
                     tvalue.bsdffile);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2606,24 +2689,28 @@ static inline void parse_pbrt_material(
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "Kd") {
-                parse_param(stream, ptype, tvalue.Kd);
+                parse_textured_param(stream, ptype, tvalue.Kd, constant_values);
             } else if (pname == "Ks") {
-                parse_param(stream, ptype, tvalue.Ks);
+                parse_textured_param(stream, ptype, tvalue.Ks, constant_values);
             } else if (pname == "roughness") {
                 pbrt_textured<float> roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_param(stream, ptype, tvalue.uroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_param(stream, ptype, tvalue.vroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -2645,32 +2732,39 @@ static inline void parse_pbrt_material(
                 tvalue.sigma_prime_s = {
                     params.second.x, params.second.y, params.second.z};
             } else if (pname == "sigma_a") {
-                parse_param(stream, ptype, tvalue.sigma_a);
+                parse_textured_param(
+                    stream, ptype, tvalue.sigma_a, constant_values);
             } else if (pname == "sigma_prime_s") {
-                parse_param(stream, ptype, tvalue.sigma_prime_s);
+                parse_textured_param(
+                    stream, ptype, tvalue.sigma_prime_s, constant_values);
             } else if (pname == "scale") {
                 parse_param(stream, ptype, tvalue.scale);
             } else if (pname == "eta") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "index") {
-                parse_param(stream, ptype, tvalue.eta);
+                parse_textured_param(
+                    stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "Kr") {
-                parse_param(stream, ptype, tvalue.Kr);
+                parse_textured_param(stream, ptype, tvalue.Kr, constant_values);
             } else if (pname == "Kt") {
-                parse_param(stream, ptype, tvalue.Kt);
+                parse_textured_param(stream, ptype, tvalue.Kt, constant_values);
             } else if (pname == "roughness") {
                 pbrt_textured<float> roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_param(stream, ptype, tvalue.uroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_param(stream, ptype, tvalue.vroughness);
+                parse_textured_param(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
-                parse_param(stream, ptype, tvalue.bumpmap);
+                parse_textured_param(
+                    stream, ptype, tvalue.bumpmap, constant_values);
             } else if (pname == "type") {
                 auto ttype = ""s;
                 parse_param(stream, ptype, ttype);
@@ -3172,6 +3266,9 @@ inline void load_pbrt(
         if (ctx.active_transform_end) ctx.transform_end *= (affine3f)xform;
     };
 
+    // constant values
+    unordered_map<string, spectrum3f> constant_values = {};
+
     // parse command by command
     auto cmd = ""s;
     while (!streams.empty() && !is_empty(streams.back())) {
@@ -3310,6 +3407,10 @@ inline void load_pbrt(
             parse_value(stream, type);
             auto value = pbrt_texture{};
             parse_pbrt_texture(stream, type, value);
+            if (type == "constant") {
+                constant_values[name] =
+                    get<pbrt_constant_texture>(value).value.value;
+            }
             cb.texture(value, name, stack.back());
         } else if (cmd == "Material") {
             static auto material_id = 0;
@@ -3320,7 +3421,7 @@ inline void load_pbrt(
             } else {
                 auto value = pbrt_material{};
                 auto name  = "unnamed_material_" + to_string(material_id++);
-                parse_pbrt_material(stream, type, value);
+                parse_pbrt_material(stream, type, value, constant_values);
                 stack.back().material = name;
                 cb.material(value, name, stack.back());
             }
@@ -3329,7 +3430,7 @@ inline void load_pbrt(
             parse_value(stream, name);
             parse_typeparam(stream, type);
             auto value = pbrt_material{};
-            parse_pbrt_material(stream, type, value);
+            parse_pbrt_material(stream, type, value, constant_values);
             cb.material(value, name, stack.back());
         } else if (cmd == "NamedMaterial") {
             auto name = ""s;

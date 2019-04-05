@@ -51,8 +51,8 @@ cameras:
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
 textures:
-  - uri: textures/test-floor.png.ypreset
-  - uri: textures/test-sky.hdr.ypreset
+  - uri: ::yocto::test-floor::textures/test-floor.png
+  - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
     diffuse: [0.7, 0.7, 0.7]
@@ -91,10 +91,10 @@ materials:
   - uri: materials/test-arealight2.yaml
     emission: [20, 20, 20]
 shapes:
-  - uri: shapes/test-floor.ply.ypreset
-  - uri: shapes/test-sphere.ply.ypreset
-  - uri: shapes/test-arealight1.ply.ypreset
-  - uri: shapes/test-arealight2.ply.ypreset
+  - uri: ::yocto::test-floor::shapes/test-floor.ply
+  - uri: ::yocto::test-sphere::shapes/test-sphere.ply
+  - uri: ::yocto::test-arealight1::shapes/test-arealight1.ply
+  - uri: ::yocto::test-arealight2::shapes/test-arealight2.ply
 instances:
   - uri: instances/test-floor.yaml
     shape: shapes/test-floor.ply

@@ -498,6 +498,9 @@ bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
 void normalize_uris(yocto_scene& scene) {
     auto normalize = [](string& name, const string& base, const string& ext,
                          int num) {
+        for (auto& c : name) {
+            if (c == ':' || c == ' ') c = '_';
+        }
         if (name.empty()) name = base + "_" + to_string(num);
         if (get_dirname(name).empty()) name = base + "s/" + name;
         if (get_extension(name).empty()) name = name + "." + ext;

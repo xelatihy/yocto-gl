@@ -87,10 +87,10 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
 @click.option('--format','-f', default='obj')
-@click.option('--outformat','-F', default='json')
+@click.option('--outformat','-F', default='yaml')
 @click.option('--mode','-m', default='default')
 @click.option('--clean/--no-clean','-C', default=False)
-def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='path',clean=True):
+def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='path',clean=True):
     modes = {
         'default': '--skip-textures --mesh-filenames',
         'gltf': '--skip-textures --mesh-filenames --mesh-directory gltf_meshes/'
@@ -103,10 +103,11 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
         if 'landscape' in dirname and outformat == 'obj': continue
         if 'fractal' in dirname and outformat == 'obj': continue
         if 'pavilion' in dirname and outformat == 'obj': continue
+        if 'sanmiguel' in dirname and outformat == 'obj': continue
         outdirname = dirname.replace(f'/{format}/',f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
-        if outformat != 'obj': os.system(f'mkdir -p {outdirname}/models')
+        if outformat != 'obj': os.system(f'mkdir -p {outdirname}/shapes')
         os.system(f'mkdir -p {outdirname}/textures')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
@@ -162,7 +163,7 @@ def backup(directory='mcguire',scene='*',format='obj',mode='default'):
         outdir = f'{directory}/backup-{format}'
         os.system(f'mkdir -p {outdir}')
         outname = dirname.replace(f'/{format}/',f'/backup-{format}/') + '.zip'
-        os.system(f'rm {outname}.zip')
+        os.system(f'rm {outname}')
         cmd = f'zip {options} {outname} {dirname}'
         print(cmd)
         os.system(cmd)

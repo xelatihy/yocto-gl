@@ -128,25 +128,25 @@ def make_tests():
         ],
         "textures": [
             {
-                "uri": "textures/test-floor.png.ypreset"
+                "uri": "::yocto::test-floor::textures/test-floor.png"
             },
             {
-                "uri": "textures/test-uvgrid.png.ypreset"
+                "uri": "::yocto::test-uvgrid::textures/test-uvgrid.png"
             },
             {
-                "uri": "textures/test-bump.png.ypreset"
+                "uri": "::yocto::test-bump::textures/test-bump.png"
             },
             {
-                "uri": "textures/test-bump-normal.png.ypreset"
+                "uri": "::yocto::test-bump-normal::textures/test-bump-normal.png"
             },
             {
-                "uri": "textures/test-fbm-displacement.png.ypreset"
+                "uri": "::yocto::test-fbm-displacement::textures/test-fbm-displacement.png"
             },
             {
-                "uri": "textures/test-sky.hdr.ypreset"
+                "uri": "::yocto::test-sky::textures/test-sky.hdr"
             },
             {
-                "uri": "textures/test-sunsky.hdr.ypreset"
+                "uri": "::yocto::test-sunsky::textures/test-sunsky.hdr"
             }
         ],
         "materials": [
@@ -270,7 +270,7 @@ def make_tests():
         ],
         "shapes": [
             {
-                "uri": "shapes/test-floor.ply.ypreset"
+                "uri": "::yocto::test-floor::shapes/test-floor.ply"
             },
             {
                 "uri": "shapes/test-bunny.obj"
@@ -279,54 +279,54 @@ def make_tests():
                 "uri": "shapes/test-teapot.obj"
             },
             {
-                "uri": "shapes/test-sphere.ply.ypreset"
+                "uri": "::yocto::test-sphere::shapes/test-sphere.ply"
             },
             {
-                "uri": "shapes/test-cube.ply.ypreset"
+                "uri": "::yocto::test-cube::shapes/test-cube.ply"
             },
             {
-                "uri": "shapes/test-disk.ply.ypreset"
+                "uri": "::yocto::test-disk::shapes/test-disk.ply"
             },
             {
-                "uri": "shapes/test-uvsphere-flipcap.ply.ypreset"
+                "uri": "::yocto::test-uvsphere-flipcap::shapes/test-uvsphere-flipcap.ply"
             },
             {
-                "uri": "shapes/test-uvcylinder.ply.ypreset"
+                "uri": "::yocto::test-uvcylinder::shapes/test-uvcylinder.ply"
             },
             {
-                "uri": "shapes/test-sphere-displaced.obj.ypreset",
+                "uri": "::yocto::test-sphere-displaced::shapes/test-sphere-displaced.obj",
                 "preserve_facevarying": false
             },
             {
-                "uri": "shapes/test-cube-subdiv.obj.ypreset",
+                "uri": "::yocto::test-cube-subdiv::shapes/test-cube-subdiv.obj",
                 "subdivision_level": 4,
                 "catmull_clark": true,
                 "compute_normals": true,
                 "preserve_facevarying": true
             },
             {
-                "uri": "shapes/test-suzanne-subdiv.obj.ypreset",
+                "uri": "::yocto::test-suzanne-subdiv::shapes/test-suzanne-subdiv.obj",
                 "subdivision_level": 2,
                 "catmull_clark": true,
                 "compute_normals": true
             },
             {
-                "uri": "shapes/test-hairball1.ply.ypreset"
+                "uri": "::yocto::test-hairball1::shapes/test-hairball1.ply"
             },
             {
-                "uri": "shapes/test-hairball2.ply.ypreset"
+                "uri": "::yocto::test-hairball2::shapes/test-hairball2.ply"
             },
             {
-                "uri": "shapes/test-hairball3.ply.ypreset"
+                "uri": "::yocto::test-hairball3::shapes/test-hairball3.ply"
             },
             {
-                "uri": "shapes/test-hairball-interior.ply.ypreset"
+                "uri": "::yocto::test-hairball-interior::shapes/test-hairball-interior.ply"
             },
             {
-                "uri": "shapes/test-arealight1.ply.ypreset"
+                "uri": "::yocto::test-arealight1::shapes/test-arealight1.ply"
             },
             {
-                "uri": "shapes/test-arealight2.ply.ypreset"
+                "uri": "::yocto::test-arealight2::shapes/test-arealight2.ply"
             }
         ],
         "instances": [
@@ -391,7 +391,8 @@ def make_tests():
     def make_test(name, shapes, materials, lights, xoffsets=[ -0.4, -0.2, 0, 0.2, 0.4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1]):
         import copy
         def remove_preset(filename):
-            return filename.replace('.ypreset', '')
+            splits = filename.rpartition('::')
+            return splits[2] if splits[2] else splits[0]
         scene = copy.deepcopy(default_scene)
         scene['instances'] += copy.deepcopy(lights['instances'])
         scene['environments'] += copy.deepcopy(lights['environments'])

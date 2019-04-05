@@ -165,14 +165,17 @@ inline bool is_hdr_filename(const string& filename) {
     return get_extension(filename) == "hdr" ||
            get_extension(filename) == "exr" || get_extension(filename) == "pfm";
 }
-// Return the image preset type and the remaining filename
+// Return the preset type and the remaining filename
 inline bool is_image_preset_filename(const string& filename) {
-    return get_extension(filename) == "ypreset";
+    return filename.find("::yocto::") == 0;
 }
+// Return the preset type and the filename. Call only if this is a preset.
 inline pair<string, string> get_image_preset_type(const string& filename) {
-    if (get_extension(filename) == "ypreset") {
-        return {get_noextension(get_noextension(get_filename(filename))),
-            get_noextension(filename)};
+    if (filename.find("::yocto::") == 0) {
+        auto aux = filename.substr(string("::yocto::").size());
+        auto pos = aux.find("::");
+        if (pos == aux.npos) throw runtime_error("bad preset name" + filename);
+        return {aux.substr(0, pos), aux.substr(pos + 2)};
     } else {
         return {"", filename};
     }
@@ -1800,7 +1803,7 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
         make_fbm_image(
             img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 10.0f, 2.0f, 0.5f, 6, true);
     } else {
-        throw std::invalid_argument("unknown image preset" + type);
+        throw std::invalid_argument("unknown image preset " + type);
     }
 }
 
