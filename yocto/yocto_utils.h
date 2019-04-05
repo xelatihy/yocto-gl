@@ -254,6 +254,12 @@ inline print_timer print_timed(const string& str) {
     return print_timer(str);
 }
 
+// Exits printing and error
+inline void exit_error(const string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

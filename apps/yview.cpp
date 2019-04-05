@@ -39,11 +39,6 @@ namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
 };
 
-void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
-}
-
 struct drawgl_shape {
     opengl_array_buffer  positions_buffer     = {};
     opengl_array_buffer  normals_buffer       = {};
