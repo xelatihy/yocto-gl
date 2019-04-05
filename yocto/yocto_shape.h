@@ -238,8 +238,8 @@ inline pair<string, string> get_shape_preset_type(const string& filename) {
     if (filename.find("::yocto::") == 0) {
         auto aux = filename.substr(string("::yocto::").size());
         auto pos = aux.find("::");
-        if(pos == aux.npos) throw runtime_error("bad preset name " + filename);
-        return {aux.substr(0, pos), aux.substr(pos+2)};
+        if (pos == aux.npos) throw runtime_error("bad preset name " + filename);
+        return {aux.substr(0, pos), aux.substr(pos + 2)};
     } else {
         return {"", filename};
     }

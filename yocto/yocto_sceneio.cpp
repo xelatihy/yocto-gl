@@ -2615,16 +2615,17 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             const string& filename)
             : scene{scene}, options{options}, filename{filename} {}
 
-        bool verbose = false;
+        bool verbose                 = false;
         bool remove_contant_textures = true;
 
         unordered_map<string, yocto_material> mmap =
             unordered_map<string, yocto_material>{{"", {}}};
         unordered_map<string, vec3f> amap = unordered_map<string, vec3f>{
             {"", zero3f}};
-        unordered_map<string, int>  ammap = unordered_map<string, int>{};
-        unordered_map<string, int>  tmap = unordered_map<string, int>{{"", -1}};
-        unordered_map<string, vec3f>  ctmap = unordered_map<string, vec3f>{{"", zero3f}};
+        unordered_map<string, int> ammap = unordered_map<string, int>{};
+        unordered_map<string, int> tmap  = unordered_map<string, int>{{"", -1}};
+        unordered_map<string, vec3f> ctmap = unordered_map<string, vec3f>{
+            {"", zero3f}};
         unordered_map<string, bool> timap = unordered_map<string, bool>{
             {"", false}};
         unordered_map<string, vector<yocto_instance>> omap =
@@ -2637,7 +2638,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             return ctmap.find(name) != ctmap.end();
         }
         vec3f get_constant_texture_color(const string& name) {
-            return ctmap.at(name);            
+            return ctmap.at(name);
         }
 
         int get_material(const pbrt_context& ctx) {
@@ -2660,8 +2661,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             if (textured.texture == "") {
                 value = {textured.value.x, textured.value.y, textured.value.z};
                 texture = -1;
-            } else if(is_constant_texture(textured.texture)) {
-                value = get_constant_texture_color(textured.texture);
+            } else if (is_constant_texture(textured.texture)) {
+                value   = get_constant_texture_color(textured.texture);
                 texture = -1;
             } else {
                 value   = {1, 1, 1};
@@ -2783,10 +2784,11 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
         void texture(const pbrt_texture& ptexture, const string& name,
             const pbrt_context& ctx) {
-            if(remove_contant_textures && holds_alternative<pbrt_constant_texture>(ptexture)) {
+            if (remove_contant_textures &&
+                holds_alternative<pbrt_constant_texture>(ptexture)) {
                 auto& constant = get<pbrt_constant_texture>(ptexture);
-                ctmap[name] = (vec3f)constant.value.value;
-                timap[name] = false;
+                ctmap[name]    = (vec3f)constant.value.value;
+                timap[name]    = false;
                 return;
             }
             auto texture = yocto_texture{};
@@ -2824,12 +2826,14 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             } else if (holds_alternative<pbrt_fbm_texture>(ptexture)) {
                 auto& fbm = get<pbrt_fbm_texture>(ptexture);
                 make_fbm_image(texture.ldr_image, {1024, 1024}, {0, 0, 0, 255},
-                    {255, 255, 255, 255}, (float)1, (float)2, (float)0.5f, fbm.octaves);
+                    {255, 255, 255, 255}, (float)1, (float)2, (float)0.5f,
+                    fbm.octaves);
                 if (verbose) printf("texture fbm not supported well");
             } else if (holds_alternative<pbrt_marble_texture>(ptexture)) {
-                auto& marble   = get<pbrt_marble_texture>(ptexture);
+                auto& marble = get<pbrt_marble_texture>(ptexture);
                 make_fbm_image(texture.ldr_image, {1024, 1024}, {0, 0, 0, 255},
-                    {255, 255, 255, 255}, (float)marble.scale, (float)2, (float)0.5f, marble.octaves);
+                    {255, 255, 255, 255}, (float)marble.scale, (float)2,
+                    (float)0.5f, marble.octaves);
                 if (verbose) printf("texture marble not supported well");
             } else if (holds_alternative<pbrt_mix_texture>(ptexture)) {
                 auto& mix = get<pbrt_mix_texture>(ptexture);
