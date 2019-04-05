@@ -233,6 +233,27 @@ inline int64_t get_time() {
     return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
+// Timer that print once it is crated and destroyed
+struct print_timer {
+    print_timer(const string& msg) : _msg{msg}, _start{get_time()} {
+        printf("%s ...\n", _msg.c_str());
+    }
+    ~print_timer() {
+        printf("%s in %s\n", _msg.c_str(), format_duration(get_time() - _start).c_str());
+    }
+    private:
+    string _msg;
+    int64_t _start;
+};
+
+// print info
+inline void print_into(const string& str) {
+    printf("%s\n", str.c_str());
+}
+inline print_timer print_timed(const string& str) {
+    return print_timer(str);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

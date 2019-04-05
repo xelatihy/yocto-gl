@@ -1398,7 +1398,7 @@ void save_mtl(
 
     // for each material, dump all the values
     for (auto& material : scene.materials) {
-        println_values(fs, "newmtl", material.name);
+        println_values(fs, "newmtl", get_basename(material.name));
         println_values(fs, "  illum 2");
         println_values(fs, "  Ke", material.emission);
         println_values(fs, "  Kd", material.diffuse);
@@ -1452,7 +1452,7 @@ void save_objx(const string& filename, const yocto_scene& scene) {
 
     // cameras
     for (auto& camera : scene.cameras) {
-        println_values(fs, "c", camera.name, (int)camera.orthographic,
+        println_values(fs, "c", get_basename(camera.name), (int)camera.orthographic,
             camera.film_width, camera.film_height, camera.focal_length,
             camera.focus_distance, camera.lens_aperture, camera.frame);
     }
@@ -1460,7 +1460,7 @@ void save_objx(const string& filename, const yocto_scene& scene) {
     // environments
     for (auto& environment : scene.environments) {
         if (environment.emission_texture >= 0) {
-            println_values(fs, "e", environment.name, environment.emission,
+            println_values(fs, "e", get_basename(environment.name), environment.emission,
                 scene.textures[environment.emission_texture].name,
                 environment.frame);
         } else {
@@ -1509,7 +1509,7 @@ void save_obj(const string& filename, const yocto_scene& scene,
         println_values(fs, "o", instance.name);
         if (instance.material >= 0)
             println_values(
-                fs, "usemtl", scene.materials[instance.material].name);
+                fs, "usemtl", get_basename(scene.materials[instance.material].name));
         if (instance.frame == identity_frame3f) {
             for (auto& p : shape.positions) println_values(fs, "v", p);
             for (auto& n : shape.normals) println_values(fs, "vn", n);
@@ -3212,7 +3212,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
 
     // convert textures
     for (auto& texture : scene.textures) {
-        println_values(fs, "Texture \"" + texture.name +
+        println_values(fs, "Texture \"" + get_basename(texture.name) +
                                "\" \"spectrum\" \"imagemap\" "
                                "\"string filename\" [\"" +
                                texture.name + "\"]");
@@ -3220,18 +3220,18 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
 
     // convert materials
     for (auto& material : scene.materials) {
-        println_values(fs, "MakeNamedMaterial \"" + material.name + "\" ");
+        println_values(fs, "MakeNamedMaterial \"" + get_basename(material.name) + "\" ");
         println_values(fs, "    \"string type\" \"uber\" ");
         if (material.diffuse_texture >= 0)
             println_values(
                 fs, "    \"texture Kd\" [\"" +
-                        scene.textures[material.diffuse_texture].name + "\"] ");
+                        get_basename(scene.textures[material.diffuse_texture].name) + "\"] ");
         else
             println_values(fs, "    \"rgb Kd\" [", material.diffuse, "] ");
         if (material.specular_texture >= 0)
             println_values(fs,
                 "    \"texture Ks\" [\"" +
-                    scene.textures[material.specular_texture].name + "\"] ");
+                    get_basename(scene.textures[material.specular_texture].name) + "\"] ");
         else
             println_values(fs, "    \"rgb Ks\" [", material.specular, "] ");
         println_values(
@@ -3245,7 +3245,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
         println_values(fs, "AttributeBegin");
         println_values(fs, "  TransformBegin");
         println_values(fs, "    ConcatTransform [", mat4f(instance.frame), "]");
-        println_values(fs, "    NamedMaterial \"" + material.name + "\"");
+        println_values(fs, "    NamedMaterial \"" + get_basename(material.name) + "\"");
         if (material.emission != zero3f)
             println_values(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [ ",
                 material.emission, " ]");
