@@ -1130,6 +1130,12 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
                         otexcoord.at(vert.texturecoord - 1));
                 if (vert.normal)
                     shape.normals.push_back(onorm.at(vert.normal - 1));
+                if(shape.normals.size() != 0 && shape.normals.size() != shape.positions.size()) {
+                    while(shape.normals.size() != shape.positions.size()) shape.normals.push_back({0,0,1});
+                }
+                if(shape.texturecoords.size() != 0 && shape.texturecoords.size() != shape.positions.size()) {
+                    while(shape.texturecoords.size() != shape.positions.size()) shape.texturecoords.push_back({0,0});
+                }
             }
         }
         // add vertex
@@ -1361,6 +1367,11 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             scene.shapes.erase(scene.shapes.begin() + idx);
             scene.instances.erase(scene.instances.begin() + idx);
             idx--;
+        }
+
+        // check if any empty shape is left
+        for(auto& shape : scene.shapes) {
+            if(shape.positions.empty()) throw io_error("empty shapes not supported");
         }
 
         // merging quads and triangles
