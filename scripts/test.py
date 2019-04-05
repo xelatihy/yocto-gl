@@ -62,7 +62,7 @@ def make_tests():
         "name": "simple-ml",
         "cameras": [
             {
-                "name": "cameras/default.ycam",
+                "name": "cameras/default.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
@@ -71,7 +71,7 @@ def make_tests():
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
-                "name": "cameras/front.ycam",
+                "name": "cameras/front.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
@@ -80,7 +80,7 @@ def make_tests():
                 "frame": lookat([0, 0.575, 1.4], [0, 0.05, 0], [0,1,0])
             },
             {
-                "name": "cameras/back.ycam",
+                "name": "cameras/back.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
@@ -89,7 +89,7 @@ def make_tests():
                 "frame": lookat([0, 0.575, -1.4], [0, 0.05, 0], [0,1,0])
             },
             {
-                "name": "cameras/perspective-sharp.ycam",
+                "name": "cameras/perspective-sharp.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
@@ -98,7 +98,7 @@ def make_tests():
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
-                "name": "cameras/perspective-dof.ycam",
+                "name": "cameras/perspective-dof.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.025,
                 "film_width": 0.036,
@@ -107,7 +107,7 @@ def make_tests():
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
-                "name": "cameras/orthographic-sharp.ycam",
+                "name": "cameras/orthographic-sharp.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
@@ -117,7 +117,7 @@ def make_tests():
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
-                "name": "cameras/orthographic-dof.ycam",
+                "name": "cameras/orthographic-dof.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.02,
                 "film_width": 0.036,
@@ -152,49 +152,49 @@ def make_tests():
         ],
         "materials": [
             {
-                "name": "materials/test-floor.ymat",
+                "name": "materials/test-floor.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "diffuse_texture": "textures/test-floor.png"
             },
             {
-                "name": "materials/test-uvgrid.ymat",
+                "name": "materials/test-uvgrid.yaml",
                 "diffuse": [ 1, 1, 1 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "roughness": 0.1,
                 "diffuse_texture": "textures/test-uvgrid.png"
             },
             {
-                "name": "materials/test-matte.ymat",
+                "name": "materials/test-matte.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "specular": [ 0, 0, 0 ],
                 "roughness": 1
             },
             {
-                "name": "materials/test-plastic-sharp.ymat",
+                "name": "materials/test-plastic-sharp.yaml",
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "roughness": 0.01
             },
             {
-                "name": "materials/test-plastic-rough.ymat",
+                "name": "materials/test-plastic-rough.yaml",
                 "diffuse": [ 0.5, 0.7, 0.5 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "roughness": 0.1
             },
             {
-                "name": "materials/test-metal-sharp.ymat",
+                "name": "materials/test-metal-sharp.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.7, 0.7, 0.7 ],
                 "roughness": 0
             },
             {
-                "name": "materials/test-metal-rough.ymat",
+                "name": "materials/test-metal-rough.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.66, 0.45, 0.34 ],
                 "roughness": 0.1
             },
             {
-                "name": "materials/test-matte-displaced.ymat",
+                "name": "materials/test-matte-displaced.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "specular": [ 0, 0, 0 ],
                 "roughness": 1,
@@ -202,28 +202,28 @@ def make_tests():
                 "displacement_scale": 0.025
             },
             {
-                "name": "materials/test-plastic-sharp-bumped.ymat",
+                "name": "materials/test-plastic-sharp-bumped.yaml",
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "roughness": 0.01,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
-                "name": "materials/test-metal-sharp-bumped.ymat",
+                "name": "materials/test-metal-sharp-bumped.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.7, 0.7, 0.7 ],
                 "roughness": 0,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
-                "name": "materials/test-transparent.ymat",
+                "name": "materials/test-transparent.yaml",
                 "diffuse": [ 0.7, 0.5, 0.5 ],
                 "specular": [ 0, 0, 0 ],
                 "roughness": 1,
                 "opacity": 0.2
             },
             {
-                "name": "materials/test-glass-sharp.ymat",
+                "name": "materials/test-glass-sharp.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 1, 1 ],
@@ -231,7 +231,7 @@ def make_tests():
                 "refract": true
             },
             {
-                "name": "materials/test-glass-rough.ymat",
+                "name": "materials/test-glass-rough.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 0.7, 0.7 ],
@@ -239,7 +239,7 @@ def make_tests():
                 "refract": true
             },
             {
-                "name": "materials/test-thinglass-sharp.ymat",
+                "name": "materials/test-thinglass-sharp.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 1, 1 ],
@@ -247,7 +247,7 @@ def make_tests():
                 "refract": false
             },
             {
-                "name": "materials/test-thinglass-rough.ymat",
+                "name": "materials/test-thinglass-rough.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 0.7, 0.7 ],
@@ -255,17 +255,17 @@ def make_tests():
                 "refract": false
             },
             {
-                "name": "materials/test-hair.ymat",
+                "name": "materials/test-hair.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "specular": [ 0, 0, 0 ],
                 "roughness": 1
             },
             {
-                "name": "materials/test-arealight1.ymat",
+                "name": "materials/test-arealight1.yaml",
                 "emission": [ 20, 20, 20 ]
             },
             {
-                "name": "materials/test-arealight2.ymat",
+                "name": "materials/test-arealight2.yaml",
                 "emission": [ 20, 20, 20 ]
             }
         ],
@@ -332,9 +332,9 @@ def make_tests():
         ],
         "instances": [
             {
-                "name": "instances/test-floor.yist",
+                "name": "instances/test-floor.yaml",
                 "shape": "shapes/test-floor.ply",
-                "material": "materials/test-floor.ymat"
+                "material": "materials/test-floor.yaml"
             }
         ],
         "environments": []
@@ -342,15 +342,15 @@ def make_tests():
     area_lights = {
         "instances": [
             {
-                "name": "instances/test-arealight1.yist",
+                "name": "instances/test-arealight1.yaml",
                 "shape": "shapes/test-arealight1.ply",
-                "material": "materials/test-arealight1.ymat",
+                "material": "materials/test-arealight1.yaml",
                 "frame": lookat([ -0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             },
             {
-                "name": "instances/test-arealight2.yist",
+                "name": "instances/test-arealight2.yaml",
                 "shape": "shapes/test-arealight2.ply",
-                "material": "materials/test-arealight2.ymat",
+                "material": "materials/test-arealight2.yaml",
                 "frame": lookat([ 0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             }
         ],
@@ -359,21 +359,21 @@ def make_tests():
     mixed_lights = {
         "instances": [
             {
-                "name": "instances/test-arealight1.yist",
+                "name": "instances/test-arealight1.yaml",
                 "shape": "shapes/test-arealight1.ply",
-                "material": "materials/test-arealight1.ymat",
+                "material": "materials/test-arealight1.yaml",
                 "frame": lookat([ -0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             },
             {
-                "name": "instances/test-arealight2.yist",
+                "name": "instances/test-arealight2.yaml",
                 "shape": "shapes/test-arealight2.ply",
-                "material": "materials/test-arealight2.ymat",
+                "material": "materials/test-arealight2.yaml",
                 "frame": lookat([ 0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             }
         ],
         "environments": [
             {
-                "name": 'environments/test-sky.yenv',
+                "name": 'environments/test-sky.yaml',
                 "emission": [2, 2, 2],
                 "emission_texture": "textures/test-sky.hdr"
             }
@@ -383,7 +383,7 @@ def make_tests():
         "instances": [],
         "environments": [
             {
-                "name": 'environments/test-sunsky.yenv',
+                "name": 'environments/test-sunsky.yaml',
                 "emission": [1, 1, 1],
                 "emission_texture": "textures/test-sunsky.hdr"
             }
@@ -391,6 +391,8 @@ def make_tests():
     }
     def make_test(name, shapes, materials, lights, xoffsets=[ -0.4, -0.2, 0, 0.2, 0.4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1]):
         import copy
+        def remove_preset(filename):
+            return filename.replace('.ypreset', '')
         scene = copy.deepcopy(default_scene)
         scene['instances'] += copy.deepcopy(lights['instances'])
         scene['environments'] += copy.deepcopy(lights['environments'])
@@ -406,14 +408,14 @@ def make_tests():
             zscale = zscales[i % len(zscales)]
             if not shape: continue
             if not material: continue
+            sref = os.path.splitext(os.path.basename(remove_preset(shape)))[0]
+            mref = os.path.splitext(os.path.basename(remove_preset(material)))[0]
             scene['instances'] += [ {
-                'name': f'instances/{shape}_{material}.yist',
+                'name': f'instances/{sref}_{mref}.yaml',
                 'shape': shape,
                 'material': material,
                 'frame': [ xscale, 0, 0, 0, yscale, 0, 0, 0, zscale, xoffset, yoffset, zoffset ]
             } ]
-        def remove_preset(filename):
-            return filename.replace('.ypreset', '')
         if True: # pruning
             old_materials = scene['materials']
             scene['materials'] = []
@@ -459,14 +461,14 @@ def make_tests():
             write_yaml_objects(f, 'shapes')
             write_yaml_objects(f, 'instances')
             write_yaml_objects(f, 'environments')
-    make_test('tests/features1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat", "materials/test-metal-rough.ymat", "materials/test-plastic-rough.ymat", "materials/test-metal-sharp.ymat"], mixed_lights)
-    make_test('tests/materials1.yaml', ['shapes/test-sphere.ply'], ["materials/test-plastic-sharp.ymat", "materials/test-plastic-rough.ymat", "materials/test-matte.ymat", "materials/test-metal-sharp.ymat", "materials/test-metal-rough.ymat"], mixed_lights)
-    make_test('tests/materials2.yaml', ['shapes/test-sphere.ply'], ["materials/test-glass-sharp.ymat", "materials/test-glass-rough.ymat", "materials/test-transparent.ymat", "materials/test-thinglass-sharp.ymat", "materials/test-thinglass-rough.ymat"], mixed_lights)
-    make_test('tests/materials3.yaml', ['shapes/test-sphere.ply', 'shapes/test-sphere.ply', 'shapes/test-sphere-displaced.obj', 'shapes/test-sphere.ply', 'shapes/test-sphere.ply'], ["materials/test-plastic-sharp-bumped.ymat", "materials/test-plastic-sharp-bumped.ymat", "materials/test-matte-displaced.ymat", "materials/test-metal-sharp-bumped.ymat", "materials/test-metal-sharp-bumped.ymat"], mixed_lights)
-    make_test('tests/shapes1.yaml', ['shapes/test-sphere.ply', "shapes/test-uvsphere-flipcap.ply", "shapes/test-disk.ply", "shapes/test-uvcylinder.ply", "shapes/test-cube.ply"], ["materials/test-uvgrid.ymat"], mixed_lights)
-    make_test('tests/shapes2.yaml', ['shapes/test-cube-subdiv.obj', "shapes/test-suzanne-subdiv.obj", "shapes/test-teapot.obj", "shapes/test-bunny.obj", "shapes/test-cube-subdiv.obj"], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat"], mixed_lights)
-    make_test('tests/shapes3.yaml', ['shapes/test-sphere.ply', "shapes/test-hairball1.ply", "shapes/test-hairball2.ply", "shapes/test-hairball3.ply", "shapes/test-sphere.ply", "", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", ""], ["materials/test-matte.ymat", "materials/test-hair.ymat", "materials/test-hair.ymat", "materials/test-hair.ymat", "materials/test-matte.ymat"], mixed_lights, xscales=[ 0.5, 1, 1, 1, 0.5 ])
-    make_test('tests/arealights1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat", "materials/test-metal-rough.ymat", "materials/test-plastic-rough.ymat", "materials/test-metal-sharp.ymat"], area_lights)
-    make_test('tests/environments1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat", "materials/test-metal-rough.ymat", "materials/test-plastic-rough.ymat", "materials/test-metal-sharp.ymat"], sunsky_lights)
+    make_test('tests/features1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-metal-rough.yaml", "materials/test-plastic-rough.yaml", "materials/test-metal-sharp.yaml"], mixed_lights)
+    make_test('tests/materials1.yaml', ['shapes/test-sphere.ply'], ["materials/test-plastic-sharp.yaml", "materials/test-plastic-rough.yaml", "materials/test-matte.yaml", "materials/test-metal-sharp.yaml", "materials/test-metal-rough.yaml"], mixed_lights)
+    make_test('tests/materials2.yaml', ['shapes/test-sphere.ply'], ["materials/test-glass-sharp.yaml", "materials/test-glass-rough.yaml", "materials/test-transparent.yaml", "materials/test-thinglass-sharp.yaml", "materials/test-thinglass-rough.yaml"], mixed_lights)
+    make_test('tests/materials3.yaml', ['shapes/test-sphere.ply', 'shapes/test-sphere.ply', 'shapes/test-sphere-displaced.obj', 'shapes/test-sphere.ply', 'shapes/test-sphere.ply'], ["materials/test-plastic-sharp-bumped.yaml", "materials/test-plastic-sharp-bumped.yaml", "materials/test-matte-displaced.yaml", "materials/test-metal-sharp-bumped.yaml", "materials/test-metal-sharp-bumped.yaml"], mixed_lights)
+    make_test('tests/shapes1.yaml', ['shapes/test-sphere.ply', "shapes/test-uvsphere-flipcap.ply", "shapes/test-disk.ply", "shapes/test-uvcylinder.ply", "shapes/test-cube.ply"], ["materials/test-uvgrid.yaml"], mixed_lights)
+    make_test('tests/shapes2.yaml', ['shapes/test-cube-subdiv.obj', "shapes/test-suzanne-subdiv.obj", "shapes/test-teapot.obj", "shapes/test-bunny.obj", "shapes/test-cube-subdiv.obj"], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml"], mixed_lights)
+    make_test('tests/shapes3.yaml', ['shapes/test-sphere.ply', "shapes/test-hairball1.ply", "shapes/test-hairball2.ply", "shapes/test-hairball3.ply", "shapes/test-sphere.ply", "", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", ""], ["materials/test-matte.yaml", "materials/test-hair.yaml", "materials/test-hair.yaml", "materials/test-hair.yaml", "materials/test-matte.yaml"], mixed_lights, xscales=[ 0.5, 1, 1, 1, 0.5 ])
+    make_test('tests/arealights1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-metal-rough.yaml", "materials/test-plastic-rough.yaml", "materials/test-metal-sharp.yaml"], area_lights)
+    make_test('tests/environments1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-metal-rough.yaml", "materials/test-plastic-rough.yaml", "materials/test-metal-sharp.yaml"], sunsky_lights)
 
 cli()

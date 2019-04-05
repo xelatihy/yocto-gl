@@ -550,7 +550,7 @@ void add_missing_materials(yocto_scene& scene) {
         if (instance.material >= 0) continue;
         if (material_id < 0) {
             auto material    = yocto_material{};
-            material.name    = "<default>";
+            material.name    = "materails/default.yaml";
             material.diffuse = {0.2f, 0.2f, 0.2f};
             scene.materials.push_back(material);
             material_id = (int)scene.materials.size() - 1;
@@ -563,7 +563,7 @@ void add_missing_materials(yocto_scene& scene) {
 void add_missing_cameras(yocto_scene& scene) {
     if (scene.cameras.empty()) {
         auto camera = yocto_camera{};
-        camera.name = "<view>";
+        camera.name = "cameras/default.yaml";
         set_camera_view_from_bbox(
             camera, compute_scene_bounds(scene), {0, 0, 1});
         scene.cameras.push_back(camera);
@@ -577,7 +577,7 @@ void add_sky_environment(yocto_scene& scene, float sun_angle) {
     make_sunsky_image(texture.hdr_image, {1024, 512}, sun_angle);
     scene.textures.push_back(texture);
     auto environment             = yocto_environment{};
-    environment.name             = "<sky>";
+    environment.name             = "environments/default.yaml";
     environment.emission         = {1, 1, 1};
     environment.emission_texture = (int)scene.textures.size() - 1;
     scene.environments.push_back(environment);
