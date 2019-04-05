@@ -67,6 +67,10 @@ materials:
     diffuse: [0.5, 0.5, 0.7]
     specular: [0.04, 0.04, 0.04]
     roughness: 0.01
+  - uri: materials/test-matte-displaced.yaml
+    diffuse: [0.7, 0.7, 0.7]
+    specular: [0, 0, 0]
+    roughness: 1
   - uri: materials/test-arealight1.yaml
     emission: [20, 20, 20]
   - uri: materials/test-arealight2.yaml
@@ -75,17 +79,23 @@ shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply
   - uri: shapes/test-bunny.obj
   - uri: shapes/test-teapot.obj
+  - uri: ::yocto::test-sphere-displaced::shapes/test-sphere-displaced.obj
   - uri: ::yocto::test-cube-subdiv::shapes/test-cube-subdiv.obj
+  - uri: ::yocto::test-suzanne-subdiv::shapes/test-suzanne-subdiv.obj
+  - uri: ::yocto::test-arealight1::shapes/test-arealight1.ply
+  - uri: ::yocto::test-arealight2::shapes/test-arealight2.ply
+subdivs:
+  - uri: ::yocto::test-cube-subdiv::subdivs/test-cube-subdiv.obj
+    tesselated_shape: shapes/test-cube-subdiv.obj
     subdivision_level: 4
     catmull_clark: True
     compute_normals: True
     preserve_facevarying: True
-  - uri: ::yocto::test-suzanne-subdiv::shapes/test-suzanne-subdiv.obj
+  - uri: ::yocto::test-suzanne-subdiv::subdivs/test-suzanne-subdiv.obj
+    tesselated_shape: shapes/test-suzanne-subdiv.obj
     subdivision_level: 2
     catmull_clark: True
     compute_normals: True
-  - uri: ::yocto::test-arealight1::shapes/test-arealight1.ply
-  - uri: ::yocto::test-arealight2::shapes/test-arealight2.ply
 instances:
   - uri: instances/test-floor.yaml
     shape: shapes/test-floor.ply
@@ -106,16 +116,16 @@ instances:
     shape: shapes/test-suzanne-subdiv.obj
     material: materials/test-plastic-sharp.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - uri: instances/test-sphere-displaced_test-matte-displaced.yaml
+    shape: shapes/test-sphere-displaced.obj
+    material: materials/test-matte-displaced.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - uri: instances/test-bunny_test-uvgrid.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-uvgrid.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - uri: instances/test-teapot_test-uvgrid.yaml
     shape: shapes/test-teapot.obj
-    material: materials/test-uvgrid.yaml
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - uri: instances/test-bunny_test-plastic-sharp.yaml
-    shape: shapes/test-bunny.obj
-    material: materials/test-plastic-sharp.yaml
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - uri: instances/test-cube-subdiv_test-uvgrid.yaml
-    shape: shapes/test-cube-subdiv.obj
     material: materials/test-uvgrid.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:

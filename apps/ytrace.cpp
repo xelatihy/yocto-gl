@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
     // tesselate
     printf("tesselating scene ...\n");
     auto start_tess = get_time();
-    tesselate_shapes(scene);
+    tesselate_subdivs(scene);
     printf("tesselating scene [%s]\n",
         format_duration(get_time() - start_tess).c_str());
 

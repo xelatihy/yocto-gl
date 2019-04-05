@@ -148,7 +148,7 @@ bool load_scene_sync(app_state& app) {
 
     // tesselate
     app.status = "tesselating shapes";
-    tesselate_shapes(app.scene);
+    tesselate_subdivs(app.scene);
 
     // add sky
     if (app.add_skyenv) add_sky_environment(app.scene);
