@@ -82,47 +82,43 @@ materials:
   - name: materials/test-arealight2.ymat
     emission: [20, 20, 20]
 shapes:
-  - name: test-floor
-    filename: shapes/test-floor.ply.ypreset
-  - name: test-sphere
-    filename: shapes/test-sphere.obj.ypreset
-  - name: test-arealight1
-    filename: shapes/test-arealight1.ply.ypreset
-  - name: test-arealight2
-    filename: shapes/test-arealight2.ply.ypreset
+  - name: shapes/test-floor.ply.ypreset
+  - name: shapes/test-sphere.ply.ypreset
+  - name: shapes/test-arealight1.ply.ypreset
+  - name: shapes/test-arealight2.ply.ypreset
 instances:
   - name: instances/test-floor.yist
-    shape: test-floor
+    shape: shapes/test-floor.ply
     material: materials/test-floor.ymat
-  - name: test-arealight1
-    shape: test-arealight1
+  - name: instances/test-arealight1.yist
+    shape: shapes/test-arealight1.ply
     material: materials/test-arealight1.ymat
     frame: [-0.8944271909999159, 0.0, -0.4472135954999579, 0.27562473083535527, 0.7874992309581578, -0.5512494616707105, 0.3521803625302495, -0.6163156344279367, -0.704360725060499, -0.4, 0.8, 0.8]
-  - name: test-arealight2
-    shape: test-arealight2
+  - name: instances/test-arealight2.yist
+    shape: shapes/test-arealight2.ply
     material: materials/test-arealight2.ymat
     frame: [-0.8944271909999159, -0.0, 0.4472135954999579, -0.27562473083535527, 0.7874992309581578, -0.5512494616707105, -0.3521803625302495, -0.6163156344279367, -0.704360725060499, 0.4, 0.8, 0.8]
-  - name: instances/test-sphere_materials/test-plastic-sharp.ymat.yist
-    shape: test-sphere
+  - name: instances/shapes/test-sphere.ply_materials/test-plastic-sharp.ymat.yist
+    shape: shapes/test-sphere.ply
     material: materials/test-plastic-sharp.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: instances/test-sphere_materials/test-plastic-rough.ymat.yist
-    shape: test-sphere
+  - name: instances/shapes/test-sphere.ply_materials/test-plastic-rough.ymat.yist
+    shape: shapes/test-sphere.ply
     material: materials/test-plastic-rough.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: instances/test-sphere_materials/test-matte.ymat.yist
-    shape: test-sphere
+  - name: instances/shapes/test-sphere.ply_materials/test-matte.ymat.yist
+    shape: shapes/test-sphere.ply
     material: materials/test-matte.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: instances/test-sphere_materials/test-metal-sharp.ymat.yist
-    shape: test-sphere
+  - name: instances/shapes/test-sphere.ply_materials/test-metal-sharp.ymat.yist
+    shape: shapes/test-sphere.ply
     material: materials/test-metal-sharp.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: instances/test-sphere_materials/test-metal-rough.ymat.yist
-    shape: test-sphere
+  - name: instances/shapes/test-sphere.ply_materials/test-metal-rough.ymat.yist
+    shape: shapes/test-sphere.ply
     material: materials/test-metal-rough.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
-  - name: test-sky
+  - name: environments/test-sky.yenv
     emission: [2, 2, 2]
     emission_texture: textures/test-sky.hdr

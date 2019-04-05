@@ -321,8 +321,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 materials.back().refract      = false;
             }
             shapes.push_back(yocto_shape{});
-            shapes.back().name     = dmaterial.name;
-            shapes.back().filename = filename + "." +
+            shapes.back().name = filename + "." +
                                      std::to_string(shapes.size()) +
                                      get_extension(filename);
             pos_map.clear();
@@ -663,7 +662,7 @@ void load_disney_island_curve(const string& filename, yocto_scene& scene,
         auto material = -1;
         for (auto j = 0; j < curves.get_length(); j++) {
             auto curve     = curves.get_array_element(j);
-            shape.filename = outname;
+            shape.name = outname;
             for (auto i = 0; i < curve.get_length(); i++) {
                 auto point = curve.get_array_element(i);
                 shape.positions.push_back({
@@ -705,7 +704,7 @@ void load_disney_island_curvetube(const string& filename, yocto_scene& scene,
         material.diffuse = mmap.at(material_name).color;
         scene.materials.push_back(material);
         auto shape      = yocto_shape{};
-        shape.filename  = outname;
+        shape.name  = outname;
         auto ssmaterial = (int)scene.materials.size() - 1;
         for (auto j = 0; j < curves.get_length(); j++) {
             auto curve             = curves.get_array_element(j);
@@ -1018,11 +1017,12 @@ int main(int argc, char** argv) {
     }
 
     // add missing mesh names if necessary
+    #if 0
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
         mesh_directory += '/';
     if (mesh_filenames && get_extension(output) == "json") {
         for (auto& shape : scene.shapes) {
-            shape.filename = "";
+            shape.name = "";
             if (shape.positions.size() <= 16) continue;
             if (shape.preserve_facevarying) {
                 shape.filename = mesh_directory + shape.name + ".obj";
@@ -1031,12 +1031,7 @@ int main(int argc, char** argv) {
             }
         }
     }
-    // gltf does not support embedded data
-    if (get_extension(output) == "gltf") {
-        for (auto& shape : scene.shapes) {
-            shape.filename = mesh_directory + shape.name + ".bin";
-        }
-    }
+    #endif
 
     // make a directory if needed
     if (!mkdir(get_dirname(output))) {

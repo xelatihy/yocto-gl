@@ -299,7 +299,6 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
     parallel_foreach(
         scene.textures,
         [&dirname](const yocto_texture& texture) {
-            if (texture.hdr_image.empty() && texture.ldr_image.empty()) return;
             save_scene_texture(texture, dirname);
         },
         options.cancel_flag, options.run_serially);
@@ -308,22 +307,21 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
     parallel_foreach(
         scene.voltextures,
         [&dirname](const yocto_voltexture& texture) {
-            if (texture.volume_data.empty()) return;
             save_scene_voltexture(texture, dirname);
         },
         options.cancel_flag, options.run_serially);
 }
 
 void load_scene_shape(yocto_shape& shape, const string& dirname) {
-    if (is_shape_preset_filename(shape.filename)) {
-        auto [type, nfilename] = get_shape_preset_type(shape.filename);
+    if (is_shape_preset_filename(shape.name)) {
+        auto [type, nfilename] = get_shape_preset_type(shape.name);
         make_shape_preset(shape.points, shape.lines, shape.triangles,
             shape.quads, shape.quads_positions, shape.quads_normals,
             shape.quads_texturecoords, shape.positions, shape.normals,
             shape.texturecoords, shape.colors, shape.radius, type);
-        shape.filename = nfilename;
+        shape.name = nfilename;
     } else {
-        load_shape(dirname + shape.filename, shape.points, shape.lines,
+        load_shape(dirname + shape.name, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.quads_positions,
             shape.quads_normals, shape.quads_texturecoords, shape.positions,
             shape.normals, shape.texturecoords, shape.colors, shape.radius,
@@ -332,7 +330,7 @@ void load_scene_shape(yocto_shape& shape, const string& dirname) {
 }
 
 void save_scene_shape(const yocto_shape& shape, const string& dirname) {
-    save_shape(dirname + shape.filename, shape.points, shape.lines,
+    save_shape(dirname + shape.name, shape.points, shape.lines,
         shape.triangles, shape.quads, shape.quads_positions,
         shape.quads_normals, shape.quads_texturecoords, shape.positions,
         shape.normals, shape.texturecoords, shape.colors, shape.radius);
@@ -347,7 +345,6 @@ void load_scene_shapes(yocto_scene& scene, const string& dirname,
     parallel_foreach(
         scene.shapes,
         [&dirname](yocto_shape& shape) {
-            if (shape.filename == "" || !shape.positions.empty()) return;
             load_scene_shape(shape, dirname);
         },
         options.cancel_flag, options.run_serially);
@@ -362,7 +359,6 @@ void save_scene_shapes(const yocto_scene& scene, const string& dirname,
     parallel_foreach(
         scene.shapes,
         [&dirname](const yocto_shape& shape) {
-            if (shape.filename == "") return;
             save_scene_shape(shape, dirname);
         },
         options.cancel_flag, options.run_serially);
@@ -592,9 +588,18 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
             if (is_string_value(yml)) {
                 auto name = ""s;
                 get_value(yml, name);
-                value = refs.at(name);
+                if(name == "") return;
+                try {
+                    value = refs.at(name);
+                } catch(...) {
+                    throw io_error("reference not found " + name);
+                }
             } else {
                 get_value(yml, value);
+                if(value < 0) return;
+                if(value >= refs.size()) {
+                    throw io_error("reference not found " + std::to_string(value));
+                }
             }
         }
 
@@ -682,7 +687,12 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                     auto& texture = scene.voltextures.back();
                     if (key == "name") {
                         get_value(value, texture.name);
-                        vmap[texture.name] = (int)scene.voltextures.size() - 1;
+                        auto refname = texture.name;
+                        if(is_image_preset_filename(refname)) {
+                            auto [_, nname] = get_image_preset_type(refname);
+                            refname = nname;
+                        }
+                        vmap[refname] = (int)scene.voltextures.size() - 1;
                     } else {
                         throw io_error("unknown property");
                     }
@@ -744,9 +754,12 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                     auto& shape = scene.shapes.back();
                     if (key == "name") {
                         get_value(value, shape.name);
-                        smap[shape.name] = (int)scene.shapes.size() - 1;
-                    } else if (key == "filename") {
-                        get_value(value, shape.filename);
+                        auto refname = shape.name;
+                        if(is_shape_preset_filename(refname)) {
+                            auto [_, nname] = get_shape_preset_type(refname);
+                            refname = nname;
+                        }
+                        smap[refname] = (int)scene.shapes.size() - 1;
                     } else if (key == "subdivision_level") {
                         get_value(value, shape.subdivision_level);
                     } else if (key == "catmull_clark") {
@@ -962,7 +975,6 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
     if (!scene.shapes.empty()) print_value(fs, "\n\nshapes:\n");
     for (auto& shape : scene.shapes) {
         print_first(fs, "name", shape.name);
-        print_optional(fs, "filename", shape.filename, def_shape.filename);
         print_optional(fs, "subdivision_level", shape.subdivision_level,
             def_shape.subdivision_level);
         print_optional(
@@ -2319,7 +2331,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         mjs["primitives"] = json::array();
         bjs["name"]       = shape.name;
         bjs["byteLength"] = 0;
-        bjs["uri"]        = replace_extension(shape.filename, ".bin");
+        bjs["uri"]        = replace_extension(shape.name, ".bin");
         pjs["material"]   = instance.material;
         auto add_accessor = [&js, &bjs, bid](
                                 int count, string type, bool indices = false) {
@@ -2502,8 +2514,8 @@ void save_gltf_scene(const string& filename, const yocto_scene& scene,
         // meshes
         auto dirname = get_dirname(filename);
         for (auto& shape : scene.shapes) {
-            if (shape.filename == "") continue;
-            auto filename = normalize_path(dirname + shape.filename);
+            if (shape.name == "") continue;
+            auto filename = normalize_path(dirname + shape.name);
             filename      = replace_extension(filename, ".bin");
             save_gltf_mesh(filename, shape);
         }
@@ -2690,7 +2702,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         void shape(const pbrt_shape& pshape, const pbrt_context& ctx) {
             static auto shape_id = 0;
             auto        shape    = yocto_shape{};
-            shape.filename = "models/" + std::to_string(shape_id++) + ".ply";
+            shape.name = "shapes/" + std::to_string(shape_id++) + ".ply";
             if (holds_alternative<pbrt_trianglemesh_shape>(pshape)) {
                 auto& mesh          = get<pbrt_trianglemesh_shape>(pshape);
                 shape.positions     = mesh.P;
@@ -2707,7 +2719,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     shape.normals, shape.triangles, shape.positions);
             } else if (holds_alternative<pbrt_plymesh_shape>(pshape)) {
                 auto& mesh     = get<pbrt_plymesh_shape>(pshape);
-                shape.filename = mesh.filename;
+                shape.name = mesh.filename;
                 if (!options.skip_meshes) {
                     load_shape(get_dirname(filename) + mesh.filename,
                         shape.points, shape.lines, shape.triangles, shape.quads,
@@ -3239,7 +3251,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
         if (material.emission != zero3f)
             println_values(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [ ",
                 material.emission, " ]");
-        if (shape.filename == "") {
+        if (shape.name == "") {
             auto triangles     = shape.triangles;
             auto positions     = shape.positions;
             auto normals       = shape.normals;
@@ -3286,7 +3298,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
             print_value(fs, " ]\n");
         } else {
             println_values(fs, "    Shape \"plymesh\" \"string filename\" [\"" +
-                                   shape.filename + "\"]");
+                                   shape.name + "\"]");
         }
         println_values(fs, "  TransformEnd");
         println_values(fs, "AttributeEnd");
@@ -3306,8 +3318,8 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
         // save meshes
         auto dirname = get_dirname(filename);
         for (auto& shape : scene.shapes) {
-            if (shape.filename == "") continue;
-            auto filename = normalize_path(dirname + shape.filename);
+            if (shape.name == "") continue;
+            auto filename = normalize_path(dirname + shape.name);
             save_shape(filename, shape.points, shape.lines, shape.triangles,
                 shape.quads, shape.quads_positions, shape.quads_normals,
                 shape.quads_texturecoords, shape.positions, shape.normals,
@@ -3452,7 +3464,6 @@ void read_object(input_file& fs, yocto_camera& camera) {
 
 void write_object(output_file& fs, const yocto_shape& shape) {
     write_value(fs, shape.name);
-    write_value(fs, shape.filename);
     write_value(fs, shape.subdivision_level);
     write_value(fs, shape.catmull_clark);
     write_value(fs, shape.compute_normals);
@@ -3473,7 +3484,6 @@ void write_object(output_file& fs, const yocto_shape& shape) {
 }
 void read_object(input_file& fs, yocto_shape& shape) {
     read_value(fs, shape.name);
-    read_value(fs, shape.filename);
     read_value(fs, shape.subdivision_level);
     read_value(fs, shape.catmull_clark);
     read_value(fs, shape.compute_normals);

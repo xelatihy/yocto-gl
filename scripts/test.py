@@ -271,86 +271,69 @@ def make_tests():
         ],
         "shapes": [
             {
-                "name": "test-floor",
-                "filename": "shapes/test-floor.ply.ypreset"
+                "name": "shapes/test-floor.ply.ypreset"
             },
             {
-                "name": "test-bunny",
-                "filename": "shapes/test-bunny.obj"
+                "name": "shapes/test-bunny.obj"
             },
             {
-                "name": "test-teapot",
-                "filename": "shapes/test-teapot.obj"
+                "name": "shapes/test-teapot.obj"
             },
             {
-                "name": "test-sphere",
-                "filename": "shapes/test-sphere.obj.ypreset"
+                "name": "shapes/test-sphere.ply.ypreset"
             },
             {
-                "name": "test-cube",
-                "filename": "shapes/test-cube.obj.ypreset"
+                "name": "shapes/test-cube.ply.ypreset"
             },
             {
-                "name": "test-disk",
-                "filename": "shapes/test-disk.obj.ypreset"
+                "name": "shapes/test-disk.ply.ypreset"
             },
             {
-                "name": "test-uvsphere-flipcap",
-                "filename": "shapes/test-uvsphere-flipcap.obj.ypreset"
+                "name": "shapes/test-uvsphere-flipcap.ply.ypreset"
             },
             {
-                "name": "test-uvcylinder",
-                "filename": "shapes/test-uvcylinder.obj.ypreset"
+                "name": "shapes/test-uvcylinder.ply.ypreset"
             },
             {
-                "name": "test-sphere-displaced",
-                "filename": "shapes/test-sphere-displaced.obj.ypreset",
+                "name": "shapes/test-sphere-displaced.obj.ypreset",
                 "preserve_facevarying": false
             },
             {
-                "name": "test-cube-subdiv",
-                "filename": "shapes/test-cube-subdiv.obj.ypreset",
+                "name": "shapes/test-cube-subdiv.obj.ypreset",
                 "subdivision_level": 4,
                 "catmull_clark": true,
                 "compute_normals": true,
                 "preserve_facevarying": true
             },
             {
-                "name": "test-suzanne-subdiv",
-                "filename": "shapes/test-suzanne-subdiv.obj.ypreset",
+                "name": "shapes/test-suzanne-subdiv.obj.ypreset",
                 "subdivision_level": 2,
                 "catmull_clark": true,
                 "compute_normals": true
             },
             {
-                "name": "test-hairball1",
-                "filename": "shapes/test-hairball1.ply.ypreset"
+                "name": "shapes/test-hairball1.ply.ypreset"
             },
             {
-                "name": "test-hairball2",
-                "filename": "shapes/test-hairball2.ply.ypreset"
+                "name": "shapes/test-hairball2.ply.ypreset"
             },
             {
-                "name": "test-hairball3",
-                "filename": "shapes/test-hairball3.ply.ypreset"
+                "name": "shapes/test-hairball3.ply.ypreset"
             },
             {
-                "name": "test-hairball-interior",
-                "filename": "shapes/test-hairball-interior.ply.ypreset"
+                "name": "shapes/test-hairball-interior.ply.ypreset"
             },
             {
-                "name": "test-arealight1",
-                "filename": "shapes/test-arealight1.ply.ypreset"
+                "name": "shapes/test-arealight1.ply.ypreset"
             },
             {
-                "name": "test-arealight2",
-                "filename": "shapes/test-arealight2.ply.ypreset"
+                "name": "shapes/test-arealight2.ply.ypreset"
             }
         ],
         "instances": [
             {
                 "name": "instances/test-floor.yist",
-                "shape": "test-floor",
+                "shape": "shapes/test-floor.ply",
                 "material": "materials/test-floor.ymat"
             }
         ],
@@ -359,14 +342,14 @@ def make_tests():
     area_lights = {
         "instances": [
             {
-                "name": "test-arealight1",
-                "shape": "test-arealight1",
+                "name": "instances/test-arealight1.yist",
+                "shape": "shapes/test-arealight1.ply",
                 "material": "materials/test-arealight1.ymat",
                 "frame": lookat([ -0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             },
             {
-                "name": "test-arealight2",
-                "shape": "test-arealight2",
+                "name": "instances/test-arealight2.yist",
+                "shape": "shapes/test-arealight2.ply",
                 "material": "materials/test-arealight2.ymat",
                 "frame": lookat([ 0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             }
@@ -376,21 +359,21 @@ def make_tests():
     mixed_lights = {
         "instances": [
             {
-                "name": "test-arealight1",
-                "shape": "test-arealight1",
+                "name": "instances/test-arealight1.yist",
+                "shape": "shapes/test-arealight1.ply",
                 "material": "materials/test-arealight1.ymat",
                 "frame": lookat([ -0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             },
             {
-                "name": "test-arealight2",
-                "shape": "test-arealight2",
+                "name": "instances/test-arealight2.yist",
+                "shape": "shapes/test-arealight2.ply",
                 "material": "materials/test-arealight2.ymat",
                 "frame": lookat([ 0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             }
         ],
         "environments": [
             {
-                "name": 'test-sky',
+                "name": 'environments/test-sky.yenv',
                 "emission": [2, 2, 2],
                 "emission_texture": "textures/test-sky.hdr"
             }
@@ -400,7 +383,7 @@ def make_tests():
         "instances": [],
         "environments": [
             {
-                "name": 'test-sunsky',
+                "name": 'environments/test-sunsky.yenv',
                 "emission": [1, 1, 1],
                 "emission_texture": "textures/test-sunsky.hdr"
             }
@@ -437,14 +420,14 @@ def make_tests():
             for material in old_materials:
                 used = False
                 for instance in scene['instances']:
-                    if instance['material'] == material['name']: used = True
+                    if instance['material'] == remove_preset(material['name']): used = True
                 if used: scene['materials'] += [material] 
             old_shapes = scene['shapes']
             scene['shapes'] = []
             for shape in old_shapes:
                 used = False
                 for instance in scene['instances']:
-                    if instance['shape'] == shape['name']: used = True
+                    if instance['shape'] == remove_preset(shape['name']): used = True
                 if used: scene['shapes'] += [shape] 
             old_textures = scene['textures']
             scene['textures'] = []
@@ -468,7 +451,7 @@ def make_tests():
                 for key, value in obj.items():
                     if key == 'name': continue
                     f.write('    ' + key + ': ' + str(value) + '\n')
-        with open(f'tests/{name}.yaml', 'wt') as f:
+        with open(f'{name}', 'wt') as f:
             write_yaml_objects(f, 'cameras')
             write_yaml_objects(f, 'textures')
             write_yaml_objects(f, 'voltextures')
@@ -476,14 +459,14 @@ def make_tests():
             write_yaml_objects(f, 'shapes')
             write_yaml_objects(f, 'instances')
             write_yaml_objects(f, 'environments')
-    make_test('features1', ['test-bunny', 'test-sphere', 'test-bunny', 'test-sphere', 'test-bunny'], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat", "materials/test-metal-rough.ymat", "materials/test-plastic-rough.ymat", "materials/test-metal-sharp.ymat"], mixed_lights)
-    make_test('materials1', ['test-sphere'], ["materials/test-plastic-sharp.ymat", "materials/test-plastic-rough.ymat", "materials/test-matte.ymat", "materials/test-metal-sharp.ymat", "materials/test-metal-rough.ymat"], mixed_lights)
-    make_test('materials2', ['test-sphere'], ["materials/test-glass-sharp.ymat", "materials/test-glass-rough.ymat", "materials/test-transparent.ymat", "materials/test-thinglass-sharp.ymat", "materials/test-thinglass-rough.ymat"], mixed_lights)
-    make_test('materials3', ['test-sphere', 'test-sphere', 'test-sphere-displaced', 'test-sphere', 'test-sphere'], ["materials/test-plastic-sharp-bumped.ymat", "materials/test-plastic-sharp-bumped.ymat", "materials/test-matte-displaced.ymat", "materials/test-metal-sharp-bumped.ymat", "materials/test-metal-sharp-bumped.ymat"], mixed_lights)
-    make_test('shapes1', ['test-sphere', "test-uvsphere-flipcap", "test-disk", "test-uvcylinder", "test-cube"], ["materials/test-uvgrid.ymat"], mixed_lights)
-    make_test('shapes2', ['test-cube-subdiv', "test-suzanne-subdiv", "test-teapot", "test-bunny", "test-cube-subdiv"], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat"], mixed_lights)
-    make_test('shapes3', ['test-sphere', "test-hairball1", "test-hairball2", "test-hairball3", "test-sphere", "", "test-hairball-interior", "test-hairball-interior", "test-hairball-interior", ""], ["materials/test-matte.ymat", "materials/test-hair.ymat", "materials/test-hair.ymat", "materials/test-hair.ymat", "materials/test-matte.ymat"], mixed_lights, xscales=[ 0.5, 1, 1, 1, 0.5 ])
-    make_test('arealights1', ['test-bunny', 'test-sphere', 'test-bunny', 'test-sphere', 'test-bunny'], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat", "materials/test-metal-rough.ymat", "materials/test-plastic-rough.ymat", "materials/test-metal-sharp.ymat"], area_lights)
-    make_test('environments1', ['test-bunny', 'test-sphere', 'test-bunny', 'test-sphere', 'test-bunny'], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat", "materials/test-metal-rough.ymat", "materials/test-plastic-rough.ymat", "materials/test-metal-sharp.ymat"], sunsky_lights)
+    make_test('tests/features1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat", "materials/test-metal-rough.ymat", "materials/test-plastic-rough.ymat", "materials/test-metal-sharp.ymat"], mixed_lights)
+    make_test('tests/materials1.yaml', ['shapes/test-sphere.ply'], ["materials/test-plastic-sharp.ymat", "materials/test-plastic-rough.ymat", "materials/test-matte.ymat", "materials/test-metal-sharp.ymat", "materials/test-metal-rough.ymat"], mixed_lights)
+    make_test('tests/materials2.yaml', ['shapes/test-sphere.ply'], ["materials/test-glass-sharp.ymat", "materials/test-glass-rough.ymat", "materials/test-transparent.ymat", "materials/test-thinglass-sharp.ymat", "materials/test-thinglass-rough.ymat"], mixed_lights)
+    make_test('tests/materials3.yaml', ['shapes/test-sphere.ply', 'shapes/test-sphere.ply', 'shapes/test-sphere-displaced.obj', 'shapes/test-sphere.ply', 'shapes/test-sphere.ply'], ["materials/test-plastic-sharp-bumped.ymat", "materials/test-plastic-sharp-bumped.ymat", "materials/test-matte-displaced.ymat", "materials/test-metal-sharp-bumped.ymat", "materials/test-metal-sharp-bumped.ymat"], mixed_lights)
+    make_test('tests/shapes1.yaml', ['shapes/test-sphere.ply', "shapes/test-uvsphere-flipcap.ply", "shapes/test-disk.ply", "shapes/test-uvcylinder.ply", "shapes/test-cube.ply"], ["materials/test-uvgrid.ymat"], mixed_lights)
+    make_test('tests/shapes2.yaml', ['shapes/test-cube-subdiv.obj', "shapes/test-suzanne-subdiv.obj", "shapes/test-teapot.obj", "shapes/test-bunny.obj", "shapes/test-cube-subdiv.obj"], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat"], mixed_lights)
+    make_test('tests/shapes3.yaml', ['shapes/test-sphere.ply', "shapes/test-hairball1.ply", "shapes/test-hairball2.ply", "shapes/test-hairball3.ply", "shapes/test-sphere.ply", "", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", ""], ["materials/test-matte.ymat", "materials/test-hair.ymat", "materials/test-hair.ymat", "materials/test-hair.ymat", "materials/test-matte.ymat"], mixed_lights, xscales=[ 0.5, 1, 1, 1, 0.5 ])
+    make_test('tests/arealights1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat", "materials/test-metal-rough.ymat", "materials/test-plastic-rough.ymat", "materials/test-metal-sharp.ymat"], area_lights)
+    make_test('tests/environments1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.ymat", "materials/test-plastic-sharp.ymat", "materials/test-metal-rough.ymat", "materials/test-plastic-rough.ymat", "materials/test-metal-sharp.ymat"], sunsky_lights)
 
 cli()

@@ -80,37 +80,34 @@ materials:
     specular: [0.66, 0.45, 0.34]
     roughness: 0.1
 shapes:
-  - name: test-floor
-    filename: shapes/test-floor.ply.ypreset
-  - name: test-bunny
-    filename: shapes/test-bunny.obj
-  - name: test-sphere
-    filename: shapes/test-sphere.obj.ypreset
+  - name: shapes/test-floor.ply.ypreset
+  - name: shapes/test-bunny.obj
+  - name: shapes/test-sphere.ply.ypreset
 instances:
   - name: instances/test-floor.yist
-    shape: test-floor
+    shape: shapes/test-floor.ply
     material: materials/test-floor.ymat
-  - name: instances/test-bunny_materials/test-uvgrid.ymat.yist
-    shape: test-bunny
+  - name: instances/shapes/test-bunny.obj_materials/test-uvgrid.ymat.yist
+    shape: shapes/test-bunny.obj
     material: materials/test-uvgrid.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: instances/test-sphere_materials/test-plastic-sharp.ymat.yist
-    shape: test-sphere
+  - name: instances/shapes/test-sphere.ply_materials/test-plastic-sharp.ymat.yist
+    shape: shapes/test-sphere.ply
     material: materials/test-plastic-sharp.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: instances/test-bunny_materials/test-metal-rough.ymat.yist
-    shape: test-bunny
+  - name: instances/shapes/test-bunny.obj_materials/test-metal-rough.ymat.yist
+    shape: shapes/test-bunny.obj
     material: materials/test-metal-rough.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: instances/test-sphere_materials/test-plastic-rough.ymat.yist
-    shape: test-sphere
+  - name: instances/shapes/test-sphere.ply_materials/test-plastic-rough.ymat.yist
+    shape: shapes/test-sphere.ply
     material: materials/test-plastic-rough.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: instances/test-bunny_materials/test-metal-sharp.ymat.yist
-    shape: test-bunny
+  - name: instances/shapes/test-bunny.obj_materials/test-metal-sharp.ymat.yist
+    shape: shapes/test-bunny.obj
     material: materials/test-metal-sharp.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
-  - name: test-sunsky
+  - name: environments/test-sunsky.yenv
     emission: [1, 1, 1]
     emission_texture: textures/test-sunsky.hdr

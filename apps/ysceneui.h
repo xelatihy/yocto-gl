@@ -300,7 +300,6 @@ inline bool draw_opengl_widgets_scene_inspector(
     const opengl_window& win, yocto_shape& value, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_opengl_widget(win, "name", value.name);
-    edited += draw_textinput_opengl_widget(win, "path", value.filename);
     draw_label_opengl_widget(win, "lines", "%ld", value.lines.size());
     draw_label_opengl_widget(win, "triangles", "%ld", value.triangles.size());
     draw_label_opengl_widget(win, "quads", "%ld", value.quads.size());

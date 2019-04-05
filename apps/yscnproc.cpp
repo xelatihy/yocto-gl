@@ -134,20 +134,14 @@ int main(int argc, char** argv) {
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
         mesh_directory += '/';
     if (mesh_filenames && get_extension(output) == "yaml") {
+        auto sid = 0;
         for (auto& shape : scene.shapes) {
-            shape.filename = "";
-            if (shape.positions.size() <= 16) continue;
             if (shape.preserve_facevarying) {
-                shape.filename = mesh_directory + shape.name + ".obj";
+                shape.name = mesh_directory + "shape__" + std::to_string(sid) + ".obj";
             } else {
-                shape.filename = mesh_directory + shape.name + ".ply";
+                shape.name = mesh_directory + "shape__" + std::to_string(sid) + ".ply";
             }
-        }
-    }
-    // gltf does not support embedded data
-    if (get_extension(output) == "gltf") {
-        for (auto& shape : scene.shapes) {
-            shape.filename = mesh_directory + shape.name + ".bin";
+            sid++;
         }
     }
 

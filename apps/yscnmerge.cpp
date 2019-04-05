@@ -125,19 +125,15 @@ int main(int argc, char** argv) {
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
         mesh_directory += '/';
-    if (get_extension(output) == "json") {
+    if (get_extension(output) == "yaml") {
         for (auto& shape : scene.shapes) {
-            if (shape.filename.empty()) {
-                shape.filename = mesh_directory + shape.name + ".ply";
-            } else if (mesh_filenames) {
-                shape.filename = mesh_directory + get_filename(shape.filename);
-            }
+            shape.name = mesh_directory + get_filename(shape.name);
         }
     }
     // gltf does not support embedded data
     if (get_extension(output) == "gltf") {
         for (auto& shape : scene.shapes) {
-            shape.filename = mesh_directory + shape.name + ".bin";
+            shape.name = mesh_directory + shape.name + ".bin";
         }
     }
 

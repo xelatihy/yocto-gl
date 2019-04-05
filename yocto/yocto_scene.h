@@ -165,7 +165,6 @@ struct yocto_material {
 struct yocto_shape {
     // shape data
     string name     = "";
-    string filename = "";
 
     // subdision properties
     int  subdivision_level    = 0;

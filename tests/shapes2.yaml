@@ -72,60 +72,53 @@ materials:
   - name: materials/test-arealight2.ymat
     emission: [20, 20, 20]
 shapes:
-  - name: test-floor
-    filename: shapes/test-floor.ply.ypreset
-  - name: test-bunny
-    filename: shapes/test-bunny.obj
-  - name: test-teapot
-    filename: shapes/test-teapot.obj
-  - name: test-cube-subdiv
-    filename: shapes/test-cube-subdiv.obj.ypreset
+  - name: shapes/test-floor.ply.ypreset
+  - name: shapes/test-bunny.obj
+  - name: shapes/test-teapot.obj
+  - name: shapes/test-cube-subdiv.obj.ypreset
     subdivision_level: 4
     catmull_clark: True
     compute_normals: True
     preserve_facevarying: True
-  - name: test-suzanne-subdiv
-    filename: shapes/test-suzanne-subdiv.obj.ypreset
+  - name: shapes/test-suzanne-subdiv.obj.ypreset
     subdivision_level: 2
     catmull_clark: True
     compute_normals: True
-  - name: test-arealight1
-    filename: shapes/test-arealight1.ply.ypreset
-  - name: test-arealight2
-    filename: shapes/test-arealight2.ply.ypreset
+  - name: shapes/test-arealight1.ply.ypreset
+  - name: shapes/test-arealight2.ply.ypreset
 instances:
   - name: instances/test-floor.yist
-    shape: test-floor
+    shape: shapes/test-floor.ply
     material: materials/test-floor.ymat
-  - name: test-arealight1
-    shape: test-arealight1
+  - name: instances/test-arealight1.yist
+    shape: shapes/test-arealight1.ply
     material: materials/test-arealight1.ymat
     frame: [-0.8944271909999159, 0.0, -0.4472135954999579, 0.27562473083535527, 0.7874992309581578, -0.5512494616707105, 0.3521803625302495, -0.6163156344279367, -0.704360725060499, -0.4, 0.8, 0.8]
-  - name: test-arealight2
-    shape: test-arealight2
+  - name: instances/test-arealight2.yist
+    shape: shapes/test-arealight2.ply
     material: materials/test-arealight2.ymat
     frame: [-0.8944271909999159, -0.0, 0.4472135954999579, -0.27562473083535527, 0.7874992309581578, -0.5512494616707105, -0.3521803625302495, -0.6163156344279367, -0.704360725060499, 0.4, 0.8, 0.8]
-  - name: instances/test-cube-subdiv_materials/test-uvgrid.ymat.yist
-    shape: test-cube-subdiv
+  - name: instances/shapes/test-cube-subdiv.obj_materials/test-uvgrid.ymat.yist
+    shape: shapes/test-cube-subdiv.obj
     material: materials/test-uvgrid.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: instances/test-suzanne-subdiv_materials/test-plastic-sharp.ymat.yist
-    shape: test-suzanne-subdiv
+  - name: instances/shapes/test-suzanne-subdiv.obj_materials/test-plastic-sharp.ymat.yist
+    shape: shapes/test-suzanne-subdiv.obj
     material: materials/test-plastic-sharp.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: instances/test-teapot_materials/test-uvgrid.ymat.yist
-    shape: test-teapot
+  - name: instances/shapes/test-teapot.obj_materials/test-uvgrid.ymat.yist
+    shape: shapes/test-teapot.obj
     material: materials/test-uvgrid.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: instances/test-bunny_materials/test-plastic-sharp.ymat.yist
-    shape: test-bunny
+  - name: instances/shapes/test-bunny.obj_materials/test-plastic-sharp.ymat.yist
+    shape: shapes/test-bunny.obj
     material: materials/test-plastic-sharp.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: instances/test-cube-subdiv_materials/test-uvgrid.ymat.yist
-    shape: test-cube-subdiv
+  - name: instances/shapes/test-cube-subdiv.obj_materials/test-uvgrid.ymat.yist
+    shape: shapes/test-cube-subdiv.obj
     material: materials/test-uvgrid.ymat
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
-  - name: test-sky
+  - name: environments/test-sky.yenv
     emission: [2, 2, 2]
     emission_texture: textures/test-sky.hdr
