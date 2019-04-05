@@ -1344,6 +1344,8 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
     return weight;
 }
 
+#define OLD_VOLPATH 0
+#if OLD_VOLPATH
 vec3f sample_next_direction(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const trace_point& point,
     const vec3f& outgoing, float prob_light, rng_state& rng, vec3f& weight) {
@@ -1417,7 +1419,8 @@ vec3f sample_next_direction_volume(const yocto_scene& scene,
         weight *= albedo * phase_function / next_direction_pdf;
     return next_direction;
 }
-
+#endif
+    
 std::tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
     const vec3f volume_density, const vec3f& volume_albedo,
@@ -1566,6 +1569,7 @@ std::tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(
     return {position, direction, radiance, weight};
 }
 
+#if OLD_VOLPATH
 // Iterative volumetric path tracing.
 vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
@@ -1630,6 +1634,7 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
 
     return {radiance, 1};
 }
+#endif
 
 // Recursive path tracing.
 vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
@@ -1917,7 +1922,6 @@ using trace_sampler_func = vec4f (*)(const yocto_scene& scene,
 trace_sampler_func get_trace_sampler_func(const trace_image_options& options) {
     switch (options.sampler_type) {
         case trace_sampler_type::path: return trace_path;
-        case trace_sampler_type::volpath: return trace_volpath;
         case trace_sampler_type::naive: return trace_naive;
         case trace_sampler_type::eyelight: return trace_eyelight;
         case trace_sampler_type::falsecolor: return trace_falsecolor;
@@ -1933,8 +1937,6 @@ bool is_trace_sampler_lit(const trace_image_options& options) {
     switch (options.sampler_type) {
         case trace_sampler_type::path: return true;
         case trace_sampler_type::naive: return true;
-        case trace_sampler_type::volpath: return true;
-        case trace_sampler_type::volnaive: return true;
         case trace_sampler_type::eyelight: return true;
         case trace_sampler_type::falsecolor: return true;
         default: {
