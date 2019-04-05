@@ -763,6 +763,8 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                         get_value(value, material.volume_density);
                     } else if (key == "volume_albedo") {
                         get_value(value, material.volume_albedo);
+                    } else if (key == "volume_emission") {
+                        get_value(value, material.volume_emission);
                     } else if (key == "volume_phaseg") {
                         get_value(value, material.volume_phaseg);
                     } else if (key == "emission_texture") {
