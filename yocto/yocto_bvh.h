@@ -860,7 +860,9 @@ inline void build_embree_shape_bvh(bvh_shape& bvh, const vector<int>& points,
     if (options.embree_compact) {
         rtcSetSceneFlags(embree_scene, RTC_SCENE_FLAG_COMPACT);
     }
-    // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
+    if (options.high_quality) {
+        rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
+    }
     bvh.embree_bvh   = embree_scene;
     auto embree_geom = (RTCGeometry) nullptr;
     if (!points.empty()) {
@@ -968,7 +970,9 @@ inline void build_embree_instances_bvh(bvh_scene& bvh, int num_instances,
     if (options.embree_compact) {
         rtcSetSceneFlags(embree_scene, RTC_SCENE_FLAG_COMPACT);
     }
-    // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
+    if (options.high_quality) {
+        rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
+    }
     bvh.embree_bvh = embree_scene;
     if (!num_instances) {
         rtcCommitScene(embree_scene);

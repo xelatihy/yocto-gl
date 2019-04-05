@@ -13,10 +13,11 @@ def cli():
 @click.option('--mode','-m', default='path')
 def yitrace(directory='mcguire',scene='*',format='obj',mode='path'):
     modes = {
-        'path': '',
-        'embree': '--embree',
+        'path': '--bvh-high-quality',
+        'embree': '--embree --bvh-high-quality',
         'embree-compact': '--embree --embree-compact',
-        'eyelight': '-t eyelight'
+        'eyelight': '-t eyelight --bvh-high-quality',
+        'eyelight-quick': '--all-cameras -s 16 -r 720 -t eyelight --no-bvh-highquality'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
@@ -61,10 +62,11 @@ def yview(directory='mcguire',scene='*',format='obj',mode='path'):
 @click.option('--outformat','-F', default='png')
 def ytrace(directory='mcguire',scene='*',format='obj',outformat="png",mode='path'):
     modes = {
-        'path': '--all-cameras -s 64 -r 360',
-        'embree': '--all-cameras -s 256 -r 720 --embree',
+        'path': '--all-cameras -s 64 -r 360 --bvh-high-quality',
+        'embree': '--all-cameras -s 256 -r 720 --embree --bvh-high-quality',
         'embree-compact': '--all-cameras -s 256 -r 720 --embree --embree-compact',
-        'eyelight': '--all-cameras -s 16 -r 720 -t eyelight'
+        'eyelight': '--all-cameras -s 16 -r 720 -t eyelight --bvh-high-quality',
+        'eyelight-quick': '--all-cameras -s 16 -r 720 -t eyelight --no-bvh-highquality'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
@@ -79,7 +81,7 @@ def ytrace(directory='mcguire',scene='*',format='obj',outformat="png",mode='path
             imagename = f'{directory}/images-{format}/ytrace-{mode}-{basename}.{outformat}'
             cmd = f'../yocto-gl/bin/ytrace -o {imagename} {options} {filename}'
             print(cmd, file=sys.stderr)
-            # os.system(cmd)
+            os.system(cmd)
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
@@ -101,11 +103,13 @@ def sync_images(directory='mcguire',scene='*',format='obj',mode='path',clean=Tru
             if clean:
                 cmd = f'rm {dirname}/*.png'
                 print(cmd, file=sys.stderr)
+                os.system(cmd)
                 cmd = f'rm {dirname}/*.hdr'
                 print(cmd, file=sys.stderr)
+                os.system(cmd)
             cmd = f'cp {imagename} {dirname}'
             print(cmd, file=sys.stderr)
-            # os.system(cmd)
+            os.system(cmd)
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')

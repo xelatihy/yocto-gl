@@ -102,12 +102,14 @@ int main(int argc, char* argv[]) {
     parser.add_option("--exposure,-e", exposure, "Hdr exposure");
     parser.add_flag("--filmic,!--no-filmic", filmic, "Hdr filmic");
     parser.add_flag("--srgb,!--no-srgb", srgb, "Hdr srgb");
+    parser.add_flag(
+        "--bvh-high-quality,!--no-bvh-high-quality", bvh_options.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
     parser.add_flag(
-        "--embree,!--no-embree", bvh_options.use_embree, "Use Embree ratracer");
-    parser.add_flag("--embree-flatten,!--no-embree-flatten",
-        bvh_options.embree_flatten, "Flatten embree scene");
-    parser.add_flag("--embree-compact,!--no-embree-compact",
+        "--bvh-embree,!--no-bvh-embree", bvh_options.use_embree, "Use Embree ratracer");
+    parser.add_flag("--bvh-embree-flatten,!--no-bvh-fembree-latten",
+        bvh_options.embree_flatten, "Flatten BVH scene");
+    parser.add_flag("--bvh-embree-compact,!--no-bvh-embree-compact",
         bvh_options.embree_compact, "Embree runs in compact memory");
 #endif
     parser.add_flag(
