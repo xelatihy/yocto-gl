@@ -45,11 +45,6 @@ bool mkdir(const string& dir) {
 #endif
 }
 
-void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
-}
-
 int main(int argc, char** argv) {
     // command line parameters
     auto skip_textures  = false;
@@ -119,21 +114,13 @@ int main(int argc, char** argv) {
     // change texture names
     if (uniform_txt) {
         for (auto& texture : scene.textures) {
-            auto ext = get_extension(texture.filename);
-            if (is_hdr_filename(texture.filename)) {
-                if (ext == "hdr" || ext == "exr") continue;
-                if (ext == "pfm") {
-                    replace_extension(filename, "hdr");
-                } else {
-                    throw runtime_error("unknown texture format " + ext);
-                }
+            auto ext = get_extension(texture.uri);
+            if (is_hdr_filename(texture.uri)) {
+                if (ext == "hdr") continue;
+                get_noextension(filename) + ".hdr";
             } else {
-                if (ext == "png" || ext == "jpg") continue;
-                if (ext == "tga" || ext == "bmp") {
-                    replace_extension(filename, "png");
-                } else {
-                    throw runtime_error("unknown texture format " + ext);
-                }
+                if (ext == "png") continue;
+                get_noextension(filename) + ".png";
             }
         }
     }
@@ -141,21 +128,17 @@ int main(int argc, char** argv) {
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
         mesh_directory += '/';
-    if (mesh_filenames && get_extension(output) == "yaml") {
+    if (mesh_filenames) {
+        auto sid = 0;
         for (auto& shape : scene.shapes) {
-            shape.filename = "";
-            if (shape.positions.size() <= 16) continue;
             if (shape.preserve_facevarying) {
-                shape.filename = mesh_directory + shape.name + ".obj";
+                shape.uri = mesh_directory + "shape_" + std::to_string(sid) +
+                            ".obj";
             } else {
-                shape.filename = mesh_directory + shape.name + ".ply";
+                shape.uri = mesh_directory + "shape_" + std::to_string(sid) +
+                            ".ply";
             }
-        }
-    }
-    // gltf does not support embedded data
-    if (get_extension(output) == "gltf") {
-        for (auto& shape : scene.shapes) {
-            shape.filename = mesh_directory + shape.name + ".bin";
+            sid++;
         }
     }
 

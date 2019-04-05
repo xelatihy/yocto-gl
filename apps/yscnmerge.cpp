@@ -45,11 +45,6 @@ bool mkdir(const string& dir) {
 #endif
 }
 
-void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
-}
-
 int main(int argc, char** argv) {
     // command line parameters
     auto scene_postfix     = false;
@@ -103,15 +98,15 @@ int main(int argc, char** argv) {
         print_validation_errors(to_merge, true);
         if (scene_postfix) {
             auto postfix = "{" + get_filename(filename) + "}";
-            for (auto& val : to_merge.cameras) val.name += postfix;
-            for (auto& val : to_merge.textures) val.name += postfix;
-            for (auto& val : to_merge.voltextures) val.name += postfix;
-            for (auto& val : to_merge.materials) val.name += postfix;
-            for (auto& val : to_merge.shapes) val.name += postfix;
-            for (auto& val : to_merge.instances) val.name += postfix;
-            for (auto& val : to_merge.environments) val.name += postfix;
-            for (auto& val : to_merge.nodes) val.name += postfix;
-            for (auto& val : to_merge.animations) val.name += postfix;
+            for (auto& val : to_merge.cameras) val.uri += postfix;
+            for (auto& val : to_merge.textures) val.uri += postfix;
+            for (auto& val : to_merge.voltextures) val.uri += postfix;
+            for (auto& val : to_merge.materials) val.uri += postfix;
+            for (auto& val : to_merge.shapes) val.uri += postfix;
+            for (auto& val : to_merge.instances) val.uri += postfix;
+            for (auto& val : to_merge.environments) val.uri += postfix;
+            for (auto& val : to_merge.nodes) val.uri += postfix;
+            for (auto& val : to_merge.animations) val.uri += postfix;
         }
         merge_scene_into(scene, to_merge);
     }
@@ -125,33 +120,31 @@ int main(int argc, char** argv) {
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
         mesh_directory += '/';
-    if (get_extension(output) == "json") {
+    if (get_extension(output) == "yaml") {
         for (auto& shape : scene.shapes) {
-            if (shape.filename.empty()) {
-                shape.filename = mesh_directory + shape.name + ".ply";
-            } else if (mesh_filenames) {
-                shape.filename = mesh_directory + get_filename(shape.filename);
-            }
+            shape.uri = mesh_directory + get_filename(shape.uri);
         }
     }
     // gltf does not support embedded data
     if (get_extension(output) == "gltf") {
         for (auto& shape : scene.shapes) {
-            shape.filename = mesh_directory + shape.name + ".bin";
+            shape.uri = mesh_directory + shape.uri + ".bin";
         }
     }
 
     // add missing textures names if necessary
     if (!texture_directory.empty() && texture_directory.back() != '/')
         texture_directory += '/';
-    if (get_extension(output) == "json") {
+    if (get_extension(output) == "yaml") {
+        auto tid = 0;
         for (auto& texture : scene.textures) {
-            if (texture.filename.empty()) {
-                texture.filename = texture_directory + texture.name + ".ply";
+            if (texture.uri.empty()) {
+                texture.uri = texture_directory + "ytexture#" +
+                              std::to_string(tid) + ".png";
             } else if (texture_filenames) {
-                texture.filename = texture_directory +
-                                   get_filename(texture.filename);
+                texture.uri = texture_directory + get_filename(texture.uri);
             }
+            tid++;
         }
     }
 

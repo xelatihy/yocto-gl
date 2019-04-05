@@ -495,29 +495,29 @@ bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Add missing names and resolve duplicated names.
-void add_missing_names(yocto_scene& scene) {
-    auto fix_names = [](auto& vals, const string& base) {
-        auto nmap = unordered_map<string, int>();
-        for (auto& value : vals) {
-            if (value.name == "") value.name = base;
-            if (nmap.find(value.name) == nmap.end()) {
-                nmap[value.name] = 0;
-            } else {
-                nmap[value.name] += 1;
-                value.name = value.name + "[" +
-                             std::to_string(nmap[value.name]) + "]";
-            }
-        }
+void normalize_uris(yocto_scene& scene) {
+    auto normalize = [](string& name, const string& base, const string& ext,
+                         int num) {
+        if (name.empty()) name = base + "_" + to_string(num);
+        if (get_dirname(name).empty()) name = base + "s/" + name;
+        if (get_extension(name).empty()) name = name + "." + ext;
     };
-    fix_names(scene.cameras, "camera");
-    fix_names(scene.shapes, "shape");
-    fix_names(scene.textures, "texture");
-    fix_names(scene.voltextures, "voltexture");
-    fix_names(scene.materials, "material");
-    fix_names(scene.instances, "instance");
-    fix_names(scene.environments, "environment");
-    fix_names(scene.nodes, "node");
-    fix_names(scene.animations, "animation");
+    for (auto id = 0; id < scene.cameras.size(); id++)
+        normalize(scene.cameras[id].uri, "camera", "yaml", id);
+    for (auto id = 0; id < scene.textures.size(); id++)
+        normalize(scene.textures[id].uri, "texture", "png", id);
+    for (auto id = 0; id < scene.voltextures.size(); id++)
+        normalize(scene.voltextures[id].uri, "volume", "yvol", id);
+    for (auto id = 0; id < scene.materials.size(); id++)
+        normalize(scene.materials[id].uri, "material", "yaml", id);
+    for (auto id = 0; id < scene.shapes.size(); id++)
+        normalize(scene.shapes[id].uri, "shape", "ply", id);
+    for (auto id = 0; id < scene.instances.size(); id++)
+        normalize(scene.instances[id].uri, "instance", "yaml", id);
+    for (auto id = 0; id < scene.animations.size(); id++)
+        normalize(scene.animations[id].uri, "animation", "yaml", id);
+    for (auto id = 0; id < scene.nodes.size(); id++)
+        normalize(scene.nodes[id].uri, "node", "yaml", id);
 }
 
 // Add missing tangent space if needed.
@@ -550,7 +550,7 @@ void add_missing_materials(yocto_scene& scene) {
         if (instance.material >= 0) continue;
         if (material_id < 0) {
             auto material    = yocto_material{};
-            material.name    = "<default>";
+            material.uri     = "materails/default.yaml";
             material.diffuse = {0.2f, 0.2f, 0.2f};
             scene.materials.push_back(material);
             material_id = (int)scene.materials.size() - 1;
@@ -563,7 +563,7 @@ void add_missing_materials(yocto_scene& scene) {
 void add_missing_cameras(yocto_scene& scene) {
     if (scene.cameras.empty()) {
         auto camera = yocto_camera{};
-        camera.name = "<view>";
+        camera.uri  = "cameras/default.yaml";
         set_camera_view_from_bbox(
             camera, compute_scene_bounds(scene), {0, 0, 1});
         scene.cameras.push_back(camera);
@@ -572,13 +572,12 @@ void add_missing_cameras(yocto_scene& scene) {
 
 // Add a sky environment
 void add_sky_environment(yocto_scene& scene, float sun_angle) {
-    auto texture     = yocto_texture{};
-    texture.name     = "<sky>";
-    texture.filename = "textures/sky.hdr";
+    auto texture = yocto_texture{};
+    texture.uri  = "textures/sky.hdr";
     make_sunsky_image(texture.hdr_image, {1024, 512}, sun_angle);
     scene.textures.push_back(texture);
     auto environment             = yocto_environment{};
-    environment.name             = "<sky>";
+    environment.uri              = "environments/default.yaml";
     environment.emission         = {1, 1, 1};
     environment.emission_texture = (int)scene.textures.size() - 1;
     scene.environments.push_back(environment);
@@ -622,7 +621,7 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
     auto check_names = [&errs](const auto& vals, const string& base) {
         auto used = unordered_map<string, int>();
         used.reserve(vals.size());
-        for (auto& value : vals) used[value.name] += 1;
+        for (auto& value : vals) used[value.uri] += 1;
         for (auto& [name, used] : used) {
             if (name == "") {
                 errs.push_back("empty " + base + " name");
@@ -634,7 +633,7 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
     auto check_empty_textures = [&errs](const vector<yocto_texture>& vals) {
         for (auto& value : vals) {
             if (value.hdr_image.empty() && value.ldr_image.empty()) {
-                errs.push_back("empty texture " + value.name);
+                errs.push_back("empty texture " + value.uri);
             }
         }
     };
@@ -1532,46 +1531,46 @@ string print_scene_stats(const yocto_scene& scene) {
 
     auto str = ""s;
 
-    str += "num_cameras: " + std::to_string(num_cameras) + "\n";
-    str += "num_shapes: " + std::to_string(num_shapes) + "\n";
-    str += "num_surface: " + std::to_string(num_surfaces) + "\n";
-    str += "num_instances: " + std::to_string(num_instances) + "\n";
-    str += "num_materials: " + std::to_string(num_materials) + "\n";
-    str += "num_textures: " + std::to_string(num_textures) + "\n";
-    str += "num_voltextures: " + std::to_string(num_voltextures) + "\n";
-    str += "num_environments: " + std::to_string(num_environments) + "\n";
-    str += "num_nodes: " + std::to_string(num_nodes) + "\n";
-    str += "num_animations: " + std::to_string(num_animations) + "\n";
+    str += "num_cameras: " + to_string(num_cameras) + "\n";
+    str += "num_shapes: " + to_string(num_shapes) + "\n";
+    str += "num_surface: " + to_string(num_surfaces) + "\n";
+    str += "num_instances: " + to_string(num_instances) + "\n";
+    str += "num_materials: " + to_string(num_materials) + "\n";
+    str += "num_textures: " + to_string(num_textures) + "\n";
+    str += "num_voltextures: " + to_string(num_voltextures) + "\n";
+    str += "num_environments: " + to_string(num_environments) + "\n";
+    str += "num_nodes: " + to_string(num_nodes) + "\n";
+    str += "num_animations: " + to_string(num_animations) + "\n";
 
-    str += "elem_points: " + std::to_string(elem_points) + "\n";
-    str += "elem_lines: " + std::to_string(elem_lines) + "\n";
-    str += "elem_triangles: " + std::to_string(elem_triangles) + "\n";
-    str += "elem_quads: " + std::to_string(elem_quads) + "\n";
-    str += "vert_pos: " + std::to_string(vert_pos) + "\n";
-    str += "vert_norm: " + std::to_string(vert_norm) + "\n";
-    str += "vert_texcoord: " + std::to_string(vert_texcoord) + "\n";
-    str += "vert_color: " + std::to_string(vert_color) + "\n";
-    str += "vert_radius: " + std::to_string(vert_radius) + "\n";
-    str += "vert_tangsp: " + std::to_string(vert_tangsp) + "\n";
+    str += "elem_points: " + to_string(elem_points) + "\n";
+    str += "elem_lines: " + to_string(elem_lines) + "\n";
+    str += "elem_triangles: " + to_string(elem_triangles) + "\n";
+    str += "elem_quads: " + to_string(elem_quads) + "\n";
+    str += "vert_pos: " + to_string(vert_pos) + "\n";
+    str += "vert_norm: " + to_string(vert_norm) + "\n";
+    str += "vert_texcoord: " + to_string(vert_texcoord) + "\n";
+    str += "vert_color: " + to_string(vert_color) + "\n";
+    str += "vert_radius: " + to_string(vert_radius) + "\n";
+    str += "vert_tangsp: " + to_string(vert_tangsp) + "\n";
 
-    str += "texel_hdr: " + std::to_string(texel_hdr) + "\n";
-    str += "texel_ldr: " + std::to_string(texel_ldr) + "\n";
+    str += "texel_hdr: " + to_string(texel_hdr) + "\n";
+    str += "texel_ldr: " + to_string(texel_ldr) + "\n";
 
-    str += "memory_imgs: " + std::to_string(memory_imgs) + "\n";
-    str += "memory_vols: " + std::to_string(memory_vols) + "\n";
-    str += "memory_elems: " + std::to_string(memory_elems) + "\n";
-    str += "memory_verts: " + std::to_string(memory_verts) + "\n";
+    str += "memory_imgs: " + to_string(memory_imgs) + "\n";
+    str += "memory_vols: " + to_string(memory_vols) + "\n";
+    str += "memory_elems: " + to_string(memory_elems) + "\n";
+    str += "memory_verts: " + to_string(memory_verts) + "\n";
 
-    str += "memory_cameras: " + std::to_string(memory_cams) + "\n";
-    str += "memory_textures: " + std::to_string(memory_txts) + "\n";
-    str += "memory_materials: " + std::to_string(memory_mats) + "\n";
-    str += "memory_shapes: " + std::to_string(memory_shps) + "\n";
-    str += "memory_instances: " + std::to_string(memory_ists) + "\n";
+    str += "memory_cameras: " + to_string(memory_cams) + "\n";
+    str += "memory_textures: " + to_string(memory_txts) + "\n";
+    str += "memory_materials: " + to_string(memory_mats) + "\n";
+    str += "memory_shapes: " + to_string(memory_shps) + "\n";
+    str += "memory_instances: " + to_string(memory_ists) + "\n";
 
-    str += "bbox min: " + std::to_string(bbox.min.x) + " " +
-           std::to_string(bbox.min.y) + " " + std::to_string(bbox.min.z) + "\n";
-    str += "bbox max: " + std::to_string(bbox.max.x) + " " +
-           std::to_string(bbox.max.y) + " " + std::to_string(bbox.max.z) + "\n";
+    str += "bbox min: " + to_string(bbox.min.x) + " " + to_string(bbox.min.y) +
+           " " + to_string(bbox.min.z) + "\n";
+    str += "bbox max: " + to_string(bbox.max.x) + " " + to_string(bbox.max.y) +
+           " " + to_string(bbox.max.z) + "\n";
 
     return str;
 }

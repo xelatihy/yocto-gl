@@ -111,7 +111,7 @@ void load_disney_island_cameras(const string& filename, yocto_scene& scene) {
     auto js = json{};
     load_json(filename, js);
     auto camera           = yocto_camera{};
-    camera.name           = get_filename(filename);
+    camera.uri            = get_filename(filename);
     camera.focal_length   = js.at("focalLength").get<float>() * 0.001f;
     camera.focus_distance = js.at("centerOfInterest").get<float>();
     // camera.lens_aperture  = js.at("lensRadius").get<float>();
@@ -133,7 +133,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
     for (auto& [name, ljs] : js.items()) {
         if (ljs.at("type") == "quad") {
             auto material     = yocto_material{};
-            material.name     = name;
+            material.uri      = name;
             material.emission = ljs.at("color").get<vec4f>().xyz *
                                 pow(2.0f, ljs.at("exposure").get<float>());
             scene.materials.push_back(material);
@@ -149,9 +149,9 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
             instance.material = (int)scene.materials.size() - 1;
             scene.instances.push_back(instance);
         } else if (ljs.at("type") == "dome") {
-            auto texture     = yocto_texture{};
-            texture.filename = ljs.at("map");
-            load_image(texture.filename, texture.hdr_image);
+            auto texture = yocto_texture{};
+            texture.uri  = ljs.at("map");
+            load_image(texture.uri, texture.hdr_image);
             scene.textures.push_back(texture);
             auto environment     = yocto_environment{};
             environment.emission = ljs.at("color").get<vec4f>().xyz *
@@ -279,8 +279,8 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         int add_texture(const string& mapname) {
             if (tmap.find(mapname) == tmap.end()) {
                 scene.textures.push_back({});
-                scene.textures.back().filename = mapname;
-                tmap[mapname]                  = scene.textures.size() - 1;
+                scene.textures.back().uri = mapname;
+                tmap[mapname]             = scene.textures.size() - 1;
             }
             return tmap.at(mapname);
         }
@@ -296,11 +296,11 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                     throw;
                 }
             }
-            if (!shapes.empty() && materials.back().name == dmaterial.name)
+            if (!shapes.empty() && materials.back().uri == dmaterial.name)
                 return;
             dmaterials.push_back(dmaterial);
             materials.push_back({});
-            materials.back().name = dmaterial.name;
+            materials.back().uri = dmaterial.name;
             if (dmaterial.color_map != "") {
                 materials.back().diffuse         = {1, 1, 1};
                 materials.back().diffuse_texture = add_texture(
@@ -321,10 +321,8 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 materials.back().refract      = false;
             }
             shapes.push_back(yocto_shape{});
-            shapes.back().name     = dmaterial.name;
-            shapes.back().filename = filename + "." +
-                                     std::to_string(shapes.size()) +
-                                     get_extension(filename);
+            shapes.back().uri = filename + "." + std::to_string(shapes.size()) +
+                                get_extension(filename);
             pos_map.clear();
             pos_map.reserve(1024 * 1024);
             norm_map.clear();
@@ -662,8 +660,8 @@ void load_disney_island_curve(const string& filename, yocto_scene& scene,
         auto shape    = yocto_shape{};
         auto material = -1;
         for (auto j = 0; j < curves.get_length(); j++) {
-            auto curve     = curves.get_array_element(j);
-            shape.filename = outname;
+            auto curve = curves.get_array_element(j);
+            shape.uri  = outname;
             for (auto i = 0; i < curve.get_length(); i++) {
                 auto point = curve.get_array_element(i);
                 shape.positions.push_back({
@@ -705,7 +703,7 @@ void load_disney_island_curvetube(const string& filename, yocto_scene& scene,
         material.diffuse = mmap.at(material_name).color;
         scene.materials.push_back(material);
         auto shape      = yocto_shape{};
-        shape.filename  = outname;
+        shape.uri       = outname;
         auto ssmaterial = (int)scene.materials.size() - 1;
         for (auto j = 0; j < curves.get_length(); j++) {
             auto curve             = curves.get_array_element(j);
@@ -899,10 +897,10 @@ void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
     }
 
     // fix scene
-    if (scene.name == "") scene.name = get_filename(filename);
+    if (scene.uri == "") scene.uri = get_filename(filename);
     add_missing_cameras(scene);
     add_missing_materials(scene);
-    add_missing_names(scene);
+    normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
 
@@ -922,11 +920,6 @@ bool mkdir(const string& dir) {
     system(("mkdir " + dir).c_str());
     return true;
 #endif
-}
-
-void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
 }
 
 int main(int argc, char** argv) {
@@ -995,34 +988,13 @@ int main(int argc, char** argv) {
     // print info
     if (print_info) printf("%s\n", print_scene_stats(scene).c_str());
 
-    // change texture names
-    if (uniform_txt) {
-        for (auto& texture : scene.textures) {
-            auto ext = get_extension(texture.filename);
-            if (is_hdr_filename(texture.filename)) {
-                if (ext == "hdr" || ext == "exr") continue;
-                if (ext == "pfm") {
-                    replace_extension(filename, "hdr");
-                } else {
-                    throw runtime_error("unknown texture format " + ext);
-                }
-            } else {
-                if (ext == "png" || ext == "jpg") continue;
-                if (ext == "tga" || ext == "bmp") {
-                    replace_extension(filename, "png");
-                } else {
-                    throw runtime_error("unknown texture format " + ext);
-                }
-            }
-        }
-    }
-
-    // add missing mesh names if necessary
+// add missing mesh names if necessary
+#if 0
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
         mesh_directory += '/';
     if (mesh_filenames && get_extension(output) == "json") {
         for (auto& shape : scene.shapes) {
-            shape.filename = "";
+            shape.name = "";
             if (shape.positions.size() <= 16) continue;
             if (shape.preserve_facevarying) {
                 shape.filename = mesh_directory + shape.name + ".obj";
@@ -1031,12 +1003,7 @@ int main(int argc, char** argv) {
             }
         }
     }
-    // gltf does not support embedded data
-    if (get_extension(output) == "gltf") {
-        for (auto& shape : scene.shapes) {
-            shape.filename = mesh_directory + shape.name + ".bin";
-        }
-    }
+#endif
 
     // make a directory if needed
     if (!mkdir(get_dirname(output))) {

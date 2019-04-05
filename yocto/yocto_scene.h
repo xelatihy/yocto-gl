@@ -86,7 +86,7 @@ namespace yocto {
 // To compute good apertures, one can use the F-stop number from phostography
 // and set the aperture to focal_leangth/f_stop.
 struct yocto_camera {
-    string  name           = "";
+    string  uri            = "";
     frame3f frame          = identity_frame3f;
     bool    orthographic   = false;
     float   film_width     = 0.036f;
@@ -103,8 +103,7 @@ struct yocto_camera {
 // conversion can be disabled with `ldr_as_linear` for example to render
 // normal maps.
 struct yocto_texture {
-    string       name      = "";
-    string       filename  = "";
+    string       uri       = "";
     image<vec4f> hdr_image = {};
     image<vec4b> ldr_image = {};
 };
@@ -112,8 +111,7 @@ struct yocto_texture {
 // Volumetric texture containing a float only volume data. See texture
 // above for other propoerties.
 struct yocto_voltexture {
-    string        name        = "";
-    string        filename    = "";
+    string        uri         = "";
     volume<float> volume_data = {};
 };
 
@@ -122,7 +120,7 @@ struct yocto_voltexture {
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct yocto_material {
-    string name          = "";
+    string uri           = "";
     bool   base_metallic = false;  // base-metallic parametrization
     bool   gltf_textures = false;  // glTF packed textures
 
@@ -166,8 +164,7 @@ struct yocto_material {
 // has its own topology.
 struct yocto_shape {
     // shape data
-    string name     = "";
-    string filename = "";
+    string uri = "";
 
     // subdision properties
     int  subdivision_level    = 0;
@@ -197,7 +194,7 @@ struct yocto_shape {
 
 // Instance of a visible shape in the scene.
 struct yocto_instance {
-    string  name     = "";
+    string  uri      = "";
     frame3f frame    = identity_frame3f;
     int     shape    = -1;
     int     material = -1;
@@ -205,7 +202,7 @@ struct yocto_instance {
 
 // Environment map.
 struct yocto_environment {
-    string  name             = "";
+    string  uri              = "";
     frame3f frame            = identity_frame3f;
     vec3f   emission         = {0, 0, 0};
     int     emission_texture = -1;
@@ -213,7 +210,7 @@ struct yocto_environment {
 
 // Node in a transform hierarchy.
 struct yocto_scene_node {
-    string        name        = "";
+    string        uri         = "";
     int           parent      = -1;
     frame3f       local       = identity_frame3f;
     vec3f         translation = {0, 0, 0};
@@ -233,7 +230,7 @@ enum struct yocto_interpolation_type { linear, step, bezier };
 
 // Keyframe data.
 struct yocto_animation {
-    string                   name            = "";
+    string                   uri             = "";
     string                   filename        = "";
     string                   animation_group = "";
     yocto_interpolation_type interpolation_type =
@@ -254,7 +251,7 @@ struct yocto_animation {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct yocto_scene {
-    string                    name         = "";
+    string                    uri          = "";
     vector<yocto_camera>      cameras      = {};
     vector<yocto_shape>       shapes       = {};
     vector<yocto_instance>    instances    = {};
@@ -326,11 +323,13 @@ bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
 void tesselate_shapes(yocto_scene& scene);
 
 // Add missing names, normals, tangents and hierarchy.
-void add_missing_names(yocto_scene& scene);
 void add_missing_normals(yocto_scene& scene);
 void add_missing_tangent_space(yocto_scene& scene);
 void add_missing_materials(yocto_scene& scene);
 void add_missing_cameras(yocto_scene& scene);
+
+// Normalize URIs and add missing ones. Assumes names are unique.
+void normalize_uris(yocto_scene& sceme);
 
 // Add a sky environment
 void add_sky_environment(yocto_scene& scene, float sun_angle = pif / 4);

@@ -3319,7 +3319,7 @@ inline void load_pbrt(
                 stack.back().material = "";
             } else {
                 auto value = pbrt_material{};
-                auto name = "unnamed_material_" + std::to_string(material_id++);
+                auto name  = "unnamed_material_" + to_string(material_id++);
                 parse_pbrt_material(stream, type, value);
                 stack.back().material = name;
                 cb.material(value, name, stack.back());
@@ -3345,8 +3345,8 @@ inline void load_pbrt(
             auto type = ""s;
             parse_value(stream, type);
             static auto material_id = 0;
-            auto name  = "unnamed_arealight_" + std::to_string(material_id++);
-            auto value = pbrt_arealight{};
+            auto        name  = "unnamed_arealight_" + to_string(material_id++);
+            auto        value = pbrt_arealight{};
             parse_pbrt_arealight(stream, type, value);
             stack.back().arealight = name;
             cb.arealight(value, name, stack.back());

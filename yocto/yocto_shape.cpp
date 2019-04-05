@@ -676,7 +676,8 @@ inline void save_ply_shape(const string& filename, const vector<int>& points,
             split_texturecoords, quads_positions, quads_normals,
             quads_texturecoords, positions, normals, texturecoords);
         return save_ply_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
-            positions, normals, texturecoords, {}, {}, ascii, flip_texcoord);
+            split_positions, split_normals, split_texturecoords, {}, {}, ascii,
+            flip_texcoord);
     }
 
     // empty data

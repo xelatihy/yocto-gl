@@ -38,7 +38,7 @@
 //
 // 1. Get paths components with `get_dirname()`, `get_filename()` and
 //   `get_extension()`
-// 2. Replace the extension with `replace_path_extension()`
+// 2. Remove parts of a path with get_noextension() and `get_basename()`
 // 3. check if a file exists with `exists_file()`
 //
 //
@@ -233,6 +233,31 @@ inline int64_t get_time() {
     return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
+// Timer that print once it is crated and destroyed
+struct print_timer {
+    print_timer(const string& msg) : _msg{msg}, _start{get_time()} {
+        printf("%s ...\n", _msg.c_str());
+    }
+    ~print_timer() {
+        printf("%s in %s\n", _msg.c_str(),
+            format_duration(get_time() - _start).c_str());
+    }
+
+   private:
+    string  _msg;
+    int64_t _start;
+};
+
+// print info
+inline void print_info(const string& str) { printf("%s\n", str.c_str()); }
+inline print_timer print_timed(const string& str) { return print_timer(str); }
+
+// Exits printing and error
+inline void exit_error(const string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -370,8 +395,8 @@ inline string format_duration(int64_t duration) {
 inline string format_num(uint64_t num) {
     auto rem = num % 1000;
     auto div = num / 1000;
-    if (div > 0) return format_num(div) + "," + std::to_string(rem);
-    return std::to_string(rem);
+    if (div > 0) return format_num(div) + "," + to_string(rem);
+    return to_string(rem);
 }
 
 }  // namespace yocto
@@ -435,16 +460,6 @@ inline string get_noextension(const string& filename_) {
     auto pos      = filename.rfind('.');
     if (pos == string::npos) return filename;
     return filename.substr(0, pos);
-}
-
-// Replace extension.
-inline string replace_extension(const string& filename_, const string& ext_) {
-    auto filename = normalize_path(filename_);
-    auto ext      = normalize_path(ext_);
-    if (ext.at(0) == '.') ext = ext.substr(1);
-    auto pos = filename.rfind('.');
-    if (pos == string::npos) return filename;
-    return filename.substr(0, pos) + "." + ext;
 }
 
 // Check if a file can be opened for reading.
