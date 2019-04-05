@@ -503,7 +503,7 @@ inline void load_obj(
 
     // parse extensions if presents
     if (!options.geometry_only) {
-        auto extname    = replace_extension(filename, "objx");
+        auto extname    = get_noextension(filename) + ".objx";
         auto ext_exists = exists_file(extname);
         if (ext_exists) {
             load_objx(extname, cb, options);

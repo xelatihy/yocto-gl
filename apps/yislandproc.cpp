@@ -994,28 +994,6 @@ int main(int argc, char** argv) {
     // print info
     if (print_info) printf("%s\n", print_scene_stats(scene).c_str());
 
-    // change texture names
-    if (uniform_txt) {
-        for (auto& texture : scene.textures) {
-            auto ext = get_extension(texture.name);
-            if (is_hdr_filename(texture.name)) {
-                if (ext == "hdr" || ext == "exr") continue;
-                if (ext == "pfm") {
-                    replace_extension(filename, "hdr");
-                } else {
-                    throw runtime_error("unknown texture format " + ext);
-                }
-            } else {
-                if (ext == "png" || ext == "jpg") continue;
-                if (ext == "tga" || ext == "bmp") {
-                    replace_extension(filename, "png");
-                } else {
-                    throw runtime_error("unknown texture format " + ext);
-                }
-            }
-        }
-    }
-
     // add missing mesh names if necessary
     #if 0
     if (!mesh_directory.empty() && mesh_directory.back() != '/')

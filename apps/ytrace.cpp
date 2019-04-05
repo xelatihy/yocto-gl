@@ -219,10 +219,10 @@ int main(int argc, char* argv[]) {
                 trace_options.camera_id, sample, trace_options.num_samples,
                 format_duration(get_time() - start_batch).c_str());
             if (save_batch) {
-                auto outfilename = replace_extension(imfilename,
-                    "cam" + std::to_string(trace_options.camera_id) + ".s" +
+                auto outfilename = get_noextension(imfilename) + 
+                    ".cam" + std::to_string(trace_options.camera_id) + ".s" +
                         std::to_string(sample + nsamples) + "." +
-                        get_extension(imfilename));
+                        get_extension(imfilename);
                 try {
                     if (logo) {
                         save_tonemapped_image_with_logo(
@@ -241,9 +241,9 @@ int main(int argc, char* argv[]) {
         try {
             auto outfilename = imfilename;
             if (all_cameras) {
-                outfilename = replace_extension(imfilename,
-                    "cam" + std::to_string(trace_options.camera_id) + "." +
-                        get_extension(imfilename));
+                outfilename = get_noextension(imfilename) +
+                    ".cam" + std::to_string(trace_options.camera_id) + "." +
+                        get_extension(imfilename);
             }
             printf("saving image %s ...\n", outfilename.c_str());
             auto start_save = get_time();

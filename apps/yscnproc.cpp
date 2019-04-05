@@ -122,10 +122,10 @@ int main(int argc, char** argv) {
             auto ext = get_extension(texture.name);
             if (is_hdr_filename(texture.name)) {
                 if (ext == "hdr") continue;
-                replace_extension(filename, "hdr");
+                get_noextension(filename) + ".hdr";
             } else {
                 if (ext == "png") continue;
-                replace_extension(filename, "png");
+                get_noextension(filename) + ".png";
             }
         }
     }

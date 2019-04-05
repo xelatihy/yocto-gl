@@ -1498,7 +1498,7 @@ void save_obj(const string& filename, const yocto_scene& scene,
 
     // material library
     if (!scene.materials.empty()) {
-        auto mtlname = replace_extension(get_filename(filename), "mtl");
+        auto mtlname = get_noextension(get_filename(filename)) + ".mtl";
         println_values(fs, "mtllib", mtlname);
     }
 
@@ -1621,10 +1621,10 @@ void save_obj_scene(const string& filename, const yocto_scene& scene,
     try {
         save_obj(filename, scene, true);
         if (!scene.materials.empty()) {
-            save_mtl(replace_extension(filename, ".mtl"), scene, true);
+            save_mtl(get_noextension(filename) + ".mtl", scene, true);
         }
         if (!scene.cameras.empty() || !scene.environments.empty()) {
-            save_objx(replace_extension(filename, ".objx"), scene);
+            save_objx(get_noextension(filename) + ".objx", scene);
         }
 
         // skip textures if needed
@@ -2331,7 +2331,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         mjs["primitives"] = json::array();
         bjs["name"]       = shape.name;
         bjs["byteLength"] = 0;
-        bjs["uri"]        = replace_extension(shape.name, ".bin");
+        bjs["uri"]        = get_noextension(shape.name) + ".bin";
         pjs["material"]   = instance.material;
         auto add_accessor = [&js, &bjs, bid](
                                 int count, string type, bool indices = false) {
@@ -2515,9 +2515,7 @@ void save_gltf_scene(const string& filename, const yocto_scene& scene,
         auto dirname = get_dirname(filename);
         for (auto& shape : scene.shapes) {
             if (shape.name == "") continue;
-            auto filename = normalize_path(dirname + shape.name);
-            filename      = replace_extension(filename, ".bin");
-            save_gltf_mesh(filename, shape);
+            save_gltf_mesh(get_noextension(dirname + shape.name) + ".bin", shape);
         }
 
         // save textures
@@ -3206,7 +3204,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
     // fprintf(f, "Sampler \"sobol\" \"interger pixelsamples\" [64]\n");
     println_values(fs, "Integrator \"path\"");
     println_values(fs, "Film \"image\" \"string filename\" [\"",
-        replace_extension(filename, "exr"), "\"] \"integer xresolution\" [",
+        get_noextension(filename) + ".exr", "\"] \"integer xresolution\" [",
         image_size.x, "] \"integer yresolution\" [", image_size.y, "]");
 
     // start world
@@ -3252,7 +3250,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
             println_values(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [ ",
                 material.emission, " ]");
         println_values(fs, "    Shape \"plymesh\" \"string filename\" [\"" +
-                                replace_extension(shape.name, "ply") + "\"]");
+                                get_noextension(shape.name) + ".ply" + "\"]");
         println_values(fs, "  TransformEnd");
         println_values(fs, "AttributeEnd");
     }
@@ -3271,7 +3269,7 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
         // save meshes
         auto dirname = get_dirname(filename);
         for (auto& shape : scene.shapes) {
-            save_shape(replace_extension(dirname + shape.name, "ply"), shape.points, shape.lines, shape.triangles,
+            save_shape(get_noextension(dirname + shape.name) + ".ply", shape.points, shape.lines, shape.triangles,
                 shape.quads, shape.quads_positions, shape.quads_normals,
                 shape.quads_texturecoords, shape.positions, shape.normals,
                 shape.texturecoords, shape.colors, shape.radius);

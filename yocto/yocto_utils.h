@@ -38,7 +38,7 @@
 //
 // 1. Get paths components with `get_dirname()`, `get_filename()` and
 //   `get_extension()`
-// 2. Replace the extension with `replace_path_extension()`
+// 2. Remove parts of a path with get_noextension() and `get_basename()`
 // 3. check if a file exists with `exists_file()`
 //
 //
@@ -435,16 +435,6 @@ inline string get_noextension(const string& filename_) {
     auto pos      = filename.rfind('.');
     if (pos == string::npos) return filename;
     return filename.substr(0, pos);
-}
-
-// Replace extension.
-inline string replace_extension(const string& filename_, const string& ext_) {
-    auto filename = normalize_path(filename_);
-    auto ext      = normalize_path(ext_);
-    if (ext.at(0) == '.') ext = ext.substr(1);
-    auto pos = filename.rfind('.');
-    if (pos == string::npos) return filename;
-    return filename.substr(0, pos) + "." + ext;
 }
 
 // Check if a file can be opened for reading.
