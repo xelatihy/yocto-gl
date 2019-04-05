@@ -58,7 +58,8 @@ def yview(directory='mcguire',scene='*',format='obj',mode='path'):
 @click.option('--scene', '-s', default='*')
 @click.option('--format','-f', default='obj')
 @click.option('--mode','-m', default='path')
-def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
+@click.option('--outformat','-F', default='png')
+def ytrace(directory='mcguire',scene='*',format='obj',outformat="png",mode='path'):
     modes = {
         'path': '--all-cameras -s 64 -r 360',
         'embree': '--all-cameras -s 256 -r 720 --embree',
@@ -73,15 +74,38 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
+            basename = os.path.basename(filename).replace(f'.{format}','')
             os.system(f'mkdir -p {directory}/images-{format}')
-            imagename = filename.replace(f'.{format}',f'.{mode}.png')
-            imagename = imagename.replace(f'{dirname}',f'{directory}/images-{format}')
-            imagenames = filename.replace(f'.{format}',f'.{mode}.cam*.png')
-            imagenames = imagenames.replace(f'{dirname}',f'{directory}/images-{format}')
+            imagename = f'{directory}/images-{format}/ytrace-{mode}-{basename}.{outformat}'
             cmd = f'../yocto-gl/bin/ytrace -o {imagename} {options} {filename}'
             print(cmd, file=sys.stderr)
-            os.system(cmd)
-            os.system(f'cp {imagenames} {dirname}')
+            # os.system(cmd)
+
+@cli.command()
+@click.option('--directory', '-d', default='mcguire')
+@click.option('--scene', '-s', default='*')
+@click.option('--format','-f', default='obj')
+# @click.option('--mode','-m', default='no-clear')
+@click.option('--clean/--no-clean','-C', default=False)
+def sync_images(directory='mcguire',scene='*',format='obj',mode='path',clean=True):
+    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
+        if not os.path.isdir(dirname): continue
+        if '/_' in dirname: continue
+        for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
+            if format == 'pbrt':
+                with open(filename) as f:
+                    if 'WorldBegin' not in f.read(): continue
+            basename = os.path.basename(filename).replace(f'.{format}','')
+            os.system(f'mkdir -p {directory}/images-{format}')
+            imagename = f'{directory}/images-{format}/ytrace-{mode}-{basename}.*'
+            if clean:
+                cmd = f'rm {dirname}/*.png'
+                print(cmd, file=sys.stderr)
+                cmd = f'rm {dirname}/*.hdr'
+                print(cmd, file=sys.stderr)
+            cmd = f'cp {imagename} {dirname}'
+            print(cmd, file=sys.stderr)
+            # os.system(cmd)
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
