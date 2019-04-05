@@ -83,38 +83,39 @@ void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals) {
 }
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape& shape) {
-    if (!shape.subdivision_level) return;
+void subdivide_shape(yocto_shape& shape, int subdivision_level,
+    bool catmull_clark, bool compute_normals) {
+    if (!subdivision_level) return;
     if (!shape.points.empty()) {
         throw runtime_error("point subdivision not supported");
     } else if (!shape.lines.empty()) {
-        for (auto l = 0; l < shape.subdivision_level; l++) {
+        for (auto l = 0; l < subdivision_level; l++) {
             subdivide_lines(shape.lines, shape.positions, shape.normals,
                 shape.texturecoords, shape.colors, shape.radius);
         }
     } else if (!shape.triangles.empty()) {
-        for (auto l = 0; l < shape.subdivision_level; l++) {
+        for (auto l = 0; l < subdivision_level; l++) {
             subdivide_triangles(shape.triangles, shape.positions, shape.normals,
                 shape.texturecoords, shape.colors, shape.radius);
         }
-    } else if (!shape.quads.empty() && !shape.catmull_clark) {
-        for (auto l = 0; l < shape.subdivision_level; l++) {
+    } else if (!shape.quads.empty() && !catmull_clark) {
+        for (auto l = 0; l < subdivision_level; l++) {
             subdivide_quads(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, shape.colors, shape.radius);
         }
-    } else if (!shape.quads.empty() && shape.catmull_clark) {
-        for (auto l = 0; l < shape.subdivision_level; l++) {
+    } else if (!shape.quads.empty() && catmull_clark) {
+        for (auto l = 0; l < subdivision_level; l++) {
             subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, shape.colors, shape.radius);
         }
-    } else if (!shape.quads_positions.empty() && !shape.catmull_clark) {
-        for (auto l = 0; l < shape.subdivision_level; l++) {
+    } else if (!shape.quads_positions.empty() && !catmull_clark) {
+        for (auto l = 0; l < subdivision_level; l++) {
             subdivide_quads(shape.quads_positions, shape.positions);
             subdivide_quads(shape.quads_normals, shape.normals);
             subdivide_quads(shape.quads_texturecoords, shape.texturecoords);
         }
-    } else if (!shape.quads_positions.empty() && shape.catmull_clark) {
-        for (auto l = 0; l < shape.subdivision_level; l++) {
+    } else if (!shape.quads_positions.empty() && catmull_clark) {
+        for (auto l = 0; l < subdivision_level; l++) {
             subdivide_catmullclark(shape.quads_positions, shape.positions);
             subdivide_catmullclark(
                 shape.quads_texturecoords, shape.texturecoords, true);
@@ -123,18 +124,16 @@ void subdivide_shape(yocto_shape& shape) {
         throw runtime_error("empty shape");
     }
 
-    if (shape.compute_normals) {
+    if (compute_normals) {
         if (!shape.quads_positions.empty()) {
             shape.quads_normals = shape.quads_positions;
         }
         compute_shape_normals(shape, shape.normals);
     }
-
-    shape.subdivision_level = 0;
 }
 // Apply displacement to a shape
-void displace_shape(
-    yocto_shape& shape, const yocto_texture& displacement, float scale) {
+void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
+    float scale, bool compute_normals) {
     if (shape.texturecoords.empty()) {
         throw runtime_error("missing texture coordinates");
         return;
@@ -150,7 +149,7 @@ void displace_shape(
                 mean(evaluate_texture(displacement, shape.texturecoords[vid])
                          .xyz);
         }
-        if (shape.compute_normals || !shape.normals.empty()) {
+        if (compute_normals || !shape.normals.empty()) {
             compute_shape_normals(shape, shape.normals);
         }
     } else {
@@ -172,7 +171,7 @@ void displace_shape(
         for (auto vid = 0; vid < shape.positions.size(); vid++) {
             shape.positions[vid] += normals[vid] * offset[vid] / count[vid];
         }
-        if (shape.compute_normals || !shape.normals.empty()) {
+        if (compute_normals || !shape.normals.empty()) {
             shape.quads_normals = shape.quads_positions;
             compute_shape_normals(shape, shape.normals);
         }
@@ -180,32 +179,29 @@ void displace_shape(
 }
 
 // Updates tesselation.
-void tesselate_shapes(yocto_scene& scene) {
-    auto displacements       = vector<int>(scene.shapes.size(), -2);
-    auto displacements_scale = vector<float>(scene.shapes.size(), 1);
-    for (auto& instance : scene.instances) {
-        auto& material           = scene.materials[instance.material];
-        auto& displacement       = displacements[instance.shape];
-        auto& displacement_scale = displacements_scale[instance.shape];
-        if (displacement == -2) {
-            displacement       = material.displacement_texture;
-            displacement_scale = material.displacement_scale;
-        } else if (displacement != material.displacement_texture) {
-            throw runtime_error(
-                "different displacements applied to the same shape");
+void tesselate_subdivs(yocto_scene& scene) {
+    for (auto& subdiv : scene.subdivs) {
+        auto& shape               = scene.shapes[subdiv.tesselated_shape];
+        shape.positions           = subdiv.positions;
+        shape.normals             = subdiv.normals;
+        shape.texturecoords       = subdiv.texturecoords;
+        shape.colors              = subdiv.colors;
+        shape.radius              = subdiv.radius;
+        shape.points              = subdiv.points;
+        shape.lines               = subdiv.lines;
+        shape.triangles           = subdiv.triangles;
+        shape.quads               = subdiv.quads;
+        shape.quads_positions     = subdiv.quads_positions;
+        shape.quads_normals       = subdiv.quads_normals;
+        shape.quads_texturecoords = subdiv.quads_texturecoords;
+        shape.lines               = subdiv.lines;
+        if (subdiv.subdivision_level) {
+            subdivide_shape(shape, subdiv.subdivision_level,
+                subdiv.catmull_clark, subdiv.compute_normals);
         }
-    }
-    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
-        auto& shape                = scene.shapes[shape_id];
-        auto  displacement_texture = displacements[shape_id];
-        auto  displacement_scale   = displacements_scale[shape_id];
-        if (!shape.subdivision_level && displacement_texture < 0) continue;
-        if (shape.subdivision_level) {
-            subdivide_shape(shape);
-        }
-        if (displacement_texture >= 0) {
-            displace_shape(shape, scene.textures[displacement_texture],
-                displacement_scale);
+        if (subdiv.displacement_texture >= 0) {
+            displace_shape(shape, scene.textures[subdiv.displacement_texture],
+                subdiv.displacement_scale, subdiv.compute_normals);
         }
     }
 }
@@ -429,7 +425,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 void build_shape_bvh(
     yocto_shape& shape, bvh_shape& bvh, const bvh_build_options& options) {
 #if YOCTO_EMBREE
-    if (options.embree_shared &&
+    if (options.embree_compact &&
         shape.positions.size() == shape.positions.capacity()) {
         shape.positions.reserve(shape.positions.size() + 1);
     }
@@ -1375,6 +1371,7 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
     auto offset_voltextures  = scene.voltextures.size();
     auto offset_materials    = scene.materials.size();
     auto offset_shapes       = scene.shapes.size();
+    auto offset_subdivs      = scene.subdivs.size();
     auto offset_instances    = scene.instances.size();
     auto offset_environments = scene.environments.size();
     auto offset_nodes        = scene.nodes.size();
@@ -1384,6 +1381,7 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
     scene.voltextures += merge.voltextures;
     scene.materials += merge.materials;
     scene.shapes += merge.shapes;
+    scene.subdivs += merge.subdivs;
     scene.instances += merge.instances;
     scene.environments += merge.environments;
     scene.nodes += merge.nodes;
@@ -1403,10 +1401,16 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
             material.roughness_texture += offset_textures;
         if (material.normal_texture >= 0)
             material.normal_texture += offset_textures;
-        if (material.displacement_texture >= 0)
-            material.displacement_texture += offset_textures;
         if (material.volume_density_texture >= 0)
             material.volume_density_texture += offset_voltextures;
+    }
+    for (auto subdiv_id = offset_subdivs; subdiv_id < scene.subdivs.size();
+         subdiv_id++) {
+        auto& subdiv = scene.subdivs[subdiv_id];
+        if (subdiv.tesselated_shape >= 0)
+            subdiv.tesselated_shape += offset_shapes;
+        if (subdiv.displacement_texture >= 0)
+            subdiv.displacement_texture += offset_textures;
     }
     for (auto instance_id = offset_instances;
          instance_id < scene.instances.size(); instance_id++) {

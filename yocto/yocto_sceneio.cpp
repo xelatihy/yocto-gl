@@ -322,7 +322,7 @@ void load_scene_shape(yocto_shape& shape, const string& dirname) {
             shape.triangles, shape.quads, shape.quads_positions,
             shape.quads_normals, shape.quads_texturecoords, shape.positions,
             shape.normals, shape.texturecoords, shape.colors, shape.radius,
-            shape.preserve_facevarying);
+            false);
     }
 }
 
@@ -331,6 +331,30 @@ void save_scene_shape(const yocto_shape& shape, const string& dirname) {
         shape.quads, shape.quads_positions, shape.quads_normals,
         shape.quads_texturecoords, shape.positions, shape.normals,
         shape.texturecoords, shape.colors, shape.radius);
+}
+
+void load_scene_subdiv(yocto_subdiv& subdiv, const string& dirname) {
+    if (is_shape_preset_filename(subdiv.uri)) {
+        auto [type, nfilename] = get_shape_preset_type(subdiv.uri);
+        make_shape_preset(subdiv.points, subdiv.lines, subdiv.triangles,
+            subdiv.quads, subdiv.quads_positions, subdiv.quads_normals,
+            subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
+            subdiv.texturecoords, subdiv.colors, subdiv.radius, type);
+        subdiv.uri = nfilename;
+    } else {
+        load_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines,
+            subdiv.triangles, subdiv.quads, subdiv.quads_positions,
+            subdiv.quads_normals, subdiv.quads_texturecoords, subdiv.positions,
+            subdiv.normals, subdiv.texturecoords, subdiv.colors, subdiv.radius,
+            subdiv.preserve_facevarying);
+    }
+}
+
+void save_scene_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
+    save_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines,
+        subdiv.triangles, subdiv.quads, subdiv.quads_positions,
+        subdiv.quads_normals, subdiv.quads_texturecoords, subdiv.positions,
+        subdiv.normals, subdiv.texturecoords, subdiv.colors, subdiv.radius);
 }
 
 // Load json meshes
@@ -342,6 +366,13 @@ void load_scene_shapes(yocto_scene& scene, const string& dirname,
     parallel_foreach(
         scene.shapes,
         [&dirname](yocto_shape& shape) { load_scene_shape(shape, dirname); },
+        options.cancel_flag, options.run_serially);
+
+    // load subdivs
+    parallel_foreach(
+        scene.subdivs,
+        [&dirname](
+            yocto_subdiv& subdiv) { load_scene_subdiv(subdiv, dirname); },
         options.cancel_flag, options.run_serially);
 }
 
@@ -355,6 +386,13 @@ void save_scene_shapes(const yocto_scene& scene, const string& dirname,
         scene.shapes,
         [&dirname](
             const yocto_shape& shape) { save_scene_shape(shape, dirname); },
+        options.cancel_flag, options.run_serially);
+    // save subdivs
+    parallel_foreach(
+        scene.subdivs,
+        [&dirname](const yocto_subdiv& subdivs) {
+            save_scene_subdiv(subdivs, dirname);
+        },
         options.cancel_flag, options.run_serially);
 }
 
@@ -565,6 +603,7 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
             voltexture,
             material,
             shape,
+            subdiv,
             instance,
             environment
         };
@@ -609,6 +648,8 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                 type = parsing_type::material;
             } else if (key == "shapes") {
                 type = parsing_type::shape;
+            } else if (key == "subdivs") {
+                type = parsing_type::subdiv;
             } else if (key == "instances") {
                 type = parsing_type::instance;
             } else if (key == "environments") {
@@ -629,6 +670,7 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                     scene.materials.push_back({});
                     break;
                 case parsing_type::shape: scene.shapes.push_back({}); break;
+                case parsing_type::subdiv: scene.subdivs.push_back({}); break;
                 case parsing_type::instance:
                     scene.instances.push_back({});
                     break;
@@ -733,14 +775,10 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                         get_ref(value, material.transmission_texture, tmap);
                     } else if (key == "roughness_texture") {
                         get_ref(value, material.roughness_texture, tmap);
-                    } else if (key == "displacement_texture") {
-                        get_ref(value, material.displacement_texture, tmap);
                     } else if (key == "normal_texture") {
                         get_ref(value, material.normal_texture, tmap);
                     } else if (key == "volume_density_texture") {
                         get_ref(value, material.volume_density_texture, vmap);
-                    } else if (key == "displacement_scale") {
-                        get_value(value, material.displacement_scale);
                     } else {
                         throw io_error("unknown property");
                     }
@@ -755,14 +793,28 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                             refname         = nname;
                         }
                         smap[refname] = (int)scene.shapes.size() - 1;
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::subdiv: {
+                    auto& subdiv = scene.subdivs.back();
+                    if (key == "uri") {
+                        get_value(value, subdiv.uri);
+                    } else if (key == "tesselated_shape") {
+                        get_ref(value, subdiv.tesselated_shape, smap);
                     } else if (key == "subdivision_level") {
-                        get_value(value, shape.subdivision_level);
+                        get_value(value, subdiv.subdivision_level);
                     } else if (key == "catmull_clark") {
-                        get_value(value, shape.catmull_clark);
+                        get_value(value, subdiv.catmull_clark);
                     } else if (key == "compute_normals") {
-                        get_value(value, shape.compute_normals);
+                        get_value(value, subdiv.compute_normals);
                     } else if (key == "preserve_facevarying") {
-                        get_value(value, shape.preserve_facevarying);
+                        get_value(value, subdiv.preserve_facevarying);
+                    } else if (key == "displacement_texture") {
+                        get_ref(value, subdiv.displacement_texture, tmap);
+                    } else if (key == "displacement_scale") {
+                        get_value(value, subdiv.displacement_scale);
                     } else {
                         throw io_error("unknown property");
                     }
@@ -860,6 +912,7 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
     static const auto def_voltexture  = yocto_voltexture{};
     static const auto def_material    = yocto_material{};
     static const auto def_shape       = yocto_shape{};
+    static const auto def_subdiv      = yocto_subdiv{};
     static const auto def_instance    = yocto_instance{};
     static const auto def_environment = yocto_environment{};
 
@@ -950,8 +1003,6 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
             scene.textures);
         print_ref(fs, "roughness_texture", material.roughness_texture,
             scene.textures);
-        print_ref(fs, "displacement_texture", material.displacement_texture,
-            scene.textures);
         print_ref(
             fs, "normal_texture", material.normal_texture, scene.textures);
         print_optional(fs, "volume_emission", material.volume_emission,
@@ -964,20 +1015,28 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
             def_material.volume_phaseg);
         print_ref(fs, "volume_density_texture", material.volume_density_texture,
             scene.voltextures);
-        // TODO: add displacement scale
     }
 
     if (!scene.shapes.empty()) print_value(fs, "\n\nshapes:\n");
     for (auto& shape : scene.shapes) {
         print_first(fs, "uri", shape.uri);
-        print_optional(fs, "subdivision_level", shape.subdivision_level,
-            def_shape.subdivision_level);
-        print_optional(
-            fs, "catmull_clark", shape.catmull_clark, def_shape.catmull_clark);
-        print_optional(fs, "compute_normals", shape.compute_normals,
-            def_shape.compute_normals);
-        print_optional(fs, "preserve_facevarying", shape.preserve_facevarying,
-            def_shape.preserve_facevarying);
+    }
+
+    if (!scene.subdivs.empty()) print_value(fs, "\n\nsubdivs:\n");
+    for (auto& subdiv : scene.subdivs) {
+        print_first(fs, "uri", subdiv.uri);
+        print_optional(fs, "subdivision_level", subdiv.subdivision_level,
+            def_subdiv.subdivision_level);
+        print_optional(fs, "catmull_clark", subdiv.catmull_clark,
+            def_subdiv.catmull_clark);
+        print_optional(fs, "compute_normals", subdiv.compute_normals,
+            def_subdiv.compute_normals);
+        print_optional(fs, "preserve_facevarying", subdiv.preserve_facevarying,
+            def_subdiv.preserve_facevarying);
+        print_ref(fs, "displacement_texture", subdiv.displacement_texture,
+            scene.textures);
+        print_optional(fs, "displacement_scale", subdiv.displacement_scale,
+            def_subdiv.displacement_scale);
     }
 
     if (!scene.instances.empty()) print_value(fs, "\n\ninstances:\n");
@@ -1062,16 +1121,19 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         unordered_map<int, int> norm_map     = unordered_map<int, int>();
         unordered_map<int, int> texcoord_map = unordered_map<int, int>();
 
+        // current parse state
+        bool preserve_facevarying_now = false;
+
         parse_callbacks(yocto_scene& scene, const load_scene_options& options)
             : scene{scene}, options{options} {}
 
         // add object if needed
         void add_shape() {
-            auto shape = yocto_shape{};
-            shape.uri  = oname + gname;
-            shape.preserve_facevarying =
-                options.obj_preserve_face_varying ||
-                shape.uri.find("[yocto::facevarying]") != string::npos;
+            auto shape               = yocto_shape{};
+            shape.uri                = oname + gname;
+            preserve_facevarying_now = options.obj_preserve_face_varying ||
+                                       shape.uri.find("[yocto::facevarying]") !=
+                                           string::npos;
             scene.shapes.push_back(shape);
             auto instance     = yocto_instance{};
             instance.uri      = shape.uri;
@@ -1184,7 +1246,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
                 add_shape();
             }
             auto& shape = scene.shapes.back();
-            if (!shape.preserve_facevarying) {
+            if (!preserve_facevarying_now) {
                 add_verts(verts, shape);
                 if (verts.size() == 4) {
                     shape.quads.push_back(
@@ -1254,8 +1316,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
                 scene.shapes.back().lines.empty()) {
                 add_shape();
             }
-            auto& shape                = scene.shapes.back();
-            shape.preserve_facevarying = false;
+            auto& shape = scene.shapes.back();
             add_verts(verts, shape);
             for (auto i = 1; i < verts.size(); i++)
                 shape.lines.push_back(
@@ -1267,8 +1328,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
                 scene.shapes.back().points.empty()) {
                 add_shape();
             }
-            auto& shape                = scene.shapes.back();
-            shape.preserve_facevarying = false;
+            auto& shape = scene.shapes.back();
             add_verts(verts, shape);
             for (auto i = 0; i < verts.size(); i++)
                 shape.points.push_back(vertex_map.at(verts[i]));
@@ -1301,7 +1361,6 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             material.specular_texture       = add_texture(omat.ks_txt, false);
             material.transmission_texture   = add_texture(omat.kt_txt, false);
             material.roughness_texture      = add_texture(omat.rs_txt, true);
-            material.displacement_texture   = add_texture(omat.disp_txt, true);
             material.normal_texture         = add_texture(omat.norm_txt, true);
             material.volume_emission        = omat.ve;
             material.volume_albedo          = omat.va;
@@ -1436,9 +1495,6 @@ void save_mtl(
         if (material.roughness_texture >= 0)
             println_values(
                 fs, "  map_Pr", scene.textures[material.roughness_texture].uri);
-        if (material.displacement_texture >= 0)
-            println_values(fs, "  map_disp",
-                scene.textures[material.displacement_texture].uri);
         if (material.normal_texture >= 0)
             println_values(
                 fs, "  map_norm", scene.textures[material.normal_texture].uri);
@@ -2670,12 +2726,18 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             }
         }
 
-        float pbrt_remap_roughness(float roughness) {
+        float get_pbrt_roughness(
+            float uroughness, float vroughness, bool remap) {
+            auto roughness = (uroughness + vroughness) / 2;
             // from pbrt code
-            roughness = max(roughness, 1e-3f);
-            float x   = log(roughness);
-            return 1.62142f + 0.819955f * x + 0.1734f * x * x +
-                   0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
+            if (remap) {
+                roughness = max(roughness, 1e-3f);
+                auto x    = log(roughness);
+                roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
+                            0.0171201f * x * x * x +
+                            0.000640711f * x * x * x * x;
+            }
+            return sqrt(roughness);
         }
 
         void camera(const pbrt_camera& pcamera, const pbrt_context& ctx) {
@@ -2899,12 +2961,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto op     = vec3f{0, 0, 0};
                 auto op_txt = -1;
                 get_scaled_texture3f(uber.opacity, op, op_txt);
-                material.opacity = (op.x + op.y + op.z) / 3;
-                material.roughness =
-                    (uber.uroughness.value + uber.vroughness.value) / 2;
-                if (uber.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.opacity   = (op.x + op.y + op.z) / 3;
+                material.roughness = get_pbrt_roughness(uber.uroughness.value,
+                    uber.vroughness.value, uber.remaproughness);
             } else if (holds_alternative<pbrt_plastic_material>(pmaterial)) {
                 auto& plastic = get<pbrt_plastic_material>(pmaterial);
                 get_scaled_texture3f(
@@ -2912,12 +2971,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // get_scaled_texture3f(
                 //     plastic.Ks, material.specular,
                 //     material.specular_texture);
-                material.specular = {0.04f, 0.04f, 0.04f};
-                material.roughness =
-                    (plastic.uroughness.value + plastic.vroughness.value) / 2;
-                if (plastic.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.specular  = {0.04f, 0.04f, 0.04f};
+                material.roughness = get_pbrt_roughness(
+                    plastic.uroughness.value, plastic.vroughness.value,
+                    plastic.remaproughness);
             } else if (holds_alternative<pbrt_translucent_material>(
                            pmaterial)) {
                 auto& translucent = get<pbrt_translucent_material>(pmaterial);
@@ -2926,12 +2983,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // get_scaled_texture3f(translucent.Ks, material.specular,
                 //     material.specular_texture);
                 material.specular  = {0.04f, 0.04f, 0.04f};
-                material.roughness = (translucent.uroughness.value +
-                                         translucent.vroughness.value) /
-                                     2;
-                if (translucent.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.roughness = get_pbrt_roughness(
+                    translucent.uroughness.value, translucent.vroughness.value,
+                    translucent.remaproughness);
             } else if (holds_alternative<pbrt_matte_material>(pmaterial)) {
                 auto& matte = get<pbrt_matte_material>(pmaterial);
                 get_scaled_texture3f(
@@ -2949,12 +3003,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto  eta_texture = -1, k_texture = -1;
                 get_scaled_texture3f(metal.eta, eta, eta_texture);
                 get_scaled_texture3f(metal.k, k, k_texture);
-                material.specular = pbrt_fresnel_metal(1, eta, k);
-                material.roughness =
-                    (metal.uroughness.value + metal.vroughness.value) / 2;
-                if (metal.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.specular  = pbrt_fresnel_metal(1, eta, k);
+                material.roughness = get_pbrt_roughness(metal.uroughness.value,
+                    metal.vroughness.value, metal.remaproughness);
             } else if (holds_alternative<pbrt_substrate_material>(pmaterial)) {
                 auto& substrate = get<pbrt_substrate_material>(pmaterial);
                 get_scaled_texture3f(
@@ -2962,13 +3013,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // get_scaled_texture3f(
                 //     substrate.Ks, material.specular,
                 //     material.specular_texture);
-                material.specular = {0.04f, 0.04f, 0.04f};
-                material.roughness =
-                    (substrate.uroughness.value + substrate.vroughness.value) /
-                    2;
-                if (substrate.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.specular  = {0.04f, 0.04f, 0.04f};
+                material.roughness = get_pbrt_roughness(
+                    substrate.uroughness.value, substrate.vroughness.value,
+                    substrate.remaproughness);
             } else if (holds_alternative<pbrt_glass_material>(pmaterial)) {
                 // auto& glass       = get<pbrt_glass_material>(pmaterial);
                 material.specular     = {0.04f, 0.04f, 0.04f};
@@ -3000,12 +3048,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // get_scaled_texture3f(kdsubdurface.Kr, material.specular,
                 //     material.specular_texture);
                 material.specular  = {0.04f, 0.04f, 0.04f};
-                material.roughness = (kdsubdurface.uroughness.value +
-                                         kdsubdurface.vroughness.value) /
-                                     2;
-                if (kdsubdurface.remaproughness)
-                    material.roughness = pbrt_remap_roughness(
-                        material.roughness);
+                material.roughness = get_pbrt_roughness(
+                    kdsubdurface.uroughness.value,
+                    kdsubdurface.vroughness.value, kdsubdurface.remaproughness);
                 if (verbose)
                     printf("kdsubsurface material not properly supported\n");
             } else if (holds_alternative<pbrt_subsurface_material>(pmaterial)) {
@@ -3030,13 +3075,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                         plastic.Kd, material.diffuse, material.diffuse_texture);
                     // get_scaled_texture3f(plastic.Ks, material.specular,
                     //     material.specular_texture);
-                    material.specular = {0.04f, 0.04f, 0.04f};
-                    material.roughness =
-                        (plastic.uroughness.value + plastic.vroughness.value) /
-                        2;
-                    if (plastic.remaproughness)
-                        material.roughness = pbrt_remap_roughness(
-                            material.roughness);
+                    material.specular  = {0.04f, 0.04f, 0.04f};
+                    material.roughness = get_pbrt_roughness(
+                        plastic.uroughness.value, plastic.vroughness.value,
+                        plastic.remaproughness);
                 } else if (holds_alternative<pbrt_metal_material>(
                                fourier.approx)) {
                     auto& metal = get<pbrt_metal_material>(fourier.approx);
@@ -3044,12 +3086,10 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     auto  eta_texture = -1, k_texture = -1;
                     get_scaled_texture3f(metal.eta, eta, eta_texture);
                     get_scaled_texture3f(metal.k, k, k_texture);
-                    material.specular = pbrt_fresnel_metal(1, eta, k);
-                    material.roughness =
-                        (metal.uroughness.value + metal.vroughness.value) / 2;
-                    if (metal.remaproughness)
-                        material.roughness = pbrt_remap_roughness(
-                            material.roughness);
+                    material.specular  = pbrt_fresnel_metal(1, eta, k);
+                    material.roughness = get_pbrt_roughness(
+                        metal.uroughness.value, metal.vroughness.value,
+                        metal.remaproughness);
                 } else if (holds_alternative<pbrt_glass_material>(
                                fourier.approx)) {
                     // auto& glass = get<pbrt_metal_glass>(fourier.approx);
@@ -3285,8 +3325,8 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
                         "\"] ");
         else
             println_values(fs, "    \"rgb Ks\" [", material.specular, "] ");
-        println_values(
-            fs, "    \"float roughness\" [", material.roughness, "] ");
+        println_values(fs, "    \"float roughness\" [",
+            material.roughness * material.roughness, "] ");
     }
 
     // convert instances
@@ -3466,10 +3506,6 @@ void read_object(input_file& fs, yocto_camera& camera) {
 
 void write_object(output_file& fs, const yocto_shape& shape) {
     write_value(fs, shape.uri);
-    write_value(fs, shape.subdivision_level);
-    write_value(fs, shape.catmull_clark);
-    write_value(fs, shape.compute_normals);
-    write_value(fs, shape.preserve_facevarying);
     write_value(fs, shape.points);
     write_value(fs, shape.lines);
     write_value(fs, shape.triangles);
@@ -3486,10 +3522,6 @@ void write_object(output_file& fs, const yocto_shape& shape) {
 }
 void read_object(input_file& fs, yocto_shape& shape) {
     read_value(fs, shape.uri);
-    read_value(fs, shape.subdivision_level);
-    read_value(fs, shape.catmull_clark);
-    read_value(fs, shape.compute_normals);
-    read_value(fs, shape.preserve_facevarying);
     read_value(fs, shape.points);
     read_value(fs, shape.lines);
     read_value(fs, shape.triangles);
@@ -3503,6 +3535,51 @@ void read_object(input_file& fs, yocto_shape& shape) {
     read_value(fs, shape.colors);
     read_value(fs, shape.radius);
     read_value(fs, shape.tangentspaces);
+}
+
+void write_object(output_file& fs, const yocto_subdiv& subdiv) {
+    write_value(fs, subdiv.uri);
+    write_value(fs, subdiv.tesselated_shape);
+    write_value(fs, subdiv.subdivision_level);
+    write_value(fs, subdiv.catmull_clark);
+    write_value(fs, subdiv.compute_normals);
+    write_value(fs, subdiv.preserve_facevarying);
+    write_value(fs, subdiv.displacement_texture);
+    write_value(fs, subdiv.displacement_scale);
+    write_value(fs, subdiv.points);
+    write_value(fs, subdiv.lines);
+    write_value(fs, subdiv.triangles);
+    write_value(fs, subdiv.quads);
+    write_value(fs, subdiv.quads_positions);
+    write_value(fs, subdiv.quads_normals);
+    write_value(fs, subdiv.quads_texturecoords);
+    write_value(fs, subdiv.positions);
+    write_value(fs, subdiv.normals);
+    write_value(fs, subdiv.texturecoords);
+    write_value(fs, subdiv.colors);
+    write_value(fs, subdiv.radius);
+}
+void read_object(input_file& fs, yocto_subdiv& subdiv) {
+    read_value(fs, subdiv.uri);
+    read_value(fs, subdiv.tesselated_shape);
+    read_value(fs, subdiv.subdivision_level);
+    read_value(fs, subdiv.catmull_clark);
+    read_value(fs, subdiv.compute_normals);
+    read_value(fs, subdiv.preserve_facevarying);
+    read_value(fs, subdiv.displacement_texture);
+    read_value(fs, subdiv.displacement_scale);
+    read_value(fs, subdiv.points);
+    read_value(fs, subdiv.lines);
+    read_value(fs, subdiv.triangles);
+    read_value(fs, subdiv.quads);
+    read_value(fs, subdiv.quads_positions);
+    read_value(fs, subdiv.quads_normals);
+    read_value(fs, subdiv.quads_texturecoords);
+    read_value(fs, subdiv.positions);
+    read_value(fs, subdiv.normals);
+    read_value(fs, subdiv.texturecoords);
+    read_value(fs, subdiv.colors);
+    read_value(fs, subdiv.radius);
 }
 
 void write_object(output_file& fs, const yocto_texture& texture) {
@@ -3555,14 +3632,12 @@ void write_object(output_file& fs, const yocto_material& material) {
     write_value(fs, material.specular_texture);
     write_value(fs, material.transmission_texture);
     write_value(fs, material.roughness_texture);
-    write_value(fs, material.displacement_texture);
     write_value(fs, material.normal_texture);
     write_value(fs, material.volume_emission);
     write_value(fs, material.volume_albedo);
     write_value(fs, material.volume_density);
     write_value(fs, material.volume_phaseg);
     write_value(fs, material.volume_density_texture);
-    write_value(fs, material.displacement_scale);
 };
 void read_object(input_file& fs, yocto_material& material) {
     read_value(fs, material.uri);
@@ -3581,14 +3656,12 @@ void read_object(input_file& fs, yocto_material& material) {
     read_value(fs, material.specular_texture);
     read_value(fs, material.transmission_texture);
     read_value(fs, material.roughness_texture);
-    read_value(fs, material.displacement_texture);
     read_value(fs, material.normal_texture);
     read_value(fs, material.volume_emission);
     read_value(fs, material.volume_albedo);
     read_value(fs, material.volume_density);
     read_value(fs, material.volume_phaseg);
     read_value(fs, material.volume_density_texture);
-    read_value(fs, material.displacement_scale);
 };
 
 void write_object(output_file& fs, const yocto_instance& instance) {
@@ -3608,6 +3681,7 @@ void write_object(output_file& fs, const yocto_scene& scene) {
     write_value(fs, scene.uri);
     write_objects(fs, scene.cameras);
     write_objects(fs, scene.shapes);
+    write_objects(fs, scene.subdivs);
     write_objects(fs, scene.textures);
     write_objects(fs, scene.voltextures);
     write_objects(fs, scene.materials);
@@ -3618,6 +3692,7 @@ void read_object(input_file& fs, yocto_scene& scene) {
     read_value(fs, scene.uri);
     read_objects(fs, scene.cameras);
     read_objects(fs, scene.shapes);
+    read_objects(fs, scene.subdivs);
     read_objects(fs, scene.textures);
     read_objects(fs, scene.voltextures);
     read_objects(fs, scene.materials);

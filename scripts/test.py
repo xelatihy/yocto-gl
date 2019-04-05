@@ -193,14 +193,6 @@ def make_tests():
                 "roughness": 0.1
             },
             {
-                "uri": "materials/test-matte-displaced.yaml",
-                "diffuse": [ 0.7, 0.7, 0.7 ],
-                "specular": [ 0, 0, 0 ],
-                "roughness": 1,
-                "displacement_texture": "textures/test-fbm-displacement.png",
-                "displacement_scale": 0.025
-            },
-            {
                 "uri": "materials/test-plastic-sharp-bumped.yaml",
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
@@ -294,21 +286,13 @@ def make_tests():
                 "uri": "::yocto::test-uvcylinder::shapes/test-uvcylinder.ply"
             },
             {
-                "uri": "::yocto::test-sphere-displaced::shapes/test-sphere-displaced.obj",
-                "preserve_facevarying": false
+                "uri": "::yocto::test-sphere-displaced::shapes/test-sphere-displaced.obj"
             },
             {
-                "uri": "::yocto::test-cube-subdiv::shapes/test-cube-subdiv.obj",
-                "subdivision_level": 4,
-                "catmull_clark": true,
-                "compute_normals": true,
-                "preserve_facevarying": true
+                "uri": "::yocto::test-cube-subdiv::shapes/test-cube-subdiv.obj"
             },
             {
-                "uri": "::yocto::test-suzanne-subdiv::shapes/test-suzanne-subdiv.obj",
-                "subdivision_level": 2,
-                "catmull_clark": true,
-                "compute_normals": true
+                "uri": "::yocto::test-suzanne-subdiv::shapes/test-suzanne-subdiv.obj"
             },
             {
                 "uri": "::yocto::test-hairball1::shapes/test-hairball1.ply"
@@ -328,6 +312,30 @@ def make_tests():
             {
                 "uri": "::yocto::test-arealight2::shapes/test-arealight2.ply"
             }
+        ],
+        "subdivs": [
+            {
+                "uri": "::yocto::test-sphere-displaced::subdivs/test-sphere-displaced.obj",
+                "tesselated_shape": "shapes/test-sphere-displaced.obj",
+                "preserve_facevarying": true,
+                "displacement_texture": "textures/test-fbm-displacement.png",
+                "displacement_scale": 0.025
+            },
+            {
+                "uri": "::yocto::test-cube-subdiv::subdivs/test-cube-subdiv.obj",
+                "tesselated_shape": "shapes/test-cube-subdiv.obj",
+                "subdivision_level": 4,
+                "catmull_clark": true,
+                "compute_normals": true,
+                "preserve_facevarying": true
+            },
+            {
+                "uri": "::yocto::test-suzanne-subdiv::subdivs/test-suzanne-subdiv.obj",
+                "tesselated_shape": "shapes/test-suzanne-subdiv.obj",
+                "subdivision_level": 2,
+                "catmull_clark": true,
+                "compute_normals": true
+            },
         ],
         "instances": [
             {
@@ -388,7 +396,7 @@ def make_tests():
             }
         ]
     }
-    def make_test(name, shapes, materials, lights, xoffsets=[ -0.4, -0.2, 0, 0.2, 0.4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1]):
+    def make_test(name, shapes, materials, lights, xoffsets=[ -0.4, -0.2, 0, 0.2, 0.4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1], subdivs=[]):
         import copy
         def remove_preset(filename):
             splits = filename.rpartition('::')
@@ -424,12 +432,20 @@ def make_tests():
                 for instance in scene['instances']:
                     if instance['material'] == remove_preset(material['uri']): used = True
                 if used: scene['materials'] += [material] 
+            old_subdivs = scene['subdivs']
+            scene['subdivs'] = []
+            for subdiv in old_subdivs:
+                used = False
+                if remove_preset(subdiv['uri']) in subdivs:
+                    scene['subdivs'] += [subdiv] 
             old_shapes = scene['shapes']
             scene['shapes'] = []
             for shape in old_shapes:
                 used = False
                 for instance in scene['instances']:
                     if instance['shape'] == remove_preset(shape['uri']): used = True
+                for subdiv in scene['subdivs']:
+                    if subdiv['tesselated_shape'] == remove_preset(shape['uri']): used = True
                 if used: scene['shapes'] += [shape] 
             old_textures = scene['textures']
             scene['textures'] = []
@@ -440,6 +456,8 @@ def make_tests():
                     if 'diffuse_texture' in material and material['diffuse_texture'] == remove_preset(texture['uri']): used = True
                     if 'normal_texture' in material and material['normal_texture'] == remove_preset(texture['uri']): used = True
                     if 'displacement_texture' in material and material['displacement_texture'] == remove_preset(texture['uri']): used = True
+                for subdiv in scene['subdivs']:
+                    if 'displacement_texture' in subdiv and subdiv['displacement_texture'] == remove_preset(texture['uri']): used = True
                 for environment in scene['environments']:
                     if environment['emission_texture'] == remove_preset(texture['uri']): used = True
                 if used: scene['textures'] += [texture] 
@@ -459,14 +477,15 @@ def make_tests():
             write_yaml_objects(f, 'voltextures')
             write_yaml_objects(f, 'materials')
             write_yaml_objects(f, 'shapes')
+            write_yaml_objects(f, 'subdivs')
             write_yaml_objects(f, 'instances')
             write_yaml_objects(f, 'environments')
     make_test('tests/features1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-metal-rough.yaml", "materials/test-plastic-rough.yaml", "materials/test-metal-sharp.yaml"], mixed_lights)
     make_test('tests/materials1.yaml', ['shapes/test-sphere.ply'], ["materials/test-plastic-sharp.yaml", "materials/test-plastic-rough.yaml", "materials/test-matte.yaml", "materials/test-metal-sharp.yaml", "materials/test-metal-rough.yaml"], mixed_lights)
     make_test('tests/materials2.yaml', ['shapes/test-sphere.ply'], ["materials/test-glass-sharp.yaml", "materials/test-glass-rough.yaml", "materials/test-transparent.yaml", "materials/test-thinglass-sharp.yaml", "materials/test-thinglass-rough.yaml"], mixed_lights)
-    make_test('tests/materials3.yaml', ['shapes/test-sphere.ply', 'shapes/test-sphere.ply', 'shapes/test-sphere-displaced.obj', 'shapes/test-sphere.ply', 'shapes/test-sphere.ply'], ["materials/test-plastic-sharp-bumped.yaml", "materials/test-plastic-sharp-bumped.yaml", "materials/test-matte-displaced.yaml", "materials/test-metal-sharp-bumped.yaml", "materials/test-metal-sharp-bumped.yaml"], mixed_lights)
+    make_test('tests/materials3.yaml', ['shapes/test-sphere.ply', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-sphere.ply'], ["materials/test-plastic-sharp-bumped.yaml", "materials/test-plastic-sharp-bumped.yaml", "materials/test-metal-sharp-bumped.yaml", "materials/test-metal-sharp-bumped.yaml", "materials/test-metal-sharp-bumped.yaml"], mixed_lights)
     make_test('tests/shapes1.yaml', ['shapes/test-sphere.ply', "shapes/test-uvsphere-flipcap.ply", "shapes/test-disk.ply", "shapes/test-uvcylinder.ply", "shapes/test-cube.ply"], ["materials/test-uvgrid.yaml"], mixed_lights)
-    make_test('tests/shapes2.yaml', ['shapes/test-cube-subdiv.obj', "shapes/test-suzanne-subdiv.obj", "shapes/test-teapot.obj", "shapes/test-bunny.obj", "shapes/test-cube-subdiv.obj"], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml"], mixed_lights)
+    make_test('tests/shapes2.yaml', ['shapes/test-cube-subdiv.obj', "shapes/test-suzanne-subdiv.obj", 'shapes/test-sphere-displaced.obj', "shapes/test-bunny.obj", "shapes/test-teapot.obj"], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-matte.yaml", "materials/test-uvgrid.yaml", "materials/test-uvgrid.yaml"], mixed_lights, subdivs=['subdivs/test-cube-subdiv.obj', "subdivs/test-suzanne-subdiv.obj", "subdivs/test-sphere-displaced.obj"])
     make_test('tests/shapes3.yaml', ['shapes/test-sphere.ply', "shapes/test-hairball1.ply", "shapes/test-hairball2.ply", "shapes/test-hairball3.ply", "shapes/test-sphere.ply", "", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", ""], ["materials/test-matte.yaml", "materials/test-hair.yaml", "materials/test-hair.yaml", "materials/test-hair.yaml", "materials/test-matte.yaml"], mixed_lights, xscales=[ 0.5, 1, 1, 1, 0.5 ])
     make_test('tests/arealights1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-metal-rough.yaml", "materials/test-plastic-rough.yaml", "materials/test-metal-sharp.yaml"], area_lights)
     make_test('tests/environments1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-metal-rough.yaml", "materials/test-plastic-rough.yaml", "materials/test-metal-sharp.yaml"], sunsky_lights)

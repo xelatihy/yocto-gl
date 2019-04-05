@@ -148,7 +148,7 @@ bool load_scene_sync(app_state& app) {
 
     // tesselate
     app.status = "tesselating shapes";
-    tesselate_shapes(app.scene);
+    tesselate_subdivs(app.scene);
 
     // add sky
     if (app.add_skyenv) add_sky_environment(app.scene);
@@ -499,8 +499,8 @@ int main(int argc, char* argv[]) {
         "Use Embree ratracer");
     parser.add_flag("--embree-flatten,!--no-embree-flatten",
         app.bvh_options.embree_flatten, "Flatten embree scene");
-    parser.add_flag("--embree-shared,!--no-embree-shared",
-        app.bvh_options.embree_shared, "Embree runs in shared memory");
+    parser.add_flag("--embree-compact,!--no-embree-compact",
+        app.bvh_options.embree_compact, "Embree runs in compact memory");
 #endif
     parser.add_flag("--double-sided,!--no-double-sided",
         app.trace_options.double_sided, "Double-sided rendering.");

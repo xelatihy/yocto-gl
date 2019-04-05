@@ -163,7 +163,7 @@ bool load_scene_sync(app_state& app) {
 
     // tesselate
     app.status = "tesselating surfaces";
-    tesselate_shapes(app.scene);
+    tesselate_subdivs(app.scene);
 
     // init renderer
     app.status = "initializing lights";

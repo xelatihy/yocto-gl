@@ -107,8 +107,8 @@ int main(int argc, char* argv[]) {
         "--embree,!--no-embree", bvh_options.use_embree, "Use Embree ratracer");
     parser.add_flag("--embree-flatten,!--no-embree-flatten",
         bvh_options.embree_flatten, "Flatten embree scene");
-    parser.add_flag("--embree-shared,!--no-embree-shared",
-        bvh_options.embree_shared, "Embree runs in shared memory");
+    parser.add_flag("--embree-compact,!--no-embree-compact",
+        bvh_options.embree_compact, "Embree runs in compact memory");
 #endif
     parser.add_flag(
         "--add-skyenv,!--no-add-skyenv", add_skyenv, "Add sky envmap");
@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
     // tesselate
     printf("tesselating scene ...\n");
     auto start_tess = get_time();
-    tesselate_shapes(scene);
+    tesselate_subdivs(scene);
     printf("tesselating scene [%s]\n",
         format_duration(get_time() - start_tess).c_str());
 

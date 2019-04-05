@@ -53,18 +53,11 @@ cameras:
 textures:
   - uri: ::yocto::test-floor::textures/test-floor.png
   - uri: ::yocto::test-bump-normal::textures/test-bump-normal.png
-  - uri: ::yocto::test-fbm-displacement::textures/test-fbm-displacement.png
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
     diffuse: [0.7, 0.7, 0.7]
     diffuse_texture: textures/test-floor.png
-  - uri: materials/test-matte-displaced.yaml
-    diffuse: [0.7, 0.7, 0.7]
-    specular: [0, 0, 0]
-    roughness: 1
-    displacement_texture: textures/test-fbm-displacement.png
-    displacement_scale: 0.025
   - uri: materials/test-plastic-sharp-bumped.yaml
     diffuse: [0.5, 0.5, 0.7]
     specular: [0.04, 0.04, 0.04]
@@ -81,9 +74,8 @@ materials:
     emission: [20, 20, 20]
 shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply
+  - uri: shapes/test-bunny.obj
   - uri: ::yocto::test-sphere::shapes/test-sphere.ply
-  - uri: ::yocto::test-sphere-displaced::shapes/test-sphere-displaced.obj
-    preserve_facevarying: False
   - uri: ::yocto::test-arealight1::shapes/test-arealight1.ply
   - uri: ::yocto::test-arealight2::shapes/test-arealight2.ply
 instances:
@@ -106,9 +98,9 @@ instances:
     shape: shapes/test-sphere.ply
     material: materials/test-plastic-sharp-bumped.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - uri: instances/test-sphere-displaced_test-matte-displaced.yaml
-    shape: shapes/test-sphere-displaced.obj
-    material: materials/test-matte-displaced.yaml
+  - uri: instances/test-bunny_test-metal-sharp-bumped.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-metal-sharp-bumped.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - uri: instances/test-sphere_test-metal-sharp-bumped.yaml
     shape: shapes/test-sphere.ply

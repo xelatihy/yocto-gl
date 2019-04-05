@@ -140,11 +140,7 @@ struct yocto_material {
     int specular_texture     = -1;
     int transmission_texture = -1;
     int roughness_texture    = -1;
-    int displacement_texture = -1;
     int normal_texture       = -1;
-
-    // texture properties
-    float displacement_scale = 1;
 
     // volume properties
     // albedo = scattering / (absorption + scattering)
@@ -166,12 +162,6 @@ struct yocto_shape {
     // shape data
     string uri = "";
 
-    // subdision properties
-    int  subdivision_level    = 0;
-    bool catmull_clark        = false;
-    bool compute_normals      = false;
-    bool preserve_facevarying = false;
-
     // primitives
     vector<int>   points    = {};
     vector<vec2i> lines     = {};
@@ -190,6 +180,48 @@ struct yocto_shape {
     vector<vec4f> colors        = {};
     vector<float> radius        = {};
     vector<vec4f> tangentspaces = {};
+};
+
+// Shape data represented as an indexed meshes of elements.
+// This object exists only to allow for further subdivision. The current
+// subdiviion data is stored in the pointed to shape, so the rest of the system
+// does not need to known about subdivs. While this is mostly helpful for
+// subdivision surfaces, we store here all data that we possibly may want to
+// subdivide, for later use.
+struct yocto_subdiv {
+    // shape data
+    string uri = "";
+
+    // tesselated shape
+    int tesselated_shape = -1;
+
+    // subdision properties
+    int  subdivision_level    = 0;
+    bool catmull_clark        = false;
+    bool compute_normals      = false;
+    bool preserve_facevarying = false;
+
+    // displacement information
+    int   displacement_texture = -1;
+    float displacement_scale   = 1;
+
+    // primitives
+    vector<int>   points    = {};
+    vector<vec2i> lines     = {};
+    vector<vec3i> triangles = {};
+    vector<vec4i> quads     = {};
+
+    // face-varying primitives
+    vector<vec4i> quads_positions     = {};
+    vector<vec4i> quads_normals       = {};
+    vector<vec4i> quads_texturecoords = {};
+
+    // vertex data
+    vector<vec3f> positions     = {};
+    vector<vec3f> normals       = {};
+    vector<vec2f> texturecoords = {};
+    vector<vec4f> colors        = {};
+    vector<float> radius        = {};
 };
 
 // Instance of a visible shape in the scene.
@@ -258,6 +290,7 @@ struct yocto_scene {
     vector<yocto_material>    materials    = {};
     vector<yocto_texture>     textures     = {};
     vector<yocto_environment> environments = {};
+    vector<yocto_subdiv>      subdivs      = {};
     vector<yocto_voltexture>  voltextures  = {};
     vector<yocto_scene_node>  nodes        = {};
     vector<yocto_animation>   animations   = {};
@@ -320,7 +353,11 @@ bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     bool find_any = false, bool non_rigid_frames = true);
 
 // Apply subdivision and displacement rules.
-void tesselate_shapes(yocto_scene& scene);
+void subdivide_shape(yocto_shape& shape, int subdivision_level,
+    bool catmull_clark, bool compute_normals);
+void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
+    float scale, bool compute_normals);
+void tesselate_subdivs(yocto_scene& scene);
 
 // Add missing names, normals, tangents and hierarchy.
 void add_missing_normals(yocto_scene& scene);
