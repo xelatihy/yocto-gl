@@ -247,7 +247,7 @@ struct print_timer {
 };
 
 // print info
-inline void print_into(const string& str) {
+inline void print_info(const string& str) {
     printf("%s\n", str.c_str());
 }
 inline print_timer print_timed(const string& str) {
@@ -391,8 +391,8 @@ inline string format_duration(int64_t duration) {
 inline string format_num(uint64_t num) {
     auto rem = num % 1000;
     auto div = num / 1000;
-    if (div > 0) return format_num(div) + "," + std::to_string(rem);
-    return std::to_string(rem);
+    if (div > 0) return format_num(div) + "," + to_string(rem);
+    return to_string(rem);
 }
 
 }  // namespace yocto

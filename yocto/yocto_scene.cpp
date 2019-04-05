@@ -498,7 +498,7 @@ bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
 void normalize_uris(yocto_scene& scene) {
     auto normalize = [](string& name, const string& base, const string& ext,
                          int num) {
-        if (name.empty()) name = base + "_" + std::to_string(num);
+        if (name.empty()) name = base + "_" + to_string(num);
         if (get_dirname(name).empty()) name = base + "s/" + name;
         if (get_extension(name).empty()) name = name + "." + ext;
     };
@@ -1531,46 +1531,46 @@ string print_scene_stats(const yocto_scene& scene) {
 
     auto str = ""s;
 
-    str += "num_cameras: " + std::to_string(num_cameras) + "\n";
-    str += "num_shapes: " + std::to_string(num_shapes) + "\n";
-    str += "num_surface: " + std::to_string(num_surfaces) + "\n";
-    str += "num_instances: " + std::to_string(num_instances) + "\n";
-    str += "num_materials: " + std::to_string(num_materials) + "\n";
-    str += "num_textures: " + std::to_string(num_textures) + "\n";
-    str += "num_voltextures: " + std::to_string(num_voltextures) + "\n";
-    str += "num_environments: " + std::to_string(num_environments) + "\n";
-    str += "num_nodes: " + std::to_string(num_nodes) + "\n";
-    str += "num_animations: " + std::to_string(num_animations) + "\n";
+    str += "num_cameras: " + to_string(num_cameras) + "\n";
+    str += "num_shapes: " + to_string(num_shapes) + "\n";
+    str += "num_surface: " + to_string(num_surfaces) + "\n";
+    str += "num_instances: " + to_string(num_instances) + "\n";
+    str += "num_materials: " + to_string(num_materials) + "\n";
+    str += "num_textures: " + to_string(num_textures) + "\n";
+    str += "num_voltextures: " + to_string(num_voltextures) + "\n";
+    str += "num_environments: " + to_string(num_environments) + "\n";
+    str += "num_nodes: " + to_string(num_nodes) + "\n";
+    str += "num_animations: " + to_string(num_animations) + "\n";
 
-    str += "elem_points: " + std::to_string(elem_points) + "\n";
-    str += "elem_lines: " + std::to_string(elem_lines) + "\n";
-    str += "elem_triangles: " + std::to_string(elem_triangles) + "\n";
-    str += "elem_quads: " + std::to_string(elem_quads) + "\n";
-    str += "vert_pos: " + std::to_string(vert_pos) + "\n";
-    str += "vert_norm: " + std::to_string(vert_norm) + "\n";
-    str += "vert_texcoord: " + std::to_string(vert_texcoord) + "\n";
-    str += "vert_color: " + std::to_string(vert_color) + "\n";
-    str += "vert_radius: " + std::to_string(vert_radius) + "\n";
-    str += "vert_tangsp: " + std::to_string(vert_tangsp) + "\n";
+    str += "elem_points: " + to_string(elem_points) + "\n";
+    str += "elem_lines: " + to_string(elem_lines) + "\n";
+    str += "elem_triangles: " + to_string(elem_triangles) + "\n";
+    str += "elem_quads: " + to_string(elem_quads) + "\n";
+    str += "vert_pos: " + to_string(vert_pos) + "\n";
+    str += "vert_norm: " + to_string(vert_norm) + "\n";
+    str += "vert_texcoord: " + to_string(vert_texcoord) + "\n";
+    str += "vert_color: " + to_string(vert_color) + "\n";
+    str += "vert_radius: " + to_string(vert_radius) + "\n";
+    str += "vert_tangsp: " + to_string(vert_tangsp) + "\n";
 
-    str += "texel_hdr: " + std::to_string(texel_hdr) + "\n";
-    str += "texel_ldr: " + std::to_string(texel_ldr) + "\n";
+    str += "texel_hdr: " + to_string(texel_hdr) + "\n";
+    str += "texel_ldr: " + to_string(texel_ldr) + "\n";
 
-    str += "memory_imgs: " + std::to_string(memory_imgs) + "\n";
-    str += "memory_vols: " + std::to_string(memory_vols) + "\n";
-    str += "memory_elems: " + std::to_string(memory_elems) + "\n";
-    str += "memory_verts: " + std::to_string(memory_verts) + "\n";
+    str += "memory_imgs: " + to_string(memory_imgs) + "\n";
+    str += "memory_vols: " + to_string(memory_vols) + "\n";
+    str += "memory_elems: " + to_string(memory_elems) + "\n";
+    str += "memory_verts: " + to_string(memory_verts) + "\n";
 
-    str += "memory_cameras: " + std::to_string(memory_cams) + "\n";
-    str += "memory_textures: " + std::to_string(memory_txts) + "\n";
-    str += "memory_materials: " + std::to_string(memory_mats) + "\n";
-    str += "memory_shapes: " + std::to_string(memory_shps) + "\n";
-    str += "memory_instances: " + std::to_string(memory_ists) + "\n";
+    str += "memory_cameras: " + to_string(memory_cams) + "\n";
+    str += "memory_textures: " + to_string(memory_txts) + "\n";
+    str += "memory_materials: " + to_string(memory_mats) + "\n";
+    str += "memory_shapes: " + to_string(memory_shps) + "\n";
+    str += "memory_instances: " + to_string(memory_ists) + "\n";
 
-    str += "bbox min: " + std::to_string(bbox.min.x) + " " +
-           std::to_string(bbox.min.y) + " " + std::to_string(bbox.min.z) + "\n";
-    str += "bbox max: " + std::to_string(bbox.max.x) + " " +
-           std::to_string(bbox.max.y) + " " + std::to_string(bbox.max.z) + "\n";
+    str += "bbox min: " + to_string(bbox.min.x) + " " +
+           to_string(bbox.min.y) + " " + to_string(bbox.min.z) + "\n";
+    str += "bbox max: " + to_string(bbox.max.x) + " " +
+           to_string(bbox.max.y) + " " + to_string(bbox.max.z) + "\n";
 
     return str;
 }

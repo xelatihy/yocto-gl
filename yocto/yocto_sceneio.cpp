@@ -598,7 +598,7 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                 get_value(yml, value);
                 if(value < 0) return;
                 if(value >= refs.size()) {
-                    throw io_error("reference not found " + std::to_string(value));
+                    throw io_error("reference not found " + to_string(value));
                 }
             }
         }
@@ -1861,7 +1861,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
             if (!gprim->attributes_count) continue;
             auto shape = yocto_shape();
             shape.name = (gmesh->name ? gmesh->name : "") +
-                         ((sid) ? std::to_string(sid) : string());
+                         ((sid) ? to_string(sid) : string());
             for (auto aid = 0; aid < gprim->attributes_count; aid++) {
                 auto gattr    = &gprim->attributes[aid];
                 auto semantic = string(gattr->name ? gattr->name : "");
@@ -2105,7 +2105,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
                 auto gsampler  = gchannel->sampler;
                 auto animation = yocto_animation{};
                 animation.name = (ganm->name ? ganm->name : "anim") +
-                                 std::to_string(aid++);
+                                 to_string(aid++);
                 animation.animation_group = ganm->name ? ganm->name : "";
                 auto input_view           = accessor_values(gsampler->input);
                 animation.keyframes_times.resize(input_view.size());
@@ -2681,7 +2681,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 camera.lens_aperture  = realistic.aperturediameter / 2;
             } else {
                 throw io_error("unsupported Camera type " +
-                               std::to_string(pcamera.index()));
+                               to_string(pcamera.index()));
             }
             scene.cameras.push_back(camera);
         }
@@ -2700,7 +2700,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         void shape(const pbrt_shape& pshape, const pbrt_context& ctx) {
             static auto shape_id = 0;
             auto        shape    = yocto_shape{};
-            shape.name = "shapes/" + std::to_string(shape_id++) + ".ply";
+            shape.name = "shapes/" + to_string(shape_id++) + ".ply";
             if (holds_alternative<pbrt_trianglemesh_shape>(pshape)) {
                 auto& mesh          = get<pbrt_trianglemesh_shape>(pshape);
                 shape.positions     = mesh.P;
@@ -2738,7 +2738,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     identity_frame3f);
             } else {
                 throw io_error(
-                    "unsupported shape type " + std::to_string(pshape.index()));
+                    "unsupported shape type " + to_string(pshape.index()));
             }
             scene.shapes.push_back(shape);
             auto instance     = yocto_instance{};
@@ -2832,7 +2832,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 if (verbose) printf("texture wrinkled not supported well");
             } else {
                 throw io_error(
-                    "texture not supported" + std::to_string(ptexture.index()));
+                    "texture not supported" + to_string(ptexture.index()));
             }
             scene.textures.push_back(texture);
             tmap[name]  = (int)scene.textures.size() - 1;
@@ -3012,11 +3012,11 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     material.roughness    = 0;
                 } else {
                     throw io_error("material type not supported " +
-                                   std::to_string(fourier.approx.index()));
+                                   to_string(fourier.approx.index()));
                 }
             } else {
                 throw io_error("material type not supported " +
-                               std::to_string(pmaterial.index()));
+                               to_string(pmaterial.index()));
             }
             mmap[name] = material;
         }
@@ -3028,13 +3028,13 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
             } else {
                 throw io_error("area light type not supported " +
-                               std::to_string(plight.index()));
+                               to_string(plight.index()));
             }
             amap[name] = emission;
         }
         void light(const pbrt_light& plight, const pbrt_context& ctx) {
             static auto light_id = 0;
-            auto        name     = "light_" + std::to_string(light_id++);
+            auto        name     = "light_" + to_string(light_id++);
             if (holds_alternative<pbrt_infinite_light>(plight)) {
                 auto& infinite    = get<pbrt_infinite_light>(plight);
                 auto  environment = yocto_environment();
@@ -3140,7 +3140,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 scene.instances.push_back(instance);
             } else {
                 throw io_error("light type not supported " +
-                               std::to_string(plight.index()));
+                               to_string(plight.index()));
             }
         }
         void begin_object(const pbrt_object& pobject, const pbrt_context& ctx) {
