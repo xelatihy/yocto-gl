@@ -153,22 +153,6 @@ foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials
             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 16 -r 360"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
-# volpath
-foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
-    set(tracer "volpath")
-    get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME ytrace-${tracer}-${filename}
-            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 16 -r 360"
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-endforeach()
-# volnaive
-foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
-    set(tracer "volnaive")
-    get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME ytrace-${tracer}-${filename}
-            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 16 -r 360"
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-endforeach()
 # naive
 foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "naive")
