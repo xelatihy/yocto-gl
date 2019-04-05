@@ -59,10 +59,9 @@ def make_tests():
     true = True   # to cut and paste from json
     false = False # to cut and paste from json
     default_scene = {
-        "name": "simple-ml",
         "cameras": [
             {
-                "name": "cameras/default.yaml",
+                "uri": "cameras/default.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
@@ -71,7 +70,7 @@ def make_tests():
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
-                "name": "cameras/front.yaml",
+                "uri": "cameras/front.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
@@ -80,7 +79,7 @@ def make_tests():
                 "frame": lookat([0, 0.575, 1.4], [0, 0.05, 0], [0,1,0])
             },
             {
-                "name": "cameras/back.yaml",
+                "uri": "cameras/back.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
@@ -89,7 +88,7 @@ def make_tests():
                 "frame": lookat([0, 0.575, -1.4], [0, 0.05, 0], [0,1,0])
             },
             {
-                "name": "cameras/perspective-sharp.yaml",
+                "uri": "cameras/perspective-sharp.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
@@ -98,7 +97,7 @@ def make_tests():
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
-                "name": "cameras/perspective-dof.yaml",
+                "uri": "cameras/perspective-dof.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.025,
                 "film_width": 0.036,
@@ -107,7 +106,7 @@ def make_tests():
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
-                "name": "cameras/orthographic-sharp.yaml",
+                "uri": "cameras/orthographic-sharp.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
@@ -117,7 +116,7 @@ def make_tests():
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
-                "name": "cameras/orthographic-dof.yaml",
+                "uri": "cameras/orthographic-dof.yaml",
                 "focal_length": 0.05,
                 "lens_aperture": 0.02,
                 "film_width": 0.036,
@@ -129,72 +128,72 @@ def make_tests():
         ],
         "textures": [
             {
-                "name": "textures/test-floor.png.ypreset"
+                "uri": "textures/test-floor.png.ypreset"
             },
             {
-                "name": "textures/test-uvgrid.png.ypreset"
+                "uri": "textures/test-uvgrid.png.ypreset"
             },
             {
-                "name": "textures/test-bump.png.ypreset"
+                "uri": "textures/test-bump.png.ypreset"
             },
             {
-                "name": "textures/test-bump-normal.png.ypreset"
+                "uri": "textures/test-bump-normal.png.ypreset"
             },
             {
-                "name": "textures/test-fbm-displacement.png.ypreset"
+                "uri": "textures/test-fbm-displacement.png.ypreset"
             },
             {
-                "name": "textures/test-sky.hdr.ypreset"
+                "uri": "textures/test-sky.hdr.ypreset"
             },
             {
-                "name": "textures/test-sunsky.hdr.ypreset"
+                "uri": "textures/test-sunsky.hdr.ypreset"
             }
         ],
         "materials": [
             {
-                "name": "materials/test-floor.yaml",
+                "uri": "materials/test-floor.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "diffuse_texture": "textures/test-floor.png"
             },
             {
-                "name": "materials/test-uvgrid.yaml",
+                "uri": "materials/test-uvgrid.yaml",
                 "diffuse": [ 1, 1, 1 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "roughness": 0.1,
                 "diffuse_texture": "textures/test-uvgrid.png"
             },
             {
-                "name": "materials/test-matte.yaml",
+                "uri": "materials/test-matte.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "specular": [ 0, 0, 0 ],
                 "roughness": 1
             },
             {
-                "name": "materials/test-plastic-sharp.yaml",
+                "uri": "materials/test-plastic-sharp.yaml",
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "roughness": 0.01
             },
             {
-                "name": "materials/test-plastic-rough.yaml",
+                "uri": "materials/test-plastic-rough.yaml",
                 "diffuse": [ 0.5, 0.7, 0.5 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "roughness": 0.1
             },
             {
-                "name": "materials/test-metal-sharp.yaml",
+                "uri": "materials/test-metal-sharp.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.7, 0.7, 0.7 ],
                 "roughness": 0
             },
             {
-                "name": "materials/test-metal-rough.yaml",
+                "uri": "materials/test-metal-rough.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.66, 0.45, 0.34 ],
                 "roughness": 0.1
             },
             {
-                "name": "materials/test-matte-displaced.yaml",
+                "uri": "materials/test-matte-displaced.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "specular": [ 0, 0, 0 ],
                 "roughness": 1,
@@ -202,28 +201,28 @@ def make_tests():
                 "displacement_scale": 0.025
             },
             {
-                "name": "materials/test-plastic-sharp-bumped.yaml",
+                "uri": "materials/test-plastic-sharp-bumped.yaml",
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "roughness": 0.01,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
-                "name": "materials/test-metal-sharp-bumped.yaml",
+                "uri": "materials/test-metal-sharp-bumped.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.7, 0.7, 0.7 ],
                 "roughness": 0,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
-                "name": "materials/test-transparent.yaml",
+                "uri": "materials/test-transparent.yaml",
                 "diffuse": [ 0.7, 0.5, 0.5 ],
                 "specular": [ 0, 0, 0 ],
                 "roughness": 1,
                 "opacity": 0.2
             },
             {
-                "name": "materials/test-glass-sharp.yaml",
+                "uri": "materials/test-glass-sharp.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 1, 1 ],
@@ -231,7 +230,7 @@ def make_tests():
                 "refract": true
             },
             {
-                "name": "materials/test-glass-rough.yaml",
+                "uri": "materials/test-glass-rough.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 0.7, 0.7 ],
@@ -239,7 +238,7 @@ def make_tests():
                 "refract": true
             },
             {
-                "name": "materials/test-thinglass-sharp.yaml",
+                "uri": "materials/test-thinglass-sharp.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 1, 1 ],
@@ -247,7 +246,7 @@ def make_tests():
                 "refract": false
             },
             {
-                "name": "materials/test-thinglass-rough.yaml",
+                "uri": "materials/test-thinglass-rough.yaml",
                 "diffuse": [ 0, 0, 0 ],
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 0.7, 0.7 ],
@@ -255,84 +254,84 @@ def make_tests():
                 "refract": false
             },
             {
-                "name": "materials/test-hair.yaml",
+                "uri": "materials/test-hair.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "specular": [ 0, 0, 0 ],
                 "roughness": 1
             },
             {
-                "name": "materials/test-arealight1.yaml",
+                "uri": "materials/test-arealight1.yaml",
                 "emission": [ 20, 20, 20 ]
             },
             {
-                "name": "materials/test-arealight2.yaml",
+                "uri": "materials/test-arealight2.yaml",
                 "emission": [ 20, 20, 20 ]
             }
         ],
         "shapes": [
             {
-                "name": "shapes/test-floor.ply.ypreset"
+                "uri": "shapes/test-floor.ply.ypreset"
             },
             {
-                "name": "shapes/test-bunny.obj"
+                "uri": "shapes/test-bunny.obj"
             },
             {
-                "name": "shapes/test-teapot.obj"
+                "uri": "shapes/test-teapot.obj"
             },
             {
-                "name": "shapes/test-sphere.ply.ypreset"
+                "uri": "shapes/test-sphere.ply.ypreset"
             },
             {
-                "name": "shapes/test-cube.ply.ypreset"
+                "uri": "shapes/test-cube.ply.ypreset"
             },
             {
-                "name": "shapes/test-disk.ply.ypreset"
+                "uri": "shapes/test-disk.ply.ypreset"
             },
             {
-                "name": "shapes/test-uvsphere-flipcap.ply.ypreset"
+                "uri": "shapes/test-uvsphere-flipcap.ply.ypreset"
             },
             {
-                "name": "shapes/test-uvcylinder.ply.ypreset"
+                "uri": "shapes/test-uvcylinder.ply.ypreset"
             },
             {
-                "name": "shapes/test-sphere-displaced.obj.ypreset",
+                "uri": "shapes/test-sphere-displaced.obj.ypreset",
                 "preserve_facevarying": false
             },
             {
-                "name": "shapes/test-cube-subdiv.obj.ypreset",
+                "uri": "shapes/test-cube-subdiv.obj.ypreset",
                 "subdivision_level": 4,
                 "catmull_clark": true,
                 "compute_normals": true,
                 "preserve_facevarying": true
             },
             {
-                "name": "shapes/test-suzanne-subdiv.obj.ypreset",
+                "uri": "shapes/test-suzanne-subdiv.obj.ypreset",
                 "subdivision_level": 2,
                 "catmull_clark": true,
                 "compute_normals": true
             },
             {
-                "name": "shapes/test-hairball1.ply.ypreset"
+                "uri": "shapes/test-hairball1.ply.ypreset"
             },
             {
-                "name": "shapes/test-hairball2.ply.ypreset"
+                "uri": "shapes/test-hairball2.ply.ypreset"
             },
             {
-                "name": "shapes/test-hairball3.ply.ypreset"
+                "uri": "shapes/test-hairball3.ply.ypreset"
             },
             {
-                "name": "shapes/test-hairball-interior.ply.ypreset"
+                "uri": "shapes/test-hairball-interior.ply.ypreset"
             },
             {
-                "name": "shapes/test-arealight1.ply.ypreset"
+                "uri": "shapes/test-arealight1.ply.ypreset"
             },
             {
-                "name": "shapes/test-arealight2.ply.ypreset"
+                "uri": "shapes/test-arealight2.ply.ypreset"
             }
         ],
         "instances": [
             {
-                "name": "instances/test-floor.yaml",
+                "uri": "instances/test-floor.yaml",
                 "shape": "shapes/test-floor.ply",
                 "material": "materials/test-floor.yaml"
             }
@@ -342,13 +341,13 @@ def make_tests():
     area_lights = {
         "instances": [
             {
-                "name": "instances/test-arealight1.yaml",
+                "uri": "instances/test-arealight1.yaml",
                 "shape": "shapes/test-arealight1.ply",
                 "material": "materials/test-arealight1.yaml",
                 "frame": lookat([ -0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             },
             {
-                "name": "instances/test-arealight2.yaml",
+                "uri": "instances/test-arealight2.yaml",
                 "shape": "shapes/test-arealight2.ply",
                 "material": "materials/test-arealight2.yaml",
                 "frame": lookat([ 0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
@@ -359,13 +358,13 @@ def make_tests():
     mixed_lights = {
         "instances": [
             {
-                "name": "instances/test-arealight1.yaml",
+                "uri": "instances/test-arealight1.yaml",
                 "shape": "shapes/test-arealight1.ply",
                 "material": "materials/test-arealight1.yaml",
                 "frame": lookat([ -0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
             },
             {
-                "name": "instances/test-arealight2.yaml",
+                "uri": "instances/test-arealight2.yaml",
                 "shape": "shapes/test-arealight2.ply",
                 "material": "materials/test-arealight2.yaml",
                 "frame": lookat([ 0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
@@ -373,7 +372,7 @@ def make_tests():
         ],
         "environments": [
             {
-                "name": 'environments/test-sky.yaml',
+                "uri": 'environments/test-sky.yaml',
                 "emission": [2, 2, 2],
                 "emission_texture": "textures/test-sky.hdr"
             }
@@ -383,7 +382,7 @@ def make_tests():
         "instances": [],
         "environments": [
             {
-                "name": 'environments/test-sunsky.yaml',
+                "uri": 'environments/test-sunsky.yaml',
                 "emission": [1, 1, 1],
                 "emission_texture": "textures/test-sunsky.hdr"
             }
@@ -411,7 +410,7 @@ def make_tests():
             sref = os.path.splitext(os.path.basename(remove_preset(shape)))[0]
             mref = os.path.splitext(os.path.basename(remove_preset(material)))[0]
             scene['instances'] += [ {
-                'name': f'instances/{sref}_{mref}.yaml',
+                'uri': f'instances/{sref}_{mref}.yaml',
                 'shape': shape,
                 'material': material,
                 'frame': [ xscale, 0, 0, 0, yscale, 0, 0, 0, zscale, xoffset, yoffset, zoffset ]
@@ -422,26 +421,26 @@ def make_tests():
             for material in old_materials:
                 used = False
                 for instance in scene['instances']:
-                    if instance['material'] == remove_preset(material['name']): used = True
+                    if instance['material'] == remove_preset(material['uri']): used = True
                 if used: scene['materials'] += [material] 
             old_shapes = scene['shapes']
             scene['shapes'] = []
             for shape in old_shapes:
                 used = False
                 for instance in scene['instances']:
-                    if instance['shape'] == remove_preset(shape['name']): used = True
+                    if instance['shape'] == remove_preset(shape['uri']): used = True
                 if used: scene['shapes'] += [shape] 
             old_textures = scene['textures']
             scene['textures'] = []
             for texture in old_textures:
                 used = False
                 for material in scene['materials']:
-                    if 'emission_texture' in material and material['emission_texture'] == remove_preset(texture['name']): used = True
-                    if 'diffuse_texture' in material and material['diffuse_texture'] == remove_preset(texture['name']): used = True
-                    if 'normal_texture' in material and material['normal_texture'] == remove_preset(texture['name']): used = True
-                    if 'displacement_texture' in material and material['displacement_texture'] == remove_preset(texture['name']): used = True
+                    if 'emission_texture' in material and material['emission_texture'] == remove_preset(texture['uri']): used = True
+                    if 'diffuse_texture' in material and material['diffuse_texture'] == remove_preset(texture['uri']): used = True
+                    if 'normal_texture' in material and material['normal_texture'] == remove_preset(texture['uri']): used = True
+                    if 'displacement_texture' in material and material['displacement_texture'] == remove_preset(texture['uri']): used = True
                 for environment in scene['environments']:
-                    if environment['emission_texture'] == remove_preset(texture['name']): used = True
+                    if environment['emission_texture'] == remove_preset(texture['uri']): used = True
                 if used: scene['textures'] += [texture] 
         # with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
         def write_yaml_objects(f, name):
@@ -449,9 +448,9 @@ def make_tests():
             if not scene[name]: return
             f.write(name + ":\n")
             for obj in scene[name]:
-                f.write('  - name: ' + obj['name'] + '\n')
+                f.write('  - name: ' + obj['uri'] + '\n')
                 for key, value in obj.items():
-                    if key == 'name': continue
+                    if key == 'uri': continue
                     f.write('    ' + key + ': ' + str(value) + '\n')
         with open(f'{name}', 'wt') as f:
             write_yaml_objects(f, 'cameras')

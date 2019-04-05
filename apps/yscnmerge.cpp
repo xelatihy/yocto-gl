@@ -98,15 +98,15 @@ int main(int argc, char** argv) {
         print_validation_errors(to_merge, true);
         if (scene_postfix) {
             auto postfix = "{" + get_filename(filename) + "}";
-            for (auto& val : to_merge.cameras) val.name += postfix;
-            for (auto& val : to_merge.textures) val.name += postfix;
-            for (auto& val : to_merge.voltextures) val.name += postfix;
-            for (auto& val : to_merge.materials) val.name += postfix;
-            for (auto& val : to_merge.shapes) val.name += postfix;
-            for (auto& val : to_merge.instances) val.name += postfix;
-            for (auto& val : to_merge.environments) val.name += postfix;
-            for (auto& val : to_merge.nodes) val.name += postfix;
-            for (auto& val : to_merge.animations) val.name += postfix;
+            for (auto& val : to_merge.cameras) val.uri += postfix;
+            for (auto& val : to_merge.textures) val.uri += postfix;
+            for (auto& val : to_merge.voltextures) val.uri += postfix;
+            for (auto& val : to_merge.materials) val.uri += postfix;
+            for (auto& val : to_merge.shapes) val.uri += postfix;
+            for (auto& val : to_merge.instances) val.uri += postfix;
+            for (auto& val : to_merge.environments) val.uri += postfix;
+            for (auto& val : to_merge.nodes) val.uri += postfix;
+            for (auto& val : to_merge.animations) val.uri += postfix;
         }
         merge_scene_into(scene, to_merge);
     }
@@ -122,13 +122,13 @@ int main(int argc, char** argv) {
         mesh_directory += '/';
     if (get_extension(output) == "yaml") {
         for (auto& shape : scene.shapes) {
-            shape.name = mesh_directory + get_filename(shape.name);
+            shape.uri = mesh_directory + get_filename(shape.uri);
         }
     }
     // gltf does not support embedded data
     if (get_extension(output) == "gltf") {
         for (auto& shape : scene.shapes) {
-            shape.name = mesh_directory + shape.name + ".bin";
+            shape.uri = mesh_directory + shape.uri + ".bin";
         }
     }
 
@@ -138,11 +138,11 @@ int main(int argc, char** argv) {
     if (get_extension(output) == "yaml") {
         auto tid = 0;
         for (auto& texture : scene.textures) {
-            if (texture.name.empty()) {
-                texture.name = texture_directory + "ytexture#" + std::to_string(tid) + ".png";
+            if (texture.uri.empty()) {
+                texture.uri = texture_directory + "ytexture#" +
+                              std::to_string(tid) + ".png";
             } else if (texture_filenames) {
-                texture.name = texture_directory +
-                                   get_filename(texture.name);
+                texture.uri = texture_directory + get_filename(texture.uri);
             }
             tid++;
         }

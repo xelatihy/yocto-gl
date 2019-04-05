@@ -114,8 +114,8 @@ int main(int argc, char** argv) {
     // change texture names
     if (uniform_txt) {
         for (auto& texture : scene.textures) {
-            auto ext = get_extension(texture.name);
-            if (is_hdr_filename(texture.name)) {
+            auto ext = get_extension(texture.uri);
+            if (is_hdr_filename(texture.uri)) {
                 if (ext == "hdr") continue;
                 get_noextension(filename) + ".hdr";
             } else {
@@ -132,9 +132,11 @@ int main(int argc, char** argv) {
         auto sid = 0;
         for (auto& shape : scene.shapes) {
             if (shape.preserve_facevarying) {
-                shape.name = mesh_directory + "shape__" + std::to_string(sid) + ".obj";
+                shape.uri = mesh_directory + "shape_" + std::to_string(sid) +
+                            ".obj";
             } else {
-                shape.name = mesh_directory + "shape__" + std::to_string(sid) + ".ply";
+                shape.uri = mesh_directory + "shape_" + std::to_string(sid) +
+                            ".ply";
             }
             sid++;
         }

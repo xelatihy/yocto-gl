@@ -503,21 +503,21 @@ void normalize_uris(yocto_scene& scene) {
         if (get_extension(name).empty()) name = name + "." + ext;
     };
     for (auto id = 0; id < scene.cameras.size(); id++)
-        normalize(scene.cameras[id].name, "camera", "yaml", id);
+        normalize(scene.cameras[id].uri, "camera", "yaml", id);
     for (auto id = 0; id < scene.textures.size(); id++)
-        normalize(scene.textures[id].name, "texture", "png", id);
+        normalize(scene.textures[id].uri, "texture", "png", id);
     for (auto id = 0; id < scene.voltextures.size(); id++)
-        normalize(scene.voltextures[id].name, "volume", "yvol", id);
+        normalize(scene.voltextures[id].uri, "volume", "yvol", id);
     for (auto id = 0; id < scene.materials.size(); id++)
-        normalize(scene.materials[id].name, "material", "yaml", id);
+        normalize(scene.materials[id].uri, "material", "yaml", id);
     for (auto id = 0; id < scene.shapes.size(); id++)
-        normalize(scene.shapes[id].name, "shape", "ply", id);
+        normalize(scene.shapes[id].uri, "shape", "ply", id);
     for (auto id = 0; id < scene.instances.size(); id++)
-        normalize(scene.instances[id].name, "instance", "yaml", id);
+        normalize(scene.instances[id].uri, "instance", "yaml", id);
     for (auto id = 0; id < scene.animations.size(); id++)
-        normalize(scene.animations[id].name, "animation", "yaml", id);
+        normalize(scene.animations[id].uri, "animation", "yaml", id);
     for (auto id = 0; id < scene.nodes.size(); id++)
-        normalize(scene.nodes[id].name, "node", "yaml", id);
+        normalize(scene.nodes[id].uri, "node", "yaml", id);
 }
 
 // Add missing tangent space if needed.
@@ -550,7 +550,7 @@ void add_missing_materials(yocto_scene& scene) {
         if (instance.material >= 0) continue;
         if (material_id < 0) {
             auto material    = yocto_material{};
-            material.name    = "materails/default.yaml";
+            material.uri     = "materails/default.yaml";
             material.diffuse = {0.2f, 0.2f, 0.2f};
             scene.materials.push_back(material);
             material_id = (int)scene.materials.size() - 1;
@@ -563,7 +563,7 @@ void add_missing_materials(yocto_scene& scene) {
 void add_missing_cameras(yocto_scene& scene) {
     if (scene.cameras.empty()) {
         auto camera = yocto_camera{};
-        camera.name = "cameras/default.yaml";
+        camera.uri  = "cameras/default.yaml";
         set_camera_view_from_bbox(
             camera, compute_scene_bounds(scene), {0, 0, 1});
         scene.cameras.push_back(camera);
@@ -573,11 +573,11 @@ void add_missing_cameras(yocto_scene& scene) {
 // Add a sky environment
 void add_sky_environment(yocto_scene& scene, float sun_angle) {
     auto texture = yocto_texture{};
-    texture.name = "textures/sky.hdr";
+    texture.uri  = "textures/sky.hdr";
     make_sunsky_image(texture.hdr_image, {1024, 512}, sun_angle);
     scene.textures.push_back(texture);
     auto environment             = yocto_environment{};
-    environment.name             = "environments/default.yaml";
+    environment.uri              = "environments/default.yaml";
     environment.emission         = {1, 1, 1};
     environment.emission_texture = (int)scene.textures.size() - 1;
     scene.environments.push_back(environment);
@@ -621,7 +621,7 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
     auto check_names = [&errs](const auto& vals, const string& base) {
         auto used = unordered_map<string, int>();
         used.reserve(vals.size());
-        for (auto& value : vals) used[value.name] += 1;
+        for (auto& value : vals) used[value.uri] += 1;
         for (auto& [name, used] : used) {
             if (name == "") {
                 errs.push_back("empty " + base + " name");
@@ -633,7 +633,7 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
     auto check_empty_textures = [&errs](const vector<yocto_texture>& vals) {
         for (auto& value : vals) {
             if (value.hdr_image.empty() && value.ldr_image.empty()) {
-                errs.push_back("empty texture " + value.name);
+                errs.push_back("empty texture " + value.uri);
             }
         }
     };
@@ -1567,10 +1567,10 @@ string print_scene_stats(const yocto_scene& scene) {
     str += "memory_shapes: " + to_string(memory_shps) + "\n";
     str += "memory_instances: " + to_string(memory_ists) + "\n";
 
-    str += "bbox min: " + to_string(bbox.min.x) + " " +
-           to_string(bbox.min.y) + " " + to_string(bbox.min.z) + "\n";
-    str += "bbox max: " + to_string(bbox.max.x) + " " +
-           to_string(bbox.max.y) + " " + to_string(bbox.max.z) + "\n";
+    str += "bbox min: " + to_string(bbox.min.x) + " " + to_string(bbox.min.y) +
+           " " + to_string(bbox.min.z) + "\n";
+    str += "bbox max: " + to_string(bbox.max.x) + " " + to_string(bbox.max.y) +
+           " " + to_string(bbox.max.z) + "\n";
 
     return str;
 }

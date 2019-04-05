@@ -214,7 +214,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                     (int)app.trace_sample);
                 auto cam_names = vector<string>();
                 for (auto& camera : app.scene.cameras)
-                    cam_names.push_back(camera.name);
+                    cam_names.push_back(camera.uri);
                 auto edited = 0;
                 if (app.load_done) {
                     edited += draw_combobox_opengl_widget(

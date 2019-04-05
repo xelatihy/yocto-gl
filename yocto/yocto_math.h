@@ -2183,8 +2183,10 @@ constexpr inline void update_image_view(vec<T, 2>& center, T& scale,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template<typename T>
-inline string to_string(const T& value) { return std::to_string(value); }
+template <typename T>
+inline string to_string(const T& value) {
+    return std::to_string(value);
+}
 template <typename T, size_t N>
 inline string to_string(const array<T, N>& value) {
     auto str = ""s;
@@ -2206,7 +2208,7 @@ template <typename T, int N>
 inline string to_string(const affine<T, N>& value) {
     return to_string((const array<T, N*(N + 1)>&)value);
 }
-template<typename T, int N, int M>
+template <typename T, int N, int M>
 inline string to_string(const mat<T, N, M>& value) {
     return to_string((const array<T, N * M>&)value);
 }

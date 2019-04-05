@@ -239,20 +239,18 @@ struct print_timer {
         printf("%s ...\n", _msg.c_str());
     }
     ~print_timer() {
-        printf("%s in %s\n", _msg.c_str(), format_duration(get_time() - _start).c_str());
+        printf("%s in %s\n", _msg.c_str(),
+            format_duration(get_time() - _start).c_str());
     }
-    private:
-    string _msg;
+
+   private:
+    string  _msg;
     int64_t _start;
 };
 
 // print info
-inline void print_info(const string& str) {
-    printf("%s\n", str.c_str());
-}
-inline print_timer print_timed(const string& str) {
-    return print_timer(str);
-}
+inline void print_info(const string& str) { printf("%s\n", str.c_str()); }
+inline print_timer print_timed(const string& str) { return print_timer(str); }
 
 // Exits printing and error
 inline void exit_error(const string& msg) {
