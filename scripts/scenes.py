@@ -14,8 +14,8 @@ def cli():
 def yitrace(directory='mcguire',scene='*',format='obj',mode='path'):
     modes = {
         'path': '--bvh-high-quality',
-        'embree': '--embree --bvh-high-quality',
-        'embree-compact': '--embree --embree-compact',
+        'embree': '--bvh-embree --bvh-high-quality',
+        'embree-compact': '--bvh-embree --bvh-embree-compact',
         'eyelight': '-t eyelight --bvh-high-quality',
         'eyelight-quick': '--all-cameras -s 16 -r 720 -t eyelight --no-bvh-highquality'
     }
@@ -63,8 +63,8 @@ def yview(directory='mcguire',scene='*',format='obj',mode='path'):
 def ytrace(directory='mcguire',scene='*',format='obj',outformat="png",mode='path'):
     modes = {
         'path': '--all-cameras -s 64 -r 360 --bvh-high-quality',
-        'embree': '--all-cameras -s 256 -r 720 --embree --bvh-high-quality',
-        'embree-compact': '--all-cameras -s 256 -r 720 --embree --embree-compact',
+        'embree': '--all-cameras -s 256 -r 720 --bvh-embree --bvh-high-quality',
+        'embree-compact': '--all-cameras -s 256 -r 720 --bvh-embree --embree-compact',
         'eyelight': '--all-cameras -s 16 -r 720 -t eyelight --bvh-high-quality',
         'eyelight-quick': '--all-cameras -s 16 -r 720 -t eyelight --no-bvh-highquality'
     }
