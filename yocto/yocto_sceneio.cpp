@@ -3562,7 +3562,7 @@ void write_object(output_file& fs, const yocto_material& material) {
     write_value(fs, material.volume_density);
     write_value(fs, material.volume_phaseg);
     write_value(fs, material.volume_density_texture);
-    // TODO: add displacement scale
+    write_value(fs, material.displacement_scale);
 };
 void read_object(input_file& fs, yocto_material& material) {
     read_value(fs, material.uri);
@@ -3588,7 +3588,7 @@ void read_object(input_file& fs, yocto_material& material) {
     read_value(fs, material.volume_density);
     read_value(fs, material.volume_phaseg);
     read_value(fs, material.volume_density_texture);
-    // TODO: add displacement scale
+    read_value(fs, material.displacement_scale);
 };
 
 void write_object(output_file& fs, const yocto_instance& instance) {
