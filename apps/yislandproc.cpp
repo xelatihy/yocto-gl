@@ -913,7 +913,8 @@ void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
 
     // fix texture names
     for(auto& texture : scene.textures) {
-        texture.uri = replace(texture.uri, "ptex2png/", "textures/"); 
+        texture.uri = replace(texture.uri, "ptex2png/", "textures/");
+        texture.uri = replace(texture.uri, ".exr", ".hdr");
     }
 
     // fix scene
