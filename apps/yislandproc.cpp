@@ -911,6 +911,11 @@ void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
         throw io_error("error loading scene "s + e.what());
     }
 
+    // fix texture names
+    for(auto& texture : scene.textures) {
+        texture.uri = replace(texture.uri, "ptex2png/", "textures/"); 
+    }
+
     // fix scene
     if (scene.uri == "") scene.uri = get_filename(filename);
     add_missing_cameras(scene);
