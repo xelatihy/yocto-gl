@@ -139,17 +139,19 @@ void load_disney_island_lights(
     for (auto& [name, ljs] : js.items()) {
         if (ljs.at("type") == "quad") {
             auto material     = yocto_material{};
-            material.uri      = "materials/lights-" + name + ".yaml";
+            material.uri      = "materials/lights/" + name + ".yaml";
             material.emission = ljs.at("color").get<vec4f>().xyz *
                                 pow(2.0f, ljs.at("exposure").get<float>());
             scene.materials.push_back(material);
             auto shape = yocto_shape{};
+            shape.uri = "shapes/lights/" + name + ".ply";
             make_quad_shape(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, {1, 1},
                 {ljs.at("width").get<float>(), ljs.at("height").get<float>()},
                 {1, 1}, identity_frame3f);
             scene.shapes.push_back(shape);
             auto instance  = yocto_instance{};
+            instance.uri = "instances/lights/" + name + ".yaml";
             instance.frame = frame3f(ljs.at("translationMatrix").get<mat4f>());
             instance.shape = (int)scene.shapes.size() - 1;
             instance.material = (int)scene.materials.size() - 1;
@@ -160,7 +162,7 @@ void load_disney_island_lights(
             load_image(dirname + texture.uri, texture.hdr_image);
             scene.textures.push_back(texture);
             auto environment     = yocto_environment{};
-            environment.uri = "environments/environment-" + name + ".yaml";
+            environment.uri = "environments/lights/" + name + ".yaml";
             environment.emission = ljs.at("color").get<vec4f>().xyz *
                                    pow(2.0f, ljs.at("exposure").get<float>());
             environment.emission_texture = (int)scene.textures.size() - 1;
@@ -501,8 +503,10 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
 
 void add_disney_island_instance(yocto_scene& scene, const string& parent_name,
     const mat4f& xform, const vector<vec2i>& shapes) {
+    static auto name_counter = unordered_map<string, int>{};
     for (auto shape_material : shapes) {
         auto instance     = yocto_instance{};
+        instance.uri = "instances/" + parent_name + "/" + parent_name + "-" + std::to_string(name_counter[parent_name]++) + ".yaml";
         instance.frame    = frame3f(xform);
         instance.shape    = shape_material.x;
         instance.material = shape_material.y;
