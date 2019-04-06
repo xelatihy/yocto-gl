@@ -1033,6 +1033,8 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
     if (!scene.subdivs.empty()) print(fs, "\n\nsubdivs:\n");
     for (auto& subdiv : scene.subdivs) {
         print(fs, "  - uri: {}\n", subdiv.uri);
+        print_ref(fs, "tesselated_shape", subdiv.tesselated_shape,
+            scene.shapes);
         print_optional(fs, "subdivision_level", subdiv.subdivision_level,
             def_subdiv.subdivision_level);
         print_optional(fs, "catmull_clark", subdiv.catmull_clark,
@@ -3358,7 +3360,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
     auto  to         = camera.frame.o - camera.frame.z;
     auto  up         = camera.frame.y;
     auto  image_size = get_camera_image_size(camera, {0, 720});
-    print(fs, "LookAt {} {} {} {} {} {}\n", from.x, from.y, from.z, to.x, to.y,
+    print(fs, "LookAt {} {} {} {} {} {} {} {} {}\n", from.x, from.y, from.z, to.x, to.y,
         to.z, up.x, up.y, up.z);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",
         get_camera_fovy(camera) * 180 / pif);

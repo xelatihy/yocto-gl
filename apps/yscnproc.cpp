@@ -172,6 +172,8 @@ int main(int argc, char** argv) {
     auto dirnames = unordered_set{dirname};
     for (auto& shape : scene.shapes)
         dirnames.insert(dirname + get_dirname(shape.uri));
+    for (auto& subdiv : scene.subdivs)
+        dirnames.insert(dirname + get_dirname(subdiv.uri));
     for (auto& texture : scene.textures)
         dirnames.insert(dirname + get_dirname(texture.uri));
     for (auto& dir : dirnames) {

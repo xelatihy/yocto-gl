@@ -1048,7 +1048,7 @@ inline void save_obj_shape(const string& filename, const vector<int>& points,
     print(fs, "#\n");
 
     for (auto& p : positions) print(fs, "v {} {} {}\n", p.x, p.y, p.z);
-    for (auto& n : normals) print(fs, "vn {} {}\n", n.x, n.y, n.z);
+    for (auto& n : normals) print(fs, "vn {} {} {}\n", n.x, n.y, n.z);
     for (auto& t : texturecoords)
         print(fs, "vt {} {}\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
 
@@ -1072,7 +1072,7 @@ inline void save_obj_shape(const string& filename, const vector<int>& points,
     }
     for (auto& q : quads) {
         if (q.z == q.w) {
-            print(fs, "f {} {} {}}\n", format_obj_vertex(vert(q.x)),
+            print(fs, "f {} {} {}\n", format_obj_vertex(vert(q.x)),
                 format_obj_vertex(vert(q.y)), format_obj_vertex(vert(q.z)));
         } else {
             print(fs, "f {} {} {} {}\n", format_obj_vertex(vert(q.x)),
