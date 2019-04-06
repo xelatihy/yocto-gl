@@ -106,10 +106,10 @@ struct disney_material {
     string color_map_baked     = "";
 };
 
-void load_disney_island_cameras(const string& filename, yocto_scene& scene) {
+void load_disney_island_cameras(const string& filename, const string& dirname, yocto_scene& scene) {
     printf("%s\n", filename.c_str());
     auto js = json{};
-    load_json(filename, js);
+    load_json(dirname + filename, js);
     auto camera           = yocto_camera{};
     camera.uri            = get_filename(filename);
     camera.focal_length   = js.at("focalLength").get<float>() * 0.001f;
@@ -126,10 +126,10 @@ void load_disney_island_cameras(const string& filename, yocto_scene& scene) {
     scene.cameras.push_back(camera);
 }
 
-void load_disney_island_lights(const string& filename, yocto_scene& scene) {
+void load_disney_island_lights(const string& filename, const string& dirname, yocto_scene& scene) {
     printf("%s\n", filename.c_str());
     auto js = json{};
-    load_json(filename, js);
+    load_json(dirname + filename, js);
     for (auto& [name, ljs] : js.items()) {
         if (ljs.at("type") == "quad") {
             auto material     = yocto_material{};
@@ -151,7 +151,7 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
         } else if (ljs.at("type") == "dome") {
             auto texture = yocto_texture{};
             texture.uri  = ljs.at("map");
-            load_image(texture.uri, texture.hdr_image);
+            load_image(dirname + texture.uri, texture.hdr_image);
             scene.textures.push_back(texture);
             auto environment     = yocto_environment{};
             environment.emission = ljs.at("color").get<vec4f>().xyz *
@@ -167,11 +167,11 @@ void load_disney_island_lights(const string& filename, yocto_scene& scene) {
 }
 
 void load_disney_island_materials(
-    const string& filename, unordered_map<string, disney_material>& mmap) {
+    const string& filename, const string& dirname, unordered_map<string, disney_material>& mmap) {
     auto tjs = json{};
-    load_json("textures/textures.json", tjs);
+    load_json(dirname + "textures/textures.json", tjs);
     auto js = json{};
-    load_json(filename, js);
+    load_json(dirname + filename, js);
     for (auto& [mname, mjs] : js.items()) {
         auto material       = disney_material{};
         material.name       = mname;
@@ -213,7 +213,7 @@ void load_disney_island_materials(
 }
 
 void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
-    const string& filename, unordered_map<string, vector<vec2i>>& smap,
+    const string& filename, const string& dirname, unordered_map<string, vector<vec2i>>& smap,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
     if (smap.find(filename) != smap.end()) return;
@@ -413,7 +413,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
         obj_options.flip_texcoord = true;
         auto cb                   = parse_callbacks{
             shapes, materials, smap, mmap, tmap, scene, filename};
-        load_obj(filename, cb, obj_options);
+        load_obj(dirname + filename, cb, obj_options);
 
         // check for PTEX errors
         for (auto id = 0; id < shapes.size(); id++) {
@@ -508,21 +508,21 @@ void add_disney_island_variant_instance(vector<yocto_instance>& instances,
     }
 }
 
-void load_disney_island_archive(const string& filename, yocto_scene& scene,
+void load_disney_island_archive(const string& filename, const string& dirname, yocto_scene& scene,
     const string& parent_name, const mat4f& parent_xform,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
     printf("%s\n", filename.c_str());
     auto buffer = ""s;
-    load_text(filename, buffer);
+    load_text(dirname + filename, buffer);
     auto view = sajson::mutable_string_view(buffer.size(), buffer.data());
     auto doc  = sajson::parse(sajson::dynamic_allocation(), view);
     auto iijs = doc.get_root();
     for (auto j = 0; j < iijs.get_length(); j++) {
         auto shape_filename = iijs.get_object_key(j).as_string();
         add_disney_island_shape(
-            scene, parent_name, shape_filename, smap, mmap, tmap);
+            scene, parent_name, shape_filename, dirname, smap, mmap, tmap);
         auto xforms = iijs.get_object_value(j);
         for (auto i = 0; i < xforms.get_length(); i++) {
             auto xform_ = xforms.get_object_value(i);
@@ -538,7 +538,7 @@ void load_disney_island_archive(const string& filename, yocto_scene& scene,
     }
 }
 
-void load_disney_island_variant_archive(const string& filename,
+void load_disney_island_variant_archive(const string& filename, const string& dirname,
     yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
     vector<yocto_instance>&                 instances,
     unordered_map<string, vector<vec2i>>&   smap,
@@ -547,14 +547,14 @@ void load_disney_island_variant_archive(const string& filename,
     // elements
     printf("%s\n", filename.c_str());
     auto buffer = ""s;
-    load_text(filename, buffer);
+    load_text(dirname + filename, buffer);
     auto view = sajson::mutable_string_view(buffer.size(), buffer.data());
     auto doc  = sajson::parse(sajson::dynamic_allocation(), view);
     auto iijs = doc.get_root();
     for (auto j = 0; j < iijs.get_length(); j++) {
         auto shape_filename = iijs.get_object_key(j).as_string();
         add_disney_island_shape(
-            scene, parent_name, shape_filename, smap, mmap, tmap);
+            scene, parent_name, shape_filename, dirname, smap, mmap, tmap);
         auto xforms = iijs.get_object_value(j);
         for (auto i = 0; i < xforms.get_length(); i++) {
             auto xform_ = xforms.get_object_value(i);
@@ -570,15 +570,15 @@ void load_disney_island_variant_archive(const string& filename,
     }
 }
 
-void load_disney_island_variants(const string& filename, yocto_scene& scene,
-    const string& parent_name, const mat4f& parent_xform,
+void load_disney_island_variants(const string& filename, const string& dirname, 
+    yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
     unordered_map<string, vector<yocto_instance>>& instances,
     unordered_map<string, vector<vec2i>>&          smap,
     unordered_map<string, disney_material>&        mmap,
     unordered_map<string, int>&                    tmap) {
     printf("%s\n", filename.c_str());
     auto js_ = json{};
-    load_json(filename, js_);
+    load_json(dirname + filename, js_);
 
     for (auto& [vname, vjs] : js_.at("variants").items()) {
         vjs["transformMatrix"] = js_.at("transformMatrix");
@@ -588,7 +588,7 @@ void load_disney_island_variants(const string& filename, yocto_scene& scene,
     for (auto& [vname, vjs] : js_.at("variants").items()) {
         instances[vname] = {};
         add_disney_island_shape(
-            scene, vname, vjs.at("geomObjFile"), smap, mmap, tmap);
+            scene, vname, vjs.at("geomObjFile"), dirname, smap, mmap, tmap);
         add_disney_island_variant_instance(instances[vname], vname,
             vjs.at("transformMatrix"), smap.at(vjs.at("geomObjFile")));
 
@@ -597,7 +597,7 @@ void load_disney_island_variants(const string& filename, yocto_scene& scene,
             vjs.at("instancedPrimitiveJsonFiles").items()) {
             auto filename = ijs.at("jsonFile").get<std::string>();
             if (ijs.at("type") == "archive") {
-                load_disney_island_variant_archive(filename, scene, vname,
+                load_disney_island_variant_archive(filename, dirname, scene, vname,
                     vjs.at("transformMatrix"), instances[vname], smap, mmap,
                     tmap);
             } else {
@@ -607,18 +607,18 @@ void load_disney_island_variants(const string& filename, yocto_scene& scene,
     }
 }
 
-void load_disney_island_element(const string& filename, yocto_scene& scene,
-    const string& parent_name, const mat4f& parent_xform,
+void load_disney_island_element(const string& filename, const string& dirname, 
+    yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
     unordered_map<string, vector<yocto_instance>> variants;
-    load_disney_island_variants("json/isBayCedarA1/isBayCedarA1.json", scene,
+    load_disney_island_variants("json/isBayCedarA1/isBayCedarA1.json", dirname, scene,
         parent_name, identity_mat4f, variants, smap, mmap, tmap);
 
     printf("%s\n", filename.c_str());
     auto buffer = ""s;
-    load_text(filename, buffer);
+    load_text(dirname + filename, buffer);
     auto view = sajson::mutable_string_view(buffer.size(), buffer.data());
     auto doc  = sajson::parse(sajson::dynamic_allocation(), view);
     auto iijs = doc.get_root();
@@ -643,14 +643,14 @@ void load_disney_island_element(const string& filename, yocto_scene& scene,
     }
 }
 
-void load_disney_island_curve(const string& filename, yocto_scene& scene,
-    const string& parent_name, const mat4f& parent_xform, float start_radius,
-    float end_radius, unordered_map<string, vector<vec2i>>& smap,
+void load_disney_island_curve(const string& filename, const string& dirname, 
+    yocto_scene& scene, const string& parent_name, const mat4f& parent_xform, 
+    float start_radius, float end_radius, unordered_map<string, vector<vec2i>>& smap,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
     printf("%s\n", filename.c_str());
     auto buffer = ""s;
-    load_text(filename, buffer);
+    load_text(dirname + filename, buffer);
     auto view    = sajson::mutable_string_view(buffer.size(), buffer.data());
     auto doc     = sajson::parse(sajson::dynamic_allocation(), view);
     auto outname = "ply/" + get_dirname(filename).substr(5) +
@@ -684,7 +684,7 @@ void load_disney_island_curve(const string& filename, yocto_scene& scene,
         scene, parent_name, parent_xform, smap.at(outname));
 }
 
-void load_disney_island_curvetube(const string& filename, yocto_scene& scene,
+void load_disney_island_curvetube(const string& filename, const string& dirname, yocto_scene& scene,
     const string& parent_name, const mat4f& parent_xform, float start_width,
     float end_width, const string& material_name,
     unordered_map<string, vector<vec2i>>&   smap,
@@ -692,7 +692,7 @@ void load_disney_island_curvetube(const string& filename, yocto_scene& scene,
     unordered_map<string, int>&             tmap) {
     printf("%s\n", filename.c_str());
     auto buffer = ""s;
-    load_text(filename, buffer);
+    load_text(dirname + filename, buffer);
     auto view    = sajson::mutable_string_view(buffer.size(), buffer.data());
     auto doc     = sajson::parse(sajson::dynamic_allocation(), view);
     auto outname = "ply/" + get_dirname(filename).substr(5) +
@@ -770,7 +770,7 @@ void load_disney_island_curvetube(const string& filename, yocto_scene& scene,
         scene, parent_name, parent_xform, smap.at(outname));
 }
 
-void load_disney_island_elements(const string& filename, yocto_scene& scene,
+void load_disney_island_elements(const string& filename, const string& dirname, yocto_scene& scene,
     unordered_map<string, vector<vec2i>>& smap,
     unordered_map<string, int>&           tmap) {
     // instancing model
@@ -790,7 +790,7 @@ void load_disney_island_elements(const string& filename, yocto_scene& scene,
 
     printf("%s\n", filename.c_str());
     auto js = json{};
-    load_json(filename, js);
+    load_json(dirname + filename, js);
 
     // add empty elements for simplicity
     if (!js.count("instancedPrimitiveJsonFiles")) {
@@ -802,12 +802,12 @@ void load_disney_island_elements(const string& filename, yocto_scene& scene,
 
     // materials
     auto mmap = unordered_map<string, disney_material>{};
-    load_disney_island_materials(js.at("matFile"), mmap);
+    load_disney_island_materials(js.at("matFile"), dirname, mmap);
 
     // main instance
     auto name = js.at("name").get<string>();
     add_disney_island_shape(
-        scene, name, js.at("geomObjFile"), smap, mmap, tmap);
+        scene, name, js.at("geomObjFile"), dirname, smap, mmap, tmap);
     add_disney_island_instance(
         scene, name, js.at("transformMatrix"), smap.at(js.at("geomObjFile")));
 
@@ -815,14 +815,14 @@ void load_disney_island_elements(const string& filename, yocto_scene& scene,
     for (auto& [iiname, ijs] : js.at("instancedPrimitiveJsonFiles").items()) {
         auto filename = ijs.at("jsonFile").get<std::string>();
         if (ijs.at("type") == "archive") {
-            load_disney_island_archive(filename, scene, name,
+            load_disney_island_archive(filename, dirname, scene, name,
                 js.at("transformMatrix"), smap, mmap, tmap);
         } else if (ijs.at("type") == "curve") {
-            load_disney_island_curvetube(filename, scene, name,
+            load_disney_island_curvetube(filename, dirname, scene, name,
                 js.at("transformMatrix"), ijs.at("widthRoot"),
                 ijs.at("widthTip"), ijs.at("material"), smap, mmap, tmap);
         } else if (ijs.at("type") == "element") {
-            load_disney_island_element(filename, scene, name,
+            load_disney_island_element(filename, dirname, scene, name,
                 js.at("transformMatrix"), smap, mmap, tmap);
         } else if (ijs.at("type") == "skip") {
             printf("skipping %s\n", filename.c_str());
@@ -835,7 +835,7 @@ void load_disney_island_elements(const string& filename, yocto_scene& scene,
     for (auto& [iname, cjs] : js.at("instancedCopies").items()) {
         if (cjs.count("geomObjFile")) {
             add_disney_island_shape(
-                scene, name, cjs.at("geomObjFile"), smap, mmap, tmap);
+                scene, name, cjs.at("geomObjFile"), dirname, smap, mmap, tmap);
             add_disney_island_instance(scene, name, cjs.at("transformMatrix"),
                 smap.at(cjs.at("geomObjFile")));
         } else {
@@ -850,10 +850,10 @@ void load_disney_island_elements(const string& filename, yocto_scene& scene,
                     : js.at("instancedPrimitiveJsonFiles").items()) {
                 auto filename = ijs.at("jsonFile").get<std::string>();
                 if (ijs.at("type") == "archive") {
-                    load_disney_island_archive(filename, scene, name,
+                    load_disney_island_archive(filename, dirname, scene, name,
                         cjs.at("transformMatrix"), smap, mmap, tmap);
                 } else if (ijs.at("type") == "curve") {
-                    load_disney_island_curvetube(filename, scene, name,
+                    load_disney_island_curvetube(filename, dirname, scene, name,
                         cjs.at("transformMatrix"), ijs.at("widthRoot"),
                         ijs.at("widthTip"), ijs.at("material"), smap, mmap,
                         tmap);
@@ -876,21 +876,21 @@ void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
     try {
         auto js = json{};
         load_json(filename, js);
+        auto dirname = get_dirname(filename);
 
         for (auto filename : js.at("cameras").get<vector<string>>()) {
-            load_disney_island_cameras(filename, scene);
+            load_disney_island_cameras(filename, dirname, scene);
         }
         auto smap = std::unordered_map<std::string, vector<vec2i>>{};
         auto tmap = std::unordered_map<std::string, int>{};
         for (auto filename : js.at("elements").get<vector<string>>()) {
-            load_disney_island_elements(filename, scene, smap, tmap);
+            load_disney_island_elements(filename, dirname, scene, smap, tmap);
         }
         for (auto filename : js.at("lights").get<vector<string>>()) {
-            load_disney_island_lights(filename, scene);
+            load_disney_island_lights(filename, dirname, scene);
         }
 
         // load meshes and textures
-        auto dirname = get_dirname(filename);
         load_scene_textures(scene, dirname, options);
     } catch (std::exception& e) {
         throw io_error("error loading scene "s + e.what());
@@ -927,7 +927,7 @@ int main(int argc, char** argv) {
     auto skip_textures  = false;
     auto skip_meshes    = false;
     auto mesh_filenames = true;
-    auto mesh_directory = "models/"s;
+    auto mesh_directory = "shapes/"s;
     auto uniform_txt    = false;
     auto validate       = false;
     auto print_info     = false;

@@ -142,12 +142,21 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='pa
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
             outname = filename.replace(f'/{format}/',f'/{outformat}/').replace(f'.{format}',f'.{outformat}')
-            cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {filename}'
-            print(cmd, file=sys.stderr)
-            os.system(cmd)
-            cmd = f'cp -r {dirname}/textures {outdirname}'
-            print(cmd, file=sys.stderr)
-            os.system(cmd)
+            if format != 'dijson':
+                cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {filename}'
+                print(cmd, file=sys.stderr)
+                os.system(cmd)
+                cmd = f'cp -r {dirname}/textures {outdirname}'
+                print(cmd, file=sys.stderr)
+                os.system(cmd)
+            else:
+                cmd = f'../yocto-gl/bin/yislandproc -o {outname} {options} {filename}'
+                print(cmd, file=sys.stderr)
+                os.system(cmd)
+                if outformat != 'ybin':
+                    cmd = f'cp -r {dirname}/textures {outdirname}'
+                    print(cmd, file=sys.stderr)
+                    os.system(cmd)
 
 @cli.command()
 @click.option('--directory', '-d', default='yuksel')
