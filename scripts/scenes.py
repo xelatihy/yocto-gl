@@ -120,8 +120,8 @@ def sync_images(directory='mcguire',scene='*',format='obj',mode='path',clean=Tru
 @click.option('--clean/--no-clean','-C', default=False)
 def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='path',clean=True):
     modes = {
-        'default': '--skip-textures --mesh-filenames',
-        'gltf': '--skip-textures --mesh-filenames --mesh-directory gltf_meshes/'
+        'default': '--uniform-textures --mesh-filenames',
+        'gltf': '--uniform-textures --mesh-filenames --mesh-directory gltf_meshes/'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
@@ -146,17 +146,10 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='pa
                 cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
-                cmd = f'cp -r {dirname}/textures {outdirname}'
-                print(cmd, file=sys.stderr)
-                os.system(cmd)
             else:
                 cmd = f'../yocto-gl/bin/yislandproc -o {outname} {options} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
-                if outformat != 'ybin':
-                    cmd = f'cp -r {dirname}/textures {outdirname}'
-                    print(cmd, file=sys.stderr)
-                    os.system(cmd)
 
 @cli.command()
 @click.option('--directory', '-d', default='yuksel')

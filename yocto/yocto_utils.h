@@ -969,4 +969,87 @@ inline void parse_varname(string_view& str, string& value) {
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// PYTHON-LIKE STRING OPERATIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Check if we start or end with a sequence
+inline bool startswith(string_view str, string_view substr) {
+    return str.find(substr) == 0;
+}
+inline bool endswith(string_view str, string_view substr) {
+    return str.rfind(substr) == str.size() - substr.size();
+}
+inline void split(string_view str, vector<string_view> splits, string_view delimiters = " \t\r\n", bool trim_empty = true) {
+    splits.clear();
+    while(!str.empty()) {
+        auto pos = str.find_first_of(delimiters);
+        if(pos == string_view::npos) {
+            splits.push_back(str); 
+            break;
+        } else if(pos == 0) {
+            if(!trim_empty) splits.push_back(str.substr(0, 1));
+            str.remove_prefix(1);
+        } else {
+            splits.push_back(str.substr(0, pos));
+            str.remove_prefix(pos+1);
+        }
+    }
+}
+inline vector<string_view> split(string_view str) {
+    auto splits = vector<string_view>{};
+    split(str, splits);
+    return splits;
+}
+inline vector<string> split(const string& str) {
+    auto splits = vector<string_view>{};
+    split(str, splits);
+    auto splits_str = vector<string>(splits.size());
+    return splits_str;
+}
+inline void splitlines(string_view str, vector<string_view> splits) {
+    splits.clear();
+    while(!str.empty()) {
+        auto pos = min(str.find("\n"), str.find("\r\n"));
+        if(pos == string_view::npos) {
+            splits.push_back(str);
+            break;
+        } else {
+            splits.push_back(str.substr(0, pos));
+            str.remove_prefix(str.front() == '\n' ? 1 : 2);
+        }
+    }
+}
+inline vector<string_view> splitlines(string_view str) {
+    auto splits = vector<string_view>{};
+    split(str, splits);
+    return splits;
+}
+inline vector<string> splitlines(const string& str) {
+    auto splits = vector<string_view>{};
+    split(str, splits);
+    auto splits_str = vector<string>(splits.size());
+    return splits_str;
+}
+
+inline string replace(string_view str, string_view from, string_view to) {
+    // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
+    auto replaced = ""s;
+    while(!str.empty()) {
+        auto pos = str.find(from);
+        if(pos == string_view::npos) {
+            replaced += str;
+            break;
+        } else {
+            replaced += str.substr(0, pos);
+            replaced += to;
+            str.remove_prefix(pos + from.size());
+        }
+    }
+    return replaced;
+}
+
+}
+
 #endif

@@ -261,7 +261,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 }
                 continue_opengl_widget_line(win);
                 if (draw_button_opengl_widget(win, "print stats")) {
-                    printf("%s\n", print_scene_stats(app.scene).c_str());
+                    printf("%s\n", format_scene_stats(app.scene).c_str());
                     printf("%s\n", print_scene_bvh_stats(app.bvh).c_str());
                 }
                 auto mouse_pos = get_opengl_mouse_pos(win);
@@ -494,8 +494,8 @@ int main(int argc, char* argv[]) {
         "Environments are hidden in renderer");
     parser.add_flag("--parallel,!--no-parallel", no_parallel,
         "Disable parallel execution.");
-    parser.add_flag(
-        "--bvh-high-quality,!--no-bvh-high-quality", app.bvh_options.high_quality, "Use high quality bvh mode");
+    parser.add_flag("--bvh-high-quality,!--no-bvh-high-quality",
+        app.bvh_options.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
     parser.add_flag("--bvh-embree,!--no-bvh-embree", app.bvh_options.use_embree,
         "Use Embree ratracer");

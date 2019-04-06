@@ -235,6 +235,19 @@ void save_scene(const string& filename, const yocto_scene& scene,
     }
 }
 
+string get_save_scene_message(const yocto_scene& scene, const string& line_prefix) {
+    auto str = ""s;
+    str += line_prefix + " \n";
+    str += line_prefix + " Written by Yocto/GL\n";
+    str += line_prefix + " https://github.com/xelatihy/yocto-gl\n";
+    str += line_prefix + "\n";
+    for(auto line : splitlines(format_scene_stats(scene))) {
+        str += line_prefix + " " + line;
+    }
+    str += line_prefix + "\n";
+    return str;
+}
+
 void load_scene_texture(yocto_texture& texture, const string& dirname) {
     if (is_image_preset_filename(texture.uri)) {
         auto [type, nfilename] = get_image_preset_type(texture.uri);
@@ -906,8 +919,7 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
     // open file
     auto fs = output_file(filename);
 
-    print_value(
-        fs, "# Written by Yocto/GL\n# https://github.com/xelatihy/yocto-gl\n");
+    print_value(fs, get_save_scene_message(scene, "#"));
 
     static const auto def_camera      = yocto_camera{};
     static const auto def_texture     = yocto_texture{};
@@ -1468,6 +1480,9 @@ void save_mtl(
     // open file
     auto fs = output_file(filename);
 
+    // embed data
+    println_values(fs, get_save_scene_message(scene, "#"));
+
     // for each material, dump all the values
     for (auto& material : scene.materials) {
         println_values(fs, "newmtl", get_basename(material.uri));
@@ -1519,6 +1534,9 @@ void save_objx(const string& filename, const yocto_scene& scene) {
     // open file
     auto fs = output_file(filename);
 
+    // embed data
+    println_values(fs, get_save_scene_message(scene, "#"));
+
     // cameras
     for (auto& camera : scene.cameras) {
         println_values(fs, "c", get_basename(camera.uri),
@@ -1564,8 +1582,8 @@ void save_obj(const string& filename, const yocto_scene& scene,
     // open file
     auto fs = output_file(filename);
 
-    println_values(
-        fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n\n");
+    // embed data
+    println_values(fs, get_save_scene_message(scene, "#"));
 
     // material library
     if (!scene.materials.empty()) {
@@ -1773,13 +1791,6 @@ void save_ply_scene(const string& filename, const yocto_scene& scene,
 // GLTF CONVESION
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-static bool startswith(const string& str, const string& substr) {
-    if (str.length() < substr.length()) return false;
-    for (auto i = 0; i < substr.length(); i++)
-        if (str[i] != substr[i]) return false;
-    return true;
-}
 
 // convert gltf to scene
 void gltf_to_scene(const string& filename, yocto_scene& scene) {

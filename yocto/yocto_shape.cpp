@@ -694,6 +694,8 @@ inline void save_ply_shape(const string& filename, const vector<int>& points,
 
     // empty data
     happly::PLYData ply;
+    ply.comments.push_back("Written by Yocto/GL");
+    ply.comments.push_back("https://github.com/xelatihy/yocto-gl");
 
     // add elements
     ply.addElement("vertex", positions.size());
@@ -1043,10 +1045,10 @@ inline void save_obj_shape(const string& filename, const vector<int>& points,
     bool flip_texcoord) {
     auto fs = output_file(filename);
 
-    // TODO: implement me
-
-    println_values(
-        fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n");
+    println_values(fs, "#");
+    println_values(fs, "# Written by Yocto/GL");
+    println_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+    println_values(fs, "#");
 
     for (auto& p : positions) println_values(fs, "v", p);
     for (auto& n : normals) println_values(fs, "vn", n);

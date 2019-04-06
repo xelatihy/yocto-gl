@@ -84,6 +84,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <unordered_map>
 #include <vector>

@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
         "Shape directory when adding names.");
     parser.add_option("--subdiv-directory", subdiv_directory,
         "Subdiv directory when adding names.");
-    parser.add_flag("--uniform-texture,!--no-uniform-textures", uniform_txt,
+    parser.add_flag("--uniform-textures,!--no-uniform-textures", uniform_txt,
         "uniform texture formats");
     parser.add_flag("--print-info,-i", print_info, "print scene info");
     parser.add_flag("--validate,!--no-validate", validate, "Validate scene");
@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
     }
 
     // print info
-    if (print_info) printf("%s\n", print_scene_stats(scene).c_str());
+    if (print_info) printf("%s\n", format_scene_stats(scene).c_str());
 
     // change texture names
     if (uniform_txt) {

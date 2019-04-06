@@ -171,7 +171,7 @@ struct bvh_build_options {
 #if YOCTO_EMBREE
     bool use_embree     = false;
     bool embree_flatten = false;
-    bool embree_compact  = false;
+    bool embree_compact = false;
 #endif
     bool          run_serially = false;
     atomic<bool>* cancel_flag  = nullptr;
