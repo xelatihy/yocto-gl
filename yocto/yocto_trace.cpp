@@ -1027,11 +1027,12 @@ float sample_lights_direction_pdf(const yocto_scene& scene,
     return pdf;
 }
 
-inline float get_albedo(const microfacet_brdf& brdf) {
-    return max(brdf.diffuse + brdf.specular + brdf.transmission);
+inline vec3f get_russian_roulette_albedo(const microfacet_brdf& brdf) {
+    return brdf.diffuse + brdf.specular + brdf.transmission;
 }
 
-#define RUSSIAN_ROULETTE_ON_WEIGHT 0
+// Russian roulette mode: 0: albedo, 1: weight, 2: pbrt
+#define YOCTO_RUSSIAN_ROULETTE_MODE 2
 /*
    Russian roulette on weight causes extremely high noise with prefectly
    transmissive materials because when reaching transparent surfaces (where you
@@ -1049,27 +1050,60 @@ inline float get_albedo(const microfacet_brdf& brdf) {
 */
 
 // Russian roulette
-bool sample_russian_roulette(float albedo, const vec3f& weight, int bounce,
-    float rr, int min_bounce = 2) {
+bool sample_russian_roulette(const vec3f& albedo, const vec3f& weight, int bounce,
+    float rr, int min_bounce = 3, float rr_threadhold = 1) {
+#if YOCTO_RUSSIAN_ROULETTE_MODE == 0
     if (bounce <= min_bounce) return false;
-
-#if RUSSIAN_ROULETTE_ON_WEIGHT
-    auto rrprob = 1.0f - min(max(weight), 0.95f);
-#else
-    auto rrprob = clamp(1.0f - albedo, 0.0f, 0.95f);
+    auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
+    return rr < rr_prob;
+#elif YOCTO_RUSSIAN_ROULETTE_MODE == 1
+    if (bounce <= min_bounce) return false;
+    auto rr_prob = 1.0f - min(max(weight), 0.95f);
+    return rr < rr_prob;
+#elif YOCTO_RUSSIAN_ROULETTE_MODE == 2
+    // from pbrt
+    // Spectrum rrBeta = beta * etaScale;
+    // if (rrBeta.MaxComponentValue() < rrThreshold && bounces > 3) {
+    //     Float q = std::max((Float).05, 1 - rrBeta.MaxComponentValue());
+    //     if (sampler.Get1D() < q) break;
+    //     beta /= 1 - q;
+    //     DCHECK(!std::isinf(beta.y()));
+    // }
+    if(max(weight) < rr_threadhold && bounce > min_bounce) {
+        auto rr_prob = max((float)0.05, 1 - max(weight));
+        return rr < rr_prob;
+    } else {
+        return false;
+    }
 #endif
 
-    return rr < rrprob;
 }
 float sample_russian_roulette_pdf(
-    float albedo, const vec3f& weight, int bounce, int min_bounce = 2) {
+    const vec3f& albedo, const vec3f& weight, int bounce, int min_bounce = 3, float rr_threadhold = 1) {    
+#if YOCTO_RUSSIAN_ROULETTE_MODE == 0
+    auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
     if (bounce <= min_bounce) return 1;
-#if RUSSIAN_ROULETTE_ON_WEIGHT
-    auto rrprob = 1.0f - min(max(weight), 0.95f);
-#else
-    auto rrprob = clamp(1.0f - albedo, 0.0f, 0.95f);
+    return 1 - rr_prob;
+#elif YOCTO_RUSSIAN_ROULETTE_MODE == 1
+    auto rr_prob = 1.0f - min(max(weight), 0.95f);
+    if (bounce <= min_bounce) return 1;
+    return 1 - rr_prob;
+#elif YOCTO_RUSSIAN_ROULETTE_MODE == 2
+    // from pbrt
+    // Spectrum rrBeta = beta * etaScale;
+    // if (rrBeta.MaxComponentValue() < rrThreshold && bounces > 3) {
+    //     Float q = std::max((Float).05, 1 - rrBeta.MaxComponentValue());
+    //     if (sampler.Get1D() < q) break;
+    //     beta /= 1 - q;
+    //     DCHECK(!std::isinf(beta.y()));
+    // }
+    if(max(weight) < rr_threadhold && bounce > min_bounce) {
+        auto rr_prob = max((float)0.05, 1 - max(weight));
+        return 1 - rr_prob;
+    } else {
+        return 1;
+    }
 #endif
-    return 1 - rrprob;
 }
 
 #if 0
@@ -1724,10 +1758,10 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // russian roulette
         if (sample_russian_roulette(
-                get_albedo(point.brdf), weight, bounce, get_random_float(rng)))
+                get_russian_roulette_albedo(point.brdf), weight, bounce, get_random_float(rng)))
             break;
         weight /= sample_russian_roulette_pdf(
-            get_albedo(point.brdf), weight, bounce);
+            get_russian_roulette_albedo(point.brdf), weight, bounce);
     }
 
     return {radiance, 1};
@@ -1796,10 +1830,10 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 
         // russian roulette
         if (sample_russian_roulette(
-                get_albedo(point.brdf), weight, bounce, get_random_float(rng)))
+                get_russian_roulette_albedo(point.brdf), weight, bounce, get_random_float(rng)))
             break;
         weight /= sample_russian_roulette_pdf(
-            get_albedo(point.brdf), weight, bounce);
+            get_russian_roulette_albedo(point.brdf), weight, bounce);
     }
 
     return {radiance, 1};

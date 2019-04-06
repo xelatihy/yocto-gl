@@ -494,12 +494,14 @@ int main(int argc, char* argv[]) {
         "Environments are hidden in renderer");
     parser.add_flag("--parallel,!--no-parallel", no_parallel,
         "Disable parallel execution.");
+    parser.add_flag(
+        "--bvh-high-quality,!--no-bvh-high-quality", app.bvh_options.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-    parser.add_flag("--embree,!--no-embree", app.bvh_options.use_embree,
+    parser.add_flag("--bvh-embree,!--no-bvh-embree", app.bvh_options.use_embree,
         "Use Embree ratracer");
-    parser.add_flag("--embree-flatten,!--no-embree-flatten",
+    parser.add_flag("--bvh-embree-flatten,!--no-bvh-embree-flatten",
         app.bvh_options.embree_flatten, "Flatten embree scene");
-    parser.add_flag("--embree-compact,!--no-embree-compact",
+    parser.add_flag("--bvh-embree-compact,!--no-bvh-embree-compact",
         app.bvh_options.embree_compact, "Embree runs in compact memory");
 #endif
     parser.add_flag("--double-sided,!--no-double-sided",
