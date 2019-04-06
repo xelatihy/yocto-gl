@@ -1488,12 +1488,7 @@ string format_scene_stats(const yocto_scene& scene, bool verbose) {
     auto str = ""s;
     for (auto& [key, value] : stats) {
         if (value == 0) continue;
-        auto line = key + ": ";
-        while (line.size() < 16) line += " ";
-        line += format_num(value) + " ";
-        while (line.size() < 24) line += " ";
-        line += "(" + to_string(value) + ")";
-        str += line + "\n";
+        str += format("{:<15} {:>13n}\n", key + ":", value);
     }
 
     return str;

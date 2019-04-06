@@ -991,7 +991,7 @@ inline bool startswith(string_view str, string_view substr) {
 inline bool endswith(string_view str, string_view substr) {
     return str.rfind(substr) == str.size() - substr.size();
 }
-inline void split(string_view str, vector<string_view> splits,
+inline void split(string_view str, vector<string_view>& splits,
     string_view delimiters = " \t\r\n", bool trim_empty = true) {
     splits.clear();
     while (!str.empty()) {
@@ -1016,10 +1016,11 @@ inline vector<string_view> split(string_view str) {
 inline vector<string> split(const string& str) {
     auto splits = vector<string_view>{};
     split(str, splits);
-    auto splits_str = vector<string>(splits.size());
+    auto splits_str = vector<string>();
+    for(auto split : splits) splits_str.push_back(string(split));
     return splits_str;
 }
-inline void splitlines(string_view str, vector<string_view> splits) {
+inline void splitlines(string_view str, vector<string_view>& splits) {
     splits.clear();
     while (!str.empty()) {
         auto pos = min(str.find("\n"), str.find("\r\n"));
@@ -1028,19 +1029,20 @@ inline void splitlines(string_view str, vector<string_view> splits) {
             break;
         } else {
             splits.push_back(str.substr(0, pos));
-            str.remove_prefix(str.front() == '\n' ? 1 : 2);
+            str.remove_prefix(pos + (str.front() == '\n' ? 0 : 1));
         }
     }
 }
 inline vector<string_view> splitlines(string_view str) {
     auto splits = vector<string_view>{};
-    split(str, splits);
+    splitlines(str, splits);
     return splits;
 }
 inline vector<string> splitlines(const string& str) {
     auto splits = vector<string_view>{};
-    split(str, splits);
-    auto splits_str = vector<string>(splits.size());
+    splitlines(str, splits);
+    auto splits_str = vector<string>();
+    for(auto split : splits) splits_str.push_back(string(split));
     return splits_str;
 }
 

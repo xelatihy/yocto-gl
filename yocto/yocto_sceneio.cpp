@@ -242,9 +242,8 @@ string get_save_scene_message(
     str += line_prefix + " Written by Yocto/GL\n";
     str += line_prefix + " https://github.com/xelatihy/yocto-gl\n";
     str += line_prefix + "\n";
-    for (auto line : splitlines(format_scene_stats(scene))) {
-        str += line_prefix + " " + line;
-    }
+    auto lines = splitlines(format_scene_stats(scene));
+    for (auto line : lines) str += line_prefix + " " + line + "\n";
     str += line_prefix + "\n";
     return str;
 }
