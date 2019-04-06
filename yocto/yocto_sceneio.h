@@ -67,6 +67,7 @@ struct load_scene_options {
 struct save_scene_options {
     bool          skip_textures = false;
     bool          skip_meshes   = false;
+    bool          ply_instances = false;
     atomic<bool>* cancel_flag   = nullptr;
     bool          run_serially  = false;
 };

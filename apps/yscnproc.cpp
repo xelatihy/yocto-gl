@@ -55,6 +55,7 @@ int main(int argc, char** argv) {
     auto uniform_txt      = false;
     auto validate         = false;
     auto print_info       = false;
+    auto ply_instances    = false;
     auto output           = "out.json"s;
     auto filename         = "scene.json"s;
 
@@ -72,6 +73,7 @@ int main(int argc, char** argv) {
         "Subdiv directory when adding names.");
     parser.add_flag("--uniform-textures,!--no-uniform-textures", uniform_txt,
         "uniform texture formats");
+    parser.add_flag("--ply-instances,!--no-ply-instances", ply_instances, "Use ply instances");
     parser.add_flag("--print-info,-i", print_info, "print scene info");
     parser.add_flag("--validate,!--no-validate", validate, "Validate scene");
     parser.add_option("--output,-o", output, "output scene")->required(true);
@@ -89,6 +91,7 @@ int main(int argc, char** argv) {
     save_options.skip_textures = skip_textures;
     load_options.skip_meshes   = skip_meshes;
     save_options.skip_meshes   = skip_meshes;
+    save_options.ply_instances = ply_instances;
 
     // load scene
     printf("loading scene ...\n");
@@ -174,6 +177,8 @@ int main(int argc, char** argv) {
         dirnames.insert(dirname + get_dirname(subdiv.uri));
     for (auto& texture : scene.textures)
         dirnames.insert(dirname + get_dirname(texture.uri));
+    if(save_options.ply_instances && get_extension(output) == "yaml")
+        dirnames.insert(dirname + "instances");
     for (auto& dir : dirnames) {
         if (!mkdir(get_dirname(dir))) {
             exit_error("cannot create directory " + get_dirname(output));

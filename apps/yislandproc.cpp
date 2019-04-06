@@ -1039,6 +1039,8 @@ int main(int argc, char** argv) {
         dirnames.insert(dirname + get_dirname(shape.uri));
     for (auto& texture : scene.textures)
         dirnames.insert(dirname + get_dirname(texture.uri));
+    if(get_extension(output) == "yaml")
+        dirnames.insert(dirname + "instances/");
     for (auto& dir : dirnames) {
         if (!mkdir(get_dirname(dir))) {
             exit_error("cannot create directory " + get_dirname(output));
@@ -1050,7 +1052,8 @@ int main(int argc, char** argv) {
     auto start_save = get_time();
     try {
         save_options.skip_textures = false;
-        save_options.run_serially  = true;
+        save_options.run_serially  = false;
+        save_options.ply_instances  = true;
         save_scene(output, scene, save_options);
     } catch (const std::exception& e) {
         exit_error(e.what());

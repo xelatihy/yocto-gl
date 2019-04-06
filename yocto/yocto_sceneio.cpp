@@ -222,8 +222,6 @@ void save_scene(const string& filename, const yocto_scene& scene,
         save_yaml_scene(filename, scene, options);
     } else if (ext == "obj" || ext == "OBJ") {
         save_obj_scene(filename, scene, options);
-    } else if (ext == "yaml" || ext == "YAML") {
-        save_yaml_scene(filename, scene, options);
     } else if (ext == "gltf" || ext == "GLTF") {
         save_gltf_scene(filename, scene, options);
     } else if (ext == "pbrt" || ext == "PBRT") {
@@ -600,6 +598,42 @@ inline void load_yaml(const string& filename, Callbacks& callbacks,
     }
 }
 
+void load_yaml_ply_instances(yocto_scene& scene, const string& filename) {
+    try {
+        // load ply
+        happly::PLYData ply(filename);
+
+        // copy instance data
+        auto& ply_instances = ply.getElement("instance");
+        scene.instances.resize(ply_instances.count);
+
+        auto names = "xyzo";
+        for(auto fj = 0; fj < 4; fj ++) {
+            for(auto fi = 0; fi < 3; fi ++) {
+                auto comp = ply_instances.getProperty<float>(format("frame.{}.{}", names[fj], names[fi]));
+                for(auto i = 0; i < comp.size(); i ++)
+                    scene.instances[i].frame[fj][fi] = comp[i];
+            }
+        }
+        auto shape = ply_instances.getProperty<int>("shape");
+        auto material = ply_instances.getProperty<int>("material");
+        for(auto i = 0; i < shape.size(); i ++) {
+            scene.instances[i].shape = shape[i];
+            scene.instances[i].material = material[i];
+        }
+    } catch (const std::exception& e) {
+        throw shapeio_error("cannot load instances " + filename + "\n" + e.what());
+    }
+
+    // set instance uris
+    auto iid = 0;
+    for(auto& instance : scene.instances) {
+        auto& shape = scene.shapes[instance.shape];
+        auto& material = scene.materials[instance.material];
+        instance.uri = format("instances/{}_{}_{}.yaml", get_basename(shape.uri), get_basename(material.uri), iid++);
+    }
+}
+
 // Save a scene in the builtin YAML format.
 void load_yaml_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
@@ -608,6 +642,7 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
     struct parse_callbacks : yaml_callbacks {
         yocto_scene&              scene;
         const load_scene_options& options;
+        string ply_instances = "";
 
         enum struct parsing_type {
             none,
@@ -618,7 +653,8 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
             shape,
             subdiv,
             instance,
-            environment
+            environment,
+            ply_instances
         };
         parsing_type type = parsing_type::none;
 
@@ -667,6 +703,8 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                 type = parsing_type::instance;
             } else if (key == "environments") {
                 type = parsing_type::environment;
+            } else if (key == "ply_instances") {
+                type = parsing_type::ply_instances;
             } else {
                 type = parsing_type::none;
                 throw io_error("unknown object type");
@@ -690,6 +728,7 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                 case parsing_type::environment:
                     scene.environments.push_back({});
                     break;
+                case parsing_type::ply_instances: break;
                 default: throw io_error("unknown object type");
             }
         }
@@ -862,6 +901,13 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                         throw io_error("unknown property");
                     }
                 } break;
+                case parsing_type::ply_instances: {
+                    if (key == "uri") {
+                        get_value(value, ply_instances);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
                 default: throw io_error("unknown object type");
             }
         }
@@ -872,6 +918,11 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
         auto yaml_options = load_yaml_options();
         auto cb           = parse_callbacks{scene, options};
         load_yaml(filename, cb, yaml_options);
+
+        // load instances
+        if(cb.ply_instances != "") {
+            load_yaml_ply_instances(scene, get_dirname(filename) + cb.ply_instances);
+        }
 
         // load shape and textures
         auto dirname = get_dirname(filename);
@@ -922,7 +973,8 @@ inline void print_yaml_keyvalue(
 }
 
 // Save yaml
-void save_yaml(const string& filename, const yocto_scene& scene) {
+void save_yaml(const string& filename, const yocto_scene& scene, bool ply_instances = false,
+    const string& instances_name = "") {
     // open file
     auto fs_ = open_output_file(filename);
     auto fs  = fs_.fs;
@@ -1048,12 +1100,17 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
             def_subdiv.displacement_scale);
     }
 
-    if (!scene.instances.empty()) print(fs, "\n\ninstances:\n");
-    for (auto& instance : scene.instances) {
-        print(fs, "  - uri: {}\n", instance.uri);
-        print_optional(fs, "frame", instance.frame, def_instance.frame);
-        print_ref(fs, "shape", instance.shape, scene.shapes);
-        print_ref(fs, "material", instance.material, scene.materials);
+    if(!ply_instances) {
+        if (!scene.instances.empty()) print(fs, "\n\ninstances:\n");
+        for (auto& instance : scene.instances) {
+            print(fs, "  - uri: {}\n", instance.uri);
+            print_optional(fs, "frame", instance.frame, def_instance.frame);
+            print_ref(fs, "shape", instance.shape, scene.shapes);
+            print_ref(fs, "material", instance.material, scene.materials);
+        }
+    } else {
+        if (!scene.instances.empty()) print(fs, "\n\nply_instances:\n");
+        print(fs, "  - uri: {}\n", instances_name);
     }
 
     if (!scene.environments.empty()) print(fs, "\n\nenvironments:\n");
@@ -1067,14 +1124,55 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
     }
 }
 
+void save_yaml_ply_instances(const yocto_scene& scene, const string& filename, 
+    const save_scene_options& options) {
+    happly::PLYData ply;
+    ply.comments.push_back("Written by Yocto/GL");
+    ply.comments.push_back("https://github.com/xelatihy/yocto-gl");
+
+    // add elements
+    ply.addElement("instance", scene.instances.size());
+    auto& ply_instances = ply.getElement("instance");
+    auto comp = vector<float>(scene.instances.size());
+    auto ids = vector<int>(scene.instances.size());
+
+    // frames
+    auto names = "xyzo";
+    for(auto fj = 0; fj < 4; fj ++) {
+        for(auto fi = 0; fi < 3; fi ++) {
+            for(auto i = 0; i < comp.size(); i ++)
+                comp[i] = scene.instances[i].frame[fj][fi];
+            ply_instances.addProperty(format("frame.{}.{}", names[fj], names[fi]), comp);
+        }
+    }
+    for(auto i = 0; i < ids.size(); i ++)
+        ids[i] = scene.instances[i].shape;
+    ply_instances.addProperty("shape", ids);
+    for(auto i = 0; i < ids.size(); i ++)
+        ids[i] = scene.instances[i].material;
+    ply_instances.addProperty("material", ids);
+
+    // Write our data
+    try {
+        ply.write(filename, happly::DataFormat::Binary);
+    } catch (const std::exception& e) {
+        throw shapeio_error("cannot save mesh " + filename + "\n" + e.what());
+    }
+}
+
 // Save a scene in the builtin YAML format.
 void save_yaml_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     try {
         // save yaml file
-        {
+        if(!options.ply_instances) {
             auto timer = print_timed("saving yaml");
             save_yaml(filename, scene);
+        } else {
+            auto timer = print_timed("saving yaml and instances");
+            auto ply_filename = "instances/" + get_basename(filename) + ".ply";
+            save_yaml(filename, scene, true, ply_filename);
+            save_yaml_ply_instances(scene, get_dirname(filename) + ply_filename, options);
         }
 
         // save meshes and textures
@@ -1084,11 +1182,11 @@ void save_yaml_scene(const string& filename, const yocto_scene& scene,
             save_scene_shapes(scene, dirname, options);
         }
         {
-            auto timer = print_timed("saving shapes");
+            auto timer = print_timed("saving textures");
             save_scene_textures(scene, dirname, options);
         }
     } catch (const std::exception& e) {
-        throw io_error("cannot load scene " + filename + "\n" + e.what());
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
