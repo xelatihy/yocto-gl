@@ -23,14 +23,6 @@
 // 4. use operators += to append an element or a vector to a given vector
 //
 //
-// ## Printing and parsing values
-//
-// Use `print_value()` to write a string in a stream or `println_values()`
-// to print a line of values. Use `format_duraction()` and `format_num()`
-// for pretty printing times and numbers. These will change once lib `fmt`
-// is accepted in the standard.
-//
-//
 // ## Path manipulation
 //
 // We define a few path manipulation utilities to split and join path
@@ -814,19 +806,6 @@ inline void print_value(
     print_value(fs, (const array<T, N*(N + 1)>&)value, in_brackets);
 }
 
-// print values to file
-template <typename Arg, typename... Args>
-inline void println_values(
-    const output_file& fs, const Arg& value, const Args&... values) {
-    print_value(fs, value);
-    if constexpr (sizeof...(values) > 0) {
-        print_value(fs, ' ');
-        println_values(fs, values...);
-    } else {
-        print_value(fs, '\n');
-    }
-}
-
 // A file holder that closes a file when destructed. Useful for RIIA
 struct file_holder {
     FILE* fs = nullptr;
@@ -834,19 +813,21 @@ struct file_holder {
     file_holder(const file_holder&) = delete;
     file_holder& operator=(const file_holder&) = delete;
     ~file_holder() {
-        if(fs) fclose(fs);
+        if (fs) fclose(fs);
     }
 };
 
 // Opens a file returing a handle with RIIA
-inline file_holder open_input_file(const string& filename, bool binary = false) {
+inline file_holder open_input_file(
+    const string& filename, bool binary = false) {
     auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
-    if(!fs) throw io_error("could not open file " + filename);
+    if (!fs) throw io_error("could not open file " + filename);
     return {fs};
 }
-inline file_holder open_output_file(const string& filename, bool binary = false) {
+inline file_holder open_output_file(
+    const string& filename, bool binary = false) {
     auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
-    if(!fs) throw io_error("could not open file " + filename);
+    if (!fs) throw io_error("could not open file " + filename);
     return {fs};
 }
 
@@ -1010,19 +991,20 @@ inline bool startswith(string_view str, string_view substr) {
 inline bool endswith(string_view str, string_view substr) {
     return str.rfind(substr) == str.size() - substr.size();
 }
-inline void split(string_view str, vector<string_view> splits, string_view delimiters = " \t\r\n", bool trim_empty = true) {
+inline void split(string_view str, vector<string_view> splits,
+    string_view delimiters = " \t\r\n", bool trim_empty = true) {
     splits.clear();
-    while(!str.empty()) {
+    while (!str.empty()) {
         auto pos = str.find_first_of(delimiters);
-        if(pos == string_view::npos) {
-            splits.push_back(str); 
+        if (pos == string_view::npos) {
+            splits.push_back(str);
             break;
-        } else if(pos == 0) {
-            if(!trim_empty) splits.push_back(str.substr(0, 1));
+        } else if (pos == 0) {
+            if (!trim_empty) splits.push_back(str.substr(0, 1));
             str.remove_prefix(1);
         } else {
             splits.push_back(str.substr(0, pos));
-            str.remove_prefix(pos+1);
+            str.remove_prefix(pos + 1);
         }
     }
 }
@@ -1039,9 +1021,9 @@ inline vector<string> split(const string& str) {
 }
 inline void splitlines(string_view str, vector<string_view> splits) {
     splits.clear();
-    while(!str.empty()) {
+    while (!str.empty()) {
         auto pos = min(str.find("\n"), str.find("\r\n"));
-        if(pos == string_view::npos) {
+        if (pos == string_view::npos) {
             splits.push_back(str);
             break;
         } else {
@@ -1065,9 +1047,9 @@ inline vector<string> splitlines(const string& str) {
 inline string replace(string_view str, string_view from, string_view to) {
     // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
     auto replaced = ""s;
-    while(!str.empty()) {
+    while (!str.empty()) {
         auto pos = str.find(from);
-        if(pos == string_view::npos) {
+        if (pos == string_view::npos) {
             replaced += str;
             break;
         } else {
@@ -1079,6 +1061,6 @@ inline string replace(string_view str, string_view from, string_view to) {
     return replaced;
 }
 
-}
+}  // namespace yocto
 
 #endif

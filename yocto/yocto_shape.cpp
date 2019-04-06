@@ -802,24 +802,6 @@ inline void save_ply_shape(const string& filename, const vector<int>& points,
     }
 }
 
-inline void print_value(const output_file& fs, const obj_vertex& value) {
-    print_value(fs, value.position);
-    if (value.texturecoord) {
-        print_value(fs, '/');
-        print_value(fs, value.texturecoord);
-        if (value.normal) {
-            print_value(fs, '/');
-            print_value(fs, value.normal);
-        }
-    } else {
-        if (value.normal) {
-            print_value(fs, '/');
-            print_value(fs, '/');
-            print_value(fs, value.normal);
-        }
-    }
-}
-
 // Load ply mesh
 inline void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
@@ -1035,6 +1017,19 @@ inline void load_obj_shape(const string& filename, vector<int>& points,
     }
 }
 
+inline string format_obj_vertex(const obj_vertex& value) {
+    if (value.texturecoord && value.normal) {
+        return format(
+            "{}/{}/{}", value.position, value.texturecoord, value.normal);
+    } else if (value.texturecoord && !value.normal) {
+        return format("{}/{}", value.position, value.texturecoord);
+    } else if (!value.texturecoord && value.normal) {
+        return format("{}//{}", value.position, value.normal);
+    } else {
+        return format("{}", value.position);
+    }
+}
+
 // Load ply mesh
 inline void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -1043,17 +1038,19 @@ inline void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     bool flip_texcoord) {
-    auto fs = output_file(filename);
+    // open file
+    auto fs_ = open_output_file(filename);
+    auto fs  = fs_.fs;
 
-    println_values(fs, "#");
-    println_values(fs, "# Written by Yocto/GL");
-    println_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-    println_values(fs, "#");
+    print(fs, "#\n");
+    print(fs, "# Written by Yocto/GL\n");
+    print(fs, "# https://github.com/xelatihy/yocto-gl\n");
+    print(fs, "#\n");
 
-    for (auto& p : positions) println_values(fs, "v", p);
-    for (auto& n : normals) println_values(fs, "vn", n);
+    for (auto& p : positions) print(fs, "v {} {} {}\n", p.x, p.y, p.z);
+    for (auto& n : normals) print(fs, "vn {} {}\n", n.x, n.y, n.z);
     for (auto& t : texturecoords)
-        println_values(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+        print(fs, "vt {} {}\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
 
     auto mask = obj_vertex{
         1, texturecoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
@@ -1063,19 +1060,24 @@ inline void save_obj_shape(const string& filename, const vector<int>& points,
     };
 
     for (auto& p : points) {
-        println_values(fs, "p", vert(p));
+        print(fs, "p {}\n", format_obj_vertex(vert(p)));
     }
     for (auto& l : lines) {
-        println_values(fs, "l", vert(l.x), vert(l.y));
+        print(fs, "l {} {}\n", format_obj_vertex(vert(l.x)),
+            format_obj_vertex(vert(l.y)));
     }
     for (auto& t : triangles) {
-        println_values(fs, "f", vert(t.x), vert(t.y), vert(t.z));
+        print(fs, "f {} {} {}\n", format_obj_vertex(vert(t.x)),
+            format_obj_vertex(vert(t.y)), format_obj_vertex(vert(t.z)));
     }
     for (auto& q : quads) {
         if (q.z == q.w) {
-            println_values(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+            print(fs, "f {} {} {}}\n", format_obj_vertex(vert(q.x)),
+                format_obj_vertex(vert(q.y)), format_obj_vertex(vert(q.z)));
         } else {
-            println_values(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+            print(fs, "f {} {} {} {}\n", format_obj_vertex(vert(q.x)),
+                format_obj_vertex(vert(q.y)), format_obj_vertex(vert(q.z)),
+                format_obj_vertex(vert(q.w)));
         }
     }
 
@@ -1100,12 +1102,16 @@ inline void save_obj_shape(const string& filename, const vector<int>& points,
         auto qn = !quads_normals.empty() ? quads_normals.at(i)
                                          : vec4i{-1, -1, -1, -1};
         if (qp.z != qp.w) {
-            println_values(fs, "f", fvvert(qp.x, qt.x, qn.x),
-                fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z),
-                fvvert(qp.w, qt.w, qn.w));
+            print(fs, "f {} {} {} {}\n",
+                format_obj_vertex(fvvert(qp.x, qt.x, qn.x)),
+                format_obj_vertex(fvvert(qp.y, qt.y, qn.y)),
+                format_obj_vertex(fvvert(qp.z, qt.z, qn.z)),
+                format_obj_vertex(fvvert(qp.w, qt.w, qn.w)));
         } else {
-            println_values(fs, "f", fvvert(qp.x, qt.x, qn.x),
-                fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z));
+            print(fs, "f {} {} {}\n",
+                format_obj_vertex(fvvert(qp.x, qt.x, qn.x)),
+                format_obj_vertex(fvvert(qp.y, qt.y, qn.y)),
+                format_obj_vertex(fvvert(qp.z, qt.z, qn.z)));
         }
     }
 }

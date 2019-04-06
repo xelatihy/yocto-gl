@@ -1454,23 +1454,40 @@ string format_scene_stats(const yocto_scene& scene, bool verbose) {
 
     auto accumulate = [](const auto& values, const auto& func) -> size_t {
         auto sum = (size_t)0;
-        for(auto& value : values) sum += func(value);
+        for (auto& value : values) sum += func(value);
         return sum;
     };
 
-    stats += {"points", accumulate(scene.shapes, [](auto& shape) { return shape.points.size(); }) };
-    stats += {"lines", accumulate(scene.shapes, [](auto& shape) { return shape.lines.size(); }) };
-    stats += {"triangles", accumulate(scene.shapes, [](auto& shape) { return shape.triangles.size(); }) };
-    stats += {"quads", accumulate(scene.shapes, [](auto& shape) { return shape.quads.size(); }) };
-    stats += {"fvquads", accumulate(scene.shapes, [](auto& shape) { return shape.quads_positions.size(); }) };
-    
-    stats += {"texels4b", accumulate(scene.textures, [](auto& texture) { return (size_t)texture.ldr_image.size().x * (size_t)texture.ldr_image.size().x; }) };
-    stats += {"texels4f", accumulate(scene.textures, [](auto& texture) { return (size_t)texture.hdr_image.size().x * (size_t)texture.hdr_image.size().y; }) };
-    stats += {"voltexels", accumulate(scene.voltextures, [](auto& texture) { return (size_t)texture.volume_data.size().x * (size_t)texture.volume_data.size().y * (size_t)texture.volume_data.size().z; }) };
-    
+    stats += {"points", accumulate(scene.shapes,
+                            [](auto& shape) { return shape.points.size(); })};
+    stats += {"lines", accumulate(scene.shapes,
+                           [](auto& shape) { return shape.lines.size(); })};
+    stats += {"triangles", accumulate(scene.shapes, [](auto& shape) {
+                  return shape.triangles.size();
+              })};
+    stats += {"quads", accumulate(scene.shapes,
+                           [](auto& shape) { return shape.quads.size(); })};
+    stats += {"fvquads", accumulate(scene.shapes, [](auto& shape) {
+                  return shape.quads_positions.size();
+              })};
+
+    stats += {"texels4b", accumulate(scene.textures, [](auto& texture) {
+                  return (size_t)texture.ldr_image.size().x *
+                         (size_t)texture.ldr_image.size().x;
+              })};
+    stats += {"texels4f", accumulate(scene.textures, [](auto& texture) {
+                  return (size_t)texture.hdr_image.size().x *
+                         (size_t)texture.hdr_image.size().y;
+              })};
+    stats += {"voltexels", accumulate(scene.voltextures, [](auto& texture) {
+                  return (size_t)texture.volume_data.size().x *
+                         (size_t)texture.volume_data.size().y *
+                         (size_t)texture.volume_data.size().z;
+              })};
+
     auto str = ""s;
-    for(auto& [key, value]: stats) {
-        if(value == 0) continue;
+    for (auto& [key, value] : stats) {
+        if (value == 0) continue;
         auto line = key + ": ";
         while (line.size() < 16) line += " ";
         line += format_num(value) + " ";
@@ -1478,7 +1495,7 @@ string format_scene_stats(const yocto_scene& scene, bool verbose) {
         line += "(" + to_string(value) + ")";
         str += line + "\n";
     }
-    
+
     return str;
 }
 
