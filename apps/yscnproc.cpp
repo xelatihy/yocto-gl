@@ -119,11 +119,9 @@ int main(int argc, char** argv) {
         for (auto& texture : scene.textures) {
             auto ext = get_extension(texture.uri);
             if (is_hdr_filename(texture.uri)) {
-                if (ext == "hdr") continue;
-                get_noextension(filename) + ".hdr";
+                texture.uri = get_noextension(texture.uri) + ".hdr";
             } else {
-                if (ext == "png") continue;
-                get_noextension(filename) + ".png";
+                texture.uri = get_noextension(texture.uri) + ".png";
             }
         }
     }
