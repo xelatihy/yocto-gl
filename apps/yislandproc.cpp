@@ -1041,7 +1041,6 @@ int main(int argc, char** argv) {
         }
     }
 
-
     // save scene
     printf("saving scene ...\n");
     auto start_save = get_time();

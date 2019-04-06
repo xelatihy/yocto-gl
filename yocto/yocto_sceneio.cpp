@@ -235,13 +235,14 @@ void save_scene(const string& filename, const yocto_scene& scene,
     }
 }
 
-string get_save_scene_message(const yocto_scene& scene, const string& line_prefix) {
+string get_save_scene_message(
+    const yocto_scene& scene, const string& line_prefix) {
     auto str = ""s;
     str += line_prefix + " \n";
     str += line_prefix + " Written by Yocto/GL\n";
     str += line_prefix + " https://github.com/xelatihy/yocto-gl\n";
     str += line_prefix + "\n";
-    for(auto line : splitlines(format_scene_stats(scene))) {
+    for (auto line : splitlines(format_scene_stats(scene))) {
         str += line_prefix + " " + line;
     }
     str += line_prefix + "\n";
@@ -890,36 +891,36 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
     update_transforms(scene);
 }
 
-inline void print_yaml_value(output_file& fs, int value) {
-    print_value(fs, value);
+inline void print_yaml_value(FILE* fs, int value) { print(fs, "{}", value); }
+inline void print_yaml_value(FILE* fs, float value) { print(fs, "{}", value); }
+inline void print_yaml_value(FILE* fs, const string& value) {
+    print(fs, "{}", value);
 }
-inline void print_yaml_value(output_file& fs, float value) {
-    print_value(fs, value);
+inline void print_yaml_value(FILE* fs, bool value) {
+    print(fs, value ? "true" : "false");
 }
-inline void print_yaml_value(output_file& fs, const string& value) {
-    print_value(fs, value);
+template <typename T>
+inline void print_yaml_value(FILE* fs, const vec<T, 2>& value) {
+    print(fs, "[ {}, {} ]", value.x, value.y);
 }
-inline void print_yaml_value(output_file& fs, const char* value) {
-    print_value(fs, value);
+template <typename T>
+inline void print_yaml_value(FILE* fs, const vec<T, 3>& value) {
+    print(fs, "[ {}, {}, {} ]", value.x, value.y, value.z);
 }
-inline void print_yaml_value(output_file& fs, bool value) {
-    print_value(fs, value, true);
-}
-template <typename T, int N>
-inline void print_yaml_value(output_file& fs, const vec<T, N>& value) {
-    print_value(fs, value, true);
-}
-template <typename T, int N>
-inline void print_yaml_value(output_file& fs, const frame<T, N>& value) {
-    print_value(fs, value, true);
+template <typename T>
+inline void print_yaml_value(FILE* fs, const frame<T, 3>& value) {
+    print(fs, "[ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {} ]", value.x.x,
+        value.x.y, value.x.z, value.y.x, value.y.y, value.y.z, value.z.x,
+        value.z.y, value.z.z, value.o.x, value.o.y, value.o.z);
 }
 
 // Save yaml
 void save_yaml(const string& filename, const yocto_scene& scene) {
     // open file
-    auto fs = output_file(filename);
+    auto fs_ = open_output_file(filename);
+    auto fs  = fs_.fs;
 
-    print_value(fs, get_save_scene_message(scene, "#"));
+    print(fs, "{}", get_save_scene_message(scene, "#"));
 
     static const auto def_camera      = yocto_camera{};
     static const auto def_texture     = yocto_texture{};
@@ -930,39 +931,26 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
     static const auto def_instance    = yocto_instance{};
     static const auto def_environment = yocto_environment{};
 
-    auto print_first = [](output_file& fs, const char* name, auto& value) {
-        print_value(fs, "  - ");
-        print_value(fs, name);
-        print_value(fs, ": ");
-        print_yaml_value(fs, value);
-        print_value(fs, "\n");
-    };
-    auto print_optional = [](output_file& fs, const char* name, auto& value,
+    auto print_optional = [](FILE* fs, const char* name, auto& value,
                               auto& def) {
         if (value == def) return;
-        print_value(fs, "    ");
-        print_value(fs, name);
-        print_value(fs, ": ");
+        print(fs, "    {}: ", name);
         print_yaml_value(fs, value);
-        print_value(fs, "\n");
+        print(fs, "\n");
     };
-    auto print_ref = [as_int = false](output_file& fs, const char* name,
-                         int value, auto& refs) {
+    auto print_ref = [as_int = false](
+                         FILE* fs, const char* name, int value, auto& refs) {
         if (value < 0) return;
-        print_value(fs, "    ");
-        print_value(fs, name);
-        print_value(fs, ": ");
         if (as_int) {
-            print_yaml_value(fs, value);
+            print(fs, "    {}: {}\n", name, value);
         } else {
-            print_yaml_value(fs, refs[value].uri);
+            print(fs, "    {}: {}\n", name, refs[value].uri);
         }
-        print_value(fs, "\n");
     };
 
     if (!scene.cameras.empty()) print_value(fs, "\n\ncameras:\n");
     for (auto& camera : scene.cameras) {
-        print_first(fs, "uri", camera.uri);
+        print(fs, "  - uri: {}\n", camera.uri);
         print_optional(fs, "frame", camera.frame, def_camera.frame);
         print_optional(
             fs, "orthographic", camera.orthographic, def_camera.orthographic);
@@ -980,17 +968,17 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
 
     if (!scene.textures.empty()) print_value(fs, "\n\ntextures:\n");
     for (auto& texture : scene.textures) {
-        print_first(fs, "uri", texture.uri);
+        print(fs, "  - uri: {}\n", texture.uri);
     }
 
     if (!scene.voltextures.empty()) print_value(fs, "\n\nvoltextures:\n");
     for (auto& texture : scene.voltextures) {
-        print_first(fs, "uri", texture.uri);
+        print(fs, "  - uri: {}\n", texture.uri);
     }
 
     if (!scene.materials.empty()) print_value(fs, "\n\nmaterials:\n");
     for (auto& material : scene.materials) {
-        print_first(fs, "uri", material.uri);
+        print(fs, "  - uri: {}\n", material.uri);
         print_optional(fs, "base_metallic", material.base_metallic,
             def_material.base_metallic);
         print_optional(fs, "gltf_textures", material.gltf_textures,
@@ -1033,12 +1021,12 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
 
     if (!scene.shapes.empty()) print_value(fs, "\n\nshapes:\n");
     for (auto& shape : scene.shapes) {
-        print_first(fs, "uri", shape.uri);
+        print(fs, "  - uri: {}\n", shape.uri);
     }
 
     if (!scene.subdivs.empty()) print_value(fs, "\n\nsubdivs:\n");
     for (auto& subdiv : scene.subdivs) {
-        print_first(fs, "uri", subdiv.uri);
+        print(fs, "  - uri: {}\n", subdiv.uri);
         print_optional(fs, "subdivision_level", subdiv.subdivision_level,
             def_subdiv.subdivision_level);
         print_optional(fs, "catmull_clark", subdiv.catmull_clark,
@@ -1055,7 +1043,7 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
 
     if (!scene.instances.empty()) print_value(fs, "\n\ninstances:\n");
     for (auto& instance : scene.instances) {
-        print_first(fs, "uri", instance.uri);
+        print(fs, "  - uri: {}\n", instance.uri);
         print_optional(fs, "frame", instance.frame, def_instance.frame);
         print_ref(fs, "shape", instance.shape, scene.shapes);
         print_ref(fs, "material", instance.material, scene.materials);
@@ -1063,7 +1051,7 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
 
     if (!scene.environments.empty()) print_value(fs, "\n\nenvironments:\n");
     for (auto& environment : scene.environments) {
-        print_first(fs, "uri", environment.uri);
+        print(fs, "  - uri: {}\n", environment.uri);
         print_optional(fs, "frame", environment.frame, def_environment.frame);
         print_optional(
             fs, "emission", environment.emission, def_environment.emission);
@@ -1077,12 +1065,21 @@ void save_yaml_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     try {
         // save yaml file
-        save_yaml(filename, scene);
+        {
+            auto timer = print_timed("saving yaml");
+            save_yaml(filename, scene);
+        }
 
         // save meshes and textures
         auto dirname = get_dirname(filename);
-        save_scene_shapes(scene, dirname, options);
-        save_scene_textures(scene, dirname, options);
+        {
+            auto timer = print_timed("saving shapes");
+            save_scene_shapes(scene, dirname, options);
+        }
+        {
+            auto timer = print_timed("saving shapes");
+            save_scene_textures(scene, dirname, options);
+        }
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
     }

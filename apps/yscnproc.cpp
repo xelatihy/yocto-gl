@@ -168,8 +168,14 @@ int main(int argc, char** argv) {
     }
 
     // make a directory if needed
-    if (!mkdir(get_dirname(output))) {
-        exit_error("cannot create directory " + get_dirname(output));
+    auto dirname = get_dirname(output);
+    auto dirnames = unordered_set{dirname};
+    for(auto& shape : scene.shapes) dirnames.insert(dirname + get_dirname(shape.uri));
+    for(auto& texture : scene.textures) dirnames.insert(dirname + get_dirname(texture.uri));
+    for(auto& dir : dirnames) {
+        if (!mkdir(get_dirname(dir))) {
+            exit_error("cannot create directory " + get_dirname(output));
+        }
     }
 
     // save scene

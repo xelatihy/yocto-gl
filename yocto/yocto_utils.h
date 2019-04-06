@@ -103,6 +103,9 @@
 #include <thread>
 #include <vector>
 
+#define FMT_HEADER_ONLY
+#include "ext/fmt/format.h"
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -122,6 +125,9 @@ using std::vector;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 using namespace std::chrono_literals;
+
+using fmt::format;
+using fmt::print;
 
 }  // namespace yocto
 
@@ -819,6 +825,29 @@ inline void println_values(
     } else {
         print_value(fs, '\n');
     }
+}
+
+// A file holder that closes a file when destructed. Useful for RIIA
+struct file_holder {
+    FILE* fs = nullptr;
+
+    file_holder(const file_holder&) = delete;
+    file_holder& operator=(const file_holder&) = delete;
+    ~file_holder() {
+        if(fs) fclose(fs);
+    }
+};
+
+// Opens a file returing a handle with RIIA
+inline file_holder open_input_file(const string& filename, bool binary = false) {
+    auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
+    if(!fs) throw io_error("could not open file " + filename);
+    return {fs};
+}
+inline file_holder open_output_file(const string& filename, bool binary = false) {
+    auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
+    if(!fs) throw io_error("could not open file " + filename);
+    return {fs};
 }
 
 }  // namespace yocto
