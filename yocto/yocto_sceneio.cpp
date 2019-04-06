@@ -1166,10 +1166,8 @@ void save_yaml_scene(const string& filename, const yocto_scene& scene,
     try {
         // save yaml file
         if(!options.ply_instances) {
-            auto timer = print_timed("saving yaml");
             save_yaml(filename, scene);
         } else {
-            auto timer = print_timed("saving yaml and instances");
             auto ply_filename = "instances/" + get_basename(filename) + ".ply";
             save_yaml(filename, scene, true, ply_filename);
             save_yaml_ply_instances(scene, get_dirname(filename) + ply_filename, options);
@@ -1177,14 +1175,8 @@ void save_yaml_scene(const string& filename, const yocto_scene& scene,
 
         // save meshes and textures
         auto dirname = get_dirname(filename);
-        {
-            auto timer = print_timed("saving shapes");
-            save_scene_shapes(scene, dirname, options);
-        }
-        {
-            auto timer = print_timed("saving textures");
-            save_scene_textures(scene, dirname, options);
-        }
+        save_scene_shapes(scene, dirname, options);
+        save_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
