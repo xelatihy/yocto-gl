@@ -64,7 +64,7 @@ def ytrace(directory='mcguire',scene='*',format='obj',outformat="png",mode='path
     modes = {
         'path': '--all-cameras -s 64 -r 360 --bvh-high-quality',
         'embree': '--all-cameras -s 256 -r 720 --bvh-embree --bvh-high-quality',
-        'embree-compact': '--all-cameras -s 256 -r 720 --bvh-embree --embree-compact',
+        'embree-compact': '--all-cameras -s 256 -r 720 --bvh-embree --bvh-embree-compact',
         'eyelight': '--all-cameras -s 16 -r 720 -t eyelight --bvh-high-quality',
         'eyelight-quick': '--all-cameras -s 16 -r 720 -t eyelight --no-bvh-highquality'
     }
