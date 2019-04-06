@@ -636,62 +636,6 @@ struct input_file {
     bool   owned    = true;
 };
 
-// file writer
-struct output_file {
-    output_file(const string& filename, bool binary = false) {
-        this->filename = filename;
-        file           = fopen(filename.c_str(), binary ? "wb" : "wt");
-        if (!file) throw io_error("could not open " + filename);
-    }
-    output_file(FILE* fs) {
-        file  = fs;
-        owned = false;
-    }
-
-    output_file(const output_file&) = delete;
-    output_file& operator=(const output_file&) = delete;
-
-    ~output_file() {
-        if (file && owned) fclose(file);
-    }
-
-    string filename = "";
-    FILE*  file     = nullptr;
-    bool   owned    = true;
-};
-
-// write a value to a file
-template <typename T>
-inline void write_value(const output_file& fs, const T& value) {
-    if (fwrite(&value, sizeof(value), 1, fs.file) != 1) {
-        throw io_error("cannot write to " + fs.filename);
-    }
-}
-
-// write values to a file
-template <typename T>
-inline void write_values(const output_file& fs, const vector<T>& values) {
-    if (values.empty()) return;
-    if (fwrite(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw io_error("cannot write to " + fs.filename);
-    }
-}
-template <typename T>
-inline void write_values(const output_file& fs, const T* values, size_t count) {
-    if (!count) return;
-    if (fwrite(values, sizeof(values[0]), count, fs.file) != count) {
-        throw io_error("cannot write to " + fs.filename);
-    }
-}
-
-// write text to a file
-inline void write_text(const output_file& fs, const std::string& str) {
-    if (fprintf(fs.file, "%s", str.c_str()) < 0) {
-        throw io_error("cannot write to " + fs.filename);
-    }
-}
-
 // read a value from a file
 template <typename T>
 inline void read_value(const input_file& fs, T& value) {
@@ -735,75 +679,6 @@ inline bool read_line(const input_file& fs, string& str) {
 inline bool read_line(const input_file& fs, char* buffer, size_t size) {
     if (fgets(buffer, size, fs.file) == nullptr) return false;
     return true;
-}
-
-// Printing values
-inline void print_value(const output_file& fs, int value) {
-    if (fprintf(fs.file, "%d", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, bool value, bool alpha = false) {
-    if (alpha) {
-        if (fprintf(fs.file, value ? "true" : "false") < 0)
-            throw io_error("cannot write to file " + fs.filename);
-    } else {
-        if (fprintf(fs.file, "%d", (int)value) < 0)
-            throw io_error("cannot write to file " + fs.filename);
-    }
-}
-inline void print_value(const output_file& fs, float value) {
-    if (fprintf(fs.file, "%g", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, double value) {
-    if (fprintf(fs.file, "%g", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, char value) {
-    if (fprintf(fs.file, "%c", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(
-    const output_file& fs, const char* value, bool quoted = false) {
-    if (fprintf(fs.file, quoted ? "\"%s\"" : "%s", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(
-    const output_file& fs, const string& value, bool quoted = false) {
-    if (fprintf(fs.file, quoted ? "\"%s\"" : "%s", value.c_str()) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-template <typename T, size_t N>
-inline void print_value(
-    const output_file& fs, const array<T, N>& value, bool in_brackets = false) {
-    if (!in_brackets) {
-        for (auto i = 0; i < N; i++) {
-            if (i) print_value(fs, ' ');
-            print_value(fs, value[i]);
-        }
-    } else {
-        print_value(fs, "[ ");
-        for (auto i = 0; i < N; i++) {
-            if (i) print_value(fs, ", ");
-            print_value(fs, value[i]);
-        }
-        print_value(fs, " ]");
-    }
-}
-template <typename T, int N>
-inline void print_value(
-    const output_file& fs, const vec<T, N>& value, bool in_brackets = false) {
-    print_value(fs, (const array<T, N>&)value, in_brackets);
-}
-template <typename T, int N, int M>
-inline void print_value(const output_file& fs, const mat<T, N, M>& value,
-    bool in_brackets = false) {
-    print_value(fs, (const array<T, N * M>&)value, in_brackets);
-}
-template <typename T, int N>
-inline void print_value(
-    const output_file& fs, const frame<T, N>& value, bool in_brackets = false) {
-    print_value(fs, (const array<T, N*(N + 1)>&)value, in_brackets);
 }
 
 // A file holder that closes a file when destructed. Useful for RIIA

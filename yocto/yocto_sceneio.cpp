@@ -185,13 +185,6 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
 void save_pbrt_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options);
 
-// Load/save a binary dump useful for very fast scene IO. This format is not
-// an archival format and should only be used as an intermediate format.
-void load_ybin_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options);
-void save_ybin_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options);
-
 // Load a scene
 void load_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
@@ -204,8 +197,6 @@ void load_scene(const string& filename, yocto_scene& scene,
         load_gltf_scene(filename, scene, options);
     } else if (ext == "pbrt" || ext == "PBRT") {
         load_pbrt_scene(filename, scene, options);
-    } else if (ext == "ybin" || ext == "YBIN") {
-        load_ybin_scene(filename, scene, options);
     } else if (ext == "ply" || ext == "PLY") {
         load_ply_scene(filename, scene, options);
     } else {
@@ -226,8 +217,6 @@ void save_scene(const string& filename, const yocto_scene& scene,
         save_gltf_scene(filename, scene, options);
     } else if (ext == "pbrt" || ext == "PBRT") {
         save_pbrt_scene(filename, scene, options);
-    } else if (ext == "ybin" || ext == "YBIN") {
-        save_ybin_scene(filename, scene, options);
     } else {
         throw io_error("unsupported scene format " + ext);
     }
@@ -2697,7 +2686,13 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
 // save gltf mesh
 void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     // open file
-    auto fs = output_file(filename, std::ios::binary);
+    auto fs_ = open_output_file(filename);
+    auto fs  = fs_.fs;
+
+    auto write_values = [](FILE* fs, const auto& values) {
+        if(values.empty()) return;
+        if(fwrite(values.data(), sizeof(values.front()), values.size(), fs) != values.size()) throw io_error("cannot write to file");
+    };
 
     if (shape.quads_positions.empty()) {
         write_values(fs, shape.positions);
@@ -3555,340 +3550,6 @@ void pbrt_flipyz_scene(yocto_scene& scene) {
     for (auto& instance : scene.instances) {
         instance.frame = instance.frame *
                          frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-    }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF BINARY SCENE FORMAT
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// serialize_bin( ) can both save/load data to/from a binary file. The behaviour
-// is set by the boolean 'save'. serialize_bin(name, file, true) : writes name
-// as binary into file serialize_bin(name, file, false): read file as binary and
-// set name
-
-// Serialize vector
-template <typename T>
-void write_value(output_file& fs, const vector<T>& vec) {
-    auto count = (size_t)vec.size();
-    write_value(fs, count);
-    write_values(fs, vec);
-}
-template <typename T>
-void read_value(input_file& fs, vector<T>& vec) {
-    auto count = (size_t)0;
-    read_value(fs, count);
-    vec = vector<T>(count);
-    read_values(fs, vec);
-}
-
-// Serialize string
-void write_value(output_file& fs, const string& str) {
-    auto count = (size_t)str.size();
-    write_value(fs, count);
-    auto vec = vector<char>(str.begin(), str.end());
-    write_values(fs, vec);
-}
-void read_value(input_file& fs, string& str) {
-    auto count = (size_t)0;
-    read_value(fs, count);
-    auto vec = vector<char>(count);
-    read_values(fs, vec);
-    str = {vec.begin(), vec.end()};
-}
-
-// Serialize image
-template <typename T>
-void write_value(output_file& fs, const image<T>& img) {
-    write_value(fs, img.size());
-    write_values(fs, img.data(), (size_t)img.size().x * (size_t)img.size().y);
-}
-template <typename T>
-void read_value(input_file& fs, image<T>& img) {
-    auto size = zero2i;
-    read_value(fs, size);
-    img = {size};
-    read_values(fs, img.data(), size.x * size.y);
-}
-
-// Serialize image
-template <typename T>
-void write_value(output_file& fs, const volume<T>& vol) {
-    write_value(fs, vol.size());
-    write_values(fs, vol.data(),
-        (size_t)vol.size().x * (size_t)vol.size().y * (size_t)vol.size().z);
-}
-template <typename T>
-void read_value(input_file& fs, volume<T>& vol) {
-    auto size = zero3i;
-    read_value(fs, size.x);
-    read_value(fs, size.y);
-    read_value(fs, size.z);
-    vol = {size};
-    read_values(fs, vol.data(), size.x * size.y * size.z);
-}
-
-// Serialize vector of pointers
-template <typename T>
-void write_objects(output_file& fs, const vector<T>& vec) {
-    auto count = (size_t)vec.size();
-    write_value(fs, count);
-    for (auto i = 0; i < vec.size(); ++i) {
-        write_object(fs, vec[i]);
-    }
-}
-template <typename T>
-void read_objects(input_file& fs, vector<T>& vec) {
-    auto count = (size_t)0;
-    read_value(fs, count);
-    vec = vector<T>(count);
-    for (auto i = 0; i < vec.size(); ++i) {
-        vec[i] = T{};
-        read_object(fs, vec[i]);
-    }
-}
-
-// Serialize yocto types. This is mostly boiler plate code.
-void write_object(output_file& fs, const yocto_camera& camera) {
-    write_value(fs, camera.uri);
-    write_value(fs, camera.frame);
-    write_value(fs, camera.orthographic);
-    write_value(fs, camera.film_width);
-    write_value(fs, camera.film_height);
-    write_value(fs, camera.focal_length);
-    write_value(fs, camera.focus_distance);
-    write_value(fs, camera.lens_aperture);
-}
-void read_object(input_file& fs, yocto_camera& camera) {
-    read_value(fs, camera.uri);
-    read_value(fs, camera.frame);
-    read_value(fs, camera.orthographic);
-    read_value(fs, camera.film_width);
-    read_value(fs, camera.film_height);
-    read_value(fs, camera.focal_length);
-    read_value(fs, camera.focus_distance);
-    read_value(fs, camera.lens_aperture);
-}
-
-void write_object(output_file& fs, const yocto_shape& shape) {
-    write_value(fs, shape.uri);
-    write_value(fs, shape.points);
-    write_value(fs, shape.lines);
-    write_value(fs, shape.triangles);
-    write_value(fs, shape.quads);
-    write_value(fs, shape.quads_positions);
-    write_value(fs, shape.quads_normals);
-    write_value(fs, shape.quads_texturecoords);
-    write_value(fs, shape.positions);
-    write_value(fs, shape.normals);
-    write_value(fs, shape.texturecoords);
-    write_value(fs, shape.colors);
-    write_value(fs, shape.radius);
-    write_value(fs, shape.tangentspaces);
-}
-void read_object(input_file& fs, yocto_shape& shape) {
-    read_value(fs, shape.uri);
-    read_value(fs, shape.points);
-    read_value(fs, shape.lines);
-    read_value(fs, shape.triangles);
-    read_value(fs, shape.quads);
-    read_value(fs, shape.quads_positions);
-    read_value(fs, shape.quads_normals);
-    read_value(fs, shape.quads_texturecoords);
-    read_value(fs, shape.positions);
-    read_value(fs, shape.normals);
-    read_value(fs, shape.texturecoords);
-    read_value(fs, shape.colors);
-    read_value(fs, shape.radius);
-    read_value(fs, shape.tangentspaces);
-}
-
-void write_object(output_file& fs, const yocto_subdiv& subdiv) {
-    write_value(fs, subdiv.uri);
-    write_value(fs, subdiv.tesselated_shape);
-    write_value(fs, subdiv.subdivision_level);
-    write_value(fs, subdiv.catmull_clark);
-    write_value(fs, subdiv.compute_normals);
-    write_value(fs, subdiv.preserve_facevarying);
-    write_value(fs, subdiv.displacement_texture);
-    write_value(fs, subdiv.displacement_scale);
-    write_value(fs, subdiv.points);
-    write_value(fs, subdiv.lines);
-    write_value(fs, subdiv.triangles);
-    write_value(fs, subdiv.quads);
-    write_value(fs, subdiv.quads_positions);
-    write_value(fs, subdiv.quads_normals);
-    write_value(fs, subdiv.quads_texturecoords);
-    write_value(fs, subdiv.positions);
-    write_value(fs, subdiv.normals);
-    write_value(fs, subdiv.texturecoords);
-    write_value(fs, subdiv.colors);
-    write_value(fs, subdiv.radius);
-}
-void read_object(input_file& fs, yocto_subdiv& subdiv) {
-    read_value(fs, subdiv.uri);
-    read_value(fs, subdiv.tesselated_shape);
-    read_value(fs, subdiv.subdivision_level);
-    read_value(fs, subdiv.catmull_clark);
-    read_value(fs, subdiv.compute_normals);
-    read_value(fs, subdiv.preserve_facevarying);
-    read_value(fs, subdiv.displacement_texture);
-    read_value(fs, subdiv.displacement_scale);
-    read_value(fs, subdiv.points);
-    read_value(fs, subdiv.lines);
-    read_value(fs, subdiv.triangles);
-    read_value(fs, subdiv.quads);
-    read_value(fs, subdiv.quads_positions);
-    read_value(fs, subdiv.quads_normals);
-    read_value(fs, subdiv.quads_texturecoords);
-    read_value(fs, subdiv.positions);
-    read_value(fs, subdiv.normals);
-    read_value(fs, subdiv.texturecoords);
-    read_value(fs, subdiv.colors);
-    read_value(fs, subdiv.radius);
-}
-
-void write_object(output_file& fs, const yocto_texture& texture) {
-    write_value(fs, texture.uri);
-    write_value(fs, texture.hdr_image);
-    write_value(fs, texture.ldr_image);
-}
-void read_object(input_file& fs, yocto_texture& texture) {
-    read_value(fs, texture.uri);
-    read_value(fs, texture.hdr_image);
-    read_value(fs, texture.ldr_image);
-}
-
-void write_object(output_file& fs, const yocto_voltexture& texture) {
-    write_value(fs, texture.uri);
-    write_value(fs, texture.volume_data);
-}
-void read_object(input_file& fs, yocto_voltexture& texture) {
-    read_value(fs, texture.uri);
-    read_value(fs, texture.volume_data);
-}
-
-void write_object(output_file& fs, const yocto_environment& environment) {
-    write_value(fs, environment.uri);
-    write_value(fs, environment.frame);
-    write_value(fs, environment.emission);
-    write_value(fs, environment.emission_texture);
-}
-void read_object(input_file& fs, yocto_environment& environment) {
-    read_value(fs, environment.uri);
-    read_value(fs, environment.frame);
-    read_value(fs, environment.emission);
-    read_value(fs, environment.emission_texture);
-}
-
-void write_object(output_file& fs, const yocto_material& material) {
-    write_value(fs, material.uri);
-    write_value(fs, material.base_metallic);
-    write_value(fs, material.gltf_textures);
-    write_value(fs, material.emission);
-    write_value(fs, material.diffuse);
-    write_value(fs, material.specular);
-    write_value(fs, material.transmission);
-    write_value(fs, material.roughness);
-    write_value(fs, material.opacity);
-    write_value(fs, material.fresnel);
-    write_value(fs, material.refract);
-    write_value(fs, material.emission_texture);
-    write_value(fs, material.diffuse_texture);
-    write_value(fs, material.specular_texture);
-    write_value(fs, material.transmission_texture);
-    write_value(fs, material.roughness_texture);
-    write_value(fs, material.normal_texture);
-    write_value(fs, material.volume_emission);
-    write_value(fs, material.volume_albedo);
-    write_value(fs, material.volume_density);
-    write_value(fs, material.volume_phaseg);
-    write_value(fs, material.volume_density_texture);
-};
-void read_object(input_file& fs, yocto_material& material) {
-    read_value(fs, material.uri);
-    read_value(fs, material.base_metallic);
-    read_value(fs, material.gltf_textures);
-    read_value(fs, material.emission);
-    read_value(fs, material.diffuse);
-    read_value(fs, material.specular);
-    read_value(fs, material.transmission);
-    read_value(fs, material.roughness);
-    read_value(fs, material.opacity);
-    read_value(fs, material.fresnel);
-    read_value(fs, material.refract);
-    read_value(fs, material.emission_texture);
-    read_value(fs, material.diffuse_texture);
-    read_value(fs, material.specular_texture);
-    read_value(fs, material.transmission_texture);
-    read_value(fs, material.roughness_texture);
-    read_value(fs, material.normal_texture);
-    read_value(fs, material.volume_emission);
-    read_value(fs, material.volume_albedo);
-    read_value(fs, material.volume_density);
-    read_value(fs, material.volume_phaseg);
-    read_value(fs, material.volume_density_texture);
-};
-
-void write_object(output_file& fs, const yocto_instance& instance) {
-    write_value(fs, instance.uri);
-    write_value(fs, instance.frame);
-    write_value(fs, instance.shape);
-    write_value(fs, instance.material);
-};
-void read_object(input_file& fs, yocto_instance& instance) {
-    read_value(fs, instance.uri);
-    read_value(fs, instance.frame);
-    read_value(fs, instance.shape);
-    read_value(fs, instance.material);
-};
-
-void write_object(output_file& fs, const yocto_scene& scene) {
-    write_value(fs, scene.uri);
-    write_objects(fs, scene.cameras);
-    write_objects(fs, scene.shapes);
-    write_objects(fs, scene.subdivs);
-    write_objects(fs, scene.textures);
-    write_objects(fs, scene.voltextures);
-    write_objects(fs, scene.materials);
-    write_objects(fs, scene.instances);
-    write_objects(fs, scene.environments);
-}
-void read_object(input_file& fs, yocto_scene& scene) {
-    read_value(fs, scene.uri);
-    read_objects(fs, scene.cameras);
-    read_objects(fs, scene.shapes);
-    read_objects(fs, scene.subdivs);
-    read_objects(fs, scene.textures);
-    read_objects(fs, scene.voltextures);
-    read_objects(fs, scene.materials);
-    read_objects(fs, scene.instances);
-    read_objects(fs, scene.environments);
-}
-
-// Load/save a binary dump useful for very fast scene IO.
-void load_ybin_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
-    scene = {};
-    try {
-        auto fs = input_file(filename, true);
-        read_object(fs, scene);
-    } catch (const std::exception& e) {
-        throw io_error("cannot load scene " + filename + "\n" + e.what());
-    }
-}
-
-// Load/save a binary dump useful for very fast scene IO.
-void save_ybin_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options) {
-    try {
-        auto fs = output_file(filename, true);
-        write_object(fs, scene);
-    } catch (const std::exception& e) {
-        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
