@@ -533,7 +533,8 @@ template <typename Callbacks>
 inline void load_yaml(const string& filename, Callbacks& callbacks,
     const load_yaml_options& options) {
     // open file
-    auto fs = input_file(filename);
+    auto fs_ = open_input_file(filename);
+    auto fs = fs_.fs;
 
     // parsing state
     auto in_objects = false;
