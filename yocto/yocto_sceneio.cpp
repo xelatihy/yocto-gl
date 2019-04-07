@@ -418,113 +418,76 @@ bool is_face_varying(const vector<vec4i>& quads_positions,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-struct yaml_value {
-    enum struct type_t { none_t, string_t, boolean_t, number_t, array_t };
-    type_t            type = type_t::none_t;
-    string            _string;
-    bool              _boolean = false;
-    array<double, 16> _numbers;
-    int               _size = 0;
-};
-
-inline void get_value(const yaml_value& yml, int& value) {
-    if (yml.type != yaml_value::type_t::number_t)
-        throw io_error("int expected");
-    value = (int)yml._numbers[0];
-}
-
-inline void get_value(const yaml_value& yml, float& value) {
-    if (yml.type != yaml_value::type_t::number_t)
-        throw io_error("number expected");
-    value = (float)yml._numbers[0];
-}
-
-inline void get_value(const yaml_value& yml, bool& value) {
-    if (yml.type != yaml_value::type_t::boolean_t)
-        throw io_error("string expected");
-    value = yml._boolean;
-}
-
-inline void get_value(const yaml_value& yml, string& value) {
-    if (yml.type != yaml_value::type_t::string_t)
-        throw io_error("string expected");
-    value = yml._string;
-}
-
-template <typename T, size_t N>
-inline void get_value(const yaml_value& yml, array<T, N>& value) {
-    if (yml.type != yaml_value::type_t::array_t || yml._size != N)
-        throw io_error("array expected");
-    for (auto i = 0; i < N; i++) value[i] = (T)yml._numbers[i];
-}
-
-template <typename T, int N>
-inline void get_value(const yaml_value& yml, vec<T, N>& value) {
-    get_value(yml, (array<T, N>&)value);
-}
-template <typename T, int N>
-inline void get_value(const yaml_value& yml, frame<T, N>& value) {
-    get_value(yml, (array<T, N*(N + 1)>&)value);
-}
-template <typename T, int N, int M>
-inline void get_value(const yaml_value& yml, mat<T, N, M>& value) {
-    get_value(yml, (array<T, N * M>&)value);
-}
-
-inline bool is_string_value(const yaml_value& yml) {
-    return yml.type == yaml_value::type_t::string_t;
-}
-
 struct yaml_callbacks {
     void object_group(const string& key);
     void object_begin();
-    void key_value(const string& key, const yaml_value& value);
+    void key_value(string_view key, string_view value);
 };
 
-inline void parse_value(string_view& str, yaml_value& value) {
+inline void get_yaml_value(string_view str, string& value) {
     skip_whitespace(str);
-    if (str.empty()) throw io_error("cannot parse value");
-    value = {};
-    if (str.front() == '[') {
-        str.remove_prefix(1);
-        value._size = 0;
-        while (true) {
-            skip_whitespace(str);
-            parse_value(str, value._numbers[value._size++]);
-            skip_whitespace(str);
-            if (str.empty()) throw io_error("cannot parse value");
-            if (str.front() == ']') {
-                str.remove_prefix(1);
-                break;
-            } else if (str.front() == ',') {
-                str.remove_prefix(1);
-            } else {
-                throw io_error("cannot parse value");
-            }
-            if (value._size >= 16) throw io_error("cannot parse value");
-        }
-        value.type = yaml_value::type_t::array_t;
-    } else if (str.front() == '-' || str.front() == '+' ||
-               is_digit(str.front())) {
-        parse_value(str, value._numbers[0]);
-        value._size = 1;
-        value.type  = yaml_value::type_t::number_t;
-    } else if (str.front() == '"') {
-        parse_value(str, value._string, true);
-        value.type = yaml_value::type_t::string_t;
+    if (str.empty()) throw io_error("expected string");
+    if (str.front() == '"') {
+        parse_value(str, value, true);
     } else {
-        parse_value(str, value._string, false);
-        value.type = yaml_value::type_t::string_t;
-        if (value._string == "true" || value._string == "True") {
-            value._string  = {};
-            value._boolean = true;
-            value.type     = yaml_value::type_t::boolean_t;
-        } else if (value._string == "false" || value._string == "False") {
-            value._string  = {};
-            value._boolean = false;
-            value.type     = yaml_value::type_t::boolean_t;
+        parse_value(str, value, false);
+    }
+}
+inline void get_yaml_value(string_view str, int& value) {
+    skip_whitespace(str);
+    parse_value(str, value);
+}
+inline void get_yaml_value(string_view str, float& value) {
+    skip_whitespace(str);
+    parse_value(str, value);
+}
+inline void get_yaml_value(string_view str, double& value) {
+    skip_whitespace(str);
+    parse_value(str, value);
+}
+inline void get_yaml_value(string_view str, bool& value) {
+    auto values = ""s;
+    get_yaml_value(str, values);
+    if (values == "true" || values == "True") {
+        value = true;
+    } else if (values == "false" || values == "False") {
+        value = false;
+    } else {
+        throw io_error("expected bool");
+    }
+}
+template <typename T, size_t N>
+inline void get_yaml_value(string_view str, array<T, N>& value) {
+    skip_whitespace(str);
+    if (str.empty() || str.front() != '[') throw io_error("expected array");
+    str.remove_prefix(1);
+    for (auto i = 0; i < N; i++) {
+        skip_whitespace(str);
+        if (str.empty()) throw io_error("expected array");
+        parse_value(str, value[i]);
+        skip_whitespace(str);
+        if (i != N - 1) {
+            if (str.empty() || str.front() != ',')
+                throw io_error("expected array");
+            str.remove_prefix(1);
+            skip_whitespace(str);
         }
     }
+    skip_whitespace(str);
+    if (str.empty() || str.front() != ']') throw io_error("expected array");
+    str.remove_prefix(1);
+}
+template <typename T, int N>
+inline void get_yaml_value(string_view str, vec<T, N>& value) {
+    return get_yaml_value(str, (array<T, N>&)value);
+}
+template <typename T, int N>
+inline void get_yaml_value(string_view str, frame<T, N>& value) {
+    return get_yaml_value(str, (array<T, N*(N + 1)>&)value);
+}
+template <typename T, int N, int M>
+inline void get_yaml_value(string_view str, mat<T, N, M>& value) {
+    return get_yaml_value(str, (array<T, N * M>&)value);
 }
 
 struct load_yaml_options {};
@@ -542,7 +505,6 @@ inline void load_yaml(const string& filename, Callbacks& callbacks,
 
     // read the file line by line
     char buffer[4096];
-    auto value = yaml_value{};
     while (read_line(fs, buffer, sizeof(buffer))) {
         // line
         auto line = string_view{buffer};
@@ -567,9 +529,8 @@ inline void load_yaml(const string& filename, Callbacks& callbacks,
             skip_whitespace(line);
             if (line.empty() || line.front() != ':') throw io_error("bad yaml");
             line.remove_prefix(1);
-            skip_whitespace(line);
-            parse_value(line, value);
-            callbacks.key_value(key, value);
+            trim_whitespace(line);
+            callbacks.key_value(key, line);
         } else if (is_alpha(line.front())) {
             // new group
             auto key = ""s;
@@ -631,289 +592,296 @@ void load_yaml_ply_instances(yocto_scene& scene, const string& filename) {
     }
 }
 
+struct load_yaml_scene_callbacks : yaml_callbacks {
+    yocto_scene&              scene;
+    const load_scene_options& options;
+    string                    ply_instances = "";
+
+    enum struct parsing_type {
+        none,
+        camera,
+        texture,
+        voltexture,
+        material,
+        shape,
+        subdiv,
+        instance,
+        environment,
+        ply_instances
+    };
+    parsing_type type = parsing_type::none;
+
+    unordered_map<string, int> tmap = {{"", -1}};
+    unordered_map<string, int> vmap = {{"", -1}};
+    unordered_map<string, int> mmap = {{"", -1}};
+    unordered_map<string, int> smap = {{"", -1}};
+
+    load_yaml_scene_callbacks(
+        yocto_scene& scene, const load_scene_options& options)
+        : scene{scene}, options{options} {}
+
+    void get_yaml_ref(
+        string_view yml, int& value, unordered_map<string, int>& refs) {
+        auto name = ""s;
+        get_yaml_value(yml, name);
+        if (name == "") return;
+        try {
+            value = refs.at(name);
+        } catch (...) {
+            throw io_error("reference not found " + name);
+        }
+    }
+
+    void get_yaml_ref(string_view yml, int& value, size_t nrefs) {
+        get_yaml_value(yml, value);
+        if (value < 0) return;
+        if (value >= nrefs) {
+            throw io_error("reference not found " + to_string(value));
+        }
+    }
+
+    template <typename T>
+    void update_texture_refs(
+        const vector<T>& elems, unordered_map<string, int>& emap) {
+        if (emap.size() == elems.size()) return;
+        emap.reserve(elems.size());
+        for (auto id = 0; id < elems.size(); id++) {
+            emap[elems[id].uri] = id;
+        }
+    }
+
+    void object_group(const string& key) {
+        if (key == "cameras") {
+            type = parsing_type::camera;
+        } else if (key == "textures") {
+            type = parsing_type::texture;
+        } else if (key == "voltextures") {
+            type = parsing_type::voltexture;
+        } else if (key == "materials") {
+            type = parsing_type::material;
+        } else if (key == "shapes") {
+            type = parsing_type::shape;
+        } else if (key == "subdivs") {
+            type = parsing_type::subdiv;
+        } else if (key == "instances") {
+            type = parsing_type::instance;
+        } else if (key == "environments") {
+            type = parsing_type::environment;
+        } else if (key == "ply_instances") {
+            type = parsing_type::ply_instances;
+        } else {
+            type = parsing_type::none;
+            throw io_error("unknown object type");
+        }
+    }
+    void object_begin() {
+        switch (type) {
+            case parsing_type::camera: scene.cameras.push_back({}); break;
+            case parsing_type::texture: scene.textures.push_back({}); break;
+            case parsing_type::voltexture:
+                scene.voltextures.push_back({});
+                break;
+            case parsing_type::material: scene.materials.push_back({}); break;
+            case parsing_type::shape: scene.shapes.push_back({}); break;
+            case parsing_type::subdiv: scene.subdivs.push_back({}); break;
+            case parsing_type::instance: scene.instances.push_back({}); break;
+            case parsing_type::environment:
+                scene.environments.push_back({});
+                break;
+            case parsing_type::ply_instances: break;
+            default: throw io_error("unknown object type");
+        }
+    }
+    void key_value(string_view key, string_view value) {
+        switch (type) {
+            case parsing_type::camera: {
+                auto& camera = scene.cameras.back();
+                if (key == "uri") {
+                    get_yaml_value(value, camera.uri);
+                } else if (key == "frame") {
+                    get_yaml_value(value, camera.frame);
+                } else if (key == "orthographic") {
+                    get_yaml_value(value, camera.orthographic);
+                } else if (key == "film_width") {
+                    get_yaml_value(value, camera.film_width);
+                } else if (key == "film_height") {
+                    get_yaml_value(value, camera.film_height);
+                } else if (key == "focal_length") {
+                    get_yaml_value(value, camera.focal_length);
+                } else if (key == "focus_distance") {
+                    get_yaml_value(value, camera.focus_distance);
+                } else if (key == "lens_aperture") {
+                    get_yaml_value(value, camera.lens_aperture);
+                } else {
+                    throw io_error("unknown property");
+                }
+            } break;
+            case parsing_type::texture: {
+                auto& texture = scene.textures.back();
+                if (key == "uri") {
+                    get_yaml_value(value, texture.uri);
+                    auto refname = texture.uri;
+                    if (is_image_preset_filename(refname)) {
+                        auto [_, nname] = get_image_preset_type(refname);
+                        refname         = nname;
+                    }
+                    tmap[refname] = (int)scene.textures.size() - 1;
+                } else if (key == "filename") {
+                    get_yaml_value(value, texture.uri);
+                } else {
+                    throw io_error("unknown property");
+                }
+            } break;
+            case parsing_type::voltexture: {
+                auto& texture = scene.voltextures.back();
+                if (key == "uri") {
+                    get_yaml_value(value, texture.uri);
+                    auto refname = texture.uri;
+                    if (is_image_preset_filename(refname)) {
+                        auto [_, nname] = get_image_preset_type(refname);
+                        refname         = nname;
+                    }
+                    vmap[refname] = (int)scene.voltextures.size() - 1;
+                } else {
+                    throw io_error("unknown property");
+                }
+            } break;
+            case parsing_type::material: {
+                auto& material = scene.materials.back();
+                if (key == "uri") {
+                    get_yaml_value(value, material.uri);
+                    mmap[material.uri] = (int)scene.materials.size() - 1;
+                } else if (key == "base_metallic") {
+                    get_yaml_value(value, material.base_metallic);
+                } else if (key == "gltf_textures") {
+                    get_yaml_value(value, material.gltf_textures);
+                } else if (key == "emission") {
+                    get_yaml_value(value, material.emission);
+                } else if (key == "diffuse") {
+                    get_yaml_value(value, material.diffuse);
+                } else if (key == "specular") {
+                    get_yaml_value(value, material.specular);
+                } else if (key == "transmission") {
+                    get_yaml_value(value, material.transmission);
+                } else if (key == "roughness") {
+                    get_yaml_value(value, material.roughness);
+                } else if (key == "opacity") {
+                    get_yaml_value(value, material.opacity);
+                } else if (key == "fresnel") {
+                    get_yaml_value(value, material.fresnel);
+                } else if (key == "refract") {
+                    get_yaml_value(value, material.refract);
+                } else if (key == "volume_density") {
+                    get_yaml_value(value, material.volume_density);
+                } else if (key == "volume_albedo") {
+                    get_yaml_value(value, material.volume_albedo);
+                } else if (key == "volume_emission") {
+                    get_yaml_value(value, material.volume_emission);
+                } else if (key == "volume_phaseg") {
+                    get_yaml_value(value, material.volume_phaseg);
+                } else if (key == "emission_texture") {
+                    get_yaml_ref(value, material.emission_texture, tmap);
+                } else if (key == "diffuse_texture") {
+                    get_yaml_ref(value, material.diffuse_texture, tmap);
+                } else if (key == "specular_texture") {
+                    get_yaml_ref(value, material.specular_texture, tmap);
+                } else if (key == "transmission_texture") {
+                    get_yaml_ref(value, material.transmission_texture, tmap);
+                } else if (key == "roughness_texture") {
+                    get_yaml_ref(value, material.roughness_texture, tmap);
+                } else if (key == "normal_texture") {
+                    get_yaml_ref(value, material.normal_texture, tmap);
+                } else if (key == "volume_density_texture") {
+                    get_yaml_ref(value, material.volume_density_texture, vmap);
+                } else {
+                    throw io_error("unknown property");
+                }
+            } break;
+            case parsing_type::shape: {
+                auto& shape = scene.shapes.back();
+                if (key == "uri") {
+                    get_yaml_value(value, shape.uri);
+                    auto refname = shape.uri;
+                    if (is_shape_preset_filename(refname)) {
+                        auto [_, nname] = get_shape_preset_type(refname);
+                        refname         = nname;
+                    }
+                    smap[refname] = (int)scene.shapes.size() - 1;
+                } else {
+                    throw io_error("unknown property");
+                }
+            } break;
+            case parsing_type::subdiv: {
+                auto& subdiv = scene.subdivs.back();
+                if (key == "uri") {
+                    get_yaml_value(value, subdiv.uri);
+                } else if (key == "tesselated_shape") {
+                    get_yaml_ref(value, subdiv.tesselated_shape, smap);
+                } else if (key == "subdivision_level") {
+                    get_yaml_value(value, subdiv.subdivision_level);
+                } else if (key == "catmull_clark") {
+                    get_yaml_value(value, subdiv.catmull_clark);
+                } else if (key == "compute_normals") {
+                    get_yaml_value(value, subdiv.compute_normals);
+                } else if (key == "preserve_facevarying") {
+                    get_yaml_value(value, subdiv.preserve_facevarying);
+                } else if (key == "displacement_texture") {
+                    get_yaml_ref(value, subdiv.displacement_texture, tmap);
+                } else if (key == "displacement_scale") {
+                    get_yaml_value(value, subdiv.displacement_scale);
+                } else {
+                    throw io_error("unknown property");
+                }
+            } break;
+            case parsing_type::instance: {
+                auto& instance = scene.instances.back();
+                if (key == "uri") {
+                    get_yaml_value(value, instance.uri);
+                } else if (key == "frame") {
+                    get_yaml_value(value, instance.frame);
+                } else if (key == "shape") {
+                    get_yaml_ref(value, instance.shape, smap);
+                } else if (key == "material") {
+                    get_yaml_ref(value, instance.material, mmap);
+                } else {
+                    throw io_error("unknown property");
+                }
+            } break;
+            case parsing_type::environment: {
+                auto& environment = scene.environments.back();
+                if (key == "uri") {
+                    get_yaml_value(value, environment.uri);
+                } else if (key == "frame") {
+                    get_yaml_value(value, environment.frame);
+                } else if (key == "emission") {
+                    get_yaml_value(value, environment.emission);
+                } else if (key == "emission_texture") {
+                    get_yaml_ref(value, environment.emission_texture, tmap);
+                } else {
+                    throw io_error("unknown property");
+                }
+            } break;
+            case parsing_type::ply_instances: {
+                if (key == "uri") {
+                    get_yaml_value(value, ply_instances);
+                } else {
+                    throw io_error("unknown property");
+                }
+            } break;
+            default: throw io_error("unknown object type");
+        }
+    }
+};
+
 // Save a scene in the builtin YAML format.
 void load_yaml_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     scene = {};
 
-    struct parse_callbacks : yaml_callbacks {
-        yocto_scene&              scene;
-        const load_scene_options& options;
-        string                    ply_instances = "";
-
-        enum struct parsing_type {
-            none,
-            camera,
-            texture,
-            voltexture,
-            material,
-            shape,
-            subdiv,
-            instance,
-            environment,
-            ply_instances
-        };
-        parsing_type type = parsing_type::none;
-
-        unordered_map<string, int> tmap = {{"", -1}};
-        unordered_map<string, int> vmap = {{"", -1}};
-        unordered_map<string, int> mmap = {{"", -1}};
-        unordered_map<string, int> smap = {{"", -1}};
-
-        parse_callbacks(yocto_scene& scene, const load_scene_options& options)
-            : scene{scene}, options{options} {}
-
-        void get_ref(const yaml_value& yml, int& value,
-            const unordered_map<string, int>& refs) const {
-            if (is_string_value(yml)) {
-                auto name = ""s;
-                get_value(yml, name);
-                if (name == "") return;
-                try {
-                    value = refs.at(name);
-                } catch (...) {
-                    throw io_error("reference not found " + name);
-                }
-            } else {
-                get_value(yml, value);
-                if (value < 0) return;
-                if (value >= refs.size()) {
-                    throw io_error("reference not found " + to_string(value));
-                }
-            }
-        }
-
-        void object_group(const string& key) {
-            if (key == "cameras") {
-                type = parsing_type::camera;
-            } else if (key == "textures") {
-                type = parsing_type::texture;
-            } else if (key == "voltextures") {
-                type = parsing_type::voltexture;
-            } else if (key == "materials") {
-                type = parsing_type::material;
-            } else if (key == "shapes") {
-                type = parsing_type::shape;
-            } else if (key == "subdivs") {
-                type = parsing_type::subdiv;
-            } else if (key == "instances") {
-                type = parsing_type::instance;
-            } else if (key == "environments") {
-                type = parsing_type::environment;
-            } else if (key == "ply_instances") {
-                type = parsing_type::ply_instances;
-            } else {
-                type = parsing_type::none;
-                throw io_error("unknown object type");
-            }
-        }
-        void object_begin() {
-            switch (type) {
-                case parsing_type::camera: scene.cameras.push_back({}); break;
-                case parsing_type::texture: scene.textures.push_back({}); break;
-                case parsing_type::voltexture:
-                    scene.voltextures.push_back({});
-                    break;
-                case parsing_type::material:
-                    scene.materials.push_back({});
-                    break;
-                case parsing_type::shape: scene.shapes.push_back({}); break;
-                case parsing_type::subdiv: scene.subdivs.push_back({}); break;
-                case parsing_type::instance:
-                    scene.instances.push_back({});
-                    break;
-                case parsing_type::environment:
-                    scene.environments.push_back({});
-                    break;
-                case parsing_type::ply_instances: break;
-                default: throw io_error("unknown object type");
-            }
-        }
-        void key_value(const string& key, const yaml_value& value) {
-            switch (type) {
-                case parsing_type::camera: {
-                    auto& camera = scene.cameras.back();
-                    if (key == "uri") {
-                        get_value(value, camera.uri);
-                    } else if (key == "frame") {
-                        get_value(value, camera.frame);
-                    } else if (key == "orthographic") {
-                        get_value(value, camera.orthographic);
-                    } else if (key == "film_width") {
-                        get_value(value, camera.film_width);
-                    } else if (key == "film_height") {
-                        get_value(value, camera.film_height);
-                    } else if (key == "focal_length") {
-                        get_value(value, camera.focal_length);
-                    } else if (key == "focus_distance") {
-                        get_value(value, camera.focus_distance);
-                    } else if (key == "lens_aperture") {
-                        get_value(value, camera.lens_aperture);
-                    } else {
-                        throw io_error("unknown property");
-                    }
-                } break;
-                case parsing_type::texture: {
-                    auto& texture = scene.textures.back();
-                    if (key == "uri") {
-                        get_value(value, texture.uri);
-                        auto refname = texture.uri;
-                        if (is_image_preset_filename(refname)) {
-                            auto [_, nname] = get_image_preset_type(refname);
-                            refname         = nname;
-                        }
-                        tmap[refname] = (int)scene.textures.size() - 1;
-                    } else if (key == "filename") {
-                        get_value(value, texture.uri);
-                    } else {
-                        throw io_error("unknown property");
-                    }
-                } break;
-                case parsing_type::voltexture: {
-                    auto& texture = scene.voltextures.back();
-                    if (key == "uri") {
-                        get_value(value, texture.uri);
-                        auto refname = texture.uri;
-                        if (is_image_preset_filename(refname)) {
-                            auto [_, nname] = get_image_preset_type(refname);
-                            refname         = nname;
-                        }
-                        vmap[refname] = (int)scene.voltextures.size() - 1;
-                    } else {
-                        throw io_error("unknown property");
-                    }
-                } break;
-                case parsing_type::material: {
-                    auto& material = scene.materials.back();
-                    if (key == "uri") {
-                        get_value(value, material.uri);
-                        mmap[material.uri] = (int)scene.materials.size() - 1;
-                    } else if (key == "base_metallic") {
-                        get_value(value, material.base_metallic);
-                    } else if (key == "gltf_textures") {
-                        get_value(value, material.gltf_textures);
-                    } else if (key == "emission") {
-                        get_value(value, material.emission);
-                    } else if (key == "diffuse") {
-                        get_value(value, material.diffuse);
-                    } else if (key == "specular") {
-                        get_value(value, material.specular);
-                    } else if (key == "transmission") {
-                        get_value(value, material.transmission);
-                    } else if (key == "roughness") {
-                        get_value(value, material.roughness);
-                    } else if (key == "opacity") {
-                        get_value(value, material.opacity);
-                    } else if (key == "fresnel") {
-                        get_value(value, material.fresnel);
-                    } else if (key == "refract") {
-                        get_value(value, material.refract);
-                    } else if (key == "volume_density") {
-                        get_value(value, material.volume_density);
-                    } else if (key == "volume_albedo") {
-                        get_value(value, material.volume_albedo);
-                    } else if (key == "volume_emission") {
-                        get_value(value, material.volume_emission);
-                    } else if (key == "volume_phaseg") {
-                        get_value(value, material.volume_phaseg);
-                    } else if (key == "emission_texture") {
-                        get_ref(value, material.emission_texture, tmap);
-                    } else if (key == "diffuse_texture") {
-                        get_ref(value, material.diffuse_texture, tmap);
-                    } else if (key == "specular_texture") {
-                        get_ref(value, material.specular_texture, tmap);
-                    } else if (key == "transmission_texture") {
-                        get_ref(value, material.transmission_texture, tmap);
-                    } else if (key == "roughness_texture") {
-                        get_ref(value, material.roughness_texture, tmap);
-                    } else if (key == "normal_texture") {
-                        get_ref(value, material.normal_texture, tmap);
-                    } else if (key == "volume_density_texture") {
-                        get_ref(value, material.volume_density_texture, vmap);
-                    } else {
-                        throw io_error("unknown property");
-                    }
-                } break;
-                case parsing_type::shape: {
-                    auto& shape = scene.shapes.back();
-                    if (key == "uri") {
-                        get_value(value, shape.uri);
-                        auto refname = shape.uri;
-                        if (is_shape_preset_filename(refname)) {
-                            auto [_, nname] = get_shape_preset_type(refname);
-                            refname         = nname;
-                        }
-                        smap[refname] = (int)scene.shapes.size() - 1;
-                    } else {
-                        throw io_error("unknown property");
-                    }
-                } break;
-                case parsing_type::subdiv: {
-                    auto& subdiv = scene.subdivs.back();
-                    if (key == "uri") {
-                        get_value(value, subdiv.uri);
-                    } else if (key == "tesselated_shape") {
-                        get_ref(value, subdiv.tesselated_shape, smap);
-                    } else if (key == "subdivision_level") {
-                        get_value(value, subdiv.subdivision_level);
-                    } else if (key == "catmull_clark") {
-                        get_value(value, subdiv.catmull_clark);
-                    } else if (key == "compute_normals") {
-                        get_value(value, subdiv.compute_normals);
-                    } else if (key == "preserve_facevarying") {
-                        get_value(value, subdiv.preserve_facevarying);
-                    } else if (key == "displacement_texture") {
-                        get_ref(value, subdiv.displacement_texture, tmap);
-                    } else if (key == "displacement_scale") {
-                        get_value(value, subdiv.displacement_scale);
-                    } else {
-                        throw io_error("unknown property");
-                    }
-                } break;
-                case parsing_type::instance: {
-                    auto& instance = scene.instances.back();
-                    if (key == "uri") {
-                        get_value(value, instance.uri);
-                    } else if (key == "frame") {
-                        get_value(value, instance.frame);
-                    } else if (key == "shape") {
-                        get_ref(value, instance.shape, smap);
-                    } else if (key == "material") {
-                        get_ref(value, instance.material, mmap);
-                    } else {
-                        throw io_error("unknown property");
-                    }
-                } break;
-                case parsing_type::environment: {
-                    auto& environment = scene.environments.back();
-                    if (key == "uri") {
-                        get_value(value, environment.uri);
-                    } else if (key == "frame") {
-                        get_value(value, environment.frame);
-                    } else if (key == "emission") {
-                        get_value(value, environment.emission);
-                    } else if (key == "emission_texture") {
-                        get_ref(value, environment.emission_texture, tmap);
-                    } else {
-                        throw io_error("unknown property");
-                    }
-                } break;
-                case parsing_type::ply_instances: {
-                    if (key == "uri") {
-                        get_value(value, ply_instances);
-                    } else {
-                        throw io_error("unknown property");
-                    }
-                } break;
-                default: throw io_error("unknown object type");
-            }
-        }
-    };
-
     try {
         // Parse obj
         auto yaml_options = load_yaml_options();
-        auto cb           = parse_callbacks{scene, options};
+        auto cb           = load_yaml_scene_callbacks{scene, options};
         load_yaml(filename, cb, yaml_options);
 
         // load instances
@@ -1196,338 +1164,334 @@ void set_obj_material(
     throw io_error("unknown material " + name);
 }
 
+struct load_obj_scene_callbacks : obj_callbacks {
+    yocto_scene&              scene;
+    const load_scene_options& options;
+
+    // current parsing values
+    string mname = ""s;
+    string oname = ""s;
+    string gname = ""s;
+
+    // vertices
+    deque<vec3f> opos      = deque<vec3f>();
+    deque<vec3f> onorm     = deque<vec3f>();
+    deque<vec2f> otexcoord = deque<vec2f>();
+
+    // object maps
+    unordered_map<string, int> tmap = unordered_map<string, int>{{"", -1}};
+    unordered_map<string, int> vmap = unordered_map<string, int>{{"", -1}};
+    unordered_map<string, int> mmap = unordered_map<string, int>{{"", -1}};
+
+    // vertex maps
+    unordered_map<obj_vertex, int> vertex_map =
+        unordered_map<obj_vertex, int>();
+    unordered_map<int, int> pos_map      = unordered_map<int, int>();
+    unordered_map<int, int> norm_map     = unordered_map<int, int>();
+    unordered_map<int, int> texcoord_map = unordered_map<int, int>();
+
+    // current parse state
+    bool preserve_facevarying_now = false;
+
+    load_obj_scene_callbacks(
+        yocto_scene& scene, const load_scene_options& options)
+        : scene{scene}, options{options} {}
+
+    // add object if needed
+    void add_shape() {
+        auto shape               = yocto_shape{};
+        shape.uri                = oname + gname;
+        preserve_facevarying_now = options.obj_preserve_face_varying ||
+                                   shape.uri.find("[yocto::facevarying]") !=
+                                       string::npos;
+        scene.shapes.push_back(shape);
+        auto instance     = yocto_instance{};
+        instance.uri      = shape.uri;
+        instance.shape    = (int)scene.shapes.size() - 1;
+        instance.material = mmap.at(mname);
+        scene.instances.push_back(instance);
+        vertex_map.clear();
+        pos_map.clear();
+        norm_map.clear();
+        texcoord_map.clear();
+    }
+    // Parse texture options and name
+    int add_texture(const obj_texture_info& info, bool force_linear) {
+        if (info.path == "") return -1;
+        if (tmap.find(info.path) != tmap.end()) {
+            return tmap.at(info.path);
+        }
+
+        // create texture
+        auto texture = yocto_texture{};
+        texture.uri  = info.path;
+        texture.uri  = info.path;
+        scene.textures.push_back(texture);
+        auto index      = (int)scene.textures.size() - 1;
+        tmap[info.path] = index;
+
+        return index;
+    }
+    // Parse texture options and name
+    int add_voltexture(const obj_texture_info& info, bool srgb) {
+        if (info.path == "") return -1;
+        if (vmap.find(info.path) != vmap.end()) {
+            return vmap.at(info.path);
+        }
+
+        // create texture
+        auto texture = yocto_voltexture{};
+        texture.uri  = info.path;
+        scene.voltextures.push_back(texture);
+        auto index      = (int)scene.voltextures.size() - 1;
+        vmap[info.path] = index;
+
+        return index;
+    }
+    // Add  vertices to the current shape
+    void add_verts(const vector<obj_vertex>& verts, yocto_shape& shape) {
+        for (auto& vert : verts) {
+            auto it = vertex_map.find(vert);
+            if (it != vertex_map.end()) continue;
+            auto& shape  = scene.shapes.back();
+            auto  nverts = (int)shape.positions.size();
+            vertex_map.insert(it, {vert, nverts});
+            if (vert.position)
+                shape.positions.push_back(opos.at(vert.position - 1));
+            if (vert.texturecoord)
+                shape.texturecoords.push_back(
+                    otexcoord.at(vert.texturecoord - 1));
+            if (vert.normal) shape.normals.push_back(onorm.at(vert.normal - 1));
+            if (shape.normals.size() != 0 &&
+                shape.normals.size() != shape.positions.size()) {
+                while (shape.normals.size() != shape.positions.size())
+                    shape.normals.push_back({0, 0, 1});
+            }
+            if (shape.texturecoords.size() != 0 &&
+                shape.texturecoords.size() != shape.positions.size()) {
+                while (shape.texturecoords.size() != shape.positions.size())
+                    shape.texturecoords.push_back({0, 0});
+            }
+        }
+    }
+    // add vertex
+    void add_fvverts(const vector<obj_vertex>& verts, yocto_shape& shape) {
+        for (auto& vert : verts) {
+            if (!vert.position) continue;
+            auto pos_it = pos_map.find(vert.position);
+            if (pos_it != pos_map.end()) continue;
+            auto nverts = (int)shape.positions.size();
+            pos_map.insert(pos_it, {vert.position, nverts});
+            shape.positions.push_back(opos.at(vert.position - 1));
+        }
+        for (auto& vert : verts) {
+            if (!vert.texturecoord) continue;
+            auto texcoord_it = texcoord_map.find(vert.texturecoord);
+            if (texcoord_it != texcoord_map.end()) continue;
+            auto nverts = (int)shape.texturecoords.size();
+            texcoord_map.insert(texcoord_it, {vert.texturecoord, nverts});
+            shape.texturecoords.push_back(otexcoord.at(vert.texturecoord - 1));
+        }
+        for (auto& vert : verts) {
+            if (!vert.normal) continue;
+            auto norm_it = norm_map.find(vert.normal);
+            if (norm_it != norm_map.end()) continue;
+            auto nverts = (int)shape.normals.size();
+            norm_map.insert(norm_it, {vert.normal, nverts});
+            shape.normals.push_back(onorm.at(vert.normal - 1));
+        }
+    }
+
+    // callbacks
+    void vert(const vec3f& v) { opos.push_back(v); }
+    void norm(const vec3f& v) { onorm.push_back(v); }
+    void texcoord(const vec2f& v) { otexcoord.push_back(v); }
+    void face(const vector<obj_vertex>& verts) {
+        if (scene.shapes.empty()) add_shape();
+        if (!scene.shapes.back().positions.empty() &&
+            (!scene.shapes.back().lines.empty() ||
+                !scene.shapes.back().points.empty())) {
+            add_shape();
+        }
+        auto& shape = scene.shapes.back();
+        if (!preserve_facevarying_now) {
+            add_verts(verts, shape);
+            if (verts.size() == 4) {
+                shape.quads.push_back(
+                    {vertex_map.at(verts[0]), vertex_map.at(verts[1]),
+                        vertex_map.at(verts[2]), vertex_map.at(verts[3])});
+            } else {
+                for (auto i = 2; i < verts.size(); i++)
+                    shape.triangles.push_back({vertex_map.at(verts[0]),
+                        vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
+            }
+        } else {
+            add_fvverts(verts, shape);
+            if (verts.size() == 4) {
+                if (verts[0].position) {
+                    shape.quads_positions.push_back(
+                        {pos_map.at(verts[0].position),
+                            pos_map.at(verts[1].position),
+                            pos_map.at(verts[2].position),
+                            pos_map.at(verts[3].position)});
+                }
+                if (verts[0].texturecoord) {
+                    shape.quads_texturecoords.push_back(
+                        {texcoord_map.at(verts[0].texturecoord),
+                            texcoord_map.at(verts[1].texturecoord),
+                            texcoord_map.at(verts[2].texturecoord),
+                            texcoord_map.at(verts[3].texturecoord)});
+                }
+                if (verts[0].normal) {
+                    shape.quads_normals.push_back({norm_map.at(verts[0].normal),
+                        norm_map.at(verts[1].normal),
+                        norm_map.at(verts[2].normal),
+                        norm_map.at(verts[3].normal)});
+                }
+            } else {
+                if (verts[0].position) {
+                    for (auto i = 2; i < verts.size(); i++)
+                        shape.quads_positions.push_back(
+                            {pos_map.at(verts[0].position),
+                                pos_map.at(verts[i - 1].position),
+                                pos_map.at(verts[i].position),
+                                pos_map.at(verts[i].position)});
+                }
+                if (verts[0].texturecoord) {
+                    for (auto i = 2; i < verts.size(); i++)
+                        shape.quads_texturecoords.push_back(
+                            {texcoord_map.at(verts[0].texturecoord),
+                                texcoord_map.at(verts[i - 1].texturecoord),
+                                texcoord_map.at(verts[i].texturecoord),
+                                texcoord_map.at(verts[i].texturecoord)});
+                }
+                if (verts[0].normal) {
+                    for (auto i = 2; i < verts.size(); i++)
+                        shape.quads_normals.push_back(
+                            {norm_map.at(verts[0].normal),
+                                norm_map.at(verts[i - 1].normal),
+                                norm_map.at(verts[i].normal),
+                                norm_map.at(verts[i].normal)});
+                }
+            }
+        }
+    }
+    void line(const vector<obj_vertex>& verts) {
+        if (scene.shapes.empty()) add_shape();
+        if (!scene.shapes.back().positions.empty() &&
+            scene.shapes.back().lines.empty()) {
+            add_shape();
+        }
+        auto& shape = scene.shapes.back();
+        add_verts(verts, shape);
+        for (auto i = 1; i < verts.size(); i++)
+            shape.lines.push_back(
+                {vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
+    }
+    void point(const vector<obj_vertex>& verts) {
+        if (scene.shapes.empty()) add_shape();
+        if (!scene.shapes.back().positions.empty() &&
+            scene.shapes.back().points.empty()) {
+            add_shape();
+        }
+        auto& shape = scene.shapes.back();
+        add_verts(verts, shape);
+        for (auto i = 0; i < verts.size(); i++)
+            shape.points.push_back(vertex_map.at(verts[i]));
+    }
+    void object(const string& name) {
+        oname = name;
+        gname = "";
+        mname = "";
+        add_shape();
+    }
+    void group(const string& name) {
+        gname = name;
+        add_shape();
+    }
+    void usemtl(const string& name) {
+        mname = name;
+        add_shape();
+    }
+    void material(const obj_material& omat) {
+        auto material                   = yocto_material();
+        material.uri                    = omat.name;
+        material.emission               = omat.ke;
+        material.diffuse                = omat.kd;
+        material.specular               = omat.ks;
+        material.transmission           = omat.kt;
+        material.roughness              = omat.rs;
+        material.opacity                = omat.op;
+        material.emission_texture       = add_texture(omat.ke_txt, false);
+        material.diffuse_texture        = add_texture(omat.kd_txt, false);
+        material.specular_texture       = add_texture(omat.ks_txt, false);
+        material.transmission_texture   = add_texture(omat.kt_txt, false);
+        material.roughness_texture      = add_texture(omat.rs_txt, true);
+        material.normal_texture         = add_texture(omat.norm_txt, true);
+        material.volume_emission        = omat.ve;
+        material.volume_albedo          = omat.va;
+        material.volume_density         = omat.vd;
+        material.volume_phaseg          = omat.vg;
+        material.volume_density_texture = add_voltexture(omat.vd_txt, false);
+        scene.materials.push_back(material);
+        mmap[material.uri] = (int)scene.materials.size() - 1;
+    }
+    void camera(const obj_camera& ocam) {
+        auto camera           = yocto_camera();
+        camera.uri            = ocam.name;
+        camera.frame          = ocam.frame;
+        camera.orthographic   = ocam.ortho;
+        camera.film_width     = ocam.width;
+        camera.film_height    = ocam.height;
+        camera.focal_length   = ocam.focal;
+        camera.focus_distance = ocam.focus;
+        camera.lens_aperture  = ocam.aperture;
+        scene.cameras.push_back(camera);
+    }
+    void environmnet(const obj_environment& oenv) {
+        auto environment             = yocto_environment();
+        environment.uri              = oenv.name;
+        environment.frame            = oenv.frame;
+        environment.emission         = oenv.ke;
+        environment.emission_texture = add_texture(oenv.ke_txt, true);
+        scene.environments.push_back(environment);
+    }
+    void procedural(const obj_procedural& oproc) {
+        auto shape = yocto_shape();
+        shape.uri  = oproc.name;
+        if (oproc.type == "floor") {
+            make_floor_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords,
+                {oproc.level < 0 ? 1 : pow2(oproc.level),
+                    oproc.level < 0 ? 20 : pow2(oproc.level)},
+                {oproc.size, oproc.size}, {oproc.size / 2, oproc.size / 2},
+                identity_frame3f);
+        } else {
+            throw io_error("unknown obj procedural");
+        }
+        scene.shapes.push_back(shape);
+        auto instance  = yocto_instance{};
+        instance.uri   = shape.uri;
+        instance.shape = (int)scene.shapes.size() - 1;
+        if (mmap.find(oproc.material) == mmap.end()) {
+            throw io_error("missing material " + oproc.material);
+        } else {
+            instance.material = mmap.find(oproc.material)->second;
+        }
+        scene.instances.push_back(instance);
+    }
+};
+
 // Loads an OBJ
 void load_obj_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     scene = {};
 
-    struct parse_callbacks : obj_callbacks {
-        yocto_scene&              scene;
-        const load_scene_options& options;
-
-        // current parsing values
-        string mname = ""s;
-        string oname = ""s;
-        string gname = ""s;
-
-        // vertices
-        deque<vec3f> opos      = deque<vec3f>();
-        deque<vec3f> onorm     = deque<vec3f>();
-        deque<vec2f> otexcoord = deque<vec2f>();
-
-        // object maps
-        unordered_map<string, int> tmap = unordered_map<string, int>{{"", -1}};
-        unordered_map<string, int> vmap = unordered_map<string, int>{{"", -1}};
-        unordered_map<string, int> mmap = unordered_map<string, int>{{"", -1}};
-
-        // vertex maps
-        unordered_map<obj_vertex, int> vertex_map =
-            unordered_map<obj_vertex, int>();
-        unordered_map<int, int> pos_map      = unordered_map<int, int>();
-        unordered_map<int, int> norm_map     = unordered_map<int, int>();
-        unordered_map<int, int> texcoord_map = unordered_map<int, int>();
-
-        // current parse state
-        bool preserve_facevarying_now = false;
-
-        parse_callbacks(yocto_scene& scene, const load_scene_options& options)
-            : scene{scene}, options{options} {}
-
-        // add object if needed
-        void add_shape() {
-            auto shape               = yocto_shape{};
-            shape.uri                = oname + gname;
-            preserve_facevarying_now = options.obj_preserve_face_varying ||
-                                       shape.uri.find("[yocto::facevarying]") !=
-                                           string::npos;
-            scene.shapes.push_back(shape);
-            auto instance     = yocto_instance{};
-            instance.uri      = shape.uri;
-            instance.shape    = (int)scene.shapes.size() - 1;
-            instance.material = mmap.at(mname);
-            scene.instances.push_back(instance);
-            vertex_map.clear();
-            pos_map.clear();
-            norm_map.clear();
-            texcoord_map.clear();
-        }
-        // Parse texture options and name
-        int add_texture(const obj_texture_info& info, bool force_linear) {
-            if (info.path == "") return -1;
-            if (tmap.find(info.path) != tmap.end()) {
-                return tmap.at(info.path);
-            }
-
-            // create texture
-            auto texture = yocto_texture{};
-            texture.uri  = info.path;
-            texture.uri  = info.path;
-            scene.textures.push_back(texture);
-            auto index      = (int)scene.textures.size() - 1;
-            tmap[info.path] = index;
-
-            return index;
-        }
-        // Parse texture options and name
-        int add_voltexture(const obj_texture_info& info, bool srgb) {
-            if (info.path == "") return -1;
-            if (vmap.find(info.path) != vmap.end()) {
-                return vmap.at(info.path);
-            }
-
-            // create texture
-            auto texture = yocto_voltexture{};
-            texture.uri  = info.path;
-            scene.voltextures.push_back(texture);
-            auto index      = (int)scene.voltextures.size() - 1;
-            vmap[info.path] = index;
-
-            return index;
-        }
-        // Add  vertices to the current shape
-        void add_verts(const vector<obj_vertex>& verts, yocto_shape& shape) {
-            for (auto& vert : verts) {
-                auto it = vertex_map.find(vert);
-                if (it != vertex_map.end()) continue;
-                auto& shape  = scene.shapes.back();
-                auto  nverts = (int)shape.positions.size();
-                vertex_map.insert(it, {vert, nverts});
-                if (vert.position)
-                    shape.positions.push_back(opos.at(vert.position - 1));
-                if (vert.texturecoord)
-                    shape.texturecoords.push_back(
-                        otexcoord.at(vert.texturecoord - 1));
-                if (vert.normal)
-                    shape.normals.push_back(onorm.at(vert.normal - 1));
-                if (shape.normals.size() != 0 &&
-                    shape.normals.size() != shape.positions.size()) {
-                    while (shape.normals.size() != shape.positions.size())
-                        shape.normals.push_back({0, 0, 1});
-                }
-                if (shape.texturecoords.size() != 0 &&
-                    shape.texturecoords.size() != shape.positions.size()) {
-                    while (shape.texturecoords.size() != shape.positions.size())
-                        shape.texturecoords.push_back({0, 0});
-                }
-            }
-        }
-        // add vertex
-        void add_fvverts(const vector<obj_vertex>& verts, yocto_shape& shape) {
-            for (auto& vert : verts) {
-                if (!vert.position) continue;
-                auto pos_it = pos_map.find(vert.position);
-                if (pos_it != pos_map.end()) continue;
-                auto nverts = (int)shape.positions.size();
-                pos_map.insert(pos_it, {vert.position, nverts});
-                shape.positions.push_back(opos.at(vert.position - 1));
-            }
-            for (auto& vert : verts) {
-                if (!vert.texturecoord) continue;
-                auto texcoord_it = texcoord_map.find(vert.texturecoord);
-                if (texcoord_it != texcoord_map.end()) continue;
-                auto nverts = (int)shape.texturecoords.size();
-                texcoord_map.insert(texcoord_it, {vert.texturecoord, nverts});
-                shape.texturecoords.push_back(
-                    otexcoord.at(vert.texturecoord - 1));
-            }
-            for (auto& vert : verts) {
-                if (!vert.normal) continue;
-                auto norm_it = norm_map.find(vert.normal);
-                if (norm_it != norm_map.end()) continue;
-                auto nverts = (int)shape.normals.size();
-                norm_map.insert(norm_it, {vert.normal, nverts});
-                shape.normals.push_back(onorm.at(vert.normal - 1));
-            }
-        }
-
-        // callbacks
-        void vert(const vec3f& v) { opos.push_back(v); }
-        void norm(const vec3f& v) { onorm.push_back(v); }
-        void texcoord(const vec2f& v) { otexcoord.push_back(v); }
-        void face(const vector<obj_vertex>& verts) {
-            if (scene.shapes.empty()) add_shape();
-            if (!scene.shapes.back().positions.empty() &&
-                (!scene.shapes.back().lines.empty() ||
-                    !scene.shapes.back().points.empty())) {
-                add_shape();
-            }
-            auto& shape = scene.shapes.back();
-            if (!preserve_facevarying_now) {
-                add_verts(verts, shape);
-                if (verts.size() == 4) {
-                    shape.quads.push_back(
-                        {vertex_map.at(verts[0]), vertex_map.at(verts[1]),
-                            vertex_map.at(verts[2]), vertex_map.at(verts[3])});
-                } else {
-                    for (auto i = 2; i < verts.size(); i++)
-                        shape.triangles.push_back({vertex_map.at(verts[0]),
-                            vertex_map.at(verts[i - 1]),
-                            vertex_map.at(verts[i])});
-                }
-            } else {
-                add_fvverts(verts, shape);
-                if (verts.size() == 4) {
-                    if (verts[0].position) {
-                        shape.quads_positions.push_back(
-                            {pos_map.at(verts[0].position),
-                                pos_map.at(verts[1].position),
-                                pos_map.at(verts[2].position),
-                                pos_map.at(verts[3].position)});
-                    }
-                    if (verts[0].texturecoord) {
-                        shape.quads_texturecoords.push_back(
-                            {texcoord_map.at(verts[0].texturecoord),
-                                texcoord_map.at(verts[1].texturecoord),
-                                texcoord_map.at(verts[2].texturecoord),
-                                texcoord_map.at(verts[3].texturecoord)});
-                    }
-                    if (verts[0].normal) {
-                        shape.quads_normals.push_back(
-                            {norm_map.at(verts[0].normal),
-                                norm_map.at(verts[1].normal),
-                                norm_map.at(verts[2].normal),
-                                norm_map.at(verts[3].normal)});
-                    }
-                } else {
-                    if (verts[0].position) {
-                        for (auto i = 2; i < verts.size(); i++)
-                            shape.quads_positions.push_back(
-                                {pos_map.at(verts[0].position),
-                                    pos_map.at(verts[i - 1].position),
-                                    pos_map.at(verts[i].position),
-                                    pos_map.at(verts[i].position)});
-                    }
-                    if (verts[0].texturecoord) {
-                        for (auto i = 2; i < verts.size(); i++)
-                            shape.quads_texturecoords.push_back(
-                                {texcoord_map.at(verts[0].texturecoord),
-                                    texcoord_map.at(verts[i - 1].texturecoord),
-                                    texcoord_map.at(verts[i].texturecoord),
-                                    texcoord_map.at(verts[i].texturecoord)});
-                    }
-                    if (verts[0].normal) {
-                        for (auto i = 2; i < verts.size(); i++)
-                            shape.quads_normals.push_back(
-                                {norm_map.at(verts[0].normal),
-                                    norm_map.at(verts[i - 1].normal),
-                                    norm_map.at(verts[i].normal),
-                                    norm_map.at(verts[i].normal)});
-                    }
-                }
-            }
-        }
-        void line(const vector<obj_vertex>& verts) {
-            if (scene.shapes.empty()) add_shape();
-            if (!scene.shapes.back().positions.empty() &&
-                scene.shapes.back().lines.empty()) {
-                add_shape();
-            }
-            auto& shape = scene.shapes.back();
-            add_verts(verts, shape);
-            for (auto i = 1; i < verts.size(); i++)
-                shape.lines.push_back(
-                    {vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
-        }
-        void point(const vector<obj_vertex>& verts) {
-            if (scene.shapes.empty()) add_shape();
-            if (!scene.shapes.back().positions.empty() &&
-                scene.shapes.back().points.empty()) {
-                add_shape();
-            }
-            auto& shape = scene.shapes.back();
-            add_verts(verts, shape);
-            for (auto i = 0; i < verts.size(); i++)
-                shape.points.push_back(vertex_map.at(verts[i]));
-        }
-        void object(const string& name) {
-            oname = name;
-            gname = "";
-            mname = "";
-            add_shape();
-        }
-        void group(const string& name) {
-            gname = name;
-            add_shape();
-        }
-        void usemtl(const string& name) {
-            mname = name;
-            add_shape();
-        }
-        void material(const obj_material& omat) {
-            auto material                   = yocto_material();
-            material.uri                    = omat.name;
-            material.emission               = omat.ke;
-            material.diffuse                = omat.kd;
-            material.specular               = omat.ks;
-            material.transmission           = omat.kt;
-            material.roughness              = omat.rs;
-            material.opacity                = omat.op;
-            material.emission_texture       = add_texture(omat.ke_txt, false);
-            material.diffuse_texture        = add_texture(omat.kd_txt, false);
-            material.specular_texture       = add_texture(omat.ks_txt, false);
-            material.transmission_texture   = add_texture(omat.kt_txt, false);
-            material.roughness_texture      = add_texture(omat.rs_txt, true);
-            material.normal_texture         = add_texture(omat.norm_txt, true);
-            material.volume_emission        = omat.ve;
-            material.volume_albedo          = omat.va;
-            material.volume_density         = omat.vd;
-            material.volume_phaseg          = omat.vg;
-            material.volume_density_texture = add_voltexture(
-                omat.vd_txt, false);
-            scene.materials.push_back(material);
-            mmap[material.uri] = (int)scene.materials.size() - 1;
-        }
-        void camera(const obj_camera& ocam) {
-            auto camera           = yocto_camera();
-            camera.uri            = ocam.name;
-            camera.frame          = ocam.frame;
-            camera.orthographic   = ocam.ortho;
-            camera.film_width     = ocam.width;
-            camera.film_height    = ocam.height;
-            camera.focal_length   = ocam.focal;
-            camera.focus_distance = ocam.focus;
-            camera.lens_aperture  = ocam.aperture;
-            scene.cameras.push_back(camera);
-        }
-        void environmnet(const obj_environment& oenv) {
-            auto environment             = yocto_environment();
-            environment.uri              = oenv.name;
-            environment.frame            = oenv.frame;
-            environment.emission         = oenv.ke;
-            environment.emission_texture = add_texture(oenv.ke_txt, true);
-            scene.environments.push_back(environment);
-        }
-        void procedural(const obj_procedural& oproc) {
-            auto shape = yocto_shape();
-            shape.uri  = oproc.name;
-            if (oproc.type == "floor") {
-                make_floor_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords,
-                    {oproc.level < 0 ? 1 : pow2(oproc.level),
-                        oproc.level < 0 ? 20 : pow2(oproc.level)},
-                    {oproc.size, oproc.size}, {oproc.size / 2, oproc.size / 2},
-                    identity_frame3f);
-            } else {
-                throw io_error("unknown obj procedural");
-            }
-            scene.shapes.push_back(shape);
-            auto instance  = yocto_instance{};
-            instance.uri   = shape.uri;
-            instance.shape = (int)scene.shapes.size() - 1;
-            if (mmap.find(oproc.material) == mmap.end()) {
-                throw io_error("missing material " + oproc.material);
-            } else {
-                instance.material = mmap.find(oproc.material)->second;
-            }
-            scene.instances.push_back(instance);
-        }
-    };
-
     try {
         // Parse obj
         auto obj_options          = load_obj_options();
         obj_options.geometry_only = false;
-        auto cb                   = parse_callbacks{scene, options};
+        auto cb                   = load_obj_scene_callbacks{scene, options};
         load_obj(filename, cb, obj_options);
 
         // cleanup empty
@@ -2823,348 +2787,412 @@ vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
     return (rp + rs) / 2.0f;
 }
 
-// load pbrt scenes
-void load_pbrt_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
-    scene = yocto_scene{};
+struct load_pbrt_scene_callbacks : pbrt_callbacks {
+    yocto_scene&              scene;
+    const load_scene_options& options;
+    const string&             filename;
 
-    struct parse_callbacks : pbrt_callbacks {
-        yocto_scene&              scene;
-        const load_scene_options& options;
-        const string&             filename;
+    load_pbrt_scene_callbacks(yocto_scene& scene,
+        const load_scene_options& options, const string& filename)
+        : scene{scene}, options{options}, filename{filename} {}
 
-        parse_callbacks(yocto_scene& scene, const load_scene_options& options,
-            const string& filename)
-            : scene{scene}, options{options}, filename{filename} {}
+    bool verbose                 = false;
+    bool remove_contant_textures = true;
 
-        bool verbose                 = false;
-        bool remove_contant_textures = true;
+    unordered_map<string, yocto_material> mmap =
+        unordered_map<string, yocto_material>{{"", {}}};
+    unordered_map<string, vec3f> amap = unordered_map<string, vec3f>{
+        {"", zero3f}};
+    unordered_map<string, int>   ammap = unordered_map<string, int>{};
+    unordered_map<string, int>   tmap  = unordered_map<string, int>{{"", -1}};
+    unordered_map<string, vec3f> ctmap = unordered_map<string, vec3f>{
+        {"", zero3f}};
+    unordered_map<string, bool> timap = unordered_map<string, bool>{
+        {"", false}};
+    unordered_map<string, vector<yocto_instance>> omap =
+        unordered_map<string, vector<yocto_instance>>{};
+    string cur_object = ""s;
 
-        unordered_map<string, yocto_material> mmap =
-            unordered_map<string, yocto_material>{{"", {}}};
-        unordered_map<string, vec3f> amap = unordered_map<string, vec3f>{
-            {"", zero3f}};
-        unordered_map<string, int> ammap = unordered_map<string, int>{};
-        unordered_map<string, int> tmap  = unordered_map<string, int>{{"", -1}};
-        unordered_map<string, vec3f> ctmap = unordered_map<string, vec3f>{
-            {"", zero3f}};
-        unordered_map<string, bool> timap = unordered_map<string, bool>{
-            {"", false}};
-        unordered_map<string, vector<yocto_instance>> omap =
-            unordered_map<string, vector<yocto_instance>>{};
-        string cur_object = ""s;
+    float last_film_aspect = -1.0f;
 
-        float last_film_aspect = -1.0f;
+    bool is_constant_texture(const string& name) {
+        return ctmap.find(name) != ctmap.end();
+    }
+    vec3f get_constant_texture_color(const string& name) {
+        return ctmap.at(name);
+    }
 
-        bool is_constant_texture(const string& name) {
-            return ctmap.find(name) != ctmap.end();
+    int get_material(const pbrt_context& ctx) {
+        static auto light_id    = 0;
+        auto        lookup_name = ctx.material + "_______" + ctx.arealight;
+        if (ammap.find(lookup_name) != ammap.end())
+            return ammap.at(lookup_name);
+        auto material     = mmap.at(ctx.material);
+        material.emission = amap.at(ctx.arealight);
+        if (material.emission != zero3f) {
+            material.uri += "_arealight_" + to_string(light_id++);
         }
-        vec3f get_constant_texture_color(const string& name) {
-            return ctmap.at(name);
-        }
+        scene.materials.push_back(material);
+        ammap[lookup_name] = (int)scene.materials.size() - 1;
+        return (int)scene.materials.size() - 1;
+    }
 
-        int get_material(const pbrt_context& ctx) {
-            static auto light_id    = 0;
-            auto        lookup_name = ctx.material + "_______" + ctx.arealight;
-            if (ammap.find(lookup_name) != ammap.end())
-                return ammap.at(lookup_name);
-            auto material     = mmap.at(ctx.material);
-            material.emission = amap.at(ctx.arealight);
-            if (material.emission != zero3f) {
-                material.uri += "_arealight_" + to_string(light_id++);
-            }
-            scene.materials.push_back(material);
-            ammap[lookup_name] = (int)scene.materials.size() - 1;
-            return (int)scene.materials.size() - 1;
+    void get_scaled_texture3f(
+        const pbrt_textured<spectrum3f>& textured, vec3f& value, int& texture) {
+        if (textured.texture == "") {
+            value   = {textured.value.x, textured.value.y, textured.value.z};
+            texture = -1;
+        } else if (is_constant_texture(textured.texture)) {
+            value   = get_constant_texture_color(textured.texture);
+            texture = -1;
+        } else {
+            value   = {1, 1, 1};
+            texture = tmap.at(textured.texture);
         }
+    }
 
-        void get_scaled_texture3f(const pbrt_textured<spectrum3f>& textured,
-            vec3f& value, int& texture) {
-            if (textured.texture == "") {
-                value = {textured.value.x, textured.value.y, textured.value.z};
-                texture = -1;
-            } else if (is_constant_texture(textured.texture)) {
-                value   = get_constant_texture_color(textured.texture);
-                texture = -1;
+    float get_pbrt_roughness(float uroughness, float vroughness, bool remap) {
+        auto roughness = (uroughness + vroughness) / 2;
+        // from pbrt code
+        if (remap) {
+            roughness = max(roughness, 1e-3f);
+            auto x    = log(roughness);
+            roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
+                        0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
+        }
+        return sqrt(roughness);
+    }
+
+    void camera(const pbrt_camera& pcamera, const pbrt_context& ctx) {
+        auto camera    = yocto_camera{};
+        camera.frame   = inverse((frame3f)ctx.transform_start);
+        camera.frame.z = -camera.frame.z;
+        if (holds_alternative<pbrt_perspective_camera>(pcamera)) {
+            auto& perspective = get<pbrt_perspective_camera>(pcamera);
+            auto  aspect      = perspective.frameaspectratio;
+            if (aspect < 0) aspect = last_film_aspect;
+            if (aspect < 0) aspect = 1;
+            if (aspect >= 1) {
+                set_camera_perspectivey(camera, radians(perspective.fov),
+                    aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
             } else {
-                value   = {1, 1, 1};
-                texture = tmap.at(textured.texture);
+                set_camera_perspectivex(camera, radians(perspective.fov),
+                    aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
             }
-        }
-
-        float get_pbrt_roughness(
-            float uroughness, float vroughness, bool remap) {
-            auto roughness = (uroughness + vroughness) / 2;
-            // from pbrt code
-            if (remap) {
-                roughness = max(roughness, 1e-3f);
-                auto x    = log(roughness);
-                roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
-                            0.0171201f * x * x * x +
-                            0.000640711f * x * x * x * x;
-            }
-            return sqrt(roughness);
-        }
-
-        void camera(const pbrt_camera& pcamera, const pbrt_context& ctx) {
-            auto camera    = yocto_camera{};
-            camera.frame   = inverse((frame3f)ctx.transform_start);
-            camera.frame.z = -camera.frame.z;
-            if (holds_alternative<pbrt_perspective_camera>(pcamera)) {
-                auto& perspective = get<pbrt_perspective_camera>(pcamera);
-                auto  aspect      = perspective.frameaspectratio;
-                if (aspect < 0) aspect = last_film_aspect;
-                if (aspect < 0) aspect = 1;
-                if (aspect >= 1) {
-                    set_camera_perspectivey(camera, radians(perspective.fov),
-                        aspect,
-                        clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
-                } else {
-                    set_camera_perspectivex(camera, radians(perspective.fov),
-                        aspect,
-                        clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
-                }
-            } else if (holds_alternative<pbrt_realistic_camera>(pcamera)) {
-                auto& realistic     = get<pbrt_realistic_camera>(pcamera);
-                camera.focal_length = max(realistic.approx_focallength, 35.0f) *
-                                      0.001f;
-                auto aspect = 1.0f;
-                if (aspect < 0) aspect = last_film_aspect;
-                if (aspect < 0) aspect = 1;
-                if (aspect >= 1) {
-                    camera.film_height = camera.film_width / aspect;
-                } else {
-                    camera.film_width = camera.film_height * aspect;
-                }
-                camera.focus_distance = realistic.focusdistance;
-                camera.lens_aperture  = realistic.aperturediameter / 2;
+        } else if (holds_alternative<pbrt_realistic_camera>(pcamera)) {
+            auto& realistic     = get<pbrt_realistic_camera>(pcamera);
+            camera.focal_length = max(realistic.approx_focallength, 35.0f) *
+                                  0.001f;
+            auto aspect = 1.0f;
+            if (aspect < 0) aspect = last_film_aspect;
+            if (aspect < 0) aspect = 1;
+            if (aspect >= 1) {
+                camera.film_height = camera.film_width / aspect;
             } else {
-                throw io_error(
-                    "unsupported Camera type " + to_string(pcamera.index()));
+                camera.film_width = camera.film_height * aspect;
             }
-            scene.cameras.push_back(camera);
+            camera.focus_distance = realistic.focusdistance;
+            camera.lens_aperture  = realistic.aperturediameter / 2;
+        } else {
+            throw io_error(
+                "unsupported Camera type " + to_string(pcamera.index()));
         }
-        void film(const pbrt_film& pfilm, const pbrt_context& ctx) {
-            if (holds_alternative<pbrt_film_image>(pfilm)) {
-                auto& perspective = get<pbrt_film_image>(pfilm);
-                last_film_aspect  = (float)perspective.xresolution /
-                                   (float)perspective.yresolution;
-                for (auto& camera : scene.cameras) {
-                    camera.film_width = camera.film_height * last_film_aspect;
-                }
-            } else {
-                throw io_error("unsupported pbrt type");
+        scene.cameras.push_back(camera);
+    }
+    void film(const pbrt_film& pfilm, const pbrt_context& ctx) {
+        if (holds_alternative<pbrt_film_image>(pfilm)) {
+            auto& perspective = get<pbrt_film_image>(pfilm);
+            last_film_aspect  = (float)perspective.xresolution /
+                               (float)perspective.yresolution;
+            for (auto& camera : scene.cameras) {
+                camera.film_width = camera.film_height * last_film_aspect;
             }
+        } else {
+            throw io_error("unsupported pbrt type");
         }
-        void shape(const pbrt_shape& pshape, const pbrt_context& ctx) {
-            static auto shape_id = 0;
-            auto        shape    = yocto_shape{};
-            shape.uri = "shapes/shape__" + to_string(shape_id++) + ".ply";
-            if (holds_alternative<pbrt_trianglemesh_shape>(pshape)) {
-                auto& mesh          = get<pbrt_trianglemesh_shape>(pshape);
-                shape.positions     = mesh.P;
-                shape.normals       = mesh.N;
-                shape.texturecoords = mesh.uv;
-                for (auto& uv : shape.texturecoords) uv.y = (1 - uv.y);
-                shape.triangles = mesh.indices;
-            } else if (holds_alternative<pbrt_loopsubdiv_shape>(pshape)) {
-                auto& mesh      = get<pbrt_loopsubdiv_shape>(pshape);
-                shape.positions = mesh.P;
-                shape.triangles = mesh.indices;
-                shape.normals.resize(shape.positions.size());
-                compute_vertex_normals(
-                    shape.normals, shape.triangles, shape.positions);
-            } else if (holds_alternative<pbrt_plymesh_shape>(pshape)) {
-                auto& mesh = get<pbrt_plymesh_shape>(pshape);
-                shape.uri  = mesh.filename;
-                if (!options.skip_meshes) {
-                    load_shape(get_dirname(filename) + mesh.filename,
-                        shape.points, shape.lines, shape.triangles, shape.quads,
-                        shape.quads_positions, shape.quads_normals,
-                        shape.quads_texturecoords, shape.positions,
-                        shape.normals, shape.texturecoords, shape.colors,
-                        shape.radius, false);
-                }
-            } else if (holds_alternative<pbrt_sphere_shape>(pshape)) {
-                auto& sphere = get<pbrt_sphere_shape>(pshape);
-                make_uvsphere_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, {64, 32}, 2 * sphere.radius, {1, 1},
-                    identity_frame3f);
-            } else if (holds_alternative<pbrt_disk_shape>(pshape)) {
-                auto& disk = get<pbrt_disk_shape>(pshape);
-                make_uvdisk_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, {32, 16}, 2 * disk.radius, {1, 1},
-                    identity_frame3f);
-            } else {
-                throw io_error(
-                    "unsupported shape type " + to_string(pshape.index()));
+    }
+    void shape(const pbrt_shape& pshape, const pbrt_context& ctx) {
+        static auto shape_id = 0;
+        auto        shape    = yocto_shape{};
+        shape.uri = "shapes/shape__" + to_string(shape_id++) + ".ply";
+        if (holds_alternative<pbrt_trianglemesh_shape>(pshape)) {
+            auto& mesh          = get<pbrt_trianglemesh_shape>(pshape);
+            shape.positions     = mesh.P;
+            shape.normals       = mesh.N;
+            shape.texturecoords = mesh.uv;
+            for (auto& uv : shape.texturecoords) uv.y = (1 - uv.y);
+            shape.triangles = mesh.indices;
+        } else if (holds_alternative<pbrt_loopsubdiv_shape>(pshape)) {
+            auto& mesh      = get<pbrt_loopsubdiv_shape>(pshape);
+            shape.positions = mesh.P;
+            shape.triangles = mesh.indices;
+            shape.normals.resize(shape.positions.size());
+            compute_vertex_normals(
+                shape.normals, shape.triangles, shape.positions);
+        } else if (holds_alternative<pbrt_plymesh_shape>(pshape)) {
+            auto& mesh = get<pbrt_plymesh_shape>(pshape);
+            shape.uri  = mesh.filename;
+            if (!options.skip_meshes) {
+                load_shape(get_dirname(filename) + mesh.filename, shape.points,
+                    shape.lines, shape.triangles, shape.quads,
+                    shape.quads_positions, shape.quads_normals,
+                    shape.quads_texturecoords, shape.positions, shape.normals,
+                    shape.texturecoords, shape.colors, shape.radius, false);
             }
-            scene.shapes.push_back(shape);
-            auto instance     = yocto_instance{};
-            instance.frame    = (frame3f)ctx.transform_start;
-            instance.shape    = (int)scene.shapes.size() - 1;
-            instance.material = get_material(ctx);
-            if (cur_object == "") {
-                scene.instances.push_back(instance);
-            } else {
-                omap[cur_object].push_back(instance);
-            }
+        } else if (holds_alternative<pbrt_sphere_shape>(pshape)) {
+            auto& sphere = get<pbrt_sphere_shape>(pshape);
+            make_uvsphere_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, {64, 32}, 2 * sphere.radius, {1, 1},
+                identity_frame3f);
+        } else if (holds_alternative<pbrt_disk_shape>(pshape)) {
+            auto& disk = get<pbrt_disk_shape>(pshape);
+            make_uvdisk_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, {32, 16}, 2 * disk.radius, {1, 1},
+                identity_frame3f);
+        } else {
+            throw io_error(
+                "unsupported shape type " + to_string(pshape.index()));
         }
-        void texture(const pbrt_texture& ptexture, const string& name,
-            const pbrt_context& ctx) {
-            if (remove_contant_textures &&
-                holds_alternative<pbrt_constant_texture>(ptexture)) {
-                auto& constant = get<pbrt_constant_texture>(ptexture);
-                ctmap[name]    = (vec3f)constant.value.value;
-                timap[name]    = false;
-                return;
-            }
-            auto texture = yocto_texture{};
-            texture.uri  = "textures/" + name + ".png";
-            if (holds_alternative<pbrt_imagemap_texture>(ptexture)) {
-                auto& imagemap = get<pbrt_imagemap_texture>(ptexture);
-                texture.uri    = imagemap.filename;
-            } else if (holds_alternative<pbrt_constant_texture>(ptexture)) {
-                auto& constant = get<pbrt_constant_texture>(ptexture);
-                texture.ldr_image.resize({1, 1});
-                texture.ldr_image[{0, 0}] = float_to_byte(
-                    vec4f{(vec3f)constant.value.value, 1});
-            } else if (holds_alternative<pbrt_bilerp_texture>(ptexture)) {
-                // auto& bilerp   = get<pbrt_bilerp_texture>(ptexture);
-                texture.ldr_image.resize({1, 1});
-                texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-                if (verbose) printf("texture bilerp not supported well");
-            } else if (holds_alternative<pbrt_checkerboard_texture>(ptexture)) {
-                auto& checkerboard = get<pbrt_checkerboard_texture>(ptexture);
-                auto  rgb1         = checkerboard.tex1.texture == ""
-                                ? checkerboard.tex1.value
-                                : spectrum3f{0.4f, 0.4f, 0.4f};
-                auto rgb2 = checkerboard.tex1.texture == ""
-                                ? checkerboard.tex2.value
-                                : spectrum3f{0.6f, 0.6f, 0.6f};
-                make_checker_image(texture.ldr_image, {1024, 1024}, 16,
-                    {float_to_byte(vec3f{rgb1.x, rgb1.y, rgb1.z}), 255},
-                    {float_to_byte(vec3f{rgb2.x, rgb2.y, rgb2.z}), 255});
-                if (verbose) printf("texture checkerboard not supported well");
-            } else if (holds_alternative<pbrt_dots_texture>(ptexture)) {
-                // auto& dots   = get<pbrt_dots_texture>(ptexture);
-                texture.ldr_image.resize({1, 1});
-                texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-                if (verbose) printf("texture dots not supported well");
-            } else if (holds_alternative<pbrt_fbm_texture>(ptexture)) {
-                auto& fbm = get<pbrt_fbm_texture>(ptexture);
-                make_fbm_image(texture.ldr_image, {1024, 1024}, {0, 0, 0, 255},
-                    {255, 255, 255, 255}, (float)1, (float)2, (float)0.5f,
-                    fbm.octaves);
-                if (verbose) printf("texture fbm not supported well");
-            } else if (holds_alternative<pbrt_marble_texture>(ptexture)) {
-                auto& marble = get<pbrt_marble_texture>(ptexture);
-                make_fbm_image(texture.ldr_image, {1024, 1024}, {0, 0, 0, 255},
-                    {255, 255, 255, 255}, (float)marble.scale, (float)2,
-                    (float)0.5f, marble.octaves);
-                if (verbose) printf("texture marble not supported well");
-            } else if (holds_alternative<pbrt_mix_texture>(ptexture)) {
-                auto& mix = get<pbrt_mix_texture>(ptexture);
-                if (timap.at(mix.tex1.texture)) {
-                    texture.uri =
-                        scene.textures.at(tmap.at(mix.tex1.texture)).uri;
-                } else if (timap.at(mix.tex2.texture)) {
-                    texture.uri =
-                        scene.textures.at(tmap.at(mix.tex2.texture)).uri;
-                } else {
-                    texture.ldr_image.resize({1, 1});
-                    texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-                }
-                if (verbose) printf("texture mix not supported well");
-            } else if (holds_alternative<pbrt_scale_texture>(ptexture)) {
-                auto& scale = get<pbrt_scale_texture>(ptexture);
-                if (timap.at(scale.tex1.texture)) {
-                    texture.uri =
-                        scene.textures.at(tmap.at(scale.tex1.texture)).uri;
-                } else if (timap.at(scale.tex2.texture)) {
-                    texture.uri =
-                        scene.textures.at(tmap.at(scale.tex2.texture)).uri;
-                } else {
-                    texture.ldr_image.resize({1, 1});
-                    texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-                }
-                if (verbose) printf("texture scale not supported well");
-            } else if (holds_alternative<pbrt_uv_texture>(ptexture)) {
-                // auto& uv   = get<pbrt_uv_texture>(ptexture);
+        scene.shapes.push_back(shape);
+        auto instance     = yocto_instance{};
+        instance.frame    = (frame3f)ctx.transform_start;
+        instance.shape    = (int)scene.shapes.size() - 1;
+        instance.material = get_material(ctx);
+        if (cur_object == "") {
+            scene.instances.push_back(instance);
+        } else {
+            omap[cur_object].push_back(instance);
+        }
+    }
+    void texture(const pbrt_texture& ptexture, const string& name,
+        const pbrt_context& ctx) {
+        if (remove_contant_textures &&
+            holds_alternative<pbrt_constant_texture>(ptexture)) {
+            auto& constant = get<pbrt_constant_texture>(ptexture);
+            ctmap[name]    = (vec3f)constant.value.value;
+            timap[name]    = false;
+            return;
+        }
+        auto texture = yocto_texture{};
+        texture.uri  = "textures/" + name + ".png";
+        if (holds_alternative<pbrt_imagemap_texture>(ptexture)) {
+            auto& imagemap = get<pbrt_imagemap_texture>(ptexture);
+            texture.uri    = imagemap.filename;
+        } else if (holds_alternative<pbrt_constant_texture>(ptexture)) {
+            auto& constant = get<pbrt_constant_texture>(ptexture);
+            texture.ldr_image.resize({1, 1});
+            texture.ldr_image[{0, 0}] = float_to_byte(
+                vec4f{(vec3f)constant.value.value, 1});
+        } else if (holds_alternative<pbrt_bilerp_texture>(ptexture)) {
+            // auto& bilerp   = get<pbrt_bilerp_texture>(ptexture);
+            texture.ldr_image.resize({1, 1});
+            texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+            if (verbose) printf("texture bilerp not supported well");
+        } else if (holds_alternative<pbrt_checkerboard_texture>(ptexture)) {
+            auto& checkerboard = get<pbrt_checkerboard_texture>(ptexture);
+            auto  rgb1         = checkerboard.tex1.texture == ""
+                            ? checkerboard.tex1.value
+                            : spectrum3f{0.4f, 0.4f, 0.4f};
+            auto rgb2 = checkerboard.tex1.texture == ""
+                            ? checkerboard.tex2.value
+                            : spectrum3f{0.6f, 0.6f, 0.6f};
+            make_checker_image(texture.ldr_image, {1024, 1024}, 16,
+                {float_to_byte(vec3f{rgb1.x, rgb1.y, rgb1.z}), 255},
+                {float_to_byte(vec3f{rgb2.x, rgb2.y, rgb2.z}), 255});
+            if (verbose) printf("texture checkerboard not supported well");
+        } else if (holds_alternative<pbrt_dots_texture>(ptexture)) {
+            // auto& dots   = get<pbrt_dots_texture>(ptexture);
+            texture.ldr_image.resize({1, 1});
+            texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+            if (verbose) printf("texture dots not supported well");
+        } else if (holds_alternative<pbrt_fbm_texture>(ptexture)) {
+            auto& fbm = get<pbrt_fbm_texture>(ptexture);
+            make_fbm_image(texture.ldr_image, {1024, 1024}, {0, 0, 0, 255},
+                {255, 255, 255, 255}, (float)1, (float)2, (float)0.5f,
+                fbm.octaves);
+            if (verbose) printf("texture fbm not supported well");
+        } else if (holds_alternative<pbrt_marble_texture>(ptexture)) {
+            auto& marble = get<pbrt_marble_texture>(ptexture);
+            make_fbm_image(texture.ldr_image, {1024, 1024}, {0, 0, 0, 255},
+                {255, 255, 255, 255}, (float)marble.scale, (float)2,
+                (float)0.5f, marble.octaves);
+            if (verbose) printf("texture marble not supported well");
+        } else if (holds_alternative<pbrt_mix_texture>(ptexture)) {
+            auto& mix = get<pbrt_mix_texture>(ptexture);
+            if (timap.at(mix.tex1.texture)) {
+                texture.uri = scene.textures.at(tmap.at(mix.tex1.texture)).uri;
+            } else if (timap.at(mix.tex2.texture)) {
+                texture.uri = scene.textures.at(tmap.at(mix.tex2.texture)).uri;
+            } else {
                 texture.ldr_image.resize({1, 1});
                 texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-                if (verbose) printf("texture uv not supported well");
-            } else if (holds_alternative<pbrt_windy_texture>(ptexture)) {
-                // auto& windy   = get<pbrt_uv_texture>(ptexture);
-                texture.ldr_image.resize({1, 1});
-                texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-                if (verbose) printf("texture windy not supported well");
-            } else if (holds_alternative<pbrt_wrinkled_texture>(ptexture)) {
-                // auto& uv   = get<pbrt_wrinkled_texture>(ptexture);
-                texture.ldr_image.resize({1, 1});
-                texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
-                if (verbose) printf("texture wrinkled not supported well");
-            } else {
-                throw io_error(
-                    "texture not supported" + to_string(ptexture.index()));
             }
-            scene.textures.push_back(texture);
-            tmap[name]  = (int)scene.textures.size() - 1;
-            timap[name] = holds_alternative<pbrt_imagemap_texture>(ptexture);
+            if (verbose) printf("texture mix not supported well");
+        } else if (holds_alternative<pbrt_scale_texture>(ptexture)) {
+            auto& scale = get<pbrt_scale_texture>(ptexture);
+            if (timap.at(scale.tex1.texture)) {
+                texture.uri =
+                    scene.textures.at(tmap.at(scale.tex1.texture)).uri;
+            } else if (timap.at(scale.tex2.texture)) {
+                texture.uri =
+                    scene.textures.at(tmap.at(scale.tex2.texture)).uri;
+            } else {
+                texture.ldr_image.resize({1, 1});
+                texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+            }
+            if (verbose) printf("texture scale not supported well");
+        } else if (holds_alternative<pbrt_uv_texture>(ptexture)) {
+            // auto& uv   = get<pbrt_uv_texture>(ptexture);
+            texture.ldr_image.resize({1, 1});
+            texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+            if (verbose) printf("texture uv not supported well");
+        } else if (holds_alternative<pbrt_windy_texture>(ptexture)) {
+            // auto& windy   = get<pbrt_uv_texture>(ptexture);
+            texture.ldr_image.resize({1, 1});
+            texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+            if (verbose) printf("texture windy not supported well");
+        } else if (holds_alternative<pbrt_wrinkled_texture>(ptexture)) {
+            // auto& uv   = get<pbrt_wrinkled_texture>(ptexture);
+            texture.ldr_image.resize({1, 1});
+            texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+            if (verbose) printf("texture wrinkled not supported well");
+        } else {
+            throw io_error(
+                "texture not supported" + to_string(ptexture.index()));
         }
-        void material(const pbrt_material& pmaterial, const string& name,
-            const pbrt_context& ctx) {
-            auto material = yocto_material{};
-            material.uri  = name;
-            if (holds_alternative<pbrt_uber_material>(pmaterial)) {
-                auto& uber = get<pbrt_uber_material>(pmaterial);
-                get_scaled_texture3f(
-                    uber.Kd, material.diffuse, material.diffuse_texture);
-                get_scaled_texture3f(
-                    uber.Ks, material.specular, material.specular_texture);
-                get_scaled_texture3f(uber.Kt, material.transmission,
-                    material.transmission_texture);
-                auto op     = vec3f{0, 0, 0};
-                auto op_txt = -1;
-                get_scaled_texture3f(uber.opacity, op, op_txt);
-                material.opacity   = (op.x + op.y + op.z) / 3;
-                material.roughness = get_pbrt_roughness(uber.uroughness.value,
-                    uber.vroughness.value, uber.remaproughness);
-            } else if (holds_alternative<pbrt_plastic_material>(pmaterial)) {
-                auto& plastic = get<pbrt_plastic_material>(pmaterial);
+        scene.textures.push_back(texture);
+        tmap[name]  = (int)scene.textures.size() - 1;
+        timap[name] = holds_alternative<pbrt_imagemap_texture>(ptexture);
+    }
+    void material(const pbrt_material& pmaterial, const string& name,
+        const pbrt_context& ctx) {
+        auto material = yocto_material{};
+        material.uri  = name;
+        if (holds_alternative<pbrt_uber_material>(pmaterial)) {
+            auto& uber = get<pbrt_uber_material>(pmaterial);
+            get_scaled_texture3f(
+                uber.Kd, material.diffuse, material.diffuse_texture);
+            get_scaled_texture3f(
+                uber.Ks, material.specular, material.specular_texture);
+            get_scaled_texture3f(
+                uber.Kt, material.transmission, material.transmission_texture);
+            auto op     = vec3f{0, 0, 0};
+            auto op_txt = -1;
+            get_scaled_texture3f(uber.opacity, op, op_txt);
+            material.opacity   = (op.x + op.y + op.z) / 3;
+            material.roughness = get_pbrt_roughness(uber.uroughness.value,
+                uber.vroughness.value, uber.remaproughness);
+        } else if (holds_alternative<pbrt_plastic_material>(pmaterial)) {
+            auto& plastic = get<pbrt_plastic_material>(pmaterial);
+            get_scaled_texture3f(
+                plastic.Kd, material.diffuse, material.diffuse_texture);
+            // get_scaled_texture3f(
+            //     plastic.Ks, material.specular,
+            //     material.specular_texture);
+            material.specular  = {0.04f, 0.04f, 0.04f};
+            material.roughness = get_pbrt_roughness(plastic.uroughness.value,
+                plastic.vroughness.value, plastic.remaproughness);
+        } else if (holds_alternative<pbrt_translucent_material>(pmaterial)) {
+            auto& translucent = get<pbrt_translucent_material>(pmaterial);
+            get_scaled_texture3f(
+                translucent.Kd, material.diffuse, material.diffuse_texture);
+            // get_scaled_texture3f(translucent.Ks, material.specular,
+            //     material.specular_texture);
+            material.specular  = {0.04f, 0.04f, 0.04f};
+            material.roughness = get_pbrt_roughness(
+                translucent.uroughness.value, translucent.vroughness.value,
+                translucent.remaproughness);
+        } else if (holds_alternative<pbrt_matte_material>(pmaterial)) {
+            auto& matte = get<pbrt_matte_material>(pmaterial);
+            get_scaled_texture3f(
+                matte.Kd, material.diffuse, material.diffuse_texture);
+            material.roughness = 1;
+        } else if (holds_alternative<pbrt_mirror_material>(pmaterial)) {
+            // auto& mirror          =
+            // get<pbrt_mirror_material>(pmaterial);
+            material.diffuse   = {0, 0, 0};
+            material.specular  = {1, 1, 1};
+            material.roughness = 0;
+        } else if (holds_alternative<pbrt_metal_material>(pmaterial)) {
+            auto& metal = get<pbrt_metal_material>(pmaterial);
+            auto  eta = zero3f, k = zero3f;
+            auto  eta_texture = -1, k_texture = -1;
+            get_scaled_texture3f(metal.eta, eta, eta_texture);
+            get_scaled_texture3f(metal.k, k, k_texture);
+            material.specular  = pbrt_fresnel_metal(1, eta, k);
+            material.roughness = get_pbrt_roughness(metal.uroughness.value,
+                metal.vroughness.value, metal.remaproughness);
+        } else if (holds_alternative<pbrt_substrate_material>(pmaterial)) {
+            auto& substrate = get<pbrt_substrate_material>(pmaterial);
+            get_scaled_texture3f(
+                substrate.Kd, material.diffuse, material.diffuse_texture);
+            // get_scaled_texture3f(
+            //     substrate.Ks, material.specular,
+            //     material.specular_texture);
+            material.specular  = {0.04f, 0.04f, 0.04f};
+            material.roughness = get_pbrt_roughness(substrate.uroughness.value,
+                substrate.vroughness.value, substrate.remaproughness);
+        } else if (holds_alternative<pbrt_glass_material>(pmaterial)) {
+            // auto& glass       = get<pbrt_glass_material>(pmaterial);
+            material.specular     = {0.04f, 0.04f, 0.04f};
+            material.transmission = {1, 1, 1};
+            // get_scaled_texture3f(
+            //     glass.Kr, material.specular,
+            //     material.specular_texture);
+            // get_scaled_texture3f(
+            //     glass.Kt, material.transmission,
+            //     material.transmission_texture);
+            material.roughness = 0;
+        } else if (holds_alternative<pbrt_hair_material>(pmaterial)) {
+            auto& hair = get<pbrt_hair_material>(pmaterial);
+            get_scaled_texture3f(
+                hair.color, material.diffuse, material.diffuse_texture);
+            material.roughness = 1;
+            if (verbose) printf("hair material not properly supported\n");
+        } else if (holds_alternative<pbrt_disney_material>(pmaterial)) {
+            auto& disney = get<pbrt_disney_material>(pmaterial);
+            get_scaled_texture3f(
+                disney.color, material.diffuse, material.diffuse_texture);
+            material.roughness = 1;
+            if (verbose) printf("disney material not properly supported\n");
+        } else if (holds_alternative<pbrt_kdsubsurface_material>(pmaterial)) {
+            auto& kdsubdurface = get<pbrt_kdsubsurface_material>(pmaterial);
+            get_scaled_texture3f(
+                kdsubdurface.Kd, material.diffuse, material.diffuse_texture);
+            // get_scaled_texture3f(kdsubdurface.Kr, material.specular,
+            //     material.specular_texture);
+            material.specular  = {0.04f, 0.04f, 0.04f};
+            material.roughness = get_pbrt_roughness(
+                kdsubdurface.uroughness.value, kdsubdurface.vroughness.value,
+                kdsubdurface.remaproughness);
+            if (verbose)
+                printf("kdsubsurface material not properly supported\n");
+        } else if (holds_alternative<pbrt_subsurface_material>(pmaterial)) {
+            // auto& subdurface           =
+            // get<pbrt_subsurface_material>(pmaterial);
+            material.diffuse   = {1, 0, 0};
+            material.roughness = 1;
+            if (verbose) printf("subsurface material not properly supported\n");
+        } else if (holds_alternative<pbrt_mix_material>(pmaterial)) {
+            auto& mix     = get<pbrt_mix_material>(pmaterial);
+            auto  matname = (!mix.namedmaterial1.empty()) ? mix.namedmaterial1
+                                                         : mix.namedmaterial2;
+            material = mmap.at(matname);
+            if (verbose) printf("mix material not properly supported\n");
+        } else if (holds_alternative<pbrt_fourier_material>(pmaterial)) {
+            auto& fourier = get<pbrt_fourier_material>(pmaterial);
+            if (holds_alternative<pbrt_plastic_material>(fourier.approx)) {
+                auto& plastic = get<pbrt_plastic_material>(fourier.approx);
                 get_scaled_texture3f(
                     plastic.Kd, material.diffuse, material.diffuse_texture);
-                // get_scaled_texture3f(
-                //     plastic.Ks, material.specular,
+                // get_scaled_texture3f(plastic.Ks, material.specular,
                 //     material.specular_texture);
                 material.specular  = {0.04f, 0.04f, 0.04f};
                 material.roughness = get_pbrt_roughness(
                     plastic.uroughness.value, plastic.vroughness.value,
                     plastic.remaproughness);
-            } else if (holds_alternative<pbrt_translucent_material>(
-                           pmaterial)) {
-                auto& translucent = get<pbrt_translucent_material>(pmaterial);
-                get_scaled_texture3f(
-                    translucent.Kd, material.diffuse, material.diffuse_texture);
-                // get_scaled_texture3f(translucent.Ks, material.specular,
-                //     material.specular_texture);
-                material.specular  = {0.04f, 0.04f, 0.04f};
-                material.roughness = get_pbrt_roughness(
-                    translucent.uroughness.value, translucent.vroughness.value,
-                    translucent.remaproughness);
-            } else if (holds_alternative<pbrt_matte_material>(pmaterial)) {
-                auto& matte = get<pbrt_matte_material>(pmaterial);
-                get_scaled_texture3f(
-                    matte.Kd, material.diffuse, material.diffuse_texture);
-                material.roughness = 1;
-            } else if (holds_alternative<pbrt_mirror_material>(pmaterial)) {
-                // auto& mirror          =
-                // get<pbrt_mirror_material>(pmaterial);
-                material.diffuse   = {0, 0, 0};
-                material.specular  = {1, 1, 1};
-                material.roughness = 0;
-            } else if (holds_alternative<pbrt_metal_material>(pmaterial)) {
-                auto& metal = get<pbrt_metal_material>(pmaterial);
+            } else if (holds_alternative<pbrt_metal_material>(fourier.approx)) {
+                auto& metal = get<pbrt_metal_material>(fourier.approx);
                 auto  eta = zero3f, k = zero3f;
                 auto  eta_texture = -1, k_texture = -1;
                 get_scaled_texture3f(metal.eta, eta, eta_texture);
@@ -3172,254 +3200,170 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 material.specular  = pbrt_fresnel_metal(1, eta, k);
                 material.roughness = get_pbrt_roughness(metal.uroughness.value,
                     metal.vroughness.value, metal.remaproughness);
-            } else if (holds_alternative<pbrt_substrate_material>(pmaterial)) {
-                auto& substrate = get<pbrt_substrate_material>(pmaterial);
-                get_scaled_texture3f(
-                    substrate.Kd, material.diffuse, material.diffuse_texture);
-                // get_scaled_texture3f(
-                //     substrate.Ks, material.specular,
-                //     material.specular_texture);
-                material.specular  = {0.04f, 0.04f, 0.04f};
-                material.roughness = get_pbrt_roughness(
-                    substrate.uroughness.value, substrate.vroughness.value,
-                    substrate.remaproughness);
-            } else if (holds_alternative<pbrt_glass_material>(pmaterial)) {
-                // auto& glass       = get<pbrt_glass_material>(pmaterial);
+            } else if (holds_alternative<pbrt_glass_material>(fourier.approx)) {
+                // auto& glass = get<pbrt_metal_glass>(fourier.approx);
+                material.diffuse      = {0, 0, 0};
                 material.specular     = {0.04f, 0.04f, 0.04f};
                 material.transmission = {1, 1, 1};
-                // get_scaled_texture3f(
-                //     glass.Kr, material.specular,
-                //     material.specular_texture);
-                // get_scaled_texture3f(
-                //     glass.Kt, material.transmission,
-                //     material.transmission_texture);
-                material.roughness = 0;
-            } else if (holds_alternative<pbrt_hair_material>(pmaterial)) {
-                auto& hair = get<pbrt_hair_material>(pmaterial);
-                get_scaled_texture3f(
-                    hair.color, material.diffuse, material.diffuse_texture);
-                material.roughness = 1;
-                if (verbose) printf("hair material not properly supported\n");
-            } else if (holds_alternative<pbrt_disney_material>(pmaterial)) {
-                auto& disney = get<pbrt_disney_material>(pmaterial);
-                get_scaled_texture3f(
-                    disney.color, material.diffuse, material.diffuse_texture);
-                material.roughness = 1;
-                if (verbose) printf("disney material not properly supported\n");
-            } else if (holds_alternative<pbrt_kdsubsurface_material>(
-                           pmaterial)) {
-                auto& kdsubdurface = get<pbrt_kdsubsurface_material>(pmaterial);
-                get_scaled_texture3f(kdsubdurface.Kd, material.diffuse,
-                    material.diffuse_texture);
-                // get_scaled_texture3f(kdsubdurface.Kr, material.specular,
-                //     material.specular_texture);
-                material.specular  = {0.04f, 0.04f, 0.04f};
-                material.roughness = get_pbrt_roughness(
-                    kdsubdurface.uroughness.value,
-                    kdsubdurface.vroughness.value, kdsubdurface.remaproughness);
-                if (verbose)
-                    printf("kdsubsurface material not properly supported\n");
-            } else if (holds_alternative<pbrt_subsurface_material>(pmaterial)) {
-                // auto& subdurface           =
-                // get<pbrt_subsurface_material>(pmaterial);
-                material.diffuse   = {1, 0, 0};
-                material.roughness = 1;
-                if (verbose)
-                    printf("subsurface material not properly supported\n");
-            } else if (holds_alternative<pbrt_mix_material>(pmaterial)) {
-                auto& mix     = get<pbrt_mix_material>(pmaterial);
-                auto  matname = (!mix.namedmaterial1.empty())
-                                   ? mix.namedmaterial1
-                                   : mix.namedmaterial2;
-                material = mmap.at(matname);
-                if (verbose) printf("mix material not properly supported\n");
-            } else if (holds_alternative<pbrt_fourier_material>(pmaterial)) {
-                auto& fourier = get<pbrt_fourier_material>(pmaterial);
-                if (holds_alternative<pbrt_plastic_material>(fourier.approx)) {
-                    auto& plastic = get<pbrt_plastic_material>(fourier.approx);
-                    get_scaled_texture3f(
-                        plastic.Kd, material.diffuse, material.diffuse_texture);
-                    // get_scaled_texture3f(plastic.Ks, material.specular,
-                    //     material.specular_texture);
-                    material.specular  = {0.04f, 0.04f, 0.04f};
-                    material.roughness = get_pbrt_roughness(
-                        plastic.uroughness.value, plastic.vroughness.value,
-                        plastic.remaproughness);
-                } else if (holds_alternative<pbrt_metal_material>(
-                               fourier.approx)) {
-                    auto& metal = get<pbrt_metal_material>(fourier.approx);
-                    auto  eta = zero3f, k = zero3f;
-                    auto  eta_texture = -1, k_texture = -1;
-                    get_scaled_texture3f(metal.eta, eta, eta_texture);
-                    get_scaled_texture3f(metal.k, k, k_texture);
-                    material.specular  = pbrt_fresnel_metal(1, eta, k);
-                    material.roughness = get_pbrt_roughness(
-                        metal.uroughness.value, metal.vroughness.value,
-                        metal.remaproughness);
-                } else if (holds_alternative<pbrt_glass_material>(
-                               fourier.approx)) {
-                    // auto& glass = get<pbrt_metal_glass>(fourier.approx);
-                    material.diffuse      = {0, 0, 0};
-                    material.specular     = {0.04f, 0.04f, 0.04f};
-                    material.transmission = {1, 1, 1};
-                    material.roughness    = 0;
-                } else {
-                    throw io_error("material type not supported " +
-                                   to_string(fourier.approx.index()));
-                }
+                material.roughness    = 0;
             } else {
                 throw io_error("material type not supported " +
-                               to_string(pmaterial.index()));
+                               to_string(fourier.approx.index()));
             }
-            mmap[name] = material;
+        } else {
+            throw io_error(
+                "material type not supported " + to_string(pmaterial.index()));
         }
-        void arealight(const pbrt_arealight& plight, const string& name,
-            const pbrt_context& ctx) {
-            auto emission = zero3f;
-            if (holds_alternative<pbrt_diffuse_arealight>(plight)) {
-                auto& diffuse = get<pbrt_diffuse_arealight>(plight);
-                emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
-            } else {
-                throw io_error("area light type not supported " +
-                               to_string(plight.index()));
+        mmap[name] = material;
+    }
+    void arealight(const pbrt_arealight& plight, const string& name,
+        const pbrt_context& ctx) {
+        auto emission = zero3f;
+        if (holds_alternative<pbrt_diffuse_arealight>(plight)) {
+            auto& diffuse = get<pbrt_diffuse_arealight>(plight);
+            emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
+        } else {
+            throw io_error(
+                "area light type not supported " + to_string(plight.index()));
+        }
+        amap[name] = emission;
+    }
+    void light(const pbrt_light& plight, const pbrt_context& ctx) {
+        static auto light_id = 0;
+        auto        name     = "light_" + to_string(light_id++);
+        if (holds_alternative<pbrt_infinite_light>(plight)) {
+            auto& infinite    = get<pbrt_infinite_light>(plight);
+            auto  environment = yocto_environment();
+            environment.uri   = name;
+            // environment.frame =
+            // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
+            // * stack.back().frame;
+            environment.frame = (frame3f)ctx.transform_start *
+                                frame3f{
+                                    {1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+            environment.emission = (vec3f)infinite.scale;
+            if (infinite.mapname != "") {
+                auto texture = yocto_texture{};
+                texture.uri  = infinite.mapname;
+                scene.textures.push_back(texture);
+                environment.emission_texture = (int)scene.textures.size() - 1;
             }
-            amap[name] = emission;
+            scene.environments.push_back(environment);
+        } else if (holds_alternative<pbrt_distant_light>(plight)) {
+            auto& distant      = get<pbrt_distant_light>(plight);
+            auto  distant_dist = 100;
+            scene.shapes.push_back({});
+            auto& shape = scene.shapes.back();
+            shape.uri   = name;
+            auto dir    = normalize(distant.from - distant.to);
+            auto size   = distant_dist * sin(5 * pif / 180);
+            make_quad_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, {1, 1}, {size, size}, {1, 1},
+                identity_frame3f);
+            scene.materials.push_back({});
+            auto& material    = scene.materials.back();
+            material.uri      = shape.uri;
+            material.emission = (vec3f)distant.L * (vec3f)distant.scale;
+            material.emission *= (distant_dist * distant_dist) / (size * size);
+            auto instance     = yocto_instance();
+            instance.uri      = shape.uri;
+            instance.shape    = (int)scene.shapes.size() - 1;
+            instance.material = (int)scene.materials.size() - 1;
+            instance.frame    = (frame3f)ctx.transform_start *
+                             make_lookat_frame(
+                                 dir * distant_dist, zero3f, {0, 1, 0}, true);
+            scene.instances.push_back(instance);
+        } else if (holds_alternative<pbrt_point_light>(plight)) {
+            auto& point = get<pbrt_point_light>(plight);
+            scene.shapes.push_back({});
+            auto& shape = scene.shapes.back();
+            shape.uri   = name;
+            auto size   = 0.01f;
+            make_sphere_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
+            scene.materials.push_back({});
+            auto& material    = scene.materials.back();
+            material.uri      = shape.uri;
+            material.emission = (vec3f)point.I * (vec3f)point.scale;
+            // TODO: fix emission
+            auto instance     = yocto_instance();
+            instance.uri      = shape.uri;
+            instance.shape    = (int)scene.shapes.size() - 1;
+            instance.material = (int)scene.materials.size() - 1;
+            instance.frame    = (frame3f)ctx.transform_start *
+                             make_translation_frame(point.from);
+            scene.instances.push_back(instance);
+        } else if (holds_alternative<pbrt_goniometric_light>(plight)) {
+            auto& goniometric = get<pbrt_goniometric_light>(plight);
+            scene.shapes.push_back({});
+            auto& shape = scene.shapes.back();
+            shape.uri   = name;
+            auto size   = 0.01f;
+            make_sphere_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
+            scene.materials.push_back({});
+            auto& material    = scene.materials.back();
+            material.uri      = shape.uri;
+            material.emission = (vec3f)goniometric.I * (vec3f)goniometric.scale;
+            // TODO: fix emission
+            auto instance     = yocto_instance();
+            instance.uri      = shape.uri;
+            instance.shape    = (int)scene.shapes.size() - 1;
+            instance.material = (int)scene.materials.size() - 1;
+            instance.frame    = (frame3f)ctx.transform_start;
+            scene.instances.push_back(instance);
+        } else if (holds_alternative<pbrt_spot_light>(plight)) {
+            auto& spot = get<pbrt_spot_light>(plight);
+            scene.shapes.push_back({});
+            auto& shape = scene.shapes.back();
+            shape.uri   = name;
+            auto size   = 0.01f;
+            make_sphere_shape(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
+            scene.materials.push_back({});
+            auto& material    = scene.materials.back();
+            material.uri      = shape.uri;
+            material.emission = (vec3f)spot.I * (vec3f)spot.scale;
+            // TODO: fix emission
+            auto instance     = yocto_instance();
+            instance.uri      = shape.uri;
+            instance.shape    = (int)scene.shapes.size() - 1;
+            instance.material = (int)scene.materials.size() - 1;
+            instance.frame    = (frame3f)ctx.transform_start;
+            scene.instances.push_back(instance);
+        } else {
+            throw io_error(
+                "light type not supported " + to_string(plight.index()));
         }
-        void light(const pbrt_light& plight, const pbrt_context& ctx) {
-            static auto light_id = 0;
-            auto        name     = "light_" + to_string(light_id++);
-            if (holds_alternative<pbrt_infinite_light>(plight)) {
-                auto& infinite    = get<pbrt_infinite_light>(plight);
-                auto  environment = yocto_environment();
-                environment.uri   = name;
-                // environment.frame =
-                // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
-                // * stack.back().frame;
-                environment.frame =
-                    (frame3f)ctx.transform_start *
-                    frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-                environment.emission = (vec3f)infinite.scale;
-                if (infinite.mapname != "") {
-                    auto texture = yocto_texture{};
-                    texture.uri  = infinite.mapname;
-                    scene.textures.push_back(texture);
-                    environment.emission_texture = (int)scene.textures.size() -
-                                                   1;
-                }
-                scene.environments.push_back(environment);
-            } else if (holds_alternative<pbrt_distant_light>(plight)) {
-                auto& distant      = get<pbrt_distant_light>(plight);
-                auto  distant_dist = 100;
-                scene.shapes.push_back({});
-                auto& shape = scene.shapes.back();
-                shape.uri   = name;
-                auto dir    = normalize(distant.from - distant.to);
-                auto size   = distant_dist * sin(5 * pif / 180);
-                make_quad_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, {1, 1}, {size, size}, {1, 1},
-                    identity_frame3f);
-                scene.materials.push_back({});
-                auto& material    = scene.materials.back();
-                material.uri      = shape.uri;
-                material.emission = (vec3f)distant.L * (vec3f)distant.scale;
-                material.emission *= (distant_dist * distant_dist) /
-                                     (size * size);
-                auto instance     = yocto_instance();
-                instance.uri      = shape.uri;
-                instance.shape    = (int)scene.shapes.size() - 1;
-                instance.material = (int)scene.materials.size() - 1;
-                instance.frame    = (frame3f)ctx.transform_start *
-                                 make_lookat_frame(dir * distant_dist, zero3f,
-                                     {0, 1, 0}, true);
-                scene.instances.push_back(instance);
-            } else if (holds_alternative<pbrt_point_light>(plight)) {
-                auto& point = get<pbrt_point_light>(plight);
-                scene.shapes.push_back({});
-                auto& shape = scene.shapes.back();
-                shape.uri   = name;
-                auto size   = 0.01f;
-                make_sphere_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
-                scene.materials.push_back({});
-                auto& material    = scene.materials.back();
-                material.uri      = shape.uri;
-                material.emission = (vec3f)point.I * (vec3f)point.scale;
-                // TODO: fix emission
-                auto instance     = yocto_instance();
-                instance.uri      = shape.uri;
-                instance.shape    = (int)scene.shapes.size() - 1;
-                instance.material = (int)scene.materials.size() - 1;
-                instance.frame    = (frame3f)ctx.transform_start *
-                                 make_translation_frame(point.from);
-                scene.instances.push_back(instance);
-            } else if (holds_alternative<pbrt_goniometric_light>(plight)) {
-                auto& goniometric = get<pbrt_goniometric_light>(plight);
-                scene.shapes.push_back({});
-                auto& shape = scene.shapes.back();
-                shape.uri   = name;
-                auto size   = 0.01f;
-                make_sphere_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
-                scene.materials.push_back({});
-                auto& material    = scene.materials.back();
-                material.uri      = shape.uri;
-                material.emission = (vec3f)goniometric.I *
-                                    (vec3f)goniometric.scale;
-                // TODO: fix emission
-                auto instance     = yocto_instance();
-                instance.uri      = shape.uri;
-                instance.shape    = (int)scene.shapes.size() - 1;
-                instance.material = (int)scene.materials.size() - 1;
-                instance.frame    = (frame3f)ctx.transform_start;
-                scene.instances.push_back(instance);
-            } else if (holds_alternative<pbrt_spot_light>(plight)) {
-                auto& spot = get<pbrt_spot_light>(plight);
-                scene.shapes.push_back({});
-                auto& shape = scene.shapes.back();
-                shape.uri   = name;
-                auto size   = 0.01f;
-                make_sphere_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
-                scene.materials.push_back({});
-                auto& material    = scene.materials.back();
-                material.uri      = shape.uri;
-                material.emission = (vec3f)spot.I * (vec3f)spot.scale;
-                // TODO: fix emission
-                auto instance     = yocto_instance();
-                instance.uri      = shape.uri;
-                instance.shape    = (int)scene.shapes.size() - 1;
-                instance.material = (int)scene.materials.size() - 1;
-                instance.frame    = (frame3f)ctx.transform_start;
-                scene.instances.push_back(instance);
-            } else {
-                throw io_error(
-                    "light type not supported " + to_string(plight.index()));
-            }
+    }
+    void begin_object(const pbrt_object& pobject, const pbrt_context& ctx) {
+        cur_object       = pobject.name;
+        omap[cur_object] = {};
+    }
+    void end_object(const pbrt_object& pobject, const pbrt_context& ctx) {
+        cur_object = "";
+    }
+    void object_instance(const pbrt_object& pobject, const pbrt_context& ctx) {
+        auto& pinstances = omap.at(pobject.name);
+        for (auto& pinstance : pinstances) {
+            auto instance     = yocto_instance();
+            instance.frame    = (frame3f)ctx.transform_start * pinstance.frame;
+            instance.shape    = pinstance.shape;
+            instance.material = pinstance.material;
+            scene.instances.push_back(instance);
         }
-        void begin_object(const pbrt_object& pobject, const pbrt_context& ctx) {
-            cur_object       = pobject.name;
-            omap[cur_object] = {};
-        }
-        void end_object(const pbrt_object& pobject, const pbrt_context& ctx) {
-            cur_object = "";
-        }
-        void object_instance(
-            const pbrt_object& pobject, const pbrt_context& ctx) {
-            auto& pinstances = omap.at(pobject.name);
-            for (auto& pinstance : pinstances) {
-                auto instance  = yocto_instance();
-                instance.frame = (frame3f)ctx.transform_start * pinstance.frame;
-                instance.shape = pinstance.shape;
-                instance.material = pinstance.material;
-                scene.instances.push_back(instance);
-            }
-        }
-    };
+    }
+};
+
+// load pbrt scenes
+void load_pbrt_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options) {
+    scene = yocto_scene{};
 
     try {
         // Parse pbrt
         auto pbrt_options = load_pbrt_options();
-        auto cb           = parse_callbacks{scene, options, filename};
+        auto cb           = load_pbrt_scene_callbacks{scene, options, filename};
         load_pbrt(filename, cb, pbrt_options);
 
         // load textures
