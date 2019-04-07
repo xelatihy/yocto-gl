@@ -367,6 +367,7 @@ void add_missing_cameras(yocto_scene& scene);
 
 // Normalize URIs and add missing ones. Assumes names are unique.
 void normalize_uris(yocto_scene& sceme);
+void rename_instances(yocto_scene& scene);
 
 // Add a sky environment
 void add_sky_environment(yocto_scene& scene, float sun_angle = pif / 4);

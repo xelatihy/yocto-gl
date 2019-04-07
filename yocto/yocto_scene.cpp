@@ -518,6 +518,24 @@ void normalize_uris(yocto_scene& scene) {
     for (auto id = 0; id < scene.nodes.size(); id++)
         normalize(scene.nodes[id].uri, "node", "yaml", id);
 }
+void rename_instances(yocto_scene& scene) {
+    auto shape_names = vector<string>(scene.shapes.size());
+    for (auto sid = 0; sid < scene.shapes.size(); sid++) {
+        shape_names[sid] = get_basename(scene.shapes[sid].uri);
+    }
+    auto shape_count = vector<vec2i>(scene.shapes.size(), vec2i{0, 0});
+    for (auto& instance : scene.instances) shape_count[instance.shape].y += 1;
+    for (auto& instance : scene.instances) {
+        if (shape_count[instance.shape].y == 1) {
+            instance.uri = format(
+                "instances/{}.yaml", shape_names[instance.shape]);
+        } else {
+            instance.uri = format("instances/{}-{:{}}.yaml",
+                shape_names[instance.shape], shape_count[instance.shape].x++,
+                (int)ceil(log10(shape_count[instance.shape].y)));
+        }
+    }
+}
 
 // Add missing tangent space if needed.
 void add_missing_tangent_space(yocto_scene& scene) {
