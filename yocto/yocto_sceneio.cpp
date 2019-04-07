@@ -574,7 +574,16 @@ struct load_yaml_scene_callbacks : yaml_callbacks {
 
     load_yaml_scene_callbacks(
         yocto_scene& scene, const load_scene_options& options)
-        : scene{scene}, options{options} {}
+        : scene{scene}, options{options} {
+            auto reserve_size = 1024*32;
+            tmap.reserve(reserve_size);
+            mmap.reserve(reserve_size);
+            smap.reserve(reserve_size);
+            scene.textures.reserve(reserve_size);
+            scene.materials.reserve(reserve_size);
+            scene.shapes.reserve(reserve_size);
+            scene.instances.reserve(reserve_size);
+        }
 
     void get_yaml_ref(
         string_view yml, int& value, unordered_map<string, int>& refs) {
@@ -901,14 +910,9 @@ void save_yaml(const string& filename, const yocto_scene& scene,
         if (value == def) return;
         print_yaml_keyvalue(fs, name, value);
     };
-    auto print_ref = [as_int = false](
-                         FILE* fs, const char* name, int value, auto& refs) {
+    auto print_ref = [](FILE* fs, const char* name, int value, auto& refs) {
         if (value < 0) return;
-        if (as_int) {
-            print(fs, "    {}: {}\n", name, value);
-        } else {
-            print(fs, "    {}: {}\n", name, refs[value].uri);
-        }
+        print(fs, "    {}: {}\n", name, refs[value].uri);
     };
 
     if (!scene.cameras.empty()) print(fs, "\n\ncameras:\n");
