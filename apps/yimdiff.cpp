@@ -95,9 +95,9 @@ int main(int argc, char* argv[]) {
         load_image(filename1, img1);
         load_image(filename2, img2);
     } catch (const std::exception& e) {
-        exit_error(e.what());
+        print_fatal(e.what());
     }
-    if (img1.size() != img2.size()) exit_error("image size differs");
+    if (img1.size() != img2.size()) print_fatal("image size differs");
     auto diff     = compute_diff_image(img1, img2);
     auto max_diff = max_diff_value(diff);
     if (!output.empty()) {
@@ -105,12 +105,12 @@ int main(int argc, char* argv[]) {
         try {
             save_image(output, display);
         } catch (const std::exception& e) {
-            exit_error(e.what());
+            print_fatal(e.what());
         }
     }
     if (max(max_diff) > threshold) {
         print_info("image max difference: " + to_string(max_diff));
-        exit_error("image content differs");
+        print_fatal("image content differs");
     }
 
     // done

@@ -96,6 +96,7 @@
 #include <vector>
 
 #define FMT_HEADER_ONLY
+#include "ext/fmt/chrono.h"
 #include "ext/fmt/format.h"
 
 // -----------------------------------------------------------------------------
@@ -120,6 +121,61 @@ using namespace std::chrono_literals;
 
 using fmt::format;
 using fmt::print;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PRINTING AND FORMATTING HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// We use the fmt library as a backend for printing. These are just helpers to
+// make printing easier in console apps.
+template <typename... Args>
+inline void println(string_view format_str, const Args&... args) {
+    print(format_str, args...);
+    print("\n");
+}
+
+// Helper to indicate info printing in console apps.
+template <typename... Args>
+inline void print_info(string_view format_str, const Args&... args) {
+    print(format_str, args...);
+    print("\n");
+}
+
+// Prints an error and exit.
+template <typename... Args>
+inline void print_fatal(string_view format_str, const Args&... args) {
+    print(format_str, args...);
+    print("\n");
+    exit(1);
+}
+
+// get time from a high resolution clock
+inline auto get_time() { return std::chrono::high_resolution_clock::now(); }
+
+// print information and returns a timer that will print the time when
+// destroyed. Use with RIIA for scoped timing.
+template <typename... Args>
+inline auto print_timed(string_view format_str, const Args&... args) {
+    struct print_timer {
+        print_timer(const string& msg) : _msg{msg} {
+            _start = std::chrono::high_resolution_clock::now();
+            print("{}\n", msg);
+        }
+        ~print_timer() {
+            auto end = std::chrono::high_resolution_clock::now();
+            print("{} {:%H:%M:%S}\n", _msg, end - _start);
+        }
+
+       private:
+        string                                                      _msg;
+        std::chrono::time_point<std::chrono::high_resolution_clock> _start;
+    };
+
+    return print_timer(format(format_str, args...));
+}
 
 }  // namespace yocto
 
@@ -223,38 +279,6 @@ namespace yocto {
 
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
-// Format a large integer number in human readable form
-inline string format_num(uint64_t num);
-
-// get time in nanoseconds - useful only to compute difference of times
-inline int64_t get_time() {
-    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-
-// Timer that print once it is crated and destroyed
-struct print_timer {
-    print_timer(const string& msg) : _msg{msg}, _start{get_time()} {
-        printf("%s ...\n", _msg.c_str());
-    }
-    ~print_timer() {
-        printf("%s in %s\n", _msg.c_str(),
-            format_duration(get_time() - _start).c_str());
-    }
-
-   private:
-    string  _msg;
-    int64_t _start;
-};
-
-// print info
-inline void print_info(const string& str) { printf("%s\n", str.c_str()); }
-inline print_timer print_timed(const string& str) { return print_timer(str); }
-
-// Exits printing and error
-inline void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
-}
 
 }  // namespace yocto
 
@@ -388,13 +412,6 @@ inline string format_duration(int64_t duration) {
     char buffer[256];
     sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
     return buffer;
-}
-// Format a large integer number in human readable form
-inline string format_num(uint64_t num) {
-    auto rem = num % 1000;
-    auto div = num / 1000;
-    if (div > 0) return format_num(div) + "," + to_string(rem);
-    return to_string(rem);
 }
 
 }  // namespace yocto

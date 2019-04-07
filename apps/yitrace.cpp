@@ -83,7 +83,6 @@ struct app_state {
     vector<pair<type_index, int>> update_list;
     bool                          navigation_fps  = false;
     bool                          quiet           = false;
-    int64_t                       trace_start     = 0;
     opengl_texture                display_texture = {};
 
     // app status
@@ -99,7 +98,6 @@ void stop_rendering_async(app_state& app) {
 void start_rendering_async(app_state& app) {
     stop_rendering_async(app);
     app.status       = "rendering image";
-    app.trace_start  = get_time();
     app.trace_stop   = false;
     app.trace_sample = 0;
 
@@ -142,7 +140,7 @@ bool load_scene_sync(app_state& app) {
     try {
         load_scene(app.filename, app.scene, app.load_options);
     } catch (const std::exception& e) {
-        exit_error(e.what());
+        print_fatal(e.what());
         return false;
     }
 
@@ -164,7 +162,7 @@ bool load_scene_sync(app_state& app) {
     // fix renderer type if no lights
     if (app.lights.instances.empty() && app.lights.environments.empty() &&
         is_trace_sampler_lit(app.trace_options)) {
-        printf("no lights presents, switching to eyelight shader\n");
+        print_info("no lights presents, switching to eyelight shader");
         app.trace_options.sampler_type = trace_sampler_type::eyelight;
     }
 
@@ -182,7 +180,7 @@ bool load_scene_sync(app_state& app) {
 
 void load_scene_async(app_state& app) {
     if (app.load_running) {
-        printf("error: already loading\n");
+        print_info("error: already loading");
         return;
     }
     app.load_done    = false;
@@ -241,12 +239,9 @@ void draw_opengl_widgets(const opengl_window& win) {
                 edited += draw_slider_opengl_widget(
                     win, "pratio", app.preview_ratio, 1, 64);
                 if (edited) app.update_list.push_back({typeid(app_state), -1});
-                draw_label_opengl_widget(win, "time/sample", "%0.3lf",
-                    (app.trace_sample) ? (get_time() - app.trace_start) /
-                                             (1000000000.0 * app.trace_sample)
-                                       : 0.0);
                 draw_slider_opengl_widget(win, "exposure", app.exposure, -5, 5);
                 draw_checkbox_opengl_widget(win, "filmic", app.filmic);
+                continue_opengl_widget_line(win);
                 draw_checkbox_opengl_widget(win, "srgb", app.srgb);
                 draw_slider_opengl_widget(
                     win, "zoom", app.image_scale, 0.1, 10);
@@ -261,8 +256,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                 }
                 continue_opengl_widget_line(win);
                 if (draw_button_opengl_widget(win, "print stats")) {
-                    printf("%s\n", format_scene_stats(app.scene).c_str());
-                    printf("%s\n", print_scene_bvh_stats(app.bvh).c_str());
+                    print_info("{}", format_scene_stats(app.scene).c_str());
+                    print_info("{}", print_scene_bvh_stats(app.bvh).c_str());
                 }
                 auto mouse_pos = get_opengl_mouse_pos(win);
                 auto ij        = get_image_coords(mouse_pos, app.image_center,

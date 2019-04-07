@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
     auto subdiv_directory = "subdivs/"s;
     auto uniform_txt      = false;
     auto validate         = false;
-    auto print_info       = false;
+    auto info             = false;
     auto ply_instances    = false;
     auto output           = "out.json"s;
     auto filename         = "scene.json"s;
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
         "uniform texture formats");
     parser.add_flag("--ply-instances,!--no-ply-instances", ply_instances,
         "Use ply instances");
-    parser.add_flag("--print-info,-i", print_info, "print scene info");
+    parser.add_flag("--print-info,-i", info, "print scene info");
     parser.add_flag("--validate,!--no-validate", validate, "Validate scene");
     parser.add_option("--output,-o", output, "output scene")->required(true);
     parser.add_option("scene", filename, "input scene")->required(true);
@@ -95,28 +95,22 @@ int main(int argc, char** argv) {
     save_options.ply_instances = ply_instances;
 
     // load scene
-    printf("loading scene ...\n");
-    auto start_load = get_time();
-    auto scene      = yocto_scene{};
+    auto scene = yocto_scene{};
     try {
+        auto timer = print_timed("loading scene");
         load_scene(filename, scene, load_options);
     } catch (const std::exception& e) {
-        exit_error(e.what());
+        print_fatal(e.what());
     }
-    printf("loading scene [%s]\n",
-        format_duration(get_time() - start_load).c_str());
 
     // validate scene
     if (validate) {
-        printf("validating scene ...\n");
-        auto start_val = get_time();
+        auto timer = print_timed("validating scene");
         print_validation_errors(scene);
-        printf("validating scene [%s]\n",
-            format_duration(get_time() - start_val).c_str());
     }
 
     // print info
-    if (print_info) printf("%s\n", format_scene_stats(scene).c_str());
+    if (info) print_info("{}", format_scene_stats(scene));
 
     // change texture names
     if (uniform_txt) {
@@ -130,11 +124,11 @@ int main(int argc, char** argv) {
         }
     }
 
-    printf("tesselating scene ...\n");
-    auto start_tess = get_time();
-    tesselate_subdivs(scene);
-    printf("tesselating scene [%s]\n",
-        format_duration(get_time() - start_tess).c_str());
+    // tesselating scene
+    {
+        auto timer = print_timed("tesselating scene");
+        tesselate_subdivs(scene);
+    }
 
     // add missing mesh names if necessary
     if (!shape_directory.empty() && shape_directory.back() != '/')
@@ -143,11 +137,9 @@ int main(int argc, char** argv) {
         auto sid = 0;
         for (auto& shape : scene.shapes) {
             if (!shape.quads_positions.empty()) {
-                shape.uri = shape_directory + "shape_" + std::to_string(sid) +
-                            ".obj";
+                shape.uri = format("{}shape_{}.obj", shape_directory, sid);
             } else {
-                shape.uri = shape_directory + "shape_" + std::to_string(sid) +
-                            ".ply";
+                shape.uri = format("{}shape_{}.ply", shape_directory, sid);
             }
             sid++;
         }
@@ -159,11 +151,9 @@ int main(int argc, char** argv) {
         auto sid = 0;
         for (auto& subdiv : scene.subdivs) {
             if (!subdiv.quads_positions.empty()) {
-                subdiv.uri = subdiv_directory + "subdiv_" +
-                             std::to_string(sid) + ".obj";
+                subdiv.uri = format("{}subdiv_{}.obj", subdiv_directory, sid);
             } else {
-                subdiv.uri = subdiv_directory + "subdiv_" +
-                             std::to_string(sid) + ".ply";
+                subdiv.uri = format("{}subdiv_{}.ply", subdiv_directory, sid);
             }
             sid++;
         }
@@ -171,7 +161,7 @@ int main(int argc, char** argv) {
 
     // make a directory if needed
     auto dirname  = get_dirname(output);
-    auto dirnames = unordered_set{dirname};
+    auto dirnames = unordered_set<string>{dirname};
     for (auto& shape : scene.shapes)
         dirnames.insert(dirname + get_dirname(shape.uri));
     for (auto& subdiv : scene.subdivs)
@@ -182,20 +172,17 @@ int main(int argc, char** argv) {
         dirnames.insert(dirname + "instances");
     for (auto& dir : dirnames) {
         if (!mkdir(get_dirname(dir))) {
-            exit_error("cannot create directory " + get_dirname(output));
+            print_fatal("cannot create directory " + get_dirname(output));
         }
     }
 
     // save scene
-    printf("saving scene ...\n");
-    auto start_save = get_time();
     try {
+        auto timer = print_timed("saving scene");
         save_scene(output, scene, save_options);
     } catch (const std::exception& e) {
-        exit_error(e.what());
+        print_fatal(e.what());
     }
-    printf("saving scene [%s]\n",
-        format_duration(get_time() - start_save).c_str());
 
     // done
     return 0;

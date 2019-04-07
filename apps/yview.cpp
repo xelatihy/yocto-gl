@@ -157,7 +157,7 @@ bool load_scene_sync(app_state& app) {
     try {
         load_scene(app.filename, app.scene, app.load_options);
     } catch (const std::exception& e) {
-        exit_error(e.what());
+        print_fatal(e.what());
         return false;
     }
 
@@ -171,7 +171,7 @@ bool load_scene_sync(app_state& app) {
 
     // fix renderer type if no lights
     if (app.lights.empty() && !app.draw_options.eyelight) {
-        printf("no lights presents, switching to eyelight shader\n");
+        print_info("no lights presents, switching to eyelight shader");
         app.draw_options.eyelight = true;
     }
 
@@ -933,7 +933,7 @@ void run_ui(app_state& app) {
 
     // loop
     auto mouse_pos = zero2f, last_pos = zero2f;
-    auto last_time = get_time();
+    auto last_time = std::chrono::high_resolution_clock::now();
     while (!should_opengl_window_close(win)) {
         last_pos            = mouse_pos;
         mouse_pos           = get_opengl_mouse_pos(win);
@@ -962,12 +962,14 @@ void run_ui(app_state& app) {
 
         // animation
         if (app.load_done && app.animate) {
-            auto time = (double)(get_time() - last_time) / 1000000000.0;
+            auto now     = std::chrono::high_resolution_clock::now();
+            auto elapsed = now - last_time;
+            auto time    = (double)(elapsed.count()) / 1000000000.0;
             app.time += min(1 / 60.0f, (float)time);
             if (app.time < app.time_range.x || app.time > app.time_range.y)
                 app.time = app.time_range.x;
             update_transforms(app.scene, app.time);
-            last_time = get_time();
+            last_time = now;
         }
 
         // update

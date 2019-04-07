@@ -42,7 +42,7 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
     auto img_idx = 0;
     for (auto& img : imgs) {
         if (extents(img) != extents(imgs[0])) {
-            exit_error("images of different sizes are not accepted");
+            print_fatal("images of different sizes are not accepted");
         }
         auto ox = (img_idx % tilex) * img.size().x,
              oy = (img_idx / tilex) * img.size().y;
@@ -177,7 +177,7 @@ int main(int argc, char* argv[]) {
     try {
         load_image(filename, img);
     } catch (const std::exception& e) {
-        exit_error(e.what());
+        print_fatal(e.what());
     }
 
     // set alpha
@@ -186,10 +186,10 @@ int main(int argc, char* argv[]) {
         try {
             load_image(alpha_filename, alpha);
         } catch (const std::exception& e) {
-            exit_error(e.what());
+            print_fatal(e.what());
         }
         if (img.size() != alpha.size()) {
-            exit_error("bad image size");
+            print_fatal("bad image size");
             exit(1);
         }
         for (auto j = 0; j < img.size().y; j++)
@@ -203,10 +203,10 @@ int main(int argc, char* argv[]) {
         try {
             load_image(coloralpha_filename, alpha);
         } catch (const std::exception& e) {
-            exit_error(e.what());
+            print_fatal(e.what());
         }
         if (img.size() != alpha.size()) {
-            exit_error("bad image size");
+            print_fatal("bad image size");
             exit(1);
         }
         for (auto j = 0; j < img.size().y; j++)
@@ -237,7 +237,7 @@ int main(int argc, char* argv[]) {
     try {
         save_image(output, img);
     } catch (const std::exception& e) {
-        exit_error(e.what());
+        print_fatal(e.what());
     }
 
     // done

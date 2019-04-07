@@ -133,50 +133,45 @@ int main(int argc, char* argv[]) {
     // scene loading
     auto scene = yocto_scene{};
     try {
-        printf("loading scene ...\n");
-        auto start_load = get_time();
+        auto timer = print_timed("loading scene");
         load_scene(filename, scene, load_options);
-        printf("loading scene [%s]\n",
-            format_duration(get_time() - start_load).c_str());
     } catch (const std::exception& e) {
-        exit_error(e.what());
+        print_fatal(e.what());
     }
 
     // tesselate
-    printf("tesselating scene ...\n");
-    auto start_tess = get_time();
-    tesselate_subdivs(scene);
-    printf("tesselating scene [%s]\n",
-        format_duration(get_time() - start_tess).c_str());
+    {
+        auto timer = print_timed("tesselating scene");
+        tesselate_subdivs(scene);
+    }
 
     // add components
     if (validate) {
-        printf("validating scene ...\n");
-        auto start_val = get_time();
+        auto timer = print_timed("validating scene");
         print_validation_errors(scene);
-        printf("validating scene [%s]\n",
-            format_duration(get_time() - start_val).c_str());
     }
 
     // add sky
     if (add_skyenv) add_sky_environment(scene);
 
     // build bvh
-    printf("building bvh ...\n");
-    auto start_bvh = get_time();
-    auto bvh       = bvh_scene{};
-    build_scene_bvh(scene, bvh, bvh_options);
-    printf(
-        "building bvh [%s]\n", format_duration(get_time() - start_bvh).c_str());
+    auto bvh = bvh_scene{};
+    {
+        auto timer = print_timed("building bvh");
+        build_scene_bvh(scene, bvh, bvh_options);
+    }
 
     // init renderer
     auto lights = trace_lights{};
-    init_trace_lights(lights, scene);
+    {
+        auto timer = print_timed("initializing lights");
+        init_trace_lights(lights, scene);
+    }
 
     // fix renderer type if no lights
     if ((lights.instances.empty() && lights.environments.empty()) &&
         is_trace_sampler_lit(trace_options)) {
-        printf("no lights presents, switching to eyelight shader\n");
+        print_info("no lights presents, switching to eyelight shader");
         trace_options.sampler_type = trace_sampler_type::eyelight;
     }
 
@@ -207,19 +202,16 @@ int main(int argc, char* argv[]) {
              sample += trace_options.samples_per_batch) {
             auto nsamples = min(trace_options.samples_per_batch,
                 trace_options.num_samples - sample);
-            printf("rendering camera %d [%d/%d] ...\n", trace_options.camera_id,
-                sample, trace_options.num_samples);
-            auto start_batch = get_time();
-            trace_image_samples(
-                render, state, scene, bvh, lights, sample, trace_options);
-            printf("rendering camera %d [%d/%d] [%s]\n",
-                trace_options.camera_id, sample, trace_options.num_samples,
-                format_duration(get_time() - start_batch).c_str());
+            {
+                auto timer = print_timed("rendering camera {} [{}/{}]",
+                    trace_options.camera_id, sample, trace_options.num_samples);
+                trace_image_samples(
+                    render, state, scene, bvh, lights, sample, trace_options);
+            }
             if (save_batch) {
-                auto outfilename = get_noextension(imfilename) + ".cam" +
-                                   std::to_string(trace_options.camera_id) +
-                                   ".s" + std::to_string(sample + nsamples) +
-                                   "." + get_extension(imfilename);
+                auto outfilename = format("{}.cam{}.s{}.{}",
+                    get_noextension(imfilename), trace_options.camera_id,
+                    sample + nsamples, get_extension(imfilename));
                 try {
                     if (logo) {
                         save_tonemapped_image_with_logo(
@@ -229,7 +221,7 @@ int main(int argc, char* argv[]) {
                             outfilename, render, exposure, filmic, srgb);
                     }
                 } catch (const std::exception& e) {
-                    exit_error(e.what());
+                    print_fatal(e.what());
                 }
             }
         }
@@ -238,12 +230,10 @@ int main(int argc, char* argv[]) {
         try {
             auto outfilename = imfilename;
             if (all_cameras) {
-                outfilename = get_noextension(imfilename) + ".cam" +
-                              std::to_string(trace_options.camera_id) + "." +
-                              get_extension(imfilename);
+                outfilename = format("{}.cam{}.{}", get_noextension(imfilename),
+                    trace_options.camera_id, get_extension(imfilename));
             }
-            printf("saving image %s ...\n", outfilename.c_str());
-            auto start_save = get_time();
+            auto timer = print_timed("saving image {}", outfilename);
             if (logo) {
                 save_tonemapped_image_with_logo(
                     outfilename, render, exposure, filmic, srgb);
@@ -251,10 +241,8 @@ int main(int argc, char* argv[]) {
                 save_tonemapped_image(
                     outfilename, render, exposure, filmic, srgb);
             }
-            printf("saving image %s [%s]\n", outfilename.c_str(),
-                format_duration(get_time() - start_save).c_str());
         } catch (const std::exception& e) {
-            exit_error(e.what());
+            print_fatal(e.what());
         }
     }
 

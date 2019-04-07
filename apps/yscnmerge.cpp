@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
     auto mesh_directory    = "models/"s;
     auto texture_filenames = true;
     auto texture_directory = "textures/"s;
-    auto print_info        = false;
+    auto info              = false;
     auto output            = "out.json"s;
     auto filenames         = vector<string>{};
 
@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
         texture_filenames, "Add texture filenames.");
     parser.add_option("--texture-directory", texture_directory,
         "Texture directory when adding names.");
-    parser.add_option("--print-info,-i", print_info, "print scene info");
+    parser.add_option("--print-info,-i", info, "print scene info");
     parser.add_option("--output,-o", output, "output scene")->required(true);
     parser.add_option("scenes", filenames, "scene filenames")->required(true);
     try {
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
         try {
             load_scene(filename, to_merge, load_options);
         } catch (const std::exception& e) {
-            exit_error(e.what());
+            print_fatal(e.what());
         }
         print_validation_errors(to_merge, true);
         if (scene_postfix) {
@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
     print_validation_errors(scene, true);
 
     // print info
-    if (print_info) printf("%s\n", format_scene_stats(scene).c_str());
+    if (info) print_info("{}", format_scene_stats(scene));
 
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
@@ -150,14 +150,14 @@ int main(int argc, char** argv) {
 
     // make a directory if needed
     if (!mkdir(get_dirname(output))) {
-        exit_error("cannot create directory " + get_dirname(output));
+        print_fatal("cannot create directory " + get_dirname(output));
     }
 
     // save scene
     try {
         save_scene(output, scene, save_options);
     } catch (const std::exception& e) {
-        exit_error(e.what());
+        print_fatal(e.what());
     }
 
     // done

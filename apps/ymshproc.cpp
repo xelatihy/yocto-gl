@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
             shape.quads_texturecoords, shape.positions, shape.normals,
             shape.texturecoords, shape.colors, shape.radius, facevarying);
     } catch (const std::exception& e) {
-        exit_error(e.what());
+        print_fatal(e.what());
     }
 
     // compute geodesics and store them as colors
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
             shape.quads_texturecoords, shape.positions, shape.normals,
             shape.texturecoords, shape.colors, shape.radius);
     } catch (const std::exception& e) {
-        exit_error(e.what());
+        print_fatal(e.what());
     }
 
     // done

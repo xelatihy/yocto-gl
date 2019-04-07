@@ -44,7 +44,7 @@
 namespace yocto {
 
 void check_opengl_error() {
-    if (glGetError() != GL_NO_ERROR) printf("gl error\n");
+    if (glGetError() != GL_NO_ERROR) print_info("gl error");
 }
 
 void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth) {
