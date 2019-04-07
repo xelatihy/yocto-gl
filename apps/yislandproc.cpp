@@ -1088,7 +1088,7 @@ int main(int argc, char** argv) {
 
     // make a directory if needed
     auto dirname  = get_dirname(output);
-    auto dirnames = unordered_set{dirname};
+    auto dirnames = unordered_set<string>{dirname};
     for (auto& shape : scene.shapes)
         dirnames.insert(dirname + get_dirname(shape.uri));
     for (auto& texture : scene.textures)
