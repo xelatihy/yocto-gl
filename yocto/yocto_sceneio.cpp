@@ -479,7 +479,73 @@ struct yaml_callbacks {
     void object_group(const string& key);
     void object_begin();
     void key_value(const string& key, const yaml_value& value);
+    void key_value(string_view key, string_view value);
 };
+
+inline void get_yaml_value(string_view str, string& value) {
+    skip_whitespace(str);
+    if (str.empty()) throw io_error("expected string");
+    if (str.front() == '"') {
+        parse_value(str, value, true);
+    } else {
+        parse_value(str, value, false);
+    }
+}
+inline void get_yaml_value(string_view str, int& value) {
+    skip_whitespace(str);
+    parse_value(str, value);
+}
+inline void get_yaml_value(string_view str, float& value) {
+    skip_whitespace(str);
+    parse_value(str, value);
+}
+inline void get_yaml_value(string_view str, double& value) {
+    skip_whitespace(str);
+    parse_value(str, value);
+}
+inline void get_yaml_value(string_view str, bool& value) {
+    auto values = ""s;
+    get_yaml_value(str, values);
+    if(values == "true" || values == "True") {
+        value = true;
+    } else if(values == "false" || values == "False") {
+        value = false;
+    } else {
+        throw io_error("expected bool");
+    }
+}
+template<typename T, size_t N>
+inline void get_yaml_value(string_view str, array<T, N>& value) {
+    skip_whitespace(str);
+    if (str.empty() || str.front() != '[') throw io_error("expected array");
+    str.remove_prefix(1);
+    for(auto i = 0; i < N; i ++) {
+        skip_whitespace(str);
+        if(str.empty()) throw io_error("expected array");        
+        parse_value(str, value[i]);
+        skip_whitespace(str);
+        if(i != N-1) {
+            if(str.empty() || str.front() != ',') throw io_error("expected array");        
+            str.remove_prefix(1);
+            skip_whitespace(str);
+        }
+    }
+    skip_whitespace(str);
+    if (str.empty() || str.front() != ']') throw io_error("expected array");
+    str.remove_prefix(1);
+}
+template<typename T, int N>
+inline void get_yaml_value(string_view str, vec<T, N>& value) {
+    return get_yaml_value(str, (array<T, N>&)value);
+}
+template<typename T, int N>
+inline void get_yaml_value(string_view str, frame<T, N>& value) {
+    return get_yaml_value(str, (array<T, N*(N+1)>&)value);
+}
+template<typename T, int N, int M>
+inline void get_yaml_value(string_view str, mat<T, N, M>& value) {
+    return get_yaml_value(str, (array<T, N*M>&)value);
+}
 
 inline void parse_value(string_view& str, yaml_value& value) {
     skip_whitespace(str);
@@ -530,7 +596,7 @@ inline void parse_value(string_view& str, yaml_value& value) {
 struct load_yaml_options {};
 
 template <typename Callbacks>
-inline void load_yaml(const string& filename, Callbacks& callbacks,
+inline void load_yaml_old(const string& filename, Callbacks& callbacks,
     const load_yaml_options& options) {
     // open file
     auto fs_ = open_input_file(filename);
@@ -570,6 +636,63 @@ inline void load_yaml(const string& filename, Callbacks& callbacks,
             skip_whitespace(line);
             parse_value(line, value);
             callbacks.key_value(key, value);
+        } else if (is_alpha(line.front())) {
+            // new group
+            auto key = ""s;
+            parse_varname(line, key);
+            skip_whitespace(line);
+            if (line.empty() || line.front() != ':') throw io_error("bad yaml");
+            line.remove_prefix(1);
+            if (!line.empty() && !is_whitespace(line))
+                throw io_error("bad yaml");
+            callbacks.object_group(key);
+            in_objects = true;
+            in_object  = false;
+        } else {
+            throw io_error("bad yaml");
+        }
+    }
+}
+
+template <typename Callbacks>
+inline void load_yaml(const string& filename, Callbacks& callbacks,
+    const load_yaml_options& options) {
+    // open file
+    auto fs_ = open_input_file(filename);
+    auto fs  = fs_.fs;
+
+    // parsing state
+    auto in_objects = false;
+    auto in_object  = false;
+
+    // read the file line by line
+    char buffer[4096];
+    while (read_line(fs, buffer, sizeof(buffer))) {
+        // line
+        auto line = string_view{buffer};
+        remove_comment_and_newline(line);
+        if (line.empty()) continue;
+        if (is_whitespace(line)) continue;
+
+        // peek commands
+        if (is_space(line.front())) {
+            if (!in_objects) throw io_error("bad yaml");
+            // indented property
+            skip_whitespace(line);
+            if (line.empty()) throw io_error("bad yaml");
+            if (line.front() == '-') {
+                callbacks.object_begin();
+                line.remove_prefix(1);
+                skip_whitespace(line);
+                in_object = true;
+            }
+            auto key = ""s;
+            parse_varname(line, key);
+            skip_whitespace(line);
+            if (line.empty() || line.front() != ':') throw io_error("bad yaml");
+            line.remove_prefix(1);
+            trim_whitespace(line);
+            callbacks.key_value(key, line);
         } else if (is_alpha(line.front())) {
             // new group
             auto key = ""s;
@@ -680,6 +803,17 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                 if (value >= refs.size()) {
                     throw io_error("reference not found " + to_string(value));
                 }
+            }
+        }
+
+        void get_yaml_ref(string_view yml, int& value, unordered_map<string, int>& refs) {
+            auto name = ""s;
+            get_yaml_value(yml, name);
+            if (name == "") return;
+            try {
+                value = refs.at(name);
+            } catch (...) {
+                throw io_error("reference not found " + name);
             }
         }
 
@@ -901,6 +1035,185 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                 case parsing_type::ply_instances: {
                     if (key == "uri") {
                         get_value(value, ply_instances);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                default: throw io_error("unknown object type");
+            }
+        }
+        void key_value(string_view key, string_view value) {
+            switch (type) {
+                case parsing_type::camera: {
+                    auto& camera = scene.cameras.back();
+                    if (key == "uri") {
+                        get_yaml_value(value, camera.uri);
+                    } else if (key == "frame") {
+                        get_yaml_value(value, camera.frame);
+                    } else if (key == "orthographic") {
+                        get_yaml_value(value, camera.orthographic);
+                    } else if (key == "film_width") {
+                        get_yaml_value(value, camera.film_width);
+                    } else if (key == "film_height") {
+                        get_yaml_value(value, camera.film_height);
+                    } else if (key == "focal_length") {
+                        get_yaml_value(value, camera.focal_length);
+                    } else if (key == "focus_distance") {
+                        get_yaml_value(value, camera.focus_distance);
+                    } else if (key == "lens_aperture") {
+                        get_yaml_value(value, camera.lens_aperture);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::texture: {
+                    auto& texture = scene.textures.back();
+                    if (key == "uri") {
+                        get_yaml_value(value, texture.uri);
+                        auto refname = texture.uri;
+                        if (is_image_preset_filename(refname)) {
+                            auto [_, nname] = get_image_preset_type(refname);
+                            refname         = nname;
+                        }
+                        tmap[refname] = (int)scene.textures.size() - 1;
+                    } else if (key == "filename") {
+                        get_yaml_value(value, texture.uri);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::voltexture: {
+                    auto& texture = scene.voltextures.back();
+                    if (key == "uri") {
+                        get_yaml_value(value, texture.uri);
+                        auto refname = texture.uri;
+                        if (is_image_preset_filename(refname)) {
+                            auto [_, nname] = get_image_preset_type(refname);
+                            refname         = nname;
+                        }
+                        vmap[refname] = (int)scene.voltextures.size() - 1;
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::material: {
+                    auto& material = scene.materials.back();
+                    if (key == "uri") {
+                        get_yaml_value(value, material.uri);
+                        mmap[material.uri] = (int)scene.materials.size() - 1;
+                    } else if (key == "base_metallic") {
+                        get_yaml_value(value, material.base_metallic);
+                    } else if (key == "gltf_textures") {
+                        get_yaml_value(value, material.gltf_textures);
+                    } else if (key == "emission") {
+                        get_yaml_value(value, material.emission);
+                    } else if (key == "diffuse") {
+                        get_yaml_value(value, material.diffuse);
+                    } else if (key == "specular") {
+                        get_yaml_value(value, material.specular);
+                    } else if (key == "transmission") {
+                        get_yaml_value(value, material.transmission);
+                    } else if (key == "roughness") {
+                        get_yaml_value(value, material.roughness);
+                    } else if (key == "opacity") {
+                        get_yaml_value(value, material.opacity);
+                    } else if (key == "fresnel") {
+                        get_yaml_value(value, material.fresnel);
+                    } else if (key == "refract") {
+                        get_yaml_value(value, material.refract);
+                    } else if (key == "volume_density") {
+                        get_yaml_value(value, material.volume_density);
+                    } else if (key == "volume_albedo") {
+                        get_yaml_value(value, material.volume_albedo);
+                    } else if (key == "volume_emission") {
+                        get_yaml_value(value, material.volume_emission);
+                    } else if (key == "volume_phaseg") {
+                        get_yaml_value(value, material.volume_phaseg);
+                    } else if (key == "emission_texture") {
+                        get_yaml_ref(value, material.emission_texture, tmap);
+                    } else if (key == "diffuse_texture") {
+                        get_yaml_ref(value, material.diffuse_texture, tmap);
+                    } else if (key == "specular_texture") {
+                        get_yaml_ref(value, material.specular_texture, tmap);
+                    } else if (key == "transmission_texture") {
+                        get_yaml_ref(value, material.transmission_texture, tmap);
+                    } else if (key == "roughness_texture") {
+                        get_yaml_ref(value, material.roughness_texture, tmap);
+                    } else if (key == "normal_texture") {
+                        get_yaml_ref(value, material.normal_texture, tmap);
+                    } else if (key == "volume_density_texture") {
+                        get_yaml_ref(value, material.volume_density_texture, vmap);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::shape: {
+                    auto& shape = scene.shapes.back();
+                    if (key == "uri") {
+                        get_yaml_value(value, shape.uri);
+                        auto refname = shape.uri;
+                        if (is_shape_preset_filename(refname)) {
+                            auto [_, nname] = get_shape_preset_type(refname);
+                            refname         = nname;
+                        }
+                        smap[refname] = (int)scene.shapes.size() - 1;
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::subdiv: {
+                    auto& subdiv = scene.subdivs.back();
+                    if (key == "uri") {
+                        get_yaml_value(value, subdiv.uri);
+                    } else if (key == "tesselated_shape") {
+                        get_yaml_ref(value, subdiv.tesselated_shape, smap);
+                    } else if (key == "subdivision_level") {
+                        get_yaml_value(value, subdiv.subdivision_level);
+                    } else if (key == "catmull_clark") {
+                        get_yaml_value(value, subdiv.catmull_clark);
+                    } else if (key == "compute_normals") {
+                        get_yaml_value(value, subdiv.compute_normals);
+                    } else if (key == "preserve_facevarying") {
+                        get_yaml_value(value, subdiv.preserve_facevarying);
+                    } else if (key == "displacement_texture") {
+                        get_yaml_ref(value, subdiv.displacement_texture, tmap);
+                    } else if (key == "displacement_scale") {
+                        get_yaml_value(value, subdiv.displacement_scale);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::instance: {
+                    auto& instance = scene.instances.back();
+                    if (key == "uri") {
+                        get_yaml_value(value, instance.uri);
+                    } else if (key == "frame") {
+                        get_yaml_value(value, instance.frame);
+                    } else if (key == "shape") {
+                        get_yaml_ref(value, instance.shape, smap);
+                    } else if (key == "material") {
+                        get_yaml_ref(value, instance.material, mmap);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::environment: {
+                    auto& environment = scene.environments.back();
+                    if (key == "uri") {
+                        get_yaml_value(value, environment.uri);
+                    } else if (key == "frame") {
+                        get_yaml_value(value, environment.frame);
+                    } else if (key == "emission") {
+                        get_yaml_value(value, environment.emission);
+                    } else if (key == "emission_texture") {
+                        get_yaml_ref(value, environment.emission_texture, tmap);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
+                case parsing_type::ply_instances: {
+                    if (key == "uri") {
+                        get_yaml_value(value, ply_instances);
                     } else {
                         throw io_error("unknown property");
                     }

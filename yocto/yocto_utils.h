@@ -654,11 +654,9 @@ inline file_holder open_output_file(
     return {fs};
 }
 
-// Read a line at a fime matching Python behaviour and remove newline character
+// Read a line
 inline bool read_line(FILE* fs, char* buffer, size_t size) {
-    if (fgets(buffer, size, fs) == nullptr) return false;
-    buffer[strlen(buffer)] = 0;
-    return true;
+    return fgets(buffer, size, fs) != nullptr;
 }
 
 }  // namespace yocto
@@ -674,6 +672,20 @@ inline void skip_whitespace(string_view& str) {
         str.remove_prefix(str.size());
     } else {
         str.remove_prefix(pos);
+    }
+}
+inline void trim_whitespace(string_view& str) {
+    auto front = str.find_first_not_of(" \t\r\n");
+    if (front == str.npos) {
+        str.remove_prefix(str.size());
+    } else {
+        str.remove_prefix(front);
+    }
+    auto back = str.find_last_not_of(" \t\r\n");
+    if (back == str.npos) {
+        str.remove_suffix(str.size());
+    } else {
+        str.remove_suffix(str.size() - back - 1);
     }
 }
 inline void remove_comment_(string_view& str, char comment_char = '#') {
