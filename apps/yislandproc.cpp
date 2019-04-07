@@ -1097,7 +1097,7 @@ int main(int argc, char** argv) {
         auto timer                 = print_timed("saving scene");
         save_options.skip_textures = false;
         save_options.run_serially  = false;
-        save_options.ply_instances = true;
+        // save_options.ply_instances = true;
         save_scene(output, scene, save_options);
     } catch (const std::exception& e) {
         print_fatal(e.what());
