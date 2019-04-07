@@ -526,8 +526,9 @@ void rename_instances(yocto_scene& scene) {
     auto shape_count = vector<vec2i>(scene.shapes.size(), vec2i{0, 0});
     for (auto& instance : scene.instances) shape_count[instance.shape].y += 1;
     for (auto& instance : scene.instances) {
-        if(shape_count[instance.shape].y == 1) {
-            instance.uri = format("instances/{}.yaml", shape_names[instance.shape]);
+        if (shape_count[instance.shape].y == 1) {
+            instance.uri = format(
+                "instances/{}.yaml", shape_names[instance.shape]);
         } else {
             instance.uri = format("instances/{}-{:{}}.yaml",
                 shape_names[instance.shape], shape_count[instance.shape].x++,

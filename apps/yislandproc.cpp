@@ -31,7 +31,7 @@
 //
 // WARNING: THIS IS REALLY UGLY CODE. THE DISNEY SCENE DATA HAS SPECIAL CASES
 // ALMOST EVERYWHERE. THOSE SPECIAL CASES ARE HARDCODED IN THE CODE BELOW.
-// REALLY, DO NOT USE THIS CODE. 
+// REALLY, DO NOT USE THIS CODE.
 //
 // =============================================================================
 //
@@ -899,7 +899,6 @@ void load_disney_island_elements(const string& filename, const string& dirname,
     }
 
     // rename materials and shapes
-
 }
 
 void load_scene_textures(yocto_scene& scene, const string& dirname,
@@ -938,42 +937,46 @@ void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
 
     // fix names
     auto parent_shape_map = unordered_map<string, vec2i>{};
-    for(auto id = 0; id < scene.shapes.size(); id ++) {
+    for (auto id = 0; id < scene.shapes.size(); id++) {
         auto parent_name = get_dirname(scene.shapes[id].uri).substr(7);
-        parent_name = parent_name.substr(0, parent_name.size()-1);
+        parent_name      = parent_name.substr(0, parent_name.size() - 1);
         parent_shape_map[parent_name].y += 1;
     }
-    for(auto id = 0; id < scene.shapes.size(); id ++) {
+    for (auto id = 0; id < scene.shapes.size(); id++) {
         auto parent_name = get_dirname(scene.shapes[id].uri).substr(7);
-        parent_name = parent_name.substr(0, parent_name.size()-1);
-        if(parent_shape_map[parent_name].y == 1) {
-            scene.shapes[id].uri = format("shapes/{}.ply", parent_name);
+        parent_name      = parent_name.substr(0, parent_name.size() - 1);
+        if (parent_shape_map[parent_name].y == 1) {
+            scene.shapes[id].uri    = format("shapes/{}.ply", parent_name);
             scene.materials[id].uri = format("materials/{}.yaml", parent_name);
         } else {
-            scene.shapes[id].uri = format("shapes/{}{}.ply", parent_name, parent_shape_map[parent_name].x);
-            scene.materials[id].uri = format("materials/{}{}.yaml", parent_name, parent_shape_map[parent_name].x);
+            scene.shapes[id].uri    = format("shapes/{}{}.ply", parent_name,
+                parent_shape_map[parent_name].x);
+            scene.materials[id].uri = format("materials/{}{}.yaml", parent_name,
+                parent_shape_map[parent_name].x);
             parent_shape_map[parent_name].x += 1;
         }
     }
     auto parent_texture_map = unordered_map<string, vec2i>{};
-    for(auto id = 0; id < scene.textures.size(); id ++) {
+    for (auto id = 0; id < scene.textures.size(); id++) {
         auto parent_name = get_dirname(scene.textures[id].uri).substr(9);
-        parent_name = parent_name.substr(0, parent_name.size()-1);
-        parent_name = replace(parent_name, "/Color", "");
+        parent_name      = parent_name.substr(0, parent_name.size() - 1);
+        parent_name      = replace(parent_name, "/Color", "");
         parent_texture_map[parent_name].y += 1;
     }
-    for(auto id = 0; id < scene.textures.size(); id ++) {
+    for (auto id = 0; id < scene.textures.size(); id++) {
         auto parent_name = get_dirname(scene.textures[id].uri).substr(9);
-        parent_name = parent_name.substr(0, parent_name.size()-1);
-        if(parent_name == "lights") {
-            scene.textures[id].uri = "textures/" + get_filename(scene.textures[id].uri);
+        parent_name      = parent_name.substr(0, parent_name.size() - 1);
+        if (parent_name == "lights") {
+            scene.textures[id].uri = "textures/" +
+                                     get_filename(scene.textures[id].uri);
             continue;
         }
         parent_name = replace(parent_name, "/Color", "");
-        if(parent_texture_map[parent_name].y == 1) {
+        if (parent_texture_map[parent_name].y == 1) {
             scene.textures[id].uri = format("textures/{}.png", parent_name);
         } else {
-            scene.textures[id].uri = format("textures/{}{}.png", parent_name, parent_texture_map[parent_name].x);
+            scene.textures[id].uri = format("textures/{}{}.png", parent_name,
+                parent_texture_map[parent_name].x);
             parent_texture_map[parent_name].x += 1;
         }
     }
