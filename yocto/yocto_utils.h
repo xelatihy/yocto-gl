@@ -636,38 +636,6 @@ struct input_file {
     bool   owned    = true;
 };
 
-// read a value from a file
-template <typename T>
-inline void read_value(const input_file& fs, T& value) {
-    if (fread(&value, sizeof(value), 1, fs.file) != 1) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
-
-// read values from a file
-template <typename T>
-inline void read_values(const input_file& fs, T* values, size_t count) {
-    if (!count) return;
-    if (fread(values, sizeof(values[0]), count, fs.file) != count) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
-template <typename T>
-inline void read_values(const input_file& fs, vector<T>& values) {
-    if (values.empty()) return;
-    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
-// read characters from a file
-inline void read_values(const input_file& fs, string& values) {
-    if (values.empty()) return;
-    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
 
 // read a line of text
 inline bool read_line(const input_file& fs, string& str) {
