@@ -269,7 +269,6 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_slider_opengl_widget(
         win, "roughness", value.roughness, 0, 1);
     edited += draw_slider_opengl_widget(win, "opacity", value.opacity, 0, 1);
-    continue_opengl_widget_line(win);
     edited += draw_checkbox_opengl_widget(win, "fresnel", value.fresnel);
     continue_opengl_widget_line(win);
     edited += draw_checkbox_opengl_widget(win, "refract", value.refract);

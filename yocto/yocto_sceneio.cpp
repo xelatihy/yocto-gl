@@ -185,13 +185,6 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
 void save_pbrt_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options);
 
-// Load/save a binary dump useful for very fast scene IO. This format is not
-// an archival format and should only be used as an intermediate format.
-void load_ybin_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options);
-void save_ybin_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options);
-
 // Load a scene
 void load_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
@@ -204,8 +197,6 @@ void load_scene(const string& filename, yocto_scene& scene,
         load_gltf_scene(filename, scene, options);
     } else if (ext == "pbrt" || ext == "PBRT") {
         load_pbrt_scene(filename, scene, options);
-    } else if (ext == "ybin" || ext == "YBIN") {
-        load_ybin_scene(filename, scene, options);
     } else if (ext == "ply" || ext == "PLY") {
         load_ply_scene(filename, scene, options);
     } else {
@@ -222,17 +213,26 @@ void save_scene(const string& filename, const yocto_scene& scene,
         save_yaml_scene(filename, scene, options);
     } else if (ext == "obj" || ext == "OBJ") {
         save_obj_scene(filename, scene, options);
-    } else if (ext == "yaml" || ext == "YAML") {
-        save_yaml_scene(filename, scene, options);
     } else if (ext == "gltf" || ext == "GLTF") {
         save_gltf_scene(filename, scene, options);
     } else if (ext == "pbrt" || ext == "PBRT") {
         save_pbrt_scene(filename, scene, options);
-    } else if (ext == "ybin" || ext == "YBIN") {
-        save_ybin_scene(filename, scene, options);
     } else {
         throw io_error("unsupported scene format " + ext);
     }
+}
+
+string get_save_scene_message(
+    const yocto_scene& scene, const string& line_prefix) {
+    auto str = ""s;
+    str += line_prefix + " \n";
+    str += line_prefix + " Written by Yocto/GL\n";
+    str += line_prefix + " https://github.com/xelatihy/yocto-gl\n";
+    str += line_prefix + "\n";
+    auto lines = splitlines(format_scene_stats(scene));
+    for (auto line : lines) str += line_prefix + " " + line + "\n";
+    str += line_prefix + "\n";
+    return str;
 }
 
 void load_scene_texture(yocto_texture& texture, const string& dirname) {
@@ -533,7 +533,8 @@ template <typename Callbacks>
 inline void load_yaml(const string& filename, Callbacks& callbacks,
     const load_yaml_options& options) {
     // open file
-    auto fs = input_file(filename);
+    auto fs_ = open_input_file(filename);
+    auto fs  = fs_.fs;
 
     // parsing state
     auto in_objects = false;
@@ -587,6 +588,48 @@ inline void load_yaml(const string& filename, Callbacks& callbacks,
     }
 }
 
+void load_yaml_ply_instances(yocto_scene& scene, const string& filename) {
+    try {
+        // load ply
+        happly::PLYData ply(filename);
+
+        // copy instance data
+        auto& ply_instances = ply.getElement("instance");
+        scene.instances.resize(ply_instances.count);
+
+        auto names = "xyzo";
+        for (auto fj = 0; fj < 4; fj++) {
+            for (auto fi = 0; fi < 3; fi++) {
+                auto comp = ply_instances.getProperty<float>(
+                    format("frame.{}.{}", names[fj], names[fi]));
+                for (auto i = 0; i < comp.size(); i++)
+                    scene.instances[i].frame[fj][fi] = comp[i];
+            }
+        }
+        auto shape    = ply_instances.getProperty<int>("shape");
+        auto material = ply_instances.getProperty<int>("material");
+        for (auto i = 0; i < shape.size(); i++) {
+            scene.instances[i].shape    = shape[i];
+            scene.instances[i].material = material[i];
+        }
+    } catch (const std::exception& e) {
+        throw shapeio_error(
+            "cannot load instances " + filename + "\n" + e.what());
+    }
+
+    // set instance uris
+    auto shape_names = vector<string>(), material_names = vector<string>();
+    for (auto& shape : scene.shapes)
+        shape_names.push_back(get_basename(shape.uri));
+    for (auto& material : scene.materials)
+        material_names.push_back(get_basename(material.uri));
+    auto iid = 0;
+    for (auto& instance : scene.instances) {
+        instance.uri = format("instances/i{}.yaml", shape_names[instance.shape],
+            material_names[instance.material], iid++);
+    }
+}
+
 // Save a scene in the builtin YAML format.
 void load_yaml_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
@@ -595,6 +638,7 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
     struct parse_callbacks : yaml_callbacks {
         yocto_scene&              scene;
         const load_scene_options& options;
+        string                    ply_instances = "";
 
         enum struct parsing_type {
             none,
@@ -605,7 +649,8 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
             shape,
             subdiv,
             instance,
-            environment
+            environment,
+            ply_instances
         };
         parsing_type type = parsing_type::none;
 
@@ -654,6 +699,8 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                 type = parsing_type::instance;
             } else if (key == "environments") {
                 type = parsing_type::environment;
+            } else if (key == "ply_instances") {
+                type = parsing_type::ply_instances;
             } else {
                 type = parsing_type::none;
                 throw io_error("unknown object type");
@@ -677,6 +724,7 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                 case parsing_type::environment:
                     scene.environments.push_back({});
                     break;
+                case parsing_type::ply_instances: break;
                 default: throw io_error("unknown object type");
             }
         }
@@ -849,6 +897,13 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
                         throw io_error("unknown property");
                     }
                 } break;
+                case parsing_type::ply_instances: {
+                    if (key == "uri") {
+                        get_value(value, ply_instances);
+                    } else {
+                        throw io_error("unknown property");
+                    }
+                } break;
                 default: throw io_error("unknown object type");
             }
         }
@@ -859,6 +914,12 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
         auto yaml_options = load_yaml_options();
         auto cb           = parse_callbacks{scene, options};
         load_yaml(filename, cb, yaml_options);
+
+        // load instances
+        if (cb.ply_instances != "") {
+            load_yaml_ply_instances(
+                scene, get_dirname(filename) + cb.ply_instances);
+        }
 
         // load shape and textures
         auto dirname = get_dirname(filename);
@@ -877,37 +938,45 @@ void load_yaml_scene(const string& filename, yocto_scene& scene,
     update_transforms(scene);
 }
 
-inline void print_yaml_value(output_file& fs, int value) {
-    print_value(fs, value);
+inline void print_yaml_keyvalue(FILE* fs, const char* name, int value) {
+    print(fs, "    {}: {}\n", name, value);
 }
-inline void print_yaml_value(output_file& fs, float value) {
-    print_value(fs, value);
+inline void print_yaml_keyvalue(FILE* fs, const char* name, float value) {
+    print(fs, "    {}: {}\n", name, value);
 }
-inline void print_yaml_value(output_file& fs, const string& value) {
-    print_value(fs, value);
+inline void print_yaml_keyvalue(
+    FILE* fs, const char* name, const string& value) {
+    print(fs, "    {}: {}\n", name, value);
 }
-inline void print_yaml_value(output_file& fs, const char* value) {
-    print_value(fs, value);
+inline void print_yaml_keyvalue(FILE* fs, const char* name, bool value) {
+    print(fs, "    {}: {}\n", name, value ? "true" : "false");
 }
-inline void print_yaml_value(output_file& fs, bool value) {
-    print_value(fs, value, true);
+template <typename T>
+inline void print_yaml_keyvalue(
+    FILE* fs, const char* name, const vec<T, 2>& value) {
+    print(fs, "    {}: [ {}, {} ]\n", name, value.x, value.y);
 }
-template <typename T, int N>
-inline void print_yaml_value(output_file& fs, const vec<T, N>& value) {
-    print_value(fs, value, true);
+template <typename T>
+inline void print_yaml_keyvalue(
+    FILE* fs, const char* name, const vec<T, 3>& value) {
+    print(fs, "    {}: [ {}, {}, {} ]\n", name, value.x, value.y, value.z);
 }
-template <typename T, int N>
-inline void print_yaml_value(output_file& fs, const frame<T, N>& value) {
-    print_value(fs, value, true);
+template <typename T>
+inline void print_yaml_keyvalue(
+    FILE* fs, const char* name, const frame<T, 3>& value) {
+    print(fs, "    {}: [ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {} ]\n",
+        name, value.x.x, value.x.y, value.x.z, value.y.x, value.y.y, value.y.z,
+        value.z.x, value.z.y, value.z.z, value.o.x, value.o.y, value.o.z);
 }
 
 // Save yaml
-void save_yaml(const string& filename, const yocto_scene& scene) {
+void save_yaml(const string& filename, const yocto_scene& scene,
+    bool ply_instances = false, const string& instances_name = "") {
     // open file
-    auto fs = output_file(filename);
+    auto fs_ = open_output_file(filename);
+    auto fs  = fs_.fs;
 
-    print_value(
-        fs, "# Written by Yocto/GL\n# https://github.com/xelatihy/yocto-gl\n");
+    print(fs, "{}", get_save_scene_message(scene, "#"));
 
     static const auto def_camera      = yocto_camera{};
     static const auto def_texture     = yocto_texture{};
@@ -918,39 +987,24 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
     static const auto def_instance    = yocto_instance{};
     static const auto def_environment = yocto_environment{};
 
-    auto print_first = [](output_file& fs, const char* name, auto& value) {
-        print_value(fs, "  - ");
-        print_value(fs, name);
-        print_value(fs, ": ");
-        print_yaml_value(fs, value);
-        print_value(fs, "\n");
-    };
-    auto print_optional = [](output_file& fs, const char* name, auto& value,
+    auto print_optional = [](FILE* fs, const char* name, auto& value,
                               auto& def) {
         if (value == def) return;
-        print_value(fs, "    ");
-        print_value(fs, name);
-        print_value(fs, ": ");
-        print_yaml_value(fs, value);
-        print_value(fs, "\n");
+        print_yaml_keyvalue(fs, name, value);
     };
-    auto print_ref = [as_int = false](output_file& fs, const char* name,
-                         int value, auto& refs) {
+    auto print_ref = [as_int = false](
+                         FILE* fs, const char* name, int value, auto& refs) {
         if (value < 0) return;
-        print_value(fs, "    ");
-        print_value(fs, name);
-        print_value(fs, ": ");
         if (as_int) {
-            print_yaml_value(fs, value);
+            print(fs, "    {}: {}\n", name, value);
         } else {
-            print_yaml_value(fs, refs[value].uri);
+            print(fs, "    {}: {}\n", name, refs[value].uri);
         }
-        print_value(fs, "\n");
     };
 
-    if (!scene.cameras.empty()) print_value(fs, "\n\ncameras:\n");
+    if (!scene.cameras.empty()) print(fs, "\n\ncameras:\n");
     for (auto& camera : scene.cameras) {
-        print_first(fs, "uri", camera.uri);
+        print(fs, "  - uri: {}\n", camera.uri);
         print_optional(fs, "frame", camera.frame, def_camera.frame);
         print_optional(
             fs, "orthographic", camera.orthographic, def_camera.orthographic);
@@ -966,19 +1020,19 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
             def_camera.lens_aperture);
     }
 
-    if (!scene.textures.empty()) print_value(fs, "\n\ntextures:\n");
+    if (!scene.textures.empty()) print(fs, "\n\ntextures:\n");
     for (auto& texture : scene.textures) {
-        print_first(fs, "uri", texture.uri);
+        print(fs, "  - uri: {}\n", texture.uri);
     }
 
-    if (!scene.voltextures.empty()) print_value(fs, "\n\nvoltextures:\n");
+    if (!scene.voltextures.empty()) print(fs, "\n\nvoltextures:\n");
     for (auto& texture : scene.voltextures) {
-        print_first(fs, "uri", texture.uri);
+        print(fs, "  - uri: {}\n", texture.uri);
     }
 
-    if (!scene.materials.empty()) print_value(fs, "\n\nmaterials:\n");
+    if (!scene.materials.empty()) print(fs, "\n\nmaterials:\n");
     for (auto& material : scene.materials) {
-        print_first(fs, "uri", material.uri);
+        print(fs, "  - uri: {}\n", material.uri);
         print_optional(fs, "base_metallic", material.base_metallic,
             def_material.base_metallic);
         print_optional(fs, "gltf_textures", material.gltf_textures,
@@ -1019,14 +1073,16 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
             scene.voltextures);
     }
 
-    if (!scene.shapes.empty()) print_value(fs, "\n\nshapes:\n");
+    if (!scene.shapes.empty()) print(fs, "\n\nshapes:\n");
     for (auto& shape : scene.shapes) {
-        print_first(fs, "uri", shape.uri);
+        print(fs, "  - uri: {}\n", shape.uri);
     }
 
-    if (!scene.subdivs.empty()) print_value(fs, "\n\nsubdivs:\n");
+    if (!scene.subdivs.empty()) print(fs, "\n\nsubdivs:\n");
     for (auto& subdiv : scene.subdivs) {
-        print_first(fs, "uri", subdiv.uri);
+        print(fs, "  - uri: {}\n", subdiv.uri);
+        print_ref(
+            fs, "tesselated_shape", subdiv.tesselated_shape, scene.shapes);
         print_optional(fs, "subdivision_level", subdiv.subdivision_level,
             def_subdiv.subdivision_level);
         print_optional(fs, "catmull_clark", subdiv.catmull_clark,
@@ -1041,17 +1097,22 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
             def_subdiv.displacement_scale);
     }
 
-    if (!scene.instances.empty()) print_value(fs, "\n\ninstances:\n");
-    for (auto& instance : scene.instances) {
-        print_first(fs, "uri", instance.uri);
-        print_optional(fs, "frame", instance.frame, def_instance.frame);
-        print_ref(fs, "shape", instance.shape, scene.shapes);
-        print_ref(fs, "material", instance.material, scene.materials);
+    if (!ply_instances) {
+        if (!scene.instances.empty()) print(fs, "\n\ninstances:\n");
+        for (auto& instance : scene.instances) {
+            print(fs, "  - uri: {}\n", instance.uri);
+            print_optional(fs, "frame", instance.frame, def_instance.frame);
+            print_ref(fs, "shape", instance.shape, scene.shapes);
+            print_ref(fs, "material", instance.material, scene.materials);
+        }
+    } else {
+        if (!scene.instances.empty()) print(fs, "\n\nply_instances:\n");
+        print(fs, "  - uri: {}\n", instances_name);
     }
 
-    if (!scene.environments.empty()) print_value(fs, "\n\nenvironments:\n");
+    if (!scene.environments.empty()) print(fs, "\n\nenvironments:\n");
     for (auto& environment : scene.environments) {
-        print_first(fs, "uri", environment.uri);
+        print(fs, "  - uri: {}\n", environment.uri);
         print_optional(fs, "frame", environment.frame, def_environment.frame);
         print_optional(
             fs, "emission", environment.emission, def_environment.emission);
@@ -1060,19 +1121,61 @@ void save_yaml(const string& filename, const yocto_scene& scene) {
     }
 }
 
+void save_yaml_ply_instances(const yocto_scene& scene, const string& filename,
+    const save_scene_options& options) {
+    happly::PLYData ply;
+    ply.comments.push_back("Written by Yocto/GL");
+    ply.comments.push_back("https://github.com/xelatihy/yocto-gl");
+
+    // add elements
+    ply.addElement("instance", scene.instances.size());
+    auto& ply_instances = ply.getElement("instance");
+    auto  comp          = vector<float>(scene.instances.size());
+    auto  ids           = vector<int>(scene.instances.size());
+
+    // frames
+    auto names = "xyzo";
+    for (auto fj = 0; fj < 4; fj++) {
+        for (auto fi = 0; fi < 3; fi++) {
+            for (auto i = 0; i < comp.size(); i++)
+                comp[i] = scene.instances[i].frame[fj][fi];
+            ply_instances.addProperty(
+                format("frame.{}.{}", names[fj], names[fi]), comp);
+        }
+    }
+    for (auto i = 0; i < ids.size(); i++) ids[i] = scene.instances[i].shape;
+    ply_instances.addProperty("shape", ids);
+    for (auto i = 0; i < ids.size(); i++) ids[i] = scene.instances[i].material;
+    ply_instances.addProperty("material", ids);
+
+    // Write our data
+    try {
+        ply.write(filename, happly::DataFormat::Binary);
+    } catch (const std::exception& e) {
+        throw shapeio_error("cannot save mesh " + filename + "\n" + e.what());
+    }
+}
+
 // Save a scene in the builtin YAML format.
 void save_yaml_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     try {
         // save yaml file
-        save_yaml(filename, scene);
+        if (!options.ply_instances) {
+            save_yaml(filename, scene);
+        } else {
+            auto ply_filename = "instances/" + get_basename(filename) + ".ply";
+            save_yaml(filename, scene, true, ply_filename);
+            save_yaml_ply_instances(
+                scene, get_dirname(filename) + ply_filename, options);
+        }
 
         // save meshes and textures
         auto dirname = get_dirname(filename);
         save_scene_shapes(scene, dirname, options);
         save_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw io_error("cannot load scene " + filename + "\n" + e.what());
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
@@ -1463,140 +1566,173 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
     update_transforms(scene);
 }
 
+inline void print_obj_keyvalue(FILE* fs, const char* name, int value) {
+    print(fs, "{} {}\n", name, value);
+}
+inline void print_obj_keyvalue(FILE* fs, const char* name, float value) {
+    print(fs, "{} {}\n", name, value);
+}
+inline void print_obj_keyvalue(FILE* fs, const char* name, const vec2f& value) {
+    print(fs, "{} {} {}\n", name, value.x, value.y);
+}
+inline void print_obj_keyvalue(FILE* fs, const char* name, const vec3f& value) {
+    print(fs, "{} {} {} {}\n", name, value.x, value.y, value.z);
+}
+inline void print_obj_keyvalue(
+    FILE* fs, const char* name, const string& value) {
+    print(fs, "{} {}\n", name, value);
+}
+
 void save_mtl(
     const string& filename, const yocto_scene& scene, bool flip_tr = true) {
     // open file
-    auto fs = output_file(filename);
+    auto fs_ = open_output_file(filename);
+    auto fs  = fs_.fs;
+
+    // embed data
+    print(fs, "{}\n\n", get_save_scene_message(scene, "#"));
 
     // for each material, dump all the values
     for (auto& material : scene.materials) {
-        println_values(fs, "newmtl", get_basename(material.uri));
-        println_values(fs, "  illum 2");
-        println_values(fs, "  Ke", material.emission);
-        println_values(fs, "  Kd", material.diffuse);
-        println_values(fs, "  Ks", material.specular);
-        println_values(fs, "  Kt", material.transmission);
-        println_values(fs, "  Ns",
+        print(fs, "newmtl {}\n", get_basename(material.uri));
+        print_obj_keyvalue(fs, "  illum", 2);
+        print_obj_keyvalue(fs, "  Ke", material.emission);
+        print_obj_keyvalue(fs, "  Kd", material.diffuse);
+        print_obj_keyvalue(fs, "  Ks", material.specular);
+        print_obj_keyvalue(fs, "  Kt", material.transmission);
+        print_obj_keyvalue(fs, "  Ns",
             (int)clamp(
                 2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) -
                     2,
                 0.0f, 1.0e9f));
-        println_values(fs, "  d", material.opacity);
+        print_obj_keyvalue(fs, "  d", material.opacity);
         if (material.emission_texture >= 0)
-            println_values(
+            print_obj_keyvalue(
                 fs, "  map_Ke", scene.textures[material.emission_texture].uri);
         if (material.diffuse_texture >= 0)
-            println_values(
+            print_obj_keyvalue(
                 fs, "  map_Kd", scene.textures[material.diffuse_texture].uri);
         if (material.specular_texture >= 0)
-            println_values(
+            print_obj_keyvalue(
                 fs, "  map_Ks", scene.textures[material.specular_texture].uri);
         if (material.transmission_texture >= 0)
-            println_values(fs, "  map_Kt",
+            print_obj_keyvalue(fs, "  map_Kt",
                 scene.textures[material.transmission_texture].uri);
         if (material.roughness_texture >= 0)
-            println_values(
+            print_obj_keyvalue(
                 fs, "  map_Pr", scene.textures[material.roughness_texture].uri);
         if (material.normal_texture >= 0)
-            println_values(
+            print_obj_keyvalue(
                 fs, "  map_norm", scene.textures[material.normal_texture].uri);
         if (material.volume_emission != zero3f)
-            println_values(fs, "  Ve", material.volume_emission);
+            print_obj_keyvalue(fs, "  Ve", material.volume_emission);
         if (material.volume_density != zero3f)
-            println_values(fs, "  Vd", material.volume_density);
+            print_obj_keyvalue(fs, "  Vd", material.volume_density);
         if (material.volume_albedo != zero3f)
-            println_values(fs, "  Va", material.volume_albedo);
+            print_obj_keyvalue(fs, "  Va", material.volume_albedo);
         if (material.volume_phaseg != 0)
-            println_values(fs, "  Vg", material.volume_phaseg);
+            print_obj_keyvalue(fs, "  Vg", material.volume_phaseg);
         if (material.volume_density_texture >= 0)
-            println_values(fs, "  map_Vd",
+            print_obj_keyvalue(fs, "  map_Vd",
                 scene.voltextures[material.volume_density_texture].uri);
-        println_values(fs, "\n");
+        print(fs, "\n");
     }
 }
 
 void save_objx(const string& filename, const yocto_scene& scene) {
     // open file
-    auto fs = output_file(filename);
+    auto fs_ = open_output_file(filename);
+    auto fs  = fs_.fs;
+
+    // embed data
+    print(fs, "{}\n\n", get_save_scene_message(scene, "#"));
 
     // cameras
     for (auto& camera : scene.cameras) {
-        println_values(fs, "c", get_basename(camera.uri),
+        print(fs, "c {} {} {} {} {} {} {} ", get_basename(camera.uri),
             (int)camera.orthographic, camera.film_width, camera.film_height,
-            camera.focal_length, camera.focus_distance, camera.lens_aperture,
-            camera.frame);
+            camera.focal_length, camera.focus_distance, camera.lens_aperture);
+        print(fs, "{} {} {} {} {} {} {} {} {} {} {} {}\n", camera.frame.x.x,
+            camera.frame.x.y, camera.frame.x.z, camera.frame.y.x,
+            camera.frame.y.y, camera.frame.y.z, camera.frame.z.x,
+            camera.frame.z.y, camera.frame.z.z, camera.frame.o.x,
+            camera.frame.o.y, camera.frame.o.z);
     }
 
     // environments
     for (auto& environment : scene.environments) {
         if (environment.emission_texture >= 0) {
-            println_values(fs, "e", get_basename(environment.uri),
-                environment.emission,
-                scene.textures[environment.emission_texture].uri,
-                environment.frame);
+            print(fs, "e {} {} {} {} {} ", get_basename(environment.uri),
+                environment.emission.x, environment.emission.y,
+                environment.emission.z,
+                scene.textures[environment.emission_texture].uri);
         } else {
-            println_values(fs, "e", environment.uri, environment.emission,
-                "\"\"", environment.frame);
+            print(fs, "e {} {} {} {} \"\" ", environment.uri,
+                environment.emission.x, environment.emission.y,
+                environment.emission.z);
         }
+        print(fs, "{} {} {} {} {} {} {} {} {} {} {} {}\n",
+            environment.frame.x.x, environment.frame.x.y, environment.frame.x.z,
+            environment.frame.y.x, environment.frame.y.y, environment.frame.y.z,
+            environment.frame.z.x, environment.frame.z.y, environment.frame.z.z,
+            environment.frame.o.x, environment.frame.o.y,
+            environment.frame.o.z);
     }
 }
 
-inline void print_value(const output_file& fs, const obj_vertex& value) {
-    print_value(fs, value.position);
-    if (value.texturecoord) {
-        print_value(fs, '/');
-        print_value(fs, value.texturecoord);
-        if (value.normal) {
-            print_value(fs, '/');
-            print_value(fs, value.normal);
-        }
+inline string format_obj_vertex(const obj_vertex& value) {
+    if (value.texturecoord && value.normal) {
+        return format(
+            "{}/{}/{}", value.position, value.texturecoord, value.normal);
+    } else if (value.texturecoord && !value.normal) {
+        return format("{}/{}", value.position, value.texturecoord);
+    } else if (!value.texturecoord && value.normal) {
+        return format("{}//{}", value.position, value.normal);
     } else {
-        if (value.normal) {
-            print_value(fs, '/');
-            print_value(fs, '/');
-            print_value(fs, value.normal);
-        }
+        return format("{}", value.position);
     }
 }
 
 void save_obj(const string& filename, const yocto_scene& scene,
     bool flip_texcoord = true) {
     // open file
-    auto fs = output_file(filename);
+    auto fs_ = open_output_file(filename);
+    auto fs  = fs_.fs;
 
-    println_values(
-        fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n\n");
+    // embed data
+    print(fs, "{}\n\n", get_save_scene_message(scene, "#"));
 
     // material library
     if (!scene.materials.empty()) {
         auto mtlname = get_noextension(get_filename(filename)) + ".mtl";
-        println_values(fs, "mtllib", mtlname);
+        print(fs, "mtllib {}\n\n", mtlname);
     }
 
     // shapes
     auto offset = obj_vertex{0, 0, 0};
     for (auto& instance : scene.instances) {
         auto& shape = scene.shapes[instance.shape];
-        println_values(fs, "o", instance.uri);
+        print_obj_keyvalue(fs, "o", instance.uri);
         if (instance.material >= 0)
-            println_values(fs, "usemtl",
+            print_obj_keyvalue(fs, "usemtl",
                 get_basename(scene.materials[instance.material].uri));
         if (instance.frame == identity_frame3f) {
-            for (auto& p : shape.positions) println_values(fs, "v", p);
-            for (auto& n : shape.normals) println_values(fs, "vn", n);
+            for (auto& p : shape.positions) print_obj_keyvalue(fs, "v", p);
+            for (auto& n : shape.normals) print_obj_keyvalue(fs, "vn", n);
             for (auto& t : shape.texturecoords)
-                println_values(
+                print_obj_keyvalue(
                     fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
         } else {
             for (auto& pp : shape.positions) {
-                println_values(fs, "v", transform_point(instance.frame, pp));
+                print_obj_keyvalue(
+                    fs, "v", transform_point(instance.frame, pp));
             }
             for (auto& nn : shape.normals) {
-                println_values(
+                print_obj_keyvalue(
                     fs, "vn", transform_direction(instance.frame, nn));
             }
             for (auto& t : shape.texturecoords)
-                println_values(
+                print_obj_keyvalue(
                     fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
         }
         auto mask = obj_vertex{1, shape.texturecoords.empty() ? 0 : 1,
@@ -1607,20 +1743,24 @@ void save_obj(const string& filename, const yocto_scene& scene,
                 (i + offset.normal + 1) * mask.normal};
         };
         for (auto& p : shape.points) {
-            println_values(fs, "p", vert(p));
+            print(fs, "p {}\n", format_obj_vertex(vert(p)));
         }
         for (auto& l : shape.lines) {
-            println_values(fs, "l", vert(l.x), vert(l.y));
+            print(fs, "l {} {}\n", format_obj_vertex(vert(l.x)),
+                format_obj_vertex(vert(l.y)));
         }
         for (auto& t : shape.triangles) {
-            println_values(fs, "f", vert(t.x), vert(t.y), vert(t.z));
+            print(fs, "f {} {} {}\n", format_obj_vertex(vert(t.x)),
+                format_obj_vertex(vert(t.y)), format_obj_vertex(vert(t.z)));
         }
         for (auto& q : shape.quads) {
             if (q.z == q.w) {
-                println_values(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+                print(fs, "f {} {} {}\n", format_obj_vertex(vert(q.x)),
+                    format_obj_vertex(vert(q.y)), format_obj_vertex(vert(q.z)));
             } else {
-                println_values(
-                    fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+                print(fs, "f {} {} {} {}\n", format_obj_vertex(vert(q.x)),
+                    format_obj_vertex(vert(q.y)), format_obj_vertex(vert(q.z)),
+                    format_obj_vertex(vert(q.w)));
             }
         }
         for (auto i = 0; i < shape.quads_positions.size(); i++) {
@@ -1632,11 +1772,16 @@ void save_obj(const string& filename, const yocto_scene& scene,
                 auto qp = shape.quads_positions[i];
                 auto qt = shape.quads_texturecoords[i];
                 if (qp.z == qp.w) {
-                    println_values(fs, "f", vert(qp.x, qt.x), vert(qp.y, qt.y),
-                        vert(qp.z, qt.z));
+                    print(fs, "f {} {} {}\n",
+                        format_obj_vertex(vert(qp.x, qt.x)),
+                        format_obj_vertex(vert(qp.y, qt.y)),
+                        format_obj_vertex(vert(qp.z, qt.z)));
                 } else {
-                    println_values(fs, "f", vert(qp.x, qt.x), vert(qp.y, qt.y),
-                        vert(qp.z, qt.z), vert(qp.w, qt.w));
+                    print(fs, "f {} {} {} {}\n",
+                        format_obj_vertex(vert(qp.x, qt.x)),
+                        format_obj_vertex(vert(qp.y, qt.y)),
+                        format_obj_vertex(vert(qp.z, qt.z)),
+                        format_obj_vertex(vert(qp.w, qt.w)));
                 }
             } else if (!shape.texturecoords.empty() && !shape.normals.empty()) {
                 auto vert = [offset](int ip, int it, int in) {
@@ -1647,12 +1792,16 @@ void save_obj(const string& filename, const yocto_scene& scene,
                 auto qt = shape.quads_texturecoords[i];
                 auto qn = shape.quads_normals[i];
                 if (qp.z == qp.w) {
-                    println_values(fs, "f", vert(qp.x, qt.x, qn.x),
-                        vert(qp.y, qt.y, qn.y), vert(qp.z, qt.z, qn.z));
+                    print(fs, "f {} {} {}\n",
+                        format_obj_vertex(vert(qp.x, qt.x, qn.x)),
+                        format_obj_vertex(vert(qp.y, qt.y, qn.y)),
+                        format_obj_vertex(vert(qp.z, qt.z, qn.z)));
                 } else {
-                    println_values(fs, "f", vert(qp.x, qt.x, qn.x),
-                        vert(qp.y, qt.y, qn.y), vert(qp.z, qt.z, qn.z),
-                        vert(qp.w, qt.w, qn.w));
+                    print(fs, "f {} {} {} {}\n",
+                        format_obj_vertex(vert(qp.x, qt.x, qn.x)),
+                        format_obj_vertex(vert(qp.y, qt.y, qn.y)),
+                        format_obj_vertex(vert(qp.z, qt.z, qn.z)),
+                        format_obj_vertex(vert(qp.w, qt.w, qn.w)));
                 }
             } else if (!shape.normals.empty()) {
                 auto vert = [offset](int ip, int in) {
@@ -1662,11 +1811,16 @@ void save_obj(const string& filename, const yocto_scene& scene,
                 auto qp = shape.quads_positions[i];
                 auto qn = shape.quads_normals[i];
                 if (qp.z == qp.w) {
-                    println_values(fs, "f", vert(qp.x, qn.x), vert(qp.y, qn.y),
-                        vert(qp.z, qn.z));
+                    print(fs, "f {} {} {}\n",
+                        format_obj_vertex(vert(qp.x, qn.x)),
+                        format_obj_vertex(vert(qp.y, qn.y)),
+                        format_obj_vertex(vert(qp.z, qn.z)));
                 } else {
-                    println_values(fs, "f", vert(qp.x, qn.x), vert(qp.y, qn.y),
-                        vert(qp.z, qn.z), vert(qp.w, qn.w));
+                    print(fs, "f {} {} {} {}\n",
+                        format_obj_vertex(vert(qp.x, qn.x)),
+                        format_obj_vertex(vert(qp.y, qn.y)),
+                        format_obj_vertex(vert(qp.z, qn.z)),
+                        format_obj_vertex(vert(qp.w, qn.w)));
                 }
             } else {
                 auto vert = [offset](int ip) {
@@ -1674,10 +1828,14 @@ void save_obj(const string& filename, const yocto_scene& scene,
                 };
                 auto q = shape.quads_positions[i];
                 if (q.z == q.w) {
-                    println_values(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+                    print(fs, "f {} {} {}\n", format_obj_vertex(vert(q.x)),
+                        format_obj_vertex(vert(q.y)),
+                        format_obj_vertex(vert(q.z)));
                 } else {
-                    println_values(
-                        fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+                    print(fs, "f {} {} {} {}\n", format_obj_vertex(vert(q.x)),
+                        format_obj_vertex(vert(q.y)),
+                        format_obj_vertex(vert(q.z)),
+                        format_obj_vertex(vert(q.w)));
                 }
             }
         }
@@ -1707,9 +1865,13 @@ void save_obj_scene(const string& filename, const yocto_scene& scene,
 }
 
 void print_obj_camera(const yocto_camera& camera) {
-    println_values(stdout, "c", camera.uri, (int)camera.orthographic,
-        camera.film_width, camera.film_height, camera.focal_length,
-        camera.focus_distance, camera.lens_aperture, camera.frame);
+    print("c {} {} {} {} {} {} {} ", get_basename(camera.uri),
+        (int)camera.orthographic, camera.film_width, camera.film_height,
+        camera.focal_length, camera.focus_distance, camera.lens_aperture);
+    print("{} {} {} {} {} {} {} {} {} {} {} {}\n", camera.frame.x.x,
+        camera.frame.x.y, camera.frame.x.z, camera.frame.y.x, camera.frame.y.y,
+        camera.frame.y.z, camera.frame.z.x, camera.frame.z.y, camera.frame.z.z,
+        camera.frame.o.x, camera.frame.o.y, camera.frame.o.z);
 }
 
 }  // namespace yocto
@@ -1773,13 +1935,6 @@ void save_ply_scene(const string& filename, const yocto_scene& scene,
 // GLTF CONVESION
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-static bool startswith(const string& str, const string& substr) {
-    if (str.length() < substr.length()) return false;
-    for (auto i = 0; i < substr.length(); i++)
-        if (str[i] != substr[i]) return false;
-    return true;
-}
 
 // convert gltf to scene
 void gltf_to_scene(const string& filename, yocto_scene& scene) {
@@ -2537,7 +2692,15 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
 // save gltf mesh
 void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     // open file
-    auto fs = output_file(filename, std::ios::binary);
+    auto fs_ = open_output_file(filename);
+    auto fs  = fs_.fs;
+
+    auto write_values = [](FILE* fs, const auto& values) {
+        if (values.empty()) return;
+        if (fwrite(values.data(), sizeof(values.front()), values.size(), fs) !=
+            values.size())
+            throw io_error("cannot write to file");
+    };
 
     if (shape.quads_positions.empty()) {
         write_values(fs, shape.positions);
@@ -3276,7 +3439,12 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
 
 // Convert a scene to pbrt format
 void save_pbrt(const string& filename, const yocto_scene& scene) {
-    auto fs = output_file(filename);
+    // open file
+    auto fs_ = open_output_file(filename);
+    auto fs  = fs_.fs;
+
+    // embed data
+    print(fs, "{}\n\n", get_save_scene_message(scene, "#"));
 
     // convert camera and settings
     auto& camera     = scene.cameras.front();
@@ -3284,73 +3452,75 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
     auto  to         = camera.frame.o - camera.frame.z;
     auto  up         = camera.frame.y;
     auto  image_size = get_camera_image_size(camera, {0, 720});
-    println_values(fs, "LookAt", from, to, up);
-    println_values(fs, "Camera \"perspective\" \"float fov\"",
+    print(fs, "LookAt {} {} {} {} {} {} {} {} {}\n", from.x, from.y, from.z,
+        to.x, to.y, to.z, up.x, up.y, up.z);
+    print(fs, "Camera \"perspective\" \"float fov\" {}\n",
         get_camera_fovy(camera) * 180 / pif);
 
     // save renderer
-    println_values(fs, "Sampler \"random\" \"integer pixelsamples\" [64]");
-    // fprintf(f, "Sampler \"sobol\" \"interger pixelsamples\" [64]\n");
-    println_values(fs, "Integrator \"path\"");
-    println_values(fs, "Film \"image\" \"string filename\" [\"",
-        get_noextension(filename) + ".exr", "\"] \"integer xresolution\" [",
-        image_size.x, "] \"integer yresolution\" [", image_size.y, "]");
-
-    // start world
-    println_values(fs, "WorldBegin");
+    print(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
+    print(fs, "Integrator \"path\"\n");
+    print(fs,
+        "Film \"image\" \"string filename\" \"{}\" \"integer xresolution\" {} \"integer yresolution\" {}\n",
+        get_noextension(filename) + ".exr", image_size.x, image_size.y);
 
     // convert textures
     for (auto& texture : scene.textures) {
-        println_values(fs, "Texture \"" + get_basename(texture.uri) +
-                               "\" \"spectrum\" \"imagemap\" "
-                               "\"string filename\" [\"" +
-                               texture.uri + "\"]");
+        print(fs,
+            "Texture \"{}\" \"spectrum\" \"imagemap\" \"string filename\" \"{}\"\n",
+            get_basename(texture.uri), texture.uri);
     }
 
     // convert materials
     for (auto& material : scene.materials) {
-        println_values(
-            fs, "MakeNamedMaterial \"" + get_basename(material.uri) + "\" ");
-        println_values(fs, "    \"string type\" \"uber\" ");
-        if (material.diffuse_texture >= 0)
-            println_values(fs,
-                "    \"texture Kd\" [\"" +
-                    get_basename(scene.textures[material.diffuse_texture].uri) +
-                    "\"] ");
-        else
-            println_values(fs, "    \"rgb Kd\" [", material.diffuse, "] ");
-        if (material.specular_texture >= 0)
-            println_values(
-                fs, "    \"texture Ks\" [\"" +
-                        get_basename(
-                            scene.textures[material.specular_texture].uri) +
-                        "\"] ");
-        else
-            println_values(fs, "    \"rgb Ks\" [", material.specular, "] ");
-        println_values(fs, "    \"float roughness\" [",
-            material.roughness * material.roughness, "] ");
+        print(fs, "MakeNamedMaterial \"{}\" \"string type\" \"uber\"\n",
+            get_basename(material.uri));
+        if (material.diffuse_texture >= 0) {
+            print(fs, "    \"texture Kd\" \"{}\"\n",
+                get_basename(scene.textures[material.diffuse_texture].uri));
+        } else {
+            print(fs, "    \"rgb Kd\" [ {} {} {} ]\n", material.diffuse.x,
+                material.diffuse.y, material.diffuse.z);
+        }
+        if (material.specular_texture >= 0) {
+            print(fs, "    \"texture Ks\" \"{}\"\n",
+                get_basename(scene.textures[material.specular_texture].uri));
+        } else {
+            print(fs, "    \"rgb Ks\" [ {} {} {} ]\n", material.specular.x,
+                material.specular.y, material.specular.z);
+        }
+        print(fs, "    \"float roughness\" {}\n",
+            material.roughness * material.roughness);
     }
+
+    // start world
+    print(fs, "WorldBegin\n");
 
     // convert instances
     for (auto& instance : scene.instances) {
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[instance.material];
-        println_values(fs, "AttributeBegin");
-        println_values(fs, "  TransformBegin");
-        println_values(fs, "    ConcatTransform [", mat4f(instance.frame), "]");
-        println_values(
-            fs, "    NamedMaterial \"" + get_basename(material.uri) + "\"");
-        if (material.emission != zero3f)
-            println_values(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [ ",
-                material.emission, " ]");
-        println_values(fs, "    Shape \"plymesh\" \"string filename\" [\"" +
-                               get_noextension(shape.uri) + ".ply" + "\"]");
-        println_values(fs, "  TransformEnd");
-        println_values(fs, "AttributeEnd");
+        print(fs, "AttributeBegin\n");
+        print(fs, "  TransformBegin\n");
+        print(fs,
+            "    Transform [{} {} {} 0 {} {} {} 0 {} {} {} 0 {} {} {} 1]\n",
+            instance.frame.x.x, instance.frame.x.y, instance.frame.x.z,
+            instance.frame.y.x, instance.frame.y.y, instance.frame.y.z,
+            instance.frame.z.x, instance.frame.z.y, instance.frame.z.z,
+            instance.frame.o.x, instance.frame.o.y, instance.frame.o.z);
+        print(fs, "    NamedMaterial \"{}\"\n", get_basename(material.uri));
+        if (material.emission != zero3f) {
+            print(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [{} {} {}]\n",
+                material.emission.x, material.emission.y, material.emission.z);
+        }
+        print(fs, "    Shape \"plymesh\" \"string filename\" \"{}\"\n",
+            get_noextension(shape.uri) + ".ply");
+        print(fs, "  TransformEnd\n");
+        print(fs, "AttributeEnd\n");
     }
 
     // end world
-    println_values(fs, "WorldEnd");
+    print(fs, "WorldEnd\n");
 }
 
 // Save a pbrt scene
@@ -3388,340 +3558,6 @@ void pbrt_flipyz_scene(yocto_scene& scene) {
     for (auto& instance : scene.instances) {
         instance.frame = instance.frame *
                          frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-    }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF BINARY SCENE FORMAT
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// serialize_bin( ) can both save/load data to/from a binary file. The behaviour
-// is set by the boolean 'save'. serialize_bin(name, file, true) : writes name
-// as binary into file serialize_bin(name, file, false): read file as binary and
-// set name
-
-// Serialize vector
-template <typename T>
-void write_value(output_file& fs, const vector<T>& vec) {
-    auto count = (size_t)vec.size();
-    write_value(fs, count);
-    write_values(fs, vec);
-}
-template <typename T>
-void read_value(input_file& fs, vector<T>& vec) {
-    auto count = (size_t)0;
-    read_value(fs, count);
-    vec = vector<T>(count);
-    read_values(fs, vec);
-}
-
-// Serialize string
-void write_value(output_file& fs, const string& str) {
-    auto count = (size_t)str.size();
-    write_value(fs, count);
-    auto vec = vector<char>(str.begin(), str.end());
-    write_values(fs, vec);
-}
-void read_value(input_file& fs, string& str) {
-    auto count = (size_t)0;
-    read_value(fs, count);
-    auto vec = vector<char>(count);
-    read_values(fs, vec);
-    str = {vec.begin(), vec.end()};
-}
-
-// Serialize image
-template <typename T>
-void write_value(output_file& fs, const image<T>& img) {
-    write_value(fs, img.size());
-    write_values(fs, img.data(), (size_t)img.size().x * (size_t)img.size().y);
-}
-template <typename T>
-void read_value(input_file& fs, image<T>& img) {
-    auto size = zero2i;
-    read_value(fs, size);
-    img = {size};
-    read_values(fs, img.data(), size.x * size.y);
-}
-
-// Serialize image
-template <typename T>
-void write_value(output_file& fs, const volume<T>& vol) {
-    write_value(fs, vol.size());
-    write_values(fs, vol.data(),
-        (size_t)vol.size().x * (size_t)vol.size().y * (size_t)vol.size().z);
-}
-template <typename T>
-void read_value(input_file& fs, volume<T>& vol) {
-    auto size = zero3i;
-    read_value(fs, size.x);
-    read_value(fs, size.y);
-    read_value(fs, size.z);
-    vol = {size};
-    read_values(fs, vol.data(), size.x * size.y * size.z);
-}
-
-// Serialize vector of pointers
-template <typename T>
-void write_objects(output_file& fs, const vector<T>& vec) {
-    auto count = (size_t)vec.size();
-    write_value(fs, count);
-    for (auto i = 0; i < vec.size(); ++i) {
-        write_object(fs, vec[i]);
-    }
-}
-template <typename T>
-void read_objects(input_file& fs, vector<T>& vec) {
-    auto count = (size_t)0;
-    read_value(fs, count);
-    vec = vector<T>(count);
-    for (auto i = 0; i < vec.size(); ++i) {
-        vec[i] = T{};
-        read_object(fs, vec[i]);
-    }
-}
-
-// Serialize yocto types. This is mostly boiler plate code.
-void write_object(output_file& fs, const yocto_camera& camera) {
-    write_value(fs, camera.uri);
-    write_value(fs, camera.frame);
-    write_value(fs, camera.orthographic);
-    write_value(fs, camera.film_width);
-    write_value(fs, camera.film_height);
-    write_value(fs, camera.focal_length);
-    write_value(fs, camera.focus_distance);
-    write_value(fs, camera.lens_aperture);
-}
-void read_object(input_file& fs, yocto_camera& camera) {
-    read_value(fs, camera.uri);
-    read_value(fs, camera.frame);
-    read_value(fs, camera.orthographic);
-    read_value(fs, camera.film_width);
-    read_value(fs, camera.film_height);
-    read_value(fs, camera.focal_length);
-    read_value(fs, camera.focus_distance);
-    read_value(fs, camera.lens_aperture);
-}
-
-void write_object(output_file& fs, const yocto_shape& shape) {
-    write_value(fs, shape.uri);
-    write_value(fs, shape.points);
-    write_value(fs, shape.lines);
-    write_value(fs, shape.triangles);
-    write_value(fs, shape.quads);
-    write_value(fs, shape.quads_positions);
-    write_value(fs, shape.quads_normals);
-    write_value(fs, shape.quads_texturecoords);
-    write_value(fs, shape.positions);
-    write_value(fs, shape.normals);
-    write_value(fs, shape.texturecoords);
-    write_value(fs, shape.colors);
-    write_value(fs, shape.radius);
-    write_value(fs, shape.tangentspaces);
-}
-void read_object(input_file& fs, yocto_shape& shape) {
-    read_value(fs, shape.uri);
-    read_value(fs, shape.points);
-    read_value(fs, shape.lines);
-    read_value(fs, shape.triangles);
-    read_value(fs, shape.quads);
-    read_value(fs, shape.quads_positions);
-    read_value(fs, shape.quads_normals);
-    read_value(fs, shape.quads_texturecoords);
-    read_value(fs, shape.positions);
-    read_value(fs, shape.normals);
-    read_value(fs, shape.texturecoords);
-    read_value(fs, shape.colors);
-    read_value(fs, shape.radius);
-    read_value(fs, shape.tangentspaces);
-}
-
-void write_object(output_file& fs, const yocto_subdiv& subdiv) {
-    write_value(fs, subdiv.uri);
-    write_value(fs, subdiv.tesselated_shape);
-    write_value(fs, subdiv.subdivision_level);
-    write_value(fs, subdiv.catmull_clark);
-    write_value(fs, subdiv.compute_normals);
-    write_value(fs, subdiv.preserve_facevarying);
-    write_value(fs, subdiv.displacement_texture);
-    write_value(fs, subdiv.displacement_scale);
-    write_value(fs, subdiv.points);
-    write_value(fs, subdiv.lines);
-    write_value(fs, subdiv.triangles);
-    write_value(fs, subdiv.quads);
-    write_value(fs, subdiv.quads_positions);
-    write_value(fs, subdiv.quads_normals);
-    write_value(fs, subdiv.quads_texturecoords);
-    write_value(fs, subdiv.positions);
-    write_value(fs, subdiv.normals);
-    write_value(fs, subdiv.texturecoords);
-    write_value(fs, subdiv.colors);
-    write_value(fs, subdiv.radius);
-}
-void read_object(input_file& fs, yocto_subdiv& subdiv) {
-    read_value(fs, subdiv.uri);
-    read_value(fs, subdiv.tesselated_shape);
-    read_value(fs, subdiv.subdivision_level);
-    read_value(fs, subdiv.catmull_clark);
-    read_value(fs, subdiv.compute_normals);
-    read_value(fs, subdiv.preserve_facevarying);
-    read_value(fs, subdiv.displacement_texture);
-    read_value(fs, subdiv.displacement_scale);
-    read_value(fs, subdiv.points);
-    read_value(fs, subdiv.lines);
-    read_value(fs, subdiv.triangles);
-    read_value(fs, subdiv.quads);
-    read_value(fs, subdiv.quads_positions);
-    read_value(fs, subdiv.quads_normals);
-    read_value(fs, subdiv.quads_texturecoords);
-    read_value(fs, subdiv.positions);
-    read_value(fs, subdiv.normals);
-    read_value(fs, subdiv.texturecoords);
-    read_value(fs, subdiv.colors);
-    read_value(fs, subdiv.radius);
-}
-
-void write_object(output_file& fs, const yocto_texture& texture) {
-    write_value(fs, texture.uri);
-    write_value(fs, texture.hdr_image);
-    write_value(fs, texture.ldr_image);
-}
-void read_object(input_file& fs, yocto_texture& texture) {
-    read_value(fs, texture.uri);
-    read_value(fs, texture.hdr_image);
-    read_value(fs, texture.ldr_image);
-}
-
-void write_object(output_file& fs, const yocto_voltexture& texture) {
-    write_value(fs, texture.uri);
-    write_value(fs, texture.volume_data);
-}
-void read_object(input_file& fs, yocto_voltexture& texture) {
-    read_value(fs, texture.uri);
-    read_value(fs, texture.volume_data);
-}
-
-void write_object(output_file& fs, const yocto_environment& environment) {
-    write_value(fs, environment.uri);
-    write_value(fs, environment.frame);
-    write_value(fs, environment.emission);
-    write_value(fs, environment.emission_texture);
-}
-void read_object(input_file& fs, yocto_environment& environment) {
-    read_value(fs, environment.uri);
-    read_value(fs, environment.frame);
-    read_value(fs, environment.emission);
-    read_value(fs, environment.emission_texture);
-}
-
-void write_object(output_file& fs, const yocto_material& material) {
-    write_value(fs, material.uri);
-    write_value(fs, material.base_metallic);
-    write_value(fs, material.gltf_textures);
-    write_value(fs, material.emission);
-    write_value(fs, material.diffuse);
-    write_value(fs, material.specular);
-    write_value(fs, material.transmission);
-    write_value(fs, material.roughness);
-    write_value(fs, material.opacity);
-    write_value(fs, material.fresnel);
-    write_value(fs, material.refract);
-    write_value(fs, material.emission_texture);
-    write_value(fs, material.diffuse_texture);
-    write_value(fs, material.specular_texture);
-    write_value(fs, material.transmission_texture);
-    write_value(fs, material.roughness_texture);
-    write_value(fs, material.normal_texture);
-    write_value(fs, material.volume_emission);
-    write_value(fs, material.volume_albedo);
-    write_value(fs, material.volume_density);
-    write_value(fs, material.volume_phaseg);
-    write_value(fs, material.volume_density_texture);
-};
-void read_object(input_file& fs, yocto_material& material) {
-    read_value(fs, material.uri);
-    read_value(fs, material.base_metallic);
-    read_value(fs, material.gltf_textures);
-    read_value(fs, material.emission);
-    read_value(fs, material.diffuse);
-    read_value(fs, material.specular);
-    read_value(fs, material.transmission);
-    read_value(fs, material.roughness);
-    read_value(fs, material.opacity);
-    read_value(fs, material.fresnel);
-    read_value(fs, material.refract);
-    read_value(fs, material.emission_texture);
-    read_value(fs, material.diffuse_texture);
-    read_value(fs, material.specular_texture);
-    read_value(fs, material.transmission_texture);
-    read_value(fs, material.roughness_texture);
-    read_value(fs, material.normal_texture);
-    read_value(fs, material.volume_emission);
-    read_value(fs, material.volume_albedo);
-    read_value(fs, material.volume_density);
-    read_value(fs, material.volume_phaseg);
-    read_value(fs, material.volume_density_texture);
-};
-
-void write_object(output_file& fs, const yocto_instance& instance) {
-    write_value(fs, instance.uri);
-    write_value(fs, instance.frame);
-    write_value(fs, instance.shape);
-    write_value(fs, instance.material);
-};
-void read_object(input_file& fs, yocto_instance& instance) {
-    read_value(fs, instance.uri);
-    read_value(fs, instance.frame);
-    read_value(fs, instance.shape);
-    read_value(fs, instance.material);
-};
-
-void write_object(output_file& fs, const yocto_scene& scene) {
-    write_value(fs, scene.uri);
-    write_objects(fs, scene.cameras);
-    write_objects(fs, scene.shapes);
-    write_objects(fs, scene.subdivs);
-    write_objects(fs, scene.textures);
-    write_objects(fs, scene.voltextures);
-    write_objects(fs, scene.materials);
-    write_objects(fs, scene.instances);
-    write_objects(fs, scene.environments);
-}
-void read_object(input_file& fs, yocto_scene& scene) {
-    read_value(fs, scene.uri);
-    read_objects(fs, scene.cameras);
-    read_objects(fs, scene.shapes);
-    read_objects(fs, scene.subdivs);
-    read_objects(fs, scene.textures);
-    read_objects(fs, scene.voltextures);
-    read_objects(fs, scene.materials);
-    read_objects(fs, scene.instances);
-    read_objects(fs, scene.environments);
-}
-
-// Load/save a binary dump useful for very fast scene IO.
-void load_ybin_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
-    scene = {};
-    try {
-        auto fs = input_file(filename, true);
-        read_object(fs, scene);
-    } catch (const std::exception& e) {
-        throw io_error("cannot load scene " + filename + "\n" + e.what());
-    }
-}
-
-// Load/save a binary dump useful for very fast scene IO.
-void save_ybin_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options) {
-    try {
-        auto fs = output_file(filename, true);
-        write_object(fs, scene);
-    } catch (const std::exception& e) {
-        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 

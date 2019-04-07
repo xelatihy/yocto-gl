@@ -84,8 +84,10 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -125,6 +127,7 @@ using std::runtime_error;
 using std::string;
 using std::unique_ptr;
 using std::unordered_map;
+using std::unordered_set;
 using std::vector;
 using namespace std::literals::string_literals;
 

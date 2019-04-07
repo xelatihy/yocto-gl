@@ -23,14 +23,6 @@
 // 4. use operators += to append an element or a vector to a given vector
 //
 //
-// ## Printing and parsing values
-//
-// Use `print_value()` to write a string in a stream or `println_values()`
-// to print a line of values. Use `format_duraction()` and `format_num()`
-// for pretty printing times and numbers. These will change once lib `fmt`
-// is accepted in the standard.
-//
-//
 // ## Path manipulation
 //
 // We define a few path manipulation utilities to split and join path
@@ -103,6 +95,9 @@
 #include <thread>
 #include <vector>
 
+#define FMT_HEADER_ONLY
+#include "ext/fmt/format.h"
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -122,6 +117,9 @@ using std::vector;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 using namespace std::chrono_literals;
+
+using fmt::format;
+using fmt::print;
 
 }  // namespace yocto
 
@@ -614,211 +612,36 @@ inline void parallel_for(size_t begin, size_t end, const Func& func,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// file inout stream
-struct input_file {
-    input_file(const string& filename, bool binary = false) {
-        this->filename = filename;
-        file           = fopen(filename.c_str(), binary ? "rb" : "rt");
-        if (!file) throw io_error("could not open " + filename);
-    }
-    input_file(FILE* fs) {
-        file  = fs;
-        owned = false;
-    }
+// A file holder that closes a file when destructed. Useful for RIIA
+struct file_holder {
+    FILE* fs = nullptr;
 
-    input_file(const input_file&) = delete;
-    input_file& operator=(const input_file&) = delete;
-
-    ~input_file() {
-        if (file && owned) fclose(file);
+    file_holder(const file_holder&) = delete;
+    file_holder& operator=(const file_holder&) = delete;
+    ~file_holder() {
+        if (fs) fclose(fs);
     }
-
-    string filename = "";
-    FILE*  file     = nullptr;
-    bool   owned    = true;
 };
 
-// file writer
-struct output_file {
-    output_file(const string& filename, bool binary = false) {
-        this->filename = filename;
-        file           = fopen(filename.c_str(), binary ? "wb" : "wt");
-        if (!file) throw io_error("could not open " + filename);
-    }
-    output_file(FILE* fs) {
-        file  = fs;
-        owned = false;
-    }
-
-    output_file(const output_file&) = delete;
-    output_file& operator=(const output_file&) = delete;
-
-    ~output_file() {
-        if (file && owned) fclose(file);
-    }
-
-    string filename = "";
-    FILE*  file     = nullptr;
-    bool   owned    = true;
-};
-
-// write a value to a file
-template <typename T>
-inline void write_value(const output_file& fs, const T& value) {
-    if (fwrite(&value, sizeof(value), 1, fs.file) != 1) {
-        throw io_error("cannot write to " + fs.filename);
-    }
+// Opens a file returing a handle with RIIA
+inline file_holder open_input_file(
+    const string& filename, bool binary = false) {
+    auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
+    if (!fs) throw io_error("could not open file " + filename);
+    return {fs};
+}
+inline file_holder open_output_file(
+    const string& filename, bool binary = false) {
+    auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
+    if (!fs) throw io_error("could not open file " + filename);
+    return {fs};
 }
 
-// write values to a file
-template <typename T>
-inline void write_values(const output_file& fs, const vector<T>& values) {
-    if (values.empty()) return;
-    if (fwrite(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw io_error("cannot write to " + fs.filename);
-    }
-}
-template <typename T>
-inline void write_values(const output_file& fs, const T* values, size_t count) {
-    if (!count) return;
-    if (fwrite(values, sizeof(values[0]), count, fs.file) != count) {
-        throw io_error("cannot write to " + fs.filename);
-    }
-}
-
-// write text to a file
-inline void write_text(const output_file& fs, const std::string& str) {
-    if (fprintf(fs.file, "%s", str.c_str()) < 0) {
-        throw io_error("cannot write to " + fs.filename);
-    }
-}
-
-// read a value from a file
-template <typename T>
-inline void read_value(const input_file& fs, T& value) {
-    if (fread(&value, sizeof(value), 1, fs.file) != 1) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
-
-// read values from a file
-template <typename T>
-inline void read_values(const input_file& fs, T* values, size_t count) {
-    if (!count) return;
-    if (fread(values, sizeof(values[0]), count, fs.file) != count) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
-template <typename T>
-inline void read_values(const input_file& fs, vector<T>& values) {
-    if (values.empty()) return;
-    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
-// read characters from a file
-inline void read_values(const input_file& fs, string& values) {
-    if (values.empty()) return;
-    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
-
-// read a line of text
-inline bool read_line(const input_file& fs, string& str) {
-    char buffer[4096];
-    if (fgets(buffer, sizeof(buffer), fs.file) == nullptr) return false;
-    str = buffer;
+// Read a line at a fime matching Python behaviour and remove newline character
+inline bool read_line(FILE* fs, char* buffer, size_t size) {
+    if (fgets(buffer, size, fs) == nullptr) return false;
+    buffer[strlen(buffer)] = 0;
     return true;
-}
-inline bool read_line(const input_file& fs, char* buffer, size_t size) {
-    if (fgets(buffer, size, fs.file) == nullptr) return false;
-    return true;
-}
-
-// Printing values
-inline void print_value(const output_file& fs, int value) {
-    if (fprintf(fs.file, "%d", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, bool value, bool alpha = false) {
-    if (alpha) {
-        if (fprintf(fs.file, value ? "true" : "false") < 0)
-            throw io_error("cannot write to file " + fs.filename);
-    } else {
-        if (fprintf(fs.file, "%d", (int)value) < 0)
-            throw io_error("cannot write to file " + fs.filename);
-    }
-}
-inline void print_value(const output_file& fs, float value) {
-    if (fprintf(fs.file, "%g", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, double value) {
-    if (fprintf(fs.file, "%g", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, char value) {
-    if (fprintf(fs.file, "%c", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(
-    const output_file& fs, const char* value, bool quoted = false) {
-    if (fprintf(fs.file, quoted ? "\"%s\"" : "%s", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(
-    const output_file& fs, const string& value, bool quoted = false) {
-    if (fprintf(fs.file, quoted ? "\"%s\"" : "%s", value.c_str()) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-template <typename T, size_t N>
-inline void print_value(
-    const output_file& fs, const array<T, N>& value, bool in_brackets = false) {
-    if (!in_brackets) {
-        for (auto i = 0; i < N; i++) {
-            if (i) print_value(fs, ' ');
-            print_value(fs, value[i]);
-        }
-    } else {
-        print_value(fs, "[ ");
-        for (auto i = 0; i < N; i++) {
-            if (i) print_value(fs, ", ");
-            print_value(fs, value[i]);
-        }
-        print_value(fs, " ]");
-    }
-}
-template <typename T, int N>
-inline void print_value(
-    const output_file& fs, const vec<T, N>& value, bool in_brackets = false) {
-    print_value(fs, (const array<T, N>&)value, in_brackets);
-}
-template <typename T, int N, int M>
-inline void print_value(const output_file& fs, const mat<T, N, M>& value,
-    bool in_brackets = false) {
-    print_value(fs, (const array<T, N * M>&)value, in_brackets);
-}
-template <typename T, int N>
-inline void print_value(
-    const output_file& fs, const frame<T, N>& value, bool in_brackets = false) {
-    print_value(fs, (const array<T, N*(N + 1)>&)value, in_brackets);
-}
-
-// print values to file
-template <typename Arg, typename... Args>
-inline void println_values(
-    const output_file& fs, const Arg& value, const Args&... values) {
-    print_value(fs, value);
-    if constexpr (sizeof...(values) > 0) {
-        print_value(fs, ' ');
-        println_values(fs, values...);
-    } else {
-        print_value(fs, '\n');
-    }
 }
 
 }  // namespace yocto
@@ -965,6 +788,92 @@ inline void parse_varname(string_view& str, string& value) {
     }
     value = str.substr(0, pos);
     str.remove_prefix(pos);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PYTHON-LIKE STRING OPERATIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Check if we start or end with a sequence
+inline bool startswith(string_view str, string_view substr) {
+    return str.find(substr) == 0;
+}
+inline bool endswith(string_view str, string_view substr) {
+    return str.rfind(substr) == str.size() - substr.size();
+}
+inline void split(string_view str, vector<string_view>& splits,
+    string_view delimiters = " \t\r\n", bool trim_empty = true) {
+    splits.clear();
+    while (!str.empty()) {
+        auto pos = str.find_first_of(delimiters);
+        if (pos == string_view::npos) {
+            splits.push_back(str);
+            break;
+        } else if (pos == 0) {
+            if (!trim_empty) splits.push_back(str.substr(0, 1));
+            str.remove_prefix(1);
+        } else {
+            splits.push_back(str.substr(0, pos));
+            str.remove_prefix(pos + 1);
+        }
+    }
+}
+inline vector<string_view> split(string_view str) {
+    auto splits = vector<string_view>{};
+    split(str, splits);
+    return splits;
+}
+inline vector<string> split(const string& str) {
+    auto splits = vector<string_view>{};
+    split(str, splits);
+    auto splits_str = vector<string>();
+    for (auto split : splits) splits_str.push_back(string(split));
+    return splits_str;
+}
+inline void splitlines(string_view str, vector<string_view>& splits) {
+    splits.clear();
+    while (!str.empty()) {
+        auto pos = min(str.find("\n"), str.find("\r\n"));
+        if (pos == string_view::npos) {
+            splits.push_back(str);
+            break;
+        } else {
+            splits.push_back(str.substr(0, pos));
+            str.remove_prefix(pos + (str.front() == '\n' ? 0 : 1));
+        }
+    }
+}
+inline vector<string_view> splitlines(string_view str) {
+    auto splits = vector<string_view>{};
+    splitlines(str, splits);
+    return splits;
+}
+inline vector<string> splitlines(const string& str) {
+    auto splits = vector<string_view>{};
+    splitlines(str, splits);
+    auto splits_str = vector<string>();
+    for (auto split : splits) splits_str.push_back(string(split));
+    return splits_str;
+}
+
+inline string replace(string_view str, string_view from, string_view to) {
+    // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
+    auto replaced = ""s;
+    while (!str.empty()) {
+        auto pos = str.find(from);
+        if (pos == string_view::npos) {
+            replaced += str;
+            break;
+        } else {
+            replaced += str.substr(0, pos);
+            replaced += to;
+            str.remove_prefix(pos + from.size());
+        }
+    }
+    return replaced;
 }
 
 }  // namespace yocto

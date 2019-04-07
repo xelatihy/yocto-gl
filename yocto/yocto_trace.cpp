@@ -1050,8 +1050,8 @@ inline vec3f get_russian_roulette_albedo(const microfacet_brdf& brdf) {
 */
 
 // Russian roulette
-bool sample_russian_roulette(const vec3f& albedo, const vec3f& weight, int bounce,
-    float rr, int min_bounce = 3, float rr_threadhold = 1) {
+bool sample_russian_roulette(const vec3f& albedo, const vec3f& weight,
+    int bounce, float rr, int min_bounce = 3, float rr_threadhold = 1) {
 #if YOCTO_RUSSIAN_ROULETTE_MODE == 0
     if (bounce <= min_bounce) return false;
     auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
@@ -1069,17 +1069,16 @@ bool sample_russian_roulette(const vec3f& albedo, const vec3f& weight, int bounc
     //     beta /= 1 - q;
     //     DCHECK(!std::isinf(beta.y()));
     // }
-    if(max(weight) < rr_threadhold && bounce > min_bounce) {
+    if (max(weight) < rr_threadhold && bounce > min_bounce) {
         auto rr_prob = max((float)0.05, 1 - max(weight));
         return rr < rr_prob;
     } else {
         return false;
     }
 #endif
-
 }
-float sample_russian_roulette_pdf(
-    const vec3f& albedo, const vec3f& weight, int bounce, int min_bounce = 3, float rr_threadhold = 1) {    
+float sample_russian_roulette_pdf(const vec3f& albedo, const vec3f& weight,
+    int bounce, int min_bounce = 3, float rr_threadhold = 1) {
 #if YOCTO_RUSSIAN_ROULETTE_MODE == 0
     auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
     if (bounce <= min_bounce) return 1;
@@ -1097,7 +1096,7 @@ float sample_russian_roulette_pdf(
     //     beta /= 1 - q;
     //     DCHECK(!std::isinf(beta.y()));
     // }
-    if(max(weight) < rr_threadhold && bounce > min_bounce) {
+    if (max(weight) < rr_threadhold && bounce > min_bounce) {
         auto rr_prob = max((float)0.05, 1 - max(weight));
         return 1 - rr_prob;
     } else {
@@ -1454,7 +1453,7 @@ vec3f sample_next_direction_volume(const yocto_scene& scene,
     return next_direction;
 }
 #endif
-    
+
 std::tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
     const vec3f volume_density, const vec3f& volume_albedo,
@@ -1757,8 +1756,8 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         outgoing = -next_direction;
 
         // russian roulette
-        if (sample_russian_roulette(
-                get_russian_roulette_albedo(point.brdf), weight, bounce, get_random_float(rng)))
+        if (sample_russian_roulette(get_russian_roulette_albedo(point.brdf),
+                weight, bounce, get_random_float(rng)))
             break;
         weight /= sample_russian_roulette_pdf(
             get_russian_roulette_albedo(point.brdf), weight, bounce);
@@ -1829,8 +1828,8 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= next_brdf_cosine / next_direction_pdf;
 
         // russian roulette
-        if (sample_russian_roulette(
-                get_russian_roulette_albedo(point.brdf), weight, bounce, get_random_float(rng)))
+        if (sample_russian_roulette(get_russian_roulette_albedo(point.brdf),
+                weight, bounce, get_random_float(rng)))
             break;
         weight /= sample_russian_roulette_pdf(
             get_russian_roulette_albedo(point.brdf), weight, bounce);

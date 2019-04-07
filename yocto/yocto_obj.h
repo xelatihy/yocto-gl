@@ -264,7 +264,8 @@ template <typename Callbacks>
 void load_mtl(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
-    auto fs = input_file(filename);
+    auto fs_ = open_input_file(filename);
+    auto fs  = fs_.fs;
 
     // currently parsed material
     auto material = obj_material();
@@ -360,7 +361,8 @@ template <typename Callbacks>
 inline void load_objx(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
-    auto fs = input_file(filename);
+    auto fs_ = open_input_file(filename);
+    auto fs  = fs_.fs;
 
     // read the file line by line
     char buffer[4096];
@@ -416,7 +418,8 @@ template <typename Callbacks>
 inline void load_obj(
     const string& filename, Callbacks& cb, const load_obj_options& options) {
     // open file
-    auto fs = input_file(filename);
+    auto fs_ = open_input_file(filename);
+    auto fs  = fs_.fs;
 
     // track vertex size
     auto vert_size = obj_vertex();

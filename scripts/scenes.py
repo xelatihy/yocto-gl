@@ -120,11 +120,11 @@ def sync_images(directory='mcguire',scene='*',format='obj',mode='path',clean=Tru
 @click.option('--clean/--no-clean','-C', default=False)
 def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='path',clean=True):
     modes = {
-        'default': '--skip-textures --mesh-filenames',
-        'gltf': '--skip-textures --mesh-filenames --mesh-directory gltf_meshes/'
+        'default': '--uniform-textures --mesh-filenames',
+        'gltf': '--uniform-textures --mesh-filenames --mesh-directory gltf_meshes/'
     }
     options = modes[mode]
-    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
+    for dirname in sorted(glob.glob(f'{directory}/source/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         if 'ecosys' in dirname and outformat == 'obj': continue
@@ -132,22 +132,22 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='pa
         if 'fractal' in dirname and outformat == 'obj': continue
         if 'pavilion' in dirname and outformat == 'obj': continue
         if 'sanmiguel' in dirname and outformat == 'obj': continue
-        outdirname = dirname.replace(f'/{format}/',f'/{outformat}/')
+        outdirname = dirname.replace(f'/source/',f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
-        if outformat != 'obj': os.system(f'mkdir -p {outdirname}/shapes')
-        os.system(f'mkdir -p {outdirname}/textures')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            outname = filename.replace(f'/{format}/',f'/{outformat}/').replace(f'.{format}',f'.{outformat}')
-            cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {filename}'
-            print(cmd, file=sys.stderr)
-            os.system(cmd)
-            cmd = f'cp -r {dirname}/textures {outdirname}'
-            print(cmd, file=sys.stderr)
-            os.system(cmd)
+            outname = filename.replace(f'/source/',f'/{outformat}/').replace(f'.{format}',f'.{outformat}')
+            if format != 'dijson':
+                cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {filename}'
+                print(cmd, file=sys.stderr)
+                os.system(cmd)
+            else:
+                cmd = f'../yocto-gl/bin/yislandproc -o {outname} {options} {filename}'
+                print(cmd, file=sys.stderr)
+                os.system(cmd)
 
 @cli.command()
 @click.option('--directory', '-d', default='yuksel')

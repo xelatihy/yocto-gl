@@ -1439,145 +1439,57 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
     }
 }
 
-string print_scene_stats(const yocto_scene& scene) {
-    // using long long instead of uint64_t to avoid printf macros
-    auto num_cameras      = (size_t)0;
-    auto num_shapes       = (size_t)0;
-    auto num_surfaces     = (size_t)0;
-    auto num_instances    = (size_t)0;
-    auto num_materials    = (size_t)0;
-    auto num_textures     = (size_t)0;
-    auto num_voltextures  = (size_t)0;
-    auto num_environments = (size_t)0;
-    auto num_nodes        = (size_t)0;
-    auto num_animations   = (size_t)0;
+string format_scene_stats(const yocto_scene& scene, bool verbose) {
+    auto stats = vector<pair<string, size_t>>{};
+    stats += {"cameras", scene.cameras.size()};
+    stats += {"shapes", scene.shapes.size()};
+    stats += {"subdivs", scene.subdivs.size()};
+    stats += {"instances", scene.instances.size()};
+    stats += {"environments", scene.environments.size()};
+    stats += {"textures", scene.textures.size()};
+    stats += {"voltextures", scene.voltextures.size()};
+    stats += {"materials", scene.materials.size()};
+    stats += {"nodes", scene.nodes.size()};
+    stats += {"animations", scene.animations.size()};
 
-    auto elem_points         = (size_t)0;
-    auto elem_lines          = (size_t)0;
-    auto elem_triangles      = (size_t)0;
-    auto elem_quads          = (size_t)0;
-    auto elem_quads_pos      = (size_t)0;
-    auto elem_quads_norm     = (size_t)0;
-    auto elem_quads_texcoord = (size_t)0;
-    auto vert_pos            = (size_t)0;
-    auto vert_norm           = (size_t)0;
-    auto vert_texcoord       = (size_t)0;
-    auto vert_color          = (size_t)0;
-    auto vert_radius         = (size_t)0;
-    auto vert_tangsp         = (size_t)0;
+    auto accumulate = [](const auto& values, const auto& func) -> size_t {
+        auto sum = (size_t)0;
+        for (auto& value : values) sum += func(value);
+        return sum;
+    };
 
-    auto texel_hdr = (size_t)0;
-    auto texel_ldr = (size_t)0;
-    auto voxel_hdr = (size_t)0;
+    stats += {"points", accumulate(scene.shapes,
+                            [](auto& shape) { return shape.points.size(); })};
+    stats += {"lines", accumulate(scene.shapes,
+                           [](auto& shape) { return shape.lines.size(); })};
+    stats += {"triangles", accumulate(scene.shapes, [](auto& shape) {
+                  return shape.triangles.size();
+              })};
+    stats += {"quads", accumulate(scene.shapes,
+                           [](auto& shape) { return shape.quads.size(); })};
+    stats += {"fvquads", accumulate(scene.shapes, [](auto& shape) {
+                  return shape.quads_positions.size();
+              })};
 
-    auto memory_imgs  = (size_t)0;
-    auto memory_vols  = (size_t)0;
-    auto memory_elems = (size_t)0;
-    auto memory_verts = (size_t)0;
-    auto memory_shps  = (size_t)0;
-    auto memory_ists  = (size_t)0;
-    auto memory_txts  = (size_t)0;
-    auto memory_cams  = (size_t)0;
-    auto memory_mats  = (size_t)0;
-
-    auto bbox = compute_scene_bounds(scene);
-
-    num_cameras      = scene.cameras.size();
-    num_shapes       = scene.shapes.size();
-    num_materials    = scene.materials.size();
-    num_textures     = scene.textures.size();
-    num_voltextures  = scene.voltextures.size();
-    num_environments = scene.environments.size();
-    num_instances    = scene.instances.size();
-    num_nodes        = scene.nodes.size();
-    num_animations   = scene.animations.size();
-
-    for (auto& shape : scene.shapes) {
-        elem_points += shape.points.size();
-        elem_lines += shape.lines.size();
-        elem_triangles += shape.triangles.size();
-        elem_quads += shape.quads.size();
-        elem_quads_pos += shape.quads_positions.size();
-        elem_quads_norm += shape.quads_normals.size();
-        elem_quads_texcoord += shape.quads_texturecoords.size();
-        vert_pos += shape.positions.size();
-        vert_norm += shape.normals.size();
-        vert_texcoord += shape.texturecoords.size();
-        vert_color += shape.colors.size();
-        vert_radius += shape.radius.size();
-        vert_tangsp += shape.tangentspaces.size();
-    }
-
-    memory_elems = elem_points * sizeof(int) + elem_lines * sizeof(vec2i) +
-                   elem_triangles * sizeof(vec3i) + elem_quads * sizeof(vec4i) +
-                   elem_quads_pos * sizeof(vec4i) +
-                   elem_quads_norm * sizeof(vec4i) +
-                   elem_quads_texcoord * sizeof(vec4i);
-    memory_verts = vert_pos * sizeof(vec3f) + vert_norm * sizeof(vec3f) +
-                   vert_texcoord * sizeof(vec2f) + vert_color * sizeof(vec4f) +
-                   vert_tangsp * sizeof(vec4f) + vert_radius * sizeof(float);
-
-    for (auto& texture : scene.textures) {
-        texel_hdr += texture.hdr_image.size().x * texture.hdr_image.size().y;
-        texel_ldr += texture.ldr_image.size().x * texture.ldr_image.size().y;
-    }
-    memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
-
-    for (auto& voltexture : scene.voltextures) {
-        voxel_hdr += voltexture.volume_data.size().x *
-                     voltexture.volume_data.size().y *
-                     voltexture.volume_data.size().z;
-    }
-    memory_vols = voxel_hdr * sizeof(float);
-
-    memory_ists = sizeof(yocto_instance) * scene.instances.size();
-    memory_shps = sizeof(yocto_shape) * scene.shapes.size();
-    memory_txts = sizeof(yocto_texture) * scene.textures.size();
-    memory_mats = sizeof(yocto_material) * scene.materials.size();
-    memory_cams = sizeof(yocto_camera) * scene.cameras.size();
+    stats += {"texels4b", accumulate(scene.textures, [](auto& texture) {
+                  return (size_t)texture.ldr_image.size().x *
+                         (size_t)texture.ldr_image.size().x;
+              })};
+    stats += {"texels4f", accumulate(scene.textures, [](auto& texture) {
+                  return (size_t)texture.hdr_image.size().x *
+                         (size_t)texture.hdr_image.size().y;
+              })};
+    stats += {"voltexels", accumulate(scene.voltextures, [](auto& texture) {
+                  return (size_t)texture.volume_data.size().x *
+                         (size_t)texture.volume_data.size().y *
+                         (size_t)texture.volume_data.size().z;
+              })};
 
     auto str = ""s;
-
-    str += "num_cameras: " + to_string(num_cameras) + "\n";
-    str += "num_shapes: " + to_string(num_shapes) + "\n";
-    str += "num_surface: " + to_string(num_surfaces) + "\n";
-    str += "num_instances: " + to_string(num_instances) + "\n";
-    str += "num_materials: " + to_string(num_materials) + "\n";
-    str += "num_textures: " + to_string(num_textures) + "\n";
-    str += "num_voltextures: " + to_string(num_voltextures) + "\n";
-    str += "num_environments: " + to_string(num_environments) + "\n";
-    str += "num_nodes: " + to_string(num_nodes) + "\n";
-    str += "num_animations: " + to_string(num_animations) + "\n";
-
-    str += "elem_points: " + to_string(elem_points) + "\n";
-    str += "elem_lines: " + to_string(elem_lines) + "\n";
-    str += "elem_triangles: " + to_string(elem_triangles) + "\n";
-    str += "elem_quads: " + to_string(elem_quads) + "\n";
-    str += "vert_pos: " + to_string(vert_pos) + "\n";
-    str += "vert_norm: " + to_string(vert_norm) + "\n";
-    str += "vert_texcoord: " + to_string(vert_texcoord) + "\n";
-    str += "vert_color: " + to_string(vert_color) + "\n";
-    str += "vert_radius: " + to_string(vert_radius) + "\n";
-    str += "vert_tangsp: " + to_string(vert_tangsp) + "\n";
-
-    str += "texel_hdr: " + to_string(texel_hdr) + "\n";
-    str += "texel_ldr: " + to_string(texel_ldr) + "\n";
-
-    str += "memory_imgs: " + to_string(memory_imgs) + "\n";
-    str += "memory_vols: " + to_string(memory_vols) + "\n";
-    str += "memory_elems: " + to_string(memory_elems) + "\n";
-    str += "memory_verts: " + to_string(memory_verts) + "\n";
-
-    str += "memory_cameras: " + to_string(memory_cams) + "\n";
-    str += "memory_textures: " + to_string(memory_txts) + "\n";
-    str += "memory_materials: " + to_string(memory_mats) + "\n";
-    str += "memory_shapes: " + to_string(memory_shps) + "\n";
-    str += "memory_instances: " + to_string(memory_ists) + "\n";
-
-    str += "bbox min: " + to_string(bbox.min.x) + " " + to_string(bbox.min.y) +
-           " " + to_string(bbox.min.z) + "\n";
-    str += "bbox max: " + to_string(bbox.max.x) + " " + to_string(bbox.max.y) +
-           " " + to_string(bbox.max.z) + "\n";
+    for (auto& [key, value] : stats) {
+        if (value == 0) continue;
+        str += format("{:<15} {:>13n}\n", key + ":", value);
+    }
 
     return str;
 }
