@@ -977,6 +977,8 @@ void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
             parent_texture_map[parent_name].x += 1;
         }
     }
+    // fix instances
+    rename_instances(scene);
 
     // fix scene
     if (scene.uri == "") scene.uri = get_filename(filename);

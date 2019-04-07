@@ -618,6 +618,7 @@ void load_yaml_ply_instances(yocto_scene& scene, const string& filename) {
     }
 
     // set instance uris
+    rename_instances(scene);
     auto shape_names = vector<string>(), material_names = vector<string>();
     for (auto& shape : scene.shapes)
         shape_names.push_back(get_basename(shape.uri));
