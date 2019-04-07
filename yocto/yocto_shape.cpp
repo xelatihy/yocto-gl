@@ -1139,9 +1139,9 @@ struct cyhair_data {
 
 inline void load_cyhair(const string& filename, cyhair_data& hair) {
     // open file
-    hair    = {};
+    hair     = {};
     auto fs_ = open_input_file(filename, true);
-    auto fs = fs_.fs;
+    auto fs  = fs_.fs;
 
     // Bytes 0-3    Must be "HAIR" in ascii code (48 41 49 52)
     // Bytes 4-7    Number of hair strands as unsigned int
@@ -1163,12 +1163,12 @@ inline void load_cyhair(const string& filename, cyhair_data& hair) {
     // If the file does not have a radius array, this default value is used.
     // Bytes 40-127    File information as char array of size 88 in ascii
 
-    auto read_value =[](FILE* fs, auto& value) {
+    auto read_value = [](FILE* fs, auto& value) {
         if (fread(&value, sizeof(value), 1, fs) != 1) {
             throw io_error("cannot read from file");
         }
     };
-    auto read_values =[](FILE* fs, auto& values) {
+    auto read_values = [](FILE* fs, auto& values) {
         if (values.empty()) return;
         if (fread(values.data(), sizeof(values[0]), values.size(), fs) !=
             values.size()) {

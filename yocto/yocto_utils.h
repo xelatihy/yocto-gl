@@ -830,7 +830,7 @@ inline vector<string> split(const string& str) {
     auto splits = vector<string_view>{};
     split(str, splits);
     auto splits_str = vector<string>();
-    for(auto split : splits) splits_str.push_back(string(split));
+    for (auto split : splits) splits_str.push_back(string(split));
     return splits_str;
 }
 inline void splitlines(string_view str, vector<string_view>& splits) {
@@ -855,7 +855,7 @@ inline vector<string> splitlines(const string& str) {
     auto splits = vector<string_view>{};
     splitlines(str, splits);
     auto splits_str = vector<string>();
-    for(auto split : splits) splits_str.push_back(string(split));
+    for (auto split : splits) splits_str.push_back(string(split));
     return splits_str;
 }
 

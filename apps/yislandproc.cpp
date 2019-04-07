@@ -1039,7 +1039,7 @@ int main(int argc, char** argv) {
         dirnames.insert(dirname + get_dirname(shape.uri));
     for (auto& texture : scene.textures)
         dirnames.insert(dirname + get_dirname(texture.uri));
-    if(get_extension(output) == "yaml")
+    if (get_extension(output) == "yaml")
         dirnames.insert(dirname + "instances/");
     for (auto& dir : dirnames) {
         if (!mkdir(get_dirname(dir))) {
@@ -1053,7 +1053,7 @@ int main(int argc, char** argv) {
     try {
         save_options.skip_textures = false;
         save_options.run_serially  = false;
-        save_options.ply_instances  = true;
+        save_options.ply_instances = true;
         save_scene(output, scene, save_options);
     } catch (const std::exception& e) {
         exit_error(e.what());
