@@ -612,43 +612,6 @@ inline void parallel_for(size_t begin, size_t end, const Func& func,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// file inout stream
-struct input_file {
-    input_file(const string& filename, bool binary = false) {
-        this->filename = filename;
-        file           = fopen(filename.c_str(), binary ? "rb" : "rt");
-        if (!file) throw io_error("could not open " + filename);
-    }
-    input_file(FILE* fs) {
-        file  = fs;
-        owned = false;
-    }
-
-    input_file(const input_file&) = delete;
-    input_file& operator=(const input_file&) = delete;
-
-    ~input_file() {
-        if (file && owned) fclose(file);
-    }
-
-    string filename = "";
-    FILE*  file     = nullptr;
-    bool   owned    = true;
-};
-
-
-// read a line of text
-inline bool read_line(const input_file& fs, string& str) {
-    char buffer[4096];
-    if (fgets(buffer, sizeof(buffer), fs.file) == nullptr) return false;
-    str = buffer;
-    return true;
-}
-inline bool read_line(const input_file& fs, char* buffer, size_t size) {
-    if (fgets(buffer, size, fs.file) == nullptr) return false;
-    return true;
-}
-
 // A file holder that closes a file when destructed. Useful for RIIA
 struct file_holder {
     FILE* fs = nullptr;
@@ -672,6 +635,13 @@ inline file_holder open_output_file(
     auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
     if (!fs) throw io_error("could not open file " + filename);
     return {fs};
+}
+
+// Read a line at a fime matching Python behaviour and remove newline character
+inline bool read_line(FILE* fs, char* buffer, size_t size) {
+    if (fgets(buffer, size, fs) == nullptr) return false;
+    buffer[strlen(buffer)] = 0;
+    return true;
 }
 
 }  // namespace yocto
