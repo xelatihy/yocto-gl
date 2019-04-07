@@ -616,11 +616,12 @@ void load_yaml_ply_instances(yocto_scene& scene, const string& filename) {
     }
 
     // set instance uris
+    auto shape_names = vector<string>(), material_names = vector<string>();
+    for(auto& shape : scene.shapes) shape_names.push_back(get_basename(shape.uri));
+    for(auto& material : scene.materials) material_names.push_back(get_basename(material.uri));
     auto iid = 0;
     for(auto& instance : scene.instances) {
-        auto& shape = scene.shapes[instance.shape];
-        auto& material = scene.materials[instance.material];
-        instance.uri = format("instances/{}_{}_{}.yaml", get_basename(shape.uri), get_basename(material.uri), iid++);
+        instance.uri = format("instances/i{}.yaml", shape_names[instance.shape], material_names[instance.material], iid++);
     }
 }
 
