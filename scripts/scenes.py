@@ -9,9 +9,9 @@ def cli():
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='obj')
+@click.option('--format','-f', default='yaml')
 @click.option('--mode','-m', default='path')
-def yitrace(directory='mcguire',scene='*',format='obj',mode='path'):
+def yitrace(directory='mcguire',scene='*',format='yaml',mode='path'):
     modes = {
         'path': '--bvh-high-quality',
         'embree': '--bvh-embree --bvh-high-quality',
@@ -34,9 +34,9 @@ def yitrace(directory='mcguire',scene='*',format='obj',mode='path'):
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='obj')
+@click.option('--format','-f', default='yaml')
 @click.option('--mode','-m', default='default')
-def yview(directory='mcguire',scene='*',format='obj',mode='path'):
+def yview(directory='mcguire',scene='*',format='yaml',mode='path'):
     modes = {
         'default': '--double-sided',
         'double-sided': '--double-sided',
@@ -57,10 +57,10 @@ def yview(directory='mcguire',scene='*',format='obj',mode='path'):
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='obj')
+@click.option('--format','-f', default='yaml')
 @click.option('--mode','-m', default='path')
 @click.option('--outformat','-F', default='png')
-def ytrace(directory='mcguire',scene='*',format='obj',outformat="png",mode='path'):
+def ytrace(directory='mcguire',scene='*',format='yaml',outformat="png",mode='path'):
     modes = {
         'path': '--all-cameras -s 64 -r 360 --bvh-high-quality',
         'embree': '--all-cameras -s 256 -r 720 --bvh-embree --bvh-high-quality',
