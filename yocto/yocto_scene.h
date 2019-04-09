@@ -456,6 +456,7 @@ struct material_point {
     vec3f transmission = zero3f;
     float roughness    = 1;
     float opacity      = 1;
+    bool  base_metallic = false;
     bool  fresnel      = true;
     bool  refract      = false;
     vec3f normalmap    = {0,0,1};

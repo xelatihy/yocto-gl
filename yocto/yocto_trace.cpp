@@ -101,11 +101,16 @@ struct trace_point {
 
 microfacet_brdf make_microfacet_brdf(const material_point& material, const vec4f& shape_color) {
     auto brdf = microfacet_brdf{};
-    brdf.diffuse = material.diffuse * shape_color.xyz;
-    brdf.specular = material.specular * shape_color.xyz;
+    if(!material.base_metallic) {
+        brdf.diffuse = material.diffuse * shape_color.xyz;
+        brdf.specular = material.specular * shape_color.xyz;
+    } else {
+        brdf.diffuse   = material.diffuse * (1 - material.specular);
+        brdf.specular  = material.diffuse * material.specular + 0.04f * (1 - material.specular);
+    }
     brdf.transmission = material.transmission;
     brdf.opacity = material.opacity * shape_color.w;
-    brdf.roughness = material.roughness;
+    brdf.roughness = material.roughness * material.roughness;
     brdf.refract = material.refract;
     brdf.fresnel = material.fresnel;
     if (brdf.diffuse != zero3f) {
