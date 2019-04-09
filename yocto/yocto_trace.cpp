@@ -52,6 +52,34 @@ constexpr bool trace_non_rigid_frames = true;
 atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
 
+// Material values packed into a convenience structure.
+struct microfacet_brdf {
+    vec3f diffuse      = zero3f;
+    vec3f specular     = zero3f;
+    vec3f transmission = zero3f;
+    float roughness    = 1;
+    float opacity      = 1;
+    bool  fresnel      = true;
+    bool  refract      = false;
+};
+
+bool is_brdf_delta(const microfacet_brdf& brdf) {
+    return brdf.roughness == 0 && brdf.diffuse == zero3f &&
+           (brdf.specular != zero3f || brdf.transmission != zero3f);
+}
+bool is_brdf_zero(const microfacet_brdf& brdf) {
+    return brdf.diffuse == zero3f && brdf.specular == zero3f &&
+           brdf.transmission == zero3f;
+}
+
+bool is_material_volume_homogeneus(const yocto_material& material) {
+    return material.volume_density_texture < 0;
+}
+bool is_material_volume_colored(const yocto_material& material) {
+    return !(material.volume_density.x == material.volume_density.y &&
+             material.volume_density.y == material.volume_density.z);
+}
+
 // Trace point
 struct trace_point {
     int             instance_id      = -1;
@@ -71,6 +99,23 @@ struct trace_point {
     bool            hit              = false;
 };
 
+microfacet_brdf make_microfacet_brdf(const material_point& material, const vec4f& shape_color) {
+    auto brdf = microfacet_brdf{};
+    brdf.diffuse = material.diffuse * shape_color.xyz;
+    brdf.specular = material.specular * shape_color.xyz;
+    brdf.transmission = material.transmission;
+    brdf.opacity = material.opacity * shape_color.w;
+    brdf.roughness = material.roughness;
+    brdf.refract = material.refract;
+    brdf.fresnel = material.fresnel;
+    if (brdf.diffuse != zero3f) {
+        brdf.roughness = clamp(brdf.roughness, 0.03f * 0.03f, 1.0f);
+    } else if (brdf.roughness <= 0.03f * 0.03f) {
+        brdf.roughness = 0;
+    }
+    return brdf;
+}
+
 // Make a trace point
 trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     int element_id, const vec2f& element_uv,
@@ -88,7 +133,15 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
         scene, instance, element_id, trace_non_rigid_frames);
     point.normal = evaluate_instance_normal(
         scene, instance, element_id, element_uv, trace_non_rigid_frames);
-
+    point.texturecoord = evaluate_shape_texturecoord(shape, element_id, element_uv);
+    point.color    = evaluate_shape_color(shape, element_id, element_uv);
+    auto material_point = evaluate_material_point(scene, material, point.texturecoord);
+    point.emission = material_point.emission;
+    point.brdf = make_microfacet_brdf(material_point, point.color);
+    point.volume_emission = material.volume_emission;
+    point.volume_density  = material.volume_density;
+    point.volume_albedo   = material.volume_albedo;
+    point.volume_phaseg   = material.volume_phaseg;
     if (!shape.lines.empty()) {
         point.normal = orthonormalize(-shading_direction, point.normal);
     } else if (!shape.points.empty()) {
@@ -96,22 +149,10 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     } else {
         if (material.normal_texture >= 0) {
             point.normal = evaluate_instance_perturbed_normal(scene, instance,
-                element_id, element_uv, trace_non_rigid_frames);
+                element_id, element_uv, material_point.normalmap, 
+                trace_non_rigid_frames);
         }
     }
-    point.texturecoord = evaluate_shape_texturecoord(
-        shape, element_id, element_uv);
-    point.color    = evaluate_shape_color(shape, element_id, element_uv);
-    point.emission = evaluate_material_emission(
-        scene, material, point.texturecoord);
-    point.brdf = evaluate_material_brdf(scene, material, point.texturecoord);
-    point.brdf.diffuse *= point.color.xyz;
-    point.brdf.specular *= point.color.xyz;
-    point.brdf.opacity *= point.color.w;
-    point.volume_emission = material.volume_emission;
-    point.volume_density  = material.volume_density;
-    point.volume_albedo   = material.volume_albedo;
-    point.volume_phaseg   = material.volume_phaseg;
     point.hit             = true;
     return point;
 }
@@ -1247,117 +1288,6 @@ float prob_direct(const microfacet_brdf& brdf) {
     auto kd       = max(brdf.diffuse);
     auto specular = max(brdf.specular);
     return (kd + brdf.roughness * specular) / (kd + specular);
-}
-
-// Sample a direction of direct illumination from the point p, which is inside
-// mediums.back(). pdf and incoming radiance le are returned in reference. It
-// works for both surface rendering and volume rendering.
-vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& p, int channel,
-    const vector<int>& mediums_, rng_state& rng, float& pdf, vec3f& le) {
-    auto  incoming = zero3f;
-    vec3f weight   = vec3f{1, 1, 1};
-    auto  mediums  = mediums_;
-
-    auto idx = sample_uniform_index(
-        lights.instances.size() + lights.environments.size(),
-        get_random_float(rng));
-    pdf = 1.0f / (lights.instances.size() + lights.environments.size());
-    if (idx < lights.instances.size()) {
-        auto instance_id = lights.instances[idx];
-        incoming = sample_instance_direction(scene, lights, instance_id, p,
-            get_random_float(rng), get_random_vec2f(rng));
-        auto& instance = scene.instances[instance_id];
-        pdf *= 1.0 / lights.shape_elements_cdf[instance.shape].back();
-    } else {
-        auto environment_id =
-            lights.environments[idx - lights.instances.size()];
-        incoming = sample_environment_direction(scene, lights, environment_id,
-            get_random_float(rng), get_random_vec2f(rng));
-        pdf *= sample_environment_direction_pdf(
-            scene, lights, environment_id, incoming);
-        if (auto isec = bvh_intersection{};
-            !intersect_scene_bvh(scene, bvh, make_ray(p, incoming), isec)) {
-            auto& environment = scene.environments[environment_id];
-            le = evaluate_environment_emission(scene, environment, incoming);
-            return incoming;
-        }
-    }
-
-    auto isec = bvh_intersection{};
-    auto hit  = intersect_scene_bvh(scene, bvh, make_ray(p, incoming), isec);
-
-    while (hit) {
-        auto& isec_instance = scene.instances[isec.instance_id];
-        auto& isec_shape    = scene.shapes[isec_instance.shape];
-        auto  lp            = evaluate_instance_position(
-            scene, isec_instance, isec.element_id, isec.element_uv);
-        auto  ln            = evaluate_instance_normal(scene, isec_instance,
-            isec.element_id, isec.element_uv, trace_non_rigid_frames);
-        auto& isec_material = scene.materials[isec_instance.material];
-        auto  emission      = evaluate_material_emission(scene, isec_material,
-                            evaluate_shape_texturecoord(
-                                isec_shape, isec.element_id, isec.element_uv)) *
-                        evaluate_shape_color(
-                            isec_shape, isec.element_id, isec.element_uv)
-                            .xyz;
-
-        auto& medium_instance = scene.instances[mediums.back()];
-        auto& medium_material = scene.materials[medium_instance.material];
-        if (medium_material.volume_density != zero3f)
-            weight *= evaluate_transmission(scene, medium_material, lp,
-                incoming, isec.distance, channel, rng);
-
-        // Hack: Uncomment this or the result will be biased
-        // If mediums refracts, the transmission ray won't reach the sampled
-        // light point if(isec.instance.mat->refract) break;
-
-        if (emission != zero3f) {
-            // Geometric term.
-            weight *= fabs(dot(ln, incoming)) / dot(lp - p, lp - p);
-            le += weight * emission;
-            break;
-        }
-
-        auto brdf = evaluate_material_brdf(scene, isec_material,
-            evaluate_shape_texturecoord(
-                isec_shape, isec.element_id, isec.element_uv));
-        if (brdf.transmission == zero3f) {
-            le = zero3f;
-            break;
-        }
-
-        auto  ndi       = dot(incoming, ln);
-        float threshold = 0.05;
-
-        if (ndi > threshold) {
-            // Exiting from medium.
-            if (isec.instance_id != mediums.back()) {
-                pdf = 0;
-                return zero3f;
-            }
-            if (mediums.size() <= 1) {
-                pdf = 0;
-                return zero3f;
-            }
-            mediums.pop_back();
-        } else if (ndi < -threshold) {
-            // Entering new medium.
-            if (isec.instance_id == mediums.back()) {
-                pdf = 0;
-                return zero3f;
-            }
-            mediums.push_back(isec.instance_id);
-        } else {
-            pdf = 0;
-            return zero3f;
-        }
-
-        // HACK: 10? Don't know...
-        hit = intersect_scene_bvh(scene, bvh, make_ray(lp, incoming), isec);
-    }
-
-    return incoming;
 }
 
 // Evaluates the weight after sampling distance in a medium.
