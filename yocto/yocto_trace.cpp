@@ -52,6 +52,14 @@ constexpr bool trace_non_rigid_frames = true;
 atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
 
+// Material lobe
+enum struct brdf_lobe_type { none, diffuse, reflection, transmission, metal };
+struct brdf_lobe {
+    brdf_lobe_type type = brdf_lobe_type::none;
+    vec3f albedo = zero3f;
+    float roughness = 1;
+};
+
 // Material values packed into a convenience structure.
 struct microfacet_brdf {
     vec3f diffuse      = zero3f;
@@ -59,7 +67,6 @@ struct microfacet_brdf {
     vec3f transmission = zero3f;
     float roughness    = 1;
     float opacity      = 1;
-    bool  fresnel      = true;
     bool  refract      = false;
 };
 
@@ -112,7 +119,6 @@ microfacet_brdf make_microfacet_brdf(const material_point& material, const vec4f
     brdf.opacity = material.opacity * shape_color.w;
     brdf.roughness = material.roughness * material.roughness;
     brdf.refract = material.refract;
-    brdf.fresnel = material.fresnel;
     if (brdf.diffuse != zero3f) {
         brdf.roughness = clamp(brdf.roughness, 0.03f * 0.03f, 1.0f);
     } else if (brdf.roughness <= 0.03f * 0.03f) {
@@ -637,7 +643,6 @@ float sample_microfacet_distribution_pdf(
 vec3f evaluate_brdf_fresnel(
     const microfacet_brdf& brdf, const vec3f& normal, const vec3f& incoming) {
     if (brdf.specular == zero3f) return zero3f;
-    if (!brdf.fresnel) return brdf.specular;
     return evaluate_fresnel_schlick(brdf.specular, dot(normal, incoming));
 }
 

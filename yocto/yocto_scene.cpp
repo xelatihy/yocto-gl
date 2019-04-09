@@ -1286,7 +1286,6 @@ material_point evaluate_material_point(const yocto_scene& scene,
         point.transmission *=
             evaluate_texture(transmission_texture, texturecoord).xyz;
     }
-    point.fresnel = material.fresnel;
     point.refract = material.refract;
     point.base_metallic = material.base_metallic;
     point.normalmap = vec3f{0,0,1};
