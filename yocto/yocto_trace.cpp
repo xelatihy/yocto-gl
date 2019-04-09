@@ -53,12 +53,24 @@ atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
 
 // Material lobe
-enum struct brdf_lobe_type { none, diffuse, reflection, transmission, metal };
-struct brdf_lobe {
-    brdf_lobe_type type = brdf_lobe_type::none;
-    vec3f albedo = zero3f;
-    float roughness = 1;
+enum struct brdf_lobe_type {
+    diffuse_reflection,
+    diffuse_transmission,
+    specular_reflection,
+    metallic_reflection,
+    specular_transmission,
+    specular_refraction,
+    opacity_passthrough
 };
+struct brdf_lobe {
+    brdf_lobe_type type      = brdf_lobe_type::diffuse_reflection;
+    vec3f          albedo    = zero3f;
+    vec3f          specular  = zero3f;
+    float          roughness = 1;
+};
+
+// Brdf as a list of lobes
+st...............
 
 // Material values packed into a convenience structure.
 struct microfacet_brdf {
@@ -87,6 +99,30 @@ bool is_material_volume_colored(const yocto_material& material) {
              material.volume_density.y == material.volume_density.z);
 }
 
+void make_composite_brdf(composite_brdf& smooth_brdfs, composite_brdf& delta_brdfs, 
+    const material_point& material, const vec4f& shape_color) {
+    auto diffuse = !material.base_metallic
+                       ? material.diffuse * shape_color.xyz
+                       : material.diffuse * (1 - material.specular);
+    auto specular = !material.base_metallic
+                        ? material.specular * shape_color.xyz
+                        : material.diffuse * material.specular +
+                              0.04f * (1 - material.specular);
+    auto transmission = material.transmission;
+    auto opacity      = material.opacity * shape_color.w;
+    auto roughness    = material.roughness * material.roughness;
+    auto refract      = material.refract;
+    if (diffuse != zero3f) {
+        roughness = clamp(roughness, 0.03f * 0.03f, 1.0f);
+    } else if (roughness <= 0.03f * 0.03f) {
+        roughness = 0;
+    }
+    brdfs[0] = {brdf_lobe_type::diffuse, diffuse, specular, 1};
+    brdfs[1] = {brdf_lobe_type::specular, specular, specular, 1};
+    brdfs[2] = {brdf_lobe_type::transmission, transmission, specular, 1};
+    return brdf;
+}
+
 // Trace point
 struct trace_point {
     int             instance_id      = -1;
@@ -106,19 +142,21 @@ struct trace_point {
     bool            hit              = false;
 };
 
-microfacet_brdf make_microfacet_brdf(const material_point& material, const vec4f& shape_color) {
+microfacet_brdf make_microfacet_brdf(
+    const material_point& material, const vec4f& shape_color) {
     auto brdf = microfacet_brdf{};
-    if(!material.base_metallic) {
-        brdf.diffuse = material.diffuse * shape_color.xyz;
+    if (!material.base_metallic) {
+        brdf.diffuse  = material.diffuse * shape_color.xyz;
         brdf.specular = material.specular * shape_color.xyz;
     } else {
-        brdf.diffuse   = material.diffuse * (1 - material.specular);
-        brdf.specular  = material.diffuse * material.specular + 0.04f * (1 - material.specular);
+        brdf.diffuse  = material.diffuse * (1 - material.specular);
+        brdf.specular = material.diffuse * material.specular +
+                        0.04f * (1 - material.specular);
     }
     brdf.transmission = material.transmission;
-    brdf.opacity = material.opacity * shape_color.w;
-    brdf.roughness = material.roughness * material.roughness;
-    brdf.refract = material.refract;
+    brdf.opacity      = material.opacity * shape_color.w;
+    brdf.roughness    = material.roughness * material.roughness;
+    brdf.refract      = material.refract;
     if (brdf.diffuse != zero3f) {
         brdf.roughness = clamp(brdf.roughness, 0.03f * 0.03f, 1.0f);
     } else if (brdf.roughness <= 0.03f * 0.03f) {
@@ -144,11 +182,13 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
         scene, instance, element_id, trace_non_rigid_frames);
     point.normal = evaluate_instance_normal(
         scene, instance, element_id, element_uv, trace_non_rigid_frames);
-    point.texturecoord = evaluate_shape_texturecoord(shape, element_id, element_uv);
-    point.color    = evaluate_shape_color(shape, element_id, element_uv);
-    auto material_point = evaluate_material_point(scene, material, point.texturecoord);
-    point.emission = material_point.emission;
-    point.brdf = make_microfacet_brdf(material_point, point.color);
+    point.texturecoord = evaluate_shape_texturecoord(
+        shape, element_id, element_uv);
+    point.color         = evaluate_shape_color(shape, element_id, element_uv);
+    auto material_point = evaluate_material_point(
+        scene, material, point.texturecoord);
+    point.emission        = material_point.emission;
+    point.brdf            = make_microfacet_brdf(material_point, point.color);
     point.volume_emission = material.volume_emission;
     point.volume_density  = material.volume_density;
     point.volume_albedo   = material.volume_albedo;
@@ -160,11 +200,11 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     } else {
         if (material.normal_texture >= 0) {
             point.normal = evaluate_instance_perturbed_normal(scene, instance,
-                element_id, element_uv, material_point.normalmap, 
+                element_id, element_uv, material_point.normalmap,
                 trace_non_rigid_frames);
         }
     }
-    point.hit             = true;
+    point.hit = true;
     return point;
 }
 
