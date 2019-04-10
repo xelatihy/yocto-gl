@@ -459,6 +459,10 @@ struct material_point {
     bool  base_metallic = false;
     bool  refract      = false;
     vec3f normalmap    = {0,0,1};
+    vec3f volume_emission = {0, 0, 0};
+    vec3f volume_albedo   = {0, 0, 0};
+    vec3f volume_density  = {0, 0, 0};
+    float volume_phaseg   = 0;
 };
 material_point evaluate_material_point(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord);
