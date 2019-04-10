@@ -1803,27 +1803,56 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Eyelight for quick previewing.
 vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    const trace_lights& lights, const vec3f& position_, const vec3f& direction_,
     rng_state& rng, const trace_image_options& options) {
-    // intersect ray
-    auto point = trace_ray(scene, bvh, position, direction);
-    if (!point.hit) {
-        if (options.environments_hidden || scene.environments.empty())
-            return zero4f;
-        return {point.emission, 1};
+    // initialize
+    auto radiance = zero3f;
+    auto weight   = vec3f{1, 1, 1};
+    auto position = position_;
+    auto direction = direction_;
+    auto hit = false;
+
+    // trace  path
+    for (auto bounce = 0; bounce < max(options.max_bounces, 4); bounce++) {
+        // intersect next point
+        auto outgoing = -direction;
+        auto point = trace_ray(scene, bvh, position, direction);
+        if (!point.hit) {
+            radiance += weight * evaluate_environment_emission(scene, direction);
+            break;
+        }
+        hit = true;
+
+        // accumulate emission
+        radiance += weight * point.emission;
+        if (point.brdf.empty()) break;
+
+        // brdf * light
+        radiance += weight * evaluate_brdf_cosine(
+                        point.brdf, point.normal, outgoing, outgoing, false) *
+                    pif;
+
+        // exit if needed
+        if (weight == zero3f) break;
+
+        // continue path
+        auto [brdf_cosine, incoming, incoming_pdf] =
+            sample_next_direction(
+                scene, lights, bvh, point, outgoing, rng, false, false, true);
+
+        // exit if no hit
+        if (incoming == zero3f || incoming_pdf == 0 ||
+            brdf_cosine == zero3f)
+            break;
+        weight *= brdf_cosine / incoming_pdf;
+        if (weight == zero3f) break;
+
+        // setup next iteration
+        position    = point.position;
+        direction = incoming;
     }
 
-    // initialize
-    auto radiance = point.emission;
-    auto outgoing = -direction;
-
-    // microfacet_brdf * light
-    radiance += evaluate_brdf_cosine(
-                    point.brdf, point.normal, outgoing, outgoing, false) *
-                pif;
-
-    // done
-    return {radiance, 1};
+    return {radiance, hit ? 1.0f : 0.0f};
 }
 
 // False color rendering
