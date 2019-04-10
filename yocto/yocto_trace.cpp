@@ -1333,6 +1333,53 @@ float evaluate_phase_function(float cos_theta, float g) {
     return (1 - g * g) / (4 * pif * denom * sqrt(denom));
 }
 
+tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene, 
+    const trace_lights& lights, const bvh_scene& bvh, const trace_point& point,
+    const vec3f& outgoing, rng_state& rng, bool mis) {
+    // continue path
+    auto next_direction     = zero3f;
+    auto next_brdf_cosine   = zero3f;
+    auto next_direction_pdf = 0.0f;
+    if (!is_delta_bsdf(point.brdf)) {
+        if(mis) {
+            if (get_random_float(rng) < 0.5f) {
+                next_direction = sample_brdf_direction(point.brdf, point.normal,
+                    outgoing, get_random_float(rng), get_random_vec2f(rng), false);
+            } else {
+                next_direction = sample_lights_direction(scene, lights, bvh,
+                    point.position, get_random_float(rng), get_random_float(rng),
+                    get_random_vec2f(rng));
+            }
+            next_brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction, false);
+            next_direction_pdf = 0.5f * sample_brdf_direction_pdf(point.brdf,
+                                            point.normal, outgoing, next_direction,
+                                            false) +
+                                0.5f * sample_lights_direction_pdf(scene, lights,
+                                            bvh, point.position, next_direction);
+        } else {
+            next_direction   = sample_brdf_direction(point.brdf, point.normal,
+                outgoing, get_random_float(rng), get_random_vec2f(rng), false);
+            next_brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction, false);
+            next_direction_pdf = sample_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing, next_direction, false);
+        }
+    } else {
+        next_direction   = sample_brdf_direction(point.brdf, point.normal,
+            outgoing, get_random_float(rng), get_random_vec2f(rng), true);
+        next_brdf_cosine = evaluate_brdf_cosine(
+            point.brdf, point.normal, outgoing, next_direction, true);
+        next_direction_pdf = sample_brdf_direction_pdf(
+            point.brdf, point.normal, outgoing, next_direction, true);
+    }
+    if(next_direction == zero3f || next_direction_pdf == 0) {
+        return {zero3f, zero3f, 0};
+    } else {
+        return {next_brdf_cosine, next_direction, next_direction_pdf};
+    }
+}
+
 #define OLD_VOLPATH 0
 #if OLD_VOLPATH
 vec3f sample_next_direction(const yocto_scene& scene,
@@ -1650,34 +1697,8 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (point.brdf.empty() || weight == zero3f) break;
 
         // continue path
-        auto next_direction     = zero3f;
-        auto next_brdf_cosine   = zero3f;
-        auto next_direction_pdf = 0.0f;
-        if (!is_delta_bsdf(point.brdf)) {
-            if (get_random_float(rng) < 0.5f) {
-                next_direction = sample_brdf_direction(point.brdf, point.normal,
-                    outgoing, get_random_float(rng), get_random_vec2f(rng),
-                    false);
-            } else {
-                next_direction = sample_lights_direction(scene, lights, bvh,
-                    point.position, get_random_float(rng),
-                    get_random_float(rng), get_random_vec2f(rng));
-            }
-            next_brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction, false);
-            next_direction_pdf =
-                0.5f * sample_brdf_direction_pdf(point.brdf, point.normal,
-                           outgoing, next_direction, false) +
-                0.5f * sample_lights_direction_pdf(
-                           scene, lights, bvh, point.position, next_direction);
-        } else {
-            next_direction   = sample_brdf_direction(point.brdf, point.normal,
-                outgoing, get_random_float(rng), get_random_vec2f(rng), true);
-            next_brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction, true);
-            next_direction_pdf = sample_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing, next_direction, true);
-        }
+        auto [next_brdf_cosine, next_direction, next_direction_pdf] = 
+            sample_next_direction(scene, lights, bvh, point, outgoing, rng, true);
 
         // exit if no hit
         if (next_direction == zero3f || next_direction_pdf == 0 ||
@@ -1747,24 +1768,8 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (point.brdf.empty() || weight == zero3f) break;
 
         // continue path
-        auto next_direction     = zero3f;
-        auto next_brdf_cosine   = zero3f;
-        auto next_direction_pdf = 0.0f;
-        if (!is_delta_bsdf(point.brdf)) {
-            next_direction   = sample_brdf_direction(point.brdf, point.normal,
-                outgoing, get_random_float(rng), get_random_vec2f(rng), false);
-            next_brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction, false);
-            next_direction_pdf = sample_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing, next_direction, false);
-        } else {
-            next_direction   = sample_brdf_direction(point.brdf, point.normal,
-                outgoing, get_random_float(rng), get_random_vec2f(rng), true);
-            next_brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction, true);
-            next_direction_pdf = sample_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing, next_direction, true);
-        }
+        auto [next_brdf_cosine, next_direction, next_direction_pdf] = 
+            sample_next_direction(scene, lights, bvh, point, outgoing, rng, false);
 
         // exit if no hit
         if (next_direction == zero3f || next_direction == zero3f ||
