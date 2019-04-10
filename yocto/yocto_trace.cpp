@@ -53,7 +53,7 @@ atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
 
 // Material lobe
-enum struct bxdf_type {
+enum struct bsdf_type {
     diffuse_reflection,
     diffuse_transmission,
     specular_reflection,
@@ -62,15 +62,15 @@ enum struct bxdf_type {
     specular_refraction,
     opacity_passthrough
 };
-struct bxdf {
-    bxdf_type type      = bxdf_type::diffuse_reflection;
+struct bsdf {
+    bsdf_type type      = bsdf_type::diffuse_reflection;
     vec3f     albedo    = zero3f;
     vec3f     specular  = zero3f;
     float     roughness = 1;
 };
 
 // Brdf as a list of lobes
-template <typename T, int N>
+template <typename T, int N = 8>
 struct short_vector {
     short_vector() {}
 
@@ -93,27 +93,24 @@ struct short_vector {
     T   _data[N];
 };
 
-// Defining a brdf as a list of lobes
-using bxdfs = short_vector<bxdf, 8>;
-
-bool is_material_volume_homogeneus(const yocto_material& material) {
+bool is_volume_homogeneus(const yocto_material& material) {
     return material.volume_density_texture < 0;
 }
-bool is_material_volume_colored(const yocto_material& material) {
+bool is_volume_colored(const yocto_material& material) {
     return !(material.volume_density.x == material.volume_density.y &&
              material.volume_density.y == material.volume_density.z);
 }
 
-bool is_bxdf_delta(const bxdf& brdf) { return brdf.roughness == 0; }
-bool is_bxdf_delta(const bxdfs& brdfs) {
+bool is_delta_bsdf(const bsdf& brdf) { return brdf.roughness == 0; }
+bool is_delta_bsdf(const short_vector<bsdf>& brdfs) {
     for (auto& brdf : brdfs) {
-        if (!is_bxdf_delta(brdf)) return false;
+        if (!is_delta_bsdf(brdf)) return false;
     }
     return true;
 }
 
-void compute_scattering_functions(vec3f& emission, bxdfs& smooth_brdfs,
-    bxdfs& delta_brdfs, float& brdf_opacity, const material_point& material,
+void compute_scattering_functions(vec3f& emission, short_vector<bsdf>& brdfs,
+    float& brdf_opacity, const material_point& material,
     const vec4f& shape_color) {
     auto diffuse = !material.base_metallic
                        ? material.diffuse * shape_color.xyz
@@ -131,31 +128,18 @@ void compute_scattering_functions(vec3f& emission, bxdfs& smooth_brdfs,
     } else if (roughness <= 0.03f * 0.03f) {
         roughness = 0;
     }
-    smooth_brdfs = {};
-    delta_brdfs  = {};
+    brdfs = {};
     if (diffuse != zero3f) {
-        smooth_brdfs.push_back(
-            {bxdf_type::diffuse_reflection, diffuse, specular, 1});
+        brdfs.push_back({bsdf_type::diffuse_reflection, diffuse, specular, 1});
     }
     if (specular != zero3f) {
-        if (roughness > 0) {
-            smooth_brdfs.push_back({bxdf_type::specular_reflection, specular,
-                specular, roughness});
-        } else {
-            delta_brdfs.push_back({bxdf_type::specular_reflection, specular,
-                specular, roughness});
-        }
+        brdfs.push_back(
+            {bsdf_type::specular_reflection, specular, specular, roughness});
     }
     if (transmission != zero3f) {
-        if (roughness > 0) {
-            smooth_brdfs.push_back({refract ? bxdf_type::specular_refraction
-                                            : bxdf_type::specular_transmission,
-                transmission, specular, roughness});
-        } else {
-            delta_brdfs.push_back({refract ? bxdf_type::specular_refraction
-                                           : bxdf_type::specular_transmission,
-                transmission, specular, roughness});
-        }
+        brdfs.push_back({refract ? bsdf_type::specular_refraction
+                                 : bsdf_type::specular_transmission,
+            transmission, specular, roughness});
     }
     emission     = material.emission * shape_color.xyz;
     brdf_opacity = opacity;
@@ -172,8 +156,7 @@ struct trace_point {
     vec2f texturecoord     = zero2f;
     vec4f color            = zero4f;
     vec3f emission         = zero3f;
-    bxdfs smooth_brdf      = {};
-    bxdfs delta_brdf       = {};
+    short_vector<bsdf> brdf             = {};
     float opacity          = 1;
     vec3f volume_density   = zero3f;
     vec3f volume_albedo    = zero3f;
@@ -204,8 +187,8 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     point.color         = evaluate_shape_color(shape, element_id, element_uv);
     auto material_point = evaluate_material_point(
         scene, material, point.texturecoord);
-    compute_scattering_functions(point.emission, point.smooth_brdf,
-        point.delta_brdf, point.opacity, material_point, point.color);
+    compute_scattering_functions(
+        point.emission, point.brdf, point.opacity, material_point, point.color);
     point.volume_emission = material.volume_emission;
     point.volume_density  = material.volume_density;
     point.volume_albedo   = material.volume_albedo;
@@ -714,7 +697,7 @@ float sample_microfacet_distribution_pdf(
 // for the processed normal, dot(outgoing, normal) > 0 always holds true.
 //
 //                                                  giacomo, 28-3-2019
-vec3f evaluate_brdf_cosine(const bxdfs& brdfs, const vec3f& normal_,
+vec3f evaluate_brdf_cosine(const short_vector<bsdf>& brdfs, const vec3f& normal_,
     const vec3f& outgoing, const vec3f& incoming) {
     // orientation
     auto outgoing_up = dot(outgoing, normal_) > 0;
@@ -723,10 +706,10 @@ vec3f evaluate_brdf_cosine(const bxdfs& brdfs, const vec3f& normal_,
 
     auto brdf_cosine = zero3f;
     for (auto& brdf : brdfs) {
-        if (is_bxdf_delta(brdf)) continue;
+        if (is_delta_bsdf(brdf)) continue;
 
         // diffuse
-        if (brdf.type == bxdf_type::diffuse_reflection &&
+        if (brdf.type == bsdf_type::diffuse_reflection &&
             outgoing_up == incoming_up) {
             auto halfway = normalize(incoming + outgoing);
             auto fresnel = evaluate_fresnel_schlick(
@@ -735,7 +718,7 @@ vec3f evaluate_brdf_cosine(const bxdfs& brdfs, const vec3f& normal_,
                            abs(dot(normal, incoming));
         }
         // specular
-        else if (brdf.type == bxdf_type::specular_reflection &&
+        else if (brdf.type == bsdf_type::specular_reflection &&
                  outgoing_up == incoming_up) {
             auto halfway = normalize(incoming + outgoing);
             auto fresnel = evaluate_fresnel_schlick(
@@ -750,7 +733,7 @@ vec3f evaluate_brdf_cosine(const bxdfs& brdfs, const vec3f& normal_,
                 abs(dot(normal, incoming));
         }
         // transmission through rough thin surface
-        else if (brdf.type == bxdf_type::specular_transmission &&
+        else if (brdf.type == bsdf_type::specular_transmission &&
                  outgoing_up != incoming_up) {
             auto ir      = reflect(-incoming, normal);
             auto halfway = normalize(ir + outgoing);
@@ -766,7 +749,7 @@ vec3f evaluate_brdf_cosine(const bxdfs& brdfs, const vec3f& normal_,
                 abs(dot(normal, incoming));
         }
         // refraction through rough surface
-        else if (brdf.type == bxdf_type::specular_refraction &&
+        else if (brdf.type == bsdf_type::specular_refraction &&
                  outgoing_up != incoming_up) {
             auto eta            = convert_specular_to_eta(brdf.specular);
             auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
@@ -800,7 +783,7 @@ vec3f evaluate_brdf_cosine(const bxdfs& brdfs, const vec3f& normal_,
 
 // Evaluates the BRDF assuming that it is called only from the directions
 // generated by sample_brdf_direction.
-vec3f evaluate_delta_brdf_cosine(const bxdfs& brdfs, const vec3f& normal_,
+vec3f evaluate_delta_brdf_cosine(const short_vector<bsdf>& brdfs, const vec3f& normal_,
     const vec3f& outgoing, const vec3f& incoming) {
     // orientation
     auto outgoing_up = dot(outgoing, normal_) > 0;
@@ -809,25 +792,25 @@ vec3f evaluate_delta_brdf_cosine(const bxdfs& brdfs, const vec3f& normal_,
 
     auto brdf_cosine = zero3f;
     for (auto& brdf : brdfs) {
-        if (!is_bxdf_delta(brdf)) return zero3f;
+        if (!is_delta_bsdf(brdf)) return zero3f;
 
         // specular
-        if (brdf.type == bxdf_type::specular_reflection &&
+        if (brdf.type == bsdf_type::specular_reflection &&
             outgoing_up == incoming_up) {
             auto fresnel = evaluate_fresnel_schlick(
                 brdf.specular, dot(normal, outgoing));
             brdf_cosine += fresnel;
         }
         // transmission (thin surface)
-        else if (brdf.type == bxdf_type::specular_transmission &&
+        else if (brdf.type == bsdf_type::specular_transmission &&
                  outgoing_up != incoming_up) {
             auto fresnel = evaluate_fresnel_schlick(
                 brdf.specular, dot(normal, outgoing));
             brdf_cosine += brdf.albedo * (1 - fresnel);
         }
         // refraction
-        else if (brdf.type == bxdf_type::specular_refraction &&
-            outgoing_up != incoming_up) {
+        else if (brdf.type == bsdf_type::specular_refraction &&
+                 outgoing_up != incoming_up) {
             auto fresnel = evaluate_fresnel_schlick(
                 brdf.specular, dot(normal, outgoing));
             brdf_cosine += brdf.albedo * (1 - fresnel);
@@ -840,7 +823,7 @@ vec3f evaluate_delta_brdf_cosine(const bxdfs& brdfs, const vec3f& normal_,
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_brdf_direction(const bxdfs& brdfs, const vec3f& normal_,
+vec3f sample_brdf_direction(const short_vector<bsdf>& brdfs, const vec3f& normal_,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
     // orientation
     auto outgoing_up = dot(outgoing, normal_) > 0;
@@ -850,15 +833,17 @@ vec3f sample_brdf_direction(const bxdfs& brdfs, const vec3f& normal_,
     auto weights     = short_vector<float, 8>{};
     auto sum_weights = 0.0f;
     for (auto& brdf : brdfs) {
-        auto fresnel = evaluate_fresnel_schlick(brdf.specular, dot(normal, outgoing));
-        auto weight =
-            (brdf.type == bxdf_type::specular_reflection ||
-                    brdf.type == bxdf_type::metallic_reflection)
-                ? max(fresnel)
-                : max(brdf.albedo * (1 - fresnel));
+        if (is_delta_bsdf(brdf)) { weights.push_back(0); continue; }
+        auto fresnel = evaluate_fresnel_schlick(
+            brdf.specular, dot(normal, outgoing));
+        auto weight = (brdf.type == bsdf_type::specular_reflection ||
+                          brdf.type == bsdf_type::metallic_reflection)
+                          ? max(fresnel)
+                          : max(brdf.albedo * (1 - fresnel));
         weights.push_back(weight);
         sum_weights += weight;
     }
+    if(sum_weights == 0) return zero3f;
     for (auto& weight : weights) weight /= sum_weights;
 
     // pick lobe
@@ -868,28 +853,28 @@ vec3f sample_brdf_direction(const bxdfs& brdfs, const vec3f& normal_,
         sum += weights[id];
         if (sum >= rnl) break;
     }
-    id = clamp(id, 0, weights.size()-1);
+    id         = clamp(id, 0, weights.size() - 1);
     auto& brdf = brdfs[id];
 
     // sample according to diffuse
-    if (brdf.type == bxdf_type::diffuse_reflection) {
+    if (brdf.type == bsdf_type::diffuse_reflection) {
         return sample_hemisphere_direction(normal, rn);
     }
     // sample according to specular GGX
-    else if (brdf.type == bxdf_type::specular_reflection) {
+    else if (brdf.type == bsdf_type::specular_reflection) {
         auto halfway = sample_microfacet_distribution(
             brdf.roughness, normal, rn);
         return reflect(outgoing, halfway);
     }
     // sample according to transmission
-    else if (brdf.type == bxdf_type::specular_transmission) {
+    else if (brdf.type == bsdf_type::specular_transmission) {
         auto halfway = sample_microfacet_distribution(
             brdf.roughness, normal, rn);
         auto ir = reflect(outgoing, halfway);
         return -reflect(ir, normal);
     }
     // sample according to rough refraction
-    else if (brdf.type == bxdf_type::specular_refraction) {
+    else if (brdf.type == bsdf_type::specular_refraction) {
         auto halfway = sample_microfacet_distribution(
             brdf.roughness, normal, rn);
         auto eta = convert_specular_to_eta(brdf.specular);
@@ -902,7 +887,7 @@ vec3f sample_brdf_direction(const bxdfs& brdfs, const vec3f& normal_,
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_delta_brdf_direction(const bxdfs& brdfs, const vec3f& normal_,
+vec3f sample_delta_brdf_direction(const short_vector<bsdf>& brdfs, const vec3f& normal_,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
     // orientation
     auto outgoing_up = dot(outgoing, normal_) > 0;
@@ -912,15 +897,17 @@ vec3f sample_delta_brdf_direction(const bxdfs& brdfs, const vec3f& normal_,
     auto weights     = short_vector<float, 8>{};
     auto sum_weights = 0.0f;
     for (auto& brdf : brdfs) {
-        auto fresnel = evaluate_fresnel_schlick(brdf.specular, dot(normal, outgoing));
-        auto weight =
-            (brdf.type == bxdf_type::specular_reflection ||
-                    brdf.type == bxdf_type::metallic_reflection)
-                ? max(fresnel)
-                : max(brdf.albedo * (1 - fresnel));
+        if (!is_delta_bsdf(brdf)) { weights.push_back(0); continue; }
+        auto fresnel = evaluate_fresnel_schlick(
+            brdf.specular, dot(normal, outgoing));
+        auto weight = (brdf.type == bsdf_type::specular_reflection ||
+                          brdf.type == bsdf_type::metallic_reflection)
+                          ? max(fresnel)
+                          : max(brdf.albedo * (1 - fresnel));
         weights.push_back(weight);
         sum_weights += weight;
     }
+    if(sum_weights == 0) return zero3f;
     for (auto& weight : weights) weight /= sum_weights;
 
     // pick lobe
@@ -930,19 +917,19 @@ vec3f sample_delta_brdf_direction(const bxdfs& brdfs, const vec3f& normal_,
         sum += weights[id];
         if (sum >= rnl) break;
     }
-    id = clamp(id, 0, weights.size()-1);
+    id         = clamp(id, 0, weights.size() - 1);
     auto& brdf = brdfs[id];
 
     // sample according to specular mirror
-    if (brdf.type == bxdf_type::specular_reflection) {
+    if (brdf.type == bsdf_type::specular_reflection) {
         return reflect(outgoing, normal);
     }
     // sample according to transmission
-    else if (brdf.type == bxdf_type::specular_transmission) {
+    else if (brdf.type == bsdf_type::specular_transmission) {
         return -outgoing;
     }
     // sample according to perfect refraction
-    else if (brdf.type == bxdf_type::specular_refraction) {
+    else if (brdf.type == bsdf_type::specular_refraction) {
         auto eta = convert_specular_to_eta(brdf.specular);
         return refract(outgoing, normal, outgoing_up ? 1 / eta : eta);
     }
@@ -953,7 +940,7 @@ vec3f sample_delta_brdf_direction(const bxdfs& brdfs, const vec3f& normal_,
 }
 
 // Compute the weight for sampling the BRDF
-float sample_brdf_direction_pdf(const bxdfs& brdfs, const vec3f& normal_,
+float sample_brdf_direction_pdf(const short_vector<bsdf>& brdfs, const vec3f& normal_,
     const vec3f& outgoing, const vec3f& incoming) {
     // orientation
     auto outgoing_up = dot(outgoing, normal_) > 0;
@@ -964,29 +951,31 @@ float sample_brdf_direction_pdf(const bxdfs& brdfs, const vec3f& normal_,
     auto weights     = short_vector<float, 8>{};
     auto sum_weights = 0.0f;
     for (auto& brdf : brdfs) {
-        auto fresnel = evaluate_fresnel_schlick(brdf.specular, dot(normal, outgoing));
-        auto weight =
-            (brdf.type == bxdf_type::specular_reflection ||
-                    brdf.type == bxdf_type::metallic_reflection)
-                ? max(fresnel)
-                : max(brdf.albedo * (1 - fresnel));
+        if (is_delta_bsdf(brdf)) { weights.push_back(0); continue; }
+        auto fresnel = evaluate_fresnel_schlick(
+            brdf.specular, dot(normal, outgoing));
+        auto weight = (brdf.type == bsdf_type::specular_reflection ||
+                          brdf.type == bsdf_type::metallic_reflection)
+                          ? max(fresnel)
+                          : max(brdf.albedo * (1 - fresnel));
         weights.push_back(weight);
         sum_weights += weight;
     }
+    if(sum_weights == 0) return 0;
     for (auto& weight : weights) weight /= sum_weights;
 
     auto pdf = 0.0f;
     for (auto i = 0; i < brdfs.size(); i++) {
         auto& brdf = brdfs[i];
-        if (is_bxdf_delta(brdfs[i])) continue;
+        if (is_delta_bsdf(brdfs[i])) continue;
 
         // diffuse
-        if (brdf.type == bxdf_type::diffuse_reflection &&
+        if (brdf.type == bsdf_type::diffuse_reflection &&
             outgoing_up == incoming_up) {
             pdf += weights[i] * fabs(dot(normal, incoming)) / pif;
         }
         // specular reflection
-        else if (brdf.type == bxdf_type::specular_reflection &&
+        else if (brdf.type == bsdf_type::specular_reflection &&
                  outgoing_up == incoming_up) {
             auto halfway = normalize(incoming + outgoing);
             auto d       = sample_microfacet_distribution_pdf(
@@ -995,7 +984,7 @@ float sample_brdf_direction_pdf(const bxdfs& brdfs, const vec3f& normal_,
             pdf += weights[i] * d * jacobian;
         }
         // transmission through thin surface
-        else if (brdf.type == bxdf_type::specular_transmission &&
+        else if (brdf.type == bsdf_type::specular_transmission &&
                  outgoing_up != incoming_up) {
             auto ir      = reflect(-incoming, normal);
             auto halfway = normalize(ir + outgoing);
@@ -1006,7 +995,7 @@ float sample_brdf_direction_pdf(const bxdfs& brdfs, const vec3f& normal_,
             // print("pdf transmission\n");
         }
         // refraction through rough surface
-        else if (brdf.type == bxdf_type::specular_refraction &&
+        else if (brdf.type == bsdf_type::specular_refraction &&
                  outgoing_up != incoming_up) {
             auto eta            = convert_specular_to_eta(brdf.specular);
             auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
@@ -1028,7 +1017,7 @@ float sample_brdf_direction_pdf(const bxdfs& brdfs, const vec3f& normal_,
 }
 
 // Compute the weight for sampling the BRDF
-float sample_delta_brdf_direction_pdf(const bxdfs& brdfs, const vec3f& normal_,
+float sample_delta_brdf_direction_pdf(const short_vector<bsdf>& brdfs, const vec3f& normal_,
     const vec3f& outgoing, const vec3f& incoming) {
     // orientation
     auto outgoing_up = dot(outgoing, normal_) > 0;
@@ -1039,34 +1028,36 @@ float sample_delta_brdf_direction_pdf(const bxdfs& brdfs, const vec3f& normal_,
     auto weights     = short_vector<float, 8>{};
     auto sum_weights = 0.0f;
     for (auto& brdf : brdfs) {
-        auto fresnel = evaluate_fresnel_schlick(brdf.specular, dot(normal, outgoing));
-        auto weight =
-            (brdf.type == bxdf_type::specular_reflection ||
-                    brdf.type == bxdf_type::metallic_reflection)
-                ? max(fresnel)
-                : max(brdf.albedo * (1 - fresnel));
+        if (!is_delta_bsdf(brdf)) { weights.push_back(0); continue; }
+        auto fresnel = evaluate_fresnel_schlick(
+            brdf.specular, dot(normal, outgoing));
+        auto weight = (brdf.type == bsdf_type::specular_reflection ||
+                          brdf.type == bsdf_type::metallic_reflection)
+                          ? max(fresnel)
+                          : max(brdf.albedo * (1 - fresnel));
         weights.push_back(weight);
         sum_weights += weight;
     }
+    if(sum_weights == 0) return 0;
     for (auto& weight : weights) weight /= sum_weights;
 
     auto pdf = 0.0f;
     for (auto i = 0; i < brdfs.size(); i++) {
-        if (!is_bxdf_delta(brdfs[i])) continue;
+        if (!is_delta_bsdf(brdfs[i])) continue;
         auto& brdf = brdfs[i];
 
         // specular reflection
-        if (brdf.type == bxdf_type::specular_reflection &&
+        if (brdf.type == bsdf_type::specular_reflection &&
             outgoing_up == incoming_up) {
             pdf += weights[i];
         }
         // transmission
-        else if (brdf.type == bxdf_type::specular_transmission &&
+        else if (brdf.type == bsdf_type::specular_transmission &&
                  outgoing_up != incoming_up) {
             pdf += weights[i];
         }
         // refraction
-        else if (brdf.type == bxdf_type::specular_refraction &&
+        else if (brdf.type == bsdf_type::specular_refraction &&
                  outgoing_up != incoming_up) {
             pdf += weights[i];
         }
@@ -1202,7 +1193,7 @@ float sample_lights_direction_pdf(const yocto_scene& scene,
     return pdf;
 }
 
-inline vec3f get_russian_roulette_albedo(const bxdfs& brdfs) {
+inline vec3f get_russian_roulette_albedo(const short_vector<bsdf>& brdfs) {
     auto albedo = zero3f;
     for (auto& brdf : brdfs) {
         albedo += brdf.albedo;
@@ -1310,7 +1301,7 @@ vec3f evaluate_transmission(const yocto_scene& scene,
     const yocto_material& material, const vec3f& from, const vec3f& dir,
     float distance, int channel, rng_state& rng) {
     auto& vd = material.volume_density;
-    if (is_material_volume_homogeneus(material))
+    if (is_volume_homogeneus(material))
         return vec3f{exp(-distance * vd.x), exp(-distance * vd.y),
             exp(-distance * vd.z)};
 
@@ -1362,7 +1353,7 @@ float sample_distance(const yocto_scene& scene, const yocto_material& material,
         auto r = get_random_float(rng);
         if (r == 0) return float_max;
         auto step = -log(r) / majorant;
-        if (is_material_volume_homogeneus(material)) return step;
+        if (is_volume_homogeneus(material)) return step;
 
         pos += dir * step;
         distance += step;
@@ -1531,7 +1522,7 @@ std::tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(
 
         if (isec.distance < distance) {
             // intersection with surface of volume
-            if (!point.smooth_brdf.empty() || !point.delta_brdf.empty()) break;
+            if (!point.brdf.empty()) break;
 
             weight *= evaluate_volume_transmission(
                 volume_density, isec.distance);
@@ -1545,32 +1536,32 @@ std::tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(
                 auto next_direction     = zero3f;
                 auto next_brdf_cosine   = zero3f;
                 auto next_direction_pdf = 0.0f;
-                if (point.delta_brdf.empty()) {
+                if (!is_delta_bsdf(point.brdf)) {
                     if (get_random_float(rng) < 0.5f) {
                         next_direction = sample_brdf_direction(
-                            point.smooth_brdf, point.normal, outgoing,
+                            point.brdf, point.normal, outgoing,
                             get_random_float(rng), get_random_vec2f(rng));
                     } else {
                         next_direction = sample_lights_direction(scene, lights,
                             bvh, point.position, get_random_float(rng),
                             get_random_float(rng), get_random_vec2f(rng));
                     }
-                    next_brdf_cosine = evaluate_brdf_cosine(point.smooth_brdf,
+                    next_brdf_cosine = evaluate_brdf_cosine(point.brdf,
                         point.normal, outgoing, next_direction);
                     next_direction_pdf =
-                        0.5f * sample_brdf_direction_pdf(point.smooth_brdf,
+                        0.5f * sample_brdf_direction_pdf(point.brdf,
                                    point.normal, outgoing, next_direction) +
                         0.5f * sample_lights_direction_pdf(scene, lights, bvh,
                                    point.position, next_direction);
                 } else {
                     next_direction = sample_delta_brdf_direction(
-                        point.delta_brdf, point.normal, outgoing,
+                        point.brdf, point.normal, outgoing,
                         get_random_float(rng), get_random_vec2f(rng));
                     next_brdf_cosine = evaluate_delta_brdf_cosine(
-                        point.delta_brdf, point.normal, outgoing,
+                        point.brdf, point.normal, outgoing,
                         next_direction);
                     next_direction_pdf = sample_delta_brdf_direction_pdf(
-                        point.delta_brdf, point.normal, outgoing,
+                        point.brdf, point.normal, outgoing,
                         next_direction);
                 }
 
@@ -1734,17 +1725,16 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
         // exit if needed
-        if ((point.smooth_brdf.empty() && point.delta_brdf.empty()) ||
-            weight == zero3f)
+        if (point.brdf.empty() || weight == zero3f)
             break;
 
         // continue path
         auto next_direction     = zero3f;
         auto next_brdf_cosine   = zero3f;
         auto next_direction_pdf = 0.0f;
-        if (!point.smooth_brdf.empty()) {
+        if (!is_delta_bsdf(point.brdf)) {
             if (get_random_float(rng) < 0.5f) {
-                next_direction = sample_brdf_direction(point.smooth_brdf,
+                next_direction = sample_brdf_direction(point.brdf,
                     point.normal, outgoing, get_random_float(rng),
                     get_random_vec2f(rng));
             } else {
@@ -1753,20 +1743,20 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                     get_random_float(rng), get_random_vec2f(rng));
             }
             next_brdf_cosine = evaluate_brdf_cosine(
-                point.smooth_brdf, point.normal, outgoing, next_direction);
+                point.brdf, point.normal, outgoing, next_direction);
             next_direction_pdf =
-                0.5f * sample_brdf_direction_pdf(point.smooth_brdf,
+                0.5f * sample_brdf_direction_pdf(point.brdf,
                            point.normal, outgoing, next_direction) +
                 0.5f * sample_lights_direction_pdf(
                            scene, lights, bvh, point.position, next_direction);
         } else {
-            next_direction   = sample_delta_brdf_direction(point.delta_brdf,
+            next_direction   = sample_delta_brdf_direction(point.brdf,
                 point.normal, outgoing, get_random_float(rng),
                 get_random_vec2f(rng));
             next_brdf_cosine = evaluate_delta_brdf_cosine(
-                point.delta_brdf, point.normal, outgoing, next_direction);
+                point.brdf, point.normal, outgoing, next_direction);
             next_direction_pdf = sample_delta_brdf_direction_pdf(
-                point.delta_brdf, point.normal, outgoing, next_direction);
+                point.brdf, point.normal, outgoing, next_direction);
         }
 
         // exit if no hit
@@ -1796,8 +1786,7 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
             next_direction, rng, options.max_bounces);
         radiance += weight * next_point.emission;
-        if (!next_point.hit ||
-            (next_point.smooth_brdf.empty() && next_point.delta_brdf.empty()))
+        if (!next_point.hit || next_point.brdf.empty())
             break;
 
         // setup next iteration
@@ -1805,14 +1794,11 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         outgoing = -next_direction;
 
         // russian roulette
-        if (sample_russian_roulette(
-                get_russian_roulette_albedo(point.smooth_brdf) +
-                    get_russian_roulette_albedo(point.delta_brdf),
+        if (sample_russian_roulette(get_russian_roulette_albedo(point.brdf),
                 weight, bounce, get_random_float(rng)))
             break;
         weight /= sample_russian_roulette_pdf(
-            get_russian_roulette_albedo(point.smooth_brdf) +
-                get_russian_roulette_albedo(point.delta_brdf),
+            get_russian_roulette_albedo(point.brdf),
             weight, bounce);
     }
 
@@ -1840,27 +1826,30 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
         // exit if needed
-        if ((point.smooth_brdf.empty() && point.delta_brdf.empty()) || weight == zero3f) break;
+        if (point.brdf.empty() ||
+            weight == zero3f)
+            break;
 
         // continue path
         auto next_direction     = zero3f;
         auto next_brdf_cosine   = zero3f;
         auto next_direction_pdf = 0.0f;
-        if (!point.smooth_brdf.empty()) {
-            next_direction   = sample_brdf_direction(point.smooth_brdf, point.normal,
-                outgoing, get_random_float(rng), get_random_vec2f(rng));
+        if (!is_delta_bsdf(point.brdf)) {
+            next_direction   = sample_brdf_direction(point.brdf,
+                point.normal, outgoing, get_random_float(rng),
+                get_random_vec2f(rng));
             next_brdf_cosine = evaluate_brdf_cosine(
-                point.smooth_brdf, point.normal, outgoing, next_direction);
+                point.brdf, point.normal, outgoing, next_direction);
             next_direction_pdf = sample_brdf_direction_pdf(
-                point.smooth_brdf, point.normal, outgoing, next_direction);
+                point.brdf, point.normal, outgoing, next_direction);
         } else {
-            next_direction   = sample_delta_brdf_direction(point.delta_brdf,
+            next_direction   = sample_delta_brdf_direction(point.brdf,
                 point.normal, outgoing, get_random_float(rng),
                 get_random_vec2f(rng));
             next_brdf_cosine = evaluate_delta_brdf_cosine(
-                point.delta_brdf, point.normal, outgoing, next_direction);
+                point.brdf, point.normal, outgoing, next_direction);
             next_direction_pdf = sample_delta_brdf_direction_pdf(
-                point.delta_brdf, point.normal, outgoing, next_direction);
+                point.brdf, point.normal, outgoing, next_direction);
         }
 
         // exit if no hit
@@ -1873,7 +1862,8 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
             next_direction, rng, options.max_bounces);
         radiance += weight * next_brdf_cosine * next_point.emission /
                     next_direction_pdf;
-        if (!next_point.hit || (next_point.smooth_brdf.empty() && next_point.delta_brdf.empty())) break;
+        if (!next_point.hit || next_point.brdf.empty())
+            break;
 
         // setup next iteration
         point    = next_point;
@@ -1881,13 +1871,13 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= next_brdf_cosine / next_direction_pdf;
 
         // russian roulette
-        if (sample_russian_roulette(get_russian_roulette_albedo(point.smooth_brdf) +
-                    get_russian_roulette_albedo(point.delta_brdf),
+        if (sample_russian_roulette(
+                get_russian_roulette_albedo(point.brdf),
                 weight, bounce, get_random_float(rng)))
             break;
         weight /= sample_russian_roulette_pdf(
-            get_russian_roulette_albedo(point.smooth_brdf) +
-                    get_russian_roulette_albedo(point.delta_brdf), weight, bounce);
+            get_russian_roulette_albedo(point.brdf),
+            weight, bounce);
     }
 
     return {radiance, 1};
@@ -1911,8 +1901,7 @@ vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     auto outgoing = -direction;
 
     // microfacet_brdf * light
-    radiance += evaluate_brdf_cosine(
-                    point.smooth_brdf, point.normal, outgoing, outgoing) *
+    radiance += evaluate_brdf_cosine(point.brdf, point.normal, outgoing, outgoing) *
                 pif;
 
     // done
@@ -1950,8 +1939,7 @@ vec4f trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
         }
         case trace_falsecolor_type::albedo: {
             auto albedo = zero3f;
-            for(auto& brdf : point.smooth_brdf) albedo += brdf.albedo;
-            for(auto& brdf : point.delta_brdf) albedo += brdf.albedo;
+            for (auto& brdf : point.brdf) albedo += brdf.albedo;
             return {albedo, 1};
         }
         case trace_falsecolor_type::texcoord: {
@@ -1965,24 +1953,29 @@ vec4f trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
         }
         case trace_falsecolor_type::diffuse: {
             auto diffuse = zero3f;
-            for(auto& brdf : point.smooth_brdf) if(brdf.type == bxdf_type::diffuse_reflection) diffuse += brdf.albedo;
+            for (auto& brdf : point.brdf)
+                if (brdf.type == bsdf_type::diffuse_reflection)
+                    diffuse += brdf.albedo;
             return {diffuse, 1};
         }
         case trace_falsecolor_type::specular: {
             auto specular = zero3f;
-            for(auto& brdf : point.smooth_brdf) if(brdf.type == bxdf_type::specular_reflection) specular += brdf.albedo;
+            for (auto& brdf : point.brdf)
+                if (brdf.type == bsdf_type::specular_reflection)
+                    specular += brdf.albedo;
             return {specular, 1};
         }
         case trace_falsecolor_type::transmission: {
             auto transmission = zero3f;
-            for(auto& brdf : point.smooth_brdf) if(brdf.type == bxdf_type::specular_transmission) transmission += brdf.albedo;
-            for(auto& brdf : point.smooth_brdf) if(brdf.type == bxdf_type::specular_refraction) transmission += brdf.albedo;
+            for (auto& brdf : point.brdf)
+                if (brdf.type == bsdf_type::specular_transmission)
+                    transmission += brdf.albedo;
             return {transmission, 1};
         }
         case trace_falsecolor_type::roughness: {
             auto roughness = 0.f;
-            for(auto& brdf : point.smooth_brdf) roughness = min(roughness, brdf.roughness);
-            for(auto& brdf : point.delta_brdf) roughness = min(roughness, brdf.roughness);
+            for (auto& brdf : point.brdf)
+                roughness = min(roughness, brdf.roughness);
             return {vec3f{roughness}, 1};
         }
         case trace_falsecolor_type::material: {
