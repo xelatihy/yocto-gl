@@ -138,7 +138,7 @@ foreach(name "images1" "images2")
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # eyelight
-foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "materials4.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "eyelight")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
@@ -146,7 +146,7 @@ foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # path
-foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
+foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "materials4.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
