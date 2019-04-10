@@ -1473,8 +1473,7 @@ tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(const yocto_scene& scene,
         auto distance = sample_volume_distance(density, get_random_float(rng));
 
         auto intersection = bvh_intersection{};
-        if (!intersect_scene_bvh(
-                scene, bvh, make_ray(position, direction), intersection)) {
+        if (!trace_ray(scene, bvh, position, direction, intersection)) {
             weight = zero3f;
             break;
         }
@@ -1483,8 +1482,7 @@ tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(const yocto_scene& scene,
         make_trace_point(point, scene, intersection, direction);
 
         if (intersection.distance < distance) {
-            // intersection with surface of volume
-            if (!point.bsdfs.empty()) break;
+            // intersection with boundary surface of volume
 
             weight *= evaluate_volume_transmission(
                 vsdf.density, intersection.distance);
@@ -1555,7 +1553,7 @@ tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(const yocto_scene& scene,
                     phase_function == 0.0f)
                     break;
                 else
-                    weight *= vsdf.albedo * vsdf.phaseg / incoming_pdf;
+                    weight *= vsdf.albedo * phase_function / incoming_pdf;
 
                 direction = incoming;
             }
