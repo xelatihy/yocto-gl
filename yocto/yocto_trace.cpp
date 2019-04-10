@@ -161,9 +161,6 @@ void compute_scattering_functions(vec3f& emission, short_vector<bsdf>& brdfs,
 
 // Trace point
 struct trace_point {
-    int                instance_id      = -1;
-    int                element_id       = -1;
-    vec2f              element_uv       = zero2f;
     vec3f              position         = zero3f;
     vec3f              normal           = zero3f;
     vec3f              geometric_normal = zero3f;
@@ -175,29 +172,25 @@ struct trace_point {
     vec3f              volume_albedo    = zero3f;
     vec3f              volume_emission  = zero3f;
     float              volume_phaseg    = 0.0f;
-    bool               hit              = false;
 };
 
 // Make a trace point
-trace_point make_trace_point(const yocto_scene& scene, int instance_id,
-    int element_id, const vec2f& element_uv,
-    const vec3f& shading_direction = zero3f) {
-    auto& instance    = scene.instances[instance_id];
-    auto& shape       = scene.shapes[instance.shape];
-    auto& material    = scene.materials[instance.material];
-    auto  point       = trace_point();
-    point.instance_id = instance_id;
-    point.element_id  = element_id;
-    point.element_uv  = element_uv;
-    point.position    = evaluate_instance_position(
-        scene, instance, element_id, element_uv);
+void make_trace_point(trace_point& point, const yocto_scene& scene,
+    const bvh_intersection& intersection, const vec3f& shading_direction) {
+    auto& instance     = scene.instances[intersection.instance_id];
+    auto& shape        = scene.shapes[instance.shape];
+    auto& material     = scene.materials[instance.material];
+    point.position     = evaluate_instance_position(
+        scene, instance, intersection.element_id, intersection.element_uv);
     point.geometric_normal = evaluate_instance_element_normal(
-        scene, instance, element_id, trace_non_rigid_frames);
-    point.normal = evaluate_instance_normal(
-        scene, instance, element_id, element_uv, trace_non_rigid_frames);
+        scene, instance, intersection.element_id, trace_non_rigid_frames);
+    point.normal       = evaluate_instance_normal(scene, instance,
+        intersection.element_id, intersection.element_uv,
+        trace_non_rigid_frames);
     point.texturecoord = evaluate_shape_texturecoord(
-        shape, element_id, element_uv);
-    point.color         = evaluate_shape_color(shape, element_id, element_uv);
+        shape, intersection.element_id, intersection.element_uv);
+    point.color = evaluate_shape_color(
+        shape, intersection.element_id, intersection.element_uv);
     auto material_point = evaluate_material_point(
         scene, material, point.texturecoord);
     compute_scattering_functions(
@@ -213,27 +206,19 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     } else {
         if (material.normal_texture >= 0) {
             point.normal = evaluate_instance_perturbed_normal(scene, instance,
-                element_id, element_uv, material_point.normalmap,
-                trace_non_rigid_frames);
+                intersection.element_id, intersection.element_uv,
+                material_point.normalmap, trace_non_rigid_frames);
         }
     }
-    point.hit = true;
-    return point;
 }
 
 // Intersects a ray and returns a point
-trace_point trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
-    const vec3f& position, const vec3f& direction) {
+bool trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
+    const vec3f& position, const vec3f& direction,
+    bvh_intersection& intersection) {
     _trace_nrays += 1;
-    if (auto isec = bvh_intersection{};
-        intersect_scene_bvh(scene, bvh, make_ray(position, direction), isec)) {
-        return make_trace_point(scene, isec.instance_id, isec.element_id,
-            isec.element_uv, direction);
-    } else {
-        auto point     = trace_point();
-        point.emission = evaluate_environment_emission(scene, direction);
-        return point;
-    }
+    return intersect_scene_bvh(
+        scene, bvh, make_ray(position, direction), intersection);
 }
 
 // Sample camera
@@ -1490,23 +1475,23 @@ std::tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(
          volume_bounce++) {
         auto distance = sample_volume_distance(density, get_random_float(rng));
 
-        auto isec = bvh_intersection{};
-        if (!intersect_scene_bvh(
-                scene, bvh, make_ray(position, direction), isec)) {
+        auto intersection = bvh_intersection{};
+        if (!intersect_scene_bvh(scene, bvh, make_ray(position, direction), 
+            intersection)) {
             weight = zero3f;
             break;
         }
 
-        auto point = make_trace_point(scene, isec.instance_id, isec.element_id,
-            isec.element_uv, direction);
+        auto point = trace_point{};
+        make_trace_point(point, scene, intersection, direction);
 
-        if (isec.distance < distance) {
+        if (intersection.distance < distance) {
             // intersection with surface of volume
             if (!point.brdf.empty()) break;
 
             weight *= evaluate_volume_transmission(
-                volume_density, isec.distance);
-            weight /= sample_volume_distance_pdf(density, isec.distance);
+                volume_density, intersection.distance);
+            weight /= sample_volume_distance_pdf(density, intersection.distance);
 
             position = point.position;
             outgoing = -direction;
@@ -1667,14 +1652,17 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
         // intersect next point
-        auto outgoing = -direction;
-        auto point    = trace_ray(scene, bvh, position, direction);
-        if (!point.hit) {
-            radiance += weight *
-                        evaluate_environment_emission(scene, direction);
+        auto intersection = bvh_intersection{};
+        if (!trace_ray(scene, bvh, position, direction, intersection)) {
+            radiance += weight * evaluate_environment_emission(scene, direction);
             break;
         }
         hit = true;
+
+        // prepare shading point
+        auto outgoing = -direction;
+        auto point = trace_point{};
+        make_trace_point(point, scene, intersection, direction);
 
         // accumulate emission
         radiance += weight * point.emission;
@@ -1739,14 +1727,17 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
         // intersect next point
-        auto outgoing = -direction;
-        auto point    = trace_ray(scene, bvh, position, direction);
-        if (!point.hit) {
-            radiance += weight *
-                        evaluate_environment_emission(scene, direction);
+        auto intersection = bvh_intersection{};
+        if (!trace_ray(scene, bvh, position, direction, intersection)) {
+            radiance += weight * evaluate_environment_emission(scene, direction);
             break;
         }
         hit = true;
+
+        // prepare shading point
+        auto outgoing = -direction;
+        auto point = trace_point{};
+        make_trace_point(point, scene, intersection, direction);
 
         // accumulate emission
         radiance += weight * point.emission;
@@ -1811,14 +1802,18 @@ vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     // trace  path
     for (auto bounce = 0; bounce < max(options.max_bounces, 4); bounce++) {
         // intersect next point
-        auto outgoing = -direction;
-        auto point    = trace_ray(scene, bvh, position, direction);
-        if (!point.hit) {
-            radiance += weight *
-                        evaluate_environment_emission(scene, direction);
+        auto intersection = bvh_intersection{};
+        if (!trace_ray(scene, bvh, position, direction, intersection)) {
+            radiance += weight * evaluate_environment_emission(scene, direction);
             break;
         }
         hit = true;
+
+        // prepare shading point
+        auto outgoing = -direction;
+        auto point = trace_point{};
+        make_trace_point(point, scene, intersection, direction);
+
 
         // accumulate emission
         radiance += weight * point.emission;
@@ -1855,9 +1850,15 @@ vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 vec4f trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
-    // intersect ray
-    auto point = trace_ray(scene, bvh, position, direction);
-    if (!point.hit) return zero4f;
+    // intersect next point
+    auto intersection = bvh_intersection{};
+    if (!trace_ray(scene, bvh, position, direction, intersection)) {
+        return zero4f;
+    }
+
+    // prepare shading point
+    auto point = trace_point{};
+    make_trace_point(point, scene, intersection, direction);
 
     switch (options.falsecolor_type) {
         case trace_falsecolor_type::normal: {
@@ -1921,19 +1922,19 @@ vec4f trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
             return {vec3f{roughness}, 1};
         }
         case trace_falsecolor_type::material: {
-            auto& instance = scene.instances[point.instance_id];
+            auto& instance = scene.instances[intersection.instance_id];
             auto  hashed   = std::hash<int>()(instance.material);
             auto  rng_     = make_rng(trace_default_seed, hashed);
             return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::shape: {
-            auto& instance = scene.instances[point.instance_id];
+            auto& instance = scene.instances[intersection.instance_id];
             auto  hashed   = std::hash<int>()(instance.shape);
             auto  rng_     = make_rng(trace_default_seed, hashed);
             return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::instance: {
-            auto hashed = std::hash<int>()(point.instance_id);
+            auto hashed = std::hash<int>()(intersection.instance_id);
             auto rng_   = make_rng(trace_default_seed, hashed);
             return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
         }
