@@ -322,7 +322,7 @@ inline T sample_uniform_element_pdf(const vector<T>& elements) {
 // Sample a discrete distribution represented by its cdf.
 template <typename T>
 inline int sample_discrete_distribution(const vector<T>& cdf, T r) {
-    r        = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
+    r        = clamp(r * cdf.back(), (T)0.0, cdf.back() - (T)0.00001);
     auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                      cdf.data());
     return clamp(idx, 0, (int)cdf.size() - 1);
