@@ -87,10 +87,14 @@ struct short_vector {
     const T* end() const { return _data + _size; }
     T*       data() { return _data; }
     const T* data() const { return _data; }
+    T&       front() { return _data[0]; }
+    const T& front() const { return _data[0]; }
+    T&       back() { return _data[_size - 1]; }
+    const T& back() const { return _data[_size - 1]; }
 
    private:
-    int _size = 0;
     T   _data[N];
+    int _size = 0;
 };
 
 bool is_volume_homogeneus(const yocto_material& material) {
@@ -107,6 +111,16 @@ bool is_delta_bsdf(const short_vector<bsdf>& brdfs) {
         if (!is_delta_bsdf(brdf)) return false;
     }
     return true;
+}
+
+float get_bsdf_sampling_weight(
+    const bsdf& brdf, const vec3f& normal, const vec3f& outgoing) {
+    auto fresnel = evaluate_fresnel_schlick(
+        brdf.specular, abs(dot(outgoing, normal)));
+    return (brdf.type == bsdf_type::specular_reflection ||
+               brdf.type == bsdf_type::metallic_reflection)
+               ? max(fresnel)
+               : max(brdf.albedo * (1 - fresnel));
 }
 
 void compute_scattering_functions(vec3f& emission, short_vector<bsdf>& brdfs,
@@ -817,16 +831,10 @@ vec3f sample_brdf_direction(const short_vector<bsdf>& brdfs,
     for (auto& brdf : brdfs) {
         if (delta != is_delta_bsdf(brdf)) {
             weights.push_back(0);
-            continue;
+        } else {
+            weights.push_back(get_bsdf_sampling_weight(brdf, normal, outgoing));
         }
-        auto fresnel = evaluate_fresnel_schlick(
-            brdf.specular, dot(normal, outgoing));
-        auto weight = (brdf.type == bsdf_type::specular_reflection ||
-                          brdf.type == bsdf_type::metallic_reflection)
-                          ? max(fresnel)
-                          : max(brdf.albedo * (1 - fresnel));
-        weights.push_back(weight);
-        sum_weights += weight;
+        sum_weights += weights.back();
     }
     if (sum_weights == 0) return zero3f;
     for (auto& weight : weights) weight /= sum_weights;
@@ -905,16 +913,10 @@ float sample_brdf_direction_pdf(const short_vector<bsdf>& brdfs,
     for (auto& brdf : brdfs) {
         if (delta != is_delta_bsdf(brdf)) {
             weights.push_back(0);
-            continue;
+        } else {
+            weights.push_back(get_bsdf_sampling_weight(brdf, normal, outgoing));
         }
-        auto fresnel = evaluate_fresnel_schlick(
-            brdf.specular, dot(normal, outgoing));
-        auto weight = (brdf.type == bsdf_type::specular_reflection ||
-                          brdf.type == bsdf_type::metallic_reflection)
-                          ? max(fresnel)
-                          : max(brdf.albedo * (1 - fresnel));
-        weights.push_back(weight);
-        sum_weights += weight;
+        sum_weights += weights.back();
     }
     if (sum_weights == 0) return 0;
     for (auto& weight : weights) weight /= sum_weights;
@@ -1333,47 +1335,60 @@ float evaluate_phase_function(float cos_theta, float g) {
     return (1 - g * g) / (4 * pif * denom * sqrt(denom));
 }
 
-tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene, 
+tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const trace_point& point,
-    const vec3f& outgoing, rng_state& rng, bool mis) {
+    const vec3f& outgoing, rng_state& rng, bool mis, bool include_smooth = true,
+    bool include_delta = true) {
+    // choose delta or non-delta
+    auto weight_smooth = 0.0f, weight_delta = 0.0f;
+    for (auto& brdf : point.brdf) {
+        if (!is_delta_bsdf(brdf)) {
+            weight_smooth = include_smooth ? get_bsdf_sampling_weight(
+                                                 brdf, point.normal, outgoing)
+                                           : 0;
+        } else {
+            weight_delta = include_delta ? get_bsdf_sampling_weight(
+                                               brdf, point.normal, outgoing)
+                                         : 0;
+        }
+    }
+    if(weight_smooth == 0 && weight_delta == 0) return {zero3f, zero3f, 0};
+    auto weight_sum = weight_smooth + weight_delta;
+    weight_smooth /= weight_sum;
+    weight_delta /= weight_sum;
+    auto delta = get_random_float(rng) < weight_delta;
+    auto mode_pdf = !delta ? weight_smooth : weight_delta;
     // continue path
     auto next_direction     = zero3f;
     auto next_brdf_cosine   = zero3f;
     auto next_direction_pdf = 0.0f;
-    if (!is_delta_bsdf(point.brdf)) {
-        if(mis) {
-            if (get_random_float(rng) < 0.5f) {
-                next_direction = sample_brdf_direction(point.brdf, point.normal,
-                    outgoing, get_random_float(rng), get_random_vec2f(rng), false);
-            } else {
-                next_direction = sample_lights_direction(scene, lights, bvh,
-                    point.position, get_random_float(rng), get_random_float(rng),
-                    get_random_vec2f(rng));
-            }
-            next_brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction, false);
-            next_direction_pdf = 0.5f * sample_brdf_direction_pdf(point.brdf,
-                                            point.normal, outgoing, next_direction,
-                                            false) +
-                                0.5f * sample_lights_direction_pdf(scene, lights,
-                                            bvh, point.position, next_direction);
+    if (mis && !delta) {
+        if (get_random_float(rng) < 0.5f) {
+            next_direction = sample_brdf_direction(point.brdf, point.normal,
+                outgoing, get_random_float(rng), get_random_vec2f(rng),
+                delta);
         } else {
-            next_direction   = sample_brdf_direction(point.brdf, point.normal,
-                outgoing, get_random_float(rng), get_random_vec2f(rng), false);
-            next_brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction, false);
-            next_direction_pdf = sample_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing, next_direction, false);
+            next_direction = sample_lights_direction(scene, lights, bvh,
+                point.position, get_random_float(rng),
+                get_random_float(rng), get_random_vec2f(rng));
         }
+        next_brdf_cosine = evaluate_brdf_cosine(
+            point.brdf, point.normal, outgoing, next_direction, delta);
+        next_direction_pdf =
+            0.5f * sample_brdf_direction_pdf(point.brdf, point.normal,
+                        outgoing, next_direction, delta) +
+            0.5f * sample_lights_direction_pdf(
+                        scene, lights, bvh, point.position, next_direction);
     } else {
         next_direction   = sample_brdf_direction(point.brdf, point.normal,
-            outgoing, get_random_float(rng), get_random_vec2f(rng), true);
+            outgoing, get_random_float(rng), get_random_vec2f(rng), delta);
         next_brdf_cosine = evaluate_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction, true);
+            point.brdf, point.normal, outgoing, next_direction, delta);
         next_direction_pdf = sample_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction, true);
+            point.brdf, point.normal, outgoing, next_direction, delta);
     }
-    if(next_direction == zero3f || next_direction_pdf == 0) {
+    next_direction_pdf *= mode_pdf;
+    if (next_direction == zero3f || next_direction_pdf == 0) {
         return {zero3f, zero3f, 0};
     } else {
         return {next_brdf_cosine, next_direction, next_direction_pdf};
@@ -1697,8 +1712,9 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (point.brdf.empty() || weight == zero3f) break;
 
         // continue path
-        auto [next_brdf_cosine, next_direction, next_direction_pdf] = 
-            sample_next_direction(scene, lights, bvh, point, outgoing, rng, true);
+        auto [next_brdf_cosine, next_direction, next_direction_pdf] =
+            sample_next_direction(
+                scene, lights, bvh, point, outgoing, rng, true);
 
         // exit if no hit
         if (next_direction == zero3f || next_direction_pdf == 0 ||
@@ -1768,8 +1784,9 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (point.brdf.empty() || weight == zero3f) break;
 
         // continue path
-        auto [next_brdf_cosine, next_direction, next_direction_pdf] = 
-            sample_next_direction(scene, lights, bvh, point, outgoing, rng, false);
+        auto [next_brdf_cosine, next_direction, next_direction_pdf] =
+            sample_next_direction(
+                scene, lights, bvh, point, outgoing, rng, false);
 
         // exit if no hit
         if (next_direction == zero3f || next_direction == zero3f ||
