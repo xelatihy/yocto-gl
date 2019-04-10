@@ -448,33 +448,24 @@ ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& image_ij,
 ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
 
-// Evaluates material parameters: emission, diffuse, specular, transmission,
-// roughness and opacity.
-vec3f evaluate_material_emission(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord);
-// float evaluate_material_opacity(const yocto_scene& scene,
-//     const yocto_material& material, const vec2f& texturecoord);
-vec3f evaluate_material_normalmap(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord);
-
 // Material values packed into a convenience structure.
-struct microfacet_brdf {
+struct material_point {
+    vec3f emission     = zero3f;
     vec3f diffuse      = zero3f;
     vec3f specular     = zero3f;
     vec3f transmission = zero3f;
     float roughness    = 1;
     float opacity      = 1;
-    bool  fresnel      = true;
+    bool  base_metallic = false;
     bool  refract      = false;
+    vec3f normalmap    = {0,0,1};
+    vec3f volume_emission = {0, 0, 0};
+    vec3f volume_albedo   = {0, 0, 0};
+    vec3f volume_density  = {0, 0, 0};
+    float volume_phaseg   = 0;
 };
-microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
+material_point evaluate_material_point(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord);
-bool            is_brdf_delta(const microfacet_brdf& f);
-bool            is_brdf_zero(const microfacet_brdf& f);
-
-// Check volume properties.
-bool is_material_volume_homogeneus(const yocto_material& vol);
-bool is_material_volume_colored(const yocto_material& vol);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
@@ -485,7 +476,7 @@ vec3f evaluate_instance_normal(const yocto_scene& scene,
     bool non_rigid_frame = false);
 vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    bool non_rigid_frame = false);
+    const vec3f& normalmap, bool non_rigid_frame = false);
 // Instance element values.
 vec3f evaluate_instance_element_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id,

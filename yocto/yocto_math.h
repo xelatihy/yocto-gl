@@ -89,6 +89,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <tuple>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -129,6 +130,7 @@ using std::unique_ptr;
 using std::unordered_map;
 using std::unordered_set;
 using std::vector;
+using std::tuple;
 using namespace std::literals::string_literals;
 
 }  // namespace yocto
