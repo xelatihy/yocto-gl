@@ -118,7 +118,7 @@ float get_bsdf_sampling_weight(
 }
 
 void compute_scattering_functions(vec3f& emission, short_vector<bsdf>& brdfs,
-    float& brdf_opacity, const material_point& material,
+    const material_point& material,
     const vec4f& shape_color) {
     auto diffuse = !material.base_metallic
                        ? material.diffuse * shape_color.xyz
@@ -154,7 +154,6 @@ void compute_scattering_functions(vec3f& emission, short_vector<bsdf>& brdfs,
         brdfs.push_back({bsdf_type::opacity_passthrough, vec3f{1 - opacity}, zero3f, 0});
     }
     emission     = opacity * material.emission * shape_color.xyz;
-    brdf_opacity = opacity;
 }
 
 // Trace point
@@ -169,7 +168,6 @@ struct trace_point {
     vec4f              color            = zero4f;
     vec3f              emission         = zero3f;
     short_vector<bsdf> brdf             = {};
-    float              opacity          = 1;
     vec3f              volume_density   = zero3f;
     vec3f              volume_albedo    = zero3f;
     vec3f              volume_emission  = zero3f;
@@ -200,7 +198,7 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     auto material_point = evaluate_material_point(
         scene, material, point.texturecoord);
     compute_scattering_functions(
-        point.emission, point.brdf, point.opacity, material_point, point.color);
+        point.emission, point.brdf, material_point, point.color);
     point.volume_emission = material.volume_emission;
     point.volume_density  = material.volume_density;
     point.volume_albedo   = material.volume_albedo;
@@ -233,23 +231,6 @@ trace_point trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
         point.emission = evaluate_environment_emission(scene, direction);
         return point;
     }
-}
-
-// Intersects a ray and returns a point accounting for opacity treated as
-// coveregae
-trace_point trace_ray_with_opacity(const yocto_scene& scene,
-    const bvh_scene& bvh, const vec3f& position_, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
-    return trace_ray(scene, bvh, position_, direction);
-    // auto position = position_;
-    // for (auto b = 0; b < max_bounces * 10; b++) {
-    //     auto point = trace_ray(scene, bvh, position, direction);
-    //     if (!point.hit) return point;
-    //     if (point.opacity > 0.999f) return point;
-    //     if (get_random_float(rng) < point.opacity) return point;
-    //     position = point.position + direction * ray_eps;
-    // }
-    // return {};
 }
 
 // Sample camera
@@ -1613,7 +1594,7 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect ray
-    auto point = trace_ray_with_opacity(
+    auto point = trace_ray(
         scene, bvh, position, direction, rng, options.max_bounces);
     if (!point.hit) {
         if (options.environments_hidden || scene.environments.empty())
@@ -1652,7 +1633,7 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // intersect next point
-        auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
+        auto next_point = trace_ray(scene, bvh, point.position,
             next_direction, rng, options.max_bounces);
 
         radiance += weight * next_point.emission;
@@ -1679,8 +1660,7 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, options.max_bounces);
+    auto point = trace_ray(scene, bvh, position, direction);
     if (!point.hit) {
         return {evaluate_environment_emission(scene, direction), 0};
     }
@@ -1724,8 +1704,8 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // intersect next point
-        auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
-            next_direction, rng, options.max_bounces);
+        auto next_point = trace_ray(scene, bvh, point.position,
+            next_direction);
         radiance += weight * next_point.emission;
         if (!next_point.hit || next_point.brdf.empty()) break;
 
@@ -1749,8 +1729,8 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, options.max_bounces);
+    auto point = trace_ray(
+        scene, bvh, position, direction);
     if (!point.hit) {
         return {evaluate_environment_emission(scene, direction), 0};
     }
@@ -1776,8 +1756,8 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
             break;
 
         // intersect next point
-        auto next_point = trace_ray_with_opacity(scene, bvh, point.position,
-            next_direction, rng, options.max_bounces);
+        auto next_point = trace_ray(scene, bvh, point.position,
+            next_direction);
         radiance += weight * next_brdf_cosine * next_point.emission /
                     next_direction_pdf;
         if (!next_point.hit || next_point.brdf.empty()) break;
@@ -1803,8 +1783,7 @@ vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, options.max_bounces);
+    auto point = trace_ray(scene, bvh, position, direction);
     if (!point.hit) {
         if (options.environments_hidden || scene.environments.empty())
             return zero4f;
@@ -1829,8 +1808,8 @@ vec4f trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, options.max_bounces);
+    auto point = trace_ray(
+        scene, bvh, position, direction);
     if (!point.hit) return zero4f;
 
     switch (options.falsecolor_type) {
