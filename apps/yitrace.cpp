@@ -214,32 +214,57 @@ void draw_opengl_widgets(const opengl_window& win) {
                 auto cam_names = vector<string>();
                 for (auto& camera : app.scene.cameras)
                     cam_names.push_back(camera.uri);
-                auto edited = 0;
-                if (app.load_done) {
-                    edited += draw_combobox_opengl_widget(
-                        win, "camera", app.trace_options.camera_id, cam_names);
+                {
+                    auto edited = false;
+                    if (app.load_done) {
+                        if (draw_combobox_opengl_widget(win, "camera",
+                                app.trace_options.camera_id, cam_names)) {
+                            edited = true;
+                        }
+                    }
+                    if (draw_slider_opengl_widget(win, "width",
+                            app.trace_options.image_size.x, 0, 4096)) {
+                        edited = true;
+                    }
+                    if (draw_slider_opengl_widget(win, "height",
+                            app.trace_options.image_size.y, 0, 4096)) {
+                        edited = true;
+                    }
+                    if (draw_slider_opengl_widget(win, "nsamples",
+                            app.trace_options.num_samples, 16, 4096)) {
+                        edited = true;
+                    }
+                    if (draw_combobox_opengl_widget(win, "tracer",
+                            (int&)app.trace_options.sampler_type,
+                            trace_sampler_type_names)) {
+                        edited = true;
+                    }
+                    if (draw_combobox_opengl_widget(win, "false color",
+                            (int&)app.trace_options.falsecolor_type,
+                            trace_falsecolor_type_names)) {
+                        edited = true;
+                    }
+                    if (draw_slider_opengl_widget(win, "nbounces",
+                            app.trace_options.max_bounces, 1, 10)) {
+                        edited = true;
+                    }
+                    if (draw_checkbox_opengl_widget(win, "double sided",
+                            app.trace_options.double_sided)) {
+                        edited = true;
+                    }
+                    if (draw_slider_opengl_widget(win, "seed",
+                            (int&)app.trace_options.random_seed, 0, 1000000)) {
+                        edited = true;
+                    }
+                    if (draw_slider_opengl_widget(
+                            win, "pratio", app.preview_ratio, 1, 64)) {
+                        edited = true;
+                    }
+                    if (edited) {
+                        app.update_list.push_back({typeid(trace_image_options),
+                            -1, app.trace_options, false});
+                    }
                 }
-                edited += draw_slider_opengl_widget(
-                    win, "width", app.trace_options.image_size.x, 0, 4096);
-                edited += draw_slider_opengl_widget(
-                    win, "height", app.trace_options.image_size.y, 0, 4096);
-                edited += draw_slider_opengl_widget(
-                    win, "nsamples", app.trace_options.num_samples, 16, 4096);
-                edited += draw_combobox_opengl_widget(win, "tracer",
-                    (int&)app.trace_options.sampler_type,
-                    trace_sampler_type_names);
-                edited += draw_combobox_opengl_widget(win, "false color",
-                    (int&)app.trace_options.falsecolor_type,
-                    trace_falsecolor_type_names);
-                edited += draw_slider_opengl_widget(
-                    win, "nbounces", app.trace_options.max_bounces, 1, 10);
-                edited += draw_checkbox_opengl_widget(
-                    win, "double sided", app.trace_options.double_sided);
-                edited += draw_slider_opengl_widget(win, "seed",
-                    (int&)app.trace_options.random_seed, 0, 1000000);
-                edited += draw_slider_opengl_widget(
-                    win, "pratio", app.preview_ratio, 1, 64);
-                if (edited) app.update_list.push_back({typeid(app_state), -1});
                 draw_slider_opengl_widget(win, "exposure", app.exposure, -5, 5);
                 draw_checkbox_opengl_widget(win, "filmic", app.filmic);
                 continue_opengl_widget_line(win);
@@ -388,16 +413,22 @@ bool update(app_state& app) {
             tesselate_subdiv(app.scene, app.scene.subdivs[index]);
             updated_shapes.push_back(app.scene.subdivs[index].tesselated_shape);
         } else if (type == typeid(yocto_material)) {
-            auto old_emission = app.scene.materials[index].emission;
+            auto old_emission          = app.scene.materials[index].emission;
             app.scene.materials[index] = any_cast<yocto_material>(data);
-            if(old_emission != app.scene.materials[index].emission) {updated_lights = true;}
+            if (old_emission != app.scene.materials[index].emission) {
+                updated_lights = true;
+            }
         } else if (type == typeid(yocto_instance)) {
             app.scene.instances[index] = any_cast<yocto_instance>(data);
             updated_instances.push_back(index);
         } else if (type == typeid(yocto_environment)) {
-            auto old_emission = app.scene.materials[index].emission;
+            auto old_emission             = app.scene.materials[index].emission;
             app.scene.environments[index] = any_cast<yocto_environment>(data);
-            if(old_emission != app.scene.materials[index].emission) {updated_lights = true;}
+            if (old_emission != app.scene.materials[index].emission) {
+                updated_lights = true;
+            }
+        } else if (type == typeid(trace_image_options)) {
+            app.trace_options = any_cast<trace_image_options>(data);
         } else {
             throw runtime_error("unsupported type "s + type.name());
         }
@@ -408,7 +439,7 @@ bool update(app_state& app) {
             app.bvh_options);
     }
     // update lights
-    if(updated_lights) {
+    if (updated_lights) {
         init_trace_lights(app.lights, app.scene);
     }
 
@@ -456,9 +487,9 @@ void run_ui(app_state& app) {
         if (app.load_done && (mouse_left || mouse_right) && !alt_down &&
             !widgets_active) {
             auto camera = app.scene.cameras.at(app.trace_options.camera_id);
-            auto  dolly  = 0.0f;
-            auto  pan    = zero2f;
-            auto  rotate = zero2f;
+            auto dolly  = 0.0f;
+            auto pan    = zero2f;
+            auto rotate = zero2f;
             if (mouse_left && !shift_down)
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
@@ -467,8 +498,8 @@ void run_ui(app_state& app) {
             pan.x = -pan.x;
             update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            app.update_list.push_back(
-                {typeid(yocto_camera), app.trace_options.camera_id, camera, false});
+            app.update_list.push_back({typeid(yocto_camera),
+                app.trace_options.camera_id, camera, false});
         }
 
         // selection
