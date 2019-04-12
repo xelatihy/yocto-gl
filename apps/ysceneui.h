@@ -36,8 +36,20 @@ using namespace yocto;
 
 #include <typeindex>
 #include <unordered_map>
+#include <any>
 using std::type_index;
 using std::unordered_map;
+using std::any;
+
+struct app_selection {
+    type_index type = typeid(void);
+    int index = -1;
+};
+
+struct app_edit {
+    app_selection selection = {};
+    any data = {};
+};
 
 inline const unordered_map<int, string>& animation_type_names() {
     static auto names = unordered_map<int, string>{
@@ -51,25 +63,25 @@ inline const unordered_map<int, string>& animation_type_names() {
 template <typename T>
 inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, int index, const vector<T>& vals,
-    pair<type_index, int>& sel);
+    app_selection& sel);
 
 template <typename T>
 inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, int index, const vector<T*>& vals,
-    pair<type_index, int>& sel);
+    app_selection& sel);
 
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_camera& value,
-    pair<type_index, int>& sel) {}
+    app_selection& sel) {}
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_texture& value,
-    pair<type_index, int>& sel) {}
+    app_selection& sel) {}
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_voltexture& value,
-    pair<type_index, int>& sel) {}
+    app_selection& sel) {}
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_material& value,
-    pair<type_index, int>& sel) {
+    app_selection& sel) {
     draw_opengl_widgets_scene_tree(
         win, "emission", scene, value.emission_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
@@ -81,10 +93,10 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_shape& value,
-    pair<type_index, int>& sel) {}
+    app_selection& sel) {}
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_subdiv& value,
-    pair<type_index, int>& sel) {
+    app_selection& sel) {
     draw_opengl_widgets_scene_tree(
         win, "shapes", scene, value.tesselated_shape, scene.shapes, sel);
     draw_opengl_widgets_scene_tree(win, "displament", scene,
@@ -93,7 +105,7 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
 
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_instance& value,
-    pair<type_index, int>& sel) {
+    app_selection& sel) {
     draw_opengl_widgets_scene_tree(
         win, "shape", scene, value.shape, scene.shapes, sel);
     draw_opengl_widgets_scene_tree(
@@ -101,13 +113,13 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_environment& value,
-    pair<type_index, int>& sel) {
+    app_selection& sel) {
     draw_opengl_widgets_scene_tree(
         win, "emission", scene, value.emission_texture, scene.textures, sel);
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_scene_node& value,
-    pair<type_index, int>& sel) {
+    app_selection& sel) {
     draw_opengl_widgets_scene_tree(
         win, "instance", scene, value.instance, scene.instances, sel);
     draw_opengl_widgets_scene_tree(
@@ -124,7 +136,7 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_animation& value,
-    pair<type_index, int>& sel) {
+    app_selection& sel) {
     auto tid = 0;
     for (auto tg : value.node_targets) {
         draw_opengl_widgets_scene_tree(
@@ -135,11 +147,11 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
 template <typename T>
 inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, int index, const vector<T>& vals,
-    pair<type_index, int>& sel) {
+    app_selection& sel) {
     if (index < 0) return;
     auto lbl = vals[index].uri;
     if (!empty(lbl_)) lbl = lbl_ + ": " + vals[index].uri;
-    auto selected = sel == pair<type_index, int>{type_index(typeid(T)), index};
+    auto selected = sel.type == type_index(typeid(T)) && sel.index == index;
     if (begin_selectabletreenode_opengl_widget(win, lbl.c_str(), selected)) {
         draw_scene_tree_opengl_widgets_rec(win, lbl_, scene, vals[index], sel);
         end_treenode_opengl_widget(win);
@@ -150,11 +162,11 @@ inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
 template <typename T>
 inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, int index, const vector<T*>& vals,
-    pair<type_index, int>& sel) {
+    app_selection& sel) {
     if (index < 0) return;
     auto lbl = vals[index]->name;
     if (!empty(lbl_)) lbl = lbl_ + ": " + vals[index]->name;
-    auto selected = sel == pair<type_index, int>{type_index(typeid(T)), index};
+    auto selected = sel.type == type_index(typeid(T)) && sel.index == index;
     if (begin_selectabletreenode_opengl_widget(win, lbl.c_str(), selected)) {
         draw_scene_tree_opengl_widgets_rec(win, lbl_, scene, vals[index], sel);
         end_treenode_opengl_widget(win);
@@ -163,7 +175,7 @@ inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
 }
 
 inline void draw_opengl_widgets_scene_tree(
-    const opengl_window& win, yocto_scene& scene, pair<type_index, int>& sel) {
+    const opengl_window& win, yocto_scene& scene, app_selection& sel) {
     if (!empty(scene.cameras) && begin_treenode_opengl_widget(win, "cameras")) {
         for (auto v = 0; v < scene.cameras.size(); v++)
             draw_opengl_widgets_scene_tree(
@@ -429,8 +441,8 @@ inline bool draw_opengl_widgets_scene_inspector(
 }
 
 inline bool draw_opengl_widgets_scene_tree(const opengl_window& win,
-    const string& lbl, yocto_scene& scene, pair<type_index, int>& sel,
-    vector<pair<type_index, int>>& update_list, int height) {
+    const string& lbl, yocto_scene& scene, app_selection& sel,
+    vector<app_selection>& update_list, int height) {
     draw_opengl_widgets_scene_tree(win, scene, sel);
     auto update_len = update_list.size();
 #if 0
@@ -457,48 +469,66 @@ inline bool draw_opengl_widgets_scene_tree(const opengl_window& win,
 }
 
 inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
-    const string& lbl, yocto_scene& scene, pair<type_index, int>& sel,
-    vector<pair<type_index, int>>& update_list, int height) {
-    if (sel.first == typeid(void)) return false;
+    const string& lbl, yocto_scene& scene, app_selection& sel,
+    vector<app_selection>& update_list, int height) {
+    if (sel.type == typeid(void)) return false;
 
     auto update_len = update_list.size();
 
-    if (sel.first == typeid(yocto_camera))
+    if (sel.type == typeid(yocto_camera)) {
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.cameras[sel.second], scene))
-            update_list.push_back({typeid(yocto_camera), sel.second});
-    if (sel.first == typeid(yocto_shape))
+                win, scene.cameras[sel.index], scene)) {
+            update_list.push_back({sel});
+        }
+    }
+    if (sel.type == typeid(yocto_shape)) {
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.shapes[sel.second], scene))
-            update_list.push_back({typeid(yocto_shape), sel.second});
-    if (sel.first == typeid(yocto_subdiv))
+                win, scene.shapes[sel.index], scene)) {
+            update_list.push_back({sel});
+        }
+    }
+    if (sel.type == typeid(yocto_subdiv)) {
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.subdivs[sel.second], scene))
-            update_list.push_back({typeid(yocto_shape), sel.second});
-    if (sel.first == typeid(yocto_texture))
+                win, scene.subdivs[sel.index], scene)) {
+            update_list.push_back({sel});
+        }
+    }
+    if (sel.type == typeid(yocto_texture)) {
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.textures[sel.second], scene))
-            update_list.push_back({typeid(yocto_texture), sel.second});
-    if (sel.first == typeid(yocto_material))
+                win, scene.textures[sel.index], scene)) {
+            update_list.push_back({sel});
+        }
+    }
+    if (sel.type == typeid(yocto_material)) {
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.materials[sel.second], scene))
-            update_list.push_back({typeid(yocto_material), sel.second});
-    if (sel.first == typeid(yocto_environment))
+                win, scene.materials[sel.index], scene)) {
+            update_list.push_back({sel});
+        }
+    }
+    if (sel.type == typeid(yocto_environment)) {
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.environments[sel.second], scene))
-            update_list.push_back({typeid(yocto_environment), sel.second});
-    if (sel.first == typeid(yocto_instance))
+                win, scene.environments[sel.index], scene)) {
+            update_list.push_back({sel});
+        }
+    }
+    if (sel.type == typeid(yocto_instance)) {
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.instances[sel.second], scene))
-            update_list.push_back({typeid(yocto_instance), sel.second});
-    if (sel.first == typeid(yocto_scene_node))
+                win, scene.instances[sel.index], scene)) {
+            update_list.push_back({sel});
+        }
+    }
+    if (sel.type == typeid(yocto_scene_node)) {
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.nodes[sel.second], scene))
-            update_list.push_back({typeid(yocto_scene_node), sel.second});
-    if (sel.first == typeid(yocto_animation))
+                win, scene.nodes[sel.index], scene)) {
+            update_list.push_back({sel});
+        }
+    }
+    if (sel.type == typeid(yocto_animation)) {
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.animations[sel.second], scene))
-            update_list.push_back({typeid(yocto_animation), sel.second});
+                win, scene.animations[sel.index], scene)) {
+            update_list.push_back({typeid(yocto_animation), sel.index});
+        }
+    }
 
     return update_list.size() != update_len;
 }

@@ -79,8 +79,8 @@ struct app_state {
     float                         image_scale  = 1;
     bool                          zoom_to_fit  = true;
     bool                          widgets_open = false;
-    pair<type_index, int>         selection    = {typeid(void), -1};
-    vector<pair<type_index, int>> update_list;
+    app_selection         selection    = {typeid(void), -1};
+    vector<app_selection> update_list;
     bool                          navigation_fps  = false;
     bool                          quiet           = false;
     opengl_texture                display_texture = {};

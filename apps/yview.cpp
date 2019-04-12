@@ -139,8 +139,8 @@ struct app_state {
     // view image
     bool                          widgets_open   = false;
     bool                          navigation_fps = false;
-    pair<type_index, int>         selection      = {typeid(void), -1};
-    vector<pair<type_index, int>> update_list;
+    app_selection         selection      = {typeid(void), -1};
+    vector<app_selection> update_list;
     float                         time       = 0;
     string                        anim_group = "";
     vec2f                         time_range = zero2f;
@@ -616,7 +616,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
 // Display a scene
 void draw_glscene(drawgl_state& state, const yocto_scene& scene,
-    const vec2i& viewport_size, const pair<type_index, int>& highlighted,
+    const vec2i& viewport_size, const app_selection& highlighted,
     const drawgl_options& options) {
     auto& camera      = scene.cameras.at(options.camera_id);
     auto  camera_view = mat4f(inverse(camera.frame));
@@ -687,9 +687,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         auto& instance = scene.instances[instance_id];
         // auto& shape     = scene.shapes[instance.shape];
         // auto& material  = scene.materials[shape.material];
-        auto highlight = highlighted ==
-                         pair<type_index, int>{
-                             typeid(yocto_instance), instance_id};
+        auto highlight = highlighted.type == typeid(yocto_instance) && highlighted.index  == instance_id;
         draw_glinstance(state, scene, instance, highlight, options);
     }
 
