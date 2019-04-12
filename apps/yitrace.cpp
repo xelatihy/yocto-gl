@@ -28,6 +28,7 @@
 
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
@@ -75,15 +76,15 @@ struct app_state {
     concurrent_queue<image_region> trace_queue   = {};
 
     // view image
-    vec2f                         image_center = zero2f;
-    float                         image_scale  = 1;
-    bool                          zoom_to_fit  = true;
-    bool                          widgets_open = false;
-    app_selection         selection    = {typeid(void), -1};
-    vector<app_selection> update_list;
-    bool                          navigation_fps  = false;
-    bool                          quiet           = false;
-    opengl_texture                display_texture = {};
+    vec2f            image_center = zero2f;
+    float            image_scale  = 1;
+    bool             zoom_to_fit  = true;
+    bool             widgets_open = false;
+    app_selection    selection    = {typeid(void), -1};
+    vector<app_edit> update_list;
+    bool             navigation_fps  = false;
+    bool             quiet           = false;
+    opengl_texture   display_texture = {};
 
     // app status
     atomic<bool> load_done, load_running;
@@ -341,17 +342,64 @@ bool update(app_state& app) {
     // stop renderer
     stop_rendering_async(app);
 
-    // update BVH
+    // update data
     auto updated_instances = vector<int>{}, updated_shapes = vector<int>{};
-    for (auto [type, index] : app.update_list) {
-        if (type == typeid(yocto_shape)) updated_shapes.push_back(index);
-        if (type == typeid(yocto_instance)) updated_instances.push_back(index);
-        if (type == typeid(yocto_scene_node))
+    for (auto& [type, index, data, reload] : app.update_list) {
+        if (type == typeid(yocto_camera)) {
+            app.scene.cameras[index] = any_cast<yocto_camera>(data);
+        } else if (type == typeid(yocto_texture)) {
+            app.scene.textures[index] = any_cast<yocto_texture>(data);
+            if (reload) {
+                auto& texture = app.scene.textures[index];
+                load_image(get_dirname(app.filename) + texture.uri,
+                    texture.hdr_image, texture.ldr_image);
+            }
+        } else if (type == typeid(yocto_voltexture)) {
+            app.scene.voltextures[index] = any_cast<yocto_voltexture>(data);
+            if (reload) {
+                auto& texture = app.scene.voltextures[index];
+                load_volume(get_dirname(app.filename) + texture.uri,
+                    texture.volume_data);
+            }
+        } else if (type == typeid(yocto_shape)) {
+            app.scene.shapes[index] = any_cast<yocto_shape>(data);
+            if (reload) {
+                auto& shape = app.scene.shapes[index];
+                load_shape(get_dirname(app.filename) + shape.uri, shape.points,
+                    shape.lines, shape.triangles, shape.quads,
+                    shape.quads_positions, shape.quads_normals,
+                    shape.quads_texturecoords, shape.positions, shape.normals,
+                    shape.texturecoords, shape.colors, shape.radius, false);
+            }
+            updated_shapes.push_back(index);
+        } else if (type == typeid(yocto_subdiv)) {
+            // TODO: this needs more fixing?
+            app.scene.subdivs[index] = any_cast<yocto_subdiv>(data);
+            if (reload) {
+                auto& subdiv = app.scene.subdivs[index];
+                load_shape(get_dirname(app.filename) + subdiv.uri,
+                    subdiv.points, subdiv.lines, subdiv.triangles, subdiv.quads,
+                    subdiv.quads_positions, subdiv.quads_normals,
+                    subdiv.quads_texturecoords, subdiv.positions,
+                    subdiv.normals, subdiv.texturecoords, subdiv.colors,
+                    subdiv.radius, subdiv.preserve_facevarying);
+            }
+            tesselate_subdiv(app.scene, app.scene.subdivs[index]);
+            updated_shapes.push_back(app.scene.subdivs[index].tesselated_shape);
+        } else if (type == typeid(yocto_material)) {
+            app.scene.materials[index] = any_cast<yocto_material>(data);
+        } else if (type == typeid(yocto_instance)) {
+            app.scene.instances[index] = any_cast<yocto_instance>(data);
             updated_instances.push_back(index);
+        } else {
+            throw runtime_error("unsupported type "s + type.name());
+        }
     }
+    // update bvh
     if (!updated_instances.empty() || !updated_shapes.empty())
         refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes,
             app.bvh_options);
+    // update lights
     app.update_list.clear();
 
     // start rendering

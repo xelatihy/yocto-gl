@@ -290,8 +290,7 @@ void draw(const opengl_window& win) {
     swap_opengl_buffers(win);
 }
 
-void update(app_state& app) {
-}
+void update(app_state& app) {}
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
