@@ -241,6 +241,13 @@ void make_trace_point(trace_point& point, const yocto_scene& scene,
 }
 
 // Intersects a ray and returns a point
+bool trace_ray(const yocto_scene& scene, const bvh_scene& bvh, const ray3f& ray,
+    bvh_intersection& intersection) {
+    _trace_nrays += 1;
+    return intersect_scene_bvh(scene, bvh, ray, intersection);
+}
+
+// Intersects a ray and returns a point
 bool trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
     const vec3f& position, const vec3f& direction,
     bvh_intersection& intersection) {
@@ -256,10 +263,10 @@ ray3f sample_camera_ray(const yocto_camera& camera, const vec2i& ij,
         camera, ij, image_size, puv, sample_disk_point(luv));
 }
 
-vec3f evaluate_emission(
-    const short_vector<esdf>& esdfs, const vec3f& normal, const vec3f& outgoing) {
+vec3f evaluate_emission(const short_vector<esdf>& esdfs, const vec3f& normal,
+    const vec3f& outgoing) {
     auto emission = zero3f;
-    for(auto& esdf : esdfs) emission += esdf.albedo;
+    for (auto& esdf : esdfs) emission += esdf.albedo;
     return emission;
 }
 
@@ -1637,33 +1644,32 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Recursive path tracing.
 vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position_, const vec3f& direction_,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // initialize
-    auto radiance  = zero3f;
-    auto weight    = vec3f{1, 1, 1};
-    auto position  = position_;
-    auto direction = direction_;
-    auto hit       = false;
+    auto radiance = zero3f;
+    auto weight   = vec3f{1, 1, 1};
+    auto ray      = make_ray(position, direction);
+    auto hit      = false;
 
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(scene, bvh, position, direction, intersection)) {
-            radiance += weight *
-                        evaluate_environment_emission(scene, direction);
+        if (!trace_ray(scene, bvh, ray, intersection)) {
+            radiance += weight * evaluate_environment_emission(scene, ray.d);
             break;
         }
         hit = true;
 
         // prepare shading point
-        auto outgoing = -direction;
+        auto outgoing = -ray.d;
         auto point    = trace_point{};
-        make_trace_point(point, scene, intersection, direction);
+        make_trace_point(point, scene, intersection, ray.d);
 
         // accumulate emission
-        radiance += weight * evaluate_emission(point.esdfs, point.normal, outgoing);
+        radiance += weight *
+                    evaluate_emission(point.esdfs, point.normal, outgoing);
         if (point.bsdfs.empty()) break;
 
         // russian roulette
@@ -1702,8 +1708,7 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // setup next iteration
-        position  = point.position;
-        direction = incoming;
+        ray = make_ray(point.position, incoming);
     }
 
     return {radiance, hit ? 1.0f : 0.0f};
@@ -1711,33 +1716,32 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Recursive path tracing.
 vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position_, const vec3f& direction_,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // initialize
-    auto radiance  = zero3f;
-    auto weight    = vec3f{1, 1, 1};
-    auto position  = position_;
-    auto direction = direction_;
-    auto hit       = false;
+    auto radiance = zero3f;
+    auto weight   = vec3f{1, 1, 1};
+    auto ray      = make_ray(position, direction);
+    auto hit      = false;
 
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(scene, bvh, position, direction, intersection)) {
-            radiance += weight *
-                        evaluate_environment_emission(scene, direction);
+        if (!trace_ray(scene, bvh, ray, intersection)) {
+            radiance += weight * evaluate_environment_emission(scene, ray.d);
             break;
         }
         hit = true;
 
         // prepare shading point
-        auto outgoing = -direction;
+        auto outgoing = -ray.d;
         auto point    = trace_point{};
-        make_trace_point(point, scene, intersection, direction);
+        make_trace_point(point, scene, intersection, ray.d);
 
         // accumulate emission
-        radiance += weight * evaluate_emission(point.esdfs, point.normal, outgoing);
+        radiance += weight *
+                    evaluate_emission(point.esdfs, point.normal, outgoing);
         if (point.bsdfs.empty()) break;
 
         // russian roulette
@@ -1776,8 +1780,7 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // setup next iteration
-        position  = point.position;
-        direction = incoming;
+        ray = make_ray(point.position, incoming);
     }
 
     return {radiance, hit ? 1.0f : 0.0f};
@@ -1811,7 +1814,8 @@ vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         make_trace_point(point, scene, intersection, direction);
 
         // accumulate emission
-        radiance += weight * evaluate_emission(point.esdfs, point.normal, outgoing);
+        radiance += weight *
+                    evaluate_emission(point.esdfs, point.normal, outgoing);
         if (point.bsdfs.empty()) break;
 
         // brdf * light
