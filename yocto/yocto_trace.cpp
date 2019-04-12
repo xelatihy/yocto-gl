@@ -1655,61 +1655,67 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
         // intersect next point
-        auto intersection = bvh_intersection{};
-        auto hit          = trace_ray(scene, bvh, ray, intersection);
+        auto intersection       = bvh_intersection{};
+        auto hit                = trace_ray(scene, bvh, ray, intersection);
+        auto volume_interaction = !hit && !volume_stack.empty();
 
-        if (!hit) {
-            radiance += weight * evaluate_environment_emission(scene, ray.d);
-            break;
-        }
+        if (!volume_interaction) {
+            if (!hit) {
+                radiance += weight *
+                            evaluate_environment_emission(scene, ray.d);
+                break;
+            }
 
-        // prepare shading point
-        auto outgoing = -ray.d;
-        auto point    = trace_point{};
-        make_trace_point(point, scene, intersection, ray.d);
+            // prepare shading point
+            auto outgoing = -ray.d;
+            auto point    = trace_point{};
+            make_trace_point(point, scene, intersection, ray.d);
 
-        // accumulate emission
-        radiance += weight *
-                    evaluate_emission(point.esdfs, point.normal, outgoing);
-        if (point.bsdfs.empty()) break;
+            // accumulate emission
+            radiance += weight *
+                        evaluate_emission(point.esdfs, point.normal, outgoing);
+            if (point.bsdfs.empty()) break;
 
-        // russian roulette
-        if (sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
-                weight, bounce, get_random_float(rng)))
-            break;
-        weight /= sample_russian_roulette_pdf(
-            get_russian_roulette_albedo(point.bsdfs), weight, bounce);
+            // russian roulette
+            if (sample_russian_roulette(
+                    get_russian_roulette_albedo(point.bsdfs), weight, bounce,
+                    get_random_float(rng)))
+                break;
+            weight /= sample_russian_roulette_pdf(
+                get_russian_roulette_albedo(point.bsdfs), weight, bounce);
 
-        // exit if needed
-        if (weight == zero3f) break;
-
-        // continue path
-        auto [brdf_cosine, incoming, incoming_pdf] = sample_next_direction(
-            scene, lights, bvh, point, outgoing, rng, true);
-
-        // exit if no hit
-        if (incoming == zero3f || incoming_pdf == 0 || brdf_cosine == zero3f)
-            break;
-        weight *= brdf_cosine / incoming_pdf;
-        if (weight == zero3f) break;
-
-        // transmission
-        if (!point.vsdfs.empty() &&
-            dot(incoming, point.geometric_normal) > 0 !=
-                dot(outgoing, point.geometric_normal) > 0) {
-            auto [pos, dir, rad, w] = integrate_volume(scene, lights, bvh,
-                point.vsdfs, point.position, outgoing, incoming, rng);
-
-            radiance += weight * rad;
-            weight *= w;
-
+            // exit if needed
             if (weight == zero3f) break;
-            point.position = pos;
-            incoming       = dir;
-        }
 
-        // setup next iteration
-        ray = make_ray(point.position, incoming);
+            // continue path
+            auto [brdf_cosine, incoming, incoming_pdf] = sample_next_direction(
+                scene, lights, bvh, point, outgoing, rng, true);
+
+            // exit if no hit
+            if (incoming == zero3f || incoming_pdf == 0 ||
+                brdf_cosine == zero3f)
+                break;
+            weight *= brdf_cosine / incoming_pdf;
+            if (weight == zero3f) break;
+
+            // transmission
+            if (!point.vsdfs.empty() &&
+                dot(incoming, point.geometric_normal) > 0 !=
+                    dot(outgoing, point.geometric_normal) > 0) {
+                auto [pos, dir, rad, w] = integrate_volume(scene, lights, bvh,
+                    point.vsdfs, point.position, outgoing, incoming, rng);
+
+                radiance += weight * rad;
+                weight *= w;
+
+                if (weight == zero3f) break;
+                point.position = pos;
+                incoming       = dir;
+            }
+
+            // setup next iteration
+            ray = make_ray(point.position, incoming);
+        }
     }
 
     return {radiance, 1.0f};
