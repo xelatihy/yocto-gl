@@ -1655,131 +1655,125 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
-        // intersect next point
-        auto intersection       = bvh_intersection{};
-        auto hit                = trace_ray(scene, bvh, ray, intersection);
-        auto volume_interaction = !hit && !volume_stack.empty();
-        auto distance           = hit ? intersection.distance : ray.tmax;
+        auto inside_volume = !volume_stack.empty();
+        if (inside_volume)
+            ray.tmax = sample_volume_distance(
+                volume_stack.back().density[spectrum], get_random_float(rng));
 
-        if (!volume_stack.empty()) {
-            auto vsdf = volume_stack.back();
+        // intersect next point
+        auto intersection = bvh_intersection{};
+        auto hit          = trace_ray(scene, bvh, ray, intersection);
+
+        if (inside_volume) {
+            auto distance = hit ? intersection.distance : ray.tmax;
+            auto vsdf     = volume_stack.back();
             weight /= sample_volume_distance_pdf(
                 vsdf.density[spectrum], distance);
             weight *= evaluate_volume_transmission(vsdf.density, distance);
-        }
 
-        if (!volume_interaction) {
             if (!hit) {
-                radiance += weight *
-                            evaluate_environment_emission(scene, ray.d);
-                break;
-            }
+                auto position = ray.o + ray.d * distance;
 
-            // prepare shading point
-            auto outgoing = -ray.d;
-            auto point    = trace_point{};
-            make_trace_point(point, scene, intersection, ray.d);
+                if (get_random_float(rng) < min(vsdf.albedo[spectrum], 0.95f)) {
+                    // scattering
+                    weight /= min(vsdf.albedo[spectrum], 0.95f);
+                    {
+                        auto outgoing     = -ray.d;
+                        auto incoming     = zero3f;
+                        auto incoming_pdf = 0.0f;
 
-            // accumulate emission
-            radiance += weight *
-                        evaluate_emission(point.esdfs, point.normal, outgoing);
-            if (point.bsdfs.empty()) break;
+                        if (get_random_float(rng) < 0.5f) {
+                            incoming = sample_lights_direction(scene, lights,
+                                bvh, position, get_random_float(rng),
+                                get_random_float(rng), get_random_vec2f(rng));
+                        } else {
+                            incoming = sample_phase_function(
+                                vsdf.phaseg, get_random_vec2f(rng));
+                            incoming = make_basis_fromz(-outgoing) * incoming;
+                        }
+                        auto cos_theta      = dot(outgoing, incoming);
+                        auto phase_function = evaluate_phase_function(
+                            cos_theta, vsdf.phaseg);
+                        incoming_pdf = 0.5f * phase_function +
+                                       0.5f * sample_lights_direction_pdf(scene,
+                                                  lights, bvh, position,
+                                                  incoming);
 
-            // russian roulette
-            if (sample_russian_roulette(
-                    get_russian_roulette_albedo(point.bsdfs), weight, bounce,
-                    get_random_float(rng)))
-                break;
-            weight /= sample_russian_roulette_pdf(
-                get_russian_roulette_albedo(point.bsdfs), weight, bounce);
-
-            // exit if needed
-            if (weight == zero3f) break;
-
-            // continue path
-            auto [brdf_cosine, incoming, incoming_pdf] = sample_next_direction(
-                scene, lights, bvh, point, outgoing, rng, true);
-
-            // exit if no hit
-            if (incoming == zero3f || incoming_pdf == 0 ||
-                brdf_cosine == zero3f)
-                break;
-            weight *= brdf_cosine / incoming_pdf;
-            if (weight == zero3f) break;
-
-            // transmission
-            if (!point.vsdfs.empty() &&
-                dot(incoming, point.geometric_normal) > 0 !=
-                    dot(outgoing, point.geometric_normal) > 0) {
-                // auto [pos, dir, rad, w] = integrate_volume(scene, lights,
-                // bvh,
-                //     point.vsdfs, point.position, outgoing, incoming, rng);
-
-                // radiance += weight * rad;
-                // weight *= w;
-
-                // if (weight == zero3f) break;
-                // point.position = pos;
-                // incoming       = dir;
-
-                if (volume_stack.empty())
-                    volume_stack.push_back(point.vsdfs[0]);
-                else
-                    volume_stack.pop_back();
-            }
-            // setup next iteration
-            ray = make_ray(point.position, incoming);
-        } else {
-            auto vsdf     = volume_stack.back();
-            auto position = ray.o + ray.d * distance;
-
-            if (get_random_float(rng) < min(vsdf.albedo[spectrum], 0.95f)) {
-                // scattering
-                weight /= min(vsdf.albedo[spectrum], 0.95f);
-
-                auto outgoing = -ray.d;
-                // direction = sample_next_direction_volume(scene, lights, bvh,
-                //     position, volume_albedo, volume_phaseg, outgoing, 0.5f,
-                //     rng, weight);
-
-                auto incoming     = zero3f;
-                auto incoming_pdf = 0.0f;
-
-                if (get_random_float(rng) < 0.5f) {
-                    incoming = sample_lights_direction(scene, lights, bvh,
-                        position, get_random_float(rng), get_random_float(rng),
-                        get_random_vec2f(rng));
+                        if (incoming == zero3f || incoming_pdf == 0 ||
+                            phase_function == 0.0f)
+                            break;
+                        else
+                            weight *= vsdf.albedo * phase_function /
+                                      incoming_pdf;
+                    }
+                    ray = make_ray(position, incoming);
+                    continue;
                 } else {
-                    incoming = sample_phase_function(
-                        vsdf.phaseg, get_random_vec2f(rng));
-                    incoming = make_basis_fromz(-outgoing) * incoming;
-                }
-                auto cos_theta      = dot(outgoing, incoming);
-                auto phase_function = evaluate_phase_function(
-                    cos_theta, vsdf.phaseg);
-                incoming_pdf = 0.5f * phase_function +
-                               0.5f * sample_lights_direction_pdf(scene, lights,
-                                          bvh, position, incoming);
-
-                if (incoming == zero3f || incoming_pdf == 0 ||
-                    phase_function == 0.0f)
+                    // absorption
+                    radiance += weight * vsdf.emission;
+                    weight = zero3f;
                     break;
-                else
-                    weight *= vsdf.albedo * phase_function / incoming_pdf;
-
-                ray = make_ray(position, incoming);
-
-            } else {
-                // absorption
-                radiance += weight * vsdf.emission;
-                weight = zero3f;
-                break;
+                }
             }
         }
 
-        if (!volume_stack.empty())
-            ray.tmax = sample_volume_distance(
-                volume_stack.back().density[spectrum], get_random_float(rng));
+        if (!hit) {
+            radiance += weight * evaluate_environment_emission(scene, ray.d);
+            break;
+        }
+
+        // prepare shading point
+        auto outgoing = -ray.d;
+        auto point    = trace_point{};
+        make_trace_point(point, scene, intersection, ray.d);
+
+        // accumulate emission
+        radiance += weight *
+                    evaluate_emission(point.esdfs, point.normal, outgoing);
+        if (point.bsdfs.empty()) break;
+
+        // russian roulette
+        if (sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
+                weight, bounce, get_random_float(rng)))
+            break;
+        weight /= sample_russian_roulette_pdf(
+            get_russian_roulette_albedo(point.bsdfs), weight, bounce);
+
+        // exit if needed
+        if (weight == zero3f) break;
+
+        // continue path
+        auto [brdf_cosine, incoming, incoming_pdf] = sample_next_direction(
+            scene, lights, bvh, point, outgoing, rng, true);
+
+        // exit if no hit
+        if (incoming == zero3f || incoming_pdf == 0 || brdf_cosine == zero3f)
+            break;
+        weight *= brdf_cosine / incoming_pdf;
+        if (weight == zero3f) break;
+
+        // transmission
+        if (!point.vsdfs.empty() &&
+            dot(incoming, point.geometric_normal) > 0 !=
+                dot(outgoing, point.geometric_normal) > 0) {
+            // auto [pos, dir, rad, w] = integrate_volume(scene, lights,
+            // bvh,
+            //     point.vsdfs, point.position, outgoing, incoming, rng);
+
+            // radiance += weight * rad;
+            // weight *= w;
+
+            // if (weight == zero3f) break;
+            // point.position = pos;
+            // incoming       = dir;
+
+            if (volume_stack.empty())
+                volume_stack.push_back(point.vsdfs[0]);
+            else
+                volume_stack.pop_back();
+        }
+        // setup next iteration
+        ray = make_ray(point.position, incoming);
     }
 
     return {radiance, 1.0f};
