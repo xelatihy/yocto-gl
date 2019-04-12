@@ -1659,6 +1659,14 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto intersection       = bvh_intersection{};
         auto hit                = trace_ray(scene, bvh, ray, intersection);
         auto volume_interaction = !hit && !volume_stack.empty();
+        auto distance           = hit ? intersection.distance : ray.tmax;
+
+        if (!volume_stack.empty()) {
+            auto vsdf = volume_stack.back();
+            weight /= sample_volume_distance_pdf(
+                vsdf.density[spectrum], distance);
+            weight *= evaluate_volume_transmission(vsdf.density, distance);
+        }
 
         if (!volume_interaction) {
             if (!hit) {
@@ -1721,8 +1729,53 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             }
             // setup next iteration
             ray = make_ray(point.position, incoming);
-        } else
-            return {{0, 0, 0}, 1};
+        } else {
+            auto vsdf     = volume_stack.back();
+            auto position = ray.o + ray.d * distance;
+
+            if (get_random_float(rng) < min(vsdf.albedo[spectrum], 0.95f)) {
+                // scattering
+                weight /= min(vsdf.albedo[spectrum], 0.95f);
+
+                auto outgoing = -ray.d;
+                // direction = sample_next_direction_volume(scene, lights, bvh,
+                //     position, volume_albedo, volume_phaseg, outgoing, 0.5f,
+                //     rng, weight);
+
+                auto incoming     = zero3f;
+                auto incoming_pdf = 0.0f;
+
+                if (get_random_float(rng) < 0.5f) {
+                    incoming = sample_lights_direction(scene, lights, bvh,
+                        position, get_random_float(rng), get_random_float(rng),
+                        get_random_vec2f(rng));
+                } else {
+                    incoming = sample_phase_function(
+                        vsdf.phaseg, get_random_vec2f(rng));
+                    incoming = make_basis_fromz(-outgoing) * incoming;
+                }
+                auto cos_theta      = dot(outgoing, incoming);
+                auto phase_function = evaluate_phase_function(
+                    cos_theta, vsdf.phaseg);
+                incoming_pdf = 0.5f * phase_function +
+                               0.5f * sample_lights_direction_pdf(scene, lights,
+                                          bvh, position, incoming);
+
+                if (incoming == zero3f || incoming_pdf == 0 ||
+                    phase_function == 0.0f)
+                    break;
+                else
+                    weight *= vsdf.albedo * phase_function / incoming_pdf;
+
+                ray = make_ray(position, incoming);
+
+            } else {
+                // absorption
+                radiance += weight * vsdf.emission;
+                weight = zero3f;
+                break;
+            }
+        }
 
         if (!volume_stack.empty())
             ray.tmax = sample_volume_distance(
