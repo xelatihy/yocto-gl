@@ -1651,6 +1651,7 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto weight       = vec3f{1, 1, 1};
     auto ray          = make_ray(position_, direction_);
     auto volume_stack = vector<vsdf>{};
+    auto spectrum     = get_random_int(rng, 3);
 
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
@@ -1702,20 +1703,30 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             if (!point.vsdfs.empty() &&
                 dot(incoming, point.geometric_normal) > 0 !=
                     dot(outgoing, point.geometric_normal) > 0) {
-                auto [pos, dir, rad, w] = integrate_volume(scene, lights, bvh,
-                    point.vsdfs, point.position, outgoing, incoming, rng);
+                // auto [pos, dir, rad, w] = integrate_volume(scene, lights,
+                // bvh,
+                //     point.vsdfs, point.position, outgoing, incoming, rng);
 
-                radiance += weight * rad;
-                weight *= w;
+                // radiance += weight * rad;
+                // weight *= w;
 
-                if (weight == zero3f) break;
-                point.position = pos;
-                incoming       = dir;
+                // if (weight == zero3f) break;
+                // point.position = pos;
+                // incoming       = dir;
+
+                if (volume_stack.empty())
+                    volume_stack.push_back(point.vsdfs[0]);
+                else
+                    volume_stack.pop_back();
             }
-
             // setup next iteration
             ray = make_ray(point.position, incoming);
-        }
+        } else
+            return {{0, 0, 0}, 1};
+
+        if (!volume_stack.empty())
+            ray.tmax = sample_volume_distance(
+                volume_stack.back().density[spectrum], get_random_float(rng));
     }
 
     return {radiance, 1.0f};
