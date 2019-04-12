@@ -239,34 +239,48 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     yocto_scene& scene) {
     auto edited_value = value;
     auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "frame.x", edited_value.frame.x, -1, 1))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "frame.y", edited_value.frame.y, -1, 1))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "frame.z", edited_value.frame.z, -1, 1))
-        edited = false;
+    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "frame.o", edited_value.frame.o, -10, 10))
-        edited = false;
-    if (draw_checkbox_opengl_widget(win, "ortho", edited_value.orthographic))
-        edited = false;
+            win, "frame.x", edited_value.frame.x, -1, 1)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "film width", edited_value.film_width, 0.01f, 1))
-        edited = false;
+            win, "frame.y", edited_value.frame.y, -1, 1)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "film height", edited_value.film_height, 0.01f, 1))
-        edited = false;
+            win, "frame.z", edited_value.frame.z, -1, 1)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "focal length", edited_value.focal_length, 0.01f, 1))
-        edited = false;
+            win, "frame.o", edited_value.frame.o, -10, 10)) {
+        edited = true;
+    }
+    if (draw_checkbox_opengl_widget(win, "ortho", edited_value.orthographic)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "focus distance", edited_value.focus_distance, 0.01f, 1000))
-        edited = false;
+            win, "film width", edited_value.film_width, 0.01f, 1)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "lens aperture", edited_value.lens_aperture, 0, 5))
-        edited = false;
+            win, "film height", edited_value.film_height, 0.01f, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "focal length", edited_value.focal_length, 0.01f, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "focus distance", edited_value.focus_distance, 0.01f, 1000)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "lens aperture", edited_value.lens_aperture, 0, 5)) {
+        edited = true;
+    }
     auto from = edited_value.frame.o,
          to   = edited_value.frame.o -
               edited_value.focus_distance * edited_value.frame.z;
@@ -285,8 +299,9 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     auto edited_value = yocto_texture{};
     edited_value.uri  = value.uri;
     auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri))
-        edited = false;
+    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
+        edited = true;
+    }
     draw_label_opengl_widget(win, "hdr_image", "%d x %d",
         value.hdr_image.size().x, value.hdr_image.size().y);
     draw_label_opengl_widget(win, "ldr_image", "%d x %d",
@@ -308,8 +323,9 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     auto edited_value = yocto_voltexture{};
     edited_value.uri  = value.uri;
     auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri))
-        edited = false;
+    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
+        edited = true;
+    }
     draw_label_opengl_widget(win, "voxel_data", "%d x %d x %d",
         value.volume_data.size().x, value.volume_data.size().y,
         value.volume_data.size().z);
@@ -328,61 +344,81 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     yocto_scene& scene) {
     auto edited_value = value;
     auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri))
-        edited = false;
+    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
+        edited = true;
+    }
     if (draw_hdr_coloredit_opengl_widget(
-            win, "emission", edited_value.emission))
-        edited = false;
-    if (draw_coloredit_opengl_widget(win, "diffuse", edited_value.diffuse))
-        edited = false;
-    if (draw_coloredit_opengl_widget(win, "specular", edited_value.specular))
-        edited = false;
+            win, "emission", edited_value.emission)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(win, "diffuse", edited_value.diffuse)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(win, "specular", edited_value.specular)) {
+        edited = true;
+    }
     if (draw_coloredit_opengl_widget(
-            win, "transmission", edited_value.transmission))
-        edited = false;
+            win, "transmission", edited_value.transmission)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "roughness", edited_value.roughness, 0, 1))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "opacity", edited_value.opacity, 0, 1))
-        edited = false;
-    if (draw_checkbox_opengl_widget(win, "fresnel", edited_value.fresnel))
-        edited = false;
+            win, "roughness", edited_value.roughness, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(win, "opacity", edited_value.opacity, 0, 1)) {
+        edited = true;
+    }
+    if (draw_checkbox_opengl_widget(win, "fresnel", edited_value.fresnel)) {
+        edited = true;
+    }
     continue_opengl_widget_line(win);
-    if (draw_checkbox_opengl_widget(win, "refract", edited_value.refract))
-        edited = false;
+    if (draw_checkbox_opengl_widget(win, "refract", edited_value.refract)) {
+        edited = true;
+    }
     if (draw_coloredit_opengl_widget(
-            win, "volume_density", edited_value.volume_density))
-        edited = false;  // 0, 10
+            win, "volume_density", edited_value.volume_density)) {
+        edited = true;
+    }  // 0, 10
     if (draw_coloredit_opengl_widget(
-            win, "volume_albedo", edited_value.volume_albedo))
-        edited = false;  // 0, 1
+            win, "volume_albedo", edited_value.volume_albedo)) {
+        edited = true;
+    }  // 0, 1
     if (draw_slider_opengl_widget(
-            win, "volume_phaseg", edited_value.volume_phaseg, -1, 1))
-        edited = false;
+            win, "volume_phaseg", edited_value.volume_phaseg, -1, 1)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(win, "emission_texture",
-            edited_value.emission_texture, scene.textures, true))
-        edited = false;
+            edited_value.emission_texture, scene.textures, true)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(win, "diffuse_texture",
-            edited_value.diffuse_texture, scene.textures, true))
-        edited = false;
+            edited_value.diffuse_texture, scene.textures, true)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(win, "specular_texture",
-            edited_value.specular_texture, scene.textures, true))
-        edited = false;
+            edited_value.specular_texture, scene.textures, true)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(win, "transmission_texture",
-            edited_value.transmission_texture, scene.textures, true))
-        edited = false;
+            edited_value.transmission_texture, scene.textures, true)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(win, "roughness_texture",
-            edited_value.roughness_texture, scene.textures, true))
-        edited = false;
+            edited_value.roughness_texture, scene.textures, true)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(win, "normal_texture",
-            edited_value.normal_texture, scene.textures, true))
-        edited = false;
+            edited_value.normal_texture, scene.textures, true)) {
+        edited = true;
+    }
     if (draw_checkbox_opengl_widget(
-            win, "base metallic", edited_value.base_metallic))
-        edited = false;
+            win, "base metallic", edited_value.base_metallic)) {
+        edited = true;
+    }
     if (draw_checkbox_opengl_widget(
-            win, "glTF textures", edited_value.gltf_textures))
-        edited = false;
+            win, "glTF textures", edited_value.gltf_textures)) {
+        edited = true;
+    }
     if (edited) {
         edit = {sel.type, sel.index, edited_value, false};
     }
@@ -395,8 +431,9 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     auto edited_value = yocto_shape{};
     edited_value.uri  = value.uri;
     auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri))
-        edited = false;
+    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
+        edited = true;
+    }
     draw_label_opengl_widget(win, "points", "%ld", value.points.size());
     draw_label_opengl_widget(win, "lines", "%ld", value.lines.size());
     draw_label_opengl_widget(win, "triangles", "%ld", value.triangles.size());
@@ -450,29 +487,37 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     edited_value.displacement_texture = value.displacement_texture;
     edited_value.displacement_scale   = value.displacement_scale;
     auto edited                       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri))
-        edited = false;
+    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "subdivision_level", edited_value.subdivision_level, 0, 10))
-        edited = false;
+            win, "subdivision_level", edited_value.subdivision_level, 0, 10)) {
+        edited = true;
+    }
     if (draw_checkbox_opengl_widget(
-            win, "catmull_clark", edited_value.catmull_clark))
-        edited = false;
+            win, "catmull_clark", edited_value.catmull_clark)) {
+        edited = true;
+    }
     if (draw_checkbox_opengl_widget(
-            win, "compute_normals", edited_value.compute_normals))
-        edited = false;
+            win, "compute_normals", edited_value.compute_normals)) {
+        edited = true;
+    }
     if (draw_checkbox_opengl_widget(
-            win, "preserve_facevarying", edited_value.preserve_facevarying))
-        edited = false;
+            win, "preserve_facevarying", edited_value.preserve_facevarying)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(win, "tesselated_shape",
-            edited_value.tesselated_shape, scene.textures, true))
-        edited = false;
+            edited_value.tesselated_shape, scene.textures, true)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(win, "displacement_texture",
-            edited_value.displacement_texture, scene.textures, true))
-        edited = false;
+            edited_value.displacement_texture, scene.textures, true)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "displacement_scale", edited_value.displacement_scale, 0, 1))
-        edited = false;
+            win, "displacement_scale", edited_value.displacement_scale, 0, 1)) {
+        edited = true;
+    }
     draw_label_opengl_widget(win, "points", "%ld", value.points.size());
     draw_label_opengl_widget(win, "lines", "%ld", value.lines.size());
     draw_label_opengl_widget(win, "triangles", "%ld", value.triangles.size());
@@ -515,23 +560,33 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     yocto_scene& scene) {
     auto edited_value = value;
     auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "frame[0]", edited_value.frame.x, -1, 1))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "frame[1]", edited_value.frame.y, -1, 1))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "frame[2]", edited_value.frame.z, -1, 1))
-        edited = false;
+    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "frame.o", edited_value.frame.o, -10, 10))
-        edited = false;
+            win, "frame[0]", edited_value.frame.x, -1, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "frame[1]", edited_value.frame.y, -1, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "frame[2]", edited_value.frame.z, -1, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "frame.o", edited_value.frame.o, -10, 10)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(
-            win, "shape", edited_value.shape, scene.shapes, true))
-        edited = false;
+            win, "shape", edited_value.shape, scene.shapes, true)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(
-            win, "material", edited_value.material, scene.materials, true))
-        edited = false;
+            win, "material", edited_value.material, scene.materials, true)) {
+        edited = true;
+    }
     if (edited) {
         edit = {sel.type, sel.index, edited_value, false};
     }
@@ -543,22 +598,32 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     yocto_scene& scene) {
     auto edited_value = value;
     auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "frame[0]", edited_value.frame.x, -1, 1))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "frame[1]", edited_value.frame.y, -1, 1))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "frame[2]", edited_value.frame.z, -1, 1))
-        edited = false;
+    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "frame.o", edited_value.frame.o, -10, 10))
-        edited = false;
-    if (draw_hdr_coloredit_opengl_widget(win, "ke", edited_value.emission))
-        edited = false;
+            win, "frame[0]", edited_value.frame.x, -1, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "frame[1]", edited_value.frame.y, -1, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "frame[2]", edited_value.frame.z, -1, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "frame.o", edited_value.frame.o, -10, 10)) {
+        edited = true;
+    }
+    if (draw_hdr_coloredit_opengl_widget(win, "ke", edited_value.emission)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(win, "ke texture",
-            edited_value.emission_texture, scene.textures, true))
-        edited = false;
+            edited_value.emission_texture, scene.textures, true)) {
+        edited = true;
+    }
     if (edited) {
         edit = {sel.type, sel.index, edited_value, false};
     }
@@ -570,37 +635,52 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     yocto_scene& scene) {
     auto edited_value = value;
     auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri))
-        edited = false;
+    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(
-            win, "parent", edited_value.parent, scene.nodes, true))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "local[0]", edited_value.local.x, -1, 1))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "local[1]", edited_value.local.y, -1, 1))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "local[2]", edited_value.local.z, -1, 1))
-        edited = false;
+            win, "parent", edited_value.parent, scene.nodes, true)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "local.o", edited_value.local.o, -10, 10))
-        edited = false;
+            win, "local[0]", edited_value.local.x, -1, 1)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "translation", edited_value.translation, -10, 10))
-        edited = false;
+            win, "local[1]", edited_value.local.y, -1, 1)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
-            win, "rotation", edited_value.rotation, -1, 1))
-        edited = false;
-    if (draw_slider_opengl_widget(win, "scale", edited_value.scale, 0, 10))
-        edited = false;
+            win, "local[2]", edited_value.local.z, -1, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "local.o", edited_value.local.o, -10, 10)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "translation", edited_value.translation, -10, 10)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "rotation", edited_value.rotation, -1, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(win, "scale", edited_value.scale, 0, 10)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(
-            win, "camera", edited_value.camera, scene.cameras, true))
-        edited = false;
+            win, "camera", edited_value.camera, scene.cameras, true)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(
-            win, "instance", edited_value.instance, scene.instances, true))
-        edited = false;
+            win, "instance", edited_value.instance, scene.instances, true)) {
+        edited = true;
+    }
     if (draw_combobox_opengl_widget(win, "environment",
-            edited_value.environment, scene.environments, true))
-        edited = false;
+            edited_value.environment, scene.environments, true)) {
+        edited = true;
+    }
     if (edited) {
         edit = {sel.type, sel.index, edited_value, false};
     }
@@ -612,13 +692,16 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     yocto_scene& scene) {
     auto edited_value = value;
     auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri))
-        edited = false;
-    if (draw_textinput_opengl_widget(win, "path", edited_value.filename))
-        edited = false;
+    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
+        edited = true;
+    }
+    if (draw_textinput_opengl_widget(win, "path", edited_value.filename)) {
+        edited = true;
+    }
     if (draw_textinput_opengl_widget(
-            win, "group", edited_value.animation_group))
-        edited = false;
+            win, "group", edited_value.animation_group)) {
+        edited = true;
+    }
     // if(draw_combobox_opengl_widget(win, "type", &value.type,
     // animation_type_names())) edited = false;
     draw_label_opengl_widget(

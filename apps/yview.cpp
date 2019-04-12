@@ -951,12 +951,14 @@ void update(app_state& app) {
             throw runtime_error("unsupported type "s + type.name());
         }
     }
+    /*
     for (auto texture_id : updated_textures) {
         throw runtime_error("texture update not supported\n");
     }
     for (auto shape_id : updated_shapes) {
         throw runtime_error("shape update not supported\n");
     }
+    */
     if (updated_hierarchy || app.time != last_time) {
         update_transforms(app.scene, app.time, app.anim_group);
         last_time = app.time;

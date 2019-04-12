@@ -344,6 +344,7 @@ bool update(app_state& app) {
 
     // update data
     auto updated_instances = vector<int>{}, updated_shapes = vector<int>{};
+    auto updated_lights = false;
     for (auto& [type, index, data, reload] : app.update_list) {
         if (type == typeid(yocto_camera)) {
             app.scene.cameras[index] = any_cast<yocto_camera>(data);
@@ -387,10 +388,16 @@ bool update(app_state& app) {
             tesselate_subdiv(app.scene, app.scene.subdivs[index]);
             updated_shapes.push_back(app.scene.subdivs[index].tesselated_shape);
         } else if (type == typeid(yocto_material)) {
+            auto old_emission = app.scene.materials[index].emission;
             app.scene.materials[index] = any_cast<yocto_material>(data);
+            if(old_emission != app.scene.materials[index].emission) {updated_lights = true;}
         } else if (type == typeid(yocto_instance)) {
             app.scene.instances[index] = any_cast<yocto_instance>(data);
             updated_instances.push_back(index);
+        } else if (type == typeid(yocto_environment)) {
+            auto old_emission = app.scene.materials[index].emission;
+            app.scene.environments[index] = any_cast<yocto_environment>(data);
+            if(old_emission != app.scene.materials[index].emission) {updated_lights = true;}
         } else {
             throw runtime_error("unsupported type "s + type.name());
         }
@@ -400,8 +407,12 @@ bool update(app_state& app) {
         refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes,
             app.bvh_options);
     }
-
     // update lights
+    if(updated_lights) {
+        init_trace_lights(app.lights, app.scene);
+    }
+
+    // clear
     app.update_list.clear();
 
     // start rendering
