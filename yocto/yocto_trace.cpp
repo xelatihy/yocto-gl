@@ -1644,23 +1644,24 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Recursive path tracing.
 vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    const trace_lights& lights, const vec3f& position_, const vec3f& direction_,
     rng_state& rng, const trace_image_options& options) {
     // initialize
-    auto radiance = zero3f;
-    auto weight   = vec3f{1, 1, 1};
-    auto ray      = make_ray(position, direction);
-    auto hit      = false;
+    auto radiance     = zero3f;
+    auto weight       = vec3f{1, 1, 1};
+    auto ray          = make_ray(position_, direction_);
+    auto volume_stack = vector<vsdf>{};
 
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(scene, bvh, ray, intersection)) {
+        auto hit          = trace_ray(scene, bvh, ray, intersection);
+
+        if (!hit) {
             radiance += weight * evaluate_environment_emission(scene, ray.d);
             break;
         }
-        hit = true;
 
         // prepare shading point
         auto outgoing = -ray.d;
@@ -1711,7 +1712,7 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         ray = make_ray(point.position, incoming);
     }
 
-    return {radiance, hit ? 1.0f : 0.0f};
+    return {radiance, 1.0f};
 }
 
 // Recursive path tracing.
