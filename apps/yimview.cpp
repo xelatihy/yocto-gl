@@ -104,9 +104,10 @@ void update_display_async(app_image& img) {
     make_image_regions(regions, img.img.size());
     parallel_foreach(
         regions,
-        [&img](const image_region& region) {
-            tonemap_image_region(img.display, region, img.img, img.exposure,
-                img.filmic, img.srgb);
+        [&img, exposure = img.exposure, filmic = img.filmic, srgb = img.srgb](
+            const image_region& region) {
+            tonemap_image_region(
+                img.display, region, img.img, exposure, filmic, srgb);
             img.display_queue.push(region);
         },
         &img.display_stop);
@@ -263,6 +264,18 @@ void draw(const opengl_window& win) {
     auto  fb_size  = get_opengl_framebuffer_size(win);
     set_opengl_viewport(fb_size);
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+    if (img.load_done) {
+        if (!img.gl_txt) {
+            init_opengl_texture(
+                img.gl_txt, img.img.size(), false, false, false, false);
+        } else {
+            auto region = image_region{};
+            while (img.display_queue.try_pop(region)) {
+                update_opengl_texture_region(
+                    img.gl_txt, img.display, region, false);
+            }
+        }
+    }
     if (img.gl_txt) {
         update_image_view(img.image_center, img.image_scale, img.display.size(),
             win_size, img.zoom_to_fit);
@@ -277,21 +290,7 @@ void draw(const opengl_window& win) {
     swap_opengl_buffers(win);
 }
 
-void update(app_state& app) {
-    for (auto& img : app.imgs) {
-        if (!img.load_done) continue;
-        if (!img.gl_txt) {
-            init_opengl_texture(
-                img.gl_txt, img.display.size(), false, false, false, false);
-        } else {
-            auto region = image_region{};
-            while (img.display_queue.try_pop(region)) {
-                update_opengl_texture_region(
-                    img.gl_txt, img.display, region, false);
-            }
-        }
-    }
-}
+void update(app_state& app) {}
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);

@@ -178,32 +178,34 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     }
 }
 
+void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv) {
+    auto& shape               = scene.shapes[subdiv.tesselated_shape];
+    shape.positions           = subdiv.positions;
+    shape.normals             = subdiv.normals;
+    shape.texturecoords       = subdiv.texturecoords;
+    shape.colors              = subdiv.colors;
+    shape.radius              = subdiv.radius;
+    shape.points              = subdiv.points;
+    shape.lines               = subdiv.lines;
+    shape.triangles           = subdiv.triangles;
+    shape.quads               = subdiv.quads;
+    shape.quads_positions     = subdiv.quads_positions;
+    shape.quads_normals       = subdiv.quads_normals;
+    shape.quads_texturecoords = subdiv.quads_texturecoords;
+    shape.lines               = subdiv.lines;
+    if (subdiv.subdivision_level) {
+        subdivide_shape(shape, subdiv.subdivision_level, subdiv.catmull_clark,
+            subdiv.compute_normals);
+    }
+    if (subdiv.displacement_texture >= 0) {
+        displace_shape(shape, scene.textures[subdiv.displacement_texture],
+            subdiv.displacement_scale, subdiv.compute_normals);
+    }
+}
+
 // Updates tesselation.
 void tesselate_subdivs(yocto_scene& scene) {
-    for (auto& subdiv : scene.subdivs) {
-        auto& shape               = scene.shapes[subdiv.tesselated_shape];
-        shape.positions           = subdiv.positions;
-        shape.normals             = subdiv.normals;
-        shape.texturecoords       = subdiv.texturecoords;
-        shape.colors              = subdiv.colors;
-        shape.radius              = subdiv.radius;
-        shape.points              = subdiv.points;
-        shape.lines               = subdiv.lines;
-        shape.triangles           = subdiv.triangles;
-        shape.quads               = subdiv.quads;
-        shape.quads_positions     = subdiv.quads_positions;
-        shape.quads_normals       = subdiv.quads_normals;
-        shape.quads_texturecoords = subdiv.quads_texturecoords;
-        shape.lines               = subdiv.lines;
-        if (subdiv.subdivision_level) {
-            subdivide_shape(shape, subdiv.subdivision_level,
-                subdiv.catmull_clark, subdiv.compute_normals);
-        }
-        if (subdiv.displacement_texture >= 0) {
-            displace_shape(shape, scene.textures[subdiv.displacement_texture],
-                subdiv.displacement_scale, subdiv.compute_normals);
-        }
-    }
+    for (auto& subdiv : scene.subdivs) tesselate_subdiv(scene, subdiv);
 }
 
 // Update animation transforms
@@ -887,7 +889,7 @@ vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
     if (material.normal_texture < 0)
         return evaluate_instance_normal(
             scene, instance, element_id, element_uv);
-    auto normal    = evaluate_shape_perturbed_normal(
+    auto normal = evaluate_shape_perturbed_normal(
         scene, scene.shapes[instance.shape], element_id, element_uv, normalmap);
     return non_rigid_frame
                ? transform_normal((const affine3f&)instance.frame, normal)
@@ -1237,7 +1239,7 @@ ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
 // Evaluates the microfacet_brdf at a location.
 material_point evaluate_material_point(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord) {
-    auto point = material_point{};            
+    auto point     = material_point{};
     point.emission = material.emission;
     if (material.emission_texture >= 0) {
         auto& emission_texture = scene.textures[material.emission_texture];
@@ -1254,27 +1256,33 @@ material_point evaluate_material_point(const yocto_scene& scene,
     point.specular = material.specular;
     if (material.specular_texture >= 0) {
         auto& specular_texture = scene.textures[material.specular_texture];
-        if(!material.base_metallic) {
-            point.specular *= evaluate_texture(specular_texture, texturecoord).xyz;
+        if (!material.base_metallic) {
+            point.specular *=
+                evaluate_texture(specular_texture, texturecoord).xyz;
         } else {
-            point.specular *= evaluate_texture(specular_texture, texturecoord).z;
+            point.specular *=
+                evaluate_texture(specular_texture, texturecoord).z;
         }
     }
     point.roughness = material.roughness;
     if (material.roughness_texture >= 0) {
-        if(!material.base_metallic) {
-            auto& roughness_texture = scene.textures[material.roughness_texture];
-            point.roughness *= evaluate_texture(roughness_texture, texturecoord).x;
-        } else if(!material.gltf_textures) {
+        if (!material.base_metallic) {
             auto& roughness_texture =
                 scene.textures[material.roughness_texture];
-            point.roughness *= evaluate_texture(roughness_texture, texturecoord).x;
+            point.roughness *=
+                evaluate_texture(roughness_texture, texturecoord).x;
+        } else if (!material.gltf_textures) {
+            auto& roughness_texture =
+                scene.textures[material.roughness_texture];
+            point.roughness *=
+                evaluate_texture(roughness_texture, texturecoord).x;
         } else {
             auto glossiness = 1 - point.roughness;
             if (material.roughness_texture >= 0) {
                 auto& roughness_texture =
                     scene.textures[material.roughness_texture];
-                glossiness *= evaluate_texture(roughness_texture, texturecoord).w;
+                glossiness *=
+                    evaluate_texture(roughness_texture, texturecoord).w;
             }
             point.roughness = 1 - glossiness;
         }
@@ -1286,16 +1294,16 @@ material_point evaluate_material_point(const yocto_scene& scene,
         point.transmission *=
             evaluate_texture(transmission_texture, texturecoord).xyz;
     }
-    point.refract = material.refract;
+    point.refract       = material.refract;
     point.base_metallic = material.base_metallic;
-    point.normalmap = vec3f{0,0,1};
+    point.normalmap     = vec3f{0, 0, 1};
     if (material.normal_texture >= 0) {
         auto& normal_texture = scene.textures[material.normal_texture];
         point.normalmap =
             evaluate_texture(normal_texture, texturecoord, true).xyz;
-        point.normalmap   = point.normalmap * 2 - vec3f{1, 1, 1};
+        point.normalmap = point.normalmap * 2 - vec3f{1, 1, 1};
         // flip vertical axis to align green with image up
-        point.normalmap.y = -point.normalmap.y;  
+        point.normalmap.y = -point.normalmap.y;
     }
     point.volume_emission = material.volume_emission;
     point.volume_albedo   = material.volume_albedo;

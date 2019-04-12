@@ -357,6 +357,7 @@ void subdivide_shape(yocto_shape& shape, int subdivision_level,
     bool catmull_clark, bool compute_normals);
 void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     float scale, bool compute_normals);
+void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv);
 void tesselate_subdivs(yocto_scene& scene);
 
 // Add missing names, normals, tangents and hierarchy.
@@ -450,15 +451,15 @@ ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    vec3f emission     = zero3f;
-    vec3f diffuse      = zero3f;
-    vec3f specular     = zero3f;
-    vec3f transmission = zero3f;
-    float roughness    = 1;
-    float opacity      = 1;
-    bool  base_metallic = false;
-    bool  refract      = false;
-    vec3f normalmap    = {0,0,1};
+    vec3f emission        = zero3f;
+    vec3f diffuse         = zero3f;
+    vec3f specular        = zero3f;
+    vec3f transmission    = zero3f;
+    float roughness       = 1;
+    float opacity         = 1;
+    bool  base_metallic   = false;
+    bool  refract         = false;
+    vec3f normalmap       = {0, 0, 1};
     vec3f volume_emission = {0, 0, 0};
     vec3f volume_albedo   = {0, 0, 0};
     vec3f volume_density  = {0, 0, 0};

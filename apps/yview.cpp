@@ -137,14 +137,14 @@ struct app_state {
     drawgl_lights lights = {};
 
     // view image
-    bool                          widgets_open   = false;
-    bool                          navigation_fps = false;
-    pair<type_index, int>         selection      = {typeid(void), -1};
-    vector<pair<type_index, int>> update_list;
-    float                         time       = 0;
-    string                        anim_group = "";
-    vec2f                         time_range = zero2f;
-    bool                          animate    = false;
+    bool             widgets_open   = false;
+    bool             navigation_fps = false;
+    app_selection    selection      = {typeid(void), -1};
+    vector<app_edit> update_list;
+    float            time       = 0;
+    string           anim_group = "";
+    vec2f            time_range = zero2f;
+    bool             animate    = false;
 
     // app status
     bool   load_done = false, load_running = false;
@@ -616,7 +616,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
 // Display a scene
 void draw_glscene(drawgl_state& state, const yocto_scene& scene,
-    const vec2i& viewport_size, const pair<type_index, int>& highlighted,
+    const vec2i& viewport_size, const app_selection& highlighted,
     const drawgl_options& options) {
     auto& camera      = scene.cameras.at(options.camera_id);
     auto  camera_view = mat4f(inverse(camera.frame));
@@ -687,9 +687,8 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         auto& instance = scene.instances[instance_id];
         // auto& shape     = scene.shapes[instance.shape];
         // auto& material  = scene.materials[shape.material];
-        auto highlight = highlighted ==
-                         pair<type_index, int>{
-                             typeid(yocto_instance), instance_id};
+        auto highlight = highlighted.type == typeid(yocto_instance) &&
+                         highlighted.index == instance_id;
         draw_glinstance(state, scene, instance, highlight, options);
     }
 
@@ -893,20 +892,76 @@ void update(app_state& app) {
     if (!app.state.program) init_drawgl_state(app.state, app.scene);
 
     static auto last_time = 0.0f;
-    for (auto& [type, index] : app.update_list) {
-        if (type == typeid(yocto_texture)) {
-            // TODO: update texture
-            throw runtime_error("texture update not supported\n");
+    auto updated_textures = vector<int>{}, updated_shapes = vector<int>{};
+    bool updated_hierarchy = false;
+    for (auto& [type, index, data, reload] : app.update_list) {
+        if (type == typeid(yocto_camera)) {
+            app.scene.cameras[index] = any_cast<yocto_camera>(data);
+        } else if (type == typeid(yocto_texture)) {
+            app.scene.textures[index] = any_cast<yocto_texture>(data);
+            if (reload) {
+                auto& texture = app.scene.textures[index];
+                load_image(get_dirname(app.filename) + texture.uri,
+                    texture.hdr_image, texture.ldr_image);
+            }
+            updated_textures.push_back(index);
+        } else if (type == typeid(yocto_voltexture)) {
+            app.scene.voltextures[index] = any_cast<yocto_voltexture>(data);
+            if (reload) {
+                auto& texture = app.scene.voltextures[index];
+                load_volume(get_dirname(app.filename) + texture.uri,
+                    texture.volume_data);
+            }
+        } else if (type == typeid(yocto_shape)) {
+            app.scene.shapes[index] = any_cast<yocto_shape>(data);
+            if (reload) {
+                auto& shape = app.scene.shapes[index];
+                load_shape(get_dirname(app.filename) + shape.uri, shape.points,
+                    shape.lines, shape.triangles, shape.quads,
+                    shape.quads_positions, shape.quads_normals,
+                    shape.quads_texturecoords, shape.positions, shape.normals,
+                    shape.texturecoords, shape.colors, shape.radius, false);
+            }
+            updated_shapes.push_back(index);
+        } else if (type == typeid(yocto_subdiv)) {
+            // TODO: this needs more fixing?
+            app.scene.subdivs[index] = any_cast<yocto_subdiv>(data);
+            if (reload) {
+                auto& subdiv = app.scene.subdivs[index];
+                load_shape(get_dirname(app.filename) + subdiv.uri,
+                    subdiv.points, subdiv.lines, subdiv.triangles, subdiv.quads,
+                    subdiv.quads_positions, subdiv.quads_normals,
+                    subdiv.quads_texturecoords, subdiv.positions,
+                    subdiv.normals, subdiv.texturecoords, subdiv.colors,
+                    subdiv.radius, subdiv.preserve_facevarying);
+            }
+            tesselate_subdiv(app.scene, app.scene.subdivs[index]);
+            updated_shapes.push_back(app.scene.subdivs[index].tesselated_shape);
+        } else if (type == typeid(yocto_material)) {
+            app.scene.materials[index] = any_cast<yocto_material>(data);
+        } else if (type == typeid(yocto_instance)) {
+            app.scene.instances[index] = any_cast<yocto_instance>(data);
+        } else if (type == typeid(yocto_animation)) {
+            app.scene.animations[index] = any_cast<yocto_animation>(data);
+            updated_hierarchy           = true;
+        } else if (type == typeid(yocto_scene_node)) {
+            app.scene.nodes[index] = any_cast<yocto_scene_node>(data);
+            updated_hierarchy      = true;
+        } else {
+            throw runtime_error("unsupported type "s + type.name());
         }
-        if (type == typeid(yocto_shape)) {
-            // TODO: update shape
-            throw runtime_error("shape update not supported\n");
-        }
-        if (type == typeid(yocto_scene_node) ||
-            type == typeid(yocto_animation) || app.time != last_time) {
-            update_transforms(app.scene, app.time, app.anim_group);
-            last_time = app.time;
-        }
+    }
+    /*
+    for (auto texture_id : updated_textures) {
+        throw runtime_error("texture update not supported\n");
+    }
+    for (auto shape_id : updated_shapes) {
+        throw runtime_error("shape update not supported\n");
+    }
+    */
+    if (updated_hierarchy || app.time != last_time) {
+        update_transforms(app.scene, app.time, app.anim_group);
+        last_time = app.time;
     }
     app.update_list.clear();
 }

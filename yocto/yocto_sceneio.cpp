@@ -575,15 +575,15 @@ struct load_yaml_scene_callbacks : yaml_callbacks {
     load_yaml_scene_callbacks(
         yocto_scene& scene, const load_scene_options& options)
         : scene{scene}, options{options} {
-            auto reserve_size = 1024*32;
-            tmap.reserve(reserve_size);
-            mmap.reserve(reserve_size);
-            smap.reserve(reserve_size);
-            scene.textures.reserve(reserve_size);
-            scene.materials.reserve(reserve_size);
-            scene.shapes.reserve(reserve_size);
-            scene.instances.reserve(reserve_size);
-        }
+        auto reserve_size = 1024 * 32;
+        tmap.reserve(reserve_size);
+        mmap.reserve(reserve_size);
+        smap.reserve(reserve_size);
+        scene.textures.reserve(reserve_size);
+        scene.materials.reserve(reserve_size);
+        scene.shapes.reserve(reserve_size);
+        scene.instances.reserve(reserve_size);
+    }
 
     void get_yaml_ref(
         string_view yml, int& value, unordered_map<string, int>& refs) {
