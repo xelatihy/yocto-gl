@@ -396,9 +396,11 @@ bool update(app_state& app) {
         }
     }
     // update bvh
-    if (!updated_instances.empty() || !updated_shapes.empty())
+    if (!updated_instances.empty() || !updated_shapes.empty()) {
         refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes,
             app.bvh_options);
+    }
+
     // update lights
     app.update_list.clear();
 
@@ -442,7 +444,7 @@ void run_ui(app_state& app) {
         // handle mouse and keyboard for navigation
         if (app.load_done && (mouse_left || mouse_right) && !alt_down &&
             !widgets_active) {
-            auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
+            auto camera = app.scene.cameras.at(app.trace_options.camera_id);
             auto  dolly  = 0.0f;
             auto  pan    = zero2f;
             auto  rotate = zero2f;
@@ -455,7 +457,7 @@ void run_ui(app_state& app) {
             update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
             app.update_list.push_back(
-                {typeid(yocto_camera), app.trace_options.camera_id});
+                {typeid(yocto_camera), app.trace_options.camera_id, camera, false});
         }
 
         // selection
