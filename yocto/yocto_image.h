@@ -95,6 +95,121 @@
 #include "yocto_utils.h"
 
 // -----------------------------------------------------------------------------
+// COLOR CONVERSION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+inline byte  float_to_byte(float a);
+inline float byte_to_float(byte a);
+
+// Element-wise float to byte conversion.
+template <int N>
+inline vec<byte, N> float_to_byte(const vec<float, N>& a);
+template <int N>
+inline vec<float, N> byte_to_float(const vec<byte, N>& a);
+
+// Default alpha
+template <typename T>
+constexpr T _default_alpha();
+template <typename T>
+constexpr T default_alpha = _default_alpha<T>();
+
+// Apply an operator to a color
+template <typename T>
+inline vec<T, 3> color_to_rgb(T a);
+template <typename T, int N>
+inline vec<T, 3> color_to_rgb(const vec<T, N>& a);
+template <typename T>
+inline vec<T, 3> color_to_rgba(T a);
+template <typename T, int N>
+inline vec<T, 4> color_to_rgba(const vec<T, N>& a);
+template <typename T, int N>
+inline T luminance(const vec<T, N>& a);
+template <int N>
+inline byte luminance(const vec<byte, N>& a);
+
+template <typename T, int N>
+inline vec<T, N> gray_to_color(T a);
+template <typename T, int N>
+inline vec<T, N> rgba_to_color(const vec<T, 4>& a);
+
+// Apply an operator to a color
+template <typename T, int N, typename Func>
+inline vec<T, N> apply_color(const Func& func, const vec<T, N>& a);
+
+// Lerp colors between two values
+template <typename T, typename T1>
+inline T lerp_color(const T& a, const T& b, T1 u);
+template <typename T1>
+inline byte lerp_color(byte a, byte b, T1 u);
+template <int N, typename T1>
+inline vec<byte, N> lerp_color(
+    const vec<byte, N>& a, const vec<byte, N> b, T1 u);
+
+template <typename T, typename T1>
+inline T bilerp_color(
+    const T& c00, const T& c10, const T& c11, const T& c01, T1 u, T1 v);
+template <typename T1>
+inline byte bilerp_color(byte c00, byte c10, byte c11, byte c01, T1 u, T1 v);
+template <int N, typename T1>
+inline vec<byte, N> bilerp_color(const vec<byte, N>& c00,
+    const vec<byte, N> c10, const vec<byte, N>& c11, const vec<byte, N> c01,
+    T1 u, T1 v);
+
+// Conversion between linear and gamma-encoded colors.
+inline float gamma_to_linear(float srgb, float gamma);
+inline float linear_to_gamma(float srgb, float gamma);
+template <typename T, int N>
+inline vec<T, N> gamma_to_linear(const vec<T, N>& srgb, float gamma);
+template <typename T, int N>
+inline vec<T, N> linear_to_gamma(const vec<T, N>& lin, float gamma);
+
+// sRGB non-linear curve
+inline float srgb_to_linear(float srgb);
+inline float linear_to_srgb(float lin);
+template <typename T, int N>
+inline vec<T, N> srgb_to_linear(const vec<T, N>& srgb);
+template <typename T, int N>
+inline vec<T, N> linear_to_srgb(const vec<T, N>& lin);
+
+// Fitted ACES tonemapping curve.
+template <typename T>
+inline T tonemap_filmic(T hdr);
+template <typename T, int N>
+inline vec<T, N> tonemap_filmic(const vec<T, N>& hdr);
+
+// Tonemap a color value according to an exposure-gamma tone mapper, with
+// an optional filmic curve.
+template <typename T, int N>
+inline vec<T, N> tonemap_filmic(
+    const vec<T, N>& hdr, T exposure, bool filmic, bool srgb);
+
+// Convert between CIE XYZ and xyY
+template <typename T>
+inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz);
+// Convert between CIE XYZ and xyY
+template <typename T>
+inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY);
+// Convert between CIE XYZ and RGB
+template <typename T>
+inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz);
+// Convert between CIE XYZ and RGB
+template <typename T>
+inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb);
+
+// Approximate color of blackbody radiation from wavelength in nm.
+template <typename T>
+inline vec<T, 3> blackbody_to_rgb(T temperature);
+
+// Converts HSV to RGB.
+template <typename T>
+inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv);
+template <typename T>
+inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -103,40 +218,29 @@ namespace yocto {
 template <typename T>
 struct image {
     // constructors
-    image() : _size{0, 0}, _pixels{} {}
-    image(const vec2i& size, const T& value = {})
-        : _size{size}, _pixels((size_t)size.x * (size_t)size.y, value) {}
-    image(const vec2i& size, const T* value)
-        : _size{size}
-        , _pixels(value, value + (size_t)size.x * (size_t)size.y) {}
+    image();
+    image(const vec2i& size, const T& value = {});
+    image(const vec2i& size, const T* value);
 
     // size
-    bool  empty() const { return _pixels.empty(); }
-    vec2i size() const { return _size; }
-    bool  contains(const vec2i& ij) const {
-        return ij.x > 0 && ij.x < _size.x && ij.y > 0 && ij.y < _size.y;
-    }
-    void resize(const vec2i& size) {
-        if (size == _size) return;
-        _size = size;
-        _pixels.resize((size_t)size.x * (size_t)size.y);
-    }
+    bool  empty() const;
+    vec2i size() const;
+    bool  contains(const vec2i& ij) const;
+    void  resize(const vec2i& size);
 
     // element access
-    T& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
-    const T& operator[](const vec2i& ij) const {
-        return _pixels[ij.y * _size.x + ij.x];
-    }
+    T&       operator[](const vec2i& ij);
+    const T& operator[](const vec2i& ij) const;
 
     // data access
-    T*       data() { return _pixels.data(); }
-    const T* data() const { return _pixels.data(); }
+    T*       data();
+    const T* data() const;
 
     // iteration
-    T*       begin() { return _pixels.data(); }
-    T*       end() { return _pixels.data() + _pixels.size(); }
-    const T* begin() const { return _pixels.data(); }
-    const T* end() const { return _pixels.data() + _pixels.size(); }
+    T*       begin();
+    T*       end();
+    const T* begin() const;
+    const T* end() const;
 
     // data
     vec2i     _size   = zero2i;
@@ -145,13 +249,9 @@ struct image {
 
 // equality
 template <typename T>
-inline bool operator==(const image<T>& a, const image<T>& b) {
-    return a.size() == b.size() && a._pixels == b._pixels;
-}
+inline bool operator==(const image<T>& a, const image<T>& b);
 template <typename T>
-inline bool operator!=(const image<T>& a, const image<T>& b) {
-    return a.size() != b.size() || a._pixels != b._pixels;
-}
+inline bool operator!=(const image<T>& a, const image<T>& b);
 
 }  // namespace yocto
 
@@ -161,25 +261,11 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
 namespace yocto {
 
 // Check if an image is HDR based on filename.
-inline bool is_hdr_filename(const string& filename) {
-    return get_extension(filename) == "hdr" ||
-           get_extension(filename) == "exr" || get_extension(filename) == "pfm";
-}
+inline bool is_hdr_filename(const string& filename);
 // Return the preset type and the remaining filename
-inline bool is_image_preset_filename(const string& filename) {
-    return filename.find("::yocto::") == 0;
-}
+inline bool is_image_preset_filename(const string& filename);
 // Return the preset type and the filename. Call only if this is a preset.
-inline pair<string, string> get_image_preset_type(const string& filename) {
-    if (filename.find("::yocto::") == 0) {
-        auto aux = filename.substr(string("::yocto::").size());
-        auto pos = aux.find("::");
-        if (pos == aux.npos) throw runtime_error("bad preset name" + filename);
-        return {aux.substr(0, pos), aux.substr(pos + 2)};
-    } else {
-        return {"", filename};
-    }
-}
+inline pair<string, string> get_image_preset_type(const string& filename);
 
 // Loads/saves a 1-4 channels float image in linear color space.
 void load_image(const string& filename, image<float>& img);
@@ -204,36 +290,16 @@ void save_image(const string& filename, const image<vec4b>& img);
 // Convenience helper for loading HDR or LDR based on filename
 template <int N>
 inline void load_image(const string& filename, image<vec<float, N>>& hdr,
-    image<vec<byte, N>>& ldr) {
-    if (is_hdr_filename(filename)) {
-        load_image(filename, hdr);
-    } else {
-        load_image(filename, ldr);
-    }
-}
+    image<vec<byte, N>>& ldr);
 template <int N>
 inline void save_image(const string& filename, const image<vec<float, N>>& hdr,
-    const image<vec<byte, N>>& ldr) {
-    if (!hdr.empty()) {
-        save_image(filename, hdr);
-    } else {
-        save_image(filename, ldr);
-    }
-}
+    const image<vec<byte, N>>& ldr);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 template <int N>
 inline void save_tonemapped_image(const string& filename,
-    const image<vec<float, N>>& hdr, float exposure, bool filmic, bool srgb) {
-    if (is_hdr_filename(filename)) {
-        save_image(filename, hdr);
-    } else {
-        auto ldr = image<vec<byte, N>>{hdr.size()};
-        tonemap_image8(ldr, hdr, exposure, filmic, srgb);
-        save_image(filename, ldr);
-    }
-}
+    const image<vec<float, N>>& hdr, float exposure, bool filmic, bool srgb);
 
 }  // namespace yocto
 
@@ -263,106 +329,51 @@ inline void set_image_region(
 
 // Apply a function to each image pixel
 template <typename T1, typename T2, typename Func>
-inline void apply(
-    const Func& func, image<T1>& result, const image<T2>& source) {
-    result.resize(source.size());
-    for (auto j = 0; j < result.size().y; j++) {
-        for (auto i = 0; i < result.size().x; i++) {
-            result[{i, j}] = func(source[{i, j}]);
-        }
-    }
-}
+inline void apply(const Func& func, image<T1>& result, const image<T2>& source);
 template <typename T1, typename T2, typename Func>
 inline void apply(const Func& func, image<T1>& result, const image<T2>& source,
-    const image_region& region) {
-    result.resize(source.size());
-    for (auto j = region.min.y; j < region.max.y; j++) {
-        for (auto i = region.min.x; i < region.max.x; i++) {
-            result[{i, j}] = func(source[{i, j}]);
-        }
-    }
-}
+    const image_region& region);
 
 // Conversion from/to floats.
 template <typename T, typename TB>
-inline void byte_to_float(image<T>& fl, const image<TB>& bt) {
-    return apply([](auto& a) { return byte_to_float(a); }, fl, bt);
-}
+inline void byte_to_float(image<T>& fl, const image<TB>& bt);
 template <typename T, typename TB>
-inline void float_to_byte(image<TB>& bt, const image<T>& fl) {
-    return apply([](auto& a) { return float_to_byte(a); }, bt, fl);
-}
+inline void float_to_byte(image<TB>& bt, const image<T>& fl);
 
 // Conversion between linear and gamma-encoded images.
 template <typename T>
-inline void srgb_to_linear(image<T>& lin, const image<T>& srgb) {
-    return apply([](auto& a) { return srgb_to_linear(a); }, lin, srgb);
-}
+inline void srgb_to_linear(image<T>& lin, const image<T>& srgb);
 template <typename T>
-inline void linear_to_srgb(image<T>& srgb, const image<T>& lin) {
-    return apply([](auto& a) { return linear_to_srgb(a); }, srgb, lin);
-}
+inline void linear_to_srgb(image<T>& srgb, const image<T>& lin);
 template <typename T, typename TB>
-inline void srgb8_to_linear(image<T>& lin, const image<TB>& srgb) {
-    return apply(
-        [](auto& a) { return srgb_to_linear(byte_to_float(a)); }, lin, srgb);
-}
+inline void srgb8_to_linear(image<T>& lin, const image<TB>& srgb);
 template <typename T, typename TB>
-inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin) {
-    return apply(
-        [](auto& a) { return float_to_byte(linear_to_srgb(a)); }, srgb, lin);
-}
+inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin);
 
 // Conversion between linear and gamma-encoded images.
 template <typename T1, typename TC>
-inline void gamma_to_linear(image<T1>& lin, const image<T1>& srgb, TC gamma) {
-    return apply(
-        [gamma](auto& a) { return gamma_to_linear(a, gamma); }, lin, srgb);
-}
+inline void gamma_to_linear(image<T1>& lin, const image<T1>& srgb, TC gamma);
 template <typename T1, typename TC>
-inline void linear_to_gamma(image<T1>& srgb, const image<T1>& lin, TC gamma) {
-    return apply(
-        [gamma](auto& a) { return linear_to_gamma(a, gamma); }, srgb, lin);
-}
+inline void linear_to_gamma(image<T1>& srgb, const image<T1>& lin, TC gamma);
 
 // Apply exposure and filmic tone mapping
 template <typename T, typename TC>
 inline void tonemap_image(
-    image<T>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
-    return apply(
-        [exposure, filmic, srgb](
-            auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); },
-        ldr, hdr);
-}
+    image<T>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb);
 template <typename T, typename TB, typename TC>
 inline void tonemap_image8(
-    image<TB>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
-    return apply(
-        [exposure, filmic, srgb](auto& a) {
-            return float_to_byte(tonemap_filmic(a, exposure, filmic, srgb));
-        },
-        ldr, hdr);
-}
+    image<TB>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb);
 template <typename T, typename TC>
 inline void tonemap_image_region(image<T>& ldr, const image_region& region,
-    const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
-    return apply(
-        [exposure, filmic, srgb](
-            auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); },
-        ldr, hdr, region);
-}
+    const image<T>& hdr, TC exposure, bool filmic, bool srgb);
 
 // Resize an image.
 template <typename T, int N>
 inline void resize_image(image<vec<T, N>>& res, const image<vec<T, N>>& img);
-inline void resize_image(image<float>& res, const image<float>& img) {
-    return resize_image((image<vec1f>&)res, (const image<vec1f>&)img);
-}
-inline void resize_image(image<byte>& res, const image<byte>& img) {
-    return resize_image((image<vec1b>&)res, (const image<vec1b>&)img);
-}
 template <typename T>
 inline void resize_image(image<T>& res, const image<T>& img, const vec2i& size);
+inline void resize_image(image<float>& res, const image<float>& img);
+inline void resize_image(image<byte>& res, const image<byte>& img);
 
 }  // namespace yocto
 
@@ -464,41 +475,28 @@ namespace yocto {
 template <typename T>
 struct volume {
     // constructors
-    volume() : _size{0, 0, 0}, _voxels{} {}
-    volume(const vec3i& size, const T& value = {})
-        : _size{size}
-        , _voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
-    volume(const vec3i& size, const T* value)
-        : _size{size}
-        , _voxels(value,
-              value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
+    volume();
+    volume(const vec3i& size, const T& value = {});
+    volume(const vec3i& size, const T* value);
 
     // size
-    bool  empty() const { return _voxels.empty(); }
-    vec3i size() const { return _size; }
-    void  resize(const vec3i& size) {
-        if (size == _size) return;
-        _size = size;
-        _voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
-    }
+    bool  empty() const;
+    vec3i size() const;
+    void  resize(const vec3i& size);
 
     // element access
-    T& operator[](const vec3i& ijk) {
-        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
-    }
-    const T& operator[](const vec3i& ijk) const {
-        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
-    }
+    T&       operator[](const vec3i& ijk);
+    const T& operator[](const vec3i& ijk) const;
 
     // data access
-    T*       data() { return _voxels.data(); }
-    const T* data() const { return _voxels.data(); }
+    T*       data();
+    const T* data() const;
 
     // iteration
-    T*       begin() { return _voxels.data(); }
-    T*       end() { return _voxels.data() + _voxels.size(); }
-    const T* begin() const { return _voxels.data(); }
-    const T* end() const { return _voxels.data() + _voxels.size(); }
+    T*       begin();
+    T*       end();
+    const T* begin() const;
+    const T* end() const;
 
     // data
     vec3i         _size   = zero3i;
@@ -507,18 +505,105 @@ struct volume {
 
 // equality
 template <typename T>
-inline bool operator==(const volume<T>& a, const volume<T>& b) {
-    return a.size() == b.size() && a._voxels == b._voxels;
-}
+inline bool operator==(const volume<T>& a, const volume<T>& b);
 template <typename T>
-inline bool operator!=(const volume<T>& a, const volume<T>& b) {
-    return a.size() != b.size() && a._voxels != b._voxels;
-}
+inline bool operator!=(const volume<T>& a, const volume<T>& b);
 
 // make a simple example volume
 inline void make_test_volume(volume<float>& vol, const vec3i& size,
     float scale = 10, float exponent = 6);
 inline void make_volume_preset(volume<float>& vol, const string& type);
+
+}  // namespace yocto
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+//                             IMPLEMENTATION                                 //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+
+// -----------------------------------------------------------------------------
+// IMAGE DATA AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// constructors
+template <typename T>
+inline image<T>::image() : _size{0, 0}, _pixels{} {}
+template <typename T>
+inline image<T>::image(const vec2i& size, const T& value)
+    : _size{size}, _pixels((size_t)size.x * (size_t)size.y, value) {}
+template <typename T>
+inline image<T>::image(const vec2i& size, const T* value)
+    : _size{size}, _pixels(value, value + (size_t)size.x * (size_t)size.y) {}
+
+// size
+template <typename T>
+inline bool image<T>::empty() const {
+    return _pixels.empty();
+}
+template <typename T>
+inline vec2i image<T>::size() const {
+    return _size;
+}
+template <typename T>
+inline bool image<T>::contains(const vec2i& ij) const {
+    return ij.x > 0 && ij.x < _size.x && ij.y > 0 && ij.y < _size.y;
+}
+template <typename T>
+inline void image<T>::resize(const vec2i& size) {
+    if (size == _size) return;
+    _size = size;
+    _pixels.resize((size_t)size.x * (size_t)size.y);
+}
+
+// element access
+template <typename T>
+inline T& image<T>::operator[](const vec2i& ij) {
+    return _pixels[ij.y * _size.x + ij.x];
+}
+template <typename T>
+inline const T& image<T>::operator[](const vec2i& ij) const {
+    return _pixels[ij.y * _size.x + ij.x];
+}
+
+// data access
+template <typename T>
+inline T* image<T>::data() {
+    return _pixels.data();
+}
+template <typename T>
+inline const T* image<T>::data() const {
+    return _pixels.data();
+}
+
+// iteration
+template <typename T>
+inline T* image<T>::begin() {
+    return _pixels.data();
+}
+template <typename T>
+inline T* image<T>::end() {
+    return _pixels.data() + _pixels.size();
+}
+template <typename T>
+inline const T* image<T>::begin() const {
+    return _pixels.data();
+}
+template <typename T>
+inline const T* image<T>::end() const {
+    return _pixels.data() + _pixels.size();
+}
+
+// equality
+template <typename T>
+inline bool operator==(const image<T>& a, const image<T>& b) {
+    return a.size() == b.size() && a._pixels == b._pixels;
+}
+template <typename T>
+inline bool operator!=(const image<T>& a, const image<T>& b) {
+    return a.size() != b.size() || a._pixels != b._pixels;
+}
 
 }  // namespace yocto
 
@@ -528,9 +613,7 @@ inline void make_volume_preset(volume<float>& vol, const string& type);
 namespace yocto {
 
 // Check if an image is a preset based on filename.
-inline bool is_volume_preset_filename(const string& filename) {
-    return get_extension(filename) == "ypreset";
-}
+inline bool is_volume_preset_filename(const string& filename);
 
 // Loads/saves a 1 channel volume.
 void load_volume(const string& filename, volume<float>& vol);
@@ -538,8 +621,17 @@ void save_volume(const string& filename, const volume<float>& vol);
 
 }  // namespace yocto
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+//                             IMPLEMENTATION                                 //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+
+#include "ext/ArHosekSkyModel.h"
+#include "ext/stb_image_resize.h"
+
 // -----------------------------------------------------------------------------
-// COLOR CONVERSION UTILITIES
+// IMPLEMENTATION OF COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -587,8 +679,6 @@ constexpr T _default_alpha() {
         return (T)1;
     }
 }
-template <typename T>
-constexpr T default_alpha = _default_alpha<T>();
 
 // Apply an operator to a color
 template <typename T>
@@ -858,65 +948,6 @@ inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
 
 // Approximate color of blackbody radiation from wavelength in nm.
 template <typename T>
-inline vec<T, 3> blackbody_to_rgb(T temperature);
-
-// Converts HSV to RGB.
-template <typename T>
-inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv);
-template <typename T>
-inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BUILTIN IMAGES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Save with a logo embedded
-template <typename T, int N>
-inline void save_image_with_logo(
-    const string& filename, const image<vec<T, N>>& img) {
-    auto logo = image<vec<T, N>>{};
-    make_logo_image(logo, "logo-render");
-    auto img_copy = img;
-    auto offset   = img.size() - logo.size() - 8;
-    set_image_region(img_copy, logo, offset);
-    save_image(filename, img_copy);
-}
-
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-template <int N>
-inline void save_tonemapped_image_with_logo(const string& filename,
-    const image<vec<float, N>>& hdr, float exposure, bool filmic, bool srgb) {
-    if (is_hdr_filename(filename)) {
-        save_image_with_logo(filename, hdr);
-    } else {
-        auto ldr = image<vec<byte, N>>{hdr.size()};
-        tonemap_image8(ldr, hdr, exposure, filmic, srgb);
-        save_image_with_logo(filename, ldr);
-    }
-}
-
-}  // namespace yocto
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-//                             IMPLEMENTATION                                 //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-
-#include "ext/ArHosekSkyModel.h"
-#include "ext/stb_image_resize.h"
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF COLOR CONVERSION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Approximate color of blackbody radiation from wavelength in nm.
-template <typename T>
 inline vec<T, 3> blackbody_to_rgb(T temperature) {
     // https://github.com/neilbartlett/color-temperature
     auto rgb = zero<T, 3>;
@@ -1023,6 +1054,100 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
     return {fabsf(K + (g - b) / (6.f * chroma + (T)1e-20)),
         chroma / (r + (T)1e-20), r};
 }
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BUILTIN IMAGES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Save with a logo embedded
+template <typename T, int N>
+inline void save_image_with_logo(
+    const string& filename, const image<vec<T, N>>& img) {
+    auto logo = image<vec<T, N>>{};
+    make_logo_image(logo, "logo-render");
+    auto img_copy = img;
+    auto offset   = img.size() - logo.size() - 8;
+    set_image_region(img_copy, logo, offset);
+    save_image(filename, img_copy);
+}
+
+// Convenience helper that saves an HDR images as wither a linear HDR file or
+// a tonemapped LDR file depending on file name
+template <int N>
+inline void save_tonemapped_image_with_logo(const string& filename,
+    const image<vec<float, N>>& hdr, float exposure, bool filmic, bool srgb) {
+    if (is_hdr_filename(filename)) {
+        save_image_with_logo(filename, hdr);
+    } else {
+        auto ldr = image<vec<byte, N>>{hdr.size()};
+        tonemap_image8(ldr, hdr, exposure, filmic, srgb);
+        save_image_with_logo(filename, ldr);
+    }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Check if an image is HDR based on filename.
+inline bool is_hdr_filename(const string& filename) {
+    return get_extension(filename) == "hdr" ||
+           get_extension(filename) == "exr" || get_extension(filename) == "pfm";
+}
+// Return the preset type and the remaining filename
+inline bool is_image_preset_filename(const string& filename) {
+    return filename.find("::yocto::") == 0;
+}
+// Return the preset type and the filename. Call only if this is a preset.
+inline pair<string, string> get_image_preset_type(const string& filename) {
+    if (filename.find("::yocto::") == 0) {
+        auto aux = filename.substr(string("::yocto::").size());
+        auto pos = aux.find("::");
+        if (pos == aux.npos) throw runtime_error("bad preset name" + filename);
+        return {aux.substr(0, pos), aux.substr(pos + 2)};
+    } else {
+        return {"", filename};
+    }
+}
+
+// Convenience helper for loading HDR or LDR based on filename
+template <int N>
+inline void load_image(const string& filename, image<vec<float, N>>& hdr,
+    image<vec<byte, N>>& ldr) {
+    if (is_hdr_filename(filename)) {
+        load_image(filename, hdr);
+    } else {
+        load_image(filename, ldr);
+    }
+}
+template <int N>
+inline void save_image(const string& filename, const image<vec<float, N>>& hdr,
+    const image<vec<byte, N>>& ldr) {
+    if (!hdr.empty()) {
+        save_image(filename, hdr);
+    } else {
+        save_image(filename, ldr);
+    }
+}
+
+// Convenience helper that saves an HDR images as wither a linear HDR file or
+// a tonemapped LDR file depending on file name
+template <int N>
+inline void save_tonemapped_image(const string& filename,
+    const image<vec<float, N>>& hdr, float exposure, bool filmic, bool srgb) {
+    if (is_hdr_filename(filename)) {
+        save_image(filename, hdr);
+    } else {
+        auto ldr = image<vec<byte, N>>{hdr.size()};
+        tonemap_image8(ldr, hdr, exposure, filmic, srgb);
+        save_image(filename, ldr);
+    }
+}
 
 }  // namespace yocto
 
@@ -1067,6 +1192,104 @@ inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
         auto rng = rng_state{};
         random_shuffle(regions, rng);
     }
+}
+
+// Apply a function to each image pixel
+template <typename T1, typename T2, typename Func>
+inline void apply(
+    const Func& func, image<T1>& result, const image<T2>& source) {
+    result.resize(source.size());
+    for (auto j = 0; j < result.size().y; j++) {
+        for (auto i = 0; i < result.size().x; i++) {
+            result[{i, j}] = func(source[{i, j}]);
+        }
+    }
+}
+template <typename T1, typename T2, typename Func>
+inline void apply(const Func& func, image<T1>& result, const image<T2>& source,
+    const image_region& region) {
+    result.resize(source.size());
+    for (auto j = region.min.y; j < region.max.y; j++) {
+        for (auto i = region.min.x; i < region.max.x; i++) {
+            result[{i, j}] = func(source[{i, j}]);
+        }
+    }
+}
+
+// Conversion from/to floats.
+template <typename T, typename TB>
+inline void byte_to_float(image<T>& fl, const image<TB>& bt) {
+    return apply([](auto& a) { return byte_to_float(a); }, fl, bt);
+}
+template <typename T, typename TB>
+inline void float_to_byte(image<TB>& bt, const image<T>& fl) {
+    return apply([](auto& a) { return float_to_byte(a); }, bt, fl);
+}
+
+// Conversion between linear and gamma-encoded images.
+template <typename T>
+inline void srgb_to_linear(image<T>& lin, const image<T>& srgb) {
+    return apply([](auto& a) { return srgb_to_linear(a); }, lin, srgb);
+}
+template <typename T>
+inline void linear_to_srgb(image<T>& srgb, const image<T>& lin) {
+    return apply([](auto& a) { return linear_to_srgb(a); }, srgb, lin);
+}
+template <typename T, typename TB>
+inline void srgb8_to_linear(image<T>& lin, const image<TB>& srgb) {
+    return apply(
+        [](auto& a) { return srgb_to_linear(byte_to_float(a)); }, lin, srgb);
+}
+template <typename T, typename TB>
+inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin) {
+    return apply(
+        [](auto& a) { return float_to_byte(linear_to_srgb(a)); }, srgb, lin);
+}
+
+// Conversion between linear and gamma-encoded images.
+template <typename T1, typename TC>
+inline void gamma_to_linear(image<T1>& lin, const image<T1>& srgb, TC gamma) {
+    return apply(
+        [gamma](auto& a) { return gamma_to_linear(a, gamma); }, lin, srgb);
+}
+template <typename T1, typename TC>
+inline void linear_to_gamma(image<T1>& srgb, const image<T1>& lin, TC gamma) {
+    return apply(
+        [gamma](auto& a) { return linear_to_gamma(a, gamma); }, srgb, lin);
+}
+
+// Apply exposure and filmic tone mapping
+template <typename T, typename TC>
+inline void tonemap_image(
+    image<T>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
+    return apply(
+        [exposure, filmic, srgb](
+            auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); },
+        ldr, hdr);
+}
+template <typename T, typename TB, typename TC>
+inline void tonemap_image8(
+    image<TB>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
+    return apply(
+        [exposure, filmic, srgb](auto& a) {
+            return float_to_byte(tonemap_filmic(a, exposure, filmic, srgb));
+        },
+        ldr, hdr);
+}
+template <typename T, typename TC>
+inline void tonemap_image_region(image<T>& ldr, const image_region& region,
+    const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
+    return apply(
+        [exposure, filmic, srgb](
+            auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); },
+        ldr, hdr, region);
+}
+
+inline void resize_image(image<float>& res, const image<float>& img) {
+    return resize_image((image<vec1f>&)res, (const image<vec1f>&)img);
+}
+inline void resize_image(image<byte>& res, const image<byte>& img) {
+    return resize_image((image<vec1b>&)res, (const image<vec1b>&)img);
 }
 
 }  // namespace yocto
@@ -1833,6 +2056,73 @@ inline void make_image_preset(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// constructors
+template <typename T>
+inline volume<T>::volume() : _size{0, 0, 0}, _voxels{} {}
+template <typename T>
+inline volume<T>::volume(const vec3i& size, const T& value)
+    : _size{size}
+    , _voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
+template <typename T>
+inline volume<T>::volume(const vec3i& size, const T* value)
+    : _size{size}
+    , _voxels(value, value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {
+}
+
+// size
+template <typename T>
+inline bool volume<T>::empty() const {
+    return _voxels.empty();
+}
+template <typename T>
+inline vec3i volume<T>::size() const {
+    return _size;
+}
+template <typename T>
+inline void volume<T>::resize(const vec3i& size) {
+    if (size == _size) return;
+    _size = size;
+    _voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
+}
+
+// element access
+template <typename T>
+inline T& volume<T>::operator[](const vec3i& ijk) {
+    return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+}
+template <typename T>
+inline const T& volume<T>::operator[](const vec3i& ijk) const {
+    return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+}
+
+// data access
+template <typename T>
+inline T* volume<T>::data() {
+    return _voxels.data();
+}
+template <typename T>
+inline const T* volume<T>::data() const {
+    return _voxels.data();
+}
+
+// iteration
+template <typename T>
+inline T* volume<T>::begin() {
+    return _voxels.data();
+}
+template <typename T>
+inline T* volume<T>::end() {
+    return _voxels.data() + _voxels.size();
+}
+template <typename T>
+inline const T* volume<T>::begin() const {
+    return _voxels.data();
+}
+template <typename T>
+inline const T* volume<T>::end() const {
+    return _voxels.data() + _voxels.size();
+}
+
 // make a simple example volume
 inline void make_test_volume(
     volume<float>& vol, const vec3i& size, float scale, float exponent) {
@@ -1858,6 +2148,18 @@ inline void make_volume_preset(volume<float>& vol, const string& type) {
     } else {
         throw runtime_error("unknown volume preset " + type);
     }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VOLUME IMAGE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Check if an image is a preset based on filename.
+inline bool is_volume_preset_filename(const string& filename) {
+    return get_extension(filename) == "ypreset";
 }
 
 }  // namespace yocto
