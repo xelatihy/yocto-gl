@@ -287,14 +287,13 @@ template <typename T>
 inline void srgb_to_linear(image<T>& lin, const image<T>& srgb);
 template <typename T>
 inline void linear_to_srgb(image<T>& srgb, const image<T>& lin);
-template <typename T, typename TB>
-inline void srgb8_to_linear(image<T>& lin, const image<TB>& srgb);
-template <typename T, typename TB>
-inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin);
 
 // Apply exposure and filmic tone mapping
 template <typename T, int N>
 inline void tonemap_image(image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr,
+    T exposure, bool filmic, bool srgb);
+template <typename T, int N>
+inline void tonemap_image(image<vec<byte, N>>& ldr, const image<vec<T, N>>& hdr,
     T exposure, bool filmic, bool srgb);
 template <typename T, int N>
 inline void tonemap_image_region(image<vec<T, N>>& ldr,
@@ -984,8 +983,8 @@ inline void save_tonemapped_image(const string& filename,
     if (is_hdr_filename(filename)) {
         save_image(filename, hdr);
     } else {
-        auto ldr = image<vec<float, N>>{hdr.size()};
-        tonemap_image(ldr, hdr, exposure, filmic, false);
+        auto ldr = image<vec<byte, N>>{hdr.size()};
+        tonemap_image(ldr, hdr, exposure, filmic, srgb);
         save_image(filename, ldr);
     }
 }
@@ -1035,52 +1034,6 @@ inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
     }
 }
 
-// Apply a function to each image pixel in rgb mode
-template <typename T1, typename T2, int N, typename Func>
-inline void apply_rgb(image<vec<T1, N>>& result,
-    const image<vec<T2, N>>& source, const Func& func) {
-    result.resize(source.size());
-    if constexpr (N == 3) {
-        for (auto j = 0; j < result.size().y; j++) {
-            for (auto i = 0; i < result.size().x; i++) {
-                result[{i, j}] = func(source[{i, j}]);
-            }
-        }
-    } else if constexpr (N == 4) {
-        for (auto j = 0; j < result.size().y; j++) {
-            for (auto i = 0; i < result.size().x; i++) {
-                auto& src      = source[{i, j}];
-                result[{i, j}] = {func(vec<T2, 3>{src.x, src.y, src.z}), src.w};
-            }
-        }
-    } else {
-        static_assert(__channel_error<N>, "unsupported number of channels");
-    }
-}
-
-// Apply a function to each image pixel in rgb mode
-template <typename T1, typename T2, int N, typename Func>
-inline void apply_rgb(image<vec<T1, N>>& result, const image_region& region,
-    const image<vec<T2, N>>& source, const Func& func) {
-    result.resize(source.size());
-    if constexpr (N == 3) {
-        for (auto j = region.min.y; j < region.max.y; j++) {
-            for (auto i = region.min.x; i < region.max.x; i++) {
-                result[{i, j}] = func(source[{i, j}]);
-            }
-        }
-    } else if constexpr (N == 4) {
-        for (auto j = region.min.y; j < region.max.y; j++) {
-            for (auto i = region.min.x; i < region.max.x; i++) {
-                auto& src      = source[{i, j}];
-                result[{i, j}] = {func(vec<T2, 3>{src.x, src.y, src.z}), src.w};
-            }
-        }
-    } else {
-        static_assert(__channel_error<N>, "unsupported number of channels");
-    }
-}
-
 // Apply a function to each image pixel
 template <typename T1, typename T2, typename Func>
 inline void apply(
@@ -1123,12 +1076,12 @@ inline void linear_to_srgb(image<T>& srgb, const image<T>& lin) {
     return apply(srgb, lin, [](const auto& a) { return linear_to_srgb(a); });
 }
 template <typename T, typename TB>
-inline void srgb8_to_linear(image<T>& lin, const image<TB>& srgb) {
+inline void srgb_to_linear(image<T>& lin, const image<TB>& srgb) {
     return apply(lin, srgb,
         [](const auto& a) { return srgb_to_linear(byte_to_float(a)); });
 }
 template <typename T, typename TB>
-inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin) {
+inline void linear_to_srgb(image<TB>& srgb, const image<T>& lin) {
     return apply(srgb, lin,
         [](const auto& a) { return float_to_byte(linear_to_srgb(a)); });
 }
@@ -1137,29 +1090,72 @@ inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin) {
 template <typename T, int N>
 inline void tonemap_image(image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr,
     T exposure, bool filmic, bool srgb) {
-    return apply_rgb(
-        ldr, hdr, [scale = pow((T)2, exposure), filmic, srgb](const auto& hdr) {
-            auto ldr = xyz(hdr) * scale;
-            if (filmic) ldr = tonemap_filmic(ldr);
-            if (srgb) ldr = linear_to_srgb(ldr);
-            return ldr;
+    return apply(
+        ldr, hdr, [scale = pow((T)2, exposure), filmic, srgb](const vec<T, N>& hdr) {
+            if constexpr (N == 3) {
+                auto ldr = hdr * scale;
+                if (filmic) ldr = tonemap_filmic(ldr);
+                if (srgb) ldr = linear_to_srgb(ldr);
+                return ldr;
+            } else if constexpr (N == 4) {
+                auto ldr = xyz(hdr) * scale;
+                if (filmic) ldr = tonemap_filmic(ldr);
+                if (srgb) ldr = linear_to_srgb(ldr);
+                return vec<T, 4>{ldr, hdr.w};
+            } else {
+                static_assert(
+                    __channel_error<N>, "unsupport number of channels");
+            }
+        });
+}
+// Apply exposure and filmic tone mapping
+template <typename T, int N>
+inline void tonemap_image(image<vec<byte, N>>& ldr, const image<vec<T, N>>& hdr,
+    T exposure, bool filmic, bool srgb) {
+    return apply(
+        ldr, hdr, [scale = pow((T)2, exposure), filmic, srgb](const vec<T, N>& hdr) {
+            if constexpr (N == 3) {
+                auto ldr = hdr * scale;
+                if (filmic) ldr = tonemap_filmic(ldr);
+                if (srgb) ldr = linear_to_srgb(ldr);
+                return float_to_byte(ldr);
+            } else if constexpr (N == 4) {
+                auto ldr = xyz(hdr) * scale;
+                if (filmic) ldr = tonemap_filmic(ldr);
+                if (srgb) ldr = linear_to_srgb(ldr);
+                return float_to_byte(vec<T, 4>{ldr, hdr.w});
+            } else {
+                static_assert(
+                    __channel_error<N>, "unsupport number of channels");
+            }
         });
 }
 template <typename T, int N>
 inline void tonemap_image_region(image<vec<T, N>>& ldr,
     const image_region& region, const image<vec<T, N>>& hdr, T exposure,
     bool filmic, bool srgb) {
-    return apply_rgb(ldr, region, hdr,
-        [scale = pow((T)2, exposure), filmic, srgb](const auto& hdr) {
-            auto ldr = xyz(hdr) * scale;
-            if (filmic) ldr = tonemap_filmic(ldr);
-            if (srgb) ldr = linear_to_srgb(ldr);
-            return ldr;
+    return apply(ldr, region, hdr,
+        [scale = pow((T)2, exposure), filmic, srgb](const vec<T, N>& hdr) {
+            if constexpr (N == 3) {
+                auto ldr = hdr * scale;
+                if (filmic) ldr = tonemap_filmic(ldr);
+                if (srgb) ldr = linear_to_srgb(ldr);
+                return ldr;
+            } else if constexpr (N == 4) {
+                auto ldr = xyz(hdr) * scale;
+                if (filmic) ldr = tonemap_filmic(ldr);
+                if (srgb) ldr = linear_to_srgb(ldr);
+                return vec<T, 4>{ldr, hdr.w};
+            } else {
+                static_assert(
+                    __channel_error<N>, "unsupport number of channels");
+            }
         });
 }
 
-template<typename T, int N1, int N2>
-inline void convert_color_channels(image<vec<T, N1>>& result, const image<vec<T, N2>>& source) {
+template <typename T, int N1, int N2>
+inline void convert_color_channels(
+    image<vec<T, N1>>& result, const image<vec<T, N2>>& source) {
     return apply(result, source, [](const vec<T, N2>& a) {
         return convert_color_channels<T, N1, N2>(a);
     });
@@ -1785,7 +1781,7 @@ inline void make_logo_image(image<vec<float, N>>& img, const string& type) {
     auto img8 = image<vec<byte, N>>();
     make_logo_image(img8, type);
     img.resize(img8.size());
-    srgb8_to_linear(img, img8);
+    srgb_to_linear(img, img8);
 }
 
 inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
@@ -1914,7 +1910,7 @@ inline void make_image_preset(image<vec<byte, 4>>& img, const string& type) {
     auto imgf = image<vec4f>{};
     make_image_preset(imgf, type);
     if (type.find("-normal") == type.npos) {
-        linear_to_srgb8(img, imgf);
+        linear_to_srgb(img, imgf);
     } else {
         float_to_byte(img, imgf);
     }
