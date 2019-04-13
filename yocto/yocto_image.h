@@ -109,12 +109,6 @@ inline vec<byte, N> float_to_byte(const vec<float, N>& a);
 template <int N>
 inline vec<float, N> byte_to_float(const vec<byte, N>& a);
 
-// Default alpha
-template <typename T>
-constexpr T _default_alpha();
-template <typename T>
-constexpr T default_alpha = _default_alpha<T>();
-
 // Apply an operator to a color
 template <typename T>
 inline vec<T, 3> color_to_rgb(T a);
@@ -668,17 +662,17 @@ inline vec<T, 3> color_to_rgb(const vec<T, N>& a) {
     }
 }
 template <typename T>
-inline vec<T, 3> color_to_rgba(T a) {
-    return {a, a, a, default_alpha<T>};
+inline vec<T, 4> color_to_rgba(T a) {
+    return {a, a, a, 1};
 }
 template <typename T, int N>
 inline vec<T, 4> color_to_rgba(const vec<T, N>& a) {
     if constexpr (N == 1) {
-        return {a.x, a.x, a.x, default_alpha<T>};
+        return {a.x, a.x, a.x, 1};
     } else if constexpr (N == 2) {
         return {a.x, a.x, a.x, a.y};
     } else if constexpr (N == 3) {
-        return {a.x, a.y, a.z, default_alpha<T>};
+        return {a.x, a.y, a.z, 1};
     } else if constexpr (N == 4) {
         return {a.x, a.y, a.z, a.w};
     } else {
@@ -709,11 +703,11 @@ inline vec<T, N> gray_to_color(T a) {
     if constexpr (N == 1) {
         return a;
     } else if constexpr (N == 2) {
-        return {a, default_alpha<T>};
+        return {a, 1};
     } else if constexpr (N == 3) {
         return {a, a, a};
     } else if constexpr (N == 4) {
-        return {a, a, a, default_alpha<T>};
+        return {a, a, a, 1};
     } else {
         throw runtime_error("Bad number of arguments");
     }
@@ -1559,7 +1553,7 @@ inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size,
     if constexpr (N == 3) {
         for (auto& p : img) p = {0, 0, 0};
     } else if constexpr (N == 4) {
-        for (auto& p : img) p = {0, 0, 0, default_alpha<T>};
+        for (auto& p : img) p = {0, 0, 0, 1};
     } else {
         throw runtime_error("bad channels");
     }
