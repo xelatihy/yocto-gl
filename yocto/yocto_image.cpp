@@ -529,7 +529,7 @@ inline void load_image_preset(
         if (type == "images2") img4.resize({2048, 1024});
         make_image_preset(img4, type);
         img.resize(img4.size());
-        rgba_to_color(img, img4);
+        convert_color_channels(img, img4);
     }
 }
 template <int N>
