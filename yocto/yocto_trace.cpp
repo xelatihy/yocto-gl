@@ -1643,7 +1643,7 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
 #endif
 
 // Recursive path tracing.
-vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // initialize
@@ -1711,11 +1711,11 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         ray = make_ray(point.position, incoming);
     }
 
-    return {radiance, hit ? 1.0f : 0.0f};
+    return {radiance, hit};
 }
 
 // Recursive path tracing.
-vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // initialize
@@ -1783,11 +1783,11 @@ vec4f trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         ray = make_ray(point.position, incoming);
     }
 
-    return {radiance, hit ? 1.0f : 0.0f};
+    return {radiance, hit};
 }
 
 // Eyelight for quick previewing.
-vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position_, const vec3f& direction_,
     rng_state& rng, const trace_image_options& options) {
     // initialize
@@ -1842,17 +1842,17 @@ vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         direction = incoming;
     }
 
-    return {radiance, hit ? 1.0f : 0.0f};
+    return {radiance, hit};
 }
 
 // False color rendering
-vec4f trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_image_options& options) {
     // intersect next point
     auto intersection = bvh_intersection{};
     if (!trace_ray(scene, bvh, position, direction, intersection)) {
-        return zero4f;
+        return {zero3f, false};
     }
 
     // prepare shading point
@@ -1947,13 +1947,13 @@ vec4f trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
             return {emission * abs(dot(outgoing, point.normal)), 1};
         }
         default: {
-            return zero4f;
+            return {zero3f, false};
         }
     }
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using trace_sampler_func = vec4f (*)(const yocto_scene& scene,
+using trace_sampler_func = pair<vec3f, bool> (*)(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, const trace_image_options& options);
 trace_sampler_func get_trace_sampler_func(const trace_image_options& options) {
@@ -2003,10 +2003,8 @@ void trace_image_region(image<vec4f>& image, trace_state& state,
                 _trace_npaths += 1;
                 auto ray    = sample_camera_ray(camera, {i, j}, image.size(),
                     get_random_vec2f(pixel.rng), get_random_vec2f(pixel.rng));
-                auto sample = sampler(
+                auto [radiance, hit] = sampler(
                     scene, bvh, lights, ray.o, ray.d, pixel.rng, options);
-                auto radiance = xyz(sample);
-                auto hit      = sample.w > 0;
                 if (!hit) {
                     if (options.environments_hidden ||
                         scene.environments.empty()) {
