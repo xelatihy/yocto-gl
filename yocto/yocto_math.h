@@ -1215,16 +1215,7 @@ struct affine;
 // Affine transformations stored as a column-major matrix.
 template <typename T>
 struct affine<T, 2> {
-    union {
-        struct {
-            vec<T, 2> x, y, o;
-        };
-        struct {
-            mat<T, 2, 2> m;
-            vec<T, 2>    t;
-        };
-        vec<T, 2> cols[3];
-    };
+    vec<T, 2> x, y, o;
 
     constexpr affine() : x{}, y{}, o{} {}
     constexpr affine(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
@@ -1235,23 +1226,19 @@ struct affine<T, 2> {
         : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
     constexpr operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
 
-    constexpr vec<T, 2>&       operator[](int i) { return cols[i]; }
-    constexpr const vec<T, 2>& operator[](int i) const { return cols[i]; }
+    constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
+
+    constexpr mat<T, 2, 2>& m() { return *(mat<T, 2, 2>*)&x; }
+    constexpr const mat<T, 2, 2>& m() const { return *(mat<T, 2, 2>*)&x; }
+    constexpr vec<T, 2>& t() { return o; }
+    constexpr const vec<T, 2>& t() const { return o; }
 };
 
 // Affine transformations stored as a column-major matrix.
 template <typename T>
 struct affine<T, 3> {
-    union {
-        struct {
-            vec<T, 3> x, y, z, o;
-        };
-        struct {
-            mat<T, 3, 3> m;
-            vec<T, 3>    t;
-        };
-        vec<T, 3> cols[4];
-    };
+    vec<T, 3> x, y, z, o;
 
     constexpr affine() : x{}, y{}, z{}, o{} {}
     constexpr affine(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
@@ -1270,6 +1257,11 @@ struct affine<T, 3> {
 
     constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
     constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
+
+    constexpr mat<T, 3, 3>& m() { return *(mat<T, 3, 3>*)&x; }
+    constexpr const mat<T, 3, 3>& m() const { return *(mat<T, 3, 3>*)&x; }
+    constexpr vec<T, 3>& t() { return o; }
+    constexpr const vec<T, 3>& t() const { return o; }
 };
 
 // Typedefs
@@ -1303,7 +1295,7 @@ constexpr inline bool operator!=(const affine<T, N>& a, const affine<T, N>& b) {
 template <typename T, int N>
 constexpr inline affine<T, N> operator*(
     const affine<T, N>& a, const affine<T, N>& b) {
-    return {a.m * b.m, a.m * b.o + a.o};
+    return {a.m() * b.m(), a.m() * b.o + a.o};
 }
 template <typename T, int N>
 constexpr inline affine<T, N>& operator*=(
@@ -1313,7 +1305,7 @@ constexpr inline affine<T, N>& operator*=(
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, int N>
 constexpr inline affine<T, N> inverse(const affine<T, N>& a) {
-    auto minv = inverse(a.m);
+    auto minv = inverse(a.m());
     return {minv, -(minv * a.o)};
 }
 
@@ -1331,16 +1323,7 @@ struct frame;
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 2> {
-    union {
-        struct {
-            vec<T, 2> x, y, o;
-        };
-        struct {
-            mat<T, 2, 2> m;
-            vec<T, 2>    t;
-        };
-        vec<T, 2> cols[3];
-    };
+    vec<T, 2> x, y, o;
 
     constexpr frame() : x{}, y{}, o{} {}
     constexpr frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
@@ -1354,23 +1337,19 @@ struct frame<T, 2> {
         : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
     constexpr operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
 
-    constexpr vec<T, 2>&       operator[](int i) { return cols[i]; }
-    constexpr const vec<T, 2>& operator[](int i) const { return cols[i]; }
+    constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
+
+    constexpr mat<T, 2, 2>& m() { return *(mat<T, 2, 2>*)&x; }
+    constexpr const mat<T, 2, 2>& m() const { return *(mat<T, 2, 2>*)&x; }
+    constexpr vec<T, 2>& t() { return o; }
+    constexpr const vec<T, 2>& t() const { return o; }
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 3> {
-    union {
-        struct {
-            vec<T, 3> x, y, z, o;
-        };
-        struct {
-            mat<T, 3, 3> m;
-            vec<T, 3>    t;
-        };
-        vec<T, 3> cols[4];
-    };
+    vec<T, 3> x, y, z, o;
 
     constexpr frame() : x{}, y{}, z{}, o{} {}
     constexpr frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
@@ -1392,8 +1371,13 @@ struct frame<T, 3> {
         return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
     }
 
-    constexpr vec<T, 3>&       operator[](int i) { return cols[i]; }
-    constexpr const vec<T, 3>& operator[](int i) const { return cols[i]; }
+    constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
+
+    constexpr mat<T, 3, 3>& m() { return *(mat<T, 3, 3>*)&x; }
+    constexpr const mat<T, 3, 3>& m() const { return *(mat<T, 3, 3>*)&x; }
+    constexpr vec<T, 3>& t() { return o; }
+    constexpr const vec<T, 3>& t() const { return o; }
 };
 
 // Typedefs
@@ -1462,7 +1446,7 @@ constexpr inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
 template <typename T, int N>
 constexpr inline frame<T, N> operator*(
     const frame<T, N>& a, const frame<T, N>& b) {
-    return {a.m * b.m, a.m * b.o + a.o};
+    return {a.m() * b.m(), a.m() * b.o + a.o};
 }
 template <typename T, int N>
 constexpr inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
@@ -1472,7 +1456,7 @@ constexpr inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, int N>
 constexpr inline frame<T, N> inverse(const frame<T, N>& a) {
-    auto minv = transpose(a.m);
+    auto minv = transpose(a.m());
     return {minv, -(minv * a.o)};
 }
 
@@ -1580,6 +1564,9 @@ struct bbox {
 
     constexpr vec<T, N>&       operator[](int i) { return (&min)[i]; }
     constexpr const vec<T, N>& operator[](int i) const { return (&min)[i]; }
+
+    constexpr vec<T, N> center() const { return (min + max) / 2; }
+    constexpr vec<T, N> size() const { return max - min; }
 };
 
 // Typedefs
@@ -1601,24 +1588,6 @@ constexpr const auto invalid_bbox1i = bbox1i{};
 constexpr const auto invalid_bbox2i = bbox2i{};
 constexpr const auto invalid_bbox3i = bbox3i{};
 constexpr const auto invalid_bbox4i = bbox4i{};
-
-// Bounding box values
-template <typename T>
-constexpr inline T bbox_size(const bbox<T, 1>& a) {
-    return a.max - a.min;
-}
-template <typename T, int N>
-constexpr inline vec<T, N> bbox_size(const bbox<T, N>& a) {
-    return a.max - a.min;
-}
-template <typename T>
-constexpr inline T bbox_center(const bbox<T, 1>& a) {
-    return (a.max + a.min) / 2;
-}
-template <typename T, int N>
-constexpr inline vec<T, N> bbox_center(const bbox<T, N>& a) {
-    return (a.max + a.min) / 2;
-}
 
 // Bounding box comparisons.
 template <typename T, int N>
@@ -1833,7 +1802,7 @@ constexpr inline vec<T, N> transform_direction(
 template <typename T, int N>
 constexpr inline vec<T, N> transform_normal(
     const affine<T, N>& a, const vec<T, N>& b) {
-    return transform_normal(a.m, b);
+    return transform_normal(a.m(), b);
 }
 
 // Transforms points, vectors and directions by frames.
