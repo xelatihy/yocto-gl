@@ -1619,7 +1619,7 @@ inline void make_lights_image(image<vec<T, 4>>& img, const vec2i& size,
     img.resize(size);
     for (auto j = 0; j < img.size().y / 2; j++) {
         auto theta = (T)pi * ((j + (T)0.5) / img.size().y);
-        theta      = clamp(theta, (T)0, (T)pi / 2 - float_epsilon);
+        theta      = clamp(theta, (T)0, (T)pi / 2 - (T)0.00001);
         if (fabs(theta - langle) > lheight / 2) continue;
         for (int i = 0; i < img.size().x; i++) {
             auto phi     = 2 * (T)pi * (float(i + (T)0.5) / img.size().x);

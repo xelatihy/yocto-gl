@@ -143,19 +143,18 @@ namespace yocto {
 using byte = unsigned char;
 using uint = unsigned int;
 
-constexpr const double pi  = 3.14159265358979323846;
-constexpr const float  pif = (float)pi;
+constexpr double pi  = 3.14159265358979323846;
+constexpr float  pif = (float)pi;
 
 template <typename T>
 constexpr T type_max = numeric_limits<T>::max();
 template <typename T>
 constexpr T type_min = numeric_limits<T>::lowest();
 
-constexpr const auto int_max       = type_max<int>;
-constexpr const auto int_min       = type_min<int>;
-constexpr const auto float_max     = type_max<float>;
-constexpr const auto float_min     = type_min<float>;
-constexpr const auto float_epsilon = FLT_EPSILON;
+constexpr auto int_max       = type_max<int>;
+constexpr auto int_min       = type_min<int>;
+constexpr auto float_max     = type_max<float>;
+constexpr auto float_min     = type_min<float>;
 
 template <typename T>
 constexpr T min(T x, T y);
@@ -260,19 +259,19 @@ using vec4d = vec<double, 4>;
 
 // Zero vector constants.
 template <typename T, int N>
-constexpr const auto zero   = vec<T, N>{};
-constexpr const auto zero1f = vec1f{0};
-constexpr const auto zero2f = vec2f{0, 0};
-constexpr const auto zero3f = vec3f{0, 0, 0};
-constexpr const auto zero4f = vec4f{0, 0, 0, 0};
-constexpr const auto zero1i = vec1i{0};
-constexpr const auto zero2i = vec2i{0, 0};
-constexpr const auto zero3i = vec3i{0, 0, 0};
-constexpr const auto zero4i = vec4i{0, 0, 0, 0};
-constexpr const auto zero1b = vec1b{0};
-constexpr const auto zero2b = vec2b{0, 0};
-constexpr const auto zero3b = vec3b{0, 0, 0};
-constexpr const auto zero4b = vec4b{0, 0, 0, 0};
+constexpr auto zero   = vec<T, N>{};
+constexpr auto zero1f = vec1f{0};
+constexpr auto zero2f = vec2f{0, 0};
+constexpr auto zero3f = vec3f{0, 0, 0};
+constexpr auto zero4f = vec4f{0, 0, 0, 0};
+constexpr auto zero1i = vec1i{0};
+constexpr auto zero2i = vec2i{0, 0};
+constexpr auto zero3i = vec3i{0, 0, 0};
+constexpr auto zero4i = vec4i{0, 0, 0, 0};
+constexpr auto zero1b = vec1b{0};
+constexpr auto zero2b = vec2b{0, 0};
+constexpr auto zero3b = vec3b{0, 0, 0};
+constexpr auto zero4b = vec4b{0, 0, 0, 0};
 
 // Vector comparison operations.
 template <typename T, int N>
@@ -496,9 +495,9 @@ template <typename T, int N>
 constexpr mat<T, N, N> make_identity_mat();
 
 // Identity matrices constants.
-constexpr const auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
-constexpr const auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-constexpr const auto identity_mat4f = mat4f{
+constexpr auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
+constexpr auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+constexpr auto identity_mat4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
@@ -622,8 +621,8 @@ using affine2f = affine<float, 2>;
 using affine3f = affine<float, 3>;
 
 // Indentity frames.
-constexpr const auto identity_affine2f = affine2f{{1, 0}, {0, 1}, {0, 0}};
-constexpr const auto identity_affine3f = affine3f{
+constexpr auto identity_affine2f = affine2f{{1, 0}, {0, 1}, {0, 0}};
+constexpr auto identity_affine3f = affine3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame comparisons.
@@ -724,9 +723,9 @@ using frame3d = frame<double, 3>;
 template <typename T, int N>
 constexpr frame<T, N> _identity_frame();
 template <typename T, int N>
-constexpr const auto identity_frame   = _identity_frame<T, N>();
-constexpr const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-constexpr const auto identity_frame3f = frame3f{
+constexpr auto identity_frame   = _identity_frame<T, N>();
+constexpr auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+constexpr auto identity_frame3f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame construction from axis.
@@ -779,7 +778,7 @@ struct quat<T, 4> {
 using quat4f = quat<float, 4>;
 
 // Constants
-constexpr const auto identity_quat4f = quat4f{0, 0, 0, 1};
+constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 // Quaternion operatons
 template <typename T, typename T1>
@@ -842,14 +841,14 @@ using bbox3i = bbox<int, 3>;
 using bbox4i = bbox<int, 4>;
 
 // Empty bbox constant.
-constexpr const auto invalid_bbox1f = bbox1f{};
-constexpr const auto invalid_bbox2f = bbox2f{};
-constexpr const auto invalid_bbox3f = bbox3f{};
-constexpr const auto invalid_bbox4f = bbox4f{};
-constexpr const auto invalid_bbox1i = bbox1i{};
-constexpr const auto invalid_bbox2i = bbox2i{};
-constexpr const auto invalid_bbox3i = bbox3i{};
-constexpr const auto invalid_bbox4i = bbox4i{};
+constexpr auto invalid_bbox1f = bbox1f{};
+constexpr auto invalid_bbox2f = bbox2f{};
+constexpr auto invalid_bbox3f = bbox3f{};
+constexpr auto invalid_bbox4f = bbox4f{};
+constexpr auto invalid_bbox1i = bbox1i{};
+constexpr auto invalid_bbox2i = bbox2i{};
+constexpr auto invalid_bbox3i = bbox3i{};
+constexpr auto invalid_bbox4i = bbox4i{};
 
 // Bounding box comparisons.
 template <typename T, int N>
@@ -918,7 +917,7 @@ struct ray<T, 3> {
 };
 
 // Ray esplison
-constexpr const auto ray_eps = 1e-4f;
+constexpr auto ray_eps = 1e-4f;
 
 // Typedefs
 using ray2f = ray<float, 2>;
