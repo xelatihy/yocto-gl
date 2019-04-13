@@ -234,9 +234,6 @@ struct vec<T, 4> {
 
     constexpr T&       operator[](int i) { return (&x)[i]; }
     constexpr const T& operator[](int i) const { return (&x)[i]; }
-
-    constexpr vec<T, 3>&       xyz() { return *(vec<T, 3>*)(&x); }
-    constexpr const vec<T, 3>& xyz() const { return *(vec<T, 3>*)(&x); }
 };
 
 // Typedefs
@@ -278,6 +275,12 @@ template <typename T, int N>
 constexpr bool operator==(const vec<T, N>& a, const vec<T, N>& b);
 template <typename T, int N>
 constexpr bool operator!=(const vec<T, N>& a, const vec<T, N>& b);
+
+// Element access
+template <typename T, int N>
+constexpr vec<T, 3>& xyz(vec<T, N>& a);
+template <typename T, int N>
+constexpr const vec<T, 3>& xyz(const vec<T, N>& a);
 
 // Vector operations.
 template <typename T, int N>
@@ -1212,6 +1215,28 @@ constexpr bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
         return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
     } else {
         return !(a == b);
+    }
+}
+
+// Element access
+template <typename T, int N>
+constexpr vec<T, 3>& xyz(vec<T, N>& a) {
+    if constexpr (N == 3) {
+        return a;
+    } else if constexpr (N == 4) {
+        return (vec<T, 3>&)a;
+    } else {
+        throw runtime_error("operation not supported");
+    }
+}
+template <typename T, int N>
+constexpr const vec<T, 3>& xyz(const vec<T, N>& a) {
+    if constexpr (N == 3) {
+        return a;
+    } else if constexpr (N == 4) {
+        return (const vec<T, 3>&)a;
+    } else {
+        throw runtime_error("operation not supported");
     }
 }
 
