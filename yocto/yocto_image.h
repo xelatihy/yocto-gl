@@ -99,6 +99,7 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Float to byte conversion.
 inline byte  float_to_byte(float a);
 inline float byte_to_float(byte a);
 
@@ -136,25 +137,6 @@ inline vec<T, N> rgba_to_color(const vec<T, 4>& a);
 // Apply an operator to a color
 template <typename T, int N, typename Func>
 inline vec<T, N> apply_color(const Func& func, const vec<T, N>& a);
-
-// Lerp colors between two values
-template <typename T, typename T1>
-inline T lerp_color(const T& a, const T& b, T1 u);
-template <typename T1>
-inline byte lerp_color(byte a, byte b, T1 u);
-template <int N, typename T1>
-inline vec<byte, N> lerp_color(
-    const vec<byte, N>& a, const vec<byte, N> b, T1 u);
-
-template <typename T, typename T1>
-inline T bilerp_color(
-    const T& c00, const T& c10, const T& c11, const T& c01, T1 u, T1 v);
-template <typename T1>
-inline byte bilerp_color(byte c00, byte c10, byte c11, byte c01, T1 u, T1 v);
-template <int N, typename T1>
-inline vec<byte, N> bilerp_color(const vec<byte, N>& c00,
-    const vec<byte, N> c10, const vec<byte, N>& c11, const vec<byte, N> c01,
-    T1 u, T1 v);
 
 // sRGB non-linear curve
 inline float srgb_to_linear(float srgb);
@@ -776,39 +758,6 @@ inline vec<T, N> apply_color(const Func& func, const vec<T, N>& a) {
     }
 }
 
-// Lerp colors between two values
-template <typename T, typename T1>
-inline T lerp_color(const T& a, const T& b, T1 u) {
-    return lerp(a, b, u);
-}
-template <typename T1>
-inline byte lerp_color(byte a, byte b, T1 u) {
-    return float_to_byte(lerp(byte_to_float(a), byte_to_float(b), u));
-}
-template <int N, typename T1>
-inline vec<byte, N> lerp_color(
-    const vec<byte, N>& a, const vec<byte, N> b, T1 u) {
-    return float_to_byte(lerp(byte_to_float(a), byte_to_float(b), u));
-}
-
-template <typename T, typename T1>
-inline T bilerp_color(
-    const T& c00, const T& c10, const T& c11, const T& c01, T1 u, T1 v) {
-    return bilerp(c00, c01, c11, c01, u, v);
-}
-template <typename T1>
-inline byte bilerp_color(byte c00, byte c10, byte c11, byte c01, T1 u, T1 v) {
-    return float_to_byte(bilerp(byte_to_float(c00), byte_to_float(c01),
-        byte_to_float(c11), byte_to_float(c01), u, v));
-}
-template <int N, typename T1>
-inline vec<byte, N> bilerp_color(const vec<byte, N>& c00,
-    const vec<byte, N> c10, const vec<byte, N>& c11, const vec<byte, N> c01,
-    T1 u, T1 v) {
-    return float_to_byte(bilerp(byte_to_float(c00), byte_to_float(c01),
-        byte_to_float(c11), byte_to_float(c01), u, v));
-}
-
 // sRGB non-linear curve
 inline float srgb_to_linear(float srgb) {
     if (srgb <= 0.04045) {
@@ -1372,7 +1321,7 @@ inline void make_bumpdimple_image(
             if (r < 0.5f) {
                 h += (c) ? (0.5f - r) : -(0.5f - r);
             }
-            return lerp_color(c0, c1, h);
+            return lerp(c0, c1, h);
         });
 }
 
@@ -1382,7 +1331,7 @@ inline void make_ramp_image(
     image<T>& img, const vec2i& size, const T& c0, const T& c1) {
     make_image_fromij(img, size, [size = img.size(), &c0, &c1](int i, int j) {
         auto u = (float)i / (float)size.x;
-        return lerp_color(c0, c1, u);
+        return lerp(c0, c1, u);
     });
 }
 template <typename T>
@@ -1391,7 +1340,7 @@ inline void make_ramp_image(image<T>& img, const vec2i& size, const T& c00,
     make_image_fromij(img, size, [size, &c00, &c10, &c01, &c11](int i, int j) {
         auto u = (float)i / (float)size.x;
         auto v = (float)j / (float)size.y;
-        return bilerp_color(c00, c10, c11, c01, u, v);
+        return bilerp(c00, c10, c11, c01, u, v);
     });
 }
 
@@ -1403,7 +1352,7 @@ inline void make_gammaramp_image(
         auto u = j / float(size.y - 1);
         if (i < size.x / 3) u = pow(u, 2.2f);
         if (i > (size.x * 2) / 3) u = pow(u, 1 / 2.2f);
-        return lerp_color(c0, c1, u);
+        return lerp(c0, c1, u);
     });
 }
 
@@ -1489,7 +1438,7 @@ inline void make_noise_image(image<T>& img, const vec2i& size, const T& c0,
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_noise(p, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            return lerp_color(c0, c1, g);
+            return lerp(c0, c1, g);
         });
 }
 
@@ -1503,7 +1452,7 @@ inline void make_fbm_image(image<T>& img, const vec2i& size, const T& c0,
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            return lerp_color(c0, c1, g);
+            return lerp(c0, c1, g);
         });
 }
 
@@ -1519,7 +1468,7 @@ inline void make_ridge_image(image<T>& img, const vec2i& size, const T& c0,
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
             g = clamp(g, 0.0f, 1.0f);
-            return lerp_color(c0, c1, g);
+            return lerp(c0, c1, g);
         });
 }
 
@@ -1534,7 +1483,7 @@ inline void make_turbulence_image(image<T>& img, const vec2i& size, const T& c0,
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);
             g = clamp(g, 0.0f, 1.0f);
-            return lerp_color(c0, c1, g);
+            return lerp(c0, c1, g);
         });
 }
 
