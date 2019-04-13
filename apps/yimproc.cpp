@@ -229,7 +229,7 @@ int main(int argc, char* argv[]) {
     // hdr correction
     if (tonemap) {
         auto ldr = img;
-        tonemap_image(img, ldr, exposure, filmic, srgb);
+        tonemap_image(img, ldr, exposure, filmic, false);
         img = ldr;
     }
 

@@ -145,14 +145,8 @@ inline vec<T, N> linear_to_srgb(const vec<T, N>& lin);
 // Fitted ACES tonemapping curve.
 template <typename T>
 inline T tonemap_filmic(T hdr);
-template <typename T, int N>
-inline vec<T, N> tonemap_filmic(const vec<T, N>& hdr);
-
-// Tonemap a color value according to an exposure-gamma tone mapper, with
-// an optional filmic curve.
-template <typename T, int N>
-inline vec<T, N> tonemap_filmic(
-    const vec<T, N>& hdr, T exposure, bool filmic, bool srgb);
+template <typename T>
+inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr);
 
 // Convert between CIE XYZ and xyY
 template <typename T>
@@ -297,13 +291,6 @@ template <typename T>
 inline void set_image_region(
     image<T>& img, const image<T>& region, const vec2i& offset);
 
-// Apply a function to each image pixel
-template <typename T1, typename T2, typename Func>
-inline void apply(const Func& func, image<T1>& result, const image<T2>& source);
-template <typename T1, typename T2, typename Func>
-inline void apply(const Func& func, image<T1>& result, const image<T2>& source,
-    const image_region& region);
-
 // Conversion from/to floats.
 template <typename T, typename TB>
 inline void byte_to_float(image<T>& fl, const image<TB>& bt);
@@ -321,15 +308,12 @@ template <typename T, typename TB>
 inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin);
 
 // Apply exposure and filmic tone mapping
-template <typename T, typename TC>
+template <typename T, int N>
 inline void tonemap_image(
-    image<T>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb);
-template <typename T, typename TB, typename TC>
-inline void tonemap_image8(
-    image<TB>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb);
-template <typename T, typename TC>
-inline void tonemap_image_region(image<T>& ldr, const image_region& region,
-    const image<T>& hdr, TC exposure, bool filmic, bool srgb);
+    image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr, T exposure, bool filmic, bool srgb);
+template <typename T, int N>
+inline void tonemap_image_region(image<vec<T, N>>& ldr, const image_region& region,
+    const image<vec<T, N>>& hdr, T exposure, bool filmic, bool srgb);
 
 // Resize an image.
 template <typename T, int N>
@@ -598,6 +582,9 @@ void save_volume(const string& filename, const volume<float>& vol);
 // IMPLEMENTATION OF COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
+    
+template<typename T> constexpr bool __type_error = std::false_type::value;
+template<int N> constexpr bool __channel_error = std::false_type::value;
 
 inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
 inline float byte_to_float(byte a) { return a / 255.0f; }
@@ -731,11 +718,11 @@ inline vec<T, N> rgba_to_color(const vec<T, 4>& a) {
 
 template <typename T, int N>
 inline void gray_to_color(image<vec<T, N>>& col, const image<T>& gray) {
-    return apply([](auto& a) { return gray_to_color<T, N>(a); }, col, gray);
+    return apply(col, gray, [](auto& a) { return gray_to_color<T, N>(a); });
 }
 template <typename T, int N>
 inline void rgba_to_color(image<vec<T, N>>& col, const image<vec<T, 4>>& rgba) {
-    return apply([](auto& a) { return rgba_to_color<T, N>(a); }, col, rgba);
+    return apply(col, rgba, [](auto& a) { return rgba_to_color<T, N>(a); });
 }
 
 // Apply an operator to a color
@@ -786,43 +773,12 @@ inline T tonemap_filmic(T hdr) {
     return (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
            (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
 }
-template <typename T, int N>
-inline vec<T, N> tonemap_filmic(const vec<T, N>& hdr) {
-    return apply_color([](auto& a) { return tonemap_filmic(a); }, hdr);
-}
-
-// Tonemap a color value according to an exposure-gamma tone mapper, with
-// an optional filmic curve.
-template <typename T, int N>
-inline vec<T, N> tonemap_filmic(
-    const vec<T, N>& hdr, T exposure, bool filmic, bool srgb) {
-    if constexpr (N == 1) {
-        auto scale = pow(2.0f, exposure);
-        auto ldr   = hdr * scale;
-        if (filmic) ldr = tonemap_filmic(ldr);
-        if (srgb) ldr = linear_to_srgb(ldr);
-        return ldr;
-    } else if constexpr (N == 2) {
-        auto scale = pow(2.0f, exposure);
-        auto ldr   = hdr.x * scale;
-        if (filmic) ldr = tonemap_filmic(ldr);
-        if (srgb) ldr = linear_to_srgb(ldr);
-        return {ldr, hdr.y};
-    } else if constexpr (N == 3) {
-        auto scale = pow(2.0f, exposure);
-        auto ldr   = hdr * scale;
-        if (filmic) ldr = tonemap_filmic(ldr);
-        if (srgb) ldr = linear_to_srgb(ldr);
-        return ldr;
-    } else if constexpr (N == 4) {
-        auto scale = pow(2.0f, exposure);
-        auto ldr   = xyz(hdr) * scale;
-        if (filmic) ldr = tonemap_filmic(ldr);
-        if (srgb) ldr = linear_to_srgb(ldr);
-        return {ldr, hdr.w};
-    } else {
-        throw runtime_error("Bad number of arguments");
-    }
+template <typename T>
+inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr) {
+    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+    // hdr *= 0.6; // brings it back to ACES range
+    return (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
+           (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
 }
 
 // Convert between CIE XYZ and xyY
@@ -994,8 +950,8 @@ inline void save_tonemapped_image_with_logo(const string& filename,
     if (is_hdr_filename(filename)) {
         save_image_with_logo(filename, hdr);
     } else {
-        auto ldr = image<vec<byte, N>>{hdr.size()};
-        tonemap_image8(ldr, hdr, exposure, filmic, srgb);
+        auto ldr = image<vec<float, N>>{hdr.size()};
+        tonemap_image(ldr, hdr, exposure, filmic, false);
         save_image_with_logo(filename, ldr);
     }
 }
@@ -1056,8 +1012,8 @@ inline void save_tonemapped_image(const string& filename,
     if (is_hdr_filename(filename)) {
         save_image(filename, hdr);
     } else {
-        auto ldr = image<vec<byte, N>>{hdr.size()};
-        tonemap_image8(ldr, hdr, exposure, filmic, srgb);
+        auto ldr = image<vec<float, N>>{hdr.size()};
+        tonemap_image(ldr, hdr, exposure, filmic, false);
         save_image(filename, ldr);
     }
 }
@@ -1107,10 +1063,53 @@ inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
     }
 }
 
+// Apply a function to each image pixel in rgb mode
+template <typename T1, typename T2, int N, typename Func>
+inline void apply_rgb(image<vec<T1, N>>& result, const image<vec<T2, N>>& source, const Func& func) {
+    result.resize(source.size());
+    if constexpr(N == 3) {
+        for (auto j = 0; j < result.size().y; j++) {
+            for (auto i = 0; i < result.size().x; i++) {
+                result[{i, j}] = func(source[{i, j}]);
+            }
+        }
+    } else if constexpr(N == 4) {
+        for (auto j = 0; j < result.size().y; j++) {
+            for (auto i = 0; i < result.size().x; i++) {
+                auto& src = source[{i, j}];
+                result[{i, j}] = {func(vec<T2, 3>{src.x, src.y, src.z}), src.w};
+            }
+        }
+    } else {
+        static_assert(__channel_error<N>, "unsupported number of channels");
+    }
+}
+
+    // Apply a function to each image pixel in rgb mode
+    template <typename T1, typename T2, int N, typename Func>
+    inline void apply_rgb(image<vec<T1, N>>& result, const image_region& region, const image<vec<T2, N>>& source, const Func& func) {
+        result.resize(source.size());
+        if constexpr(N == 3) {
+            for (auto j = region.min.y; j < region.max.y; j++) {
+                for (auto i = region.min.x; i < region.max.x; i++) {
+                    result[{i, j}] = func(source[{i, j}]);
+                }
+            }
+        } else if constexpr(N == 4) {
+            for (auto j = region.min.y; j < region.max.y; j++) {
+                for (auto i = region.min.x; i < region.max.x; i++) {
+                    auto& src = source[{i, j}];
+                    result[{i, j}] = {func(vec<T2, 3>{src.x, src.y, src.z}), src.w};
+                }
+            }
+        } else {
+            static_assert(__channel_error<N>, "unsupported number of channels");
+        }
+    }
+    
 // Apply a function to each image pixel
 template <typename T1, typename T2, typename Func>
-inline void apply(
-    const Func& func, image<T1>& result, const image<T2>& source) {
+inline void apply(image<T1>& result, const image<T2>& source, const Func& func) {
     result.resize(source.size());
     for (auto j = 0; j < result.size().y; j++) {
         for (auto i = 0; i < result.size().x; i++) {
@@ -1119,8 +1118,8 @@ inline void apply(
     }
 }
 template <typename T1, typename T2, typename Func>
-inline void apply(const Func& func, image<T1>& result, const image<T2>& source,
-    const image_region& region) {
+inline void apply(image<T1>& result, const image_region& region, 
+    const image<T2>& source, const Func& func) {
     result.resize(source.size());
     for (auto j = region.min.y; j < region.max.y; j++) {
         for (auto i = region.min.x; i < region.max.x; i++) {
@@ -1132,70 +1131,55 @@ inline void apply(const Func& func, image<T1>& result, const image<T2>& source,
 // Conversion from/to floats.
 template <typename T, typename TB>
 inline void byte_to_float(image<T>& fl, const image<TB>& bt) {
-    return apply([](auto& a) { return byte_to_float(a); }, fl, bt);
+    return apply(fl, bt, [](const auto& a) { return byte_to_float(a); });
 }
 template <typename T, typename TB>
 inline void float_to_byte(image<TB>& bt, const image<T>& fl) {
-    return apply([](auto& a) { return float_to_byte(a); }, bt, fl);
+    return apply(bt, fl, [](const auto& a) { return float_to_byte(a); });
 }
 
 // Conversion between linear and gamma-encoded images.
 template <typename T>
 inline void srgb_to_linear(image<T>& lin, const image<T>& srgb) {
-    return apply([](auto& a) { return srgb_to_linear(a); }, lin, srgb);
+    return apply(lin, srgb, [](const auto& a) { return srgb_to_linear(a); });
 }
 template <typename T>
 inline void linear_to_srgb(image<T>& srgb, const image<T>& lin) {
-    return apply([](auto& a) { return linear_to_srgb(a); }, srgb, lin);
+    return apply(srgb, lin, [](const auto& a) { return linear_to_srgb(a); });
 }
 template <typename T, typename TB>
 inline void srgb8_to_linear(image<T>& lin, const image<TB>& srgb) {
-    return apply(
-        [](auto& a) { return srgb_to_linear(byte_to_float(a)); }, lin, srgb);
+    return apply(lin, srgb,
+        [](const auto& a) { return srgb_to_linear(byte_to_float(a)); });
 }
 template <typename T, typename TB>
 inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin) {
-    return apply(
-        [](auto& a) { return float_to_byte(linear_to_srgb(a)); }, srgb, lin);
-}
-
-// Conversion between linear and gamma-encoded images.
-template <typename T1, typename TC>
-inline void gamma_to_linear(image<T1>& lin, const image<T1>& srgb, TC gamma) {
-    return apply(
-        [gamma](auto& a) { return gamma_to_linear(a, gamma); }, lin, srgb);
-}
-template <typename T1, typename TC>
-inline void linear_to_gamma(image<T1>& srgb, const image<T1>& lin, TC gamma) {
-    return apply(
-        [gamma](auto& a) { return linear_to_gamma(a, gamma); }, srgb, lin);
+    return apply(srgb, lin,
+        [](const auto& a) { return float_to_byte(linear_to_srgb(a)); });
 }
 
 // Apply exposure and filmic tone mapping
-template <typename T, typename TC>
+template <typename T, int N>
 inline void tonemap_image(
-    image<T>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
-    return apply(
-        [exposure, filmic, srgb](
-            auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); },
-        ldr, hdr);
+    image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr, T exposure, bool filmic, bool srgb) {
+    return apply_rgb(ldr, hdr,
+        [scale = pow((T)2, exposure), filmic, srgb](const auto& hdr) {
+                auto ldr   = xyz(hdr) * scale;
+                if (filmic) ldr = tonemap_filmic(ldr);
+                if (srgb) ldr = linear_to_srgb(ldr);
+                return ldr;
+            });
 }
-template <typename T, typename TB, typename TC>
-inline void tonemap_image8(
-    image<TB>& ldr, const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
-    return apply(
-        [exposure, filmic, srgb](auto& a) {
-            return float_to_byte(tonemap_filmic(a, exposure, filmic, srgb));
-        },
-        ldr, hdr);
-}
-template <typename T, typename TC>
-inline void tonemap_image_region(image<T>& ldr, const image_region& region,
-    const image<T>& hdr, TC exposure, bool filmic, bool srgb) {
-    return apply(
-        [exposure, filmic, srgb](
-            auto& a) { return tonemap_filmic(a, exposure, filmic, srgb); },
-        ldr, hdr, region);
+template <typename T, int N>
+inline void tonemap_image_region(image<vec<T, N>>& ldr, const image_region& region,
+    const image<vec<T, N>>& hdr, T exposure, bool filmic, bool srgb) {
+    return apply_rgb(ldr, region, hdr,
+        [scale = pow((T)2, exposure), filmic, srgb](const auto& hdr) {
+                auto ldr   = xyz(hdr) * scale;
+                if (filmic) ldr = tonemap_filmic(ldr);
+                if (srgb) ldr = linear_to_srgb(ldr);
+                return ldr;
+            });
 }
 
 inline void resize_image(image<float>& res, const image<float>& img) {
@@ -1211,9 +1195,6 @@ inline void resize_image(image<byte>& res, const image<byte>& img) {
 // IMPLEMENTATION FOR IMAGE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-template<typename T> constexpr bool __type_error = std::false_type::value;
-template<int N> constexpr bool __channel_error = std::false_type::value;
 
 // Resize image.
 template <typename T, int N>
@@ -1559,8 +1540,8 @@ inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size,
         for (auto& p : img) p = {0, 0, 0};
     } else if constexpr (N == 4) {
         for (auto& p : img) p = {0, 0, 0, 1};
-            } else {
-                static_assert(__channel_error<T>, "channels not supported");
+    } else {
+        static_assert(__channel_error<T>, "channels not supported");
     }
 
     // sun-sky
