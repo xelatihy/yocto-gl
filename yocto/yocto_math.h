@@ -631,6 +631,12 @@ constexpr bool operator==(const affine<T, N>& a, const affine<T, N>& b);
 template <typename T, int N>
 constexpr bool operator!=(const affine<T, N>& a, const affine<T, N>& b);
 
+// Element access
+template<typename T, int N>
+constexpr mat<T, N, N>& linear_component(affine<T, N>& a);
+template<typename T, int N>
+constexpr const mat<T, N, N>& linear_component(const affine<T, N>& a);
+
 // Frame composition, equivalent to affine matrix product.
 template <typename T, int N>
 constexpr affine<T, N> operator*(
@@ -735,6 +741,12 @@ constexpr frame<T, 3> make_frame_fromz(
 template <typename T>
 constexpr frame<T, 3> make_frame_fromzx(
     const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_);
+
+// Element access
+template<typename T, int N>
+constexpr mat<T, N, N>& linear_component(frame<T, N>& a);
+template<typename T, int N>
+constexpr const mat<T, N, N>& linear_component(const frame<T, N>& a);
 
 // Frame comparisons.
 template <typename T, int N>
@@ -2035,11 +2047,21 @@ constexpr bool operator!=(const affine<T, N>& a, const affine<T, N>& b) {
     return !(a == b);
 }
 
+template<typename T, int N>
+constexpr mat<T, N, N>& linear_component(affine<T, N>& a) {
+    return (mat<T, N, N>&)a;
+}
+
+template<typename T, int N>
+constexpr const mat<T, N, N>& linear_component(const affine<T, N>& a) {
+    return (mat<T, N, N>&)a;
+}
+
 // Frame composition, equivalent to affine matrix product.
 template <typename T, int N>
 constexpr affine<T, N> operator*(
     const affine<T, N>& a, const affine<T, N>& b) {
-    return {a.m() * b.m(), a.m() * b.o + a.o};
+    return {linear_component(a) * linear_component(b), linear_component(a) * b.o + a.o};
 }
 template <typename T, int N>
 constexpr affine<T, N>& operator*=(
@@ -2049,7 +2071,7 @@ constexpr affine<T, N>& operator*=(
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, int N>
 constexpr affine<T, N> inverse(const affine<T, N>& a) {
-    auto minv = inverse(a.m());
+    auto minv = inverse(linear_component(a));
     return {minv, -(minv * a.o)};
 }
 
@@ -2091,6 +2113,16 @@ constexpr frame<T, 3> make_frame_fromzx(
     auto x = orthonormalize(x_, z);
     auto y = normalize(cross(z, x));
     return {x, y, z, o};
+}
+
+template<typename T, int N>
+constexpr mat<T, N, N>& linear_component(frame<T, N>& a) {
+    return (mat<T, N, N>&)a;
+}
+
+template<typename T, int N>
+constexpr const mat<T, N, N>& linear_component(const frame<T, N>& a) {
+    return (mat<T, N, N>&)a;
 }
 
 // Frame comparisons.
