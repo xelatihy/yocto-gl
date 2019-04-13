@@ -1513,7 +1513,7 @@ inline void build_bvh_nodes(vector<bvh_node>& nodes, size_t num_elements,
     auto prims = vector<bvh_prim>(num_elements);
     for (auto element_id = 0; element_id < num_elements; element_id++) {
         prims[element_id].bbox   = element_bounds(element_id);
-        prims[element_id].center = prims[element_id].bbox.center();
+        prims[element_id].center = bbox_center(prims[element_id].bbox);
         prims[element_id].primid = element_id;
     }
 

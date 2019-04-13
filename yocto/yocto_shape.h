@@ -3092,7 +3092,7 @@ inline void make_shell_shape(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texturecoords, T thickness) {
     auto bbox = invalid_bbox3f;
     for (auto p : positions) bbox += p;
-    auto center              = bbox.center();
+    auto center              = bbox_center(bbox);
     auto inner_quads         = quads;
     auto inner_positions     = positions;
     auto inner_normals       = normals;

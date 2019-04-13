@@ -825,9 +825,6 @@ struct bbox {
 
     constexpr vec<T, N>&       operator[](int i) { return (&min)[i]; }
     constexpr const vec<T, N>& operator[](int i) const { return (&min)[i]; }
-
-    constexpr vec<T, N> center() const { return (min + max) / 2; }
-    constexpr vec<T, N> size() const { return max - min; }
 };
 
 // Typedefs
@@ -855,6 +852,12 @@ template <typename T, int N>
 constexpr bool operator==(const bbox<T, N>& a, const bbox<T, N>& b);
 template <typename T, int N>
 constexpr bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b);
+
+// Bbox properties
+template <typename T, int N>
+constexpr vec<T, N> bbox_center(const bbox<T, N>& a) { return (a.min + a.max) / 2; }
+template <typename T, int N>
+constexpr vec<T, N> bbox_size(const bbox<T, N>& a) { return a.max - a.min; }
 
 // Bounding box expansions with points and other boxes.
 template <typename T, int N>
