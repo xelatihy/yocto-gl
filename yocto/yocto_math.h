@@ -912,70 +912,52 @@ struct mat;
 // Small Fixed-size matrices stored in column major format.
 template <typename T, int N>
 struct mat<T, N, 1> {
-    union {
-        vec<T, N> x;
-        vec<T, N> cols[1];
-    };
+    vec<T, N> x;
 
     constexpr mat() : x{} {}
     constexpr mat(const vec<T, N>& x) : x{x} {}
 
-    constexpr vec<T, N>&       operator[](int i) { return cols[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return cols[i]; }
+    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
 template <typename T, int N>
 struct mat<T, N, 2> {
-    union {
-        struct {
-            vec<T, N> x, y;
-        };
-        vec<T, N> cols[2];
-    };
+    vec<T, N> x, y;
 
     constexpr mat() : x{}, y{} {}
     constexpr mat(const vec<T, N>& x, const vec<T, N>& y) : x{x}, y{y} {}
 
-    constexpr vec<T, N>&       operator[](int i) { return cols[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return cols[i]; }
+    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
 template <typename T, int N>
 struct mat<T, N, 3> {
-    union {
-        struct {
-            vec<T, N> x, y, z;
-        };
-        vec<T, N> cols[3];
-    };
+    vec<T, N> x, y, z;
 
     constexpr mat() : x{}, y{}, z{} {}
     constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z)
         : x{x}, y{y}, z{z} {}
 
-    constexpr vec<T, N>&       operator[](int i) { return cols[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return cols[i]; }
+    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
 template <typename T, int N>
 struct mat<T, N, 4> {
-    union {
-        struct {
-            vec<T, N> x, y, z, w;
-        };
-        vec<T, N> cols[4];
-    };
+    vec<T, N> x, y, z, w;
 
     constexpr mat() : x{}, y{}, z{}, w{} {}
     constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z,
         const vec<T, N>& w)
         : x{x}, y{y}, z{z}, w{w} {}
 
-    constexpr vec<T, N>&       operator[](int i) { return cols[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return cols[i]; }
+    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
 };
 
 // Typedefs
