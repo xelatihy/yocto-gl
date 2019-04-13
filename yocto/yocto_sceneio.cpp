@@ -2899,8 +2899,7 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
                             ? checkerboard.tex2.value
                             : spectrum3f{0.6f, 0.6f, 0.6f};
             make_checker_image(texture.hdr_image, {1024, 1024}, 16,
-                {rgb1.x, rgb1.y, rgb1.z, 1},
-                {rgb2.x, rgb2.y, rgb2.z, 1});
+                {rgb1.x, rgb1.y, rgb1.z, 1}, {rgb2.x, rgb2.y, rgb2.z, 1});
             float_to_byte(texture.ldr_image, texture.hdr_image);
             texture.hdr_image = {};
             if (verbose) printf("texture checkerboard not supported well");
@@ -2912,16 +2911,15 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
         } else if (holds_alternative<pbrt_fbm_texture>(ptexture)) {
             auto& fbm = get<pbrt_fbm_texture>(ptexture);
             make_fbm_image(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
-                {1, 1, 1, 1}, (float)1, (float)2, (float)0.5f,
-                fbm.octaves);
+                {1, 1, 1, 1}, (float)1, (float)2, (float)0.5f, fbm.octaves);
             float_to_byte(texture.ldr_image, texture.hdr_image);
             texture.hdr_image = {};
             if (verbose) printf("texture fbm not supported well");
         } else if (holds_alternative<pbrt_marble_texture>(ptexture)) {
             auto& marble = get<pbrt_marble_texture>(ptexture);
             make_fbm_image(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
-                {1, 1, 1, 1}, (float)marble.scale, (float)2,
-                (float)0.5f, marble.octaves);
+                {1, 1, 1, 1}, (float)marble.scale, (float)2, (float)0.5f,
+                marble.octaves);
             float_to_byte(texture.ldr_image, texture.hdr_image);
             texture.hdr_image = {};
             if (verbose) printf("texture marble not supported well");

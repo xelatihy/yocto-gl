@@ -252,8 +252,10 @@ inline T perlin_turbulence_noise(const vec<T, 3>& p, T lacunarity = (T)2,
 namespace yocto {
 
 // PCG random numbers from http://www.pcg-random.org/
-inline rng_state::rng_state() : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
-inline rng_state::rng_state(uint64_t state, uint64_t inc) : state{state}, inc{inc} {}
+inline rng_state::rng_state()
+    : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
+inline rng_state::rng_state(uint64_t state, uint64_t inc)
+    : state{state}, inc{inc} {}
 
 // Next random number.
 inline uint32_t advance_rng(rng_state& rng) {

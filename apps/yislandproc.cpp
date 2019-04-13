@@ -223,8 +223,8 @@ void load_disney_island_materials(const string& filename, const string& dirname,
                 ass_material.color_map_baked = tjs.at(ass_material.color_map)
                                                    .at("bakedFilename")
                                                    .get<string>();
-                ass_material.color =
-                    xyz(tjs.at(ass_material.color_map).at("color").get<vec4f>());
+                ass_material.color = xyz(
+                    tjs.at(ass_material.color_map).at("color").get<vec4f>());
                 mmap[ass_material.name] = ass_material;
             }
         }

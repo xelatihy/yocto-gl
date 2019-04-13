@@ -931,7 +931,7 @@ bool draw_hdr_coloredit_opengl_widget(
         win, (lbl + " [col]"s).c_str(), color);
     if (edit_exposure || edit_color) {
         xyz(value) = xyz(color) * exp2(exposure);
-        value.w   = color.w;
+        value.w    = color.w;
         return true;
     } else {
         return false;

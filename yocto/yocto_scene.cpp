@@ -144,9 +144,9 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
         auto normals = shape.normals;
         if (shape.normals.empty()) compute_shape_normals(shape, normals);
         for (auto vid = 0; vid < shape.positions.size(); vid++) {
-            shape.positions[vid] +=
-                normals[vid] * scale *
-                mean(xyz(evaluate_texture(displacement, shape.texturecoords[vid])));
+            shape.positions[vid] += normals[vid] * scale *
+                                    mean(xyz(evaluate_texture(displacement,
+                                        shape.texturecoords[vid])));
         }
         if (compute_normals || !shape.normals.empty()) {
             compute_shape_normals(shape, shape.normals);
@@ -159,8 +159,9 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
             auto qpos = shape.quads_positions[fid];
             auto qtxt = shape.quads_texturecoords[fid];
             for (auto i = 0; i < 4; i++) {
-                offset[qpos[i]] += scale * mean(xyz(evaluate_texture(displacement,
-                                               shape.texturecoords[qtxt[i]])));
+                offset[qpos[i]] += scale *
+                                   mean(xyz(evaluate_texture(displacement,
+                                       shape.texturecoords[qtxt[i]])));
                 count[qpos[i]] += 1;
             }
         }
@@ -1254,8 +1255,8 @@ material_point evaluate_material_point(const yocto_scene& scene,
     if (material.specular_texture >= 0) {
         auto& specular_texture = scene.textures[material.specular_texture];
         if (!material.base_metallic) {
-            point.specular *=
-                xyz(evaluate_texture(specular_texture, texturecoord));
+            point.specular *= xyz(
+                evaluate_texture(specular_texture, texturecoord));
         } else {
             point.specular *=
                 evaluate_texture(specular_texture, texturecoord).z;
@@ -1288,16 +1289,16 @@ material_point evaluate_material_point(const yocto_scene& scene,
     if (material.transmission_texture >= 0) {
         auto& transmission_texture =
             scene.textures[material.transmission_texture];
-        point.transmission *=
-            xyz(evaluate_texture(transmission_texture, texturecoord));
+        point.transmission *= xyz(
+            evaluate_texture(transmission_texture, texturecoord));
     }
     point.refract       = material.refract;
     point.base_metallic = material.base_metallic;
     point.normalmap     = vec3f{0, 0, 1};
     if (material.normal_texture >= 0) {
         auto& normal_texture = scene.textures[material.normal_texture];
-        point.normalmap =
-            xyz(evaluate_texture(normal_texture, texturecoord, true));
+        point.normalmap      = xyz(
+            evaluate_texture(normal_texture, texturecoord, true));
         point.normalmap = point.normalmap * 2 - vec3f{1, 1, 1};
         // flip vertical axis to align green with image up
         point.normalmap.y = -point.normalmap.y;

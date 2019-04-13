@@ -1090,8 +1090,8 @@ inline void linear_to_srgb(image<TB>& srgb, const image<T>& lin) {
 template <typename T, int N>
 inline void tonemap_image(image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr,
     T exposure, bool filmic, bool srgb) {
-    return apply(
-        ldr, hdr, [scale = pow((T)2, exposure), filmic, srgb](const vec<T, N>& hdr) {
+    return apply(ldr, hdr,
+        [scale = pow((T)2, exposure), filmic, srgb](const vec<T, N>& hdr) {
             if constexpr (N == 3) {
                 auto ldr = hdr * scale;
                 if (filmic) ldr = tonemap_filmic(ldr);
@@ -1112,8 +1112,8 @@ inline void tonemap_image(image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr,
 template <typename T, int N>
 inline void tonemap_image(image<vec<byte, N>>& ldr, const image<vec<T, N>>& hdr,
     T exposure, bool filmic, bool srgb) {
-    return apply(
-        ldr, hdr, [scale = pow((T)2, exposure), filmic, srgb](const vec<T, N>& hdr) {
+    return apply(ldr, hdr,
+        [scale = pow((T)2, exposure), filmic, srgb](const vec<T, N>& hdr) {
             if constexpr (N == 3) {
                 auto ldr = hdr * scale;
                 if (filmic) ldr = tonemap_filmic(ldr);

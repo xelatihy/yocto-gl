@@ -153,9 +153,9 @@ constexpr T quad_area(const vec<T, 3>& p0, const vec<T, 3>& p1,
 
 // Triangle tangent and bitangent from uv
 template <typename T>
-constexpr pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& uv0,
-    const vec<T, 2>& uv1, const vec<T, 2>& uv2);
+constexpr pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2);
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
@@ -790,9 +790,9 @@ constexpr T quad_area(const vec<T, 3>& p0, const vec<T, 3>& p1,
 
 // Triangle tangent and bitangent from uv
 template <typename T>
-constexpr pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& uv0,
-    const vec<T, 2>& uv1, const vec<T, 2>& uv2);
+constexpr pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2);
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
@@ -849,9 +849,9 @@ constexpr T interpolate_bezier_derivative(
 
 // Triangle tangent and bitangent from uv
 template <typename T>
-constexpr pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& uv0,
-    const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
+constexpr pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
     // https://gist.github.com/aras-p/2843984
     // normal points up from texture space

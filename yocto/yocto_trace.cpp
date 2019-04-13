@@ -1846,9 +1846,10 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // False color rendering
-pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, const trace_image_options& options) {
+pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng,
+    const trace_image_options& options) {
     // intersect next point
     auto intersection = bvh_intersection{};
     if (!trace_ray(scene, bvh, position, direction, intersection)) {
@@ -2001,7 +2002,7 @@ void trace_image_region(image<vec4f>& image, trace_state& state,
             for (auto s = 0; s < num_samples; s++) {
                 if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
-                auto ray    = sample_camera_ray(camera, {i, j}, image.size(),
+                auto ray = sample_camera_ray(camera, {i, j}, image.size(),
                     get_random_vec2f(pixel.rng), get_random_vec2f(pixel.rng));
                 auto [radiance, hit] = sampler(
                     scene, bvh, lights, ray.o, ray.d, pixel.rng, options);
