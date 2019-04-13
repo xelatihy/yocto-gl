@@ -813,7 +813,7 @@ inline vec<T, N> tonemap_filmic(
         return ldr;
     } else if constexpr (N == 4) {
         auto scale = pow(2.0f, exposure);
-        auto ldr   = hdr.xyz * scale;
+        auto ldr   = hdr.xyz() * scale;
         if (filmic) ldr = tonemap_filmic(ldr);
         if (srgb) ldr = linear_to_srgb(ldr);
         return {ldr, hdr.w};
@@ -1446,7 +1446,7 @@ inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size,
                 // average channel over wavelengths
                 img[{i, j}][c / 3] += (float)val / 3;
             }
-            integral += img[{i, j}].xyz * sin(theta) /
+            integral += img[{i, j}].xyz() * sin(theta) /
                         (img.size().x * img.size().y / 2);
         }
     }

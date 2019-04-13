@@ -147,10 +147,10 @@ void compute_scattering_functions(short_vector<esdf>& esdfs,
     const material_point& material, const vec4f& shape_color) {
     auto emission = material.emission;
     auto diffuse  = !material.base_metallic
-                       ? material.diffuse * shape_color.xyz
+                       ? material.diffuse * shape_color.xyz()
                        : material.diffuse * (1 - material.specular);
     auto specular = !material.base_metallic
-                        ? material.specular * shape_color.xyz
+                        ? material.specular * shape_color.xyz()
                         : material.diffuse * material.specular +
                               0.04f * (1 - material.specular);
     auto transmission = material.transmission;
@@ -185,7 +185,7 @@ void compute_scattering_functions(short_vector<esdf>& esdfs,
     }
     if (emission != zero3f) {
         esdfs.push_back({esdf_type::diffuse_emission,
-            opacity * material.emission * shape_color.xyz, zero3f, 1});
+            opacity * material.emission * shape_color.xyz(), zero3f, 1});
     }
     if (material.volume_density != zero3f) {
         vsdfs.push_back({vsdf_type::phase_hg, material.volume_emission,
@@ -1888,7 +1888,7 @@ vec4f trace_falsecolor(const yocto_scene& scene, const bvh_scene& bvh,
             return {{point.texturecoord.x, point.texturecoord.y, 0}, 1};
         }
         case trace_falsecolor_type::color: {
-            return {point.color.xyz, 1};
+            return {point.color.xyz(), 1};
         }
         case trace_falsecolor_type::emission: {
             auto emission = zero3f;
@@ -2005,7 +2005,7 @@ void trace_image_region(image<vec4f>& image, trace_state& state,
                     get_random_vec2f(pixel.rng), get_random_vec2f(pixel.rng));
                 auto sample = sampler(
                     scene, bvh, lights, ray.o, ray.d, pixel.rng, options);
-                auto radiance = sample.xyz;
+                auto radiance = sample.xyz();
                 auto hit      = sample.w > 0;
                 if (!hit) {
                     if (options.environments_hidden ||

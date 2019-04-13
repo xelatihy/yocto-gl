@@ -206,85 +206,55 @@ struct vec;
 
 template <typename T>
 struct vec<T, 1> {
-    union {
-        T x;
-        T elems[1];
-    };
+    T x;
 
     constexpr vec() : x{0} {}
     constexpr vec(T x) : x{x} {}
 
-    constexpr T&       operator[](int i) { return elems[i]; }
-    constexpr const T& operator[](int i) const { return elems[i]; }
+    constexpr T&       operator[](int i) { return (&x)[i]; }
+    constexpr const T& operator[](int i) const { return (&x)[i]; }
 };
 
 template <typename T>
 struct vec<T, 2> {
-    union {
-        struct {
-            T x, y;
-        };
-        T elems[2];
-    };
+    T x, y;
 
     constexpr vec() : x{0}, y{0} {}
     constexpr vec(T x, T y) : x{x}, y{y} {}
     constexpr vec(const vec<T, 1>& v, T y) : x{v.x}, y{y} {}
     constexpr explicit vec(T v) : x{v}, y{v} {}
 
-    constexpr T&       operator[](int i) { return elems[i]; }
-    constexpr const T& operator[](int i) const { return elems[i]; }
+    constexpr T&       operator[](int i) { return (&x)[i]; }
+    constexpr const T& operator[](int i) const { return (&x)[i]; }
 };
 
 template <typename T>
 struct vec<T, 3> {
-    union {
-        struct {
-            T x, y, z;
-        };
-        struct {
-            vec<T, 2> xy;
-            T         _z;
-        };
-        T elems[3];
-    };
+    T x, y, z;
 
     constexpr vec() : x{0}, y{0}, z{0} {}
     constexpr vec(T x, T y, T z) : x{x}, y{y}, z{z} {}
     constexpr vec(const vec<T, 2>& v, T z) : x{v.x}, y{v.y}, z{z} {}
     constexpr explicit vec(T v) : x{v}, y{v}, z{v} {}
 
-    constexpr T&       operator[](int i) { return elems[i]; }
-    constexpr const T& operator[](int i) const { return elems[i]; }
+    constexpr T&       operator[](int i) { return (&x)[i]; }
+    constexpr const T& operator[](int i) const { return (&x)[i]; }
 };
 
 template <typename T>
 struct vec<T, 4> {
-    union {
-        struct {
-            T x, y, z, w;
-        };
-        struct {
-            vec<T, 3> xyz;
-            T         _w;
-        };
-        struct {
-            T r, g, b, a;
-        };
-        struct {
-            vec<T, 3> rgb;
-            T         _a;
-        };
-        T elems[4];
-    };
+    T x, y, z, w;
 
     constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
     constexpr vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
     constexpr vec(const vec<T, 3>& v, T w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
     constexpr explicit vec(T v) : x{v}, y{v}, z{v}, w{v} {}
 
-    constexpr T&       operator[](int i) { return elems[i]; }
-    constexpr const T& operator[](int i) const { return elems[i]; }
+    constexpr T&       operator[](int i) { return (&x)[i]; }
+    constexpr const T& operator[](int i) const { return (&x)[i]; }
+
+    constexpr vec<T, 3>& xyz() { return *(vec<T, 3>*)(&x); }
+    constexpr const vec<T, 3>& xyz() const { return *(vec<T, 3>*)(&x); }
 };
 
 // Typedefs
