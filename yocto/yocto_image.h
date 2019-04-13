@@ -133,9 +133,9 @@ template <typename T, int N, typename Func>
 inline vec<T, N> apply_color(const Func& func, const vec<T, N>& a);
 
 // sRGB non-linear curve
-template<typename T>
+template <typename T>
 inline T srgb_to_linear(T srgb);
-template<typename T>
+template <typename T>
 inline T linear_to_srgb(T lin);
 template <typename T, int N>
 inline vec<T, N> srgb_to_linear(const vec<T, N>& srgb);
@@ -309,11 +309,12 @@ inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin);
 
 // Apply exposure and filmic tone mapping
 template <typename T, int N>
-inline void tonemap_image(
-    image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr, T exposure, bool filmic, bool srgb);
+inline void tonemap_image(image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr,
+    T exposure, bool filmic, bool srgb);
 template <typename T, int N>
-inline void tonemap_image_region(image<vec<T, N>>& ldr, const image_region& region,
-    const image<vec<T, N>>& hdr, T exposure, bool filmic, bool srgb);
+inline void tonemap_image_region(image<vec<T, N>>& ldr,
+    const image_region& region, const image<vec<T, N>>& hdr, T exposure,
+    bool filmic, bool srgb);
 
 // Resize an image.
 template <typename T, int N>
@@ -582,9 +583,11 @@ void save_volume(const string& filename, const volume<float>& vol);
 // IMPLEMENTATION OF COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-    
-template<typename T> constexpr bool __type_error = std::false_type::value;
-template<int N> constexpr bool __channel_error = std::false_type::value;
+
+template <typename T>
+constexpr bool __type_error = std::false_type::value;
+template <int N>
+constexpr bool __channel_error = std::false_type::value;
 
 inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
 inline float byte_to_float(byte a) { return a / 255.0f; }
@@ -1065,18 +1068,19 @@ inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
 
 // Apply a function to each image pixel in rgb mode
 template <typename T1, typename T2, int N, typename Func>
-inline void apply_rgb(image<vec<T1, N>>& result, const image<vec<T2, N>>& source, const Func& func) {
+inline void apply_rgb(image<vec<T1, N>>& result,
+    const image<vec<T2, N>>& source, const Func& func) {
     result.resize(source.size());
-    if constexpr(N == 3) {
+    if constexpr (N == 3) {
         for (auto j = 0; j < result.size().y; j++) {
             for (auto i = 0; i < result.size().x; i++) {
                 result[{i, j}] = func(source[{i, j}]);
             }
         }
-    } else if constexpr(N == 4) {
+    } else if constexpr (N == 4) {
         for (auto j = 0; j < result.size().y; j++) {
             for (auto i = 0; i < result.size().x; i++) {
-                auto& src = source[{i, j}];
+                auto& src      = source[{i, j}];
                 result[{i, j}] = {func(vec<T2, 3>{src.x, src.y, src.z}), src.w};
             }
         }
@@ -1085,31 +1089,33 @@ inline void apply_rgb(image<vec<T1, N>>& result, const image<vec<T2, N>>& source
     }
 }
 
-    // Apply a function to each image pixel in rgb mode
-    template <typename T1, typename T2, int N, typename Func>
-    inline void apply_rgb(image<vec<T1, N>>& result, const image_region& region, const image<vec<T2, N>>& source, const Func& func) {
-        result.resize(source.size());
-        if constexpr(N == 3) {
-            for (auto j = region.min.y; j < region.max.y; j++) {
-                for (auto i = region.min.x; i < region.max.x; i++) {
-                    result[{i, j}] = func(source[{i, j}]);
-                }
+// Apply a function to each image pixel in rgb mode
+template <typename T1, typename T2, int N, typename Func>
+inline void apply_rgb(image<vec<T1, N>>& result, const image_region& region,
+    const image<vec<T2, N>>& source, const Func& func) {
+    result.resize(source.size());
+    if constexpr (N == 3) {
+        for (auto j = region.min.y; j < region.max.y; j++) {
+            for (auto i = region.min.x; i < region.max.x; i++) {
+                result[{i, j}] = func(source[{i, j}]);
             }
-        } else if constexpr(N == 4) {
-            for (auto j = region.min.y; j < region.max.y; j++) {
-                for (auto i = region.min.x; i < region.max.x; i++) {
-                    auto& src = source[{i, j}];
-                    result[{i, j}] = {func(vec<T2, 3>{src.x, src.y, src.z}), src.w};
-                }
-            }
-        } else {
-            static_assert(__channel_error<N>, "unsupported number of channels");
         }
+    } else if constexpr (N == 4) {
+        for (auto j = region.min.y; j < region.max.y; j++) {
+            for (auto i = region.min.x; i < region.max.x; i++) {
+                auto& src      = source[{i, j}];
+                result[{i, j}] = {func(vec<T2, 3>{src.x, src.y, src.z}), src.w};
+            }
+        }
+    } else {
+        static_assert(__channel_error<N>, "unsupported number of channels");
     }
-    
+}
+
 // Apply a function to each image pixel
 template <typename T1, typename T2, typename Func>
-inline void apply(image<T1>& result, const image<T2>& source, const Func& func) {
+inline void apply(
+    image<T1>& result, const image<T2>& source, const Func& func) {
     result.resize(source.size());
     for (auto j = 0; j < result.size().y; j++) {
         for (auto i = 0; i < result.size().x; i++) {
@@ -1118,7 +1124,7 @@ inline void apply(image<T1>& result, const image<T2>& source, const Func& func) 
     }
 }
 template <typename T1, typename T2, typename Func>
-inline void apply(image<T1>& result, const image_region& region, 
+inline void apply(image<T1>& result, const image_region& region,
     const image<T2>& source, const Func& func) {
     result.resize(source.size());
     for (auto j = region.min.y; j < region.max.y; j++) {
@@ -1160,26 +1166,27 @@ inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin) {
 
 // Apply exposure and filmic tone mapping
 template <typename T, int N>
-inline void tonemap_image(
-    image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr, T exposure, bool filmic, bool srgb) {
-    return apply_rgb(ldr, hdr,
-        [scale = pow((T)2, exposure), filmic, srgb](const auto& hdr) {
-                auto ldr   = xyz(hdr) * scale;
-                if (filmic) ldr = tonemap_filmic(ldr);
-                if (srgb) ldr = linear_to_srgb(ldr);
-                return ldr;
-            });
+inline void tonemap_image(image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr,
+    T exposure, bool filmic, bool srgb) {
+    return apply_rgb(
+        ldr, hdr, [scale = pow((T)2, exposure), filmic, srgb](const auto& hdr) {
+            auto ldr = xyz(hdr) * scale;
+            if (filmic) ldr = tonemap_filmic(ldr);
+            if (srgb) ldr = linear_to_srgb(ldr);
+            return ldr;
+        });
 }
 template <typename T, int N>
-inline void tonemap_image_region(image<vec<T, N>>& ldr, const image_region& region,
-    const image<vec<T, N>>& hdr, T exposure, bool filmic, bool srgb) {
+inline void tonemap_image_region(image<vec<T, N>>& ldr,
+    const image_region& region, const image<vec<T, N>>& hdr, T exposure,
+    bool filmic, bool srgb) {
     return apply_rgb(ldr, region, hdr,
         [scale = pow((T)2, exposure), filmic, srgb](const auto& hdr) {
-                auto ldr   = xyz(hdr) * scale;
-                if (filmic) ldr = tonemap_filmic(ldr);
-                if (srgb) ldr = linear_to_srgb(ldr);
-                return ldr;
-            });
+            auto ldr = xyz(hdr) * scale;
+            if (filmic) ldr = tonemap_filmic(ldr);
+            if (srgb) ldr = linear_to_srgb(ldr);
+            return ldr;
+        });
 }
 
 inline void resize_image(image<float>& res, const image<float>& img) {
