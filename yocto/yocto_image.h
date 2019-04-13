@@ -133,8 +133,10 @@ template <typename T, int N, typename Func>
 inline vec<T, N> apply_color(const Func& func, const vec<T, N>& a);
 
 // sRGB non-linear curve
-inline float srgb_to_linear(float srgb);
-inline float linear_to_srgb(float lin);
+template<typename T>
+inline T srgb_to_linear(T srgb);
+template<typename T>
+inline T linear_to_srgb(T lin);
 template <typename T, int N>
 inline vec<T, N> srgb_to_linear(const vec<T, N>& srgb);
 template <typename T, int N>
@@ -1210,6 +1212,9 @@ inline void resize_image(image<byte>& res, const image<byte>& img) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+template<typename T> constexpr bool __type_error = std::false_type::value;
+template<int N> constexpr bool __channel_error = std::false_type::value;
+
 // Resize image.
 template <typename T, int N>
 inline void resize_image(
@@ -1228,7 +1233,7 @@ inline void resize_image(
             sizeof(vec<T, N>) * res_img.size().x, N, alpha, 0, STBIR_EDGE_CLAMP,
             STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     } else {
-        throw runtime_error("type not supported");
+        static_assert(__type_error<T>, "type not supported");
     }
 }
 template <typename T>
@@ -1364,7 +1369,7 @@ inline void make_uvramp_image(image<vec<T, N>>& img, const vec2i& size) {
             vec<T, N>{1, 0, 0, 0}, vec<T, N>{1, 1, 0, 0},
             vec<T, N>{0, 1, 0, 0});
     } else {
-        throw runtime_error("bad channels");
+        static_assert(__channel_error<T>, "channels not supported");
     }
 }
 
@@ -1397,7 +1402,7 @@ inline void make_uvgrid_image(
             } else if constexpr (N == 4) {
                 return vec<T, 4>{rgb.x, rgb.y, rgb.z, 1};
             } else {
-                throw runtime_error("bad number of channels");
+                static_assert(__channel_error<T>, "channels not supported");
             }
         });
 }
@@ -1417,7 +1422,7 @@ inline void make_blackbodyramp_image(image<vec<T, N>>& img, const vec2i& size,
             } else if constexpr (N == 4) {
                 return vec<T, 4>{rgb.x, rgb.y, rgb.z, 1};
             } else {
-                throw runtime_error("bad number of channels");
+                static_assert(__channel_error<T>, "channels not supported");
             }
         });
 }
@@ -1554,8 +1559,8 @@ inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size,
         for (auto& p : img) p = {0, 0, 0};
     } else if constexpr (N == 4) {
         for (auto& p : img) p = {0, 0, 0, 1};
-    } else {
-        throw runtime_error("bad channels");
+            } else {
+                static_assert(__channel_error<T>, "channels not supported");
     }
 
     // sun-sky
