@@ -156,14 +156,6 @@ inline vec<byte, N> bilerp_color(const vec<byte, N>& c00,
     const vec<byte, N> c10, const vec<byte, N>& c11, const vec<byte, N> c01,
     T1 u, T1 v);
 
-// Conversion between linear and gamma-encoded colors.
-inline float gamma_to_linear(float srgb, float gamma);
-inline float linear_to_gamma(float srgb, float gamma);
-template <typename T, int N>
-inline vec<T, N> gamma_to_linear(const vec<T, N>& srgb, float gamma);
-template <typename T, int N>
-inline vec<T, N> linear_to_gamma(const vec<T, N>& lin, float gamma);
-
 // sRGB non-linear curve
 inline float srgb_to_linear(float srgb);
 inline float linear_to_srgb(float lin);
@@ -349,12 +341,6 @@ template <typename T, typename TB>
 inline void srgb8_to_linear(image<T>& lin, const image<TB>& srgb);
 template <typename T, typename TB>
 inline void linear_to_srgb8(image<TB>& srgb, const image<T>& lin);
-
-// Conversion between linear and gamma-encoded images.
-template <typename T1, typename TC>
-inline void gamma_to_linear(image<T1>& lin, const image<T1>& srgb, TC gamma);
-template <typename T1, typename TC>
-inline void linear_to_gamma(image<T1>& srgb, const image<T1>& lin, TC gamma);
 
 // Apply exposure and filmic tone mapping
 template <typename T, typename TC>
@@ -821,24 +807,6 @@ inline vec<byte, N> bilerp_color(const vec<byte, N>& c00,
     T1 u, T1 v) {
     return float_to_byte(bilerp(byte_to_float(c00), byte_to_float(c01),
         byte_to_float(c11), byte_to_float(c01), u, v));
-}
-
-// Conversion between linear and gamma-encoded colors.
-inline float gamma_to_linear(float srgb, float gamma) {
-    return pow(srgb, gamma);
-}
-inline float linear_to_gamma(float srgb, float gamma) {
-    return pow(srgb, 1 / gamma);
-}
-template <typename T, int N>
-inline vec<T, N> gamma_to_linear(const vec<T, N>& srgb, float gamma) {
-    return apply_color(
-        [&gamma](auto& a) { return gamma_to_linear(a, gamma); }, srgb);
-}
-template <typename T, int N>
-inline vec<T, N> linear_to_gamma(const vec<T, N>& lin, float gamma) {
-    return apply_color(
-        [&gamma](auto& a) { return linear_to_gamma(a, gamma); }, lin);
 }
 
 // sRGB non-linear curve
