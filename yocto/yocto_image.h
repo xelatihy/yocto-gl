@@ -997,8 +997,8 @@ template <typename T>
 constexpr T pq_display_to_linear(T x) {
     T Np = pow(x, 1 / (T)78.84375);
     T L  = max(Np - (T)0.8359375, (T)0);
-    L = L / ((T)18.8515625 - (T)18.6875 * Np);
-    L = pow(L, 1 / (T)0.1593017578125);
+    L    = L / ((T)18.8515625 - (T)18.6875 * Np);
+    L    = pow(L, 1 / (T)0.1593017578125);
     return L;
 }
 template <typename T>
@@ -1015,18 +1015,18 @@ constexpr T pq_linear_to_display(T x) {
 // likely a better range to use.
 template <typename T>
 constexpr T hlg_display_to_linear(T x) {
-    if(x < (T)0.5) {
-        return 3*3*x*x;
+    if (x < (T)0.5) {
+        return 3 * 3 * x * x;
     } else {
         return (exp((x - (T)0.55991073) / (T)0.17883277) + (T)0.28466892) / 12;
     }
 }
 template <typename T>
 constexpr T hlg_linear_to_display(T x) {
-    if(x < 1 / (T)12) {
-        return sqrt(3*x);
+    if (x < 1 / (T)12) {
+        return sqrt(3 * x);
     } else {
-        return (T)0.17883277 * log(12*x-(T)0.28466892) + (T)0.55991073;
+        return (T)0.17883277 * log(12 * x - (T)0.28466892) + (T)0.55991073;
     }
 }
 
