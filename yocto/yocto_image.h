@@ -133,6 +133,21 @@ inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr);
 template <typename T, int N1, int N2>
 inline vec<T, N1> convert_color_channels(const vec<T, N2>& a);
 
+// Color spaces
+enum struct color_space {
+    linear,  // default linear space
+    srgb,    // srgb color space
+    xyz,     // xyz color space
+    xyZ,     // xyZ color space
+};
+
+// Convert color space
+template <typename T, color_space From, color_space To>
+inline vec<T, 3> convert_color_space(const vec<T, 3>& a);
+template <typename T>
+inline vec<T, 3> convert_color_space(
+    const vec<T, 3>& a, color_space from, color_space to);
+
 // Convert between CIE XYZ and xyY
 template <typename T>
 inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz);
@@ -752,6 +767,307 @@ inline vec<T, N1> convert_color_channels(const vec<T, N2>& a) {
     }
 }
 
+// https://en.wikipedia.org/wiki/SRGB
+template <typename T>
+constexpr mat<T, 3, 3> _srgb_to_xyz_mat = {
+    {0.4124, 0.2126, 0.0193},
+    {0.3576, 0.7152, 0.1192},
+    {0.1805, 0.0722, 0.9504},
+};
+template <typename T>
+constexpr mat<T, 3, 3> _xyz_to_srgb_mat = {
+    {+3.2406, -1.5372, -0.4986},
+    {-0.9689, +1.8758, +0.0415},
+    {+0.0557, -0.2040, +1.0570},
+};
+
+// rgb color space chromaticities stored for convenience in a 2x4 matrix
+template <typename T>
+struct rgb_chromaticities {
+    vec<T, 2> red;
+    vec<T, 2> green;
+    vec<T, 2> blue;
+    vec<T, 2> white;
+};
+
+// https://en.wikipedia.org/wiki/SRGB
+template <typename T>
+constexpr auto srgb_chromaticities = rgb_chromaticities<T>{
+    {0.6400, 0.3300}, {0.3000, 0.6000}, {0.1500, 0.0600}, {0.3127, 0.3290}};
+template <typename T>
+constexpr auto acesp0_chromaticities = rgb_chromaticities<T>{
+    {0.7347, 0.2653}, {0.0000, 1.0000}, {0.0001, -0.0770}, {0.32168, 0.33767}};
+template <typename T>
+constexpr auto acesp1_chromaticities = rgb_chromaticities<T>{
+    {0.7130, 0.2930}, {0.1650, 0.8300}, {0.1280, +0.0440}, {0.32168, 0.33767}};
+// https://en.wikipedia.org/wiki/Adobe_RGB_color_space
+template <typename T>
+constexpr auto adobergb_chromaticities = rgb_chromaticities<T>{
+    {0.6400, 0.3300}, {0.2100, 0.7100}, {0.1500, 0.0600}, {0.3127, 0.3290}};
+// https://en.wikipedia.org/wiki/Rec._709
+template <typename T>
+constexpr auto rec709_chromaticities = rgb_chromaticities<T>{
+    {0.6400, 0.3300}, {0.3000, 0.6000}, {0.1500, 0.0600}, {0.3127, 0.3290}};
+// https://en.wikipedia.org/wiki/Rec._2020
+template <typename T>
+constexpr auto rec2020_chromaticities = rgb_chromaticities<T>{
+    {0.7080, 0.2920}, {0.1700, 0.7970}, {0.1310, 0.0460}, {0.3127, 0.3290}};
+// https://en.wikipedia.org/wiki/Rec._2020
+template <typename T>
+constexpr auto rec2100_chromaticities = rgb_chromaticities<T>{
+    {0.7080, 0.2920}, {0.1700, 0.7970}, {0.1310, 0.0460}, {0.3127, 0.3290}};
+// https://en.wikipedia.org/wiki/DCI-P3
+template <typename T>
+constexpr auto dcip3_chromaticities = rgb_chromaticities<T>{
+    {0.6800, 0.3200}, {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3140, 0.3510}};
+// https://en.wikipedia.org/wiki/DCI-P3
+template <typename T>
+constexpr auto d60p3_chromaticities = rgb_chromaticities<T>{
+    {0.6800, 0.3200}, {0.2650, 0.6900}, {0.1500, 0.0600}, {0.32168, 0.33767}};
+// https://en.wikipedia.org/wiki/DCI-P3
+template <typename T>
+constexpr auto d65p3_chromaticities = rgb_chromaticities<T>{
+    {0.6800, 0.3200}, {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3127, 0.3290}};
+// https://en.wikipedia.org/wiki/DCI-P3
+template <typename T>
+constexpr auto displayp3_chromaticities = rgb_chromaticities<T>{
+    {0.6800, 0.3200}, {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3127, 0.3290}};
+// https://en.wikipedia.org/wiki/ProPhoto_RGB_color_space
+template <typename T>
+constexpr auto prophoto_chromaticities = rgb_chromaticities<T>{
+    {0.7347, 0.2653}, {0.1596, 0.8404}, {0.0366, 0.0001}, {0.3457, 0.3585}};
+
+// Compute the rgb -> xyz matrix from the color space definition
+// Input: red, green, blue, white (x,y) chromoticities
+// Algorithm from: SMPTE Recommended Practice RP 177-1993
+// http://car.france3.mars.free.fr/HD/INA-%2026%20jan%2006/SMPTE%20normes%20et%20confs/rp177.pdf
+template <typename T>
+constexpr mat<T, 3, 3> rgb_to_xyz_mat(const rgb_chromaticities<T>& ch) {
+    auto& rc  = ch.red;
+    auto& gc  = ch.green;
+    auto& bc  = ch.blue;
+    auto& wc  = ch.white;
+    auto  rgb = mat<T, 3, 3>{
+        {rc.x, rc.y, 1 - rc.x - rc.y},
+        {gc.x, gc.y, 1 - gc.x - gc.y},
+        {bc.x, bc.y, 1 - bc.x - bc.y},
+    };
+    auto w = vec<T, 3>{wc.x, wc.y, 1 - wc.x - wc.y};
+    auto c = inverse(rgb) * vec<T, 3>{w.x / w.y, 1, w.z / w.y};
+    return mat<T, 3, 3>{c.x * rgb.x, c.y * rgb.y, c.z * rgb.z};
+}
+
+template <typename T>
+constexpr mat<T, 3, 3> srgb_to_xyz_mat = rgb_to_xyz_mat(srgb_chromaticities<T>);
+template <typename T>
+constexpr mat<T, 3, 3> acesp0_to_xyz_mat = rgb_to_xyz_mat(
+    acesp0_chromaticities<T>);
+
+// https://en.wikipedia.org/wiki/SRGB
+template <typename T>
+constexpr T srgb_display_to_linear(T x) {
+    if (x < (T)0.04045) {
+        return x / (T)12.92;
+    } else {
+        return pow((x + (T)0.055) / (T)1.055, (T)2.4);
+    }
+}
+template <typename T>
+constexpr T srgb_linear_to_display(T x) {
+    if (x < (T)0.0031308) {
+        return (T)12.92 * x;
+    } else {
+        return (T)1.055 * pow(x, 1 / (T)2.4) - (T)0.055;
+    }
+}
+// https://en.wikipedia.org/wiki/Rec._709
+template <typename T>
+constexpr T rec709_display_to_linear(T x) {
+    if (x < (T)0.081) {
+        return x / (T)4.5;
+    } else {
+        return pow((x + (T)0.099) / (T)1.099, 1 / (T)0.45);
+    }
+}
+template <typename T>
+constexpr T rec709_linear_to_display(T x) {
+    if (x < (T)0.018) {
+        return (T)4.500 * x;
+    } else {
+        return (T)1.099 * pow(x, (T)0.45) - (T)0.099;
+    }
+}
+// https://en.wikipedia.org/wiki/Rec._2020
+template <typename T>
+constexpr T rec2020_display_to_linear(T x) {
+    if (x < (T)0.0812428583) {
+        return x / (T)4.5;
+    } else {
+        return pow(
+            (x + (T)0.09929682680944) / (T)1.09929682680944, 1 / (T)0.45);
+    }
+}
+template <typename T>
+constexpr T rec2020_linear_to_display(T x) {
+    if (x < (T)0.018053968510807) {
+        return (T)4.500 * x;
+    } else {
+        return (T)1.09929682680944 * pow(x, (T)0.45) - (T)0.09929682680944;
+    }
+}
+// https://en.wikipedia.org/wiki/DCI-P3
+template <typename T>
+constexpr T adobergb_display_to_linear(T x) {
+    return pow(x, (T)2.19921875);
+}
+template <typename T>
+constexpr T adobergb_linear_to_display(T x) {
+    return pow(x, 1 / (T)2.19921875);
+}
+// https://en.wikipedia.org/wiki/DCI-P3
+template <typename T>
+constexpr T dcip3_display_to_linear(T x) {
+    return pow(x, (T)2.6);
+}
+template <typename T>
+constexpr T dcip3_linear_to_display(T x) {
+    return pow(x, 1 / (T)2.6);
+}
+// https://github.com/ampas/aces-dev
+template <typename T>
+constexpr T acescc_display_to_linear(T x) {
+    if (x < (T)-0.3013698630) {  // (9.72-15)/17.52
+        return (exp2(x * (T)17.52 - (T)9.72) - exp2((T)-16)) * 2;
+    } else if (x < (log2((T)65504) + (T)9.72) / (T)17.52) {
+        return exp2(x * (T)17.52 - (T)9.72);
+    } else {  // (in >= (log2(65504)+9.72)/17.52)
+        return (T)65504;
+    }
+}
+template <typename T>
+constexpr T acescc_linear_to_display(T x) {
+    if (x <= 0) {
+        return (T)-0.3584474886;  // =(log2( pow(2.,-16.))+9.72)/17.52
+    } else if (x < exp2((T)-15)) {
+        return (log2(exp2((T)-16) + x * (T)0.5) + (T)9.72) / (T)17.52;
+    } else {  // (in >= pow(2.,-15))
+        return (log2(x) + (T)9.72) / (T)17.52;
+    }
+}
+// https://github.com/ampas/aces-dev
+template <typename T>
+constexpr T acescct_display_to_linear(T x) {
+    if (x > (T)0.155251141552511) {
+        return exp2(x * (T)17.52 - (T)9.72);
+    } else {
+        return (x - (T)0.0729055341958355) / (T)10.5402377416545;
+    }
+}
+template <typename T>
+constexpr T acescct_linear_to_display(T x) {
+    if (x <= (T)0.0078125) {
+        return (T)10.5402377416545 * x + (T)0.0729055341958355;
+    } else {
+        return (log2(x) + (T)9.72) / (T)17.52;
+    }
+}
+// https://en.wikipedia.org/wiki/ProPhoto_RGB_color_space
+template <typename T>
+constexpr T prophoto_display_to_linear(T x) {
+    if (x < (T)0.03125) {
+        return x / (T)16;
+    } else {
+        return pow(x, (T)1.8);
+    }
+}
+template <typename T>
+constexpr T prophoto_linear_to_display(T x) {
+    if (x < (T)0.001953125) {
+        return (T)16 * x;
+    } else {
+        return pow(x, 1 / (T)1.8);
+    }
+}
+
+// https://en.wikipedia.org/wiki/High-dynamic-range_video#Perceptual_Quantizer
+// https://github.com/ampas/aces-dev/blob/master/transforms/ctl/lib/ACESlib.Utilities_Color.ctl
+// In PQ, we assume that the linear luminance in [0,1] corresponds to
+// [0,10000] cd m^2
+template <typename T>
+constexpr T pq_display_to_linear(T x) {
+    T Np = pow(x, 1 / (T)78.84375);
+    T L  = max(Np - (T)0.8359375, (T)0);
+    L = L / ((T)18.8515625 - (T)18.6875 * Np);
+    L = pow(L, 1 / (T)0.1593017578125);
+    return L;
+}
+template <typename T>
+constexpr T pq_linear_to_display(T x) {
+    return pow(((T)0.8359375 + (T)18.8515625 * pow(x, (T)0.1593017578125)) /
+                   (1 + (T)18.6875 * pow(x, (T)0.1593017578125)),
+        (T)78.84375);
+}
+// https://en.wikipedia.org/wiki/High-dynamic-range_video#Perceptual_Quantizer
+// In HLG, we assume that the linear luminance in [0,1] corresponds to
+// [0,1000] cd m^2. Note that the version we report here is scaled in [0,1]
+// range for nominal luminance. But HLG was initially defined in the [0,12]
+// range where it maps 1 to 0.5 and 12 to 1. For use in HDR tonemapping that is
+// likely a better range to use.
+template <typename T>
+constexpr T hlg_display_to_linear(T x) {
+    if(x < (T)0.5) {
+        return 3*3*x*x;
+    } else {
+        return (exp((x - (T)0.55991073) / (T)0.17883277) + (T)0.28466892) / 12;
+    }
+}
+template <typename T>
+constexpr T hlg_linear_to_display(T x) {
+    if(x < 1 / (T)12) {
+        return sqrt(3*x);
+    } else {
+        return (T)0.17883277 * log(12*x-(T)0.28466892) + (T)0.55991073;
+    }
+}
+
+// Convert color space
+template <typename T>
+inline vec<T, 3> convert_color_space(
+    const vec<T, 3>& col, color_space from, color_space to) {
+    if (from == to) {
+        return col;
+    } else if (from != color_space::linear && to != color_space::linear) {
+        auto lin = convert_color_space(col, from, color_space::linear);
+        return convert_color_space(lin, color_space::linear, to);
+    } else if (from == color_space::linear) {
+        if (to == color_space::srgb) {
+            return linear_to_srgb(col);
+        } else if (to == color_space::xyz) {
+            return rgb_to_xyz(col);
+        } else if (to == color_space::xyZ) {
+            return xyz_to_xyZ(rgb_to_xyz(col));
+        } else {
+            throw runtime_error("unsupported color space");
+        }
+    } else if (to == color_space::linear) {
+        if (from == color_space::srgb) {
+            return srgb_to_linear(col);
+        } else if (from == color_space::xyz) {
+            return xyz_to_rgb(col);
+        } else if (from == color_space::xyZ) {
+            return xyY_to_xyz(xyz_to_rgb(col));
+        } else {
+            throw runtime_error("unsupported color space");
+        }
+    } else {
+        throw runtime_error("unsupported color space");
+    }
+}
+template <typename T, color_space from, color_space to>
+inline vec<T, 3> convert_color_space(const vec<T, 3>& a) {
+    return convert_color_channels(a, from, to);
+}
+
 // Convert between CIE XYZ and xyY
 template <typename T>
 inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
@@ -862,9 +1178,9 @@ inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
     h       = fmod(h, (T)1) / ((T)60 / (T)360);
     int   i = (int)h;
     float f = h - (float)i;
-    float p = v * (1.0f - s);
-    float q = v * (1.0f - s * f);
-    float t = v * (1.0f - s * (1.0f - f));
+    float p = v * (1 - s);
+    float q = v * (1 - s * f);
+    float t = v * (1 - s * (1 - f));
 
     switch (i) {
         case 0: return {v, t, p};
@@ -883,15 +1199,15 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
     float K = 0.f;
     if (g < b) {
         swap(g, b);
-        K = -1.f;
+        K = -1;
     }
     if (r < g) {
         swap(r, g);
-        K = -2.f / 6.f - K;
+        K = -2 / (T)6 - K;
     }
 
     float chroma = r - (g < b ? g : b);
-    return {fabsf(K + (g - b) / (6.f * chroma + (T)1e-20)),
+    return {fabsf(K + (g - b) / (6 * chroma + (T)1e-20)),
         chroma / (r + (T)1e-20), r};
 }
 }  // namespace yocto
