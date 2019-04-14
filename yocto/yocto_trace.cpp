@@ -1418,6 +1418,35 @@ tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
     }
 }
 
+tuple<vec3f, vec3f> sample_next_direction_volume(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
+    const vec3f& outgoing, const vec3f& albedo, float phaseg, rng_state& rng) {
+    auto direction     = zero3f;
+    auto direction_pdf = 0.0f;
+
+    if (get_random_float(rng) < 0.5f) {
+        direction = sample_lights_direction(scene, lights, bvh, position,
+            get_random_float(rng), get_random_float(rng),
+            get_random_vec2f(rng));
+    } else {
+        direction = sample_phase_function(phaseg, get_random_vec2f(rng));
+        direction = make_basis_fromz(-outgoing) * direction;
+    }
+    auto cos_theta      = dot(outgoing, direction);
+    auto phase_function = evaluate_phase_function(cos_theta, phaseg);
+    auto light_pdf      = sample_lights_direction_pdf(
+        scene, lights, bvh, position, direction);
+
+    direction_pdf = 0.5f * phase_function + 0.5f * light_pdf;
+
+    if (direction == zero3f || direction_pdf == 0 || phase_function == 0.0f)
+        return {zero3f, zero3f};
+    else {
+        auto weight = albedo * phase_function / direction_pdf;
+        return {direction, weight};
+    }
+}
+
 #define OLD_VOLPATH 0
 
 #if 0
@@ -1677,35 +1706,11 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 if (get_random_float(rng) < min(vsdf.albedo[spectrum], 0.95f)) {
                     // scattering
                     weight /= min(vsdf.albedo[spectrum], 0.95f);
-                    {
-                        auto outgoing     = -ray.d;
-                        auto incoming     = zero3f;
-                        auto incoming_pdf = 0.0f;
-
-                        if (get_random_float(rng) < 0.5f) {
-                            incoming = sample_lights_direction(scene, lights,
-                                bvh, position, get_random_float(rng),
-                                get_random_float(rng), get_random_vec2f(rng));
-                        } else {
-                            incoming = sample_phase_function(
-                                vsdf.phaseg, get_random_vec2f(rng));
-                            incoming = make_basis_fromz(-outgoing) * incoming;
-                        }
-                        auto cos_theta      = dot(outgoing, incoming);
-                        auto phase_function = evaluate_phase_function(
-                            cos_theta, vsdf.phaseg);
-                        incoming_pdf = 0.5f * phase_function +
-                                       0.5f * sample_lights_direction_pdf(scene,
-                                                  lights, bvh, position,
-                                                  incoming);
-
-                        if (incoming == zero3f || incoming_pdf == 0 ||
-                            phase_function == 0.0f)
-                            break;
-                        else
-                            weight *= vsdf.albedo * phase_function /
-                                      incoming_pdf;
-                    }
+                    auto [incoming, w] = sample_next_direction_volume(scene,
+                        lights, bvh, position, -ray.d, vsdf.albedo, vsdf.phaseg,
+                        rng);
+                    if (w == zero3f) break;
+                    weight *= w;
                     ray = make_ray(position, incoming);
                     continue;
                 } else {
@@ -1733,11 +1738,11 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (point.bsdfs.empty()) break;
 
         // russian roulette
-        if (sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
-                weight, bounce, get_random_float(rng)))
-            break;
-        weight /= sample_russian_roulette_pdf(
-            get_russian_roulette_albedo(point.bsdfs), weight, bounce);
+        // if (sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
+        //         weight, bounce, get_random_float(rng)))
+        //     break;
+        // weight /= sample_russian_roulette_pdf(
+        //     get_russian_roulette_albedo(point.bsdfs), weight, bounce);
 
         // exit if needed
         if (weight == zero3f) break;
@@ -1756,21 +1761,13 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (!point.vsdfs.empty() &&
             dot(incoming, point.geometric_normal) > 0 !=
                 dot(outgoing, point.geometric_normal) > 0) {
-            // auto [pos, dir, rad, w] = integrate_volume(scene, lights,
-            // bvh,
-            //     point.vsdfs, point.position, outgoing, incoming, rng);
-
-            // radiance += weight * rad;
-            // weight *= w;
-
-            // if (weight == zero3f) break;
-            // point.position = pos;
-            // incoming       = dir;
-
-            if (volume_stack.empty())
-                volume_stack.push_back(point.vsdfs[0]);
-            else
+            if (volume_stack.empty()) {
+                assert(point.vsdfs.size() == 1);
+                volume_stack.push_back(point.vsdfs.back());
+            } else {
+                assert(volume_stack.size() == 1);
                 volume_stack.pop_back();
+            }
         }
         // setup next iteration
         ray = make_ray(point.position, incoming);
