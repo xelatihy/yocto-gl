@@ -362,11 +362,6 @@ int main(int argc, char* argv[]) {
         return parser.exit(e);
     }
 
-    // print("{}", srgb_to_xyz_mat<float>);
-    println("{}", _srgb_to_xyz_mat<float>);
-    println("{}", srgb_to_xyz_mat<float>);
-    println("{}", acesp0_to_xyz_mat<float>);
-
     // loading images
     for (auto filename : filenames)
         add_new_image(app, filename, outfilename, exposure, filmic, srgb);

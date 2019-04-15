@@ -135,11 +135,26 @@ inline vec<T, N1> convert_color_channels(const vec<T, N2>& a);
 
 // Color spaces
 enum struct color_space {
-    linear,  // default linear space
-    srgb,    // srgb color space
-    xyz,     // xyz color space
-    xyZ,     // xyZ color space
-};
+    linear,       // default linear space (srgb linear)
+    srgb,         // srgb color space (non-linear)
+    adobergb,     // Adobe rgb color space (non-linear)
+    prophotorgb,  // ProPhoto Kodak rgb color space (non-linear)
+    rec709,       // hdtv color space (non-linear)
+    rec2020,      // uhtv color space (non-linear)
+    rec2100_pq,   // hdr color space with perceptual quantizer (non-linear)
+    rec2100_hlg,  // hdr color space with hybrid log gamma (non-linear)
+    aces,         // ACES storage format (linear)
+    acescg,       // ACES CG computation (linear)
+    acescc,       // ACES color correction (non-linear)
+    acescct,      // ACES color correction 2 (non-linear)
+    dcip3,        // P3 DCI (non-linear)
+    d60p3,        // P3 variation for D60 (non-linear)
+    d65p3,        // P3 variation for D65 (non-linear)
+    displayp3,    // Apple display P3
+    xyz,          // CIE XYZ
+    xyY,          // CIE xyY
+    hsv,          // HSV color space (this gets converted from any RGB one)
+}
 
 // Convert color space
 template <typename T, color_space From, color_space To>
@@ -147,6 +162,9 @@ inline vec<T, 3> convert_color_space(const vec<T, 3>& a);
 template <typename T>
 inline vec<T, 3> convert_color_space(
     const vec<T, 3>& a, color_space from, color_space to);
+template <color_space space>
+constexpr bool is_linear_color_space();
+inline bool    is_linear_color_space(color_space space);
 
 // Convert between CIE XYZ and xyY
 template <typename T>
@@ -1029,6 +1047,31 @@ constexpr T hlg_linear_to_display(T x) {
         return (T)0.17883277 * log(12 * x - (T)0.28466892) + (T)0.55991073;
     }
 }
+
+// Convert color space
+template <typename T, color_space From, color_space To>
+inline vec<T, 3> convert_color_space(const vec<T, 3>& a) {
+    if constexpr (from == to) {
+        return a;
+    } else if constexpr (from = color_space::linear &&
+                                to == color_space::srgb) {
+        return srgb_linear_to_display(a);
+    } else if constexpr (from = color_space::srgb &&
+                                to == color_space::linear) {
+        return srgb_display_to_linear(a);
+    } else if constexpr (to == color_space::xyz) {
+    } else if constexpr (from == color_space::xyz) {
+    } else {
+        auto xyz = convert_color_space<from, color_space::xyz>(a);
+        return convert_color_space<color_space::xyz, to>(xyz);
+    }
+}
+template <typename T>
+inline vec<T, 3> convert_color_space(
+    const vec<T, 3>& a, color_space from, color_space to);
+template <color_space space>
+constexpr bool is_linear_color_space();
+inline bool    is_linear_color_space(color_space space);
 
 // Convert color space
 template <typename T>
