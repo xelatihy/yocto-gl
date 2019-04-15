@@ -1685,6 +1685,8 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
         auto inside_volume = !volume_stack.empty();
+
+        // clamp ray if inside a volume
         if (inside_volume)
             ray.tmax = sample_volume_distance(
                 volume_stack.back().density[spectrum], get_random_float(rng));
@@ -1694,13 +1696,14 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto hit          = trace_ray(scene, bvh, ray, intersection);
 
         if (inside_volume) {
-            auto distance = hit ? intersection.distance : ray.tmax;
-            auto vsdf     = volume_stack.back();
+            auto  distance = hit ? intersection.distance : ray.tmax;
+            auto& vsdf     = volume_stack.back();
             weight /= sample_volume_distance_pdf(
                 vsdf.density[spectrum], distance);
             weight *= evaluate_volume_transmission(vsdf.density, distance);
 
             if (!hit) {
+                // volume interaction
                 auto position = ray.o + ray.d * distance;
 
                 if (get_random_float(rng) < min(vsdf.albedo[spectrum], 0.95f)) {
@@ -1738,11 +1741,11 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (point.bsdfs.empty()) break;
 
         // russian roulette
-        // if (sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
-        //         weight, bounce, get_random_float(rng)))
-        //     break;
-        // weight /= sample_russian_roulette_pdf(
-        //     get_russian_roulette_albedo(point.bsdfs), weight, bounce);
+        if (sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
+                weight, bounce, get_random_float(rng)))
+            break;
+        weight /= sample_russian_roulette_pdf(
+            get_russian_roulette_albedo(point.bsdfs), weight, bounce);
 
         // exit if needed
         if (weight == zero3f) break;
@@ -1757,17 +1760,14 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= brdf_cosine / incoming_pdf;
         if (weight == zero3f) break;
 
-        // transmission
+        // update volume_stack
         if (!point.vsdfs.empty() &&
             dot(incoming, point.geometric_normal) > 0 !=
                 dot(outgoing, point.geometric_normal) > 0) {
-            if (volume_stack.empty()) {
-                assert(point.vsdfs.size() == 1);
+            if (volume_stack.empty())
                 volume_stack.push_back(point.vsdfs.back());
-            } else {
-                assert(volume_stack.size() == 1);
+            else
                 volume_stack.pop_back();
-            }
         }
         // setup next iteration
         ray = make_ray(point.position, incoming);
