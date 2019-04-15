@@ -1681,6 +1681,7 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto ray          = make_ray(position_, direction_);
     auto volume_stack = vector<vsdf>{};
     auto spectrum     = get_random_int(rng, 3);
+    auto alpha        = 0.0f;
 
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
@@ -1696,6 +1697,7 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto hit          = trace_ray(scene, bvh, ray, intersection);
 
         if (inside_volume) {
+            // compute volume transmission
             auto  distance = hit ? intersection.distance : ray.tmax;
             auto& vsdf     = volume_stack.back();
             weight /= sample_volume_distance_pdf(
@@ -1729,6 +1731,7 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             radiance += weight * evaluate_environment_emission(scene, ray.d);
             break;
         }
+        alpha = 1.0f;
 
         // prepare shading point
         auto outgoing = -ray.d;
@@ -1769,11 +1772,12 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             else
                 volume_stack.pop_back();
         }
+
         // setup next iteration
         ray = make_ray(point.position, incoming);
     }
 
-    return {radiance, 1.0f};
+    return {radiance, alpha};
 }
 
 // Recursive path tracing.
