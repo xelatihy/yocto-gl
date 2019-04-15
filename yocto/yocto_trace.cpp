@@ -1418,6 +1418,35 @@ tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
     }
 }
 
+tuple<vec3f, vec3f> sample_next_direction_volume(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
+    const vec3f& outgoing, const vec3f& albedo, float phaseg, rng_state& rng) {
+    auto direction     = zero3f;
+    auto direction_pdf = 0.0f;
+
+    if (get_random_float(rng) < 0.5f) {
+        direction = sample_lights_direction(scene, lights, bvh, position,
+            get_random_float(rng), get_random_float(rng),
+            get_random_vec2f(rng));
+    } else {
+        direction = sample_phase_function(phaseg, get_random_vec2f(rng));
+        direction = make_basis_fromz(-outgoing) * direction;
+    }
+    auto cos_theta      = dot(outgoing, direction);
+    auto phase_function = evaluate_phase_function(cos_theta, phaseg);
+    auto light_pdf      = sample_lights_direction_pdf(
+        scene, lights, bvh, position, direction);
+
+    direction_pdf = 0.5f * phase_function + 0.5f * light_pdf;
+
+    if (direction == zero3f || direction_pdf == 0 || phase_function == 0.0f)
+        return {zero3f, zero3f};
+    else {
+        auto weight = albedo * phase_function / direction_pdf;
+        return {direction, weight};
+    }
+}
+
 #define OLD_VOLPATH 0
 
 #if 0
@@ -1644,23 +1673,65 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Recursive path tracing.
 vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    const trace_lights& lights, const vec3f& position_, const vec3f& direction_,
     rng_state& rng, const trace_image_options& options) {
     // initialize
-    auto radiance = zero3f;
-    auto weight   = vec3f{1, 1, 1};
-    auto ray      = make_ray(position, direction);
-    auto hit      = false;
+    auto radiance     = zero3f;
+    auto weight       = vec3f{1, 1, 1};
+    auto ray          = make_ray(position_, direction_);
+    auto volume_stack = vector<vsdf>{};
+    auto spectrum     = get_random_int(rng, 3);
+    auto alpha        = 0.0f;
 
     // trace  path
     for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
+        auto inside_volume = !volume_stack.empty();
+
+        // clamp ray if inside a volume
+        if (inside_volume)
+            ray.tmax = sample_volume_distance(
+                volume_stack.back().density[spectrum], get_random_float(rng));
+
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(scene, bvh, ray, intersection)) {
+        auto hit          = trace_ray(scene, bvh, ray, intersection);
+
+        if (inside_volume) {
+            // compute volume transmission
+            auto  distance = hit ? intersection.distance : ray.tmax;
+            auto& vsdf     = volume_stack.back();
+            weight /= sample_volume_distance_pdf(
+                vsdf.density[spectrum], distance);
+            weight *= evaluate_volume_transmission(vsdf.density, distance);
+
+            if (!hit) {
+                // volume interaction
+                auto position = ray.o + ray.d * distance;
+
+                if (get_random_float(rng) < min(vsdf.albedo[spectrum], 0.95f)) {
+                    // scattering
+                    weight /= min(vsdf.albedo[spectrum], 0.95f);
+                    auto [incoming, w] = sample_next_direction_volume(scene,
+                        lights, bvh, position, -ray.d, vsdf.albedo, vsdf.phaseg,
+                        rng);
+                    if (w == zero3f) break;
+                    weight *= w;
+                    ray = make_ray(position, incoming);
+                    continue;
+                } else {
+                    // absorption
+                    radiance += weight * vsdf.emission;
+                    weight = zero3f;
+                    break;
+                }
+            }
+        }
+
+        if (!hit) {
             radiance += weight * evaluate_environment_emission(scene, ray.d);
             break;
         }
-        hit = true;
+        alpha = 1.0f;
 
         // prepare shading point
         auto outgoing = -ray.d;
@@ -1692,26 +1763,21 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= brdf_cosine / incoming_pdf;
         if (weight == zero3f) break;
 
-        // transmission
+        // update volume_stack
         if (!point.vsdfs.empty() &&
             dot(incoming, point.geometric_normal) > 0 !=
                 dot(outgoing, point.geometric_normal) > 0) {
-            auto [pos, dir, rad, w] = integrate_volume(scene, lights, bvh,
-                point.vsdfs, point.position, outgoing, incoming, rng);
-
-            radiance += weight * rad;
-            weight *= w;
-
-            if (weight == zero3f) break;
-            point.position = pos;
-            incoming       = dir;
+            if (volume_stack.empty())
+                volume_stack.push_back(point.vsdfs.back());
+            else
+                volume_stack.pop_back();
         }
 
         // setup next iteration
         ray = make_ray(point.position, incoming);
     }
 
-    return {radiance, hit ? 1.0f : 0.0f};
+    return {radiance, alpha};
 }
 
 // Recursive path tracing.
