@@ -179,6 +179,48 @@ inline auto print_timed(string_view format_str, const Args&... args) {
 
 }  // namespace yocto
 
+// Formatter for math types
+namespace fmt {
+// Formatter for math types
+template <typename T, int N>
+struct formatter_base {
+    template <typename ParseContext>
+    constexpr auto parse(ParseContext& ctx) {
+        return ctx.begin();
+    }
+
+    template <typename FormatContext>
+    constexpr auto format(const T& p, FormatContext& ctx) {
+        if constexpr (N == 1) {
+            return format_to(ctx.begin(), "[{}]", p[0]);
+        } else if constexpr (N == 2) {
+            return format_to(ctx.begin(), "[{}, {}]", p[0], p[1]);
+        } else if constexpr (N == 3) {
+            return format_to(ctx.begin(), "[{}, {}, {}]", p[0], p[1], p[2]);
+        } else if constexpr (N == 4) {
+            return format_to(
+                ctx.begin(), "[{}, {}, {}, {}]", p[0], p[1], p[2], p[3]);
+        } else {
+            throw std::runtime_error("unsupported length");
+        }
+    }
+};
+// Formatter for math types
+template <typename T, int N>
+struct formatter<yocto::vec<T, N>> : formatter_base<yocto::vec<T, N>, N> {};
+template <typename T, int N, int M>
+struct formatter<yocto::mat<T, N, M>> : formatter_base<yocto::mat<T, N, M>, M> {
+};
+template <typename T, int N>
+struct formatter<yocto::affine<T, N>>
+    : formatter_base<yocto::affine<T, N>, N + 1> {};
+template <typename T, int N>
+struct formatter<yocto::frame<T, N>>
+    : formatter_base<yocto::frame<T, N>, N + 1> {};
+template <typename T, int N>
+struct formatter<yocto::bbox<T, N>> : formatter_base<yocto::bbox<T, N>, 2> {};
+}  // namespace fmt
+
 // -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
 // -----------------------------------------------------------------------------

@@ -920,9 +920,9 @@ bool draw_hdr_coloredit_opengl_widget(
     const opengl_window& win, const char* lbl, vec4f& value) {
     auto color    = value;
     auto exposure = 0.0f;
-    auto scale    = max(color.xyz);
+    auto scale    = max(xyz(color));
     if (scale > 1) {
-        color.xyz /= scale;
+        xyz(color) /= scale;
         exposure = log2(scale);
     }
     auto edit_exposure = draw_slider_opengl_widget(
@@ -930,8 +930,8 @@ bool draw_hdr_coloredit_opengl_widget(
     auto edit_color = draw_coloredit_opengl_widget(
         win, (lbl + " [col]"s).c_str(), color);
     if (edit_exposure || edit_color) {
-        value.xyz = color.xyz * exp2(exposure);
-        value.w   = color.w;
+        xyz(value) = xyz(color) * exp2(exposure);
+        value.w    = color.w;
         return true;
     } else {
         return false;

@@ -106,6 +106,83 @@
 #include "yocto_utils.h"
 
 // -----------------------------------------------------------------------------
+// RAY INTERSECTION AND CLOSEST POINT FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Intersect a ray with a point (approximate).
+// Based on http://geomalgorithms.com/a02-lines.html.
+inline bool intersect_point(
+    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist);
+
+// Intersect a ray with a line (approximate).
+// Based on http://geomalgorithms.com/a05-intersect-1.html and
+// http://geomalgorithms.com/a07-distance.html#
+//     dist3D_Segment_to_Segment
+inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    float r0, float r1, vec2f& uv, float& dist);
+
+// Intersect a ray with a triangle.
+inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist);
+
+// Intersect a ray with a quad represented as two triangles (0,1,3) and
+// (2,3,1), with the uv coordinates of the second triangle corrected by u =
+// 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
+// to 1. This is equivalent to Intel's Embree.
+inline bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist);
+
+// Intersect a ray with a axis-aligned bounding box.
+inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
+
+// Intersect a ray with a axis-aligned bounding box, implemented as
+// "Robust BVH Ray Traversal" by T. Ize published at
+// http://jcgt.org/published/0002/02/02/paper.pdf
+inline bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
+    const vec3i& ray_dsign, const bbox3f& bbox);
+
+// Intersect a ray with a axis-aligned bounding box, implemented as
+// "A Ray-Box Intersection Algorithm and Efficient Dynamic Voxel Rendering" at
+// http://jcgt.org/published/0007/03/04/
+// but using the Wald implementation
+inline bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
+    const vec3i& ray_dsign, const bbox3f& bbox);
+
+// Check if a point overlaps a position within a max distance.
+inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p0,
+    float r0, vec2f& uv, float& dist);
+
+// Find closest line point to a position.
+float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
+
+// Check if a line overlaps a position within a max distance.
+inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, float r0, float r1, vec2f& uv, float& dist);
+
+// Find closest triangle point to a position.
+inline vec2f closestuv_triangle(
+    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
+
+// Check if a triangle overlaps a position within a max distance.
+inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, vec2f& uv,
+    float& dist);
+
+// Check if a quad overlaps a position within a max distance.
+inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
+    float r2, float r3, vec2f& uv, float& dist);
+
+// Check if a bounding box overlaps a position within a max distance.
+inline bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
+
+// Check if two bounding boxes overlap.
+inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -347,83 +424,6 @@ inline bool overlap_scene_bvh(const bvh_scene& bvh, const Scene& scene,
         },
         pos, max_distance, intersection, find_any, non_rigid_frames);
 }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// RAY INTERSECTION AND CLOSEST POINT FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Intersect a ray with a point (approximate).
-// Based on http://geomalgorithms.com/a02-lines.html.
-inline bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist);
-
-// Intersect a ray with a line (approximate).
-// Based on http://geomalgorithms.com/a05-intersect-1.html and
-// http://geomalgorithms.com/a07-distance.html#
-//     dist3D_Segment_to_Segment
-inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    float r0, float r1, vec2f& uv, float& dist);
-
-// Intersect a ray with a triangle.
-inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist);
-
-// Intersect a ray with a quad represented as two triangles (0,1,3) and
-// (2,3,1), with the uv coordinates of the second triangle corrected by u =
-// 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
-// to 1. This is equivalent to Intel's Embree.
-inline bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist);
-
-// Intersect a ray with a axis-aligned bounding box.
-inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
-
-// Intersect a ray with a axis-aligned bounding box, implemented as
-// "Robust BVH Ray Traversal" by T. Ize published at
-// http://jcgt.org/published/0002/02/02/paper.pdf
-inline bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox);
-
-// Intersect a ray with a axis-aligned bounding box, implemented as
-// "A Ray-Box Intersection Algorithm and Efficient Dynamic Voxel Rendering" at
-// http://jcgt.org/published/0007/03/04/
-// but using the Wald implementation
-inline bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox);
-
-// Check if a point overlaps a position within a max distance.
-inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p0,
-    float r0, vec2f& uv, float& dist);
-
-// Find closest line point to a position.
-float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
-
-// Check if a line overlaps a position within a max distance.
-inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, float r0, float r1, vec2f& uv, float& dist);
-
-// Find closest triangle point to a position.
-inline vec2f closestuv_triangle(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
-
-// Check if a triangle overlaps a position within a max distance.
-inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, vec2f& uv,
-    float& dist);
-
-// Check if a quad overlaps a position within a max distance.
-inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
-    float r2, float r3, vec2f& uv, float& dist);
-
-// Check if a bounding box overlaps a position within a max distance.
-inline bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
-
-// Check if two bounding boxes overlap.
-inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 
 }  // namespace yocto
 

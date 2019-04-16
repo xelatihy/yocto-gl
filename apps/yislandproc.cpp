@@ -150,7 +150,7 @@ void load_disney_island_lights(
         if (ljs.at("type") == "quad") {
             auto material     = yocto_material{};
             material.uri      = "materials/lights/" + name + ".yaml";
-            material.emission = ljs.at("color").get<vec4f>().xyz *
+            material.emission = xyz(ljs.at("color").get<vec4f>()) *
                                 pow(2.0f, ljs.at("exposure").get<float>());
             scene.materials.push_back(material);
             auto shape = yocto_shape{};
@@ -173,7 +173,7 @@ void load_disney_island_lights(
             scene.textures.push_back(texture);
             auto environment     = yocto_environment{};
             environment.uri      = "environments/lights/" + name + ".yaml";
-            environment.emission = ljs.at("color").get<vec4f>().xyz *
+            environment.emission = xyz(ljs.at("color").get<vec4f>()) *
                                    pow(2.0f, ljs.at("exposure").get<float>());
             environment.emission_texture = (int)scene.textures.size() - 1;
             environment.frame            = frame3f(
@@ -223,8 +223,8 @@ void load_disney_island_materials(const string& filename, const string& dirname,
                 ass_material.color_map_baked = tjs.at(ass_material.color_map)
                                                    .at("bakedFilename")
                                                    .get<string>();
-                ass_material.color =
-                    tjs.at(ass_material.color_map).at("color").get<vec4f>().xyz;
+                ass_material.color = xyz(
+                    tjs.at(ass_material.color_map).at("color").get<vec4f>());
                 mmap[ass_material.name] = ass_material;
             }
         }

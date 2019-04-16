@@ -131,96 +131,63 @@ namespace yocto {
 
 // Line properties.
 template <typename T>
-inline vec<T, 3> line_tangent(const vec<T, 3>& p0, const vec<T, 3>& p1) {
-    return normalize(p1 - p0);
-}
+constexpr vec<T, 3> line_tangent(const vec<T, 3>& p0, const vec<T, 3>& p1);
 template <typename T>
-inline T line_length(const vec<T, 3>& p0, const vec<T, 3>& p1) {
-    return length(p1 - p0);
-}
+constexpr T line_length(const vec<T, 3>& p0, const vec<T, 3>& p1);
 
 // Triangle properties.
 template <typename T>
-inline vec<T, 3> triangle_normal(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
-    return normalize(cross(p1 - p0, p2 - p0));
-}
+constexpr vec<T, 3> triangle_normal(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
 template <typename T>
-inline T triangle_area(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
-    return length(cross(p1 - p0, p2 - p0)) / 2;
-}
+constexpr T triangle_area(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
 
 // Quad propeties.
 template <typename T>
-inline vec<T, 3> quad_normal(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 3>& p3) {
-    return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
-}
+constexpr vec<T, 3> quad_normal(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 3>& p3);
 template <typename T>
-inline T quad_area(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 3>& p3) {
-    return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
-}
+constexpr T quad_area(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 3>& p3);
 
 // Triangle tangent and bitangent from uv
 template <typename T>
-inline pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& uv0,
-    const vec<T, 2>& uv1, const vec<T, 2>& uv2);
+constexpr pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2);
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
 // to do it. If not interested in the split, just pass zero2f here.
 template <typename T>
-inline pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
+constexpr pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2,
     const vec<T, 2>& uv3, const vec<T, 2>& current_uv);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T, typename T1>
-inline T interpolate_line(const T& p0, const T& p1, T1 u) {
-    return p0 * (1 - u) + p1 * u;
-}
+constexpr T interpolate_line(const T& p0, const T& p1, T1 u);
 // Interpolates values over a triangle parameterized by u and v along the
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T, typename T1>
-inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec<T1, 2>& uv) {
-    return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
-}
+constexpr T interpolate_triangle(
+    const T& p0, const T& p1, const T& p2, const vec<T1, 2>& uv);
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
 template <typename T, typename T1>
-inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
-#if YOCTO_QUADS_AS_TRIANGLES
-    if (uv.x + uv.y <= 1) {
-        return interpolate_triangle(p0, p1, p3, uv);
-    } else {
-        return interpolate_triangle(p2, p3, p1, 1 - uv);
-    }
-#else
-    return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
-           p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
-#endif
-}
+constexpr T interpolate_quad(
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv);
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
 template <typename T, typename T1>
-inline T interpolate_bezier(
-    const T& p0, const T& p1, const T& p2, const T& p3, T1 u) {
-    return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
-           p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
-}
+constexpr T interpolate_bezier(
+    const T& p0, const T& p1, const T& p2, const T& p3, T1 u);
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T, typename T1>
-inline T interpolate_bezier_derivative(
-    const T& p0, const T& p1, const T& p2, const T& p3, T1 u) {
-    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
-           (p3 - p2) * 3 * u * u;
-}
+constexpr T interpolate_bezier_derivative(
+    const T& p0, const T& p1, const T& p2, const T& p3, T1 u);
 
 }  // namespace yocto
 
@@ -230,20 +197,9 @@ inline T interpolate_bezier_derivative(
 namespace yocto {
 
 // Return the preset type and the remaining filename
-inline bool is_shape_preset_filename(const string& filename) {
-    return filename.find("::yocto::") == 0;
-}
+inline bool is_shape_preset_filename(const string& filename);
 // Return the preset type and the filename. Call only if this is a preset.
-inline pair<string, string> get_shape_preset_type(const string& filename) {
-    if (filename.find("::yocto::") == 0) {
-        auto aux = filename.substr(string("::yocto::").size());
-        auto pos = aux.find("::");
-        if (pos == aux.npos) throw runtime_error("bad preset name " + filename);
-        return {aux.substr(0, pos), aux.substr(pos + 2)};
-    } else {
-        return {"", filename};
-    }
-}
+inline pair<string, string> get_shape_preset_type(const string& filename);
 
 // Load/Save a shape
 void load_shape(const string& filename, vector<int>& points,
@@ -798,11 +754,104 @@ inline void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Line properties.
+template <typename T>
+constexpr vec<T, 3> line_tangent(const vec<T, 3>& p0, const vec<T, 3>& p1) {
+    return normalize(p1 - p0);
+}
+template <typename T>
+constexpr T line_length(const vec<T, 3>& p0, const vec<T, 3>& p1) {
+    return length(p1 - p0);
+}
+
+// Triangle properties.
+template <typename T>
+constexpr vec<T, 3> triangle_normal(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
+    return normalize(cross(p1 - p0, p2 - p0));
+}
+template <typename T>
+constexpr T triangle_area(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
+    return length(cross(p1 - p0, p2 - p0)) / 2;
+}
+
+// Quad propeties.
+template <typename T>
+constexpr vec<T, 3> quad_normal(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 3>& p3) {
+    return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
+}
+template <typename T>
+constexpr T quad_area(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 3>& p3) {
+    return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
+}
+
 // Triangle tangent and bitangent from uv
 template <typename T>
-inline pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& uv0,
-    const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
+constexpr pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2);
+
+// Quad tangent and bitangent from uv. Note that we pass a current_uv since
+// internally we may want to split the quad in two and we need to known where
+// to do it. If not interested in the split, just pass zero2f here.
+template <typename T>
+constexpr pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2,
+    const vec<T, 2>& uv3, const vec<T, 2>& current_uv);
+
+// Interpolates values over a line parameterized from a to b by u. Same as lerp.
+template <typename T, typename T1>
+constexpr T interpolate_line(const T& p0, const T& p1, T1 u) {
+    return p0 * (1 - u) + p1 * u;
+}
+// Interpolates values over a triangle parameterized by u and v along the
+// (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
+template <typename T, typename T1>
+constexpr T interpolate_triangle(
+    const T& p0, const T& p1, const T& p2, const vec<T1, 2>& uv) {
+    return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+}
+// Interpolates values over a quad parameterized by u and v along the
+// (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
+template <typename T, typename T1>
+constexpr T interpolate_quad(
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
+#if YOCTO_QUADS_AS_TRIANGLES
+    if (uv.x + uv.y <= 1) {
+        return interpolate_triangle(p0, p1, p3, uv);
+    } else {
+        return interpolate_triangle(p2, p3, p1, 1 - uv);
+    }
+#else
+    return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
+           p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
+#endif
+}
+
+// Interpolates values along a cubic Bezier segment parametrized by u.
+template <typename T, typename T1>
+constexpr T interpolate_bezier(
+    const T& p0, const T& p1, const T& p2, const T& p3, T1 u) {
+    return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
+           p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
+}
+// Computes the derivative of a cubic Bezier segment parametrized by u.
+template <typename T, typename T1>
+constexpr T interpolate_bezier_derivative(
+    const T& p0, const T& p1, const T& p2, const T& p3, T1 u) {
+    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
+           (p3 - p2) * 3 * u * u;
+}
+
+// Triangle tangent and bitangent from uv
+template <typename T>
+constexpr pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
     // https://gist.github.com/aras-p/2843984
     // normal points up from texture space
@@ -827,7 +876,7 @@ inline pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
 
 // Quad tangent and bitangent from uv.
 template <typename T>
-inline pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
+constexpr pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2,
     const vec<T, 2>& uv3, const vec<T, 2>& current_uv) {
@@ -844,11 +893,28 @@ inline pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
 
 }  // namespace yocto
 
-// ---------------------------------------------------------------------------//
-//                                                                            //
-//                             IMPLEMENTATION                                 //
-//                                                                            //
-// ---------------------------------------------------------------------------//
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE IO FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Return the preset type and the remaining filename
+inline bool is_shape_preset_filename(const string& filename) {
+    return filename.find("::yocto::") == 0;
+}
+// Return the preset type and the filename. Call only if this is a preset.
+inline pair<string, string> get_shape_preset_type(const string& filename) {
+    if (filename.find("::yocto::") == 0) {
+        auto aux = filename.substr(string("::yocto::").size());
+        auto pos = aux.find("::");
+        if (pos == aux.npos) throw runtime_error("bad preset name " + filename);
+        return {aux.substr(0, pos), aux.substr(pos + 2)};
+    } else {
+        return {"", filename};
+    }
+}
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER_VERTEX PROPETIES

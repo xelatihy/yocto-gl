@@ -1290,7 +1290,7 @@ inline void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
     compute_vertex_tangents(normals, lines, positions);
 
     // fix colors
-    for (auto& c : color) c = {pow(c.xyz, 2.2f), c.w};
+    for (auto& c : color) c = {pow(xyz(c), 2.2f), c.w};
 }
 
 }  // namespace yocto

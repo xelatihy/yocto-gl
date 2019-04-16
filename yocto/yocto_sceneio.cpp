@@ -2898,9 +2898,10 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
             auto rgb2 = checkerboard.tex1.texture == ""
                             ? checkerboard.tex2.value
                             : spectrum3f{0.6f, 0.6f, 0.6f};
-            make_checker_image(texture.ldr_image, {1024, 1024}, 16,
-                {float_to_byte(vec3f{rgb1.x, rgb1.y, rgb1.z}), 255},
-                {float_to_byte(vec3f{rgb2.x, rgb2.y, rgb2.z}), 255});
+            make_checker_image(texture.hdr_image, {1024, 1024}, 16,
+                {rgb1.x, rgb1.y, rgb1.z, 1}, {rgb2.x, rgb2.y, rgb2.z, 1});
+            float_to_byte(texture.ldr_image, texture.hdr_image);
+            texture.hdr_image = {};
             if (verbose) printf("texture checkerboard not supported well");
         } else if (holds_alternative<pbrt_dots_texture>(ptexture)) {
             // auto& dots   = get<pbrt_dots_texture>(ptexture);
@@ -2909,15 +2910,18 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
             if (verbose) printf("texture dots not supported well");
         } else if (holds_alternative<pbrt_fbm_texture>(ptexture)) {
             auto& fbm = get<pbrt_fbm_texture>(ptexture);
-            make_fbm_image(texture.ldr_image, {1024, 1024}, {0, 0, 0, 255},
-                {255, 255, 255, 255}, (float)1, (float)2, (float)0.5f,
-                fbm.octaves);
+            make_fbm_image(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
+                {1, 1, 1, 1}, (float)1, (float)2, (float)0.5f, fbm.octaves);
+            float_to_byte(texture.ldr_image, texture.hdr_image);
+            texture.hdr_image = {};
             if (verbose) printf("texture fbm not supported well");
         } else if (holds_alternative<pbrt_marble_texture>(ptexture)) {
             auto& marble = get<pbrt_marble_texture>(ptexture);
-            make_fbm_image(texture.ldr_image, {1024, 1024}, {0, 0, 0, 255},
-                {255, 255, 255, 255}, (float)marble.scale, (float)2,
-                (float)0.5f, marble.octaves);
+            make_fbm_image(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
+                {1, 1, 1, 1}, (float)marble.scale, (float)2, (float)0.5f,
+                marble.octaves);
+            float_to_byte(texture.ldr_image, texture.hdr_image);
+            texture.hdr_image = {};
             if (verbose) printf("texture marble not supported well");
         } else if (holds_alternative<pbrt_mix_texture>(ptexture)) {
             auto& mix = get<pbrt_mix_texture>(ptexture);

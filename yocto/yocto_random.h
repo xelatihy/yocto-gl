@@ -110,9 +110,152 @@ struct rng_state {
     uint64_t state = 0x853c49e6748fea9bULL;
     uint64_t inc   = 0xda3e39cb94b95bdbULL;
 
-    rng_state() : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
-    rng_state(uint64_t state, uint64_t inc) : state{state}, inc{inc} {}
+    rng_state();
+    rng_state(uint64_t state, uint64_t inc);
 };
+
+// Init a random number generator with a state state from the sequence seq.
+inline rng_state make_rng(uint64_t seed, uint64_t seq = 1);
+
+// Next random numbers: floats in [0,1), ints in [0,n).
+inline int   get_random_int(rng_state& rng, int n);
+inline float get_random_float(rng_state& rng);
+inline vec2f get_random_vec2f(rng_state& rng);
+inline vec3f get_random_vec3f(rng_state& rng);
+
+// Shuffles a sequence of elements
+template <typename T>
+inline void random_shuffle(vector<T>& vals, rng_state& rng);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// MONETACARLO SAMPLING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Sample an hemispherical direction with uniform distribution.
+template <typename T>
+inline vec<T, 3> sample_hemisphere_direction(const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_hemisphere_direction_pdf(const vec<T, 3>& direction);
+
+// Sample an hemispherical direction with uniform distribution.
+template <typename T>
+inline vec<T, 3> sample_hemisphere_direction(
+    const vec<T, 3>& normal, const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_hemisphere_direction_pdf(
+    const vec<T, 3>& normal, const vec<T, 3>& direction);
+
+// Sample a spherical direction with uniform distribution.
+template <typename T>
+inline vec<T, 3> sample_sphere_direction(const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_sphere_direction_pdf(const vec<T, 3>& w);
+
+// Sample an hemispherical direction with cosine distribution.
+template <typename T>
+inline vec<T, 3> sample_hemisphere_direction_cosine(const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_hemisphere_direction_cosine_pdf(const vec<T, 3>& direction);
+
+// Sample an hemispherical direction with cosine power distribution.
+template <typename T>
+inline vec<T, 3> sample_hemisphere_direction_cospower(
+    T exponent, const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_hemisphere_direction_cospower_pdf(
+    T exponent, const vec<T, 3>& direction);
+
+// Sample a point uniformly on a disk.
+template <typename T>
+inline vec<T, 2> sample_disk_point(const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_disk_point_pdf();
+
+// Sample a point uniformly on a cylinder, without caps.
+template <typename T>
+inline vec<T, 3> sample_cylinder_point(const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_cylinder_point_pdf();
+
+// Sample a point uniformly on a triangle returning the baricentric coordinates.
+template <typename T>
+inline vec<T, 2> sample_triangle_coordinates(const vec<T, 2>& ruv);
+
+// Sample a point uniformly on a triangle.
+template <typename T>
+inline vec<T, 3> sample_triangle_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 2>& ruv);
+// Pdf for uniform triangle sampling, i.e. triangle area.
+template <typename T>
+inline T sample_triangle_point_pdf(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
+
+// Sample an index with uniform distribution.
+template <typename T>
+inline int sample_uniform_index(int size, T r);
+template <typename T>
+inline T sample_uniform_index_pdf(int size);
+
+// Sample an index with uniform distribution.
+template <typename T, typename T1>
+inline T sample_uniform_element(const vector<T>& elements, T1 r);
+template <typename T>
+inline T sample_uniform_element_pdf(const vector<T>& elements);
+
+// Sample a discrete distribution represented by its cdf.
+template <typename T>
+inline int sample_discrete_distribution(const vector<T>& cdf, T r);
+// Pdf for uniform discrete distribution sampling.
+template <typename T>
+inline T sample_discrete_distribution_pdf(const vector<T>& cdf, int idx);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PERLIN NOISE FUNCTION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Compute the revised Perlin noise function. Wrap provides a wrapping noise
+// but must be power of two (wraps at 256 anyway). For octave based noise,
+// good values are obtained with octaves=6 (numerber of noise calls),
+// lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
+// output), gain=0.5 (relative weighting applied to each successive octave),
+// offset=1.0 (used to invert the ridges).
+template <typename T>
+inline T perlin_noise(const vec<T, 3>& p, const vec3i& wrap = zero3i);
+template <typename T>
+inline T perlin_ridge_noise(const vec<T, 3>& p, T lacunarity = (T)2,
+    T gain = (T)0.5, T offset = (T)1, int octaves = 6,
+    const vec3i& wrap = zero3i);
+template <typename T>
+inline T perlin_fbm_noise(const vec<T, 3>& p, T lacunarity = (T)2,
+    T gain = (T)0.5, int octaves = 6, const vec3i& wrap = zero3i);
+template <typename T>
+inline T perlin_turbulence_noise(const vec<T, 3>& p, T lacunarity = (T)2,
+    T gain = (T)0.5, int octaves = 6, const vec3i& wrap = zero3i);
+
+}  // namespace yocto
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+//                             IMPLEMENTATION                                 //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR RANDOM NUMBER GENERATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// PCG random numbers from http://www.pcg-random.org/
+inline rng_state::rng_state()
+    : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
+inline rng_state::rng_state(uint64_t state, uint64_t inc)
+    : state{state}, inc{inc} {}
 
 // Next random number.
 inline uint32_t advance_rng(rng_state& rng) {
@@ -124,7 +267,7 @@ inline uint32_t advance_rng(rng_state& rng) {
 }
 
 // Init a random number generator with a state state from the sequence seq.
-inline rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
+inline rng_state make_rng(uint64_t seed, uint64_t seq) {
     auto rng  = rng_state();
     rng.state = 0U;
     rng.inc   = (seq << 1u) | 1u;
@@ -177,7 +320,7 @@ inline void random_shuffle(vector<T>& vals, rng_state& rng) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// MONETACARLO SAMPLING FUNCTIONS
+// IMPLEMENTATION FOR MONETACARLO SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -333,32 +476,6 @@ inline T sample_discrete_distribution_pdf(const vector<T>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PERLIN NOISE FUNCTION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Compute the revised Perlin noise function. Wrap provides a wrapping noise
-// but must be power of two (wraps at 256 anyway). For octave based noise,
-// good values are obtained with octaves=6 (numerber of noise calls),
-// lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
-// output), gain=0.5 (relative weighting applied to each successive octave),
-// offset=1.0 (used to invert the ridges).
-template <typename T>
-inline T perlin_noise(const vec<T, 3>& p, const vec3i& wrap = zero3i);
-template <typename T>
-inline T perlin_ridge_noise(const vec<T, 3>& p, T lacunarity = (T)2,
-    T gain = (T)0.5, T offset = (T)1, int octaves = 6,
-    const vec3i& wrap = zero3i);
-template <typename T>
-inline T perlin_fbm_noise(const vec<T, 3>& p, T lacunarity = (T)2,
-    T gain = (T)0.5, int octaves = 6, const vec3i& wrap = zero3i);
-template <typename T>
-inline T perlin_turbulence_noise(const vec<T, 3>& p, T lacunarity = (T)2,
-    T gain = (T)0.5, int octaves = 6, const vec3i& wrap = zero3i);
 
 }  // namespace yocto
 
