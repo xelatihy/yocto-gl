@@ -1705,7 +1705,7 @@ inline void make_uvramp_image(image<vec<T, N>>& img, const vec2i& size) {
             vec<T, N>{1, 0, 0, 0}, vec<T, N>{1, 1, 0, 0},
             vec<T, N>{0, 1, 0, 0});
     } else {
-        static_assert(__channel_error<T>, "channels not supported");
+        static_assert(__channel_error<N>, "channels not supported");
     }
 }
 
@@ -1738,7 +1738,7 @@ inline void make_uvgrid_image(
             } else if constexpr (N == 4) {
                 return vec<T, 4>{rgb.x, rgb.y, rgb.z, 1};
             } else {
-                static_assert(__channel_error<T>, "channels not supported");
+                static_assert(__channel_error<N>, "channels not supported");
             }
         });
 }
@@ -1758,7 +1758,7 @@ inline void make_blackbodyramp_image(image<vec<T, N>>& img, const vec2i& size,
             } else if constexpr (N == 4) {
                 return vec<T, 4>{rgb.x, rgb.y, rgb.z, 1};
             } else {
-                static_assert(__channel_error<T>, "channels not supported");
+                static_assert(__channel_error<N>, "channels not supported");
             }
         });
 }
