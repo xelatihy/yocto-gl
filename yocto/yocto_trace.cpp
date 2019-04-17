@@ -1741,14 +1741,13 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             ray = make_ray(point.position, incoming);
         } else {
             // clamp ray if inside a volume
-            auto spectrum     = get_random_int(rng, 3);
-            ray.tmax = sample_volume_distance(
-                volume_stack.back().density[spectrum],
-                get_random_float(rng));
+            auto spectrum = get_random_int(rng, 3);
+            ray.tmax      = sample_volume_distance(
+                volume_stack.back().density[spectrum], get_random_float(rng));
 
             // intersect next point
             auto intersection = bvh_intersection{};
-            auto hit_surface          = trace_ray(scene, bvh, ray, intersection);
+            auto hit_surface  = trace_ray(scene, bvh, ray, intersection);
 
             // compute volume transmission
             auto  distance = hit_surface ? intersection.distance : ray.tmax;
@@ -1761,13 +1760,12 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 // volume interaction
                 auto position = ray.o + ray.d * distance;
 
-                if (get_random_float(rng) <
-                    min(vsdf.albedo[spectrum], 0.95f)) {
+                if (get_random_float(rng) < min(vsdf.albedo[spectrum], 0.95f)) {
                     // scattering
                     weight /= min(vsdf.albedo[spectrum], 0.95f);
                     auto [incoming, w] = sample_next_direction_volume(scene,
-                        lights, bvh, position, -ray.d, vsdf.albedo,
-                        vsdf.phaseg, rng);
+                        lights, bvh, position, -ray.d, vsdf.albedo, vsdf.phaseg,
+                        rng);
                     if (w == zero3f) break;
                     weight *= w;
                     ray = make_ray(position, incoming);
@@ -1778,52 +1776,53 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                     weight = zero3f;
                     break;
                 }
+            } else {
+                // prepare shading point
+                auto outgoing = -ray.d;
+                auto point    = trace_point{};
+                make_trace_point(point, scene, intersection, ray.d);
+
+                // accumulate emission
+                radiance += weight * evaluate_emission(
+                                         point.esdfs, point.normal, outgoing);
+                if (point.bsdfs.empty()) break;
+
+                // russian roulette
+                if (sample_russian_roulette(
+                        get_russian_roulette_albedo(point.bsdfs), weight,
+                        bounce, get_random_float(rng)))
+                    break;
+                weight /= sample_russian_roulette_pdf(
+                    get_russian_roulette_albedo(point.bsdfs), weight, bounce);
+
+                // exit if needed
+                if (weight == zero3f) break;
+
+                // continue path
+                auto [brdf_cosine, incoming, incoming_pdf] =
+                    sample_next_direction(
+                        scene, lights, bvh, point, outgoing, rng, true);
+
+                // exit if no hit
+                if (incoming == zero3f || incoming_pdf == 0 ||
+                    brdf_cosine == zero3f)
+                    break;
+                weight *= brdf_cosine / incoming_pdf;
+                if (weight == zero3f) break;
+
+                // update volume_stack
+                if (!point.vsdfs.empty() &&
+                    dot(incoming, point.geometric_normal) > 0 !=
+                        dot(outgoing, point.geometric_normal) > 0) {
+                    if (volume_stack.empty())
+                        volume_stack.push_back(point.vsdfs.back());
+                    else
+                        volume_stack.pop_back();
+                }
+
+                // setup next iteration
+                ray = make_ray(point.position, incoming);
             }
-
-            // prepare shading point
-            auto outgoing = -ray.d;
-            auto point    = trace_point{};
-            make_trace_point(point, scene, intersection, ray.d);
-
-            // accumulate emission
-            radiance += weight *
-                        evaluate_emission(point.esdfs, point.normal, outgoing);
-            if (point.bsdfs.empty()) break;
-
-            // russian roulette
-            if (sample_russian_roulette(
-                    get_russian_roulette_albedo(point.bsdfs), weight, bounce,
-                    get_random_float(rng)))
-                break;
-            weight /= sample_russian_roulette_pdf(
-                get_russian_roulette_albedo(point.bsdfs), weight, bounce);
-
-            // exit if needed
-            if (weight == zero3f) break;
-
-            // continue path
-            auto [brdf_cosine, incoming, incoming_pdf] = sample_next_direction(
-                scene, lights, bvh, point, outgoing, rng, true);
-
-            // exit if no hit
-            if (incoming == zero3f || incoming_pdf == 0 ||
-                brdf_cosine == zero3f)
-                break;
-            weight *= brdf_cosine / incoming_pdf;
-            if (weight == zero3f) break;
-
-            // update volume_stack
-            if (!point.vsdfs.empty() &&
-                dot(incoming, point.geometric_normal) > 0 !=
-                    dot(outgoing, point.geometric_normal) > 0) {
-                if (volume_stack.empty())
-                    volume_stack.push_back(point.vsdfs.back());
-                else
-                    volume_stack.pop_back();
-            }
-
-            // setup next iteration
-            ray = make_ray(point.position, incoming);
         }
     }
 
