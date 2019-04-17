@@ -1580,7 +1580,6 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             ray = make_ray(point.position, incoming);
         } else {
 #if 0
-
             // grab vsdfs
             auto& vsdfs = volume_stack.back();
 
@@ -1597,9 +1596,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             auto distance = hit_surface ? intersection.distance : ray.tmax;
             weight /= sample_volume_distance_pdf(vsdfs, distance, channel);
             weight *= evaluate_volume_transmission(vsdfs, distance);
-
 #else
-
             // intersect next point
             auto intersection = bvh_intersection{};
             if (!trace_ray(scene, bvh, ray, intersection)) {
@@ -1615,7 +1612,6 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
             // check hit
             auto hit_surface = distance >= intersection.distance;
-
 #endif
 
             if (!hit_surface) {
