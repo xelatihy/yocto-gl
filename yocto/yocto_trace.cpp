@@ -211,11 +211,11 @@ void compute_scattering_functions(short_vector<esdf>& esdfs,
 
 // Trace point
 struct trace_point {
-    vec3f              position         = zero3f;
-    vec3f              normal           = zero3f;
-    short_vector<esdf> esdfs            = {};
-    short_vector<bsdf> bsdfs            = {};
-    short_vector<vsdf> vsdfs            = {};
+    vec3f              position = zero3f;
+    vec3f              normal   = zero3f;
+    short_vector<esdf> esdfs    = {};
+    short_vector<bsdf> bsdfs    = {};
+    short_vector<vsdf> vsdfs    = {};
 };
 
 // Make a trace point
@@ -1564,9 +1564,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             if (weight == zero3f) break;
 
             // update volume_stack
-            if (!point.vsdfs.empty() &&
-                dot(incoming, point.normal) > 0 !=
-                    dot(outgoing, point.normal) > 0) {
+            if (!point.vsdfs.empty() && dot(incoming, point.normal) > 0 !=
+                                            dot(outgoing, point.normal) > 0) {
                 if (volume_stack.empty())
                     volume_stack.push_back(point.vsdfs);
                 else
@@ -1837,17 +1836,16 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {frontfacing, 1};
         }
         case trace_falsecolor_type::gnormal: {
-            auto normal = evaluate_instance_element_normal(scene, instance, 
-                intersection.element_id, true);
+            auto normal = evaluate_instance_element_normal(
+                scene, instance, intersection.element_id, true);
             return {normal * 0.5f + 0.5f, 1};
         }
         case trace_falsecolor_type::gfrontfacing: {
-            auto normal = evaluate_instance_element_normal(scene, instance, 
-                intersection.element_id, true);
+            auto normal = evaluate_instance_element_normal(
+                scene, instance, intersection.element_id, true);
             auto outgoing    = -direction;
-            auto frontfacing = dot(normal, outgoing) > 0
-                                   ? vec3f{0, 1, 0}
-                                   : vec3f{1, 0, 0};
+            auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
+                                                         : vec3f{1, 0, 0};
             return {frontfacing, 1};
         }
         case trace_falsecolor_type::albedo: {
@@ -1856,12 +1854,12 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {albedo, 1};
         }
         case trace_falsecolor_type::texcoord: {
-            auto  texturecoord = evaluate_shape_texturecoord(
+            auto texturecoord = evaluate_shape_texturecoord(
                 shape, intersection.element_id, intersection.element_uv);
             return {{texturecoord.x, texturecoord.y, 0}, 1};
         }
         case trace_falsecolor_type::color: {
-            auto  color    = evaluate_shape_color(
+            auto color = evaluate_shape_color(
                 shape, intersection.element_id, intersection.element_uv);
             return {xyz(color), 1};
         }
@@ -1898,13 +1896,13 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {vec3f{roughness}, 1};
         }
         case trace_falsecolor_type::material: {
-            auto  hashed   = std::hash<int>()(instance.material);
-            auto  rng_     = make_rng(trace_default_seed, hashed);
+            auto hashed = std::hash<int>()(instance.material);
+            auto rng_   = make_rng(trace_default_seed, hashed);
             return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::shape: {
-            auto  hashed   = std::hash<int>()(instance.shape);
-            auto  rng_     = make_rng(trace_default_seed, hashed);
+            auto hashed = std::hash<int>()(instance.shape);
+            auto rng_   = make_rng(trace_default_seed, hashed);
             return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::instance: {
