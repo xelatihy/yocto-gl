@@ -213,7 +213,6 @@ void compute_scattering_functions(short_vector<esdf>& esdfs,
 struct trace_point {
     vec3f              position         = zero3f;
     vec3f              normal           = zero3f;
-    // vec3f              geometric_normal = zero3f;
     short_vector<esdf> esdfs            = {};
     short_vector<bsdf> bsdfs            = {};
     short_vector<vsdf> vsdfs            = {};
@@ -227,8 +226,6 @@ void make_trace_point(trace_point& point, const yocto_scene& scene,
     auto& material = scene.materials[instance.material];
     point.position = evaluate_instance_position(
         scene, instance, intersection.element_id, intersection.element_uv);
-    // point.geometric_normal = evaluate_instance_element_normal(
-    //     scene, instance, intersection.element_id, trace_non_rigid_frames);
     point.normal      = evaluate_instance_normal(scene, instance,
         intersection.element_id, intersection.element_uv,
         trace_non_rigid_frames);
