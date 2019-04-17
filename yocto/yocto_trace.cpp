@@ -1764,9 +1764,15 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 radiance += weight * vsdf.emission;
 
                 // russian roulette
+                #if 0
                 if (get_random_float(rng) >= min(vsdf.albedo[spectrum], 0.95f))
                     break;
                 weight /= min(vsdf.albedo[spectrum], 0.95f);
+                #else
+                if (sample_russian_roulette(vsdf.albedo, weight, bounce, get_random_float(rng)))
+                    break;
+                weight /= sample_russian_roulette_pdf(vsdf.albedo, weight, bounce);
+                #endif
 
                 // exit if needed
                 if (weight == zero3f) break;
