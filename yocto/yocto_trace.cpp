@@ -1423,14 +1423,11 @@ tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
     // choose delta or non-delta
     auto weight_smooth = 0.0f, weight_delta = 0.0f;
     for (auto& brdf : bsdfs) {
-        if (!is_delta_bsdf(brdf)) {
-            weight_smooth = include_smooth ? get_bsdf_sampling_weight(
-                                                 brdf, normal, outgoing)
-                                           : 0;
-        } else {
-            weight_delta = include_delta ? get_bsdf_sampling_weight(
-                                               brdf, normal, outgoing)
-                                         : 0;
+        if (!is_delta_bsdf(brdf) && include_smooth) {
+            weight_smooth += get_bsdf_sampling_weight(brdf, normal, outgoing);
+        }
+        if (is_delta_bsdf(brdf) && include_delta) {
+            weight_delta += get_bsdf_sampling_weight(brdf, normal, outgoing);
         }
     }
     if (weight_smooth == 0 && weight_delta == 0) return {zero3f, zero3f, 0};
