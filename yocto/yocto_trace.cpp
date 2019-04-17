@@ -98,11 +98,11 @@ struct short_vector {
     short_vector() {}
     short_vector(int n) {
         _size = n;
-        for(auto i = 0; i < n; i ++) _data[i] = T{};
+        for (auto i = 0; i < n; i++) _data[i] = T{};
     }
     short_vector(initializer_list<T> values) {
         _size = 0;
-        for(auto& value : values) {
+        for (auto& value : values) {
             _data[_size++] = value;
         }
     }
@@ -153,8 +153,7 @@ float get_bsdf_sampling_weight(
                : max(brdf.albedo * (1 - fresnel));
 }
 
-float get_vsdf_sampling_weight(
-    const vsdf& vsdf, const vec3f& outgoing) {
+float get_vsdf_sampling_weight(const vsdf& vsdf, const vec3f& outgoing) {
     return max(vsdf.albedo);
 }
 
@@ -286,12 +285,13 @@ vec3f evaluate_emission(const short_vector<esdf>& esdfs, const vec3f& normal,
     return emission;
 }
 
-vec3f evaluate_emission(const short_vector<vsdf>& vsdfs, const vec3f& outgoing) {
+vec3f evaluate_emission(
+    const short_vector<vsdf>& vsdfs, const vec3f& outgoing) {
     auto emission = zero3f;
     for (auto& vsdf : vsdfs) emission += vsdf.emission;
     return emission;
 }
-    
+
 #if YOCTO_TRACE_THINSHEET
 
 // Schlick approximation of the Fresnel term
@@ -1200,8 +1200,9 @@ inline vec3f get_russian_roulette_albedo(const short_vector<vsdf>& vsdfs) {
 */
 
 // Russian roulette. Returns whether to stop and its pdf.
-pair<bool, float> sample_russian_roulette(const vec3f& albedo, const vec3f& weight,
-    int bounce, float rr, int min_bounce = 4, float rr_threadhold = 1) {
+pair<bool, float> sample_russian_roulette(const vec3f& albedo,
+    const vec3f& weight, int bounce, float rr, int min_bounce = 4,
+    float rr_threadhold = 1) {
 #if YOCTO_RUSSIAN_ROULETTE_MODE == 0
     if (bounce <= min_bounce) return {false, 1};
     auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
@@ -1277,8 +1278,9 @@ vec3f evaluate_transmission(const yocto_scene& scene,
     return {tr, tr, tr};
 }
 
-pair<float, int> sample_volume_distance(const short_vector<vsdf>& vsdfs, float rl, float rd) {
-    if(vsdfs.size() != 1) throw runtime_error("unsupported size");
+pair<float, int> sample_volume_distance(
+    const short_vector<vsdf>& vsdfs, float rl, float rd) {
+    if (vsdfs.size() != 1) throw runtime_error("unsupported size");
     auto channel = clamp((int)(rl * 3), 0, 2);
     auto density = vsdfs[0].density[channel];
     if (density == 0 || rd == 0)
@@ -1287,14 +1289,16 @@ pair<float, int> sample_volume_distance(const short_vector<vsdf>& vsdfs, float r
         return {-log(rd) / density, channel};
 }
 
-float sample_volume_distance_pdf(const short_vector<vsdf>& vsdfs, float distance, int channel) {
-    if(vsdfs.size() != 1) throw runtime_error("unsupported size");
+float sample_volume_distance_pdf(
+    const short_vector<vsdf>& vsdfs, float distance, int channel) {
+    if (vsdfs.size() != 1) throw runtime_error("unsupported size");
     auto density = vsdfs[0].density[channel];
     return exp(-density * distance);
 }
 
-vec3f evaluate_volume_transmission(const short_vector<vsdf>& vsdfs, float distance) {
-    if(vsdfs.size() != 1) throw runtime_error("unsupported size");
+vec3f evaluate_volume_transmission(
+    const short_vector<vsdf>& vsdfs, float distance) {
+    if (vsdfs.size() != 1) throw runtime_error("unsupported size");
     return exp(-vsdfs[0].density * distance);
 }
 
@@ -1373,7 +1377,7 @@ vec3f evaluate_vsdf_cosine(const short_vector<vsdf>& vsdfs,
     for (auto& vsdf : vsdfs) {
         auto cos_theta = dot(outgoing, incoming);
         phase_function_cosine += vsdf.albedo * evaluate_phase_function(
-            cos_theta, vsdf.phaseg);
+                                                   cos_theta, vsdf.phaseg);
     }
     return phase_function_cosine;
 }
@@ -1420,15 +1424,16 @@ float sample_vsdf_direction_pdf(const short_vector<vsdf>& vsdfs,
     auto pdf = 0.0f;
     for (auto i = 0; i < vsdfs.size(); i++) {
         auto& vsdf = vsdfs[i];
-        pdf += weights[i] * evaluate_phase_function(dot(outgoing, incoming), vsdf.phaseg);
+        pdf += weights[i] *
+               evaluate_phase_function(dot(outgoing, incoming), vsdf.phaseg);
     }
     return pdf;
 }
 
 tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
-    const vec3f& normal, const short_vector<bsdf>& bsdfs,
-    const vec3f& outgoing, rng_state& rng, bool mis, bool include_smooth = true,
+    const vec3f& normal, const short_vector<bsdf>& bsdfs, const vec3f& outgoing,
+    rng_state& rng, bool mis, bool include_smooth = true,
     bool include_delta = true) {
     // choose delta or non-delta
     auto weight_smooth = 0.0f, weight_delta = 0.0f;
@@ -1452,17 +1457,17 @@ tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
     auto incoming_pdf = 0.0f;
     if (mis && !delta) {
         if (get_random_float(rng) < 0.5f) {
-            incoming = sample_brdf_direction(bsdfs, normal,
-                outgoing, get_random_float(rng), get_random_vec2f(rng), delta);
+            incoming = sample_brdf_direction(bsdfs, normal, outgoing,
+                get_random_float(rng), get_random_vec2f(rng), delta);
         } else {
-            incoming = sample_lights_direction(scene, lights, bvh,
-                position, get_random_float(rng), get_random_float(rng),
+            incoming = sample_lights_direction(scene, lights, bvh, position,
+                get_random_float(rng), get_random_float(rng),
                 get_random_vec2f(rng));
         }
         brdf_cosine = evaluate_brdf_cosine(
             bsdfs, normal, outgoing, incoming, delta);
-        incoming_pdf = 0.5f * sample_brdf_direction_pdf(bsdfs,
-                                  normal, outgoing, incoming, delta) +
+        incoming_pdf = 0.5f * sample_brdf_direction_pdf(
+                                  bsdfs, normal, outgoing, incoming, delta) +
                        0.5f * sample_lights_direction_pdf(
                                   scene, lights, bvh, position, incoming);
     } else {
@@ -1481,9 +1486,10 @@ tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
     }
 }
 
-tuple<vec3f, vec3f, float> sample_next_direction_volume(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
-    const vec3f& outgoing, const short_vector<vsdf>& vsdfs, rng_state& rng, bool mis) {
+tuple<vec3f, vec3f, float> sample_next_direction_volume(
+    const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
+    const vec3f& position, const vec3f& outgoing,
+    const short_vector<vsdf>& vsdfs, rng_state& rng, bool mis) {
     // continue path
     auto incoming     = zero3f;
     auto vsdf_cosine  = zero3f;
@@ -1497,15 +1503,15 @@ tuple<vec3f, vec3f, float> sample_next_direction_volume(const yocto_scene& scene
                 get_random_float(rng), get_random_float(rng),
                 get_random_vec2f(rng));
         }
-        vsdf_cosine = evaluate_vsdf_cosine(vsdfs, outgoing, incoming);
-        incoming_pdf =
-            0.5f * sample_vsdf_direction_pdf(vsdfs, outgoing, incoming) +
-            0.5f *
-                sample_lights_direction_pdf(scene, lights, bvh, position, incoming);
+        vsdf_cosine  = evaluate_vsdf_cosine(vsdfs, outgoing, incoming);
+        incoming_pdf = 0.5f * sample_vsdf_direction_pdf(
+                                  vsdfs, outgoing, incoming) +
+                       0.5f * sample_lights_direction_pdf(
+                                  scene, lights, bvh, position, incoming);
     } else {
         incoming = sample_vsdf_direction(
             vsdfs, outgoing, get_random_float(rng), get_random_vec2f(rng));
-        vsdf_cosine = evaluate_vsdf_cosine(vsdfs, outgoing, incoming);
+        vsdf_cosine  = evaluate_vsdf_cosine(vsdfs, outgoing, incoming);
         incoming_pdf = sample_vsdf_direction_pdf(vsdfs, outgoing, incoming);
     }
     if (incoming == zero3f || incoming_pdf == 0) {
@@ -1549,9 +1555,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             if (point.bsdfs.empty()) break;
 
             // russian roulette
-            auto [rr_stop, rr_pdf] = sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
-                                                             weight, bounce, get_random_float(rng));
-            if(rr_stop) break;
+            auto [rr_stop, rr_pdf] = sample_russian_roulette(
+                get_russian_roulette_albedo(point.bsdfs), weight, bounce,
+                get_random_float(rng));
+            if (rr_stop) break;
             weight /= rr_pdf;
             if (weight == zero3f) break;
 
@@ -1583,8 +1590,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             // grab vsdfs
             auto& vsdfs = volume_stack.back();
             // clamp ray if inside a volume
-            auto [distance_, channel] =
-            sample_volume_distance(vsdfs, get_random_float(rng), get_random_float(rng));
+            auto [distance_, channel] = sample_volume_distance(
+                vsdfs, get_random_float(rng), get_random_float(rng));
             ray.tmax = distance_;
 
             // intersect next point
@@ -1592,7 +1599,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             auto hit_surface  = trace_ray(scene, bvh, ray, intersection);
 
             // compute volume transmission
-            auto  distance = hit_surface ? intersection.distance : ray.tmax;
+            auto distance = hit_surface ? intersection.distance : ray.tmax;
             weight /= sample_volume_distance_pdf(vsdfs, distance, channel);
             weight *= evaluate_volume_transmission(vsdfs, distance);
 
@@ -1605,21 +1612,23 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 radiance += weight * evaluate_emission(vsdfs, outgoing);
 
                 // russian roulette
-                auto [rr_stop, rr_pdf] = sample_russian_roulette(get_russian_roulette_albedo(vsdfs),
-                                                                 weight, bounce, get_random_float(rng));
-                if(rr_stop) break;
+                auto [rr_stop, rr_pdf] = sample_russian_roulette(
+                    get_russian_roulette_albedo(vsdfs), weight, bounce,
+                    get_random_float(rng));
+                if (rr_stop) break;
                 weight /= rr_pdf;
                 if (weight == zero3f) break;
 
                 // continue path
-                auto [vsdf_cosine, incoming, incoming_pdf] = sample_next_direction_volume(scene, lights,
-                    bvh, position, outgoing, vsdfs, rng, true);
+                auto [vsdf_cosine, incoming, incoming_pdf] =
+                    sample_next_direction_volume(scene, lights, bvh, position,
+                        outgoing, vsdfs, rng, true);
                 if (incoming == zero3f || incoming_pdf == 0 ||
                     vsdf_cosine == zero3f)
                     break;
                 weight *= vsdf_cosine / incoming_pdf;
                 if (weight == zero3f) break;
-                
+
                 // setup next iteration
                 ray = make_ray(position, incoming);
                 continue;
@@ -1635,17 +1644,17 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 if (point.bsdfs.empty()) break;
 
                 // russian roulette
-                auto [rr_stop, rr_pdf] = sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
-                                                                 weight, bounce, get_random_float(rng));
-                if(rr_stop) break;
+                auto [rr_stop, rr_pdf] = sample_russian_roulette(
+                    get_russian_roulette_albedo(point.bsdfs), weight, bounce,
+                    get_random_float(rng));
+                if (rr_stop) break;
                 weight /= rr_pdf;
                 if (weight == zero3f) break;
 
                 // continue path
                 auto [brdf_cosine, incoming, incoming_pdf] =
-                    sample_next_direction(
-                        scene, lights, bvh, point.position, point.normal, 
-                        point.bsdfs, outgoing, rng, true);
+                    sample_next_direction(scene, lights, bvh, point.position,
+                        point.normal, point.bsdfs, outgoing, rng, true);
 
                 // exit if no hit
                 if (incoming == zero3f || incoming_pdf == 0 ||
@@ -1704,15 +1713,16 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (point.bsdfs.empty()) break;
 
         // russian roulette
-        auto [rr_stop, rr_pdf] = sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
-                                                         weight, bounce, get_random_float(rng));
-        if(rr_stop) break;
+        auto [rr_stop, rr_pdf] = sample_russian_roulette(
+            get_russian_roulette_albedo(point.bsdfs), weight, bounce,
+            get_random_float(rng));
+        if (rr_stop) break;
         weight /= rr_pdf;
         if (weight == zero3f) break;
 
         // continue path
         auto [brdf_cosine, incoming, incoming_pdf] = sample_next_direction(
-            scene, lights, bvh, point.position, point.normal, point.bsdfs, 
+            scene, lights, bvh, point.position, point.normal, point.bsdfs,
             outgoing, rng, false);
 
         // exit if no hit
@@ -1771,7 +1781,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
         // continue path
         auto [brdf_cosine, incoming, incoming_pdf] = sample_next_direction(
-            scene, lights, bvh, point.position, point.normal, point.bsdfs, 
+            scene, lights, bvh, point.position, point.normal, point.bsdfs,
             outgoing, rng, false, false, true);
 
         // exit if no hit
