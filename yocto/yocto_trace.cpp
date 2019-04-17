@@ -1473,21 +1473,31 @@ tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
 
 tuple<vec3f, vec3f, float> sample_next_direction_volume(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
-    const vec3f& outgoing, const short_vector<vsdf>& vsdfs, rng_state& rng) {
-    auto incoming = zero3f;
-    if (get_random_float(rng) < 0.5f) {
+    const vec3f& outgoing, const short_vector<vsdf>& vsdfs, rng_state& rng, bool mis) {
+    // continue path
+    auto incoming     = zero3f;
+    auto vsdf_cosine  = zero3f;
+    auto incoming_pdf = 0.0f;
+    if (mis) {
+        if (get_random_float(rng) < 0.5f) {
+            incoming = sample_vsdf_direction(
+                vsdfs, outgoing, get_random_float(rng), get_random_vec2f(rng));
+        } else {
+            incoming = sample_lights_direction(scene, lights, bvh, position,
+                get_random_float(rng), get_random_float(rng),
+                get_random_vec2f(rng));
+        }
+        vsdf_cosine = evaluate_vsdf_cosine(vsdfs, outgoing, incoming);
+        incoming_pdf =
+            0.5f * sample_vsdf_direction_pdf(vsdfs, outgoing, incoming) +
+            0.5f *
+                sample_lights_direction_pdf(scene, lights, bvh, position, incoming);
+    } else {
         incoming = sample_vsdf_direction(
             vsdfs, outgoing, get_random_float(rng), get_random_vec2f(rng));
-    } else {
-        incoming = sample_lights_direction(scene, lights, bvh, position,
-            get_random_float(rng), get_random_float(rng),
-            get_random_vec2f(rng));
+        vsdf_cosine = evaluate_vsdf_cosine(vsdfs, outgoing, incoming);
+        incoming_pdf = sample_vsdf_direction_pdf(vsdfs, outgoing, incoming);
     }
-    auto vsdf_cosine = evaluate_vsdf_cosine(vsdfs, outgoing, incoming);
-    auto incoming_pdf =
-        0.5f * sample_vsdf_direction_pdf(vsdfs, outgoing, incoming) +
-        0.5f *
-            sample_lights_direction_pdf(scene, lights, bvh, position, incoming);
     if (incoming == zero3f || incoming_pdf == 0) {
         return {zero3f, zero3f, 0};
     } else {
@@ -1812,23 +1822,16 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 // emission
                 radiance += weight * vsdf.emission;
 
-// russian roulette
-#if 0
-                if (get_random_float(rng) >= min(vsdf.albedo[spectrum], 0.95f))
-                    break;
-                weight /= min(vsdf.albedo[spectrum], 0.95f);
-#else
                 // russian roulette
                 auto [rr_stop, rr_pdf] = sample_russian_roulette(get_russian_roulette_albedo(vsdfs),
                                                                  weight, bounce, get_random_float(rng));
                 if(rr_stop) break;
                 weight /= rr_pdf;
                 if (weight == zero3f) break;
-#endif
 
                 // continue path
                 auto [vsdf_cosine, incoming, incoming_pdf] = sample_next_direction_volume(scene, lights,
-                    bvh, position, outgoing, vsdfs, rng);
+                    bvh, position, outgoing, vsdfs, rng, true);
                 if (incoming == zero3f || incoming_pdf == 0 ||
                     vsdf_cosine == zero3f)
                     break;
