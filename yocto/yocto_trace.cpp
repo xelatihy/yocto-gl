@@ -215,7 +215,6 @@ struct trace_point {
     vec3f              normal           = zero3f;
     vec3f              geometric_normal = zero3f;
     vec2f              texturecoord     = zero2f;
-    vec4f              color            = zero4f;
     short_vector<esdf> esdfs            = {};
     short_vector<bsdf> bsdfs            = {};
     short_vector<vsdf> vsdfs            = {};
@@ -236,12 +235,12 @@ void make_trace_point(trace_point& point, const yocto_scene& scene,
         trace_non_rigid_frames);
     point.texturecoord = evaluate_shape_texturecoord(
         shape, intersection.element_id, intersection.element_uv);
-    point.color = evaluate_shape_color(
+    auto color = evaluate_shape_color(
         shape, intersection.element_id, intersection.element_uv);
     auto material_point = evaluate_material_point(
         scene, material, point.texturecoord);
     compute_scattering_functions(
-        point.esdfs, point.bsdfs, point.vsdfs, material_point, point.color);
+        point.esdfs, point.bsdfs, point.vsdfs, material_point, color);
     if (!shape.lines.empty()) {
         point.normal = orthonormalize(-shading_direction, point.normal);
     } else if (!shape.points.empty()) {
@@ -1860,7 +1859,10 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {{point.texturecoord.x, point.texturecoord.y, 0}, 1};
         }
         case trace_falsecolor_type::color: {
-            return {xyz(point.color), 1};
+            auto& instance = scene.instances[intersection.instance_id];
+            auto& shape = scene.shapes[instance.shape];
+            auto color = evaluate_shape_color(shape, intersection.element_id, intersection.element_uv);
+            return {xyz(color), 1};
         }
         case trace_falsecolor_type::emission: {
             auto emission = zero3f;
