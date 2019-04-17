@@ -1760,22 +1760,25 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 // volume interaction
                 auto position = ray.o + ray.d * distance;
 
-                if (get_random_float(rng) < min(vsdf.albedo[spectrum], 0.95f)) {
-                    // scattering
-                    weight /= min(vsdf.albedo[spectrum], 0.95f);
-                    auto [incoming, w] = sample_next_direction_volume(scene,
-                        lights, bvh, position, -ray.d, vsdf.albedo, vsdf.phaseg,
-                        rng);
-                    if (w == zero3f) break;
-                    weight *= w;
-                    ray = make_ray(position, incoming);
-                    continue;
-                } else {
-                    // absorption
-                    radiance += weight * vsdf.emission;
-                    weight = zero3f;
+                // emission
+                radiance += weight * vsdf.emission;
+
+                // russian roulette
+                if (get_random_float(rng) >= min(vsdf.albedo[spectrum], 0.95f))
                     break;
-                }
+                weight /= min(vsdf.albedo[spectrum], 0.95f);
+
+                // exit if needed
+                if (weight == zero3f) break;
+
+                // continue path
+                auto [incoming, w] = sample_next_direction_volume(scene,
+                    lights, bvh, position, -ray.d, vsdf.albedo, vsdf.phaseg,
+                    rng);
+                if (w == zero3f) break;
+                weight *= w;
+                ray = make_ray(position, incoming);
+                continue;
             } else {
                 // prepare shading point
                 auto outgoing = -ray.d;
