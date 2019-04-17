@@ -213,7 +213,7 @@ void compute_scattering_functions(short_vector<esdf>& esdfs,
 struct trace_point {
     vec3f              position         = zero3f;
     vec3f              normal           = zero3f;
-    vec3f              geometric_normal = zero3f;
+    // vec3f              geometric_normal = zero3f;
     short_vector<esdf> esdfs            = {};
     short_vector<bsdf> bsdfs            = {};
     short_vector<vsdf> vsdfs            = {};
@@ -227,8 +227,8 @@ void make_trace_point(trace_point& point, const yocto_scene& scene,
     auto& material = scene.materials[instance.material];
     point.position = evaluate_instance_position(
         scene, instance, intersection.element_id, intersection.element_uv);
-    point.geometric_normal = evaluate_instance_element_normal(
-        scene, instance, intersection.element_id, trace_non_rigid_frames);
+    // point.geometric_normal = evaluate_instance_element_normal(
+    //     scene, instance, intersection.element_id, trace_non_rigid_frames);
     point.normal      = evaluate_instance_normal(scene, instance,
         intersection.element_id, intersection.element_uv,
         trace_non_rigid_frames);
@@ -1568,8 +1568,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
             // update volume_stack
             if (!point.vsdfs.empty() &&
-                dot(incoming, point.geometric_normal) > 0 !=
-                    dot(outgoing, point.geometric_normal) > 0) {
+                dot(incoming, point.normal) > 0 !=
+                    dot(outgoing, point.normal) > 0) {
                 if (volume_stack.empty())
                     volume_stack.push_back(point.vsdfs);
                 else
@@ -1676,8 +1676,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
                 // update volume_stack
                 if (!point.vsdfs.empty() &&
-                    dot(incoming, point.geometric_normal) > 0 !=
-                        dot(outgoing, point.geometric_normal) > 0) {
+                    dot(incoming, point.normal) > 0 !=
+                        dot(outgoing, point.normal) > 0) {
                     if (volume_stack.empty())
                         volume_stack.push_back(point.vsdfs);
                     else
@@ -1840,11 +1840,15 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {frontfacing, 1};
         }
         case trace_falsecolor_type::gnormal: {
-            return {point.geometric_normal * 0.5f + 0.5f, 1};
+            auto normal = evaluate_instance_element_normal(scene, instance, 
+                intersection.element_id, true);
+            return {normal * 0.5f + 0.5f, 1};
         }
         case trace_falsecolor_type::gfrontfacing: {
+            auto normal = evaluate_instance_element_normal(scene, instance, 
+                intersection.element_id, true);
             auto outgoing    = -direction;
-            auto frontfacing = dot(point.geometric_normal, outgoing) > 0
+            auto frontfacing = dot(normal, outgoing) > 0
                                    ? vec3f{0, 1, 0}
                                    : vec3f{1, 0, 0};
             return {frontfacing, 1};
