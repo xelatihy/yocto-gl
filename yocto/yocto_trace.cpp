@@ -1499,6 +1499,22 @@ tuple<vec3f, vec3f, float> sample_next_direction_volume(
     }
 }
 
+tuple<vec3f, float, float> sample_next_volume_distance(
+    const vec3f& position, const vec3f& outgoing, float max_distance,
+    const short_vector<vsdf>& vsdfs, rng_state& rng) {
+    // clamp ray if inside a volume
+    auto [distance, channel] = sample_volume_distance(
+        vsdfs, get_random_float(rng), get_random_float(rng));
+
+    // compute volume transmission
+    distance = min(distance, max_distance);
+    auto pdf = sample_volume_distance_pdf(vsdfs, distance, channel);
+    auto transmission = evaluate_volume_transmission(vsdfs, distance);
+
+    // done
+    return {transmission, distance, pdf};
+}
+
 // Recursive path tracing.
 pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
@@ -1565,8 +1581,12 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             // setup next iteration
             ray = make_ray(point.position, incoming);
         } else {
+            
+            #if 0
+
             // grab vsdfs
             auto& vsdfs = volume_stack.back();
+
             // clamp ray if inside a volume
             auto [distance_, channel] = sample_volume_distance(
                 vsdfs, get_random_float(rng), get_random_float(rng));
@@ -1580,6 +1600,26 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             auto distance = hit_surface ? intersection.distance : ray.tmax;
             weight /= sample_volume_distance_pdf(vsdfs, distance, channel);
             weight *= evaluate_volume_transmission(vsdfs, distance);
+
+            #else
+
+            // intersect next point
+            auto intersection = bvh_intersection{};
+            if(!trace_ray(scene, bvh, ray, intersection)) {
+                break; // bad for now
+            }
+
+            // clamp ray if inside a volume
+            auto& vsdfs = volume_stack.back();
+            auto [transmission, distance, distance_pdf] = 
+                sample_next_volume_distance(ray.o, -ray.d, intersection.distance, 
+                vsdfs, rng);
+            weight *= transmission / distance_pdf;
+
+            // check hit
+            auto hit_surface = distance >= intersection.distance;
+
+            #endif
 
             if (!hit_surface) {
                 // prepare shading point
