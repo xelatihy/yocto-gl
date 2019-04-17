@@ -214,7 +214,6 @@ struct trace_point {
     vec3f              position         = zero3f;
     vec3f              normal           = zero3f;
     vec3f              geometric_normal = zero3f;
-    vec2f              texturecoord     = zero2f;
     short_vector<esdf> esdfs            = {};
     short_vector<bsdf> bsdfs            = {};
     short_vector<vsdf> vsdfs            = {};
@@ -230,15 +229,15 @@ void make_trace_point(trace_point& point, const yocto_scene& scene,
         scene, instance, intersection.element_id, intersection.element_uv);
     point.geometric_normal = evaluate_instance_element_normal(
         scene, instance, intersection.element_id, trace_non_rigid_frames);
-    point.normal       = evaluate_instance_normal(scene, instance,
+    point.normal      = evaluate_instance_normal(scene, instance,
         intersection.element_id, intersection.element_uv,
         trace_non_rigid_frames);
-    point.texturecoord = evaluate_shape_texturecoord(
+    auto texturecoord = evaluate_shape_texturecoord(
         shape, intersection.element_id, intersection.element_uv);
     auto color = evaluate_shape_color(
         shape, intersection.element_id, intersection.element_uv);
     auto material_point = evaluate_material_point(
-        scene, material, point.texturecoord);
+        scene, material, texturecoord);
     compute_scattering_functions(
         point.esdfs, point.bsdfs, point.vsdfs, material_point, color);
     if (!shape.lines.empty()) {
@@ -1498,16 +1497,16 @@ tuple<vec3f, vec3f, float> sample_next_direction_volume(
     }
 }
 
-tuple<vec3f, float, float> sample_next_volume_distance(
-    const vec3f& position, const vec3f& outgoing, float max_distance,
-    const short_vector<vsdf>& vsdfs, rng_state& rng) {
+tuple<vec3f, float, float> sample_next_volume_distance(const vec3f& position,
+    const vec3f& outgoing, float max_distance, const short_vector<vsdf>& vsdfs,
+    rng_state& rng) {
     // clamp ray if inside a volume
     auto [distance, channel] = sample_volume_distance(
         vsdfs, get_random_float(rng), get_random_float(rng));
 
     // compute volume transmission
-    distance = min(distance, max_distance);
-    auto pdf = sample_volume_distance_pdf(vsdfs, distance, channel);
+    distance          = min(distance, max_distance);
+    auto pdf          = sample_volume_distance_pdf(vsdfs, distance, channel);
     auto transmission = evaluate_volume_transmission(vsdfs, distance);
 
     // done
@@ -1580,8 +1579,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             // setup next iteration
             ray = make_ray(point.position, incoming);
         } else {
-            
-            #if 0
+#if 0
 
             // grab vsdfs
             auto& vsdfs = volume_stack.back();
@@ -1600,25 +1598,25 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             weight /= sample_volume_distance_pdf(vsdfs, distance, channel);
             weight *= evaluate_volume_transmission(vsdfs, distance);
 
-            #else
+#else
 
             // intersect next point
             auto intersection = bvh_intersection{};
-            if(!trace_ray(scene, bvh, ray, intersection)) {
-                break; // bad for now
+            if (!trace_ray(scene, bvh, ray, intersection)) {
+                break;  // bad for now
             }
 
             // clamp ray if inside a volume
             auto& vsdfs = volume_stack.back();
-            auto [transmission, distance, distance_pdf] = 
-                sample_next_volume_distance(ray.o, -ray.d, intersection.distance, 
-                vsdfs, rng);
+            auto [transmission, distance, distance_pdf] =
+                sample_next_volume_distance(
+                    ray.o, -ray.d, intersection.distance, vsdfs, rng);
             weight *= transmission / distance_pdf;
 
             // check hit
             auto hit_surface = distance >= intersection.distance;
 
-            #endif
+#endif
 
             if (!hit_surface) {
                 // prepare shading point
@@ -1826,6 +1824,11 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
         return {zero3f, false};
     }
 
+    // get scene elements
+    auto& instance = scene.instances[intersection.instance_id];
+    auto& shape    = scene.shapes[instance.shape];
+    // auto& material = scene.materials[instance.material];
+
     // prepare shading point
     auto point = trace_point{};
     make_trace_point(point, scene, intersection, direction);
@@ -1856,12 +1859,13 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {albedo, 1};
         }
         case trace_falsecolor_type::texcoord: {
-            return {{point.texturecoord.x, point.texturecoord.y, 0}, 1};
+            auto  texturecoord = evaluate_shape_texturecoord(
+                shape, intersection.element_id, intersection.element_uv);
+            return {{texturecoord.x, texturecoord.y, 0}, 1};
         }
         case trace_falsecolor_type::color: {
-            auto& instance = scene.instances[intersection.instance_id];
-            auto& shape = scene.shapes[instance.shape];
-            auto color = evaluate_shape_color(shape, intersection.element_id, intersection.element_uv);
+            auto  color    = evaluate_shape_color(
+                shape, intersection.element_id, intersection.element_uv);
             return {xyz(color), 1};
         }
         case trace_falsecolor_type::emission: {
@@ -1897,13 +1901,11 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {vec3f{roughness}, 1};
         }
         case trace_falsecolor_type::material: {
-            auto& instance = scene.instances[intersection.instance_id];
             auto  hashed   = std::hash<int>()(instance.material);
             auto  rng_     = make_rng(trace_default_seed, hashed);
             return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::shape: {
-            auto& instance = scene.instances[intersection.instance_id];
             auto  hashed   = std::hash<int>()(instance.shape);
             auto  rng_     = make_rng(trace_default_seed, hashed);
             return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
