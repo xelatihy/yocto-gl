@@ -286,6 +286,12 @@ vec3f evaluate_emission(const short_vector<esdf>& esdfs, const vec3f& normal,
     return emission;
 }
 
+vec3f evaluate_emission(const short_vector<vsdf>& vsdfs, const vec3f& outgoing) {
+    auto emission = zero3f;
+    for (auto& vsdf : vsdfs) emission += vsdf.emission;
+    return emission;
+}
+    
 #if YOCTO_TRACE_THINSHEET
 
 // Schlick approximation of the Fresnel term
@@ -1271,21 +1277,25 @@ vec3f evaluate_transmission(const yocto_scene& scene,
     return {tr, tr, tr};
 }
 
-float sample_volume_distance(float volume_density, float r) {
-    if (volume_density == 0 || r == 0)
-        return float_max;
+pair<float, int> sample_volume_distance(const short_vector<vsdf>& vsdfs, float rl, float rd) {
+    if(vsdfs.size() != 1) throw runtime_error("unsupported size");
+    auto channel = clamp((int)(rl * 3), 0, 2);
+    auto density = vsdfs[0].density[channel];
+    if (density == 0 || rd == 0)
+        return {float_max, channel};
     else
-        return -log(r) / volume_density;
+        return {-log(rd) / density, channel};
 }
 
-float sample_volume_distance_pdf(float volume_density, float distance) {
-    return exp(-volume_density * distance);
+float sample_volume_distance_pdf(const short_vector<vsdf>& vsdfs, float distance, int channel) {
+    if(vsdfs.size() != 1) throw runtime_error("unsupported size");
+    auto density = vsdfs[0].density[channel];
+    return exp(-density * distance);
 }
 
-vec3f evaluate_volume_transmission(
-    const vec3f& volume_density, float distance) {
-    return vec3f{exp(-volume_density.x * distance),
-        exp(-volume_density.y * distance), exp(-volume_density.z * distance)};
+vec3f evaluate_volume_transmission(const short_vector<vsdf>& vsdfs, float distance) {
+    if(vsdfs.size() != 1) throw runtime_error("unsupported size");
+    return exp(-vsdfs[0].density * distance);
 }
 
 float sample_distance(const yocto_scene& scene, const yocto_material& material,
@@ -1505,231 +1515,6 @@ tuple<vec3f, vec3f, float> sample_next_direction_volume(const yocto_scene& scene
     }
 }
 
-#define OLD_VOLPATH 0
-
-#if 0
-vec3f sample_next_direction_volume(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
-    const vec3f& albedo, float phaseg, const vec3f& outgoing, float prob_light,
-    rng_state& rng, vec3f& weight) {
-    // Sample next direction when path tracing inside a volume. prob_light is
-    // the probabilty of sampling a direction towards a light.
-
-    auto incoming     = zero3f;
-    auto incoming_pdf = 0.0f;
-
-    if (get_random_float(rng) < prob_light) {
-        incoming = sample_lights_direction(scene, lights, bvh, position,
-            get_random_float(rng), get_random_float(rng),
-            get_random_vec2f(rng));
-    } else {
-        incoming = sample_phase_function(phaseg, get_random_vec2f(rng));
-        incoming = make_basis_fromz(-outgoing) * incoming;
-    }
-    auto cos_theta      = dot(outgoing, incoming);
-    auto phase_function = evaluate_phase_function(cos_theta, phaseg);
-    incoming_pdf        = (1 - prob_light) * phase_function +
-                   prob_light * sample_lights_direction_pdf(
-                                    scene, lights, bvh, position, incoming);
-
-    if (incoming == zero3f || incoming_pdf == 0 || phase_function == 0.0f)
-        weight = zero3f;
-    else
-        weight *= albedo * phase_function / incoming_pdf;
-    return incoming;
-}
-#endif
-
-tuple<vec3f, vec3f, vec3f, vec3f> integrate_volume(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh,
-    const short_vector<vsdf>& vsdfs, const vec3f& position_,
-    const vec3f& outgoing_, const vec3f& direction_, rng_state& rng) {
-    // check assumption on vsdf size
-    if (vsdfs.size() != 1) throw runtime_error("volume supports only 1 vsdf");
-    auto& vsdf = vsdfs.front();
-
-    // Integrate weight while random walking inside the volume until exit.
-    auto position  = position_;
-    auto direction = direction_;
-    auto outgoing  = outgoing_;
-    auto weight    = vec3f{1, 1, 1};
-    auto radiance  = zero3f;
-
-    // auto direction = next_direction_;
-
-    auto      spectrum          = get_random_int(rng, 3);
-    auto      density           = vsdf.density[spectrum];
-    auto      albedo            = vsdf.albedo[spectrum];
-    const int volume_max_bounce = 1000;  // @giacomo: hardcoded!
-
-    for (auto volume_bounce = 0; volume_bounce < volume_max_bounce;
-         volume_bounce++) {
-        auto distance = sample_volume_distance(density, get_random_float(rng));
-
-        auto intersection = bvh_intersection{};
-        if (!trace_ray(scene, bvh, position, direction, intersection)) {
-            weight = zero3f;
-            break;
-        }
-
-        auto point = trace_point{};
-        make_trace_point(point, scene, intersection, direction);
-
-        if (intersection.distance < distance) {
-            // intersection with boundary surface of volume
-
-            weight *= evaluate_volume_transmission(
-                vsdf.density, intersection.distance);
-            weight /= sample_volume_distance_pdf(
-                density, intersection.distance);
-
-            position = point.position;
-            outgoing = -direction;
-            // direction = sample_next_direction(
-            //     scene, lights, bvh, point, outgoing, 0.5f, rng, weight);
-            {
-                auto [brdf_cosine, incoming, incoming_pdf] =
-                    sample_next_direction(
-                        scene, lights, bvh, point.position, 
-                        point.normal, point.bsdfs, outgoing, rng, true);
-
-                // exit if no hit
-                if (incoming == zero3f || incoming_pdf == 0 ||
-                    brdf_cosine == zero3f)
-                    break;
-                else
-                    weight *= brdf_cosine / incoming_pdf;
-
-                direction = incoming;
-            }
-
-            if (dot(direction, point.geometric_normal) > 0 !=
-                dot(outgoing, point.geometric_normal) > 0)
-                break;  // exit from volume
-            else
-                continue;  // internal reflection
-        }
-
-        // medium interaction inside volume
-        position += direction * distance;
-        weight /= sample_volume_distance_pdf(density, distance);
-        weight *= evaluate_volume_transmission(vsdf.density, distance);
-
-        // CAN WE USE A FUNCTION LIKE sample_next_direction?
-        if (get_random_float(rng) < min(albedo, 0.95f)) {
-            // scattering
-            weight /= min(albedo, 0.95f);
-
-            outgoing = -direction;
-            // direction = sample_next_direction_volume(scene, lights, bvh,
-            //     position, volume_albedo, volume_phaseg, outgoing, 0.5f, rng,
-            //     weight);
-            {
-                auto incoming     = zero3f;
-                auto incoming_pdf = 0.0f;
-
-                if (get_random_float(rng) < 0.5f) {
-                    incoming = sample_lights_direction(scene, lights, bvh,
-                        position, get_random_float(rng), get_random_float(rng),
-                        get_random_vec2f(rng));
-                } else {
-                    incoming = sample_phase_function(
-                        vsdf.phaseg, get_random_vec2f(rng));
-                    incoming = make_basis_fromz(-outgoing) * incoming;
-                }
-                auto cos_theta      = dot(outgoing, incoming);
-                auto phase_function = evaluate_phase_function(
-                    cos_theta, vsdf.phaseg);
-                incoming_pdf = 0.5f * phase_function +
-                               0.5f * sample_lights_direction_pdf(scene, lights,
-                                          bvh, position, incoming);
-
-                if (incoming == zero3f || incoming_pdf == 0 ||
-                    phase_function == 0.0f)
-                    break;
-                else
-                    weight *= vsdf.albedo * phase_function / incoming_pdf;
-
-                direction = incoming;
-            }
-        } else {
-            // absorption
-            radiance += weight * vsdf.emission;
-            weight = zero3f;
-            break;
-        }
-    }
-
-    return {position, direction, radiance, weight};
-}
-
-#if OLD_VOLPATH
-// Iterative volumetric path tracing.
-vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, const trace_image_options& options) {
-    // intersect ray
-    auto point = trace_ray(
-        scene, bvh, position, direction, rng, options.max_bounces);
-    if (!point.hit) {
-        if (options.environments_hidden || scene.environments.empty())
-            return zero4f;
-        return {point.emission, 1};
-    }
-
-    // initialize
-    auto radiance = point.emission;
-    auto weight   = vec3f{1, 1, 1};
-    auto outgoing = -direction;
-
-    // trace path
-    for (auto bounce = 0; bounce < options.max_bounces; bounce++) {
-        // exit if needed
-        if (is_brdf_zero(point.brdf) || weight == zero3f) break;
-
-        auto incoming = sample_next_direction(
-            scene, lights, bvh, point, outgoing, 0.5, rng, weight);
-        if (weight == zero3f) break;
-
-        // transmission
-        if (dot(incoming, point.geometric_normal) > 0 !=
-            dot(outgoing, point.geometric_normal) > 0) {
-            auto [pos, dir, rad, w] = integrate_volume(scene, lights, bvh,
-                point.volume_density, point.volume_albedo,
-                point.volume_emission, point.volume_phaseg, point.position,
-                outgoing, incoming, rng);
-
-            radiance += weight * rad;
-            weight *= w;
-
-            if (weight == zero3f) break;
-            point.position = pos;
-            incoming       = dir;
-        }
-
-        // intersect next point
-        auto next_point = trace_ray(
-            scene, bvh, point.position, incoming, rng, options.max_bounces);
-
-        radiance += weight * next_point.emission;
-        if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
-
-        // setup next iteration
-        point    = next_point;
-        outgoing = -incoming;
-
-        // russian roulette
-        if (sample_russian_roulette(
-                get_albedo(point.brdf), weight, bounce, get_random_float(rng)))
-            break;
-        weight /= sample_russian_roulette_pdf(
-            get_albedo(point.brdf), weight, bounce);
-    }
-
-    return {radiance, 1};
-}
-#endif
-
 // Recursive path tracing.
 pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
@@ -1738,7 +1523,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto radiance     = zero3f;
     auto weight       = vec3f{1, 1, 1};
     auto ray          = make_ray(position, direction);
-    auto volume_stack = short_vector<vsdf>{};
+    auto volume_stack = short_vector<short_vector<vsdf>>{};
     auto hit          = false;
 
     // trace  path
@@ -1787,7 +1572,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 dot(incoming, point.geometric_normal) > 0 !=
                     dot(outgoing, point.geometric_normal) > 0) {
                 if (volume_stack.empty())
-                    volume_stack.push_back(point.vsdfs.back());
+                    volume_stack.push_back(point.vsdfs);
                 else
                     volume_stack.pop_back();
             }
@@ -1795,10 +1580,12 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             // setup next iteration
             ray = make_ray(point.position, incoming);
         } else {
+            // grab vsdfs
+            auto& vsdfs = volume_stack.back();
             // clamp ray if inside a volume
-            auto spectrum = get_random_int(rng, 3);
-            ray.tmax      = sample_volume_distance(
-                volume_stack.back().density[spectrum], get_random_float(rng));
+            auto [distance_, channel] =
+            sample_volume_distance(vsdfs, get_random_float(rng), get_random_float(rng));
+            ray.tmax = distance_;
 
             // intersect next point
             auto intersection = bvh_intersection{};
@@ -1806,21 +1593,16 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
             // compute volume transmission
             auto  distance = hit_surface ? intersection.distance : ray.tmax;
-            auto& vsdf     = volume_stack.back();
-            weight /= sample_volume_distance_pdf(
-                vsdf.density[spectrum], distance);
-            weight *= evaluate_volume_transmission(vsdf.density, distance);
+            weight /= sample_volume_distance_pdf(vsdfs, distance, channel);
+            weight *= evaluate_volume_transmission(vsdfs, distance);
 
             if (!hit_surface) {
-                // volume interaction
-                auto position = ray.o + ray.d * distance;
-
                 // prepare shading point
                 auto outgoing = -ray.d;
-                auto vsdfs = short_vector{{volume_stack.back()}};
+                auto position = ray.o + ray.d * distance;
 
                 // emission
-                radiance += weight * vsdf.emission;
+                radiance += weight * evaluate_emission(vsdfs, outgoing);
 
                 // russian roulette
                 auto [rr_stop, rr_pdf] = sample_russian_roulette(get_russian_roulette_albedo(vsdfs),
@@ -1877,7 +1659,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                     dot(incoming, point.geometric_normal) > 0 !=
                         dot(outgoing, point.geometric_normal) > 0) {
                     if (volume_stack.empty())
-                        volume_stack.push_back(point.vsdfs.back());
+                        volume_stack.push_back(point.vsdfs);
                     else
                         volume_stack.pop_back();
                 }
@@ -1938,21 +1720,6 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
             break;
         weight *= brdf_cosine / incoming_pdf;
         if (weight == zero3f) break;
-
-        // transmission
-        if (!point.vsdfs.empty() &&
-            dot(incoming, point.geometric_normal) > 0 !=
-                dot(outgoing, point.geometric_normal) > 0) {
-            auto [pos, dir, rad, w] = integrate_volume(scene, lights, bvh,
-                point.vsdfs, point.position, outgoing, incoming, rng);
-
-            radiance += weight * rad;
-            weight *= w;
-
-            if (weight == zero3f) break;
-            point.position = pos;
-            incoming       = dir;
-        }
 
         // setup next iteration
         ray = make_ray(point.position, incoming);
