@@ -1193,15 +1193,15 @@ inline vec3f get_russian_roulette_albedo(const short_vector<vsdf>& vsdfs) {
                                                     giacomo, 3-04-2019
 */
 
-// Russian roulette
-bool sample_russian_roulette(const vec3f& albedo, const vec3f& weight,
+// Russian roulette. Returns whether to stop and its pdf.
+pair<bool, float> sample_russian_roulette(const vec3f& albedo, const vec3f& weight,
     int bounce, float rr, int min_bounce = 4, float rr_threadhold = 1) {
 #if YOCTO_RUSSIAN_ROULETTE_MODE == 0
-    if (bounce <= min_bounce) return false;
+    if (bounce <= min_bounce) return {false, 1};
     auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
-    return rr < rr_prob;
+    return {rr < rr_prob, 1 - rr_prob};
 #elif YOCTO_RUSSIAN_ROULETTE_MODE == 1
-    if (bounce <= min_bounce) return false;
+    if (bounce <= min_bounce) return {false, 1};
     auto rr_prob = 1.0f - min(max(weight), 0.95f);
     return rr < rr_prob;
 #elif YOCTO_RUSSIAN_ROULETTE_MODE == 2
@@ -1215,36 +1215,9 @@ bool sample_russian_roulette(const vec3f& albedo, const vec3f& weight,
     // }
     if (max(weight) < rr_threadhold && bounce > min_bounce) {
         auto rr_prob = max((float)0.05, 1 - max(weight));
-        return rr < rr_prob;
+        return {rr < rr_prob, 1 - rr_prob};
     } else {
-        return false;
-    }
-#endif
-}
-float sample_russian_roulette_pdf(const vec3f& albedo, const vec3f& weight,
-    int bounce, int min_bounce = 4, float rr_threadhold = 1) {
-#if YOCTO_RUSSIAN_ROULETTE_MODE == 0
-    auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
-    if (bounce <= min_bounce) return 1;
-    return 1 - rr_prob;
-#elif YOCTO_RUSSIAN_ROULETTE_MODE == 1
-    auto rr_prob = 1.0f - min(max(weight), 0.95f);
-    if (bounce <= min_bounce) return 1;
-    return 1 - rr_prob;
-#elif YOCTO_RUSSIAN_ROULETTE_MODE == 2
-    // from pbrt
-    // Spectrum rrBeta = beta * etaScale;
-    // if (rrBeta.MaxComponentValue() < rrThreshold && bounces > 3) {
-    //     Float q = std::max((Float).05, 1 - rrBeta.MaxComponentValue());
-    //     if (sampler.Get1D() < q) break;
-    //     beta /= 1 - q;
-    //     DCHECK(!std::isinf(beta.y()));
-    // }
-    if (max(weight) < rr_threadhold && bounce > min_bounce) {
-        auto rr_prob = max((float)0.05, 1 - max(weight));
-        return 1 - rr_prob;
-    } else {
-        return 1;
+        return {false, 1};
     }
 #endif
 }
@@ -1784,14 +1757,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             if (point.bsdfs.empty()) break;
 
             // russian roulette
-            if (sample_russian_roulette(
-                    get_russian_roulette_albedo(point.bsdfs), weight, bounce,
-                    get_random_float(rng)))
-                break;
-            weight /= sample_russian_roulette_pdf(
-                get_russian_roulette_albedo(point.bsdfs), weight, bounce);
-
-            // exit if needed
+            auto [rr_stop, rr_pdf] = sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
+                                                             weight, bounce, get_random_float(rng));
+            if(rr_stop) break;
+            weight /= rr_pdf;
             if (weight == zero3f) break;
 
             // continue path
@@ -1852,21 +1821,17 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                     break;
                 weight /= min(vsdf.albedo[spectrum], 0.95f);
 #else
-                if (sample_russian_roulette(
-                        vsdf.albedo, weight, bounce, get_random_float(rng)))
-                    break;
-                weight /= sample_russian_roulette_pdf(
-                    vsdf.albedo, weight, bounce);
-#endif
-
-                // exit if needed
+                // russian roulette
+                auto [rr_stop, rr_pdf] = sample_russian_roulette(get_russian_roulette_albedo(vsdfs),
+                                                                 weight, bounce, get_random_float(rng));
+                if(rr_stop) break;
+                weight /= rr_pdf;
                 if (weight == zero3f) break;
+#endif
 
                 // continue path
                 auto [vsdf_cosine, incoming, incoming_pdf] = sample_next_direction_volume(scene, lights,
                     bvh, position, outgoing, vsdfs, rng);
-                
-                // exit if no hit
                 if (incoming == zero3f || incoming_pdf == 0 ||
                     vsdf_cosine == zero3f)
                     break;
@@ -1888,14 +1853,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 if (point.bsdfs.empty()) break;
 
                 // russian roulette
-                if (sample_russian_roulette(
-                        get_russian_roulette_albedo(point.bsdfs), weight,
-                        bounce, get_random_float(rng)))
-                    break;
-                weight /= sample_russian_roulette_pdf(
-                    get_russian_roulette_albedo(point.bsdfs), weight, bounce);
-
-                // exit if needed
+                auto [rr_stop, rr_pdf] = sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
+                                                                 weight, bounce, get_random_float(rng));
+                if(rr_stop) break;
+                weight /= rr_pdf;
                 if (weight == zero3f) break;
 
                 // continue path
@@ -1961,13 +1922,10 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (point.bsdfs.empty()) break;
 
         // russian roulette
-        if (sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
-                weight, bounce, get_random_float(rng)))
-            break;
-        weight /= sample_russian_roulette_pdf(
-            get_russian_roulette_albedo(point.bsdfs), weight, bounce);
-
-        // exit if needed
+        auto [rr_stop, rr_pdf] = sample_russian_roulette(get_russian_roulette_albedo(point.bsdfs),
+                                                         weight, bounce, get_random_float(rng));
+        if(rr_stop) break;
+        weight /= rr_pdf;
         if (weight == zero3f) break;
 
         // continue path
