@@ -1229,28 +1229,6 @@ pair<bool, float> sample_russian_roulette(const vec3f& albedo,
 #endif
 }
 
-#if 0
-// Test occlusion.
-vec3f evaluate_transmission(const yocto_scene& scene, const bvh_scene& bvh,
-    const vec3f& from, const vec3f& to, int max_bounces) {
-    auto weight = vec3f{1, 1, 1};
-    auto p      = from;
-    for (auto bounce = 0; bounce < max_bounces; bounce++) {
-        auto ray  = make_segment(p, to);
-        auto isec = intersect_scene(scene, bvh, ray);
-        if (!isec.instance) break;
-        auto f = evaluate_brdf(isec.instance.shape, isec.element_id, isec.element_uv);
-        auto op = evaluate_opacity(
-            isec.instance, isec.element_id, isec.element_uv);
-        weight *= brdf.transmission + vec3f{1 - op, 1 - op, 1 - op};
-        if (weight == zero3f) break;
-        p = evaluate_position(isec.instance, isec.element_id, isec.element_uv);
-    }
-    return weight;
-}
-
-#endif
-
 vec3f evaluate_transmission(const yocto_scene& scene,
     const yocto_material& material, const vec3f& from, const vec3f& dir,
     float distance, int channel, rng_state& rng) {
