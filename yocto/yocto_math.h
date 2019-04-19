@@ -1727,7 +1727,8 @@ constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a, T b) {
 }
 // Apply a binary function to all vector elements
 template <typename T, int N, typename Func>
-constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec<T, N> apply(
+    const Func& func, const vec<T, N>& a, const vec<T, N>& b) {
     if constexpr (N == 1) {
         return {func(a.x, b.x)};
     } else if constexpr (N == 2) {

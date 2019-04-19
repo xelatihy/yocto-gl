@@ -1559,12 +1559,13 @@ inline void tonemap_image_region(image<vec<T, N>>& ldr,
 
 // Apply exposure and filmic tone mapping
 template <typename T, int N>
-inline void colorgrade_image_region(image<vec<T, N>>& ldr, const image_region& region, 
-    const image<vec<T, N>>& hdr, const colorgrade_image_options<T>& options) {
-    return apply(ldr, region, hdr, [&options] (const vec<T, N>& hdr) {
+inline void colorgrade_image_region(image<vec<T, N>>& ldr,
+    const image_region& region, const image<vec<T, N>>& hdr,
+    const colorgrade_image_options<T>& options) {
+    return apply(ldr, region, hdr, [&options](const vec<T, N>& hdr) {
         static auto default_options = colorgrade_image_options<T>{};
-        auto ldr               = xyz(hdr);
-        ldr* exp2(options.hdr_exposure) * options.hdr_tint;
+        auto        ldr             = xyz(hdr);
+        ldr*        exp2(options.hdr_exposure) * options.hdr_tint;
         if (options.hdr_saturation != default_options.hdr_saturation) {
             auto lumaWeights = vec<T, 3>(0.25, 0.50, 0.25);
             auto grey        = dot(lumaWeights, ldr);
@@ -1599,11 +1600,11 @@ inline void colorgrade_image_region(image<vec<T, N>>& ldr, const image_region& r
             lift      = lift - mean(lift) + options.ldr_shadows;
             gain      = gain - mean(gain) + options.ldr_highlights;
             auto grey = gamma + options.ldr_midtones;
-            gamma = log(((T)0.5-lift)/(gain-lift))/log(grey);
+            gamma     = log(((T)0.5 - lift) / (gain - lift)) / log(grey);
 
             // apply
             auto lerp_value = clamp01(pow(ldr, 1 / gamma));
-            ldr = gain * lerp_value + lift * (1 - lerp_value);
+            ldr             = gain * lerp_value + lift * (1 - lerp_value);
         }
         if constexpr (N == 3) {
             return ldr;
@@ -1612,7 +1613,7 @@ inline void colorgrade_image_region(image<vec<T, N>>& ldr, const image_region& r
         } else {
             static_assert(__channel_error<N>, "unsupport number of channels");
         }
-        });
+    });
 }
 
 template <typename T, int N1, int N2>

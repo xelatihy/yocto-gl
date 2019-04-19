@@ -53,10 +53,10 @@ struct app_image {
     image_stats stats;
 
     // tonemapping values
-    float exposure = 0;
-    bool  filmic   = false;
-    bool  srgb     = true;
-    bool colorgrade = false;
+    float                           exposure           = 0;
+    bool                            filmic             = false;
+    bool                            srgb               = true;
+    bool                            colorgrade         = false;
     colorgrade_image_options<float> colorgrade_options = {};
 
     // computation futures
@@ -104,21 +104,20 @@ void update_display_async(app_image& img) {
     img.texture_done = false;
     auto regions     = vector<image_region>{};
     make_image_regions(regions, img.img.size());
-    if(img.colorgrade) {
+    if (img.colorgrade) {
         parallel_foreach(
             regions,
             [&img, options = img.colorgrade_options](
                 const image_region& region) {
-                colorgrade_image_region(
-                    img.display, region, img.img, options);
+                colorgrade_image_region(img.display, region, img.img, options);
                 img.display_queue.push(region);
             },
             &img.display_stop);
     } else {
         parallel_foreach(
             regions,
-            [&img, exposure = img.exposure, filmic = img.filmic, srgb = img.srgb](
-                const image_region& region) {
+            [&img, exposure = img.exposure, filmic = img.filmic,
+                srgb = img.srgb](const image_region& region) {
                 tonemap_image_region(
                     img.display, region, img.img, exposure, filmic, srgb);
                 img.display_queue.push(region);
@@ -226,7 +225,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             if (begin_tabitem_opengl_widget(win, "adjust")) {
                 edited += draw_checkbox_opengl_widget(
                     win, "colorgrade", img.colorgrade);
-                if(img.colorgrade) {
+                if (img.colorgrade) {
                     auto& options = img.colorgrade_options;
                     edited += draw_slider_opengl_widget(
                         win, "hdr exposure", options.hdr_exposure, -5, 5);
@@ -254,8 +253,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                         win, "ldr shadows color", options.ldr_shadows_color);
                     edited += draw_coloredit_opengl_widget(
                         win, "ldr midtones color", options.ldr_midtones_color);
-                    edited += draw_coloredit_opengl_widget(
-                        win, "ldr highlights color", options.ldr_highlights_color);
+                    edited += draw_coloredit_opengl_widget(win,
+                        "ldr highlights color", options.ldr_highlights_color);
                 } else {
                     edited += draw_slider_opengl_widget(
                         win, "exposure", img.exposure, -5, 5);
@@ -263,7 +262,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                         win, "filmic", img.filmic);
                     edited += draw_checkbox_opengl_widget(
                         win, "srgb", img.srgb);
-                    edited += draw_checkbox_opengl_widget(win, "srgb", img.srgb);
+                    edited += draw_checkbox_opengl_widget(
+                        win, "srgb", img.srgb);
                 }
                 end_tabitem_opengl_widget(win);
             }
