@@ -348,6 +348,34 @@ inline void tonemap_image_region(image<vec<T, N>>& ldr,
     const image_region& region, const image<vec<T, N>>& hdr, T exposure,
     bool filmic, bool srgb);
 
+// minimal color grading
+template <typename T>
+struct colorgrade_image_options {
+    T         hdr_exposure         = 0;
+    vec<T, 3> hdr_tint             = {1, 1, 1};
+    T         hdr_contrast         = (T)0.5;
+    T         hdr_logcontrast      = (T)0.5;
+    T         hdr_saturation       = 1;
+    bool      hdr_filmic           = true;
+    bool      hdr_srgb             = true;
+    T         ldr_contrast         = (T)0.5;
+    T         ldr_shadows          = (T)0.0;
+    T         ldr_midtones         = (T)0.5;
+    T         ldr_highlights       = (T)1.0;
+    vec<T, 3> ldr_shadows_color    = {0.0, 0.0, 0.0};
+    vec<T, 3> ldr_midtones_color   = {0.5, 0.5, 0.5};
+    vec<T, 3> ldr_highlights_color = {1, 1, 1};
+};
+
+template <typename T, int N>
+inline void colorgrade_image(image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr,
+    const colorgrade_image_options<T>& options);
+
+template <typename T, int N>
+inline void colorgrade_image_region(image<vec<T, N>>& ldr,
+    const image_region& region, const image<vec<T, N>>& hdr,
+    const colorgrade_image_options<T>& options);
+
 // Convert number of channels
 template <typename T, int N1, int N2>
 inline void convert_color_channels(
@@ -1526,6 +1554,64 @@ inline void tonemap_image_region(image<vec<T, N>>& ldr,
                 static_assert(
                     __channel_error<N>, "unsupport number of channels");
             }
+        });
+}
+
+// Apply exposure and filmic tone mapping
+template <typename T, int N>
+inline void colorgrade_image_region(image<vec<T, N>>& ldr, const image_region& region, 
+    const image<vec<T, N>>& hdr, const colorgrade_image_options<T>& options) {
+    return apply(ldr, region, hdr, [&options] (const vec<T, N>& hdr) {
+        static auto default_options = colorgrade_image_options<T>{};
+        auto ldr               = xyz(hdr);
+        ldr* exp2(options.hdr_exposure) * options.hdr_tint;
+        if (options.hdr_saturation != default_options.hdr_saturation) {
+            auto lumaWeights = vec<T, 3>(0.25, 0.50, 0.25);
+            auto grey        = dot(lumaWeights, ldr);
+            ldr = grey + (ldr - grey) * (options.hdr_saturation * 2);
+        }
+        if (options.hdr_contrast != default_options.hdr_contrast) {
+            auto grey = (T)0.18;
+            ldr       = grey + (ldr - grey) * (options.hdr_contrast * 2);
+        }
+        if (options.hdr_logcontrast != default_options.hdr_logcontrast) {
+            auto epsilon  = (T)0.0001;
+            auto grey     = (T)0.18;
+            auto log_grey = log2(grey);
+            auto log_ldr  = log2(ldr + epsilon);
+            auto adjusted = log_grey +
+                            (log_ldr - log_grey) * (options.hdr_contrast * 2);
+            ldr = max(zero<T, 3>, exp2(adjusted) - epsilon);
+        }
+        if (options.hdr_filmic) ldr = tonemap_filmic(ldr);
+        if (options.hdr_srgb) ldr = linear_to_srgb(ldr);
+        if (options.ldr_shadows != default_options.ldr_shadows ||
+            options.ldr_midtones != default_options.ldr_midtones ||
+            options.ldr_highlights != default_options.ldr_highlights ||
+            options.ldr_shadows_color != default_options.ldr_shadows_color ||
+            options.ldr_midtones_color != default_options.ldr_midtones_color ||
+            options.ldr_highlights_color !=
+                default_options.ldr_highlights_color) {
+            auto lift  = options.ldr_shadows_color;
+            auto gamma = options.ldr_midtones_color;
+            auto gain  = options.ldr_highlights_color;
+
+            lift      = lift - mean(lift) + options.ldr_shadows;
+            gain      = gain - mean(gain) + options.ldr_highlights;
+            auto grey = gamma + options.ldr_midtones;
+            gamma = log(((T)0.5-lift)/(gain-lift))/log(grey);
+
+            // apply
+            auto lerp_value = clamp01(pow(ldr, 1 / gamma));
+            ldr = gain * lerp_value + lift * (1 - lerp_value);
+        }
+        if constexpr (N == 3) {
+            return ldr;
+        } else if constexpr (N == 4) {
+            return vec<T, 4>{ldr, hdr.w};
+        } else {
+            static_assert(__channel_error<N>, "unsupport number of channels");
+        }
         });
 }
 

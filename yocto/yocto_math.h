@@ -395,10 +395,16 @@ constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a, T b);
 // Functions applied to vector elements
 template <typename T, int N>
 constexpr vec<T, N> sqrt(const vec<T, N>& a);
-template <typename T, int N>
-constexpr vec<T, N> exp(const vec<T, N>& a);
 template <typename T, int N, typename T1>
 constexpr vec<T, N> pow(const vec<T, N>& a, T1 b);
+template <typename T, int N>
+constexpr vec<T, N> exp(const vec<T, N>& a);
+template <typename T, int N>
+constexpr vec<T, N> log(const vec<T, N>& a);
+template <typename T, int N>
+constexpr vec<T, N> exp2(const vec<T, N>& a);
+template <typename T, int N>
+constexpr vec<T, N> log2(const vec<T, N>& a);
 template <typename T, int N>
 constexpr bool isfinite(const vec<T, N>& a);
 
@@ -1719,19 +1725,48 @@ constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a, T b) {
         return c;
     }
 }
+// Apply a binary function to all vector elements
+template <typename T, int N, typename Func>
+constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {func(a.x, b.x)};
+    } else if constexpr (N == 2) {
+        return {func(a.x, b.x), func(a.y, b.x)};
+    } else if constexpr (N == 3) {
+        return {func(a.x, b.x), func(a.y, b.y), func(a.z, b.z)};
+    } else if constexpr (N == 4) {
+        return {func(a.x, b.x), func(a.y, b.y), func(a.z, b.z), func(a.w, b.w)};
+    } else {
+        auto c = vec<T, N>{};
+        for (auto i = 0; i < N; i++) c[i] = func(a[i], b);
+        return c;
+    }
+}
 
 // Functions applied to vector elements
 template <typename T, int N>
 constexpr vec<T, N> sqrt(const vec<T, N>& a) {
     return apply([](const T& a) { return sqrt(a); }, a);
 };
+template <typename T, int N, typename T1>
+constexpr vec<T, N> pow(const vec<T, N>& a, T1 b) {
+    return apply([](const T& a, const T& b) { return pow(a, b); }, a, b);
+};
 template <typename T, int N>
 constexpr vec<T, N> exp(const vec<T, N>& a) {
     return apply([](const T& a) { return exp(a); }, a);
 };
-template <typename T, int N, typename T1>
-constexpr vec<T, N> pow(const vec<T, N>& a, T1 b) {
-    return apply([](const T& a, const T& b) { return pow(a, b); }, a, b);
+template <typename T, int N>
+constexpr vec<T, N> log(const vec<T, N>& a) {
+    return apply([](const T& a) { return log(a); }, a);
+};
+template <typename T, int N>
+constexpr vec<T, N> exp2(const vec<T, N>& a) {
+    return apply([](const T& a) { return exp2(a); }, a);
+};
+template <typename T, int N>
+constexpr vec<T, N> log2(const vec<T, N>& a) {
+    return apply([](const T& a) { return log2(a); }, a);
 };
 
 template <typename T, int N>
