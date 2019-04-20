@@ -357,7 +357,7 @@ struct colorgrade_image_options {
     vec3f hdr_tint             = {1, 1, 1};
     float hdr_contrast         = 0.5;
     float hdr_logcontrast      = 0.5;
-    float hdr_saturation       = 1;
+    float hdr_saturation       = 0.5;
     bool  hdr_filmic           = true;
     bool  hdr_srgb             = true;
     float ldr_contrast         = 0.5;
@@ -1595,7 +1595,7 @@ inline void colorgrade_image_region(image<vec4f>& ldr,
             auto log_grey = log2(grey);
             auto log_ldr  = log2(ldr + epsilon);
             auto adjusted = log_grey +
-                            (log_ldr - log_grey) * (options.hdr_contrast * 2);
+                            (log_ldr - log_grey) * (options.hdr_logcontrast * 2);
             ldr = max(zero3f, exp2(adjusted) - epsilon);
         }
         if (options.hdr_filmic) ldr = tonemap_filmic(ldr);
@@ -1613,7 +1613,7 @@ inline void colorgrade_image_region(image<vec4f>& ldr,
 
             lift      = lift - mean(lift) + options.ldr_shadows;
             gain      = gain - mean(gain) + options.ldr_highlights;
-            auto grey = gamma + options.ldr_midtones;
+            auto grey = gamma - mean(gamma) + options.ldr_midtones;
             gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
 
             // apply
