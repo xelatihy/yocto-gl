@@ -54,7 +54,7 @@ struct app_image {
 
     // tonemapping values
     float                    exposure           = 0;
-    bool                     filmic             = false;
+    bool                     filmic             = true;
     bool                     srgb               = true;
     bool                     colorgrade         = false;
     colorgrade_image_options colorgrade_options = {};
@@ -239,6 +239,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                         win, "hdr saturation", options.hdr_saturation, 0, 1);
                     edited += draw_checkbox_opengl_widget(
                         win, "hdr filmic", options.hdr_filmic);
+                    continue_opengl_widget_line(win);
                     edited += draw_checkbox_opengl_widget(
                         win, "hdr srgb", options.hdr_srgb);
                     edited += draw_slider_opengl_widget(
@@ -260,8 +261,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                         win, "exposure", img.exposure, -5, 5);
                     edited += draw_checkbox_opengl_widget(
                         win, "filmic", img.filmic);
-                    edited += draw_checkbox_opengl_widget(
-                        win, "srgb", img.srgb);
+                    continue_opengl_widget_line(win);
                     edited += draw_checkbox_opengl_widget(
                         win, "srgb", img.srgb);
                 }
@@ -392,7 +392,7 @@ int main(int argc, char* argv[]) {
     // prepare application
     auto app         = app_state();
     auto exposure    = 0.0f;
-    auto filmic      = false;
+    auto filmic      = true;
     auto srgb        = true;
     auto outfilename = ""s;
     auto filenames   = vector<string>{};
