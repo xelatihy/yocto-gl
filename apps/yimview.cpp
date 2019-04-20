@@ -53,11 +53,11 @@ struct app_image {
     image_stats stats;
 
     // tonemapping values
-    float                           exposure           = 0;
-    bool                            filmic             = false;
-    bool                            srgb               = true;
-    bool                            colorgrade         = false;
-    colorgrade_image_options<float> colorgrade_options = {};
+    float                    exposure           = 0;
+    bool                     filmic             = false;
+    bool                     srgb               = true;
+    bool                     colorgrade         = false;
+    colorgrade_image_options colorgrade_options = {};
 
     // computation futures
     atomic<bool> load_done, display_done, stats_done, texture_done;
