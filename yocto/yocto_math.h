@@ -165,10 +165,14 @@ constexpr T clamp(T x, T min, T max);
 template <typename T>
 constexpr T clamp01(T x);
 template <typename T, typename T1>
-constexpr T lerp(const T& a, const T& b, T1 u);
+constexpr T lerp(const T& a, const T& b, const T1& u);
 template <typename T, typename T1>
 constexpr T bilerp(
-    const T& c00, const T& c10, const T& c11, const T& c01, T1 u, T1 v);
+    const T& c00, const T& c10, const T& c11, const T& c01, const T1& u, const T1& v);
+template<typename T, typename T1>
+constexpr T bias(const T& a, const T1& bias);
+template<typename T, typename T1>
+constexpr T gain(const T& a, const T1& gain);
 constexpr int pow2(int x);
 template <typename T>
 inline T radians(T x);
@@ -396,7 +400,7 @@ constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a, T b);
 template <typename T, int N>
 constexpr vec<T, N> sqrt(const vec<T, N>& a);
 template <typename T, int N, typename T1>
-constexpr vec<T, N> pow(const vec<T, N>& a, T1 b);
+constexpr vec<T, N> pow(const vec<T, N>& a, const T1& b);
 template <typename T, int N>
 constexpr vec<T, N> exp(const vec<T, N>& a);
 template <typename T, int N>
@@ -405,6 +409,8 @@ template <typename T, int N>
 constexpr vec<T, N> exp2(const vec<T, N>& a);
 template <typename T, int N>
 constexpr vec<T, N> log2(const vec<T, N>& a);
+template <typename T, int N, typename T1>
+constexpr vec<T, N> gain(const vec<T, N>& a, const T1& b);
 template <typename T, int N>
 constexpr bool isfinite(const vec<T, N>& a);
 
@@ -1141,14 +1147,26 @@ constexpr T clamp01(T x) {
     return min(max(x, (T)0), (T)1);
 }
 template <typename T, typename T1>
-constexpr T lerp(const T& a, const T& b, T1 u) {
+constexpr T lerp(const T& a, const T& b, const T1& u) {
     return a * (1 - u) + b * u;
 }
 template <typename T, typename T1>
 constexpr T bilerp(
-    const T& c00, const T& c10, const T& c11, const T& c01, T1 u, T1 v) {
+    const T& c00, const T& c10, const T& c11, const T& c01, const T1& u, const T1& v) {
     return c00 * (1 - u) * (1 - v) + c10 * u * (1 - v) + c01 * (1 - u) * v +
            c11 * u * v;
+}
+template<typename T, typename T1>
+constexpr T bias(const T& a, const T1& bias) {
+    return a / ((1/bias - 2) * (1-a) + 1);
+}
+template<typename T, typename T1>
+constexpr T gain(const T& a, const T1& gain) {
+    if(a < (T)0.5) {
+        return bias(a*2,gain) / 2;
+    } else {
+        return bias(a*2-1,1-gain) / 2 + (T)0.5;
+    }
 }
 constexpr int pow2(int x) { return 1 << x; }
 template <typename T>
@@ -1750,7 +1768,7 @@ constexpr vec<T, N> sqrt(const vec<T, N>& a) {
     return apply([](const T& a) { return sqrt(a); }, a);
 };
 template <typename T, int N, typename T1>
-constexpr vec<T, N> pow(const vec<T, N>& a, T1 b) {
+constexpr vec<T, N> pow(const vec<T, N>& a, const T1& b) {
     return apply([](const T& a, const T& b) { return pow(a, b); }, a, b);
 };
 template <typename T, int N>
@@ -1768,6 +1786,10 @@ constexpr vec<T, N> exp2(const vec<T, N>& a) {
 template <typename T, int N>
 constexpr vec<T, N> log2(const vec<T, N>& a) {
     return apply([](const T& a) { return log2(a); }, a);
+};
+template <typename T, int N, typename T1>
+constexpr vec<T, N> gain(const vec<T, N>& a, const T1& b) {
+    return apply([](const T& a, const T& b) { return gain(a, b); }, a, b);
 };
 
 template <typename T, int N>

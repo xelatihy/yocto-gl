@@ -1600,6 +1600,9 @@ inline void colorgrade_image_region(image<vec4f>& ldr,
         }
         if (options.hdr_filmic) ldr = tonemap_filmic(ldr);
         if (options.hdr_srgb) ldr = linear_to_srgb(ldr);
+        if (options.ldr_contrast != default_options.ldr_contrast) {
+            ldr = gain(ldr, 1 - options.ldr_contrast);
+        }
         if (options.ldr_shadows != default_options.ldr_shadows ||
             options.ldr_midtones != default_options.ldr_midtones ||
             options.ldr_highlights != default_options.ldr_highlights ||
