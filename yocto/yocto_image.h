@@ -764,16 +764,39 @@ inline vec<T, N> linear_to_srgb(const vec<T, N>& lin) {
 template <typename T>
 inline T tonemap_filmic(T hdr_) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    auto hdr = hdr_ * (T)0.6; // brings it back to ACES range
+    auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
     return (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
            (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
 }
 template <typename T>
 inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr_) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    auto hdr = hdr_ * (T)0.6; // brings it back to ACES range
+    auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
     return (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
            (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
+}
+template <typename T>
+inline vec<T, 3> tonemap_filmic2(const vec<T, 3>& hdr) {
+    // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+    // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
+    static const auto ACESInputMat = transpose(mat<T, 3, 3>{
+        {0.59719, 0.35458, 0.04823},
+        {0.07600, 0.90834, 0.01566},
+        {0.02840, 0.13383, 0.83777},
+    });
+    // ODT_SAT => XYZ => D60_2_D65 => sRGB
+    static const auto ACESOutputMat = transpose(mat<T, 3, 3>{
+        {1.60475, -0.53108, -0.07367},
+        {-0.10208, 1.10813, -0.00605},
+        {-0.00327, -0.07276, 1.07602},
+    });
+    // RRT => ODT
+    auto RRTAndODTFit = [](const vec<T, 3>& v) -> vec<T, 3> {
+        return (v * v + v * (T)0.0245786 - (T)0.000090537) /
+               (v * v * (T)0.983729 + v * (T)0.4329510 + (T)0.238081);
+    };
+
+    return ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr);
 }
 
 // Convert number of channels
@@ -1594,11 +1617,11 @@ inline void colorgrade_image_region(image<vec4f>& ldr,
             auto grey     = (float)0.18;
             auto log_grey = log2(grey);
             auto log_ldr  = log2(ldr + epsilon);
-            auto adjusted = log_grey +
-                            (log_ldr - log_grey) * (options.hdr_logcontrast * 2);
+            auto adjusted = log_grey + (log_ldr - log_grey) *
+                                           (options.hdr_logcontrast * 2);
             ldr = max(zero3f, exp2(adjusted) - epsilon);
         }
-        if (options.hdr_filmic) ldr = tonemap_filmic(ldr);
+        if (options.hdr_filmic) ldr = tonemap_filmic2(ldr);
         if (options.hdr_srgb) ldr = linear_to_srgb(ldr);
         if (options.ldr_contrast != default_options.ldr_contrast) {
             ldr = gain(ldr, 1 - options.ldr_contrast);
