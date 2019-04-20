@@ -762,16 +762,16 @@ inline vec<T, N> linear_to_srgb(const vec<T, N>& lin) {
 
 // Fitted ACES tonemapping curve.
 template <typename T>
-inline T tonemap_filmic(T hdr) {
+inline T tonemap_filmic(T hdr_) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    // hdr *= 0.6; // brings it back to ACES range
+    auto hdr = hdr_ * (T)0.6; // brings it back to ACES range
     return (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
            (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
 }
 template <typename T>
-inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr) {
+inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr_) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    // hdr *= 0.6; // brings it back to ACES range
+    auto hdr = hdr_ * (T)0.6; // brings it back to ACES range
     return (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
            (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
 }
