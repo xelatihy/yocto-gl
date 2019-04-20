@@ -285,14 +285,14 @@ void save_image(const string& filename, const image<vec3b>& img);
 void save_image(const string& filename, const image<vec4b>& img);
 
 // Convenience helper for loading HDR or LDR based on filename
-inline void load_image(const string& filename, image<vec3f>& hdr,
-    image<vec3b>& ldr);
-inline void load_image(const string& filename, image<vec4f>& hdr,
-    image<vec4b>& ldr);
-inline void save_image(const string& filename, const image<vec3f>& hdr,
-    const image<vec3b>& ldr);
-inline void save_image(const string& filename, const image<vec4f>& hdr,
-    const image<vec4b>& ldr);
+inline void load_image(
+    const string& filename, image<vec3f>& hdr, image<vec3b>& ldr);
+inline void load_image(
+    const string& filename, image<vec4f>& hdr, image<vec4b>& ldr);
+inline void save_image(
+    const string& filename, const image<vec3f>& hdr, const image<vec3b>& ldr);
+inline void save_image(
+    const string& filename, const image<vec4f>& hdr, const image<vec4b>& ldr);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
@@ -340,16 +340,16 @@ template <typename T>
 inline void linear_to_srgb(image<T>& srgb, const image<T>& lin);
 
 // Apply exposure and filmic tone mapping
-template <typename T, int N>
-inline void tonemap_image(image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr,
-    T exposure, bool filmic, bool srgb);
-template <typename T, int N>
-inline void tonemap_image(image<vec<byte, N>>& ldr, const image<vec<T, N>>& hdr,
-    T exposure, bool filmic, bool srgb);
-template <typename T, int N>
-inline void tonemap_image_region(image<vec<T, N>>& ldr,
-    const image_region& region, const image<vec<T, N>>& hdr, T exposure,
-    bool filmic, bool srgb);
+inline void tonemap_image(image<vec3f>& ldr, const image<vec3f>& hdr,
+    float exposure, bool filmic, bool srgb);
+inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb);
+inline void tonemap_image(image<vec3b>& ldr, const image<vec3f>& hdr,
+    float exposure, bool filmic, bool srgb);
+inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb);
+inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // minimal color grading
 template <typename T>
@@ -380,17 +380,26 @@ inline void colorgrade_image_region(image<vec<T, N>>& ldr,
     const colorgrade_image_options<T>& options);
 
 // Convert number of channels
-template <typename T, int N1, int N2>
+template <int N1, int N2>
 inline void convert_color_channels(
-    image<vec<T, N1>>& result, const image<vec<T, N2>>& source);
+    image<vec<float, N1>>& result, const image<vec<float, N2>>& source);
+template <int N1, int N2>
+inline void convert_color_channels(
+    image<vec<byte, N1>>& result, const image<vec<byte, N2>>& source);
 
 // Resize an image.
-template <typename T, int N>
-inline void resize_image(image<vec<T, N>>& res, const image<vec<T, N>>& img);
+inline void resize_image(image<float>& res, const image<float>& img);
+inline void resize_image(image<vec1f>& res, const image<vec1f>& img);
+inline void resize_image(image<vec2f>& res, const image<vec2f>& img);
+inline void resize_image(image<vec3f>& res, const image<vec3f>& img);
+inline void resize_image(image<vec4f>& res, const image<vec4f>& img);
+inline void resize_image(image<byte>& res, const image<byte>& img);
+inline void resize_image(image<vec1b>& res, const image<vec1b>& img);
+inline void resize_image(image<vec2b>& res, const image<vec2b>& img);
+inline void resize_image(image<vec3b>& res, const image<vec3b>& img);
+inline void resize_image(image<vec4b>& res, const image<vec4b>& img);
 template <typename T>
 inline void resize_image(image<T>& res, const image<T>& img, const vec2i& size);
-inline void resize_image(image<float>& res, const image<float>& img);
-inline void resize_image(image<byte>& res, const image<byte>& img);
 
 }  // namespace yocto
 
@@ -1373,28 +1382,28 @@ inline void load_image_impl(const string& filename, image<vec<float, N>>& hdr,
     }
 }
 template <int N>
-inline void save_image_impl(const string& filename, const image<vec<float, N>>& hdr,
-    const image<vec<byte, N>>& ldr) {
+inline void save_image_impl(const string& filename,
+    const image<vec<float, N>>& hdr, const image<vec<byte, N>>& ldr) {
     if (!hdr.empty()) {
         save_image(filename, hdr);
     } else {
         save_image(filename, ldr);
     }
 }
-inline void load_image(const string& filename, image<vec3f>& hdr,
-    image<vec3b>& ldr) {
+inline void load_image(
+    const string& filename, image<vec3f>& hdr, image<vec3b>& ldr) {
     load_image_impl(filename, hdr, ldr);
 }
-inline void load_image(const string& filename, image<vec4f>& hdr,
-    image<vec4b>& ldr) {
+inline void load_image(
+    const string& filename, image<vec4f>& hdr, image<vec4b>& ldr) {
     load_image_impl(filename, hdr, ldr);
 }
-inline void save_image(const string& filename, const image<vec3f>& hdr,
-    const image<vec3b>& ldr) {
+inline void save_image(
+    const string& filename, const image<vec3f>& hdr, const image<vec3b>& ldr) {
     save_image_impl(filename, hdr, ldr);
 }
-inline void save_image(const string& filename, const image<vec4f>& hdr,
-    const image<vec4b>& ldr) {
+inline void save_image(
+    const string& filename, const image<vec4f>& hdr, const image<vec4b>& ldr) {
     save_image_impl(filename, hdr, ldr);
 }
 
@@ -1518,69 +1527,54 @@ inline void linear_to_srgb(image<TB>& srgb, const image<T>& lin) {
 }
 
 // Apply exposure and filmic tone mapping
-template <typename T, int N>
-inline void tonemap_image(image<vec<T, N>>& ldr, const image<vec<T, N>>& hdr,
-    T exposure, bool filmic, bool srgb) {
-    return apply(ldr, hdr,
-        [scale = pow((T)2, exposure), filmic, srgb](const vec<T, N>& hdr) {
-            if constexpr (N == 3) {
-                auto ldr = hdr * scale;
-                if (filmic) ldr = tonemap_filmic(ldr);
-                if (srgb) ldr = linear_to_srgb(ldr);
-                return ldr;
-            } else if constexpr (N == 4) {
-                auto ldr = xyz(hdr) * scale;
-                if (filmic) ldr = tonemap_filmic(ldr);
-                if (srgb) ldr = linear_to_srgb(ldr);
-                return vec<T, 4>{ldr, hdr.w};
-            } else {
-                static_assert(
-                    __channel_error<N>, "unsupport number of channels");
-            }
+inline void tonemap_image(image<vec3f>& ldr, const image<vec3f>& hdr,
+    float exposure, bool filmic, bool srgb) {
+    return apply(
+        ldr, hdr, [scale = exp2(exposure), filmic, srgb](const vec3f& hdr) {
+            auto ldr = hdr * scale;
+            if (filmic) ldr = tonemap_filmic(ldr);
+            if (srgb) ldr = linear_to_srgb(ldr);
+            return ldr;
         });
 }
-// Apply exposure and filmic tone mapping
-template <typename T, int N>
-inline void tonemap_image(image<vec<byte, N>>& ldr, const image<vec<T, N>>& hdr,
-    T exposure, bool filmic, bool srgb) {
-    return apply(ldr, hdr,
-        [scale = pow((T)2, exposure), filmic, srgb](const vec<T, N>& hdr) {
-            if constexpr (N == 3) {
-                auto ldr = hdr * scale;
-                if (filmic) ldr = tonemap_filmic(ldr);
-                if (srgb) ldr = linear_to_srgb(ldr);
-                return float_to_byte(ldr);
-            } else if constexpr (N == 4) {
-                auto ldr = xyz(hdr) * scale;
-                if (filmic) ldr = tonemap_filmic(ldr);
-                if (srgb) ldr = linear_to_srgb(ldr);
-                return float_to_byte(vec<T, 4>{ldr, hdr.w});
-            } else {
-                static_assert(
-                    __channel_error<N>, "unsupport number of channels");
-            }
+inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb) {
+    return apply(
+        ldr, hdr, [scale = exp2(exposure), filmic, srgb](const vec4f& hdr) {
+            auto ldr = xyz(hdr) * scale;
+            if (filmic) ldr = tonemap_filmic(ldr);
+            if (srgb) ldr = linear_to_srgb(ldr);
+            return vec4f{ldr, hdr.w};
         });
 }
-template <typename T, int N>
-inline void tonemap_image_region(image<vec<T, N>>& ldr,
-    const image_region& region, const image<vec<T, N>>& hdr, T exposure,
-    bool filmic, bool srgb) {
+inline void tonemap_image(image<vec3b>& ldr, const image<vec3f>& hdr,
+    float exposure, bool filmic, bool srgb) {
+    return apply(
+        ldr, hdr, [scale = exp2(exposure), filmic, srgb](const vec3f& hdr) {
+            auto ldr = hdr * scale;
+            if (filmic) ldr = tonemap_filmic(ldr);
+            if (srgb) ldr = linear_to_srgb(ldr);
+            return float_to_byte(ldr);
+        });
+}
+inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb) {
+    return apply(
+        ldr, hdr, [scale = exp2(exposure), filmic, srgb](const vec4f& hdr) {
+            auto ldr = xyz(hdr) * scale;
+            if (filmic) ldr = tonemap_filmic(ldr);
+            if (srgb) ldr = linear_to_srgb(ldr);
+            return float_to_byte(vec4f{ldr, hdr.w});
+        });
+}
+inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
     return apply(ldr, region, hdr,
-        [scale = pow((T)2, exposure), filmic, srgb](const vec<T, N>& hdr) {
-            if constexpr (N == 3) {
-                auto ldr = hdr * scale;
-                if (filmic) ldr = tonemap_filmic(ldr);
-                if (srgb) ldr = linear_to_srgb(ldr);
-                return ldr;
-            } else if constexpr (N == 4) {
-                auto ldr = xyz(hdr) * scale;
-                if (filmic) ldr = tonemap_filmic(ldr);
-                if (srgb) ldr = linear_to_srgb(ldr);
-                return vec<T, 4>{ldr, hdr.w};
-            } else {
-                static_assert(
-                    __channel_error<N>, "unsupport number of channels");
-            }
+        [scale = exp2(exposure), filmic, srgb](const vec4f& hdr) {
+            auto ldr = xyz(hdr) * scale;
+            if (filmic) ldr = tonemap_filmic(ldr);
+            if (srgb) ldr = linear_to_srgb(ldr);
+            return vec4f{ldr, hdr.w};
         });
 }
 
@@ -1643,49 +1637,75 @@ inline void colorgrade_image_region(image<vec<T, N>>& ldr,
     });
 }
 
-template <typename T, int N1, int N2>
+template <int N1, int N2>
 inline void convert_color_channels(
-    image<vec<T, N1>>& result, const image<vec<T, N2>>& source) {
-    return apply(result, source, [](const vec<T, N2>& a) {
-        return convert_color_channels<T, N1, N2>(a);
+    image<vec<float, N1>>& result, const image<vec<float, N2>>& source) {
+    return apply(result, source, [](const vec<float, N2>& a) {
+        return convert_color_channels<float, N1, N2>(a);
+    });
+}
+template <int N1, int N2>
+inline void convert_color_channels(
+    image<vec<byte, N1>>& result, const image<vec<byte, N2>>& source) {
+    return apply(result, source, [](const vec<byte, N2>& a) {
+        return convert_color_channels<byte, N1, N2>(a);
     });
 }
 
-inline void resize_image(image<float>& res, const image<float>& img) {
-    return resize_image((image<vec1f>&)res, (const image<vec1f>&)img);
-}
-inline void resize_image(image<byte>& res, const image<byte>& img) {
-    return resize_image((image<vec1b>&)res, (const image<vec1b>&)img);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR IMAGE UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
 // Resize image.
-template <typename T, int N>
-inline void resize_image(
-    image<vec<T, N>>& res_img, const image<vec<T, N>>& img) {
+template <int N>
+inline void resize_image_impl(
+    image<vec<float, N>>& res_img, const image<vec<float, N>>& img) {
     auto alpha = (N == 2 || N == 4) ? N - 1 : -1;
-    if constexpr (std::is_same_v<T, float>) {
-        stbir_resize_float_generic((T*)img.data(), img.size().x, img.size().y,
-            sizeof(vec<T, N>) * img.size().x, (T*)res_img.data(),
-            res_img.size().x, res_img.size().y,
-            sizeof(vec<T, N>) * res_img.size().x, N, alpha, 0, STBIR_EDGE_CLAMP,
-            STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-    } else if constexpr (std::is_same_v<T, byte>) {
-        stbir_resize_uint8_generic((T*)img.data(), img.size().x, img.size().y,
-            sizeof(vec<T, N>) * img.size().x, (T*)res_img.data(),
-            res_img.size().x, res_img.size().y,
-            sizeof(vec<T, N>) * res_img.size().x, N, alpha, 0, STBIR_EDGE_CLAMP,
-            STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-    } else {
-        static_assert(__type_error<T>, "type not supported");
-    }
+    stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
+        sizeof(vec<float, N>) * img.size().x, (float*)res_img.data(),
+        res_img.size().x, res_img.size().y,
+        sizeof(vec<float, N>) * res_img.size().x, N, alpha, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
+template <int N>
+inline void resize_image_impl(
+    image<vec<byte, N>>& res_img, const image<vec<byte, N>>& img) {
+    auto alpha = (N == 2 || N == 4) ? N - 1 : -1;
+    stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
+        sizeof(vec<byte, N>) * img.size().x, (byte*)res_img.data(),
+        res_img.size().x, res_img.size().y,
+        sizeof(vec<byte, N>) * res_img.size().x, N, alpha, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+}
+
+inline void resize_image(image<float>& res, const image<float>& img) {
+    return resize_image_impl((image<vec1f>&)res, (const image<vec1f>&)img);
+}
+inline void resize_image(image<vec1f>& res, const image<vec1f>& img) {
+    return resize_image_impl(res, img);
+}
+inline void resize_image(image<vec2f>& res, const image<vec2f>& img) {
+    return resize_image_impl(res, img);
+}
+inline void resize_image(image<vec3f>& res, const image<vec3f>& img) {
+    return resize_image_impl(res, img);
+}
+inline void resize_image(image<vec4f>& res, const image<vec4f>& img) {
+    return resize_image_impl(res, img);
+}
+
+inline void resize_image(image<byte>& res, const image<byte>& img) {
+    return resize_image_impl((image<vec1b>&)res, (const image<vec1b>&)img);
+}
+inline void resize_image(image<vec1b>& res, const image<vec1b>& img) {
+    return resize_image_impl(res, img);
+}
+inline void resize_image(image<vec2b>& res, const image<vec2b>& img) {
+    return resize_image_impl(res, img);
+}
+inline void resize_image(image<vec3b>& res, const image<vec3b>& img) {
+    return resize_image_impl(res, img);
+}
+inline void resize_image(image<vec4b>& res, const image<vec4b>& img) {
+    return resize_image_impl(res, img);
+}
+
 template <typename T>
 inline void resize_image(
     image<T>& res_img, const image<T>& img, const vec2i& size_) {
