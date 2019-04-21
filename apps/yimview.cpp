@@ -207,8 +207,6 @@ void draw_opengl_widgets(const opengl_window& win) {
                         [&img]() { save_image_async(img); });
                 }
             }
-            draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
-            draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
             end_header_opengl_widget(win);
         }
         if (begin_header_opengl_widget(win, "tonemap")) {
@@ -257,6 +255,8 @@ void draw_opengl_widgets(const opengl_window& win) {
             end_header_opengl_widget(win);
         }
         if (begin_header_opengl_widget(win, "inspect")) {
+            draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
+            draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
             auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(
                 mouse_pos, img.image_center, img.image_scale, img.img.size());
