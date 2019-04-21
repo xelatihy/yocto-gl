@@ -765,16 +765,18 @@ template <typename T>
 inline T tonemap_filmic(T hdr_) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
-    return (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
+    auto ldr = (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
            (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
+    return max((T)0, ldr);
 }
 template <typename T>
 inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr_, bool accurate_fit) {
     if (!accurate_fit) {
         // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
         auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
-        return (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
+        auto ldr = (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
                (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
+        return max(zero<T, 3>, ldr);
     } else {
         // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
         // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
@@ -795,7 +797,8 @@ inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr_, bool accurate_fit) {
                    (v * v * (T)0.983729 + v * (T)0.4329510 + (T)0.238081);
         };
 
-        return ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
+        auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
+        return max(zero<T, 3>, ldr);
     }
 }
 
