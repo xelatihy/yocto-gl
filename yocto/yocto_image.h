@@ -361,11 +361,11 @@ struct colorgrade_image_options {
     bool  hdr_filmic           = true;
     bool  hdr_srgb             = true;
     float ldr_contrast         = 0.5;
-    float ldr_shadows          = 0.0;
+    float ldr_shadows          = 0.5;
     float ldr_midtones         = 0.5;
-    float ldr_highlights       = 1.0;
-    vec3f ldr_shadows_color    = {0.0, 0.0, 0.0};
-    vec3f ldr_midtones_color   = {0.5, 0.5, 0.5};
+    float ldr_highlights       = 0.5;
+    vec3f ldr_shadows_color    = {1, 1, 1};
+    vec3f ldr_midtones_color   = {1, 1, 1};
     vec3f ldr_highlights_color = {1, 1, 1};
 };
 
@@ -1649,8 +1649,8 @@ inline void colorgrade_image_region(image<vec4f>& ldr,
             auto gamma = options.ldr_midtones_color;
             auto gain  = options.ldr_highlights_color;
 
-            lift      = lift - mean(lift) + options.ldr_shadows;
-            gain      = gain - mean(gain) + options.ldr_highlights;
+            lift      = lift - mean(lift) + options.ldr_shadows - (float)0.5;
+            gain      = gain - mean(gain) + options.ldr_highlights + (float)0.5;
             auto grey = gamma - mean(gamma) + options.ldr_midtones;
             gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
 
