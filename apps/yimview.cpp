@@ -41,9 +41,11 @@ struct image_stats {
 
 struct app_image {
     // original data
+    string       name     = "";
     string       filename = "";
     string       outname  = "";
-    string       name     = "";
+
+    // image data
     image<vec4f> img      = {};
 
     // diplay image
@@ -129,6 +131,7 @@ void update_display_async(app_image& img) {
 
 // load image
 void load_image_async(app_image& img) {
+    img.name = get_basename(img.filename) + " [loading]";
     img.load_done    = false;
     img.display_done = false;
     img.texture_done = false;
@@ -136,8 +139,10 @@ void load_image_async(app_image& img) {
     img.img          = {};
     try {
         load_image(img.filename, img.img);
+        img.name = get_filename(img.filename) + format(" [{}x{}]", img.img.size().x, img.img.size().y);
     } catch (const std::exception& e) {
         img.error_msg = e.what();
+        img.name = get_filename(img.filename) + " [error]";
         return;
     }
     compute_image_stats(
@@ -202,18 +207,6 @@ void draw_opengl_widgets(const opengl_window& win) {
                         [&img]() { save_image_async(img); });
                 }
             }
-            auto status = string();
-            if (img.error_msg != "")
-                status = "error: " + img.error_msg;
-            else if (!img.load_done)
-                status = "loading...";
-            else if (!img.display_done)
-                status = "displaying...";
-            else
-                status = "done";
-            draw_label_opengl_widget(win, "status", status.c_str());
-            draw_label_opengl_widget(
-                win, "size", "%d x %d ", img.img.size().x, img.img.size().y);
             draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
             draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
             end_header_opengl_widget(win);
