@@ -54,8 +54,8 @@ struct app_image {
     image_stats image_stats, display_stats;
 
     // tonemapping values
-    tonemap_options tonemap_opts = {};
-    colorgrade_options colorgrade_opts = {};
+    tonemap_image_options tonemap_options = {};
+    colorgrade_image_options colorgrade_options = {};
     bool                     colorgrade         = false;
 
     // computation futures
@@ -112,7 +112,7 @@ void update_display_async(app_image& img) {
     if (img.colorgrade) {
         parallel_foreach(
             regions,
-            [&img, options = img.colorgrade_opts](
+            [&img, options = img.colorgrade_options](
                 const image_region& region) {
                 colorgrade_image_region(img.display, region, img.img, options);
                 img.display_queue.push(region);
@@ -121,7 +121,7 @@ void update_display_async(app_image& img) {
     } else {
         parallel_foreach(
             regions,
-            [&img, options = img.tonemap_opts](const image_region& region) {
+            [&img, options = img.tonemap_options](const image_region& region) {
                 tonemap_image_region(
                     img.display, region, img.img, options);
                 img.display_queue.push(region);
@@ -172,17 +172,17 @@ void save_image_async(app_image& img) {
 
 // add a new image
 void add_new_image(app_state& app, const string& filename,
-    const string& outname, const tonemap_options& tonemap_opts = {}) {
+    const string& outname, const tonemap_image_options& tonemap_options = {}) {
     app.imgs.emplace_back();
     auto& img    = app.imgs.back();
     img.filename = filename;
     img.outname  = (outname == "") ? get_noextension(filename) + ".display.png"
                                   : outname;
     img.name         = get_filename(filename);
-    img.tonemap_opts = tonemap_opts;
+    img.tonemap_options = tonemap_options;
     if(!is_hdr_filename(filename)) {
-        img.colorgrade_opts.hdr_filmic = false;
-        img.tonemap_opts.filmic = false;
+        img.colorgrade_options.hdr_filmic = false;
+        img.tonemap_options.filmic = false;
     }
     img.load_done    = false;
     img.display_done = false;
@@ -232,7 +232,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                         win, "colorgrade", img.colorgrade))
                     edited = true;
                 if (img.colorgrade) {
-                    auto& options = img.colorgrade_opts;
+                    auto& options = img.colorgrade_options;
                     if (draw_slider_opengl_widget(
                             win, "hdr exposure", options.hdr_exposure, -5, 5))
                         edited = true;
@@ -284,7 +284,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                             options.ldr_highlights_color))
                         edited = true;
                 } else {
-                    auto options = img.tonemap_opts;
+                    auto options = img.tonemap_options;
                     draw_slider_opengl_widget(
                             win, "exposure", options.exposure, -5, 5);
                     draw_coloredit_opengl_widget(
@@ -298,9 +298,9 @@ void draw_opengl_widgets(const opengl_window& win) {
                     draw_checkbox_opengl_widget(win, "filmic", options.filmic);
                     continue_opengl_widget_line(win);
                     draw_checkbox_opengl_widget(win, "srgb", options.srgb);
-                    if(options != img.tonemap_opts) {
+                    if(options != img.tonemap_options) {
                         edited = true;
-                        img.tonemap_opts = options;
+                        img.tonemap_options = options;
                     }
                 }
                 end_tabitem_opengl_widget(win);
@@ -439,15 +439,15 @@ void run_ui(app_state& app) {
 int main(int argc, char* argv[]) {
     // prepare application
     auto app         = app_state();
-    auto tonemap_opts = tonemap_options{};
+    auto tonemap_options = tonemap_image_options{};
     auto outfilename = ""s;
     auto filenames   = vector<string>{};
 
     // command line options
     auto parser = CLI::App{"view images"};
-    parser.add_option("--exposure,-e", tonemap_opts.exposure, "display exposure");
-    parser.add_flag("--filmic,!--no-filmic", tonemap_opts.filmic, "display filmic");
-    parser.add_flag("--srgb,!--no-srgb", tonemap_opts.srgb, "display as sRGB");
+    parser.add_option("--exposure,-e", tonemap_options.exposure, "display exposure");
+    parser.add_flag("--filmic,!--no-filmic", tonemap_options.filmic, "display filmic");
+    parser.add_flag("--srgb,!--no-srgb", tonemap_options.srgb, "display as sRGB");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
     parser.add_option("--out,-o", outfilename, "image out filename");
@@ -460,7 +460,7 @@ int main(int argc, char* argv[]) {
 
     // loading images
     for (auto filename : filenames)
-        add_new_image(app, filename, outfilename, tonemap_opts);
+        add_new_image(app, filename, outfilename, tonemap_options);
     app.img_id = 0;
 
     // run ui

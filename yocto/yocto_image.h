@@ -344,7 +344,7 @@ template <typename T>
 inline void linear_to_srgb(image<T>& srgb, const image<T>& lin);
 
 // Tone mapping options
-struct tonemap_options {
+struct tonemap_image_options {
     float exposure = 0;
     vec3f tint     = {1, 1, 1};
     float contrast = 0.5f;
@@ -355,27 +355,27 @@ struct tonemap_options {
 };
 
 // Equality operators
-inline bool operator==(const tonemap_options& a, const tonemap_options& b) {
+inline bool operator==(const tonemap_image_options& a, const tonemap_image_options& b) {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(const tonemap_options& a, const tonemap_options& b) {
+inline bool operator!=(const tonemap_image_options& a, const tonemap_image_options& b) {
     return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
 // Apply exposure and filmic tone mapping
 inline void tonemap_image(image<vec3f>& ldr, const image<vec3f>& hdr,
-    const tonemap_options& options);
+    const tonemap_image_options& options);
 inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const tonemap_options& options);
+    const tonemap_image_options& options);
 inline void tonemap_image(image<vec3b>& ldr, const image<vec3f>& hdr,
-    const tonemap_options& options);
+    const tonemap_image_options& options);
 inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
-    const tonemap_options& options);
+    const tonemap_image_options& options);
 inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
-    const image<vec4f>& hdr, const tonemap_options& options);
+    const image<vec4f>& hdr, const tonemap_image_options& options);
 
 // minimal color grading
-struct colorgrade_options {
+struct colorgrade_image_options {
     float hdr_exposure         = 0;
     vec3f hdr_tint             = {1, 1, 1};
     float hdr_contrast         = 0.5;
@@ -393,17 +393,17 @@ struct colorgrade_options {
 };
 
 // Equality operators
-inline bool operator==(const colorgrade_options& a, const colorgrade_options& b) {
+inline bool operator==(const colorgrade_image_options& a, const colorgrade_image_options& b) {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(const colorgrade_options& a, const colorgrade_options& b) {
+inline bool operator!=(const colorgrade_image_options& a, const colorgrade_image_options& b) {
     return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
 // color grade an image region
 inline void colorgrade_image_region(image<vec4f>& ldr,
     const image_region& region, const image<vec4f>& hdr,
-    const colorgrade_options& options);
+    const colorgrade_image_options& options);
 
 // determine white balance colors
 inline vec3f compute_white_balance(const image<vec4f>& img);
@@ -529,9 +529,9 @@ namespace yocto {
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 inline void save_tonemapped_image(const string& filename,
-    const image<vec3f>& hdr, const tonemap_options& options);
+    const image<vec3f>& hdr, const tonemap_image_options& options);
 inline void save_tonemapped_image(const string& filename,
-    const image<vec4f>& hdr, const tonemap_options& options);
+    const image<vec4f>& hdr, const tonemap_image_options& options);
 
 // Save with a logo embedded
 template <typename T, int N>
@@ -542,7 +542,7 @@ inline void save_image_with_logo(
 // a tonemapped LDR file depending on file name
 template <int N>
 inline void save_tonemapped_image_with_logo(const string& filename,
-    const image<vec<float, N>>& hdr, const tonemap_options& options);
+    const image<vec<float, N>>& hdr, const tonemap_image_options& options);
 
 }  // namespace yocto
 
@@ -1492,7 +1492,7 @@ inline void save_image(
 // a tonemapped LDR file depending on file name
 template <int N>
 inline void save_tonemapped_image_impl(const string& filename,
-    const image<vec<float, N>>& hdr, const tonemap_options& options) {
+    const image<vec<float, N>>& hdr, const tonemap_image_options& options) {
     if (is_hdr_filename(filename)) {
         save_image(filename, hdr);
     } else {
@@ -1502,11 +1502,11 @@ inline void save_tonemapped_image_impl(const string& filename,
     }
 }
 inline void save_tonemapped_image(const string& filename,
-    const image<vec3f>& hdr, const tonemap_options& options) {
+    const image<vec3f>& hdr, const tonemap_image_options& options) {
     save_tonemapped_image_impl(filename, hdr, options);
 }
 inline void save_tonemapped_image(const string& filename,
-    const image<vec4f>& hdr, const tonemap_options& options) {
+    const image<vec4f>& hdr, const tonemap_image_options& options) {
     save_tonemapped_image_impl(filename, hdr, options);
 }
 
@@ -1526,7 +1526,7 @@ inline void save_image_with_logo(
 // a tonemapped LDR file depending on file name
 template <int N>
 inline void save_tonemapped_image_with_logo(const string& filename,
-    const image<vec<float, N>>& hdr, const tonemap_options& options) {
+    const image<vec<float, N>>& hdr, const tonemap_image_options& options) {
     if (is_hdr_filename(filename)) {
         save_image_with_logo(filename, hdr);
     } else {
@@ -1633,7 +1633,7 @@ inline void linear_to_srgb(image<TB>& srgb, const image<T>& lin) {
         [](const auto& a) { return float_to_byte(linear_to_srgb(a)); });
 }
 
-inline vec3f tonemap_pixel(const vec3f& hdr, const tonemap_options& options) {
+inline vec3f tonemap_pixel(const vec3f& hdr, const tonemap_image_options& options) {
     auto rgb = hdr;
     if(options.exposure != 0) rgb *= exp2(options.exposure);
     if(options.tint != vec3f{1,1,1}) rgb *= options.tint;
@@ -1647,14 +1647,14 @@ inline vec3f tonemap_pixel(const vec3f& hdr, const tonemap_options& options) {
 
 // Apply exposure and filmic tone mapping
 inline void tonemap_image(image<vec3f>& ldr, const image<vec3f>& hdr,
-    const tonemap_options& options) {
+    const tonemap_image_options& options) {
     return apply(ldr, hdr,
         [options](const vec3f& hdr) {
             return tonemap_pixel(hdr, options);
         });
 }
 inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const tonemap_options& options) {
+    const tonemap_image_options& options) {
     return apply(ldr, hdr,
         [scale = exp2(options.exposure) * options.tint, options](
             const vec4f& hdr) {
@@ -1662,21 +1662,21 @@ inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
         });
 }
 inline void tonemap_image(image<vec3b>& ldr, const image<vec3f>& hdr,
-    const tonemap_options& options) {
+    const tonemap_image_options& options) {
     return apply(
         ldr, hdr, [options](const vec3f& hdr) {
             return float_to_byte(tonemap_pixel(hdr, options));
         });
 }
 inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
-    const tonemap_options& options) {
+    const tonemap_image_options& options) {
     return apply(ldr, hdr,
         [options](const vec4f& hdr) {
             return float_to_byte(vec4f{tonemap_pixel(xyz(hdr), options), hdr.w});
         });
 }
 inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
-    const image<vec4f>& hdr, const tonemap_options& options) {
+    const image<vec4f>& hdr, const tonemap_image_options& options) {
     return apply(ldr, region, hdr,
         [options](const vec4f& hdr) {
             return vec4f{tonemap_pixel(xyz(hdr), options), hdr.w};
@@ -1686,9 +1686,9 @@ inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
 // Apply exposure and filmic tone mapping
 inline void colorgrade_image_region(image<vec4f>& ldr,
     const image_region& region, const image<vec4f>& hdr,
-    const colorgrade_options& options) {
+    const colorgrade_image_options& options) {
     return apply(ldr, region, hdr, [&options](const vec4f& hdr) {
-        static auto default_options = colorgrade_options{};
+        static auto default_options = colorgrade_image_options{};
         auto        ldr             = xyz(hdr);
         ldr *= exp2(options.hdr_exposure) * options.hdr_tint;
         if (options.hdr_saturation != default_options.hdr_saturation) {
