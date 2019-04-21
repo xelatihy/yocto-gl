@@ -54,7 +54,7 @@ struct app_image {
     image_stats image_stats, display_stats;
 
     // tonemapping values
-    tonemap_image_options tonemap_options = {};
+    tonemap_image_options    tonemap_options    = {};
     colorgrade_image_options colorgrade_options = {};
 
     // computation futures
@@ -110,14 +110,15 @@ void update_display_async(app_image& img) {
     make_image_regions(regions, img.img.size());
     parallel_foreach(
         regions,
-        [&img, 
-            colorgrade = img.colorgrade_options != colorgrade_image_options{}, 
-            tonemap_options = img.tonemap_options, 
-            colorgrade_options = img.colorgrade_options](const image_region& region) {
-            tonemap_image_region(
-                img.display, region, img.img, tonemap_options);
-            if(colorgrade) {
-                colorgrade_image_region(img.display, region, img.display, colorgrade_options);
+        [&img,
+            colorgrade = img.colorgrade_options != colorgrade_image_options{},
+            tonemap_options    = img.tonemap_options,
+            colorgrade_options = img.colorgrade_options](
+            const image_region& region) {
+            tonemap_image_region(img.display, region, img.img, tonemap_options);
+            if (colorgrade) {
+                colorgrade_image_region(
+                    img.display, region, img.display, colorgrade_options);
             }
             img.display_queue.push(region);
         },
@@ -172,9 +173,9 @@ void add_new_image(app_state& app, const string& filename,
     img.filename = filename;
     img.outname  = (outname == "") ? get_noextension(filename) + ".display.png"
                                   : outname;
-    img.name         = get_filename(filename);
+    img.name            = get_filename(filename);
     img.tonemap_options = tonemap_options;
-    if(!is_hdr_filename(filename)) {
+    if (!is_hdr_filename(filename)) {
         img.tonemap_options.filmic = false;
     }
     img.load_done    = false;
@@ -189,125 +190,109 @@ void draw_opengl_widgets(const opengl_window& win) {
     begin_opengl_widgets_frame(win);
     if (begin_opengl_widgets_window(win, "yimview")) {
         auto& img = app.imgs.at(app.img_id);
-        if (begin_tabbar_opengl_widget(win, "tabs")) {
-            if (begin_tabitem_opengl_widget(win, "image")) {
-                draw_combobox_opengl_widget(
-                    win, "image", app.img_id, app.imgs, false);
-                draw_label_opengl_widget(
-                    win, "filename", "%s", img.filename.c_str());
-                draw_textinput_opengl_widget(win, "outname", img.outname);
-                if (draw_button_opengl_widget(win, "save display")) {
-                    if (img.display_done) {
-                        img.save_thread = thread(
-                            [&img]() { save_image_async(img); });
-                    }
+        if (begin_header_opengl_widget(win, "image")) {
+            draw_combobox_opengl_widget(
+                win, "image", app.img_id, app.imgs, false);
+            draw_label_opengl_widget(
+                win, "filename", "%s", img.filename.c_str());
+            draw_textinput_opengl_widget(win, "outname", img.outname);
+            if (draw_button_opengl_widget(win, "save display")) {
+                if (img.display_done) {
+                    img.save_thread = thread(
+                        [&img]() { save_image_async(img); });
                 }
-                auto status = string();
-                if (img.error_msg != "")
-                    status = "error: " + img.error_msg;
-                else if (!img.load_done)
-                    status = "loading...";
-                else if (!img.display_done)
-                    status = "displaying...";
-                else
-                    status = "done";
-                draw_label_opengl_widget(win, "status", status.c_str());
-                draw_label_opengl_widget(win, "size", "%d x %d ",
-                    img.img.size().x, img.img.size().y);
-                draw_slider_opengl_widget(
-                    win, "zoom", img.image_scale, 0.1, 10);
-                draw_checkbox_opengl_widget(
-                    win, "zoom to fit", img.zoom_to_fit);
-                end_tabitem_opengl_widget(win);
             }
-            if (begin_tabitem_opengl_widget(win, "adjust")) {
-                if (begin_header_opengl_widget(win, "tonemap")) {
-                    auto options = img.tonemap_options;
-                    draw_slider_opengl_widget(
-                            win, "exposure", options.exposure, -5, 5);
-                    draw_coloredit_opengl_widget(
-                            win, "tint", options.tint);
-                    draw_slider_opengl_widget(
-                            win, "contrast", options.contrast, 0, 1);
-                    draw_slider_opengl_widget(win, "logcontrast",
-                            options.logcontrast, 0, 1);
-                    draw_slider_opengl_widget(win, "saturation",
-                            options.saturation, 0, 1);
-                    draw_checkbox_opengl_widget(win, "filmic", options.filmic);
-                    continue_opengl_widget_line(win);
-                    draw_checkbox_opengl_widget(win, "srgb", options.srgb);
-                    continue_opengl_widget_line(win);
-                    if (draw_button_opengl_widget(win, "auto wb")) {
-                        edited           = true;
-                        auto wb          = 1 / xyz(img.image_stats.average);
-                        options.tint = wb / max(wb);
-                    }
-                    if(options != img.tonemap_options) {
-                        edited = true;
-                        img.tonemap_options = options;
-                    }
-                    end_header_opengl_widget(win);
-                }
-                if (begin_header_opengl_widget(win, "colorgrade")) {
-                    auto options = img.colorgrade_options;
-                    draw_slider_opengl_widget(
-                            win, "contrast", options.contrast, 0, 1);
-                    draw_slider_opengl_widget(
-                            win, "ldr shadows", options.shadows, 0, 1);
-                    draw_slider_opengl_widget(
-                            win, "ldr midtones", options.midtones, 0, 1);
-                    draw_slider_opengl_widget(win, "highlights",
-                            options.highlights, 0, 1);
-                    draw_coloredit_opengl_widget(win, "shadows color",
-                            options.shadows_color);
-                    draw_coloredit_opengl_widget(win, "midtones color",
-                            options.midtones_color);
-                    draw_coloredit_opengl_widget(win,
-                            "highlights color",
-                            options.highlights_color);
-                    if(options != img.colorgrade_options) {
-                        edited = true;
-                        img.colorgrade_options = options;
-                    }
-                    end_header_opengl_widget(win);
-                }
-                end_tabitem_opengl_widget(win);
+            auto status = string();
+            if (img.error_msg != "")
+                status = "error: " + img.error_msg;
+            else if (!img.load_done)
+                status = "loading...";
+            else if (!img.display_done)
+                status = "displaying...";
+            else
+                status = "done";
+            draw_label_opengl_widget(win, "status", status.c_str());
+            draw_label_opengl_widget(
+                win, "size", "%d x %d ", img.img.size().x, img.img.size().y);
+            draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
+            draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
+            end_header_opengl_widget(win);
+        }
+        if (begin_header_opengl_widget(win, "tonemap")) {
+            auto options = img.tonemap_options;
+            draw_slider_opengl_widget(win, "exposure", options.exposure, -5, 5);
+            draw_coloredit_opengl_widget(win, "tint", options.tint);
+            draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
+            draw_slider_opengl_widget(
+                win, "logcontrast", options.logcontrast, 0, 1);
+            draw_slider_opengl_widget(
+                win, "saturation", options.saturation, 0, 1);
+            draw_checkbox_opengl_widget(win, "filmic", options.filmic);
+            continue_opengl_widget_line(win);
+            draw_checkbox_opengl_widget(win, "srgb", options.srgb);
+            continue_opengl_widget_line(win);
+            if (draw_button_opengl_widget(win, "auto wb")) {
+                edited       = true;
+                auto wb      = 1 / xyz(img.image_stats.average);
+                options.tint = wb / max(wb);
             }
-            if (begin_tabitem_opengl_widget(win, "inspect")) {
-                auto mouse_pos = get_opengl_mouse_pos(win);
-                auto ij        = get_image_coords(mouse_pos, img.image_center,
-                    img.image_scale, img.img.size());
-                draw_dragger_opengl_widget(win, "mouse", ij);
-                auto img_pixel = zero4f, display_pixel = zero4f;
-                if (ij.x >= 0 && ij.x < img.img.size().x && ij.y >= 0 &&
-                    ij.y < img.img.size().y) {
-                    img_pixel     = img.img[{ij.x, ij.y}];
-                    display_pixel = img.display[{ij.x, ij.y}];
-                }
-                draw_coloredit_opengl_widget(win, "image", img_pixel);
-                draw_dragger_opengl_widget(win, "display", display_pixel);
-                auto img_stats = (img.load_done) ? img.image_stats
+            if (options != img.tonemap_options) {
+                edited              = true;
+                img.tonemap_options = options;
+            }
+            end_header_opengl_widget(win);
+        }
+        if (begin_header_opengl_widget(win, "colorgrade")) {
+            auto options = img.colorgrade_options;
+            draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
+            draw_slider_opengl_widget(
+                win, "ldr shadows", options.shadows, 0, 1);
+            draw_slider_opengl_widget(
+                win, "ldr midtones", options.midtones, 0, 1);
+            draw_slider_opengl_widget(
+                win, "highlights", options.highlights, 0, 1);
+            draw_coloredit_opengl_widget(
+                win, "shadows color", options.shadows_color);
+            draw_coloredit_opengl_widget(
+                win, "midtones color", options.midtones_color);
+            draw_coloredit_opengl_widget(
+                win, "highlights color", options.highlights_color);
+            if (options != img.colorgrade_options) {
+                edited                 = true;
+                img.colorgrade_options = options;
+            }
+            end_header_opengl_widget(win);
+        }
+        if (begin_header_opengl_widget(win, "inspect")) {
+            auto mouse_pos = get_opengl_mouse_pos(win);
+            auto ij        = get_image_coords(
+                mouse_pos, img.image_center, img.image_scale, img.img.size());
+            draw_dragger_opengl_widget(win, "mouse", ij);
+            auto img_pixel = zero4f, display_pixel = zero4f;
+            if (ij.x >= 0 && ij.x < img.img.size().x && ij.y >= 0 &&
+                ij.y < img.img.size().y) {
+                img_pixel     = img.img[{ij.x, ij.y}];
+                display_pixel = img.display[{ij.x, ij.y}];
+            }
+            draw_coloredit_opengl_widget(win, "image", img_pixel);
+            draw_dragger_opengl_widget(win, "display", display_pixel);
+            auto img_stats = (img.load_done) ? img.image_stats : image_stats{};
+            draw_dragger_opengl_widget(win, "image min", img_stats.bounds.min);
+            draw_dragger_opengl_widget(win, "image max", img_stats.bounds.max);
+            draw_dragger_opengl_widget(win, "image avg", img_stats.average);
+            draw_histogram_opengl_widget(
+                win, "image histo", img_stats.histogram);
+            auto display_stats = (img.load_done) ? img.display_stats
                                                  : image_stats{};
-                draw_dragger_opengl_widget(
-                    win, "image min", img_stats.bounds.min);
-                draw_dragger_opengl_widget(
-                    win, "image max", img_stats.bounds.max);
-                draw_dragger_opengl_widget(win, "image avg", img_stats.average);
-                draw_histogram_opengl_widget(
-                    win, "image histo", img_stats.histogram);
-                auto display_stats = (img.load_done) ? img.display_stats
-                                                     : image_stats{};
-                draw_dragger_opengl_widget(
-                    win, "display min", display_stats.bounds.min);
-                draw_dragger_opengl_widget(
-                    win, "display max", display_stats.bounds.max);
-                draw_dragger_opengl_widget(
-                    win, "display avg", display_stats.average);
-                draw_histogram_opengl_widget(
-                    win, "display histo", display_stats.histogram);
-                end_tabitem_opengl_widget(win);
-            }
-            end_tabbar_opengl_widget(win);
+            draw_dragger_opengl_widget(
+                win, "display min", display_stats.bounds.min);
+            draw_dragger_opengl_widget(
+                win, "display max", display_stats.bounds.max);
+            draw_dragger_opengl_widget(
+                win, "display avg", display_stats.average);
+            draw_histogram_opengl_widget(
+                win, "display histo", display_stats.histogram);
+            end_header_opengl_widget(win);
         }
     }
     end_opengl_widgets_frame(win);
@@ -406,16 +391,19 @@ void run_ui(app_state& app) {
 
 int main(int argc, char* argv[]) {
     // prepare application
-    auto app         = app_state();
+    auto app             = app_state();
     auto tonemap_options = tonemap_image_options{};
-    auto outfilename = ""s;
-    auto filenames   = vector<string>{};
+    auto outfilename     = ""s;
+    auto filenames       = vector<string>{};
 
     // command line options
     auto parser = CLI::App{"view images"};
-    parser.add_option("--exposure,-e", tonemap_options.exposure, "display exposure");
-    parser.add_flag("--filmic,!--no-filmic", tonemap_options.filmic, "display filmic");
-    parser.add_flag("--srgb,!--no-srgb", tonemap_options.srgb, "display as sRGB");
+    parser.add_option(
+        "--exposure,-e", tonemap_options.exposure, "display exposure");
+    parser.add_flag(
+        "--filmic,!--no-filmic", tonemap_options.filmic, "display filmic");
+    parser.add_flag(
+        "--srgb,!--no-srgb", tonemap_options.srgb, "display as sRGB");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
     parser.add_option("--out,-o", outfilename, "image out filename");
