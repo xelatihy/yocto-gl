@@ -36,6 +36,8 @@ using namespace yocto;
 struct image_stats {
     bbox4f pxl_bounds = {zero4f, zero4f};
     bbox1f lum_bounds = {zero1f, zero1f};
+    vector<vec3f> rgb_histogram = {};
+    vector<float> lum_histogram = {};
 };
 
 struct app_image {
@@ -96,6 +98,17 @@ void update_stats_async(app_image& img) {
         img.stats.pxl_bounds += p;
         img.stats.lum_bounds += vec1f{luminance(xyz(p))};
     }
+    img.stats.lum_histogram.resize(256);
+    img.stats.rgb_histogram.resize(256);
+    for (auto& p : img.img) {
+        auto lum = luminance(xyz(p));
+        img.stats.rgb_histogram[(int)(clamp(p.x/10, 0.f, 1.f) * 255)].x += 1;
+        img.stats.rgb_histogram[(int)(clamp(p.y/10, 0.f, 1.f) * 255)].y += 1;
+        img.stats.rgb_histogram[(int)(clamp(p.z/10, 0.f, 1.f) * 255)].z += 1;
+        img.stats.lum_histogram[(int)(clamp(lum/10, 0.f, 1.f) * 255)] += 1;
+    }
+    for(auto& v : img.stats.lum_histogram) v /= (float)img.img.size().x * (float)img.img.size().y;
+    for(auto& v : img.stats.rgb_histogram) v /= (float)img.img.size().x * (float)img.img.size().y;
     img.stats_done = true;
 }
 
@@ -278,8 +291,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                     img_pixel     = img.img[{ij.x, ij.y}];
                     display_pixel = img.display[{ij.x, ij.y}];
                 }
-                draw_coloredit_opengl_widget(win, "pixel color", img_pixel);
-                draw_dragger_opengl_widget(win, "pixel value", display_pixel);
+                draw_coloredit_opengl_widget(win, "image", img_pixel);
+                draw_dragger_opengl_widget(win, "display", display_pixel);
                 auto stats = (img.stats_done) ? img.stats : image_stats{};
                 draw_dragger_opengl_widget(
                     win, "pxl min", stats.pxl_bounds.min);
@@ -289,6 +302,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                     win, "lum min", stats.lum_bounds.min);
                 draw_dragger_opengl_widget(
                     win, "lum max", stats.lum_bounds.max);
+                draw_histogram_opengl_widget(win, "lum histo", stats.lum_histogram);
+                draw_histogram_opengl_widget(win, "rgb histo", stats.rgb_histogram);
                 end_tabitem_opengl_widget(win);
             }
             end_tabbar_opengl_widget(win);
