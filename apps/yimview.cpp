@@ -148,7 +148,8 @@ void load_image_async(app_image& img) {
         img.error_msg = e.what();
         return;
     }
-    compute_image_stats(img.image_stats, img.img, is_hdr_filename(img.filename));
+    compute_image_stats(
+        img.image_stats, img.img, is_hdr_filename(img.filename));
     img.load_done      = true;
     img.display        = img.img;
     img.display_thread = thread([&img]() { update_display_async(img); });
@@ -229,53 +230,70 @@ void draw_opengl_widgets(const opengl_window& win) {
                 end_tabitem_opengl_widget(win);
             }
             if (begin_tabitem_opengl_widget(win, "adjust")) {
-                edited += draw_checkbox_opengl_widget(
-                    win, "colorgrade", img.colorgrade);
+                if (draw_checkbox_opengl_widget(
+                        win, "colorgrade", img.colorgrade))
+                    edited = true;
                 if (img.colorgrade) {
                     auto& options = img.colorgrade_options;
-                    edited += draw_slider_opengl_widget(
-                        win, "hdr exposure", options.hdr_exposure, -5, 5);
-                    edited += draw_coloredit_opengl_widget(
-                        win, "hdr tint", options.hdr_tint);
-                    edited += draw_slider_opengl_widget(
-                        win, "hdr contrast", options.hdr_contrast, 0, 1);
-                    edited += draw_slider_opengl_widget(
-                        win, "hdr logcontrast", options.hdr_logcontrast, 0, 1);
-                    edited += draw_slider_opengl_widget(
-                        win, "hdr saturation", options.hdr_saturation, 0, 1);
-                    edited += draw_checkbox_opengl_widget(
-                        win, "hdr filmic", options.hdr_filmic);
+                    if (draw_slider_opengl_widget(
+                            win, "hdr exposure", options.hdr_exposure, -5, 5))
+                        edited = true;
+                    if (draw_coloredit_opengl_widget(
+                            win, "hdr tint", options.hdr_tint))
+                        edited = true;
+                    if (draw_slider_opengl_widget(
+                            win, "hdr contrast", options.hdr_contrast, 0, 1))
+                        edited = true;
+                    if (draw_slider_opengl_widget(win, "hdr logcontrast",
+                            options.hdr_logcontrast, 0, 1))
+                        edited = true;
+                    if (draw_slider_opengl_widget(win, "hdr saturation",
+                            options.hdr_saturation, 0, 1))
+                        edited = true;
+                    if (draw_checkbox_opengl_widget(
+                            win, "hdr filmic", options.hdr_filmic))
+                        edited = true;
                     continue_opengl_widget_line(win);
-                    edited += draw_checkbox_opengl_widget(
-                        win, "hdr srgb", options.hdr_srgb);
+                    if (draw_checkbox_opengl_widget(
+                            win, "hdr srgb", options.hdr_srgb))
+                        edited = true;
                     continue_opengl_widget_line(win);
-                    if(draw_button_opengl_widget(win, "auto wb")) {
-                        edited += 1;
-                        auto wb = 1 / xyz(img.image_stats.average);
+                    if (draw_button_opengl_widget(win, "auto wb")) {
+                        edited           = true;
+                        auto wb          = 1 / xyz(img.image_stats.average);
                         options.hdr_tint = wb / max(wb);
                     }
-                    edited += draw_slider_opengl_widget(
-                        win, "ldr contrast", options.ldr_contrast, 0, 1);
-                    edited += draw_slider_opengl_widget(
-                        win, "ldr shadows", options.ldr_shadows, 0, 1);
-                    edited += draw_slider_opengl_widget(
-                        win, "ldr midtones", options.ldr_midtones, 0, 1);
-                    edited += draw_slider_opengl_widget(
-                        win, "ldr highlights", options.ldr_highlights, 0, 1);
-                    edited += draw_coloredit_opengl_widget(
-                        win, "ldr shadows color", options.ldr_shadows_color);
-                    edited += draw_coloredit_opengl_widget(
-                        win, "ldr midtones color", options.ldr_midtones_color);
-                    edited += draw_coloredit_opengl_widget(win,
-                        "ldr highlights color", options.ldr_highlights_color);
+                    if (draw_slider_opengl_widget(
+                            win, "ldr contrast", options.ldr_contrast, 0, 1))
+                        edited = true;
+                    if (draw_slider_opengl_widget(
+                            win, "ldr shadows", options.ldr_shadows, 0, 1))
+                        edited = true;
+                    if (draw_slider_opengl_widget(
+                            win, "ldr midtones", options.ldr_midtones, 0, 1))
+                        edited = true;
+                    if (draw_slider_opengl_widget(win, "ldr highlights",
+                            options.ldr_highlights, 0, 1))
+                        edited = true;
+                    if (draw_coloredit_opengl_widget(win, "ldr shadows color",
+                            options.ldr_shadows_color))
+                        edited = true;
+                    if (draw_coloredit_opengl_widget(win, "ldr midtones color",
+                            options.ldr_midtones_color))
+                        edited = true;
+                    if (draw_coloredit_opengl_widget(win,
+                            "ldr highlights color",
+                            options.ldr_highlights_color))
+                        edited = true;
                 } else {
-                    edited += draw_slider_opengl_widget(
-                        win, "exposure", img.exposure, -5, 5);
-                    edited += draw_checkbox_opengl_widget(
-                        win, "filmic", img.filmic);
+                    if (draw_slider_opengl_widget(
+                            win, "exposure", img.exposure, -5, 5))
+                        edited = true;
+                    if (draw_checkbox_opengl_widget(win, "filmic", img.filmic))
+                        edited = true;
                     continue_opengl_widget_line(win);
-                    edited += draw_checkbox_opengl_widget(
-                        win, "srgb", img.srgb);
+                    if (draw_checkbox_opengl_widget(win, "srgb", img.srgb))
+                        edited = true;
                 }
                 end_tabitem_opengl_widget(win);
             }
@@ -298,8 +316,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                     win, "image min", img_stats.bounds.min);
                 draw_dragger_opengl_widget(
                     win, "image max", img_stats.bounds.max);
-                draw_dragger_opengl_widget(
-                    win, "image avg", img_stats.average);
+                draw_dragger_opengl_widget(win, "image avg", img_stats.average);
                 draw_histogram_opengl_widget(
                     win, "image histo", img_stats.histogram);
                 auto display_stats = (img.load_done) ? img.display_stats
