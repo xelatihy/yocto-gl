@@ -53,7 +53,7 @@ struct app_state {
     load_scene_options  load_options  = {};
     bvh_build_options   bvh_options   = {};
     trace_image_options trace_options = {};
-    tonemap_image_options tonemap_options = {};
+    tonemap_options tonemap_options = {};
     int                 preview_ratio = 8;
     vec2i               image_size    = {0, 0};
 

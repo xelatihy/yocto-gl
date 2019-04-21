@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
     auto load_options  = load_scene_options{};
     auto bvh_options   = bvh_build_options{};
     auto trace_options = trace_image_options{};
-    auto tonemap_options = tonemap_image_options{};
+    auto tonemap_opts = tonemap_options{};
     auto all_cameras   = false;
     auto no_parallel   = false;
     auto save_batch    = false;
@@ -97,9 +97,9 @@ int main(int argc, char* argv[]) {
     parser.add_flag("--double-sided,!--no-double-sided,-D",
         trace_options.double_sided, "Double-sided rendering.");
     parser.add_option("--save-batch", save_batch, "Save images progressively");
-    parser.add_option("--exposure,-e", tonemap_options.exposure, "Hdr exposure");
-    parser.add_flag("--filmic,!--no-filmic", tonemap_options.filmic, "Hdr filmic");
-    parser.add_flag("--srgb,!--no-srgb", tonemap_options.srgb, "Hdr srgb");
+    parser.add_option("--exposure,-e", tonemap_opts.exposure, "Hdr exposure");
+    parser.add_flag("--filmic,!--no-filmic", tonemap_opts.filmic, "Hdr filmic");
+    parser.add_flag("--srgb,!--no-srgb", tonemap_opts.srgb, "Hdr srgb");
     parser.add_flag("--bvh-high-quality,!--no-bvh-high-quality",
         bvh_options.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
@@ -213,10 +213,10 @@ int main(int argc, char* argv[]) {
                 try {
                     if (logo) {
                         save_tonemapped_image_with_logo(
-                            outfilename, render, tonemap_options);
+                            outfilename, render, tonemap_opts);
                     } else {
                         save_tonemapped_image(
-                            outfilename, render, tonemap_options);
+                            outfilename, render, tonemap_opts);
                     }
                 } catch (const std::exception& e) {
                     print_fatal(e.what());
@@ -234,10 +234,10 @@ int main(int argc, char* argv[]) {
             auto timer = print_timed("saving image {}", outfilename);
             if (logo) {
                 save_tonemapped_image_with_logo(
-                    outfilename, render, tonemap_options);
+                    outfilename, render, tonemap_opts);
             } else {
                 save_tonemapped_image(
-                    outfilename, render, tonemap_options);
+                    outfilename, render, tonemap_opts);
             }
         } catch (const std::exception& e) {
             print_fatal(e.what());
