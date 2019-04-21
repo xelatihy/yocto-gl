@@ -54,7 +54,7 @@ struct app_state {
     bvh_build_options   bvh_options   = {};
     trace_image_options trace_options = {};
     float               exposure      = 0;
-    bool                filmic        = false;
+    bool                filmic        = true;
     bool                srgb          = true;
     int                 preview_ratio = 8;
     vec2i               image_size    = {0, 0};

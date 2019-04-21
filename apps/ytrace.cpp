@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     auto no_parallel   = false;
     auto save_batch    = false;
     auto exposure      = 0.0f;
-    auto filmic        = false;
+    auto filmic        = true;
     auto srgb          = true;
     auto add_skyenv    = false;
     auto validate      = false;
