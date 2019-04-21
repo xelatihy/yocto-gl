@@ -132,9 +132,7 @@ image<vec4f> filter_bilateral(
 int main(int argc, char* argv[]) {
     // command line parameters
     auto tonemap             = false;
-    auto exposure            = 0.0f;
-    auto srgb                = true;
-    auto filmic              = false;
+    auto tonemap_options     = tonemap_image_options{};
     auto resize_width        = 0;
     auto resize_height       = 0;
     auto spatial_sigma       = 0.0f;
@@ -147,10 +145,10 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = CLI::App{"Transform images"};
     parser.add_flag("--tonemap,!--no-tonemap,-t", tonemap, "Tonemap image");
-    parser.add_option("--exposure,-e", exposure, "Tonemap exposure");
-    parser.add_flag("--srgb,!--no-srgb", srgb, "Tonemap to sRGB.");
+    parser.add_option("--exposure,-e", tonemap_options.exposure, "Tonemap exposure");
+    parser.add_flag("--srgb,!--no-srgb", tonemap_options.srgb, "Tonemap to sRGB.");
     parser.add_flag(
-        "--filmic,!--no-filmic,-f", filmic, "Tonemap uses filmic curve");
+        "--filmic,!--no-filmic,-f", tonemap_options.filmic, "Tonemap uses filmic curve");
     parser.add_option(
         "--resize-width", resize_width, "resize size (0 to maintain aspect)");
     parser.add_option(
@@ -229,7 +227,7 @@ int main(int argc, char* argv[]) {
     // hdr correction
     if (tonemap) {
         auto ldr = img;
-        tonemap_image(img, ldr, exposure, filmic, false);
+        tonemap_image(img, ldr, tonemap_options);
         img = ldr;
     }
 

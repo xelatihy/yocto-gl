@@ -54,11 +54,9 @@ struct app_image {
     image_stats image_stats, display_stats;
 
     // tonemapping values
-    float                    exposure           = 0;
-    bool                     filmic             = true;
-    bool                     srgb               = true;
-    bool                     colorgrade         = false;
+    tonemap_image_options tonemap_options = {};
     colorgrade_image_options colorgrade_options = {};
+    bool                     colorgrade         = false;
 
     // computation futures
     atomic<bool>                   load_done, display_done, texture_done;
@@ -123,10 +121,9 @@ void update_display_async(app_image& img) {
     } else {
         parallel_foreach(
             regions,
-            [&img, exposure = img.exposure, filmic = img.filmic,
-                srgb = img.srgb](const image_region& region) {
+            [&img, options = img.tonemap_options](const image_region& region) {
                 tonemap_image_region(
-                    img.display, region, img.img, exposure, filmic, srgb);
+                    img.display, region, img.img, options);
                 img.display_queue.push(region);
             },
             &img.display_stop);
@@ -175,17 +172,18 @@ void save_image_async(app_image& img) {
 
 // add a new image
 void add_new_image(app_state& app, const string& filename,
-    const string& outname, float exposure = 0, bool filmic = false,
-    bool srgb = true) {
+    const string& outname, const tonemap_image_options& tonemap_options = {}) {
     app.imgs.emplace_back();
     auto& img    = app.imgs.back();
     img.filename = filename;
     img.outname  = (outname == "") ? get_noextension(filename) + ".display.png"
                                   : outname;
     img.name         = get_filename(filename);
-    img.exposure     = exposure;
-    img.filmic       = filmic;
-    img.srgb         = srgb;
+    img.tonemap_options = tonemap_options;
+    if(!is_hdr_filename(filename)) {
+        img.colorgrade_options.hdr_filmic = false;
+        img.tonemap_options.filmic = false;
+    }
     img.load_done    = false;
     img.display_done = false;
     img.load_thread  = thread([&img]() { load_image_async(img); });
@@ -287,12 +285,12 @@ void draw_opengl_widgets(const opengl_window& win) {
                         edited = true;
                 } else {
                     if (draw_slider_opengl_widget(
-                            win, "exposure", img.exposure, -5, 5))
+                            win, "exposure", img.tonemap_options.exposure, -5, 5))
                         edited = true;
-                    if (draw_checkbox_opengl_widget(win, "filmic", img.filmic))
+                    if (draw_checkbox_opengl_widget(win, "filmic", img.tonemap_options.filmic))
                         edited = true;
                     continue_opengl_widget_line(win);
-                    if (draw_checkbox_opengl_widget(win, "srgb", img.srgb))
+                    if (draw_checkbox_opengl_widget(win, "srgb", img.tonemap_options.srgb))
                         edited = true;
                 }
                 end_tabitem_opengl_widget(win);
@@ -431,17 +429,15 @@ void run_ui(app_state& app) {
 int main(int argc, char* argv[]) {
     // prepare application
     auto app         = app_state();
-    auto exposure    = 0.0f;
-    auto filmic      = true;
-    auto srgb        = true;
+    auto tonemap_options = tonemap_image_options{};
     auto outfilename = ""s;
     auto filenames   = vector<string>{};
 
     // command line options
     auto parser = CLI::App{"view images"};
-    parser.add_option("--exposure,-e", exposure, "display exposure");
-    parser.add_flag("--filmic,!--no-filmic", filmic, "display filmic");
-    parser.add_flag("--srgb,!--no-srgb", srgb, "display as sRGB");
+    parser.add_option("--exposure,-e", tonemap_options.exposure, "display exposure");
+    parser.add_flag("--filmic,!--no-filmic", tonemap_options.filmic, "display filmic");
+    parser.add_flag("--srgb,!--no-srgb", tonemap_options.srgb, "display as sRGB");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
     parser.add_option("--out,-o", outfilename, "image out filename");
@@ -454,7 +450,7 @@ int main(int argc, char* argv[]) {
 
     // loading images
     for (auto filename : filenames)
-        add_new_image(app, filename, outfilename, exposure, filmic, srgb);
+        add_new_image(app, filename, outfilename, tonemap_options);
     app.img_id = 0;
 
     // run ui

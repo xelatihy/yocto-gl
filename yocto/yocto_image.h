@@ -294,13 +294,6 @@ inline void save_image(
 inline void save_image(
     const string& filename, const image<vec4f>& hdr, const image<vec4b>& ldr);
 
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-inline void save_tonemapped_image(const string& filename,
-    const image<vec3f>& hdr, float exposure, bool filmic, bool srgb);
-inline void save_tonemapped_image(const string& filename,
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -339,17 +332,25 @@ inline void srgb_to_linear(image<T>& lin, const image<T>& srgb);
 template <typename T>
 inline void linear_to_srgb(image<T>& srgb, const image<T>& lin);
 
+// Tone mapping options
+struct tonemap_image_options {
+    float exposure = 0;
+    vec3f tint     = {1, 1, 1};
+    bool  filmic   = true;
+    bool  srgb     = true;
+};
+
 // Apply exposure and filmic tone mapping
 inline void tonemap_image(image<vec3f>& ldr, const image<vec3f>& hdr,
-    float exposure, bool filmic, bool srgb);
+    const tonemap_image_options& options);
 inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
-    float exposure, bool filmic, bool srgb);
+    const tonemap_image_options& options);
 inline void tonemap_image(image<vec3b>& ldr, const image<vec3f>& hdr,
-    float exposure, bool filmic, bool srgb);
+    const tonemap_image_options& options);
 inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
-    float exposure, bool filmic, bool srgb);
+    const tonemap_image_options& options);
 inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
+    const image<vec4f>& hdr, const tonemap_image_options& options);
 
 // minimal color grading
 struct colorgrade_image_options {
@@ -487,6 +488,31 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type);
 inline void make_image_preset(image<vec<byte, 4>>& img, const string& type);
 inline void make_image_preset(
     image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SAVING HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Convenience helper that saves an HDR images as wither a linear HDR file or
+// a tonemapped LDR file depending on file name
+inline void save_tonemapped_image(const string& filename,
+    const image<vec3f>& hdr, const tonemap_image_options& options);
+inline void save_tonemapped_image(const string& filename,
+    const image<vec4f>& hdr, const tonemap_image_options& options);
+
+// Save with a logo embedded
+template <typename T, int N>
+inline void save_image_with_logo(
+    const string& filename, const image<vec<T, N>>& img);
+
+// Convenience helper that saves an HDR images as wither a linear HDR file or
+// a tonemapped LDR file depending on file name
+template <int N>
+inline void save_tonemapped_image_with_logo(const string& filename,
+    const image<vec<float, N>>& hdr, const tonemap_image_options& options);
 
 }  // namespace yocto
 
@@ -770,7 +796,7 @@ inline T tonemap_filmic(T hdr_) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
     auto ldr = (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
-           (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
+               (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
     return max((T)0, ldr);
 }
 template <typename T>
@@ -779,7 +805,7 @@ inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr_, bool accurate_fit) {
         // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
         auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
         auto ldr = (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
-               (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
+                   (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
         return max(zero<T, 3>, ldr);
     } else {
         // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
@@ -1346,38 +1372,6 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
     return {fabsf(K + (g - b) / (6 * chroma + (T)1e-20)),
         chroma / (r + (T)1e-20), r};
 }
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BUILTIN IMAGES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Save with a logo embedded
-template <typename T, int N>
-inline void save_image_with_logo(
-    const string& filename, const image<vec<T, N>>& img) {
-    auto logo = image<vec<T, N>>{};
-    make_logo_image(logo, "logo-render");
-    auto img_copy = img;
-    auto offset   = img.size() - logo.size() - 8;
-    set_image_region(img_copy, logo, offset);
-    save_image(filename, img_copy);
-}
-
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-template <int N>
-inline void save_tonemapped_image_with_logo(const string& filename,
-    const image<vec<float, N>>& hdr, float exposure, bool filmic, bool srgb) {
-    if (is_hdr_filename(filename)) {
-        save_image_with_logo(filename, hdr);
-    } else {
-        auto ldr = image<vec<float, N>>{hdr.size()};
-        tonemap_image(ldr, hdr, exposure, filmic, false);
-        save_image_with_logo(filename, ldr);
-    }
-}
 
 }  // namespace yocto
 
@@ -1447,22 +1441,48 @@ inline void save_image(
 // a tonemapped LDR file depending on file name
 template <int N>
 inline void save_tonemapped_image_impl(const string& filename,
-    const image<vec<float, N>>& hdr, float exposure, bool filmic, bool srgb) {
+    const image<vec<float, N>>& hdr, const tonemap_image_options& options) {
     if (is_hdr_filename(filename)) {
         save_image(filename, hdr);
     } else {
         auto ldr = image<vec<byte, N>>{hdr.size()};
-        tonemap_image(ldr, hdr, exposure, filmic, srgb);
+        tonemap_image(ldr, hdr, options);
         save_image(filename, ldr);
     }
 }
 inline void save_tonemapped_image(const string& filename,
-    const image<vec3f>& hdr, float exposure, bool filmic, bool srgb) {
-    save_tonemapped_image_impl(filename, hdr, exposure, filmic, srgb);
+    const image<vec3f>& hdr, const tonemap_image_options& options) {
+    save_tonemapped_image_impl(filename, hdr, options);
 }
 inline void save_tonemapped_image(const string& filename,
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
-    save_tonemapped_image_impl(filename, hdr, exposure, filmic, srgb);
+    const image<vec4f>& hdr, const tonemap_image_options& options) {
+    save_tonemapped_image_impl(filename, hdr, options);
+}
+
+// Save with a logo embedded
+template <typename T, int N>
+inline void save_image_with_logo(
+    const string& filename, const image<vec<T, N>>& img) {
+    auto logo = image<vec<T, N>>{};
+    make_logo_image(logo, "logo-render");
+    auto img_copy = img;
+    auto offset   = img.size() - logo.size() - 8;
+    set_image_region(img_copy, logo, offset);
+    save_image(filename, img_copy);
+}
+
+// Convenience helper that saves an HDR images as wither a linear HDR file or
+// a tonemapped LDR file depending on file name
+template <int N>
+inline void save_tonemapped_image_with_logo(const string& filename,
+    const image<vec<float, N>>& hdr, const tonemap_image_options& options) {
+    if (is_hdr_filename(filename)) {
+        save_image_with_logo(filename, hdr);
+    } else {
+        auto ldr = image<vec<byte, N>>{hdr.size()};
+        tonemap_image(ldr, hdr, options);
+        save_image_with_logo(filename, ldr);
+    }
 }
 
 }  // namespace yocto
@@ -1564,52 +1584,56 @@ inline void linear_to_srgb(image<TB>& srgb, const image<T>& lin) {
 
 // Apply exposure and filmic tone mapping
 inline void tonemap_image(image<vec3f>& ldr, const image<vec3f>& hdr,
-    float exposure, bool filmic, bool srgb) {
-    return apply(
-        ldr, hdr, [scale = exp2(exposure), filmic, srgb](const vec3f& hdr) {
+    const tonemap_image_options& options) {
+    return apply(ldr, hdr,
+        [scale = exp2(options.exposure) * options.tint, options](
+            const vec3f& hdr) {
             auto ldr = hdr * scale;
-            if (filmic) ldr = tonemap_filmic(ldr);
-            if (srgb) ldr = linear_to_srgb(ldr);
+            if (options.filmic) ldr = tonemap_filmic(ldr);
+            if (options.srgb) ldr = linear_to_srgb(ldr);
             return ldr;
         });
 }
 inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
-    float exposure, bool filmic, bool srgb) {
-    return apply(
-        ldr, hdr, [scale = exp2(exposure), filmic, srgb](const vec4f& hdr) {
+    const tonemap_image_options& options) {
+    return apply(ldr, hdr,
+        [scale = exp2(options.exposure) * options.tint, options](
+            const vec4f& hdr) {
             auto ldr = xyz(hdr) * scale;
-            if (filmic) ldr = tonemap_filmic(ldr);
-            if (srgb) ldr = linear_to_srgb(ldr);
+            if (options.filmic) ldr = tonemap_filmic(ldr);
+            if (options.srgb) ldr = linear_to_srgb(ldr);
             return vec4f{ldr, hdr.w};
         });
 }
 inline void tonemap_image(image<vec3b>& ldr, const image<vec3f>& hdr,
-    float exposure, bool filmic, bool srgb) {
+    const tonemap_image_options& options) {
     return apply(
-        ldr, hdr, [scale = exp2(exposure), filmic, srgb](const vec3f& hdr) {
+        ldr, hdr, [scale = exp2(options.exposure), options](const vec3f& hdr) {
             auto ldr = hdr * scale;
-            if (filmic) ldr = tonemap_filmic(ldr);
-            if (srgb) ldr = linear_to_srgb(ldr);
+            if (options.filmic) ldr = tonemap_filmic(ldr);
+            if (options.srgb) ldr = linear_to_srgb(ldr);
             return float_to_byte(ldr);
         });
 }
 inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
-    float exposure, bool filmic, bool srgb) {
-    return apply(
-        ldr, hdr, [scale = exp2(exposure), filmic, srgb](const vec4f& hdr) {
+    const tonemap_image_options& options) {
+    return apply(ldr, hdr,
+        [scale = exp2(options.exposure) * options.tint, options](
+            const vec4f& hdr) {
             auto ldr = xyz(hdr) * scale;
-            if (filmic) ldr = tonemap_filmic(ldr);
-            if (srgb) ldr = linear_to_srgb(ldr);
+            if (options.filmic) ldr = tonemap_filmic(ldr);
+            if (options.srgb) ldr = linear_to_srgb(ldr);
             return float_to_byte(vec4f{ldr, hdr.w});
         });
 }
 inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
+    const image<vec4f>& hdr, const tonemap_image_options& options) {
     return apply(ldr, region, hdr,
-        [scale = exp2(exposure), filmic, srgb](const vec4f& hdr) {
+        [scale = exp2(options.exposure) * options.tint, options](
+            const vec4f& hdr) {
             auto ldr = xyz(hdr) * scale;
-            if (filmic) ldr = tonemap_filmic(ldr);
-            if (srgb) ldr = linear_to_srgb(ldr);
+            if (options.filmic) ldr = tonemap_filmic(ldr);
+            if (options.srgb) ldr = linear_to_srgb(ldr);
             return vec4f{ldr, hdr.w};
         });
 }
@@ -1672,8 +1696,8 @@ inline void colorgrade_image_region(image<vec4f>& ldr,
 // compute white balance
 inline vec3f compute_white_balance(const image<vec4f>& img) {
     auto rgb = zero3f;
-    for(auto& p : img) rgb += xyz(p);
-    if(rgb == zero3f) return zero3f;
+    for (auto& p : img) rgb += xyz(p);
+    if (rgb == zero3f) return zero3f;
     return rgb / max(rgb);
 }
 
