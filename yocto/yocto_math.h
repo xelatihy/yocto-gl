@@ -167,12 +167,12 @@ constexpr T clamp01(T x);
 template <typename T, typename T1>
 constexpr T lerp(const T& a, const T& b, const T1& u);
 template <typename T, typename T1>
-constexpr T bilerp(
-    const T& c00, const T& c10, const T& c11, const T& c01, const T1& u, const T1& v);
-template<typename T, typename T1>
+constexpr T bilerp(const T& c00, const T& c10, const T& c11, const T& c01,
+    const T1& u, const T1& v);
+template <typename T, typename T1>
 constexpr T bias(const T& a, const T1& bias);
-template<typename T, typename T1>
-constexpr T gain(const T& a, const T1& gain);
+template <typename T, typename T1>
+constexpr T   gain(const T& a, const T1& gain);
 constexpr int pow2(int x);
 template <typename T>
 inline T radians(T x);
@@ -1151,21 +1151,21 @@ constexpr T lerp(const T& a, const T& b, const T1& u) {
     return a * (1 - u) + b * u;
 }
 template <typename T, typename T1>
-constexpr T bilerp(
-    const T& c00, const T& c10, const T& c11, const T& c01, const T1& u, const T1& v) {
+constexpr T bilerp(const T& c00, const T& c10, const T& c11, const T& c01,
+    const T1& u, const T1& v) {
     return c00 * (1 - u) * (1 - v) + c10 * u * (1 - v) + c01 * (1 - u) * v +
            c11 * u * v;
 }
-template<typename T, typename T1>
+template <typename T, typename T1>
 constexpr T bias(const T& a, const T1& bias) {
-    return a / ((1/bias - 2) * (1-a) + 1);
+    return a / ((1 / bias - 2) * (1 - a) + 1);
 }
-template<typename T, typename T1>
+template <typename T, typename T1>
 constexpr T gain(const T& a, const T1& gain) {
-    if(a < (T)0.5) {
-        return bias(a*2,gain) / 2;
+    if (a < (T)0.5) {
+        return bias(a * 2, gain) / 2;
     } else {
-        return bias(a*2-1,1-gain) / 2 + (T)0.5;
+        return bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
     }
 }
 constexpr int pow2(int x) { return 1 << x; }

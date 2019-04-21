@@ -34,7 +34,7 @@ using namespace yocto;
 #include "ext/CLI11.hpp"
 
 struct image_stats {
-    bbox4f bounds = {zero4f, zero4f};
+    bbox4f        bounds    = {zero4f, zero4f};
     vector<vec3f> histogram = {};
 };
 
@@ -50,7 +50,7 @@ struct app_image {
     opengl_texture gl_txt  = {};
 
     // image stats
-    image_stats stats;
+    image_stats image_stats, display_stats;
 
     // tonemapping values
     float                    exposure           = 0;
@@ -60,9 +60,9 @@ struct app_image {
     colorgrade_image_options colorgrade_options = {};
 
     // computation futures
-    atomic<bool> load_done, display_done, stats_done, texture_done;
-    thread       load_thread, display_thread, stats_thread, save_thread;
-    atomic<bool> display_stop;
+    atomic<bool>                   load_done, display_done, texture_done;
+    thread                         load_thread, display_thread, save_thread;
+    atomic<bool>                   display_stop;
     concurrent_queue<image_region> display_queue;
     string                         error_msg = "";
 
@@ -76,7 +76,6 @@ struct app_image {
         display_stop = true;
         if (load_thread.joinable()) load_thread.join();
         if (display_thread.joinable()) display_thread.join();
-        if (stats_thread.joinable()) stats_thread.join();
         if (save_thread.joinable()) save_thread.join();
     }
 };
@@ -88,18 +87,19 @@ struct app_state {
 };
 
 // compute min/max
-void update_stats_async(app_image& img) {
-    img.stats_done       = false;
-    img.stats.bounds = invalid_bbox4f;
-    img.stats.histogram.resize(256);
-    for (auto& p : img.img) {
-        img.stats.bounds += p;
-        img.stats.histogram[(int)(clamp(p.x/10, 0.f, 1.f) * 255)].x += 1;
-        img.stats.histogram[(int)(clamp(p.y/10, 0.f, 1.f) * 255)].y += 1;
-        img.stats.histogram[(int)(clamp(p.z/10, 0.f, 1.f) * 255)].z += 1;
+void compute_stats(
+    image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
+    auto max_histo = linear_hdr ? 8 : 1;
+    stats.bounds   = invalid_bbox4f;
+    stats.histogram.assign(256, zero3f);
+    for (auto& p : img) {
+        stats.bounds += p;
+        stats.histogram[(int)(clamp(p.x / max_histo, 0.f, 1.f) * 255)].x += 1;
+        stats.histogram[(int)(clamp(p.y / max_histo, 0.f, 1.f) * 255)].y += 1;
+        stats.histogram[(int)(clamp(p.z / max_histo, 0.f, 1.f) * 255)].z += 1;
     }
-    for(auto& v : img.stats.histogram) v /= (float)img.img.size().x * (float)img.img.size().y;
-    img.stats_done = true;
+    for (auto& v : stats.histogram)
+        v /= (float)img.size().x * (float)img.size().y;
 }
 
 void update_display_async(app_image& img) {
@@ -127,13 +127,13 @@ void update_display_async(app_image& img) {
             },
             &img.display_stop);
     }
+    compute_stats(img.display_stats, img.display, false);
     img.display_done = true;
 }
 
 // load image
 void load_image_async(app_image& img) {
     img.load_done    = false;
-    img.stats_done   = false;
     img.display_done = false;
     img.texture_done = false;
     img.error_msg    = "";
@@ -144,10 +144,10 @@ void load_image_async(app_image& img) {
         img.error_msg = e.what();
         return;
     }
+    compute_stats(img.image_stats, img.img, is_hdr_filename(img.filename));
     img.load_done      = true;
     img.display        = img.img;
     img.display_thread = thread([&img]() { update_display_async(img); });
-    img.stats_thread   = thread([&img]() { update_stats_async(img); });
     img.zoom_to_fit    = true;
 }
 
@@ -183,7 +183,6 @@ void add_new_image(app_state& app, const string& filename,
     img.srgb         = srgb;
     img.load_done    = false;
     img.display_done = false;
-    img.stats_done   = false;
     img.load_thread  = thread([&img]() { load_image_async(img); });
     app.img_id       = (int)app.imgs.size() - 1;
 }
@@ -283,12 +282,22 @@ void draw_opengl_widgets(const opengl_window& win) {
                 }
                 draw_coloredit_opengl_widget(win, "image", img_pixel);
                 draw_dragger_opengl_widget(win, "display", display_pixel);
-                auto stats = (img.stats_done) ? img.stats : image_stats{};
+                auto img_stats = (img.load_done) ? img.image_stats
+                                                 : image_stats{};
                 draw_dragger_opengl_widget(
-                    win, "min", stats.bounds.min);
+                    win, "image min", img_stats.bounds.min);
                 draw_dragger_opengl_widget(
-                    win, "max", stats.bounds.max);
-                draw_histogram_opengl_widget(win, "histo", stats.histogram);
+                    win, "image max", img_stats.bounds.max);
+                draw_histogram_opengl_widget(
+                    win, "image histo", img_stats.histogram);
+                auto display_stats = (img.load_done) ? img.display_stats
+                                                     : image_stats{};
+                draw_dragger_opengl_widget(
+                    win, "display min", display_stats.bounds.min);
+                draw_dragger_opengl_widget(
+                    win, "display max", display_stats.bounds.max);
+                draw_histogram_opengl_widget(
+                    win, "display histo", display_stats.histogram);
                 end_tabitem_opengl_widget(win);
             }
             end_tabbar_opengl_widget(win);

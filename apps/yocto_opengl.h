@@ -385,11 +385,16 @@ void begin_child_opengl_widget(
     const opengl_window& win, const char* lbl, const vec2i& size);
 void end_child_opengl_widget(const opengl_window& win);
 
-void draw_histogram_opengl_widget(const opengl_window& win, const char* lbl, const float* values, int count);
-void draw_histogram_opengl_widget(const opengl_window& win, const char* lbl, const vector<float>& values);
-void draw_histogram_opengl_widget(const opengl_window& win, const char* lbl, const vector<vec2f>& values);
-void draw_histogram_opengl_widget(const opengl_window& win, const char* lbl, const vector<vec3f>& values);
-void draw_histogram_opengl_widget(const opengl_window& win, const char* lbl, const vector<vec4f>& values);
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const float* values, int count);
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<float>& values);
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<vec2f>& values);
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<vec3f>& values);
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<vec4f>& values);
 
 }  // namespace yocto
 

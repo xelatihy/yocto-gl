@@ -1127,11 +1127,11 @@ constexpr vec<T, 3> linear_to_display(
             rgb.z < lim ? lin.z : gamma.z,
         };
     } else if (space.curve_type == rgb_tone_curve_type::aces_cc) {
-        return {acescc_linear_to_display(rgb.x), acescc_linear_to_display(rgb.y),
-            acescc_linear_to_display(rgb.z)};
+        return {acescc_linear_to_display(rgb.x),
+            acescc_linear_to_display(rgb.y), acescc_linear_to_display(rgb.z)};
     } else if (space.curve_type == rgb_tone_curve_type::aces_cct) {
-        return {acescct_linear_to_display(rgb.x), acescct_linear_to_display(rgb.y),
-            acescct_linear_to_display(rgb.z)};
+        return {acescct_linear_to_display(rgb.x),
+            acescct_linear_to_display(rgb.y), acescct_linear_to_display(rgb.z)};
     } else if (space.curve_type == rgb_tone_curve_type::pq) {
         return {pq_linear_to_display(rgb.x), pq_linear_to_display(rgb.y),
             pq_linear_to_display(rgb.z)};
@@ -1158,11 +1158,11 @@ constexpr vec<T, 3> display_to_linear(
             rgb.z < lim ? lin.z : gamma.z,
         };
     } else if (space.curve_type == rgb_tone_curve_type::aces_cc) {
-        return {acescc_display_to_linear(rgb.x), acescc_display_to_linear(rgb.y),
-            acescc_display_to_linear(rgb.z)};
+        return {acescc_display_to_linear(rgb.x),
+            acescc_display_to_linear(rgb.y), acescc_display_to_linear(rgb.z)};
     } else if (space.curve_type == rgb_tone_curve_type::aces_cct) {
-        return {acescct_display_to_linear(rgb.x), acescct_display_to_linear(rgb.y),
-            acescct_display_to_linear(rgb.z)};
+        return {acescct_display_to_linear(rgb.x),
+            acescct_display_to_linear(rgb.y), acescct_display_to_linear(rgb.z)};
     } else if (space.curve_type == rgb_tone_curve_type::pq) {
         return {pq_display_to_linear(rgb.x), pq_display_to_linear(rgb.y),
             pq_display_to_linear(rgb.z)};
