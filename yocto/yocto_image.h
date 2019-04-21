@@ -376,20 +376,13 @@ inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
 
 // minimal color grading
 struct colorgrade_image_options {
-    float hdr_exposure         = 0;
-    vec3f hdr_tint             = {1, 1, 1};
-    float hdr_contrast         = 0.5;
-    float hdr_logcontrast      = 0.5;
-    float hdr_saturation       = 0.5;
-    bool  hdr_filmic           = true;
-    bool  hdr_srgb             = true;
-    float ldr_contrast         = 0.5;
-    float ldr_shadows          = 0.5;
-    float ldr_midtones         = 0.5;
-    float ldr_highlights       = 0.5;
-    vec3f ldr_shadows_color    = {1, 1, 1};
-    vec3f ldr_midtones_color   = {1, 1, 1};
-    vec3f ldr_highlights_color = {1, 1, 1};
+    float contrast         = 0.5;
+    float shadows          = 0.5;
+    float midtones         = 0.5;
+    float highlights       = 0.5;
+    vec3f shadows_color    = {1, 1, 1};
+    vec3f midtones_color   = {1, 1, 1};
+    vec3f highlights_color = {1, 1, 1};
 };
 
 // Equality operators
@@ -401,8 +394,8 @@ inline bool operator!=(const colorgrade_image_options& a, const colorgrade_image
 }
 
 // color grade an image region
-inline void colorgrade_image_region(image<vec4f>& ldr,
-    const image_region& region, const image<vec4f>& hdr,
+inline void colorgrade_image_region(image<vec4f>& corrected,
+    const image_region& region, const image<vec4f>& img,
     const colorgrade_image_options& options);
 
 // determine white balance colors
@@ -1683,58 +1676,39 @@ inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
         });
 }
 
+inline vec3f colorgrade_pixel(const vec3f& ldr, const colorgrade_image_options& options) {
+    auto rgb = ldr;
+    if (options.contrast != 0.5f) {
+        rgb = gain(ldr, 1 - options.contrast);
+    }
+    if (options.shadows != 0.5f ||
+        options.midtones != 0.5f ||
+        options.highlights != 0.5f ||
+        options.shadows_color != vec3f{1,1,1} ||
+        options.midtones_color != vec3f{1,1,1} ||
+        options.highlights_color != vec3f{1,1,1}) {
+        auto lift  = options.shadows_color;
+        auto gamma = options.midtones_color;
+        auto gain  = options.highlights_color;
+
+        lift      = lift - mean(lift) + options.shadows - (float)0.5;
+        gain      = gain - mean(gain) + options.highlights + (float)0.5;
+        auto grey = gamma - mean(gamma) + options.midtones;
+        gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
+
+        // apply
+        auto lerp_value = clamp01(pow(rgb, 1 / gamma));
+        rgb             = gain * lerp_value + lift * (1 - lerp_value);
+    }
+    return rgb;
+}
+
 // Apply exposure and filmic tone mapping
-inline void colorgrade_image_region(image<vec4f>& ldr,
-    const image_region& region, const image<vec4f>& hdr,
+inline void colorgrade_image_region(image<vec4f>& corrected,
+    const image_region& region, const image<vec4f>& ldr,
     const colorgrade_image_options& options) {
-    return apply(ldr, region, hdr, [&options](const vec4f& hdr) {
-        static auto default_options = colorgrade_image_options{};
-        auto        ldr             = xyz(hdr);
-        ldr *= exp2(options.hdr_exposure) * options.hdr_tint;
-        if (options.hdr_saturation != default_options.hdr_saturation) {
-            auto lumaWeights = vec3f(0.25, 0.50, 0.25);
-            auto grey        = dot(lumaWeights, ldr);
-            ldr = grey + (ldr - grey) * (options.hdr_saturation * 2);
-        }
-        if (options.hdr_contrast != default_options.hdr_contrast) {
-            auto grey = (float)0.18;
-            ldr       = grey + (ldr - grey) * (options.hdr_contrast * 2);
-        }
-        if (options.hdr_logcontrast != default_options.hdr_logcontrast) {
-            auto epsilon  = (float)0.0001;
-            auto grey     = (float)0.18;
-            auto log_grey = log2(grey);
-            auto log_ldr  = log2(ldr + epsilon);
-            auto adjusted = log_grey + (log_ldr - log_grey) *
-                                           (options.hdr_logcontrast * 2);
-            ldr = max(zero3f, exp2(adjusted) - epsilon);
-        }
-        if (options.hdr_filmic) ldr = tonemap_filmic(ldr);
-        if (options.hdr_srgb) ldr = linear_to_srgb(ldr);
-        if (options.ldr_contrast != default_options.ldr_contrast) {
-            ldr = gain(ldr, 1 - options.ldr_contrast);
-        }
-        if (options.ldr_shadows != default_options.ldr_shadows ||
-            options.ldr_midtones != default_options.ldr_midtones ||
-            options.ldr_highlights != default_options.ldr_highlights ||
-            options.ldr_shadows_color != default_options.ldr_shadows_color ||
-            options.ldr_midtones_color != default_options.ldr_midtones_color ||
-            options.ldr_highlights_color !=
-                default_options.ldr_highlights_color) {
-            auto lift  = options.ldr_shadows_color;
-            auto gamma = options.ldr_midtones_color;
-            auto gain  = options.ldr_highlights_color;
-
-            lift      = lift - mean(lift) + options.ldr_shadows - (float)0.5;
-            gain      = gain - mean(gain) + options.ldr_highlights + (float)0.5;
-            auto grey = gamma - mean(gamma) + options.ldr_midtones;
-            gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
-
-            // apply
-            auto lerp_value = clamp01(pow(ldr, 1 / gamma));
-            ldr             = gain * lerp_value + lift * (1 - lerp_value);
-        }
-        return vec4f{ldr, hdr.w};
+    return apply(corrected, region, ldr, [&options](const vec4f& hdr) {
+        return vec4f{colorgrade_pixel(xyz(hdr), options), hdr.w};
     });
 }
 
