@@ -35,6 +35,7 @@ using namespace yocto;
 
 struct image_stats {
     bbox4f        bounds    = {zero4f, zero4f};
+    vec4f         average   = zero4f;
     vector<vec3f> histogram = {};
 };
 
@@ -87,19 +88,22 @@ struct app_state {
 };
 
 // compute min/max
-void compute_stats(
+void compute_image_stats(
     image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
     auto max_histo = linear_hdr ? 8 : 1;
     stats.bounds   = invalid_bbox4f;
+    stats.average  = zero4f;
     stats.histogram.assign(256, zero3f);
     for (auto& p : img) {
         stats.bounds += p;
+        stats.average += p;
         stats.histogram[(int)(clamp(p.x / max_histo, 0.f, 1.f) * 255)].x += 1;
         stats.histogram[(int)(clamp(p.y / max_histo, 0.f, 1.f) * 255)].y += 1;
         stats.histogram[(int)(clamp(p.z / max_histo, 0.f, 1.f) * 255)].z += 1;
     }
-    for (auto& v : stats.histogram)
-        v /= (float)img.size().x * (float)img.size().y;
+    auto num_pixels = (size_t)img.size().x * (size_t)img.size().y;
+    for (auto& v : stats.histogram) v /= num_pixels;
+    stats.average /= num_pixels;
 }
 
 void update_display_async(app_image& img) {
@@ -127,7 +131,7 @@ void update_display_async(app_image& img) {
             },
             &img.display_stop);
     }
-    compute_stats(img.display_stats, img.display, false);
+    compute_image_stats(img.display_stats, img.display, false);
     img.display_done = true;
 }
 
@@ -144,7 +148,7 @@ void load_image_async(app_image& img) {
         img.error_msg = e.what();
         return;
     }
-    compute_stats(img.image_stats, img.img, is_hdr_filename(img.filename));
+    compute_image_stats(img.image_stats, img.img, is_hdr_filename(img.filename));
     img.load_done      = true;
     img.display        = img.img;
     img.display_thread = thread([&img]() { update_display_async(img); });
@@ -244,6 +248,12 @@ void draw_opengl_widgets(const opengl_window& win) {
                     continue_opengl_widget_line(win);
                     edited += draw_checkbox_opengl_widget(
                         win, "hdr srgb", options.hdr_srgb);
+                    continue_opengl_widget_line(win);
+                    if(draw_button_opengl_widget(win, "auto wb")) {
+                        edited += 1;
+                        auto wb = 1 / xyz(img.image_stats.average);
+                        options.hdr_tint = wb / max(wb);
+                    }
                     edited += draw_slider_opengl_widget(
                         win, "ldr contrast", options.ldr_contrast, 0, 1);
                     edited += draw_slider_opengl_widget(
@@ -288,6 +298,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                     win, "image min", img_stats.bounds.min);
                 draw_dragger_opengl_widget(
                     win, "image max", img_stats.bounds.max);
+                draw_dragger_opengl_widget(
+                    win, "image avg", img_stats.average);
                 draw_histogram_opengl_widget(
                     win, "image histo", img_stats.histogram);
                 auto display_stats = (img.load_done) ? img.display_stats
@@ -296,6 +308,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                     win, "display min", display_stats.bounds.min);
                 draw_dragger_opengl_widget(
                     win, "display max", display_stats.bounds.max);
+                draw_dragger_opengl_widget(
+                    win, "display avg", display_stats.average);
                 draw_histogram_opengl_widget(
                     win, "display histo", display_stats.histogram);
                 end_tabitem_opengl_widget(win);

@@ -369,9 +369,13 @@ struct colorgrade_image_options {
     vec3f ldr_highlights_color = {1, 1, 1};
 };
 
+// color grade an image region
 inline void colorgrade_image_region(image<vec4f>& ldr,
     const image_region& region, const image<vec4f>& hdr,
     const colorgrade_image_options& options);
+
+// determine white balance colors
+inline vec3f compute_white_balance(const image<vec4f>& img);
 
 // Convert number of channels
 template <int N1, int N2>
@@ -1663,6 +1667,14 @@ inline void colorgrade_image_region(image<vec4f>& ldr,
         }
         return vec4f{ldr, hdr.w};
     });
+}
+
+// compute white balance
+inline vec3f compute_white_balance(const image<vec4f>& img) {
+    auto rgb = zero3f;
+    for(auto& p : img) rgb += xyz(p);
+    if(rgb == zero3f) return zero3f;
+    return rgb / max(rgb);
 }
 
 template <int N1, int N2>
