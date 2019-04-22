@@ -1070,4 +1070,89 @@ void draw_histogram_opengl_widget(
         {0, 0}, sizeof(vec4f));
 }
 
+// https://github.com/ocornut/imgui/issues/300
+struct ImGuiAppLog {
+    ImGuiTextBuffer     Buf;
+    ImGuiTextFilter     Filter;
+    ImVector<int>       LineOffsets;        // Index to lines offset
+    bool                ScrollToBottom;
+
+    void    Clear()     { Buf.clear(); LineOffsets.clear(); }
+
+    void    AddLog(const char* fmt, ...)
+    {
+        int old_size = Buf.size();
+        va_list args;
+        va_start(args, fmt);
+        Buf.appendfv(fmt, args);
+        va_end(args);
+        for (int new_size = Buf.size(); old_size < new_size; old_size++)
+            if (Buf[old_size] == '\n')
+                LineOffsets.push_back(old_size);
+        ScrollToBottom = true;
+    }
+
+    void    Draw()
+    {
+        // ImGui::SetNextWindowSize(ImVec2(500,400), ImGuiSetCond_FirstUseEver);
+        // ImGui::Begin(title, p_opened);
+        if (ImGui::Button("Clear")) Clear();
+        ImGui::SameLine();
+        bool copy = ImGui::Button("Copy");
+        ImGui::SameLine();
+        Filter.Draw("Filter", -100.0f);
+        ImGui::Separator();
+        ImGui::BeginChild("scrolling");
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,1));
+        if (copy) ImGui::LogToClipboard();
+
+        if (Filter.IsActive())
+        {
+            const char* buf_begin = Buf.begin();
+            const char* line = buf_begin;
+            for (int line_no = 0; line != NULL; line_no++)
+            {
+                const char* line_end = (line_no < LineOffsets.Size) ? buf_begin + LineOffsets[line_no] : NULL;
+                if (Filter.PassFilter(line, line_end))
+                    ImGui::TextUnformatted(line, line_end);
+                line = line_end && line_end[1] ? line_end + 1 : NULL;
+            }
+        }
+        else
+        {
+            ImGui::TextUnformatted(Buf.begin());
+        }
+
+        if (ScrollToBottom)
+            ImGui::SetScrollHere(1.0f);
+        ScrollToBottom = false;
+        ImGui::PopStyleVar();
+        ImGui::EndChild();
+        // ImGui::End();
+    }
+};
+
+std::mutex _log_mutex;
+ImGuiAppLog _log_widget;
+void add_log_opengl_widget(const opengl_window& win, const char* msg) {
+    _log_mutex.lock();
+    _log_widget.AddLog(msg);
+    _log_mutex.unlock();
+}
+void add_log_opengl_widget(const opengl_window& win, const string& msg) {
+    _log_mutex.lock();
+    _log_widget.AddLog(msg.c_str());
+    _log_mutex.unlock();
+}
+void clear_logs_opengl_widget(const opengl_window& win) {
+    _log_mutex.lock();
+    _log_widget.Clear();
+    _log_mutex.unlock();
+}
+void draw_log_opengl_widget(const opengl_window& win) {
+    _log_mutex.lock();
+    _log_widget.Draw();
+    _log_mutex.unlock();
+}
+
 }  // namespace yocto

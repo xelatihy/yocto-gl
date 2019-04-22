@@ -396,6 +396,11 @@ void draw_histogram_opengl_widget(
 void draw_histogram_opengl_widget(
     const opengl_window& win, const char* lbl, const vector<vec4f>& values);
 
+void add_log_opengl_widget(const opengl_window& win, const char* msg);
+void add_log_opengl_widget(const opengl_window& win, const string& msg);
+void clear_logs_opengl_widget(const opengl_window& win);
+void draw_log_opengl_widget(const opengl_window& win);
+
 }  // namespace yocto
 
 #endif

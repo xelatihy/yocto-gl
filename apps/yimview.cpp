@@ -89,6 +89,7 @@ struct app_state {
 // compute min/max
 void compute_image_stats(
     image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
+    auto timer = log_timed("computing stats");
     auto max_histo = linear_hdr ? 8 : 1;
     stats.bounds   = invalid_bbox4f;
     stats.average  = zero4f;
@@ -106,6 +107,7 @@ void compute_image_stats(
 }
 
 void update_display_async(app_image& img) {
+    auto timer = log_timed("rendering {}", get_filename(img.filename));
     img.display_done = false;
     img.texture_done = false;
     auto regions     = vector<image_region>{};
@@ -131,6 +133,7 @@ void update_display_async(app_image& img) {
 
 // load image
 void load_image_async(app_image& img) {
+    auto timer = log_timed("loading {}", get_filename(img.filename));
     img.name = get_basename(img.filename) + " [loading]";
     img.load_done    = false;
     img.display_done = false;
@@ -185,7 +188,6 @@ void add_new_image(app_state& app, const string& filename,
     }
     img.load_done    = false;
     img.display_done = false;
-    img.load_thread  = thread([&img]() { load_image_async(img); });
     app.img_id       = (int)app.imgs.size() - 1;
 }
 
@@ -287,6 +289,9 @@ void draw_opengl_widgets(const opengl_window& win) {
                 win, "display histo", display_stats.histogram);
             end_header_opengl_widget(win);
         }
+        if (begin_header_opengl_widget(win, "log")) {
+            draw_log_opengl_widget(win);
+        }
     }
     end_opengl_widgets_frame(win);
     if (edited) {
@@ -338,7 +343,10 @@ void update(app_state& app) {}
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
-    for (auto path : paths) add_new_image(app, path, "");
+    for (auto path : paths) {
+        add_new_image(app, path, "");
+        app.imgs.back().load_thread  = thread([&img = app.imgs.back()]() { load_image_async(img); });
+    }
 }
 
 void run_ui(app_state& app) {
@@ -351,6 +359,14 @@ void run_ui(app_state& app) {
 
     // init widgets
     init_opengl_widgets(win);
+
+    // setup logging
+    set_log_callback([&win](const string& msg){ add_log_opengl_widget(win, msg.c_str()); });
+
+    // load images
+    for(auto& img : app.imgs) {
+        img.load_thread  = thread([&img]() { load_image_async(img); });
+    }
 
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;
