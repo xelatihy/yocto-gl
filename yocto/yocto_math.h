@@ -135,6 +135,8 @@ using std::shared_ptr;
 using std::unordered_map;
 using std::unordered_set;
 using std::vector;
+using std::make_unique;
+using std::make_shared;
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
 
