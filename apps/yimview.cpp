@@ -198,6 +198,7 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (begin_opengl_widgets_window(win, "yimview")) {
         if (draw_button_opengl_widget(win, "load")) {
         }
+        continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "save")) {
             auto& img = app.imgs.at(app.img_id);
             if (img.display_done) {
@@ -205,9 +206,12 @@ void draw_opengl_widgets(const opengl_window& win) {
                     [&img]() { save_image_async(img); });
             }
         }
+        continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "close")) {
         }
+        continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "quit")) {
+            set_close_opengl_window(win, true);
         }
         draw_combobox_opengl_widget(
             win, "image", app.img_id, app.imgs, false);

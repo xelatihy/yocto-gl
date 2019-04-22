@@ -241,6 +241,7 @@ vec2i get_opengl_framebuffer_size(const opengl_window& win);
 vec2i get_opengl_window_size(const opengl_window& win);
 
 bool should_opengl_window_close(const opengl_window& win);
+void set_close_opengl_window(const opengl_window& win, bool close);
 
 vec2f get_opengl_mouse_pos(const opengl_window& win);
 bool  get_opengl_mouse_left(const opengl_window& win);

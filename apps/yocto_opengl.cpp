@@ -657,6 +657,9 @@ vec2i get_opengl_window_size(const opengl_window& win) {
 bool should_opengl_window_close(const opengl_window& win) {
     return glfwWindowShouldClose(win.win);
 }
+void set_close_opengl_window(const opengl_window& win, bool close) {
+    glfwSetWindowShouldClose(win.win, close ? GLFW_TRUE : GLFW_FALSE);
+}
 
 vec2f get_opengl_mouse_pos(const opengl_window& win) {
     double mouse_posx, mouse_posy;
