@@ -124,14 +124,14 @@ template <typename T, int N>
 inline vec<T, N> linear_to_srgb(const vec<T, N>& lin);
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-template<typename T>
+template <typename T>
 inline vec<T, 3> apply_contrast(const vec<T, 3>& rgb, T contrast, T grey);
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-template<typename T>
+template <typename T>
 inline vec<T, 3> apply_logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey);
 // Apply saturation.
-template<typename T>
-inline vec<T, 3> apply_saturation(const vec<T, 3>& rgb, T saturation, 
+template <typename T>
+inline vec<T, 3> apply_saturation(const vec<T, 3>& rgb, T saturation,
     const vec<T, 3>& luminance_weights = vec<T, 3>{0.25, 0.5, 0.25});
 
 // Fitted ACES tonemapping curve.
@@ -345,20 +345,22 @@ inline void linear_to_srgb(image<T>& srgb, const image<T>& lin);
 
 // Tone mapping options
 struct tonemap_image_options {
-    float exposure = 0;
-    vec3f tint     = {1, 1, 1};
-    float contrast = 0.5f;
+    float exposure    = 0;
+    vec3f tint        = {1, 1, 1};
+    float contrast    = 0.5f;
     float logcontrast = 0.5f;
-    float saturation = 0.5f;
-    bool  filmic   = true;
-    bool  srgb     = true;
+    float saturation  = 0.5f;
+    bool  filmic      = true;
+    bool  srgb        = true;
 };
 
 // Equality operators
-inline bool operator==(const tonemap_image_options& a, const tonemap_image_options& b) {
+inline bool operator==(
+    const tonemap_image_options& a, const tonemap_image_options& b) {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(const tonemap_image_options& a, const tonemap_image_options& b) {
+inline bool operator!=(
+    const tonemap_image_options& a, const tonemap_image_options& b) {
     return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
@@ -386,10 +388,12 @@ struct colorgrade_image_options {
 };
 
 // Equality operators
-inline bool operator==(const colorgrade_image_options& a, const colorgrade_image_options& b) {
+inline bool operator==(
+    const colorgrade_image_options& a, const colorgrade_image_options& b) {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(const colorgrade_image_options& a, const colorgrade_image_options& b) {
+inline bool operator!=(
+    const colorgrade_image_options& a, const colorgrade_image_options& b) {
     return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
@@ -814,13 +818,14 @@ inline vec<T, N> linear_to_srgb(const vec<T, N>& lin) {
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-template<typename T>
+template <typename T>
 inline vec<T, 3> apply_contrast(const vec<T, 3>& rgb, T contrast, T grey) {
     return max(zero<T, 3>, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-template<typename T>
-inline vec<T, 3> apply_logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey) {
+template <typename T>
+inline vec<T, 3> apply_logcontrast(
+    const vec<T, 3>& rgb, T logcontrast, T grey) {
     auto epsilon  = (float)0.0001;
     auto log_grey = log2(grey);
     auto log_ldr  = log2(rgb + epsilon);
@@ -828,9 +833,10 @@ inline vec<T, 3> apply_logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey) 
     return max(zero<T, 3>, exp2(adjusted) - epsilon);
 }
 // Apply saturation.
-template<typename T>
-inline vec<T, 3> apply_saturation(const vec<T, 3>& rgb, T saturation, const vec<T, 3>& weights) {
-    auto grey        = dot(weights, rgb);
+template <typename T>
+inline vec<T, 3> apply_saturation(
+    const vec<T, 3>& rgb, T saturation, const vec<T, 3>& weights) {
+    auto grey = dot(weights, rgb);
     return max(zero<T, 3>, grey + (rgb - grey) * (saturation * 2));
 }
 
@@ -1626,13 +1632,17 @@ inline void linear_to_srgb(image<TB>& srgb, const image<T>& lin) {
         [](const auto& a) { return float_to_byte(linear_to_srgb(a)); });
 }
 
-inline vec3f tonemap_pixel(const vec3f& hdr, const tonemap_image_options& options) {
+inline vec3f tonemap_pixel(
+    const vec3f& hdr, const tonemap_image_options& options) {
     auto rgb = hdr;
-    if(options.exposure != 0) rgb *= exp2(options.exposure);
-    if(options.tint != vec3f{1,1,1}) rgb *= options.tint;
-    if(options.contrast != 0.5f) rgb = apply_contrast(rgb, options.contrast, 0.18f);
-    if(options.logcontrast != 0.5f) rgb = apply_logcontrast(rgb, options.logcontrast, 0.18f);
-    if(options.saturation != 0.5f) rgb = apply_saturation(rgb, options.saturation);
+    if (options.exposure != 0) rgb *= exp2(options.exposure);
+    if (options.tint != vec3f{1, 1, 1}) rgb *= options.tint;
+    if (options.contrast != 0.5f)
+        rgb = apply_contrast(rgb, options.contrast, 0.18f);
+    if (options.logcontrast != 0.5f)
+        rgb = apply_logcontrast(rgb, options.logcontrast, 0.18f);
+    if (options.saturation != 0.5f)
+        rgb = apply_saturation(rgb, options.saturation);
     if (options.filmic) rgb = tonemap_filmic(rgb);
     if (options.srgb) rgb = linear_to_srgb(rgb);
     return rgb;
@@ -1642,9 +1652,7 @@ inline vec3f tonemap_pixel(const vec3f& hdr, const tonemap_image_options& option
 inline void tonemap_image(image<vec3f>& ldr, const image<vec3f>& hdr,
     const tonemap_image_options& options) {
     return apply(ldr, hdr,
-        [options](const vec3f& hdr) {
-            return tonemap_pixel(hdr, options);
-        });
+        [options](const vec3f& hdr) { return tonemap_pixel(hdr, options); });
 }
 inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
     const tonemap_image_options& options) {
@@ -1656,37 +1664,33 @@ inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
 }
 inline void tonemap_image(image<vec3b>& ldr, const image<vec3f>& hdr,
     const tonemap_image_options& options) {
-    return apply(
-        ldr, hdr, [options](const vec3f& hdr) {
-            return float_to_byte(tonemap_pixel(hdr, options));
-        });
+    return apply(ldr, hdr, [options](const vec3f& hdr) {
+        return float_to_byte(tonemap_pixel(hdr, options));
+    });
 }
 inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
     const tonemap_image_options& options) {
-    return apply(ldr, hdr,
-        [options](const vec4f& hdr) {
-            return float_to_byte(vec4f{tonemap_pixel(xyz(hdr), options), hdr.w});
-        });
+    return apply(ldr, hdr, [options](const vec4f& hdr) {
+        return float_to_byte(vec4f{tonemap_pixel(xyz(hdr), options), hdr.w});
+    });
 }
 inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
     const image<vec4f>& hdr, const tonemap_image_options& options) {
-    return apply(ldr, region, hdr,
-        [options](const vec4f& hdr) {
-            return vec4f{tonemap_pixel(xyz(hdr), options), hdr.w};
-        });
+    return apply(ldr, region, hdr, [options](const vec4f& hdr) {
+        return vec4f{tonemap_pixel(xyz(hdr), options), hdr.w};
+    });
 }
 
-inline vec3f colorgrade_pixel(const vec3f& ldr, const colorgrade_image_options& options) {
+inline vec3f colorgrade_pixel(
+    const vec3f& ldr, const colorgrade_image_options& options) {
     auto rgb = ldr;
     if (options.contrast != 0.5f) {
         rgb = gain(ldr, 1 - options.contrast);
     }
-    if (options.shadows != 0.5f ||
-        options.midtones != 0.5f ||
-        options.highlights != 0.5f ||
-        options.shadows_color != vec3f{1,1,1} ||
-        options.midtones_color != vec3f{1,1,1} ||
-        options.highlights_color != vec3f{1,1,1}) {
+    if (options.shadows != 0.5f || options.midtones != 0.5f ||
+        options.highlights != 0.5f || options.shadows_color != vec3f{1, 1, 1} ||
+        options.midtones_color != vec3f{1, 1, 1} ||
+        options.highlights_color != vec3f{1, 1, 1}) {
         auto lift  = options.shadows_color;
         auto gamma = options.midtones_color;
         auto gain  = options.highlights_color;

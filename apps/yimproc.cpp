@@ -145,10 +145,12 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = CLI::App{"Transform images"};
     parser.add_flag("--tonemap,!--no-tonemap,-t", tonemap, "Tonemap image");
-    parser.add_option("--exposure,-e", tonemap_options.exposure, "Tonemap exposure");
-    parser.add_flag("--srgb,!--no-srgb", tonemap_options.srgb, "Tonemap to sRGB.");
+    parser.add_option(
+        "--exposure,-e", tonemap_options.exposure, "Tonemap exposure");
     parser.add_flag(
-        "--filmic,!--no-filmic,-f", tonemap_options.filmic, "Tonemap uses filmic curve");
+        "--srgb,!--no-srgb", tonemap_options.srgb, "Tonemap to sRGB.");
+    parser.add_flag("--filmic,!--no-filmic,-f", tonemap_options.filmic,
+        "Tonemap uses filmic curve");
     parser.add_option(
         "--resize-width", resize_width, "resize size (0 to maintain aspect)");
     parser.add_option(
@@ -233,7 +235,7 @@ int main(int argc, char* argv[]) {
 
     // save
     try {
-        if(tonemap && tonemap_options.srgb) {
+        if (tonemap && tonemap_options.srgb) {
             auto linear = image<vec4f>{};
             srgb_to_linear(linear, img);
             save_image(output, linear);

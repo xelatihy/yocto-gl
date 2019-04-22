@@ -41,12 +41,12 @@ struct image_stats {
 
 struct app_image {
     // original data
-    string       name     = "";
-    string       filename = "";
-    string       outname  = "";
+    string name     = "";
+    string filename = "";
+    string outname  = "";
 
     // image data
-    image<vec4f> img      = {};
+    image<vec4f> img = {};
 
     // diplay image
     image<vec4f>   display = {};
@@ -89,7 +89,7 @@ struct app_state {
 // compute min/max
 void compute_image_stats(
     image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
-    auto timer = log_timed("computing stats");
+    auto timer     = log_timed("computing stats");
     auto max_histo = linear_hdr ? 8 : 1;
     stats.bounds   = invalid_bbox4f;
     stats.average  = zero4f;
@@ -107,7 +107,7 @@ void compute_image_stats(
 }
 
 void update_display_async(app_image& img) {
-    auto timer = log_timed("rendering {}", get_filename(img.filename));
+    auto timer       = log_timed("rendering {}", get_filename(img.filename));
     img.display_done = false;
     img.texture_done = false;
     auto regions     = vector<image_region>{};
@@ -133,8 +133,8 @@ void update_display_async(app_image& img) {
 
 // load image
 void load_image_async(app_image& img) {
-    auto timer = log_timed("loading {}", get_filename(img.filename));
-    img.name = get_basename(img.filename) + " [loading]";
+    auto timer       = log_timed("loading {}", get_filename(img.filename));
+    img.name         = get_basename(img.filename) + " [loading]";
     img.load_done    = false;
     img.display_done = false;
     img.texture_done = false;
@@ -142,10 +142,11 @@ void load_image_async(app_image& img) {
     img.img          = {};
     try {
         load_image(img.filename, img.img);
-        img.name = get_filename(img.filename) + format(" [{}x{}]", img.img.size().x, img.img.size().y);
+        img.name = get_filename(img.filename) +
+                   format(" [{}x{}]", img.img.size().x, img.img.size().y);
     } catch (const std::exception& e) {
         img.error_msg = e.what();
-        img.name = get_filename(img.filename) + " [error]";
+        img.name      = get_filename(img.filename) + " [error]";
         return;
     }
     compute_image_stats(
@@ -345,7 +346,8 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
     for (auto path : paths) {
         add_new_image(app, path, "");
-        app.imgs.back().load_thread  = thread([&img = app.imgs.back()]() { load_image_async(img); });
+        app.imgs.back().load_thread = thread(
+            [& img = app.imgs.back()]() { load_image_async(img); });
     }
 }
 
@@ -361,11 +363,12 @@ void run_ui(app_state& app) {
     init_opengl_widgets(win);
 
     // setup logging
-    set_log_callback([&win](const string& msg){ add_log_opengl_widget(win, msg.c_str()); });
+    set_log_callback(
+        [&win](const string& msg) { add_log_opengl_widget(win, msg.c_str()); });
 
     // load images
-    for(auto& img : app.imgs) {
-        img.load_thread  = thread([&img]() { load_image_async(img); });
+    for (auto& img : app.imgs) {
+        img.load_thread = thread([&img]() { load_image_async(img); });
     }
 
     // window values

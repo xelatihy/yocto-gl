@@ -81,6 +81,7 @@
 #include <climits>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -90,7 +91,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <cstring>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
