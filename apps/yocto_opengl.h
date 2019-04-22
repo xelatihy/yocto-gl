@@ -373,14 +373,6 @@ inline bool draw_combobox_opengl_widget(const opengl_window& win,
         win, lbl, idx, (int)vals.size(),
         [&](int idx) { return vals[idx].uri.c_str(); }, include_null);
 }
-template <typename T>
-inline bool draw_combobox_opengl_widget(const opengl_window& win,
-    const char* lbl, int& idx, const deque<T>& vals,
-    bool include_null = false) {
-    return draw_combobox_opengl_widget(
-        win, lbl, idx, (int)vals.size(),
-        [&](int idx) { return vals[idx].name.c_str(); }, include_null);
-}
 
 void begin_child_opengl_widget(
     const opengl_window& win, const char* lbl, const vec2i& size);

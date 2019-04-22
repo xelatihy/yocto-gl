@@ -81,9 +81,8 @@ struct app_image {
 };
 
 struct app_state {
-    // images
-    deque<app_image> imgs;
-    int              img_id = 0;
+    vector<shared_ptr<app_image>> images;
+    int              selected = -1;
 };
 
 // compute min/max
@@ -177,8 +176,8 @@ void save_image_async(app_image& img) {
 // add a new image
 void add_new_image(app_state& app, const string& filename,
     const string& outname, const tonemap_image_options& tonemap_options = {}) {
-    app.imgs.emplace_back();
-    auto& img    = app.imgs.back();
+    app.images.push_back(make_shared<app_image>());
+    auto& img    = *app.images.back();
     img.filename = filename;
     img.outname  = (outname == "") ? get_noextension(filename) + ".display.png"
                                   : outname;
@@ -189,7 +188,7 @@ void add_new_image(app_state& app, const string& filename,
     }
     img.load_done    = false;
     img.display_done = false;
-    app.img_id       = (int)app.imgs.size() - 1;
+    app.selected       = (int)app.images.size() - 1;
 }
 
 void draw_opengl_widgets(const opengl_window& win) {
@@ -200,7 +199,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "save")) {
-            auto& img = app.imgs.at(app.img_id);
+            auto& img = *app.images.at(app.selected);
             if (img.display_done) {
                 img.save_thread = thread(
                     [&img]() { save_image_async(img); });
@@ -214,9 +213,9 @@ void draw_opengl_widgets(const opengl_window& win) {
             set_close_opengl_window(win, true);
         }
         draw_combobox_opengl_widget(
-            win, "image", app.img_id, app.imgs, false);
+            win, "image", app.selected, (int)app.images.size(), [&app](int idx) { return app.images[idx]->name.c_str(); }, false);
         if (begin_header_opengl_widget(win, "tonemap")) {
-            auto& img = app.imgs.at(app.img_id);
+            auto& img = *app.images.at(app.selected);
             auto options = img.tonemap_options;
             draw_slider_opengl_widget(win, "exposure", options.exposure, -5, 5);
             draw_coloredit_opengl_widget(win, "tint", options.tint);
@@ -241,7 +240,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             end_header_opengl_widget(win);
         }
         if (begin_header_opengl_widget(win, "colorgrade")) {
-            auto& img = app.imgs.at(app.img_id);
+            auto& img = *app.images.at(app.selected);
             auto options = img.colorgrade_options;
             draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
             draw_slider_opengl_widget(
@@ -263,7 +262,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             end_header_opengl_widget(win);
         }
         if (begin_header_opengl_widget(win, "inspect")) {
-            auto& img = app.imgs.at(app.img_id);
+            auto& img = *app.images.at(app.selected);
             draw_label_opengl_widget(
                 win, "filename", "%s", img.filename.c_str());
             draw_textinput_opengl_widget(win, "outname", img.outname);
@@ -304,7 +303,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
     }
     if (edited) {
-        auto& img = app.imgs.at(app.img_id);
+        auto& img = *app.images.at(app.selected);
         if (img.display_thread.joinable()) {
             img.display_stop = true;
             img.display_thread.join();
@@ -317,7 +316,7 @@ void draw_opengl_widgets(const opengl_window& win) {
 
 void draw(const opengl_window& win) {
     auto& app      = *(app_state*)get_opengl_user_pointer(win);
-    auto& img      = app.imgs.at(app.img_id);
+    auto& img      = *app.images.at(app.selected);
     auto  win_size = get_opengl_window_size(win);
     auto  fb_size  = get_opengl_framebuffer_size(win);
     set_opengl_viewport(fb_size);
@@ -356,17 +355,15 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
     for (auto path : paths) {
         add_new_image(app, path, "");
-        app.imgs.back().load_thread = thread(
-            [& img = app.imgs.back()]() { load_image_async(img); });
+        app.images.back()->load_thread = thread(
+            [img = app.images.back()]() { load_image_async(*img); });
     }
 }
 
 void run_ui(app_state& app) {
     // window
-    auto& img = app.imgs.at(app.img_id);
     auto  win = opengl_window();
-    init_opengl_window(
-        win, {1280, 720}, "yimview | " + app.imgs.front().name, &app, draw);
+    init_opengl_window(win, {1280, 720}, "yimview", &app, draw);
     set_drop_opengl_callback(win, drop_callback);
 
     // init widgets
@@ -377,8 +374,8 @@ void run_ui(app_state& app) {
         [&win](const string& msg) { add_log_opengl_widget(win, msg.c_str()); });
 
     // load images
-    for (auto& img : app.imgs) {
-        img.load_thread = thread([&img]() { load_image_async(img); });
+    for (auto& img : app.images) {
+        img->load_thread = thread([img]() { load_image_async(*img); });
     }
 
     // window values
@@ -391,10 +388,14 @@ void run_ui(app_state& app) {
         auto widgets_active = get_opengl_widgets_active(win);
 
         // handle mouse
-        if (mouse_left && !widgets_active)
+        if (mouse_left && !widgets_active) {
+            auto& img = *app.images.at(app.selected);
             img.image_center += mouse_pos - last_pos;
-        if (mouse_right && !widgets_active)
+        }
+        if (mouse_right && !widgets_active) {
+            auto& img = *app.images.at(app.selected);
             img.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+        }
 
         // update
         update(app);
@@ -439,7 +440,7 @@ int main(int argc, char* argv[]) {
     // loading images
     for (auto filename : filenames)
         add_new_image(app, filename, outfilename, tonemap_options);
-    app.img_id = 0;
+    app.selected = 0;
 
     // run ui
     run_ui(app);
