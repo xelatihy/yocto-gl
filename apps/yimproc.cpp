@@ -233,7 +233,13 @@ int main(int argc, char* argv[]) {
 
     // save
     try {
-        save_image(output, img);
+        if(tonemap && tonemap_options.srgb) {
+            auto linear = image<vec4f>{};
+            srgb_to_linear(linear, img);
+            save_image(output, linear);
+        } else {
+            save_image(output, img);
+        }
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }
