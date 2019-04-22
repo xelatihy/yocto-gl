@@ -195,24 +195,24 @@ void add_new_image(app_state& app, const string& filename,
 void draw_opengl_widgets(const opengl_window& win) {
     auto& app    = *(app_state*)get_opengl_user_pointer(win);
     auto  edited = false;
-    begin_opengl_widgets_frame(win);
     if (begin_opengl_widgets_window(win, "yimview")) {
-        auto& img = app.imgs.at(app.img_id);
-        if (begin_header_opengl_widget(win, "image")) {
-            draw_combobox_opengl_widget(
-                win, "image", app.img_id, app.imgs, false);
-            draw_label_opengl_widget(
-                win, "filename", "%s", img.filename.c_str());
-            draw_textinput_opengl_widget(win, "outname", img.outname);
-            if (draw_button_opengl_widget(win, "save display")) {
-                if (img.display_done) {
-                    img.save_thread = thread(
-                        [&img]() { save_image_async(img); });
-                }
-            }
-            end_header_opengl_widget(win);
+        if (draw_button_opengl_widget(win, "load")) {
         }
+        if (draw_button_opengl_widget(win, "save")) {
+            auto& img = app.imgs.at(app.img_id);
+            if (img.display_done) {
+                img.save_thread = thread(
+                    [&img]() { save_image_async(img); });
+            }
+        }
+        if (draw_button_opengl_widget(win, "close")) {
+        }
+        if (draw_button_opengl_widget(win, "quit")) {
+        }
+        draw_combobox_opengl_widget(
+            win, "image", app.img_id, app.imgs, false);
         if (begin_header_opengl_widget(win, "tonemap")) {
+            auto& img = app.imgs.at(app.img_id);
             auto options = img.tonemap_options;
             draw_slider_opengl_widget(win, "exposure", options.exposure, -5, 5);
             draw_coloredit_opengl_widget(win, "tint", options.tint);
@@ -237,6 +237,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             end_header_opengl_widget(win);
         }
         if (begin_header_opengl_widget(win, "colorgrade")) {
+            auto& img = app.imgs.at(app.img_id);
             auto options = img.colorgrade_options;
             draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
             draw_slider_opengl_widget(
@@ -258,6 +259,10 @@ void draw_opengl_widgets(const opengl_window& win) {
             end_header_opengl_widget(win);
         }
         if (begin_header_opengl_widget(win, "inspect")) {
+            auto& img = app.imgs.at(app.img_id);
+            draw_label_opengl_widget(
+                win, "filename", "%s", img.filename.c_str());
+            draw_textinput_opengl_widget(win, "outname", img.outname);
             draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
             draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
             auto mouse_pos = get_opengl_mouse_pos(win);
@@ -294,7 +299,6 @@ void draw_opengl_widgets(const opengl_window& win) {
             draw_log_opengl_widget(win);
         }
     }
-    end_opengl_widgets_frame(win);
     if (edited) {
         auto& img = app.imgs.at(app.img_id);
         if (img.display_thread.joinable()) {
@@ -336,7 +340,9 @@ void draw(const opengl_window& win) {
             img.image_scale);
         set_opengl_blending(false);
     }
+    begin_opengl_widgets_frame(win);
     draw_opengl_widgets(win);
+    end_opengl_widgets_frame(win);
     swap_opengl_buffers(win);
 }
 
