@@ -82,7 +82,7 @@ struct app_image {
 
 struct app_state {
     vector<shared_ptr<app_image>> images;
-    int              selected = -1;
+    int                           selected = -1;
 };
 
 // compute min/max
@@ -188,119 +188,111 @@ void add_new_image(app_state& app, const string& filename,
     }
     img.load_done    = false;
     img.display_done = false;
-    app.selected       = (int)app.images.size() - 1;
+    app.selected     = (int)app.images.size() - 1;
 }
 
 void draw_opengl_widgets(const opengl_window& win) {
     auto& app    = *(app_state*)get_opengl_user_pointer(win);
     auto  edited = false;
-    if (begin_opengl_widgets_window(win, "yimview")) {
-        if (draw_button_opengl_widget(win, "load")) {
+    if (!begin_opengl_widgets_window(win, "yimview")) return;
+    if (draw_button_opengl_widget(win, "load")) {
+    }
+    continue_opengl_widget_line(win);
+    if (draw_button_opengl_widget(win, "save")) {
+        auto& img = *app.images.at(app.selected);
+        if (img.display_done) {
+            img.save_thread = thread([&img]() { save_image_async(img); });
         }
+    }
+    continue_opengl_widget_line(win);
+    if (draw_button_opengl_widget(win, "close")) {
+    }
+    continue_opengl_widget_line(win);
+    if (draw_button_opengl_widget(win, "quit")) {
+        set_close_opengl_window(win, true);
+    }
+    draw_combobox_opengl_widget(
+        win, "image", app.selected, (int)app.images.size(),
+        [&app](int idx) { return app.images[idx]->name.c_str(); }, false);
+    if (begin_header_opengl_widget(win, "tonemap")) {
+        auto& img     = *app.images.at(app.selected);
+        auto  options = img.tonemap_options;
+        draw_slider_opengl_widget(win, "exposure", options.exposure, -5, 5);
+        draw_coloredit_opengl_widget(win, "tint", options.tint);
+        draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
+        draw_slider_opengl_widget(
+            win, "logcontrast", options.logcontrast, 0, 1);
+        draw_slider_opengl_widget(win, "saturation", options.saturation, 0, 1);
+        draw_checkbox_opengl_widget(win, "filmic", options.filmic);
         continue_opengl_widget_line(win);
-        if (draw_button_opengl_widget(win, "save")) {
-            auto& img = *app.images.at(app.selected);
-            if (img.display_done) {
-                img.save_thread = thread(
-                    [&img]() { save_image_async(img); });
-            }
-        }
+        draw_checkbox_opengl_widget(win, "srgb", options.srgb);
         continue_opengl_widget_line(win);
-        if (draw_button_opengl_widget(win, "close")) {
+        if (draw_button_opengl_widget(win, "auto wb")) {
+            edited       = true;
+            auto wb      = 1 / xyz(img.image_stats.average);
+            options.tint = wb / max(wb);
         }
-        continue_opengl_widget_line(win);
-        if (draw_button_opengl_widget(win, "quit")) {
-            set_close_opengl_window(win, true);
+        if (options != img.tonemap_options) {
+            edited              = true;
+            img.tonemap_options = options;
         }
-        draw_combobox_opengl_widget(
-            win, "image", app.selected, (int)app.images.size(), [&app](int idx) { return app.images[idx]->name.c_str(); }, false);
-        if (begin_header_opengl_widget(win, "tonemap")) {
-            auto& img = *app.images.at(app.selected);
-            auto options = img.tonemap_options;
-            draw_slider_opengl_widget(win, "exposure", options.exposure, -5, 5);
-            draw_coloredit_opengl_widget(win, "tint", options.tint);
-            draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
-            draw_slider_opengl_widget(
-                win, "logcontrast", options.logcontrast, 0, 1);
-            draw_slider_opengl_widget(
-                win, "saturation", options.saturation, 0, 1);
-            draw_checkbox_opengl_widget(win, "filmic", options.filmic);
-            continue_opengl_widget_line(win);
-            draw_checkbox_opengl_widget(win, "srgb", options.srgb);
-            continue_opengl_widget_line(win);
-            if (draw_button_opengl_widget(win, "auto wb")) {
-                edited       = true;
-                auto wb      = 1 / xyz(img.image_stats.average);
-                options.tint = wb / max(wb);
-            }
-            if (options != img.tonemap_options) {
-                edited              = true;
-                img.tonemap_options = options;
-            }
-            end_header_opengl_widget(win);
+        end_header_opengl_widget(win);
+    }
+    if (begin_header_opengl_widget(win, "colorgrade")) {
+        auto& img     = *app.images.at(app.selected);
+        auto  options = img.colorgrade_options;
+        draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
+        draw_slider_opengl_widget(win, "ldr shadows", options.shadows, 0, 1);
+        draw_slider_opengl_widget(win, "ldr midtones", options.midtones, 0, 1);
+        draw_slider_opengl_widget(win, "highlights", options.highlights, 0, 1);
+        draw_coloredit_opengl_widget(
+            win, "shadows color", options.shadows_color);
+        draw_coloredit_opengl_widget(
+            win, "midtones color", options.midtones_color);
+        draw_coloredit_opengl_widget(
+            win, "highlights color", options.highlights_color);
+        if (options != img.colorgrade_options) {
+            edited                 = true;
+            img.colorgrade_options = options;
         }
-        if (begin_header_opengl_widget(win, "colorgrade")) {
-            auto& img = *app.images.at(app.selected);
-            auto options = img.colorgrade_options;
-            draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
-            draw_slider_opengl_widget(
-                win, "ldr shadows", options.shadows, 0, 1);
-            draw_slider_opengl_widget(
-                win, "ldr midtones", options.midtones, 0, 1);
-            draw_slider_opengl_widget(
-                win, "highlights", options.highlights, 0, 1);
-            draw_coloredit_opengl_widget(
-                win, "shadows color", options.shadows_color);
-            draw_coloredit_opengl_widget(
-                win, "midtones color", options.midtones_color);
-            draw_coloredit_opengl_widget(
-                win, "highlights color", options.highlights_color);
-            if (options != img.colorgrade_options) {
-                edited                 = true;
-                img.colorgrade_options = options;
-            }
-            end_header_opengl_widget(win);
+        end_header_opengl_widget(win);
+    }
+    if (begin_header_opengl_widget(win, "inspect")) {
+        auto& img = *app.images.at(app.selected);
+        draw_label_opengl_widget(win, "filename", "%s", img.filename.c_str());
+        draw_textinput_opengl_widget(win, "outname", img.outname);
+        draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
+        draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
+        auto mouse_pos = get_opengl_mouse_pos(win);
+        auto ij        = get_image_coords(
+            mouse_pos, img.image_center, img.image_scale, img.img.size());
+        draw_dragger_opengl_widget(win, "mouse", ij);
+        auto img_pixel = zero4f, display_pixel = zero4f;
+        if (ij.x >= 0 && ij.x < img.img.size().x && ij.y >= 0 &&
+            ij.y < img.img.size().y) {
+            img_pixel     = img.img[{ij.x, ij.y}];
+            display_pixel = img.display[{ij.x, ij.y}];
         }
-        if (begin_header_opengl_widget(win, "inspect")) {
-            auto& img = *app.images.at(app.selected);
-            draw_label_opengl_widget(
-                win, "filename", "%s", img.filename.c_str());
-            draw_textinput_opengl_widget(win, "outname", img.outname);
-            draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
-            draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
-            auto mouse_pos = get_opengl_mouse_pos(win);
-            auto ij        = get_image_coords(
-                mouse_pos, img.image_center, img.image_scale, img.img.size());
-            draw_dragger_opengl_widget(win, "mouse", ij);
-            auto img_pixel = zero4f, display_pixel = zero4f;
-            if (ij.x >= 0 && ij.x < img.img.size().x && ij.y >= 0 &&
-                ij.y < img.img.size().y) {
-                img_pixel     = img.img[{ij.x, ij.y}];
-                display_pixel = img.display[{ij.x, ij.y}];
-            }
-            draw_coloredit_opengl_widget(win, "image", img_pixel);
-            draw_dragger_opengl_widget(win, "display", display_pixel);
-            auto img_stats = (img.load_done) ? img.image_stats : image_stats{};
-            draw_dragger_opengl_widget(win, "image min", img_stats.bounds.min);
-            draw_dragger_opengl_widget(win, "image max", img_stats.bounds.max);
-            draw_dragger_opengl_widget(win, "image avg", img_stats.average);
-            draw_histogram_opengl_widget(
-                win, "image histo", img_stats.histogram);
-            auto display_stats = (img.load_done) ? img.display_stats
-                                                 : image_stats{};
-            draw_dragger_opengl_widget(
-                win, "display min", display_stats.bounds.min);
-            draw_dragger_opengl_widget(
-                win, "display max", display_stats.bounds.max);
-            draw_dragger_opengl_widget(
-                win, "display avg", display_stats.average);
-            draw_histogram_opengl_widget(
-                win, "display histo", display_stats.histogram);
-            end_header_opengl_widget(win);
-        }
-        if (begin_header_opengl_widget(win, "log")) {
-            draw_log_opengl_widget(win);
-        }
+        draw_coloredit_opengl_widget(win, "image", img_pixel);
+        draw_dragger_opengl_widget(win, "display", display_pixel);
+        auto img_stats = (img.load_done) ? img.image_stats : image_stats{};
+        draw_dragger_opengl_widget(win, "image min", img_stats.bounds.min);
+        draw_dragger_opengl_widget(win, "image max", img_stats.bounds.max);
+        draw_dragger_opengl_widget(win, "image avg", img_stats.average);
+        draw_histogram_opengl_widget(win, "image histo", img_stats.histogram);
+        auto display_stats = (img.load_done) ? img.display_stats
+                                             : image_stats{};
+        draw_dragger_opengl_widget(
+            win, "display min", display_stats.bounds.min);
+        draw_dragger_opengl_widget(
+            win, "display max", display_stats.bounds.max);
+        draw_dragger_opengl_widget(win, "display avg", display_stats.average);
+        draw_histogram_opengl_widget(
+            win, "display histo", display_stats.histogram);
+        end_header_opengl_widget(win);
+    }
+    if (begin_header_opengl_widget(win, "log")) {
+        draw_log_opengl_widget(win);
     }
     if (edited) {
         auto& img = *app.images.at(app.selected);
@@ -362,7 +354,7 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 
 void run_ui(app_state& app) {
     // window
-    auto  win = opengl_window();
+    auto win = opengl_window();
     init_opengl_window(win, {1280, 720}, "yimview", &app, draw);
     set_drop_opengl_callback(win, drop_callback);
 
