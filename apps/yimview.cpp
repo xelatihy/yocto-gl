@@ -198,14 +198,16 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (draw_button_opengl_widget(win, "load")) {
     }
     continue_opengl_widget_line(win);
-    if (draw_button_opengl_widget(win, "save")) {
+    if (draw_button_opengl_widget(win, "save") && app.selected >= 0) {
         auto& img = *app.images.at(app.selected);
         if (img.display_done) {
             img.save_thread = thread([&img]() { save_image_async(img); });
         }
     }
     continue_opengl_widget_line(win);
-    if (draw_button_opengl_widget(win, "close")) {
+    if (draw_button_opengl_widget(win, "close") && app.selected >= 0) {
+        app.images.erase(app.images.begin()+app.selected);
+        app.selected = app.images.empty() ? -1 : 0;
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "quit")) {
