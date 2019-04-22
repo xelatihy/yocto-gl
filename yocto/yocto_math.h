@@ -87,6 +87,7 @@
 #include <memory>
 #include <numeric>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -127,12 +128,15 @@ using std::out_of_range;
 using std::pair;
 using std::runtime_error;
 using std::string;
+using std::string_view;
 using std::tuple;
 using std::unique_ptr;
+using std::shared_ptr;
 using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 using namespace std::literals::string_literals;
+using namespace std::literals::string_view_literals;
 
 }  // namespace yocto
 
