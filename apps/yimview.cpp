@@ -205,6 +205,7 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (draw_button_opengl_widget(win, "quit")) {
         set_close_opengl_window(win, true);
     }
+    if(app.images.empty()) return;
     draw_combobox_opengl_widget(
         win, "image", app.selected, (int)app.images.size(),
         [&app](int idx) { return app.images[idx].name.c_str(); }, false);
