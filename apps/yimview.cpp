@@ -97,7 +97,6 @@ struct app_state {
 // compute min/max
 void compute_image_stats(
     image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
-    // auto timer     = log_timed("computing stats");
     auto max_histo = linear_hdr ? 8 : 1;
     stats.bounds   = invalid_bbox4f;
     stats.average  = zero4f;
@@ -277,8 +276,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         end_header_opengl_widget(win);
     }
     if (edited) {
-        if (img.load_done)
-        img.task_queue.emplace_back(app_task_type::display);
+        if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
     }
 }
 
@@ -308,6 +306,23 @@ void draw(const opengl_window& win) {
 }
 
 void update(app_state& app) {
+    // remove unneeded tasks
+    for (auto& img : app.images) {
+        while (img.task_queue.size() > 1 &&
+               img.task_queue.at(0).type == app_task_type::display &&
+               img.task_queue.at(1).type == app_task_type::display) {
+            log_info("stopping rendering {}", img.filename);
+            auto& task = img.task_queue.front();
+            task.stop  = true;
+            if (task.result.valid()) {
+                try {
+                    task.result.get();
+                } catch (...) {
+                }
+            }
+            img.task_queue.pop_front();
+        }
+    }
     // schedule tasks not running
     for (auto& img : app.images) {
         if (img.task_queue.empty()) continue;
@@ -317,6 +332,7 @@ void update(app_state& app) {
         switch (task.type) {
             case app_task_type::none: break;
             case app_task_type::load: {
+                img.load_done = false;
                 task.result = async([&img]() {
                     load_app_image(img.filename, img.img, img.image_stats);
                 });
@@ -326,6 +342,7 @@ void update(app_state& app) {
                     [&img]() { save_app_image(img.outname, img.display); });
             } break;
             case app_task_type::display: {
+                img.display_done = false;
                 task.result = async([&img, &task]() {
                     update_app_display(img.filename, img.img, img.display,
                         img.display_stats, img.tonemap_options,
@@ -362,7 +379,8 @@ void update(app_state& app) {
                     img.name = format("{} [{}x{}]", get_filename(img.filename),
                         img.img.size().x, img.img.size().y);
                     img.display = img.img;
-                    init_opengl_texture(img.gl_txt, img.display, false, false, false);
+                    init_opengl_texture(
+                        img.gl_txt, img.display, false, false, false);
                     img.task_queue.emplace_back(app_task_type::display);
                 } catch (std::exception& e) {
                     log_error(e.what());
