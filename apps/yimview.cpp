@@ -42,13 +42,12 @@ struct image_stats {
 enum struct app_task_type { none, load, save, display };
 
 struct app_task {
-    app_task_type                  type    = app_task_type::none;
-    bool                           running = false;
-    future<void>                   result = {};
-    atomic<bool>                   stop = false;
+    app_task_type                  type;
+    future<void>                   result;
+    atomic<bool>                   stop;
     concurrent_queue<image_region> queue;
 
-    app_task(app_task_type type) : type{type}, running{false} {}
+    app_task(app_task_type type) : type{type}, result{}, stop{false}, queue{} {}
     ~app_task() {
         stop = true;
         if (result.valid()) {
@@ -122,10 +121,10 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     concurrent_queue<image_region>& queue) {
     auto timer   = log_timed("rendering {}", get_filename(filename));
     auto regions = vector<image_region>{};
-    make_image_regions(regions, img.size());
+    make_image_regions(regions, img.size(), 128);
     parallel_foreach(
         regions,
-        [&img, &display, &queue,
+        [&img, &display, &queue, 
             colorgrade = colorgrade_options != colorgrade_image_options{},
             tonemap_options, colorgrade_options](const image_region& region) {
             tonemap_image_region(display, region, img, tonemap_options);
@@ -293,8 +292,7 @@ void draw(const opengl_window& win) {
         if (!img.gl_txt) {
             init_opengl_texture(
                 img.gl_txt, img.img.size(), false, false, false, false);
-        } else if (!img.task_queue.empty() &&
-                   img.task_queue.front().type == app_task_type::display) {
+        } else if (!img.task_queue.empty() && img.task_queue.front().type == app_task_type::display) {
             auto region = image_region{};
             while (img.task_queue.front().queue.try_pop(region)) {
                 update_opengl_texture_region(
@@ -326,9 +324,9 @@ void update(app_state& app) {
     for (auto& img : app.images) {
         if (img.task_queue.empty()) continue;
         auto& task = img.task_queue.front();
-        if (task.running) continue;
+        if (task.result.valid()) continue;
+        log_info("starting {} {}", img.filename, (int)task.type);
         task.stop = false;
-        task.running = true;
         switch (task.type) {
             case app_task_type::none: break;
             case app_task_type::load: {
@@ -353,7 +351,10 @@ void update(app_state& app) {
     for (auto& img : app.images) {
         if (img.task_queue.empty()) continue;
         auto& task = img.task_queue.front();
-        if (!task.result.valid() || !task.queue.empty()) continue;
+        if (!task.result.valid()) continue;
+        if (!task.queue.empty()) continue;
+        if (task.result.wait_for(std::chrono::nanoseconds(10)) != std::future_status::ready) continue;
+        log_info("finishing {} {}", img.filename, (int)task.type);
         switch (task.type) {
             case app_task_type::none: break;
             case app_task_type::load: {
