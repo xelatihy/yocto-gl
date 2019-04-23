@@ -308,12 +308,12 @@ void draw_opengl_widgets(const opengl_window& win) {
 
 void draw(const opengl_window& win) {
     auto& app      = *(app_state*)get_opengl_user_pointer(win);
-    auto& img      = app.images.at(app.selected);
     auto  win_size = get_opengl_window_size(win);
     auto  fb_size  = get_opengl_framebuffer_size(win);
     set_opengl_viewport(fb_size);
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-    if (img.load_done) {
+    for(auto& img : app.images) {
+        if (!img.load_done) continue;
         if (!img.gl_txt) {
             init_opengl_texture(
                 img.gl_txt, img.img.size(), false, false, false, false);
@@ -325,15 +325,18 @@ void draw(const opengl_window& win) {
             }
         }
     }
-    if (img.gl_txt) {
-        update_image_view(img.image_center, img.image_scale, img.display.size(),
-            win_size, img.zoom_to_fit);
-        draw_opengl_image_background(img.gl_txt, win_size.x, win_size.y,
-            img.image_center, img.image_scale);
-        set_opengl_blending(true);
-        draw_opengl_image(img.gl_txt, win_size.x, win_size.y, img.image_center,
-            img.image_scale);
-        set_opengl_blending(false);
+    if(!app.images.empty() && app.selected >= 0) {
+        auto& img      = app.images.at(app.selected);
+        if (img.gl_txt) {
+            update_image_view(img.image_center, img.image_scale, img.display.size(),
+                win_size, img.zoom_to_fit);
+            draw_opengl_image_background(img.gl_txt, win_size.x, win_size.y,
+                img.image_center, img.image_scale);
+            set_opengl_blending(true);
+            draw_opengl_image(img.gl_txt, win_size.x, win_size.y, img.image_center,
+                img.image_scale);
+            set_opengl_blending(false);
+        }
     }
     begin_opengl_widgets_frame(win);
     draw_opengl_widgets(win);
