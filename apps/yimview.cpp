@@ -327,7 +327,7 @@ void draw(const opengl_window& win) {
     }
     if(!app.images.empty() && app.selected >= 0) {
         auto& img      = app.images.at(app.selected);
-        if (img.gl_txt) {
+        if (img.load_done && img.gl_txt) {
             update_image_view(img.image_center, img.image_scale, img.display.size(),
                 win_size, img.zoom_to_fit);
             draw_opengl_image_background(img.gl_txt, win_size.x, win_size.y,
