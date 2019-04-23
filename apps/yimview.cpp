@@ -80,7 +80,7 @@ struct app_image {
     colorgrade_image_options colorgrade_options = {};
 
     // computation futures
-    atomic<bool>    load_done, display_done;
+    bool    load_done = false, display_done = false;
     deque<app_task> task_queue;
 
     // viewing properties
@@ -140,7 +140,7 @@ void update_app_display(const string& filename, const image<vec4f>& img,
 // load image
 void load_app_image(
     const string& filename, image<vec4f>& img, image_stats& stats) {
-    img        = {};
+    img = {};
     load_image(filename, img);
     compute_image_stats(stats, img, is_hdr_filename(filename));
 }
@@ -175,10 +175,10 @@ void draw_opengl_widgets(const opengl_window& win) {
     auto& app    = *(app_state*)get_opengl_user_pointer(win);
     auto  edited = false;
     if (!begin_opengl_widgets_window(win, "yimview")) return;
-    if(!app.errors.empty()) open_modal_opengl_widget(win, "error");
-    if(begin_modal_opengl_widget(win, "error")) {
+    if (!app.errors.empty()) open_modal_opengl_widget(win, "error");
+    if (begin_modal_opengl_widget(win, "error")) {
         draw_text_opengl_widget(win, app.errors.front());
-        if(draw_button_opengl_widget(win, "ok")) {
+        if (draw_button_opengl_widget(win, "ok")) {
             app.errors.pop_front();
             close_modal_opengl_widget(win);
         }
@@ -194,8 +194,12 @@ void draw_opengl_widgets(const opengl_window& win) {
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "close") && app.selected >= 0) {
-        // app.images.erase(app.images.begin()+app.selected);
-        // app.selected = app.images.empty() ? -1 : 0;
+        auto& img = app.images.at(app.selected);
+        if (img.task_queue.empty()) {
+            app.images.erase(app.images.begin() + app.selected);
+            app.selected = app.images.empty() ? -1 : 0;
+            return;
+        }
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "quit")) {
@@ -342,7 +346,7 @@ void update(app_state& app) {
             case app_task_type::load: {
                 log_info("start loading {}", img.filename);
                 img.load_done = false;
-                task.result = async([&img]() {
+                task.result   = async([&img]() {
                     load_app_image(img.filename, img.img, img.image_stats);
                 });
             } break;
@@ -354,7 +358,7 @@ void update(app_state& app) {
             case app_task_type::display: {
                 log_info("start rendering {}", img.filename);
                 img.display_done = false;
-                task.result = async([&img, &task]() {
+                task.result      = async([&img, &task]() {
                     update_app_display(img.filename, img.img, img.display,
                         img.display_stats, img.tonemap_options,
                         img.colorgrade_options, task.stop, task.queue);
