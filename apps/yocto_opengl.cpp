@@ -38,6 +38,7 @@
 #include <GLFW/glfw3.h>
 
 #include "ext/imgui/imgui.h"
+#include "ext/imgui/imgui_internal.h"
 #include "ext/imgui/imgui_impl_glfw.h"
 #include "ext/imgui/imgui_impl_opengl3.h"
 
@@ -764,6 +765,19 @@ void end_tabitem_opengl_widget(const opengl_window& win) {
 
 bool draw_button_opengl_widget(const opengl_window& win, const char* lbl) {
     return ImGui::Button(lbl);
+}
+bool draw_button_opengl_widget(
+    const opengl_window& win, const char* lbl, bool enabled) {
+    if (enabled) {
+        return ImGui::Button(lbl);
+    } else {
+        ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        auto ok = ImGui::Button(lbl);
+        ImGui::PopItemFlag();
+        ImGui::PopStyleVar();
+        return ok;
+    }
 }
 
 void draw_label_opengl_widget(

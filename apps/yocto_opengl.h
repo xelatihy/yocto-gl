@@ -281,6 +281,7 @@ void draw_separator_opengl_widget(const opengl_window& win);
 void continue_opengl_widget_line(const opengl_window& win);
 
 bool draw_button_opengl_widget(const opengl_window& win, const char* lbl);
+bool draw_button_opengl_widget(const opengl_window& win, const char* lbl, bool enabled);
 
 bool draw_textinput_opengl_widget(
     const opengl_window& win, const char* lbl, string& value);
