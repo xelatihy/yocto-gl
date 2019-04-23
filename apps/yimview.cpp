@@ -327,7 +327,6 @@ void update(app_state& app) {
         if (img.task_queue.empty()) continue;
         auto& task = img.task_queue.front();
         if (task.result.valid()) continue;
-        log_info("starting {} {}", img.filename, (int)task.type);
         task.stop = false;
         switch (task.type) {
             case app_task_type::none: break;
@@ -353,12 +352,10 @@ void update(app_state& app) {
     for (auto& img : app.images) {
         if (img.task_queue.empty()) continue;
         auto& task = img.task_queue.front();
-        if (!task.result.valid()) continue;
-        if (!task.queue.empty()) continue;
-        if (task.result.wait_for(std::chrono::nanoseconds(10)) !=
-            std::future_status::ready)
+        if (!task.result.valid() || !task.queue.empty() ||
+            task.result.wait_for(std::chrono::nanoseconds(10)) !=
+                std::future_status::ready)
             continue;
-        log_info("finishing {} {}", img.filename, (int)task.type);
         switch (task.type) {
             case app_task_type::none: break;
             case app_task_type::load: {
