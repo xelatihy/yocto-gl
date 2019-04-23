@@ -288,20 +288,6 @@ void draw(const opengl_window& win) {
     auto  fb_size  = get_opengl_framebuffer_size(win);
     set_opengl_viewport(fb_size);
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-    for (auto& img : app.images) {
-        if (!img.load_done) continue;
-        if (!img.gl_txt) {
-            init_opengl_texture(
-                img.gl_txt, img.img.size(), false, false, false, false);
-        } else if (!img.task_queue.empty() &&
-                   img.task_queue.front().type == app_task_type::display) {
-            auto region = image_region{};
-            while (img.task_queue.front().queue.try_pop(region)) {
-                update_opengl_texture_region(
-                    img.gl_txt, img.display, region, false);
-            }
-        }
-    }
     if (!app.images.empty() && app.selected >= 0) {
         auto& img = app.images.at(app.selected);
         if (img.load_done && img.gl_txt) {
@@ -348,6 +334,17 @@ void update(app_state& app) {
             } break;
         }
     }
+    // consume partial results
+    for (auto& img : app.images) {
+        if (img.task_queue.empty()) continue;
+        auto& task = img.task_queue.front();
+        if (task.type != app_task_type::display || task.queue.empty()) continue;
+        auto region = image_region{};
+        while (img.task_queue.front().queue.try_pop(region)) {
+            update_opengl_texture_region(
+                img.gl_txt, img.display, region, false);
+        }
+    }
     // grab result of finished tasks
     for (auto& img : app.images) {
         if (img.task_queue.empty()) continue;
@@ -365,6 +362,7 @@ void update(app_state& app) {
                     img.name = format("{} [{}x{}]", get_filename(img.filename),
                         img.img.size().x, img.img.size().y);
                     img.display = img.img;
+                    init_opengl_texture(img.gl_txt, img.display, false, false, false);
                     img.task_queue.emplace_back(app_task_type::display);
                 } catch (std::exception& e) {
                     log_error(e.what());
