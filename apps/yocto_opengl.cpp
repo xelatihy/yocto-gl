@@ -763,6 +763,19 @@ void end_tabitem_opengl_widget(const opengl_window& win) {
     ImGui::EndTabItem();
 }
 
+void open_modal_opengl_widget(const opengl_window& win, const char* id) {
+    ImGui::OpenPopup(id);
+}
+void close_modal_opengl_widget(const opengl_window& win) {
+    ImGui::CloseCurrentPopup();
+}
+bool begin_modal_opengl_widget(const opengl_window& win, const char* id) {
+    return ImGui::BeginPopupModal(id);
+}
+void end_modal_opengl_widget(const opengl_window& win) {
+    ImGui::EndPopup();
+}
+
 bool draw_button_opengl_widget(const opengl_window& win, const char* lbl) {
     return ImGui::Button(lbl);
 }
@@ -778,6 +791,11 @@ bool draw_button_opengl_widget(
         ImGui::PopStyleVar();
         return ok;
     }
+}
+
+void draw_text_opengl_widget(
+    const opengl_window& win, const string& text) {
+    ImGui::Text("%s", text.c_str());
 }
 
 void draw_label_opengl_widget(

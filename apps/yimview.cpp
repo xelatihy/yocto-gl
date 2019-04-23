@@ -92,6 +92,7 @@ struct app_image {
 struct app_state {
     deque<app_image> images;
     int              selected = -1;
+    deque<string>    errors;
 };
 
 // compute min/max
@@ -174,6 +175,15 @@ void draw_opengl_widgets(const opengl_window& win) {
     auto& app    = *(app_state*)get_opengl_user_pointer(win);
     auto  edited = false;
     if (!begin_opengl_widgets_window(win, "yimview")) return;
+    if(!app.errors.empty()) open_modal_opengl_widget(win, "error");
+    if(begin_modal_opengl_widget(win, "error")) {
+        draw_text_opengl_widget(win, app.errors.front());
+        if(draw_button_opengl_widget(win, "ok")) {
+            app.errors.pop_front();
+            close_modal_opengl_widget(win);
+        }
+        end_modal_opengl_widget(win);
+    }
     if (draw_button_opengl_widget(win, "load")) {
     }
     continue_opengl_widget_line(win);
@@ -387,6 +397,7 @@ void update(app_state& app) {
                 } catch (std::exception& e) {
                     log_error(e.what());
                     img.name = format("{} [error]", get_filename(img.filename));
+                    app.errors.push_back("cannot load " + img.filename);
                 }
             } break;
             case app_task_type::save: {
@@ -395,6 +406,7 @@ void update(app_state& app) {
                     log_info("done saving {}", img.outname);
                 } catch (std::exception& e) {
                     log_error(e.what());
+                    app.errors.push_back("cannot save " + img.outname);
                 }
             } break;
             case app_task_type::display: {
@@ -404,6 +416,7 @@ void update(app_state& app) {
                     log_info("done rendering {}", img.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
+                    app.errors.push_back("cannot render " + img.filename);
                 }
             } break;
         }
