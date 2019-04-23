@@ -124,7 +124,7 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     make_image_regions(regions, img.size(), 128);
     parallel_foreach(
         regions,
-        [&img, &display, &queue, 
+        [&img, &display, &queue,
             colorgrade = colorgrade_options != colorgrade_image_options{},
             tonemap_options, colorgrade_options](const image_region& region) {
             tonemap_image_region(display, region, img, tonemap_options);
@@ -162,7 +162,7 @@ void save_app_image(const string& filename, const image<vec4f>& display) {
 
 // add a new image
 void add_new_image(app_state& app, const string& filename) {
-    auto& img = app.images.emplace_back();
+    auto& img                  = app.images.emplace_back();
     img.filename               = filename;
     img.outname                = get_noextension(filename) + ".display.png";
     img.name                   = get_filename(filename);
@@ -277,7 +277,8 @@ void draw_opengl_widgets(const opengl_window& win) {
         end_header_opengl_widget(win);
     }
     // if (edited) {
-    //     if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
+    //     if (img.load_done)
+    //     img.task_queue.emplace_back(app_task_type::display);
     // }
 }
 
@@ -292,7 +293,8 @@ void draw(const opengl_window& win) {
         if (!img.gl_txt) {
             init_opengl_texture(
                 img.gl_txt, img.img.size(), false, false, false, false);
-        } else if (!img.task_queue.empty() && img.task_queue.front().type == app_task_type::display) {
+        } else if (!img.task_queue.empty() &&
+                   img.task_queue.front().type == app_task_type::display) {
             auto region = image_region{};
             while (img.task_queue.front().queue.try_pop(region)) {
                 update_opengl_texture_region(
@@ -353,7 +355,9 @@ void update(app_state& app) {
         auto& task = img.task_queue.front();
         if (!task.result.valid()) continue;
         if (!task.queue.empty()) continue;
-        if (task.result.wait_for(std::chrono::nanoseconds(10)) != std::future_status::ready) continue;
+        if (task.result.wait_for(std::chrono::nanoseconds(10)) !=
+            std::future_status::ready)
+            continue;
         log_info("finishing {} {}", img.filename, (int)task.type);
         switch (task.type) {
             case app_task_type::none: break;
@@ -361,7 +365,8 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     img.load_done = true;
-                    img.name = format("{} [{}x{}]", get_filename(img.filename), img.img.size().x, img.img.size().y);
+                    img.name = format("{} [{}x{}]", get_filename(img.filename),
+                        img.img.size().x, img.img.size().y);
                     img.display = img.img;
                     img.task_queue.emplace_back(app_task_type::display);
                 } catch (std::exception& e) {
