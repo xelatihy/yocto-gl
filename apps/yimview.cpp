@@ -276,10 +276,10 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_log_opengl_widget(win);
         end_header_opengl_widget(win);
     }
-    // if (edited) {
-    //     if (img.load_done)
-    //     img.task_queue.emplace_back(app_task_type::display);
-    // }
+    if (edited) {
+        if (img.load_done)
+        img.task_queue.emplace_back(app_task_type::display);
+    }
 }
 
 void draw(const opengl_window& win) {
