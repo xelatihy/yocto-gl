@@ -80,7 +80,7 @@ struct app_image {
     colorgrade_image_options colorgrade_options = {};
 
     // computation futures
-    bool    load_done = false, display_done = false;
+    bool            load_done = false, display_done = false;
     deque<app_task> task_queue;
 
     // viewing properties
@@ -205,7 +205,7 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (draw_button_opengl_widget(win, "quit")) {
         set_close_opengl_window(win, true);
     }
-    if(app.images.empty()) return;
+    if (app.images.empty()) return;
     draw_combobox_opengl_widget(
         win, "image", app.selected, (int)app.images.size(),
         [&app](int idx) { return app.images[idx].name.c_str(); }, false);
