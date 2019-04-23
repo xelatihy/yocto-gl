@@ -118,7 +118,6 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     const tonemap_image_options&    tonemap_options,
     const colorgrade_image_options& colorgrade_options, atomic<bool>& stop,
     concurrent_queue<image_region>& queue) {
-    auto timer   = log_timed("rendering {}", get_filename(filename));
     auto regions = vector<image_region>{};
     make_image_regions(regions, img.size(), 128);
     parallel_foreach(
@@ -140,7 +139,6 @@ void update_app_display(const string& filename, const image<vec4f>& img,
 // load image
 void load_app_image(
     const string& filename, image<vec4f>& img, image_stats& stats) {
-    auto timer = log_timed("loading {}", get_filename(filename));
     img        = {};
     load_image(filename, img);
     compute_image_stats(stats, img, is_hdr_filename(filename));
@@ -311,7 +309,7 @@ void update(app_state& app) {
         while (img.task_queue.size() > 1 &&
                img.task_queue.at(0).type == app_task_type::display &&
                img.task_queue.at(1).type == app_task_type::display) {
-            log_info("stopping rendering {}", img.filename);
+            log_info("cancel rendering {}", img.filename);
             auto& task = img.task_queue.front();
             task.stop  = true;
             if (task.result.valid()) {
@@ -332,16 +330,19 @@ void update(app_state& app) {
         switch (task.type) {
             case app_task_type::none: break;
             case app_task_type::load: {
+                log_info("start loading {}", img.filename);
                 img.load_done = false;
                 task.result = async([&img]() {
                     load_app_image(img.filename, img.img, img.image_stats);
                 });
             } break;
             case app_task_type::save: {
+                log_info("start saving {}", img.outname);
                 task.result = async(
                     [&img]() { save_app_image(img.outname, img.display); });
             } break;
             case app_task_type::display: {
+                log_info("start rendering {}", img.filename);
                 img.display_done = false;
                 task.result = async([&img, &task]() {
                     update_app_display(img.filename, img.img, img.display,
@@ -379,6 +380,7 @@ void update(app_state& app) {
                     img.name = format("{} [{}x{}]", get_filename(img.filename),
                         img.img.size().x, img.img.size().y);
                     img.display = img.img;
+                    log_info("done loading {}", img.filename);
                     init_opengl_texture(
                         img.gl_txt, img.display, false, false, false);
                     img.task_queue.emplace_back(app_task_type::display);
@@ -390,6 +392,7 @@ void update(app_state& app) {
             case app_task_type::save: {
                 try {
                     task.result.get();
+                    log_info("done saving {}", img.outname);
                 } catch (std::exception& e) {
                     log_error(e.what());
                 }
@@ -398,6 +401,7 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     img.display_done = true;
+                    log_info("done rendering {}", img.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
                 }
