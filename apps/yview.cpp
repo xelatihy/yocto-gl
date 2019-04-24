@@ -629,14 +629,13 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
 // Display a scene
 void draw_glscene(drawgl_state& state, const yocto_scene& scene,
-    const vec2i& viewport_size, const app_selection& highlighted,
+    const vec4i& viewport, const app_selection& highlighted,
     const drawgl_options& options) {
     auto& camera      = scene.cameras.at(options.camera_id);
     auto  camera_view = mat4f(inverse(camera.frame));
-    auto  camera_proj = make_perspective_mat(get_camera_fovx(camera) *
-                                                (float)viewport_size.y /
-                                                (float)viewport_size.x,
-        (float)viewport_size.x / (float)viewport_size.y, options.near_plane,
+    auto  camera_proj = make_perspective_mat(
+        get_camera_fovx(camera) * (float)viewport.w / (float)viewport.z,
+        (float)viewport.z / (float)viewport.w, options.near_plane,
         options.far_plane);
 
     bind_opengl_program(state.program);
@@ -950,13 +949,12 @@ void draw_opengl_widgets(const opengl_window& win) {
 void draw(const opengl_window& win) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
 
-    clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
-    set_opengl_viewport(get_opengl_framebuffer_size(win));
-    clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+    clear_opengl_framebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+    set_opengl_viewport(get_opengl_framebuffer_viewport(win));
     if (!app.scenes.empty() && app.selected >= 0 &&
         app.scenes[app.selected].load_done) {
         auto& scn = app.scenes[app.selected];
-        draw_glscene(scn.state, scn.scene, get_opengl_framebuffer_size(win),
+        draw_glscene(scn.state, scn.scene, get_opengl_framebuffer_viewport(win),
             scn.selection, scn.draw_options);
     }
     begin_opengl_widgets_frame(win);
@@ -1208,7 +1206,7 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 void run_ui(app_state& app) {
     // window
     auto win = opengl_window();
-    init_opengl_window(win, {1280, 720}, "yview", &app, draw);
+    init_opengl_window(win, {1280 + 320, 720}, "yview", &app, draw);
 
     // init widget
     init_opengl_widgets(win);

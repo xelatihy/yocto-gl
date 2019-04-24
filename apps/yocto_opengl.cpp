@@ -51,7 +51,7 @@ void check_opengl_error() {
     if (glGetError() != GL_NO_ERROR) print_info("gl error");
 }
 
-void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth) {
+void clear_opengl_framebuffer(const vec4f& color, bool clear_depth) {
     glClearColor(color.x, color.y, color.z, color.w);
     if (clear_depth) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -61,10 +61,8 @@ void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth) {
     }
 }
 
-void set_opengl_viewport(int x, int y, int w, int h) { glViewport(x, y, w, h); }
-
-void set_opengl_viewport(const vec2i& size) {
-    glViewport(0, 0, size.x, size.y);
+void set_opengl_viewport(const vec4i& viewport) {
+    glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
 }
 
 void set_opengl_wireframe(bool enabled) {
@@ -646,15 +644,36 @@ void set_drop_opengl_callback(
     glfwSetDropCallback(win.win, _glfw_drop_callback);
 }
 
-vec2i get_opengl_framebuffer_size(const opengl_window& win) {
+vec2i get_opengl_framebuffer_size(
+    const opengl_window& win, bool ignore_widgets) {
     auto size = zero2i;
     glfwGetFramebufferSize(win.win, &size.x, &size.y);
+    if (ignore_widgets && win.widgets_width) {
+        auto win_size = zero2i;
+        glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
+        size.x -= (int)(win.widgets_width * (float)size.x / (float)win_size.x);
+    }
     return size;
 }
 
-vec2i get_opengl_window_size(const opengl_window& win) {
+vec4i get_opengl_framebuffer_viewport(
+    const opengl_window& win, bool ignore_widgets) {
+    auto viewport = zero4i;
+    glfwGetFramebufferSize(win.win, &viewport.z, &viewport.w);
+    if (ignore_widgets && win.widgets_width) {
+        auto win_size = zero2i;
+        glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
+        auto offset = (int)(win.widgets_width * (float)viewport.z / win_size.x);
+        viewport.z -= offset;
+        if (win.widgets_left) viewport.x += offset;
+    }
+    return viewport;
+}
+
+vec2i get_opengl_window_size(const opengl_window& win, bool ignore_widgets) {
     auto size = zero2i;
     glfwGetWindowSize(win.win, &size.x, &size.y);
+    if (ignore_widgets && win.widgets_width) size.x -= win.widgets_width;
     return size;
 }
 
@@ -665,10 +684,14 @@ void set_close_opengl_window(const opengl_window& win, bool close) {
     glfwSetWindowShouldClose(win.win, close ? GLFW_TRUE : GLFW_FALSE);
 }
 
-vec2f get_opengl_mouse_pos(const opengl_window& win) {
+vec2f get_opengl_mouse_pos(const opengl_window& win, bool ignore_widgets) {
     double mouse_posx, mouse_posy;
     glfwGetCursorPos(win.win, &mouse_posx, &mouse_posy);
-    return vec2f{(float)mouse_posx, (float)mouse_posy};
+    auto pos = vec2f{(float)mouse_posx, (float)mouse_posy};
+    if (ignore_widgets && win.widgets_width && win.widgets_left) {
+        pos.x -= win.widgets_width;
+    }
+    return pos;
 }
 
 bool get_opengl_mouse_left(const opengl_window& win) {
@@ -697,7 +720,7 @@ void process_opengl_events(const opengl_window& win, bool wait) {
 
 void swap_opengl_buffers(const opengl_window& win) { glfwSwapBuffers(win.win); }
 
-void init_opengl_widgets(const opengl_window& win) {
+void init_opengl_widgets(opengl_window& win, int width, bool left) {
     // init widgets
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename       = nullptr;
@@ -709,6 +732,8 @@ void init_opengl_widgets(const opengl_window& win) {
     ImGui_ImplOpenGL3_Init("#version 330");
 #endif
     ImGui::StyleColorsDark();
+    win.widgets_width = width;
+    win.widgets_left  = left;
 }
 
 bool get_opengl_widgets_active(const opengl_window& win) {
@@ -717,16 +742,19 @@ bool get_opengl_widgets_active(const opengl_window& win) {
 }
 
 void begin_opengl_widgets_frame(const opengl_window& win) {
-    static auto first_time = true;
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    if (first_time) {
+    auto win_size = get_opengl_window_size(win, false);
+    if (win.widgets_left) {
         ImGui::SetNextWindowPos({0, 0});
-        ImGui::SetNextWindowSize({320, 360});
-        ImGui::SetNextWindowCollapsed(true);
-        first_time = false;
+        ImGui::SetNextWindowSize({(float)win.widgets_width, (float)win_size.y});
+    } else {
+        ImGui::SetNextWindowPos({(float)(win_size.x - win.widgets_width), 0});
+        ImGui::SetNextWindowSize({(float)win.widgets_width, (float)win_size.y});
     }
+    ImGui::SetNextWindowCollapsed(false);
+    ImGui::SetNextWindowBgAlpha(1);
 }
 
 void end_opengl_widgets_frame(const opengl_window& win) {
@@ -736,7 +764,10 @@ void end_opengl_widgets_frame(const opengl_window& win) {
 }
 
 bool begin_opengl_widgets_window(const opengl_window& win, const char* title) {
-    return ImGui::Begin(title);
+    return ImGui::Begin(title, nullptr,
+        // ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 }
 
 bool begin_header_opengl_widget(const opengl_window& win, const char* lbl) {

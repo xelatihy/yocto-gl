@@ -290,9 +290,9 @@ void draw_opengl_widgets(const opengl_window& win) {
 void draw(const opengl_window& win) {
     auto& app      = *(app_state*)get_opengl_user_pointer(win);
     auto  win_size = get_opengl_window_size(win);
-    auto  fb_size  = get_opengl_framebuffer_size(win);
-    set_opengl_viewport(fb_size);
-    clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+    auto  fb_view  = get_opengl_framebuffer_viewport(win);
+    set_opengl_viewport(fb_view);
+    clear_opengl_framebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (!app.images.empty() && app.selected >= 0) {
         auto& img = app.images.at(app.selected);
         if (img.load_done && img.gl_txt) {
@@ -461,7 +461,7 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 void run_ui(app_state& app) {
     // window
     auto win = opengl_window();
-    init_opengl_window(win, {1280, 720}, "yimview", &app, draw);
+    init_opengl_window(win, {1280 + 320, 720}, "yimview", &app, draw);
     set_drop_opengl_callback(win, drop_callback);
 
     // init widgets
