@@ -249,8 +249,11 @@ void draw_opengl_widgets(const opengl_window& win) {
         end_header_opengl_widget(win);
     }
     if (begin_header_opengl_widget(win, "inspect")) {
-        draw_label_opengl_widget(win, "filename", "%s", img.filename.c_str());
-        draw_textinput_opengl_widget(win, "outname", img.outname);
+        draw_label_opengl_widget(win, "image", get_filename(img.filename));
+        draw_label_opengl_widget(win, "filename", img.filename);
+        draw_label_opengl_widget(win, "outname", img.outname);
+        draw_label_opengl_widget(win, "image", "%d x %d",
+            img.img.size().x, img.img.size().y);
         draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
         draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
         auto mouse_pos = get_opengl_mouse_pos(win);

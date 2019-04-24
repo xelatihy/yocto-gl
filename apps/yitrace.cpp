@@ -391,27 +391,29 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_checkbox_opengl_widget(win, "filmic", tonemap_options.filmic);
         continue_opengl_widget_line(win);
         draw_checkbox_opengl_widget(win, "srgb", tonemap_options.srgb);
-        draw_slider_opengl_widget(win, "zoom", scn.image_scale, 0.1, 10);
-        draw_checkbox_opengl_widget(win, "zoom to fit", scn.zoom_to_fit);
-        continue_opengl_widget_line(win);
-        draw_checkbox_opengl_widget(win, "fps", scn.navigation_fps);
         if (trace_options != scn.trace_options) {
-            scn.task_queue.emplace_back(app_task_type::param_edit,
-                app_edit{typeid(trace_image_options), -1, trace_options,
-                    false});
+            scn.task_queue.emplace_back(
+                app_task_type::param_edit, app_edit{typeid(trace_image_options),
+                                               -1, trace_options, false});
         }
         if (tonemap_options != scn.tonemap_options) {
-            scn.task_queue.emplace_back(
-                app_task_type::param_edit,
-                app_edit{typeid(tonemap_image_options), -1, tonemap_options, false});
+            scn.task_queue.emplace_back(app_task_type::param_edit,
+                app_edit{
+                    typeid(tonemap_image_options), -1, tonemap_options, false});
         }
         end_header_opengl_widget(win);
     }
     if (begin_header_opengl_widget(win, "inspect")) {
         draw_label_opengl_widget(win, "scene", get_filename(scn.filename));
         draw_label_opengl_widget(win, "filename", scn.filename);
+        draw_label_opengl_widget(win, "outname", scn.outname);
+        draw_label_opengl_widget(win, "imagename", scn.imagename);
         draw_label_opengl_widget(win, "image", "%d x %d @ %d",
             scn.render.size().x, scn.render.size().y, scn.render_sample);
+        draw_slider_opengl_widget(win, "zoom", scn.image_scale, 0.1, 10);
+        draw_checkbox_opengl_widget(win, "zoom to fit", scn.zoom_to_fit);
+        continue_opengl_widget_line(win);
+        draw_checkbox_opengl_widget(win, "fps", scn.navigation_fps);
         if (draw_button_opengl_widget(win, "print cams")) {
             for (auto& camera : scn.scene.cameras) {
                 print_obj_camera(camera);
@@ -749,11 +751,13 @@ void run_ui(app_state& app) {
         // handle mouse and keyboard for navigation
         if (app.selected >= 0 && app.scenes[app.selected].load_done &&
             (mouse_left || mouse_right) && !alt_down && !widgets_active) {
-            auto& scn    = app.scenes[app.selected];
-            auto  camera = scn.scene.cameras.at(scn.trace_options.camera_id);
-            auto  dolly  = 0.0f;
-            auto  pan    = zero2f;
-            auto  rotate = zero2f;
+            auto& scn        = app.scenes[app.selected];
+            auto& old_camera = scn.scene.cameras.at(
+                scn.trace_options.camera_id);
+            auto camera = scn.scene.cameras.at(scn.trace_options.camera_id);
+            auto dolly  = 0.0f;
+            auto pan    = zero2f;
+            auto rotate = zero2f;
             if (mouse_left && !shift_down)
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
@@ -762,9 +766,12 @@ void run_ui(app_state& app) {
             pan.x = -pan.x;
             update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            scn.task_queue.emplace_back(app_task_type::scene_edit,
-                app_edit{typeid(yocto_camera), scn.trace_options.camera_id,
-                    camera, false});
+            if (camera.frame != old_camera.frame ||
+                camera.focus_distance != old_camera.focus_distance) {
+                scn.task_queue.emplace_back(app_task_type::scene_edit,
+                    app_edit{typeid(yocto_camera), scn.trace_options.camera_id,
+                        camera, false});
+            }
         }
 
         // selection
