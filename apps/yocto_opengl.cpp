@@ -646,15 +646,21 @@ void set_drop_opengl_callback(
     glfwSetDropCallback(win.win, _glfw_drop_callback);
 }
 
-vec2i get_opengl_framebuffer_size(const opengl_window& win) {
+vec2i get_opengl_framebuffer_size(const opengl_window& win, bool ignore_widgets) {
     auto size = zero2i;
     glfwGetFramebufferSize(win.win, &size.x, &size.y);
+    if(ignore_widgets && win.widgets_width) {
+        auto win_size = zero2i;
+        glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
+        size.x -= (int)(win.widgets_width * (float)size.x / (float)win_size.x);
+    }
     return size;
 }
 
-vec2i get_opengl_window_size(const opengl_window& win) {
+vec2i get_opengl_window_size(const opengl_window& win, bool ignore_widgets) {
     auto size = zero2i;
     glfwGetWindowSize(win.win, &size.x, &size.y);
+    if(ignore_widgets && win.widgets_width) size.x -= win.widgets_width;
     return size;
 }
 
@@ -697,7 +703,7 @@ void process_opengl_events(const opengl_window& win, bool wait) {
 
 void swap_opengl_buffers(const opengl_window& win) { glfwSwapBuffers(win.win); }
 
-void init_opengl_widgets(const opengl_window& win) {
+void init_opengl_widgets(opengl_window& win, int widgets_width) {
     // init widgets
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename       = nullptr;
@@ -709,6 +715,7 @@ void init_opengl_widgets(const opengl_window& win) {
     ImGui_ImplOpenGL3_Init("#version 330");
 #endif
     ImGui::StyleColorsDark();
+    win.widgets_width = widgets_width;
 }
 
 bool get_opengl_widgets_active(const opengl_window& win) {
@@ -717,16 +724,13 @@ bool get_opengl_widgets_active(const opengl_window& win) {
 }
 
 void begin_opengl_widgets_frame(const opengl_window& win) {
-    static auto first_time = true;
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    if (first_time) {
-        ImGui::SetNextWindowPos({0, 0});
-        ImGui::SetNextWindowSize({320, 360});
-        ImGui::SetNextWindowCollapsed(true);
-        first_time = false;
-    }
+    auto win_size = get_opengl_window_size(win, false);
+    ImGui::SetNextWindowPos({(float)(win_size.x - win.widgets_width), 0});
+    ImGui::SetNextWindowSize({(float)(win.widgets_width), (float)(win_size.y)});
+    ImGui::SetNextWindowCollapsed(false);
 }
 
 void end_opengl_widgets_frame(const opengl_window& win) {

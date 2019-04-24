@@ -226,6 +226,7 @@ struct opengl_window {
     void*                   user_ptr   = nullptr;
     refresh_opengl_callback refresh_cb = {};
     drop_opengl_callback    drop_cb    = {};
+    int widgets_width = 0;
 };
 
 void init_opengl_window(opengl_window& win, const vec2i& size,
@@ -237,8 +238,8 @@ void set_drop_opengl_callback(opengl_window& win, drop_opengl_callback drop_cb);
 
 void* get_opengl_user_pointer(const opengl_window& win);
 
-vec2i get_opengl_framebuffer_size(const opengl_window& win);
-vec2i get_opengl_window_size(const opengl_window& win);
+vec2i get_opengl_framebuffer_size(const opengl_window& win, bool ignore_widgets = true);
+vec2i get_opengl_window_size(const opengl_window& win, bool ignore_widgets = true);
 
 bool should_opengl_window_close(const opengl_window& win);
 void set_close_opengl_window(const opengl_window& win, bool close);
@@ -252,7 +253,7 @@ bool  get_opengl_shift_key(const opengl_window& win);
 void process_opengl_events(const opengl_window& win, bool wait = false);
 void swap_opengl_buffers(const opengl_window& win);
 
-void init_opengl_widgets(const opengl_window& win);
+void init_opengl_widgets(opengl_window& win, int widgets_width = 320);
 bool get_opengl_widgets_active(const opengl_window& win);
 
 void begin_opengl_widgets_frame(const opengl_window& win);
