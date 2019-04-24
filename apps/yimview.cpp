@@ -137,27 +137,6 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     compute_image_stats(stats, display, false);
 }
 
-// load image
-void load_app_image(
-    const string& filename, image<vec4f>& img, image_stats& stats) {
-    img = {};
-    load_image(filename, img);
-    compute_image_stats(stats, img, is_hdr_filename(filename));
-}
-
-// save an image
-void save_app_image(const string& filename, const image<vec4f>& display) {
-    if (!is_hdr_filename(filename)) {
-        auto ldr = image<vec4b>{};
-        float_to_byte(ldr, display);
-        save_image(filename, ldr);
-    } else {
-        auto aux = image<vec4f>{};
-        srgb_to_linear(aux, display);
-        save_image(filename, aux);
-    }
-}
-
 // add a new image
 void add_new_image(app_state& app, const string& filename) {
     auto& img                  = app.images.emplace_back();
@@ -331,6 +310,17 @@ void draw(const opengl_window& win) {
 }
 
 void update(app_state& app) {
+    // consume partial results
+    for (auto& img : app.images) {
+        if (img.task_queue.empty()) continue;
+        auto& task = img.task_queue.front();
+        if (task.type != app_task_type::display || task.queue.empty()) continue;
+        auto region = image_region{};
+        while (img.task_queue.front().queue.try_pop(region)) {
+            update_opengl_texture_region(
+                img.gl_txt, img.display, region, false);
+        }
+    }
     // remove unneeded tasks
     for (auto& img : app.images) {
         while (img.task_queue.size() > 1 &&
@@ -360,13 +350,25 @@ void update(app_state& app) {
                 log_info("start loading {}", img.filename);
                 img.load_done = false;
                 task.result   = async([&img]() {
-                    load_app_image(img.filename, img.img, img.image_stats);
+                    img.img = {};
+                    load_image(img.filename, img.img);
+                    compute_image_stats(img.image_stats, img.img,
+                        is_hdr_filename(img.filename));
                 });
             } break;
             case app_task_type::save: {
                 log_info("start saving {}", img.outname);
-                task.result = async(
-                    [&img]() { save_app_image(img.outname, img.display); });
+                task.result = async([&img]() {
+                    if (!is_hdr_filename(img.outname)) {
+                        auto ldr = image<vec4b>{};
+                        float_to_byte(ldr, img.display);
+                        save_image(img.outname, ldr);
+                    } else {
+                        auto aux = image<vec4f>{};
+                        srgb_to_linear(aux, img.display);
+                        save_image(img.outname, aux);
+                    }
+                });
             } break;
             case app_task_type::display: {
                 log_info("start rendering {}", img.filename);
@@ -377,17 +379,6 @@ void update(app_state& app) {
                         img.colorgrade_options, task.stop, task.queue);
                 });
             } break;
-        }
-    }
-    // consume partial results
-    for (auto& img : app.images) {
-        if (img.task_queue.empty()) continue;
-        auto& task = img.task_queue.front();
-        if (task.type != app_task_type::display || task.queue.empty()) continue;
-        auto region = image_region{};
-        while (img.task_queue.front().queue.try_pop(region)) {
-            update_opengl_texture_region(
-                img.gl_txt, img.display, region, false);
         }
     }
     // grab result of finished tasks
