@@ -226,6 +226,7 @@ struct opengl_window {
     refresh_opengl_callback refresh_cb    = {};
     drop_opengl_callback    drop_cb       = {};
     int                     widgets_width = 0;
+    bool widgets_left      = true;
 };
 
 void init_opengl_window(opengl_window& win, const vec2i& size,
@@ -257,7 +258,7 @@ bool get_opengl_shift_key(const opengl_window& win);
 void process_opengl_events(const opengl_window& win, bool wait = false);
 void swap_opengl_buffers(const opengl_window& win);
 
-void init_opengl_widgets(opengl_window& win, int widgets_width = 320);
+void init_opengl_widgets(opengl_window& win, int width = 320, bool left = true);
 bool get_opengl_widgets_active(const opengl_window& win);
 
 void begin_opengl_widgets_frame(const opengl_window& win);

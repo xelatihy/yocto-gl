@@ -663,8 +663,9 @@ vec4i get_opengl_framebuffer_viewport(
     if (ignore_widgets && win.widgets_width) {
         auto win_size = zero2i;
         glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
-        viewport.z -=
-            (int)(win.widgets_width * (float)viewport.z / (float)win_size.x);
+        auto offset = (int)(win.widgets_width * (float)viewport.z / win_size.x);
+        viewport.z -= offset;
+        if(win.widgets_left) viewport.x += offset;
     }
     return viewport;
 }
@@ -686,7 +687,11 @@ void set_close_opengl_window(const opengl_window& win, bool close) {
 vec2f get_opengl_mouse_pos(const opengl_window& win, bool ignore_widgets) {
     double mouse_posx, mouse_posy;
     glfwGetCursorPos(win.win, &mouse_posx, &mouse_posy);
-    return vec2f{(float)mouse_posx, (float)mouse_posy};
+    auto pos = vec2f{(float)mouse_posx, (float)mouse_posy};
+    if (ignore_widgets && win.widgets_width && win.widgets_left) {
+        pos.x -= win.widgets_width;
+    }
+    return pos;
 }
 
 bool get_opengl_mouse_left(const opengl_window& win) {
@@ -715,7 +720,7 @@ void process_opengl_events(const opengl_window& win, bool wait) {
 
 void swap_opengl_buffers(const opengl_window& win) { glfwSwapBuffers(win.win); }
 
-void init_opengl_widgets(opengl_window& win, int widgets_width) {
+void init_opengl_widgets(opengl_window& win, int width, bool left) {
     // init widgets
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename       = nullptr;
@@ -727,7 +732,8 @@ void init_opengl_widgets(opengl_window& win, int widgets_width) {
     ImGui_ImplOpenGL3_Init("#version 330");
 #endif
     ImGui::StyleColorsDark();
-    win.widgets_width = widgets_width;
+    win.widgets_width = width;
+    win.widgets_left = left;
 }
 
 bool get_opengl_widgets_active(const opengl_window& win) {
@@ -740,9 +746,15 @@ void begin_opengl_widgets_frame(const opengl_window& win) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     auto win_size = get_opengl_window_size(win, false);
-    ImGui::SetNextWindowPos({(float)(win_size.x - win.widgets_width), 0});
-    ImGui::SetNextWindowSize({(float)(win.widgets_width), (float)(win_size.y)});
-    ImGui::SetNextWindowCollapsed(false);
+    if(win.widgets_left) {
+        ImGui::SetNextWindowPos({0, 0});
+        ImGui::SetNextWindowSize({(float)win.widgets_width, (float)win_size.y});
+        ImGui::SetNextWindowCollapsed(false);
+    } else {
+        ImGui::SetNextWindowPos({(float)(win_size.x - win.widgets_width), 0});
+        ImGui::SetNextWindowSize({(float)win.widgets_width, (float)win_size.y});
+        ImGui::SetNextWindowCollapsed(false);
+    }
 }
 
 void end_opengl_widgets_frame(const opengl_window& win) {
