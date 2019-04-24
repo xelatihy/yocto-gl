@@ -887,6 +887,82 @@ void draw(const opengl_window& win) {
     swap_opengl_buffers(win);
 }
 
+void apply_edit(const string& filename, yocto_scene& scene,
+    drawgl_lights& lights, drawgl_options& draw_options, float time,
+    const string& anim_group, const app_edit& edit) {
+    static auto last_time = 0.0f;
+    auto updated_textures = vector<int>{}, updated_shapes = vector<int>{};
+    bool updated_hierarchy            = false;
+    auto& [type, index, data, reload] = edit;
+    if (type == typeid(yocto_camera)) {
+        scene.cameras[index] = any_cast<yocto_camera>(data);
+    } else if (type == typeid(yocto_texture)) {
+        scene.textures[index] = any_cast<yocto_texture>(data);
+        if (reload) {
+            auto& texture = scene.textures[index];
+            load_image(get_dirname(filename) + texture.uri, texture.hdr_image,
+                texture.ldr_image);
+        }
+        updated_textures.push_back(index);
+    } else if (type == typeid(yocto_voltexture)) {
+        scene.voltextures[index] = any_cast<yocto_voltexture>(data);
+        if (reload) {
+            auto& texture = scene.voltextures[index];
+            load_volume(
+                get_dirname(filename) + texture.uri, texture.volume_data);
+        }
+    } else if (type == typeid(yocto_shape)) {
+        scene.shapes[index] = any_cast<yocto_shape>(data);
+        if (reload) {
+            auto& shape = scene.shapes[index];
+            load_shape(get_dirname(filename) + shape.uri, shape.points,
+                shape.lines, shape.triangles, shape.quads,
+                shape.quads_positions, shape.quads_normals,
+                shape.quads_texturecoords, shape.positions, shape.normals,
+                shape.texturecoords, shape.colors, shape.radius, false);
+        }
+        updated_shapes.push_back(index);
+    } else if (type == typeid(yocto_subdiv)) {
+        // TODO: this needs more fixing?
+        scene.subdivs[index] = any_cast<yocto_subdiv>(data);
+        if (reload) {
+            auto& subdiv = scene.subdivs[index];
+            load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
+                subdiv.lines, subdiv.triangles, subdiv.quads,
+                subdiv.quads_positions, subdiv.quads_normals,
+                subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
+                subdiv.texturecoords, subdiv.colors, subdiv.radius,
+                subdiv.preserve_facevarying);
+        }
+        tesselate_subdiv(scene, scene.subdivs[index]);
+        updated_shapes.push_back(scene.subdivs[index].tesselated_shape);
+    } else if (type == typeid(yocto_material)) {
+        scene.materials[index] = any_cast<yocto_material>(data);
+    } else if (type == typeid(yocto_instance)) {
+        scene.instances[index] = any_cast<yocto_instance>(data);
+    } else if (type == typeid(yocto_animation)) {
+        scene.animations[index] = any_cast<yocto_animation>(data);
+        updated_hierarchy       = true;
+    } else if (type == typeid(yocto_scene_node)) {
+        scene.nodes[index] = any_cast<yocto_scene_node>(data);
+        updated_hierarchy  = true;
+    } else {
+        throw runtime_error("unsupported type "s + type.name());
+    }
+    /*
+    for (auto texture_id : updated_textures) {
+        throw runtime_error("texture update not supported\n");
+    }
+    for (auto shape_id : updated_shapes) {
+        throw runtime_error("shape update not supported\n");
+    }
+    */
+    if (updated_hierarchy || time != last_time) {
+        update_transforms(scene, time, anim_group);
+        last_time = time;
+    }
+}
+
 // update
 void update(app_state& app) {
     // close if needed
@@ -900,6 +976,24 @@ void update(app_state& app) {
         if (pos < 0) break;
         app.scenes.erase(app.scenes.begin() + pos);
         app.selected = app.scenes.empty() ? -1 : 0;
+    }
+
+    // apply synchronous edit
+    for (auto& scn : app.scenes) {
+        while(!scn.task_queue.empty()) {
+            auto& task = scn.task_queue.front();
+            if (task.type != app_task_type::apply_edit) break;
+            log_info("start editing {}", scn.filename);
+            try {
+                apply_edit(scn.filename, scn.scene, scn.lights, scn.draw_options,
+                    scn.time, scn.anim_group, task.edit);
+                log_info("done editing {}", scn.filename);
+            } catch(std::exception& e) {
+                log_error(e.what());
+                app.errors.push_back("cannot edit " + scn.filename);
+            }
+            scn.task_queue.pop_front();
+        }
     }
 
     // grab result of finished tasks
@@ -943,15 +1037,7 @@ void update(app_state& app) {
                     app.errors.push_back("cannot save " + scn.outname);
                 }
             } break;
-            case app_task_type::apply_edit: {
-                try {
-                    task.result.get();
-                    log_info("done editing {}", scn.filename);
-                } catch (std::exception& e) {
-                    log_error(e.what());
-                    app.errors.push_back("cannot edit " + scn.filename);
-                }
-            } break;
+            case app_task_type::apply_edit: break;
         }
         scn.task_queue.pop_front();
     }
@@ -982,9 +1068,8 @@ void update(app_state& app) {
             } break;
             case app_task_type::save_image: {
                 log_info("start saving {}", scn.imagename);
-                task.result = async([&scn]() {
-                    throw runtime_error("not implemnted yet");
-                });
+                task.result = async(
+                    []() { throw runtime_error("not implemnted yet"); });
             } break;
             case app_task_type::save_scene: {
                 log_info("start saving {}", scn.outname);
@@ -992,95 +1077,9 @@ void update(app_state& app) {
                     save_scene(scn.outname, scn.scene, scn.save_options);
                 });
             } break;
-            case app_task_type::apply_edit: {
-                log_info("start editing {}", scn.filename);
-                // TODO
-                // task.result     = async([&scn, &task]() {
-                //     apply_edit(scn.filename, scn.scene, scn.bvh, scn.lights,
-                //         scn.trace_options, scn.tonemap_options,
-                //         scn.bvh_options, task.edit);
-                // });
-            } break;
+            case app_task_type::apply_edit: break;
         }
     }
-
-    // static auto last_time = 0.0f;
-    // auto updated_textures = vector<int>{}, updated_shapes = vector<int>{};
-    // bool updated_hierarchy = false;
-    // for (auto& [type, index, data, reload] : scn.update_list) {
-    //     if (type == typeid(yocto_camera)) {
-    //         scn.scene.cameras[index] = any_cast<yocto_camera>(data);
-    //     } else if (type == typeid(yocto_texture)) {
-    //         scn.scene.textures[index] = any_cast<yocto_texture>(data);
-    //         if (reload) {
-    //             auto& texture = scn.scene.textures[index];
-    //             load_image(get_dirname(scn.filename) + texture.uri,
-    //                 texture.hdr_image, texture.ldr_image);
-    //         }
-    //         updated_textures.push_back(index);
-    //     } else if (type == typeid(yocto_voltexture)) {
-    //         scn.scene.voltextures[index] = any_cast<yocto_voltexture>(data);
-    //         if (reload) {
-    //             auto& texture = scn.scene.voltextures[index];
-    //             load_volume(get_dirname(scn.filename) + texture.uri,
-    //                 texture.volume_data);
-    //         }
-    //     } else if (type == typeid(yocto_shape)) {
-    //         scn.scene.shapes[index] = any_cast<yocto_shape>(data);
-    //         if (reload) {
-    //             auto& shape = scn.scene.shapes[index];
-    //             load_shape(get_dirname(scn.filename) + shape.uri,
-    //             shape.points,
-    //                 shape.lines, shape.triangles, shape.quads,
-    //                 shape.quads_positions, shape.quads_normals,
-    //                 shape.quads_texturecoords, shape.positions,
-    //                 shape.normals, shape.texturecoords, shape.colors,
-    //                 shape.radius, false);
-    //         }
-    //         updated_shapes.push_back(index);
-    //     } else if (type == typeid(yocto_subdiv)) {
-    //         // TODO: this needs more fixing?
-    //         scn.scene.subdivs[index] = any_cast<yocto_subdiv>(data);
-    //         if (reload) {
-    //             auto& subdiv = scn.scene.subdivs[index];
-    //             load_shape(get_dirname(scn.filename) + subdiv.uri,
-    //                 subdiv.points, subdiv.lines, subdiv.triangles,
-    //                 subdiv.quads, subdiv.quads_positions,
-    //                 subdiv.quads_normals, subdiv.quads_texturecoords,
-    //                 subdiv.positions, subdiv.normals, subdiv.texturecoords,
-    //                 subdiv.colors, subdiv.radius,
-    //                 subdiv.preserve_facevarying);
-    //         }
-    //         tesselate_subdiv(scn.scene, scn.scene.subdivs[index]);
-    //         updated_shapes.push_back(scn.scene.subdivs[index].tesselated_shape);
-    //     } else if (type == typeid(yocto_material)) {
-    //         scn.scene.materials[index] = any_cast<yocto_material>(data);
-    //     } else if (type == typeid(yocto_instance)) {
-    //         scn.scene.instances[index] = any_cast<yocto_instance>(data);
-    //     } else if (type == typeid(yocto_animation)) {
-    //         scn.scene.animations[index] = any_cast<yocto_animation>(data);
-    //         updated_hierarchy           = true;
-    //     } else if (type == typeid(yocto_scene_node)) {
-    //         scn.scene.nodes[index] = any_cast<yocto_scene_node>(data);
-    //         updated_hierarchy      = true;
-    //     } else {
-    //         throw runtime_error("unsupported type "s + type.name());
-    //     }
-    // }
-    // /*
-    // for (auto texture_id : updated_textures) {
-    //     throw runtime_error("texture update not supported\n");
-    // }
-    // for (auto shape_id : updated_shapes) {
-    //     throw runtime_error("shape update not supported\n");
-    // }
-    // */
-    // if (updated_hierarchy || scn.time != last_time) {
-    //     update_transforms(scn.scene, scn.time, scn.anim_group);
-    //     last_time = scn.time;
-    // }
-    // scn.update_list.clear();
-    // }
 }
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
