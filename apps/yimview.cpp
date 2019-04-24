@@ -159,8 +159,7 @@ void add_new_image(app_state& app, const string& filename) {
 
 void draw_opengl_widgets(const opengl_window& win) {
     static string load_path = "", save_path = "", error_message = "";
-    auto&         app    = *(app_state*)get_opengl_user_pointer(win);
-    auto          edited = false;
+    auto&         app = *(app_state*)get_opengl_user_pointer(win);
     if (!begin_opengl_widgets_window(win, "yimview")) return;
     if (!app.errors.empty() && error_message.empty()) {
         error_message = app.errors.front();
@@ -221,13 +220,13 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_checkbox_opengl_widget(win, "srgb", options.srgb);
         continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "auto wb")) {
-            edited       = true;
             auto wb      = 1 / xyz(img.image_stats.average);
             options.tint = wb / max(wb);
         }
         if (options != img.tonemap_options) {
-            edited              = true;
             img.tonemap_options = options;
+            if (img.load_done)
+                img.task_queue.emplace_back(app_task_type::display);
         }
         end_header_opengl_widget(win);
     }
@@ -244,8 +243,8 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_coloredit_opengl_widget(
             win, "highlights color", options.highlights_color);
         if (options != img.colorgrade_options) {
-            edited                 = true;
             img.colorgrade_options = options;
+            if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
         }
         end_header_opengl_widget(win);
     }
@@ -285,9 +284,6 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (begin_header_opengl_widget(win, "log")) {
         draw_log_opengl_widget(win);
         end_header_opengl_widget(win);
-    }
-    if (edited) {
-        if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
     }
 }
 

@@ -168,6 +168,16 @@ struct trace_image_options {
     bool                  run_serially        = false;
 };
 
+// Equality operators
+inline bool operator==(
+    const trace_image_options& a, const trace_image_options& b) {
+    return memcmp(&a, &b, sizeof(a)) == 0;
+}
+inline bool operator!=(
+    const trace_image_options& a, const trace_image_options& b) {
+    return memcmp(&a, &b, sizeof(a)) != 0;
+}
+
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_image_options& options);
