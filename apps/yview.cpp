@@ -968,8 +968,8 @@ void draw(const opengl_window& win) {
 void apply_edit(const string& filename, yocto_scene& scene,
     drawgl_lights& lights, drawgl_options& draw_options, float time,
     const string& anim_group, bool& reload_element, const app_edit& edit) {
-    static auto last_time = 0.0f;
-    bool updated_hierarchy            = false;
+    static auto last_time             = 0.0f;
+    bool        updated_hierarchy     = false;
     auto& [type, index, data, reload] = edit;
     if (type == typeid(yocto_camera)) {
         scene.cameras[index] = any_cast<yocto_camera>(data);
@@ -1009,8 +1009,7 @@ void apply_edit(const string& filename, yocto_scene& scene,
 
 // reload an element
 void load_element(
-    const string& filename, yocto_scene& scene,
-    const app_edit& edit) {
+    const string& filename, yocto_scene& scene, const app_edit& edit) {
     auto& [type, index, data, reload] = edit;
 
     if (type == typeid(yocto_texture)) {
@@ -1066,11 +1065,13 @@ void update(app_state& app) {
             try {
                 auto reload_element = false;
                 apply_edit(scn.filename, scn.scene, scn.lights,
-                    scn.draw_options, scn.time, scn.anim_group, reload_element, task.edit);
+                    scn.draw_options, scn.time, scn.anim_group, reload_element,
+                    task.edit);
                 log_info("done editing {}", scn.filename);
-                if(reload_element) {
+                if (reload_element) {
                     scn.load_done = false;
-                    scn.task_queue.emplace_back(app_task_type::load_element, task.edit);
+                    scn.task_queue.emplace_back(
+                        app_task_type::load_element, task.edit);
                 }
             } catch (std::exception& e) {
                 log_error(e.what());
@@ -1108,14 +1109,14 @@ void update(app_state& app) {
                     task.result.get();
                     scn.load_done = true;
                     log_info("done loading element from {}", scn.filename);
-                    if(task.edit.type == typeid(yocto_texture)) {
+                    if (task.edit.type == typeid(yocto_texture)) {
                         // not supported yet
                         log_error("texture refresh is not supported yet");
-                    } else if(task.edit.type == typeid(yocto_voltexture)) {
-                    } else if(task.edit.type == typeid(yocto_shape)) {
+                    } else if (task.edit.type == typeid(yocto_voltexture)) {
+                    } else if (task.edit.type == typeid(yocto_shape)) {
                         // not supported yet
                         log_error("shape refresh is not supported yet");
-                    } else if(task.edit.type == typeid(yocto_subdiv)) {
+                    } else if (task.edit.type == typeid(yocto_subdiv)) {
                         // not supported yet
                         log_error("shape refresh is not supported yet");
                     } else {
