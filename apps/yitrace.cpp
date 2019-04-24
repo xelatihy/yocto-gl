@@ -332,7 +332,7 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (draw_button_opengl_widget(win, "save image",
             app.selected >= 0 && app.scenes[app.selected].render_done)) {
         save_path = app.scenes[app.selected].imagename;
-        open_modal_opengl_widget(win, "save ikmage");
+        open_modal_opengl_widget(win, "save image");
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "close", app.selected >= 0)) {
