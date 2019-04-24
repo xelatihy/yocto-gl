@@ -50,8 +50,7 @@ enum struct app_task_type {
     bvh,
     lights,
     render,
-    param_edit,
-    scene_edit,
+    edit,
     save_image,
     save_scene
 };
@@ -204,9 +203,11 @@ void add_new_scene(app_state& app, const string& filename) {
     app.selected = (int)app.scenes.size() - 1;
 }
 
-void apply_scene_edit(const string& filename, yocto_scene& scene,
-    bvh_scene& bvh, trace_lights& lights, const app_edit& edit,
-    const bvh_build_options& bvh_options) {
+void apply_edit(const string& filename, yocto_scene& scene,
+    bvh_scene& bvh, trace_lights& lights, trace_image_options& trace_options,
+    tonemap_image_options& tonemap_options,
+    bvh_build_options& bvh_options,
+    const app_edit& edit) {
     // update data
     auto updated_instances = vector<int>{}, updated_shapes = vector<int>{};
     auto updated_lights = false;
@@ -269,6 +270,10 @@ void apply_scene_edit(const string& filename, yocto_scene& scene,
         if (old_emission != scene.materials[index].emission) {
             updated_lights = true;
         }
+    } else if (type == typeid(trace_image_options)) {
+        trace_options = any_cast<trace_image_options>(data);
+    } else if (type == typeid(tonemap_image_options)) {
+        tonemap_options = any_cast<tonemap_image_options>(data);
     } else {
         throw runtime_error("unsupported type "s + type.name());
     }
@@ -280,20 +285,6 @@ void apply_scene_edit(const string& filename, yocto_scene& scene,
     }
     // update lights
     if (updated_lights) init_trace_lights(lights, scene);
-}
-
-void apply_param_edit(const string& filename,
-    trace_image_options& trace_options, tonemap_image_options& tonemap_options,
-    const app_edit& edit) {
-    // update data
-    auto& [type, index, data, reload] = edit;
-    if (type == typeid(trace_image_options)) {
-        trace_options = any_cast<trace_image_options>(data);
-    } else if (type == typeid(tonemap_image_options)) {
-        tonemap_options = any_cast<tonemap_image_options>(data);
-    } else {
-        throw runtime_error("unsupported type "s + type.name());
-    }
 }
 
 void draw_opengl_widgets(const opengl_window& win) {
@@ -393,11 +384,11 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_checkbox_opengl_widget(win, "srgb", tonemap_options.srgb);
         if (trace_options != scn.trace_options) {
             scn.task_queue.emplace_back(
-                app_task_type::param_edit, app_edit{typeid(trace_image_options),
+                app_task_type::edit, app_edit{typeid(trace_image_options),
                                                -1, trace_options, false});
         }
         if (tonemap_options != scn.tonemap_options) {
-            scn.task_queue.emplace_back(app_task_type::param_edit,
+            scn.task_queue.emplace_back(app_task_type::edit,
                 app_edit{
                     typeid(tonemap_image_options), -1, tonemap_options, false});
         }
@@ -446,7 +437,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         auto edit = app_edit{};
         if (draw_opengl_widgets_scene_inspector(
                 win, "", scn.scene, scn.selection, edit, 200)) {
-            scn.task_queue.emplace_back(app_task_type::scene_edit, edit);
+            scn.task_queue.emplace_back(app_task_type::edit, edit);
         }
         end_header_opengl_widget(win);
     }
@@ -509,8 +500,7 @@ void update(app_state& app) {
         while (scn.task_queue.size() > 1 &&
                scn.task_queue.at(0).type == app_task_type::render &&
                (scn.task_queue.at(1).type == app_task_type::render ||
-                   scn.task_queue.at(1).type == app_task_type::scene_edit ||
-                   scn.task_queue.at(1).type == app_task_type::param_edit)) {
+                   scn.task_queue.at(1).type == app_task_type::edit)) {
             log_info("cancel rendering {}", scn.filename);
             auto& task = scn.task_queue.front();
             task.stop  = true;
@@ -614,20 +604,10 @@ void update(app_state& app) {
                     app.errors.push_back("cannot render " + scn.filename);
                 }
             } break;
-            case app_task_type::scene_edit: {
+            case app_task_type::edit: {
                 try {
                     task.result.get();
                     log_info("done editing {}", scn.filename);
-                    scn.task_queue.emplace_back(app_task_type::render);
-                } catch (std::exception& e) {
-                    log_error(e.what());
-                    app.errors.push_back("cannot edit " + scn.filename);
-                }
-            } break;
-            case app_task_type::param_edit: {
-                try {
-                    task.result.get();
-                    log_info("done editing params for {}", scn.filename);
                     scn.task_queue.emplace_back(app_task_type::render);
                 } catch (std::exception& e) {
                     log_error(e.what());
@@ -718,20 +698,14 @@ void update(app_state& app) {
                         scn.gl_txt, scn.display, false, false, false);
                 }
             } break;
-            case app_task_type::scene_edit: {
+            case app_task_type::edit: {
                 log_info("start editing {}", scn.filename);
                 scn.render_done = false;
                 task.result     = async([&scn, &task]() {
-                    apply_scene_edit(scn.filename, scn.scene, scn.bvh,
-                        scn.lights, task.edit, scn.bvh_options);
-                });
-            } break;
-            case app_task_type::param_edit: {
-                log_info("start editing params for {}", scn.filename);
-                scn.render_done = false;
-                task.result     = async([&scn, &task]() {
-                    apply_param_edit(scn.filename, scn.trace_options,
-                        scn.tonemap_options, task.edit);
+                    apply_edit(scn.filename, scn.scene, scn.bvh,
+                        scn.lights, scn.trace_options, 
+                        scn.tonemap_options, scn.bvh_options, 
+                        task.edit);
                 });
             } break;
         }
@@ -788,7 +762,7 @@ void run_ui(app_state& app) {
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
             if (camera.frame != old_camera.frame ||
                 camera.focus_distance != old_camera.focus_distance) {
-                scn.task_queue.emplace_back(app_task_type::scene_edit,
+                scn.task_queue.emplace_back(app_task_type::edit,
                     app_edit{typeid(yocto_camera), scn.trace_options.camera_id,
                         camera, false});
             }
