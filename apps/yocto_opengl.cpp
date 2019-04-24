@@ -797,10 +797,10 @@ bool draw_modal_message_opengl_window(
 }
 
 struct filedialog_state {
-    string                     dirname      = "";
-    string                     filename     = "";
-    vector<pair<string, bool>> entries      = {};
-    bool                       save         = false;
+    string                     dirname       = "";
+    string                     filename      = "";
+    vector<pair<string, bool>> entries       = {};
+    bool                       save          = false;
     bool                       remove_hidden = true;
 
     filedialog_state() {}
@@ -826,7 +826,7 @@ struct filedialog_state {
         dirname = normalize_path(dirname);
         if (dirname == "") {
             dirname = "./";
-        } else if(dirname.back() != '/') {
+        } else if (dirname.back() != '/') {
             dirname += '/';
         }
         entries.clear();
@@ -836,8 +836,8 @@ struct filedialog_state {
             cf_file_t file;
             cf_read_file(&dir, &file);
             cf_dir_next(&dir);
-            if(remove_hidden && file.name[0] == '.') continue;
-            if(file.is_dir) {
+            if (remove_hidden && file.name[0] == '.') continue;
+            if (file.is_dir) {
                 entries.push_back({file.name + "/"s, true});
             } else {
                 entries.push_back({file.name, false});
@@ -845,14 +845,12 @@ struct filedialog_state {
         }
         cf_dir_close(&dir);
         std::sort(entries.begin(), entries.end(), [](auto& a, auto& b) {
-            if(a.second == b.second) return a.first < b.first;
+            if (a.second == b.second) return a.first < b.first;
             return a.second;
         });
     }
 
-    string get_path() const {
-        return dirname + filename;
-    }
+    string get_path() const { return dirname + filename; }
 };
 bool draw_modal_fileialog_opengl_widgets(const opengl_window& win,
     const char* lbl, string& path, bool save, const string& dirname,
@@ -873,7 +871,7 @@ bool draw_modal_fileialog_opengl_widgets(const opengl_window& win,
                 "entries", &current_item,
                 [](void* data, int idx, const char** out_text) -> bool {
                     auto& state = *(filedialog_state*)data;
-                    *out_text = state.entries[idx].first.c_str();
+                    *out_text   = state.entries[idx].first.c_str();
                     return true;
                 },
                 &state, (int)state.entries.size())) {
