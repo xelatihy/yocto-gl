@@ -344,49 +344,6 @@ void update(app_state& app) {
             img.task_queue.pop_front();
         }
     }
-    // schedule tasks not running
-    for (auto& img : app.images) {
-        if (img.task_queue.empty()) continue;
-        auto& task = img.task_queue.front();
-        if (task.result.valid()) continue;
-        task.stop = false;
-        switch (task.type) {
-            case app_task_type::none: break;
-            case app_task_type::load: {
-                log_info("start loading {}", img.filename);
-                img.load_done = false;
-                task.result   = async([&img]() {
-                    img.img = {};
-                    load_image(img.filename, img.img);
-                    compute_image_stats(img.image_stats, img.img,
-                        is_hdr_filename(img.filename));
-                });
-            } break;
-            case app_task_type::save: {
-                log_info("start saving {}", img.outname);
-                task.result = async([&img]() {
-                    if (!is_hdr_filename(img.outname)) {
-                        auto ldr = image<vec4b>{};
-                        float_to_byte(ldr, img.display);
-                        save_image(img.outname, ldr);
-                    } else {
-                        auto aux = image<vec4f>{};
-                        srgb_to_linear(aux, img.display);
-                        save_image(img.outname, aux);
-                    }
-                });
-            } break;
-            case app_task_type::display: {
-                log_info("start rendering {}", img.filename);
-                img.display_done = false;
-                task.result      = async([&img, &task]() {
-                    update_app_display(img.filename, img.img, img.display,
-                        img.display_stats, img.tonemap_options,
-                        img.colorgrade_options, task.stop, task.queue);
-                });
-            } break;
-        }
-    }
     // grab result of finished tasks
     for (auto& img : app.images) {
         if (img.task_queue.empty()) continue;
@@ -435,6 +392,49 @@ void update(app_state& app) {
             } break;
         }
         img.task_queue.pop_front();
+    }
+    // schedule tasks not running
+    for (auto& img : app.images) {
+        if (img.task_queue.empty()) continue;
+        auto& task = img.task_queue.front();
+        if (task.result.valid()) continue;
+        task.stop = false;
+        switch (task.type) {
+            case app_task_type::none: break;
+            case app_task_type::load: {
+                log_info("start loading {}", img.filename);
+                img.load_done = false;
+                task.result   = async([&img]() {
+                    img.img = {};
+                    load_image(img.filename, img.img);
+                    compute_image_stats(img.image_stats, img.img,
+                        is_hdr_filename(img.filename));
+                });
+            } break;
+            case app_task_type::save: {
+                log_info("start saving {}", img.outname);
+                task.result = async([&img]() {
+                    if (!is_hdr_filename(img.outname)) {
+                        auto ldr = image<vec4b>{};
+                        float_to_byte(ldr, img.display);
+                        save_image(img.outname, ldr);
+                    } else {
+                        auto aux = image<vec4f>{};
+                        srgb_to_linear(aux, img.display);
+                        save_image(img.outname, aux);
+                    }
+                });
+            } break;
+            case app_task_type::display: {
+                log_info("start rendering {}", img.filename);
+                img.display_done = false;
+                task.result      = async([&img, &task]() {
+                    update_app_display(img.filename, img.img, img.display,
+                        img.display_stats, img.tonemap_options,
+                        img.colorgrade_options, task.stop, task.queue);
+                });
+            } break;
+        }
     }
 }
 
