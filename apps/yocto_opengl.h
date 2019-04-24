@@ -226,7 +226,7 @@ struct opengl_window {
     refresh_opengl_callback refresh_cb    = {};
     drop_opengl_callback    drop_cb       = {};
     int                     widgets_width = 0;
-    bool widgets_left      = true;
+    bool                    widgets_left  = true;
 };
 
 void init_opengl_window(opengl_window& win, const vec2i& size,
