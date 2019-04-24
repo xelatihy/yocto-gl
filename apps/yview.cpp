@@ -117,6 +117,38 @@ struct drawgl_options {
     float far_plane        = 10000.0f;
 };
 
+// Application task
+enum struct app_task_type {
+    none,
+    load_scene,
+    init_lights,
+    apply_edit,
+    save_image,
+    save_scene,
+    close_scene
+};
+
+struct app_task {
+    app_task_type                  type;
+    future<void>                   result;
+    atomic<bool>                   stop;
+    atomic<int>                    current;
+    concurrent_queue<image_region> queue;
+    app_edit                       edit;
+
+    app_task(app_task_type type, const app_edit& edit = {})
+        : type{type}, result{}, stop{false}, current{-1}, queue{}, edit{edit} {}
+    ~app_task() {
+        stop = true;
+        if (result.valid()) {
+            try {
+                result.get();
+            } catch (...) {
+            }
+        }
+    }
+};
+
 // Application state
 struct app_scene {
     // loading parameters
@@ -128,7 +160,6 @@ struct app_scene {
     // options
     load_scene_options load_options = {};
     save_scene_options save_options    = {};
-    bvh_build_options  bvh_options  = {};
     drawgl_options     draw_options = {};
 
     // scene
@@ -139,10 +170,7 @@ struct app_scene {
     drawgl_lights lights = {};
 
     // view image
-    bool             widgets_open   = false;
     bool             navigation_fps = false;
-    app_selection    selection      = {typeid(void), -1};
-    vector<app_edit> update_list;
     float            time       = 0;
     string           anim_group = "";
     vec2f            time_range = zero2f;
@@ -151,6 +179,10 @@ struct app_scene {
     // app status
     bool   load_done = false, load_running = false;
     string status = "";
+
+    // tasks
+    app_selection    selection      = {typeid(void), -1};
+    vector<app_edit> update_list;
 };
 
 // Application state
@@ -163,7 +195,6 @@ struct app_state {
     // default options
     load_scene_options    load_options    = {};
     save_scene_options    save_options    = {};
-    bvh_build_options     bvh_options     = {};
     drawgl_options        draw_options = {};
 };
 
@@ -227,7 +258,6 @@ void add_new_scene(app_state& app, const string& filename) {
     scn.load_options    = app.load_options;
     scn.save_options    = app.save_options;
     scn.draw_options   = app.draw_options;
-    scn.bvh_options     = app.bvh_options;
     load_scene_async(scn);
     // scn.task_queue.emplace_back(app_task_type::load_scene);
     app.selected = (int)app.scenes.size() - 1;
