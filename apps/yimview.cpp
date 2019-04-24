@@ -39,7 +39,7 @@ struct image_stats {
     vector<vec3f> histogram = {};
 };
 
-enum struct app_task_type { none, load, save, display };
+enum struct app_task_type { none, load, save, display, close };
 
 struct app_task {
     app_task_type                  type;
@@ -90,9 +90,14 @@ struct app_image {
 };
 
 struct app_state {
+    // data
     deque<app_image> images;
     int              selected = -1;
     deque<string>    errors;
+
+    // default options
+    tonemap_image_options    tonemap_options    = {};
+    colorgrade_image_options colorgrade_options = {};
 };
 
 // compute min/max
@@ -137,33 +142,14 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     compute_image_stats(stats, display, false);
 }
 
-// load image
-void load_app_image(
-    const string& filename, image<vec4f>& img, image_stats& stats) {
-    img = {};
-    load_image(filename, img);
-    compute_image_stats(stats, img, is_hdr_filename(filename));
-}
-
-// save an image
-void save_app_image(const string& filename, const image<vec4f>& display) {
-    if (!is_hdr_filename(filename)) {
-        auto ldr = image<vec4b>{};
-        float_to_byte(ldr, display);
-        save_image(filename, ldr);
-    } else {
-        auto aux = image<vec4f>{};
-        srgb_to_linear(aux, display);
-        save_image(filename, aux);
-    }
-}
-
 // add a new image
 void add_new_image(app_state& app, const string& filename) {
     auto& img                  = app.images.emplace_back();
     img.filename               = filename;
     img.outname                = get_noextension(filename) + ".display.png";
     img.name                   = get_filename(filename);
+    img.tonemap_options        = app.tonemap_options;
+    img.colorgrade_options     = app.colorgrade_options;
     img.tonemap_options.filmic = is_hdr_filename(filename);
     img.load_done              = false;
     img.display_done           = false;
@@ -173,8 +159,7 @@ void add_new_image(app_state& app, const string& filename) {
 
 void draw_opengl_widgets(const opengl_window& win) {
     static string load_path = "", save_path = "", error_message = "";
-    auto&         app    = *(app_state*)get_opengl_user_pointer(win);
-    auto          edited = false;
+    auto&         app = *(app_state*)get_opengl_user_pointer(win);
     if (!begin_opengl_widgets_window(win, "yimview")) return;
     if (!app.errors.empty() && error_message.empty()) {
         error_message = app.errors.front();
@@ -207,11 +192,7 @@ void draw_opengl_widgets(const opengl_window& win) {
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "close", app.selected >= 0)) {
         auto& img = app.images.at(app.selected);
-        if (img.task_queue.empty()) {
-            app.images.erase(app.images.begin() + app.selected);
-            app.selected = app.images.empty() ? -1 : 0;
-            return;
-        }
+        img.task_queue.emplace_back(app_task_type::close);
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "quit")) {
@@ -235,13 +216,13 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_checkbox_opengl_widget(win, "srgb", options.srgb);
         continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "auto wb")) {
-            edited       = true;
             auto wb      = 1 / xyz(img.image_stats.average);
             options.tint = wb / max(wb);
         }
         if (options != img.tonemap_options) {
-            edited              = true;
             img.tonemap_options = options;
+            if (img.load_done)
+                img.task_queue.emplace_back(app_task_type::display);
         }
         end_header_opengl_widget(win);
     }
@@ -258,14 +239,18 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_coloredit_opengl_widget(
             win, "highlights color", options.highlights_color);
         if (options != img.colorgrade_options) {
-            edited                 = true;
             img.colorgrade_options = options;
+            if (img.load_done)
+                img.task_queue.emplace_back(app_task_type::display);
         }
         end_header_opengl_widget(win);
     }
     if (begin_header_opengl_widget(win, "inspect")) {
-        draw_label_opengl_widget(win, "filename", "%s", img.filename.c_str());
-        draw_textinput_opengl_widget(win, "outname", img.outname);
+        draw_label_opengl_widget(win, "image", get_filename(img.filename));
+        draw_label_opengl_widget(win, "filename", img.filename);
+        draw_label_opengl_widget(win, "outname", img.outname);
+        draw_label_opengl_widget(
+            win, "image", "%d x %d", img.img.size().x, img.img.size().y);
         draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
         draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
         auto mouse_pos = get_opengl_mouse_pos(win);
@@ -300,9 +285,6 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_log_opengl_widget(win);
         end_header_opengl_widget(win);
     }
-    if (edited) {
-        if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
-    }
 }
 
 void draw(const opengl_window& win) {
@@ -331,53 +313,17 @@ void draw(const opengl_window& win) {
 }
 
 void update(app_state& app) {
-    // remove unneeded tasks
-    for (auto& img : app.images) {
-        while (img.task_queue.size() > 1 &&
-               img.task_queue.at(0).type == app_task_type::display &&
-               img.task_queue.at(1).type == app_task_type::display) {
-            log_info("cancel rendering {}", img.filename);
-            auto& task = img.task_queue.front();
-            task.stop  = true;
-            if (task.result.valid()) {
-                try {
-                    task.result.get();
-                } catch (...) {
-                }
+    // close if needed
+    while (!app.images.empty()) {
+        auto pos = -1;
+        for (auto idx = 0; idx < app.images.size(); idx++) {
+            for (auto& task : app.images[idx].task_queue) {
+                if (task.type == app_task_type::close) pos = idx;
             }
-            img.task_queue.pop_front();
         }
-    }
-    // schedule tasks not running
-    for (auto& img : app.images) {
-        if (img.task_queue.empty()) continue;
-        auto& task = img.task_queue.front();
-        if (task.result.valid()) continue;
-        task.stop = false;
-        switch (task.type) {
-            case app_task_type::none: break;
-            case app_task_type::load: {
-                log_info("start loading {}", img.filename);
-                img.load_done = false;
-                task.result   = async([&img]() {
-                    load_app_image(img.filename, img.img, img.image_stats);
-                });
-            } break;
-            case app_task_type::save: {
-                log_info("start saving {}", img.outname);
-                task.result = async(
-                    [&img]() { save_app_image(img.outname, img.display); });
-            } break;
-            case app_task_type::display: {
-                log_info("start rendering {}", img.filename);
-                img.display_done = false;
-                task.result      = async([&img, &task]() {
-                    update_app_display(img.filename, img.img, img.display,
-                        img.display_stats, img.tonemap_options,
-                        img.colorgrade_options, task.stop, task.queue);
-                });
-            } break;
-        }
+        if (pos < 0) break;
+        app.images.erase(app.images.begin() + pos);
+        app.selected = app.images.empty() ? -1 : 0;
     }
     // consume partial results
     for (auto& img : app.images) {
@@ -390,6 +336,27 @@ void update(app_state& app) {
                 img.gl_txt, img.display, region, false);
         }
     }
+    // remove unneeded tasks
+    for (auto& img : app.images) {
+        while (img.task_queue.size() > 1) {
+            auto& task = img.task_queue.at(0);
+            auto& next = img.task_queue.at(1);
+            if (task.type == app_task_type::display) {
+                if (next.type != app_task_type::display) break;
+                log_info("cancel rendering {}", img.filename);
+            } else {
+                break;
+            }
+            task.stop = true;
+            if (task.result.valid()) {
+                try {
+                    task.result.get();
+                } catch (...) {
+                }
+            }
+            img.task_queue.pop_front();
+        }
+    }
     // grab result of finished tasks
     for (auto& img : app.images) {
         if (img.task_queue.empty()) continue;
@@ -400,6 +367,7 @@ void update(app_state& app) {
             continue;
         switch (task.type) {
             case app_task_type::none: break;
+            case app_task_type::close: break;
             case app_task_type::load: {
                 try {
                     task.result.get();
@@ -438,6 +406,50 @@ void update(app_state& app) {
             } break;
         }
         img.task_queue.pop_front();
+    }
+    // schedule tasks not running
+    for (auto& img : app.images) {
+        if (img.task_queue.empty()) continue;
+        auto& task = img.task_queue.front();
+        if (task.result.valid()) continue;
+        task.stop = false;
+        switch (task.type) {
+            case app_task_type::none: break;
+            case app_task_type::close: break;
+            case app_task_type::load: {
+                log_info("start loading {}", img.filename);
+                img.load_done = false;
+                task.result   = async([&img]() {
+                    img.img = {};
+                    load_image(img.filename, img.img);
+                    compute_image_stats(img.image_stats, img.img,
+                        is_hdr_filename(img.filename));
+                });
+            } break;
+            case app_task_type::save: {
+                log_info("start saving {}", img.outname);
+                task.result = async([&img]() {
+                    if (!is_hdr_filename(img.outname)) {
+                        auto ldr = image<vec4b>{};
+                        float_to_byte(ldr, img.display);
+                        save_image(img.outname, ldr);
+                    } else {
+                        auto aux = image<vec4f>{};
+                        srgb_to_linear(aux, img.display);
+                        save_image(img.outname, aux);
+                    }
+                });
+            } break;
+            case app_task_type::display: {
+                log_info("start rendering {}", img.filename);
+                img.display_done = false;
+                task.result      = async([&img, &task]() {
+                    update_app_display(img.filename, img.img, img.display,
+                        img.display_stats, img.tonemap_options,
+                        img.colorgrade_options, task.stop, task.queue);
+                });
+            } break;
+        }
     }
 }
 

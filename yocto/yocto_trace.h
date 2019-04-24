@@ -162,11 +162,20 @@ struct trace_image_options {
     int                   region_size         = 16;
     float                 pixel_clamp         = 10;
     bool                  environments_hidden = false;
-    bool                  double_sided        = false;
     uint64_t              random_seed         = trace_default_seed;
     std::atomic<bool>*    cancel_flag         = nullptr;
     bool                  run_serially        = false;
 };
+
+// Equality operators
+inline bool operator==(
+    const trace_image_options& a, const trace_image_options& b) {
+    return memcmp(&a, &b, sizeof(a)) == 0;
+}
+inline bool operator!=(
+    const trace_image_options& a, const trace_image_options& b) {
+    return memcmp(&a, &b, sizeof(a)) != 0;
+}
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
@@ -178,6 +187,14 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 int trace_image_samples(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options);
+
+// Progressively compute an image by calling trace_image_region multiple times.
+// Compared to `trace_image_samples` this always runs serially and is helpful
+// when building async applications.
+void trace_image_region(image<vec4f>& image, trace_state& state,
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const image_region& region, int num_samples,
+    const trace_image_options& options);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // options.

@@ -722,104 +722,59 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     return edited;
 }
 
-inline bool draw_opengl_widgets_scene_tree(const opengl_window& win,
-    const string& lbl, yocto_scene& scene, app_selection& sel,
-    vector<app_edit>& update_list, int height) {
+inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
+    const string& lbl, yocto_scene& scene, app_selection& sel, int height) {
     draw_opengl_widgets_scene_tree(win, scene, sel);
-    auto update_len = update_list.size();
-#if 0
-    if (test_scn) {
-        draw_add_elem_opengl_widgets(
-            scene, "camera", scene.cameras, test_scn->cameras, sel, update_list);
-        draw_add_elem_opengl_widgets(scene, "texture", scene.textures,
-            test_scn->textures, sel, update_list);
-        draw_add_elem_opengl_widgets(scene, "mat", scene.materials,
-            test_scn->materials, sel, update_list);
-        draw_add_elem_opengl_widgets(
-            scene, "shape", scene.shapes, test_scn->shapes, sel, update_list);
-        draw_add_elem_opengl_widgets(scene, "instance", scene.instances,
-            test_scn->instances, sel, update_list);
-        draw_add_elem_opengl_widgets(
-            scene, "node", scene.nodes, test_scn->nodes, sel, update_list);
-        draw_add_elem_opengl_widgets(scene, "environment", scene.environments,
-            test_scn->environments, sel, update_list);
-        draw_add_elem_opengl_widgets(scene, "anim", scene.animations,
-            test_scn->animations, sel, update_list);
-    }
-#endif
-    return update_list.size() != update_len;
 }
 
 inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
-    const string& lbl, yocto_scene& scene, app_selection& sel,
-    vector<app_edit>& update_list, int height) {
+    const string& lbl, yocto_scene& scene, app_selection& sel, app_edit& edit,
+    int height) {
     if (sel.type == typeid(void)) return false;
 
-    auto update_len = update_list.size();
-
-    auto edit = app_edit{};
+    edit = app_edit{};
     if (sel.type == typeid(yocto_camera)) {
-        if (draw_opengl_widgets_scene_inspector(
-                win, scene.cameras[sel.index], sel, edit, scene)) {
-            update_list.push_back(edit);
-        }
+        return draw_opengl_widgets_scene_inspector(
+            win, scene.cameras[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_shape)) {
-        if (draw_opengl_widgets_scene_inspector(
-                win, scene.shapes[sel.index], sel, edit, scene)) {
-            update_list.push_back(edit);
-        }
+        return draw_opengl_widgets_scene_inspector(
+            win, scene.shapes[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_subdiv)) {
-        if (draw_opengl_widgets_scene_inspector(
-                win, scene.subdivs[sel.index], sel, edit, scene)) {
-            update_list.push_back(edit);
-        }
+        return draw_opengl_widgets_scene_inspector(
+            win, scene.subdivs[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_texture)) {
-        if (draw_opengl_widgets_scene_inspector(
-                win, scene.textures[sel.index], sel, edit, scene)) {
-            update_list.push_back(edit);
-        }
+        return draw_opengl_widgets_scene_inspector(
+            win, scene.textures[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_voltexture)) {
-        if (draw_opengl_widgets_scene_inspector(
-                win, scene.voltextures[sel.index], sel, edit, scene)) {
-            update_list.push_back(edit);
-        }
+        return draw_opengl_widgets_scene_inspector(
+            win, scene.voltextures[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_material)) {
-        if (draw_opengl_widgets_scene_inspector(
-                win, scene.materials[sel.index], sel, edit, scene)) {
-            update_list.push_back(edit);
-        }
+        return draw_opengl_widgets_scene_inspector(
+            win, scene.materials[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_environment)) {
-        if (draw_opengl_widgets_scene_inspector(
-                win, scene.environments[sel.index], sel, edit, scene)) {
-            update_list.push_back(edit);
-        }
+        return draw_opengl_widgets_scene_inspector(
+            win, scene.environments[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_instance)) {
-        if (draw_opengl_widgets_scene_inspector(
-                win, scene.instances[sel.index], sel, edit, scene)) {
-            update_list.push_back(edit);
-        }
+        return draw_opengl_widgets_scene_inspector(
+            win, scene.instances[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_scene_node)) {
-        if (draw_opengl_widgets_scene_inspector(
-                win, scene.nodes[sel.index], sel, edit, scene)) {
-            update_list.push_back(edit);
-        }
+        return draw_opengl_widgets_scene_inspector(
+            win, scene.nodes[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_animation)) {
-        if (draw_opengl_widgets_scene_inspector(
-                win, scene.animations[sel.index], sel, edit, scene)) {
-            update_list.push_back(edit);
-        }
+        return draw_opengl_widgets_scene_inspector(
+            win, scene.animations[sel.index], sel, edit, scene);
     }
 
-    return update_list.size() != update_len;
+    return false;
 }
 
 #endif

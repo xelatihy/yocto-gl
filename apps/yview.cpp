@@ -855,12 +855,15 @@ void draw_widgets(const opengl_window& win) {
             }
             if (app.load_done && begin_tabitem_opengl_widget(win, "navigate")) {
                 draw_opengl_widgets_scene_tree(
-                    win, "", app.scene, app.selection, app.update_list, 200);
+                    win, "", app.scene, app.selection, 200);
                 end_tabitem_opengl_widget(win);
             }
             if (app.load_done && begin_tabitem_opengl_widget(win, "inspect")) {
-                draw_opengl_widgets_scene_inspector(
-                    win, "", app.scene, app.selection, app.update_list, 200);
+                auto edit = app_edit{};
+                if (draw_opengl_widgets_scene_inspector(
+                        win, "", app.scene, app.selection, edit, 200)) {
+                    app.update_list.push_back(edit);
+                }
                 end_tabitem_opengl_widget(win);
             }
             end_tabbar_opengl_widget(win);
