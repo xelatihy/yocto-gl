@@ -980,15 +980,15 @@ void update(app_state& app) {
 
     // apply synchronous edit
     for (auto& scn : app.scenes) {
-        while(!scn.task_queue.empty()) {
+        while (!scn.task_queue.empty()) {
             auto& task = scn.task_queue.front();
             if (task.type != app_task_type::apply_edit) break;
             log_info("start editing {}", scn.filename);
             try {
-                apply_edit(scn.filename, scn.scene, scn.lights, scn.draw_options,
-                    scn.time, scn.anim_group, task.edit);
+                apply_edit(scn.filename, scn.scene, scn.lights,
+                    scn.draw_options, scn.time, scn.anim_group, task.edit);
                 log_info("done editing {}", scn.filename);
-            } catch(std::exception& e) {
+            } catch (std::exception& e) {
                 log_error(e.what());
                 app.errors.push_back("cannot edit " + scn.filename);
             }
@@ -1161,8 +1161,7 @@ void run_ui(app_state& app) {
         draw(win);
 
         // event hadling
-        process_opengl_events(
-            win, !((mouse_left || mouse_right) || widgets_active));
+        process_opengl_events(win);
     }
 
     // clear

@@ -497,7 +497,6 @@ void run_ui(app_state& app) {
         draw(win);
 
         // event hadling
-        // could also wait if (mouse_left || mouse_right || widgets_active)
         process_opengl_events(win);
     }
 
