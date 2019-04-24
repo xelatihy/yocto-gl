@@ -43,6 +43,27 @@ namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
 };  // namespace yocto
 
+// Application task
+enum struct app_task_type { none, load, save, bvh, lights, render, save_scene };
+
+struct app_task {
+    app_task_type                  type;
+    future<void>                   result;
+    atomic<bool>                   stop;
+    concurrent_queue<image_region> queue;
+
+    app_task(app_task_type type) : type{type}, result{}, stop{false}, queue{} {}
+    ~app_task() {
+        stop = true;
+        if (result.valid()) {
+            try {
+                result.get();
+            } catch (...) {
+            }
+        }
+    }   
+};
+
 // Application state
 struct app_state {
     // loading options
