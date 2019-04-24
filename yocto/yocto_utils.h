@@ -1012,7 +1012,7 @@ inline bool startswith(string_view str, string_view substr) {
 inline bool endswith(string_view str, string_view substr) {
     return str.rfind(substr) == str.size() - substr.size();
 }
-inline void split(string_view str, vector<string_view>& splits,
+inline void split_view(string_view str, vector<string_view>& splits,
     string_view delimiters = " \t\r\n", bool trim_empty = true) {
     splits.clear();
     while (!str.empty()) {
@@ -1029,14 +1029,14 @@ inline void split(string_view str, vector<string_view>& splits,
         }
     }
 }
-inline vector<string_view> split(string_view str) {
+inline vector<string_view> split_view(string_view str, string_view delimiters = " \t\r\n", bool trim_empty = true) {
     auto splits = vector<string_view>{};
-    split(str, splits);
+    split_view(str, splits, delimiters, trim_empty);
     return splits;
 }
-inline vector<string> split(const string& str) {
+inline vector<string> split(const string& str, string_view delimiters = " \t\r\n", bool trim_empty = true) {
     auto splits = vector<string_view>{};
-    split(str, splits);
+    split_view(str, splits, delimiters, trim_empty);
     auto splits_str = vector<string>();
     for (auto split : splits) splits_str.push_back(string(split));
     return splits_str;

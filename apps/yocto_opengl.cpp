@@ -797,38 +797,65 @@ bool draw_modal_message_opengl_window(
 }
 
 struct filedialog_state {
-    string                     dirname       = "";
-    string                     filename      = "";
-    vector<pair<string, bool>> entries       = {};
-    bool                       save          = false;
-    bool                       remove_hidden = true;
+    string                     dirname          = "";
+    string                     filename         = "";
+    vector<pair<string, bool>> entries          = {};
+    bool                       save             = false;
+    bool                       remove_hidden    = true;
+    string                     filter           = "";
+    vector<string>             extensions       = {};
 
     filedialog_state() {}
-    filedialog_state(const string& dirname, const string& filename, bool save)
-        : dirname{dirname}, filename{filename}, save{save} {
+    filedialog_state(const string& dirname, const string& filename, bool save,
+        const string& filter) {
+        this->save = save;
+        set_filter(filter);
+        set_dirname(dirname);
+        set_filename(filename);
+    }
+    void set_dirname(const string& name) {
+        dirname = name;
+        dirname = normalize_path(dirname);
+        if(dirname == "") dirname = "./";
+        if (dirname.back() != '/') dirname += '/';
         refresh();
     }
-    void set_dirname(const string& dirname) {
-        this->dirname = dirname;
-        refresh();
+    void set_filename(const string& name) { 
+        filename = name; 
+        check_filename();
     }
-    void set_filename(const string& filename) { this->filename = filename; }
+    void set_filter(const string& flt) { 
+        filter = "";
+        extensions.clear();
+        for(auto pattern : split(flt, ";")) {
+            auto ext = get_extension(pattern);
+            if(ext != "") {
+                extensions.push_back(ext);
+                filter += (filter == "") ? ("*."+ext) : (";*."+ext);
+            }
+        }
+    }
+    void check_filename() {
+        if(filename.empty()) return;
+        auto ext = get_extension(filename);
+        if(std::find(extensions.begin(), extensions.end(), ext) == extensions.end()) {
+            filename = "";
+            return;
+        }
+        if(!save && !exists_file(dirname + filename)) {
+            filename = "";
+            return;
+        }
+    }
     void select_entry(int idx) {
         if (entries[idx].second) {
-            dirname = dirname + entries[idx].first;
-            refresh();
+            set_dirname(dirname + entries[idx].first);
         } else {
-            filename = entries[idx].first;
+            set_filename(entries[idx].first);
         }
     }
 
     void refresh() {
-        dirname = normalize_path(dirname);
-        if (dirname == "") {
-            dirname = "./";
-        } else if (dirname.back() != '/') {
-            dirname += '/';
-        }
         entries.clear();
         cf_dir_t dir;
         cf_dir_open(&dir, dirname.c_str());
@@ -854,11 +881,11 @@ struct filedialog_state {
 };
 bool draw_modal_fileialog_opengl_widgets(const opengl_window& win,
     const char* lbl, string& path, bool save, const string& dirname,
-    const string& filename) {
+    const string& filename, const string& filter) {
     static auto states = unordered_map<string, filedialog_state>{};
     if (ImGui::BeginPopupModal(lbl)) {
         if (states.find(lbl) == states.end()) {
-            states[lbl] = filedialog_state{dirname, filename, save};
+            states[lbl] = filedialog_state{dirname, filename, save, filter};
         }
         auto& state = states.at(lbl);
         char  dir_buffer[1024];
@@ -881,6 +908,11 @@ bool draw_modal_fileialog_opengl_widgets(const opengl_window& win,
         strcpy(file_buffer, state.filename.c_str());
         if (ImGui::InputText("file", file_buffer, sizeof(file_buffer))) {
             state.set_filename(file_buffer);
+        }
+        char filter_buffer[1024];
+        strcpy(filter_buffer, state.filter.c_str());
+        if (ImGui::InputText("filter", filter_buffer, sizeof(filter_buffer))) {
+            state.set_filter(filter_buffer);
         }
         auto ok = false, exit = false;
         if (ImGui::Button("Ok")) {

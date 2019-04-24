@@ -279,7 +279,7 @@ bool draw_modal_message_opengl_window(
     const opengl_window& win, const char* lbl, const string& message);
 bool draw_modal_fileialog_opengl_widgets(const opengl_window& win,
     const char* lbl, string& path, bool save, const string& dirname,
-    const string& filename);
+    const string& filename, const string& filter);
 
 void draw_text_opengl_widget(const opengl_window& win, const string& text);
 void draw_label_opengl_widget(
