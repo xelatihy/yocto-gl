@@ -329,11 +329,15 @@ void update(app_state& app) {
     }
     // remove unneeded tasks
     for (auto& img : app.images) {
-        while (img.task_queue.size() > 1 &&
-               img.task_queue.at(0).type == app_task_type::display &&
-               img.task_queue.at(1).type == app_task_type::display) {
-            log_info("cancel rendering {}", img.filename);
-            auto& task = img.task_queue.front();
+        while (img.task_queue.size() > 1) {
+            auto& task = img.task_queue.at(0);
+            auto& next = img.task_queue.at(1);
+            if(task.type == app_task_type::display){
+                if(next.type != app_task_type::display) break;
+                log_info("cancel rendering {}", img.filename);
+            } else {
+                break;
+            }
             task.stop  = true;
             if (task.result.valid()) {
                 try {
