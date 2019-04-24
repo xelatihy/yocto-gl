@@ -299,11 +299,11 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (!draw_modal_message_opengl_window(win, "error", error_message)) {
         error_message = "";
     }
-    if (draw_modal_fileialog_opengl_widgets(win, "load scene", load_path, false,
+    if (draw_modal_fileialog_opengl_widgets(win, "load", load_path, false,
             "./", "", "*.yaml;*.obj;*.pbrt")) {
         add_new_scene(app, load_path);
     }
-    if (draw_modal_fileialog_opengl_widgets(win, "save scene", save_path, true,
+    if (draw_modal_fileialog_opengl_widgets(win, "save", save_path, true,
             get_dirname(save_path), get_filename(save_path),
             "*.yaml;*.obj;*.pbrt")) {
         app.scenes[app.selected].outname = save_path;
@@ -320,14 +320,15 @@ void draw_opengl_widgets(const opengl_window& win) {
         save_path = "";
     }
     if (draw_button_opengl_widget(win, "load")) {
-        open_modal_opengl_widget(win, "load scene");
+        open_modal_opengl_widget(win, "load");
     }
     continue_opengl_widget_line(win);
-    if (draw_button_opengl_widget(win, "save scene",
+    if (draw_button_opengl_widget(win, "save",
             app.selected >= 0 && app.scenes[app.selected].task_queue.empty())) {
         save_path = app.scenes[app.selected].outname;
-        open_modal_opengl_widget(win, "save scene");
+        open_modal_opengl_widget(win, "save");
     }
+    continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "save image",
             app.selected >= 0 && app.scenes[app.selected].render_done)) {
         save_path = app.scenes[app.selected].imagename;
@@ -678,7 +679,7 @@ void update(app_state& app) {
                     scn.trace_options.sampler_type =
                         trace_sampler_type::eyelight;
                 }
-                scn.render_sample = scn.trace_options.num_samples;
+                scn.render_sample = 0;
                 scn.name = format("{} [{}x{}@{}]", get_filename(scn.filename),
                     scn.render.size().x, scn.render.size().y,
                     scn.render_sample);
