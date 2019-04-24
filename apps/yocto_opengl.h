@@ -241,6 +241,7 @@ vec2i get_opengl_framebuffer_size(const opengl_window& win);
 vec2i get_opengl_window_size(const opengl_window& win);
 
 bool should_opengl_window_close(const opengl_window& win);
+void set_close_opengl_window(const opengl_window& win, bool close);
 
 vec2f get_opengl_mouse_pos(const opengl_window& win);
 bool  get_opengl_mouse_left(const opengl_window& win);
@@ -268,8 +269,21 @@ void end_tabbar_opengl_widget(const opengl_window& win);
 bool begin_tabitem_opengl_widget(const opengl_window& win, const char* title);
 void end_tabitem_opengl_widget(const opengl_window& win);
 
+void open_modal_opengl_widget(const opengl_window& win, const char* lbl);
+void close_modal_opengl_widget(const opengl_window& win);
+bool begin_modal_opengl_widget(const opengl_window& win, const char* lbl);
+void end_modal_opengl_widget(const opengl_window& win);
+bool is_modal_open_opengl_widget(const opengl_window& win);
+
+bool draw_modal_message_opengl_window(
+    const opengl_window& win, const char* lbl, const string& message);
+bool draw_modal_fileialog_opengl_widgets(const opengl_window& win,
+    const char* lbl, string& path, bool save, const string& dirname,
+    const string& filename, const string& filter);
+
+void draw_text_opengl_widget(const opengl_window& win, const string& text);
 void draw_label_opengl_widget(
-    const opengl_window& win, const char* lbl, const string& texture);
+    const opengl_window& win, const char* lbl, const string& text);
 void draw_label_opengl_widget(
     const opengl_window& win, const char* lbl, const char* fmt, ...);
 
@@ -280,6 +294,8 @@ void draw_separator_opengl_widget(const opengl_window& win);
 void continue_opengl_widget_line(const opengl_window& win);
 
 bool draw_button_opengl_widget(const opengl_window& win, const char* lbl);
+bool draw_button_opengl_widget(
+    const opengl_window& win, const char* lbl, bool enabled);
 
 bool draw_textinput_opengl_widget(
     const opengl_window& win, const char* lbl, string& value);
@@ -372,18 +388,31 @@ inline bool draw_combobox_opengl_widget(const opengl_window& win,
         win, lbl, idx, (int)vals.size(),
         [&](int idx) { return vals[idx].uri.c_str(); }, include_null);
 }
-template <typename T>
-inline bool draw_combobox_opengl_widget(const opengl_window& win,
-    const char* lbl, int& idx, const deque<T>& vals,
-    bool include_null = false) {
-    return draw_combobox_opengl_widget(
-        win, lbl, idx, (int)vals.size(),
-        [&](int idx) { return vals[idx].name.c_str(); }, include_null);
-}
 
 void begin_child_opengl_widget(
     const opengl_window& win, const char* lbl, const vec2i& size);
 void end_child_opengl_widget(const opengl_window& win);
+
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const float* values, int count);
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<float>& values);
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<vec2f>& values);
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<vec3f>& values);
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<vec4f>& values);
+
+void add_log_opengl_widget(const opengl_window& win, const char* msg);
+void add_log_opengl_widget(const opengl_window& win, const string& msg);
+void clear_logs_opengl_widget(const opengl_window& win);
+void draw_log_opengl_widget(const opengl_window& win);
+
+void open_message_opengl_widget(
+    const opengl_window& win, const char* title, const string& message);
+void draw_message_opengl_widget(const opengl_window& win, const char* title);
+bool is_message_open_opengl_widget(const opengl_window& win, const char* title);
 
 }  // namespace yocto
 

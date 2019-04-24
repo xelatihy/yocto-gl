@@ -50,14 +50,12 @@ struct app_state {
     string imfilename = "out.obj";
 
     // options
-    load_scene_options  load_options  = {};
-    bvh_build_options   bvh_options   = {};
-    trace_image_options trace_options = {};
-    float               exposure      = 0;
-    bool                filmic        = false;
-    bool                srgb          = true;
-    int                 preview_ratio = 8;
-    vec2i               image_size    = {0, 0};
+    load_scene_options    load_options          = {};
+    bvh_build_options     bvh_options           = {};
+    trace_image_options   trace_options         = {};
+    tonemap_image_options tonemap_image_options = {};
+    int                   preview_ratio         = 8;
+    vec2i                 image_size            = {0, 0};
 
     // scene
     yocto_scene scene      = {};
@@ -114,8 +112,7 @@ void start_rendering_async(app_state& app) {
     preview_options.num_samples = 1;
     app.preview = trace_image(app.scene, app.bvh, app.lights, preview_options);
     auto display_preview = app.preview;
-    tonemap_image(
-        display_preview, app.preview, app.exposure, app.filmic, app.srgb);
+    tonemap_image(display_preview, app.preview, app.tonemap_image_options);
     auto large_preview = image{app.image_size, zero4f};
     for (auto j = 0; j < app.image_size.y; j++) {
         for (auto i = 0; i < app.image_size.x; i++) {
@@ -265,10 +262,13 @@ void draw_opengl_widgets(const opengl_window& win) {
                             -1, app.trace_options, false});
                     }
                 }
-                draw_slider_opengl_widget(win, "exposure", app.exposure, -5, 5);
-                draw_checkbox_opengl_widget(win, "filmic", app.filmic);
+                draw_slider_opengl_widget(
+                    win, "exposure", app.tonemap_image_options.exposure, -5, 5);
+                draw_checkbox_opengl_widget(
+                    win, "filmic", app.tonemap_image_options.filmic);
                 continue_opengl_widget_line(win);
-                draw_checkbox_opengl_widget(win, "srgb", app.srgb);
+                draw_checkbox_opengl_widget(
+                    win, "srgb", app.tonemap_image_options.srgb);
                 draw_slider_opengl_widget(
                     win, "zoom", app.image_scale, 0.1, 10);
                 draw_checkbox_opengl_widget(
@@ -340,7 +340,7 @@ void draw(const opengl_window& win) {
                     break;
                 } else {
                     tonemap_image_region(app.display, region, app.render,
-                        app.exposure, app.filmic, app.srgb);
+                        app.tonemap_image_options);
                     update_opengl_texture_region(
                         app.display_texture, app.display, region, false);
                     size += region.size().x * region.size().y;

@@ -132,6 +132,198 @@ namespace yocto {
 // We use the fmt library as a backend for printing. These are just helpers to
 // make printing easier in console apps.
 template <typename... Args>
+inline void println(string_view format_str, const Args&... args);
+// Helper to indicate info printing in console apps.
+template <typename... Args>
+inline void print_info(string_view format_str, const Args&... args);
+// Prints an error and exit.
+template <typename... Args>
+inline void print_fatal(string_view format_str, const Args&... args);
+
+// get time from a high resolution clock
+inline auto get_time();
+
+// print information and returns a timer that will print the time when
+// destroyed. Use with RIIA for scoped timing.
+template <typename... Args>
+inline auto print_timed(string_view format_str, const Args&... args);
+
+// Logging to a sync
+inline void set_log_callback(function<void(const string&)> callback);
+template <typename... Args>
+inline void log_info(string_view format_str, const Args&... args);
+template <typename... Args>
+inline void log_error(string_view format_str, const Args&... args);
+template <typename... Args>
+inline auto log_timed(string_view format_str, const Args&... args);
+
+}  // namespace yocto
+
+// Formatter for math types
+namespace fmt {
+
+// Formatter for math types
+template <typename T, int N>
+struct formatter<yocto::vec<T, N>>;
+template <typename T, int N, int M>
+struct formatter<yocto::mat<T, N, M>>;
+template <typename T, int N>
+struct formatter<yocto::affine<T, N>>;
+template <typename T, int N>
+struct formatter<yocto::frame<T, N>>;
+template <typename T, int N>
+struct formatter<yocto::bbox<T, N>>;
+
+}  // namespace fmt
+
+// -----------------------------------------------------------------------------
+// PYTHON-LIKE ITERATORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Python `range()` equivalent. Construct an object to iterate over a sequence.
+inline auto range(int max);
+inline auto range(int min, int max);
+
+// Python `enumerate()` equivalent. Construct an object that iteraterates over a
+// sequence of elements and numbers them.
+template <typename T>
+inline auto enumerate(const vector<T>& vals);
+template <typename T>
+inline auto enumerate(vector<T>& vals);
+
+// Vector append and concatenation
+template <typename T>
+inline vector<T>& operator+=(vector<T>& a, const T& b);
+template <typename T>
+inline vector<T>& operator+=(vector<T>& a, const vector<T>& b);
+template <typename T>
+inline vector<T>& operator+=(vector<T>& a, const initializer_list<T>& b);
+template <typename T>
+inline vector<T> operator+(const vector<T>& a, const T& b);
+template <typename T>
+inline vector<T> operator+(const vector<T>& a, const vector<T>& b);
+template <typename T>
+inline vector<T> operator+(const vector<T>& a, const initializer_list<T>& b);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// APPLICATION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Format duration string from nanoseconds
+inline string format_duration(int64_t duration);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Normalize path delimiters.
+inline string normalize_path(const string& filename);
+// Get directory name (including '/').
+inline string get_dirname(const string& filename);
+// Get extension (not including '.').
+inline string get_extension(const string& filename);
+// Get filename without directory.
+inline string get_filename(const string& filename);
+// Get path without extension.
+inline string get_noextension(const string& filename);
+// Get filename without directory and extension.
+inline string get_basename(const string& filename);
+
+// Check if a file can be opened for reading.
+inline bool exists_file(const string& filename);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a text file
+inline void load_text(const string& filename, string& str);
+inline void save_text(const string& filename, const string& str);
+
+// Load/save a binary file
+inline void load_binary(const string& filename, vector<byte>& data);
+inline void save_binary(const string& filename, const vector<byte>& data);
+
+// Io error
+struct io_error : runtime_error {
+    explicit io_error(const char* msg) : runtime_error{msg} {}
+    explicit io_error(const std::string& msg) : runtime_error{msg} {}
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CONCURRENCY UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// a simple concurrent queue that locks at every call
+template <typename T>
+struct concurrent_queue {
+    concurrent_queue();
+    concurrent_queue(const concurrent_queue& other);
+    concurrent_queue& operator=(const concurrent_queue& other);
+
+    bool empty();
+    void clear();
+    void push(const T& value);
+    bool try_pop(T& value);
+
+   private:
+    mutex    _mutex;
+    deque<T> _queue;
+};
+
+// Runs a rask as an asycnrhonous operation.
+template <typename Function>
+inline auto async(Function&& function);
+template <typename Function, typename... Args>
+inline auto async(Function&& function, Args&&... args);
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(size_t begin, size_t end, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false);
+template <typename Func>
+inline void parallel_for(size_t num, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false);
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+inline void parallel_foreach(vector<T>& values, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false);
+template <typename T, typename Func>
+inline void parallel_foreach(const vector<T>& values, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false);
+
+}  // namespace yocto
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+//                             IMPLEMENTATION                                 //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR PRINTING AND FORMATTING HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// We use the fmt library as a backend for printing. These are just helpers to
+// make printing easier in console apps.
+template <typename... Args>
 inline void println(string_view format_str, const Args&... args) {
     print(format_str, args...);
     print("\n");
@@ -175,6 +367,38 @@ inline auto print_timed(string_view format_str, const Args&... args) {
     };
 
     return print_timer(format(format_str, args...));
+}
+
+// Logging to a sync
+inline auto _log_callback = function<void(const string&)>{};
+inline void set_log_callback(function<void(const string&)> callback) {
+    _log_callback = callback;
+}
+template <typename... Args>
+inline void log_info(string_view format_str, const Args&... args) {
+    _log_callback(format(format_str, args...) + "\n");
+}
+template <typename... Args>
+inline void log_error(string_view format_str, const Args&... args) {
+    _log_callback(format(format_str, args...) + "\n");
+}
+template <typename... Args>
+inline auto log_timed(string_view format_str, const Args&... args) {
+    struct log_timer {
+        log_timer(const string& msg) : _msg{msg} {
+            _start = std::chrono::high_resolution_clock::now();
+            log_info("{}", msg);
+        }
+        ~log_timer() {
+            auto end = std::chrono::high_resolution_clock::now();
+            log_info("{} {:%H:%M:%S}", _msg, end - _start);
+        }
+
+       private:
+        string                                                      _msg;
+        std::chrono::time_point<std::chrono::high_resolution_clock> _start;
+    };
+    return log_timer(format(format_str, args...));
 }
 
 }  // namespace yocto
@@ -222,7 +446,7 @@ struct formatter<yocto::bbox<T, N>> : formatter_base<yocto::bbox<T, N>, 2> {};
 }  // namespace fmt
 
 // -----------------------------------------------------------------------------
-// PYTHON-LIKE ITERATORS
+// IMPLEMENTATION FOR PYTHON-LIKE ITERATORS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -313,129 +537,6 @@ inline vector<T> operator+(const vector<T>& a, const initializer_list<T>& b) {
 }
 
 }  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// APPLICATION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Normalize path delimiters.
-inline string normalize_path(const string& filename);
-// Get directory name (including '/').
-inline string get_dirname(const string& filename);
-// Get extension (not including '.').
-inline string get_extension(const string& filename);
-// Get filename without directory.
-inline string get_filename(const string& filename);
-// Get path without extension.
-inline string get_noextension(const string& filename);
-// Get filename without directory and extension.
-inline string get_basename(const string& filename);
-
-// Check if a file can be opened for reading.
-inline bool exists_file(const string& filename);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Load/save a text file
-inline void load_text(const string& filename, string& str);
-inline void save_text(const string& filename, const string& str);
-
-// Load/save a binary file
-inline void load_binary(const string& filename, vector<byte>& data);
-inline void save_binary(const string& filename, const vector<byte>& data);
-
-// Io error
-struct io_error : runtime_error {
-    explicit io_error(const char* msg) : runtime_error{msg} {}
-    explicit io_error(const std::string& msg) : runtime_error{msg} {}
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// CONCURRENCY UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// a simple concurrent queue that locks at every call
-template <typename T>
-struct concurrent_queue {
-    concurrent_queue();
-    concurrent_queue(const concurrent_queue& other);
-    concurrent_queue& operator=(const concurrent_queue& other);
-
-    bool empty();
-    void clear();
-    void push(const T& value);
-    bool try_pop(T& value);
-
-   private:
-    mutex    _mutex;
-    deque<T> _queue;
-};
-
-// Runs a rask as an asycnrhonous operation.
-template <typename Function>
-inline auto async(Function&& function) {
-    return std::async(std::launch::async, std::forward<Function>(function));
-}
-template <typename Function, typename... Args>
-inline auto async(Function&& function, Args&&... args) {
-    return std::async(std::launch::async, std::forward<Function>(function),
-        std::forward<Args>(args)...);
-}
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(size_t begin, size_t end, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false);
-template <typename Func>
-inline void parallel_for(size_t num, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false) {
-    parallel_for(0, num, func, cancel, serial);
-}
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes a reference to a `T`.
-template <typename T, typename Func>
-inline void parallel_foreach(vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false) {
-    parallel_for(
-        0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
-        cancel, serial);
-}
-template <typename T, typename Func>
-inline void parallel_foreach(const vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false) {
-    parallel_for(
-        0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
-        cancel, serial);
-}
-
-}  // namespace yocto
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-//                             IMPLEMENTATION                                 //
-//                                                                            //
-// ---------------------------------------------------------------------------//
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING FORMAT UTILITIES
@@ -636,6 +737,17 @@ inline bool concurrent_queue<T>::try_pop(T& value) {
     return true;
 }
 
+// Runs a rask as an asycnrhonous operation.
+template <typename Function>
+inline auto async(Function&& function) {
+    return std::async(std::launch::async, std::forward<Function>(function));
+}
+template <typename Function, typename... Args>
+inline auto async(Function&& function, Args&&... args) {
+    return std::async(std::launch::async, std::forward<Function>(function),
+        std::forward<Args>(args)...);
+}
+
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms.
 template <typename Func>
@@ -662,6 +774,31 @@ inline void parallel_for(size_t begin, size_t end, const Func& func,
         }
         for (auto& f : futures) f.get();
     }
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(
+    size_t num, const Func& func, atomic<bool>* cancel, bool serial) {
+    parallel_for(0, num, func, cancel, serial);
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+inline void parallel_foreach(
+    vector<T>& values, const Func& func, atomic<bool>* cancel, bool serial) {
+    parallel_for(
+        0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
+        cancel, serial);
+}
+template <typename T, typename Func>
+inline void parallel_foreach(const vector<T>& values, const Func& func,
+    atomic<bool>* cancel, bool serial) {
+    parallel_for(
+        0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
+        cancel, serial);
 }
 
 }  // namespace yocto
@@ -875,7 +1012,7 @@ inline bool startswith(string_view str, string_view substr) {
 inline bool endswith(string_view str, string_view substr) {
     return str.rfind(substr) == str.size() - substr.size();
 }
-inline void split(string_view str, vector<string_view>& splits,
+inline void split_view(string_view str, vector<string_view>& splits,
     string_view delimiters = " \t\r\n", bool trim_empty = true) {
     splits.clear();
     while (!str.empty()) {
@@ -892,14 +1029,16 @@ inline void split(string_view str, vector<string_view>& splits,
         }
     }
 }
-inline vector<string_view> split(string_view str) {
+inline vector<string_view> split_view(string_view str,
+    string_view delimiters = " \t\r\n", bool trim_empty = true) {
     auto splits = vector<string_view>{};
-    split(str, splits);
+    split_view(str, splits, delimiters, trim_empty);
     return splits;
 }
-inline vector<string> split(const string& str) {
+inline vector<string> split(const string& str,
+    string_view delimiters = " \t\r\n", bool trim_empty = true) {
     auto splits = vector<string_view>{};
-    split(str, splits);
+    split_view(str, splits, delimiters, trim_empty);
     auto splits_str = vector<string>();
     for (auto split : splits) splits_str.push_back(string(split));
     return splits_str;

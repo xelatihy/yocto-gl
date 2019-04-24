@@ -40,6 +40,10 @@
 #include "ext/imgui/imgui.h"
 #include "ext/imgui/imgui_impl_glfw.h"
 #include "ext/imgui/imgui_impl_opengl3.h"
+#include "ext/imgui/imgui_internal.h"
+
+#define CUTE_FILES_IMPLEMENTATION
+#include "ext/cute_files.h"
 
 namespace yocto {
 
@@ -657,6 +661,9 @@ vec2i get_opengl_window_size(const opengl_window& win) {
 bool should_opengl_window_close(const opengl_window& win) {
     return glfwWindowShouldClose(win.win);
 }
+void set_close_opengl_window(const opengl_window& win, bool close) {
+    glfwSetWindowShouldClose(win.win, close ? GLFW_TRUE : GLFW_FALSE);
+}
 
 vec2f get_opengl_mouse_pos(const opengl_window& win) {
     double mouse_posx, mouse_posy;
@@ -759,8 +766,197 @@ void end_tabitem_opengl_widget(const opengl_window& win) {
     ImGui::EndTabItem();
 }
 
+void open_modal_opengl_widget(const opengl_window& win, const char* lbl) {
+    ImGui::OpenPopup(lbl);
+}
+void close_modal_opengl_widget(const opengl_window& win) {
+    ImGui::CloseCurrentPopup();
+}
+bool begin_modal_opengl_widget(const opengl_window& win, const char* lbl) {
+    return ImGui::BeginPopupModal(lbl);
+}
+void end_modal_opengl_widget(const opengl_window& win) { ImGui::EndPopup(); }
+bool is_modal_open_opengl_widget(const opengl_window& win, const char* lbl) {
+    return ImGui::IsPopupOpen(lbl);
+}
+
+bool draw_modal_message_opengl_window(
+    const opengl_window& win, const char* lbl, const string& message) {
+    if (ImGui::BeginPopupModal(lbl)) {
+        auto open = true;
+        ImGui::Text("%s", message.c_str());
+        if (ImGui::Button("Ok")) {
+            ImGui::CloseCurrentPopup();
+            open = false;
+        }
+        ImGui::EndPopup();
+        return open;
+    } else {
+        return false;
+    }
+}
+
+struct filedialog_state {
+    string                     dirname       = "";
+    string                     filename      = "";
+    vector<pair<string, bool>> entries       = {};
+    bool                       save          = false;
+    bool                       remove_hidden = true;
+    string                     filter        = "";
+    vector<string>             extensions    = {};
+
+    filedialog_state() {}
+    filedialog_state(const string& dirname, const string& filename, bool save,
+        const string& filter) {
+        this->save = save;
+        set_filter(filter);
+        set_dirname(dirname);
+        set_filename(filename);
+    }
+    void set_dirname(const string& name) {
+        dirname = name;
+        dirname = normalize_path(dirname);
+        if (dirname == "") dirname = "./";
+        if (dirname.back() != '/') dirname += '/';
+        refresh();
+    }
+    void set_filename(const string& name) {
+        filename = name;
+        check_filename();
+    }
+    void set_filter(const string& flt) {
+        filter = "";
+        extensions.clear();
+        for (auto pattern : split(flt, ";")) {
+            auto ext = get_extension(pattern);
+            if (ext != "") {
+                extensions.push_back(ext);
+                filter += (filter == "") ? ("*." + ext) : (";*." + ext);
+            }
+        }
+    }
+    void check_filename() {
+        if (filename.empty()) return;
+        auto ext = get_extension(filename);
+        if (std::find(extensions.begin(), extensions.end(), ext) ==
+            extensions.end()) {
+            filename = "";
+            return;
+        }
+        if (!save && !exists_file(dirname + filename)) {
+            filename = "";
+            return;
+        }
+    }
+    void select_entry(int idx) {
+        if (entries[idx].second) {
+            set_dirname(dirname + entries[idx].first);
+        } else {
+            set_filename(entries[idx].first);
+        }
+    }
+
+    void refresh() {
+        entries.clear();
+        cf_dir_t dir;
+        cf_dir_open(&dir, dirname.c_str());
+        while (dir.has_next) {
+            cf_file_t file;
+            cf_read_file(&dir, &file);
+            cf_dir_next(&dir);
+            if (remove_hidden && file.name[0] == '.') continue;
+            if (file.is_dir) {
+                entries.push_back({file.name + "/"s, true});
+            } else {
+                entries.push_back({file.name, false});
+            }
+        }
+        cf_dir_close(&dir);
+        std::sort(entries.begin(), entries.end(), [](auto& a, auto& b) {
+            if (a.second == b.second) return a.first < b.first;
+            return a.second;
+        });
+    }
+
+    string get_path() const { return dirname + filename; }
+};
+bool draw_modal_fileialog_opengl_widgets(const opengl_window& win,
+    const char* lbl, string& path, bool save, const string& dirname,
+    const string& filename, const string& filter) {
+    static auto states = unordered_map<string, filedialog_state>{};
+    ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
+    if (ImGui::BeginPopupModal(lbl)) {
+        if (states.find(lbl) == states.end()) {
+            states[lbl] = filedialog_state{dirname, filename, save, filter};
+        }
+        auto& state = states.at(lbl);
+        char  dir_buffer[1024];
+        strcpy(dir_buffer, state.dirname.c_str());
+        if (ImGui::InputText("dir", dir_buffer, sizeof(dir_buffer))) {
+            state.set_dirname(dir_buffer);
+        }
+        auto current_item = -1;
+        if (ImGui::ListBox(
+                "entries", &current_item,
+                [](void* data, int idx, const char** out_text) -> bool {
+                    auto& state = *(filedialog_state*)data;
+                    *out_text   = state.entries[idx].first.c_str();
+                    return true;
+                },
+                &state, (int)state.entries.size())) {
+            state.select_entry(current_item);
+        }
+        char file_buffer[1024];
+        strcpy(file_buffer, state.filename.c_str());
+        if (ImGui::InputText("file", file_buffer, sizeof(file_buffer))) {
+            state.set_filename(file_buffer);
+        }
+        char filter_buffer[1024];
+        strcpy(filter_buffer, state.filter.c_str());
+        if (ImGui::InputText("filter", filter_buffer, sizeof(filter_buffer))) {
+            state.set_filter(filter_buffer);
+        }
+        auto ok = false, exit = false;
+        if (ImGui::Button("Ok")) {
+            path = state.dirname + state.filename;
+            ok   = true;
+            exit = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            exit = true;
+        }
+        if (exit) {
+            ImGui::CloseCurrentPopup();
+            states.erase(lbl);
+        }
+        ImGui::EndPopup();
+        return ok;
+    } else {
+        return false;
+    }
+}
+
 bool draw_button_opengl_widget(const opengl_window& win, const char* lbl) {
     return ImGui::Button(lbl);
+}
+bool draw_button_opengl_widget(
+    const opengl_window& win, const char* lbl, bool enabled) {
+    if (enabled) {
+        return ImGui::Button(lbl);
+    } else {
+        ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+        ImGui::PushStyleVar(
+            ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        auto ok = ImGui::Button(lbl);
+        ImGui::PopItemFlag();
+        ImGui::PopStyleVar();
+        return ok;
+    }
+}
+
+void draw_text_opengl_widget(const opengl_window& win, const string& text) {
+    ImGui::Text("%s", text.c_str());
 }
 
 void draw_label_opengl_widget(
@@ -1022,6 +1218,137 @@ void begin_child_opengl_widget(
 void end_child_opengl_widget(const opengl_window& win) {
     ImGui::EndChild();
     ImGui::PopID();
+}
+
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const float* values, int count) {
+    ImGui::PlotHistogram(lbl, values, count);
+}
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<float>& values) {
+    ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
+        type_max<float>, type_max<float>, {0, 0}, 4);
+}
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<vec2f>& values) {
+    ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
+        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        {0, 0}, sizeof(vec2f));
+    ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
+        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        {0, 0}, sizeof(vec2f));
+}
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<vec3f>& values) {
+    ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
+        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        {0, 0}, sizeof(vec3f));
+    ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
+        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        {0, 0}, sizeof(vec3f));
+    ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
+        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        {0, 0}, sizeof(vec3f));
+}
+void draw_histogram_opengl_widget(
+    const opengl_window& win, const char* lbl, const vector<vec4f>& values) {
+    ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
+        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        {0, 0}, sizeof(vec4f));
+    ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
+        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        {0, 0}, sizeof(vec4f));
+    ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
+        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        {0, 0}, sizeof(vec4f));
+    ImGui::PlotHistogram((lbl + " w"s).c_str(), (const float*)values.data() + 3,
+        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        {0, 0}, sizeof(vec4f));
+}
+
+// https://github.com/ocornut/imgui/issues/300
+struct ImGuiAppLog {
+    ImGuiTextBuffer Buf;
+    ImGuiTextFilter Filter;
+    ImVector<int>   LineOffsets;  // Index to lines offset
+    bool            ScrollToBottom;
+
+    void Clear() {
+        Buf.clear();
+        LineOffsets.clear();
+    }
+
+    void AddLog(const char* fmt, ...) {
+        int     old_size = Buf.size();
+        va_list args;
+        va_start(args, fmt);
+        Buf.appendfv(fmt, args);
+        va_end(args);
+        for (int new_size = Buf.size(); old_size < new_size; old_size++)
+            if (Buf[old_size] == '\n') LineOffsets.push_back(old_size);
+        ScrollToBottom = true;
+    }
+
+    void Draw() {
+        if (ImGui::Button("Clear")) Clear();
+        ImGui::SameLine();
+        bool copy = ImGui::Button("Copy");
+        ImGui::SameLine();
+        Filter.Draw("Filter", -100.0f);
+        ImGui::Separator();
+        ImGui::BeginChild("scrolling");
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 1));
+        if (copy) ImGui::LogToClipboard();
+
+        if (Filter.IsActive()) {
+            const char* buf_begin = Buf.begin();
+            const char* line      = buf_begin;
+            for (int line_no = 0; line != NULL; line_no++) {
+                const char* line_end = (line_no < LineOffsets.Size)
+                                           ? buf_begin + LineOffsets[line_no]
+                                           : NULL;
+                if (Filter.PassFilter(line, line_end))
+                    ImGui::TextUnformatted(line, line_end);
+                line = line_end && line_end[1] ? line_end + 1 : NULL;
+            }
+        } else {
+            ImGui::TextUnformatted(Buf.begin());
+        }
+
+        if (ScrollToBottom) ImGui::SetScrollHere(1.0f);
+        ScrollToBottom = false;
+        ImGui::PopStyleVar();
+        ImGui::EndChild();
+    }
+    void Draw(const char* title, bool* p_opened = NULL) {
+        ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiSetCond_FirstUseEver);
+        ImGui::Begin(title, p_opened);
+        Draw();
+        ImGui::End();
+    }
+};
+
+std::mutex  _log_mutex;
+ImGuiAppLog _log_widget;
+void        add_log_opengl_widget(const opengl_window& win, const char* msg) {
+    _log_mutex.lock();
+    _log_widget.AddLog(msg);
+    _log_mutex.unlock();
+}
+void add_log_opengl_widget(const opengl_window& win, const string& msg) {
+    _log_mutex.lock();
+    _log_widget.AddLog(msg.c_str());
+    _log_mutex.unlock();
+}
+void clear_logs_opengl_widget(const opengl_window& win) {
+    _log_mutex.lock();
+    _log_widget.Clear();
+    _log_mutex.unlock();
+}
+void draw_log_opengl_widget(const opengl_window& win) {
+    _log_mutex.lock();
+    _log_widget.Draw();
+    _log_mutex.unlock();
 }
 
 }  // namespace yocto
