@@ -64,6 +64,52 @@ struct app_task {
     }   
 };
 
+// Application scene
+struct app_scene {
+    // loading options
+    string filename   = "scene.json";
+    string imfilename = "out.obj";
+
+    // options
+    load_scene_options    load_options          = {};
+    bvh_build_options     bvh_options           = {};
+    trace_image_options   trace_options         = {};
+    tonemap_image_options tonemap_image_options = {};
+    int                   preview_ratio         = 8;
+    vec2i                 image_size            = {0, 0};
+
+    // scene
+    yocto_scene scene      = {};
+    bvh_scene   bvh        = {};
+    bool        add_skyenv = false;
+
+    // rendering state
+    trace_lights                   lights  = {};
+    trace_state                    state   = {};
+    image<vec4f>                   render  = {};
+    image<vec4f>                   display = {};
+    image<vec4f>                   preview = {};
+    atomic<bool>                   trace_stop;
+    atomic<int>                    trace_sample;
+    vector<future<void>>           trace_futures = {};
+    concurrent_queue<image_region> trace_queue   = {};
+
+    // view image
+    vec2f            image_center = zero2f;
+    float            image_scale  = 1;
+    bool             zoom_to_fit  = true;
+    bool             widgets_open = false;
+    app_selection    selection    = {typeid(void), -1};
+    vector<app_edit> update_list;
+    bool             navigation_fps  = false;
+    bool             quiet           = false;
+    opengl_texture   display_texture = {};
+
+    // app status
+    atomic<bool> load_done, load_running;
+    string       status = "";
+};
+
 // Application state
 struct app_state {
     // loading options
