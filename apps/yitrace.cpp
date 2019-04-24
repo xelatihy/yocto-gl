@@ -46,11 +46,11 @@ void print_obj_camera(const yocto_camera& camera);
 // Application task
 enum struct app_task_type {
     none,
-    load,
-    bvh,
-    lights,
-    render,
-    edit,
+    load_scene,
+    build_bvh,
+    init_lights,
+    render_image,
+    apply_edit,
     save_image,
     save_scene
 };
@@ -199,7 +199,7 @@ void add_new_scene(app_state& app, const string& filename) {
     scn.bvh_options     = app.bvh_options;
     scn.tonemap_options = app.tonemap_options;
     scn.add_skyenv      = app.add_skyenv;
-    scn.task_queue.emplace_back(app_task_type::load);
+    scn.task_queue.emplace_back(app_task_type::load_scene);
     app.selected = (int)app.scenes.size() - 1;
 }
 
@@ -384,11 +384,11 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_checkbox_opengl_widget(win, "srgb", tonemap_options.srgb);
         if (trace_options != scn.trace_options) {
             scn.task_queue.emplace_back(
-                app_task_type::edit, app_edit{typeid(trace_image_options),
+                app_task_type::apply_edit, app_edit{typeid(trace_image_options),
                                                -1, trace_options, false});
         }
         if (tonemap_options != scn.tonemap_options) {
-            scn.task_queue.emplace_back(app_task_type::edit,
+            scn.task_queue.emplace_back(app_task_type::apply_edit,
                 app_edit{
                     typeid(tonemap_image_options), -1, tonemap_options, false});
         }
@@ -437,7 +437,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         auto edit = app_edit{};
         if (draw_opengl_widgets_scene_inspector(
                 win, "", scn.scene, scn.selection, edit, 200)) {
-            scn.task_queue.emplace_back(app_task_type::edit, edit);
+            scn.task_queue.emplace_back(app_task_type::apply_edit, edit);
         }
         end_header_opengl_widget(win);
     }
@@ -476,7 +476,7 @@ void update(app_state& app) {
     for (auto& scn : app.scenes) {
         if (scn.task_queue.empty()) continue;
         auto& task = scn.task_queue.front();
-        if (task.type != app_task_type::render || task.queue.empty()) continue;
+        if (task.type != app_task_type::render_image || task.queue.empty()) continue;
         auto region  = image_region{};
         auto updated = false;
         while (scn.task_queue.front().queue.try_pop(region)) {
@@ -500,11 +500,11 @@ void update(app_state& app) {
         while (scn.task_queue.size() > 1) {
             auto& task = scn.task_queue.at(0);
             auto& next = scn.task_queue.at(1);
-            if(task.type == app_task_type::render) {
-                if(next.type != app_task_type::render && next.type != app_task_type::edit) break;
+            if(task.type == app_task_type::render_image) {
+                if(next.type != app_task_type::render_image && next.type != app_task_type::apply_edit) break;
                 log_info("cancel rendering {}", scn.filename);
-            } else if(task.type ==app_task_type::edit) {
-                if(next.type != app_task_type::edit || task.edit.type != next.edit.type || task.edit.index != next.edit.index) break;
+            } else if(task.type ==app_task_type::apply_edit) {
+                if(next.type != app_task_type::apply_edit || task.edit.type != next.edit.type || task.edit.index != next.edit.index) break;
                 log_info("cancel editing {}", scn.filename);
             } else {
                 break;
@@ -529,7 +529,7 @@ void update(app_state& app) {
             continue;
         switch (task.type) {
             case app_task_type::none: break;
-            case app_task_type::load: {
+            case app_task_type::load_scene: {
                 try {
                     task.result.get();
                     scn.load_done  = true;
@@ -545,33 +545,33 @@ void update(app_state& app) {
                     log_info("done loading {}", scn.filename);
                     init_opengl_texture(
                         scn.gl_txt, scn.display, false, false, false);
-                    scn.task_queue.emplace_back(app_task_type::bvh);
+                    scn.task_queue.emplace_back(app_task_type::build_bvh);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     scn.name = format("{} [error]", get_filename(scn.filename));
                     app.errors.push_back("cannot load " + scn.filename);
                 }
             } break;
-            case app_task_type::bvh: {
+            case app_task_type::build_bvh: {
                 try {
                     task.result.get();
                     scn.bvh_done = true;
                     scn.name     = format("{}", get_filename(scn.filename));
                     log_info("done building bvh {}", scn.filename);
-                    scn.task_queue.emplace_back(app_task_type::lights);
+                    scn.task_queue.emplace_back(app_task_type::init_lights);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     scn.name = format("{} [error]", get_filename(scn.filename));
                     app.errors.push_back("cannot build bvh " + scn.filename);
                 }
             } break;
-            case app_task_type::lights: {
+            case app_task_type::init_lights: {
                 try {
                     task.result.get();
                     scn.lights_done = true;
                     scn.name        = format("{}", get_filename(scn.filename));
                     log_info("done building lights {}", scn.filename);
-                    scn.task_queue.emplace_back(app_task_type::render);
+                    scn.task_queue.emplace_back(app_task_type::render_image);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     scn.name = format("{} [error]", get_filename(scn.filename));
@@ -596,7 +596,7 @@ void update(app_state& app) {
                     app.errors.push_back("cannot save " + scn.outname);
                 }
             } break;
-            case app_task_type::render: {
+            case app_task_type::render_image: {
                 try {
                     task.result.get();
                     scn.render_done = true;
@@ -610,11 +610,11 @@ void update(app_state& app) {
                     app.errors.push_back("cannot render " + scn.filename);
                 }
             } break;
-            case app_task_type::edit: {
+            case app_task_type::apply_edit: {
                 try {
                     task.result.get();
                     log_info("done editing {}", scn.filename);
-                    scn.task_queue.emplace_back(app_task_type::render);
+                    scn.task_queue.emplace_back(app_task_type::render_image);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     app.errors.push_back("cannot edit " + scn.filename);
@@ -631,7 +631,7 @@ void update(app_state& app) {
         task.stop = false;
         switch (task.type) {
             case app_task_type::none: break;
-            case app_task_type::load: {
+            case app_task_type::load_scene: {
                 log_info("start loading {}", scn.filename);
                 scn.load_done   = false;
                 scn.bvh_done    = false;
@@ -642,14 +642,14 @@ void update(app_state& app) {
                     if (scn.add_skyenv) add_sky_environment(scn.scene);
                 });
             } break;
-            case app_task_type::bvh: {
+            case app_task_type::build_bvh: {
                 log_info("start building bvh {}", scn.filename);
                 scn.bvh_done = false;
                 task.result  = async([&scn]() {
                     build_scene_bvh(scn.scene, scn.bvh, scn.bvh_options);
                 });
             } break;
-            case app_task_type::lights: {
+            case app_task_type::init_lights: {
                 log_info("start building lights {}", scn.filename);
                 scn.lights_done = false;
                 task.result     = async(
@@ -668,7 +668,7 @@ void update(app_state& app) {
                     save_scene(scn.outname, scn.scene, scn.save_options);
                 });
             } break;
-            case app_task_type::render: {
+            case app_task_type::render_image: {
                 log_info("start rendering {}", scn.filename);
                 scn.render_done = false;
                 scn.image_size  = get_camera_image_size(
@@ -704,7 +704,7 @@ void update(app_state& app) {
                         scn.gl_txt, scn.display, false, false, false);
                 }
             } break;
-            case app_task_type::edit: {
+            case app_task_type::apply_edit: {
                 log_info("start editing {}", scn.filename);
                 scn.render_done = false;
                 task.result     = async([&scn, &task]() {
@@ -768,7 +768,7 @@ void run_ui(app_state& app) {
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
             if (camera.frame != old_camera.frame ||
                 camera.focus_distance != old_camera.focus_distance) {
-                scn.task_queue.emplace_back(app_task_type::edit,
+                scn.task_queue.emplace_back(app_task_type::apply_edit,
                     app_edit{typeid(yocto_camera), scn.trace_options.camera_id,
                         camera, false});
             }
