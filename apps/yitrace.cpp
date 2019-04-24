@@ -396,9 +396,7 @@ void apply_edit(const string& filename, yocto_scene& scene,
         scene.cameras[index] = any_cast<yocto_camera>(data);
     } else if (type == typeid(yocto_texture)) {
         scene.textures[index] = any_cast<yocto_texture>(data);
-        if (reload) {
-            reload_element = true;
-        }
+        if (reload) reload_element = true;
     } else if (type == typeid(yocto_voltexture)) {
         scene.voltextures[index] = any_cast<yocto_voltexture>(data);
         if (reload) reload_element = true;
@@ -442,6 +440,7 @@ void apply_edit(const string& filename, yocto_scene& scene,
     }
 }
 
+// reload an element
 void load_element(
     const string& filename, yocto_scene& scene, const app_edit& edit) {
     auto& [type, index, data, reload] = edit;
