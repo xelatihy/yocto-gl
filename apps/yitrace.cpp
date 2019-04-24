@@ -335,12 +335,8 @@ void draw_opengl_widgets(const opengl_window& win) {
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "close", app.selected >= 0)) {
-        auto& img = app.scenes.at(app.selected);
-        if (img.task_queue.empty()) {
-            app.scenes.erase(app.scenes.begin() + app.selected);
-            app.selected = app.scenes.empty() ? -1 : 0;
-            return;
-        }
+        app.scenes.erase(app.scenes.begin() + app.selected);
+        app.selected = app.scenes.empty() ? -1 : 0;
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "quit")) {
