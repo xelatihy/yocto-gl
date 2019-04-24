@@ -47,12 +47,13 @@ void print_obj_camera(const yocto_camera& camera);
 enum struct app_task_type {
     none,
     load,
-    save,
     bvh,
     lights,
     render,
+    param_edit,
     scene_edit,
-    scene_save
+    save_image,
+    save_scene
 };
 
 struct app_task {
@@ -63,8 +64,8 @@ struct app_task {
     concurrent_queue<image_region> queue;
     app_edit                       edit;
 
-    app_task(app_task_type type)
-        : type{type}, result{}, stop{false}, current{-1}, queue{} {}
+    app_task(app_task_type type, const app_edit& edit = {})
+        : type{type}, result{}, stop{false}, current{-1}, queue{}, edit{edit} {}
     ~app_task() {
         stop = true;
         if (result.valid()) {
@@ -86,6 +87,7 @@ struct app_scene {
 
     // options
     load_scene_options    load_options    = {};
+    save_scene_options    save_options    = {};
     bvh_build_options     bvh_options     = {};
     trace_image_options   trace_options   = {};
     tonemap_image_options tonemap_options = {};
@@ -109,18 +111,14 @@ struct app_scene {
     vec2f          image_center   = zero2f;
     float          image_scale    = 1;
     bool           zoom_to_fit    = true;
-    app_selection  selection      = {typeid(void), -1};
     bool           navigation_fps = false;
     opengl_texture gl_txt         = {};
 
     // tasks
     bool load_done = false, bvh_done = false, lights_done = false,
          render_done = false;
-    deque<app_task>  task_queue;
-    vector<app_edit> update_list;
-
-    // app status
-    string status = "";
+    deque<app_task> task_queue;
+    app_selection   selection = {typeid(void), -1};
 };
 
 // Application state
@@ -202,6 +200,98 @@ void add_new_scene(app_state& app, const string& filename,
     app.selected = (int)app.scenes.size() - 1;
 }
 
+void apply_scene_edit(const string& filename, yocto_scene& scene,
+    bvh_scene& bvh, trace_lights& lights, const app_edit& edit,
+    const bvh_build_options& bvh_options) {
+    // update data
+    auto updated_instances = vector<int>{}, updated_shapes = vector<int>{};
+    auto updated_lights = false;
+
+    auto& [type, index, data, reload] = edit;
+
+    if (type == typeid(yocto_camera)) {
+        scene.cameras[index] = any_cast<yocto_camera>(data);
+    } else if (type == typeid(yocto_texture)) {
+        scene.textures[index] = any_cast<yocto_texture>(data);
+        if (reload) {
+            auto& texture = scene.textures[index];
+            load_image(get_dirname(filename) + texture.uri, texture.hdr_image,
+                texture.ldr_image);
+        }
+    } else if (type == typeid(yocto_voltexture)) {
+        scene.voltextures[index] = any_cast<yocto_voltexture>(data);
+        if (reload) {
+            auto& texture = scene.voltextures[index];
+            load_volume(
+                get_dirname(filename) + texture.uri, texture.volume_data);
+        }
+    } else if (type == typeid(yocto_shape)) {
+        scene.shapes[index] = any_cast<yocto_shape>(data);
+        if (reload) {
+            auto& shape = scene.shapes[index];
+            load_shape(get_dirname(filename) + shape.uri, shape.points,
+                shape.lines, shape.triangles, shape.quads,
+                shape.quads_positions, shape.quads_normals,
+                shape.quads_texturecoords, shape.positions, shape.normals,
+                shape.texturecoords, shape.colors, shape.radius, false);
+        }
+        updated_shapes.push_back(index);
+    } else if (type == typeid(yocto_subdiv)) {
+        // TODO: this needs more fixing?
+        scene.subdivs[index] = any_cast<yocto_subdiv>(data);
+        if (reload) {
+            auto& subdiv = scene.subdivs[index];
+            load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
+                subdiv.lines, subdiv.triangles, subdiv.quads,
+                subdiv.quads_positions, subdiv.quads_normals,
+                subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
+                subdiv.texturecoords, subdiv.colors, subdiv.radius,
+                subdiv.preserve_facevarying);
+        }
+        tesselate_subdiv(scene, scene.subdivs[index]);
+        updated_shapes.push_back(scene.subdivs[index].tesselated_shape);
+    } else if (type == typeid(yocto_material)) {
+        auto old_emission      = scene.materials[index].emission;
+        scene.materials[index] = any_cast<yocto_material>(data);
+        if (old_emission != scene.materials[index].emission) {
+            updated_lights = true;
+        }
+    } else if (type == typeid(yocto_instance)) {
+        scene.instances[index] = any_cast<yocto_instance>(data);
+        updated_instances.push_back(index);
+    } else if (type == typeid(yocto_environment)) {
+        auto old_emission         = scene.materials[index].emission;
+        scene.environments[index] = any_cast<yocto_environment>(data);
+        if (old_emission != scene.materials[index].emission) {
+            updated_lights = true;
+        }
+    } else {
+        throw runtime_error("unsupported type "s + type.name());
+    }
+
+    // update bvh
+    if (!updated_instances.empty() || !updated_shapes.empty()) {
+        refit_scene_bvh(
+            scene, bvh, updated_instances, updated_shapes, bvh_options);
+    }
+    // update lights
+    if (updated_lights) init_trace_lights(lights, scene);
+}
+
+void apply_param_edit(const string& filename,
+    trace_image_options& trace_options, tonemap_image_options& tonemap_options,
+    const app_edit& edit) {
+    // update data
+    auto& [type, index, data, reload] = edit;
+    if (type == typeid(trace_image_options)) {
+        trace_options = any_cast<trace_image_options>(data);
+    } else if (type == typeid(tonemap_image_options)) {
+        tonemap_options = any_cast<tonemap_image_options>(data);
+    } else {
+        throw runtime_error("unsupported type "s + type.name());
+    }
+}
+
 void draw_opengl_widgets(const opengl_window& win) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
     if (begin_opengl_widgets_window(win, "yitrace")) {
@@ -214,7 +304,6 @@ void draw_opengl_widgets(const opengl_window& win) {
                 draw_label_opengl_widget(
                     win, "scene", get_filename(scn.filename));
                 draw_label_opengl_widget(win, "filename", scn.filename);
-                draw_label_opengl_widget(win, "status", scn.status);
                 draw_label_opengl_widget(win, "image", "%d x %d @ %d",
                     scn.render.size().x, scn.render.size().y,
                     scn.render_sample);
@@ -268,8 +357,9 @@ void draw_opengl_widgets(const opengl_window& win) {
                         edited = true;
                     }
                     if (edited) {
-                        scn.update_list.push_back({typeid(trace_image_options),
-                            -1, scn.trace_options, false});
+                        scn.task_queue.emplace_back(app_task_type::param_edit,
+                            app_edit{typeid(trace_image_options), -1,
+                                scn.trace_options, false});
                     }
                 }
                 draw_slider_opengl_widget(
@@ -311,12 +401,16 @@ void draw_opengl_widgets(const opengl_window& win) {
             }
             if (scn.load_done && begin_tabitem_opengl_widget(win, "navigate")) {
                 draw_opengl_widgets_scene_tree(
-                    win, "", scn.scene, scn.selection, scn.update_list, 200);
+                    win, "", scn.scene, scn.selection, 200);
                 end_tabitem_opengl_widget(win);
             }
             if (scn.load_done && begin_tabitem_opengl_widget(win, "inspec")) {
-                draw_opengl_widgets_scene_inspector(
-                    win, "", scn.scene, scn.selection, scn.update_list, 200);
+                auto edit = app_edit{};
+                if (draw_opengl_widgets_scene_inspector(
+                        win, "", scn.scene, scn.selection, edit, 200)) {
+                    scn.task_queue.emplace_back(
+                        app_task_type::scene_edit, edit);
+                }
                 end_tabitem_opengl_widget(win);
             }
             end_tabbar_opengl_widget(win);
@@ -349,11 +443,37 @@ void draw(const opengl_window& win) {
 }
 
 void update(app_state& app) {
+    // consume partial results
+    for (auto& scn : app.scenes) {
+        if (scn.task_queue.empty()) continue;
+        auto& task = scn.task_queue.front();
+        if (task.type != app_task_type::render || task.queue.empty()) continue;
+        auto region  = image_region{};
+        auto updated = false;
+        while (scn.task_queue.front().queue.try_pop(region)) {
+            if (region.size() == zero2i) {
+                update_opengl_texture_region(scn.gl_txt, scn.preview,
+                    {zero2i, scn.preview.size()}, false);
+            } else {
+                update_opengl_texture_region(
+                    scn.gl_txt, scn.display, region, false);
+            }
+            updated = true;
+        }
+        if (updated) {
+            scn.render_sample = max(scn.render_sample, (int)task.current);
+            scn.name          = format(
+                "{} [{}x{}@{}]", get_filename(scn.filename), scn.render.size().x,
+                                     scn.render.size().y, scn.render_sample);
+        }
+    }
     // remove unneeded tasks
     for (auto& scn : app.scenes) {
         while (scn.task_queue.size() > 1 &&
                scn.task_queue.at(0).type == app_task_type::render &&
-               scn.task_queue.at(1).type == app_task_type::render) {
+               (scn.task_queue.at(1).type == app_task_type::render ||
+                   scn.task_queue.at(1).type == app_task_type::scene_edit ||
+                   scn.task_queue.at(1).type == app_task_type::param_edit)) {
             log_info("cancel rendering {}", scn.filename);
             auto& task = scn.task_queue.front();
             task.stop  = true;
@@ -398,11 +518,17 @@ void update(app_state& app) {
                 task.result     = async(
                     [&scn]() { init_trace_lights(scn.lights, scn.scene); });
             } break;
-            case app_task_type::save: {
+            case app_task_type::save_image: {
                 log_info("start saving {}", scn.imagename);
                 task.result = async([&scn]() {
                     save_tonemapped_image(
                         scn.imagename, scn.render, scn.tonemap_options);
+                });
+            } break;
+            case app_task_type::save_scene: {
+                log_info("start saving {}", scn.outname);
+                task.result = async([&scn]() {
+                    save_scene(scn.outname, scn.scene, scn.save_options);
                 });
             } break;
             case app_task_type::render: {
@@ -422,7 +548,11 @@ void update(app_state& app) {
                     scn.trace_options.sampler_type =
                         trace_sampler_type::eyelight;
                 }
-                task.result = async([&scn, &task]() {
+                scn.render_sample = scn.trace_options.num_samples;
+                scn.name          = format("{} [{}x{}@{}]",
+                    get_filename(scn.filename), scn.render.size().x,
+                        scn.render.size().y, scn.render_sample);
+                task.result       = async([&scn, &task]() {
                     update_app_render(scn.filename, scn.render, scn.display,
                         scn.preview, scn.state, scn.scene, scn.lights, scn.bvh,
                         scn.trace_options, scn.tonemap_options,
@@ -431,17 +561,22 @@ void update(app_state& app) {
                 init_opengl_texture(
                     scn.gl_txt, scn.display, false, false, false);
             } break;
-        }
-    }
-    // consume partial results
-    for (auto& scn : app.scenes) {
-        if (scn.task_queue.empty()) continue;
-        auto& task = scn.task_queue.front();
-        if (task.type != app_task_type::render || task.queue.empty()) continue;
-        auto region = image_region{};
-        while (scn.task_queue.front().queue.try_pop(region)) {
-            update_opengl_texture_region(
-                scn.gl_txt, scn.display, region, false);
+            case app_task_type::scene_edit: {
+                log_info("start editing {}", scn.filename);
+                scn.render_done = false;
+                task.result     = async([&scn, &task]() {
+                    apply_scene_edit(scn.filename, scn.scene, scn.bvh,
+                        scn.lights, task.edit, scn.bvh_options);
+                });
+            } break;
+            case app_task_type::param_edit: {
+                log_info("start editing params for {}", scn.filename);
+                scn.render_done = false;
+                task.result     = async([&scn, &task]() {
+                    apply_param_edit(scn.filename, scn.trace_options,
+                        scn.tonemap_options, task.edit);
+                });
+            } break;
         }
     }
     // grab result of finished tasks
@@ -493,7 +628,7 @@ void update(app_state& app) {
                     app.errors.push_back("cannot build lights " + scn.filename);
                 }
             } break;
-            case app_task_type::save: {
+            case app_task_type::save_image: {
                 try {
                     task.result.get();
                     log_info("done saving {}", scn.imagename);
@@ -502,14 +637,47 @@ void update(app_state& app) {
                     app.errors.push_back("cannot save " + scn.imagename);
                 }
             } break;
+            case app_task_type::save_scene: {
+                try {
+                    task.result.get();
+                    log_info("done saving {}", scn.outname);
+                } catch (std::exception& e) {
+                    log_error(e.what());
+                    app.errors.push_back("cannot save " + scn.outname);
+                }
+            } break;
             case app_task_type::render: {
                 try {
                     task.result.get();
                     scn.render_done = true;
                     log_info("done rendering {}", scn.filename);
+                    scn.render_sample = scn.trace_options.num_samples;
+                    scn.name          = format("{} [{}x{}@{}]",
+                        get_filename(scn.filename), scn.render.size().x,
+                            scn.render.size().y, scn.render_sample);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     app.errors.push_back("cannot render " + scn.filename);
+                }
+            } break;
+            case app_task_type::scene_edit: {
+                try {
+                    task.result.get();
+                    log_info("done editing {}", scn.filename);
+                    scn.task_queue.emplace_back(app_task_type::render);
+                } catch (std::exception& e) {
+                    log_error(e.what());
+                    app.errors.push_back("cannot edit " + scn.filename);
+                }
+            } break;
+            case app_task_type::param_edit: {
+                try {
+                    task.result.get();
+                    log_info("done editing params for {}", scn.filename);
+                    scn.task_queue.emplace_back(app_task_type::render);
+                } catch (std::exception& e) {
+                    log_error(e.what());
+                    app.errors.push_back("cannot edit " + scn.filename);
                 }
             } break;
         }
@@ -657,8 +825,9 @@ void run_ui(app_state& app) {
             pan.x = -pan.x;
             update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            scn.update_list.push_back({typeid(yocto_camera),
-                scn.trace_options.camera_id, camera, false});
+            scn.task_queue.emplace_back(app_task_type::scene_edit,
+                app_edit{typeid(yocto_camera), scn.trace_options.camera_id,
+                    camera, false});
         }
 
         // selection
