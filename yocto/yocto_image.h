@@ -1961,13 +1961,7 @@ inline void make_uvgrid_image(
             }
             auto rgb = (colored) ? hsv_to_rgb(vec<T, 3>{ph, ps, pv})
                                  : vec<T, 3>{pv, pv, pv};
-            if constexpr (N == 3) {
-                return vec<T, 3>{rgb.x, rgb.y, rgb.z};
-            } else if constexpr (N == 4) {
-                return vec<T, 4>{rgb.x, rgb.y, rgb.z, 1};
-            } else {
-                static_assert(__channel_error<N>, "channels not supported");
-            }
+            return convert_color_channels<T, N, 3>(rgb);
         });
 }
 
@@ -1981,13 +1975,7 @@ inline void make_blackbodyramp_image(image<vec<T, N>>& img, const vec2i& size,
                                (end_temperature - start_temperature) *
                                    (float)i / (float)(size.x - 1);
             auto rgb = blackbody_to_rgb(temperature);
-            if constexpr (N == 3) {
-                return vec<T, 3>{rgb.x, rgb.y, rgb.z};
-            } else if constexpr (N == 4) {
-                return vec<T, 4>{rgb.x, rgb.y, rgb.z, 1};
-            } else {
-                static_assert(__channel_error<N>, "channels not supported");
-            }
+            return convert_color_channels<T, N, 3>(rgb);
         });
 }
 
@@ -2119,13 +2107,7 @@ inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size,
 
     // clear image
     img.resize(size);
-    if constexpr (N == 3) {
-        for (auto& p : img) p = {0, 0, 0};
-    } else if constexpr (N == 4) {
-        for (auto& p : img) p = {0, 0, 0, 1};
-    } else {
-        static_assert(__channel_error<T>, "channels not supported");
-    }
+    for (auto& p : img) p = convert_color_channels<T, N, 3>(vec<T, 3>{0, 0, 0});
 
     // sun-sky
     auto sun_direction = vec<T, 3>{0, sin(theta_sun), cos(theta_sun)};
