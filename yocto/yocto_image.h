@@ -351,7 +351,7 @@ struct tonemap_image_options {
     float contrast    = 0.5f;
     float logcontrast = 0.5f;
     float saturation  = 0.5f;
-    bool  filmic      = true;
+    bool  filmic      = false;
     bool  srgb        = true;
 };
 

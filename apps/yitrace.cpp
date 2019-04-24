@@ -959,6 +959,11 @@ int main(int argc, char* argv[]) {
         "Environments are hidden in renderer");
     parser.add_flag("--parallel,!--no-parallel", no_parallel,
         "Disable parallel execution.");
+    parser.add_option(
+        "--exposure,-e", app.tonemap_options.exposure, "Hdr exposure");
+    parser.add_flag(
+        "--filmic,!--no-filmic", app.tonemap_options.filmic, "Hdr filmic");
+    parser.add_flag("--srgb,!--no-srgb", app.tonemap_options.srgb, "Hdr srgb");
     parser.add_flag("--bvh-high-quality,!--no-bvh-high-quality",
         app.bvh_options.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE

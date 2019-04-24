@@ -150,7 +150,6 @@ void add_new_image(app_state& app, const string& filename) {
     img.name                   = get_filename(filename);
     img.tonemap_options        = app.tonemap_options;
     img.colorgrade_options     = app.colorgrade_options;
-    img.tonemap_options.filmic = is_hdr_filename(filename);
     img.load_done              = false;
     img.display_done           = false;
     img.task_queue.emplace_back(app_task_type::load);
