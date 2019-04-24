@@ -361,10 +361,6 @@ void draw_opengl_widgets(const opengl_window& win) {
         [&app](int idx) { return app.scenes[idx].name.c_str(); }, false);
     auto& scn = app.scenes[app.selected];
     if (begin_header_opengl_widget(win, "trace")) {
-        draw_label_opengl_widget(win, "scene", get_filename(scn.filename));
-        draw_label_opengl_widget(win, "filename", scn.filename);
-        draw_label_opengl_widget(win, "image", "%d x %d @ %d",
-            scn.render.size().x, scn.render.size().y, scn.render_sample);
         auto cam_names = vector<string>();
         for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
         auto trace_options = scn.trace_options;
@@ -386,8 +382,6 @@ void draw_opengl_widgets(const opengl_window& win) {
             trace_falsecolor_type_names);
         draw_slider_opengl_widget(
             win, "nbounces", scn.trace_options.max_bounces, 1, 10);
-        draw_checkbox_opengl_widget(
-            win, "double sided", scn.trace_options.double_sided);
         draw_slider_opengl_widget(
             win, "seed", (int&)scn.trace_options.random_seed, 0, 1000000);
         draw_slider_opengl_widget(win, "pratio", scn.preview_ratio, 1, 64);
@@ -414,6 +408,10 @@ void draw_opengl_widgets(const opengl_window& win) {
         end_header_opengl_widget(win);
     }
     if (begin_header_opengl_widget(win, "inspect")) {
+        draw_label_opengl_widget(win, "scene", get_filename(scn.filename));
+        draw_label_opengl_widget(win, "filename", scn.filename);
+        draw_label_opengl_widget(win, "image", "%d x %d @ %d",
+            scn.render.size().x, scn.render.size().y, scn.render_sample);
         if (draw_button_opengl_widget(win, "print cams")) {
             for (auto& camera : scn.scene.cameras) {
                 print_obj_camera(camera);
@@ -860,8 +858,6 @@ int main(int argc, char* argv[]) {
     parser.add_flag("--bvh-embree-compact,!--no-bvh-embree-compact",
         app.bvh_options.embree_compact, "Embree runs in compact memory");
 #endif
-    parser.add_flag("--double-sided,!--no-double-sided",
-        app.trace_options.double_sided, "Double-sided rendering.");
     parser.add_flag(
         "--add-skyenv,!--no-add-skyenv", app.add_skyenv, "Add sky envmap");
     parser.add_option("scenes", filenames, "Scene filenames")->required(true);

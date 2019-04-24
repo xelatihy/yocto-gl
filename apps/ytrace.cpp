@@ -94,8 +94,6 @@ int main(int argc, char* argv[]) {
     parser.add_flag("--env-hidden,!--no-env-hidden",
         trace_options.environments_hidden,
         "Environments are hidden in renderer");
-    parser.add_flag("--double-sided,!--no-double-sided,-D",
-        trace_options.double_sided, "Double-sided rendering.");
     parser.add_option("--save-batch", save_batch, "Save images progressively");
     parser.add_option(
         "--exposure,-e", tonemap_options.exposure, "Hdr exposure");
