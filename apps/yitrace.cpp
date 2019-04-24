@@ -365,8 +365,8 @@ void draw_opengl_widgets(const opengl_window& win) {
 void draw(const opengl_window& win) {
     auto& app      = *(app_state*)get_opengl_user_pointer(win);
     auto  win_size = get_opengl_window_size(win);
-    set_opengl_viewport(get_opengl_framebuffer_size(win));
-    clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+    set_opengl_viewport(get_opengl_framebuffer_viewport(win));
+    clear_opengl_framebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (!app.scenes.empty() && app.selected >= 0) {
         auto& scn = app.scenes.at(app.selected);
         if (scn.load_done && scn.gl_txt) {

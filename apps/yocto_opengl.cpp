@@ -51,7 +51,7 @@ void check_opengl_error() {
     if (glGetError() != GL_NO_ERROR) print_info("gl error");
 }
 
-void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth) {
+void clear_opengl_framebuffer(const vec4f& color, bool clear_depth) {
     glClearColor(color.x, color.y, color.z, color.w);
     if (clear_depth) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -61,10 +61,8 @@ void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth) {
     }
 }
 
-void set_opengl_viewport(int x, int y, int w, int h) { glViewport(x, y, w, h); }
-
-void set_opengl_viewport(const vec2i& size) {
-    glViewport(0, 0, size.x, size.y);
+void set_opengl_viewport(const vec4i& viewport) {
+    glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
 }
 
 void set_opengl_wireframe(bool enabled) {
@@ -657,6 +655,17 @@ vec2i get_opengl_framebuffer_size(const opengl_window& win, bool ignore_widgets)
     return size;
 }
 
+vec4i get_opengl_framebuffer_viewport(const opengl_window& win, bool ignore_widgets) {
+    auto viewport = zero4i;
+    glfwGetFramebufferSize(win.win, &viewport.z, &viewport.w);
+    if(ignore_widgets && win.widgets_width) {
+        auto win_size = zero2i;
+        glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
+        viewport.z -= (int)(win.widgets_width * (float)viewport.z / (float)win_size.x);
+    }
+    return viewport;
+}
+
 vec2i get_opengl_window_size(const opengl_window& win, bool ignore_widgets) {
     auto size = zero2i;
     glfwGetWindowSize(win.win, &size.x, &size.y);
@@ -671,7 +680,7 @@ void set_close_opengl_window(const opengl_window& win, bool close) {
     glfwSetWindowShouldClose(win.win, close ? GLFW_TRUE : GLFW_FALSE);
 }
 
-vec2f get_opengl_mouse_pos(const opengl_window& win) {
+vec2f get_opengl_mouse_pos(const opengl_window& win, bool ignore_widgets) {
     double mouse_posx, mouse_posy;
     glfwGetCursorPos(win.win, &mouse_posx, &mouse_posy);
     return vec2f{(float)mouse_posx, (float)mouse_posy};

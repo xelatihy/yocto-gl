@@ -61,10 +61,9 @@ struct gl_error : runtime_error {
     explicit gl_error(const string& msg) : runtime_error{msg} {}
 };
 
-void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth = true);
+void clear_opengl_framebuffer(const vec4f& color, bool clear_depth = true);
 
-void set_opengl_viewport(int x, int y, int w, int h);
-void set_opengl_viewport(const vec2i& size);
+void set_opengl_viewport(const vec4i& viewport);
 
 void set_opengl_wireframe(bool enabled);
 void set_opengl_blending(bool enabled);
@@ -238,13 +237,14 @@ void set_drop_opengl_callback(opengl_window& win, drop_opengl_callback drop_cb);
 
 void* get_opengl_user_pointer(const opengl_window& win);
 
-vec2i get_opengl_framebuffer_size(const opengl_window& win, bool ignore_widgets = true);
 vec2i get_opengl_window_size(const opengl_window& win, bool ignore_widgets = true);
+vec2i get_opengl_framebuffer_size(const opengl_window& win, bool ignore_widgets = true);
+vec4i get_opengl_framebuffer_viewport(const opengl_window& win, bool ignore_widgets = true);
 
 bool should_opengl_window_close(const opengl_window& win);
 void set_close_opengl_window(const opengl_window& win, bool close);
 
-vec2f get_opengl_mouse_pos(const opengl_window& win);
+vec2f get_opengl_mouse_pos(const opengl_window& win, bool ignore_widgets = true);
 bool  get_opengl_mouse_left(const opengl_window& win);
 bool  get_opengl_mouse_right(const opengl_window& win);
 bool  get_opengl_alt_key(const opengl_window& win);
