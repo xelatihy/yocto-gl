@@ -184,11 +184,12 @@ struct trace_point {
 };
 
 // Make a trace point
-void make_trace_point(trace_point& point, const yocto_scene& scene,
+trace_point make_trace_point(const yocto_scene& scene,
     const bvh_intersection& intersection, const vec3f& shading_direction) {
     auto& instance = scene.instances[intersection.instance_id];
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
+    auto point = trace_point{};
     point.position = evaluate_instance_position(
         scene, instance, intersection.element_id, intersection.element_uv);
     point.normal      = evaluate_instance_normal(scene, instance,
@@ -213,6 +214,7 @@ void make_trace_point(trace_point& point, const yocto_scene& scene,
                 material_point.normalmap, trace_non_rigid_frames);
         }
     }
+    return point;
 }
 
 // Intersects a ray and returns a point
@@ -1437,8 +1439,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
             // prepare shading point
             auto outgoing = -ray.d;
-            auto point    = trace_point{};
-            make_trace_point(point, scene, intersection, ray.d);
+            auto point    = make_trace_point(scene, intersection, ray.d);
 
             // accumulate emission
             radiance += weight * evaluate_emission(
@@ -1545,8 +1546,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             } else {
                 // prepare shading point
                 auto outgoing = -ray.d;
-                auto point    = trace_point{};
-                make_trace_point(point, scene, intersection, ray.d);
+                auto point    = make_trace_point(scene, intersection, ray.d);
 
                 // accumulate emission
                 radiance += weight * evaluate_emission(point.material,
@@ -1614,8 +1614,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 
         // prepare shading point
         auto outgoing = -ray.d;
-        auto point    = trace_point{};
-        make_trace_point(point, scene, intersection, ray.d);
+        auto point    = make_trace_point(scene, intersection, ray.d);
 
         // accumulate emission
         radiance += weight *
@@ -1672,8 +1671,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
         // prepare shading point
         auto outgoing = -direction;
-        auto point    = trace_point{};
-        make_trace_point(point, scene, intersection, direction);
+        auto point    = make_trace_point(scene, intersection, direction);
 
         // accumulate emission
         radiance += weight *
@@ -1725,8 +1723,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     // auto& material = scene.materials[instance.material];
 
     // prepare shading point
-    auto point = trace_point{};
-    make_trace_point(point, scene, intersection, direction);
+    auto point = make_trace_point(scene, intersection, direction);
 
     switch (options.falsecolor_type) {
         case trace_falsecolor_type::normal: {
