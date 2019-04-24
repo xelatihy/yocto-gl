@@ -39,7 +39,7 @@ struct image_stats {
     vector<vec3f> histogram = {};
 };
 
-enum struct app_task_type { none, load, save, display };
+enum struct app_task_type { none, load, save, display, close };
 
 struct app_task {
     app_task_type                  type;
@@ -192,11 +192,7 @@ void draw_opengl_widgets(const opengl_window& win) {
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "close", app.selected >= 0)) {
         auto& img = app.images.at(app.selected);
-        if (img.task_queue.empty()) {
-            app.images.erase(app.images.begin() + app.selected);
-            app.selected = app.images.empty() ? -1 : 0;
-            return;
-        }
+        img.task_queue.emplace_back(app_task_type::close);
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "quit")) {
@@ -316,6 +312,18 @@ void draw(const opengl_window& win) {
 }
 
 void update(app_state& app) {
+    // close if needed
+    while (!app.images.empty()) {
+        auto pos = -1;
+        for(auto idx = 0; idx < app.images.size(); idx++) {
+            for(auto& task : app.images[idx].task_queue) {
+                if(task.type == app_task_type::close) pos = idx;
+            }
+        }
+        if(pos < 0) break;
+        app.images.erase(app.images.begin() + pos);
+        app.selected = app.images.empty() ? -1 : 0;
+    }
     // consume partial results
     for (auto& img : app.images) {
         if (img.task_queue.empty()) continue;
@@ -358,6 +366,7 @@ void update(app_state& app) {
             continue;
         switch (task.type) {
             case app_task_type::none: break;
+            case app_task_type::close: break;
             case app_task_type::load: {
                 try {
                     task.result.get();
@@ -405,6 +414,7 @@ void update(app_state& app) {
         task.stop = false;
         switch (task.type) {
             case app_task_type::none: break;
+            case app_task_type::close: break;
             case app_task_type::load: {
                 log_info("start loading {}", img.filename);
                 img.load_done = false;

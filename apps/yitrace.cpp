@@ -52,7 +52,8 @@ enum struct app_task_type {
     render_image,
     apply_edit,
     save_image,
-    save_scene
+    save_scene,
+    close_scene
 };
 
 struct app_task {
@@ -336,8 +337,7 @@ void draw_opengl_widgets(const opengl_window& win) {
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "close", app.selected >= 0)) {
-        app.scenes.erase(app.scenes.begin() + app.selected);
-        app.selected = app.scenes.empty() ? -1 : 0;
+        app.scenes[app.selected].task_queue.emplace_back(app_task_type::close_scene);
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "quit")) {
@@ -469,6 +469,18 @@ void draw(const opengl_window& win) {
 }
 
 void update(app_state& app) {
+    // close if needed
+    while (!app.scenes.empty()) {
+        auto pos = -1;
+        for(auto idx = 0; idx < app.scenes.size(); idx++) {
+            for(auto& task : app.scenes[idx].task_queue) {
+                if(task.type == app_task_type::close_scene) pos = idx;
+            }
+        }
+        if(pos < 0) break;
+        app.scenes.erase(app.scenes.begin() + pos);
+        app.selected = app.scenes.empty() ? -1 : 0;
+    }
     // consume partial results
     for (auto& scn : app.scenes) {
         if (scn.task_queue.empty()) continue;
@@ -526,6 +538,7 @@ void update(app_state& app) {
             continue;
         switch (task.type) {
             case app_task_type::none: break;
+            case app_task_type::close_scene: break;
             case app_task_type::load_scene: {
                 try {
                     task.result.get();
@@ -628,6 +641,7 @@ void update(app_state& app) {
         task.stop = false;
         switch (task.type) {
             case app_task_type::none: break;
+            case app_task_type::close_scene: break;
             case app_task_type::load_scene: {
                 log_info("start loading {}", scn.filename);
                 scn.load_done   = false;
