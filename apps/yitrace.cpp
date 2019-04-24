@@ -123,9 +123,18 @@ struct app_scene {
 
 // Application state
 struct app_state {
+    // data
     deque<app_scene> scenes;
     int              selected = -1;
     deque<string>    errors;
+
+    // default options
+    load_scene_options    load_options    = {};
+    save_scene_options    save_options    = {};
+    bvh_build_options     bvh_options     = {};
+    trace_image_options   trace_options   = {};
+    tonemap_image_options tonemap_options = {};
+    bool                  add_skyenv      = false;
 };
 
 void update_app_render(const string& filename, image<vec4f>& render,
@@ -179,23 +188,18 @@ void update_app_render(const string& filename, image<vec4f>& render,
     current_sample = trace_options.num_samples;
 }
 
-void add_new_scene(app_state& app, const string& filename,
-    const load_scene_options&    load_options,
-    const trace_image_options&   trace_options,
-    const bvh_build_options&     bvh_options,
-    const tonemap_image_options& tonemap_options, bool validate = false,
-    bool add_skyenv = false) {
-    auto& scn         = app.scenes.emplace_back();
-    scn.filename      = filename;
-    scn.imagename     = get_noextension(filename) + ".png";
-    scn.outname       = get_noextension(filename) + ".edited.yaml";
-    scn.name          = get_filename(scn.filename);
-    scn.load_options  = load_options;
-    scn.trace_options = trace_options;
-    scn.trace_options.samples_per_batch = 1;
-    scn.bvh_options                     = bvh_options;
-    scn.tonemap_options                 = tonemap_options;
-    scn.add_skyenv                      = add_skyenv;
+void add_new_scene(app_state& app, const string& filename) {
+    auto& scn           = app.scenes.emplace_back();
+    scn.filename        = filename;
+    scn.imagename       = get_noextension(filename) + ".png";
+    scn.outname         = get_noextension(filename) + ".edited.yaml";
+    scn.name            = get_filename(scn.filename);
+    scn.load_options    = app.load_options;
+    scn.save_options    = app.save_options;
+    scn.trace_options   = app.trace_options;
+    scn.bvh_options     = app.bvh_options;
+    scn.tonemap_options = app.tonemap_options;
+    scn.add_skyenv      = app.add_skyenv;
     scn.task_queue.emplace_back(app_task_type::load);
     app.selected = (int)app.scenes.size() - 1;
 }
@@ -462,9 +466,8 @@ void update(app_state& app) {
         }
         if (updated) {
             scn.render_sample = max(scn.render_sample, (int)task.current);
-            scn.name          = format(
-                "{} [{}x{}@{}]", get_filename(scn.filename), scn.render.size().x,
-                                     scn.render.size().y, scn.render_sample);
+            scn.name = format("{} [{}x{}@{}]", get_filename(scn.filename),
+                scn.render.size().x, scn.render.size().y, scn.render_sample);
         }
     }
     // remove unneeded tasks
@@ -549,10 +552,10 @@ void update(app_state& app) {
                         trace_sampler_type::eyelight;
                 }
                 scn.render_sample = scn.trace_options.num_samples;
-                scn.name          = format("{} [{}x{}@{}]",
-                    get_filename(scn.filename), scn.render.size().x,
-                        scn.render.size().y, scn.render_sample);
-                task.result       = async([&scn, &task]() {
+                scn.name = format("{} [{}x{}@{}]", get_filename(scn.filename),
+                    scn.render.size().x, scn.render.size().y,
+                    scn.render_sample);
+                task.result = async([&scn, &task]() {
                     update_app_render(scn.filename, scn.render, scn.display,
                         scn.preview, scn.state, scn.scene, scn.lights, scn.bvh,
                         scn.trace_options, scn.tonemap_options,
@@ -654,7 +657,7 @@ void update(app_state& app) {
                     scn.render_sample = scn.trace_options.num_samples;
                     scn.name          = format("{} [{}x{}@{}]",
                         get_filename(scn.filename), scn.render.size().x,
-                            scn.render.size().y, scn.render_sample);
+                        scn.render.size().y, scn.render_sample);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     app.errors.push_back("cannot render " + scn.filename);
@@ -687,7 +690,7 @@ void update(app_state& app) {
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
-    for (auto& path : paths) add_new_scene(app, path, {}, {}, {}, {});
+    for (auto& path : paths) add_new_scene(app, path);
 }
 
 // run ui loop
@@ -772,15 +775,9 @@ void run_ui(app_state& app) {
 int main(int argc, char* argv[]) {
     // application
     app_state app{};
-    auto      load_options          = load_scene_options{};
-    auto      bvh_options           = bvh_build_options{};
-    auto      trace_options         = trace_image_options{};
-    auto      tonemap_options       = tonemap_image_options{};
-    auto      no_parallel           = false;
-    auto      add_skyenv            = false;
-    auto      validate              = false;
-    auto      filenames             = vector<string>{};
-    trace_options.samples_per_batch = 1;
+    app.trace_options.samples_per_batch = 1;
+    auto no_parallel                    = false;
+    auto filenames                      = vector<string>{};
 
     // names for enums
     auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
@@ -797,45 +794,46 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser = CLI::App{"progressive path tracing"};
-    parser.add_option("--camera", trace_options.camera_id, "Camera index.");
-    parser.add_option("--hres,-R", trace_options.image_size.x,
+    parser.add_option("--camera", app.trace_options.camera_id, "Camera index.");
+    parser.add_option("--hres,-R", app.trace_options.image_size.x,
         "Image horizontal resolution.");
+    parser.add_option("--vres,-r", app.trace_options.image_size.y,
+        "Image vertical resolution.");
     parser.add_option(
-        "--vres,-r", trace_options.image_size.y, "Image vertical resolution.");
-    parser.add_option(
-        "--nsamples,-s", trace_options.num_samples, "Number of samples.");
+        "--nsamples,-s", app.trace_options.num_samples, "Number of samples.");
     parser
-        .add_option("--tracer,-t", trace_options.sampler_type, "Tracer type.")
+        .add_option(
+            "--tracer,-t", app.trace_options.sampler_type, "Tracer type.")
         ->transform(CLI::IsMember(trace_sampler_type_namemap));
     parser
-        .add_option("--falsecolor,-F", trace_options.falsecolor_type,
+        .add_option("--falsecolor,-F", app.trace_options.falsecolor_type,
             "Tracer false color type.")
         ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
-    parser.add_option(
-        "--nbounces", trace_options.max_bounces, "Maximum number of bounces.");
-    parser.add_option(
-        "--pixel-clamp", trace_options.pixel_clamp, "Final pixel clamping.");
-    parser.add_option("--seed", trace_options.random_seed,
+    parser.add_option("--nbounces", app.trace_options.max_bounces,
+        "Maximum number of bounces.");
+    parser.add_option("--pixel-clamp", app.trace_options.pixel_clamp,
+        "Final pixel clamping.");
+    parser.add_option("--seed", app.trace_options.random_seed,
         "Seed for the random number generators.");
     parser.add_flag("--env-hidden,!--no-env-hidden",
-        trace_options.environments_hidden,
+        app.trace_options.environments_hidden,
         "Environments are hidden in renderer");
     parser.add_flag("--parallel,!--no-parallel", no_parallel,
         "Disable parallel execution.");
     parser.add_flag("--bvh-high-quality,!--no-bvh-high-quality",
-        bvh_options.high_quality, "Use high quality bvh mode");
+        app.bvh_options.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-    parser.add_flag("--bvh-embree,!--no-bvh-embree", bvh_options.use_embree,
+    parser.add_flag("--bvh-embree,!--no-bvh-embree", app.bvh_options.use_embree,
         "Use Embree ratracer");
     parser.add_flag("--bvh-embree-flatten,!--no-bvh-embree-flatten",
-        bvh_options.embree_flatten, "Flatten embree scene");
+        app.bvh_options.embree_flatten, "Flatten embree scene");
     parser.add_flag("--bvh-embree-compact,!--no-bvh-embree-compact",
-        bvh_options.embree_compact, "Embree runs in compact memory");
+        app.bvh_options.embree_compact, "Embree runs in compact memory");
 #endif
     parser.add_flag("--double-sided,!--no-double-sided",
-        trace_options.double_sided, "Double-sided rendering.");
+        app.trace_options.double_sided, "Double-sided rendering.");
     parser.add_flag(
-        "--add-skyenv,!--no-add-skyenv", add_skyenv, "Add sky envmap");
+        "--add-skyenv,!--no-add-skyenv", app.add_skyenv, "Add sky envmap");
     parser.add_option("scenes", filenames, "Scene filenames")->required(true);
     try {
         parser.parse(argc, argv);
@@ -845,16 +843,15 @@ int main(int argc, char* argv[]) {
 
     // fix parallel code
     if (no_parallel) {
-        bvh_options.run_serially   = true;
-        load_options.run_serially  = true;
-        trace_options.run_serially = true;
+        app.bvh_options.run_serially   = true;
+        app.load_options.run_serially  = true;
+        app.save_options.run_serially  = true;
+        app.trace_options.run_serially = true;
     }
 
     // loading images
-    for (auto filename : filenames)
-        add_new_scene(app, filename, load_options, trace_options, bvh_options,
-            tonemap_options, validate, add_skyenv);
-    app.selected = 0;
+    for (auto filename : filenames) add_new_scene(app, filename);
+    app.selected = app.scenes.empty() ? -1 : 0;
 
     // run interactive
     run_ui(app);
