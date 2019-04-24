@@ -797,13 +797,13 @@ bool draw_modal_message_opengl_window(
 }
 
 struct filedialog_state {
-    string                     dirname          = "";
-    string                     filename         = "";
-    vector<pair<string, bool>> entries          = {};
-    bool                       save             = false;
-    bool                       remove_hidden    = true;
-    string                     filter           = "";
-    vector<string>             extensions       = {};
+    string                     dirname       = "";
+    string                     filename      = "";
+    vector<pair<string, bool>> entries       = {};
+    bool                       save          = false;
+    bool                       remove_hidden = true;
+    string                     filter        = "";
+    vector<string>             extensions    = {};
 
     filedialog_state() {}
     filedialog_state(const string& dirname, const string& filename, bool save,
@@ -816,33 +816,34 @@ struct filedialog_state {
     void set_dirname(const string& name) {
         dirname = name;
         dirname = normalize_path(dirname);
-        if(dirname == "") dirname = "./";
+        if (dirname == "") dirname = "./";
         if (dirname.back() != '/') dirname += '/';
         refresh();
     }
-    void set_filename(const string& name) { 
-        filename = name; 
+    void set_filename(const string& name) {
+        filename = name;
         check_filename();
     }
-    void set_filter(const string& flt) { 
+    void set_filter(const string& flt) {
         filter = "";
         extensions.clear();
-        for(auto pattern : split(flt, ";")) {
+        for (auto pattern : split(flt, ";")) {
             auto ext = get_extension(pattern);
-            if(ext != "") {
+            if (ext != "") {
                 extensions.push_back(ext);
-                filter += (filter == "") ? ("*."+ext) : (";*."+ext);
+                filter += (filter == "") ? ("*." + ext) : (";*." + ext);
             }
         }
     }
     void check_filename() {
-        if(filename.empty()) return;
+        if (filename.empty()) return;
         auto ext = get_extension(filename);
-        if(std::find(extensions.begin(), extensions.end(), ext) == extensions.end()) {
+        if (std::find(extensions.begin(), extensions.end(), ext) ==
+            extensions.end()) {
             filename = "";
             return;
         }
-        if(!save && !exists_file(dirname + filename)) {
+        if (!save && !exists_file(dirname + filename)) {
             filename = "";
             return;
         }

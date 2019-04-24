@@ -1029,12 +1029,14 @@ inline void split_view(string_view str, vector<string_view>& splits,
         }
     }
 }
-inline vector<string_view> split_view(string_view str, string_view delimiters = " \t\r\n", bool trim_empty = true) {
+inline vector<string_view> split_view(string_view str,
+    string_view delimiters = " \t\r\n", bool trim_empty = true) {
     auto splits = vector<string_view>{};
     split_view(str, splits, delimiters, trim_empty);
     return splits;
 }
-inline vector<string> split(const string& str, string_view delimiters = " \t\r\n", bool trim_empty = true) {
+inline vector<string> split(const string& str,
+    string_view delimiters = " \t\r\n", bool trim_empty = true) {
     auto splits = vector<string_view>{};
     split_view(str, splits, delimiters, trim_empty);
     auto splits_str = vector<string>();
