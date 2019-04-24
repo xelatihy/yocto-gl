@@ -749,12 +749,12 @@ void begin_opengl_widgets_frame(const opengl_window& win) {
     if(win.widgets_left) {
         ImGui::SetNextWindowPos({0, 0});
         ImGui::SetNextWindowSize({(float)win.widgets_width, (float)win_size.y});
-        ImGui::SetNextWindowCollapsed(false);
     } else {
         ImGui::SetNextWindowPos({(float)(win_size.x - win.widgets_width), 0});
         ImGui::SetNextWindowSize({(float)win.widgets_width, (float)win_size.y});
-        ImGui::SetNextWindowCollapsed(false);
     }
+    ImGui::SetNextWindowCollapsed(false);
+    ImGui::SetNextWindowBgAlpha(1);
 }
 
 void end_opengl_widgets_frame(const opengl_window& win) {
