@@ -363,18 +363,18 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_slider_opengl_widget(
             win, "width", trace_options.image_size.x, 0, 4096);
         draw_slider_opengl_widget(
-            win, "height", scn.trace_options.image_size.y, 0, 4096);
+            win, "height", trace_options.image_size.y, 0, 4096);
         draw_slider_opengl_widget(
-            win, "nsamples", scn.trace_options.num_samples, 16, 4096);
+            win, "nsamples", trace_options.num_samples, 16, 4096);
         draw_combobox_opengl_widget(win, "tracer",
-            (int&)scn.trace_options.sampler_type, trace_sampler_type_names);
+            (int&)trace_options.sampler_type, trace_sampler_type_names);
         draw_combobox_opengl_widget(win, "false color",
-            (int&)scn.trace_options.falsecolor_type,
+            (int&)trace_options.falsecolor_type,
             trace_falsecolor_type_names);
         draw_slider_opengl_widget(
-            win, "nbounces", scn.trace_options.max_bounces, 1, 10);
+            win, "nbounces", trace_options.max_bounces, 1, 10);
         draw_slider_opengl_widget(
-            win, "seed", (int&)scn.trace_options.random_seed, 0, 1000000);
+            win, "seed", (int&)trace_options.random_seed, 0, 1000000);
         draw_slider_opengl_widget(win, "pratio", scn.preview_ratio, 1, 64);
         auto tonemap_options = scn.tonemap_options;
         draw_slider_opengl_widget(
