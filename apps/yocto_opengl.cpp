@@ -665,7 +665,7 @@ vec4i get_opengl_framebuffer_viewport(
         glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
         auto offset = (int)(win.widgets_width * (float)viewport.z / win_size.x);
         viewport.z -= offset;
-        if(win.widgets_left) viewport.x += offset;
+        if (win.widgets_left) viewport.x += offset;
     }
     return viewport;
 }
@@ -733,7 +733,7 @@ void init_opengl_widgets(opengl_window& win, int width, bool left) {
 #endif
     ImGui::StyleColorsDark();
     win.widgets_width = width;
-    win.widgets_left = left;
+    win.widgets_left  = left;
 }
 
 bool get_opengl_widgets_active(const opengl_window& win) {
@@ -746,7 +746,7 @@ void begin_opengl_widgets_frame(const opengl_window& win) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     auto win_size = get_opengl_window_size(win, false);
-    if(win.widgets_left) {
+    if (win.widgets_left) {
         ImGui::SetNextWindowPos({0, 0});
         ImGui::SetNextWindowSize({(float)win.widgets_width, (float)win_size.y});
     } else {
@@ -764,7 +764,10 @@ void end_opengl_widgets_frame(const opengl_window& win) {
 }
 
 bool begin_opengl_widgets_window(const opengl_window& win, const char* title) {
-    return ImGui::Begin(title);
+    return ImGui::Begin(title, nullptr,
+        // ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 }
 
 bool begin_header_opengl_widget(const opengl_window& win, const char* lbl) {
