@@ -773,6 +773,23 @@ bool begin_modal_opengl_widget(const opengl_window& win, const char* id) {
     return ImGui::BeginPopupModal(id);
 }
 void end_modal_opengl_widget(const opengl_window& win) { ImGui::EndPopup(); }
+bool is_modal_open_opengl_widget(const opengl_window& win, const char* id) { return ImGui::IsPopupOpen(id); }
+
+bool draw_modal_message_opengl_window(const opengl_window& win, const char* id, const string& message) {
+    ImGui::OpenPopup(id);    
+    if(ImGui::BeginPopupModal(id)) {
+        auto open = true;
+        ImGui::Text("%s", message.c_str());
+        if(ImGui::Button("Ok")) {
+            ImGui::CloseCurrentPopup();
+            open = false;
+        }
+        ImGui::EndPopup();
+        return open;
+    } else {
+        return false;
+    }
+}
 
 bool draw_button_opengl_widget(const opengl_window& win, const char* lbl) {
     return ImGui::Button(lbl);

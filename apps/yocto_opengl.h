@@ -273,6 +273,8 @@ void open_modal_opengl_widget(const opengl_window& win, const char* id);
 void close_modal_opengl_widget(const opengl_window& win);
 bool begin_modal_opengl_widget(const opengl_window& win, const char* id);
 void end_modal_opengl_widget(const opengl_window& win);
+bool is_modal_open_opengl_widget(const opengl_window& win);
+bool draw_modal_message_opengl_window(const opengl_window& win, const char* id, const string& message);
 
 void draw_text_opengl_widget(const opengl_window& win, const string& text);
 void draw_label_opengl_widget(
@@ -401,6 +403,10 @@ void add_log_opengl_widget(const opengl_window& win, const char* msg);
 void add_log_opengl_widget(const opengl_window& win, const string& msg);
 void clear_logs_opengl_widget(const opengl_window& win);
 void draw_log_opengl_widget(const opengl_window& win);
+
+void open_message_opengl_widget(const opengl_window& win, const char* title, const string& message);
+void draw_message_opengl_widget(const opengl_window& win, const char* title);
+bool is_message_open_opengl_widget(const opengl_window& win, const char* title);
 
 }  // namespace yocto
 

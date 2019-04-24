@@ -175,14 +175,10 @@ void draw_opengl_widgets(const opengl_window& win) {
     auto& app    = *(app_state*)get_opengl_user_pointer(win);
     auto  edited = false;
     if (!begin_opengl_widgets_window(win, "yimview")) return;
-    if (!app.errors.empty()) open_modal_opengl_widget(win, "error");
-    if (begin_modal_opengl_widget(win, "error")) {
-        draw_text_opengl_widget(win, app.errors.front());
-        if (draw_button_opengl_widget(win, "ok")) {
+    if (!app.errors.empty()) {
+        if(!draw_modal_message_opengl_window(win, "error", app.errors.front())) {
             app.errors.pop_front();
-            close_modal_opengl_widget(win);
         }
-        end_modal_opengl_widget(win);
     }
     if (draw_button_opengl_widget(win, "load")) {
     }
