@@ -172,29 +172,35 @@ void add_new_image(app_state& app, const string& filename) {
 }
 
 void draw_opengl_widgets(const opengl_window& win) {
+    static string load_path = "", save_path = "", error_message = "";
     auto& app    = *(app_state*)get_opengl_user_pointer(win);
     auto  edited = false;
     if (!begin_opengl_widgets_window(win, "yimview")) return;
-    if (!app.errors.empty()) {
+    if (!app.errors.empty() && error_message.empty()) { 
+        error_message = app.errors.front();
+        app.errors.pop_front();
         open_modal_opengl_widget(win, "error");
-        if (!draw_modal_message_opengl_window(
-                win, "error", app.errors.front())) {
-            app.errors.pop_front();
-        }
     }
-    string load_path = "";
+    if (!draw_modal_message_opengl_window(win, "error", error_message)) {
+        error_message = "";
+    }
     if (draw_modal_fileialog_opengl_widgets(win, "load image", load_path, false,
             "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
         add_new_image(app, load_path);
+    }
+    if (draw_modal_fileialog_opengl_widgets(win, "save image", save_path, true,
+            get_dirname(save_path), get_filename(save_path), "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
+        app.images[app.selected].outname = save_path;
+        app.images[app.selected].task_queue.emplace_back(app_task_type::save);
+        save_path = "";
     }
     if (draw_button_opengl_widget(win, "load")) {
         open_modal_opengl_widget(win, "load image");
     }
     continue_opengl_widget_line(win);
-    if (draw_button_opengl_widget(win, "save", app.selected >= 0)) {
-        auto& img = app.images.at(app.selected);
-        if (img.display_done && img.task_queue.empty())
-            img.task_queue.emplace_back(app_task_type::save);
+    if (draw_button_opengl_widget(win, "save", app.selected >= 0 && app.images[app.selected].display_done)) {
+        save_path = app.images[app.selected].outname;
+        open_modal_opengl_widget(win, "save image");
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "close", app.selected >= 0)) {
