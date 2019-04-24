@@ -90,7 +90,7 @@ struct app_image {
 };
 
 struct app_state {
-    vector<app_image> images;
+    deque<app_image> images;
     int              selected = -1;
     deque<string>    errors;
 };

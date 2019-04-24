@@ -44,13 +44,14 @@ void print_obj_camera(const yocto_camera& camera);
 };  // namespace yocto
 
 // Application task
-enum struct app_task_type { none, load, save, bvh, lights, render, save_scene };
+enum struct app_task_type { none, load, save, bvh, lights, render, scene_edit, scene_save };
 
 struct app_task {
     app_task_type                  type;
     future<void>                   result;
     atomic<bool>                   stop;
     concurrent_queue<image_region> queue;
+    app_edit                       edit;
 
     app_task(app_task_type type) : type{type}, result{}, stop{false}, queue{} {}
     ~app_task() {
@@ -67,8 +68,10 @@ struct app_task {
 // Application scene
 struct app_scene {
     // loading options
-    string filename   = "scene.json";
-    string imfilename = "out.obj";
+    string filename   = "scene.yaml";
+    string imagename = "out.png";
+    string outname = "out.yaml";
+    string name = "";
 
     // options
     load_scene_options    load_options          = {};
@@ -100,19 +103,21 @@ struct app_scene {
     bool             zoom_to_fit  = true;
     bool             widgets_open = false;
     app_selection    selection    = {typeid(void), -1};
-    vector<app_edit> update_list;
     bool             navigation_fps  = false;
-    bool             quiet           = false;
     opengl_texture   display_texture = {};
 
+    // tasks
+    bool load_done = false, bvh_done = false, lights_done = true;
+    deque<app_task> task_queue;
+    vector<app_edit> update_list;
+
     // app status
-    bool load_done, load_running;
     string       status = "";
 };
 
 // Application state
 struct app_state {
-    vector<app_scene> scenes;
+    deque<app_scene> scenes;
     int               selected = -1;
     deque<string>     errors;
 };
@@ -194,7 +199,6 @@ bool load_scene_sync(app_scene& scn) {
 
     // set flags
     scn.load_done    = true;
-    scn.load_running = false;
     scn.status       = "loading done";
 
     // start rendering
@@ -205,12 +209,7 @@ bool load_scene_sync(app_scene& scn) {
 }
 
 void load_scene_async(app_scene& scn) {
-    if (scn.load_running) {
-        print_info("error: already loading");
-        return;
-    }
     scn.load_done    = false;
-    scn.load_running = true;
     scn.status       = "uninitialized";
     scn.scene        = {};
     scn.bvh          = {};
@@ -227,14 +226,17 @@ void add_new_scene(app_state& app, const string& filename,
     bool validate = false, bool add_skyenv = false) {
     auto& scn                           = app.scenes.emplace_back();
     scn.filename                        = filename;
-    scn.imfilename                      = get_noextension(filename) + ".png";
+    scn.imagename                      = get_noextension(filename) + ".png";
+    scn.outname                      = get_noextension(filename) + ".edited.yaml";
+    scn.name = get_filename(scn.filename);
     scn.load_options = load_options;
     scn.trace_options                   = trace_options;
     scn.trace_options.samples_per_batch = 1;
     scn.bvh_options                     = bvh_options;
     scn.tonemap_options                 = tonemap_options;
     scn.add_skyenv = add_skyenv;
-    load_scene_async(scn);
+    scn.task_queue.emplace_back(app_task_type::load);
+    app.selected = (int)app.scenes.size() - 1;
 }
 
 void draw_opengl_widgets(const opengl_window& win) {
@@ -412,7 +414,6 @@ void draw(const opengl_window& win) {
 }
 
 bool update(app_state& app) {
-    auto updated = false;
     for (auto& scn : app.scenes) {
         // exit if no updated
         if (!scn.load_done || scn.update_list.empty()) return false;
