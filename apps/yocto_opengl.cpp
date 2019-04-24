@@ -644,10 +644,11 @@ void set_drop_opengl_callback(
     glfwSetDropCallback(win.win, _glfw_drop_callback);
 }
 
-vec2i get_opengl_framebuffer_size(const opengl_window& win, bool ignore_widgets) {
+vec2i get_opengl_framebuffer_size(
+    const opengl_window& win, bool ignore_widgets) {
     auto size = zero2i;
     glfwGetFramebufferSize(win.win, &size.x, &size.y);
-    if(ignore_widgets && win.widgets_width) {
+    if (ignore_widgets && win.widgets_width) {
         auto win_size = zero2i;
         glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
         size.x -= (int)(win.widgets_width * (float)size.x / (float)win_size.x);
@@ -655,13 +656,15 @@ vec2i get_opengl_framebuffer_size(const opengl_window& win, bool ignore_widgets)
     return size;
 }
 
-vec4i get_opengl_framebuffer_viewport(const opengl_window& win, bool ignore_widgets) {
+vec4i get_opengl_framebuffer_viewport(
+    const opengl_window& win, bool ignore_widgets) {
     auto viewport = zero4i;
     glfwGetFramebufferSize(win.win, &viewport.z, &viewport.w);
-    if(ignore_widgets && win.widgets_width) {
+    if (ignore_widgets && win.widgets_width) {
         auto win_size = zero2i;
         glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
-        viewport.z -= (int)(win.widgets_width * (float)viewport.z / (float)win_size.x);
+        viewport.z -=
+            (int)(win.widgets_width * (float)viewport.z / (float)win_size.x);
     }
     return viewport;
 }
@@ -669,7 +672,7 @@ vec4i get_opengl_framebuffer_viewport(const opengl_window& win, bool ignore_widg
 vec2i get_opengl_window_size(const opengl_window& win, bool ignore_widgets) {
     auto size = zero2i;
     glfwGetWindowSize(win.win, &size.x, &size.y);
-    if(ignore_widgets && win.widgets_width) size.x -= win.widgets_width;
+    if (ignore_widgets && win.widgets_width) size.x -= win.widgets_width;
     return size;
 }
 
