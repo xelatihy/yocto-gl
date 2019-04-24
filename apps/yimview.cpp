@@ -90,9 +90,14 @@ struct app_image {
 };
 
 struct app_state {
+    // data
     deque<app_image> images;
     int              selected = -1;
     deque<string>    errors;
+
+    // default options
+    tonemap_image_options    tonemap_options    = {};
+    colorgrade_image_options colorgrade_options = {};
 };
 
 // compute min/max
@@ -143,6 +148,8 @@ void add_new_image(app_state& app, const string& filename) {
     img.filename               = filename;
     img.outname                = get_noextension(filename) + ".display.png";
     img.name                   = get_filename(filename);
+    img.tonemap_options        = app.tonemap_options;
+    img.colorgrade_options     = app.colorgrade_options;
     img.tonemap_options.filmic = is_hdr_filename(filename);
     img.load_done              = false;
     img.display_done           = false;
