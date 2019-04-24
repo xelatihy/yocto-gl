@@ -461,7 +461,7 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 void run_ui(app_state& app) {
     // window
     auto win = opengl_window();
-    init_opengl_window(win, {1280, 720}, "yimview", &app, draw);
+    init_opengl_window(win, {1280 + 320, 720}, "yimview", &app, draw);
     set_drop_opengl_callback(win, drop_callback);
 
     // init widgets
