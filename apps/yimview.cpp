@@ -183,7 +183,7 @@ void draw_opengl_widgets(const opengl_window& win) {
     }
     string load_path = "";
     if (draw_modal_fileialog_opengl_widgets(win, "load image", load_path, false, "", "")) {
-        log_info("{}", load_path);
+        add_new_image(app, load_path);
     }
     if (draw_button_opengl_widget(win, "load")) {
         open_modal_opengl_widget(win, "load image");

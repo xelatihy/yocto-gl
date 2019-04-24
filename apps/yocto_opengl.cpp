@@ -886,7 +886,7 @@ bool draw_modal_fileialog_opengl_widgets(const opengl_window& win,
         }
         auto ok = false, exit = false;
         if (ImGui::Button("Ok")) {
-            path = state.filename;
+            path = state.dirname + state.filename;
             ok   = true;
             exit = true;
         }
