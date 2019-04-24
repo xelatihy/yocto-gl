@@ -450,6 +450,10 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         end_header_opengl_widget(win);
     }
+    if (begin_header_opengl_widget(win, "log")) {
+        draw_log_opengl_widget(win);
+        end_header_opengl_widget(win);
+    }
 }
 
 void draw(const opengl_window& win) {
