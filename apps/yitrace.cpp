@@ -47,7 +47,9 @@ void print_obj_camera(const yocto_camera& camera);
 enum struct app_task_type {
     none,
     load_scene,
+    load_element,
     build_bvh,
+    refit_bvh,
     init_lights,
     render_image,
     apply_edit,
@@ -202,89 +204,6 @@ void add_new_scene(app_state& app, const string& filename) {
     scn.add_skyenv      = app.add_skyenv;
     scn.task_queue.emplace_back(app_task_type::load_scene);
     app.selected = (int)app.scenes.size() - 1;
-}
-
-void apply_edit(const string& filename, yocto_scene& scene, bvh_scene& bvh,
-    trace_lights& lights, trace_image_options& trace_options,
-    tonemap_image_options& tonemap_options, bvh_build_options& bvh_options,
-    const app_edit& edit) {
-    // update data
-    auto updated_instances = vector<int>{}, updated_shapes = vector<int>{};
-    auto updated_lights = false;
-
-    auto& [type, index, data, reload] = edit;
-
-    if (type == typeid(yocto_camera)) {
-        scene.cameras[index] = any_cast<yocto_camera>(data);
-    } else if (type == typeid(yocto_texture)) {
-        scene.textures[index] = any_cast<yocto_texture>(data);
-        if (reload) {
-            auto& texture = scene.textures[index];
-            load_image(get_dirname(filename) + texture.uri, texture.hdr_image,
-                texture.ldr_image);
-        }
-    } else if (type == typeid(yocto_voltexture)) {
-        scene.voltextures[index] = any_cast<yocto_voltexture>(data);
-        if (reload) {
-            auto& texture = scene.voltextures[index];
-            load_volume(
-                get_dirname(filename) + texture.uri, texture.volume_data);
-        }
-    } else if (type == typeid(yocto_shape)) {
-        scene.shapes[index] = any_cast<yocto_shape>(data);
-        if (reload) {
-            auto& shape = scene.shapes[index];
-            load_shape(get_dirname(filename) + shape.uri, shape.points,
-                shape.lines, shape.triangles, shape.quads,
-                shape.quads_positions, shape.quads_normals,
-                shape.quads_texturecoords, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius, false);
-        }
-        updated_shapes.push_back(index);
-    } else if (type == typeid(yocto_subdiv)) {
-        // TODO: this needs more fixing?
-        scene.subdivs[index] = any_cast<yocto_subdiv>(data);
-        if (reload) {
-            auto& subdiv = scene.subdivs[index];
-            load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
-                subdiv.lines, subdiv.triangles, subdiv.quads,
-                subdiv.quads_positions, subdiv.quads_normals,
-                subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
-                subdiv.texturecoords, subdiv.colors, subdiv.radius,
-                subdiv.preserve_facevarying);
-        }
-        tesselate_subdiv(scene, scene.subdivs[index]);
-        updated_shapes.push_back(scene.subdivs[index].tesselated_shape);
-    } else if (type == typeid(yocto_material)) {
-        auto old_emission      = scene.materials[index].emission;
-        scene.materials[index] = any_cast<yocto_material>(data);
-        if (old_emission != scene.materials[index].emission) {
-            updated_lights = true;
-        }
-    } else if (type == typeid(yocto_instance)) {
-        scene.instances[index] = any_cast<yocto_instance>(data);
-        updated_instances.push_back(index);
-    } else if (type == typeid(yocto_environment)) {
-        auto old_emission         = scene.materials[index].emission;
-        scene.environments[index] = any_cast<yocto_environment>(data);
-        if (old_emission != scene.materials[index].emission) {
-            updated_lights = true;
-        }
-    } else if (type == typeid(trace_image_options)) {
-        trace_options = any_cast<trace_image_options>(data);
-    } else if (type == typeid(tonemap_image_options)) {
-        tonemap_options = any_cast<tonemap_image_options>(data);
-    } else {
-        throw runtime_error("unsupported type "s + type.name());
-    }
-
-    // update bvh
-    if (!updated_instances.empty() || !updated_shapes.empty()) {
-        refit_scene_bvh(
-            scene, bvh, updated_instances, updated_shapes, bvh_options);
-    }
-    // update lights
-    if (updated_lights) init_trace_lights(lights, scene);
 }
 
 void draw_opengl_widgets(const opengl_window& win) {
@@ -467,6 +386,114 @@ void draw(const opengl_window& win) {
     swap_opengl_buffers(win);
 }
 
+void apply_edit(const string& filename, yocto_scene& scene,
+    trace_image_options& trace_options, tonemap_image_options& tonemap_options,
+    bool& reload_element, bool& updated_lights, bool& updated_bvh,
+    const app_edit& edit) {
+    auto& [type, index, data, reload] = edit;
+
+    if (type == typeid(yocto_camera)) {
+        scene.cameras[index] = any_cast<yocto_camera>(data);
+    } else if (type == typeid(yocto_texture)) {
+        scene.textures[index] = any_cast<yocto_texture>(data);
+        if (reload) reload_element = true;
+    } else if (type == typeid(yocto_voltexture)) {
+        scene.voltextures[index] = any_cast<yocto_voltexture>(data);
+        if (reload) reload_element = true;
+    } else if (type == typeid(yocto_shape)) {
+        scene.shapes[index] = any_cast<yocto_shape>(data);
+        if (reload) {
+            reload_element = true;
+            updated_bvh    = true;
+        }
+    } else if (type == typeid(yocto_subdiv)) {
+        scene.subdivs[index] = any_cast<yocto_subdiv>(data);
+        if (reload) {
+            reload_element = true;
+            updated_bvh    = true;
+        }
+    } else if (type == typeid(yocto_material)) {
+        auto old_emission      = scene.materials[index].emission;
+        scene.materials[index] = any_cast<yocto_material>(data);
+        if (old_emission != scene.materials[index].emission) {
+            updated_lights = true;
+        }
+    } else if (type == typeid(yocto_instance)) {
+        auto old_instance      = scene.instances[index];
+        scene.instances[index] = any_cast<yocto_instance>(data);
+        if (old_instance.shape != scene.instances[index].shape ||
+            old_instance.frame != scene.instances[index].frame) {
+            updated_bvh = true;
+        }
+    } else if (type == typeid(yocto_environment)) {
+        auto old_emission         = scene.materials[index].emission;
+        scene.environments[index] = any_cast<yocto_environment>(data);
+        if (old_emission != scene.materials[index].emission) {
+            updated_lights = true;
+        }
+    } else if (type == typeid(trace_image_options)) {
+        trace_options = any_cast<trace_image_options>(data);
+    } else if (type == typeid(tonemap_image_options)) {
+        tonemap_options = any_cast<tonemap_image_options>(data);
+    } else {
+        throw runtime_error("unsupported type "s + type.name());
+    }
+}
+
+// reload an element
+void load_element(
+    const string& filename, yocto_scene& scene, const app_edit& edit) {
+    auto& [type, index, data, reload] = edit;
+
+    if (type == typeid(yocto_texture)) {
+        auto& texture = scene.textures[index];
+        load_image(get_dirname(filename) + texture.uri, texture.hdr_image,
+            texture.ldr_image);
+    } else if (type == typeid(yocto_voltexture)) {
+        auto& texture = scene.voltextures[index];
+        load_volume(get_dirname(filename) + texture.uri, texture.volume_data);
+    } else if (type == typeid(yocto_shape)) {
+        auto& shape = scene.shapes[index];
+        load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.quads_positions,
+            shape.quads_normals, shape.quads_texturecoords, shape.positions,
+            shape.normals, shape.texturecoords, shape.colors, shape.radius,
+            false);
+    } else if (type == typeid(yocto_subdiv)) {
+        // TODO: this needs more fixing?
+        auto& subdiv = scene.subdivs[index];
+        load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
+            subdiv.lines, subdiv.triangles, subdiv.quads,
+            subdiv.quads_positions, subdiv.quads_normals,
+            subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
+            subdiv.texturecoords, subdiv.colors, subdiv.radius,
+            subdiv.preserve_facevarying);
+        tesselate_subdiv(scene, scene.subdivs[index]);
+    } else {
+        throw runtime_error("unsupported type "s + type.name());
+    }
+}
+
+void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
+    const bvh_build_options& bvh_options, const app_edit& edit) {
+    auto& [type, index, data, reload] = edit;
+
+    auto updated_shapes    = vector<int>{};
+    auto updated_instances = vector<int>{};
+    if (type == typeid(yocto_shape)) {
+        updated_shapes.push_back(index);
+    } else if (type == typeid(yocto_subdiv)) {
+        auto& subdiv = scene.subdivs[index];
+        updated_shapes.push_back(subdiv.tesselated_shape);
+    } else if (type == typeid(yocto_instance)) {
+        updated_instances.push_back(index);
+    } else {
+        throw runtime_error("unsupported type "s + type.name());
+    }
+
+    refit_scene_bvh(scene, bvh, updated_instances, updated_shapes);
+}
+
 void update(app_state& app) {
     // close if needed
     while (!app.scenes.empty()) {
@@ -480,6 +507,7 @@ void update(app_state& app) {
         app.scenes.erase(app.scenes.begin() + pos);
         app.selected = app.scenes.empty() ? -1 : 0;
     }
+
     // consume partial results
     for (auto& scn : app.scenes) {
         if (scn.task_queue.empty()) continue;
@@ -504,6 +532,7 @@ void update(app_state& app) {
                 scn.render.size().x, scn.render.size().y, scn.render_sample);
         }
     }
+
     // remove unneeded tasks
     for (auto& scn : app.scenes) {
         while (scn.task_queue.size() > 1) {
@@ -533,6 +562,44 @@ void update(app_state& app) {
             scn.task_queue.pop_front();
         }
     }
+
+    // apply synchronous edit
+    for (auto& scn : app.scenes) {
+        while (!scn.task_queue.empty()) {
+            auto& task = scn.task_queue.front();
+            if (task.type != app_task_type::apply_edit) break;
+            log_info("start editing {}", scn.filename);
+            try {
+                scn.render_done     = false;
+                auto reload_element = false, update_bvh = false,
+                     update_lights = false;
+                apply_edit(scn.filename, scn.scene, scn.trace_options,
+                    scn.tonemap_options, reload_element, update_lights,
+                    update_bvh, task.edit);
+                log_info("done editing {}", scn.filename);
+                if (reload_element) {
+                    scn.load_done = false;
+                    scn.task_queue.emplace_back(
+                        app_task_type::load_element, task.edit);
+                }
+                if (update_bvh) {
+                    scn.bvh_done = false;
+                    scn.task_queue.emplace_back(
+                        app_task_type::refit_bvh, task.edit);
+                }
+                if (update_lights) {
+                    scn.lights_done = false;
+                    scn.task_queue.emplace_back(app_task_type::init_lights);
+                }
+                scn.task_queue.emplace_back(app_task_type::render_image);
+            } catch (std::exception& e) {
+                log_error(e.what());
+                app.errors.push_back("cannot edit " + scn.filename);
+            }
+            scn.task_queue.pop_front();
+        }
+    }
+
     // grab result of finished tasks
     for (auto& scn : app.scenes) {
         if (scn.task_queue.empty()) continue;
@@ -561,10 +628,24 @@ void update(app_state& app) {
                     init_opengl_texture(
                         scn.gl_txt, scn.display, false, false, false);
                     scn.task_queue.emplace_back(app_task_type::build_bvh);
+                    scn.task_queue.emplace_back(app_task_type::init_lights);
+                    scn.task_queue.emplace_back(app_task_type::render_image);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     scn.name = format("{} [error]", get_filename(scn.filename));
                     app.errors.push_back("cannot load " + scn.filename);
+                }
+            } break;
+            case app_task_type::load_element: {
+                try {
+                    task.result.get();
+                    scn.load_done = true;
+                    log_info("done loading element from {}", scn.filename);
+                } catch (std::exception& e) {
+                    log_error(e.what());
+                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    app.errors.push_back(
+                        "cannot load element from " + scn.filename);
                 }
             } break;
             case app_task_type::build_bvh: {
@@ -573,11 +654,22 @@ void update(app_state& app) {
                     scn.bvh_done = true;
                     scn.name     = format("{}", get_filename(scn.filename));
                     log_info("done building bvh {}", scn.filename);
-                    scn.task_queue.emplace_back(app_task_type::init_lights);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     scn.name = format("{} [error]", get_filename(scn.filename));
                     app.errors.push_back("cannot build bvh " + scn.filename);
+                }
+            } break;
+            case app_task_type::refit_bvh: {
+                try {
+                    task.result.get();
+                    scn.bvh_done = true;
+                    scn.name     = format("{}", get_filename(scn.filename));
+                    log_info("done refitting bvh {}", scn.filename);
+                } catch (std::exception& e) {
+                    log_error(e.what());
+                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    app.errors.push_back("cannot refit bvh " + scn.filename);
                 }
             } break;
             case app_task_type::init_lights: {
@@ -586,7 +678,6 @@ void update(app_state& app) {
                     scn.lights_done = true;
                     scn.name        = format("{}", get_filename(scn.filename));
                     log_info("done building lights {}", scn.filename);
-                    scn.task_queue.emplace_back(app_task_type::render_image);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     scn.name = format("{} [error]", get_filename(scn.filename));
@@ -625,16 +716,7 @@ void update(app_state& app) {
                     app.errors.push_back("cannot render " + scn.filename);
                 }
             } break;
-            case app_task_type::apply_edit: {
-                try {
-                    task.result.get();
-                    log_info("done editing {}", scn.filename);
-                    scn.task_queue.emplace_back(app_task_type::render_image);
-                } catch (std::exception& e) {
-                    log_error(e.what());
-                    app.errors.push_back("cannot edit " + scn.filename);
-                }
-            } break;
+            case app_task_type::apply_edit: break;
         }
         scn.task_queue.pop_front();
     }
@@ -658,11 +740,26 @@ void update(app_state& app) {
                     if (scn.add_skyenv) add_sky_environment(scn.scene);
                 });
             } break;
+            case app_task_type::load_element: {
+                log_info("start loading element for {}", scn.filename);
+                scn.load_done = false;
+                task.result   = async([&scn, &task]() {
+                    load_element(scn.filename, scn.scene, task.edit);
+                });
+            } break;
             case app_task_type::build_bvh: {
                 log_info("start building bvh {}", scn.filename);
                 scn.bvh_done = false;
                 task.result  = async([&scn]() {
                     build_scene_bvh(scn.scene, scn.bvh, scn.bvh_options);
+                });
+            } break;
+            case app_task_type::refit_bvh: {
+                log_info("start refitting bvh {}", scn.filename);
+                scn.bvh_done = false;
+                task.result  = async([&scn, &task]() {
+                    refit_bvh(scn.filename, scn.scene, scn.bvh, scn.bvh_options,
+                        task.edit);
                 });
             } break;
             case app_task_type::init_lights: {
@@ -720,15 +817,7 @@ void update(app_state& app) {
                         scn.gl_txt, scn.display, false, false, false);
                 }
             } break;
-            case app_task_type::apply_edit: {
-                log_info("start editing {}", scn.filename);
-                scn.render_done = false;
-                task.result     = async([&scn, &task]() {
-                    apply_edit(scn.filename, scn.scene, scn.bvh, scn.lights,
-                        scn.trace_options, scn.tonemap_options, scn.bvh_options,
-                        task.edit);
-                });
-            } break;
+            case app_task_type::apply_edit: break;
         }
     }
 }

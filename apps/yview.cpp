@@ -128,6 +128,7 @@ inline bool operator!=(const drawgl_options& a, const drawgl_options& b) {
 enum struct app_task_type {
     none,
     load_scene,
+    load_element,
     apply_edit,
     save_image,
     save_scene,
@@ -966,53 +967,25 @@ void draw(const opengl_window& win) {
 
 void apply_edit(const string& filename, yocto_scene& scene,
     drawgl_lights& lights, drawgl_options& draw_options, float time,
-    const string& anim_group, const app_edit& edit) {
-    static auto last_time = 0.0f;
-    auto updated_textures = vector<int>{}, updated_shapes = vector<int>{};
-    bool updated_hierarchy            = false;
+    const string& anim_group, bool& reload_element, const app_edit& edit) {
+    static auto last_time             = 0.0f;
+    bool        updated_hierarchy     = false;
     auto& [type, index, data, reload] = edit;
     if (type == typeid(yocto_camera)) {
         scene.cameras[index] = any_cast<yocto_camera>(data);
     } else if (type == typeid(yocto_texture)) {
         scene.textures[index] = any_cast<yocto_texture>(data);
-        if (reload) {
-            auto& texture = scene.textures[index];
-            load_image(get_dirname(filename) + texture.uri, texture.hdr_image,
-                texture.ldr_image);
-        }
-        updated_textures.push_back(index);
+        if (reload) reload_element = true;
     } else if (type == typeid(yocto_voltexture)) {
         scene.voltextures[index] = any_cast<yocto_voltexture>(data);
-        if (reload) {
-            auto& texture = scene.voltextures[index];
-            load_volume(
-                get_dirname(filename) + texture.uri, texture.volume_data);
-        }
+        if (reload) reload_element = true;
     } else if (type == typeid(yocto_shape)) {
         scene.shapes[index] = any_cast<yocto_shape>(data);
-        if (reload) {
-            auto& shape = scene.shapes[index];
-            load_shape(get_dirname(filename) + shape.uri, shape.points,
-                shape.lines, shape.triangles, shape.quads,
-                shape.quads_positions, shape.quads_normals,
-                shape.quads_texturecoords, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius, false);
-        }
-        updated_shapes.push_back(index);
+        if (reload) reload_element = true;
     } else if (type == typeid(yocto_subdiv)) {
         // TODO: this needs more fixing?
         scene.subdivs[index] = any_cast<yocto_subdiv>(data);
-        if (reload) {
-            auto& subdiv = scene.subdivs[index];
-            load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
-                subdiv.lines, subdiv.triangles, subdiv.quads,
-                subdiv.quads_positions, subdiv.quads_normals,
-                subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
-                subdiv.texturecoords, subdiv.colors, subdiv.radius,
-                subdiv.preserve_facevarying);
-        }
-        tesselate_subdiv(scene, scene.subdivs[index]);
-        updated_shapes.push_back(scene.subdivs[index].tesselated_shape);
+        if (reload) reload_element = true;
     } else if (type == typeid(yocto_material)) {
         scene.materials[index] = any_cast<yocto_material>(data);
     } else if (type == typeid(yocto_instance)) {
@@ -1028,17 +1001,43 @@ void apply_edit(const string& filename, yocto_scene& scene,
     } else {
         throw runtime_error("unsupported type "s + type.name());
     }
-    /*
-    for (auto texture_id : updated_textures) {
-        throw runtime_error("texture update not supported\n");
-    }
-    for (auto shape_id : updated_shapes) {
-        throw runtime_error("shape update not supported\n");
-    }
-    */
     if (updated_hierarchy || time != last_time) {
         update_transforms(scene, time, anim_group);
         last_time = time;
+    }
+}
+
+// reload an element
+void load_element(
+    const string& filename, yocto_scene& scene, const app_edit& edit) {
+    auto& [type, index, data, reload] = edit;
+
+    if (type == typeid(yocto_texture)) {
+        auto& texture = scene.textures[index];
+        load_image(get_dirname(filename) + texture.uri, texture.hdr_image,
+            texture.ldr_image);
+    } else if (type == typeid(yocto_voltexture)) {
+        auto& texture = scene.voltextures[index];
+        load_volume(get_dirname(filename) + texture.uri, texture.volume_data);
+    } else if (type == typeid(yocto_shape)) {
+        auto& shape = scene.shapes[index];
+        load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.quads_positions,
+            shape.quads_normals, shape.quads_texturecoords, shape.positions,
+            shape.normals, shape.texturecoords, shape.colors, shape.radius,
+            false);
+    } else if (type == typeid(yocto_subdiv)) {
+        // TODO: this needs more fixing?
+        auto& subdiv = scene.subdivs[index];
+        load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
+            subdiv.lines, subdiv.triangles, subdiv.quads,
+            subdiv.quads_positions, subdiv.quads_normals,
+            subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
+            subdiv.texturecoords, subdiv.colors, subdiv.radius,
+            subdiv.preserve_facevarying);
+        tesselate_subdiv(scene, scene.subdivs[index]);
+    } else {
+        throw runtime_error("unsupported type "s + type.name());
     }
 }
 
@@ -1064,9 +1063,16 @@ void update(app_state& app) {
             if (task.type != app_task_type::apply_edit) break;
             log_info("start editing {}", scn.filename);
             try {
+                auto reload_element = false;
                 apply_edit(scn.filename, scn.scene, scn.lights,
-                    scn.draw_options, scn.time, scn.anim_group, task.edit);
+                    scn.draw_options, scn.time, scn.anim_group, reload_element,
+                    task.edit);
                 log_info("done editing {}", scn.filename);
+                if (reload_element) {
+                    scn.load_done = false;
+                    scn.task_queue.emplace_back(
+                        app_task_type::load_element, task.edit);
+                }
             } catch (std::exception& e) {
                 log_error(e.what());
                 app.errors.push_back("cannot edit " + scn.filename);
@@ -1096,6 +1102,31 @@ void update(app_state& app) {
                     log_error(e.what());
                     scn.name = format("{} [error]", get_filename(scn.filename));
                     app.errors.push_back("cannot load " + scn.filename);
+                }
+            } break;
+            case app_task_type::load_element: {
+                try {
+                    task.result.get();
+                    scn.load_done = true;
+                    log_info("done loading element from {}", scn.filename);
+                    if (task.edit.type == typeid(yocto_texture)) {
+                        // not supported yet
+                        log_error("texture refresh is not supported yet");
+                    } else if (task.edit.type == typeid(yocto_voltexture)) {
+                    } else if (task.edit.type == typeid(yocto_shape)) {
+                        // not supported yet
+                        log_error("shape refresh is not supported yet");
+                    } else if (task.edit.type == typeid(yocto_subdiv)) {
+                        // not supported yet
+                        log_error("shape refresh is not supported yet");
+                    } else {
+                        throw runtime_error("unsupported type");
+                    }
+                } catch (std::exception& e) {
+                    log_error(e.what());
+                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    app.errors.push_back(
+                        "cannot load element from " + scn.filename);
                 }
             } break;
             case app_task_type::save_image: {
@@ -1143,6 +1174,13 @@ void update(app_state& app) {
                     }
                     scn.time_range = compute_animation_range(scn.scene);
                     scn.time       = scn.time_range.x;
+                });
+            } break;
+            case app_task_type::load_element: {
+                log_info("start loading element for {}", scn.filename);
+                scn.load_done = false;
+                task.result   = async([&scn, &task]() {
+                    load_element(scn.filename, scn.scene, task.edit);
                 });
             } break;
             case app_task_type::save_image: {
