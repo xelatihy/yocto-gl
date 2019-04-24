@@ -519,99 +519,6 @@ void update(app_state& app) {
             scn.task_queue.pop_front();
         }
     }
-    // schedule tasks not running
-    for (auto& scn : app.scenes) {
-        if (scn.task_queue.empty()) continue;
-        auto& task = scn.task_queue.front();
-        if (task.result.valid()) continue;
-        task.stop = false;
-        switch (task.type) {
-            case app_task_type::none: break;
-            case app_task_type::load: {
-                log_info("start loading {}", scn.filename);
-                scn.load_done   = false;
-                scn.bvh_done    = false;
-                scn.lights_done = false;
-                task.result     = async([&scn]() {
-                    load_scene(scn.filename, scn.scene, scn.load_options);
-                    tesselate_subdivs(scn.scene);
-                    if (scn.add_skyenv) add_sky_environment(scn.scene);
-                });
-            } break;
-            case app_task_type::bvh: {
-                log_info("start building bvh {}", scn.filename);
-                scn.bvh_done = false;
-                task.result  = async([&scn]() {
-                    build_scene_bvh(scn.scene, scn.bvh, scn.bvh_options);
-                });
-            } break;
-            case app_task_type::lights: {
-                log_info("start building lights {}", scn.filename);
-                scn.lights_done = false;
-                task.result     = async(
-                    [&scn]() { init_trace_lights(scn.lights, scn.scene); });
-            } break;
-            case app_task_type::save_image: {
-                log_info("start saving {}", scn.imagename);
-                task.result = async([&scn]() {
-                    save_tonemapped_image(
-                        scn.imagename, scn.render, scn.tonemap_options);
-                });
-            } break;
-            case app_task_type::save_scene: {
-                log_info("start saving {}", scn.outname);
-                task.result = async([&scn]() {
-                    save_scene(scn.outname, scn.scene, scn.save_options);
-                });
-            } break;
-            case app_task_type::render: {
-                log_info("start rendering {}", scn.filename);
-                scn.render_done = false;
-                scn.image_size  = get_camera_image_size(
-                    scn.scene.cameras[scn.trace_options.camera_id],
-                    scn.trace_options.image_size);
-                scn.render.assign(scn.image_size, zero4f);
-                scn.display.assign(scn.image_size, zero4f);
-                scn.preview.assign(scn.image_size, zero4f);
-                if (scn.lights.instances.empty() &&
-                    scn.lights.environments.empty() &&
-                    is_trace_sampler_lit(scn.trace_options)) {
-                    log_info(
-                        "no lights presents, switching to eyelight shader");
-                    scn.trace_options.sampler_type =
-                        trace_sampler_type::eyelight;
-                }
-                scn.render_sample = scn.trace_options.num_samples;
-                scn.name = format("{} [{}x{}@{}]", get_filename(scn.filename),
-                    scn.render.size().x, scn.render.size().y,
-                    scn.render_sample);
-                task.result = async([&scn, &task]() {
-                    update_app_render(scn.filename, scn.render, scn.display,
-                        scn.preview, scn.state, scn.scene, scn.lights, scn.bvh,
-                        scn.trace_options, scn.tonemap_options,
-                        scn.preview_ratio, task.stop, task.current, task.queue);
-                });
-                init_opengl_texture(
-                    scn.gl_txt, scn.display, false, false, false);
-            } break;
-            case app_task_type::scene_edit: {
-                log_info("start editing {}", scn.filename);
-                scn.render_done = false;
-                task.result     = async([&scn, &task]() {
-                    apply_scene_edit(scn.filename, scn.scene, scn.bvh,
-                        scn.lights, task.edit, scn.bvh_options);
-                });
-            } break;
-            case app_task_type::param_edit: {
-                log_info("start editing params for {}", scn.filename);
-                scn.render_done = false;
-                task.result     = async([&scn, &task]() {
-                    apply_param_edit(scn.filename, scn.trace_options,
-                        scn.tonemap_options, task.edit);
-                });
-            } break;
-        }
-    }
     // grab result of finished tasks
     for (auto& scn : app.scenes) {
         if (scn.task_queue.empty()) continue;
@@ -625,9 +532,19 @@ void update(app_state& app) {
             case app_task_type::load: {
                 try {
                     task.result.get();
-                    scn.load_done = true;
-                    scn.name      = format("{}", get_filename(scn.filename));
+                    scn.load_done  = true;
+                    scn.image_size = get_camera_image_size(
+                        scn.scene.cameras[scn.trace_options.camera_id],
+                        scn.trace_options.image_size);
+                    scn.render.resize(scn.image_size);
+                    scn.display.resize(scn.image_size);
+                    scn.preview.resize(scn.image_size);
+                    scn.name = format("{} [{}x{}@0]",
+                        get_filename(scn.filename), scn.render.size().x,
+                        scn.render.size().y);
                     log_info("done loading {}", scn.filename);
+                    init_opengl_texture(
+                        scn.gl_txt, scn.display, false, false, false);
                     scn.task_queue.emplace_back(app_task_type::bvh);
                 } catch (std::exception& e) {
                     log_error(e.what());
@@ -715,6 +632,105 @@ void update(app_state& app) {
             } break;
         }
         scn.task_queue.pop_front();
+    }
+    // schedule tasks not running
+    for (auto& scn : app.scenes) {
+        if (scn.task_queue.empty()) continue;
+        auto& task = scn.task_queue.front();
+        if (task.result.valid()) continue;
+        task.stop = false;
+        switch (task.type) {
+            case app_task_type::none: break;
+            case app_task_type::load: {
+                log_info("start loading {}", scn.filename);
+                scn.load_done   = false;
+                scn.bvh_done    = false;
+                scn.lights_done = false;
+                task.result     = async([&scn]() {
+                    load_scene(scn.filename, scn.scene, scn.load_options);
+                    tesselate_subdivs(scn.scene);
+                    if (scn.add_skyenv) add_sky_environment(scn.scene);
+                });
+            } break;
+            case app_task_type::bvh: {
+                log_info("start building bvh {}", scn.filename);
+                scn.bvh_done = false;
+                task.result  = async([&scn]() {
+                    build_scene_bvh(scn.scene, scn.bvh, scn.bvh_options);
+                });
+            } break;
+            case app_task_type::lights: {
+                log_info("start building lights {}", scn.filename);
+                scn.lights_done = false;
+                task.result     = async(
+                    [&scn]() { init_trace_lights(scn.lights, scn.scene); });
+            } break;
+            case app_task_type::save_image: {
+                log_info("start saving {}", scn.imagename);
+                task.result = async([&scn]() {
+                    save_tonemapped_image(
+                        scn.imagename, scn.render, scn.tonemap_options);
+                });
+            } break;
+            case app_task_type::save_scene: {
+                log_info("start saving {}", scn.outname);
+                task.result = async([&scn]() {
+                    save_scene(scn.outname, scn.scene, scn.save_options);
+                });
+            } break;
+            case app_task_type::render: {
+                log_info("start rendering {}", scn.filename);
+                scn.render_done = false;
+                scn.image_size  = get_camera_image_size(
+                    scn.scene.cameras[scn.trace_options.camera_id],
+                    scn.trace_options.image_size);
+                if (scn.lights.instances.empty() &&
+                    scn.lights.environments.empty() &&
+                    is_trace_sampler_lit(scn.trace_options)) {
+                    log_info(
+                        "no lights presents, switching to eyelight shader");
+                    scn.trace_options.sampler_type =
+                        trace_sampler_type::eyelight;
+                }
+                scn.render_sample = scn.trace_options.num_samples;
+                scn.name = format("{} [{}x{}@{}]", get_filename(scn.filename),
+                    scn.render.size().x, scn.render.size().y,
+                    scn.render_sample);
+                task.result = async([&scn, &task]() {
+                    update_app_render(scn.filename, scn.render, scn.display,
+                        scn.preview, scn.state, scn.scene, scn.lights, scn.bvh,
+                        scn.trace_options, scn.tonemap_options,
+                        scn.preview_ratio, task.stop, task.current, task.queue);
+                });
+                if (scn.render.size() != scn.image_size) {
+                    scn.render.resize(scn.image_size);
+                    scn.display.assign(scn.image_size);
+                    scn.preview.assign(scn.image_size);
+                    if (scn.gl_txt) {
+                        delete_opengl_texture(scn.gl_txt);
+                        scn.gl_txt = {};
+                    }
+                    init_opengl_texture(
+                        scn.gl_txt, scn.display, false, false, false);
+                }
+            } break;
+            case app_task_type::scene_edit: {
+                log_info("start editing {}", scn.filename);
+                scn.render_done = false;
+                task.result     = async([&scn, &task]() {
+                    apply_scene_edit(scn.filename, scn.scene, scn.bvh,
+                        scn.lights, task.edit, scn.bvh_options);
+                });
+            } break;
+            case app_task_type::param_edit: {
+                log_info("start editing params for {}", scn.filename);
+                scn.render_done = false;
+                task.result     = async([&scn, &task]() {
+                    apply_param_edit(scn.filename, scn.trace_options,
+                        scn.tonemap_options, task.edit);
+                });
+            } break;
+        }
     }
 }
 
