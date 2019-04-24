@@ -497,12 +497,18 @@ void update(app_state& app) {
     }
     // remove unneeded tasks
     for (auto& scn : app.scenes) {
-        while (scn.task_queue.size() > 1 &&
-               scn.task_queue.at(0).type == app_task_type::render &&
-               (scn.task_queue.at(1).type == app_task_type::render ||
-                   scn.task_queue.at(1).type == app_task_type::edit)) {
-            log_info("cancel rendering {}", scn.filename);
-            auto& task = scn.task_queue.front();
+        while (scn.task_queue.size() > 1) {
+            auto& task = scn.task_queue.at(0);
+            auto& next = scn.task_queue.at(1);
+            if(task.type == app_task_type::render) {
+                if(next.type != app_task_type::render && next.type != app_task_type::edit) break;
+                log_info("cancel rendering {}", scn.filename);
+            } else if(task.type ==app_task_type::edit) {
+                if(next.type != app_task_type::edit || task.edit.type != next.edit.type || task.edit.index != next.edit.index) break;
+                log_info("cancel editing {}", scn.filename);
+            } else {
+                break;
+            }
             task.stop  = true;
             if (task.result.valid()) {
                 try {
