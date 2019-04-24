@@ -53,12 +53,8 @@ atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
 
 // Emission lobe
-enum struct esdf_type {
-    diffuse_emission,
-};
-struct esdf {
-    esdf_type type      = esdf_type::diffuse_emission;
-    vec3f     albedo    = zero3f;
+struct surface_emission {
+    vec3f     emission    = zero3f;
     vec3f     specular  = zero3f;
     float     roughness = 1;
 };
@@ -80,12 +76,8 @@ struct bsdf {
     float     roughness = 1;
 };
 
-// Volume lobe
-enum struct vsdf_type {
-    phase_hg,
-};
-struct vsdf {
-    vsdf_type type     = vsdf_type::phase_hg;
+// Volume scattering
+struct volume_scattering {
     vec3f     emission = zero3f;
     vec3f     albedo   = zero3f;
     vec3f     density  = zero3f;
@@ -153,12 +145,8 @@ float get_bsdf_sampling_weight(
                : max(brdf.albedo * (1 - fresnel));
 }
 
-float get_vsdf_sampling_weight(const vsdf& vsdf, const vec3f& outgoing) {
-    return max(vsdf.albedo);
-}
-
-void compute_scattering_functions(short_vector<esdf>& esdfs,
-    short_vector<bsdf>& bsdfs, short_vector<vsdf>& vsdfs,
+void compute_scattering_functions(surface_emission& emissions,
+    short_vector<bsdf>& bsdfs, volume_scattering& volume,
     const material_point& material, const vec4f& shape_color) {
     auto emission = material.emission;
     auto diffuse  = !material.base_metallic
@@ -179,8 +167,8 @@ void compute_scattering_functions(short_vector<esdf>& esdfs,
     }
     if (opacity > 0.999f) opacity = 1;
     bsdfs = {};
-    esdfs = {};
-    vsdfs = {};
+    emissions = {};
+    volume = {};
     if (diffuse != zero3f) {
         bsdfs.push_back(
             {bsdf_type::diffuse_reflection, opacity * diffuse, specular, 1});
@@ -199,13 +187,15 @@ void compute_scattering_functions(short_vector<esdf>& esdfs,
             {bsdf_type::opacity_passthrough, vec3f{1 - opacity}, zero3f, 0});
     }
     if (emission != zero3f) {
-        esdfs.push_back({esdf_type::diffuse_emission,
-            opacity * material.emission * xyz(shape_color), zero3f, 1});
+        emissions.emission = emission  * xyz(shape_color);
+        emissions.roughness = 1;
+        emissions.specular = zero3f;
     }
     if (material.volume_density != zero3f) {
-        vsdfs.push_back({vsdf_type::phase_hg, material.volume_emission,
-            material.volume_albedo, material.volume_density,
-            material.volume_phaseg});
+        volume.emission = material.volume_emission;
+        volume.albedo = material.volume_albedo;
+        volume.density = material.volume_density;
+        volume.phaseg = material.volume_phaseg;
     }
 }
 
@@ -213,9 +203,9 @@ void compute_scattering_functions(short_vector<esdf>& esdfs,
 struct trace_point {
     vec3f              position = zero3f;
     vec3f              normal   = zero3f;
-    short_vector<esdf> esdfs    = {};
+    surface_emission   emission = {};
     short_vector<bsdf> bsdfs    = {};
-    short_vector<vsdf> vsdfs    = {};
+    volume_scattering  volume   = {};
 };
 
 // Make a trace point
@@ -236,7 +226,7 @@ void make_trace_point(trace_point& point, const yocto_scene& scene,
     auto material_point = evaluate_material_point(
         scene, material, texturecoord);
     compute_scattering_functions(
-        point.esdfs, point.bsdfs, point.vsdfs, material_point, color);
+        point.emission, point.bsdfs, point.volume, material_point, color);
     if (!shape.lines.empty()) {
         point.normal = orthonormalize(-shading_direction, point.normal);
     } else if (!shape.points.empty()) {
@@ -273,18 +263,14 @@ ray3f sample_camera_ray(const yocto_camera& camera, const vec2i& ij,
         camera, ij, image_size, puv, sample_disk_point(luv));
 }
 
-vec3f evaluate_emission(const short_vector<esdf>& esdfs, const vec3f& normal,
+vec3f evaluate_emission(const surface_emission& emission, const vec3f& normal,
     const vec3f& outgoing) {
-    auto emission = zero3f;
-    for (auto& esdf : esdfs) emission += esdf.albedo;
-    return emission;
+    return emission.emission;
 }
 
 vec3f evaluate_emission(
-    const short_vector<vsdf>& vsdfs, const vec3f& outgoing) {
-    auto emission = zero3f;
-    for (auto& vsdf : vsdfs) emission += vsdf.emission;
-    return emission;
+    const volume_scattering& volume, const vec3f& outgoing) {
+    return volume.emission;
 }
 
 #if YOCTO_TRACE_THINSHEET
@@ -1168,12 +1154,8 @@ inline vec3f get_russian_roulette_albedo(const short_vector<bsdf>& bsdfs) {
     return albedo;
 }
 
-inline vec3f get_russian_roulette_albedo(const short_vector<vsdf>& vsdfs) {
-    auto albedo = zero3f;
-    for (auto& vsdf : vsdfs) {
-        albedo += vsdf.albedo;
-    }
-    return albedo;
+inline vec3f get_russian_roulette_albedo(const volume_scattering& volume) {
+    return volume.albedo;
 }
 
 // Russian roulette mode: 0: albedo, 1: weight, 2: pbrt
@@ -1252,10 +1234,9 @@ vec3f evaluate_transmission(const yocto_scene& scene,
 }
 
 pair<float, int> sample_volume_distance(
-    const short_vector<vsdf>& vsdfs, float rl, float rd) {
-    if (vsdfs.size() != 1) throw runtime_error("unsupported size");
+    const volume_scattering& volume, float rl, float rd) {
     auto channel = clamp((int)(rl * 3), 0, 2);
-    auto density = vsdfs[0].density[channel];
+    auto density = volume.density[channel];
     if (density == 0 || rd == 0)
         return {float_max, channel};
     else
@@ -1263,16 +1244,14 @@ pair<float, int> sample_volume_distance(
 }
 
 float sample_volume_distance_pdf(
-    const short_vector<vsdf>& vsdfs, float distance, int channel) {
-    if (vsdfs.size() != 1) throw runtime_error("unsupported size");
-    auto density = vsdfs[0].density[channel];
+    const volume_scattering& volume, float distance, int channel) {
+    auto density = volume.density[channel];
     return exp(-density * distance);
 }
 
 vec3f evaluate_volume_transmission(
-    const short_vector<vsdf>& vsdfs, float distance) {
-    if (vsdfs.size() != 1) throw runtime_error("unsupported size");
-    return exp(-vsdfs[0].density * distance);
+    const volume_scattering& volume, float distance) {
+    return exp(-volume.density * distance);
 }
 
 float sample_distance(const yocto_scene& scene, const yocto_material& material,
@@ -1344,63 +1323,22 @@ float evaluate_phase_function(float cos_theta, float g) {
     return (1 - g * g) / (4 * pif * denom * sqrt(denom));
 }
 
-vec3f evaluate_vsdf_cosine(const short_vector<vsdf>& vsdfs,
+vec3f evaluate_scattering(const volume_scattering& volume,
     const vec3f& outgoing, const vec3f& incoming) {
-    auto phase_function_cosine = zero3f;
-    for (auto& vsdf : vsdfs) {
-        auto cos_theta = dot(outgoing, incoming);
-        phase_function_cosine += vsdf.albedo * evaluate_phase_function(
-                                                   cos_theta, vsdf.phaseg);
-    }
-    return phase_function_cosine;
+    auto cos_theta = dot(outgoing, incoming);
+    return volume.albedo * evaluate_phase_function(cos_theta, volume.phaseg);
 }
 
-vec3f sample_vsdf_direction(const short_vector<vsdf>& vsdfs,
+vec3f sample_scattering_direction(const volume_scattering& volume,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-    // weights
-    auto weights     = short_vector<float, 8>{};
-    auto sum_weights = 0.0f;
-    for (auto& vsdf : vsdfs) {
-        weights.push_back(get_vsdf_sampling_weight(vsdf, outgoing));
-        sum_weights += weights.back();
-    }
-    if (sum_weights == 0) return zero3f;
-    for (auto& weight : weights) weight /= sum_weights;
-
-    // pick lobe
-    auto id  = 0;
-    auto sum = 0.0f;
-    for (id = 0; id < weights.size(); id++) {
-        sum += weights[id];
-        if (sum >= rnl) break;
-    }
-    id         = clamp(id, 0, weights.size() - 1);
-    auto& vsdf = vsdfs[id];
-
     // sample accirding to phase_g
-    auto direction = sample_phase_function(vsdf.phaseg, rn);
+    auto direction = sample_phase_function(volume.phaseg, rn);
     return make_basis_fromz(-outgoing) * direction;
 }
 
-float sample_vsdf_direction_pdf(const short_vector<vsdf>& vsdfs,
+float sample_scattering_direction_pdf(const volume_scattering& volume,
     const vec3f& outgoing, const vec3f& incoming) {
-    // weights
-    auto weights     = short_vector<float, 8>{};
-    auto sum_weights = 0.0f;
-    for (auto& vsdf : vsdfs) {
-        weights.push_back(get_vsdf_sampling_weight(vsdf, outgoing));
-        sum_weights += weights.back();
-    }
-    if (sum_weights == 0) return 0;
-    for (auto& weight : weights) weight /= sum_weights;
-
-    auto pdf = 0.0f;
-    for (auto i = 0; i < vsdfs.size(); i++) {
-        auto& vsdf = vsdfs[i];
-        pdf += weights[i] *
-               evaluate_phase_function(dot(outgoing, incoming), vsdf.phaseg);
-    }
-    return pdf;
+    return evaluate_phase_function(dot(outgoing, incoming), volume.phaseg);
 }
 
 tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
@@ -1462,30 +1400,30 @@ tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
 tuple<vec3f, vec3f, float> sample_next_direction_volume(
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
     const vec3f& position, const vec3f& outgoing,
-    const short_vector<vsdf>& vsdfs, rng_state& rng, bool mis) {
+    const volume_scattering& volume, rng_state& rng, bool mis) {
     // continue path
     auto incoming     = zero3f;
     auto vsdf_cosine  = zero3f;
     auto incoming_pdf = 0.0f;
     if (mis) {
         if (get_random_float(rng) < 0.5f) {
-            incoming = sample_vsdf_direction(
-                vsdfs, outgoing, get_random_float(rng), get_random_vec2f(rng));
+            incoming = sample_scattering_direction(
+                volume, outgoing, get_random_float(rng), get_random_vec2f(rng));
         } else {
             incoming = sample_lights_direction(scene, lights, bvh, position,
                 get_random_float(rng), get_random_float(rng),
                 get_random_vec2f(rng));
         }
-        vsdf_cosine  = evaluate_vsdf_cosine(vsdfs, outgoing, incoming);
-        incoming_pdf = 0.5f * sample_vsdf_direction_pdf(
-                                  vsdfs, outgoing, incoming) +
+        vsdf_cosine  = evaluate_scattering(volume, outgoing, incoming);
+        incoming_pdf = 0.5f * sample_scattering_direction_pdf(
+                                  volume, outgoing, incoming) +
                        0.5f * sample_lights_direction_pdf(
                                   scene, lights, bvh, position, incoming);
     } else {
-        incoming = sample_vsdf_direction(
-            vsdfs, outgoing, get_random_float(rng), get_random_vec2f(rng));
-        vsdf_cosine  = evaluate_vsdf_cosine(vsdfs, outgoing, incoming);
-        incoming_pdf = sample_vsdf_direction_pdf(vsdfs, outgoing, incoming);
+        incoming = sample_scattering_direction(
+            volume, outgoing, get_random_float(rng), get_random_vec2f(rng));
+        vsdf_cosine  = evaluate_scattering(volume, outgoing, incoming);
+        incoming_pdf = sample_scattering_direction_pdf(volume, outgoing, incoming);
     }
     if (incoming == zero3f || incoming_pdf == 0) {
         return {zero3f, zero3f, 0};
@@ -1495,16 +1433,16 @@ tuple<vec3f, vec3f, float> sample_next_direction_volume(
 }
 
 tuple<vec3f, float, float> sample_next_volume_distance(const vec3f& position,
-    const vec3f& outgoing, float max_distance, const short_vector<vsdf>& vsdfs,
+    const vec3f& outgoing, float max_distance, const volume_scattering& volume,
     rng_state& rng) {
     // clamp ray if inside a volume
     auto [distance, channel] = sample_volume_distance(
-        vsdfs, get_random_float(rng), get_random_float(rng));
+        volume, get_random_float(rng), get_random_float(rng));
 
     // compute volume transmission
     distance          = min(distance, max_distance);
-    auto pdf          = sample_volume_distance_pdf(vsdfs, distance, channel);
-    auto transmission = evaluate_volume_transmission(vsdfs, distance);
+    auto pdf          = sample_volume_distance_pdf(volume, distance, channel);
+    auto transmission = evaluate_volume_transmission(volume, distance);
 
     // done
     return {transmission, distance, pdf};
@@ -1518,7 +1456,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto radiance     = zero3f;
     auto weight       = vec3f{1, 1, 1};
     auto ray          = make_ray(position, direction);
-    auto volume_stack = short_vector<short_vector<vsdf>>{};
+    auto volume_stack = short_vector<volume_scattering>{};
     auto hit          = false;
 
     // trace  path
@@ -1540,7 +1478,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
             // accumulate emission
             radiance += weight *
-                        evaluate_emission(point.esdfs, point.normal, outgoing);
+                        evaluate_emission(point.emission, point.normal, outgoing);
             if (point.bsdfs.empty()) break;
 
             // russian roulette
@@ -1564,10 +1502,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             if (weight == zero3f) break;
 
             // update volume_stack
-            if (!point.vsdfs.empty() && dot(incoming, point.normal) > 0 !=
+            if (point.volume.density != zero3f && dot(incoming, point.normal) > 0 !=
                                             dot(outgoing, point.normal) > 0) {
                 if (volume_stack.empty())
-                    volume_stack.push_back(point.vsdfs);
+                    volume_stack.push_back(point.volume);
                 else
                     volume_stack.pop_back();
             }
@@ -1647,7 +1585,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
                 // accumulate emission
                 radiance += weight * evaluate_emission(
-                                         point.esdfs, point.normal, outgoing);
+                                         point.emission, point.normal, outgoing);
                 if (point.bsdfs.empty()) break;
 
                 // russian roulette
@@ -1671,11 +1609,11 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 if (weight == zero3f) break;
 
                 // update volume_stack
-                if (!point.vsdfs.empty() &&
+                if (point.volume.density != zero3f &&
                     dot(incoming, point.normal) > 0 !=
                         dot(outgoing, point.normal) > 0) {
                     if (volume_stack.empty())
-                        volume_stack.push_back(point.vsdfs);
+                        volume_stack.push_back(point.volume);
                     else
                         volume_stack.pop_back();
                 }
@@ -1716,7 +1654,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 
         // accumulate emission
         radiance += weight *
-                    evaluate_emission(point.esdfs, point.normal, outgoing);
+                    evaluate_emission(point.emission, point.normal, outgoing);
         if (point.bsdfs.empty()) break;
 
         // russian roulette
@@ -1774,7 +1712,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
         // accumulate emission
         radiance += weight *
-                    evaluate_emission(point.esdfs, point.normal, outgoing);
+                    evaluate_emission(point.emission, point.normal, outgoing);
         if (point.bsdfs.empty()) break;
 
         // brdf * light
@@ -1864,9 +1802,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {xyz(color), 1};
         }
         case trace_falsecolor_type::emission: {
-            auto emission = zero3f;
-            for (auto& esdf : point.esdfs) emission += esdf.albedo;
-            return {emission, 1};
+            return {point.emission.emission, 1};
         }
         case trace_falsecolor_type::diffuse: {
             auto diffuse = zero3f;
@@ -1911,8 +1847,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::highlight: {
-            auto emission = zero3f;
-            for (auto& esdf : point.esdfs) emission += esdf.albedo;
+            auto emission = point.emission.emission;
             auto outgoing = -direction;
             if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
             return {emission * abs(dot(outgoing, point.normal)), 1};
