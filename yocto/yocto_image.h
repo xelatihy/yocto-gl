@@ -235,6 +235,7 @@ struct image {
     vec2i size() const;
     bool  contains(const vec2i& ij) const;
     void  resize(const vec2i& size);
+    void  assign(const vec2i& size, const T& value = {});
 
     // element access
     T&       operator[](const vec2i& ij);
@@ -560,6 +561,7 @@ struct volume {
     bool  empty() const;
     vec3i size() const;
     void  resize(const vec3i& size);
+    void  assign(const vec3i& size, const T& value = {});
 
     // element access
     T&       operator[](const vec3i& ijk);
@@ -632,6 +634,11 @@ inline void image<T>::resize(const vec2i& size) {
     if (size == _size) return;
     _size = size;
     _pixels.resize((size_t)size.x * (size_t)size.y);
+}
+template <typename T>
+inline void image<T>::assign(const vec2i& size, const T& value) {
+    _size = size;
+    _pixels.assign((size_t)size.x * (size_t)size.y, value);
 }
 
 // element access
@@ -2556,6 +2563,11 @@ inline void volume<T>::resize(const vec3i& size) {
     if (size == _size) return;
     _size = size;
     _voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
+}
+template <typename T>
+inline void volume<T>::assign(const vec3i& size, const T& value) {
+    _size = size;
+    _voxels.assign((size_t)size.x * (size_t)size.y * (size_t)size.z, value);
 }
 
 // element access

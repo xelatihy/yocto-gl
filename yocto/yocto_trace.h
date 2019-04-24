@@ -179,6 +179,14 @@ int trace_image_samples(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options);
 
+// Progressively compute an image by calling trace_image_region multiple times.
+// Compared to `trace_image_samples` this always runs serially and is helpful
+// when building async applications.
+void trace_image_region(image<vec4f>& image, trace_state& state,
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const image_region& region, int num_samples,
+    const trace_image_options& options);
+
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // options.
 void trace_image_async_start(image<vec4f>& image, trace_state& state,
