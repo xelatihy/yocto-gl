@@ -117,12 +117,10 @@ struct drawgl_options {
 };
 
 // Equality operators
-inline bool operator==(
-    const drawgl_options& a, const drawgl_options& b) {
+inline bool operator==(const drawgl_options& a, const drawgl_options& b) {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(
-    const drawgl_options& a, const drawgl_options& b) {
+inline bool operator!=(const drawgl_options& a, const drawgl_options& b) {
     return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
@@ -853,8 +851,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         open_modal_opengl_widget(win, "save");
     }
     continue_opengl_widget_line(win);
-    if (draw_button_opengl_widget(win, "save image",
-            app.selected >= 0)) {
+    if (draw_button_opengl_widget(win, "save image", app.selected >= 0)) {
         save_path = app.scenes[app.selected].imagename;
         open_modal_opengl_widget(win, "save image");
     }
@@ -1026,6 +1023,8 @@ void apply_edit(const string& filename, yocto_scene& scene,
     } else if (type == typeid(yocto_scene_node)) {
         scene.nodes[index] = any_cast<yocto_scene_node>(data);
         updated_hierarchy  = true;
+    } else if (type == typeid(drawgl_options)) {
+        draw_options = any_cast<drawgl_options>(data);
     } else {
         throw runtime_error("unsupported type "s + type.name());
     }
