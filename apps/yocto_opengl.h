@@ -269,12 +269,15 @@ void end_tabbar_opengl_widget(const opengl_window& win);
 bool begin_tabitem_opengl_widget(const opengl_window& win, const char* title);
 void end_tabitem_opengl_widget(const opengl_window& win);
 
-void open_modal_opengl_widget(const opengl_window& win, const char* id);
+void open_modal_opengl_widget(const opengl_window& win, const char* lbl);
 void close_modal_opengl_widget(const opengl_window& win);
-bool begin_modal_opengl_widget(const opengl_window& win, const char* id);
+bool begin_modal_opengl_widget(const opengl_window& win, const char* lbl);
 void end_modal_opengl_widget(const opengl_window& win);
 bool is_modal_open_opengl_widget(const opengl_window& win);
-bool draw_modal_message_opengl_window(const opengl_window& win, const char* id, const string& message);
+
+bool draw_modal_message_opengl_window(const opengl_window& win, const char* lbl, const string& message);
+bool draw_modal_fileialog_opengl_widgets(const opengl_window& win, const char* lbl,
+    string& path, bool save, const string& dirname, const string& filename);
 
 void draw_text_opengl_widget(const opengl_window& win, const string& text);
 void draw_label_opengl_widget(

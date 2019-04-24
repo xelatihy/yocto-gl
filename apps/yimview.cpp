@@ -176,11 +176,17 @@ void draw_opengl_widgets(const opengl_window& win) {
     auto  edited = false;
     if (!begin_opengl_widgets_window(win, "yimview")) return;
     if (!app.errors.empty()) {
+        open_modal_opengl_widget(win, "error");
         if(!draw_modal_message_opengl_window(win, "error", app.errors.front())) {
             app.errors.pop_front();
         }
     }
+    string load_path = "";
+    if (draw_modal_fileialog_opengl_widgets(win, "load image", load_path, false, "", "")) {
+        log_info("{}", load_path);
+    }
     if (draw_button_opengl_widget(win, "load")) {
+        open_modal_opengl_widget(win, "load image");
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "save", app.selected >= 0)) {

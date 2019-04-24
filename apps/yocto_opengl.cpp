@@ -42,6 +42,9 @@
 #include "ext/imgui/imgui_impl_opengl3.h"
 #include "ext/imgui/imgui_internal.h"
 
+#define CUTE_FILES_IMPLEMENTATION
+#include "ext/cute_files.h"
+
 namespace yocto {
 
 void check_opengl_error() {
@@ -763,29 +766,140 @@ void end_tabitem_opengl_widget(const opengl_window& win) {
     ImGui::EndTabItem();
 }
 
-void open_modal_opengl_widget(const opengl_window& win, const char* id) {
-    ImGui::OpenPopup(id);
+void open_modal_opengl_widget(const opengl_window& win, const char* lbl) {
+    ImGui::OpenPopup(lbl);
 }
 void close_modal_opengl_widget(const opengl_window& win) {
     ImGui::CloseCurrentPopup();
 }
-bool begin_modal_opengl_widget(const opengl_window& win, const char* id) {
-    return ImGui::BeginPopupModal(id);
+bool begin_modal_opengl_widget(const opengl_window& win, const char* lbl) {
+    return ImGui::BeginPopupModal(lbl);
 }
 void end_modal_opengl_widget(const opengl_window& win) { ImGui::EndPopup(); }
-bool is_modal_open_opengl_widget(const opengl_window& win, const char* id) { return ImGui::IsPopupOpen(id); }
+bool is_modal_open_opengl_widget(const opengl_window& win, const char* lbl) {
+    return ImGui::IsPopupOpen(lbl);
+}
 
-bool draw_modal_message_opengl_window(const opengl_window& win, const char* id, const string& message) {
-    ImGui::OpenPopup(id);    
-    if(ImGui::BeginPopupModal(id)) {
+bool draw_modal_message_opengl_window(
+    const opengl_window& win, const char* lbl, const string& message) {
+    if (ImGui::BeginPopupModal(lbl)) {
         auto open = true;
         ImGui::Text("%s", message.c_str());
-        if(ImGui::Button("Ok")) {
+        if (ImGui::Button("Ok")) {
             ImGui::CloseCurrentPopup();
             open = false;
         }
         ImGui::EndPopup();
         return open;
+    } else {
+        return false;
+    }
+}
+
+struct filedialog_state {
+    string                     dirname      = "";
+    string                     filename     = "";
+    vector<pair<string, bool>> entries      = {};
+    bool                       save         = false;
+    bool                       remove_hidden = true;
+
+    filedialog_state() {}
+    filedialog_state(const string& dirname, const string& filename, bool save)
+        : dirname{dirname}, filename{filename}, save{save} {
+        refresh();
+    }
+    void set_dirname(const string& dirname) {
+        this->dirname = dirname;
+        refresh();
+    }
+    void set_filename(const string& filename) { this->filename = filename; }
+    void select_entry(int idx) {
+        if (entries[idx].second) {
+            dirname = dirname + entries[idx].first;
+            refresh();
+        } else {
+            filename = entries[idx].first;
+        }
+    }
+
+    void refresh() {
+        dirname = normalize_path(dirname);
+        if (dirname == "") {
+            dirname = "./";
+        } else if(dirname.back() != '/') {
+            dirname += '/';
+        }
+        entries.clear();
+        cf_dir_t dir;
+        cf_dir_open(&dir, dirname.c_str());
+        while (dir.has_next) {
+            cf_file_t file;
+            cf_read_file(&dir, &file);
+            cf_dir_next(&dir);
+            if(remove_hidden && file.name[0] == '.') continue;
+            if(file.is_dir) {
+                entries.push_back({file.name + "/"s, true});
+            } else {
+                entries.push_back({file.name, false});
+            }
+        }
+        cf_dir_close(&dir);
+        std::sort(entries.begin(), entries.end(), [](auto& a, auto& b) {
+            if(a.second == b.second) return a.first < b.first;
+            return a.second;
+        });
+    }
+
+    string get_path() const {
+        return dirname + filename;
+    }
+};
+bool draw_modal_fileialog_opengl_widgets(const opengl_window& win,
+    const char* lbl, string& path, bool save, const string& dirname,
+    const string& filename) {
+    static auto states = unordered_map<string, filedialog_state>{};
+    if (ImGui::BeginPopupModal(lbl)) {
+        if (states.find(lbl) == states.end()) {
+            states[lbl] = filedialog_state{dirname, filename, save};
+        }
+        auto& state = states.at(lbl);
+        char  dir_buffer[1024];
+        strcpy(dir_buffer, state.dirname.c_str());
+        if (ImGui::InputText("dir", dir_buffer, sizeof(dir_buffer))) {
+            state.set_dirname(dir_buffer);
+        }
+        auto current_item = -1;
+        if (ImGui::ListBox(
+                "entries", &current_item,
+                [](void* data, int idx, const char** out_text) -> bool {
+                    auto& state = *(filedialog_state*)data;
+                    *out_text = state.entries[idx].first.c_str();
+                    return true;
+                },
+                &state, (int)state.entries.size())) {
+            state.select_entry(current_item);
+        }
+        char file_buffer[1024];
+        strcpy(file_buffer, state.filename.c_str());
+        if (ImGui::InputText("file", file_buffer, sizeof(file_buffer))) {
+            state.set_filename(file_buffer);
+        }
+        auto ok = false, exit = false;
+        if (ImGui::Button("Ok")) {
+            path = state.filename;
+            ok   = true;
+            exit = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            exit = true;
+        }
+        if (exit) {
+            ImGui::CloseCurrentPopup();
+            states.erase(lbl);
+        }
+        ImGui::EndPopup();
+        return ok;
     } else {
         return false;
     }
