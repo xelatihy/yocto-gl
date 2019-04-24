@@ -204,10 +204,9 @@ void add_new_scene(app_state& app, const string& filename) {
     app.selected = (int)app.scenes.size() - 1;
 }
 
-void apply_edit(const string& filename, yocto_scene& scene,
-    bvh_scene& bvh, trace_lights& lights, trace_image_options& trace_options,
-    tonemap_image_options& tonemap_options,
-    bvh_build_options& bvh_options,
+void apply_edit(const string& filename, yocto_scene& scene, bvh_scene& bvh,
+    trace_lights& lights, trace_image_options& trace_options,
+    tonemap_image_options& tonemap_options, bvh_build_options& bvh_options,
     const app_edit& edit) {
     // update data
     auto updated_instances = vector<int>{}, updated_shapes = vector<int>{};
@@ -300,8 +299,8 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (!draw_modal_message_opengl_window(win, "error", error_message)) {
         error_message = "";
     }
-    if (draw_modal_fileialog_opengl_widgets(win, "load", load_path, false,
-            "./", "", "*.yaml;*.obj;*.pbrt")) {
+    if (draw_modal_fileialog_opengl_widgets(
+            win, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
         add_new_scene(app, load_path);
     }
     if (draw_modal_fileialog_opengl_widgets(win, "save", save_path, true,
@@ -337,7 +336,8 @@ void draw_opengl_widgets(const opengl_window& win) {
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "close", app.selected >= 0)) {
-        app.scenes[app.selected].task_queue.emplace_back(app_task_type::close_scene);
+        app.scenes[app.selected].task_queue.emplace_back(
+            app_task_type::close_scene);
     }
     continue_opengl_widget_line(win);
     if (draw_button_opengl_widget(win, "quit")) {
@@ -366,8 +366,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_combobox_opengl_widget(win, "tracer",
             (int&)trace_options.sampler_type, trace_sampler_type_names);
         draw_combobox_opengl_widget(win, "false color",
-            (int&)trace_options.falsecolor_type,
-            trace_falsecolor_type_names);
+            (int&)trace_options.falsecolor_type, trace_falsecolor_type_names);
         draw_slider_opengl_widget(
             win, "nbounces", trace_options.max_bounces, 1, 10);
         draw_slider_opengl_widget(
@@ -472,12 +471,12 @@ void update(app_state& app) {
     // close if needed
     while (!app.scenes.empty()) {
         auto pos = -1;
-        for(auto idx = 0; idx < app.scenes.size(); idx++) {
-            for(auto& task : app.scenes[idx].task_queue) {
-                if(task.type == app_task_type::close_scene) pos = idx;
+        for (auto idx = 0; idx < app.scenes.size(); idx++) {
+            for (auto& task : app.scenes[idx].task_queue) {
+                if (task.type == app_task_type::close_scene) pos = idx;
             }
         }
-        if(pos < 0) break;
+        if (pos < 0) break;
         app.scenes.erase(app.scenes.begin() + pos);
         app.selected = app.scenes.empty() ? -1 : 0;
     }
@@ -485,7 +484,8 @@ void update(app_state& app) {
     for (auto& scn : app.scenes) {
         if (scn.task_queue.empty()) continue;
         auto& task = scn.task_queue.front();
-        if (task.type != app_task_type::render_image || task.queue.empty()) continue;
+        if (task.type != app_task_type::render_image || task.queue.empty())
+            continue;
         auto region  = image_region{};
         auto updated = false;
         while (scn.task_queue.front().queue.try_pop(region)) {
@@ -509,16 +509,21 @@ void update(app_state& app) {
         while (scn.task_queue.size() > 1) {
             auto& task = scn.task_queue.at(0);
             auto& next = scn.task_queue.at(1);
-            if(task.type == app_task_type::render_image) {
-                if(next.type != app_task_type::render_image && next.type != app_task_type::apply_edit) break;
+            if (task.type == app_task_type::render_image) {
+                if (next.type != app_task_type::render_image &&
+                    next.type != app_task_type::apply_edit)
+                    break;
                 log_info("cancel rendering {}", scn.filename);
-            } else if(task.type ==app_task_type::apply_edit) {
-                if(next.type != app_task_type::apply_edit || task.edit.type != next.edit.type || task.edit.index != next.edit.index) break;
+            } else if (task.type == app_task_type::apply_edit) {
+                if (next.type != app_task_type::apply_edit ||
+                    task.edit.type != next.edit.type ||
+                    task.edit.index != next.edit.index)
+                    break;
                 log_info("cancel editing {}", scn.filename);
             } else {
                 break;
             }
-            task.stop  = true;
+            task.stop = true;
             if (task.result.valid()) {
                 try {
                     task.result.get();
@@ -719,9 +724,8 @@ void update(app_state& app) {
                 log_info("start editing {}", scn.filename);
                 scn.render_done = false;
                 task.result     = async([&scn, &task]() {
-                    apply_edit(scn.filename, scn.scene, scn.bvh,
-                        scn.lights, scn.trace_options, 
-                        scn.tonemap_options, scn.bvh_options, 
+                    apply_edit(scn.filename, scn.scene, scn.bvh, scn.lights,
+                        scn.trace_options, scn.tonemap_options, scn.bvh_options,
                         task.edit);
                 });
             } break;

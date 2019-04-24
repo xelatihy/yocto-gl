@@ -728,50 +728,50 @@ inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
 }
 
 inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
-    const string& lbl, yocto_scene& scene, app_selection& sel,
-    app_edit& edit, int height) {
+    const string& lbl, yocto_scene& scene, app_selection& sel, app_edit& edit,
+    int height) {
     if (sel.type == typeid(void)) return false;
 
     edit = app_edit{};
     if (sel.type == typeid(yocto_camera)) {
         return draw_opengl_widgets_scene_inspector(
-                win, scene.cameras[sel.index], sel, edit, scene);
+            win, scene.cameras[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_shape)) {
         return draw_opengl_widgets_scene_inspector(
-                win, scene.shapes[sel.index], sel, edit, scene);
+            win, scene.shapes[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_subdiv)) {
         return draw_opengl_widgets_scene_inspector(
-                win, scene.subdivs[sel.index], sel, edit, scene);
+            win, scene.subdivs[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_texture)) {
         return draw_opengl_widgets_scene_inspector(
-                win, scene.textures[sel.index], sel, edit, scene);
+            win, scene.textures[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_voltexture)) {
         return draw_opengl_widgets_scene_inspector(
-                win, scene.voltextures[sel.index], sel, edit, scene);
+            win, scene.voltextures[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_material)) {
         return draw_opengl_widgets_scene_inspector(
-                win, scene.materials[sel.index], sel, edit, scene);
+            win, scene.materials[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_environment)) {
         return draw_opengl_widgets_scene_inspector(
-                win, scene.environments[sel.index], sel, edit, scene);
+            win, scene.environments[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_instance)) {
         return draw_opengl_widgets_scene_inspector(
-                win, scene.instances[sel.index], sel, edit, scene);
+            win, scene.instances[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_scene_node)) {
         return draw_opengl_widgets_scene_inspector(
-                win, scene.nodes[sel.index], sel, edit, scene);
+            win, scene.nodes[sel.index], sel, edit, scene);
     }
     if (sel.type == typeid(yocto_animation)) {
         return draw_opengl_widgets_scene_inspector(
-                win, scene.animations[sel.index], sel, edit, scene);
+            win, scene.animations[sel.index], sel, edit, scene);
     }
 
     return false;

@@ -240,7 +240,8 @@ void draw_opengl_widgets(const opengl_window& win) {
             win, "highlights color", options.highlights_color);
         if (options != img.colorgrade_options) {
             img.colorgrade_options = options;
-            if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
+            if (img.load_done)
+                img.task_queue.emplace_back(app_task_type::display);
         }
         end_header_opengl_widget(win);
     }
@@ -248,8 +249,8 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_label_opengl_widget(win, "image", get_filename(img.filename));
         draw_label_opengl_widget(win, "filename", img.filename);
         draw_label_opengl_widget(win, "outname", img.outname);
-        draw_label_opengl_widget(win, "image", "%d x %d",
-            img.img.size().x, img.img.size().y);
+        draw_label_opengl_widget(
+            win, "image", "%d x %d", img.img.size().x, img.img.size().y);
         draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
         draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
         auto mouse_pos = get_opengl_mouse_pos(win);
@@ -315,12 +316,12 @@ void update(app_state& app) {
     // close if needed
     while (!app.images.empty()) {
         auto pos = -1;
-        for(auto idx = 0; idx < app.images.size(); idx++) {
-            for(auto& task : app.images[idx].task_queue) {
-                if(task.type == app_task_type::close) pos = idx;
+        for (auto idx = 0; idx < app.images.size(); idx++) {
+            for (auto& task : app.images[idx].task_queue) {
+                if (task.type == app_task_type::close) pos = idx;
             }
         }
-        if(pos < 0) break;
+        if (pos < 0) break;
         app.images.erase(app.images.begin() + pos);
         app.selected = app.images.empty() ? -1 : 0;
     }
@@ -340,13 +341,13 @@ void update(app_state& app) {
         while (img.task_queue.size() > 1) {
             auto& task = img.task_queue.at(0);
             auto& next = img.task_queue.at(1);
-            if(task.type == app_task_type::display){
-                if(next.type != app_task_type::display) break;
+            if (task.type == app_task_type::display) {
+                if (next.type != app_task_type::display) break;
                 log_info("cancel rendering {}", img.filename);
             } else {
                 break;
             }
-            task.stop  = true;
+            task.stop = true;
             if (task.result.valid()) {
                 try {
                     task.result.get();
