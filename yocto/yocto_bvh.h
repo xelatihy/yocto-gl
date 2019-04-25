@@ -278,8 +278,7 @@ inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
-    bool non_rigid_frames = true);
+    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
 template <typename GetInstance, typename IntersectShape>
 inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const IntersectShape& inetrsect_shape,
@@ -295,7 +294,7 @@ inline bool overlap_bvh(const bvh_shape& bvh, const vector<int>& points,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
     const vec3f& pos, float max_distance, bvh_intersection& intersection,
-    bool find_any = false, bool non_rigid_frames = true);
+    bool find_any = false);
 template <typename GetInstance, typename OverlapShape>
 inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const OverlapShape& inetrsect_shape,
@@ -743,7 +742,9 @@ inline bvh_scene::~bvh_scene() {
     }
 }
 
-static inline void _embree_error(void* ctx, RTCError code, const char* str) {
+namespace bvh_impl {
+
+static inline void embree_error(void* ctx, RTCError code, const char* str) {
     switch (code) {
         case RTC_ERROR_UNKNOWN:
             throw runtime_error("RTC_ERROR_UNKNOWN: "s + str);
@@ -768,31 +769,31 @@ static inline void _embree_error(void* ctx, RTCError code, const char* str) {
 }
 
 // Embree memory
-inline atomic<ssize_t> _embree_memory = 0;
-static inline bool _embree_memory_monitor(void* userPtr, ssize_t bytes, bool post) {
-    _embree_memory += bytes;
+inline atomic<ssize_t> embree_memory = 0;
+static inline bool embree_memory_monitor(void* userPtr, ssize_t bytes, bool post) {
+    embree_memory += bytes;
     return true;
 }
 
 // Get Embree device
-static inline RTCDevice _get_embree_device() {
+static inline RTCDevice get_embree_device() {
     static RTCDevice device = nullptr;
     if (!device) {
         device = rtcNewDevice("");
-        rtcSetDeviceErrorFunction(device, _embree_error, nullptr);
+        rtcSetDeviceErrorFunction(device, embree_error, nullptr);
         rtcSetDeviceMemoryMonitorFunction(
-            device, _embree_memory_monitor, nullptr);
+            device, embree_memory_monitor, nullptr);
     }
     return device;
 }
 
 // Initialize Embree BVH
-static inline void _build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
+static inline void build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
     const bvh_params& params) {
-    auto embree_device = _get_embree_device();
+    auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     if (params.embree_compact) {
         rtcSetSceneFlags(embree_scene, RTC_SCENE_FLAG_COMPACT);
@@ -820,7 +821,7 @@ static inline void _build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
             last_index = l.y;
         }
         embree_geom = rtcNewGeometry(
-            _get_embree_device(), RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
+            get_embree_device(), RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
             RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4,
@@ -831,7 +832,7 @@ static inline void _build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
         memcpy(embree_lines, elines.data(), elines.size() * 4);
     } else if (!triangles.empty()) {
         embree_geom = rtcNewGeometry(
-            _get_embree_device(), RTC_GEOMETRY_TYPE_TRIANGLE);
+            get_embree_device(), RTC_GEOMETRY_TYPE_TRIANGLE);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         if (params.embree_compact) {
             rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX, 0,
@@ -851,7 +852,7 @@ static inline void _build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
         }
     } else if (!quads.empty()) {
         embree_geom = rtcNewGeometry(
-            _get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
+            get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         if (params.embree_compact) {
             rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX, 0,
@@ -871,7 +872,7 @@ static inline void _build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
         }
     } else if (!quads_positions.empty()) {
         embree_geom = rtcNewGeometry(
-            _get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
+            get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         if (params.embree_compact) {
             rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX, 0,
@@ -899,10 +900,10 @@ static inline void _build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
 }
 // Build a BVH using Embree.
 template <typename GetInstance>
-static inline void _build_embree_bvh(bvh_scene& bvh, int num_instances,
+static inline void build_embree_bvh(bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const bvh_params& params) {
     // scene bvh
-    auto embree_device = _get_embree_device();
+    auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     if (params.embree_compact) {
         rtcSetSceneFlags(embree_scene, RTC_SCENE_FLAG_COMPACT);
@@ -935,10 +936,10 @@ static inline void _build_embree_bvh(bvh_scene& bvh, int num_instances,
 
 // Initialize Embree BVH
 template <typename Scene>
-static inline void _build_embree_flattened_bvh(
+static inline void build_embree_flattened_bvh(
     bvh_scene& bvh, const Scene& scene, const bvh_params& params) {
     // scene bvh
-    auto embree_device = _get_embree_device();
+    auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
     bvh.embree_bvh = embree_scene;
@@ -985,7 +986,7 @@ static inline void _build_embree_flattened_bvh(
                 last_index = l.y;
             }
             embree_geom = rtcNewGeometry(
-                _get_embree_device(), RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
+                get_embree_device(), RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
             rtcSetGeometryVertexAttributeCount(embree_geom, 1);
             auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
                 RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4,
@@ -996,7 +997,7 @@ static inline void _build_embree_flattened_bvh(
             memcpy(embree_lines, elines.data(), elines.size() * 4);
         } else if (!triangles.empty()) {
             embree_geom = rtcNewGeometry(
-                _get_embree_device(), RTC_GEOMETRY_TYPE_TRIANGLE);
+                get_embree_device(), RTC_GEOMETRY_TYPE_TRIANGLE);
             rtcSetGeometryVertexAttributeCount(embree_geom, 1);
             auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
                 RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
@@ -1009,7 +1010,7 @@ static inline void _build_embree_flattened_bvh(
             memcpy(embree_triangles, triangles.data(), triangles.size() * 12);
         } else if (!quads.empty()) {
             embree_geom = rtcNewGeometry(
-                _get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
+                get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
             rtcSetGeometryVertexAttributeCount(embree_geom, 1);
             auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
                 RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
@@ -1022,7 +1023,7 @@ static inline void _build_embree_flattened_bvh(
             memcpy(embree_quads, quads.data(), quads.size() * 16);
         } else if (!quads_positions.empty()) {
             embree_geom = rtcNewGeometry(
-                _get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
+                get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
             rtcSetGeometryVertexAttributeCount(embree_geom, 1);
             auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
                 RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
@@ -1045,10 +1046,10 @@ static inline void _build_embree_flattened_bvh(
 }
 // Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not
 // available.
-static inline void _refit_embree_bvh(bvh_shape& bvh) {
+static inline void refit_embree_bvh(bvh_shape& bvh) {
     throw runtime_error("not yet implemented");
 }
-static inline bool _intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray,
+static inline bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray,
     bvh_intersection& intersection, bool find_any) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
@@ -1074,7 +1075,7 @@ static inline bool _intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray,
     intersection.distance   = embree_ray.ray.tfar;
     return true;
 }
-static inline bool _intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray,
+static inline bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray,
     bvh_intersection& intersection, bool find_any) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
@@ -1103,15 +1104,15 @@ static inline bool _intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray,
 #endif
 
 // BVH primitive with its bbox, its center and the index to the primitive
-struct _bvh_prim {
+struct bvh_prim {
     bbox3f bbox   = invalid_bbox3f;
     vec3f  center = zero3f;
     int    primid = 0;
 };
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static inline pair<int, int> _split_sah(
-    vector<_bvh_prim>& prims, int start, int end) {
+static inline pair<int, int> split_sah(
+    vector<bvh_prim>& prims, int start, int end) {
     // initialize split axis and position
     auto split_axis = 0;
     auto mid        = (start + end) / 2;
@@ -1173,8 +1174,8 @@ static inline pair<int, int> _split_sah(
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-static inline pair<int, int> _split_balanced(
-    vector<_bvh_prim>& prims, int start, int end) {
+static inline pair<int, int> split_balanced(
+    vector<bvh_prim>& prims, int start, int end) {
     // initialize split axis and position
     auto split_axis = 0;
     auto mid        = (start + end) / 2;
@@ -1212,8 +1213,8 @@ static inline pair<int, int> _split_balanced(
 
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
-static inline pair<int, int> _split_middle(
-    vector<_bvh_prim>& prims, int start, int end) {
+static inline pair<int, int> split_middle(
+    vector<bvh_prim>& prims, int start, int end) {
     // initialize split axis and position
     auto split_axis = 0;
     auto mid        = (start + end) / 2;
@@ -1254,7 +1255,7 @@ static inline pair<int, int> _split_middle(
 // or initializing it as a leaf. When splitting, the heuristic heuristic is
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
-static inline void _make_node(vector<bvh_node>& nodes, vector<_bvh_prim>& prims,
+static inline void make_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     deque<vec3i>& queue, bool high_quality) {
     // grab node to work on
     auto next = queue.front();
@@ -1272,8 +1273,8 @@ static inline void _make_node(vector<bvh_node>& nodes, vector<_bvh_prim>& prims,
     if (end - start > bvh_max_prims) {
         // get split
         auto [mid, split_axis] = (high_quality)
-                                     ? _split_sah(prims, start, end)
-                                     : _split_balanced(prims, start, end);
+                                     ? split_sah(prims, start, end)
+                                     : split_balanced(prims, start, end);
 
         // make an internal node
         node.is_internal      = true;
@@ -1295,7 +1296,7 @@ static inline void _make_node(vector<bvh_node>& nodes, vector<_bvh_prim>& prims,
 }
 
 // Build BVH nodes
-static inline void _build_bvh_serial(vector<bvh_node>& nodes, vector<_bvh_prim>& prims,
+static inline void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     const bvh_params& params) {
     // prepare to build nodes
     nodes.clear();
@@ -1326,8 +1327,8 @@ static inline void _build_bvh_serial(vector<bvh_node>& nodes, vector<_bvh_prim>&
         if (end - start > bvh_max_prims) {
             // get split
             auto [mid, split_axis] =
-                (params.high_quality) ? _split_sah(prims, start, end)
-                                       : _split_balanced(prims, start, end);
+                (params.high_quality) ? split_sah(prims, start, end)
+                                       : split_balanced(prims, start, end);
 
             // make an internal node
             node.is_internal      = true;
@@ -1353,7 +1354,7 @@ static inline void _build_bvh_serial(vector<bvh_node>& nodes, vector<_bvh_prim>&
 }
 
 // Build BVH nodes
-static inline void _build_bvh_parallel(vector<bvh_node>& nodes, vector<_bvh_prim>& prims,
+static inline void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     const bvh_params& params) {
     // prepare to build nodes
     nodes.clear();
@@ -1408,8 +1409,8 @@ static inline void _build_bvh_parallel(vector<bvh_node>& nodes, vector<_bvh_prim
                     // get split
                     auto [mid, split_axis] =
                         (params.high_quality)
-                            ? _split_sah(prims, start, end)
-                            : _split_balanced(prims, start, end);
+                            ? split_sah(prims, start, end)
+                            : split_balanced(prims, start, end);
 
                     // make an internal node
                     {
@@ -1443,10 +1444,10 @@ static inline void _build_bvh_parallel(vector<bvh_node>& nodes, vector<_bvh_prim
 
 // Build a BVH from a set of primitives.
 template <typename ElemBounds>
-inline void build_bvh(vector<bvh_node>& nodes, size_t num_elements,
+static inline void build_bvh(vector<bvh_node>& nodes, size_t num_elements,
     const ElemBounds& element_bounds, const bvh_params& params) {
     // get the number of primitives and the primitive type
-    auto prims = vector<_bvh_prim>(num_elements);
+    auto prims = vector<bvh_prim>(num_elements);
     for (auto element_id = 0; element_id < num_elements; element_id++) {
         prims[element_id].bbox   = element_bounds(element_id);
         prims[element_id].center = bbox_center(prims[element_id].bbox);
@@ -1455,13 +1456,13 @@ inline void build_bvh(vector<bvh_node>& nodes, size_t num_elements,
 
     // build nodes
     if (params.run_serially) {
-        _build_bvh_serial(nodes, prims, params);
+        build_bvh_serial(nodes, prims, params);
     } else {
-        _build_bvh_parallel(nodes, prims, params);
+        build_bvh_parallel(nodes, prims, params);
     }
 }
 
-inline void build_bvh(bvh_shape& bvh, const vector<int>& points,
+static inline void build_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
@@ -1469,7 +1470,7 @@ inline void build_bvh(bvh_shape& bvh, const vector<int>& points,
 #if YOCTO_EMBREE
     // call Embree if needed
     if (params.use_embree) {
-        return _build_embree_bvh(bvh, points, lines, triangles, quads,
+        return build_embree_bvh(bvh, points, lines, triangles, quads,
             quads_positions, positions, radius, params);
     }
 #endif
@@ -1522,7 +1523,7 @@ inline void build_bvh(bvh_shape& bvh, const vector<int>& points,
     }
 }
 template <typename GetInstance>
-inline void build_bvh(bvh_scene& bvh, int num_instances,
+static inline void build_bvh(bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const bvh_params& params) {
 #if YOCTO_EMBREE
     if (params.use_embree) {
@@ -1531,7 +1532,7 @@ inline void build_bvh(bvh_scene& bvh, int num_instances,
             // get_instance, params);
             throw runtime_error("flattening not support now");
         } else {
-            return _build_embree_bvh(bvh, num_instances, get_instance, params);
+            return build_embree_bvh(bvh, num_instances, get_instance, params);
         }
     }
 #endif
@@ -1552,7 +1553,7 @@ inline void build_bvh(bvh_scene& bvh, int num_instances,
 
 // Recursively recomputes the node bounds for a shape bvh
 template <typename ElemBound>
-inline void refit_bvh(
+static inline void refit_bvh(
     vector<bvh_node>& nodes, int nodeid, const ElemBound& element_bounds) {
     // refit
     auto& node = nodes[nodeid];
@@ -1570,7 +1571,7 @@ inline void refit_bvh(
     }
 }
 
-inline void refit_bvh(bvh_shape& bvh, const vector<int>& points,
+static inline void refit_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
@@ -1613,7 +1614,7 @@ inline void refit_bvh(bvh_shape& bvh, const vector<int>& points,
 }
 
 template <typename GetInstance>
-inline void refit_bvh(bvh_scene& bvh, int num_instances,
+static inline void refit_bvh(bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const bvh_params& params) {
 #if YOCTO_EMBREE
     if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
@@ -1635,7 +1636,7 @@ inline void refit_bvh(bvh_scene& bvh, int num_instances,
 
 // Intersect ray with a bvh.
 template <bool IsInstanced, typename PrimitiveIntersect>
-inline bool intersect_bvh(const vector<bvh_node>& nodes, const ray3f& ray_,
+static inline bool intersect_bvh(const vector<bvh_node>& nodes, const ray3f& ray_,
     bvh_intersection& intersection, bool find_any,
     const PrimitiveIntersect& intersect_primitive) {
     // check empty
@@ -1705,16 +1706,15 @@ inline bool intersect_bvh(const vector<bvh_node>& nodes, const ray3f& ray_,
     return hit;
 }
 
-inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points,
+static inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any,
-    bool non_rigid_frames) {
+    const ray3f& ray, bvh_intersection& intersection, bool find_any) {
 #if YOCTO_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh) {
-        return _intersect_embree_bvh(bvh, ray, intersection, find_any);
+        return intersect_embree_bvh(bvh, ray, intersection, find_any);
     }
 #endif
 
@@ -1762,14 +1762,14 @@ inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points,
     }
 }
 template <typename GetInstance, typename IntersectShape>
-inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
+static inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const IntersectShape& intersect_shape,
     const ray3f& ray, bvh_intersection& intersection, bool find_any,
     bool non_rigid_frames) {
 #if YOCTO_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh) {
-        return _intersect_embree_bvh(bvh, ray, intersection, find_any);
+        return intersect_embree_bvh(bvh, ray, intersection, find_any);
     }
 #endif
 
@@ -1794,7 +1794,7 @@ inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
 
 // Intersect ray with a bvh.
 template <bool IsInstanced, typename PrimitiveOverlap>
-inline bool overlap_bvh_nodes(const vector<bvh_node>& nodes, const vec3f& pos,
+static inline bool overlap_bvh_nodes(const vector<bvh_node>& nodes, const vec3f& pos,
     float max_distance, bvh_intersection& intersection, bool find_any,
     const PrimitiveOverlap& overlap_primitive) {
     // check if empty
@@ -1851,12 +1851,12 @@ inline bool overlap_bvh_nodes(const vector<bvh_node>& nodes, const vec3f& pos,
 }
 
 // Finds the closest element with a bvh.
-inline bool overlap_bvh(const bvh_shape& bvh, const vector<int>& points,
+static inline bool overlap_bvh(const bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
     const vec3f& pos, float max_distance, bvh_intersection& intersection,
-    bool find_any, bool non_rigid_frames) {
+    bool find_any) {
     if (!points.empty()) {
         return overlap_bvh_nodes<false>(bvh.nodes, pos, max_distance,
             intersection, find_any,
@@ -1922,7 +1922,7 @@ inline bool overlap_bvh(const bvh_shape& bvh, const vector<int>& points,
     }
 }
 template <typename GetInstance, typename OverlapShape>
-inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
+static inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const OverlapShape& overlap_shape,
     const vec3f& pos, float max_distance, bvh_intersection& intersection,
     bool find_any, bool non_rigid_frames) {
@@ -2006,6 +2006,74 @@ inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
         }
     }
 #endif
+
+}
+
+// Build the bvh acceleration structure.
+inline void build_bvh(bvh_shape& bvh, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const bvh_params& params) {
+    return bvh_impl::build_bvh(bvh, points, lines, triangles, quads, quads_positions, positions, radius, params);
+}
+template <typename GetInstance>
+inline void build_bvh(bvh_scene& bvh, int num_instances,
+    const GetInstance& get_instance, const bvh_params& params) {
+    return bvh_impl::build_bvh(bvh, num_instances, get_instance, params);
+}
+
+// Refit bvh data
+inline void refit_bvh(bvh_shape& bvh, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const bvh_params& params) {
+    return bvh_impl::refit_bvh(bvh, points, lines, triangles, quads, quads_positions, positions, radius, params);
+}
+template <typename GetInstance>
+inline void refit_bvh(bvh_scene& bvh, int num_instances,
+    const GetInstance& get_instance, const bvh_params& params) {
+    return bvh_impl::refit_bvh(bvh, num_instances, get_instance, params);
+}
+
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
+inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any) {
+    return bvh_impl::intersect_bvh(bvh, points, lines, triangles, quads, quads_positions, positions, radius, ray, intersection, find_any);
+}
+template <typename GetInstance, typename IntersectShape>
+inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
+    const GetInstance& get_instance, const IntersectShape& inetrsect_shape,
+    const ray3f& ray, bvh_intersection& intersection, bool find_any,
+    bool non_rigid_frames) {
+    return bvh_impl::intersect_bvh(bvh, num_instances, get_instance, inetrsect_shape, ray, intersection, find_any, non_rigid_frames);
+}
+
+// Find a shape element that overlaps a point within a given distance
+// max distance, returning either the closest or any overlap depending on
+// `find_any`. Returns the point distance, the instance id, the shape element
+// index and the element barycentric coordinates.
+inline bool overlap_bvh(const bvh_shape& bvh, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const vec3f& pos, float max_distance, bvh_intersection& intersection,
+    bool find_any) {
+    return bvh_impl::overlap_bvh(bvh, points, lines, triangles, quads, quads_positions, positions, radius, pos, max_distance, intersection, find_any);
+}
+template <typename GetInstance, typename OverlapShape>
+inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
+    const GetInstance& get_instance, const OverlapShape& overlap_shape,
+    const vec3f& pos, float max_distance, bvh_intersection& intersection,
+    bool find_any, bool non_rigid_frames) {
+    return bvh_impl::overlap_bvh(bvh, num_instances, get_instance, overlap_shape, pos, max_distance, intersection, find_any, non_rigid_frames);
+}
 
 }  // namespace yocto
 
