@@ -2740,7 +2740,7 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
     }
 
     void get_scaled_texture3f(
-        const pbrt_textured<spectrum3f>& textured, vec3f& value, int& texture) {
+        const pbrt_textured<pbrt_spectrum3f>& textured, vec3f& value, int& texture) {
         if (textured.texture == "") {
             value   = {textured.value.x, textured.value.y, textured.value.z};
             texture = -1;
@@ -2894,10 +2894,10 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
             auto& checkerboard = get<pbrt_checkerboard_texture>(ptexture);
             auto  rgb1         = checkerboard.tex1.texture == ""
                             ? checkerboard.tex1.value
-                            : spectrum3f{0.4f, 0.4f, 0.4f};
+                            : pbrt_spectrum3f{0.4f, 0.4f, 0.4f};
             auto rgb2 = checkerboard.tex1.texture == ""
                             ? checkerboard.tex2.value
-                            : spectrum3f{0.6f, 0.6f, 0.6f};
+                            : pbrt_spectrum3f{0.6f, 0.6f, 0.6f};
             make_checker(texture.hdr_image, {1024, 1024}, 16,
                 {rgb1.x, rgb1.y, rgb1.z, 1}, {rgb2.x, rgb2.y, rgb2.z, 1});
             float_to_byte(texture.ldr_image, texture.hdr_image);
@@ -3268,7 +3268,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     try {
         // Parse pbrt
-        auto pbrt_options = load_pbrt_options();
+        auto pbrt_options = pbrt_params();
         auto cb           = load_pbrt_scene_callbacks{scene, params, filename};
         load_pbrt(filename, cb, pbrt_options);
 
