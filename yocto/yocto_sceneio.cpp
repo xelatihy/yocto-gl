@@ -328,7 +328,7 @@ void load_shape(yocto_shape& shape, const string& dirname) {
     }
 }
 
-void save_scene_shape(const yocto_shape& shape, const string& dirname) {
+void save_shape(const yocto_shape& shape, const string& dirname) {
     save_shape(dirname + shape.uri, shape.points, shape.lines, shape.triangles,
         shape.quads, shape.quads_positions, shape.quads_normals,
         shape.quads_texturecoords, shape.positions, shape.normals,
@@ -387,7 +387,7 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
     parallel_foreach(
         scene.shapes,
         [&dirname](
-            const yocto_shape& shape) { save_scene_shape(shape, dirname); },
+            const yocto_shape& shape) { save_shape(shape, dirname); },
         params.cancel_flag, params.run_serially);
     // save subdivs
     parallel_foreach(
@@ -843,6 +843,11 @@ static void load_yaml_scene(const string& filename, yocto_scene& scene,
     update_transforms(scene);
 }
 
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+ 
 static inline void print_yaml_keyvalue(FILE* fs, const char* name, int value) {
     print(fs, "    {}: {}\n", name, value);
 }
@@ -873,6 +878,10 @@ static inline void print_yaml_keyvalue(
         name, value.x.x, value.x.y, value.x.z, value.y.x, value.y.y, value.y.z,
         value.z.x, value.z.y, value.z.z, value.o.x, value.o.y, value.o.z);
 }
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 // Save yaml
 static void save_yaml(const string& filename, const yocto_scene& scene,
