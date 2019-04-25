@@ -132,7 +132,7 @@ image<vec4f> filter_bilateral(
 int main(int argc, char* argv[]) {
     // command line parameters
     auto do_tonemap          = false;
-    auto tonemap_prms     = tonemap_params{};
+    auto tonemap_prms        = tonemap_params{};
     auto resize_width        = 0;
     auto resize_height       = 0;
     auto spatial_sigma       = 0.0f;
@@ -147,8 +147,7 @@ int main(int argc, char* argv[]) {
     parser.add_flag("--tonemap,!--no-tonemap,-t", do_tonemap, "Tonemap image");
     parser.add_option(
         "--exposure,-e", tonemap_prms.exposure, "Tonemap exposure");
-    parser.add_flag(
-        "--srgb,!--no-srgb", tonemap_prms.srgb, "Tonemap to sRGB.");
+    parser.add_flag("--srgb,!--no-srgb", tonemap_prms.srgb, "Tonemap to sRGB.");
     parser.add_flag("--filmic,!--no-filmic,-f", tonemap_prms.filmic,
         "Tonemap uses filmic curve");
     parser.add_option(

@@ -168,12 +168,10 @@ struct trace_params {
 };
 
 // Equality operators
-inline bool operator==(
-    const trace_params& a, const trace_params& b) {
+inline bool operator==(const trace_params& a, const trace_params& b) {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(
-    const trace_params& a, const trace_params& b) {
+inline bool operator!=(const trace_params& a, const trace_params& b) {
     return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
@@ -193,8 +191,7 @@ int trace_samples(image<vec4f>& image, trace_state& state,
 // when building async applications.
 void trace_region(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const image_region& region, int num_samples,
-    const trace_params& params);
+    const image_region& region, int num_samples, const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
@@ -225,8 +222,7 @@ namespace yocto {
 float exponent_to_roughness(float n);
 
 // Specular to fresnel eta.
-void specular_to_eta(
-    const vec3f& specular, vec3f& es, vec3f& esk);
+void  specular_to_eta(const vec3f& specular, vec3f& es, vec3f& esk);
 float specular_to_eta(const vec3f& specular);
 // Compute the fresnel term for dielectrics.
 vec3f fresnel_dielectric(float direction_cosine, const vec3f& eta);

@@ -129,8 +129,8 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     parallel_foreach(
         regions,
         [&img, &display, &queue, tonemap_prms, colorgrade_prms,
-            do_colorgrade = colorgrade_prms != colorgrade_params{}
-            ](const image_region& region) {
+            do_colorgrade = colorgrade_prms != colorgrade_params{}](
+            const image_region& region) {
             tonemap(display, img, region, tonemap_prms);
             if (do_colorgrade) {
                 colorgrade(display, display, region, colorgrade_prms);
@@ -143,14 +143,14 @@ void update_app_display(const string& filename, const image<vec4f>& img,
 
 // add a new image
 void add_new_image(app_state& app, const string& filename) {
-    auto& img                  = app.images.emplace_back();
-    img.filename               = filename;
-    img.outname                = get_noextension(filename) + ".display.png";
-    img.name                   = get_filename(filename);
-    img.tonemap_prms        = app.tonemap_prms;
-    img.colorgrade_prms     = app.colorgrade_prms;
-    img.load_done              = false;
-    img.display_done           = false;
+    auto& img           = app.images.emplace_back();
+    img.filename        = filename;
+    img.outname         = get_noextension(filename) + ".display.png";
+    img.name            = get_filename(filename);
+    img.tonemap_prms    = app.tonemap_prms;
+    img.colorgrade_prms = app.colorgrade_prms;
+    img.load_done       = false;
+    img.display_done    = false;
     img.task_queue.emplace_back(app_task_type::load);
     app.selected = (int)app.images.size() - 1;
 }

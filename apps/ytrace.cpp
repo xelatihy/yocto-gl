@@ -38,18 +38,18 @@ using namespace yocto;
 
 int main(int argc, char* argv[]) {
     // options
-    auto sceneio_prms    = sceneio_params{};
+    auto sceneio_prms = sceneio_params{};
     auto bvh_prms     = bvh_params{};
     auto trace_prms   = trace_params{};
     auto tonemap_prms = tonemap_params{};
-    auto all_cameras     = false;
-    auto no_parallel     = false;
-    auto save_batch      = false;
-    auto add_skyenv      = false;
-    auto validate        = false;
-    auto logo            = true;
-    auto imfilename      = "out.hdr"s;
-    auto filename        = "scene.json"s;
+    auto all_cameras  = false;
+    auto no_parallel  = false;
+    auto save_batch   = false;
+    auto add_skyenv   = false;
+    auto validate     = false;
+    auto logo         = true;
+    auto imfilename   = "out.hdr"s;
+    auto filename     = "scene.json"s;
 
     // names for enums
     auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
@@ -69,8 +69,8 @@ int main(int argc, char* argv[]) {
     parser.add_option("--camera", trace_prms.camera_id, "Camera index.");
     parser.add_flag(
         "--all-cameras,!--no-all-cameras", all_cameras, "Render all cameras.");
-    parser.add_option("--hres,-R", trace_prms.image_size.x,
-        "Image horizontal resolution.");
+    parser.add_option(
+        "--hres,-R", trace_prms.image_size.x, "Image horizontal resolution.");
     parser.add_option(
         "--vres,-r", trace_prms.image_size.y, "Image vertical resolution.");
     parser.add_option(
@@ -92,13 +92,10 @@ int main(int argc, char* argv[]) {
     parser.add_option(
         "--nbatch,-b", trace_prms.samples_per_batch, "Samples per batch.");
     parser.add_flag("--env-hidden,!--no-env-hidden",
-        trace_prms.environments_hidden,
-        "Environments are hidden in renderer");
+        trace_prms.environments_hidden, "Environments are hidden in renderer");
     parser.add_option("--save-batch", save_batch, "Save images progressively");
-    parser.add_option(
-        "--exposure,-e", tonemap_prms.exposure, "Hdr exposure");
-    parser.add_flag(
-        "--filmic,!--no-filmic", tonemap_prms.filmic, "Hdr filmic");
+    parser.add_option("--exposure,-e", tonemap_prms.exposure, "Hdr exposure");
+    parser.add_flag("--filmic,!--no-filmic", tonemap_prms.filmic, "Hdr filmic");
     parser.add_flag("--srgb,!--no-srgb", tonemap_prms.srgb, "Hdr srgb");
     parser.add_flag("--bvh-high-quality,!--no-bvh-high-quality",
         bvh_prms.high_quality, "Use high quality bvh mode");
@@ -124,7 +121,7 @@ int main(int argc, char* argv[]) {
 
     // fix parallel code
     if (no_parallel) {
-        bvh_prms.run_serially  = true;
+        bvh_prms.run_serially     = true;
         sceneio_prms.run_serially = true;
     }
 
@@ -198,8 +195,8 @@ int main(int argc, char* argv[]) {
         // render
         for (auto sample = 0; sample < trace_prms.num_samples;
              sample += trace_prms.samples_per_batch) {
-            auto nsamples = min(trace_prms.samples_per_batch,
-                trace_prms.num_samples - sample);
+            auto nsamples = min(
+                trace_prms.samples_per_batch, trace_prms.num_samples - sample);
             {
                 auto timer = print_timed("rendering cam{} at {:4}/{:4}",
                     trace_prms.camera_id, sample, trace_prms.num_samples);
@@ -215,8 +212,7 @@ int main(int argc, char* argv[]) {
                         save_tonemapped_with_logo(
                             outfilename, render, tonemap_prms);
                     } else {
-                        save_tonemapped(
-                            outfilename, render, tonemap_prms);
+                        save_tonemapped(outfilename, render, tonemap_prms);
                     }
                 } catch (const std::exception& e) {
                     print_fatal(e.what());
@@ -233,8 +229,7 @@ int main(int argc, char* argv[]) {
             }
             auto timer = print_timed("saving {}", outfilename);
             if (logo) {
-                save_tonemapped_with_logo(
-                    outfilename, render, tonemap_prms);
+                save_tonemapped_with_logo(outfilename, render, tonemap_prms);
             } else {
                 save_tonemapped(outfilename, render, tonemap_prms);
             }

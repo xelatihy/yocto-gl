@@ -162,11 +162,9 @@ inline T sample_hemisphere_cos_pdf(const vec<T, 3>& direction);
 
 // Sample an hemispherical direction with cosine power distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_cospower(
-    T exponent, const vec<T, 2>& ruv);
+inline vec<T, 3> sample_hemisphere_cospower(T exponent, const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_hemisphere_cospower_pdf(
-    T exponent, const vec<T, 3>& direction);
+inline T sample_hemisphere_cospower_pdf(T exponent, const vec<T, 3>& direction);
 
 // Sample a point uniformly on a disk.
 template <typename T>
@@ -278,9 +276,7 @@ inline rng_state make_rng(uint64_t seed, uint64_t seq) {
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int rand1i(rng_state& rng, int n) {
-    return _advance_rng(rng) % n;
-}
+inline int   rand1i(rng_state& rng, int n) { return _advance_rng(rng) % n; }
 inline float rand1f(rng_state& rng) {
     union {
         uint32_t u;
@@ -381,8 +377,7 @@ inline T sample_hemisphere_cos_pdf(const vec<T, 3>& direction) {
 
 // Sample an hemispherical direction with cosine power distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_cospower(
-    T exponent, const vec<T, 2>& ruv) {
+inline vec<T, 3> sample_hemisphere_cospower(T exponent, const vec<T, 2>& ruv) {
     auto z   = pow(ruv.y, 1 / (exponent + 1));
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * (T)pi * ruv.x;

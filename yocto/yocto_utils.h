@@ -381,8 +381,7 @@ inline void set_log_callback(function<void(const string&)> callback) {
 }
 template <typename... Args>
 inline void log_msg(string_view format_str, const Args&... args) {
-    if (impl::log_callback)
-        impl::log_callback(format(format_str, args...));
+    if (impl::log_callback) impl::log_callback(format(format_str, args...));
 }
 template <typename... Args>
 inline void log_info(string_view format_str, const Args&... args) {
@@ -475,26 +474,33 @@ struct range_iterator {
             return pos != other.pos;
         }
         int operator*() const { return pos; }
-        private: T pos = 0;
+
+       private:
+        T pos = 0;
     };
-    range_iterator(T start, T end) : first{first}, last{last} { }
+    range_iterator(T start, T end) : first{first}, last{last} {}
     iterator begin() const { return {first}; }
     iterator end() const { return {last}; }
-    private:
-    T       first = 0, last = 0;
+
+   private:
+    T first = 0, last = 0;
 };
 
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
 template <typename T>
-inline range_iterator<T> range(T max) { return range_iterator<T>{0, max}; }
+inline range_iterator<T> range(T max) {
+    return range_iterator<T>{0, max};
+}
 template <typename T>
-inline range_iterator<T> range(T min, T max) { return range_iterator<T>{min, max}; }
+inline range_iterator<T> range(T min, T max) {
+    return range_iterator<T>{min, max};
+}
 
 // Enumerate helper (this should not be used directly)
 template <typename T>
 struct enumerate_iterator {
     struct iterator {
-        iterator(T* data, int pos) : data{data}, pos{pos} { }
+        iterator(T* data, int pos) : data{data}, pos{pos} {}
         iterator& operator++() {
             pos++;
             return *this;
@@ -503,16 +509,18 @@ struct enumerate_iterator {
             return pos != other.pos;
         }
         pair<int&, T&> operator*() const { return {pos, *(data + pos)}; }
-        private:
-        T*         data = nullptr;
-        int        pos  = 0;
+
+       private:
+        T*  data = nullptr;
+        int pos  = 0;
     };
-    enumerate_iterator(T* data, int size) : data{data}, size{size} { }
+    enumerate_iterator(T* data, int size) : data{data}, size{size} {}
     iterator begin() const { return {data, 0}; }
     iterator end() const { return {data, size}; }
-    private:
-    T*        data = nullptr;
-    int       size = 0;
+
+   private:
+    T*  data = nullptr;
+    int size = 0;
 };
 
 // Python `enumerate()` equivalent. Construct an object that iteraterates over a

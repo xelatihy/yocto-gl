@@ -154,40 +154,40 @@ static inline void from_json(const json& js, volume<T>& value) {
 namespace yocto {
 
 // Load/save a scene in the builtin YAML format.
-static void load_yaml_scene(const string& filename, yocto_scene& scene,
-    const sceneio_params& params);
+static void load_yaml_scene(
+    const string& filename, yocto_scene& scene, const sceneio_params& params);
 static void save_yaml_scene(const string& filename, const yocto_scene& scene,
     const sceneio_params& params);
 
 // Load/save a scene from/to OBJ.
-static void load_obj_scene(const string& filename, yocto_scene& scene,
-    const sceneio_params& params);
+static void load_obj_scene(
+    const string& filename, yocto_scene& scene, const sceneio_params& params);
 static void save_obj_scene(const string& filename, const yocto_scene& scene,
     const sceneio_params& params);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static void load_ply_scene(const string& filename, yocto_scene& scene,
-    const sceneio_params& params);
+static void load_ply_scene(
+    const string& filename, yocto_scene& scene, const sceneio_params& params);
 static void save_ply_scene(const string& filename, const yocto_scene& scene,
     const sceneio_params& params);
 
 // Load/save a scene from/to glTF.
-static void load_gltf_scene(const string& filename, yocto_scene& scene,
-    const sceneio_params& params);
+static void load_gltf_scene(
+    const string& filename, yocto_scene& scene, const sceneio_params& params);
 static void save_gltf_scene(const string& filename, const yocto_scene& scene,
     const sceneio_params& params);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static void load_pbrt_scene(const string& filename, yocto_scene& scene,
-    const sceneio_params& params);
+static void load_pbrt_scene(
+    const string& filename, yocto_scene& scene, const sceneio_params& params);
 static void save_pbrt_scene(const string& filename, const yocto_scene& scene,
     const sceneio_params& params);
 
 // Load a scene
-void load_scene(const string& filename, yocto_scene& scene,
-    const sceneio_params& params) {
+void load_scene(
+    const string& filename, yocto_scene& scene, const sceneio_params& params) {
     auto ext = get_extension(filename);
     if (ext == "yaml" || ext == "YAML") {
         load_yaml_scene(filename, scene, params);
@@ -256,8 +256,8 @@ void load_voltexture(yocto_voltexture& texture, const string& dirname) {
     }
 }
 
-void load_textures(yocto_scene& scene, const string& dirname,
-    const sceneio_params& params) {
+void load_textures(
+    yocto_scene& scene, const string& dirname, const sceneio_params& params) {
     if (params.skip_textures) return;
 
     // load images
@@ -284,8 +284,7 @@ void save_texture(const yocto_texture& texture, const string& dirname) {
     save_image(dirname + texture.uri, texture.hdr_image, texture.ldr_image);
 }
 
-void save_voltexture(
-    const yocto_voltexture& texture, const string& dirname) {
+void save_voltexture(const yocto_voltexture& texture, const string& dirname) {
     save_volume(dirname + texture.uri, texture.volume_data);
 }
 
@@ -297,9 +296,8 @@ void save_textures(const yocto_scene& scene, const string& dirname,
     // save images
     parallel_foreach(
         scene.textures,
-        [&dirname](const yocto_texture& texture) {
-            save_texture(texture, dirname);
-        },
+        [&dirname](
+            const yocto_texture& texture) { save_texture(texture, dirname); },
         params.cancel_flag, params.run_serially);
 
     // save volumes
@@ -314,32 +312,31 @@ void save_textures(const yocto_scene& scene, const string& dirname,
 void load_shape(yocto_shape& shape, const string& dirname) {
     if (is_shape_preset_filename(shape.uri)) {
         auto [type, nfilename] = get_shape_preset_type(shape.uri);
-        make_preset(shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.quads_positions, shape.quads_normals,
-            shape.quads_texcoords, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius, type);
+        make_preset(shape.points, shape.lines, shape.triangles, shape.quads,
+            shape.quads_positions, shape.quads_normals, shape.quads_texcoords,
+            shape.positions, shape.normals, shape.texcoords, shape.colors,
+            shape.radius, type);
         shape.uri = nfilename;
     } else {
         load_shape(dirname + shape.uri, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.quads_positions,
             shape.quads_normals, shape.quads_texcoords, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.radius,
-            false);
+            shape.normals, shape.texcoords, shape.colors, shape.radius, false);
     }
 }
 
 void save_shape(const yocto_shape& shape, const string& dirname) {
     save_shape(dirname + shape.uri, shape.points, shape.lines, shape.triangles,
         shape.quads, shape.quads_positions, shape.quads_normals,
-        shape.quads_texcoords, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius);
+        shape.quads_texcoords, shape.positions, shape.normals, shape.texcoords,
+        shape.colors, shape.radius);
 }
 
 void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
     if (is_shape_preset_filename(subdiv.uri)) {
         auto [type, nfilename] = get_shape_preset_type(subdiv.uri);
-        make_preset(subdiv.points, subdiv.lines, subdiv.triangles,
-            subdiv.quads, subdiv.quads_positions, subdiv.quads_normals,
+        make_preset(subdiv.points, subdiv.lines, subdiv.triangles, subdiv.quads,
+            subdiv.quads_positions, subdiv.quads_normals,
             subdiv.quads_texcoords, subdiv.positions, subdiv.normals,
             subdiv.texcoords, subdiv.colors, subdiv.radius, type);
         subdiv.uri = nfilename;
@@ -360,8 +357,8 @@ void save_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
 }
 
 // Load json meshes
-void load_shapes(yocto_scene& scene, const string& dirname,
-    const sceneio_params& params) {
+void load_shapes(
+    yocto_scene& scene, const string& dirname, const sceneio_params& params) {
     if (params.skip_meshes) return;
 
     // load shapes
@@ -373,8 +370,7 @@ void load_shapes(yocto_scene& scene, const string& dirname,
     // load subdivs
     parallel_foreach(
         scene.subdivs,
-        [&dirname](
-            yocto_subdiv& subdiv) { load_subdiv(subdiv, dirname); },
+        [&dirname](yocto_subdiv& subdiv) { load_subdiv(subdiv, dirname); },
         params.cancel_flag, params.run_serially);
 }
 
@@ -386,15 +382,13 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
     // save shapes
     parallel_foreach(
         scene.shapes,
-        [&dirname](
-            const yocto_shape& shape) { save_shape(shape, dirname); },
+        [&dirname](const yocto_shape& shape) { save_shape(shape, dirname); },
         params.cancel_flag, params.run_serially);
     // save subdivs
     parallel_foreach(
         scene.subdivs,
-        [&dirname](const yocto_subdiv& subdivs) {
-            save_subdiv(subdivs, dirname);
-        },
+        [&dirname](
+            const yocto_subdiv& subdivs) { save_subdiv(subdivs, dirname); },
         params.cancel_flag, params.run_serially);
 }
 
@@ -537,9 +531,9 @@ inline void load_yaml(const string& filename, Callbacks& callbacks,
 }
 
 struct load_yaml_scene_cb : yaml_callbacks {
-    yocto_scene&              scene;
+    yocto_scene&          scene;
     const sceneio_params& params;
-    string                    ply_instances = "";
+    string                ply_instances = "";
 
     enum struct parsing_type {
         none,
@@ -559,8 +553,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
     unordered_map<string, int> mmap = {{"", -1}};
     unordered_map<string, int> smap = {{"", -1}};
 
-    load_yaml_scene_cb(
-        yocto_scene& scene, const sceneio_params& params)
+    load_yaml_scene_cb(yocto_scene& scene, const sceneio_params& params)
         : scene{scene}, params{params} {
         auto reserve_size = 1024 * 32;
         tmap.reserve(reserve_size);
@@ -816,8 +809,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
 };
 
 // Save a scene in the builtin YAML format.
-static void load_yaml_scene(const string& filename, yocto_scene& scene,
-    const sceneio_params& params) {
+static void load_yaml_scene(
+    const string& filename, yocto_scene& scene, const sceneio_params& params) {
     scene = {};
 
     try {
@@ -847,11 +840,12 @@ static void load_yaml_scene(const string& filename, yocto_scene& scene,
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
- 
+
 static inline void print_yaml_keyvalue(FILE* fs, const char* name, int value) {
     print(fs, "    {}: {}\n", name, value);
 }
-static inline void print_yaml_keyvalue(FILE* fs, const char* name, float value) {
+static inline void print_yaml_keyvalue(
+    FILE* fs, const char* name, float value) {
     print(fs, "    {}: {}\n", name, value);
 }
 static inline void print_yaml_keyvalue(
@@ -1054,7 +1048,7 @@ static void save_yaml_scene(const string& filename, const yocto_scene& scene,
 namespace yocto {
 
 struct load_obj_scene_cb : obj_callbacks {
-    yocto_scene&              scene;
+    yocto_scene&          scene;
     const sceneio_params& params;
 
     // current parsing values
@@ -1082,8 +1076,7 @@ struct load_obj_scene_cb : obj_callbacks {
     // current parse state
     bool preserve_facevarying_now = false;
 
-    load_obj_scene_cb(
-        yocto_scene& scene, const sceneio_params& params)
+    load_obj_scene_cb(yocto_scene& scene, const sceneio_params& params)
         : scene{scene}, params{params} {}
 
     // add object if needed
@@ -1148,8 +1141,7 @@ struct load_obj_scene_cb : obj_callbacks {
             if (vert.position)
                 shape.positions.push_back(opos.at(vert.position - 1));
             if (vert.texturecoord)
-                shape.texcoords.push_back(
-                    otexcoord.at(vert.texturecoord - 1));
+                shape.texcoords.push_back(otexcoord.at(vert.texturecoord - 1));
             if (vert.normal) shape.normals.push_back(onorm.at(vert.normal - 1));
             if (shape.normals.size() != 0 &&
                 shape.normals.size() != shape.positions.size()) {
@@ -1372,15 +1364,15 @@ struct load_obj_scene_cb : obj_callbacks {
 };
 
 // Loads an OBJ
-static void load_obj_scene(const string& filename, yocto_scene& scene,
-    const sceneio_params& params) {
+static void load_obj_scene(
+    const string& filename, yocto_scene& scene, const sceneio_params& params) {
     scene = {};
 
     try {
         // Parse obj
         auto obj_prms          = obj_params();
         obj_prms.geometry_only = false;
-        auto cb                   = load_obj_scene_cb{scene, params};
+        auto cb                = load_obj_scene_cb{scene, params};
         load_obj(filename, cb, obj_prms);
 
         // cleanup empty
@@ -1426,10 +1418,12 @@ static inline void print_obj_keyvalue(FILE* fs, const char* name, int value) {
 static inline void print_obj_keyvalue(FILE* fs, const char* name, float value) {
     print(fs, "{} {}\n", name, value);
 }
-static inline void print_obj_keyvalue(FILE* fs, const char* name, const vec2f& value) {
+static inline void print_obj_keyvalue(
+    FILE* fs, const char* name, const vec2f& value) {
     print(fs, "{} {} {}\n", name, value.x, value.y);
 }
-static inline void print_obj_keyvalue(FILE* fs, const char* name, const vec3f& value) {
+static inline void print_obj_keyvalue(
+    FILE* fs, const char* name, const vec3f& value) {
     print(fs, "{} {} {} {}\n", name, value.x, value.y, value.z);
 }
 static inline void print_obj_keyvalue(
@@ -1589,8 +1583,8 @@ static void save_obj(const string& filename, const yocto_scene& scene,
                 print_obj_keyvalue(
                     fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
         }
-        auto mask = obj_vertex{1, shape.texcoords.empty() ? 0 : 1,
-            shape.normals.empty() ? 0 : 1};
+        auto mask = obj_vertex{
+            1, shape.texcoords.empty() ? 0 : 1, shape.normals.empty() ? 0 : 1};
         auto vert = [mask, offset](int i) {
             return obj_vertex{(i + offset.position + 1) * mask.position,
                 (i + offset.texturecoord + 1) * mask.texturecoord,
@@ -1735,8 +1729,8 @@ void print_obj_camera(const yocto_camera& camera) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_ply_scene(const string& filename, yocto_scene& scene,
-    const sceneio_params& params) {
+static void load_ply_scene(
+    const string& filename, yocto_scene& scene, const sceneio_params& params) {
     scene = {};
 
     try {
@@ -2275,8 +2269,8 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
 }
 
 // Load a scene
-static void load_gltf_scene(const string& filename, yocto_scene& scene,
-    const sceneio_params& params) {
+static void load_gltf_scene(
+    const string& filename, yocto_scene& scene, const sceneio_params& params) {
     // initialization
     scene = {};
 
@@ -2469,11 +2463,11 @@ static void scene_to_gltf(const yocto_scene& scene, json& js) {
                 pjs["mode"] = 4;
             }
         } else {
-            auto positions     = vector<vec3f>{};
-            auto normals       = vector<vec3f>{};
+            auto positions = vector<vec3f>{};
+            auto normals   = vector<vec3f>{};
             auto texcoords = vector<vec2f>{};
-            auto quads         = vector<vec4i>{};
-            auto triangles     = vector<vec3i>{};
+            auto quads     = vector<vec4i>{};
+            auto triangles = vector<vec3i>{};
             split_facevarying(quads, positions, normals, texcoords,
                 shape.quads_positions, shape.quads_normals,
                 shape.quads_texcoords, shape.positions, shape.normals,
@@ -2569,15 +2563,14 @@ static void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
         quads_to_triangles(qtriangles, shape.quads);
         write_values(fs, qtriangles);
     } else {
-        auto positions     = vector<vec3f>{};
-        auto normals       = vector<vec3f>{};
+        auto positions = vector<vec3f>{};
+        auto normals   = vector<vec3f>{};
         auto texcoords = vector<vec2f>{};
-        auto quads         = vector<vec4i>{};
-        auto triangles     = vector<vec3i>{};
+        auto quads     = vector<vec4i>{};
+        auto triangles = vector<vec3i>{};
         split_facevarying(quads, positions, normals, texcoords,
-            shape.quads_positions, shape.quads_normals,
-            shape.quads_texcoords, shape.positions, shape.normals,
-            shape.texcoords);
+            shape.quads_positions, shape.quads_normals, shape.quads_texcoords,
+            shape.positions, shape.normals, shape.texcoords);
         quads_to_triangles(triangles, quads);
         write_values(fs, positions);
         write_values(fs, normals);
@@ -2649,7 +2642,8 @@ static vec3f pbrt_fresnel_dielectric(float cosw, const vec3f& eta_) {
 
 // Compute the fresnel term for metals. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-static vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
+static vec3f pbrt_fresnel_metal(
+    float cosw, const vec3f& eta, const vec3f& etak) {
     if (etak == zero3f) return pbrt_fresnel_dielectric(cosw, eta);
 
     cosw       = clamp(cosw, (float)-1, (float)1);
@@ -2677,12 +2671,12 @@ static vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak)
 }
 
 struct load_pbrt_scene_cb : pbrt_callbacks {
-    yocto_scene&              scene;
+    yocto_scene&          scene;
     const sceneio_params& params;
-    const string&             filename;
+    const string&         filename;
 
-    load_pbrt_scene_cb(yocto_scene& scene,
-        const sceneio_params& params, const string& filename)
+    load_pbrt_scene_cb(yocto_scene& scene, const sceneio_params& params,
+        const string& filename)
         : scene{scene}, params{params}, filename{filename} {}
 
     bool verbose                 = false;
@@ -2726,8 +2720,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         return (int)scene.materials.size() - 1;
     }
 
-    void get_scaled_texture3f(
-        const pbrt_textured<pbrt_spectrum3f>& textured, vec3f& value, int& texture) {
+    void get_scaled_texture3f(const pbrt_textured<pbrt_spectrum3f>& textured,
+        vec3f& value, int& texture) {
         if (textured.texture == "") {
             value   = {textured.value.x, textured.value.y, textured.value.z};
             texture = -1;
@@ -2762,11 +2756,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             if (aspect < 0) aspect = last_film_aspect;
             if (aspect < 0) aspect = 1;
             if (aspect >= 1) {
-                set_perspectivey(camera, radians(perspective.fov),
-                    aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+                set_perspectivey(camera, radians(perspective.fov), aspect,
+                    clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
             } else {
-                set_perspectivex(camera, radians(perspective.fov),
-                    aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+                set_perspectivex(camera, radians(perspective.fov), aspect,
+                    clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
             }
         } else if (holds_alternative<pbrt_realistic_camera>(pcamera)) {
             auto& realistic     = get<pbrt_realistic_camera>(pcamera);
@@ -2805,9 +2799,9 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto        shape    = yocto_shape{};
         shape.uri = "shapes/shape__" + to_string(shape_id++) + ".ply";
         if (holds_alternative<pbrt_trianglemesh_shape>(pshape)) {
-            auto& mesh          = get<pbrt_trianglemesh_shape>(pshape);
-            shape.positions     = mesh.P;
-            shape.normals       = mesh.N;
+            auto& mesh      = get<pbrt_trianglemesh_shape>(pshape);
+            shape.positions = mesh.P;
+            shape.normals   = mesh.N;
             shape.texcoords = mesh.uv;
             for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
             shape.triangles = mesh.indices;
@@ -2816,8 +2810,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             shape.positions = mesh.P;
             shape.triangles = mesh.indices;
             shape.normals.resize(shape.positions.size());
-            compute_normals(
-                shape.normals, shape.triangles, shape.positions);
+            compute_normals(shape.normals, shape.triangles, shape.positions);
         } else if (holds_alternative<pbrt_plymesh_shape>(pshape)) {
             auto& mesh = get<pbrt_plymesh_shape>(pshape);
             shape.uri  = mesh.filename;
@@ -3249,8 +3242,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
 };
 
 // load pbrt scenes
-static void load_pbrt_scene(const string& filename, yocto_scene& scene,
-    const sceneio_params& params) {
+static void load_pbrt_scene(
+    const string& filename, yocto_scene& scene, const sceneio_params& params) {
     scene = yocto_scene{};
 
     try {

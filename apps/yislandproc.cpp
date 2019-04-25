@@ -242,9 +242,9 @@ struct load_island_shape_callbacks : obj_callbacks {
     const string&                           parent_name;
 
     load_island_shape_callbacks(vector<yocto_shape>& shapes,
-        vector<yocto_material>&                             materials,
-        unordered_map<string, vector<vec2i>>&               smap,
-        unordered_map<string, disney_material>&             mmap,
+        vector<yocto_material>&                      materials,
+        unordered_map<string, vector<vec2i>>&        smap,
+        unordered_map<string, disney_material>&      mmap,
         unordered_map<string, int>& tmap, yocto_scene& scene,
         const string& filename, const string& parent_name)
         : shapes{shapes}
@@ -425,7 +425,7 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
         obj_prms.exit_on_error = false;
         obj_prms.geometry_only = true;
         obj_prms.flip_texcoord = true;
-        auto cb                   = load_island_shape_callbacks{
+        auto cb                = load_island_shape_callbacks{
             shapes, materials, smap, mmap, tmap, scene, filename, parent_name};
         load_obj(dirname + filename, cb, obj_prms);
 
@@ -452,12 +452,12 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
                     split_texcoords, shape.quads_positions, shape.quads_normals,
                     shape.quads_texcoords, shape.positions, shape.normals,
                     shape.texcoords);
-                shape.quads               = split_quads;
-                shape.positions           = split_positions;
-                shape.normals             = split_normals;
+                shape.quads           = split_quads;
+                shape.positions       = split_positions;
+                shape.normals         = split_normals;
                 shape.texcoords       = split_texcoords;
-                shape.quads_positions     = {};
-                shape.quads_normals       = {};
+                shape.quads_positions = {};
+                shape.quads_normals   = {};
                 shape.quads_texcoords = {};
                 if (shape.texcoords.empty()) {
                     auto all_triangles = true;
@@ -468,8 +468,7 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
                         }
                     }
                     if (all_triangles) {
-                        quads_to_triangles(
-                            shape.triangles, shape.quads);
+                        quads_to_triangles(shape.triangles, shape.quads);
                         shape.quads = {};
                     }
                 }
@@ -559,9 +558,9 @@ void load_island_archive(const string& filename, const string& dirname,
     }
 }
 
-void load_island_variant_archive(const string& filename,
-    const string& dirname, yocto_scene& scene, const string& parent_name,
-    const mat4f& parent_xform, vector<yocto_instance>& instances,
+void load_island_variant_archive(const string& filename, const string& dirname,
+    yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
+    vector<yocto_instance>&                 instances,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
@@ -618,9 +617,9 @@ void load_island_variants(const string& filename, const string& dirname,
             vjs.at("instancedPrimitiveJsonFiles").items()) {
             auto filename = ijs.at("jsonFile").get<std::string>();
             if (ijs.at("type") == "archive") {
-                load_island_variant_archive(filename, dirname, scene,
-                    vname, vjs.at("transformMatrix"), instances[vname], smap,
-                    mmap, tmap);
+                load_island_variant_archive(filename, dirname, scene, vname,
+                    vjs.at("transformMatrix"), instances[vname], smap, mmap,
+                    tmap);
             } else {
                 throw io_error("unknown instance type");
             }
@@ -634,8 +633,8 @@ void load_island_element(const string& filename, const string& dirname,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
     unordered_map<string, vector<yocto_instance>> variants;
-    load_island_variants("json/isBayCedarA1/isBayCedarA1.json", dirname,
-        scene, parent_name, identity_mat4f, variants, smap, mmap, tmap);
+    load_island_variants("json/isBayCedarA1/isBayCedarA1.json", dirname, scene,
+        parent_name, identity_mat4f, variants, smap, mmap, tmap);
 
     print_info("{}", filename);
     auto buffer = ""s;
@@ -702,8 +701,7 @@ void load_island_curve(const string& filename, const string& dirname,
         scene.shapes.push_back(shape);
         smap[outname] = {{(int)scene.shapes.size() - 1, material}};
     }
-    add_island_instance(
-        scene, parent_name, parent_xform, smap.at(outname));
+    add_island_instance(scene, parent_name, parent_xform, smap.at(outname));
 }
 
 void load_island_curvetube(const string& filename, const string& dirname,
@@ -788,8 +786,7 @@ void load_island_curvetube(const string& filename, const string& dirname,
         scene.shapes.push_back(shape);
         smap[outname] = {{(int)scene.shapes.size() - 1, ssmaterial}};
     }
-    add_island_instance(
-        scene, parent_name, parent_xform, smap.at(outname));
+    add_island_instance(scene, parent_name, parent_xform, smap.at(outname));
 }
 
 void load_island_elements(const string& filename, const string& dirname,
@@ -892,8 +889,8 @@ void load_island_elements(const string& filename, const string& dirname,
     // rename materials and shapes
 }
 
-void load_textures(yocto_scene& scene, const string& dirname,
-    const sceneio_params& params);
+void load_textures(
+    yocto_scene& scene, const string& dirname, const sceneio_params& params);
 
 void load_island_scene(const std::string& filename, yocto_scene& scene,
     const sceneio_params& params) {
@@ -1094,7 +1091,7 @@ int main(int argc, char** argv) {
 
     // save scene
     try {
-        auto timer                 = print_timed("saving scene");
+        auto timer              = print_timed("saving scene");
         save_prms.skip_textures = false;
         save_prms.run_serially  = false;
         // save_prms.ply_instances = true;

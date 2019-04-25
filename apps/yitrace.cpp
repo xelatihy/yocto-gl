@@ -88,12 +88,12 @@ struct app_scene {
     string name      = "";
 
     // options
-    sceneio_params    sceneio_prms    = {};
-    bvh_params     bvh_prms     = {};
-    trace_params   trace_prms   = {};
-    tonemap_params tonemap_prms = {};
-    int                   preview_ratio   = 8;
-    vec2i                 image_size      = {0, 0};
+    sceneio_params sceneio_prms  = {};
+    bvh_params     bvh_prms      = {};
+    trace_params   trace_prms    = {};
+    tonemap_params tonemap_prms  = {};
+    int            preview_ratio = 8;
+    vec2i          image_size    = {0, 0};
 
     // scene
     yocto_scene scene      = {};
@@ -130,19 +130,18 @@ struct app_state {
     deque<string>    errors;
 
     // default options
-    sceneio_params    sceneio_prms    = {};
+    sceneio_params sceneio_prms = {};
     bvh_params     bvh_prms     = {};
     trace_params   trace_prms   = {};
     tonemap_params tonemap_prms = {};
-    bool                  add_skyenv      = false;
+    bool           add_skyenv   = false;
 };
 
 void update_app_render(const string& filename, image<vec4f>& render,
     image<vec4f>& display, image<vec4f>& preview, trace_state& state,
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
-    const trace_params&   trace_prms,
-    const tonemap_params& tonemap_prms, int preview_ratio,
-    atomic<bool>& stop, atomic<int>& current_sample,
+    const trace_params& trace_prms, const tonemap_params& tonemap_prms,
+    int preview_ratio, atomic<bool>& stop, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue) {
     auto preview_options = trace_prms;
     preview_options.image_size /= preview_ratio;
@@ -175,9 +174,8 @@ void update_app_render(const string& filename, image<vec4f>& render,
             trace_prms.num_samples - current_sample);
         parallel_foreach(
             regions,
-            [num_samples, &trace_prms, &tonemap_prms, &render, &display,
-                &scene, &lights, &bvh, &state,
-                &queue](const image_region& region) {
+            [num_samples, &trace_prms, &tonemap_prms, &render, &display, &scene,
+                &lights, &bvh, &state, &queue](const image_region& region) {
                 trace_region(render, state, scene, bvh, lights, region,
                     num_samples, trace_prms);
                 tonemap(display, render, region, tonemap_prms);
@@ -189,16 +187,16 @@ void update_app_render(const string& filename, image<vec4f>& render,
 }
 
 void add_new_scene(app_state& app, const string& filename) {
-    auto& scn           = app.scenes.emplace_back();
-    scn.filename        = filename;
-    scn.imagename       = get_noextension(filename) + ".png";
-    scn.outname         = get_noextension(filename) + ".edited.yaml";
-    scn.name            = get_filename(scn.filename);
-    scn.sceneio_prms    = app.sceneio_prms;
+    auto& scn        = app.scenes.emplace_back();
+    scn.filename     = filename;
+    scn.imagename    = get_noextension(filename) + ".png";
+    scn.outname      = get_noextension(filename) + ".edited.yaml";
+    scn.name         = get_filename(scn.filename);
+    scn.sceneio_prms = app.sceneio_prms;
     scn.trace_prms   = app.trace_prms;
     scn.bvh_prms     = app.bvh_prms;
     scn.tonemap_prms = app.tonemap_prms;
-    scn.add_skyenv      = app.add_skyenv;
+    scn.add_skyenv   = app.add_skyenv;
     scn.task_queue.emplace_back(app_task_type::load_scene);
     app.selected = (int)app.scenes.size() - 1;
 }
@@ -279,8 +277,8 @@ void draw_opengl_widgets(const opengl_window& win) {
             win, "height", trace_prms.image_size.y, 0, 4096);
         draw_slider_opengl_widget(
             win, "nsamples", trace_prms.num_samples, 16, 4096);
-        draw_combobox_opengl_widget(win, "tracer",
-            (int&)trace_prms.sampler_type, trace_sampler_names);
+        draw_combobox_opengl_widget(
+            win, "tracer", (int&)trace_prms.sampler_type, trace_sampler_names);
         draw_combobox_opengl_widget(win, "false color",
             (int&)trace_prms.falsecolor_type, trace_falsecolor_names);
         draw_slider_opengl_widget(
@@ -295,14 +293,12 @@ void draw_opengl_widgets(const opengl_window& win) {
         continue_opengl_widget_line(win);
         draw_checkbox_opengl_widget(win, "srgb", tonemap_prms.srgb);
         if (trace_prms != scn.trace_prms) {
-            scn.task_queue.emplace_back(
-                app_task_type::apply_edit, app_edit{typeid(trace_params),
-                                               -1, trace_prms, false});
+            scn.task_queue.emplace_back(app_task_type::apply_edit,
+                app_edit{typeid(trace_params), -1, trace_prms, false});
         }
         if (tonemap_prms != scn.tonemap_prms) {
             scn.task_queue.emplace_back(app_task_type::apply_edit,
-                app_edit{
-                    typeid(tonemap_params), -1, tonemap_prms, false});
+                app_edit{typeid(tonemap_params), -1, tonemap_prms, false});
         }
         end_header_opengl_widget(win);
     }
@@ -454,8 +450,7 @@ void load_element(
         load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.quads_positions,
             shape.quads_normals, shape.quads_texcoords, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.radius,
-            false);
+            shape.normals, shape.texcoords, shape.colors, shape.radius, false);
     } else if (type == typeid(yocto_subdiv)) {
         // TODO: this needs more fixing?
         auto& subdiv = scene.subdivs[index];
@@ -571,8 +566,8 @@ void update(app_state& app) {
                 auto reload_element = false, update_bvh = false,
                      update_lights = false;
                 apply_edit(scn.filename, scn.scene, scn.trace_prms,
-                    scn.tonemap_prms, reload_element, update_lights,
-                    update_bvh, task.edit);
+                    scn.tonemap_prms, reload_element, update_lights, update_bvh,
+                    task.edit);
                 log_info("done editing {}", scn.filename);
                 if (reload_element) {
                     scn.load_done = false;
@@ -747,9 +742,8 @@ void update(app_state& app) {
             case app_task_type::build_bvh: {
                 log_info("start building bvh {}", scn.filename);
                 scn.bvh_done = false;
-                task.result  = async([&scn]() {
-                    build_bvh(scn.scene, scn.bvh, scn.bvh_prms);
-                });
+                task.result  = async(
+                    [&scn]() { build_bvh(scn.scene, scn.bvh, scn.bvh_prms); });
             } break;
             case app_task_type::refit_bvh: {
                 log_info("start refitting bvh {}", scn.filename);
@@ -789,8 +783,7 @@ void update(app_state& app) {
                     is_sampler_lit(scn.trace_prms)) {
                     log_info(
                         "no lights presents, switching to eyelight shader");
-                    scn.trace_prms.sampler_type =
-                        trace_sampler_type::eyelight;
+                    scn.trace_prms.sampler_type = trace_sampler_type::eyelight;
                 }
                 scn.render_sample = 0;
                 scn.name = format("{} [{}x{}@{}]", get_filename(scn.filename),
@@ -799,8 +792,8 @@ void update(app_state& app) {
                 task.result = async([&scn, &task]() {
                     update_app_render(scn.filename, scn.render, scn.display,
                         scn.preview, scn.state, scn.scene, scn.lights, scn.bvh,
-                        scn.trace_prms, scn.tonemap_prms,
-                        scn.preview_ratio, task.stop, task.current, task.queue);
+                        scn.trace_prms, scn.tonemap_prms, scn.preview_ratio,
+                        task.stop, task.current, task.queue);
                 });
                 if (scn.render.size() != scn.image_size) {
                     scn.render.resize(scn.image_size);
@@ -853,12 +846,11 @@ void run_ui(app_state& app) {
         if (app.selected >= 0 && app.scenes[app.selected].load_done &&
             (mouse_left || mouse_right) && !alt_down && !widgets_active) {
             auto& scn        = app.scenes[app.selected];
-            auto& old_camera = scn.scene.cameras.at(
-                scn.trace_prms.camera_id);
-            auto camera = scn.scene.cameras.at(scn.trace_prms.camera_id);
-            auto dolly  = 0.0f;
-            auto pan    = zero2f;
-            auto rotate = zero2f;
+            auto& old_camera = scn.scene.cameras.at(scn.trace_prms.camera_id);
+            auto  camera     = scn.scene.cameras.at(scn.trace_prms.camera_id);
+            auto  dolly      = 0.0f;
+            auto  pan        = zero2f;
+            auto  rotate     = zero2f;
             if (mouse_left && !shift_down)
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
@@ -883,9 +875,8 @@ void run_ui(app_state& app) {
                 scn.image_scale, scn.render.size());
             if (ij.x < 0 || ij.x >= scn.render.size().x || ij.y < 0 ||
                 ij.y >= scn.render.size().y) {
-                auto& camera = scn.scene.cameras.at(
-                    scn.trace_prms.camera_id);
-                auto ray = eval_camera(
+                auto& camera = scn.scene.cameras.at(scn.trace_prms.camera_id);
+                auto  ray    = eval_camera(
                     camera, ij, scn.render.size(), {0.5f, 0.5f}, zero2f);
                 if (auto isec = bvh_intersection{};
                     intersect_bvh(scn.scene, scn.bvh, ray, isec)) {
@@ -912,8 +903,8 @@ int main(int argc, char* argv[]) {
     // application
     app_state app{};
     app.trace_prms.samples_per_batch = 1;
-    auto no_parallel                    = false;
-    auto filenames                      = vector<string>{};
+    auto no_parallel                 = false;
+    auto filenames                   = vector<string>{};
 
     // names for enums
     auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
@@ -933,22 +924,21 @@ int main(int argc, char* argv[]) {
     parser.add_option("--camera", app.trace_prms.camera_id, "Camera index.");
     parser.add_option("--hres,-R", app.trace_prms.image_size.x,
         "Image horizontal resolution.");
-    parser.add_option("--vres,-r", app.trace_prms.image_size.y,
-        "Image vertical resolution.");
+    parser.add_option(
+        "--vres,-r", app.trace_prms.image_size.y, "Image vertical resolution.");
     parser.add_option(
         "--nsamples,-s", app.trace_prms.num_samples, "Number of samples.");
     parser
-        .add_option(
-            "--tracer,-t", app.trace_prms.sampler_type, "Tracer type.")
+        .add_option("--tracer,-t", app.trace_prms.sampler_type, "Tracer type.")
         ->transform(CLI::IsMember(trace_sampler_type_namemap));
     parser
         .add_option("--falsecolor,-F", app.trace_prms.falsecolor_type,
             "Tracer false color type.")
         ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
-    parser.add_option("--nbounces", app.trace_prms.max_bounces,
-        "Maximum number of bounces.");
-    parser.add_option("--pixel-clamp", app.trace_prms.pixel_clamp,
-        "Final pixel clamping.");
+    parser.add_option(
+        "--nbounces", app.trace_prms.max_bounces, "Maximum number of bounces.");
+    parser.add_option(
+        "--pixel-clamp", app.trace_prms.pixel_clamp, "Final pixel clamping.");
     parser.add_option("--seed", app.trace_prms.random_seed,
         "Seed for the random number generators.");
     parser.add_flag("--env-hidden,!--no-env-hidden",
@@ -982,9 +972,9 @@ int main(int argc, char* argv[]) {
 
     // fix parallel code
     if (no_parallel) {
-        app.bvh_prms.run_serially   = true;
-        app.sceneio_prms.run_serially  = true;
-        app.trace_prms.run_serially = true;
+        app.bvh_prms.run_serially     = true;
+        app.sceneio_prms.run_serially = true;
+        app.trace_prms.run_serially   = true;
     }
 
     // loading images

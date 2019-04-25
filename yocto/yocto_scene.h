@@ -169,17 +169,17 @@ struct yocto_shape {
     vector<vec4i> quads     = {};
 
     // face-varying primitives
-    vector<vec4i> quads_positions     = {};
-    vector<vec4i> quads_normals       = {};
+    vector<vec4i> quads_positions = {};
+    vector<vec4i> quads_normals   = {};
     vector<vec4i> quads_texcoords = {};
 
     // vertex data
-    vector<vec3f> positions     = {};
-    vector<vec3f> normals       = {};
+    vector<vec3f> positions = {};
+    vector<vec3f> normals   = {};
     vector<vec2f> texcoords = {};
-    vector<vec4f> colors        = {};
-    vector<float> radius        = {};
-    vector<vec4f> tangents = {};
+    vector<vec4f> colors    = {};
+    vector<float> radius    = {};
+    vector<vec4f> tangents  = {};
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -212,16 +212,16 @@ struct yocto_subdiv {
     vector<vec4i> quads     = {};
 
     // face-varying primitives
-    vector<vec4i> quads_positions     = {};
-    vector<vec4i> quads_normals       = {};
+    vector<vec4i> quads_positions = {};
+    vector<vec4i> quads_normals   = {};
     vector<vec4i> quads_texcoords = {};
 
     // vertex data
-    vector<vec3f> positions     = {};
-    vector<vec3f> normals       = {};
+    vector<vec3f> positions = {};
+    vector<vec3f> normals   = {};
     vector<vec2f> texcoords = {};
-    vector<vec4f> colors        = {};
-    vector<float> radius        = {};
+    vector<vec4f> colors    = {};
+    vector<float> radius    = {};
 };
 
 // Instance of a visible shape in the scene.
@@ -377,8 +377,7 @@ void add_sky(yocto_scene& scene, float sun_angle = pif / 4);
 void trim_memory(yocto_scene& scene);
 
 // Checks for validity of the scene.
-void print_validation(
-    const yocto_scene& scene, bool skip_textures = false);
+void print_validation(const yocto_scene& scene, bool skip_textures = false);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f eval_position(
@@ -393,20 +392,19 @@ float eval_radius(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
 pair<vec3f, bool> eval_tangsp(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-vec3f eval_perturbed_normal(const yocto_scene& scene,
-    const yocto_shape& shape, int element_id, const vec2f& element_uv,
-    const vec3f& normalmap);
+vec3f eval_perturbed_normal(const yocto_scene& scene, const yocto_shape& shape,
+    int element_id, const vec2f& element_uv, const vec3f& normalmap);
 // Shape element values.
-vec3f eval_element_normal(const yocto_shape& shape, int element_id);
+vec3f             eval_element_normal(const yocto_shape& shape, int element_id);
 pair<vec3f, bool> eval_element_tangents(
     const yocto_shape& shape, int element_id, const vec2f& element_uv = zero2f);
 
 // Sample a shape element based on area/length.
-void sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf);
+void             sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf);
 pair<int, vec2f> sample_shape(const yocto_shape& shape,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
-float            sample_shape_pdf(const yocto_shape& shape,
-               const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
+float sample_shape_pdf(const yocto_shape& shape, const vector<float>& elem_cdf,
+    int element_id, const vec2f& element_uv);
 
 // Evaluate a texture.
 vec2i texture_size(const yocto_texture& texture);
@@ -417,9 +415,9 @@ vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
     bool clamp_to_edge = false);
 float lookup_voltexture(
     const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear);
-float eval_voltexture(const yocto_voltexture& texture,
-    const vec3f& texcoord, bool ldr_as_linear = false,
-    bool no_interpolation = false, bool clamp_to_edge = false);
+float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
+    bool ldr_as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float camera_fovx(const yocto_camera& camera);
@@ -446,8 +444,8 @@ ray3f eval_camera(const yocto_camera& camera, const vec2i& image_ij,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
 // Generates a ray from a camera for pixel index `idx`, the image size,
 // the sub-pixel coordinates `pixel_uv` and the lens coordinates `lens_uv`.
-ray3f eval_camera(const yocto_camera& camera, int idx,
-    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
+ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
+    const vec2f& pixel_uv, const vec2f& lens_uv);
 
 // Material values packed into a convenience structure.
 struct material_point {
@@ -470,11 +468,10 @@ material_point eval_material(const yocto_scene& scene,
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
-vec3f eval_position(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec3f eval_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    bool non_rigid_frame = false);
+vec3f eval_position(const yocto_scene& scene, const yocto_instance& instance,
+    int element_id, const vec2f& element_uv);
+vec3f eval_normal(const yocto_scene& scene, const yocto_instance& instance,
+    int element_id, const vec2f& element_uv, bool non_rigid_frame = false);
 vec3f eval_perturbed_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     const vec3f& normalmap, bool non_rigid_frame = false);
@@ -493,8 +490,7 @@ vec3f eval_direction(
 vec3f eval_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vec3f& direction);
 // Evaluate all environment emission.
-vec3f eval_environment(
-    const yocto_scene& scene, const vec3f& direction);
+vec3f eval_environment(const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
 void  sample_environment_cdf(const yocto_scene& scene,
@@ -514,8 +510,7 @@ float sample_environment_pdf(const yocto_scene& scene,
 namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
-inline int keyframe_index(
-    const vector<float>& times, const float& time);
+inline int keyframe_index(const vector<float>& times, const float& time);
 
 // Evaluates a keyframed value using step interpolation.
 template <typename T>
@@ -545,8 +540,7 @@ inline T keyframe_bezier(
 namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
-inline int keyframe_index(
-    const vector<float>& times, const float& time) {
+inline int keyframe_index(const vector<float>& times, const float& time) {
     for (auto i = 0; i < times.size(); i++)
         if (times[i] > time) return i;
     return (int)times.size();

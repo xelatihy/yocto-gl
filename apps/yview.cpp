@@ -43,7 +43,7 @@ void print_obj_camera(const yocto_camera& camera);
 struct drawgl_shape {
     opengl_array_buffer  positions_buffer     = {};
     opengl_array_buffer  normals_buffer       = {};
-    opengl_array_buffer  texcoords_buffer = {};
+    opengl_array_buffer  texcoords_buffer     = {};
     opengl_array_buffer  colors_buffer        = {};
     opengl_array_buffer  tangentspaces_buffer = {};
     opengl_elementbuffer points_buffer        = {};
@@ -166,7 +166,7 @@ struct app_scene {
 
     // options
     sceneio_params sceneio_prms = {};
-    drawgl_params     drawgl_prms = {};
+    drawgl_params  drawgl_prms  = {};
 
     // scene
     yocto_scene scene = {};
@@ -197,7 +197,7 @@ struct app_state {
 
     // default options
     sceneio_params sceneio_prms = {};
-    drawgl_params     drawgl_prms = {};
+    drawgl_params  drawgl_prms  = {};
 };
 
 void add_new_scene(app_state& app, const string& filename) {
@@ -207,7 +207,7 @@ void add_new_scene(app_state& app, const string& filename) {
     scn.outname      = get_noextension(filename) + ".edited.yaml";
     scn.name         = get_filename(scn.filename);
     scn.sceneio_prms = app.sceneio_prms;
-    scn.drawgl_prms = app.drawgl_prms;
+    scn.drawgl_prms  = app.drawgl_prms;
     scn.task_queue.emplace_back(app_task_type::load_scene);
     app.selected = (int)app.scenes.size() - 1;
 }
@@ -757,9 +757,9 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
                 init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
             }
         } else {
-            auto quads         = vector<vec4i>{};
-            auto positions     = vector<vec3f>{};
-            auto normals       = vector<vec3f>{};
+            auto quads     = vector<vec4i>{};
+            auto positions = vector<vec3f>{};
+            auto normals   = vector<vec3f>{};
             auto texcoords = vector<vec2f>{};
             split_facevarying(quads, positions, normals, texcoords,
                 shape.quads_positions, shape.quads_normals,
@@ -1019,8 +1019,7 @@ void load_element(
         load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.quads_positions,
             shape.quads_normals, shape.quads_texcoords, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.radius,
-            false);
+            shape.normals, shape.texcoords, shape.colors, shape.radius, false);
     } else if (type == typeid(yocto_subdiv)) {
         // TODO: this needs more fixing?
         auto& subdiv = scene.subdivs[index];
@@ -1059,9 +1058,8 @@ void update(app_state& app) {
             log_info("start editing {}", scn.filename);
             try {
                 auto reload_element = false;
-                apply_edit(scn.filename, scn.scene, scn.lights,
-                    scn.drawgl_prms, scn.time, scn.anim_group, reload_element,
-                    task.edit);
+                apply_edit(scn.filename, scn.scene, scn.lights, scn.drawgl_prms,
+                    scn.time, scn.anim_group, reload_element, task.edit);
                 log_info("done editing {}", scn.filename);
                 if (reload_element) {
                     scn.load_done = false;

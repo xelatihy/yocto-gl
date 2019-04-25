@@ -301,7 +301,7 @@ inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
     const vec3f& pos, float max_distance, bvh_intersection& intersection,
     bool find_any = false, bool non_rigid_frames = true);
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL INTERFACE
@@ -768,7 +768,8 @@ static inline void embree_error(void* ctx, RTCError code, const char* str) {
 
 // Embree memory
 inline atomic<ssize_t> embree_memory = 0;
-static inline bool embree_memory_monitor(void* userPtr, ssize_t bytes, bool post) {
+static inline bool     embree_memory_monitor(
+        void* userPtr, ssize_t bytes, bool post) {
     embree_memory += bytes;
     return true;
 }
@@ -1294,8 +1295,8 @@ static inline void make_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 }
 
 // Build BVH nodes
-static inline void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
-    const bvh_params& params) {
+static inline void build_bvh_serial(vector<bvh_node>& nodes,
+    vector<bvh_prim>& prims, const bvh_params& params) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
@@ -1324,9 +1325,9 @@ static inline void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& p
         // split into two children
         if (end - start > bvh_max_prims) {
             // get split
-            auto [mid, split_axis] =
-                (params.high_quality) ? split_sah(prims, start, end)
-                                       : split_balanced(prims, start, end);
+            auto [mid, split_axis] = (params.high_quality)
+                                         ? split_sah(prims, start, end)
+                                         : split_balanced(prims, start, end);
 
             // make an internal node
             node.is_internal      = true;
@@ -1352,8 +1353,8 @@ static inline void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& p
 }
 
 // Build BVH nodes
-static inline void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
-    const bvh_params& params) {
+static inline void build_bvh_parallel(vector<bvh_node>& nodes,
+    vector<bvh_prim>& prims, const bvh_params& params) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
@@ -1405,10 +1406,10 @@ static inline void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>&
                 // split into two children
                 if (end - start > bvh_max_prims) {
                     // get split
-                    auto [mid, split_axis] =
-                        (params.high_quality)
-                            ? split_sah(prims, start, end)
-                            : split_balanced(prims, start, end);
+                    auto [mid, split_axis] = (params.high_quality)
+                                                 ? split_sah(prims, start, end)
+                                                 : split_balanced(
+                                                       prims, start, end);
 
                     // make an internal node
                     {
@@ -1521,7 +1522,7 @@ inline void build_bvh(bvh_shape& bvh, const vector<int>& points,
     }
 }
 template <typename GetInstance>
- inline void build_bvh(bvh_scene& bvh, int num_instances,
+inline void build_bvh(bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const bvh_params& params) {
 #if YOCTO_EMBREE
     if (params.use_embree) {
@@ -1569,7 +1570,7 @@ static inline void refit_bvh(
     }
 }
 
- inline void refit_bvh(bvh_shape& bvh, const vector<int>& points,
+inline void refit_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
@@ -1612,7 +1613,7 @@ static inline void refit_bvh(
 }
 
 template <typename GetInstance>
- inline void refit_bvh(bvh_scene& bvh, int num_instances,
+inline void refit_bvh(bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const bvh_params& params) {
 #if YOCTO_EMBREE
     if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
@@ -1634,7 +1635,7 @@ template <typename GetInstance>
 
 // Intersect ray with a bvh.
 template <bool IsInstanced, typename PrimitiveIntersect>
- inline bool intersect_bvh(const vector<bvh_node>& nodes, const ray3f& ray_,
+inline bool intersect_bvh(const vector<bvh_node>& nodes, const ray3f& ray_,
     bvh_intersection& intersection, bool find_any,
     const PrimitiveIntersect& intersect_primitive) {
     // check empty
@@ -1704,7 +1705,7 @@ template <bool IsInstanced, typename PrimitiveIntersect>
     return hit;
 }
 
- inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points,
+inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
@@ -1760,7 +1761,7 @@ template <bool IsInstanced, typename PrimitiveIntersect>
     }
 }
 template <typename GetInstance, typename IntersectShape>
- inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
+inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const IntersectShape& intersect_shape,
     const ray3f& ray, bvh_intersection& intersection, bool find_any,
     bool non_rigid_frames) {
@@ -1792,7 +1793,7 @@ template <typename GetInstance, typename IntersectShape>
 
 // Intersect ray with a bvh.
 template <bool IsInstanced, typename PrimitiveOverlap>
- inline bool overlap_bvh_nodes(const vector<bvh_node>& nodes, const vec3f& pos,
+inline bool overlap_bvh_nodes(const vector<bvh_node>& nodes, const vec3f& pos,
     float max_distance, bvh_intersection& intersection, bool find_any,
     const PrimitiveOverlap& overlap_primitive) {
     // check if empty
@@ -1849,7 +1850,7 @@ template <bool IsInstanced, typename PrimitiveOverlap>
 }
 
 // Finds the closest element with a bvh.
- inline bool overlap_bvh(const bvh_shape& bvh, const vector<int>& points,
+inline bool overlap_bvh(const bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
@@ -1920,7 +1921,7 @@ template <bool IsInstanced, typename PrimitiveOverlap>
     }
 }
 template <typename GetInstance, typename OverlapShape>
- inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
+inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const OverlapShape& overlap_shape,
     const vec3f& pos, float max_distance, bvh_intersection& intersection,
     bool find_any, bool non_rigid_frames) {

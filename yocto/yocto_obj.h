@@ -198,8 +198,8 @@ struct obj_params {
 
 // Load obj scene
 template <typename Callbacks>
-inline void load_obj(const string& filename, Callbacks& cb,
-    const obj_params& params = {});
+inline void load_obj(
+    const string& filename, Callbacks& cb, const obj_params& params = {});
 
 }  // namespace yocto
 
@@ -261,7 +261,7 @@ static inline void parse_value(string_view& str, obj_texture_info& info) {
 
 // Load obj materials
 template <typename Callbacks>
- inline void load_mtl(
+inline void load_mtl(
     const string& filename, Callbacks& cb, const obj_params& params) {
     // open file
     auto fs_ = open_input_file(filename);
@@ -358,7 +358,7 @@ template <typename Callbacks>
 
 // Load obj extensions
 template <typename Callbacks>
- inline void load_objx(
+inline void load_objx(
     const string& filename, Callbacks& cb, const obj_params& params) {
     // open file
     auto fs_ = open_input_file(filename);
@@ -415,7 +415,7 @@ template <typename Callbacks>
 
 // Load obj scene
 template <typename Callbacks>
- inline void load_obj(
+inline void load_obj(
     const string& filename, Callbacks& cb, const obj_params& params) {
     // open file
     auto fs_ = open_input_file(filename);

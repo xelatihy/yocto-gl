@@ -211,11 +211,10 @@ void load_shape(const string& filename, vector<int>& points,
 void save_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texcoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec4f>& colors, const vector<float>& radius,
-    bool ascii = false);
+    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, bool ascii = false);
 
 // shapeio error
 struct shapeio_error : runtime_error {
@@ -364,17 +363,15 @@ inline void triangles_to_quads(
     vector<vec4i>& quads, const vector<vec3i>& triangles);
 
 // Convert beziers to lines using 3 lines for each bezier.
-inline void bezier_to_lines(
-    vector<vec2i>& lines, const vector<vec4i>& beziers);
+inline void bezier_to_lines(vector<vec2i>& lines, const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm, texcoord and colors.
 template <typename T>
 inline void split_facevarying(vector<vec4i>& split_quads,
     vector<vec<T, 3>>& split_positions, vector<vec<T, 3>>& split_normals,
-    vector<vec<T, 2>>&   split_texcoords,
-    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
-    const vector<vec4i>&     quads_texcoords,
+    vector<vec<T, 2>>& split_texcoords, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords,
     const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
     const vector<vec<T, 2>>& texcoords);
 
@@ -451,8 +448,7 @@ inline void subdivide_triangles(vector<vec3i>& triangles, vector<T>& vert);
 template <typename T>
 inline void subdivide_triangles(vector<vec3i>& triangles,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, vector<vec<T, 4>>& colors,
-    vector<T>& radius);
+    vector<vec<T, 2>>& texcoords, vector<vec<T, 4>>& colors, vector<T>& radius);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
@@ -467,8 +463,7 @@ inline void subdivide_beziers(vector<vec4i>& beziers, vector<T>& vert);
 template <typename T>
 inline void subdivide_beziers(vector<vec4i>& beziers,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, vector<vec<T, 4>>& colors,
-    vector<T>& radius);
+    vector<vec<T, 2>>& texcoords, vector<vec<T, 4>>& colors, vector<T>& radius);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
 inline void subdivide_catmullclark(
@@ -476,8 +471,7 @@ inline void subdivide_catmullclark(
 template <typename T>
 inline void subdivide_catmullclark(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, vector<vec<T, 4>>& colors,
-    vector<T>& radius);
+    vector<vec<T, 2>>& texcoords, vector<vec<T, 4>>& colors, vector<T>& radius);
 
 }  // namespace yocto
 
@@ -503,8 +497,8 @@ inline pair<int, T> sample_lines(const vector<T>& cdf, T re, T ru);
 
 // Pick a point on a triangle mesh uniformly.
 template <typename T>
-inline void sample_triangles_cdf(vector<T>& cdf,
-    const vector<vec3i>& triangles, const vector<vec<T, 3>>& positions);
+inline void sample_triangles_cdf(vector<T>& cdf, const vector<vec3i>& triangles,
+    const vector<vec<T, 3>>& positions);
 template <typename T>
 inline pair<int, vec<T, 2>> sample_triangles(
     const vector<T>& cdf, T re, const vec<T, 2>& ruv);
@@ -524,13 +518,13 @@ inline pair<int, vec<T, 2>> sample_quads(const vector<vec4i>& quads,
 // norm and texcoord of the sampled points.
 template <typename T>
 inline void sample_triangles(vector<vec<T, 3>>& sampled_positions,
-    vector<vec<T, 3>>&                                 sampled_normals,
+    vector<vec<T, 3>>&                          sampled_normals,
     vector<vec<T, 2>>& sampled_texturecoords, const vector<vec3i>& triangles,
     const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
     const vector<vec<T, 2>>& texcoords, int npoints, int seed = 7);
 template <typename T>
 inline void sample_quads(vector<vec<T, 3>>& sampled_positions,
-    vector<vec<T, 3>>&                             sampled_normals,
+    vector<vec<T, 3>>&                      sampled_normals,
     vector<vec<T, 2>>& sampled_texturecoords, const vector<vec4i>& quads,
     const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
     const vector<vec<T, 2>>& texcoords, int npoints, int seed = 7);
@@ -585,40 +579,39 @@ inline void make_rect(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize,
     const frame<T, 3>& frame);
 template <typename T>
-inline void make_rect_stack(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 2>& uvsize, const frame<T, 3>& frame);
+inline void make_rect_stack(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec3i& steps, const vec<T, 3>& size, const vec<T, 2>& uvsize,
+    const frame<T, 3>& frame);
 template <typename T>
 inline void make_floor(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
     const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize,
     const frame<T, 3>& frame);
 template <typename T>
-inline void make_bent_floor(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec2i& steps, const vec<T, 2>& size,
-    const vec<T, 2>& uvsize, T radius, const frame<T, 3>& frame);
+inline void make_bent_floor(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize,
+    T radius, const frame<T, 3>& frame);
 template <typename T>
 inline void make_box(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
     const vec3i& steps, const vec<T, 3>& size, const vec<T, 3>& uvsize,
     const frame<T, 3>& frame);
 template <typename T>
-inline void make_rounded_box(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 3>& uvsize, T rounded, const frame<T, 3>& frame);
+inline void make_rounded_box(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec3i& steps, const vec<T, 3>& size, const vec<T, 3>& uvsize,
+    T rounded, const frame<T, 3>& frame);
 template <typename T>
-inline void make_sphere(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, int steps, T size, T uvsize,
+inline void make_sphere(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, int steps, T size,
+    T uvsize, const frame<T, 3>& frame);
+template <typename T>
+inline void make_uvsphere(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec2i& steps, T size, const vec<T, 2>& uvsize,
     const frame<T, 3>& frame);
-template <typename T>
-inline void make_uvsphere(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize, const frame<T, 3>& frame);
 template <typename T>
 inline void make_flipcap_uvsphere(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
@@ -626,28 +619,26 @@ inline void make_flipcap_uvsphere(vector<vec4i>& quads,
     const vec<T, 2>& uvsize, const vec<T, 2>& zflip, const frame<T, 3>& frame);
 template <typename T>
 inline void make_disk(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, int steps,
-    T size, T uvsize, const frame<T, 3>& frame);
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, int steps, T size,
+    T uvsize, const frame<T, 3>& frame);
 template <typename T>
-inline void make_bulged_disk(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, int steps, T size, T uvsize, T height,
+inline void make_bulged_disk(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, int steps, T size,
+    T uvsize, T height, const frame<T, 3>& frame);
+template <typename T>
+inline void make_bulged_rect(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, int steps, T size,
+    T uvsize, T height, const frame<T, 3>& frame);
+template <typename T>
+inline void make_uvdisk(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec2i& steps, T size, const vec<T, 2>& uvsize,
     const frame<T, 3>& frame);
 template <typename T>
-inline void make_bulged_rect(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, int steps, T size, T uvsize, T height,
+inline void make_uvcylinder(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec3i& steps, const vec<T, 2>& size, const vec<T, 3>& uvsize,
     const frame<T, 3>& frame);
-template <typename T>
-inline void make_uvdisk(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize, const frame<T, 3>& frame);
-template <typename T>
-inline void make_uvcylinder(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec3i& steps, const vec<T, 2>& size,
-    const vec<T, 3>& uvsize, const frame<T, 3>& frame);
 template <typename T>
 inline void make_rounded_uvcylinder(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
@@ -660,8 +651,8 @@ inline void make_geosphere(vector<vec3i>& triangles,
 
 // Make examples shapes with are watertight (good for subdivs).
 template <typename T>
-inline void make_suzanne(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, T size, const frame<T, 3>& frame);
+inline void make_suzanne(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    T size, const frame<T, 3>& frame);
 template <typename T>
 inline void make_box(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     const vec<T, 3>& size, const frame<T, 3>& frame);
@@ -683,21 +674,19 @@ inline void make_fvsphere(vector<vec4i>& quads_positions,
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 template <typename T>
 inline void make_lines(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, const vec2i& steps, const vec<T, 2>& size,
-    const vec<T, 2>& uvsize, const vec<T, 2>& line_radius,
-    const frame<T, 3>& frame);
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, vector<T>& radius,
+    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize,
+    const vec<T, 2>& line_radius, const frame<T, 3>& frame);
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
 template <typename T>
 inline void make_point(vector<int>& points, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, T point_radius, const frame<T, 3>& frame);
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, vector<T>& radius,
+    T point_radius, const frame<T, 3>& frame);
 template <typename T>
 inline void make_points(vector<int>& points, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, int num, T uvsize, T point_radius,
-    const frame<T, 3>& frame);
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, vector<T>& radius,
+    int num, T uvsize, T point_radius, const frame<T, 3>& frame);
 template <typename T>
 inline void make_random_points(vector<int>& points,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
@@ -718,8 +707,8 @@ inline void make_bezier_circle(vector<vec4i>& beziers,
 // rotation: rotation added to hair (angle/strength)
 template <typename T>
 inline void make_hair(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, const vec2i& steps, const vector<vec3i>& striangles,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, vector<T>& radius,
+    const vec2i& steps, const vector<vec3i>& striangles,
     const vector<vec4i>& squads, const vector<vec<T, 3>>& spos,
     const vector<vec<T, 3>>& snorm, const vector<vec<T, 2>>& stexcoord,
     const vec<T, 2>& length, const vec<T, 2>& rad, const vec<T, 2>& noise,
@@ -992,8 +981,7 @@ inline void compute_tangent_spaces(vector<vec<T, 4>>& tangent_spaces,
     auto tangv = vector<vec<T, 3>>(positions.size(), zero3f);
     for (auto t : triangles) {
         auto [tu, tv] = triangle_tangents_fromuv(positions[t.x], positions[t.y],
-            positions[t.z], texcoords[t.x], texcoords[t.y],
-            texcoords[t.z]);
+            positions[t.z], texcoords[t.x], texcoords[t.y], texcoords[t.z]);
         tu            = normalize(tu);
         tv            = normalize(tv);
         for (auto vid : {t.x, t.y, t.z}) tangu[vid] += tu;
@@ -1323,9 +1311,8 @@ inline void bezier_to_lines(
 template <typename T>
 inline void split_facevarying(vector<vec4i>& split_quads,
     vector<vec<T, 3>>& split_positions, vector<vec<T, 3>>& split_normals,
-    vector<vec<T, 2>>&   split_texcoords,
-    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
-    const vector<vec4i>&     quads_texcoords,
+    vector<vec<T, 2>>& split_texcoords, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords,
     const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
     const vector<vec<T, 2>>& texcoords) {
     // make faces unique
@@ -1336,9 +1323,7 @@ inline void split_facevarying(vector<vec4i>& split_quads,
             auto v = vec3i{
                 (&quads_positions[fid].x)[c],
                 (!quads_normals.empty()) ? (&quads_normals[fid].x)[c] : -1,
-                (!quads_texcoords.empty())
-                    ? (&quads_texcoords[fid].x)[c]
-                    : -1,
+                (!quads_texcoords.empty()) ? (&quads_texcoords[fid].x)[c] : -1,
             };
             auto it = vert_map.find(v);
             if (it == vert_map.end()) {
@@ -1836,8 +1821,8 @@ inline void subdivide_catmullclark(
 template <typename ET, typename T, typename SubdivideFunc>
 inline void subdivide_elems_impl(vector<ET>& elems,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, vector<vec<T, 4>>& colors,
-    vector<T>& radius, const SubdivideFunc&& subdivied_func) {
+    vector<vec<T, 2>>& texcoords, vector<vec<T, 4>>& colors, vector<T>& radius,
+    const SubdivideFunc&& subdivied_func) {
     if (!normals.empty()) {
         auto elems_ = elems;
         subdivied_func(elems_, normals);
@@ -1861,8 +1846,8 @@ template <typename T>
 inline void subdivide_lines(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
     vector<vec<T, 4>>& colors, vector<T>& radius) {
-    subdivide_elems_impl(lines, positions, normals, texcoords, colors,
-        radius, [](auto& lines, auto& vert) { subdivide_lines(lines, vert); });
+    subdivide_elems_impl(lines, positions, normals, texcoords, colors, radius,
+        [](auto& lines, auto& vert) { subdivide_lines(lines, vert); });
 }
 template <typename T>
 inline void subdivide_triangles(vector<vec3i>& triangles,
@@ -1878,16 +1863,15 @@ template <typename T>
 inline void subdivide_quads(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
     vector<vec<T, 4>>& colors, vector<T>& radius) {
-    subdivide_elems_impl(quads, positions, normals, texcoords, colors,
-        radius, [](auto& quads, auto& vert) { subdivide_quads(quads, vert); });
+    subdivide_elems_impl(quads, positions, normals, texcoords, colors, radius,
+        [](auto& quads, auto& vert) { subdivide_quads(quads, vert); });
 }
 template <typename T>
 inline void subdivide_beziers(vector<vec4i>& beziers,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texcoords, vector<vec<T, 4>>& colors,
     vector<T>& radius) {
-    subdivide_elems_impl(beziers, positions, normals, texcoords, colors,
-        radius,
+    subdivide_elems_impl(beziers, positions, normals, texcoords, colors, radius,
         [](auto& beziers, auto& vert) { subdivide_beziers(beziers, vert); });
 }
 template <typename T>
@@ -1895,8 +1879,7 @@ inline void subdivide_catmullclark(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texcoords, vector<vec<T, 4>>& colors,
     vector<T>& radius) {
-    subdivide_elems_impl(quads, positions, normals, texcoords, colors,
-        radius,
+    subdivide_elems_impl(quads, positions, normals, texcoords, colors, radius,
         [](auto& quads, auto& vert) { subdivide_catmullclark(quads, vert); });
 }
 
@@ -1940,8 +1923,8 @@ inline pair<int, T> sample_lines(const vector<T>& cdf, T re, T ru) {
 
 // Pick a point on a triangle mesh uniformly.
 template <typename T>
-inline void sample_triangles_cdf(vector<T>& cdf,
-    const vector<vec3i>& triangles, const vector<vec<T, 3>>& positions) {
+inline void sample_triangles_cdf(vector<T>& cdf, const vector<vec3i>& triangles,
+    const vector<vec<T, 3>>& positions) {
     cdf.resize(triangles.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto t = triangles[i];
@@ -1952,8 +1935,7 @@ inline void sample_triangles_cdf(vector<T>& cdf,
 template <typename T>
 inline pair<int, vec<T, 2>> sample_triangles(
     const vector<T>& cdf, T re, const vec<T, 2>& ruv) {
-    return {sample_discrete(cdf, re),
-        sample_triangle(ruv)};
+    return {sample_discrete(cdf, re), sample_triangle(ruv)};
 }
 
 // Pick a point on a quad mesh uniformly.
@@ -1989,7 +1971,7 @@ inline pair<int, vec<T, 2>> sample_quads(const vector<vec4i>& quads,
 // [0,1]^3. unorm and texcoord are optional.
 template <typename T>
 inline void sample_triangles(vector<vec<T, 3>>& sampled_positions,
-    vector<vec<T, 3>>&                                 sampled_normals,
+    vector<vec<T, 3>>&                          sampled_normals,
     vector<vec<T, 2>>& sampled_texturecoords, const vector<vec3i>& triangles,
     const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
     const vector<vec<T, 2>>& texcoords, int npoints, int seed) {
@@ -2000,11 +1982,10 @@ inline void sample_triangles(vector<vec<T, 3>>& sampled_positions,
     sample_triangles_cdf(cdf, triangles, positions);
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
-        auto [triangle_id, triangle_uv] = sample_triangles(cdf,
-            (T)rand1f(rng),
-            {(T)rand1f(rng), (T)rand1f(rng)});
-        auto t                          = triangles[triangle_id];
-        sampled_positions[i]            = interpolate_triangle(
+        auto [triangle_id, triangle_uv] = sample_triangles(
+            cdf, (T)rand1f(rng), {(T)rand1f(rng), (T)rand1f(rng)});
+        auto t               = triangles[triangle_id];
+        sampled_positions[i] = interpolate_triangle(
             positions[t.x], positions[t.y], positions[t.z], triangle_uv);
         if (!sampled_normals.empty()) {
             sampled_normals[i] = normalize(interpolate_triangle(
@@ -2014,8 +1995,8 @@ inline void sample_triangles(vector<vec<T, 3>>& sampled_positions,
                 positions[t.x], positions[t.y], positions[t.z]);
         }
         if (!sampled_texturecoords.empty()) {
-            sampled_texturecoords[i] = interpolate_triangle(texcoords[t.x],
-                texcoords[t.y], texcoords[t.z], triangle_uv);
+            sampled_texturecoords[i] = interpolate_triangle(
+                texcoords[t.x], texcoords[t.y], texcoords[t.z], triangle_uv);
         } else {
             sampled_texturecoords[i] = zero2f;
         }
@@ -2027,7 +2008,7 @@ inline void sample_triangles(vector<vec<T, 3>>& sampled_positions,
 // [0,1]^3. unorm and texcoord are optional.
 template <typename T>
 inline void sample_quads(vector<vec<T, 3>>& sampled_positions,
-    vector<vec<T, 3>>&                             sampled_normals,
+    vector<vec<T, 3>>&                      sampled_normals,
     vector<vec<T, 2>>& sampled_texturecoords, const vector<vec4i>& quads,
     const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
     const vector<vec<T, 2>>& texcoords, int npoints, int seed) {
@@ -2038,10 +2019,9 @@ inline void sample_quads(vector<vec<T, 3>>& sampled_positions,
     sample_quads_cdf(cdf, quads, positions);
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
-        auto [quad_id, quad_uv] = sample_quads(cdf,
-            (T)rand1f(rng),
-            {(T)rand1f(rng), (T)rand1f(rng)});
-        auto q                  = quads[quad_id];
+        auto [quad_id, quad_uv] = sample_quads(
+            cdf, (T)rand1f(rng), {(T)rand1f(rng), (T)rand1f(rng)});
+        auto q               = quads[quad_id];
         sampled_positions[i] = interpolate_quad(positions[q.x], positions[q.y],
             positions[q.z], positions[q.w], quad_uv);
         if (!sampled_normals.empty()) {
@@ -2053,8 +2033,7 @@ inline void sample_quads(vector<vec<T, 3>>& sampled_positions,
         }
         if (!sampled_texturecoords.empty()) {
             sampled_texturecoords[i] = interpolate_quad(texcoords[q.x],
-                texcoords[q.y], texcoords[q.z], texcoords[q.w],
-                quad_uv);
+                texcoords[q.y], texcoords[q.z], texcoords[q.w], quad_uv);
         } else {
             sampled_texturecoords[i] = zero2f;
         }
@@ -2383,7 +2362,7 @@ inline void make_rect(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
             auto uv = vec<T, 2>{i / (T)steps.x, j / (T)steps.y};
             positions[j * (steps.x + 1) + i] = {
                 (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
-            normals[j * (steps.x + 1) + i]       = {0, 0, 1};
+            normals[j * (steps.x + 1) + i]   = {0, 0, 1};
             texcoords[j * (steps.x + 1) + i] = uv * uvsize;
         }
     }
@@ -2417,8 +2396,8 @@ inline void make_floor(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
     const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize,
     const frame<T, 3>& frame) {
-    make_rect(quads, positions, normals, texcoords, steps, size,
-        uvsize, identity_frame<T, 3>);
+    make_rect(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame<T, 3>);
     for (auto& p : positions) p = {p.x, p.z, p.y};
     for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
     for (auto& q : quads) swap(q.y, q.w);
@@ -2427,12 +2406,12 @@ inline void make_floor(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
 
 // Make a rounded cube.
 template <typename T>
-inline void make_bent_floor(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec2i& steps, const vec<T, 2>& size,
-    const vec<T, 2>& uvsize, T radius, const frame<T, 3>& frame) {
-    make_floor(quads, positions, normals, texcoords, steps, size,
-        uvsize, identity_frame<T, 3>);
+inline void make_bent_floor(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize,
+    T radius, const frame<T, 3>& frame) {
+    make_floor(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame<T, 3>);
     auto start = (size.y / 2 - radius) / 2;
     auto end   = start + radius;
     for (auto i = 0; i < positions.size(); i++) {
@@ -2453,10 +2432,10 @@ inline void make_bent_floor(vector<vec4i>& quads,
 
 // Make a stack of quads
 template <typename T>
-inline void make_rect_stack(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 2>& uvsize, const frame<T, 3>& frame) {
+inline void make_rect_stack(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec3i& steps, const vec<T, 3>& size, const vec<T, 2>& uvsize,
+    const frame<T, 3>& frame) {
     quads.clear();
     positions.clear();
     normals.clear();
@@ -2469,8 +2448,8 @@ inline void make_rect_stack(vector<vec4i>& quads,
         make_rect(qquads, qpositions, qnormals, qtexturecoords,
             {steps.x, steps.y}, {size.x, size.y}, uvsize, identity_frame<T, 3>);
         for (auto& p : qpositions) p.z = (-0.5f + (T)i / steps.z) * size.z;
-        merge_quads(quads, positions, normals, texcoords, qquads,
-            qpositions, qnormals, qtexturecoords);
+        merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+            qnormals, qtexturecoords);
     }
     _transform_points_inplace(frame, positions);
 }
@@ -2490,41 +2469,36 @@ inline void make_box(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     auto qnormals       = vector<vec<T, 3>>{};
     auto qtexturecoords = vector<vec<T, 2>>{};
     // + z
-    make_rect(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
-        identity_frame<T, 3>);
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.y},
+        {size.x, size.y}, {uvsize.x, uvsize.y}, identity_frame<T, 3>);
     for (auto& p : qpositions) p = {p.x, p.y, size.z / 2};
     for (auto& n : qnormals) n = {0, 0, 1};
     merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // - z
-    make_rect(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
-        identity_frame<T, 3>);
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.y},
+        {size.x, size.y}, {uvsize.x, uvsize.y}, identity_frame<T, 3>);
     for (auto& p : qpositions) p = {-p.x, p.y, -size.z / 2};
     for (auto& n : qnormals) n = {0, 0, -1};
     merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // + x
-    make_rect(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.z, steps.y}, {size.z, size.y}, {uvsize.z, uvsize.y},
-        identity_frame<T, 3>);
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.z, steps.y},
+        {size.z, size.y}, {uvsize.z, uvsize.y}, identity_frame<T, 3>);
     for (auto& p : qpositions) p = {size.x / 2, p.y, -p.x};
     for (auto& n : qnormals) n = {1, 0, 0};
     merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // - x
-    make_rect(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.z, steps.y}, {size.z, size.y}, {uvsize.z, uvsize.y},
-        identity_frame<T, 3>);
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.z, steps.y},
+        {size.z, size.y}, {uvsize.z, uvsize.y}, identity_frame<T, 3>);
     for (auto& p : qpositions) p = {-size.x / 2, p.y, p.x};
     for (auto& n : qnormals) n = {-1, 0, 0};
     merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // + y
-    make_rect(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.z}, {size.x, size.z}, {uvsize.x, uvsize.z},
-        identity_frame<T, 3>);
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.z},
+        {size.x, size.z}, {uvsize.x, uvsize.z}, identity_frame<T, 3>);
     for (auto i = 0; i < qpositions.size(); i++) {
         qpositions[i] = {qpositions[i].x, size.y / 2, -qpositions[i].y};
         qnormals[i]   = {0, 1, 0};
@@ -2532,9 +2506,8 @@ inline void make_box(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
     merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // - y
-    make_rect(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.z}, {size.x, size.z}, {uvsize.x, uvsize.z},
-        identity_frame<T, 3>);
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.z},
+        {size.x, size.z}, {uvsize.x, uvsize.z}, identity_frame<T, 3>);
     for (auto i = 0; i < qpositions.size(); i++) {
         qpositions[i] = {qpositions[i].x, -size.y / 2, qpositions[i].y};
         qnormals[i]   = {0, -1, 0};
@@ -2546,12 +2519,12 @@ inline void make_box(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
 
 // Make a rounded cube.
 template <typename T>
-inline void make_rounded_box(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec3i& steps, const vec<T, 3>& size,
-    const vec<T, 3>& uvsize, T rounded, const frame<T, 3>& frame) {
-    make_box(quads, positions, normals, texcoords, steps, size,
-        uvsize, identity_frame<T, 3>);
+inline void make_rounded_box(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec3i& steps, const vec<T, 3>& size, const vec<T, 3>& uvsize,
+    T rounded, const frame<T, 3>& frame) {
+    make_box(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame<T, 3>);
     auto radius = rounded * min(size) / 2;
     auto c      = size / 2 - vec<T, 3>{radius, radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
@@ -2587,18 +2560,18 @@ inline void make_rounded_box(vector<vec4i>& quads,
 
 // Make a sphere.
 template <typename T>
-inline void make_uvsphere(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize, const frame<T, 3>& frame) {
-    make_rect(quads, positions, normals, texcoords, steps, {1, 1},
-        {1, 1}, identity_frame<T, 3>);
+inline void make_uvsphere(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec2i& steps, T size, const vec<T, 2>& uvsize,
+    const frame<T, 3>& frame) {
+    make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1},
+        identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
         auto uv = texcoords[i];
         auto a  = vec<T, 2>{2 * pif * uv.x, pif * (1 - uv.y)};
         auto p  = vec<T, 3>{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-        positions[i]     = p * (size / 2);
-        normals[i]       = normalize(p);
+        positions[i] = p * (size / 2);
+        normals[i]   = normalize(p);
         texcoords[i] = uv * uvsize;
     }
     _transform_points_inplace(frame, positions);
@@ -2606,13 +2579,11 @@ inline void make_uvsphere(vector<vec4i>& quads,
 
 // Make a spherecube.
 template <typename T>
-inline void make_sphere(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, int steps, T size, T uvsize,
-    const frame<T, 3>& frame) {
-    make_box(quads, positions, normals, texcoords,
-        {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize},
-        identity_frame<T, 3>);
+inline void make_sphere(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, int steps, T size,
+    T uvsize, const frame<T, 3>& frame) {
+    make_box(quads, positions, normals, texcoords, {steps, steps, steps},
+        {1, 1, 1}, {uvsize, uvsize, uvsize}, identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
         auto p       = positions[i];
         positions[i] = normalize(p) * (size / 2);
@@ -2628,8 +2599,8 @@ inline void make_flipcap_uvsphere(vector<vec4i>& quads,
     vector<vec<T, 2>>& texcoords, const vec2i& steps, T size,
     const vec<T, 2>& uvsize, const vec<T, 2>& zflip_,
     const frame<T, 3>& frame) {
-    make_uvsphere(quads, positions, normals, texcoords, steps, size,
-        uvsize, identity_frame<T, 3>);
+    make_uvsphere(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame<T, 3>);
     auto zflip = zflip_ * size / 2;
     for (auto i = 0; i < positions.size(); i++) {
         if (positions[i].z > zflip.y) {
@@ -2647,18 +2618,18 @@ inline void make_flipcap_uvsphere(vector<vec4i>& quads,
 
 // Make a disk.
 template <typename T>
-inline void make_uvdisk(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec2i& steps, T size,
-    const vec<T, 2>& uvsize, const frame<T, 3>& frame) {
-    make_rect(quads, positions, normals, texcoords, steps, {1, 1},
-        {1, 1}, identity_frame<T, 3>);
+inline void make_uvdisk(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec2i& steps, T size, const vec<T, 2>& uvsize,
+    const frame<T, 3>& frame) {
+    make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1},
+        identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
         auto uv      = texcoords[i];
         auto phi     = 2 * pif * uv.x;
         positions[i] = {
             cos(phi) * uv.y * size / 2, sin(phi) * uv.y * size / 2, 0};
-        normals[i]       = {0, 0, 1};
+        normals[i]   = {0, 0, 1};
         texcoords[i] = uv * uvsize;
     }
     _transform_points_inplace(frame, positions);
@@ -2667,10 +2638,10 @@ inline void make_uvdisk(vector<vec4i>& quads,
 // Make a disk from a quad.
 template <typename T>
 inline void make_disk(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, int steps,
-    T size, T uvsize, const frame<T, 3>& frame) {
-    make_rect(quads, positions, normals, texcoords, {steps, steps},
-        {2, 2}, {uvsize, uvsize}, identity_frame<T, 3>);
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, int steps, T size,
+    T uvsize, const frame<T, 3>& frame) {
+    make_rect(quads, positions, normals, texcoords, {steps, steps}, {2, 2},
+        {uvsize, uvsize}, identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
@@ -2684,12 +2655,11 @@ inline void make_disk(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
 
 // Make a bulged disk from a quad.
 template <typename T>
-inline void make_bulged_disk(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, int steps, T size, T uvsize, T height,
-    const frame<T, 3>& frame) {
-    make_disk(quads, positions, normals, texcoords, steps, size,
-        uvsize, identity_frame<T, 3>);
+inline void make_bulged_disk(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, int steps, T size,
+    T uvsize, T height, const frame<T, 3>& frame) {
+    make_disk(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame<T, 3>);
     if (height == 0) return;
     auto radius = (size * size / 4 + height * height) / (2 * height);
     auto center = vec<T, 3>{0, 0, -radius + height};
@@ -2703,10 +2673,9 @@ inline void make_bulged_disk(vector<vec4i>& quads,
 
 // Make a bulged quad.
 template <typename T>
-inline void make_bulged_rect(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, int steps, T size, T uvsize, T height,
-    const frame<T, 3>& frame) {
+inline void make_bulged_rect(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, int steps, T size,
+    T uvsize, T height, const frame<T, 3>& frame) {
     make_rect(quads, positions, normals, texcoords, {steps, steps},
         {size, size}, {uvsize, uvsize}, identity_frame<T, 3>);
     if (height == 0) return;
@@ -2726,14 +2695,14 @@ inline void make_cylinder_side_shape(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texcoords, const vec2i& steps, const vec<T, 2>& size,
     const vec<T, 2>& uvsize, const frame<T, 3>& frame) {
-    make_rect(quads, positions, normals, texcoords, steps, {1, 1},
-        {1, 1}, identity_frame<T, 3>);
+    make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1},
+        identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
-        auto uv          = texcoords[i];
-        auto phi         = 2 * pif * uv.x;
-        positions[i]     = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
+        auto uv      = texcoords[i];
+        auto phi     = 2 * pif * uv.x;
+        positions[i] = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
             (uv.y - 0.5f) * size.y};
-        normals[i]       = {cos(phi), sin(phi), 0};
+        normals[i]   = {cos(phi), sin(phi), 0};
         texcoords[i] = uv * uvsize;
     }
     _transform_points_inplace(frame, positions);
@@ -2741,10 +2710,10 @@ inline void make_cylinder_side_shape(vector<vec4i>& quads,
 
 // Make a cylinder.
 template <typename T>
-inline void make_uvcylinder(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vec3i& steps, const vec<T, 2>& size,
-    const vec<T, 3>& uvsize, const frame<T, 3>& frame) {
+inline void make_uvcylinder(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vec3i& steps, const vec<T, 2>& size, const vec<T, 3>& uvsize,
+    const frame<T, 3>& frame) {
     quads.clear();
     positions.clear();
     normals.clear();
@@ -2786,8 +2755,8 @@ inline void make_rounded_uvcylinder(vector<vec4i>& quads,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texcoords, const vec3i& steps, const vec<T, 2>& size,
     const vec<T, 3>& uvsize, T rounded, const frame<T, 3>& frame) {
-    make_uvcylinder(quads, positions, normals, texcoords, steps, size,
-        uvsize, identity_frame<T, 3>);
+    make_uvcylinder(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame<T, 3>);
     auto radius = rounded * max(size) / 2;
     auto c      = size / 2 - vec<T, 2>{radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
@@ -2840,11 +2809,11 @@ inline void make_fvbox(vector<vec4i>& quads_positions,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texcoords, const vec3i& steps, const vec<T, 3>& size,
     const vec<T, 3>& uvsize, const frame<T, 3>& frame) {
-    make_box(quads_positions, positions, normals, texcoords, steps,
-        size, uvsize, identity_frame<T, 3>);
-    quads_normals       = quads_positions;
+    make_box(quads_positions, positions, normals, texcoords, steps, size,
+        uvsize, identity_frame<T, 3>);
+    quads_normals   = quads_positions;
     quads_texcoords = quads_positions;
-    auto positions_     = positions;
+    auto positions_ = positions;
     weld_quads(quads_positions, positions,
         min(0.1f * size / vec<T, 3>{(T)steps.x, (T)steps.y, (T)steps.z}));
     _transform_points_inplace(frame, positions);
@@ -2857,8 +2826,8 @@ inline void make_fvsphere(vector<vec4i>& quads_positions,
     vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
     vector<vec<T, 2>>& texcoords, int steps, T size, T uvsize,
     const frame<T, 3>& frame) {
-    make_fvbox(quads_positions, quads_normals, quads_texcoords,
-        positions, normals, texcoords, {steps, steps, steps}, {1, 1, 1},
+    make_fvbox(quads_positions, quads_normals, quads_texcoords, positions,
+        normals, texcoords, {steps, steps, steps}, {1, 1, 1},
         {uvsize, uvsize, uvsize}, identity_frame<T, 3>);
     quads_normals = quads_positions;
     normals       = positions;
@@ -2875,8 +2844,8 @@ const vector<vec4i>& get_suzanne_quads();
 
 // Make a suzanne monkey model for testing.
 template <typename T>
-inline void make_suzanne(vector<vec4i>& quads,
-    vector<vec<T, 3>>& positions, T size, const frame<T, 3>& frame) {
+inline void make_suzanne(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
+    T size, const frame<T, 3>& frame) {
     positions = get_suzanne_positions();
     for (auto& p : positions) p *= size / 2;
     quads = get_suzanne_quads();
@@ -2903,10 +2872,9 @@ inline void make_box(vector<vec4i>& quads, vector<vec<T, 3>>& positions,
 // Generate lines set along a quad.
 template <typename T>
 inline void make_lines(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, const vec2i& steps, const vec<T, 2>& size,
-    const vec<T, 2>& uvsize, const vec<T, 2>& line_radius,
-    const frame<T, 3>& frame) {
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, vector<T>& radius,
+    const vec2i& steps, const vec<T, 2>& size, const vec<T, 2>& uvsize,
+    const vec<T, 2>& line_radius, const frame<T, 3>& frame) {
     auto nverts = (steps.x + 1) * steps.y;
     auto nlines = steps.x * steps.y;
     auto vid    = [steps](int i, int j) { return j * (steps.x + 1) + i; };
@@ -2923,15 +2891,15 @@ inline void make_lines(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
                     i / (T)steps.x, j / (T)(steps.y > 1 ? steps.y - 1 : 1)};
                 positions[vid(i, j)] = {
                     (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
-                normals[vid(i, j)]       = {1, 0, 0};
+                normals[vid(i, j)]   = {1, 0, 0};
                 texcoords[vid(i, j)] = uv * uvsize;
             }
         }
     } else {
         for (auto i = 0; i <= steps.x; i++) {
-            auto uv                  = vec<T, 2>{i / (T)steps.x, 0};
-            positions[vid(i, 0)]     = {(uv.x - 0.5f) * size.x, 0, 0};
-            normals[vid(i, 0)]       = {1, 0, 0};
+            auto uv              = vec<T, 2>{i / (T)steps.x, 0};
+            positions[vid(i, 0)] = {(uv.x - 0.5f) * size.x, 0, 0};
+            normals[vid(i, 0)]   = {1, 0, 0};
             texcoords[vid(i, 0)] = uv * uvsize;
         }
     }
@@ -2950,9 +2918,8 @@ inline void make_lines(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
 // varying along u.
 template <typename T>
 inline void make_points(vector<int>& points, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, int num, T uvsize, T point_radius,
-    const frame<T, 3>& frame) {
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, vector<T>& radius,
+    int num, T uvsize, T point_radius, const frame<T, 3>& frame) {
     points.resize(num);
     for (auto i = 0; i < num; i++) points[i] = i;
     positions.assign(num, {0, 0, 0});
@@ -2972,12 +2939,11 @@ inline void make_random_points(vector<int>& points,
     vector<vec<T, 2>>& texcoords, vector<T>& radius, int num,
     const vec<T, 3>& size, T uvsize, T point_radius, uint64_t seed,
     const frame<T, 3>& frame) {
-    make_points(points, positions, normals, texcoords, radius, num,
-        uvsize, point_radius);
+    make_points(points, positions, normals, texcoords, radius, num, uvsize,
+        point_radius);
     auto rng = make_rng(seed);
     for (auto i = 0; i < positions.size(); i++) {
-        positions[i] = (rand3f(rng) - vec<T, 3>{0.5f, 0.5f, 0.5f}) *
-                       size;
+        positions[i] = (rand3f(rng) - vec<T, 3>{0.5f, 0.5f, 0.5f}) * size;
     }
     _transform_points_inplace(frame, positions);
 }
@@ -2985,13 +2951,13 @@ inline void make_random_points(vector<int>& points,
 // Make a point.
 template <typename T>
 inline void make_point(vector<int>& points, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, T point_radius, const frame<T, 3>& frame) {
-    points        = {0};
-    positions     = {{0, 0, 0}};
-    normals       = {{0, 0, 1}};
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, vector<T>& radius,
+    T point_radius, const frame<T, 3>& frame) {
+    points    = {0};
+    positions = {{0, 0, 0}};
+    normals   = {{0, 0, 1}};
     texcoords = {{0, 0}};
-    radius        = {point_radius};
+    radius    = {point_radius};
     _transform_points_inplace(frame, positions);
 }
 
@@ -3015,8 +2981,8 @@ inline void make_bezier_circle(vector<vec4i>& beziers,
 // Make a hair ball around a shape
 template <typename T>
 inline void make_hair(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, const vec2i& steps, const vector<vec3i>& striangles,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords, vector<T>& radius,
+    const vec2i& steps, const vector<vec3i>& striangles,
     const vector<vec4i>& squads, const vector<vec<T, 3>>& spos,
     const vector<vec<T, 3>>& snorm, const vector<vec<T, 2>>& stexcoord,
     const vec<T, 2>& len, const vec<T, 2>& rad, const vec<T, 2>& noise,
@@ -3051,8 +3017,8 @@ inline void make_hair(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
         }
     }
 
-    make_lines(lines, positions, normals, texcoords, radius, steps,
-        {1, 1}, {1, 1}, {1, 1}, identity_frame<T, 3>);
+    make_lines(lines, positions, normals, texcoords, radius, steps, {1, 1},
+        {1, 1}, {1, 1}, identity_frame<T, 3>);
     for (auto i = 0; i < positions.size(); i++) {
         auto u       = texcoords[i].x;
         auto bidx    = i / (steps.x + 1);
@@ -3112,57 +3078,56 @@ inline void make_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
     vector<vec<T, 4>>& colors, vector<T>& radius, const string& type) {
     if (type == "default-quad") {
-        make_rect<T>(quads, positions, normals, texcoords, {1, 1},
-            {2, 2}, {1, 1}, identity_frame<T, 3>);
+        make_rect<T>(quads, positions, normals, texcoords, {1, 1}, {2, 2},
+            {1, 1}, identity_frame<T, 3>);
     } else if (type == "default-quady") {
-        make_rect<T>(quads, positions, normals, texcoords, {1, 1},
-            {2, 2}, {1, 1}, identity_frame<T, 3>);
+        make_rect<T>(quads, positions, normals, texcoords, {1, 1}, {2, 2},
+            {1, 1}, identity_frame<T, 3>);
     } else if (type == "default-quad-stack") {
-        make_rect_stack<T>(quads, positions, normals, texcoords,
-            {1, 1, 1}, {2, 2, 2}, {1, 1}, identity_frame<T, 3>);
+        make_rect_stack<T>(quads, positions, normals, texcoords, {1, 1, 1},
+            {2, 2, 2}, {1, 1}, identity_frame<T, 3>);
     } else if (type == "default-box") {
-        make_box<T>(quads, positions, normals, texcoords, {1, 1, 1},
-            {2, 2, 2}, {1, 1, 1}, identity_frame<T, 3>);
+        make_box<T>(quads, positions, normals, texcoords, {1, 1, 1}, {2, 2, 2},
+            {1, 1, 1}, identity_frame<T, 3>);
     } else if (type == "default-box-rounded") {
-        make_rounded_box<T>(quads, positions, normals, texcoords,
-            {32, 32, 32}, {2, 2, 2}, {1, 1, 1}, (T)0.15, identity_frame<T, 3>);
+        make_rounded_box<T>(quads, positions, normals, texcoords, {32, 32, 32},
+            {2, 2, 2}, {1, 1, 1}, (T)0.15, identity_frame<T, 3>);
     } else if (type == "default-uvsphere") {
-        make_uvsphere<T>(quads, positions, normals, texcoords,
-            {64, 32}, 2, {1, 1}, identity_frame<T, 3>);
+        make_uvsphere<T>(quads, positions, normals, texcoords, {64, 32}, 2,
+            {1, 1}, identity_frame<T, 3>);
     } else if (type == "default-sphere") {
         make_sphere<T>(quads, positions, normals, texcoords, 32, 2, 1,
             identity_frame<T, 3>);
     } else if (type == "default-uvsphere-flipcap") {
-        make_flipcap_uvsphere<T>(quads, positions, normals, texcoords,
-            {64, 32}, (T)2, {1, 1}, {(T)-0.75, (T)0.75}, identity_frame<T, 3>);
+        make_flipcap_uvsphere<T>(quads, positions, normals, texcoords, {64, 32},
+            (T)2, {1, 1}, {(T)-0.75, (T)0.75}, identity_frame<T, 3>);
     } else if (type == "default-uvdisk") {
-        make_uvdisk<T>(quads, positions, normals, texcoords, {32, 16},
-            2, {1, 1}, identity_frame<T, 3>);
+        make_uvdisk<T>(quads, positions, normals, texcoords, {32, 16}, 2,
+            {1, 1}, identity_frame<T, 3>);
     } else if (type == "default-disk") {
         make_disk<T>(quads, positions, normals, texcoords, 32, 2, 1,
             identity_frame<T, 3>);
     } else if (type == "default-disk-bulged") {
-        make_bulged_disk<T>(quads, positions, normals, texcoords, 32,
-            2, 1, (T)0.25, identity_frame<T, 3>);
+        make_bulged_disk<T>(quads, positions, normals, texcoords, 32, 2, 1,
+            (T)0.25, identity_frame<T, 3>);
     } else if (type == "default-quad-bulged") {
-        make_bulged_rect<T>(quads, positions, normals, texcoords, 32,
-            2, 1, (T)0.25, identity_frame<T, 3>);
+        make_bulged_rect<T>(quads, positions, normals, texcoords, 32, 2, 1,
+            (T)0.25, identity_frame<T, 3>);
     } else if (type == "default-uvcylinder") {
-        make_uvcylinder<T>(quads, positions, normals, texcoords,
-            {64, 32, 16}, {2, 2}, {1, 1, 1}, identity_frame<T, 3>);
+        make_uvcylinder<T>(quads, positions, normals, texcoords, {64, 32, 16},
+            {2, 2}, {1, 1, 1}, identity_frame<T, 3>);
     } else if (type == "default-uvcylinder-rounded") {
-        make_rounded_uvcylinder<T>(quads, positions, normals,
-            texcoords, {64, 32, 16}, {2, 2}, {1, 1, 1}, (T)0.075,
-            identity_frame<T, 3>);
+        make_rounded_uvcylinder<T>(quads, positions, normals, texcoords,
+            {64, 32, 16}, {2, 2}, {1, 1, 1}, (T)0.075, identity_frame<T, 3>);
     } else if (type == "default-sphere-geodesic") {
         make_geosphere<T>(
             triangles, positions, normals, 4, (T)2, identity_frame<T, 3>);
     } else if (type == "default-floor") {
-        make_floor<T>(quads, positions, normals, texcoords, {1, 1},
-            {40, 40}, {20, 20}, identity_frame<T, 3>);
+        make_floor<T>(quads, positions, normals, texcoords, {1, 1}, {40, 40},
+            {20, 20}, identity_frame<T, 3>);
     } else if (type == "default-floor-bent") {
-        make_bent_floor<T>(quads, positions, normals, texcoords,
-            {1, 40}, {40, 40}, {20, 20}, (T)10, identity_frame<T, 3>);
+        make_bent_floor<T>(quads, positions, normals, texcoords, {1, 40},
+            {40, 40}, {20, 20}, (T)10, identity_frame<T, 3>);
     } else if (type == "default-matball") {
         make_sphere<T>(quads, positions, normals, texcoords, 32, 2, 1,
             identity_frame<T, 3>);
@@ -3173,13 +3138,12 @@ inline void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto base_texturecoords = vector<vec2f>{};
         make_sphere<T>(base_quads, base_positions, base_normals,
             base_texturecoords, 32, 2 * (T)0.8, 1, identity_frame<T, 3>);
-        make_hair<T>(lines, positions, normals, texcoords, radius,
-            {4, 65536}, {}, base_quads, base_positions, base_normals,
-            base_texturecoords, {(T)0.2, (T)0.2}, {(T)0.002, (T)0.001}, {0, 0},
-            {0, 0}, {0, 0});
+        make_hair<T>(lines, positions, normals, texcoords, radius, {4, 65536},
+            {}, base_quads, base_positions, base_normals, base_texturecoords,
+            {(T)0.2, (T)0.2}, {(T)0.002, (T)0.001}, {0, 0}, {0, 0}, {0, 0});
     } else if (type == "default-hairball-interior") {
-        make_sphere<T>(quads, positions, normals, texcoords, 32,
-            2 * (T)0.8, 1, identity_frame<T, 3>);
+        make_sphere<T>(quads, positions, normals, texcoords, 32, 2 * (T)0.8, 1,
+            identity_frame<T, 3>);
     } else if (type == "default-suzanne") {
         make_suzanne<T>(quads, positions, 2, identity_frame<T, 3>);
     } else if (type == "default-cube-posonly") {
@@ -3187,46 +3151,46 @@ inline void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto ignore2 = vector<vec4i>{};
         auto ignore3 = vector<vec3f>{};
         auto ignore4 = vector<vec2f>{};
-        make_fvbox<T>(quads, ignore1, ignore2, positions, ignore3,
-            ignore4, {1, 1, 1}, {2, 2, 2}, {1, 1, 1}, identity_frame<T, 3>);
+        make_fvbox<T>(quads, ignore1, ignore2, positions, ignore3, ignore4,
+            {1, 1, 1}, {2, 2, 2}, {1, 1, 1}, identity_frame<T, 3>);
     } else if (type == "default-cube-facevarying") {
         make_fvbox<T>(quads_positions, quads_normals, quads_texcoords,
             positions, normals, texcoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1},
             identity_frame<T, 3>);
     } else if (type == "default-sphere-facevarying") {
-        make_fvsphere<T>(quads_positions, quads_normals,
-            quads_texcoords, positions, normals, texcoords, 32, (T)2.0,
-            (T)1.0, identity_frame<T, 3>);
+        make_fvsphere<T>(quads_positions, quads_normals, quads_texcoords,
+            positions, normals, texcoords, 32, (T)2.0, (T)1.0,
+            identity_frame<T, 3>);
     } else if (type == "test-cube") {
-        make_rounded_box<T>(quads, positions, normals, texcoords,
-            {32, 32, 32}, {(T)0.15, (T)0.15, (T)0.15}, {1, 1, 1}, (T)0.3,
+        make_rounded_box<T>(quads, positions, normals, texcoords, {32, 32, 32},
+            {(T)0.15, (T)0.15, (T)0.15}, {1, 1, 1}, (T)0.3,
             frame<T, 3>{{0, (T)0.075, 0}});
     } else if (type == "test-uvsphere") {
-        make_uvsphere<T>(quads, positions, normals, texcoords,
-            {64, 32}, (T)0.15, {1, 1}, frame<T, 3>{{0, (T)0.075, 0}});
+        make_uvsphere<T>(quads, positions, normals, texcoords, {64, 32},
+            (T)0.15, {1, 1}, frame<T, 3>{{0, (T)0.075, 0}});
     } else if (type == "test-uvsphere-flipcap") {
-        make_flipcap_uvsphere<T>(quads, positions, normals, texcoords,
-            {64, 32}, (T)0.15, {1, 1}, {(T)-0.75, (T)0.75},
+        make_flipcap_uvsphere<T>(quads, positions, normals, texcoords, {64, 32},
+            (T)0.15, {1, 1}, {(T)-0.75, (T)0.75},
             frame<T, 3>{{0, (T)0.075, 0}});
     } else if (type == "test-sphere") {
-        make_sphere<T>(quads, positions, normals, texcoords, 32,
-            (T)0.15, (T)1.0, frame<T, 3>{{0, (T)0.075, 0}});
+        make_sphere<T>(quads, positions, normals, texcoords, 32, (T)0.15,
+            (T)1.0, frame<T, 3>{{0, (T)0.075, 0}});
     } else if (type == "test-sphere-displaced") {
-        make_sphere<T>(quads, positions, normals, texcoords, 32,
-            (T)0.15, (T)1.0, frame<T, 3>{{0, (T)0.075, 0}});
+        make_sphere<T>(quads, positions, normals, texcoords, 32, (T)0.15,
+            (T)1.0, frame<T, 3>{{0, (T)0.075, 0}});
     } else if (type == "test-disk") {
-        make_disk<T>(quads, positions, normals, texcoords, 32,
-            (T)0.15, (T)1.0, frame<T, 3>{{0, (T)0.075, 0}});
+        make_disk<T>(quads, positions, normals, texcoords, 32, (T)0.15, (T)1.0,
+            frame<T, 3>{{0, (T)0.075, 0}});
     } else if (type == "test-uvcylinder") {
-        make_rounded_uvcylinder<T>(quads, positions, normals,
-            texcoords, {64, 32, 16}, {(T)0.15, (T)0.15}, {1, 1, 1}, (T)0.3,
+        make_rounded_uvcylinder<T>(quads, positions, normals, texcoords,
+            {64, 32, 16}, {(T)0.15, (T)0.15}, {1, 1, 1}, (T)0.3,
             frame<T, 3>{{0, (T)0.075, 0}});
     } else if (type == "test-floor") {
-        make_floor<T>(quads, positions, normals, texcoords, {1, 1},
-            {4, 4}, {20, 20}, identity_frame<T, 3>);
+        make_floor<T>(quads, positions, normals, texcoords, {1, 1}, {4, 4},
+            {20, 20}, identity_frame<T, 3>);
     } else if (type == "test-matball") {
-        make_sphere<T>(quads, positions, normals, texcoords, 32,
-            (T)0.15, (T)1, frame<T, 3>{{0, (T)0.075, 0}});
+        make_sphere<T>(quads, positions, normals, texcoords, 32, (T)0.15, (T)1,
+            frame<T, 3>{{0, (T)0.075, 0}});
     } else if (type == "test-hairball1") {
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
@@ -3235,9 +3199,9 @@ inline void make_preset(vector<int>& points, vector<vec2i>& lines,
         make_sphere<T>(base_quads, base_positions, base_normals,
             base_texturecoords, 32, (T)0.15 * (T)0.8, 1,
             frame<T, 3>{{0, (T)0.075, 0}});
-        make_hair<T>(lines, positions, normals, texcoords, radius,
-            {4, 65536}, {}, base_quads, base_positions, base_normals,
-            base_texturecoords, vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
+        make_hair<T>(lines, positions, normals, texcoords, radius, {4, 65536},
+            {}, base_quads, base_positions, base_normals, base_texturecoords,
+            vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
             vec<T, 2>{(T)0.001, (T)0.0005} * (T)0.15, {(T)0.03, 100}, {0, 0},
             {0, 0});
     } else if (type == "test-hairball2") {
@@ -3248,9 +3212,9 @@ inline void make_preset(vector<int>& points, vector<vec2i>& lines,
         make_sphere<T>(base_quads, base_positions, base_normals,
             base_texturecoords, 32, (T)0.15 * (T)0.8, 1,
             frame<T, 3>{{0, (T)0.075, 0}});
-        make_hair<T>(lines, positions, normals, texcoords, radius,
-            {4, 65536}, {}, base_quads, base_positions, base_normals,
-            base_texturecoords, vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
+        make_hair<T>(lines, positions, normals, texcoords, radius, {4, 65536},
+            {}, base_quads, base_positions, base_normals, base_texturecoords,
+            vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
             vec<T, 2>{(T)0.001, (T)0.0005} * (T)0.15, {0, 0}, {0, 0}, {0, 0});
     } else if (type == "test-hairball3") {
         auto base_quads         = vector<vec4i>{};
@@ -3260,9 +3224,9 @@ inline void make_preset(vector<int>& points, vector<vec2i>& lines,
         make_sphere<T>(base_quads, base_positions, base_normals,
             base_texturecoords, 32, (T)0.15 * (T)0.8, 1,
             frame<T, 3>{{0, (T)0.075, 0}});
-        make_hair<T>(lines, positions, normals, texcoords, radius,
-            {4, 65536}, {}, base_quads, base_positions, base_normals,
-            base_texturecoords, vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
+        make_hair<T>(lines, positions, normals, texcoords, radius, {4, 65536},
+            {}, base_quads, base_positions, base_normals, base_texturecoords,
+            vec<T, 2>{(T)0.1, (T)0.1} * (T)0.15,
             vec<T, 2>{(T)0.001, (T)0.0005} * (T)0.15, {0, 0}, {(T)0.5, 128},
             {0, 0});
     } else if (type == "test-hairball-interior") {

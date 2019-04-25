@@ -1312,10 +1312,10 @@ tuple<vec3f, vec3f, float> sample_direction(const yocto_scene& scene,
     }
 }
 
-tuple<vec3f, vec3f, float> sample_direction_volume(
-    const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
-    const vec3f& position, const vec3f& outgoing, const trace_volume& volume,
-    rng_state& rng, bool mis) {
+tuple<vec3f, vec3f, float> sample_direction_volume(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
+    const vec3f& outgoing, const trace_volume& volume, rng_state& rng,
+    bool mis) {
     // continue path
     auto incoming     = zero3f;
     auto vsdf_cosine  = zero3f;
@@ -1400,9 +1400,9 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             if (weight == zero3f) break;
 
             // continue path
-            auto [brdf_cosine, incoming, incoming_pdf] = sample_direction(
-                scene, lights, bvh, point.position, point.normal,
-                point.material, outgoing, rng, true);
+            auto [brdf_cosine, incoming, incoming_pdf] = sample_direction(scene,
+                lights, bvh, point.position, point.normal, point.material,
+                outgoing, rng, true);
 
             // exit if no hit
             if (incoming == zero3f || incoming_pdf == 0 ||
@@ -1505,9 +1505,9 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 if (weight == zero3f) break;
 
                 // continue path
-                auto [brdf_cosine, incoming, incoming_pdf] =
-                    sample_direction(scene, lights, bvh, point.position,
-                        point.normal, point.material, outgoing, rng, true);
+                auto [brdf_cosine, incoming, incoming_pdf] = sample_direction(
+                    scene, lights, bvh, point.position, point.normal,
+                    point.material, outgoing, rng, true);
 
                 // exit if no hit
                 if (incoming == zero3f || incoming_pdf == 0 ||
@@ -1571,9 +1571,9 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // continue path
-        auto [brdf_cosine, incoming, incoming_pdf] = sample_direction(
-            scene, lights, bvh, point.position, point.normal, point.material,
-            outgoing, rng, false);
+        auto [brdf_cosine, incoming, incoming_pdf] = sample_direction(scene,
+            lights, bvh, point.position, point.normal, point.material, outgoing,
+            rng, false);
 
         // exit if no hit
         if (incoming == zero3f || incoming_pdf == 0 || brdf_cosine == zero3f)
@@ -1627,9 +1627,9 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // continue path
-        auto [brdf_cosine, incoming, incoming_pdf] = sample_direction(
-            scene, lights, bvh, point.position, point.normal, point.material,
-            outgoing, rng, false, false, true);
+        auto [brdf_cosine, incoming, incoming_pdf] = sample_direction(scene,
+            lights, bvh, point.position, point.normal, point.material, outgoing,
+            rng, false, false, true);
 
         // exit if no hit
         if (incoming == zero3f || incoming_pdf == 0 || brdf_cosine == zero3f)
