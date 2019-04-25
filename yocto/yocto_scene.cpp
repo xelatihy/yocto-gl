@@ -406,7 +406,7 @@ float sample_environment_pdf(const yocto_scene& scene,
     if (!texels_cdf.empty() && environment.emission_texture >= 0) {
         auto& texture  = scene.textures[environment.emission_texture];
         auto  size     = texture_size(texture);
-        auto  texcoord = eval_texturecoord(environment, direction);
+        auto  texcoord = eval_texcoord(environment, direction);
         auto  i        = (int)(texcoord.x * size.x);
         auto  j        = (int)(texcoord.y * size.y);
         auto  idx      = j * size.x + i;
@@ -814,7 +814,7 @@ vec3f eval_normal(
     return normalize(evaluate_shape_elem(
         shape, shape.quads_normals, shape.normals, element_id, element_uv));
 }
-vec2f eval_texturecoord(
+vec2f eval_texcoord(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
     if (shape.texcoords.empty()) return element_uv;
     return evaluate_shape_elem(
@@ -887,7 +887,7 @@ vec3f eval_element_normal(const yocto_scene& scene,
 }
 
 // Environment texture coordinates from the direction.
-vec2f eval_texturecoord(
+vec2f eval_texcoord(
     const yocto_environment& environment, const vec3f& direction) {
     auto wl = transform_direction_inverse(environment.frame, direction);
     auto environment_uv = vec2f{
@@ -910,7 +910,7 @@ vec3f eval_environment(const yocto_scene& scene,
     if (environment.emission_texture >= 0) {
         auto& emission_texture = scene.textures[environment.emission_texture];
         ke *= xyz(eval_texture(
-            emission_texture, eval_texturecoord(environment, direction)));
+            emission_texture, eval_texcoord(environment, direction)));
     }
     return ke;
 }
