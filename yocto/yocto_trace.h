@@ -23,7 +23,7 @@
 // general (you can even more an arbitrary shape sun). For now only the first
 // environment is used.
 //
-// 1. prepare the ray-tracing acceleration structure with `build_scene_bvh()`
+// 1. prepare the ray-tracing acceleration structure with `build_bvh()`
 // 2. prepare lights for rendering with `init_trace_lights()`
 // 3. create the random number generators with `init_trace_state()`
 // 4. render blocks of samples with `trace_samples()`

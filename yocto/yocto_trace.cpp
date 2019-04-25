@@ -222,7 +222,7 @@ trace_point make_trace_point(const yocto_scene& scene,
 bool trace_ray(const yocto_scene& scene, const bvh_scene& bvh, const ray3f& ray,
     bvh_intersection& intersection) {
     _trace_nrays += 1;
-    return intersect_scene_bvh(scene, bvh, ray, intersection);
+    return intersect_bvh(scene, bvh, ray, intersection);
 }
 
 // Intersects a ray and returns a point
@@ -230,7 +230,7 @@ bool trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
     const vec3f& position, const vec3f& direction,
     bvh_intersection& intersection) {
     _trace_nrays += 1;
-    return intersect_scene_bvh(
+    return intersect_bvh(
         scene, bvh, make_ray(position, direction), intersection);
 }
 

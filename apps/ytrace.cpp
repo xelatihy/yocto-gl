@@ -156,7 +156,7 @@ int main(int argc, char* argv[]) {
     auto bvh = bvh_scene{};
     {
         auto timer = print_timed("building bvh");
-        build_scene_bvh(scene, bvh, bvh_options);
+        build_bvh(scene, bvh, bvh_options);
     }
 
     // init renderer

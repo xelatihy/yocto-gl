@@ -328,7 +328,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "print stats")) {
             print_info("{}", format_scene_stats(scn.scene).c_str());
-            print_info("{}", print_scene_bvh_stats(scn.bvh).c_str());
+            print_info("{}", print_stats(scn.bvh).c_str());
         }
         auto mouse_pos = get_opengl_mouse_pos(win);
         auto ij        = get_image_coords(
@@ -491,7 +491,7 @@ void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
         throw runtime_error("unsupported type "s + type.name());
     }
 
-    refit_scene_bvh(scene, bvh, updated_instances, updated_shapes);
+    refit_bvh(scene, bvh, updated_instances, updated_shapes);
 }
 
 void update(app_state& app) {
@@ -751,7 +751,7 @@ void update(app_state& app) {
                 log_info("start building bvh {}", scn.filename);
                 scn.bvh_done = false;
                 task.result  = async([&scn]() {
-                    build_scene_bvh(scn.scene, scn.bvh, scn.bvh_options);
+                    build_bvh(scn.scene, scn.bvh, scn.bvh_options);
                 });
             } break;
             case app_task_type::refit_bvh: {
@@ -891,7 +891,7 @@ void run_ui(app_state& app) {
                 auto ray = evaluate_camera_ray(
                     camera, ij, scn.render.size(), {0.5f, 0.5f}, zero2f);
                 if (auto isec = bvh_intersection{};
-                    intersect_scene_bvh(scn.scene, scn.bvh, ray, isec)) {
+                    intersect_bvh(scn.scene, scn.bvh, ray, isec)) {
                     scn.selection = {typeid(yocto_instance), isec.instance_id};
                 }
             }
