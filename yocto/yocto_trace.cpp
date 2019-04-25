@@ -1178,8 +1178,8 @@ inline vec3f get_russian_roulette_albedo(const trace_volume& volume) {
     return volume.albedo;
 }
 
-// Russian roulette mode: 0: albedo, 1: weight (pbrt)
-#define YOCTO_RUSSIAN_ROULETTE_MODE 1
+// Russian roulette mode: 0: weight (pbrt), 1: albedo
+#define YOCTO_RUSSIAN_ROULETTE_MODE 0
 // Russian roulette on weight causes extremely high noise with prefectly
 // transmissive materials because when reaching transparent surfaces (where you
 // just want to continue path tracing) a path may still have low weight, hence
@@ -1193,22 +1193,26 @@ inline vec3f get_russian_roulette_albedo(const trace_volume& volume) {
 // has always low propabilty of being terminated on transmissive surfaces.
 
 // Russian roulette. Returns whether to stop and its pdf.
+#if YOCTO_RUSSIAN_ROULETTE_MODE == 0
 pair<bool, float> sample_russian_roulette(const vec3f& albedo,
     const vec3f& weight, int bounce, float rr, int min_bounce = 4,
     float rr_threadhold = 1) {
-#if YOCTO_RUSSIAN_ROULETTE_MODE == 0
-    if (bounce <= min_bounce) return {false, 1};
-    auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
-    return {rr < rr_prob, 1 - rr_prob};
-#elif YOCTO_RUSSIAN_ROULETTE_MODE == 1
     if (max(weight) < rr_threadhold && bounce > min_bounce) {
         auto rr_prob = max((float)0.05, 1 - max(weight));
         return {rr < rr_prob, 1 - rr_prob};
     } else {
         return {false, 1};
     }
-#endif
 }
+#elif YOCTO_RUSSIAN_ROULETTE_MODE == 1
+pair<bool, float> sample_russian_roulette(const vec3f& albedo,
+    const vec3f& weight, int bounce, float rr, int min_bounce = 4,
+    float rr_threadhold = 1) {
+    if (bounce <= min_bounce) return {false, 1};
+    auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
+    return {rr < rr_prob, 1 - rr_prob};
+}
+#endif
 
 pair<float, int> sample_volume_distance(
     const trace_volume& volume, float rl, float rd) {
