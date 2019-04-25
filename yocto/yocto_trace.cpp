@@ -238,7 +238,7 @@ bool trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
 ray3f sample_camera_ray(const yocto_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
     return evaluate_camera_ray(
-        camera, ij, image_size, puv, sample_disk_point(luv));
+        camera, ij, image_size, puv, sample_disk(luv));
 }
 
 vec3f evaluate_emission(const trace_material& material, const vec3f& normal,
@@ -899,7 +899,7 @@ vec3f sample_scattering_direction(const trace_material& material,
     weight_sum += weights.diffuse_pdf;
     if (material.diffuse_color != zero3f &&
         mode == trace_scattering_mode::smooth && rnl <= weight_sum) {
-        return sample_hemisphere_direction(normal, rn);
+        return sample_hemisphere(normal, rn);
     }
 
     // sample according to specular GGX
@@ -1057,7 +1057,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
             environment, incoming);
         auto i    = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
         auto j    = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
-        auto prob = sample_discrete_distribution_pdf(
+        auto prob = sample_discrete_pdf(
                         elements_cdf, j * size.x + i) /
                     elements_cdf.back();
         auto angle = (2 * pif / size.x) * (pif / size.y) *
@@ -1077,13 +1077,13 @@ vec3f sample_environment_direction(const yocto_scene& scene,
         auto& elements_cdf =
             lights.environment_texture_cdf[environment.emission_texture];
         auto& emission_texture = scene.textures[environment.emission_texture];
-        auto  idx  = sample_discrete_distribution(elements_cdf, rel);
+        auto  idx  = sample_discrete(elements_cdf, rel);
         auto  size = evaluate_texture_size(emission_texture);
         auto  u    = (idx % size.x + 0.5f) / size.x;
         auto  v    = (idx / size.x + 0.5f) / size.y;
         return evaluate_environment_direction(environment, {u, v});
     } else {
-        return sample_sphere_direction(ruv);
+        return sample_sphere(ruv);
     }
 }
 
@@ -1137,7 +1137,7 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
 vec3f sample_lights_direction(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
     float rl, float rel, const vec2f& ruv) {
-    auto light_id = sample_uniform_index(
+    auto light_id = sample_uniform(
         lights.instances.size() + lights.environments.size(), rl);
     if (light_id < lights.instances.size()) {
         auto instance = lights.instances[light_id];
@@ -1164,7 +1164,7 @@ float sample_lights_direction_pdf(const yocto_scene& scene,
         pdf += sample_environment_direction_pdf(
             scene, lights, environment, direction);
     }
-    pdf *= sample_uniform_index_pdf<float>(
+    pdf *= sample_uniform_pdf<float>(
         lights.instances.size() + lights.environments.size());
     return pdf;
 }
@@ -1293,7 +1293,7 @@ tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
     weight_delta /= weight_sum;
     auto mode     = trace_scattering_mode::smooth;
     auto mode_pdf = 0.0f;
-    if (get_random_float(rng) < weight_delta) {
+    if (rand1f(rng) < weight_delta) {
         mode     = trace_scattering_mode::delta;
         mode_pdf = weight_delta;
     } else {
@@ -1305,13 +1305,13 @@ tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
     auto brdf_cosine  = zero3f;
     auto incoming_pdf = 0.0f;
     if (mis && mode == trace_scattering_mode::smooth) {
-        if (get_random_float(rng) < 0.5f) {
+        if (rand1f(rng) < 0.5f) {
             incoming = sample_scattering_direction(material, normal, outgoing,
-                get_random_float(rng), get_random_vec2f(rng), mode);
+                rand1f(rng), rand2f(rng), mode);
         } else {
             incoming = sample_lights_direction(scene, lights, bvh, position,
-                get_random_float(rng), get_random_float(rng),
-                get_random_vec2f(rng));
+                rand1f(rng), rand1f(rng),
+                rand2f(rng));
         }
         brdf_cosine = evaluate_scattering(
             material, normal, outgoing, incoming, mode);
@@ -1321,7 +1321,7 @@ tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
                                   scene, lights, bvh, position, incoming);
     } else {
         incoming    = sample_scattering_direction(material, normal, outgoing,
-            get_random_float(rng), get_random_vec2f(rng), mode);
+            rand1f(rng), rand2f(rng), mode);
         brdf_cosine = evaluate_scattering(
             material, normal, outgoing, incoming, mode);
         incoming_pdf = sample_scattering_direction_pdf(
@@ -1344,13 +1344,13 @@ tuple<vec3f, vec3f, float> sample_next_direction_volume(
     auto vsdf_cosine  = zero3f;
     auto incoming_pdf = 0.0f;
     if (mis) {
-        if (get_random_float(rng) < 0.5f) {
+        if (rand1f(rng) < 0.5f) {
             incoming = sample_scattering_direction(
-                volume, outgoing, get_random_float(rng), get_random_vec2f(rng));
+                volume, outgoing, rand1f(rng), rand2f(rng));
         } else {
             incoming = sample_lights_direction(scene, lights, bvh, position,
-                get_random_float(rng), get_random_float(rng),
-                get_random_vec2f(rng));
+                rand1f(rng), rand1f(rng),
+                rand2f(rng));
         }
         vsdf_cosine  = evaluate_scattering(volume, outgoing, incoming);
         incoming_pdf = 0.5f * sample_scattering_direction_pdf(
@@ -1359,7 +1359,7 @@ tuple<vec3f, vec3f, float> sample_next_direction_volume(
                                   scene, lights, bvh, position, incoming);
     } else {
         incoming = sample_scattering_direction(
-            volume, outgoing, get_random_float(rng), get_random_vec2f(rng));
+            volume, outgoing, rand1f(rng), rand2f(rng));
         vsdf_cosine  = evaluate_scattering(volume, outgoing, incoming);
         incoming_pdf = sample_scattering_direction_pdf(
             volume, outgoing, incoming);
@@ -1376,7 +1376,7 @@ tuple<vec3f, float, float> sample_next_volume_distance(const vec3f& position,
     rng_state& rng) {
     // clamp ray if inside a volume
     auto [distance, channel] = sample_volume_distance(
-        volume, get_random_float(rng), get_random_float(rng));
+        volume, rand1f(rng), rand1f(rng));
 
     // compute volume transmission
     distance          = min(distance, max_distance);
@@ -1421,7 +1421,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
             // russian roulette
             auto [rr_stop, rr_pdf] = sample_russian_roulette(
-                weight, bounce, get_random_float(rng));
+                weight, bounce, rand1f(rng));
             if (rr_stop) break;
             weight /= rr_pdf;
             if (weight == zero3f) break;
@@ -1457,7 +1457,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
             // clamp ray if inside a volume
             auto [distance_, channel] = sample_volume_distance(
-                vsdfs, get_random_float(rng), get_random_float(rng));
+                vsdfs, rand1f(rng), rand1f(rng));
             ray.tmax = distance_;
 
             // intersect next point
@@ -1496,7 +1496,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
                 // russian roulette
                 auto [rr_stop, rr_pdf] = sample_russian_roulette(
-                    weight, bounce, get_random_float(rng));
+                    weight, bounce, rand1f(rng));
                 if (rr_stop) break;
                 weight /= rr_pdf;
                 if (weight == zero3f) break;
@@ -1526,7 +1526,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
                 // russian roulette
                 auto [rr_stop, rr_pdf] = sample_russian_roulette(
-                    weight, bounce, get_random_float(rng));
+                    weight, bounce, rand1f(rng));
                 if (rr_stop) break;
                 weight /= rr_pdf;
                 if (weight == zero3f) break;
@@ -1593,7 +1593,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 
         // russian roulette
         auto [rr_stop, rr_pdf] = sample_russian_roulette(
-            weight, bounce, get_random_float(rng));
+            weight, bounce, rand1f(rng));
         if (rr_stop) break;
         weight /= rr_pdf;
         if (weight == zero3f) break;
@@ -1751,17 +1751,17 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
         case trace_falsecolor_type::material: {
             auto hashed = std::hash<int>()(instance.material);
             auto rng_   = make_rng(trace_default_seed, hashed);
-            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
+            return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::shape: {
             auto hashed = std::hash<int>()(instance.shape);
             auto rng_   = make_rng(trace_default_seed, hashed);
-            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
+            return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::instance: {
             auto hashed = std::hash<int>()(intersection.instance_id);
             auto rng_   = make_rng(trace_default_seed, hashed);
-            return {pow(0.5f + 0.5f * get_random_vec3f(rng_), 2.2f), 1};
+            return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::highlight: {
             auto emission = point.material.emission;
@@ -1825,7 +1825,7 @@ void trace_image_region(image<vec4f>& image, trace_state& state,
                 if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
                 auto ray = sample_camera_ray(camera, {i, j}, image.size(),
-                    get_random_vec2f(pixel.rng), get_random_vec2f(pixel.rng));
+                    rand2f(pixel.rng), rand2f(pixel.rng));
                 auto [radiance, hit] = sampler(
                     scene, bvh, lights, ray.o, ray.d, pixel.rng, options);
                 if (!hit) {
@@ -1863,7 +1863,7 @@ void init_trace_state(
     for (auto j = 0; j < state.image_size.y; j++) {
         for (auto i = 0; i < state.image_size.x; i++) {
             auto& pixel = get_trace_pixel(state, i, j);
-            pixel.rng   = make_rng(seed, get_random_int(rng, 1 << 31) / 2 + 1);
+            pixel.rng   = make_rng(seed, rand1i(rng, 1 << 31) / 2 + 1);
         }
     }
 }
@@ -2180,7 +2180,7 @@ float integrate_func_base(
     const Func& f, float a, float b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = get_random_float(rng);
+        auto r = rand1f(rng);
         auto x = a + r * (b - a);
         integral += f(x) * (b - a);
     }
@@ -2193,7 +2193,7 @@ float integrate_func_stratified(
     const Func& f, float a, float b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = (i + get_random_float(rng)) / nsamples;
+        auto r = (i + rand1f(rng)) / nsamples;
         auto x = a + r * (b - a);
         integral += f(x) * (b - a);
     }
@@ -2206,7 +2206,7 @@ float integrate_func_importance(const Func& f, const Func& pdf,
     const Func& warp, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = get_random_float(rng);
+        auto r = rand1f(rng);
         auto x = warp(r);
         integral += f(x) / pdf(x);
     }
@@ -2247,7 +2247,7 @@ float integrate_func2_base(
     const Func& f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = get_random_vec2f(rng);
+        auto r = rand2f(rng);
         auto x = a + r * (b - a);
         integral += f(x) * (b.x - a.x) * (b.y - a.y);
     }
@@ -2262,8 +2262,8 @@ float integrate_func2_stratified(
     auto nsamples2 = (int)sqrt(nsamples);
     for (auto i = 0; i < nsamples2; i++) {
         for (auto j = 0; j < nsamples2; j++) {
-            auto r = vec2f{(i + get_random_float(rng)) / nsamples2,
-                (j + get_random_float(rng)) / nsamples2};
+            auto r = vec2f{(i + rand1f(rng)) / nsamples2,
+                (j + rand1f(rng)) / nsamples2};
             auto x = a + r * (b - a);
             integral += f(x) * (b.x - a.x) * (b.y - a.y);
         }
@@ -2277,7 +2277,7 @@ float integrate_func2_importance(const Func& f, const Func& pdf,
     const Func2& warp, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = get_random_vec2f(rng);
+        auto r = rand2f(rng);
         auto x = warp(r);
         integral += f(x) / pdf(x);
     }

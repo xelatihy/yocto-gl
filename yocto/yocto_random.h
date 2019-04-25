@@ -15,20 +15,20 @@
 //     1. initialize the random number generator with `make_rng()`
 //     2. advance the random number state with `advance_rng()`
 //     3. if necessary, you can reseed the rng with `seed_rng()`
-//     4. generate random integers in an interval with `get_random_int()`
+//     4. generate random integers in an interval with `rand1i()`
 //     5. generate random floats and double in the [0,1) range with
-//        `get_random_float()`, `get_random_vec2f()`, `get_random_vec3f()`,
+//        `rand1f()`, `rand2f()`, `rand3f()`,
 //        `next_rand1d()`
 // 2. Perlin noise: `perlin_noise()` to generate Perlin noise with optional
 //    wrapping, with fractal variations `perlin_ridge_noise()`,
 //    `perlin_fbm_noise()`, `perlin_turbulence_noise()`
 // 3. Monte Carlo support: warp functions from [0,1)^k domains to domains
 //    commonly used in path tracing. In particular, use
-//    `sample_hemisphere_direction()`, `sample_sphere_direction()`,
-//    `sample_hemisphere_direction_cosine()`,
-//    `sample_hemisphere_direction_cospower()`. `sample_disk_point()`.
-//    `sample_cylinder_point()`. `sample_triangle()`,
-//    `sample_discrete_distribution()`. For each warp, you can compute
+//    `sample_hemisphere()`, `sample_sphere()`,
+//    `sample_hemisphere_cos()`,
+//    `sample_hemisphere_cospower()`. `sample_disk()`.
+//    `sample_cylinder()`. `sample_triangle()`,
+//    `sample_discrete()`. For each warp, you can compute
 //     the PDF with `sample_xxx_pdf()`.
 //
 //
@@ -118,10 +118,10 @@ struct rng_state {
 inline rng_state make_rng(uint64_t seed, uint64_t seq = 1);
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int   get_random_int(rng_state& rng, int n);
-inline float get_random_float(rng_state& rng);
-inline vec2f get_random_vec2f(rng_state& rng);
-inline vec3f get_random_vec3f(rng_state& rng);
+inline int   rand1i(rng_state& rng, int n);
+inline float rand1f(rng_state& rng);
+inline vec2f rand2f(rng_state& rng);
+inline vec3f rand3f(rng_state& rng);
 
 // Shuffles a sequence of elements
 template <typename T>
@@ -136,81 +136,81 @@ namespace yocto {
 
 // Sample an hemispherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction(const vec<T, 2>& ruv);
+inline vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_hemisphere_direction_pdf(const vec<T, 3>& direction);
+inline T sample_hemisphere_pdf(const vec<T, 3>& direction);
 
 // Sample an hemispherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction(
+inline vec<T, 3> sample_hemisphere(
     const vec<T, 3>& normal, const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_hemisphere_direction_pdf(
+inline T sample_hemisphere_pdf(
     const vec<T, 3>& normal, const vec<T, 3>& direction);
 
 // Sample a spherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_sphere_direction(const vec<T, 2>& ruv);
+inline vec<T, 3> sample_sphere(const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_sphere_direction_pdf(const vec<T, 3>& w);
+inline T sample_sphere_pdf(const vec<T, 3>& w);
 
 // Sample an hemispherical direction with cosine distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction_cosine(const vec<T, 2>& ruv);
+inline vec<T, 3> sample_hemisphere_cos(const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_hemisphere_direction_cosine_pdf(const vec<T, 3>& direction);
+inline T sample_hemisphere_cos_pdf(const vec<T, 3>& direction);
 
 // Sample an hemispherical direction with cosine power distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction_cospower(
+inline vec<T, 3> sample_hemisphere_cospower(
     T exponent, const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_hemisphere_direction_cospower_pdf(
+inline T sample_hemisphere_cospower_pdf(
     T exponent, const vec<T, 3>& direction);
 
 // Sample a point uniformly on a disk.
 template <typename T>
-inline vec<T, 2> sample_disk_point(const vec<T, 2>& ruv);
+inline vec<T, 2> sample_disk(const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_disk_point_pdf();
+inline T sample_disk_pdf();
 
 // Sample a point uniformly on a cylinder, without caps.
 template <typename T>
-inline vec<T, 3> sample_cylinder_point(const vec<T, 2>& ruv);
+inline vec<T, 3> sample_cylinder(const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_cylinder_point_pdf();
+inline T sample_cylinder_pdf();
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
 template <typename T>
-inline vec<T, 2> sample_triangle_coordinates(const vec<T, 2>& ruv);
+inline vec<T, 2> sample_triangle(const vec<T, 2>& ruv);
 
 // Sample a point uniformly on a triangle.
 template <typename T>
-inline vec<T, 3> sample_triangle_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
+inline vec<T, 3> sample_triangle(const vec<T, 3>& p0, const vec<T, 3>& p1,
     const vec<T, 3>& p2, const vec<T, 2>& ruv);
 // Pdf for uniform triangle sampling, i.e. triangle area.
 template <typename T>
-inline T sample_triangle_point_pdf(
+inline T sample_triangle_pdf(
     const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
 
 // Sample an index with uniform distribution.
 template <typename T>
-inline int sample_uniform_index(int size, T r);
+inline int sample_uniform(int size, T r);
 template <typename T>
-inline T sample_uniform_index_pdf(int size);
+inline T sample_uniform_pdf(int size);
 
 // Sample an index with uniform distribution.
 template <typename T, typename T1>
-inline T sample_uniform_element(const vector<T>& elements, T1 r);
+inline T sample_uniform(const vector<T>& elements, T1 r);
 template <typename T>
-inline T sample_uniform_element_pdf(const vector<T>& elements);
+inline T sample_uniform_pdf(const vector<T>& elements);
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T>
-inline int sample_discrete_distribution(const vector<T>& cdf, T r);
+inline int sample_discrete(const vector<T>& cdf, T r);
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-inline T sample_discrete_distribution_pdf(const vector<T>& cdf, int idx);
+inline T sample_discrete_pdf(const vector<T>& cdf, int idx);
 
 }  // namespace yocto
 
@@ -278,10 +278,10 @@ inline rng_state make_rng(uint64_t seed, uint64_t seq) {
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int get_random_int(rng_state& rng, int n) {
+inline int rand1i(rng_state& rng, int n) {
     return advance_rng(rng) % n;
 }
-inline float get_random_float(rng_state& rng) {
+inline float rand1f(rng_state& rng) {
     union {
         uint32_t u;
         float    f;
@@ -292,17 +292,17 @@ inline float get_random_float(rng_state& rng) {
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f get_random_vec2f(rng_state& rng) {
+inline vec2f rand2f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
-    auto x = get_random_float(rng);
-    auto y = get_random_float(rng);
+    auto x = rand1f(rng);
+    auto y = rand1f(rng);
     return {x, y};
 }
-inline vec3f get_random_vec3f(rng_state& rng) {
+inline vec3f rand3f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
-    auto x = get_random_float(rng);
-    auto y = get_random_float(rng);
-    auto z = get_random_float(rng);
+    auto x = rand1f(rng);
+    auto y = rand1f(rng);
+    auto z = rand1f(rng);
     return {x, y, z};
 }
 
@@ -312,7 +312,7 @@ inline void random_shuffle(vector<T>& vals, rng_state& rng) {
     // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
     using std::swap;
     for (auto i = (int)vals.size() - 1; i > 0; i--) {
-        auto j = get_random_int(rng, i + 1);
+        auto j = rand1i(rng, i + 1);
         swap(vals[j], vals[i]);
     }
 }
@@ -326,20 +326,20 @@ namespace yocto {
 
 // Sample an hemispherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction(const vec<T, 2>& ruv) {
+inline vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv) {
     auto z   = ruv.y;
     auto r   = sqrt(clamp01(1 - z * z));
     auto phi = 2 * (T)pi * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
-inline T sample_hemisphere_direction_pdf(const vec<T, 3>& direction) {
+inline T sample_hemisphere_pdf(const vec<T, 3>& direction) {
     return (direction.z <= 0) ? 0 : 1 / (2 * (T)pi);
 }
 
 // Sample an hemispherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction(
+inline vec<T, 3> sample_hemisphere(
     const vec<T, 3>& normal, const vec<T, 2>& ruv) {
     auto z               = ruv.y;
     auto r               = sqrt(clamp01(1 - z * z));
@@ -348,40 +348,40 @@ inline vec<T, 3> sample_hemisphere_direction(
     return transform_direction(make_basis_fromz(normal), local_direction);
 }
 template <typename T>
-inline T sample_hemisphere_direction_pdf(
+inline T sample_hemisphere_pdf(
     const vec<T, 3>& normal, const vec<T, 3>& direction) {
     return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * (T)pi);
 }
 
 // Sample a spherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_sphere_direction(const vec<T, 2>& ruv) {
+inline vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
     auto z   = 2 * ruv.y - 1;
     auto r   = sqrt(clamp01(1 - z * z));
     auto phi = 2 * (T)pi * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
-inline T sample_sphere_direction_pdf(const vec<T, 3>& w) {
+inline T sample_sphere_pdf(const vec<T, 3>& w) {
     return 1 / (4 * (T)pi);
 }
 
 // Sample an hemispherical direction with cosine distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction_cosine(const vec<T, 2>& ruv) {
+inline vec<T, 3> sample_hemisphere_cos(const vec<T, 2>& ruv) {
     auto z   = sqrt(ruv.y);
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * (T)pi * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
-inline T sample_hemisphere_direction_cosine_pdf(const vec<T, 3>& direction) {
+inline T sample_hemisphere_cos_pdf(const vec<T, 3>& direction) {
     return (direction.z <= 0) ? 0 : direction.z / (T)pi;
 }
 
 // Sample an hemispherical direction with cosine power distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction_cospower(
+inline vec<T, 3> sample_hemisphere_cospower(
     T exponent, const vec<T, 2>& ruv) {
     auto z   = pow(ruv.y, 1 / (exponent + 1));
     auto r   = sqrt(1 - z * z);
@@ -389,7 +389,7 @@ inline vec<T, 3> sample_hemisphere_direction_cospower(
     return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
-inline T sample_hemisphere_direction_cospower_pdf(
+inline T sample_hemisphere_cospower_pdf(
     T exponent, const vec<T, 3>& direction) {
     return (direction.z <= 0)
                ? 0
@@ -398,73 +398,73 @@ inline T sample_hemisphere_direction_cospower_pdf(
 
 // Sample a point uniformly on a disk.
 template <typename T>
-inline vec<T, 2> sample_disk_point(const vec<T, 2>& ruv) {
+inline vec<T, 2> sample_disk(const vec<T, 2>& ruv) {
     auto r   = sqrt(ruv.y);
     auto phi = 2 * (T)pi * ruv.x;
     return {cos(phi) * r, sin(phi) * r};
 }
 template <typename T>
-inline T sample_disk_point_pdf() {
+inline T sample_disk_pdf() {
     return 1 / (T)pi;
 }
 
 // Sample a point uniformly on a cylinder, without caps.
 template <typename T>
-inline vec<T, 3> sample_cylinder_point(const vec<T, 2>& ruv) {
+inline vec<T, 3> sample_cylinder(const vec<T, 2>& ruv) {
     auto phi = 2 * (T)pi * ruv.x;
     return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
 template <typename T>
-inline T sample_cylinder_point_pdf() {
+inline T sample_cylinder_pdf() {
     return 1 / (T)pi;
 }
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
 template <typename T>
-inline vec<T, 2> sample_triangle_coordinates(const vec<T, 2>& ruv) {
+inline vec<T, 2> sample_triangle(const vec<T, 2>& ruv) {
     return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
 
 // Sample a point uniformly on a triangle.
 template <typename T>
-inline vec<T, 3> sample_triangle_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
+inline vec<T, 3> sample_triangle(const vec<T, 3>& p0, const vec<T, 3>& p1,
     const vec<T, 3>& p2, const vec<T, 2>& ruv) {
-    auto uv = sample_triangle_coordinates(ruv);
+    auto uv = sample_triangle(ruv);
     return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
 template <typename T>
-inline T sample_triangle_point_pdf(
+inline T sample_triangle_pdf(
     const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
     return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
 // Sample an index with uniform distribution.
 template <typename T>
-inline int sample_uniform_index(int size, T r) {
+inline int sample_uniform(int size, T r) {
     return clamp((int)(r * size), 0, size - 1);
 }
 template <typename T>
-inline T sample_uniform_index_pdf(int size) {
+inline T sample_uniform_pdf(int size) {
     return (T)1 / (T)size;
 }
 
 // Sample an index with uniform distribution.
 template <typename T, typename T1>
-inline T sample_uniform_element(const vector<T>& elements, T1 r) {
+inline T sample_uniform(const vector<T>& elements, T1 r) {
     if (elements.empty()) return {};
     auto size = (int)elements.size();
     return elements[clamp((int)(r * size), 0, size - 1)];
 }
 template <typename T>
-inline T sample_uniform_element_pdf(const vector<T>& elements) {
+inline T sample_uniform_pdf(const vector<T>& elements) {
     if (elements.empty()) return 0;
     return 1.0f / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T>
-inline int sample_discrete_distribution(const vector<T>& cdf, T r) {
+inline int sample_discrete(const vector<T>& cdf, T r) {
     r        = clamp(r * cdf.back(), (T)0.0, cdf.back() - (T)0.00001);
     auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                      cdf.data());
@@ -472,7 +472,7 @@ inline int sample_discrete_distribution(const vector<T>& cdf, T r) {
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-inline T sample_discrete_distribution_pdf(const vector<T>& cdf, int idx) {
+inline T sample_discrete_pdf(const vector<T>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }

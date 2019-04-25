@@ -1910,7 +1910,7 @@ namespace yocto {
 // Pick a point in a point set uniformly.
 template <typename T>
 inline int sample_points_element(int npoints, T re) {
-    return sample_uniform_index(npoints, re);
+    return sample_uniform(npoints, re);
 }
 template <typename T>
 inline void sample_points_element_cdf(vector<T>& cdf, int npoints) {
@@ -1919,7 +1919,7 @@ inline void sample_points_element_cdf(vector<T>& cdf, int npoints) {
 }
 template <typename T>
 inline int sample_points_element(const vector<T>& cdf, T re) {
-    return sample_discrete_distribution(cdf, re);
+    return sample_discrete(cdf, re);
 }
 
 // Pick a point on lines uniformly.
@@ -1935,7 +1935,7 @@ inline void sample_lines_element_cdf(vector<T>& cdf, const vector<vec2i>& lines,
 }
 template <typename T>
 inline pair<int, T> sample_lines_element(const vector<T>& cdf, T re, T ru) {
-    return {sample_discrete_distribution(cdf, re), ru};
+    return {sample_discrete(cdf, re), ru};
 }
 
 // Pick a point on a triangle mesh uniformly.
@@ -1952,8 +1952,8 @@ inline void sample_triangles_element_cdf(vector<T>& cdf,
 template <typename T>
 inline pair<int, vec<T, 2>> sample_triangles_element(
     const vector<T>& cdf, T re, const vec<T, 2>& ruv) {
-    return {sample_discrete_distribution(cdf, re),
-        sample_triangle_coordinates(ruv)};
+    return {sample_discrete(cdf, re),
+        sample_triangle(ruv)};
 }
 
 // Pick a point on a quad mesh uniformly.
@@ -1971,14 +1971,14 @@ inline void sample_quads_element_cdf(vector<T>& cdf, const vector<vec4i>& quads,
 template <typename T>
 inline pair<int, vec<T, 2>> sample_quads_element(
     const vector<T>& cdf, T re, const vec<T, 2>& ruv) {
-    return {sample_discrete_distribution(cdf, re), ruv};
+    return {sample_discrete(cdf, re), ruv};
 }
 template <typename T>
 inline pair<int, vec<T, 2>> sample_quads_element(const vector<vec4i>& quads,
     const vector<T>& cdf, T re, const vec<T, 2>& ruv) {
-    auto element_id = sample_discrete_distribution(cdf, re);
+    auto element_id = sample_discrete(cdf, re);
     if (quads[element_id].z == quads[element_id].w) {
-        return {element_id, sample_triangle_coordinates(ruv)};
+        return {element_id, sample_triangle(ruv)};
     } else {
         return {element_id, ruv};
     }
@@ -2001,8 +2001,8 @@ inline void sample_triangles_points(vector<vec<T, 3>>& sampled_positions,
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto [triangle_id, triangle_uv] = sample_triangles_element(cdf,
-            (T)get_random_float(rng),
-            {(T)get_random_float(rng), (T)get_random_float(rng)});
+            (T)rand1f(rng),
+            {(T)rand1f(rng), (T)rand1f(rng)});
         auto t                          = triangles[triangle_id];
         sampled_positions[i]            = interpolate_triangle(
             positions[t.x], positions[t.y], positions[t.z], triangle_uv);
@@ -2039,8 +2039,8 @@ inline void sample_quads_points(vector<vec<T, 3>>& sampled_positions,
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto [quad_id, quad_uv] = sample_quads_element(cdf,
-            (T)get_random_float(rng),
-            {(T)get_random_float(rng), (T)get_random_float(rng)});
+            (T)rand1f(rng),
+            {(T)rand1f(rng), (T)rand1f(rng)});
         auto q                  = quads[quad_id];
         sampled_positions[i] = interpolate_quad(positions[q.x], positions[q.y],
             positions[q.z], positions[q.w], quad_uv);
@@ -2976,7 +2976,7 @@ inline void make_random_points_shape(vector<int>& points,
         uvsize, point_radius);
     auto rng = make_rng(seed);
     for (auto i = 0; i < positions.size(); i++) {
-        positions[i] = (get_random_vec3f(rng) - vec<T, 3>{0.5f, 0.5f, 0.5f}) *
+        positions[i] = (rand3f(rng) - vec<T, 3>{0.5f, 0.5f, 0.5f}) *
                        size;
     }
     _transform_points_inplace(frame, positions);
@@ -3034,7 +3034,7 @@ inline void make_hair_shape(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
 
     auto rng  = make_rng(seed, 3);
     auto blen = vector<T>(bpos.size());
-    for (auto& l : blen) l = lerp(len.x, len.y, (T)get_random_float(rng));
+    for (auto& l : blen) l = lerp(len.x, len.y, (T)rand1f(rng));
 
     auto cidx = vector<int>();
     if (clump.x > 0) {

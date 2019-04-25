@@ -390,13 +390,13 @@ vec3f sample_environment_direction(const yocto_scene& scene,
     float re, const vec2f& ruv) {
     if (!texels_cdf.empty() && environment.emission_texture >= 0) {
         auto& texture = scene.textures[environment.emission_texture];
-        auto  idx     = sample_discrete_distribution(texels_cdf, re);
+        auto  idx     = sample_discrete(texels_cdf, re);
         auto  size    = evaluate_texture_size(texture);
         auto  u       = (idx % size.x + 0.5f) / size.x;
         auto  v       = (idx / size.x + 0.5f) / size.y;
         return evaluate_environment_direction(environment, {u, v});
     } else {
-        return sample_sphere_direction(ruv);
+        return sample_sphere(ruv);
     }
 }
 
@@ -412,13 +412,13 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
         auto i    = (int)(texcoord.x * size.x);
         auto j    = (int)(texcoord.y * size.y);
         auto idx  = j * size.x + i;
-        auto prob = sample_discrete_distribution_pdf(texels_cdf, idx) /
+        auto prob = sample_discrete_pdf(texels_cdf, idx) /
                     texels_cdf.back();
         auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         return prob / angle;
     } else {
-        return sample_sphere_direction_pdf(direction);
+        return sample_sphere_pdf(direction);
     }
 }
 
