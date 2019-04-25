@@ -592,7 +592,7 @@ void add_missing_cameras(yocto_scene& scene) {
 void add_sky_environment(yocto_scene& scene, float sun_angle) {
     auto texture = yocto_texture{};
     texture.uri  = "textures/sky.hdr";
-    make_sunsky_image(texture.hdr_image, {1024, 512}, sun_angle);
+    make_sunsky(texture.hdr_image, {1024, 512}, sun_angle);
     scene.textures.push_back(texture);
     auto environment             = yocto_environment{};
     environment.uri              = "environments/default.yaml";

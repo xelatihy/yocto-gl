@@ -238,7 +238,7 @@ string get_save_scene_message(
 void load_scene_texture(yocto_texture& texture, const string& dirname) {
     if (is_image_preset_filename(texture.uri)) {
         auto [type, nfilename] = get_image_preset_type(texture.uri);
-        make_image_preset(texture.hdr_image, texture.ldr_image, type);
+        make_preset(texture.hdr_image, texture.ldr_image, type);
         texture.uri = nfilename;
     } else {
         load_image(dirname + texture.uri, texture.hdr_image, texture.ldr_image);
@@ -247,7 +247,7 @@ void load_scene_texture(yocto_texture& texture, const string& dirname) {
 
 void load_scene_voltexture(yocto_voltexture& texture, const string& dirname) {
     if (is_volume_preset_filename(texture.uri)) {
-        make_volume_preset(texture.volume_data, get_basename(texture.uri));
+        make_preset(texture.volume_data, get_basename(texture.uri));
         texture.uri = get_noextension(texture.uri) + ".yvol";
     } else {
         load_volume(dirname + texture.uri, texture.volume_data);
@@ -2898,7 +2898,7 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
             auto rgb2 = checkerboard.tex1.texture == ""
                             ? checkerboard.tex2.value
                             : spectrum3f{0.6f, 0.6f, 0.6f};
-            make_checker_image(texture.hdr_image, {1024, 1024}, 16,
+            make_checker(texture.hdr_image, {1024, 1024}, 16,
                 {rgb1.x, rgb1.y, rgb1.z, 1}, {rgb2.x, rgb2.y, rgb2.z, 1});
             float_to_byte(texture.ldr_image, texture.hdr_image);
             texture.hdr_image = {};
@@ -2910,14 +2910,14 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
             if (verbose) printf("texture dots not supported well");
         } else if (holds_alternative<pbrt_fbm_texture>(ptexture)) {
             auto& fbm = get<pbrt_fbm_texture>(ptexture);
-            make_fbm_image(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
+            make_fbm(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
                 {1, 1, 1, 1}, (float)1, (float)2, (float)0.5f, fbm.octaves);
             float_to_byte(texture.ldr_image, texture.hdr_image);
             texture.hdr_image = {};
             if (verbose) printf("texture fbm not supported well");
         } else if (holds_alternative<pbrt_marble_texture>(ptexture)) {
             auto& marble = get<pbrt_marble_texture>(ptexture);
-            make_fbm_image(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
+            make_fbm(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
                 {1, 1, 1, 1}, (float)marble.scale, (float)2, (float)0.5f,
                 marble.octaves);
             float_to_byte(texture.ldr_image, texture.hdr_image);

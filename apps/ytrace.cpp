@@ -212,10 +212,10 @@ int main(int argc, char* argv[]) {
                     sample + nsamples, get_extension(imfilename));
                 try {
                     if (logo) {
-                        save_tonemapped_image_with_logo(
+                        save_tonemapped_with_logo(
                             outfilename, render, tonemap_options);
                     } else {
-                        save_tonemapped_image(
+                        save_tonemapped(
                             outfilename, render, tonemap_options);
                     }
                 } catch (const std::exception& e) {
@@ -233,10 +233,10 @@ int main(int argc, char* argv[]) {
             }
             auto timer = print_timed("saving image {}", outfilename);
             if (logo) {
-                save_tonemapped_image_with_logo(
+                save_tonemapped_with_logo(
                     outfilename, render, tonemap_options);
             } else {
-                save_tonemapped_image(outfilename, render, tonemap_options);
+                save_tonemapped(outfilename, render, tonemap_options);
             }
         } catch (const std::exception& e) {
             print_fatal(e.what());

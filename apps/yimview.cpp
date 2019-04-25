@@ -125,16 +125,15 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     const colorgrade_image_options& colorgrade_options, atomic<bool>& stop,
     concurrent_queue<image_region>& queue) {
     auto regions = vector<image_region>{};
-    make_image_regions(regions, img.size(), 128);
+    make_regions(regions, img.size(), 128);
     parallel_foreach(
         regions,
-        [&img, &display, &queue,
-            colorgrade = colorgrade_options != colorgrade_image_options{},
-            tonemap_options, colorgrade_options](const image_region& region) {
-            tonemap_image_region(display, region, img, tonemap_options);
-            if (colorgrade) {
-                colorgrade_image_region(
-                    display, region, display, colorgrade_options);
+        [&img, &display, &queue, tonemap_options, colorgrade_options,
+            do_colorgrade = colorgrade_options != colorgrade_image_options{}
+            ](const image_region& region) {
+            tonemap(display, img, region, tonemap_options);
+            if (do_colorgrade) {
+                colorgrade(display, display, region, colorgrade_options);
             }
             queue.push(region);
         },

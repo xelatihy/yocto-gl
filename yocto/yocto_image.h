@@ -24,11 +24,11 @@
 //
 // 1. store images using the image<T> structure
 // 2. load and save images with `load_image()` and `save_image()`
-// 3. resize images with `resize_image()`
-// 4. tonemap images with `tonemap_image()` that convert from linear HDR to
+// 3. resize images with `resize()`
+// 4. tonemap images with `tonemap()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
 // 5. make various image examples with the `make_XXX_image()` functions
-// 6. create procedural sun-sky images with `make_sunsky_image()`
+// 6. create procedural sun-sky images with `make_sunsky()`
 // 7. load and save images with Yocto/ImageIO
 // 8. many color conversion functions are available in the code below
 //
@@ -142,24 +142,24 @@ inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr, bool accurate_fit = true);
 
 // Convert number of channels
 template <typename T, int N1, int N2>
-inline vec<T, N1> convert_color_channels(const vec<T, N2>& a);
+inline vec<T, N1> convert_channels(const vec<T, N2>& a);
 
 // Forward declaration
 template <typename T>
-struct rgb_color_space;
+struct rgb_space;
 
 // Conversion between rgb color spaces
 template <typename T>
 constexpr vec<T, 3> rgb_to_rgb(const vec<T, 3>& rgb,
-    const rgb_color_space<T>& from_space, const rgb_color_space<T>& to_space);
+    const rgb_space<T>& from_space, const rgb_space<T>& to_space);
 
 // Conversion to/from xyz
 template <typename T>
 constexpr vec<T, 3> rgb_to_xyz(
-    const vec<T, 3>& rgb, const rgb_color_space<T>& rgb_space);
+    const vec<T, 3>& rgb, const rgb_space<T>& rgb_space);
 template <typename T>
 constexpr vec<T, 3> xyz_to_rgb(
-    const vec<T, 3>& xyz, const rgb_color_space<T>& rgb_space);
+    const vec<T, 3>& xyz, const rgb_space<T>& rgb_space);
 
 // Convert between CIE XYZ and xyY
 template <typename T>
@@ -182,17 +182,17 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
 // Tone curves
 // Pure gamma tone curve: y = x^gamma
 template <typename T>
-constexpr T tone_curve_pure_gamma(T x, T gamma);
+constexpr T apply_gamma(T x, T gamma);
 template <typename T>
-constexpr T tone_curve_pure_gamma_inv(T x, T gamma);
+constexpr T apply_gamma_inv(T x, T gamma);
 // Pure gamma tone curve: y = (x < d) ? x * c : pow(x * a + b, gamma)
 template <typename T>
-constexpr T tone_curve_linear_gamma(T x, T gamma, const vec<T, 4>& abcd);
+constexpr T apply_gamma(T x, T gamma, const vec<T, 4>& abcd);
 template <typename T>
-constexpr T tone_curve_linear_gamma_inv(T x, T gamma, const vec<T, 4>& abcd);
+constexpr T apply_gamma_inv(T x, T gamma, const vec<T, 4>& abcd);
 
 // RGB color spaces
-enum struct rgb_color_space_type {
+enum struct rgb_space_type {
     linear_srgb,   // default linear space (srgb linear)
     srgb,          // srgb color space (non-linear)
     adobe_rgb,     // Adobe rgb color space (non-linear)
@@ -213,7 +213,7 @@ enum struct rgb_color_space_type {
 
 // get the color space definition for builtin color spaces
 template <typename T>
-constexpr rgb_color_space<T> get_rgb_color_space(rgb_color_space_type type);
+constexpr rgb_space<T> get_rgb_space(rgb_space_type type);
 
 }  // namespace yocto
 
@@ -321,15 +321,15 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
+inline void make_regions(vector<image_region>& regions, const vec2i& size,
     int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
 template <typename T>
-inline void get_image_region(
+inline void get_region(
     image<T>& clipped, const image<T>& img, const image_region& region);
 template <typename T>
-inline void set_image_region(
+inline void set_region(
     image<T>& img, const image<T>& region, const vec2i& offset);
 
 // Conversion from/to floats.
@@ -366,16 +366,16 @@ inline bool operator!=(
 }
 
 // Apply exposure and filmic tone mapping
-inline void tonemap_image(image<vec3f>& ldr, const image<vec3f>& hdr,
+inline void tonemap(image<vec3f>& ldr, const image<vec3f>& hdr,
     const tonemap_image_options& options);
-inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
+inline void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     const tonemap_image_options& options);
-inline void tonemap_image(image<vec3b>& ldr, const image<vec3f>& hdr,
+inline void tonemap(image<vec3b>& ldr, const image<vec3f>& hdr,
     const tonemap_image_options& options);
-inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
+inline void tonemap(image<vec4b>& ldr, const image<vec4f>& hdr,
     const tonemap_image_options& options);
-inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
-    const image<vec4f>& hdr, const tonemap_image_options& options);
+inline void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
+    const image_region& region, const tonemap_image_options& options);
 
 // minimal color grading
 struct colorgrade_image_options {
@@ -399,8 +399,8 @@ inline bool operator!=(
 }
 
 // color grade an image region
-inline void colorgrade_image_region(image<vec4f>& corrected,
-    const image_region& region, const image<vec4f>& img,
+inline void colorgrade(image<vec4f>& corrected,
+    const image<vec4f>& img, const image_region& region, 
     const colorgrade_image_options& options);
 
 // determine white balance colors
@@ -408,25 +408,25 @@ inline vec3f compute_white_balance(const image<vec4f>& img);
 
 // Convert number of channels
 template <int N1, int N2>
-inline void convert_color_channels(
+inline void convert_channels(
     image<vec<float, N1>>& result, const image<vec<float, N2>>& source);
 template <int N1, int N2>
-inline void convert_color_channels(
+inline void convert_channels(
     image<vec<byte, N1>>& result, const image<vec<byte, N2>>& source);
 
 // Resize an image.
-inline void resize_image(image<float>& res, const image<float>& img);
-inline void resize_image(image<vec1f>& res, const image<vec1f>& img);
-inline void resize_image(image<vec2f>& res, const image<vec2f>& img);
-inline void resize_image(image<vec3f>& res, const image<vec3f>& img);
-inline void resize_image(image<vec4f>& res, const image<vec4f>& img);
-inline void resize_image(image<byte>& res, const image<byte>& img);
-inline void resize_image(image<vec1b>& res, const image<vec1b>& img);
-inline void resize_image(image<vec2b>& res, const image<vec2b>& img);
-inline void resize_image(image<vec3b>& res, const image<vec3b>& img);
-inline void resize_image(image<vec4b>& res, const image<vec4b>& img);
+inline void resize(image<float>& res, const image<float>& img);
+inline void resize(image<vec1f>& res, const image<vec1f>& img);
+inline void resize(image<vec2f>& res, const image<vec2f>& img);
+inline void resize(image<vec3f>& res, const image<vec3f>& img);
+inline void resize(image<vec4f>& res, const image<vec4f>& img);
+inline void resize(image<byte>& res, const image<byte>& img);
+inline void resize(image<vec1b>& res, const image<vec1b>& img);
+inline void resize(image<vec2b>& res, const image<vec2b>& img);
+inline void resize(image<vec3b>& res, const image<vec3b>& img);
+inline void resize(image<vec4b>& res, const image<vec4b>& img);
 template <typename T>
-inline void resize_image(image<T>& res, const image<T>& img, const vec2i& size);
+inline void resize(image<T>& res, const image<T>& img, const vec2i& size);
 
 }  // namespace yocto
 
@@ -438,35 +438,35 @@ namespace yocto {
 // Make example images in linear color space. Takes as input images allocated
 // to the desired size and fill the pixel with expected values.
 template <typename T>
-inline void make_grid_image(
+inline void make_grid(
     image<T>& img, const vec2i& size, int tile, const T& c0, const T& c1);
 template <typename T>
-inline void make_checker_image(
+inline void make_checker(
     image<T>& img, const vec2i& size, int tile, const T& c0, const T& c1);
 template <typename T>
-inline void make_bumpdimple_image(
+inline void make_bumpdimple(
     image<T>& img, const vec2i& size, int tile, const T& c0, const T& c1);
 template <typename T>
-inline void make_ramp_image(
+inline void make_ramp(
     image<T>& img, const vec2i& size, const T& c0, const T& c1);
 template <typename T>
-inline void make_ramp_image(image<T>& img, const vec2i& size, const T& c00,
+inline void make_ramp(image<T>& img, const vec2i& size, const T& c00,
     const T& c10, const T& c11, const T& c01);
 template <typename T>
-inline void make_gammaramp_image(
+inline void make_gammaramp(
     image<T>& img, const vec2i& size, const T& c0, const T& c1);
 template <typename T>
-inline void make_uvramp_image(image<T>& img, const vec2i& size);
+inline void make_uvramp(image<T>& img, const vec2i& size);
 template <typename T, int N>
-inline void make_uvgrid_image(image<vec<T, N>>& img, const vec2i& size,
+inline void make_uvgrid(image<vec<T, N>>& img, const vec2i& size,
     int tile = 8, bool colored = true);
 template <typename T, int N>
-inline void make_blackbodyramp_image(image<vec<T, N>>& img, const vec2i& size,
+inline void make_blackbodyramp(image<vec<T, N>>& img, const vec2i& size,
     float start_temperature = 1000, float end_temperature = 12000);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 template <typename T, int N>
-inline void bump_to_normal_map(
+inline void bump_to_normal(
     image<vec<T, N>>& norm, const image<vec<T, N>>& img, T scale = 1);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
@@ -475,46 +475,46 @@ inline void bump_to_normal_map(
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
 template <typename T, int N>
-inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size,
+inline void make_sunsky(image<vec<T, N>>& img, const vec2i& size,
     T sun_angle, T turbidity = 3, bool has_sun = false, T sun_intensity = 1,
     T                sun_temperature = 0,
     const vec<T, 3>& ground_albedo   = {(T)0.2, (T)0.2, (T)0.2});
 // Make an image of multiple lights.
 template <typename T, int N>
-inline void make_lights_image(image<vec<T, N>>& img, const vec2i& size,
+inline void make_lights(image<vec<T, N>>& img, const vec2i& size,
     const vec<T, 3>& le = {1, 1, 1}, int nlights = 4, T langle = (T)pi / 4,
     T lwidth = (T)pi / 16, T lheight = (T)pi / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 template <typename T, typename T1>
-inline void make_noise_image(image<T>& img, const vec2i& size, const T& c0,
+inline void make_noise(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale = 1, bool wrap = true);
 template <typename T, typename T1>
-inline void make_fbm_image(image<T>& img, const vec2i& size, const T& c0,
+inline void make_fbm(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale = 1, T1 lacunarity = 2, T1 gain = 0.5f,
     int octaves = 6, bool wrap = true);
 template <typename T, typename T1>
-inline void make_ridge_image(image<T>& img, const vec2i& size, const T& c0,
+inline void make_ridge(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale = 1, T1 lacunarity = 2, T1 gain = (T1)0.5,
     T1 offset = 1, int octaves = 6, bool wrap = true);
 template <typename T, typename T1>
-inline void make_turbulence_image(image<T>& img, const vec2i& size, const T& c0,
+inline void make_turbulence(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale = 1, T1 lacunarity = 2, T1 gain = (T1)0.5,
     int octaves = 6, bool wrap = true);
 
 // Add a border to an image
 template <typename T>
-inline void add_image_border(
+inline void add_border(
     image<T>& img, const vec2i& size, int border_width, const T& border_color);
 
 // Make logo images. Image is resized to proper size.
 template <typename T>
-inline void make_logo_image(image<T>& img, const string& name);
+inline void make_logo(image<T>& img, const string& name);
 
 // Make an image preset, useful for testing. See implementation for types.
-inline void make_image_preset(image<vec<float, 4>>& img, const string& type);
-inline void make_image_preset(image<vec<byte, 4>>& img, const string& type);
-inline void make_image_preset(
+inline void make_preset(image<vec<float, 4>>& img, const string& type);
+inline void make_preset(image<vec<byte, 4>>& img, const string& type);
+inline void make_preset(
     image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
 
 }  // namespace yocto
@@ -526,9 +526,9 @@ namespace yocto {
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-inline void save_tonemapped_image(const string& filename,
+inline void save_tonemapped(const string& filename,
     const image<vec3f>& hdr, const tonemap_image_options& options);
-inline void save_tonemapped_image(const string& filename,
+inline void save_tonemapped(const string& filename,
     const image<vec4f>& hdr, const tonemap_image_options& options);
 
 // Save with a logo embedded
@@ -539,7 +539,7 @@ inline void save_image_with_logo(
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 template <int N>
-inline void save_tonemapped_image_with_logo(const string& filename,
+inline void save_tonemapped_with_logo(const string& filename,
     const image<vec<float, N>>& hdr, const tonemap_image_options& options);
 
 }  // namespace yocto
@@ -589,9 +589,9 @@ template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b);
 
 // make a simple example volume
-inline void make_test_volume(volume<float>& vol, const vec3i& size,
+inline void make_test(volume<float>& vol, const vec3i& size,
     float scale = 10, float exponent = 6);
-inline void make_volume_preset(volume<float>& vol, const string& type);
+inline void make_preset(volume<float>& vol, const string& type);
 
 }  // namespace yocto
 
@@ -891,7 +891,7 @@ inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr_, bool accurate_fit) {
 
 // Convert number of channels
 template <typename T, int N1, int N2>
-inline vec<T, N1> convert_color_channels(const vec<T, N2>& a) {
+inline vec<T, N1> convert_channels(const vec<T, N2>& a) {
     if constexpr (N1 == 1) {
         if constexpr (N2 == 1) {
             return {a.x};
@@ -976,7 +976,7 @@ enum struct rgb_tone_curve_type {
 
 // RGB color space definition. Various predefined color spaces are listed below.
 template <typename T>
-struct rgb_color_space {
+struct rgb_space {
     // primaries
     vec<T, 2>    red_chromaticity;    // xy chromaticity of the red primary
     vec<T, 2>    green_chromaticity;  // xy chromaticity of the green primary
@@ -1009,106 +1009,106 @@ constexpr mat<T, 3, 3> rgb_to_xyz_mat(const vec<T, 2>& rc, const vec<T, 2>& gc,
 
 // Construct an RGB color space. Predefined color spaces below
 template <typename T>
-constexpr rgb_color_space<T> _make_linear_rgb_color_space(const vec<T, 2>& red,
+constexpr rgb_space<T> _make_linear_rgb_color_space(const vec<T, 2>& red,
     const vec<T, 2>& green, const vec<T, 2>& blue, const vec<T, 2>& white) {
-    return rgb_color_space{red, green, blue, white,
+    return rgb_space{red, green, blue, white,
         rgb_to_xyz_mat<T>(red, green, blue, white),
         inverse(rgb_to_xyz_mat<T>(red, green, blue, white)),
         rgb_tone_curve_type::linear};
 }
 template <typename T>
-constexpr rgb_color_space<T> _make_gamma_rgb_color_space(const vec<T, 2>& red,
+constexpr rgb_space<T> _make_gamma_rgb_color_space(const vec<T, 2>& red,
     const vec<T, 2>& green, const vec<T, 2>& blue, const vec<T, 2>& white,
     T gamma, const vec<T, 4>& curve_abcd = zero<T, 4>) {
-    return rgb_color_space{red, green, blue, white,
+    return rgb_space{red, green, blue, white,
         rgb_to_xyz_mat<T>(red, green, blue, white),
         inverse(rgb_to_xyz_mat<T>(red, green, blue, white)),
         curve_abcd == zero<T, 4> ? rgb_tone_curve_type::gamma
                                  : rgb_tone_curve_type::linear_gamma};
 }
 template <typename T>
-constexpr rgb_color_space<T> _make_other_rgb_color_space(const vec<T, 2>& red,
+constexpr rgb_space<T> _make_other_rgb_color_space(const vec<T, 2>& red,
     const vec<T, 2>& green, const vec<T, 2>& blue, const vec<T, 2>& white,
     rgb_tone_curve_type curve_type) {
-    return rgb_color_space{red, green, blue, white,
+    return rgb_space{red, green, blue, white,
         rgb_to_xyz_mat<T>(red, green, blue, white),
         inverse(rgb_to_xyz_mat<T>(red, green, blue, white)), curve_type};
 }
 
 template <typename T>
-constexpr rgb_color_space<T> get_rgb_space(rgb_color_space_type space) {
+constexpr rgb_space<T> get_rgb_space(rgb_space_type space) {
     switch (space) {
         // https://en.wikipedia.org/wiki/Rec._709
-        case rgb_color_space_type::linear_srgb:
+        case rgb_space_type::linear_srgb:
             return _make_linear_rgb_color_space<T>({0.6400, 0.3300},
                 {0.3000, 0.6000}, {0.1500, 0.0600}, {0.3127, 0.3290});
         // https://en.wikipedia.org/wiki/Rec._709
-        case rgb_color_space_type::srgb:
+        case rgb_space_type::srgb:
             return _make_gamma_rgb_color_space<T>({0.6400, 0.3300},
                 {0.3000, 0.6000}, {0.1500, 0.0600}, {0.3127, 0.3290}, 2.4,
                 {1.055, 0.055, 12.92, 0.0031308});
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System
-        case rgb_color_space_type::aces_2065:
+        case rgb_space_type::aces_2065:
             return _make_linear_rgb_color_space<T>({0.7347, 0.2653},
                 {0.0000, 1.0000}, {0.0001, -0.0770}, {0.32168, 0.33767});
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-        case rgb_color_space_type::aces_cg:
+        case rgb_space_type::aces_cg:
             return _make_linear_rgb_color_space<T>({0.7130, 0.2930},
                 {0.1650, 0.8300}, {0.1280, +0.0440}, {0.32168, 0.33767});
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-        case rgb_color_space_type::aces_cc:
+        case rgb_space_type::aces_cc:
             return _make_other_rgb_color_space<T>({0.7130, 0.2930},
                 {0.1650, 0.8300}, {0.1280, +0.0440}, {0.32168, 0.33767},
                 rgb_tone_curve_type::aces_cc);
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-        case rgb_color_space_type::aces_cct:
+        case rgb_space_type::aces_cct:
             return _make_other_rgb_color_space<T>({0.7130, 0.2930},
                 {0.1650, 0.8300}, {0.1280, +0.0440}, {0.32168, 0.33767},
                 rgb_tone_curve_type::aces_cct);
         // https://en.wikipedia.org/wiki/Adobe_RGB_color_space
-        case rgb_color_space_type::adobe_rgb:
+        case rgb_space_type::adobe_rgb:
             return _make_gamma_rgb_color_space<T>({0.6400, 0.3300},
                 {0.2100, 0.7100}, {0.1500, 0.0600}, {0.3127, 0.3290},
                 2.19921875);
         // https://en.wikipedia.org/wiki/Rec._709
-        case rgb_color_space_type::rec_709:
+        case rgb_space_type::rec_709:
             return _make_gamma_rgb_color_space<T>({0.6400, 0.3300},
                 {0.3000, 0.6000}, {0.1500, 0.0600}, {0.3127, 0.3290}, 1 / 0.45,
                 {1.099, 0.099, 4.500, 0.018});
         // https://en.wikipedia.org/wiki/Rec._2020
-        case rgb_color_space_type::rec_2020:
+        case rgb_space_type::rec_2020:
             return _make_gamma_rgb_color_space<T>({0.7080, 0.2920},
                 {0.1700, 0.7970}, {0.1310, 0.0460}, {0.3127, 0.3290}, 1 / 0.45,
                 {1.09929682680944, 0.09929682680944, 4.5, 0.018053968510807});
         // https://en.wikipedia.org/wiki/Rec._2020
-        case rgb_color_space_type::rec_2100_pq:
+        case rgb_space_type::rec_2100_pq:
             return _make_other_rgb_color_space<T>({0.7080, 0.2920},
                 {0.1700, 0.7970}, {0.1310, 0.0460}, {0.3127, 0.3290},
                 rgb_tone_curve_type::pq);
         // https://en.wikipedia.org/wiki/Rec._2020
-        case rgb_color_space_type::rec_2100_hlg:
+        case rgb_space_type::rec_2100_hlg:
             return _make_other_rgb_color_space<T>({0.7080, 0.2920},
                 {0.1700, 0.7970}, {0.1310, 0.0460}, {0.3127, 0.3290},
                 rgb_tone_curve_type::hlg);
         // https://en.wikipedia.org/wiki/DCI-P3
-        case rgb_color_space_type::p3_dci:
+        case rgb_space_type::p3_dci:
             return _make_gamma_rgb_color_space<T>({0.6800, 0.3200},
                 {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3140, 0.3510}, 1.6);
         // https://en.wikipedia.org/wiki/DCI-P3
-        case rgb_color_space_type::p3_d60:
+        case rgb_space_type::p3_d60:
             return _make_gamma_rgb_color_space<T>({0.6800, 0.3200},
                 {0.2650, 0.6900}, {0.1500, 0.0600}, {0.32168, 0.33767}, 1.6);
         // https://en.wikipedia.org/wiki/DCI-P3
-        case rgb_color_space_type::p3_d65:
+        case rgb_space_type::p3_d65:
             return _make_gamma_rgb_color_space<T>({0.6800, 0.3200},
                 {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3127, 0.3290}, 1.6);
         // https://en.wikipedia.org/wiki/DCI-P3
-        case rgb_color_space_type::p3_display:
+        case rgb_space_type::p3_display:
             return _make_gamma_rgb_color_space<T>({0.6800, 0.3200},
                 {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3127, 0.3290}, 2.4,
                 {1.055, 0.055, 12.92, 0.0031308});
         // https://en.wikipedia.org/wiki/ProPhoto_RGB_color_space
-        case rgb_color_space_type::prophoto_rgb:
+        case rgb_space_type::prophoto_rgb:
             return _make_gamma_rgb_color_space<T>({0.7347, 0.2653},
                 {0.1596, 0.8404}, {0.0366, 0.0001}, {0.3457, 0.3585}, 1.8,
                 {1, 0, 16, 0.001953125});
@@ -1201,7 +1201,7 @@ constexpr T hlg_linear_to_display(T x) {
 // Applies linear to display transformations and vice-verse
 template <typename T>
 constexpr vec<T, 3> linear_to_display(
-    const vec<T, 3>& rgb, const rgb_color_space<T>& space) {
+    const vec<T, 3>& rgb, const rgb_space<T>& space) {
     if (space.curve_type == rgb_tone_curve_type::linear) {
         return rgb;
     } else if (space.curve_type == rgb_tone_curve_type::gamma) {
@@ -1232,7 +1232,7 @@ constexpr vec<T, 3> linear_to_display(
 }
 template <typename T>
 constexpr vec<T, 3> display_to_linear(
-    const vec<T, 3>& rgb, const rgb_color_space<T>& space) {
+    const vec<T, 3>& rgb, const rgb_space<T>& space) {
     if (space.curve_type == rgb_tone_curve_type::linear) {
         return rgb;
     } else if (space.curve_type == rgb_tone_curve_type::gamma) {
@@ -1264,8 +1264,8 @@ constexpr vec<T, 3> display_to_linear(
 
 // Conversion between rgb color spaces
 template <typename T>
-constexpr vec<T, 3> rgb_to_rgb(const vec<T, 3>& rgb,
-    const rgb_color_space<T>& from, const rgb_color_space<T>& to) {
+constexpr vec<T, 3> rgb_to_rgb(
+    const vec<T, 3>& rgb, const rgb_space<T>& from, const rgb_space<T>& to) {
     if (from == to) {
         return rgb;
     } else if (from.rgb_to_xyz_mat == to.rgb_to_xyz_mat) {
@@ -1277,13 +1277,11 @@ constexpr vec<T, 3> rgb_to_rgb(const vec<T, 3>& rgb,
 
 // Conversion to/from xyz
 template <typename T>
-constexpr vec<T, 3> rgb_to_xyz(
-    const vec<T, 3>& rgb, const rgb_color_space<T>& from) {
+constexpr vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb, const rgb_space<T>& from) {
     return from.rgb_to_xyz_mat * display_to_linear(rgb, from);
 }
 template <typename T>
-constexpr vec<T, 3> xyz_to_rgb(
-    const vec<T, 3>& xyz, const rgb_color_space<T>& to) {
+constexpr vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz, const rgb_space<T>& to) {
     return linear_to_display(to.xyz_to_rgb_mat * xyz, to);
 }
 
@@ -1503,15 +1501,15 @@ inline void save_tonemapped_image_impl(const string& filename,
         save_image(filename, hdr);
     } else {
         auto ldr = image<vec<byte, N>>{hdr.size()};
-        tonemap_image(ldr, hdr, options);
+        tonemap(ldr, hdr, options);
         save_image(filename, ldr);
     }
 }
-inline void save_tonemapped_image(const string& filename,
+inline void save_tonemapped(const string& filename,
     const image<vec3f>& hdr, const tonemap_image_options& options) {
     save_tonemapped_image_impl(filename, hdr, options);
 }
-inline void save_tonemapped_image(const string& filename,
+inline void save_tonemapped(const string& filename,
     const image<vec4f>& hdr, const tonemap_image_options& options) {
     save_tonemapped_image_impl(filename, hdr, options);
 }
@@ -1521,23 +1519,23 @@ template <typename T, int N>
 inline void save_image_with_logo(
     const string& filename, const image<vec<T, N>>& img) {
     auto logo = image<vec<T, N>>{};
-    make_logo_image(logo, "logo-render");
+    make_logo(logo, "logo-render");
     auto img_copy = img;
     auto offset   = img.size() - logo.size() - 8;
-    set_image_region(img_copy, logo, offset);
+    set_region(img_copy, logo, offset);
     save_image(filename, img_copy);
 }
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 template <int N>
-inline void save_tonemapped_image_with_logo(const string& filename,
+inline void save_tonemapped_with_logo(const string& filename,
     const image<vec<float, N>>& hdr, const tonemap_image_options& options) {
     if (is_hdr_filename(filename)) {
         save_image_with_logo(filename, hdr);
     } else {
         auto ldr = image<vec<byte, N>>{hdr.size()};
-        tonemap_image(ldr, hdr, options);
+        tonemap(ldr, hdr, options);
         save_image_with_logo(filename, ldr);
     }
 }
@@ -1551,7 +1549,7 @@ namespace yocto {
 
 // Gets pixels in an image region
 template <typename T>
-inline void get_image_region(
+inline void get_region(
     image<T>& clipped, const image<T>& img, const image_region& region) {
     clipped.resize(region.size());
     for (auto j = 0; j < region.size().y; j++) {
@@ -1561,7 +1559,7 @@ inline void get_image_region(
     }
 }
 template <typename T>
-inline void set_image_region(
+inline void set_region(
     image<T>& img, const image<T>& region, const vec2i& offset) {
     for (auto j = 0; j < region.size().y; j++) {
         for (auto i = 0; i < region.size().x; i++) {
@@ -1572,7 +1570,7 @@ inline void set_image_region(
 }
 
 // Splits an image into an array of regions
-inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
+inline void make_regions(vector<image_region>& regions, const vec2i& size,
     int region_size, bool shuffled) {
     regions.clear();
     for (auto y = 0; y < size.y; y += region_size) {
@@ -1599,8 +1597,9 @@ inline void apply(
     }
 }
 template <typename T1, typename T2, typename Func>
-inline void apply(image<T1>& result, const image_region& region,
-    const image<T2>& source, const Func& func) {
+inline void apply(image<T1>& result, 
+    const image<T2>& source, const image_region& region,
+    const Func& func) {
     result.resize(source.size());
     for (auto j = region.min.y; j < region.max.y; j++) {
         for (auto i = region.min.x; i < region.max.x; i++) {
@@ -1639,7 +1638,7 @@ inline void linear_to_srgb(image<TB>& srgb, const image<T>& lin) {
         [](const auto& a) { return float_to_byte(linear_to_srgb(a)); });
 }
 
-inline vec3f tonemap_pixel(
+inline vec3f tonemap(
     const vec3f& hdr, const tonemap_image_options& options) {
     auto rgb = hdr;
     if (options.exposure != 0) rgb *= exp2(options.exposure);
@@ -1656,39 +1655,39 @@ inline vec3f tonemap_pixel(
 }
 
 // Apply exposure and filmic tone mapping
-inline void tonemap_image(image<vec3f>& ldr, const image<vec3f>& hdr,
+inline void tonemap(image<vec3f>& ldr, const image<vec3f>& hdr,
     const tonemap_image_options& options) {
     return apply(ldr, hdr,
-        [options](const vec3f& hdr) { return tonemap_pixel(hdr, options); });
+        [options](const vec3f& hdr) { return tonemap(hdr, options); });
 }
-inline void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
+inline void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     const tonemap_image_options& options) {
     return apply(ldr, hdr,
         [scale = exp2(options.exposure) * options.tint, options](
             const vec4f& hdr) {
-            return vec4f{tonemap_pixel(xyz(hdr), options), hdr.w};
+            return vec4f{tonemap(xyz(hdr), options), hdr.w};
         });
 }
-inline void tonemap_image(image<vec3b>& ldr, const image<vec3f>& hdr,
+inline void tonemap(image<vec3b>& ldr, const image<vec3f>& hdr,
     const tonemap_image_options& options) {
     return apply(ldr, hdr, [options](const vec3f& hdr) {
-        return float_to_byte(tonemap_pixel(hdr, options));
+        return float_to_byte(tonemap(hdr, options));
     });
 }
-inline void tonemap_image(image<vec4b>& ldr, const image<vec4f>& hdr,
+inline void tonemap(image<vec4b>& ldr, const image<vec4f>& hdr,
     const tonemap_image_options& options) {
     return apply(ldr, hdr, [options](const vec4f& hdr) {
-        return float_to_byte(vec4f{tonemap_pixel(xyz(hdr), options), hdr.w});
+        return float_to_byte(vec4f{tonemap(xyz(hdr), options), hdr.w});
     });
 }
-inline void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
-    const image<vec4f>& hdr, const tonemap_image_options& options) {
-    return apply(ldr, region, hdr, [options](const vec4f& hdr) {
-        return vec4f{tonemap_pixel(xyz(hdr), options), hdr.w};
+inline void tonemap(image<vec4f>& ldr, 
+    const image<vec4f>& hdr, const image_region& region, const tonemap_image_options& options) {
+    return apply(ldr, hdr, region, [options](const vec4f& hdr) {
+        return vec4f{tonemap(xyz(hdr), options), hdr.w};
     });
 }
 
-inline vec3f colorgrade_pixel(
+inline vec3f colorgrade(
     const vec3f& ldr, const colorgrade_image_options& options) {
     auto rgb = ldr;
     if (options.contrast != 0.5f) {
@@ -1715,11 +1714,11 @@ inline vec3f colorgrade_pixel(
 }
 
 // Apply exposure and filmic tone mapping
-inline void colorgrade_image_region(image<vec4f>& corrected,
-    const image_region& region, const image<vec4f>& ldr,
+inline void colorgrade(image<vec4f>& corrected,
+    const image<vec4f>& ldr, const image_region& region,
     const colorgrade_image_options& options) {
-    return apply(corrected, region, ldr, [&options](const vec4f& hdr) {
-        return vec4f{colorgrade_pixel(xyz(hdr), options), hdr.w};
+    return apply(corrected, ldr, region, [&options](const vec4f& hdr) {
+        return vec4f{colorgrade(xyz(hdr), options), hdr.w};
     });
 }
 
@@ -1732,17 +1731,17 @@ inline vec3f compute_white_balance(const image<vec4f>& img) {
 }
 
 template <int N1, int N2>
-inline void convert_color_channels(
+inline void convert_channels(
     image<vec<float, N1>>& result, const image<vec<float, N2>>& source) {
     return apply(result, source, [](const vec<float, N2>& a) {
-        return convert_color_channels<float, N1, N2>(a);
+        return convert_channels<float, N1, N2>(a);
     });
 }
 template <int N1, int N2>
-inline void convert_color_channels(
+inline void convert_channels(
     image<vec<byte, N1>>& result, const image<vec<byte, N2>>& source) {
     return apply(result, source, [](const vec<byte, N2>& a) {
-        return convert_color_channels<byte, N1, N2>(a);
+        return convert_channels<byte, N1, N2>(a);
     });
 }
 
@@ -1768,44 +1767,44 @@ inline void resize_image_impl(
         STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
 
-inline void resize_image(image<float>& res, const image<float>& img) {
+inline void resize(image<float>& res, const image<float>& img) {
     return resize_image_impl((image<vec1f>&)res, (const image<vec1f>&)img);
 }
-inline void resize_image(image<vec1f>& res, const image<vec1f>& img) {
+inline void resize(image<vec1f>& res, const image<vec1f>& img) {
     return resize_image_impl(res, img);
 }
-inline void resize_image(image<vec2f>& res, const image<vec2f>& img) {
+inline void resize(image<vec2f>& res, const image<vec2f>& img) {
     return resize_image_impl(res, img);
 }
-inline void resize_image(image<vec3f>& res, const image<vec3f>& img) {
+inline void resize(image<vec3f>& res, const image<vec3f>& img) {
     return resize_image_impl(res, img);
 }
-inline void resize_image(image<vec4f>& res, const image<vec4f>& img) {
+inline void resize(image<vec4f>& res, const image<vec4f>& img) {
     return resize_image_impl(res, img);
 }
 
-inline void resize_image(image<byte>& res, const image<byte>& img) {
+inline void resize(image<byte>& res, const image<byte>& img) {
     return resize_image_impl((image<vec1b>&)res, (const image<vec1b>&)img);
 }
-inline void resize_image(image<vec1b>& res, const image<vec1b>& img) {
+inline void resize(image<vec1b>& res, const image<vec1b>& img) {
     return resize_image_impl(res, img);
 }
-inline void resize_image(image<vec2b>& res, const image<vec2b>& img) {
+inline void resize(image<vec2b>& res, const image<vec2b>& img) {
     return resize_image_impl(res, img);
 }
-inline void resize_image(image<vec3b>& res, const image<vec3b>& img) {
+inline void resize(image<vec3b>& res, const image<vec3b>& img) {
     return resize_image_impl(res, img);
 }
-inline void resize_image(image<vec4b>& res, const image<vec4b>& img) {
+inline void resize(image<vec4b>& res, const image<vec4b>& img) {
     return resize_image_impl(res, img);
 }
 
 template <typename T>
-inline void resize_image(
+inline void resize(
     image<T>& res_img, const image<T>& img, const vec2i& size_) {
     auto size = size_;
     if (size == zero2i) {
-        throw std::invalid_argument("bad image size in resize_image");
+        throw std::invalid_argument("bad image size in resize");
     }
     if (size.y == 0) {
         size.y = (int)round(size.x * (float)img.size().y / (float)img.size().x);
@@ -1813,7 +1812,7 @@ inline void resize_image(
         size.x = (int)round(size.y * (float)img.size().x / (float)img.size().y);
     }
     res_img = {size};
-    resize_image(res_img, img);
+    resize(res_img, img);
 }
 
 }  // namespace yocto
@@ -1849,7 +1848,7 @@ inline void make_image_fromuv(
 
 // Make a grid image
 template <typename T>
-inline void make_grid_image(
+inline void make_grid(
     image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
     make_image_fromij(
         img, size, [tile = size.x / tiles, &c0, &c1](int i, int j) {
@@ -1861,7 +1860,7 @@ inline void make_grid_image(
 
 // Make a checkerboard image
 template <typename T>
-inline void make_checker_image(
+inline void make_checker(
     image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
     make_image_fromij(
         img, size, [tile = size.x / tiles, &c0, &c1](int i, int j) {
@@ -1872,7 +1871,7 @@ inline void make_checker_image(
 
 // Make an image with bumps and dimples.
 template <typename T>
-inline void make_bumpdimple_image(
+inline void make_bumpdimple(
     image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
     make_image_fromij(
         img, size, [tile = size.x / tiles, &c0, &c1](int i, int j) {
@@ -1890,7 +1889,7 @@ inline void make_bumpdimple_image(
 
 // Make a uv colored grid
 template <typename T>
-inline void make_ramp_image(
+inline void make_ramp(
     image<T>& img, const vec2i& size, const T& c0, const T& c1) {
     make_image_fromij(img, size, [size = img.size(), &c0, &c1](int i, int j) {
         auto u = (float)i / (float)size.x;
@@ -1898,7 +1897,7 @@ inline void make_ramp_image(
     });
 }
 template <typename T>
-inline void make_ramp_image(image<T>& img, const vec2i& size, const T& c00,
+inline void make_ramp(image<T>& img, const vec2i& size, const T& c00,
     const T& c10, const T& c11, const T& c01) {
     make_image_fromij(img, size, [size, &c00, &c10, &c01, &c11](int i, int j) {
         auto u = (float)i / (float)size.x;
@@ -1909,7 +1908,7 @@ inline void make_ramp_image(image<T>& img, const vec2i& size, const T& c00,
 
 // Make a gamma ramp image
 template <typename T>
-inline void make_gammaramp_image(
+inline void make_gammaramp(
     image<T>& img, const vec2i& size, const T& c0, const T& c1) {
     make_image_fromij(img, size, [size, &c0, &c1](int i, int j) {
         auto u = j / float(size.y - 1);
@@ -1922,14 +1921,14 @@ inline void make_gammaramp_image(
 // Make an image color with red/green in the [0,1] range. Helpful to
 // visualize uv texture coordinate application.
 template <typename T, int N>
-inline void make_uvramp_image(image<vec<T, N>>& img, const vec2i& size) {
+inline void make_uvramp(image<vec<T, N>>& img, const vec2i& size) {
     if constexpr (N == 3) {
         // FIXME: not generic
-        return make_ramp_image(img, size, vec<T, N>{0, 0, 0},
+        return make_ramp(img, size, vec<T, N>{0, 0, 0},
             vec<T, N>{1, 0, 0}, vec<T, N>{1, 1, 0}, vec<T, N>{0, 1, 0});
     } else if constexpr (N == 4) {
         // FIXME: not generic
-        return make_ramp_image(img, size, vec<T, N>{0, 0, 0, 0},
+        return make_ramp(img, size, vec<T, N>{0, 0, 0, 0},
             vec<T, N>{1, 0, 0, 0}, vec<T, N>{1, 1, 0, 0},
             vec<T, N>{0, 1, 0, 0});
     } else {
@@ -1939,7 +1938,7 @@ inline void make_uvramp_image(image<vec<T, N>>& img, const vec2i& size) {
 
 // Make a uv colored grid
 template <typename T, int N>
-inline void make_uvgrid_image(
+inline void make_uvgrid(
     image<vec<T, N>>& img, const vec2i& size, int tiles, bool colored) {
     make_image_fromij(
         img, size, [size, tile = size.x / tiles, colored](int i, int j) {
@@ -1961,13 +1960,13 @@ inline void make_uvgrid_image(
             }
             auto rgb = (colored) ? hsv_to_rgb(vec<T, 3>{ph, ps, pv})
                                  : vec<T, 3>{pv, pv, pv};
-            return convert_color_channels<T, N, 3>(rgb);
+            return convert_channels<T, N, 3>(rgb);
         });
 }
 
 // Makes a blackbody ramp
 template <typename T, int N>
-inline void make_blackbodyramp_image(image<vec<T, N>>& img, const vec2i& size,
+inline void make_blackbodyramp(image<vec<T, N>>& img, const vec2i& size,
     float start_temperature, float end_temperature) {
     make_image_fromij(
         img, size, [size, start_temperature, end_temperature](int i, int j) {
@@ -1975,13 +1974,13 @@ inline void make_blackbodyramp_image(image<vec<T, N>>& img, const vec2i& size,
                                (end_temperature - start_temperature) *
                                    (float)i / (float)(size.x - 1);
             auto rgb = blackbody_to_rgb(temperature);
-            return convert_color_channels<T, N, 3>(rgb);
+            return convert_channels<T, N, 3>(rgb);
         });
 }
 
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
-inline void make_noise_image(image<T>& img, const vec2i& size, const T& c0,
+inline void make_noise(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale, bool wrap) {
     make_image_fromij(img, size,
         [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale, &c0,
@@ -1995,7 +1994,7 @@ inline void make_noise_image(image<T>& img, const vec2i& size, const T& c0,
 
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
-inline void make_fbm_image(image<T>& img, const vec2i& size, const T& c0,
+inline void make_fbm(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale, T1 lacunarity, T1 gain, int octaves, bool wrap) {
     make_image_fromij(img, size,
         [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale,
@@ -2009,7 +2008,7 @@ inline void make_fbm_image(image<T>& img, const vec2i& size, const T& c0,
 
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
-inline void make_ridge_image(image<T>& img, const vec2i& size, const T& c0,
+inline void make_ridge(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale, T1 lacunarity, T1 gain, T1 offset, int octaves,
     bool wrap) {
     make_image_fromij(img, size,
@@ -2025,7 +2024,7 @@ inline void make_ridge_image(image<T>& img, const vec2i& size, const T& c0,
 
 // Make a noise image. Wrap works only if size is a power of two.
 template <typename T, typename T1>
-inline void make_turbulence_image(image<T>& img, const vec2i& size, const T& c0,
+inline void make_turbulence(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale, T1 lacunarity, T1 gain, int octaves, bool wrap) {
     make_image_fromij(img, size,
         [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale,
@@ -2040,7 +2039,7 @@ inline void make_turbulence_image(image<T>& img, const vec2i& size, const T& c0,
 
 // Comvert a bump map to a normal map.
 template <typename T, int N>
-inline void bump_to_normal_map(
+inline void bump_to_normal(
     image<vec<T, N>>& norm, const image<vec<T, N>>& img, T scale) {
     norm.resize(img.size());
     auto dx = 1.0f / img.size().x, dy = 1.0f / img.size().y;
@@ -2063,7 +2062,7 @@ inline void bump_to_normal_map(
 
 // Add a border to an image
 template <typename T>
-inline void add_image_border(
+inline void add_border(
     image<T>& img, int border_width, const T& border_color) {
     for (auto j = 0; j < img.size().y; j++) {
         for (auto b = 0; b < border_width; b++) {
@@ -2083,7 +2082,7 @@ inline void add_image_border(
 
 // Implementation of sunsky modified heavily from pbrt
 template <typename T, int N>
-inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size,
+inline void make_sunsky(image<vec<T, N>>& img, const vec2i& size,
     T theta_sun, T turbidity, bool has_sun, T sun_intensity, T sun_temperature,
     const vec<T, 3>& ground_albedo) {
     // idea adapted from pbrt
@@ -2107,7 +2106,7 @@ inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size,
 
     // clear image
     img.resize(size);
-    for (auto& p : img) p = convert_color_channels<T, N, 3>(vec<T, 3>{0, 0, 0});
+    for (auto& p : img) p = convert_channels<T, N, 3>(vec<T, 3>{0, 0, 0});
 
     // sun-sky
     auto sun_direction = vec<T, 3>{0, sin(theta_sun), cos(theta_sun)};
@@ -2151,7 +2150,7 @@ inline void make_sunsky_image(image<vec<T, N>>& img, const vec2i& size,
 #else
 
 // Implementation of sunsky modified heavily from pbrt
-image<vec4f> make_sunsky_image(int width, int height, float theta_sun,
+image<vec4f> make_sunsky(int width, int height, float theta_sun,
     float turbidity, bool has_sun, float sun_angle_scale,
     float sun_emission_scale, const vec3f& ground_albedo,
     bool renormalize_sun) {
@@ -2299,7 +2298,7 @@ image<vec4f> make_sunsky_image(int width, int height, float theta_sun,
 
 // Make an image of multiple lights.
 template <typename T>
-inline void make_lights_image(image<vec<T, 4>>& img, const vec2i& size,
+inline void make_lights(image<vec<T, 4>>& img, const vec2i& size,
     const vec<T, 3>& le, int nlights, T langle, T lwidth, T lheight) {
     img.resize(size);
     for (auto j = 0; j < img.size().y / 2; j++) {
@@ -2319,7 +2318,7 @@ inline void make_lights_image(image<vec<T, 4>>& img, const vec2i& size,
 }
 
 template <int N>
-inline void make_logo_image(image<vec<byte, N>>& img, const string& type) {
+inline void make_logo(image<vec<byte, N>>& img, const string& type) {
     static const auto size = vec2i{144, 28};
     // clang-format off
     static const auto logo_render = vector<byte>{
@@ -2356,62 +2355,62 @@ inline void make_logo_image(image<vec<byte, N>>& img, const string& type) {
     if (type == "logo-render") {
         auto img1 = image<vec<byte, 1>>{size, (vec1b*)logo_render.data()};
         img.resize(size);
-        convert_color_channels(img, img1);
+        convert_channels(img, img1);
     } else {
         throw io_error("unknown builtin image " + type);
     }
 }
 
 template <int N>
-inline void make_logo_image(image<vec<float, N>>& img, const string& type) {
+inline void make_logo(image<vec<float, N>>& img, const string& type) {
     auto img8 = image<vec<byte, N>>();
-    make_logo_image(img8, type);
+    make_logo(img8, type);
     img.resize(img8.size());
     srgb_to_linear(img, img8);
 }
 
-inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
+inline void make_preset(image<vec<float, 4>>& img, const string& type) {
     auto size = vec2i{1024, 1024};
     if (type.find("sky") != type.npos) size = {2048, 1024};
     if (type == "grid") {
-        make_grid_image(
+        make_grid(
             img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
     } else if (type == "checker") {
-        make_checker_image(
+        make_checker(
             img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
     } else if (type == "bump") {
-        make_bumpdimple_image(img, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+        make_bumpdimple(img, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
     } else if (type == "uvramp") {
-        make_uvramp_image(img, size);
+        make_uvramp(img, size);
     } else if (type == "gammaramp") {
-        make_gammaramp_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1});
+        make_gammaramp(img, size, {0, 0, 0, 1}, {1, 1, 1, 1});
     } else if (type == "blackbodyramp") {
-        make_blackbodyramp_image(img, size);
+        make_blackbodyramp(img, size);
     } else if (type == "uvgrid") {
-        make_uvgrid_image(img, size);
+        make_uvgrid(img, size);
     } else if (type == "sky") {
-        make_sunsky_image(img, size, pif / 4, 3.0f, false, 1.0f, 0.0f,
+        make_sunsky(img, size, pif / 4, 3.0f, false, 1.0f, 0.0f,
             vec<float, 3>{0.7f, 0.7f, 0.7f});
     } else if (type == "sunsky") {
-        make_sunsky_image(img, size, pif / 4, 3.0f, true, 1.0f, 0.0f,
+        make_sunsky(img, size, pif / 4, 3.0f, true, 1.0f, 0.0f,
             vec<float, 3>{0.7f, 0.7f, 0.7f});
     } else if (type == "noise") {
-        make_noise_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
+        make_noise(img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
     } else if (type == "fbm") {
-        make_fbm_image(
+        make_fbm(
             img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
     } else if (type == "ridge") {
-        make_ridge_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f,
+        make_ridge(img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f,
             0.5f, 1.0f, 6, true);
     } else if (type == "turbulence") {
-        make_turbulence_image(
+        make_turbulence(
             img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
     } else if (type == "bump-normal") {
         auto bump = image<vec<float, 4>>{};
-        make_bumpdimple_image(bump, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
-        bump_to_normal_map(img, bump, 0.05f);
+        make_bumpdimple(bump, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+        bump_to_normal(img, bump, 0.05f);
     } else if (type == "logo-render") {
-        make_logo_image(img, "logo-render");
+        make_logo(img, "logo-render");
     } else if (type == "images1") {
         auto sub_types = vector<string>{"grid", "uvgrid", "checker",
             "gammaramp", "bump", "bump-normal", "noise", "fbm",
@@ -2419,7 +2418,7 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
         auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
         for (auto i = 0; i < sub_imgs.size(); i++) {
             sub_imgs.at(i).resize(img.size());
-            make_image_preset(sub_imgs.at(i), sub_types.at(i));
+            make_preset(sub_imgs.at(i), sub_types.at(i));
         }
         auto montage_size = zero2i;
         for (auto& sub_img : sub_imgs) {
@@ -2429,14 +2428,14 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
         img.resize(montage_size);
         auto pos = 0;
         for (auto& sub_img : sub_imgs) {
-            set_image_region(img, sub_img, {pos, 0});
+            set_region(img, sub_img, {pos, 0});
             pos += sub_img.size().x;
         }
     } else if (type == "images2") {
         auto sub_types = vector<string>{"sky", "sunsky"};
         auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
         for (auto i = 0; i < sub_imgs.size(); i++) {
-            make_image_preset(sub_imgs.at(i), sub_types.at(i));
+            make_preset(sub_imgs.at(i), sub_types.at(i));
         }
         auto montage_size = zero2i;
         for (auto& sub_img : sub_imgs) {
@@ -2446,55 +2445,55 @@ inline void make_image_preset(image<vec<float, 4>>& img, const string& type) {
         img.resize(montage_size);
         auto pos = 0;
         for (auto& sub_img : sub_imgs) {
-            set_image_region(img, sub_img, {pos, 0});
+            set_region(img, sub_img, {pos, 0});
             pos += sub_img.size().x;
         }
     } else if (type == "test-floor") {
-        make_grid_image(
+        make_grid(
             img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
-        add_image_border(img, 2, {0, 0, 0, 1});
+        add_border(img, 2, {0, 0, 0, 1});
     } else if (type == "test-grid") {
-        make_grid_image(
+        make_grid(
             img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
     } else if (type == "test-checker") {
-        make_checker_image(
+        make_checker(
             img, size, 8, {0.2f, 0.2f, 0.2f, 1}, {0.5f, 0.5f, 0.5f, 1});
     } else if (type == "test-bump") {
-        make_bumpdimple_image(img, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+        make_bumpdimple(img, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
     } else if (type == "test-uvramp") {
-        make_uvramp_image(img, size);
+        make_uvramp(img, size);
     } else if (type == "test-gammaramp") {
-        make_gammaramp_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1});
+        make_gammaramp(img, size, {0, 0, 0, 1}, {1, 1, 1, 1});
     } else if (type == "test-blackbodyramp") {
-        make_blackbodyramp_image(img, size);
+        make_blackbodyramp(img, size);
     } else if (type == "test-uvgrid") {
-        make_uvgrid_image(img, size);
+        make_uvgrid(img, size);
     } else if (type == "test-sky") {
-        make_sunsky_image(img, size, pif / 4, 3.0f, false, 1.0f, 0.0f,
+        make_sunsky(img, size, pif / 4, 3.0f, false, 1.0f, 0.0f,
             vec<float, 3>{0.7f, 0.7f, 0.7f});
     } else if (type == "test-sunsky") {
-        make_sunsky_image(img, size, pif / 4, 3.0f, true, 1.0f, 0.0f,
+        make_sunsky(img, size, pif / 4, 3.0f, true, 1.0f, 0.0f,
             vec<float, 3>{0.7f, 0.7f, 0.7f});
     } else if (type == "test-noise") {
-        make_noise_image(img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
+        make_noise(img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, true);
     } else if (type == "test-fbm") {
-        make_fbm_image(
+        make_fbm(
             img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 1.0f, 2.0f, 0.5f, 6, true);
     } else if (type == "test-bump-normal") {
         auto bump = image<vec<float, 4>>{};
-        make_bumpdimple_image(bump, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
-        bump_to_normal_map(img, bump, 0.05f);
+        make_bumpdimple(bump, size, 8, {0, 0, 0, 1}, {1, 1, 1, 1});
+        bump_to_normal(img, bump, 0.05f);
     } else if (type == "test-fbm-displacement") {
-        make_fbm_image(
+        make_fbm(
             img, size, {0, 0, 0, 1}, {1, 1, 1, 1}, 10.0f, 2.0f, 0.5f, 6, true);
     } else {
         throw std::invalid_argument("unknown image preset " + type);
     }
 }
 
-inline void make_image_preset(image<vec<byte, 4>>& img, const string& type) {
+inline void make_preset(image<vec<byte, 4>>& img, const string& type) {
     auto imgf = image<vec4f>{};
-    make_image_preset(imgf, type);
+    make_preset(imgf, type);
     if (type.find("-normal") == type.npos) {
         linear_to_srgb(img, imgf);
     } else {
@@ -2502,12 +2501,12 @@ inline void make_image_preset(image<vec<byte, 4>>& img, const string& type) {
     }
 }
 
-inline void make_image_preset(
+inline void make_preset(
     image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
     if (type.find("sky") == type.npos) {
-        make_image_preset(ldr, type);
+        make_preset(ldr, type);
     } else {
-        make_image_preset(hdr, type);
+        make_preset(hdr, type);
     }
 }
 
@@ -2591,7 +2590,7 @@ inline const T* volume<T>::end() const {
 }
 
 // make a simple example volume
-inline void make_test_volume(
+inline void make_test(
     volume<float>& vol, const vec3i& size, float scale, float exponent) {
     vol.resize(size);
     for (auto k = 0; k < vol.size().z; k++) {
@@ -2608,10 +2607,10 @@ inline void make_test_volume(
     }
 }
 
-inline void make_volume_preset(volume<float>& vol, const string& type) {
+inline void make_preset(volume<float>& vol, const string& type) {
     auto size = vec3i{256, 256, 256};
     if (type == "test-volume") {
-        make_test_volume(vol, size, 6, 10);
+        make_test(vol, size, 6, 10);
     } else {
         throw runtime_error("unknown volume preset " + type);
     }

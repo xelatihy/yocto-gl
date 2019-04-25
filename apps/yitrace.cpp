@@ -151,7 +151,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
     preview_options.num_samples = 1;
     auto small_preview   = trace_image(scene, bvh, lights, preview_options);
     auto display_preview = small_preview;
-    tonemap_image(display_preview, small_preview, tonemap_options);
+    tonemap(display_preview, small_preview, tonemap_options);
     for (auto j = 0; j < preview.size().y; j++) {
         for (auto i = 0; i < preview.size().x; i++) {
             auto pi = clamp(i / preview_ratio, 0, display_preview.size().x - 1),
@@ -167,7 +167,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
     state            = trace_state{};
     init_trace_state(state, image_size, trace_options.random_seed);
     auto regions = vector<image_region>{};
-    make_image_regions(regions, render.size(), trace_options.region_size, true);
+    make_regions(regions, render.size(), trace_options.region_size, true);
 
     for (auto sample = 0; sample < trace_options.num_samples;
          sample += trace_options.samples_per_batch) {
@@ -182,7 +182,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
                 &queue](const image_region& region) {
                 trace_image_region(render, state, scene, bvh, lights, region,
                     num_samples, trace_options);
-                tonemap_image_region(display, region, render, tonemap_options);
+                tonemap(display, render, region, tonemap_options);
                 queue.push(region);
             },
             &stop);
@@ -771,7 +771,7 @@ void update(app_state& app) {
             case app_task_type::save_image: {
                 log_info("start saving {}", scn.imagename);
                 task.result = async([&scn]() {
-                    save_tonemapped_image(
+                    save_tonemapped(
                         scn.imagename, scn.render, scn.tonemap_options);
                 });
             } break;

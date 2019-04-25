@@ -398,48 +398,48 @@ static inline void apply_json_procedural(const json& js, image<vec4f>& img) {
     if (type == "") {
         img = image{{width, height}, zero4f};
     } else if (type == "grid") {
-        make_grid_image(img, js.value("tile", 8),
+        make_grid(img, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "checker") {
-        make_checker_image(img, js.value("tile", 8),
+        make_checker(img, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "bump") {
-        make_bumpdimple_image(img, js.value("tile", 8),
+        make_bumpdimple(img, js.value("tile", 8),
             js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}));
     } else if (type == "uvramp") {
-        make_uvramp_image(img);
+        make_uvramp(img);
     } else if (type == "gammaramp") {
-        make_gammaramp_image(img, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_gammaramp(img, js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}));
     } else if (type == "blackbodyramp") {
-        make_blackbodyramp_image(img);
+        make_blackbodyramp(img);
     } else if (type == "uvgrid") {
-        make_uvgrid_image(img);
+        make_uvgrid(img);
     } else if (type == "sky") {
-        make_sunsky_image(img, js.value("sun_angle", pif / 4),
+        make_sunsky(img, js.value("sun_angle", pif / 4),
             js.value("turbidity", 3.0f), js.value("has_sun", false),
             js.value("sun_intensity", 1.0f), js.value("sun_temperature", 0.0f),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
     } else if (type == "noise") {
-        make_noise_image(img, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_noise(img, js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("wrap", true));
     } else if (type == "fbm") {
-        make_fbm_image(img, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_fbm(img, js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        make_ridge_image(img, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_ridge(img, js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        make_turbulence_image(img, js.value("c0", vec4f{0, 0, 0, 1}),
+        make_turbulence(img, js.value("c0", vec4f{0, 0, 0, 1}),
             js.value("c1", vec4f{1, 1, 1, 1}), js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
@@ -456,19 +456,19 @@ static inline void apply_json_procedural(const json& js, image<vec4f>& img) {
         img.resize(size);
         auto pos = 0;
         for (auto& sub_img : sub_imgs) {
-            set_image_region(img, sub_img, {pos, 0});
+            set_region(img, sub_img, {pos, 0});
             pos += sub_img.size().x;
         }
     } else {
         throw std::invalid_argument("unknown image type" + type);
     }
     if (js.value("border", false)) {
-        add_image_border(img, js.value("border_width", 2),
+        add_border(img, js.value("border_width", 2),
             js.value("border_color", vec4f{0, 0, 0, 1}));
     }
     if (js.value("bump_to_normal", false)) {
         auto buffer = img;
-        bump_to_normal_map(img, buffer, js.value("bump_scale", 1.0f));
+        bump_to_normal(img, buffer, js.value("bump_scale", 1.0f));
     }
 }
 
@@ -523,13 +523,13 @@ inline void load_image_preset(
     if constexpr (N == 4) {
         img.resize({1024, 1024});
         if (type == "images2") img.resize({2048, 1024});
-        make_image_preset(img, type);
+        make_preset(img, type);
     } else {
         auto img4 = image<vec<float, 4>>({1024, 1024});
         if (type == "images2") img4.resize({2048, 1024});
-        make_image_preset(img4, type);
+        make_preset(img4, type);
         img.resize(img4.size());
-        convert_color_channels(img, img4);
+        convert_channels(img, img4);
     }
 }
 template <int N>
