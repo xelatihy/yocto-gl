@@ -1391,10 +1391,10 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
 
     try {
         // Parse obj
-        auto obj_options          = load_obj_options();
-        obj_options.geometry_only = false;
+        auto obj_prms          = obj_params();
+        obj_prms.geometry_only = false;
         auto cb                   = load_obj_scene_callbacks{scene, params};
-        load_obj(filename, cb, obj_options);
+        load_obj(filename, cb, obj_prms);
 
         // cleanup empty
         for (auto idx = 0; idx < scene.shapes.size(); idx++) {

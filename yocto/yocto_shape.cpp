@@ -992,14 +992,14 @@ inline void load_obj_shape(const string& filename, vector<int>& points,
     bool preserve_facevarying, bool flip_texcoord) {
     try {
         // load obj
-        auto obj_options          = load_obj_options();
-        obj_options.exit_on_error = false;
-        obj_options.geometry_only = true;
-        obj_options.flip_texcoord = flip_texcoord;
+        auto obj_prms          = obj_params();
+        obj_prms.exit_on_error = false;
+        obj_prms.geometry_only = true;
+        obj_prms.flip_texcoord = flip_texcoord;
         auto cb = load_obj_shape_callbacks{points, lines, triangles, quads,
             quads_positions, quads_normals, quads_texturecoords, positions,
             normals, texturecoords, preserve_facevarying};
-        load_obj(filename, cb, obj_options);
+        load_obj(filename, cb, obj_prms);
 
         // merging quads and triangles
         if (!preserve_facevarying) {

@@ -421,13 +421,13 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
 
     try {
         // load obj
-        auto obj_options          = load_obj_options();
-        obj_options.exit_on_error = false;
-        obj_options.geometry_only = true;
-        obj_options.flip_texcoord = true;
+        auto obj_prms          = obj_params();
+        obj_prms.exit_on_error = false;
+        obj_prms.geometry_only = true;
+        obj_prms.flip_texcoord = true;
         auto cb                   = load_disney_island_shape_callbacks{
             shapes, materials, smap, mmap, tmap, scene, filename, parent_name};
-        load_obj(dirname + filename, cb, obj_options);
+        load_obj(dirname + filename, cb, obj_prms);
 
         // check for PTEX errors
         for (auto id = 0; id < shapes.size(); id++) {
