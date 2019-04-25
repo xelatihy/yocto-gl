@@ -214,7 +214,7 @@ inline void load_obj(const string& filename, Callbacks& cb,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static inline void _parse_value(string_view& str, obj_vertex& value) {
+static inline void parse_value(string_view& str, obj_vertex& value) {
     value = obj_vertex{0, 0, 0};
     parse_value(str, value.position);
     if (!str.empty() && str.front() == '/') {
@@ -233,7 +233,7 @@ static inline void _parse_value(string_view& str, obj_vertex& value) {
 }
 
 // Input for OBJ textures
-static inline void _parse_value(string_view& str, obj_texture_info& info) {
+static inline void parse_value(string_view& str, obj_texture_info& info) {
     // initialize
     info = obj_texture_info();
 
@@ -261,7 +261,7 @@ static inline void _parse_value(string_view& str, obj_texture_info& info) {
 
 // Load obj materials
 template <typename Callbacks>
-static inline void _load_mtl(
+ inline void load_mtl(
     const string& filename, Callbacks& cb, const obj_params& params) {
     // open file
     auto fs_ = open_input_file(filename);
@@ -320,25 +320,25 @@ static inline void _load_mtl(
         } else if (cmd == "Pr" || cmd == "rs") {
             parse_value(line, material.rs);
         } else if (cmd == "map_Ke") {
-            _parse_value(line, material.ke_txt);
+            parse_value(line, material.ke_txt);
         } else if (cmd == "map_Kd") {
-            _parse_value(line, material.kd_txt);
+            parse_value(line, material.kd_txt);
         } else if (cmd == "map_Ks") {
-            _parse_value(line, material.ks_txt);
+            parse_value(line, material.ks_txt);
         } else if (cmd == "map_Tr") {
-            _parse_value(line, material.kt_txt);
+            parse_value(line, material.kt_txt);
         } else if (cmd == "map_d" || cmd == "map_Tr") {
-            _parse_value(line, material.op_txt);
+            parse_value(line, material.op_txt);
         } else if (cmd == "map_Pr" || cmd == "map_rs") {
-            _parse_value(line, material.rs_txt);
+            parse_value(line, material.rs_txt);
         } else if (cmd == "map_occ" || cmd == "occ") {
-            _parse_value(line, material.occ_txt);
+            parse_value(line, material.occ_txt);
         } else if (cmd == "map_bump" || cmd == "bump") {
-            _parse_value(line, material.bump_txt);
+            parse_value(line, material.bump_txt);
         } else if (cmd == "map_disp" || cmd == "disp") {
-            _parse_value(line, material.disp_txt);
+            parse_value(line, material.disp_txt);
         } else if (cmd == "map_norm" || cmd == "norm") {
-            _parse_value(line, material.norm_txt);
+            parse_value(line, material.norm_txt);
         } else if (cmd == "Ve") {
             parse_value(line, material.ve);
         } else if (cmd == "Va") {
@@ -348,7 +348,7 @@ static inline void _load_mtl(
         } else if (cmd == "Vg") {
             parse_value(line, material.vg);
         } else if (cmd == "map_Vd") {
-            _parse_value(line, material.vd_txt);
+            parse_value(line, material.vd_txt);
         }
     }
 
@@ -358,7 +358,7 @@ static inline void _load_mtl(
 
 // Load obj extensions
 template <typename Callbacks>
-static inline void _load_objx(
+ inline void load_objx(
     const string& filename, Callbacks& cb, const obj_params& params) {
     // open file
     auto fs_ = open_input_file(filename);
@@ -415,7 +415,7 @@ static inline void _load_objx(
 
 // Load obj scene
 template <typename Callbacks>
-static inline void _load_obj(
+ inline void load_obj(
     const string& filename, Callbacks& cb, const obj_params& params) {
     // open file
     auto fs_ = open_input_file(filename);
@@ -461,7 +461,7 @@ static inline void _load_obj(
             skip_whitespace(line);
             while (!line.empty()) {
                 auto vert = obj_vertex{};
-                _parse_value(line, vert);
+                parse_value(line, vert);
                 if (!vert.position) break;
                 if (vert.position < 0)
                     vert.position = vert_size.position + vert.position + 1;
@@ -498,7 +498,7 @@ static inline void _load_obj(
             parse_value(line, mtlname);
             cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + mtlname;
-            _load_mtl(mtlpath, cb, params);
+            load_mtl(mtlpath, cb, params);
         } else {
             // unused
         }
@@ -509,15 +509,9 @@ static inline void _load_obj(
         auto extname    = get_noextension(filename) + ".objx";
         auto ext_exists = exists_file(extname);
         if (ext_exists) {
-            _load_objx(extname, cb, params);
+            load_objx(extname, cb, params);
         }
     }
-}
-
-template <typename Callbacks>
-inline void load_obj(
-    const string& filename, Callbacks& cb, const obj_params& params) {
-    return _load_obj(filename, cb, params);
 }
 
 }  // namespace yocto
