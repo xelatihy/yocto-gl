@@ -76,8 +76,8 @@ struct app_image {
     image_stats image_stats, display_stats;
 
     // tonemapping values
-    tonemap_image_options    tonemap_options    = {};
-    colorgrade_image_options colorgrade_options = {};
+    tonemap_params    tonemap_prms    = {};
+    colorgrade_params colorgrade_prms = {};
 
     // computation futures
     bool            load_done = false, display_done = false;
@@ -96,8 +96,8 @@ struct app_state {
     deque<string>    errors;
 
     // default options
-    tonemap_image_options    tonemap_options    = {};
-    colorgrade_image_options colorgrade_options = {};
+    tonemap_params    tonemap_prms    = {};
+    colorgrade_params colorgrade_prms = {};
 };
 
 // compute min/max
@@ -121,20 +121,19 @@ void compute_image_stats(
 
 void update_app_display(const string& filename, const image<vec4f>& img,
     image<vec4f>& display, image_stats& stats,
-    const tonemap_image_options&    tonemap_options,
-    const colorgrade_image_options& colorgrade_options, atomic<bool>& stop,
+    const tonemap_params&    tonemap_prms,
+    const colorgrade_params& colorgrade_prms, atomic<bool>& stop,
     concurrent_queue<image_region>& queue) {
     auto regions = vector<image_region>{};
-    make_image_regions(regions, img.size(), 128);
+    make_regions(regions, img.size(), 128);
     parallel_foreach(
         regions,
-        [&img, &display, &queue,
-            colorgrade = colorgrade_options != colorgrade_image_options{},
-            tonemap_options, colorgrade_options](const image_region& region) {
-            tonemap_image_region(display, region, img, tonemap_options);
-            if (colorgrade) {
-                colorgrade_image_region(
-                    display, region, display, colorgrade_options);
+        [&img, &display, &queue, tonemap_prms, colorgrade_prms,
+            do_colorgrade = colorgrade_prms != colorgrade_params{}](
+            const image_region& region) {
+            tonemap(display, img, region, tonemap_prms);
+            if (do_colorgrade) {
+                colorgrade(display, display, region, colorgrade_prms);
             }
             queue.push(region);
         },
@@ -144,15 +143,14 @@ void update_app_display(const string& filename, const image<vec4f>& img,
 
 // add a new image
 void add_new_image(app_state& app, const string& filename) {
-    auto& img                  = app.images.emplace_back();
-    img.filename               = filename;
-    img.outname                = get_noextension(filename) + ".display.png";
-    img.name                   = get_filename(filename);
-    img.tonemap_options        = app.tonemap_options;
-    img.colorgrade_options     = app.colorgrade_options;
-    img.tonemap_options.filmic = is_hdr_filename(filename);
-    img.load_done              = false;
-    img.display_done           = false;
+    auto& img           = app.images.emplace_back();
+    img.filename        = filename;
+    img.outname         = get_noextension(filename) + ".display.png";
+    img.name            = get_filename(filename);
+    img.tonemap_prms    = app.tonemap_prms;
+    img.colorgrade_prms = app.colorgrade_prms;
+    img.load_done       = false;
+    img.display_done    = false;
     img.task_queue.emplace_back(app_task_type::load);
     app.selected = (int)app.images.size() - 1;
 }
@@ -204,7 +202,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         [&app](int idx) { return app.images[idx].name.c_str(); }, false);
     auto& img = app.images.at(app.selected);
     if (begin_header_opengl_widget(win, "tonemap")) {
-        auto options = img.tonemap_options;
+        auto options = img.tonemap_prms;
         draw_slider_opengl_widget(win, "exposure", options.exposure, -5, 5);
         draw_coloredit_opengl_widget(win, "tint", options.tint);
         draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
@@ -219,15 +217,15 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto wb      = 1 / xyz(img.image_stats.average);
             options.tint = wb / max(wb);
         }
-        if (options != img.tonemap_options) {
-            img.tonemap_options = options;
+        if (options != img.tonemap_prms) {
+            img.tonemap_prms = options;
             if (img.load_done)
                 img.task_queue.emplace_back(app_task_type::display);
         }
         end_header_opengl_widget(win);
     }
     if (begin_header_opengl_widget(win, "colorgrade")) {
-        auto options = img.colorgrade_options;
+        auto options = img.colorgrade_prms;
         draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
         draw_slider_opengl_widget(win, "ldr shadows", options.shadows, 0, 1);
         draw_slider_opengl_widget(win, "ldr midtones", options.midtones, 0, 1);
@@ -238,8 +236,8 @@ void draw_opengl_widgets(const opengl_window& win) {
             win, "midtones color", options.midtones_color);
         draw_coloredit_opengl_widget(
             win, "highlights color", options.highlights_color);
-        if (options != img.colorgrade_options) {
-            img.colorgrade_options = options;
+        if (options != img.colorgrade_prms) {
+            img.colorgrade_prms = options;
             if (img.load_done)
                 img.task_queue.emplace_back(app_task_type::display);
         }
@@ -445,8 +443,8 @@ void update(app_state& app) {
                 img.display_done = false;
                 task.result      = async([&img, &task]() {
                     update_app_display(img.filename, img.img, img.display,
-                        img.display_stats, img.tonemap_options,
-                        img.colorgrade_options, task.stop, task.queue);
+                        img.display_stats, img.tonemap_prms,
+                        img.colorgrade_prms, task.stop, task.queue);
                 });
             } break;
         }

@@ -60,8 +60,8 @@ int main(int argc, char** argv) {
     try {
         load_shape(filename, shape.points, shape.lines, shape.triangles,
             shape.quads, shape.quads_positions, shape.quads_normals,
-            shape.quads_texturecoords, shape.positions, shape.normals,
-            shape.texturecoords, shape.colors, shape.radius, facevarying);
+            shape.quads_texcoords, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, facevarying);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }
@@ -80,8 +80,8 @@ int main(int argc, char** argv) {
     try {
         save_shape(filename, shape.points, shape.lines, shape.triangles,
             shape.quads, shape.quads_positions, shape.quads_normals,
-            shape.quads_texturecoords, shape.positions, shape.normals,
-            shape.texturecoords, shape.colors, shape.radius);
+            shape.quads_texcoords, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }

@@ -81,21 +81,21 @@ int main(int argc, char** argv) {
     }
 
     // fix options
-    auto load_options          = load_scene_options();
-    auto save_options          = save_scene_options();
-    load_options.skip_textures = skip_textures;
-    save_options.skip_textures = skip_textures;
+    auto load_prms          = sceneio_params();
+    auto save_prms          = sceneio_params();
+    load_prms.skip_textures = skip_textures;
+    save_prms.skip_textures = skip_textures;
 
     // load scene
     auto scene = yocto_scene{};
     for (auto& filename : filenames) {
         auto to_merge = yocto_scene{};
         try {
-            load_scene(filename, to_merge, load_options);
+            load_scene(filename, to_merge, load_prms);
         } catch (const std::exception& e) {
             print_fatal(e.what());
         }
-        print_validation_errors(to_merge, true);
+        print_validation(to_merge, true);
         if (scene_postfix) {
             auto postfix = "{" + get_filename(filename) + "}";
             for (auto& val : to_merge.cameras) val.uri += postfix;
@@ -108,14 +108,14 @@ int main(int argc, char** argv) {
             for (auto& val : to_merge.nodes) val.uri += postfix;
             for (auto& val : to_merge.animations) val.uri += postfix;
         }
-        merge_scene_into(scene, to_merge);
+        merge_scene(scene, to_merge);
     }
 
     // validate scene
-    print_validation_errors(scene, true);
+    print_validation(scene, true);
 
     // print info
-    if (info) print_info("{}", format_scene_stats(scene));
+    if (info) print_info("{}", format_stats(scene));
 
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
@@ -155,7 +155,7 @@ int main(int argc, char** argv) {
 
     // save scene
     try {
-        save_scene(output, scene, save_options);
+        save_scene(output, scene, save_prms);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }

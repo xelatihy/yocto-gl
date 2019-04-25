@@ -443,30 +443,29 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     draw_label_opengl_widget(
         win, "quads norm", "%ld", value.quads_normals.size());
     draw_label_opengl_widget(
-        win, "quads texcoord", "%ld", value.quads_texturecoords.size());
+        win, "quads texcoord", "%ld", value.quads_texcoords.size());
     draw_label_opengl_widget(win, "pos", "%ld", value.positions.size());
     draw_label_opengl_widget(win, "norm", "%ld", value.normals.size());
-    draw_label_opengl_widget(
-        win, "texcoord", "%ld", value.texturecoords.size());
+    draw_label_opengl_widget(win, "texcoord", "%ld", value.texcoords.size());
     draw_label_opengl_widget(win, "color", "%ld", value.colors.size());
     draw_label_opengl_widget(win, "radius", "%ld", value.radius.size());
-    draw_label_opengl_widget(win, "tangsp", "%ld", value.tangentspaces.size());
+    draw_label_opengl_widget(win, "tangsp", "%ld", value.tangents.size());
     if (edited) {
         auto reload = edited_value.uri != value.uri;
         if (!reload) {
-            edited_value.points              = value.points;
-            edited_value.lines               = value.lines;
-            edited_value.triangles           = value.triangles;
-            edited_value.quads               = value.quads;
-            edited_value.quads_positions     = value.quads_positions;
-            edited_value.quads_normals       = value.quads_normals;
-            edited_value.quads_texturecoords = value.quads_texturecoords;
-            edited_value.positions           = value.positions;
-            edited_value.normals             = value.normals;
-            edited_value.texturecoords       = value.texturecoords;
-            edited_value.colors              = value.colors;
-            edited_value.radius              = value.radius;
-            edited_value.tangentspaces       = value.tangentspaces;
+            edited_value.points          = value.points;
+            edited_value.lines           = value.lines;
+            edited_value.triangles       = value.triangles;
+            edited_value.quads           = value.quads;
+            edited_value.quads_positions = value.quads_positions;
+            edited_value.quads_normals   = value.quads_normals;
+            edited_value.quads_texcoords = value.quads_texcoords;
+            edited_value.positions       = value.positions;
+            edited_value.normals         = value.normals;
+            edited_value.texcoords       = value.texcoords;
+            edited_value.colors          = value.colors;
+            edited_value.radius          = value.radius;
+            edited_value.tangents        = value.tangents;
         }
         edit = {sel.type, sel.index, edited_value, reload};
     }
@@ -527,28 +526,27 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     draw_label_opengl_widget(
         win, "quads norm", "%ld", value.quads_normals.size());
     draw_label_opengl_widget(
-        win, "quads texcoord", "%ld", value.quads_texturecoords.size());
+        win, "quads texcoord", "%ld", value.quads_texcoords.size());
     draw_label_opengl_widget(win, "pos", "%ld", value.positions.size());
     draw_label_opengl_widget(win, "norm", "%ld", value.normals.size());
-    draw_label_opengl_widget(
-        win, "texcoord", "%ld", value.texturecoords.size());
+    draw_label_opengl_widget(win, "texcoord", "%ld", value.texcoords.size());
     draw_label_opengl_widget(win, "color", "%ld", value.colors.size());
     draw_label_opengl_widget(win, "radius", "%ld", value.radius.size());
     if (edited) {
         auto reload = edited_value.uri != value.uri;
         if (!reload) {
-            edited_value.points              = value.points;
-            edited_value.lines               = value.lines;
-            edited_value.triangles           = value.triangles;
-            edited_value.quads               = value.quads;
-            edited_value.quads_positions     = value.quads_positions;
-            edited_value.quads_normals       = value.quads_normals;
-            edited_value.quads_texturecoords = value.quads_texturecoords;
-            edited_value.positions           = value.positions;
-            edited_value.normals             = value.normals;
-            edited_value.texturecoords       = value.texturecoords;
-            edited_value.colors              = value.colors;
-            edited_value.radius              = value.radius;
+            edited_value.points          = value.points;
+            edited_value.lines           = value.lines;
+            edited_value.triangles       = value.triangles;
+            edited_value.quads           = value.quads;
+            edited_value.quads_positions = value.quads_positions;
+            edited_value.quads_normals   = value.quads_normals;
+            edited_value.quads_texcoords = value.quads_texcoords;
+            edited_value.positions       = value.positions;
+            edited_value.normals         = value.normals;
+            edited_value.texcoords       = value.texcoords;
+            edited_value.colors          = value.colors;
+            edited_value.radius          = value.radius;
         }
         edit = {sel.type, sel.index, edited_value, reload};
     }

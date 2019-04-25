@@ -131,8 +131,8 @@ image<vec4f> filter_bilateral(
 
 int main(int argc, char* argv[]) {
     // command line parameters
-    auto tonemap             = false;
-    auto tonemap_options     = tonemap_image_options{};
+    auto do_tonemap          = false;
+    auto tonemap_prms        = tonemap_params{};
     auto resize_width        = 0;
     auto resize_height       = 0;
     auto spatial_sigma       = 0.0f;
@@ -144,12 +144,11 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser = CLI::App{"Transform images"};
-    parser.add_flag("--tonemap,!--no-tonemap,-t", tonemap, "Tonemap image");
+    parser.add_flag("--tonemap,!--no-tonemap,-t", do_tonemap, "Tonemap image");
     parser.add_option(
-        "--exposure,-e", tonemap_options.exposure, "Tonemap exposure");
-    parser.add_flag(
-        "--srgb,!--no-srgb", tonemap_options.srgb, "Tonemap to sRGB.");
-    parser.add_flag("--filmic,!--no-filmic,-f", tonemap_options.filmic,
+        "--exposure,-e", tonemap_prms.exposure, "Tonemap exposure");
+    parser.add_flag("--srgb,!--no-srgb", tonemap_prms.srgb, "Tonemap to sRGB.");
+    parser.add_flag("--filmic,!--no-filmic,-f", tonemap_prms.filmic,
         "Tonemap uses filmic curve");
     parser.add_option(
         "--resize-width", resize_width, "resize size (0 to maintain aspect)");
@@ -217,7 +216,7 @@ int main(int argc, char* argv[]) {
     // resize
     if (resize_width != 0 || resize_height != 0) {
         auto res = image<vec4f>{};
-        resize_image(res, img, {resize_width, resize_height});
+        resize(res, img, {resize_width, resize_height});
         img = res;
     }
 
@@ -227,15 +226,15 @@ int main(int argc, char* argv[]) {
     }
 
     // hdr correction
-    if (tonemap) {
+    if (do_tonemap) {
         auto ldr = img;
-        tonemap_image(img, ldr, tonemap_options);
+        tonemap(img, ldr, tonemap_prms);
         img = ldr;
     }
 
     // save
     try {
-        if (tonemap && tonemap_options.srgb) {
+        if (do_tonemap && tonemap_prms.srgb) {
             auto linear = image<vec4f>{};
             srgb_to_linear(linear, img);
             save_image(output, linear);

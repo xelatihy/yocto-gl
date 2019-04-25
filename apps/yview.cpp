@@ -43,7 +43,7 @@ void print_obj_camera(const yocto_camera& camera);
 struct drawgl_shape {
     opengl_array_buffer  positions_buffer     = {};
     opengl_array_buffer  normals_buffer       = {};
-    opengl_array_buffer  texturecoords_buffer = {};
+    opengl_array_buffer  texcoords_buffer     = {};
     opengl_array_buffer  colors_buffer        = {};
     opengl_array_buffer  tangentspaces_buffer = {};
     opengl_elementbuffer points_buffer        = {};
@@ -74,7 +74,7 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
         auto& material = scene.materials[instance.material];
         if (material.emission == zero3f) continue;
         if (lights.positions.size() >= 16) break;
-        auto bbox = compute_shape_bounds(shape);
+        auto bbox = compute_bounds(shape);
         auto pos  = (bbox.max + bbox.min) / 2;
         auto area = 0.0f;
         if (!shape.triangles.empty()) {
@@ -99,7 +99,7 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
 }
 
 // Draw options
-struct drawgl_options {
+struct drawgl_params {
     int   camera_id        = 0;
     int   image_width      = 1280;
     int   image_height     = 720;
@@ -117,10 +117,10 @@ struct drawgl_options {
 };
 
 // Equality operators
-inline bool operator==(const drawgl_options& a, const drawgl_options& b) {
+inline bool operator==(const drawgl_params& a, const drawgl_params& b) {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(const drawgl_options& a, const drawgl_options& b) {
+inline bool operator!=(const drawgl_params& a, const drawgl_params& b) {
     return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
@@ -165,9 +165,8 @@ struct app_scene {
     string name      = "";
 
     // options
-    load_scene_options load_options = {};
-    save_scene_options save_options = {};
-    drawgl_options     draw_options = {};
+    sceneio_params sceneio_prms = {};
+    drawgl_params  drawgl_prms  = {};
 
     // scene
     yocto_scene scene = {};
@@ -197,9 +196,8 @@ struct app_state {
     deque<string>    errors;
 
     // default options
-    load_scene_options load_options = {};
-    save_scene_options save_options = {};
-    drawgl_options     draw_options = {};
+    sceneio_params sceneio_prms = {};
+    drawgl_params  drawgl_prms  = {};
 };
 
 void add_new_scene(app_state& app, const string& filename) {
@@ -208,9 +206,8 @@ void add_new_scene(app_state& app, const string& filename) {
     scn.imagename    = get_noextension(filename) + ".png";
     scn.outname      = get_noextension(filename) + ".edited.yaml";
     scn.name         = get_filename(scn.filename);
-    scn.load_options = app.load_options;
-    scn.save_options = app.save_options;
-    scn.draw_options = app.draw_options;
+    scn.sceneio_prms = app.sceneio_prms;
+    scn.drawgl_prms  = app.drawgl_prms;
     scn.task_queue.emplace_back(app_task_type::load_scene);
     app.selected = (int)app.scenes.size() - 1;
 }
@@ -526,7 +523,7 @@ static const char* fragment =
 // Draw a shape
 void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     const yocto_instance& instance, bool highlighted,
-    const drawgl_options& options) {
+    const drawgl_params& options) {
     auto& shape    = scene.shapes[instance.shape];
     auto& vbos     = state.shapes.at(instance.shape);
     auto& material = scene.materials[instance.material];
@@ -584,7 +581,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     set_opengl_vertexattrib(
         state.program, "vert_norm", vbos.normals_buffer, zero3f);
     set_opengl_vertexattrib(
-        state.program, "vert_texcoord", vbos.texturecoords_buffer, zero2f);
+        state.program, "vert_texcoord", vbos.texcoords_buffer, zero2f);
     set_opengl_vertexattrib(
         state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
     set_opengl_vertexattrib(state.program, "vert_tangsp",
@@ -630,11 +627,11 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 // Display a scene
 void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     const vec4i& viewport, const app_selection& highlighted,
-    const drawgl_options& options) {
+    const drawgl_params& options) {
     auto& camera      = scene.cameras.at(options.camera_id);
     auto  camera_view = mat4f(inverse(camera.frame));
     auto  camera_proj = make_perspective_mat(
-        get_camera_fovx(camera) * (float)viewport.w / (float)viewport.z,
+        camera_fovx(camera) * (float)viewport.w / (float)viewport.z,
         (float)viewport.z / (float)viewport.w, options.near_plane,
         options.far_plane);
 
@@ -656,7 +653,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
             auto& material = scene.materials[instance.material];
             if (material.emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
-            auto bbox = compute_shape_bounds(shape);
+            auto bbox = compute_bounds(shape);
             auto pos  = (bbox.max + bbox.min) / 2;
             auto area = 0.0f;
             if (!shape.triangles.empty()) {
@@ -736,15 +733,15 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             if (!shape.normals.empty())
                 init_opengl_array_buffer(
                     vbos.normals_buffer, shape.normals, false);
-            if (!shape.texturecoords.empty())
+            if (!shape.texcoords.empty())
                 init_opengl_array_buffer(
-                    vbos.texturecoords_buffer, shape.texturecoords, false);
+                    vbos.texcoords_buffer, shape.texcoords, false);
             if (!shape.colors.empty())
                 init_opengl_array_buffer(
                     vbos.colors_buffer, shape.colors, false);
-            if (!shape.tangentspaces.empty())
+            if (!shape.tangents.empty())
                 init_opengl_array_buffer(
-                    vbos.tangentspaces_buffer, shape.tangentspaces, false);
+                    vbos.tangentspaces_buffer, shape.tangents, false);
             if (!shape.points.empty())
                 init_opengl_elementbuffer(
                     vbos.points_buffer, shape.points, false);
@@ -756,29 +753,29 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
                     vbos.triangles_buffer, shape.triangles, false);
             if (!shape.quads.empty()) {
                 auto triangles = vector<vec3i>{};
-                convert_quads_to_triangles(triangles, shape.quads);
+                quads_to_triangles(triangles, shape.quads);
                 init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
             }
         } else {
-            auto quads         = vector<vec4i>{};
-            auto positions     = vector<vec3f>{};
-            auto normals       = vector<vec3f>{};
-            auto texturecoords = vector<vec2f>{};
-            convert_facevarying(quads, positions, normals, texturecoords,
+            auto quads     = vector<vec4i>{};
+            auto positions = vector<vec3f>{};
+            auto normals   = vector<vec3f>{};
+            auto texcoords = vector<vec2f>{};
+            split_facevarying(quads, positions, normals, texcoords,
                 shape.quads_positions, shape.quads_normals,
-                shape.quads_texturecoords, shape.positions, shape.normals,
-                shape.texturecoords);
+                shape.quads_texcoords, shape.positions, shape.normals,
+                shape.texcoords);
             if (!positions.empty())
                 init_opengl_array_buffer(
                     vbos.positions_buffer, positions, false);
             if (!normals.empty())
                 init_opengl_array_buffer(vbos.normals_buffer, normals, false);
-            if (!texturecoords.empty())
+            if (!texcoords.empty())
                 init_opengl_array_buffer(
-                    vbos.texturecoords_buffer, texturecoords, false);
+                    vbos.texcoords_buffer, texcoords, false);
             if (!quads.empty()) {
                 auto triangles = vector<vec3i>{};
-                convert_quads_to_triangles(triangles, quads);
+                quads_to_triangles(triangles, quads);
                 init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
             }
         }
@@ -789,7 +786,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
 void delete_drawgl_shape(drawgl_shape& glshape) {
     delete_opengl_array_buffer(glshape.positions_buffer);
     delete_opengl_array_buffer(glshape.normals_buffer);
-    delete_opengl_array_buffer(glshape.texturecoords_buffer);
+    delete_opengl_array_buffer(glshape.texcoords_buffer);
     delete_opengl_array_buffer(glshape.colors_buffer);
     delete_opengl_array_buffer(glshape.tangentspaces_buffer);
     delete_opengl_elementbuffer(glshape.points_buffer);
@@ -872,21 +869,21 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (begin_header_opengl_widget(win, "trace")) {
         auto cam_names = vector<string>();
         for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
-        auto draw_options = scn.draw_options;
+        auto drawgl_prms = scn.drawgl_prms;
         if (scn.load_done) {
             if (draw_combobox_opengl_widget(
-                    win, "camera", draw_options.camera_id, cam_names)) {
+                    win, "camera", drawgl_prms.camera_id, cam_names)) {
             }
         }
         draw_slider_opengl_widget(
-            win, "width", draw_options.image_width, 0, 4096);
+            win, "width", drawgl_prms.image_width, 0, 4096);
         draw_slider_opengl_widget(
-            win, "height", draw_options.image_height, 0, 4096);
-        draw_checkbox_opengl_widget(win, "eyelight", draw_options.eyelight);
+            win, "height", drawgl_prms.image_height, 0, 4096);
+        draw_checkbox_opengl_widget(win, "eyelight", drawgl_prms.eyelight);
         continue_opengl_widget_line(win);
-        draw_checkbox_opengl_widget(win, "wireframe", draw_options.wireframe);
+        draw_checkbox_opengl_widget(win, "wireframe", drawgl_prms.wireframe);
         continue_opengl_widget_line(win);
-        draw_checkbox_opengl_widget(win, "edges", draw_options.edges);
+        draw_checkbox_opengl_widget(win, "edges", drawgl_prms.edges);
         if (scn.time_range != zero2f) {
             draw_slider_opengl_widget(
                 win, "time", scn.time, scn.time_range.x, scn.time_range.y);
@@ -894,18 +891,18 @@ void draw_opengl_widgets(const opengl_window& win) {
             draw_checkbox_opengl_widget(win, "animate", scn.animate);
         }
         draw_slider_opengl_widget(
-            win, "exposure", draw_options.exposure, -10, 10);
-        draw_slider_opengl_widget(win, "gamma", draw_options.gamma, 0.1f, 4);
+            win, "exposure", drawgl_prms.exposure, -10, 10);
+        draw_slider_opengl_widget(win, "gamma", drawgl_prms.gamma, 0.1f, 4);
         draw_checkbox_opengl_widget(
-            win, "double sided", draw_options.double_sided);
+            win, "double sided", drawgl_prms.double_sided);
         draw_slider_opengl_widget(
-            win, "near", draw_options.near_plane, 0.01f, 1.0f);
+            win, "near", drawgl_prms.near_plane, 0.01f, 1.0f);
         draw_slider_opengl_widget(
-            win, "far", draw_options.far_plane, 1000.0f, 10000.0f);
+            win, "far", drawgl_prms.far_plane, 1000.0f, 10000.0f);
 
-        if (draw_options != scn.draw_options) {
+        if (drawgl_prms != scn.drawgl_prms) {
             scn.task_queue.emplace_back(app_task_type::apply_edit,
-                app_edit{typeid(drawgl_options), -1, draw_options, false});
+                app_edit{typeid(drawgl_params), -1, drawgl_prms, false});
         }
         end_header_opengl_widget(win);
     }
@@ -923,7 +920,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "print stats")) {
-            print_info("{}", format_scene_stats(scn.scene).c_str());
+            print_info("{}", format_stats(scn.scene).c_str());
         }
         end_header_opengl_widget(win);
     }
@@ -955,7 +952,7 @@ void draw(const opengl_window& win) {
         app.scenes[app.selected].load_done) {
         auto& scn = app.scenes[app.selected];
         draw_glscene(scn.state, scn.scene, get_opengl_framebuffer_viewport(win),
-            scn.selection, scn.draw_options);
+            scn.selection, scn.drawgl_prms);
     }
     begin_opengl_widgets_frame(win);
     draw_opengl_widgets(win);
@@ -964,7 +961,7 @@ void draw(const opengl_window& win) {
 }
 
 void apply_edit(const string& filename, yocto_scene& scene,
-    drawgl_lights& lights, drawgl_options& draw_options, float time,
+    drawgl_lights& lights, drawgl_params& drawgl_prms, float time,
     const string& anim_group, bool& reload_element, const app_edit& edit) {
     static auto last_time             = 0.0f;
     bool        updated_hierarchy     = false;
@@ -994,8 +991,8 @@ void apply_edit(const string& filename, yocto_scene& scene,
     } else if (type == typeid(yocto_scene_node)) {
         scene.nodes[index] = any_cast<yocto_scene_node>(data);
         updated_hierarchy  = true;
-    } else if (type == typeid(drawgl_options)) {
-        draw_options = any_cast<drawgl_options>(data);
+    } else if (type == typeid(drawgl_params)) {
+        drawgl_prms = any_cast<drawgl_params>(data);
     } else {
         throw runtime_error("unsupported type "s + type.name());
     }
@@ -1021,17 +1018,16 @@ void load_element(
         auto& shape = scene.shapes[index];
         load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.quads_positions,
-            shape.quads_normals, shape.quads_texturecoords, shape.positions,
-            shape.normals, shape.texturecoords, shape.colors, shape.radius,
-            false);
+            shape.quads_normals, shape.quads_texcoords, shape.positions,
+            shape.normals, shape.texcoords, shape.colors, shape.radius, false);
     } else if (type == typeid(yocto_subdiv)) {
         // TODO: this needs more fixing?
         auto& subdiv = scene.subdivs[index];
         load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
             subdiv.lines, subdiv.triangles, subdiv.quads,
             subdiv.quads_positions, subdiv.quads_normals,
-            subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
-            subdiv.texturecoords, subdiv.colors, subdiv.radius,
+            subdiv.quads_texcoords, subdiv.positions, subdiv.normals,
+            subdiv.texcoords, subdiv.colors, subdiv.radius,
             subdiv.preserve_facevarying);
         tesselate_subdiv(scene, scene.subdivs[index]);
     } else {
@@ -1062,9 +1058,8 @@ void update(app_state& app) {
             log_info("start editing {}", scn.filename);
             try {
                 auto reload_element = false;
-                apply_edit(scn.filename, scn.scene, scn.lights,
-                    scn.draw_options, scn.time, scn.anim_group, reload_element,
-                    task.edit);
+                apply_edit(scn.filename, scn.scene, scn.lights, scn.drawgl_prms,
+                    scn.time, scn.anim_group, reload_element, task.edit);
                 log_info("done editing {}", scn.filename);
                 if (reload_element) {
                     scn.load_done = false;
@@ -1162,13 +1157,13 @@ void update(app_state& app) {
                 log_info("start loading {}", scn.filename);
                 scn.load_done = false;
                 task.result   = async([&scn]() {
-                    load_scene(scn.filename, scn.scene, scn.load_options);
+                    load_scene(scn.filename, scn.scene, scn.sceneio_prms);
                     tesselate_subdivs(scn.scene);
                     init_drawgl_lights(scn.lights, scn.scene);
-                    if (scn.lights.empty() && !scn.draw_options.eyelight) {
+                    if (scn.lights.empty() && !scn.drawgl_prms.eyelight) {
                         print_info(
                             "no lights presents, switching to eyelight shader");
-                        scn.draw_options.eyelight = true;
+                        scn.drawgl_prms.eyelight = true;
                     }
                     scn.time_range = compute_animation_range(scn.scene);
                     scn.time       = scn.time_range.x;
@@ -1189,7 +1184,7 @@ void update(app_state& app) {
             case app_task_type::save_scene: {
                 log_info("start saving {}", scn.outname);
                 task.result = async([&scn]() {
-                    save_scene(scn.outname, scn.scene, scn.save_options);
+                    save_scene(scn.outname, scn.scene, scn.sceneio_prms);
                 });
             } break;
             case app_task_type::apply_edit: break;
@@ -1237,8 +1232,8 @@ void run_ui(app_state& app) {
         if (app.selected >= 0 && (mouse_left || mouse_right) && !alt_down &&
             !widgets_active) {
             auto& scn        = app.scenes[app.selected];
-            auto& old_camera = scn.scene.cameras.at(scn.draw_options.camera_id);
-            auto  camera     = scn.scene.cameras.at(scn.draw_options.camera_id);
+            auto& old_camera = scn.scene.cameras.at(scn.drawgl_prms.camera_id);
+            auto  camera     = scn.scene.cameras.at(scn.drawgl_prms.camera_id);
             auto  dolly      = 0.0f;
             auto  pan        = zero2f;
             auto  rotate     = zero2f;
@@ -1251,7 +1246,7 @@ void run_ui(app_state& app) {
             if (camera.frame != old_camera.frame ||
                 camera.focus_distance != old_camera.focus_distance) {
                 scn.task_queue.emplace_back(app_task_type::apply_edit,
-                    app_edit{typeid(yocto_camera), scn.draw_options.camera_id,
+                    app_edit{typeid(yocto_camera), scn.drawgl_prms.camera_id,
                         camera, false});
             }
         }
@@ -1291,12 +1286,12 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser = CLI::App{"views scenes inteactively"};
-    parser.add_option("--camera", app.draw_options.camera_id, "Camera index.");
-    parser.add_option("--hres,-R", app.draw_options.image_width,
+    parser.add_option("--camera", app.drawgl_prms.camera_id, "Camera index.");
+    parser.add_option("--hres,-R", app.drawgl_prms.image_width,
         "Image horizontal resolution.");
-    parser.add_option("--vres,-r", app.draw_options.image_height,
+    parser.add_option("--vres,-r", app.drawgl_prms.image_height,
         "Image vertical resolution.");
-    parser.add_flag("--eyelight,!--no-eyelight,-c", app.draw_options.eyelight,
+    parser.add_flag("--eyelight,!--no-eyelight,-c", app.drawgl_prms.eyelight,
         "Eyelight rendering.");
     parser.add_flag("--parallel,!--no-parallel", no_parallel,
         "Disable parallel execution.");
@@ -1309,7 +1304,7 @@ int main(int argc, char* argv[]) {
 
     // fix parallel code
     if (no_parallel) {
-        app.load_options.run_serially = true;
+        app.sceneio_prms.run_serially = true;
     }
 
     // loading images

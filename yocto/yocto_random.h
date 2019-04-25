@@ -15,20 +15,20 @@
 //     1. initialize the random number generator with `make_rng()`
 //     2. advance the random number state with `advance_rng()`
 //     3. if necessary, you can reseed the rng with `seed_rng()`
-//     4. generate random integers in an interval with `get_random_int()`
+//     4. generate random integers in an interval with `rand1i()`
 //     5. generate random floats and double in the [0,1) range with
-//        `get_random_float()`, `get_random_vec2f()`, `get_random_vec3f()`,
+//        `rand1f()`, `rand2f()`, `rand3f()`,
 //        `next_rand1d()`
 // 2. Perlin noise: `perlin_noise()` to generate Perlin noise with optional
 //    wrapping, with fractal variations `perlin_ridge_noise()`,
 //    `perlin_fbm_noise()`, `perlin_turbulence_noise()`
 // 3. Monte Carlo support: warp functions from [0,1)^k domains to domains
 //    commonly used in path tracing. In particular, use
-//    `sample_hemisphere_direction()`, `sample_sphere_direction()`,
-//    `sample_hemisphere_direction_cosine()`,
-//    `sample_hemisphere_direction_cospower()`. `sample_disk_point()`.
-//    `sample_cylinder_point()`. `sample_triangle()`,
-//    `sample_discrete_distribution()`. For each warp, you can compute
+//    `sample_hemisphere()`, `sample_sphere()`,
+//    `sample_hemisphere_cos()`,
+//    `sample_hemisphere_cospower()`. `sample_disk()`.
+//    `sample_cylinder()`. `sample_triangle()`,
+//    `sample_discrete()`. For each warp, you can compute
 //     the PDF with `sample_xxx_pdf()`.
 //
 //
@@ -118,14 +118,14 @@ struct rng_state {
 inline rng_state make_rng(uint64_t seed, uint64_t seq = 1);
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int   get_random_int(rng_state& rng, int n);
-inline float get_random_float(rng_state& rng);
-inline vec2f get_random_vec2f(rng_state& rng);
-inline vec3f get_random_vec3f(rng_state& rng);
+inline int   rand1i(rng_state& rng, int n);
+inline float rand1f(rng_state& rng);
+inline vec2f rand2f(rng_state& rng);
+inline vec3f rand3f(rng_state& rng);
 
 // Shuffles a sequence of elements
 template <typename T>
-inline void random_shuffle(vector<T>& vals, rng_state& rng);
+inline void shuffle(vector<T>& vals, rng_state& rng);
 
 }  // namespace yocto
 
@@ -136,81 +136,79 @@ namespace yocto {
 
 // Sample an hemispherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction(const vec<T, 2>& ruv);
+inline vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_hemisphere_direction_pdf(const vec<T, 3>& direction);
+inline T sample_hemisphere_pdf(const vec<T, 3>& direction);
 
 // Sample an hemispherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction(
+inline vec<T, 3> sample_hemisphere(
     const vec<T, 3>& normal, const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_hemisphere_direction_pdf(
+inline T sample_hemisphere_pdf(
     const vec<T, 3>& normal, const vec<T, 3>& direction);
 
 // Sample a spherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_sphere_direction(const vec<T, 2>& ruv);
+inline vec<T, 3> sample_sphere(const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_sphere_direction_pdf(const vec<T, 3>& w);
+inline T sample_sphere_pdf(const vec<T, 3>& w);
 
 // Sample an hemispherical direction with cosine distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction_cosine(const vec<T, 2>& ruv);
+inline vec<T, 3> sample_hemisphere_cos(const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_hemisphere_direction_cosine_pdf(const vec<T, 3>& direction);
+inline T sample_hemisphere_cos_pdf(const vec<T, 3>& direction);
 
 // Sample an hemispherical direction with cosine power distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction_cospower(
-    T exponent, const vec<T, 2>& ruv);
+inline vec<T, 3> sample_hemisphere_cospower(T exponent, const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_hemisphere_direction_cospower_pdf(
-    T exponent, const vec<T, 3>& direction);
+inline T sample_hemisphere_cospower_pdf(T exponent, const vec<T, 3>& direction);
 
 // Sample a point uniformly on a disk.
 template <typename T>
-inline vec<T, 2> sample_disk_point(const vec<T, 2>& ruv);
+inline vec<T, 2> sample_disk(const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_disk_point_pdf();
+inline T sample_disk_pdf();
 
 // Sample a point uniformly on a cylinder, without caps.
 template <typename T>
-inline vec<T, 3> sample_cylinder_point(const vec<T, 2>& ruv);
+inline vec<T, 3> sample_cylinder(const vec<T, 2>& ruv);
 template <typename T>
-inline T sample_cylinder_point_pdf();
+inline T sample_cylinder_pdf();
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
 template <typename T>
-inline vec<T, 2> sample_triangle_coordinates(const vec<T, 2>& ruv);
+inline vec<T, 2> sample_triangle(const vec<T, 2>& ruv);
 
 // Sample a point uniformly on a triangle.
 template <typename T>
-inline vec<T, 3> sample_triangle_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
+inline vec<T, 3> sample_triangle(const vec<T, 3>& p0, const vec<T, 3>& p1,
     const vec<T, 3>& p2, const vec<T, 2>& ruv);
 // Pdf for uniform triangle sampling, i.e. triangle area.
 template <typename T>
-inline T sample_triangle_point_pdf(
+inline T sample_triangle_pdf(
     const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
 
 // Sample an index with uniform distribution.
 template <typename T>
-inline int sample_uniform_index(int size, T r);
+inline int sample_uniform(int size, T r);
 template <typename T>
-inline T sample_uniform_index_pdf(int size);
+inline T sample_uniform_pdf(int size);
 
 // Sample an index with uniform distribution.
 template <typename T, typename T1>
-inline T sample_uniform_element(const vector<T>& elements, T1 r);
+inline T sample_uniform(const vector<T>& elements, T1 r);
 template <typename T>
-inline T sample_uniform_element_pdf(const vector<T>& elements);
+inline T sample_uniform_pdf(const vector<T>& elements);
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T>
-inline int sample_discrete_distribution(const vector<T>& cdf, T r);
+inline int sample_discrete(const vector<T>& cdf, T r);
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-inline T sample_discrete_distribution_pdf(const vector<T>& cdf, int idx);
+inline T sample_discrete_pdf(const vector<T>& cdf, int idx);
 
 }  // namespace yocto
 
@@ -258,7 +256,7 @@ inline rng_state::rng_state(uint64_t state, uint64_t inc)
     : state{state}, inc{inc} {}
 
 // Next random number.
-inline uint32_t advance_rng(rng_state& rng) {
+inline uint32_t _advance_rng(rng_state& rng) {
     uint64_t oldstate   = rng.state;
     rng.state           = oldstate * 6364136223846793005ULL + rng.inc;
     uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
@@ -271,48 +269,46 @@ inline rng_state make_rng(uint64_t seed, uint64_t seq) {
     auto rng  = rng_state();
     rng.state = 0U;
     rng.inc   = (seq << 1u) | 1u;
-    advance_rng(rng);
+    _advance_rng(rng);
     rng.state += seed;
-    advance_rng(rng);
+    _advance_rng(rng);
     return rng;
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int get_random_int(rng_state& rng, int n) {
-    return advance_rng(rng) % n;
-}
-inline float get_random_float(rng_state& rng) {
+inline int   rand1i(rng_state& rng, int n) { return _advance_rng(rng) % n; }
+inline float rand1f(rng_state& rng) {
     union {
         uint32_t u;
         float    f;
     } x;
-    x.u = (advance_rng(rng) >> 9) | 0x3f800000u;
+    x.u = (_advance_rng(rng) >> 9) | 0x3f800000u;
     return x.f - 1.0f;
     // alternate implementation
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f get_random_vec2f(rng_state& rng) {
+inline vec2f rand2f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
-    auto x = get_random_float(rng);
-    auto y = get_random_float(rng);
+    auto x = rand1f(rng);
+    auto y = rand1f(rng);
     return {x, y};
 }
-inline vec3f get_random_vec3f(rng_state& rng) {
+inline vec3f rand3f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
-    auto x = get_random_float(rng);
-    auto y = get_random_float(rng);
-    auto z = get_random_float(rng);
+    auto x = rand1f(rng);
+    auto y = rand1f(rng);
+    auto z = rand1f(rng);
     return {x, y, z};
 }
 
 // Shuffles a sequence of elements
 template <typename T>
-inline void random_shuffle(vector<T>& vals, rng_state& rng) {
+inline void shuffle(vector<T>& vals, rng_state& rng) {
     // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
     using std::swap;
     for (auto i = (int)vals.size() - 1; i > 0; i--) {
-        auto j = get_random_int(rng, i + 1);
+        auto j = rand1i(rng, i + 1);
         swap(vals[j], vals[i]);
     }
 }
@@ -326,20 +322,20 @@ namespace yocto {
 
 // Sample an hemispherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction(const vec<T, 2>& ruv) {
+inline vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv) {
     auto z   = ruv.y;
     auto r   = sqrt(clamp01(1 - z * z));
     auto phi = 2 * (T)pi * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
-inline T sample_hemisphere_direction_pdf(const vec<T, 3>& direction) {
+inline T sample_hemisphere_pdf(const vec<T, 3>& direction) {
     return (direction.z <= 0) ? 0 : 1 / (2 * (T)pi);
 }
 
 // Sample an hemispherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction(
+inline vec<T, 3> sample_hemisphere(
     const vec<T, 3>& normal, const vec<T, 2>& ruv) {
     auto z               = ruv.y;
     auto r               = sqrt(clamp01(1 - z * z));
@@ -348,48 +344,47 @@ inline vec<T, 3> sample_hemisphere_direction(
     return transform_direction(make_basis_fromz(normal), local_direction);
 }
 template <typename T>
-inline T sample_hemisphere_direction_pdf(
+inline T sample_hemisphere_pdf(
     const vec<T, 3>& normal, const vec<T, 3>& direction) {
     return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * (T)pi);
 }
 
 // Sample a spherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_sphere_direction(const vec<T, 2>& ruv) {
+inline vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
     auto z   = 2 * ruv.y - 1;
     auto r   = sqrt(clamp01(1 - z * z));
     auto phi = 2 * (T)pi * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
-inline T sample_sphere_direction_pdf(const vec<T, 3>& w) {
+inline T sample_sphere_pdf(const vec<T, 3>& w) {
     return 1 / (4 * (T)pi);
 }
 
 // Sample an hemispherical direction with cosine distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction_cosine(const vec<T, 2>& ruv) {
+inline vec<T, 3> sample_hemisphere_cos(const vec<T, 2>& ruv) {
     auto z   = sqrt(ruv.y);
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * (T)pi * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
-inline T sample_hemisphere_direction_cosine_pdf(const vec<T, 3>& direction) {
+inline T sample_hemisphere_cos_pdf(const vec<T, 3>& direction) {
     return (direction.z <= 0) ? 0 : direction.z / (T)pi;
 }
 
 // Sample an hemispherical direction with cosine power distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_direction_cospower(
-    T exponent, const vec<T, 2>& ruv) {
+inline vec<T, 3> sample_hemisphere_cospower(T exponent, const vec<T, 2>& ruv) {
     auto z   = pow(ruv.y, 1 / (exponent + 1));
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * (T)pi * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
-inline T sample_hemisphere_direction_cospower_pdf(
+inline T sample_hemisphere_cospower_pdf(
     T exponent, const vec<T, 3>& direction) {
     return (direction.z <= 0)
                ? 0
@@ -398,73 +393,73 @@ inline T sample_hemisphere_direction_cospower_pdf(
 
 // Sample a point uniformly on a disk.
 template <typename T>
-inline vec<T, 2> sample_disk_point(const vec<T, 2>& ruv) {
+inline vec<T, 2> sample_disk(const vec<T, 2>& ruv) {
     auto r   = sqrt(ruv.y);
     auto phi = 2 * (T)pi * ruv.x;
     return {cos(phi) * r, sin(phi) * r};
 }
 template <typename T>
-inline T sample_disk_point_pdf() {
+inline T sample_disk_pdf() {
     return 1 / (T)pi;
 }
 
 // Sample a point uniformly on a cylinder, without caps.
 template <typename T>
-inline vec<T, 3> sample_cylinder_point(const vec<T, 2>& ruv) {
+inline vec<T, 3> sample_cylinder(const vec<T, 2>& ruv) {
     auto phi = 2 * (T)pi * ruv.x;
     return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
 template <typename T>
-inline T sample_cylinder_point_pdf() {
+inline T sample_cylinder_pdf() {
     return 1 / (T)pi;
 }
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
 template <typename T>
-inline vec<T, 2> sample_triangle_coordinates(const vec<T, 2>& ruv) {
+inline vec<T, 2> sample_triangle(const vec<T, 2>& ruv) {
     return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
 
 // Sample a point uniformly on a triangle.
 template <typename T>
-inline vec<T, 3> sample_triangle_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
+inline vec<T, 3> sample_triangle(const vec<T, 3>& p0, const vec<T, 3>& p1,
     const vec<T, 3>& p2, const vec<T, 2>& ruv) {
-    auto uv = sample_triangle_coordinates(ruv);
+    auto uv = sample_triangle(ruv);
     return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
 template <typename T>
-inline T sample_triangle_point_pdf(
+inline T sample_triangle_pdf(
     const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
     return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
 // Sample an index with uniform distribution.
 template <typename T>
-inline int sample_uniform_index(int size, T r) {
+inline int sample_uniform(int size, T r) {
     return clamp((int)(r * size), 0, size - 1);
 }
 template <typename T>
-inline T sample_uniform_index_pdf(int size) {
+inline T sample_uniform_pdf(int size) {
     return (T)1 / (T)size;
 }
 
 // Sample an index with uniform distribution.
 template <typename T, typename T1>
-inline T sample_uniform_element(const vector<T>& elements, T1 r) {
+inline T sample_uniform(const vector<T>& elements, T1 r) {
     if (elements.empty()) return {};
     auto size = (int)elements.size();
     return elements[clamp((int)(r * size), 0, size - 1)];
 }
 template <typename T>
-inline T sample_uniform_element_pdf(const vector<T>& elements) {
+inline T sample_uniform_pdf(const vector<T>& elements) {
     if (elements.empty()) return 0;
     return 1.0f / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T>
-inline int sample_discrete_distribution(const vector<T>& cdf, T r) {
+inline int sample_discrete(const vector<T>& cdf, T r) {
     r        = clamp(r * cdf.back(), (T)0.0, cdf.back() - (T)0.00001);
     auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                      cdf.data());
@@ -472,7 +467,7 @@ inline int sample_discrete_distribution(const vector<T>& cdf, T r) {
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-inline T sample_discrete_distribution_pdf(const vector<T>& cdf, int idx) {
+inline T sample_discrete_pdf(const vector<T>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }
@@ -485,19 +480,19 @@ inline T sample_discrete_distribution_pdf(const vector<T>& cdf, int idx) {
 namespace yocto {
 
 // clang-format off
-inline float stb__perlin_lerp(float a, float b, float t)
+inline float _stb__perlin_lerp(float a, float b, float t)
 {
    return a + (b-a) * t;
 }
 
-inline int stb__perlin_fastfloor(float a)
+inline int _stb__perlin_fastfloor(float a)
 {
     int ai = (int) a;
     return (a < ai) ? ai-1 : ai;
 }
 
 // different grad function from Perlin's, but easy to modify to match reference
-inline float stb__perlin_grad(int hash, float x, float y, float z)
+inline float _stb__perlin_grad(int hash, float x, float y, float z)
 {
    static float basis[12][4] =
    {
@@ -534,12 +529,12 @@ inline float stb__perlin_grad(int hash, float x, float y, float z)
    return grad[0]*x + grad[1]*y + grad[2]*z;
 }
 
-inline float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap)
+inline float _stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap)
 {
     // not same permutation table as Perlin's reference to avoid copyright issues;
     // Perlin's table can be found at http://mrl.nyu.edu/~perlin/noise/
     // @OPTIMIZE: should this be unsigned char instead of int for cache?
-    static unsigned char stb__perlin_randtab[512] =
+    static unsigned char _stb__perlin_randtab[512] =
     {
     23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,
     152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,
@@ -585,49 +580,49 @@ inline float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap
    unsigned int x_mask = (x_wrap-1) & 255;
    unsigned int y_mask = (y_wrap-1) & 255;
    unsigned int z_mask = (z_wrap-1) & 255;
-   int px = stb__perlin_fastfloor(x);
-   int py = stb__perlin_fastfloor(y);
-   int pz = stb__perlin_fastfloor(z);
+   int px = _stb__perlin_fastfloor(x);
+   int py = _stb__perlin_fastfloor(y);
+   int pz = _stb__perlin_fastfloor(z);
    int x0 = px & x_mask, x1 = (px+1) & x_mask;
    int y0 = py & y_mask, y1 = (py+1) & y_mask;
    int z0 = pz & z_mask, z1 = (pz+1) & z_mask;
    int r0,r1, r00,r01,r10,r11;
 
-   #define stb__perlin_ease(a)   (((a*6-15)*a + 10) * a * a * a)
+   #define _stb__perlin_ease(a)   (((a*6-15)*a + 10) * a * a * a)
 
-   x -= px; u = stb__perlin_ease(x);
-   y -= py; v = stb__perlin_ease(y);
-   z -= pz; w = stb__perlin_ease(z);
+   x -= px; u = _stb__perlin_ease(x);
+   y -= py; v = _stb__perlin_ease(y);
+   z -= pz; w = _stb__perlin_ease(z);
 
-   r0 = stb__perlin_randtab[x0];
-   r1 = stb__perlin_randtab[x1];
+   r0 = _stb__perlin_randtab[x0];
+   r1 = _stb__perlin_randtab[x1];
 
-   r00 = stb__perlin_randtab[r0+y0];
-   r01 = stb__perlin_randtab[r0+y1];
-   r10 = stb__perlin_randtab[r1+y0];
-   r11 = stb__perlin_randtab[r1+y1];
+   r00 = _stb__perlin_randtab[r0+y0];
+   r01 = _stb__perlin_randtab[r0+y1];
+   r10 = _stb__perlin_randtab[r1+y0];
+   r11 = _stb__perlin_randtab[r1+y1];
 
-   n000 = stb__perlin_grad(stb__perlin_randtab[r00+z0], x  , y  , z   );
-   n001 = stb__perlin_grad(stb__perlin_randtab[r00+z1], x  , y  , z-1 );
-   n010 = stb__perlin_grad(stb__perlin_randtab[r01+z0], x  , y-1, z   );
-   n011 = stb__perlin_grad(stb__perlin_randtab[r01+z1], x  , y-1, z-1 );
-   n100 = stb__perlin_grad(stb__perlin_randtab[r10+z0], x-1, y  , z   );
-   n101 = stb__perlin_grad(stb__perlin_randtab[r10+z1], x-1, y  , z-1 );
-   n110 = stb__perlin_grad(stb__perlin_randtab[r11+z0], x-1, y-1, z   );
-   n111 = stb__perlin_grad(stb__perlin_randtab[r11+z1], x-1, y-1, z-1 );
+   n000 = _stb__perlin_grad(_stb__perlin_randtab[r00+z0], x  , y  , z   );
+   n001 = _stb__perlin_grad(_stb__perlin_randtab[r00+z1], x  , y  , z-1 );
+   n010 = _stb__perlin_grad(_stb__perlin_randtab[r01+z0], x  , y-1, z   );
+   n011 = _stb__perlin_grad(_stb__perlin_randtab[r01+z1], x  , y-1, z-1 );
+   n100 = _stb__perlin_grad(_stb__perlin_randtab[r10+z0], x-1, y  , z   );
+   n101 = _stb__perlin_grad(_stb__perlin_randtab[r10+z1], x-1, y  , z-1 );
+   n110 = _stb__perlin_grad(_stb__perlin_randtab[r11+z0], x-1, y-1, z   );
+   n111 = _stb__perlin_grad(_stb__perlin_randtab[r11+z1], x-1, y-1, z-1 );
 
-   n00 = stb__perlin_lerp(n000,n001,w);
-   n01 = stb__perlin_lerp(n010,n011,w);
-   n10 = stb__perlin_lerp(n100,n101,w);
-   n11 = stb__perlin_lerp(n110,n111,w);
+   n00 = _stb__perlin_lerp(n000,n001,w);
+   n01 = _stb__perlin_lerp(n010,n011,w);
+   n10 = _stb__perlin_lerp(n100,n101,w);
+   n11 = _stb__perlin_lerp(n110,n111,w);
 
-   n0 = stb__perlin_lerp(n00,n01,v);
-   n1 = stb__perlin_lerp(n10,n11,v);
+   n0 = _stb__perlin_lerp(n00,n01,v);
+   n1 = _stb__perlin_lerp(n10,n11,v);
 
-   return stb__perlin_lerp(n0,n1,u);
+   return _stb__perlin_lerp(n0,n1,u);
 }
 
-inline float stb_perlin_ridge_noise3(float x, float y, float z,float lacunarity, float gain, float offset, int octaves,int x_wrap, int y_wrap, int z_wrap)
+inline float _stb_perlin_ridge_noise3(float x, float y, float z,float lacunarity, float gain, float offset, int octaves,int x_wrap, int y_wrap, int z_wrap)
 {
    int i;
    float frequency = 1.0f;
@@ -636,7 +631,7 @@ inline float stb_perlin_ridge_noise3(float x, float y, float z,float lacunarity,
    float sum = 0.0f;
 
    for (i = 0; i < octaves; i++) {
-      float r = (float)(stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap));
+      float r = (float)(_stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap));
       r = r<0 ? -r : r; // fabs()
       r = offset - r;
       r = r*r;
@@ -648,7 +643,7 @@ inline float stb_perlin_ridge_noise3(float x, float y, float z,float lacunarity,
    return sum;
 }
 
-inline float stb_perlin_fbm_noise3(float x, float y, float z,float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap)
+inline float _stb_perlin_fbm_noise3(float x, float y, float z,float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap)
 {
    int i;
    float frequency = 1.0f;
@@ -656,14 +651,14 @@ inline float stb_perlin_fbm_noise3(float x, float y, float z,float lacunarity, f
    float sum = 0.0f;
 
    for (i = 0; i < octaves; i++) {
-      sum += stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap)*amplitude;
+      sum += _stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap)*amplitude;
       frequency *= lacunarity;
       amplitude *= gain;
    }
    return sum;
 }
 
-inline float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap)
+inline float _stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap)
 {
    int i;
    float frequency = 1.0f;
@@ -671,7 +666,7 @@ inline float stb_perlin_turbulence_noise3(float x, float y, float z, float lacun
    float sum = 0.0f;
 
    for (i = 0; i < octaves; i++) {
-      float r = stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap)*amplitude;
+      float r = _stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap)*amplitude;
       r = r<0 ? -r : r; // fabs()
       sum += r;
       frequency *= lacunarity;
@@ -684,14 +679,14 @@ inline float stb_perlin_turbulence_noise3(float x, float y, float z, float lacun
 // adapeted  stb_perlin.h
 template <typename T>
 inline T perlin_noise(const vec<T, 3>& p, const vec3i& wrap) {
-    return stb_perlin_noise3(p.x, p.y, p.z, wrap.x, wrap.y, wrap.z);
+    return _stb_perlin_noise3(p.x, p.y, p.z, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
 template <typename T>
 inline T perlin_ridge_noise(const vec<T, 3>& p, T lacunarity, T gain, T offset,
     int octaves, const vec3i& wrap) {
-    return stb_perlin_ridge_noise3(p.x, p.y, p.z, lacunarity, gain, offset,
+    return _stb_perlin_ridge_noise3(p.x, p.y, p.z, lacunarity, gain, offset,
         octaves, wrap.x, wrap.y, wrap.z);
 }
 
@@ -699,7 +694,7 @@ inline T perlin_ridge_noise(const vec<T, 3>& p, T lacunarity, T gain, T offset,
 template <typename T>
 inline T perlin_fbm_noise(
     const vec<T, 3>& p, T lacunarity, T gain, int octaves, const vec3i& wrap) {
-    return stb_perlin_fbm_noise3(
+    return _stb_perlin_fbm_noise3(
         p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
@@ -707,7 +702,7 @@ inline T perlin_fbm_noise(
 template <typename T>
 inline T perlin_turbulence_noise(
     const vec<T, 3>& p, T lacunarity, T gain, int octaves, const vec3i& wrap) {
-    return stb_perlin_turbulence_noise3(
+    return _stb_perlin_turbulence_noise3(
         p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
