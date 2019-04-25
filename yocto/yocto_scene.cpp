@@ -544,7 +544,7 @@ void add_tangent_spaces(yocto_scene& scene) {
         auto& material = scene.materials[instance.material];
         if (material.normal_texture < 0) continue;
         auto& shape = scene.shapes[instance.shape];
-        if (!shape.tangentspaces.empty() || shape.texcoords.empty())
+        if (!shape.tangents.empty() || shape.texcoords.empty())
             continue;
         if (!shape.triangles.empty()) {
             if (shape.normals.empty()) {
@@ -552,8 +552,8 @@ void add_tangent_spaces(yocto_scene& scene) {
                 compute_normals(
                     shape.normals, shape.triangles, shape.positions);
             }
-            shape.tangentspaces.resize(shape.positions.size());
-            compute_tangent_spaces(shape.tangentspaces, shape.triangles,
+            shape.tangents.resize(shape.positions.size());
+            compute_tangent_spaces(shape.tangents, shape.triangles,
                 shape.positions, shape.normals, shape.texcoords);
         } else {
             throw runtime_error("type not supported");
@@ -616,7 +616,7 @@ void trim_memory(yocto_scene& scene) {
         shape.texcoords.shrink_to_fit();
         shape.colors.shrink_to_fit();
         shape.radius.shrink_to_fit();
-        shape.tangentspaces.shrink_to_fit();
+        shape.tangents.shrink_to_fit();
     }
     for (auto& texture : scene.textures) {
         texture.ldr_image.shrink_to_fit();
@@ -843,11 +843,11 @@ float eval_radius(
 }
 pair<vec3f, bool> eval_tangsp(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
-    if (shape.tangentspaces.empty())
+    if (shape.tangents.empty())
         return eval_element_tangents(
             shape, element_id, element_uv);
     auto tangsp = evaluate_shape_elem(
-        shape, {}, shape.tangentspaces, element_id, element_uv);
+        shape, {}, shape.tangents, element_id, element_uv);
     return {xyz(tangsp), tangsp.w < 0};
 }
 // Shading normals including material perturbations.

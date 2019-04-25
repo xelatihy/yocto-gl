@@ -450,7 +450,7 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
         win, "texcoord", "%ld", value.texcoords.size());
     draw_label_opengl_widget(win, "color", "%ld", value.colors.size());
     draw_label_opengl_widget(win, "radius", "%ld", value.radius.size());
-    draw_label_opengl_widget(win, "tangsp", "%ld", value.tangentspaces.size());
+    draw_label_opengl_widget(win, "tangsp", "%ld", value.tangents.size());
     if (edited) {
         auto reload = edited_value.uri != value.uri;
         if (!reload) {
@@ -466,7 +466,7 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             edited_value.texcoords       = value.texcoords;
             edited_value.colors              = value.colors;
             edited_value.radius              = value.radius;
-            edited_value.tangentspaces       = value.tangentspaces;
+            edited_value.tangents       = value.tangents;
         }
         edit = {sel.type, sel.index, edited_value, reload};
     }

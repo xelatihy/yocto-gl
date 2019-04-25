@@ -739,9 +739,9 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             if (!shape.colors.empty())
                 init_opengl_array_buffer(
                     vbos.colors_buffer, shape.colors, false);
-            if (!shape.tangentspaces.empty())
+            if (!shape.tangents.empty())
                 init_opengl_array_buffer(
-                    vbos.tangentspaces_buffer, shape.tangentspaces, false);
+                    vbos.tangentspaces_buffer, shape.tangents, false);
             if (!shape.points.empty())
                 init_opengl_elementbuffer(
                     vbos.points_buffer, shape.points, false);

@@ -1969,12 +1969,12 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
                             {(float)vals[i][0], (float)vals[i][1],
                                 (float)vals[i][2], (float)vals[i][3]});
                 } else if (semantic == "TANGENT") {
-                    shape.tangentspaces.reserve(vals.size());
+                    shape.tangents.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
-                        shape.tangentspaces.push_back(
+                        shape.tangents.push_back(
                             {(float)vals[i][0], (float)vals[i][1],
                                 (float)vals[i][2], (float)vals[i][3]});
-                    for (auto& t : shape.tangentspaces) t.w = -t.w;
+                    for (auto& t : shape.tangents) t.w = -t.w;
                 } else if (semantic == "RADIUS") {
                     shape.radius.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)

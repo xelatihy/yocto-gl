@@ -179,7 +179,7 @@ struct yocto_shape {
     vector<vec2f> texcoords = {};
     vector<vec4f> colors        = {};
     vector<float> radius        = {};
-    vector<vec4f> tangentspaces = {};
+    vector<vec4f> tangents = {};
 };
 
 // Shape data represented as an indexed meshes of elements.
