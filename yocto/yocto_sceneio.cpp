@@ -2476,7 +2476,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
             }
             if (!shape.quads.empty()) {
                 auto triangles = vector<vec3i>{};
-                convert_quads_to_triangles(triangles, shape.quads);
+                quads_to_triangles(triangles, shape.quads);
                 pjs["indices"] = add_accessor(
                     (int)triangles.size() * 3, "SCALAR", true);
                 pjs["mode"] = 4;
@@ -2491,7 +2491,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
                 shape.quads_positions, shape.quads_normals,
                 shape.quads_texturecoords, shape.positions, shape.normals,
                 shape.texturecoords);
-            convert_quads_to_triangles(triangles, quads);
+            quads_to_triangles(triangles, quads);
             auto nverts = (int)positions.size();
             if (!positions.empty())
                 pjs["attributes"]["POSITION"] = add_accessor(nverts, "VEC3");
@@ -2579,7 +2579,7 @@ void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
         write_values(fs, shape.lines);
         write_values(fs, shape.triangles);
         auto qtriangles = vector<vec3i>{};
-        convert_quads_to_triangles(qtriangles, shape.quads);
+        quads_to_triangles(qtriangles, shape.quads);
         write_values(fs, qtriangles);
     } else {
         auto positions     = vector<vec3f>{};
@@ -2591,7 +2591,7 @@ void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
             shape.quads_positions, shape.quads_normals,
             shape.quads_texturecoords, shape.positions, shape.normals,
             shape.texturecoords);
-        convert_quads_to_triangles(triangles, quads);
+        quads_to_triangles(triangles, quads);
         write_values(fs, positions);
         write_values(fs, normals);
         write_values(fs, texturecoords);
@@ -2829,7 +2829,7 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
             shape.positions = mesh.P;
             shape.triangles = mesh.indices;
             shape.normals.resize(shape.positions.size());
-            compute_vertex_normals(
+            compute_normals(
                 shape.normals, shape.triangles, shape.positions);
         } else if (holds_alternative<pbrt_plymesh_shape>(pshape)) {
             auto& mesh = get<pbrt_plymesh_shape>(pshape);

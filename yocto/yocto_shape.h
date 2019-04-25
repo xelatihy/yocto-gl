@@ -36,8 +36,8 @@
 //    `interpolate_triangle()` and `interpolate_quad()`
 // 3. evaluate Bezier curves and derivatives with `interpolate_bezier()` and
 //    `interpolate_bezier_derivative()`
-// 4. compute smooth normals and tangents with `compute_vertex_normals()`
-//   `compute_vertex_tangents()`
+// 4. compute smooth normals and tangents with `compute_normals()`
+//   `compute_tangents()`
 // 5. compute tangent frames from texture coordinates with
 //    `compute_tangent_spaces()`
 // 6. compute skinning with `compute_skinning()` and
@@ -57,7 +57,7 @@
 // 9.  sample a could of point over a surface with
 // `sample_triangles_element_points()`
 // 10. get edges and boundaries with `get_edges()`
-// 11. convert quads to triangles with `convert_quads_to_triangles()`
+// 11. convert quads to triangles with `quads_to_triangles()`
 // 12. convert face varying to vertex shared representations with
 //     `convert_face_varying()`
 // 13. subdivide elements by edge splits with `subdivide_lines()`,
@@ -232,13 +232,13 @@ namespace yocto {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
 template <typename T>
-inline void compute_vertex_tangents(vector<vec<T, 3>>& tangents,
+inline void compute_tangents(vector<vec<T, 3>>& tangents,
     const vector<vec2i>& lines, const vector<vec<T, 3>>& positions);
 template <typename T>
-inline void compute_vertex_normals(vector<vec<T, 3>>& normals,
+inline void compute_normals(vector<vec<T, 3>>& normals,
     const vector<vec3i>& triangles, const vector<vec<T, 3>>& positions);
 template <typename T>
-inline void compute_vertex_normals(vector<vec<T, 3>>& normals,
+inline void compute_normals(vector<vec<T, 3>>& normals,
     const vector<vec4i>& quads, const vector<vec<T, 3>>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
@@ -273,7 +273,7 @@ namespace yocto {
 
 // Flip vertex normals
 template <typename T>
-inline void flip_vertex_normals(vector<vec<T, 3>>& normals);
+inline void flip_normals(vector<vec<T, 3>>& normals);
 // Flip face orientation
 template <typename T>
 inline void flip_triangles_orientation(vector<vec<T, 3>>& triangles);
@@ -353,18 +353,18 @@ inline void find_nearest_neightbors(const hash_grid<T, 3>& grid,
 namespace yocto {
 
 // Convert quads to triangles
-inline void convert_quads_to_triangles(
+inline void quads_to_triangles(
     vector<vec3i>& triangles, const vector<vec4i>& quads);
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-inline void convert_quads_to_triangles(
+inline void quads_to_triangles(
     vector<vec3i>& triangles, const vector<vec4i>& quads, int row_length);
 // Convert triangles to quads by creating degenerate quads
-inline void convert_triangles_to_quads(
+inline void triangles_to_quads(
     vector<vec4i>& quads, const vector<vec3i>& triangles);
 
 // Convert beziers to lines using 3 lines for each bezier.
-inline void convert_bezier_to_lines(
+inline void bezier_to_lines(
     vector<vec2i>& lines, const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
@@ -923,7 +923,7 @@ namespace yocto {
 
 // Compute per-vertex tangents for lines.
 template <typename T>
-inline void compute_vertex_tangents(vector<vec<T, 3>>& tangents,
+inline void compute_tangents(vector<vec<T, 3>>& tangents,
     const vector<vec2i>& lines, const vector<vec<T, 3>>& positions) {
     if (tangents.size() != positions.size()) {
         throw std::out_of_range("array should be the same length");
@@ -940,7 +940,7 @@ inline void compute_vertex_tangents(vector<vec<T, 3>>& tangents,
 
 // Compute per-vertex normals for triangles.
 template <typename T>
-inline void compute_vertex_normals(vector<vec<T, 3>>& normals,
+inline void compute_normals(vector<vec<T, 3>>& normals,
     const vector<vec3i>& triangles, const vector<vec<T, 3>>& positions) {
     if (normals.size() != positions.size()) {
         throw std::out_of_range("array should be the same length");
@@ -960,7 +960,7 @@ inline void compute_vertex_normals(vector<vec<T, 3>>& normals,
 
 // Compute per-vertex normals for quads.
 template <typename T>
-inline void compute_vertex_normals(vector<vec<T, 3>>& normals,
+inline void compute_normals(vector<vec<T, 3>>& normals,
     const vector<vec4i>& quads, const vector<vec<T, 3>>& positions) {
     if (normals.size() != positions.size()) {
         throw std::out_of_range("array should be the same length");
@@ -1069,7 +1069,7 @@ namespace yocto {
 
 // Flip vertex normals
 template <typename T>
-inline void flip_vertex_normals(vector<vec<T, 3>>& normals) {
+inline void flip_normals(vector<vec<T, 3>>& normals) {
     for (auto& n : normals) n = -n;
 }
 // Flip face orientation
@@ -1262,7 +1262,7 @@ inline void find_nearest_neightbors(const hash_grid<T, 3>& grid,
 namespace yocto {
 
 // Convert quads to triangles
-inline void convert_quads_to_triangles(
+inline void quads_to_triangles(
     vector<vec3i>& triangles, const vector<vec4i>& quads) {
     triangles.clear();
     triangles.reserve(quads.size() * 2);
@@ -1274,7 +1274,7 @@ inline void convert_quads_to_triangles(
 
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-inline void convert_quads_to_triangles(
+inline void quads_to_triangles(
     vector<vec3i>& triangles, const vector<vec4i>& quads, int row_length) {
     triangles.clear();
     triangles.reserve(quads.size() * 2);
@@ -1299,7 +1299,7 @@ inline void convert_quads_to_triangles(
 }
 
 // Convert triangles to quads by creating degenerate quads
-inline void convert_triangles_to_quads(
+inline void triangles_to_quads(
     vector<vec4i>& quads, const vector<vec3i>& triangles) {
     quads.clear();
     quads.reserve(triangles.size());
@@ -1307,7 +1307,7 @@ inline void convert_triangles_to_quads(
 }
 
 // Convert beziers to lines using 3 lines for each bezier.
-inline void convert_bezier_to_lines(
+inline void bezier_to_lines(
     vector<vec2i>& lines, const vector<vec4i>& beziers) {
     lines.clear();
     lines.reserve(beziers.size() * 3);
@@ -1529,12 +1529,12 @@ inline void merge_triangles_and_quads(
     if (quads.empty()) return;
     if (force_triangles) {
         auto qtriangles = vector<vec3i>{};
-        convert_quads_to_triangles(qtriangles, quads);
+        quads_to_triangles(qtriangles, quads);
         triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
         quads = {};
     } else {
         auto tquads = vector<vec4i>{};
-        convert_triangles_to_quads(tquads, triangles);
+        triangles_to_quads(tquads, triangles);
         quads.insert(quads.end(), tquads.begin(), tquads.end());
         triangles = {};
     }
@@ -3023,7 +3023,7 @@ inline void make_hair_shape(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
     const vec<T, 2>& clump, const vec<T, 2>& rotation, int seed) {
     auto alltriangles    = striangles;
     auto quads_triangles = vector<vec3i>{};
-    convert_quads_to_triangles(quads_triangles, squads);
+    quads_to_triangles(quads_triangles, squads);
     alltriangles.insert(
         alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
     auto bpos      = vector<vec<T, 3>>{};
@@ -3080,7 +3080,7 @@ inline void make_hair_shape(vector<vec2i>& lines, vector<vec<T, 3>>& positions,
     }
 
     if (clump.x > 0 || noise.x > 0 || rotation.x > 0) {
-        compute_vertex_tangents(normals, lines, positions);
+        compute_tangents(normals, lines, positions);
     }
 }
 

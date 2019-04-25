@@ -468,7 +468,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                         }
                     }
                     if (all_triangles) {
-                        convert_quads_to_triangles(
+                        quads_to_triangles(
                             shape.triangles, shape.quads);
                         shape.quads = {};
                     }
