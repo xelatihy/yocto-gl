@@ -88,45 +88,6 @@ bool is_scattering_zero(const trace_material& material) {
            material.opacity_color == zero3f;
 }
 
-// Brdf as a list of lobes
-template <typename T, int N = 8>
-struct short_vector {
-    short_vector() {}
-    short_vector(int n) {
-        _size = n;
-        for (auto i = 0; i < n; i++) _data[i] = T{};
-    }
-    short_vector(initializer_list<T> values) {
-        _size = 0;
-        for (auto& value : values) {
-            _data[_size++] = value;
-        }
-    }
-
-    int  size() const { return _size; }
-    bool empty() const { return _size == 0; }
-
-    void push_back(const T& value) { _data[_size++] = value; }
-    void pop_back() { _size--; }
-
-    T&       operator[](int i) { return _data[i]; }
-    const T& operator[](int i) const { return _data[i]; }
-    T*       begin() { return _data; }
-    const T* begin() const { return _data; }
-    T*       end() { return _data + _size; }
-    const T* end() const { return _data + _size; }
-    T*       data() { return _data; }
-    const T* data() const { return _data; }
-    T&       front() { return _data[0]; }
-    const T& front() const { return _data[0]; }
-    T&       back() { return _data[_size - 1]; }
-    const T& back() const { return _data[_size - 1]; }
-
-   private:
-    T   _data[N];
-    int _size = 0;
-};
-
 pair<trace_material, trace_volume> make_trace_material(
     const material_point& point, const vec4f& shape_color) {
     auto emission = point.emission;
@@ -1366,15 +1327,16 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, const trace_params& params) {
     // initialize
-    auto radiance     = zero3f;
-    auto weight       = vec3f{1, 1, 1};
-    auto ray          = make_ray(position, direction);
-    auto volume_stack = short_vector<trace_volume>{};
-    auto hit          = false;
+    auto radiance          = zero3f;
+    auto weight            = vec3f{1, 1, 1};
+    auto ray               = make_ray(position, direction);
+    auto volume_stack      = array<trace_volume, 16>{};
+    auto volume_stack_size = 0;
+    auto hit               = false;
 
     // trace  path
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
-        if (volume_stack.empty()) {
+        if (!volume_stack_size) {
             // intersect next point
             auto intersection = bvh_intersection{};
             if (!trace_ray(scene, bvh, ray, intersection)) {
@@ -1415,10 +1377,11 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             if (point.volume.density != zero3f &&
                 dot(incoming, point.normal) > 0 !=
                     dot(outgoing, point.normal) > 0) {
-                if (volume_stack.empty())
-                    volume_stack.push_back(point.volume);
-                else
-                    volume_stack.pop_back();
+                if (!volume_stack_size) {
+                    volume_stack[volume_stack_size++] = point.volume;
+                } else {
+                    volume_stack_size--;
+                }
             }
 
             // setup next iteration
@@ -1449,7 +1412,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             }
 
             // clamp ray if inside a volume
-            auto& vsdfs = volume_stack.back();
+            auto& vsdfs = volume_stack[volume_stack_size - 1];
             auto [transmission, distance, distance_pdf] =
                 sample_volume_distance(
                     ray.o, -ray.d, intersection.distance, vsdfs, rng);
@@ -1520,10 +1483,11 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 if (point.volume.density != zero3f &&
                     dot(incoming, point.normal) > 0 !=
                         dot(outgoing, point.normal) > 0) {
-                    if (volume_stack.empty())
-                        volume_stack.push_back(point.volume);
-                    else
-                        volume_stack.pop_back();
+                    if (!volume_stack_size) {
+                        volume_stack[volume_stack_size++] = point.volume;
+                    } else {
+                        volume_stack_size--;
+                    }
                 }
 
                 // setup next iteration
