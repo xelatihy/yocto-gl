@@ -451,19 +451,19 @@ const vector<vec4i>& get_suzanne_quads() {
 namespace yocto {
 
 // hack for CyHair data
-inline void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
+static  void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
     bool flip_texcoord = true);
 
 // Load/Save a ply mesh
-inline void load_ply_shape(const string& filename, vector<int>& points,
+static  void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& color,
     vector<float>& radius, bool flip_texcoord = true);
-inline void save_ply_shape(const string& filename, const vector<int>& points,
+static  void save_ply_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec4i>& quads_normals,
@@ -473,13 +473,13 @@ inline void save_ply_shape(const string& filename, const vector<int>& points,
     bool ascii = false, bool flip_texcoord = true);
 
 // Load/Save an OBJ mesh
-inline void load_obj_shape(const string& filename, vector<int>& points,
+static  void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
     bool preserve_facevarying, bool flip_texcoord = true);
-inline void save_obj_shape(const string& filename, const vector<int>& points,
+static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec4i>& quads_normals,
@@ -546,7 +546,7 @@ void save_shape(const string& filename, const vector<int>& points,
     }
 }
 
-inline void load_ply_shape(const string& filename, vector<int>& points,
+static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
@@ -671,7 +671,7 @@ inline void load_ply_shape(const string& filename, vector<int>& points,
 }
 
 // Save ply mesh
-inline void save_ply_shape(const string& filename, const vector<int>& points,
+static void save_ply_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec4i>& quads_normals,
@@ -802,7 +802,7 @@ inline void save_ply_shape(const string& filename, const vector<int>& points,
     }
 }
 
-struct load_obj_shape_callbacks : obj_callbacks {
+struct load_obj_cb : obj_callbacks {
     vector<int>&   points;
     vector<vec2i>& lines;
     vector<vec3i>& triangles;
@@ -831,7 +831,7 @@ struct load_obj_shape_callbacks : obj_callbacks {
     unordered_map<int, int> texcoord_map = unordered_map<int, int>();
     unordered_map<int, int> norm_map     = unordered_map<int, int>();
 
-    load_obj_shape_callbacks(vector<int>& points, vector<vec2i>& lines,
+    load_obj_cb(vector<int>& points, vector<vec2i>& lines,
         vector<vec3i>& triangles, vector<vec4i>& quads,
         vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
         vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
@@ -984,7 +984,7 @@ struct load_obj_shape_callbacks : obj_callbacks {
 };
 
 // Load ply mesh
-inline void load_obj_shape(const string& filename, vector<int>& points,
+static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
@@ -996,7 +996,7 @@ inline void load_obj_shape(const string& filename, vector<int>& points,
         obj_prms.exit_on_error = false;
         obj_prms.geometry_only = true;
         obj_prms.flip_texcoord = flip_texcoord;
-        auto cb = load_obj_shape_callbacks{points, lines, triangles, quads,
+        auto cb = load_obj_cb{points, lines, triangles, quads,
             quads_positions, quads_normals, quads_texturecoords, positions,
             normals, texturecoords, preserve_facevarying};
         load_obj(filename, cb, obj_prms);
@@ -1011,7 +1011,7 @@ inline void load_obj_shape(const string& filename, vector<int>& points,
     }
 }
 
-inline string format_obj_vertex(const obj_vertex& value) {
+static inline string format_obj_vertex(const obj_vertex& value) {
     if (value.texturecoord && value.normal) {
         return format(
             "{}/{}/{}", value.position, value.texturecoord, value.normal);
@@ -1025,7 +1025,7 @@ inline string format_obj_vertex(const obj_vertex& value) {
 }
 
 // Load ply mesh
-inline void save_obj_shape(const string& filename, const vector<int>& points,
+static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec4i>& quads_normals,
@@ -1131,7 +1131,7 @@ struct cyhair_data {
     vec3f                 default_color        = zero3f;
 };
 
-inline void load_cyhair(const string& filename, cyhair_data& hair) {
+static void load_cyhair(const string& filename, cyhair_data& hair) {
     // open file
     hair     = {};
     auto fs_ = open_input_file(filename, true);
@@ -1246,7 +1246,7 @@ inline void load_cyhair(const string& filename, cyhair_data& hair) {
     }
 }
 
-inline void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
+static void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
     bool flip_texcoord) {
