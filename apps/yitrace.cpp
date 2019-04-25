@@ -88,8 +88,7 @@ struct app_scene {
     string name      = "";
 
     // options
-    load_params    load_prms    = {};
-    save_params    save_prms    = {};
+    sceneio_params    sceneio_prms    = {};
     bvh_params     bvh_prms     = {};
     trace_params   trace_prms   = {};
     tonemap_params tonemap_prms = {};
@@ -131,8 +130,7 @@ struct app_state {
     deque<string>    errors;
 
     // default options
-    load_params    load_prms    = {};
-    save_params    save_prms    = {};
+    sceneio_params    sceneio_prms    = {};
     bvh_params     bvh_prms     = {};
     trace_params   trace_prms   = {};
     tonemap_params tonemap_prms = {};
@@ -196,8 +194,7 @@ void add_new_scene(app_state& app, const string& filename) {
     scn.imagename       = get_noextension(filename) + ".png";
     scn.outname         = get_noextension(filename) + ".edited.yaml";
     scn.name            = get_filename(scn.filename);
-    scn.load_prms    = app.load_prms;
-    scn.save_prms    = app.save_prms;
+    scn.sceneio_prms    = app.sceneio_prms;
     scn.trace_prms   = app.trace_prms;
     scn.bvh_prms     = app.bvh_prms;
     scn.tonemap_prms = app.tonemap_prms;
@@ -735,7 +732,7 @@ void update(app_state& app) {
                 scn.bvh_done    = false;
                 scn.lights_done = false;
                 task.result     = async([&scn]() {
-                    load_scene(scn.filename, scn.scene, scn.load_prms);
+                    load_scene(scn.filename, scn.scene, scn.sceneio_prms);
                     tesselate_subdivs(scn.scene);
                     if (scn.add_skyenv) add_sky_environment(scn.scene);
                 });
@@ -778,7 +775,7 @@ void update(app_state& app) {
             case app_task_type::save_scene: {
                 log_info("start saving {}", scn.outname);
                 task.result = async([&scn]() {
-                    save_scene(scn.outname, scn.scene, scn.save_prms);
+                    save_scene(scn.outname, scn.scene, scn.sceneio_prms);
                 });
             } break;
             case app_task_type::render_image: {
@@ -986,8 +983,7 @@ int main(int argc, char* argv[]) {
     // fix parallel code
     if (no_parallel) {
         app.bvh_prms.run_serially   = true;
-        app.load_prms.run_serially  = true;
-        app.save_prms.run_serially  = true;
+        app.sceneio_prms.run_serially  = true;
         app.trace_prms.run_serially = true;
     }
 

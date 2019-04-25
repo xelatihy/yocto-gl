@@ -83,8 +83,8 @@ int main(int argc, char** argv) {
     }
 
     // fix options
-    auto load_prms          = load_params();
-    auto save_prms          = save_params();
+    auto load_prms          = sceneio_params();
+    auto save_prms          = sceneio_params();
     load_prms.skip_textures = skip_textures;
     save_prms.skip_textures = skip_textures;
     load_prms.skip_meshes   = skip_meshes;

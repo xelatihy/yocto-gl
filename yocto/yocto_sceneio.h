@@ -55,7 +55,7 @@
 namespace yocto {
 
 // Scene load params
-struct load_params {
+struct sceneio_params {
     bool          skip_textures             = false;
     bool          skip_meshes               = false;
     bool          obj_split_shapes          = true;
@@ -63,19 +63,12 @@ struct load_params {
     atomic<bool>* cancel_flag               = nullptr;
     bool          run_serially              = false;
 };
-// Scene save params
-struct save_params {
-    bool          skip_textures = false;
-    bool          skip_meshes   = false;
-    atomic<bool>* cancel_flag   = nullptr;
-    bool          run_serially  = false;
-};
 
 // Load/save a scene in the supported formats.
 void load_scene(const string& filename, yocto_scene& scene,
-    const load_params& params = {});
+    const sceneio_params& params = {});
 void save_scene(const string& filename, const yocto_scene& scene,
-    const save_params& params = {});
+    const sceneio_params& params = {});
 
 }  // namespace yocto
 

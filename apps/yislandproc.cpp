@@ -893,10 +893,10 @@ void load_disney_island_elements(const string& filename, const string& dirname,
 }
 
 void load_scene_textures(yocto_scene& scene, const string& dirname,
-    const load_params& options);
+    const sceneio_params& params);
 
 void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
-    const load_params& options) {
+    const sceneio_params& params) {
     try {
         auto js = json{};
         load_json(filename, js);
@@ -915,7 +915,7 @@ void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
         }
 
         // load meshes and textures
-        load_scene_textures(scene, dirname, options);
+        load_scene_textures(scene, dirname, params);
     } catch (std::exception& e) {
         throw io_error("error loading scene "s + e.what());
     }
@@ -1034,9 +1034,9 @@ int main(int argc, char** argv) {
         return parser.exit(e);
     }
 
-    // fix options
-    auto load_prms          = load_params();
-    auto save_prms          = save_params();
+    // fix params
+    auto load_prms          = sceneio_params();
+    auto save_prms          = sceneio_params();
     load_prms.skip_textures = skip_textures;
     save_prms.skip_textures = skip_textures;
     load_prms.skip_meshes   = skip_meshes;

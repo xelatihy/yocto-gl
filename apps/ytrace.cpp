@@ -38,7 +38,7 @@ using namespace yocto;
 
 int main(int argc, char* argv[]) {
     // options
-    auto load_prms    = load_params{};
+    auto sceneio_prms    = sceneio_params{};
     auto bvh_prms     = bvh_params{};
     auto trace_prms   = trace_params{};
     auto tonemap_prms = tonemap_params{};
@@ -125,14 +125,14 @@ int main(int argc, char* argv[]) {
     // fix parallel code
     if (no_parallel) {
         bvh_prms.run_serially  = true;
-        load_prms.run_serially = true;
+        sceneio_prms.run_serially = true;
     }
 
     // scene loading
     auto scene = yocto_scene{};
     try {
         auto timer = print_timed("loading scene");
-        load_scene(filename, scene, load_prms);
+        load_scene(filename, scene, sceneio_prms);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }
