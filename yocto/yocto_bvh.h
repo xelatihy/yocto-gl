@@ -758,7 +758,7 @@ inline bvh_scene::~bvh_scene() {
     }
 }
 
-inline void embree_error(void* ctx, RTCError code, const char* str) {
+static inline void _embree_error(void* ctx, RTCError code, const char* str) {
     switch (code) {
         case RTC_ERROR_UNKNOWN:
             throw runtime_error("RTC_ERROR_UNKNOWN: "s + str);
@@ -783,31 +783,31 @@ inline void embree_error(void* ctx, RTCError code, const char* str) {
 }
 
 // Embree memory
-inline atomic<ssize_t> embree_memory = 0;
-inline bool embree_memory_monitor(void* userPtr, ssize_t bytes, bool post) {
-    embree_memory += bytes;
+inline atomic<ssize_t> _embree_memory = 0;
+static inline bool _embree_memory_monitor(void* userPtr, ssize_t bytes, bool post) {
+    _embree_memory += bytes;
     return true;
 }
 
 // Get Embree device
-inline RTCDevice get_embree_device() {
+static inline RTCDevice _get_embree_device() {
     static RTCDevice device = nullptr;
     if (!device) {
         device = rtcNewDevice("");
-        rtcSetDeviceErrorFunction(device, embree_error, nullptr);
+        rtcSetDeviceErrorFunction(device, _embree_error, nullptr);
         rtcSetDeviceMemoryMonitorFunction(
-            device, embree_memory_monitor, nullptr);
+            device, _embree_memory_monitor, nullptr);
     }
     return device;
 }
 
 // Initialize Embree BVH
-inline void build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
+static inline void _build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
     const bvh_params& params) {
-    auto embree_device = get_embree_device();
+    auto embree_device = _get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     if (params.embree_compact) {
         rtcSetSceneFlags(embree_scene, RTC_SCENE_FLAG_COMPACT);
@@ -835,7 +835,7 @@ inline void build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
             last_index = l.y;
         }
         embree_geom = rtcNewGeometry(
-            get_embree_device(), RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
+            _get_embree_device(), RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
             RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4,
@@ -846,7 +846,7 @@ inline void build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
         memcpy(embree_lines, elines.data(), elines.size() * 4);
     } else if (!triangles.empty()) {
         embree_geom = rtcNewGeometry(
-            get_embree_device(), RTC_GEOMETRY_TYPE_TRIANGLE);
+            _get_embree_device(), RTC_GEOMETRY_TYPE_TRIANGLE);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         if (params.embree_compact) {
             rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX, 0,
@@ -866,7 +866,7 @@ inline void build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
         }
     } else if (!quads.empty()) {
         embree_geom = rtcNewGeometry(
-            get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
+            _get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         if (params.embree_compact) {
             rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX, 0,
@@ -886,7 +886,7 @@ inline void build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
         }
     } else if (!quads_positions.empty()) {
         embree_geom = rtcNewGeometry(
-            get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
+            _get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         if (params.embree_compact) {
             rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX, 0,
@@ -914,10 +914,10 @@ inline void build_embree_bvh(bvh_shape& bvh, const vector<int>& points,
 }
 // Build a BVH using Embree.
 template <typename GetInstance>
-inline void build_embree_bvh(bvh_scene& bvh, int num_instances,
+static inline void _build_embree_bvh(bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const bvh_params& params) {
     // scene bvh
-    auto embree_device = get_embree_device();
+    auto embree_device = _get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     if (params.embree_compact) {
         rtcSetSceneFlags(embree_scene, RTC_SCENE_FLAG_COMPACT);
@@ -950,10 +950,10 @@ inline void build_embree_bvh(bvh_scene& bvh, int num_instances,
 
 // Initialize Embree BVH
 template <typename Scene>
-inline void build_embree_flattened_bvh(
+static inline void _build_embree_flattened_bvh(
     bvh_scene& bvh, const Scene& scene, const bvh_params& params) {
     // scene bvh
-    auto embree_device = get_embree_device();
+    auto embree_device = _get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
     bvh.embree_bvh = embree_scene;
@@ -1000,7 +1000,7 @@ inline void build_embree_flattened_bvh(
                 last_index = l.y;
             }
             embree_geom = rtcNewGeometry(
-                get_embree_device(), RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
+                _get_embree_device(), RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
             rtcSetGeometryVertexAttributeCount(embree_geom, 1);
             auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
                 RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4,
@@ -1011,7 +1011,7 @@ inline void build_embree_flattened_bvh(
             memcpy(embree_lines, elines.data(), elines.size() * 4);
         } else if (!triangles.empty()) {
             embree_geom = rtcNewGeometry(
-                get_embree_device(), RTC_GEOMETRY_TYPE_TRIANGLE);
+                _get_embree_device(), RTC_GEOMETRY_TYPE_TRIANGLE);
             rtcSetGeometryVertexAttributeCount(embree_geom, 1);
             auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
                 RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
@@ -1024,7 +1024,7 @@ inline void build_embree_flattened_bvh(
             memcpy(embree_triangles, triangles.data(), triangles.size() * 12);
         } else if (!quads.empty()) {
             embree_geom = rtcNewGeometry(
-                get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
+                _get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
             rtcSetGeometryVertexAttributeCount(embree_geom, 1);
             auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
                 RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
@@ -1037,7 +1037,7 @@ inline void build_embree_flattened_bvh(
             memcpy(embree_quads, quads.data(), quads.size() * 16);
         } else if (!quads_positions.empty()) {
             embree_geom = rtcNewGeometry(
-                get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
+                _get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
             rtcSetGeometryVertexAttributeCount(embree_geom, 1);
             auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
                 RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
@@ -1060,10 +1060,10 @@ inline void build_embree_flattened_bvh(
 }
 // Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not
 // available.
-inline void refit_embree_bvh(bvh_shape& bvh) {
+static inline void _refit_embree_bvh(bvh_shape& bvh) {
     throw runtime_error("not yet implemented");
 }
-inline bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray,
+static inline bool _intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray,
     bvh_intersection& intersection, bool find_any) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
@@ -1089,7 +1089,7 @@ inline bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray,
     intersection.distance   = embree_ray.ray.tfar;
     return true;
 }
-inline bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray,
+static inline bool _intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray,
     bvh_intersection& intersection, bool find_any) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
@@ -1118,15 +1118,15 @@ inline bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray,
 #endif
 
 // BVH primitive with its bbox, its center and the index to the primitive
-struct bvh_prim {
+struct _bvh_prim {
     bbox3f bbox   = invalid_bbox3f;
     vec3f  center = zero3f;
     int    primid = 0;
 };
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-inline pair<int, int> split_bvh_sah(
-    vector<bvh_prim>& prims, int start, int end) {
+static inline pair<int, int> _split_sah(
+    vector<_bvh_prim>& prims, int start, int end) {
     // initialize split axis and position
     auto split_axis = 0;
     auto mid        = (start + end) / 2;
@@ -1188,8 +1188,8 @@ inline pair<int, int> split_bvh_sah(
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-inline pair<int, int> split_bvh_balanced(
-    vector<bvh_prim>& prims, int start, int end) {
+static inline pair<int, int> _split_balanced(
+    vector<_bvh_prim>& prims, int start, int end) {
     // initialize split axis and position
     auto split_axis = 0;
     auto mid        = (start + end) / 2;
@@ -1227,8 +1227,8 @@ inline pair<int, int> split_bvh_balanced(
 
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
-inline pair<int, int> split_bvh_middle(
-    vector<bvh_prim>& prims, int start, int end) {
+static inline pair<int, int> _split_middle(
+    vector<_bvh_prim>& prims, int start, int end) {
     // initialize split axis and position
     auto split_axis = 0;
     auto mid        = (start + end) / 2;
@@ -1269,7 +1269,7 @@ inline pair<int, int> split_bvh_middle(
 // or initializing it as a leaf. When splitting, the heuristic heuristic is
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
-inline void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+static inline void _make_node(vector<bvh_node>& nodes, vector<_bvh_prim>& prims,
     deque<vec3i>& queue, bool high_quality) {
     // grab node to work on
     auto next = queue.front();
@@ -1287,8 +1287,8 @@ inline void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     if (end - start > bvh_max_prims) {
         // get split
         auto [mid, split_axis] = (high_quality)
-                                     ? split_bvh_sah(prims, start, end)
-                                     : split_bvh_balanced(prims, start, end);
+                                     ? _split_sah(prims, start, end)
+                                     : _split_balanced(prims, start, end);
 
         // make an internal node
         node.is_internal      = true;
@@ -1310,7 +1310,7 @@ inline void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 }
 
 // Build BVH nodes
-inline void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+static inline void _build_bvh_serial(vector<bvh_node>& nodes, vector<_bvh_prim>& prims,
     const bvh_params& params) {
     // prepare to build nodes
     nodes.clear();
@@ -1341,8 +1341,8 @@ inline void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
         if (end - start > bvh_max_prims) {
             // get split
             auto [mid, split_axis] =
-                (params.high_quality) ? split_bvh_sah(prims, start, end)
-                                       : split_bvh_balanced(prims, start, end);
+                (params.high_quality) ? _split_sah(prims, start, end)
+                                       : _split_balanced(prims, start, end);
 
             // make an internal node
             node.is_internal      = true;
@@ -1368,7 +1368,7 @@ inline void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 }
 
 // Build BVH nodes
-inline void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+static inline void _build_bvh_parallel(vector<bvh_node>& nodes, vector<_bvh_prim>& prims,
     const bvh_params& params) {
     // prepare to build nodes
     nodes.clear();
@@ -1423,8 +1423,8 @@ inline void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
                     // get split
                     auto [mid, split_axis] =
                         (params.high_quality)
-                            ? split_bvh_sah(prims, start, end)
-                            : split_bvh_balanced(prims, start, end);
+                            ? _split_sah(prims, start, end)
+                            : _split_balanced(prims, start, end);
 
                     // make an internal node
                     {
@@ -1461,7 +1461,7 @@ template <typename ElemBounds>
 inline void build_bvh(vector<bvh_node>& nodes, size_t num_elements,
     const ElemBounds& element_bounds, const bvh_params& params) {
     // get the number of primitives and the primitive type
-    auto prims = vector<bvh_prim>(num_elements);
+    auto prims = vector<_bvh_prim>(num_elements);
     for (auto element_id = 0; element_id < num_elements; element_id++) {
         prims[element_id].bbox   = element_bounds(element_id);
         prims[element_id].center = bbox_center(prims[element_id].bbox);
@@ -1470,9 +1470,9 @@ inline void build_bvh(vector<bvh_node>& nodes, size_t num_elements,
 
     // build nodes
     if (params.run_serially) {
-        build_bvh_serial(nodes, prims, params);
+        _build_bvh_serial(nodes, prims, params);
     } else {
-        build_bvh_parallel(nodes, prims, params);
+        _build_bvh_parallel(nodes, prims, params);
     }
 }
 
@@ -1484,7 +1484,7 @@ inline void build_bvh(bvh_shape& bvh, const vector<int>& points,
 #if YOCTO_EMBREE
     // call Embree if needed
     if (params.use_embree) {
-        return build_embree_bvh(bvh, points, lines, triangles, quads,
+        return _build_embree_bvh(bvh, points, lines, triangles, quads,
             quads_positions, positions, radius, params);
     }
 #endif
@@ -1546,7 +1546,7 @@ inline void build_bvh(bvh_scene& bvh, int num_instances,
             // get_instance, params);
             throw runtime_error("flattening not support now");
         } else {
-            return build_embree_bvh(bvh, num_instances, get_instance, params);
+            return _build_embree_bvh(bvh, num_instances, get_instance, params);
         }
     }
 #endif
@@ -1729,7 +1729,7 @@ inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points,
 #if YOCTO_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh) {
-        return intersect_embree_bvh(bvh, ray, intersection, find_any);
+        return _intersect_embree_bvh(bvh, ray, intersection, find_any);
     }
 #endif
 
@@ -1784,7 +1784,7 @@ inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
 #if YOCTO_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh) {
-        return intersect_embree_bvh(bvh, ray, intersection, find_any);
+        return _intersect_embree_bvh(bvh, ray, intersection, find_any);
     }
 #endif
 
