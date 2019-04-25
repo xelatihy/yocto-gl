@@ -1747,7 +1747,7 @@ inline void convert_channels(
 
 // Resize image.
 template <int N>
-inline void _resize_impl(
+static inline void _resize(
     image<vec<float, N>>& res_img, const image<vec<float, N>>& img) {
     auto alpha = (N == 2 || N == 4) ? N - 1 : -1;
     stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
@@ -1757,7 +1757,7 @@ inline void _resize_impl(
         STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
 template <int N>
-inline void _resize_impl(
+static inline void _resize(
     image<vec<byte, N>>& res_img, const image<vec<byte, N>>& img) {
     auto alpha = (N == 2 || N == 4) ? N - 1 : -1;
     stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
@@ -1768,35 +1768,35 @@ inline void _resize_impl(
 }
 
 inline void resize(image<float>& res, const image<float>& img) {
-    return _resize_impl((image<vec1f>&)res, (const image<vec1f>&)img);
+    return _resize((image<vec1f>&)res, (const image<vec1f>&)img);
 }
 inline void resize(image<vec1f>& res, const image<vec1f>& img) {
-    return _resize_impl(res, img);
+    return _resize(res, img);
 }
 inline void resize(image<vec2f>& res, const image<vec2f>& img) {
-    return _resize_impl(res, img);
+    return _resize(res, img);
 }
 inline void resize(image<vec3f>& res, const image<vec3f>& img) {
-    return _resize_impl(res, img);
+    return _resize(res, img);
 }
 inline void resize(image<vec4f>& res, const image<vec4f>& img) {
-    return _resize_impl(res, img);
+    return _resize(res, img);
 }
 
 inline void resize(image<byte>& res, const image<byte>& img) {
-    return _resize_impl((image<vec1b>&)res, (const image<vec1b>&)img);
+    return _resize((image<vec1b>&)res, (const image<vec1b>&)img);
 }
 inline void resize(image<vec1b>& res, const image<vec1b>& img) {
-    return _resize_impl(res, img);
+    return _resize(res, img);
 }
 inline void resize(image<vec2b>& res, const image<vec2b>& img) {
-    return _resize_impl(res, img);
+    return _resize(res, img);
 }
 inline void resize(image<vec3b>& res, const image<vec3b>& img) {
-    return _resize_impl(res, img);
+    return _resize(res, img);
 }
 inline void resize(image<vec4b>& res, const image<vec4b>& img) {
-    return _resize_impl(res, img);
+    return _resize(res, img);
 }
 
 template <typename T>
