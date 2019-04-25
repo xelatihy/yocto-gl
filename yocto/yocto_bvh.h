@@ -46,21 +46,6 @@
 // 3. perform point overlap queries with `overlap_bvh()`
 // 4. refit BVH for dynamic applications with `refit_bvh`
 //
-// For scene instances we reply on callbacks and templates to both avoid slow
-// down and avoid repeating code. Just define the following functions to
-// adapt your type to use in Yocto/Bvh.
-//
-// a. int bvh_get_num_instances(const void*, int)
-// b. int bvh_get_num_shapes(const void*, int)
-// c. bvh_instance bvh_get_instance(const void*, int)
-// d. const vector<int>& bvh_get_shape_points(const void*, int)
-// e. const vector<vec2i>& bvh_get_shape_lines(const void*, int)
-// f. const vector<vec3i>& bvh_get_shape_triangles)(const void*, int)
-// g. const vector<vec4i>& bvh_get_shape_quads)(const void*, int)
-// h. const vector<vec4i>& bvh_get_shape_quads_positions)(const void*, int)
-// i. const vector<vec3f>& bvh_get_shape_positions)(const void*, int)
-// l. const vector<float>& bvh_get_shape_radius)(const void*, int)
-//
 
 //
 // LICENSE:
