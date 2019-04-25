@@ -1581,7 +1581,7 @@ inline void make_regions(vector<image_region>& regions, const vec2i& size,
     }
     if (shuffled) {
         auto rng = rng_state{};
-        random_shuffle(regions, rng);
+        shuffle(regions, rng);
     }
 }
 
