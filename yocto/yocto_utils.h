@@ -140,12 +140,14 @@ template <typename... Args>
 inline void print_fatal(string_view format_str, const Args&... args);
 
 // get time from a high resolution clock
-inline auto get_time();
+using time_point = std::chrono::time_point<std::chrono::high_resolution_clock>;
+inline time_point get_time();
 
 // print information and returns a timer that will print the time when
 // destroyed. Use with RIIA for scoped timing.
+struct print_timer;
 template <typename... Args>
-inline auto print_timed(string_view format_str, const Args&... args);
+inline print_timer print_timed(string_view format_str, const Args&... args);
 
 // Logging to a sync
 inline void set_log_callback(function<void(const string&)> callback);
@@ -153,6 +155,7 @@ template <typename... Args>
 inline void log_info(string_view format_str, const Args&... args);
 template <typename... Args>
 inline void log_error(string_view format_str, const Args&... args);
+struct log_timer;
 template <typename... Args>
 inline auto log_timed(string_view format_str, const Args&... args);
 
@@ -181,15 +184,21 @@ struct formatter<yocto::bbox<T, N>>;
 namespace yocto {
 
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
-inline auto range(int max);
-inline auto range(int min, int max);
+template <typename T>
+struct range_iterator;
+template <typename T>
+inline range_iterator<T> range(T max);
+template <typename T>
+inline range_iterator<T> range(T min, T max);
 
 // Python `enumerate()` equivalent. Construct an object that iteraterates over a
 // sequence of elements and numbers them.
 template <typename T>
-inline auto enumerate(const vector<T>& vals);
+struct enumerate_iterator;
 template <typename T>
-inline auto enumerate(vector<T>& vals);
+inline enumerate_iterator<const T> enumerate(const vector<T>& vals);
+template <typename T>
+inline enumerate_iterator<T> enumerate(vector<T>& vals);
 
 // Vector append and concatenation
 template <typename T>
@@ -336,60 +345,66 @@ inline void print_fatal(string_view format_str, const Args&... args) {
 }
 
 // get time from a high resolution clock
-inline auto get_time() { return std::chrono::high_resolution_clock::now(); }
+inline time_point get_time() {
+    return std::chrono::high_resolution_clock::now();
+}
 
 // print information and returns a timer that will print the time when
 // destroyed. Use with RIIA for scoped timing.
+struct print_timer {
+    print_timer(const string& msg) : msg{msg} {
+        start = get_time();
+        print("{}\n", msg);
+    }
+    ~print_timer() {
+        auto end = get_time();
+        print("{} {:%H:%M:%S}\n", msg, end - start);
+    }
+
+   private:
+    string     msg;
+    time_point start;
+};
 template <typename... Args>
-inline auto print_timed(string_view format_str, const Args&... args) {
-    struct print_timer {
-        print_timer(const string& msg) : _msg{msg} {
-            _start = std::chrono::high_resolution_clock::now();
-            print("{}\n", msg);
-        }
-        ~print_timer() {
-            auto end = std::chrono::high_resolution_clock::now();
-            print("{} {:%H:%M:%S}\n", _msg, end - _start);
-        }
-
-       private:
-        string                                                      _msg;
-        std::chrono::time_point<std::chrono::high_resolution_clock> _start;
-    };
-
+inline print_timer print_timed(string_view format_str, const Args&... args) {
     return print_timer(format(format_str, args...));
 }
 
 // Logging to a sync
-inline auto _log_callback = function<void(const string&)>{};
+namespace impl {
+inline auto log_callback = function<void(const string&)>{};
+}
+
 inline void set_log_callback(function<void(const string&)> callback) {
-    _log_callback = callback;
+    impl::log_callback = callback;
 }
 template <typename... Args>
 inline void log_info(string_view format_str, const Args&... args) {
-    _log_callback(format(format_str, args...) + "\n");
+    if (impl::log_callback)
+        impl::log_callback(format(format_str, args...) + "\n");
 }
 template <typename... Args>
 inline void log_error(string_view format_str, const Args&... args) {
-    _log_callback(format(format_str, args...) + "\n");
+    if (impl::log_callback)
+        impl::log_callback(format(format_str, args...) + "\n");
 }
-template <typename... Args>
-inline auto log_timed(string_view format_str, const Args&... args) {
-    struct log_timer {
-        log_timer(const string& msg) : _msg{msg} {
-            _start = std::chrono::high_resolution_clock::now();
-            log_info("{}", msg);
-        }
-        ~log_timer() {
-            auto end = std::chrono::high_resolution_clock::now();
-            log_info("{} {:%H:%M:%S}", _msg, end - _start);
-        }
+struct log_timer {
+    log_timer(const string& msg) : msg{msg} {
+        start = get_time();
+        log_info("{}", msg);
+    }
+    ~log_timer() {
+        auto end = get_time();
+        log_info("{} {:%H:%M:%S}", msg, end - start);
+    }
 
-       private:
-        string                                                      _msg;
-        std::chrono::time_point<std::chrono::high_resolution_clock> _start;
-    };
-    return log_timer(format(format_str, args...));
+   private:
+    string     msg;
+    time_point start;
+};
+template <typename... Args>
+inline log_timer log_timed(string_view format_str, const Args&... args) {
+    if (impl::log_callback) return log_timer(format(format_str, args...));
 }
 
 }  // namespace yocto
@@ -424,8 +439,8 @@ struct _formatter_base {
 template <typename T, int N>
 struct formatter<yocto::vec<T, N>> : _formatter_base<yocto::vec<T, N>, N> {};
 template <typename T, int N, int M>
-struct formatter<yocto::mat<T, N, M>> : _formatter_base<yocto::mat<T, N, M>, M> {
-};
+struct formatter<yocto::mat<T, N, M>>
+    : _formatter_base<yocto::mat<T, N, M>, M> {};
 template <typename T, int N>
 struct formatter<yocto::affine<T, N>>
     : _formatter_base<yocto::affine<T, N>, N + 1> {};
@@ -443,57 +458,66 @@ struct formatter<yocto::bbox<T, N>> : _formatter_base<yocto::bbox<T, N>, 2> {};
 namespace yocto {
 
 // Range helpper (this should not be used directly)
-struct _range_helper {
-    struct _iterator {
-        int        _pos = 0;
-        _iterator& operator++() {
-            _pos++;
+template <typename T>
+struct range_iterator {
+    struct iterator {
+        iterator& operator++() {
+            pos++;
             return *this;
         }
-        bool operator!=(const _iterator& other) const {
-            return _pos != other._pos;
+        bool operator!=(const iterator& other) const {
+            return pos != other.pos;
         }
-        int operator*() const { return _pos; }
+        int operator*() const { return pos; }
+        private: T pos = 0;
     };
-    int       _start = 0, _end = 0;
-    _iterator begin() const { return {_start}; }
-    _iterator end() const { return {_end}; }
+    range_iterator(T start, T end) : first{first}, last{last} { }
+    iterator begin() const { return {first}; }
+    iterator end() const { return {last}; }
+    private:
+    T       first = 0, last = 0;
 };
 
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
-inline auto range(int max) { return _range_helper{0, max}; }
-inline auto range(int min, int max) { return _range_helper{min, max}; }
+template <typename T>
+inline range_iterator<T> range(T max) { return range_iterator<T>{0, max}; }
+template <typename T>
+inline range_iterator<T> range(T min, T max) { return range_iterator<T>{min, max}; }
 
 // Enumerate helper (this should not be used directly)
 template <typename T>
-struct _enumerate_helper {
-    struct _iterator {
-        T*         _data = nullptr;
-        int        _pos  = 0;
-        _iterator& operator++() {
-            _pos++;
+struct enumerate_iterator {
+    struct iterator {
+        iterator(T* data, int pos) : data{data}, pos{pos} { }
+        iterator& operator++() {
+            pos++;
             return *this;
         }
-        bool operator!=(const _iterator& other) const {
-            return _pos != other._pos;
+        bool operator!=(const iterator& other) const {
+            return pos != other.pos;
         }
-        pair<int&, T&> operator*() const { return {_pos, *(_data + _pos)}; }
+        pair<int&, T&> operator*() const { return {pos, *(data + pos)}; }
+        private:
+        T*         data = nullptr;
+        int        pos  = 0;
     };
-    T*        _data = nullptr;
-    int       _size = 0;
-    _iterator begin() const { return {_data, 0}; }
-    _iterator end() const { return {_data, _size}; }
+    enumerate_iterator(T* data, int size) : data{data}, size{size} { }
+    iterator begin() const { return {data, 0}; }
+    iterator end() const { return {data, size}; }
+    private:
+    T*        data = nullptr;
+    int       size = 0;
 };
 
 // Python `enumerate()` equivalent. Construct an object that iteraterates over a
 // sequence of elements and numbers them.
 template <typename T>
-inline auto enumerate(const vector<T>& vals) {
-    return _enumerate_helper<const T>{vals.data(), vals.size()};
+inline enumerate_iterator<const T> enumerate(const vector<T>& vals) {
+    return enumerate_iterator<const T>{vals.data(), vals.size()};
 };
 template <typename T>
-inline auto enumerate(vector<T>& vals) {
-    return _enumerate_helper<T>{vals.data(), vals.size()};
+inline enumerate_iterator<T> enumerate(vector<T>& vals) {
+    return enumerate_iterator<T>{vals.data(), vals.size()};
 };
 
 // Vector append and concatenation
