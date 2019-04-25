@@ -81,17 +81,17 @@ int main(int argc, char** argv) {
     }
 
     // fix options
-    auto load_options          = load_scene_options();
-    auto save_options          = save_scene_options();
-    load_options.skip_textures = skip_textures;
-    save_options.skip_textures = skip_textures;
+    auto load_prms          = load_params();
+    auto save_prms          = save_params();
+    load_prms.skip_textures = skip_textures;
+    save_prms.skip_textures = skip_textures;
 
     // load scene
     auto scene = yocto_scene{};
     for (auto& filename : filenames) {
         auto to_merge = yocto_scene{};
         try {
-            load_scene(filename, to_merge, load_options);
+            load_scene(filename, to_merge, load_prms);
         } catch (const std::exception& e) {
             print_fatal(e.what());
         }
@@ -155,7 +155,7 @@ int main(int argc, char** argv) {
 
     // save scene
     try {
-        save_scene(output, scene, save_options);
+        save_scene(output, scene, save_prms);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }

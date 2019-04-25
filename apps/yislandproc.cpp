@@ -893,10 +893,10 @@ void load_disney_island_elements(const string& filename, const string& dirname,
 }
 
 void load_scene_textures(yocto_scene& scene, const string& dirname,
-    const load_scene_options& options);
+    const load_params& options);
 
 void load_disney_island_scene(const std::string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
+    const load_params& options) {
     try {
         auto js = json{};
         load_json(filename, js);
@@ -1035,18 +1035,18 @@ int main(int argc, char** argv) {
     }
 
     // fix options
-    auto load_options          = load_scene_options();
-    auto save_options          = save_scene_options();
-    load_options.skip_textures = skip_textures;
-    save_options.skip_textures = skip_textures;
-    load_options.skip_meshes   = skip_meshes;
-    save_options.skip_meshes   = skip_meshes;
+    auto load_prms          = load_params();
+    auto save_prms          = save_params();
+    load_prms.skip_textures = skip_textures;
+    save_prms.skip_textures = skip_textures;
+    load_prms.skip_meshes   = skip_meshes;
+    save_prms.skip_meshes   = skip_meshes;
 
     // load scene
     auto scene = yocto_scene{};
     try {
         auto timer = print_timed("loading scene");
-        load_disney_island_scene(filename, scene, load_options);
+        load_disney_island_scene(filename, scene, load_prms);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }
@@ -1095,10 +1095,10 @@ int main(int argc, char** argv) {
     // save scene
     try {
         auto timer                 = print_timed("saving scene");
-        save_options.skip_textures = false;
-        save_options.run_serially  = false;
-        // save_options.ply_instances = true;
-        save_scene(output, scene, save_options);
+        save_prms.skip_textures = false;
+        save_prms.run_serially  = false;
+        // save_prms.ply_instances = true;
+        save_scene(output, scene, save_prms);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }

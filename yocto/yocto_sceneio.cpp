@@ -155,50 +155,50 @@ namespace yocto {
 
 // Load/save a scene in the builtin YAML format.
 void load_yaml_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options);
+    const load_params& params);
 void save_yaml_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options);
+    const save_params& params);
 
 // Load/save a scene from/to OBJ.
 void load_obj_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options);
+    const load_params& params);
 void save_obj_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options);
+    const save_params& params);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 void load_ply_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options);
+    const load_params& params);
 void save_ply_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options);
+    const save_params& params);
 
 // Load/save a scene from/to glTF.
 void load_gltf_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options);
+    const load_params& params);
 void save_gltf_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options);
+    const save_params& params);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 void load_pbrt_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options);
+    const load_params& params);
 void save_pbrt_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options);
+    const save_params& params);
 
 // Load a scene
 void load_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
+    const load_params& params) {
     auto ext = get_extension(filename);
     if (ext == "yaml" || ext == "YAML") {
-        load_yaml_scene(filename, scene, options);
+        load_yaml_scene(filename, scene, params);
     } else if (ext == "obj" || ext == "OBJ") {
-        load_obj_scene(filename, scene, options);
+        load_obj_scene(filename, scene, params);
     } else if (ext == "gltf" || ext == "GLTF") {
-        load_gltf_scene(filename, scene, options);
+        load_gltf_scene(filename, scene, params);
     } else if (ext == "pbrt" || ext == "PBRT") {
-        load_pbrt_scene(filename, scene, options);
+        load_pbrt_scene(filename, scene, params);
     } else if (ext == "ply" || ext == "PLY") {
-        load_ply_scene(filename, scene, options);
+        load_ply_scene(filename, scene, params);
     } else {
         scene = {};
         throw io_error("unsupported scene format " + ext);
@@ -207,16 +207,16 @@ void load_scene(const string& filename, yocto_scene& scene,
 
 // Save a scene
 void save_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options) {
+    const save_params& params) {
     auto ext = get_extension(filename);
     if (ext == "yaml" || ext == "YAML") {
-        save_yaml_scene(filename, scene, options);
+        save_yaml_scene(filename, scene, params);
     } else if (ext == "obj" || ext == "OBJ") {
-        save_obj_scene(filename, scene, options);
+        save_obj_scene(filename, scene, params);
     } else if (ext == "gltf" || ext == "GLTF") {
-        save_gltf_scene(filename, scene, options);
+        save_gltf_scene(filename, scene, params);
     } else if (ext == "pbrt" || ext == "PBRT") {
-        save_pbrt_scene(filename, scene, options);
+        save_pbrt_scene(filename, scene, params);
     } else {
         throw io_error("unsupported scene format " + ext);
     }
@@ -255,8 +255,8 @@ void load_scene_voltexture(yocto_voltexture& texture, const string& dirname) {
 }
 
 void load_scene_textures(yocto_scene& scene, const string& dirname,
-    const load_scene_options& options) {
-    if (options.skip_textures) return;
+    const load_params& params) {
+    if (params.skip_textures) return;
 
     // load images
     parallel_foreach(
@@ -266,7 +266,7 @@ void load_scene_textures(yocto_scene& scene, const string& dirname,
                 return;
             load_scene_texture(texture, dirname);
         },
-        options.cancel_flag, options.run_serially);
+        params.cancel_flag, params.run_serially);
 
     // load volumes
     parallel_foreach(
@@ -275,7 +275,7 @@ void load_scene_textures(yocto_scene& scene, const string& dirname,
             if (!texture.volume_data.empty()) return;
             load_scene_voltexture(texture, dirname);
         },
-        options.cancel_flag, options.run_serially);
+        params.cancel_flag, params.run_serially);
 }
 
 void save_scene_texture(const yocto_texture& texture, const string& dirname) {
@@ -289,8 +289,8 @@ void save_scene_voltexture(
 
 // helper to save textures
 void save_scene_textures(const yocto_scene& scene, const string& dirname,
-    const save_scene_options& options) {
-    if (options.skip_textures) return;
+    const save_params& params) {
+    if (params.skip_textures) return;
 
     // save images
     parallel_foreach(
@@ -298,7 +298,7 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
         [&dirname](const yocto_texture& texture) {
             save_scene_texture(texture, dirname);
         },
-        options.cancel_flag, options.run_serially);
+        params.cancel_flag, params.run_serially);
 
     // save volumes
     parallel_foreach(
@@ -306,7 +306,7 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
         [&dirname](const yocto_voltexture& texture) {
             save_scene_voltexture(texture, dirname);
         },
-        options.cancel_flag, options.run_serially);
+        params.cancel_flag, params.run_serially);
 }
 
 void load_scene_shape(yocto_shape& shape, const string& dirname) {
@@ -359,41 +359,41 @@ void save_scene_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
 
 // Load json meshes
 void load_scene_shapes(yocto_scene& scene, const string& dirname,
-    const load_scene_options& options) {
-    if (options.skip_meshes) return;
+    const load_params& params) {
+    if (params.skip_meshes) return;
 
     // load shapes
     parallel_foreach(
         scene.shapes,
         [&dirname](yocto_shape& shape) { load_scene_shape(shape, dirname); },
-        options.cancel_flag, options.run_serially);
+        params.cancel_flag, params.run_serially);
 
     // load subdivs
     parallel_foreach(
         scene.subdivs,
         [&dirname](
             yocto_subdiv& subdiv) { load_scene_subdiv(subdiv, dirname); },
-        options.cancel_flag, options.run_serially);
+        params.cancel_flag, params.run_serially);
 }
 
 // Save json meshes
 void save_scene_shapes(const yocto_scene& scene, const string& dirname,
-    const save_scene_options& options) {
-    if (options.skip_meshes) return;
+    const save_params& params) {
+    if (params.skip_meshes) return;
 
     // save shapes
     parallel_foreach(
         scene.shapes,
         [&dirname](
             const yocto_shape& shape) { save_scene_shape(shape, dirname); },
-        options.cancel_flag, options.run_serially);
+        params.cancel_flag, params.run_serially);
     // save subdivs
     parallel_foreach(
         scene.subdivs,
         [&dirname](const yocto_subdiv& subdivs) {
             save_scene_subdiv(subdivs, dirname);
         },
-        options.cancel_flag, options.run_serially);
+        params.cancel_flag, params.run_serially);
 }
 
 // check if it is really face varying
@@ -494,7 +494,7 @@ struct load_yaml_options {};
 
 template <typename Callbacks>
 inline void load_yaml(const string& filename, Callbacks& callbacks,
-    const load_yaml_options& options) {
+    const load_yaml_options& params) {
     // open file
     auto fs_ = open_input_file(filename);
     auto fs  = fs_.fs;
@@ -551,7 +551,7 @@ inline void load_yaml(const string& filename, Callbacks& callbacks,
 
 struct load_yaml_scene_callbacks : yaml_callbacks {
     yocto_scene&              scene;
-    const load_scene_options& options;
+    const load_params& params;
     string                    ply_instances = "";
 
     enum struct parsing_type {
@@ -573,8 +573,8 @@ struct load_yaml_scene_callbacks : yaml_callbacks {
     unordered_map<string, int> smap = {{"", -1}};
 
     load_yaml_scene_callbacks(
-        yocto_scene& scene, const load_scene_options& options)
-        : scene{scene}, options{options} {
+        yocto_scene& scene, const load_params& params)
+        : scene{scene}, params{params} {
         auto reserve_size = 1024 * 32;
         tmap.reserve(reserve_size);
         mmap.reserve(reserve_size);
@@ -830,19 +830,19 @@ struct load_yaml_scene_callbacks : yaml_callbacks {
 
 // Save a scene in the builtin YAML format.
 void load_yaml_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
+    const load_params& params) {
     scene = {};
 
     try {
         // Parse obj
         auto yaml_options = load_yaml_options();
-        auto cb           = load_yaml_scene_callbacks{scene, options};
+        auto cb           = load_yaml_scene_callbacks{scene, params};
         load_yaml(filename, cb, yaml_options);
 
         // load shape and textures
         auto dirname = get_dirname(filename);
-        load_scene_shapes(scene, dirname, options);
-        load_scene_textures(scene, dirname, options);
+        load_scene_shapes(scene, dirname, params);
+        load_scene_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
@@ -1036,15 +1036,15 @@ void save_yaml(const string& filename, const yocto_scene& scene,
 
 // Save a scene in the builtin YAML format.
 void save_yaml_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options) {
+    const save_params& params) {
     try {
         // save yaml file
         save_yaml(filename, scene);
 
         // save meshes and textures
         auto dirname = get_dirname(filename);
-        save_scene_shapes(scene, dirname, options);
-        save_scene_textures(scene, dirname, options);
+        save_scene_shapes(scene, dirname, params);
+        save_scene_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
@@ -1068,7 +1068,7 @@ void set_obj_material(
 
 struct load_obj_scene_callbacks : obj_callbacks {
     yocto_scene&              scene;
-    const load_scene_options& options;
+    const load_params& params;
 
     // current parsing values
     string mname = ""s;
@@ -1096,14 +1096,14 @@ struct load_obj_scene_callbacks : obj_callbacks {
     bool preserve_facevarying_now = false;
 
     load_obj_scene_callbacks(
-        yocto_scene& scene, const load_scene_options& options)
-        : scene{scene}, options{options} {}
+        yocto_scene& scene, const load_params& params)
+        : scene{scene}, params{params} {}
 
     // add object if needed
     void add_shape() {
         auto shape               = yocto_shape{};
         shape.uri                = oname + gname;
-        preserve_facevarying_now = options.obj_preserve_face_varying ||
+        preserve_facevarying_now = params.obj_preserve_face_varying ||
                                    shape.uri.find("[yocto::facevarying]") !=
                                        string::npos;
         scene.shapes.push_back(shape);
@@ -1117,7 +1117,7 @@ struct load_obj_scene_callbacks : obj_callbacks {
         norm_map.clear();
         texcoord_map.clear();
     }
-    // Parse texture options and name
+    // Parse texture params and name
     int add_texture(const obj_texture_info& info, bool force_linear) {
         if (info.path == "") return -1;
         if (tmap.find(info.path) != tmap.end()) {
@@ -1134,7 +1134,7 @@ struct load_obj_scene_callbacks : obj_callbacks {
 
         return index;
     }
-    // Parse texture options and name
+    // Parse texture params and name
     int add_voltexture(const obj_texture_info& info, bool srgb) {
         if (info.path == "") return -1;
         if (vmap.find(info.path) != vmap.end()) {
@@ -1386,14 +1386,14 @@ struct load_obj_scene_callbacks : obj_callbacks {
 
 // Loads an OBJ
 void load_obj_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
+    const load_params& params) {
     scene = {};
 
     try {
         // Parse obj
         auto obj_options          = load_obj_options();
         obj_options.geometry_only = false;
-        auto cb                   = load_obj_scene_callbacks{scene, options};
+        auto cb                   = load_obj_scene_callbacks{scene, params};
         load_obj(filename, cb, obj_options);
 
         // cleanup empty
@@ -1419,7 +1419,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
 
         // load textures
         auto dirname = get_dirname(filename);
-        load_scene_textures(scene, dirname, options);
+        load_scene_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
@@ -1713,7 +1713,7 @@ void save_obj(const string& filename, const yocto_scene& scene,
 }
 
 void save_obj_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options) {
+    const save_params& params) {
     try {
         save_obj(filename, scene, true);
         if (!scene.materials.empty()) {
@@ -1725,7 +1725,7 @@ void save_obj_scene(const string& filename, const yocto_scene& scene,
 
         // skip textures if needed
         auto dirname = get_dirname(filename);
-        save_scene_textures(scene, dirname, options);
+        save_scene_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
@@ -1749,7 +1749,7 @@ void print_obj_camera(const yocto_camera& camera) {
 namespace yocto {
 
 void load_ply_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
+    const load_params& params) {
     scene = {};
 
     try {
@@ -1781,7 +1781,7 @@ void load_ply_scene(const string& filename, yocto_scene& scene,
 }
 
 void save_ply_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options) {
+    const save_params& params) {
     if (scene.shapes.empty()) {
         throw io_error("cannot save empty scene " + filename);
     }
@@ -1806,15 +1806,15 @@ namespace yocto {
 // convert gltf to scene
 void gltf_to_scene(const string& filename, yocto_scene& scene) {
     // load gltf
-    auto options = cgltf_options{};
-    memset(&options, 0, sizeof(options));
+    auto params = cgltf_options{};
+    memset(&params, 0, sizeof(params));
     auto data   = (cgltf_data*)nullptr;
-    auto result = cgltf_parse_file(&options, filename.c_str(), &data);
+    auto result = cgltf_parse_file(&params, filename.c_str(), &data);
     if (result != cgltf_result_success) {
         throw io_error("could not load gltf " + filename);
     }
     auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{data, cgltf_free};
-    if (cgltf_load_buffers(&options, data, get_dirname(filename).c_str()) !=
+    if (cgltf_load_buffers(&params, data, get_dirname(filename).c_str()) !=
         cgltf_result_success) {
         throw io_error("could not load gltf buffers " + filename);
     }
@@ -2289,7 +2289,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
 
 // Load a scene
 void load_gltf_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
+    const load_params& params) {
     // initialization
     scene = {};
 
@@ -2299,7 +2299,7 @@ void load_gltf_scene(const string& filename, yocto_scene& scene,
 
         // load textures
         auto dirname = get_dirname(filename);
-        load_scene_textures(scene, dirname, options);
+        load_scene_textures(scene, dirname, params);
 
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
@@ -2601,7 +2601,7 @@ void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
 
 // Save gltf json
 void save_gltf_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options) {
+    const save_params& params) {
     try {
         // save json
         auto js               = json::object();
@@ -2621,7 +2621,7 @@ void save_gltf_scene(const string& filename, const yocto_scene& scene,
         }
 
         // save textures
-        save_scene_textures(scene, dirname, options);
+        save_scene_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
@@ -2691,12 +2691,12 @@ vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
 
 struct load_pbrt_scene_callbacks : pbrt_callbacks {
     yocto_scene&              scene;
-    const load_scene_options& options;
+    const load_params& params;
     const string&             filename;
 
     load_pbrt_scene_callbacks(yocto_scene& scene,
-        const load_scene_options& options, const string& filename)
-        : scene{scene}, options{options}, filename{filename} {}
+        const load_params& params, const string& filename)
+        : scene{scene}, params{params}, filename{filename} {}
 
     bool verbose                 = false;
     bool remove_contant_textures = true;
@@ -2834,7 +2834,7 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
         } else if (holds_alternative<pbrt_plymesh_shape>(pshape)) {
             auto& mesh = get<pbrt_plymesh_shape>(pshape);
             shape.uri  = mesh.filename;
-            if (!options.skip_meshes) {
+            if (!params.skip_meshes) {
                 load_shape(get_dirname(filename) + mesh.filename, shape.points,
                     shape.lines, shape.triangles, shape.quads,
                     shape.quads_positions, shape.quads_normals,
@@ -3263,18 +3263,18 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
 
 // load pbrt scenes
 void load_pbrt_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
+    const load_params& params) {
     scene = yocto_scene{};
 
     try {
         // Parse pbrt
         auto pbrt_options = load_pbrt_options();
-        auto cb           = load_pbrt_scene_callbacks{scene, options, filename};
+        auto cb           = load_pbrt_scene_callbacks{scene, params, filename};
         load_pbrt(filename, cb, pbrt_options);
 
         // load textures
         auto dirname = get_dirname(filename);
-        load_scene_textures(scene, dirname, options);
+        load_scene_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
@@ -3376,7 +3376,7 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
 
 // Save a pbrt scene
 void save_pbrt_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options) {
+    const save_params& params) {
     try {
         // save json
         save_pbrt(filename, scene);
@@ -3392,7 +3392,7 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
         }
 
         // skip textures
-        save_scene_textures(scene, dirname, options);
+        save_scene_textures(scene, dirname, params);
 
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());

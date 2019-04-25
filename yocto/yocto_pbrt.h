@@ -739,7 +739,7 @@ struct pbrt_callbacks {
     void end_object(const pbrt_object& value, const pbrt_context& ctx) {}
 };
 
-// Load obj options
+// Load obj params
 struct load_pbrt_options {
     bool geometry_only = false;
     bool flip_texcoord = true;
@@ -748,7 +748,7 @@ struct load_pbrt_options {
 // Load obj scene
 template <typename Callbacks>
 inline void load_pbrt(const string& filename, Callbacks& cb,
-    const load_pbrt_options& options = {});
+    const load_pbrt_options& params = {});
 
 }  // namespace yocto
 
@@ -3245,7 +3245,7 @@ static inline void parse_pbrt_medium(
 // Load pbrt scene
 template <typename Callbacks>
 inline void load_pbrt(
-    const string& filename, Callbacks& cb, const load_pbrt_options& options) {
+    const string& filename, Callbacks& cb, const load_pbrt_options& params) {
     // start laoding files
     auto streams = vector<pbrt_token_stream>{};
     init_token_stream(streams);

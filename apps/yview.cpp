@@ -165,8 +165,8 @@ struct app_scene {
     string name      = "";
 
     // options
-    load_scene_options load_options = {};
-    save_scene_options save_options = {};
+    load_params load_prms = {};
+    save_params save_prms = {};
     drawgl_options     draw_options = {};
 
     // scene
@@ -197,8 +197,8 @@ struct app_state {
     deque<string>    errors;
 
     // default options
-    load_scene_options load_options = {};
-    save_scene_options save_options = {};
+    load_params load_prms = {};
+    save_params save_prms = {};
     drawgl_options     draw_options = {};
 };
 
@@ -208,8 +208,8 @@ void add_new_scene(app_state& app, const string& filename) {
     scn.imagename    = get_noextension(filename) + ".png";
     scn.outname      = get_noextension(filename) + ".edited.yaml";
     scn.name         = get_filename(scn.filename);
-    scn.load_options = app.load_options;
-    scn.save_options = app.save_options;
+    scn.load_prms = app.load_prms;
+    scn.save_prms = app.save_prms;
     scn.draw_options = app.draw_options;
     scn.task_queue.emplace_back(app_task_type::load_scene);
     app.selected = (int)app.scenes.size() - 1;
@@ -1162,7 +1162,7 @@ void update(app_state& app) {
                 log_info("start loading {}", scn.filename);
                 scn.load_done = false;
                 task.result   = async([&scn]() {
-                    load_scene(scn.filename, scn.scene, scn.load_options);
+                    load_scene(scn.filename, scn.scene, scn.load_prms);
                     tesselate_subdivs(scn.scene);
                     init_drawgl_lights(scn.lights, scn.scene);
                     if (scn.lights.empty() && !scn.draw_options.eyelight) {
@@ -1189,7 +1189,7 @@ void update(app_state& app) {
             case app_task_type::save_scene: {
                 log_info("start saving {}", scn.outname);
                 task.result = async([&scn]() {
-                    save_scene(scn.outname, scn.scene, scn.save_options);
+                    save_scene(scn.outname, scn.scene, scn.save_prms);
                 });
             } break;
             case app_task_type::apply_edit: break;
@@ -1309,7 +1309,7 @@ int main(int argc, char* argv[]) {
 
     // fix parallel code
     if (no_parallel) {
-        app.load_options.run_serially = true;
+        app.load_prms.run_serially = true;
     }
 
     // loading images

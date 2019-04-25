@@ -188,7 +188,7 @@ struct obj_callbacks {
     void procedural(const obj_procedural&) {}
 };
 
-// Load obj options
+// Load obj params
 struct load_obj_options {
     bool exit_on_error = false;
     bool geometry_only = false;
@@ -199,7 +199,7 @@ struct load_obj_options {
 // Load obj scene
 template <typename Callbacks>
 inline void load_obj(const string& filename, Callbacks& cb,
-    const load_obj_options& options = {});
+    const load_obj_options& params = {});
 
 }  // namespace yocto
 
@@ -251,7 +251,7 @@ inline void parse_value(string_view& str, obj_texture_info& info) {
     // texture name
     info.path = normalize_path(tokens.back());
 
-    // texture options
+    // texture params
     auto last = string();
     for (auto i = 0; i < tokens.size() - 1; i++) {
         if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
@@ -262,7 +262,7 @@ inline void parse_value(string_view& str, obj_texture_info& info) {
 // Load obj materials
 template <typename Callbacks>
 void load_mtl(
-    const string& filename, Callbacks& cb, const load_obj_options& options) {
+    const string& filename, Callbacks& cb, const load_obj_options& params) {
     // open file
     auto fs_ = open_input_file(filename);
     auto fs  = fs_.fs;
@@ -306,10 +306,10 @@ void load_mtl(
             parse_value(line, material.kt);
             if (material.kt.y < 0)
                 material.kt = {material.kt.x, material.kt.x, material.kt.x};
-            if (options.flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
+            if (params.flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
         } else if (cmd == "Tr") {
             parse_value(line, material.op);
-            if (options.flip_tr) material.op = 1 - material.op;
+            if (params.flip_tr) material.op = 1 - material.op;
         } else if (cmd == "Ns") {
             parse_value(line, material.ns);
             material.rs = pow(2 / (material.ns + 2), 1 / 4.0f);
@@ -359,7 +359,7 @@ void load_mtl(
 // Load obj extensions
 template <typename Callbacks>
 inline void load_objx(
-    const string& filename, Callbacks& cb, const load_obj_options& options) {
+    const string& filename, Callbacks& cb, const load_obj_options& params) {
     // open file
     auto fs_ = open_input_file(filename);
     auto fs  = fs_.fs;
@@ -416,7 +416,7 @@ inline void load_objx(
 // Load obj scene
 template <typename Callbacks>
 inline void load_obj(
-    const string& filename, Callbacks& cb, const load_obj_options& options) {
+    const string& filename, Callbacks& cb, const load_obj_options& params) {
     // open file
     auto fs_ = open_input_file(filename);
     auto fs  = fs_.fs;
@@ -453,7 +453,7 @@ inline void load_obj(
         } else if (cmd == "vt") {
             auto vert = zero2f;
             parse_value(line, vert);
-            if (options.flip_texcoord) vert.y = 1 - vert.y;
+            if (params.flip_texcoord) vert.y = 1 - vert.y;
             cb.texcoord(vert);
             vert_size.texturecoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
@@ -493,23 +493,23 @@ inline void load_obj(
             parse_value_or_empty(line, name);
             cb.smoothing(name);
         } else if (cmd == "mtllib") {
-            if (options.geometry_only) continue;
+            if (params.geometry_only) continue;
             auto mtlname = ""s;
             parse_value(line, mtlname);
             cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + mtlname;
-            load_mtl(mtlpath, cb, options);
+            load_mtl(mtlpath, cb, params);
         } else {
             // unused
         }
     }
 
     // parse extensions if presents
-    if (!options.geometry_only) {
+    if (!params.geometry_only) {
         auto extname    = get_noextension(filename) + ".objx";
         auto ext_exists = exists_file(extname);
         if (ext_exists) {
-            load_objx(extname, cb, options);
+            load_objx(extname, cb, params);
         }
     }
 }
