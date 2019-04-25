@@ -742,8 +742,6 @@ inline bvh_scene::~bvh_scene() {
     }
 }
 
-namespace bvh_impl {
-
 static inline void embree_error(void* ctx, RTCError code, const char* str) {
     switch (code) {
         case RTC_ERROR_UNKNOWN:
@@ -1462,7 +1460,7 @@ static inline void build_bvh(vector<bvh_node>& nodes, size_t num_elements,
     }
 }
 
-static inline void build_bvh(bvh_shape& bvh, const vector<int>& points,
+inline void build_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
@@ -1523,7 +1521,7 @@ static inline void build_bvh(bvh_shape& bvh, const vector<int>& points,
     }
 }
 template <typename GetInstance>
-static inline void build_bvh(bvh_scene& bvh, int num_instances,
+ inline void build_bvh(bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const bvh_params& params) {
 #if YOCTO_EMBREE
     if (params.use_embree) {
@@ -1571,7 +1569,7 @@ static inline void refit_bvh(
     }
 }
 
-static inline void refit_bvh(bvh_shape& bvh, const vector<int>& points,
+ inline void refit_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
@@ -1614,7 +1612,7 @@ static inline void refit_bvh(bvh_shape& bvh, const vector<int>& points,
 }
 
 template <typename GetInstance>
-static inline void refit_bvh(bvh_scene& bvh, int num_instances,
+ inline void refit_bvh(bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const bvh_params& params) {
 #if YOCTO_EMBREE
     if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
@@ -1636,7 +1634,7 @@ static inline void refit_bvh(bvh_scene& bvh, int num_instances,
 
 // Intersect ray with a bvh.
 template <bool IsInstanced, typename PrimitiveIntersect>
-static inline bool intersect_bvh(const vector<bvh_node>& nodes, const ray3f& ray_,
+ inline bool intersect_bvh(const vector<bvh_node>& nodes, const ray3f& ray_,
     bvh_intersection& intersection, bool find_any,
     const PrimitiveIntersect& intersect_primitive) {
     // check empty
@@ -1706,7 +1704,7 @@ static inline bool intersect_bvh(const vector<bvh_node>& nodes, const ray3f& ray
     return hit;
 }
 
-static inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points,
+ inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
@@ -1762,7 +1760,7 @@ static inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points
     }
 }
 template <typename GetInstance, typename IntersectShape>
-static inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
+ inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const IntersectShape& intersect_shape,
     const ray3f& ray, bvh_intersection& intersection, bool find_any,
     bool non_rigid_frames) {
@@ -1794,7 +1792,7 @@ static inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
 
 // Intersect ray with a bvh.
 template <bool IsInstanced, typename PrimitiveOverlap>
-static inline bool overlap_bvh_nodes(const vector<bvh_node>& nodes, const vec3f& pos,
+ inline bool overlap_bvh_nodes(const vector<bvh_node>& nodes, const vec3f& pos,
     float max_distance, bvh_intersection& intersection, bool find_any,
     const PrimitiveOverlap& overlap_primitive) {
     // check if empty
@@ -1851,7 +1849,7 @@ static inline bool overlap_bvh_nodes(const vector<bvh_node>& nodes, const vec3f&
 }
 
 // Finds the closest element with a bvh.
-static inline bool overlap_bvh(const bvh_shape& bvh, const vector<int>& points,
+ inline bool overlap_bvh(const bvh_shape& bvh, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec3f>& positions, const vector<float>& radius,
@@ -1922,7 +1920,7 @@ static inline bool overlap_bvh(const bvh_shape& bvh, const vector<int>& points,
     }
 }
 template <typename GetInstance, typename OverlapShape>
-static inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
+ inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
     const GetInstance& get_instance, const OverlapShape& overlap_shape,
     const vec3f& pos, float max_distance, bvh_intersection& intersection,
     bool find_any, bool non_rigid_frames) {
@@ -2006,74 +2004,6 @@ static inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
         }
     }
 #endif
-
-}
-
-// Build the bvh acceleration structure.
-inline void build_bvh(bvh_shape& bvh, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const bvh_params& params) {
-    return bvh_impl::build_bvh(bvh, points, lines, triangles, quads, quads_positions, positions, radius, params);
-}
-template <typename GetInstance>
-inline void build_bvh(bvh_scene& bvh, int num_instances,
-    const GetInstance& get_instance, const bvh_params& params) {
-    return bvh_impl::build_bvh(bvh, num_instances, get_instance, params);
-}
-
-// Refit bvh data
-inline void refit_bvh(bvh_shape& bvh, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const bvh_params& params) {
-    return bvh_impl::refit_bvh(bvh, points, lines, triangles, quads, quads_positions, positions, radius, params);
-}
-template <typename GetInstance>
-inline void refit_bvh(bvh_scene& bvh, int num_instances,
-    const GetInstance& get_instance, const bvh_params& params) {
-    return bvh_impl::refit_bvh(bvh, num_instances, get_instance, params);
-}
-
-// Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance , the instance id,
-// the shape element index and the element barycentric coordinates.
-inline bool intersect_bvh(const bvh_shape& bvh, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any) {
-    return bvh_impl::intersect_bvh(bvh, points, lines, triangles, quads, quads_positions, positions, radius, ray, intersection, find_any);
-}
-template <typename GetInstance, typename IntersectShape>
-inline bool intersect_bvh(const bvh_scene& bvh, int num_instances,
-    const GetInstance& get_instance, const IntersectShape& inetrsect_shape,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any,
-    bool non_rigid_frames) {
-    return bvh_impl::intersect_bvh(bvh, num_instances, get_instance, inetrsect_shape, ray, intersection, find_any, non_rigid_frames);
-}
-
-// Find a shape element that overlaps a point within a given distance
-// max distance, returning either the closest or any overlap depending on
-// `find_any`. Returns the point distance, the instance id, the shape element
-// index and the element barycentric coordinates.
-inline bool overlap_bvh(const bvh_shape& bvh, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const vec3f& pos, float max_distance, bvh_intersection& intersection,
-    bool find_any) {
-    return bvh_impl::overlap_bvh(bvh, points, lines, triangles, quads, quads_positions, positions, radius, pos, max_distance, intersection, find_any);
-}
-template <typename GetInstance, typename OverlapShape>
-inline bool overlap_bvh(const bvh_scene& bvh, int num_instances,
-    const GetInstance& get_instance, const OverlapShape& overlap_shape,
-    const vec3f& pos, float max_distance, bvh_intersection& intersection,
-    bool find_any, bool non_rigid_frames) {
-    return bvh_impl::overlap_bvh(bvh, num_instances, get_instance, overlap_shape, pos, max_distance, intersection, find_any, non_rigid_frames);
-}
 
 }  // namespace yocto
 

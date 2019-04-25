@@ -68,8 +68,6 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-namespace impl {
-
 // Split a string
 static inline vector<string> split_string(const string& str) {
     auto ret = vector<string>();
@@ -413,15 +411,15 @@ static inline void load_image_preset(
 
 // Forward declarations
 template <int N>
-static inline void load_image(
+static inline void load_image_impl(
     const string& filename, image<vec<byte, N>>& img);
 template <int N>
-static inline void save_image(
+static inline void save_image_impl(
     const string& filename, const image<vec<byte, N>>& img);
 
 // Loads an hdr image.
 template <int N>
-static inline void load_image(
+static inline void load_image_impl(
     const string& filename, image<vec<float, N>>& img) {
     if (is_image_preset_filename(filename)) {
         return load_image_preset(filename, img);
@@ -435,7 +433,7 @@ static inline void load_image(
         load_stb(filename, img);
     } else if (!is_hdr_filename(filename)) {
         auto img8 = image<vec<byte, N>>{};
-        load_image(filename, img8);
+        load_image_impl(filename, img8);
         srgb_to_linear(img, img8);
     } else {
         throw io_error("unsupported image format " + ext);
@@ -444,7 +442,7 @@ static inline void load_image(
 
 // Saves an hdr image.
 template <int N>
-static inline void save_image(
+static inline void save_image_impl(
     const string& filename, const image<vec<float, N>>& img) {
     auto ext = get_extension(filename);
     if (ext == "hdr" || ext == "HDR") {
@@ -456,7 +454,7 @@ static inline void save_image(
     } else if (!is_hdr_filename(filename)) {
         auto img8 = image<vec<byte, N>>{img.size()};
         linear_to_srgb(img8, img);
-        save_image(filename, img8);
+        save_image_impl(filename, img8);
     } else {
         throw io_error("unsupported image format " + ext);
     }
@@ -464,7 +462,7 @@ static inline void save_image(
 
 // Loads an hdr image.
 template <int N>
-static inline void load_image(
+static inline void load_image_impl(
     const string& filename, image<vec<byte, N>>& img) {
     if (is_image_preset_filename(filename)) {
         return load_image_preset(filename, img);
@@ -480,7 +478,7 @@ static inline void load_image(
         load_stb(filename, img);
     } else if (is_hdr_filename(filename)) {
         auto imgf = image<vec<float, N>>{};
-        load_image(filename, imgf);
+        load_image_impl(filename, imgf);
         linear_to_srgb(img, imgf);
     } else {
         throw io_error("unsupported image format " + ext);
@@ -489,7 +487,7 @@ static inline void load_image(
 
 // Saves an ldr image.
 template <int N>
-static inline void save_image(
+static inline void save_image_impl(
     const string& filename, const image<vec<byte, N>>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
@@ -503,64 +501,62 @@ static inline void save_image(
     } else if (is_hdr_filename(filename)) {
         auto imgf = image<vec<float, N>>{img.size()};
         srgb_to_linear(imgf, img);
-        save_image(filename, imgf);
+        save_image_impl(filename, imgf);
     } else {
         throw io_error("unsupported image format " + ext);
     }
 }
 
-}  // namespace impl
-
 // Loads/saves a 1-4 channels float image in linear color space.
 void load_image(const string& filename, image<float>& img) {
-    impl::load_image(filename, (image<vec1f>&)img);
+    load_image_impl(filename, (image<vec1f>&)img);
 }
 void load_image(const string& filename, image<vec2f>& img) {
-    impl::load_image(filename, img);
+    load_image_impl(filename, img);
 }
 void load_image(const string& filename, image<vec3f>& img) {
-    impl::load_image(filename, img);
+    load_image_impl(filename, img);
 }
 void load_image(const string& filename, image<vec4f>& img) {
-    impl::load_image(filename, img);
+    load_image_impl(filename, img);
 }
 void save_image(const string& filename, const image<float>& img) {
-    impl::save_image(filename, (const image<vec1f>&)img);
+    save_image_impl(filename, (const image<vec1f>&)img);
 }
 void save_image(const string& filename, const image<vec2f>& img) {
-    impl::save_image(filename, img);
+    save_image_impl(filename, img);
 }
 void save_image(const string& filename, const image<vec3f>& img) {
-    impl::save_image(filename, img);
+    save_image_impl(filename, img);
 }
 void save_image(const string& filename, const image<vec4f>& img) {
-    impl::save_image(filename, img);
+    save_image_impl(filename, img);
 }
 
 // Loads/saves a 1-4 byte image in sRGB color space.
 void load_image(const string& filename, image<byte>& img) {
-    impl::load_image(filename, (image<vec1b>&)img);
+    load_image_impl(filename, (image<vec1b>&)img);
 }
 void load_image(const string& filename, image<vec2b>& img) {
-    impl::load_image(filename, img);
+    load_image_impl(filename, img);
 }
 void load_image(const string& filename, image<vec3b>& img) {
-    impl::load_image(filename, img);
+    load_image_impl(filename, img);
 }
 void load_image(const string& filename, image<vec4b>& img) {
-    impl::load_image(filename, img);
+    load_image_impl(filename, img);
 }
 void save_image(const string& filename, const image<byte>& img) {
-    impl::save_image(filename, (const image<vec1b>&)img);
+    save_image_impl(filename, (const image<vec1b>&)img);
 }
 void save_image(const string& filename, const image<vec2b>& img) {
-    impl::save_image(filename, img);
+    save_image_impl(filename, img);
 }
 void save_image(const string& filename, const image<vec3b>& img) {
-    impl::save_image(filename, img);
+    save_image_impl(filename, img);
 }
 void save_image(const string& filename, const image<vec4b>& img) {
-    impl::save_image(filename, img);
+    save_image_impl(filename, img);
 }
 
 }  // namespace yocto

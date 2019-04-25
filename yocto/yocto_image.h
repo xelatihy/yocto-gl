@@ -727,8 +727,6 @@ void save_volume(const string& filename, const volume<float>& vol);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-namespace impl {
-
 template <typename T>
 constexpr bool type_error = std::false_type::value;
 template <int N>
@@ -744,8 +742,6 @@ constexpr T default_alpha() {
     } else {
         return (T)1;
     }
-}
-
 }
 
 inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
@@ -816,7 +812,7 @@ inline vec<T, N> srgb_to_linear(const vec<T, N>& srgb) {
         return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
             srgb_to_linear(srgb.z), srgb.w};
     } else {
-        static_assert(impl::channel_error<N>, "unsupported number of channels");
+        static_assert(channel_error<N>, "unsupported number of channels");
     }
 }
 template <typename T, int N>
@@ -832,7 +828,7 @@ inline vec<T, N> linear_to_srgb(const vec<T, N>& lin) {
         return {linear_to_srgb(lin.x), linear_to_srgb(lin.y),
             linear_to_srgb(lin.z), lin.w};
     } else {
-        static_assert(impl::channel_error<N>, "unsupported number of channels");
+        static_assert(channel_error<N>, "unsupported number of channels");
     }
 }
 
@@ -915,20 +911,20 @@ inline vec<T, N1> convert_channels(const vec<T, N2>& a) {
             return {(a.x + a.y + a.z) / 3};
         } else {
             static_assert(
-                impl::channel_error<N2>, "unsupported number of channels");
+                channel_error<N2>, "unsupported number of channels");
         }
     } else if constexpr (N1 == 2) {
         if constexpr (N2 == 1) {
-            return {a.x, impl::default_alpha<T>()};
+            return {a.x, default_alpha<T>()};
         } else if constexpr (N2 == 2) {
             return {a.x, a.y};
         } else if constexpr (N2 == 3) {
-            return {(a.x + a.y + a.z) / 3, impl::default_alpha<T>()};
+            return {(a.x + a.y + a.z) / 3, default_alpha<T>()};
         } else if constexpr (N2 == 4) {
             return {(a.x + a.y + a.z) / 3, a.w};
         } else {
             static_assert(
-                impl::channel_error<N2>, "unsupported number of channels");
+                channel_error<N2>, "unsupported number of channels");
         }
     } else if constexpr (N1 == 3) {
         if constexpr (N2 == 1) {
@@ -941,27 +937,25 @@ inline vec<T, N1> convert_channels(const vec<T, N2>& a) {
             return {a.x, a.y, a.z};
         } else {
             static_assert(
-                impl::channel_error<N2>, "unsupported number of channels");
+                channel_error<N2>, "unsupported number of channels");
         }
     } else if constexpr (N1 == 4) {
         if constexpr (N2 == 1) {
-            return {a.x, a.x, a.x, impl::default_alpha<T>()};
+            return {a.x, a.x, a.x, default_alpha<T>()};
         } else if constexpr (N2 == 2) {
             return {a.x, a.x, a.x};
         } else if constexpr (N2 == 3) {
-            return {a.x, a.y, a.z, impl::default_alpha<T>()};
+            return {a.x, a.y, a.z, default_alpha<T>()};
         } else if constexpr (N2 == 4) {
             return {a.x, a.y, a.z};
         } else {
             static_assert(
-                impl::channel_error<N2>, "unsupported number of channels");
+                channel_error<N2>, "unsupported number of channels");
         }
     } else {
-        static_assert(impl::channel_error<N1>, "unsupported number of channels");
+        static_assert(channel_error<N1>, "unsupported number of channels");
     }
 }
-
-namespace impl {
 
 // https://en.wikipedia.org/wiki/SRGB
 template <typename T>
@@ -976,8 +970,6 @@ constexpr mat<T, 3, 3> xyz_to_srgb_mat = {
     {-0.9689, +1.8758, +0.0415},
     {+0.0557, -0.2040, +1.0570},
 };
-
-}
 
 // Curve type
 enum struct rgb_curve_type {
@@ -1023,8 +1015,6 @@ constexpr mat<T, 3, 3> rgb_to_xyz_mat(const vec<T, 2>& rc, const vec<T, 2>& gc,
     return mat<T, 3, 3>{c.x * rgb.x, c.y * rgb.y, c.z * rgb.z};
 }
 
-namespace impl {
-
 // Construct an RGB color space. Predefined color spaces below
 template <typename T>
 constexpr rgb_space<T> make_linear_rgb_space(const vec<T, 2>& red,
@@ -1053,83 +1043,81 @@ constexpr rgb_space<T> make_other_rgb_space(const vec<T, 2>& red,
         inverse(rgb_to_xyz_mat<T>(red, green, blue, white)), curve_type};
 }
 
-}
-
 template <typename T>
 constexpr rgb_space<T> get_rgb_space(rgb_space_type space) {
     switch (space) {
         // https://en.wikipedia.org/wiki/Rec._709
         case rgb_space_type::linear_srgb:
-            return impl::make_linear_rgb_space<T>({0.6400, 0.3300},
+            return make_linear_rgb_space<T>({0.6400, 0.3300},
                 {0.3000, 0.6000}, {0.1500, 0.0600}, {0.3127, 0.3290});
         // https://en.wikipedia.org/wiki/Rec._709
         case rgb_space_type::srgb:
-            return impl::make_gamma_rgb_space<T>({0.6400, 0.3300},
+            return make_gamma_rgb_space<T>({0.6400, 0.3300},
                 {0.3000, 0.6000}, {0.1500, 0.0600}, {0.3127, 0.3290}, 2.4,
                 {1.055, 0.055, 12.92, 0.0031308});
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System
         case rgb_space_type::aces_2065:
-            return impl::make_linear_rgb_space<T>({0.7347, 0.2653},
+            return make_linear_rgb_space<T>({0.7347, 0.2653},
                 {0.0000, 1.0000}, {0.0001, -0.0770}, {0.32168, 0.33767});
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
         case rgb_space_type::aces_cg:
-            return impl::make_linear_rgb_space<T>({0.7130, 0.2930},
+            return make_linear_rgb_space<T>({0.7130, 0.2930},
                 {0.1650, 0.8300}, {0.1280, +0.0440}, {0.32168, 0.33767});
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
         case rgb_space_type::aces_cc:
-            return impl::make_other_rgb_space<T>({0.7130, 0.2930},
+            return make_other_rgb_space<T>({0.7130, 0.2930},
                 {0.1650, 0.8300}, {0.1280, +0.0440}, {0.32168, 0.33767},
                 rgb_curve_type::aces_cc);
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
         case rgb_space_type::aces_cct:
-            return impl::make_other_rgb_space<T>({0.7130, 0.2930},
+            return make_other_rgb_space<T>({0.7130, 0.2930},
                 {0.1650, 0.8300}, {0.1280, +0.0440}, {0.32168, 0.33767},
                 rgb_curve_type::aces_cct);
         // https://en.wikipedia.org/wiki/Adobe_RGB_color_space
         case rgb_space_type::adobe_rgb:
-            return impl::make_gamma_rgb_space<T>({0.6400, 0.3300},
+            return make_gamma_rgb_space<T>({0.6400, 0.3300},
                 {0.2100, 0.7100}, {0.1500, 0.0600}, {0.3127, 0.3290},
                 2.19921875);
         // https://en.wikipedia.org/wiki/Rec._709
         case rgb_space_type::rec_709:
-            return impl::make_gamma_rgb_space<T>({0.6400, 0.3300},
+            return make_gamma_rgb_space<T>({0.6400, 0.3300},
                 {0.3000, 0.6000}, {0.1500, 0.0600}, {0.3127, 0.3290}, 1 / 0.45,
                 {1.099, 0.099, 4.500, 0.018});
         // https://en.wikipedia.org/wiki/Rec._2020
         case rgb_space_type::rec_2020:
-            return impl::make_gamma_rgb_space<T>({0.7080, 0.2920},
+            return make_gamma_rgb_space<T>({0.7080, 0.2920},
                 {0.1700, 0.7970}, {0.1310, 0.0460}, {0.3127, 0.3290}, 1 / 0.45,
                 {1.09929682680944, 0.09929682680944, 4.5, 0.018053968510807});
         // https://en.wikipedia.org/wiki/Rec._2020
         case rgb_space_type::rec_2100_pq:
-            return impl::make_other_rgb_space<T>({0.7080, 0.2920},
+            return make_other_rgb_space<T>({0.7080, 0.2920},
                 {0.1700, 0.7970}, {0.1310, 0.0460}, {0.3127, 0.3290},
                 rgb_curve_type::pq);
         // https://en.wikipedia.org/wiki/Rec._2020
         case rgb_space_type::rec_2100_hlg:
-            return impl::make_other_rgb_space<T>({0.7080, 0.2920},
+            return make_other_rgb_space<T>({0.7080, 0.2920},
                 {0.1700, 0.7970}, {0.1310, 0.0460}, {0.3127, 0.3290},
                 rgb_curve_type::hlg);
         // https://en.wikipedia.org/wiki/DCI-P3
         case rgb_space_type::p3_dci:
-            return impl::make_gamma_rgb_space<T>({0.6800, 0.3200},
+            return make_gamma_rgb_space<T>({0.6800, 0.3200},
                 {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3140, 0.3510}, 1.6);
         // https://en.wikipedia.org/wiki/DCI-P3
         case rgb_space_type::p3_d60:
-            return impl::make_gamma_rgb_space<T>({0.6800, 0.3200},
+            return make_gamma_rgb_space<T>({0.6800, 0.3200},
                 {0.2650, 0.6900}, {0.1500, 0.0600}, {0.32168, 0.33767}, 1.6);
         // https://en.wikipedia.org/wiki/DCI-P3
         case rgb_space_type::p3_d65:
-            return impl::make_gamma_rgb_space<T>({0.6800, 0.3200},
+            return make_gamma_rgb_space<T>({0.6800, 0.3200},
                 {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3127, 0.3290}, 1.6);
         // https://en.wikipedia.org/wiki/DCI-P3
         case rgb_space_type::p3_display:
-            return impl::make_gamma_rgb_space<T>({0.6800, 0.3200},
+            return make_gamma_rgb_space<T>({0.6800, 0.3200},
                 {0.2650, 0.6900}, {0.1500, 0.0600}, {0.3127, 0.3290}, 2.4,
                 {1.055, 0.055, 12.92, 0.0031308});
         // https://en.wikipedia.org/wiki/ProPhoto_RGB_color_space
         case rgb_space_type::prophoto_rgb:
-            return impl::make_gamma_rgb_space<T>({0.7347, 0.2653},
+            return make_gamma_rgb_space<T>({0.7347, 0.2653},
                 {0.1596, 0.8404}, {0.0366, 0.0001}, {0.3457, 0.3585}, 1.8,
                 {1, 0, 16, 0.001953125});
         default: throw "unknown color space";
@@ -1476,11 +1464,9 @@ inline pair<string, string> get_image_preset_type(const string& filename) {
     }
 }
 
-namespace impl {
-
 // Convenience helper for loading HDR or LDR based on filename
 template <int N>
-inline void load_image(const string& filename, image<vec<float, N>>& hdr,
+inline void load_image_impl(const string& filename, image<vec<float, N>>& hdr,
     image<vec<byte, N>>& ldr) {
     if (is_hdr_filename(filename)) {
         load_image(filename, hdr);
@@ -1489,7 +1475,7 @@ inline void load_image(const string& filename, image<vec<float, N>>& hdr,
     }
 }
 template <int N>
-inline void save_image(const string& filename,
+inline void save_image_impl(const string& filename,
     const image<vec<float, N>>& hdr, const image<vec<byte, N>>& ldr) {
     if (!hdr.empty()) {
         save_image(filename, hdr);
@@ -1498,31 +1484,27 @@ inline void save_image(const string& filename,
     }
 }
 
-}
-
 inline void load_image(
     const string& filename, image<vec3f>& hdr, image<vec3b>& ldr) {
-    impl::load_image(filename, hdr, ldr);
+    load_image_impl(filename, hdr, ldr);
 }
 inline void load_image(
     const string& filename, image<vec4f>& hdr, image<vec4b>& ldr) {
-    impl::load_image(filename, hdr, ldr);
+    load_image_impl(filename, hdr, ldr);
 }
 inline void save_image(
     const string& filename, const image<vec3f>& hdr, const image<vec3b>& ldr) {
-    impl::save_image(filename, hdr, ldr);
+    save_image_impl(filename, hdr, ldr);
 }
 inline void save_image(
     const string& filename, const image<vec4f>& hdr, const image<vec4b>& ldr) {
-    impl::save_image(filename, hdr, ldr);
+    save_image_impl(filename, hdr, ldr);
 }
-
-namespace impl {
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 template <int N>
-inline void save_tonemapped(const string& filename,
+inline void save_tonemapped_impl(const string& filename,
     const image<vec<float, N>>& hdr, const tonemap_params& params) {
     if (is_hdr_filename(filename)) {
         save_image(filename, hdr);
@@ -1533,15 +1515,13 @@ inline void save_tonemapped(const string& filename,
     }
 }
 
-}
-
 inline void save_tonemapped(const string& filename,
     const image<vec3f>& hdr, const tonemap_params& params) {
-    impl::save_tonemapped(filename, hdr, params);
+    save_tonemapped_impl(filename, hdr, params);
 }
 inline void save_tonemapped(const string& filename,
     const image<vec4f>& hdr, const tonemap_params& params) {
-    impl::save_tonemapped(filename, hdr, params);
+    save_tonemapped_impl(filename, hdr, params);
 }
 
 // Save with a logo embedded
@@ -1615,8 +1595,6 @@ inline void make_regions(vector<image_region>& regions, const vec2i& size,
     }
 }
 
-namespace impl {
-
 // Apply a function to each image pixel
 template <typename T1, typename T2, typename Func>
 inline void apply_image(
@@ -1640,35 +1618,33 @@ inline void apply_image(image<T1>& result,
     }
 }
 
-}
-
 // Conversion from/to floats.
 template <typename T, typename TB>
 inline void byte_to_float(image<T>& fl, const image<TB>& bt) {
-    return impl::apply_image(fl, bt, [](const auto& a) { return byte_to_float(a); });
+    return apply_image(fl, bt, [](const auto& a) { return byte_to_float(a); });
 }
 template <typename T, typename TB>
 inline void float_to_byte(image<TB>& bt, const image<T>& fl) {
-    return impl::apply_image(bt, fl, [](const auto& a) { return float_to_byte(a); });
+    return apply_image(bt, fl, [](const auto& a) { return float_to_byte(a); });
 }
 
 // Conversion between linear and gamma-encoded images.
 template <typename T>
 inline void srgb_to_linear(image<T>& lin, const image<T>& srgb) {
-    return impl::apply_image(lin, srgb, [](const auto& a) { return srgb_to_linear(a); });
+    return apply_image(lin, srgb, [](const auto& a) { return srgb_to_linear(a); });
 }
 template <typename T>
 inline void linear_to_srgb(image<T>& srgb, const image<T>& lin) {
-    return impl::apply_image(srgb, lin, [](const auto& a) { return linear_to_srgb(a); });
+    return apply_image(srgb, lin, [](const auto& a) { return linear_to_srgb(a); });
 }
 template <typename T, typename TB>
 inline void srgb_to_linear(image<T>& lin, const image<TB>& srgb) {
-    return impl::apply_image(lin, srgb,
+    return apply_image(lin, srgb,
         [](const auto& a) { return srgb_to_linear(byte_to_float(a)); });
 }
 template <typename T, typename TB>
 inline void linear_to_srgb(image<TB>& srgb, const image<T>& lin) {
-    return impl::apply_image(srgb, lin,
+    return apply_image(srgb, lin,
         [](const auto& a) { return float_to_byte(linear_to_srgb(a)); });
 }
 
@@ -1691,12 +1667,12 @@ inline vec3f tonemap(
 // Apply exposure and filmic tone mapping
 inline void tonemap(image<vec3f>& ldr, const image<vec3f>& hdr,
     const tonemap_params& params) {
-    return impl::apply_image(ldr, hdr,
+    return apply_image(ldr, hdr,
         [params](const vec3f& hdr) { return tonemap(hdr, params); });
 }
 inline void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     const tonemap_params& params) {
-    return impl::apply_image(ldr, hdr,
+    return apply_image(ldr, hdr,
         [scale = exp2(params.exposure) * params.tint, params](
             const vec4f& hdr) {
             return vec4f{tonemap(xyz(hdr), params), hdr.w};
@@ -1704,19 +1680,19 @@ inline void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
 }
 inline void tonemap(image<vec3b>& ldr, const image<vec3f>& hdr,
     const tonemap_params& params) {
-    return impl::apply_image(ldr, hdr, [params](const vec3f& hdr) {
+    return apply_image(ldr, hdr, [params](const vec3f& hdr) {
         return float_to_byte(tonemap(hdr, params));
     });
 }
 inline void tonemap(image<vec4b>& ldr, const image<vec4f>& hdr,
     const tonemap_params& params) {
-    return impl::apply_image(ldr, hdr, [params](const vec4f& hdr) {
+    return apply_image(ldr, hdr, [params](const vec4f& hdr) {
         return float_to_byte(vec4f{tonemap(xyz(hdr), params), hdr.w});
     });
 }
 inline void tonemap(image<vec4f>& ldr, 
     const image<vec4f>& hdr, const image_region& region, const tonemap_params& params) {
-    return impl::apply_image(ldr, hdr, region, [params](const vec4f& hdr) {
+    return apply_image(ldr, hdr, region, [params](const vec4f& hdr) {
         return vec4f{tonemap(xyz(hdr), params), hdr.w};
     });
 }
@@ -1740,7 +1716,7 @@ inline vec3f colorgrade(
         auto grey = gamma - mean(gamma) + params.midtones;
         gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
 
-        // impl::apply_image
+        // apply_image
         auto lerp_value = clamp01(pow(rgb, 1 / gamma));
         rgb             = gain * lerp_value + lift * (1 - lerp_value);
     }
@@ -1751,7 +1727,7 @@ inline vec3f colorgrade(
 inline void colorgrade(image<vec4f>& corrected,
     const image<vec4f>& ldr, const image_region& region,
     const colorgrade_params& params) {
-    return impl::apply_image(corrected, ldr, region, [&params](const vec4f& hdr) {
+    return apply_image(corrected, ldr, region, [&params](const vec4f& hdr) {
         return vec4f{colorgrade(xyz(hdr), params), hdr.w};
     });
 }
@@ -1767,23 +1743,21 @@ inline vec3f compute_white_balance(const image<vec4f>& img) {
 template <int N1, int N2>
 inline void convert_channels(
     image<vec<float, N1>>& result, const image<vec<float, N2>>& source) {
-    return impl::apply_image(result, source, [](const vec<float, N2>& a) {
+    return apply_image(result, source, [](const vec<float, N2>& a) {
         return convert_channels<float, N1, N2>(a);
     });
 }
 template <int N1, int N2>
 inline void convert_channels(
     image<vec<byte, N1>>& result, const image<vec<byte, N2>>& source) {
-    return impl::apply_image(result, source, [](const vec<byte, N2>& a) {
+    return apply_image(result, source, [](const vec<byte, N2>& a) {
         return convert_channels<byte, N1, N2>(a);
     });
 }
 
-namespace impl {
-
 // Resize image.
 template <int N>
-static inline void resize(
+static inline void resize_impl(
     image<vec<float, N>>& res_img, const image<vec<float, N>>& img) {
     auto alpha = (N == 2 || N == 4) ? N - 1 : -1;
     stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
@@ -1793,7 +1767,7 @@ static inline void resize(
         STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
 template <int N>
-static inline void resize(
+static inline void resize_impl(
     image<vec<byte, N>>& res_img, const image<vec<byte, N>>& img) {
     auto alpha = (N == 2 || N == 4) ? N - 1 : -1;
     stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
@@ -1803,38 +1777,36 @@ static inline void resize(
         STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
 
-}
-
 inline void resize(image<float>& res, const image<float>& img) {
-    return impl::resize((image<vec1f>&)res, (const image<vec1f>&)img);
+    return resize_impl((image<vec1f>&)res, (const image<vec1f>&)img);
 }
 inline void resize(image<vec1f>& res, const image<vec1f>& img) {
-    return impl::resize(res, img);
+    return resize_impl(res, img);
 }
 inline void resize(image<vec2f>& res, const image<vec2f>& img) {
-    return impl::resize(res, img);
+    return resize_impl(res, img);
 }
 inline void resize(image<vec3f>& res, const image<vec3f>& img) {
-    return impl::resize(res, img);
+    return resize_impl(res, img);
 }
 inline void resize(image<vec4f>& res, const image<vec4f>& img) {
-    return impl::resize(res, img);
+    return resize_impl(res, img);
 }
 
 inline void resize(image<byte>& res, const image<byte>& img) {
-    return impl::resize((image<vec1b>&)res, (const image<vec1b>&)img);
+    return resize_impl((image<vec1b>&)res, (const image<vec1b>&)img);
 }
 inline void resize(image<vec1b>& res, const image<vec1b>& img) {
-    return impl::resize(res, img);
+    return resize_impl(res, img);
 }
 inline void resize(image<vec2b>& res, const image<vec2b>& img) {
-    return impl::resize(res, img);
+    return resize_impl(res, img);
 }
 inline void resize(image<vec3b>& res, const image<vec3b>& img) {
-    return impl::resize(res, img);
+    return resize_impl(res, img);
 }
 inline void resize(image<vec4b>& res, const image<vec4b>& img) {
-    return impl::resize(res, img);
+    return resize_impl(res, img);
 }
 
 template <typename T>
@@ -1860,8 +1832,6 @@ inline void resize(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-    namespace impl {
-
 // Make an image by assign values to each pixel
 template <typename T, typename Func>
 inline void make_fromij(
@@ -1886,13 +1856,11 @@ inline void make_fromuv(
     }
 }
 
-    }
-
 // Make a grid image
 template <typename T>
 inline void make_grid(
     image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
-    impl::make_fromij(
+    make_fromij(
         img, size, [tile = size.x / tiles, &c0, &c1](int i, int j) {
             auto c = i % tile == 0 || i % tile == tile - 1 || j % tile == 0 ||
                      j % tile == tile - 1;
@@ -1904,7 +1872,7 @@ inline void make_grid(
 template <typename T>
 inline void make_checker(
     image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
-    impl::make_fromij(
+    make_fromij(
         img, size, [tile = size.x / tiles, &c0, &c1](int i, int j) {
             auto c = (i / tile + j / tile) % 2 == 0;
             return (c) ? c0 : c1;
@@ -1915,7 +1883,7 @@ inline void make_checker(
 template <typename T>
 inline void make_bumpdimple(
     image<T>& img, const vec2i& size, int tiles, const T& c0, const T& c1) {
-    impl::make_fromij(
+    make_fromij(
         img, size, [tile = size.x / tiles, &c0, &c1](int i, int j) {
             auto c  = (i / tile + j / tile) % 2 == 0;
             auto ii = i % tile - tile / 2, jj = j % tile - tile / 2;
@@ -1933,7 +1901,7 @@ inline void make_bumpdimple(
 template <typename T>
 inline void make_ramp(
     image<T>& img, const vec2i& size, const T& c0, const T& c1) {
-    impl::make_fromij(img, size, [size = img.size(), &c0, &c1](int i, int j) {
+    make_fromij(img, size, [size = img.size(), &c0, &c1](int i, int j) {
         auto u = (float)i / (float)size.x;
         return lerp(c0, c1, u);
     });
@@ -1941,7 +1909,7 @@ inline void make_ramp(
 template <typename T>
 inline void make_ramp(image<T>& img, const vec2i& size, const T& c00,
     const T& c10, const T& c11, const T& c01) {
-    impl::make_fromij(img, size, [size, &c00, &c10, &c01, &c11](int i, int j) {
+    make_fromij(img, size, [size, &c00, &c10, &c01, &c11](int i, int j) {
         auto u = (float)i / (float)size.x;
         auto v = (float)j / (float)size.y;
         return bilerp(c00, c10, c11, c01, u, v);
@@ -1952,7 +1920,7 @@ inline void make_ramp(image<T>& img, const vec2i& size, const T& c00,
 template <typename T>
 inline void make_gammaramp(
     image<T>& img, const vec2i& size, const T& c0, const T& c1) {
-    impl::make_fromij(img, size, [size, &c0, &c1](int i, int j) {
+    make_fromij(img, size, [size, &c0, &c1](int i, int j) {
         auto u = j / float(size.y - 1);
         if (i < size.x / 3) u = pow(u, 2.2f);
         if (i > (size.x * 2) / 3) u = pow(u, 1 / 2.2f);
@@ -1974,7 +1942,7 @@ inline void make_uvramp(image<vec<T, N>>& img, const vec2i& size) {
             vec<T, N>{1, 0, 0, 0}, vec<T, N>{1, 1, 0, 0},
             vec<T, N>{0, 1, 0, 0});
     } else {
-        static_assert(impl::channel_error<N>, "channels not supported");
+        static_assert(channel_error<N>, "channels not supported");
     }
 }
 
@@ -1982,7 +1950,7 @@ inline void make_uvramp(image<vec<T, N>>& img, const vec2i& size) {
 template <typename T, int N>
 inline void make_uvgrid(
     image<vec<T, N>>& img, const vec2i& size, int tiles, bool colored) {
-    impl::make_fromij(
+    make_fromij(
         img, size, [size, tile = size.x / tiles, colored](int i, int j) {
             j       = size.y - j - 1;
             auto ii = i / tile, jj = j / tile;
@@ -2010,7 +1978,7 @@ inline void make_uvgrid(
 template <typename T, int N>
 inline void make_blackbodyramp(image<vec<T, N>>& img, const vec2i& size,
     float start_temperature, float end_temperature) {
-    impl::make_fromij(
+    make_fromij(
         img, size, [size, start_temperature, end_temperature](int i, int j) {
             auto temperature = start_temperature +
                                (end_temperature - start_temperature) *
@@ -2024,7 +1992,7 @@ inline void make_blackbodyramp(image<vec<T, N>>& img, const vec2i& size,
 template <typename T, typename T1>
 inline void make_noise(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale, bool wrap) {
-    impl::make_fromij(img, size,
+    make_fromij(img, size,
         [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale, &c0,
             &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
@@ -2038,7 +2006,7 @@ inline void make_noise(image<T>& img, const vec2i& size, const T& c0,
 template <typename T, typename T1>
 inline void make_fbm(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale, T1 lacunarity, T1 gain, int octaves, bool wrap) {
-    impl::make_fromij(img, size,
+    make_fromij(img, size,
         [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale,
             lacunarity, gain, octaves, &c0, &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
@@ -2053,7 +2021,7 @@ template <typename T, typename T1>
 inline void make_ridge(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale, T1 lacunarity, T1 gain, T1 offset, int octaves,
     bool wrap) {
-    impl::make_fromij(img, size,
+    make_fromij(img, size,
         [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale,
             lacunarity, gain, offset, octaves, &c0, &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
@@ -2068,7 +2036,7 @@ inline void make_ridge(image<T>& img, const vec2i& size, const T& c0,
 template <typename T, typename T1>
 inline void make_turbulence(image<T>& img, const vec2i& size, const T& c0,
     const T& c1, T1 scale, T1 lacunarity, T1 gain, int octaves, bool wrap) {
-    impl::make_fromij(img, size,
+    make_fromij(img, size,
         [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale,
             lacunarity, gain, octaves, &c0, &c1](int i, int j) {
             auto p = vec3f{i / (float)size.x, j / (float)size.y, 0.5f} * scale;
