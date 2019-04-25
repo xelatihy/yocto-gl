@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
         trace_prms.camera_id = camera_id;
 
         // allocate buffers
-        auto image_size = get_camera_image_size(
+        auto image_size = camera_image_size(
             scene.cameras[trace_prms.camera_id], trace_prms.image_size);
         auto render = image{image_size, zero4f};
         auto state  = trace_state{};

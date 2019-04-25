@@ -362,14 +362,14 @@ float sample_shape_pdf(const yocto_shape& shape,
 }
 
 // Update environment CDF for sampling.
-void compute_environment_texels_cdf(const yocto_scene& scene,
+void sample_environment_cdf(const yocto_scene& scene,
     const yocto_environment& environment, vector<float>& texels_cdf) {
     if (environment.emission_texture < 0) {
         texels_cdf.clear();
         return;
     }
     auto& texture = scene.textures[environment.emission_texture];
-    auto  size    = get_texture_size(texture);
+    auto  size    = texture_size(texture);
     texels_cdf.resize(size.x * size.y);
     if (size != zero2i) {
         for (auto i = 0; i < texels_cdf.size(); i++) {
@@ -385,29 +385,29 @@ void compute_environment_texels_cdf(const yocto_scene& scene,
 }
 
 // Sample an environment based on texels
-vec3f sample_environment_direction(const yocto_scene& scene,
+vec3f sample_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     float re, const vec2f& ruv) {
     if (!texels_cdf.empty() && environment.emission_texture >= 0) {
         auto& texture = scene.textures[environment.emission_texture];
         auto  idx     = sample_discrete(texels_cdf, re);
-        auto  size    = get_texture_size(texture);
+        auto  size    = texture_size(texture);
         auto  u       = (idx % size.x + 0.5f) / size.x;
         auto  v       = (idx / size.x + 0.5f) / size.y;
-        return evaluate_environment_direction(environment, {u, v});
+        return eval_direction(environment, {u, v});
     } else {
         return sample_sphere(ruv);
     }
 }
 
 // Sample an environment based on texels
-float sample_environment_direction_pdf(const yocto_scene& scene,
+float sample_environment_pdf(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     const vec3f& direction) {
     if (!texels_cdf.empty() && environment.emission_texture >= 0) {
         auto& texture  = scene.textures[environment.emission_texture];
-        auto  size     = get_texture_size(texture);
-        auto  texcoord = evaluate_environment_texturecoord(
+        auto  size     = texture_size(texture);
+        auto  texcoord = eval_texturecoord(
             environment, direction);
         auto i    = (int)(texcoord.x * size.x);
         auto j    = (int)(texcoord.y * size.y);
@@ -582,7 +582,7 @@ void add_cameras(yocto_scene& scene) {
     if (scene.cameras.empty()) {
         auto camera = yocto_camera{};
         camera.uri  = "cameras/default.yaml";
-        set_camera_view_from_bbox(
+        set_view(
             camera, compute_bounds(scene), {0, 0, 1});
         scene.cameras.push_back(camera);
     }
@@ -866,13 +866,13 @@ vec3f eval_perturbed_normal(const yocto_scene& scene,
 }
 
 // Instance values interpolated using barycentric coordinates.
-vec3f evaluate_instance_position(const yocto_scene& scene,
+vec3f eval_position(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv) {
     return transform_point(
         instance.frame, eval_position(scene.shapes[instance.shape],
                             element_id, element_uv));
 }
-vec3f evaluate_instance_normal(const yocto_scene& scene,
+vec3f eval_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     bool non_rigid_frame) {
     auto normal = eval_normal(
@@ -881,12 +881,12 @@ vec3f evaluate_instance_normal(const yocto_scene& scene,
                ? transform_normal((const affine3f&)instance.frame, normal)
                : transform_normal(instance.frame, normal);
 }
-vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
+vec3f eval_perturbed_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     const vec3f& normalmap, bool non_rigid_frame) {
     auto& material = scene.materials[instance.material];
     if (material.normal_texture < 0)
-        return evaluate_instance_normal(
+        return eval_normal(
             scene, instance, element_id, element_uv);
     auto normal = eval_perturbed_normal(
         scene, scene.shapes[instance.shape], element_id, element_uv, normalmap);
@@ -895,7 +895,7 @@ vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
                : transform_normal(instance.frame, normal);
 }
 // Instance element values.
-vec3f evaluate_instance_element_normal(const yocto_scene& scene,
+vec3f eval_element_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, bool non_rigid_frame) {
     auto normal = eval_element_normal(
         scene.shapes[instance.shape], element_id);
@@ -905,7 +905,7 @@ vec3f evaluate_instance_element_normal(const yocto_scene& scene,
 }
 
 // Environment texture coordinates from the direction.
-vec2f evaluate_environment_texturecoord(
+vec2f eval_texturecoord(
     const yocto_environment& environment, const vec3f& direction) {
     auto wl = transform_direction_inverse(environment.frame, direction);
     auto environment_uv = vec2f{
@@ -914,7 +914,7 @@ vec2f evaluate_environment_texturecoord(
     return environment_uv;
 }
 // Evaluate the environment direction.
-vec3f evaluate_environment_direction(
+vec3f eval_direction(
     const yocto_environment& environment, const vec2f& environment_uv) {
     return transform_direction(environment.frame,
         {cos(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif),
@@ -922,27 +922,27 @@ vec3f evaluate_environment_direction(
             sin(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif)});
 }
 // Evaluate the environment color.
-vec3f evaluate_environment_emission(const yocto_scene& scene,
+vec3f eval_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vec3f& direction) {
     auto ke = environment.emission;
     if (environment.emission_texture >= 0) {
         auto& emission_texture = scene.textures[environment.emission_texture];
         ke *= xyz(eval_texture(emission_texture,
-            evaluate_environment_texturecoord(environment, direction)));
+            eval_texturecoord(environment, direction)));
     }
     return ke;
 }
 // Evaluate all environment color.
-vec3f evaluate_environment_emission(
+vec3f eval_environment(
     const yocto_scene& scene, const vec3f& direction) {
     auto ke = zero3f;
     for (auto& environment : scene.environments)
-        ke += evaluate_environment_emission(scene, environment, direction);
+        ke += eval_environment(scene, environment, direction);
     return ke;
 }
 
 // Check texture size
-vec2i get_texture_size(const yocto_texture& texture) {
+vec2i texture_size(const yocto_texture& texture) {
     if (!texture.hdr_image.empty()) {
         return texture.hdr_image.size();
     } else if (!texture.ldr_image.empty()) {
@@ -973,7 +973,7 @@ vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
         return {1, 1, 1, 1};
 
     // get image width/height
-    auto size  = get_texture_size(texture);
+    auto size  = texture_size(texture);
     auto width = size.x, height = size.y;
 
     // get coordinates normalized for tiling
@@ -1062,18 +1062,18 @@ float eval_voltexture(const yocto_voltexture& texture,
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float get_camera_fovx(const yocto_camera& camera) {
+float camera_fovx(const yocto_camera& camera) {
     assert(!camera.orthographic);
     return 2 * atan(camera.film_width / (2 * camera.focal_length));
 }
-float get_camera_fovy(const yocto_camera& camera) {
+float camera_fovy(const yocto_camera& camera) {
     assert(!camera.orthographic);
     return 2 * atan(camera.film_height / (2 * camera.focal_length));
 }
-float get_camera_aspect(const yocto_camera& camera) {
+float camera_aspect(const yocto_camera& camera) {
     return camera.film_width / camera.film_height;
 }
-vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size_) {
+vec2i camera_image_size(const yocto_camera& camera, const vec2i& size_) {
     auto size = size_;
     if (size == zero2i) size = {1280, 720};
     if (size.x != 0 && size.y != 0) {
@@ -1091,7 +1091,7 @@ vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size_) {
     }
     return size;
 }
-void set_camera_perspectivey(
+void set_perspectivey(
     yocto_camera& camera, float fovy, float aspect, float focus, float height) {
     camera.orthographic   = false;
     camera.film_width     = height * aspect;
@@ -1105,7 +1105,7 @@ void set_camera_perspectivey(
         camera.focal_length = distance;
     }
 }
-void set_camera_perspectivex(
+void set_perspectivex(
     yocto_camera& camera, float fovx, float aspect, float focus, float width) {
     camera.orthographic   = false;
     camera.film_width     = width;
@@ -1121,7 +1121,7 @@ void set_camera_perspectivex(
 }
 
 // add missing camera
-void set_camera_view_from_bbox(yocto_camera& camera, const bbox3f& bbox,
+void set_view(yocto_camera& camera, const bbox3f& bbox,
     const vec3f& view_direction, float width, float height, float focal) {
     camera.orthographic = false;
     if (width != 0) camera.film_width = width;
@@ -1132,7 +1132,7 @@ void set_camera_view_from_bbox(yocto_camera& camera, const bbox3f& bbox,
     auto camera_dir  = (view_direction == zero3f) ? camera.frame.o - bbox_center
                                                  : view_direction;
     if (camera_dir == zero3f) camera_dir = {0, 0, 1};
-    auto camera_fov = min(get_camera_fovx(camera), get_camera_fovy(camera));
+    auto camera_fov = min(camera_fovx(camera), camera_fovy(camera));
     if (camera_fov == 0) camera_fov = 45 * pif / 180;
     auto camera_dist      = bbox_radius / sin(camera_fov / 2);
     auto from             = camera_dir * (camera_dist * 1) + bbox_center;
@@ -1209,7 +1209,7 @@ ray3f evaluate_orthographic_camera_ray(
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f evaluate_camera_ray(
+ray3f eval_ray(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
     if (camera.orthographic)
         return evaluate_orthographic_camera_ray(camera, image_uv, lens_uv);
@@ -1218,24 +1218,24 @@ ray3f evaluate_camera_ray(
 }
 
 // Generates a ray from a camera.
-ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& image_ij,
+ray3f eval_ray(const yocto_camera& camera, const vec2i& image_ij,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
     auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
         (image_ij.y + pixel_uv.y) / image_size.y};
-    return evaluate_camera_ray(camera, image_uv, lens_uv);
+    return eval_ray(camera, image_uv, lens_uv);
 }
 
 // Generates a ray from a camera.
-ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
+ray3f eval_ray(const yocto_camera& camera, int idx,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
     auto image_ij = vec2i{idx % image_size.x, idx / image_size.x};
     auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
         (image_ij.y + pixel_uv.y) / image_size.y};
-    return evaluate_camera_ray(camera, image_uv, lens_uv);
+    return eval_ray(camera, image_uv, lens_uv);
 }
 
 // Evaluates the microfacet_brdf at a location.
-material_point evaluate_material_point(const yocto_scene& scene,
+material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord) {
     auto point     = material_point{};
     point.emission = material.emission;

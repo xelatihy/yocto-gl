@@ -2081,7 +2081,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
         } else {
             auto persp           = &gcam->perspective;
             camera.lens_aperture = 0;
-            set_camera_perspectivey(
+            set_perspectivey(
                 camera, persp->yfov, persp->aspect_ratio, float_max);
         }
         scene.cameras.push_back(camera);
@@ -2340,7 +2340,7 @@ static void scene_to_gltf(const yocto_scene& scene, json& js) {
         if (!camera.orthographic) {
             cjs["type"]         = "perspective";
             auto& pcjs          = cjs["perspective"];
-            pcjs["yfov"]        = get_camera_fovy(camera);
+            pcjs["yfov"]        = camera_fovy(camera);
             pcjs["aspectRatio"] = camera.film_width / camera.film_height;
             pcjs["znear"]       = 0.01f;
         } else {
@@ -2762,10 +2762,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             if (aspect < 0) aspect = last_film_aspect;
             if (aspect < 0) aspect = 1;
             if (aspect >= 1) {
-                set_camera_perspectivey(camera, radians(perspective.fov),
+                set_perspectivey(camera, radians(perspective.fov),
                     aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
             } else {
-                set_camera_perspectivex(camera, radians(perspective.fov),
+                set_perspectivex(camera, radians(perspective.fov),
                     aspect, clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
             }
         } else if (holds_alternative<pbrt_realistic_camera>(pcamera)) {
@@ -3289,11 +3289,11 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
     auto  from       = camera.frame.o;
     auto  to         = camera.frame.o - camera.frame.z;
     auto  up         = camera.frame.y;
-    auto  image_size = get_camera_image_size(camera, {0, 720});
+    auto  image_size = camera_image_size(camera, {0, 720});
     print(fs, "LookAt {} {} {} {} {} {} {} {} {}\n", from.x, from.y, from.z,
         to.x, to.y, to.z, up.x, up.y, up.z);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",
-        get_camera_fovy(camera) * 180 / pif);
+        camera_fovy(camera) * 180 / pif);
 
     // save renderer
     print(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");

@@ -131,7 +131,7 @@ void load_island_cameras(
     camera.focus_distance = js.at("centerOfInterest").get<float>();
     // camera.lens_aperture  = js.at("lensRadius").get<float>();
     camera.film_height = camera.film_width / js.at("ratio").get<float>();
-    print_info("{} {} {}", get_camera_fovx(camera), get_camera_fovy(camera),
+    print_info("{} {} {}", camera_fovx(camera), camera_fovy(camera),
         js.at("fov").get<float>() * pif / 180);
     auto from             = js.at("eye").get<vec3f>();
     auto to               = js.at("look").get<vec3f>();

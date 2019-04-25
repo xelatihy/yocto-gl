@@ -191,16 +191,16 @@ trace_point make_trace_point(const yocto_scene& scene,
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
     auto  point    = trace_point{};
-    point.position = evaluate_instance_position(
+    point.position = eval_position(
         scene, instance, intersection.element_id, intersection.element_uv);
-    point.normal      = evaluate_instance_normal(scene, instance,
+    point.normal      = eval_normal(scene, instance,
         intersection.element_id, intersection.element_uv,
         trace_non_rigid_frames);
     auto texturecoord = eval_texturecoord(
         shape, intersection.element_id, intersection.element_uv);
     auto color = eval_color(
         shape, intersection.element_id, intersection.element_uv);
-    auto material_point = evaluate_material_point(
+    auto material_point = eval_material(
         scene, material, texturecoord);
     std::tie(point.material, point.volume) = make_trace_material(
         material_point, color);
@@ -210,7 +210,7 @@ trace_point make_trace_point(const yocto_scene& scene,
         point.normal = -shading_direction;
     } else {
         if (material.normal_texture >= 0) {
-            point.normal = evaluate_instance_perturbed_normal(scene, instance,
+            point.normal = eval_perturbed_normal(scene, instance,
                 intersection.element_id, intersection.element_uv,
                 material_point.normalmap, trace_non_rigid_frames);
         }
@@ -237,7 +237,7 @@ bool trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
 // Sample camera
 ray3f sample_camera_ray(const yocto_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
-    return evaluate_camera_ray(
+    return eval_ray(
         camera, ij, image_size, puv, sample_disk(luv));
 }
 
@@ -1045,15 +1045,15 @@ float sample_scattering_direction_pdf(const trace_material& material,
 #endif
 
 // Sample pdf for an environment.
-float sample_environment_direction_pdf(const yocto_scene& scene,
+float sample_environment_pdf(const yocto_scene& scene,
     const trace_lights& lights, int environment_id, const vec3f& incoming) {
     auto& environment = scene.environments[environment_id];
     if (environment.emission_texture >= 0) {
         auto& elements_cdf =
             lights.environment_texture_cdf[environment.emission_texture];
         auto& emission_texture = scene.textures[environment.emission_texture];
-        auto  size             = get_texture_size(emission_texture);
-        auto  texcoord         = evaluate_environment_texturecoord(
+        auto  size             = texture_size(emission_texture);
+        auto  texcoord         = eval_texturecoord(
             environment, incoming);
         auto i    = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
         auto j    = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
@@ -1069,7 +1069,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 }
 
 // Picks a point on an environment.
-vec3f sample_environment_direction(const yocto_scene& scene,
+vec3f sample_environment(const yocto_scene& scene,
     const trace_lights& lights, int environment_id, float rel,
     const vec2f& ruv) {
     auto& environment = scene.environments[environment_id];
@@ -1078,10 +1078,10 @@ vec3f sample_environment_direction(const yocto_scene& scene,
             lights.environment_texture_cdf[environment.emission_texture];
         auto& emission_texture = scene.textures[environment.emission_texture];
         auto  idx  = sample_discrete(elements_cdf, rel);
-        auto  size = get_texture_size(emission_texture);
+        auto  size = texture_size(emission_texture);
         auto  u    = (idx % size.x + 0.5f) / size.x;
         auto  v    = (idx / size.x + 0.5f) / size.y;
-        return evaluate_environment_direction(environment, {u, v});
+        return eval_direction(environment, {u, v});
     } else {
         return sample_sphere(ruv);
     }
@@ -1097,7 +1097,7 @@ vec3f sample_instance_direction(const yocto_scene& scene,
     auto [element_id, element_uv] = sample_shape(
         shape, elements_cdf, rel, ruv);
     return normalize(
-        evaluate_instance_position(scene, instance, element_id, element_uv) -
+        eval_position(scene, instance, element_id, element_uv) -
         p);
 }
 
@@ -1119,9 +1119,9 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
             break;
         // accumulate pdf
         auto& instance       = scene.instances[isec.instance_id];
-        auto  light_position = evaluate_instance_position(
+        auto  light_position = eval_position(
             scene, instance, isec.element_id, isec.element_uv);
-        auto light_normal = evaluate_instance_normal(scene, instance,
+        auto light_normal = eval_normal(scene, instance,
             isec.element_id, isec.element_uv, trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = elements_cdf.back();
@@ -1146,7 +1146,7 @@ vec3f sample_lights_direction(const yocto_scene& scene,
     } else {
         auto environment =
             lights.environments[light_id - (int)lights.instances.size()];
-        return sample_environment_direction(
+        return sample_environment(
             scene, lights, environment, rel, ruv);
     }
 }
@@ -1161,7 +1161,7 @@ float sample_lights_direction_pdf(const yocto_scene& scene,
             scene, lights, instance, bvh, position, direction);
     }
     for (auto environment : lights.environments) {
-        pdf += sample_environment_direction_pdf(
+        pdf += sample_environment_pdf(
             scene, lights, environment, direction);
     }
     pdf *= sample_uniform_pdf<float>(
@@ -1405,7 +1405,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             auto intersection = bvh_intersection{};
             if (!trace_ray(scene, bvh, ray, intersection)) {
                 radiance += weight *
-                            evaluate_environment_emission(scene, ray.d);
+                            eval_environment(scene, ray.d);
                 break;
             }
             hit = true;
@@ -1577,7 +1577,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         // intersect next point
         auto intersection = bvh_intersection{};
         if (!trace_ray(scene, bvh, ray, intersection)) {
-            radiance += weight * evaluate_environment_emission(scene, ray.d);
+            radiance += weight * eval_environment(scene, ray.d);
             break;
         }
         hit = true;
@@ -1633,7 +1633,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         auto intersection = bvh_intersection{};
         if (!trace_ray(scene, bvh, position, direction, intersection)) {
             radiance += weight *
-                        evaluate_environment_emission(scene, direction);
+                        eval_environment(scene, direction);
             break;
         }
         hit = true;
@@ -1704,12 +1704,12 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {frontfacing, 1};
         }
         case trace_falsecolor_type::gnormal: {
-            auto normal = evaluate_instance_element_normal(
+            auto normal = eval_element_normal(
                 scene, instance, intersection.element_id, true);
             return {normal * 0.5f + 0.5f, 1};
         }
         case trace_falsecolor_type::gfrontfacing: {
-            auto normal = evaluate_instance_element_normal(
+            auto normal = eval_element_normal(
                 scene, instance, intersection.element_id, true);
             auto outgoing    = -direction;
             auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
@@ -1893,7 +1893,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
         if (environment.emission == zero3f) continue;
         lights.environments.push_back(environment_id);
         if (environment.emission_texture >= 0) {
-            compute_environment_texels_cdf(scene, environment,
+            sample_environment_cdf(scene, environment,
                 lights.environment_texture_cdf[environment.emission_texture]);
         }
     }
@@ -1902,7 +1902,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_params& params) {
-    auto image_size = get_camera_image_size(
+    auto image_size = camera_image_size(
         scene.cameras.at(params.camera_id), params.image_size);
     auto image = yocto::image{image_size, zero4f};
     auto state = trace_state{};
@@ -1942,7 +1942,7 @@ void trace_image_async_start(image<vec4f>& image, trace_state& state,
     vector<future<void>>& futures, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue, const trace_params& params) {
     auto& camera     = scene.cameras.at(params.camera_id);
-    auto  image_size = get_camera_image_size(camera, params.image_size);
+    auto  image_size = camera_image_size(camera, params.image_size);
     image            = {image_size, zero4f};
     state            = trace_state{};
     init_trace_state(state, image_size, params.random_seed);

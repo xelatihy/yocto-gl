@@ -409,7 +409,7 @@ float            sample_shape_pdf(const yocto_shape& shape,
                const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
 // Evaluate a texture.
-vec2i get_texture_size(const yocto_texture& texture);
+vec2i texture_size(const yocto_texture& texture);
 vec4f lookup_texture(
     const yocto_texture& texture, int i, int j, bool ldr_as_linear = false);
 vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
@@ -422,31 +422,31 @@ float eval_voltexture(const yocto_voltexture& texture,
     bool no_interpolation = false, bool clamp_to_edge = false);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float get_camera_fovx(const yocto_camera& camera);
-float get_camera_fovy(const yocto_camera& camera);
-float get_camera_aspect(const yocto_camera& camera);
-vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size);
-void  set_camera_perspectivey(yocto_camera& camera, float fovy, float aspect,
+float camera_fovx(const yocto_camera& camera);
+float camera_fovy(const yocto_camera& camera);
+float camera_aspect(const yocto_camera& camera);
+vec2i camera_image_size(const yocto_camera& camera, const vec2i& size);
+void  set_perspectivey(yocto_camera& camera, float fovy, float aspect,
      float focus, float height = 0.024f);
-void  set_camera_perspectivex(yocto_camera& camera, float fovx, float aspect,
+void  set_perspectivex(yocto_camera& camera, float fovx, float aspect,
      float focus, float width = 0.036f);
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
-void set_camera_view_from_bbox(yocto_camera& camera, const bbox3f& bbox,
+void set_view(yocto_camera& camera, const bbox3f& bbox,
     const vec3f& view_direction = zero3f, float width = 0, float height = 0,
     float focal = 0);
 
 // Generates a ray from a camera image coordinate and lens coordinates.
-ray3f evaluate_camera_ray(
+ray3f eval_ray(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv);
 // Generates a ray from a camera for pixel `image_ij`, the image size,
 // the sub-pixel coordinates `pixel_uv` and the lens coordinates `lens_uv`
 // and the image resolution `image_size`.
-ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& image_ij,
+ray3f eval_ray(const yocto_camera& camera, const vec2i& image_ij,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
 // Generates a ray from a camera for pixel index `idx`, the image size,
 // the sub-pixel coordinates `pixel_uv` and the lens coordinates `lens_uv`.
-ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
+ray3f eval_ray(const yocto_camera& camera, int idx,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
 
 // Material values packed into a convenience structure.
@@ -465,44 +465,44 @@ struct material_point {
     vec3f volume_density  = {0, 0, 0};
     float volume_phaseg   = 0;
 };
-material_point evaluate_material_point(const yocto_scene& scene,
+material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
-vec3f evaluate_instance_position(const yocto_scene& scene,
+vec3f eval_position(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_normal(const yocto_scene& scene,
+vec3f eval_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     bool non_rigid_frame = false);
-vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
+vec3f eval_perturbed_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     const vec3f& normalmap, bool non_rigid_frame = false);
 // Instance element values.
-vec3f evaluate_instance_element_normal(const yocto_scene& scene,
+vec3f eval_element_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id,
     bool non_rigid_frame = false);
 
 // Environment texture coordinates from the incoming direction.
-vec2f evaluate_environment_texturecoord(
+vec2f eval_texturecoord(
     const yocto_environment& environment, const vec3f& direction);
 // Evaluate the incoming direction from the element_uv.
-vec3f evaluate_environment_direction(
+vec3f eval_direction(
     const yocto_environment& environment, const vec2f& environment_uv);
 // Evaluate the environment emission.
-vec3f evaluate_environment_emission(const yocto_scene& scene,
+vec3f eval_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vec3f& direction);
 // Evaluate all environment emission.
-vec3f evaluate_environment_emission(
+vec3f eval_environment(
     const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
-void  compute_environment_texels_cdf(const yocto_scene& scene,
+void  sample_environment_cdf(const yocto_scene& scene,
      const yocto_environment& environment, vector<float>& texels_cdf);
-vec3f sample_environment_direction(const yocto_scene& scene,
+vec3f sample_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     float re, const vec2f& ruv);
-float sample_environment_direction_pdf(const yocto_scene& scene,
+float sample_environment_pdf(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     const vec3f& direction);
 

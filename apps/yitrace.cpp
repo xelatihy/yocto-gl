@@ -161,7 +161,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
     current_sample = 0;
 
     auto& camera     = scene.cameras.at(trace_prms.camera_id);
-    auto  image_size = get_camera_image_size(camera, trace_prms.image_size);
+    auto  image_size = camera_image_size(camera, trace_prms.image_size);
     state            = trace_state{};
     init_trace_state(state, image_size, trace_prms.random_seed);
     auto regions = vector<image_region>{};
@@ -612,7 +612,7 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     scn.load_done  = true;
-                    scn.image_size = get_camera_image_size(
+                    scn.image_size = camera_image_size(
                         scn.scene.cameras[scn.trace_prms.camera_id],
                         scn.trace_prms.image_size);
                     scn.render.resize(scn.image_size);
@@ -781,7 +781,7 @@ void update(app_state& app) {
             case app_task_type::render_image: {
                 log_info("start rendering {}", scn.filename);
                 scn.render_done = false;
-                scn.image_size  = get_camera_image_size(
+                scn.image_size  = camera_image_size(
                     scn.scene.cameras[scn.trace_prms.camera_id],
                     scn.trace_prms.image_size);
                 if (scn.lights.instances.empty() &&
@@ -885,7 +885,7 @@ void run_ui(app_state& app) {
                 ij.y >= scn.render.size().y) {
                 auto& camera = scn.scene.cameras.at(
                     scn.trace_prms.camera_id);
-                auto ray = evaluate_camera_ray(
+                auto ray = eval_ray(
                     camera, ij, scn.render.size(), {0.5f, 0.5f}, zero2f);
                 if (auto isec = bvh_intersection{};
                     intersect_bvh(scn.scene, scn.bvh, ray, isec)) {
