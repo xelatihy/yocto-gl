@@ -1194,9 +1194,8 @@ inline vec3f get_russian_roulette_albedo(const trace_volume& volume) {
 
 // Russian roulette. Returns whether to stop and its pdf.
 #if YOCTO_RUSSIAN_ROULETTE_MODE == 0
-pair<bool, float> sample_russian_roulette(const vec3f& albedo,
-    const vec3f& weight, int bounce, float rr, int min_bounce = 4,
-    float rr_threadhold = 1) {
+pair<bool, float> sample_russian_roulette(const vec3f& weight, int bounce,
+    float rr, int min_bounce = 4, float rr_threadhold = 1) {
     if (max(weight) < rr_threadhold && bounce > min_bounce) {
         auto rr_prob = max((float)0.05, 1 - max(weight));
         return {rr < rr_prob, 1 - rr_prob};
@@ -1292,13 +1291,13 @@ tuple<vec3f, vec3f, float> sample_next_direction(const yocto_scene& scene,
     auto weight_sum = weight_smooth + weight_delta;
     weight_smooth /= weight_sum;
     weight_delta /= weight_sum;
-    auto mode = trace_scattering_mode::smooth;
+    auto mode     = trace_scattering_mode::smooth;
     auto mode_pdf = 0.0f;
-    if(get_random_float(rng) < weight_delta) {
-        mode = trace_scattering_mode::delta;
+    if (get_random_float(rng) < weight_delta) {
+        mode     = trace_scattering_mode::delta;
         mode_pdf = weight_delta;
     } else {
-        mode = trace_scattering_mode::smooth;
+        mode     = trace_scattering_mode::smooth;
         mode_pdf = weight_smooth;
     }
     // continue path
@@ -1422,8 +1421,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
             // russian roulette
             auto [rr_stop, rr_pdf] = sample_russian_roulette(
-                get_russian_roulette_albedo(point.material), weight, bounce,
-                get_random_float(rng));
+                weight, bounce, get_random_float(rng));
             if (rr_stop) break;
             weight /= rr_pdf;
             if (weight == zero3f) break;
@@ -1498,8 +1496,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
                 // russian roulette
                 auto [rr_stop, rr_pdf] = sample_russian_roulette(
-                    get_russian_roulette_albedo(vsdfs), weight, bounce,
-                    get_random_float(rng));
+                    weight, bounce, get_random_float(rng));
                 if (rr_stop) break;
                 weight /= rr_pdf;
                 if (weight == zero3f) break;
@@ -1529,8 +1526,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
                 // russian roulette
                 auto [rr_stop, rr_pdf] = sample_russian_roulette(
-                    get_russian_roulette_albedo(point.material), weight, bounce,
-                    get_random_float(rng));
+                    weight, bounce, get_random_float(rng));
                 if (rr_stop) break;
                 weight /= rr_pdf;
                 if (weight == zero3f) break;
@@ -1597,8 +1593,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 
         // russian roulette
         auto [rr_stop, rr_pdf] = sample_russian_roulette(
-            get_russian_roulette_albedo(point.material), weight, bounce,
-            get_random_float(rng));
+            weight, bounce, get_random_float(rng));
         if (rr_stop) break;
         weight /= rr_pdf;
         if (weight == zero3f) break;
