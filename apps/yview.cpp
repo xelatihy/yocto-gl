@@ -764,7 +764,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             auto positions     = vector<vec3f>{};
             auto normals       = vector<vec3f>{};
             auto texturecoords = vector<vec2f>{};
-            convert_facevarying(quads, positions, normals, texturecoords,
+            split_facevarying(quads, positions, normals, texturecoords,
                 shape.quads_positions, shape.quads_normals,
                 shape.quads_texturecoords, shape.positions, shape.normals,
                 shape.texturecoords);

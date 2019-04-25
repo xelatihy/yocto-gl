@@ -320,15 +320,15 @@ vec2f compute_animation_range(
 void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf) {
     cdf.clear();
     if (!shape.triangles.empty()) {
-        sample_triangles_element_cdf(cdf, shape.triangles, shape.positions);
+        sample_triangles_cdf(cdf, shape.triangles, shape.positions);
     } else if (!shape.quads.empty()) {
-        sample_quads_element_cdf(cdf, shape.quads, shape.positions);
+        sample_quads_cdf(cdf, shape.quads, shape.positions);
     } else if (!shape.lines.empty()) {
-        sample_lines_element_cdf(cdf, shape.lines, shape.positions);
+        sample_lines_cdf(cdf, shape.lines, shape.positions);
     } else if (!shape.points.empty()) {
-        sample_points_element_cdf(cdf, shape.points.size());
+        sample_points_cdf(cdf, shape.points.size());
     } else if (!shape.quads_positions.empty()) {
-        sample_quads_element_cdf(cdf, shape.quads_positions, shape.positions);
+        sample_quads_cdf(cdf, shape.quads_positions, shape.positions);
     } else {
         throw runtime_error("empty shape");
     }
@@ -340,15 +340,15 @@ pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
     // TODO: implement sampling without cdf
     if (elements_cdf.empty()) return {};
     if (!shape.triangles.empty()) {
-        return sample_triangles_element(elements_cdf, re, ruv);
+        return sample_triangles(elements_cdf, re, ruv);
     } else if (!shape.quads.empty()) {
-        return sample_quads_element(elements_cdf, re, ruv);
+        return sample_quads(elements_cdf, re, ruv);
     } else if (!shape.lines.empty()) {
-        return {sample_lines_element(elements_cdf, re, ruv.x).first, ruv};
+        return {sample_lines(elements_cdf, re, ruv.x).first, ruv};
     } else if (!shape.points.empty()) {
-        return {sample_points_element(elements_cdf, re), ruv};
+        return {sample_points(elements_cdf, re), ruv};
     } else if (!shape.quads_positions.empty()) {
-        return sample_quads_element(elements_cdf, re, ruv);
+        return sample_quads(elements_cdf, re, ruv);
     } else {
         return {0, zero2f};
     }

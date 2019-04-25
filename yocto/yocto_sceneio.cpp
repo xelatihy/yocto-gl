@@ -312,7 +312,7 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
 void load_scene_shape(yocto_shape& shape, const string& dirname) {
     if (is_shape_preset_filename(shape.uri)) {
         auto [type, nfilename] = get_shape_preset_type(shape.uri);
-        make_shape_preset(shape.points, shape.lines, shape.triangles,
+        make_preset(shape.points, shape.lines, shape.triangles,
             shape.quads, shape.quads_positions, shape.quads_normals,
             shape.quads_texturecoords, shape.positions, shape.normals,
             shape.texturecoords, shape.colors, shape.radius, type);
@@ -336,7 +336,7 @@ void save_scene_shape(const yocto_shape& shape, const string& dirname) {
 void load_scene_subdiv(yocto_subdiv& subdiv, const string& dirname) {
     if (is_shape_preset_filename(subdiv.uri)) {
         auto [type, nfilename] = get_shape_preset_type(subdiv.uri);
-        make_shape_preset(subdiv.points, subdiv.lines, subdiv.triangles,
+        make_preset(subdiv.points, subdiv.lines, subdiv.triangles,
             subdiv.quads, subdiv.quads_positions, subdiv.quads_normals,
             subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
             subdiv.texturecoords, subdiv.colors, subdiv.radius, type);
@@ -1362,7 +1362,7 @@ struct load_obj_scene_callbacks : obj_callbacks {
         auto shape = yocto_shape();
         shape.uri  = oproc.name;
         if (oproc.type == "floor") {
-            make_floor_shape(shape.quads, shape.positions, shape.normals,
+            make_floor(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords,
                 {oproc.level < 0 ? 1 : pow2(oproc.level),
                     oproc.level < 0 ? 20 : pow2(oproc.level)},
@@ -2487,7 +2487,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
             auto texturecoords = vector<vec2f>{};
             auto quads         = vector<vec4i>{};
             auto triangles     = vector<vec3i>{};
-            convert_facevarying(quads, positions, normals, texturecoords,
+            split_facevarying(quads, positions, normals, texturecoords,
                 shape.quads_positions, shape.quads_normals,
                 shape.quads_texturecoords, shape.positions, shape.normals,
                 shape.texturecoords);
@@ -2587,7 +2587,7 @@ void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
         auto texturecoords = vector<vec2f>{};
         auto quads         = vector<vec4i>{};
         auto triangles     = vector<vec3i>{};
-        convert_facevarying(quads, positions, normals, texturecoords,
+        split_facevarying(quads, positions, normals, texturecoords,
             shape.quads_positions, shape.quads_normals,
             shape.quads_texturecoords, shape.positions, shape.normals,
             shape.texturecoords);
@@ -2843,12 +2843,12 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
             }
         } else if (holds_alternative<pbrt_sphere_shape>(pshape)) {
             auto& sphere = get<pbrt_sphere_shape>(pshape);
-            make_uvsphere_shape(shape.quads, shape.positions, shape.normals,
+            make_uvsphere(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, {64, 32}, 2 * sphere.radius, {1, 1},
                 identity_frame3f);
         } else if (holds_alternative<pbrt_disk_shape>(pshape)) {
             auto& disk = get<pbrt_disk_shape>(pshape);
-            make_uvdisk_shape(shape.quads, shape.positions, shape.normals,
+            make_uvdisk(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, {32, 16}, 2 * disk.radius, {1, 1},
                 identity_frame3f);
         } else {
@@ -3163,7 +3163,7 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
             shape.uri   = name;
             auto dir    = normalize(distant.from - distant.to);
             auto size   = distant_dist * sin(5 * pif / 180);
-            make_quad_shape(shape.quads, shape.positions, shape.normals,
+            make_rect(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, {1, 1}, {size, size}, {1, 1},
                 identity_frame3f);
             scene.materials.push_back({});
@@ -3185,7 +3185,7 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
             auto& shape = scene.shapes.back();
             shape.uri   = name;
             auto size   = 0.01f;
-            make_sphere_shape(shape.quads, shape.positions, shape.normals,
+            make_sphere(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
@@ -3205,7 +3205,7 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
             auto& shape = scene.shapes.back();
             shape.uri   = name;
             auto size   = 0.01f;
-            make_sphere_shape(shape.quads, shape.positions, shape.normals,
+            make_sphere(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
@@ -3224,7 +3224,7 @@ struct load_pbrt_scene_callbacks : pbrt_callbacks {
             auto& shape = scene.shapes.back();
             shape.uri   = name;
             auto size   = 0.01f;
-            make_sphere_shape(shape.quads, shape.positions, shape.normals,
+            make_sphere(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();

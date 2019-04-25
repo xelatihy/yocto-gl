@@ -155,7 +155,7 @@ void load_disney_island_lights(
             scene.materials.push_back(material);
             auto shape = yocto_shape{};
             shape.uri  = "shapes/lights/" + name + ".ply";
-            make_quad_shape(shape.quads, shape.positions, shape.normals,
+            make_rect(shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, {1, 1},
                 {ljs.at("width").get<float>(), ljs.at("height").get<float>()},
                 {1, 1}, identity_frame3f);
@@ -448,7 +448,7 @@ void add_disney_island_shape(yocto_scene& scene, const string& parent_name,
                 auto split_positions = vector<vec3f>{};
                 auto split_normals   = vector<vec3f>{};
                 auto split_texcoords = vector<vec2f>{};
-                convert_facevarying(split_quads, split_positions, split_normals,
+                split_facevarying(split_quads, split_positions, split_normals,
                     split_texcoords, shape.quads_positions, shape.quads_normals,
                     shape.quads_texturecoords, shape.positions, shape.normals,
                     shape.texturecoords);
