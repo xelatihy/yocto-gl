@@ -619,8 +619,8 @@ void trim_memory(yocto_scene& scene) {
         shape.tangentspaces.shrink_to_fit();
     }
     for (auto& texture : scene.textures) {
-        texture.ldr_image._pixels.shrink_to_fit();
-        texture.hdr_image._pixels.shrink_to_fit();
+        texture.ldr_image.shrink_to_fit();
+        texture.hdr_image.shrink_to_fit();
     }
     scene.cameras.shrink_to_fit();
     scene.shapes.shrink_to_fit();
