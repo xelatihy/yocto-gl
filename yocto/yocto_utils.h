@@ -131,8 +131,7 @@ namespace yocto {
 
 // We use the fmt library as a backend for printing. These are just helpers to
 // make printing easier in console apps.
-template <typename... Args>
-inline void println(string_view format_str, const Args&... args);
+
 // Helper to indicate info printing in console apps.
 template <typename... Args>
 inline void print_info(string_view format_str, const Args&... args);
@@ -321,14 +320,6 @@ inline void parallel_foreach(const vector<T>& values, const Func& func,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// We use the fmt library as a backend for printing. These are just helpers to
-// make printing easier in console apps.
-template <typename... Args>
-inline void println(string_view format_str, const Args&... args) {
-    print(format_str, args...);
-    print("\n");
-}
-
 // Helper to indicate info printing in console apps.
 template <typename... Args>
 inline void print_info(string_view format_str, const Args&... args) {
@@ -407,7 +398,7 @@ inline auto log_timed(string_view format_str, const Args&... args) {
 namespace fmt {
 // Formatter for math types
 template <typename T, int N>
-struct formatter_base {
+struct _formatter_base {
     template <typename ParseContext>
     constexpr auto parse(ParseContext& ctx) {
         return ctx.begin();
@@ -431,18 +422,19 @@ struct formatter_base {
 };
 // Formatter for math types
 template <typename T, int N>
-struct formatter<yocto::vec<T, N>> : formatter_base<yocto::vec<T, N>, N> {};
+struct formatter<yocto::vec<T, N>> : _formatter_base<yocto::vec<T, N>, N> {};
 template <typename T, int N, int M>
-struct formatter<yocto::mat<T, N, M>> : formatter_base<yocto::mat<T, N, M>, M> {
+struct formatter<yocto::mat<T, N, M>> : _formatter_base<yocto::mat<T, N, M>, M> {
 };
 template <typename T, int N>
 struct formatter<yocto::affine<T, N>>
-    : formatter_base<yocto::affine<T, N>, N + 1> {};
+    : _formatter_base<yocto::affine<T, N>, N + 1> {};
 template <typename T, int N>
 struct formatter<yocto::frame<T, N>>
-    : formatter_base<yocto::frame<T, N>, N + 1> {};
+    : _formatter_base<yocto::frame<T, N>, N + 1> {};
 template <typename T, int N>
-struct formatter<yocto::bbox<T, N>> : formatter_base<yocto::bbox<T, N>, 2> {};
+struct formatter<yocto::bbox<T, N>> : _formatter_base<yocto::bbox<T, N>, 2> {};
+
 }  // namespace fmt
 
 // -----------------------------------------------------------------------------
