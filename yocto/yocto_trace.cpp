@@ -1178,23 +1178,19 @@ inline vec3f get_russian_roulette_albedo(const trace_volume& volume) {
     return volume.albedo;
 }
 
-// Russian roulette mode: 0: albedo, 1: weight, 2: pbrt
-#define YOCTO_RUSSIAN_ROULETTE_MODE 2
-/*
-   Russian roulette on weight causes extremely high noise with prefectly
-   transmissive materials because when reaching transparent surfaces (where you
-   just want to continue path tracing) a path may still have low weight, hence
-   high probability of beign terminated by Russian roulette.
-   This causes to throw away almost every path that passes through multiple
-   transparent surfaces: the path gets terminated very often, but it doesn't
-   carry any radiance yet (since we don't split to trace lights) hence gives no
-   contribution.
-   The current fix is to sample Russian roulette on albedo, which is a local
-   property and does not depend on the path. In this way we ensure that a path
-   has always low propabilty of being terminated on transmissive surfaces.
-
-                                                    giacomo, 3-04-2019
-*/
+// Russian roulette mode: 0: albedo, 1: weight (pbrt)
+#define YOCTO_RUSSIAN_ROULETTE_MODE 1
+// Russian roulette on weight causes extremely high noise with prefectly
+// transmissive materials because when reaching transparent surfaces (where you
+// just want to continue path tracing) a path may still have low weight, hence
+// high probability of beign terminated by Russian roulette.
+// This causes to throw away almost every path that passes through multiple
+// transparent surfaces: the path gets terminated very often, but it doesn't
+// carry any radiance yet (since we don't split to trace lights) hence gives no
+// contribution.
+// The current fix is to sample Russian roulette on albedo, which is a local
+// property and does not depend on the path. In this way we ensure that a path
+// has always low propabilty of being terminated on transmissive surfaces.
 
 // Russian roulette. Returns whether to stop and its pdf.
 pair<bool, float> sample_russian_roulette(const vec3f& albedo,
@@ -1205,18 +1201,6 @@ pair<bool, float> sample_russian_roulette(const vec3f& albedo,
     auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
     return {rr < rr_prob, 1 - rr_prob};
 #elif YOCTO_RUSSIAN_ROULETTE_MODE == 1
-    if (bounce <= min_bounce) return {false, 1};
-    auto rr_prob = 1.0f - min(max(weight), 0.95f);
-    return rr < rr_prob;
-#elif YOCTO_RUSSIAN_ROULETTE_MODE == 2
-    // from pbrt
-    // Spectrum rrBeta = beta * etaScale;
-    // if (rrBeta.MaxComponentValue() < rrThreshold && bounces > 3) {
-    //     Float q = std::max((Float).05, 1 - rrBeta.MaxComponentValue());
-    //     if (sampler.Get1D() < q) break;
-    //     beta /= 1 - q;
-    //     DCHECK(!std::isinf(beta.y()));
-    // }
     if (max(weight) < rr_threadhold && bounce > min_bounce) {
         auto rr_prob = max((float)0.05, 1 - max(weight));
         return {rr < rr_prob, 1 - rr_prob};
