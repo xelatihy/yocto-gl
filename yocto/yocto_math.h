@@ -118,6 +118,7 @@ using std::sin;
 using std::sqrt;
 using std::swap;
 using std::tan;
+using std::to_string;
 
 using std::array;
 using std::exception;
@@ -1103,26 +1104,6 @@ constexpr vec2i get_image_coords(const vec<T, 2>& mouse_pos,
 template <typename T>
 constexpr void update_image_view(vec<T, 2>& center, T& scale,
     const vec2i& imsize, const vec2i& winsize, bool zoom_to_fit);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// VALUES TO STRING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-inline string to_string(const T& value);
-template <typename T, size_t N>
-inline string to_string(const array<T, N>& value);
-template <typename T, int N>
-inline string to_string(const vec<T, N>& value);
-template <typename T, int N>
-inline string to_string(const frame<T, N>& value);
-template <typename T, int N>
-inline string to_string(const affine<T, N>& value);
-template <typename T, int N, int M>
-inline string to_string(const mat<T, N, M>& value);
 
 }  // namespace yocto
 
@@ -2764,43 +2745,6 @@ constexpr void update_image_view(vec<T, 2>& center, T& scale,
         if (winsize.x >= imsize.x * scale) center.x = winsize.x / 2;
         if (winsize.y >= imsize.y * scale) center.y = winsize.y / 2;
     }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF VALUES TO STRING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-inline string to_string(const T& value) {
-    return std::to_string(value);
-}
-template <typename T, size_t N>
-inline string to_string(const array<T, N>& value) {
-    auto str = ""s;
-    for (auto i = 0; i < N; i++) {
-        if (i) str += ' ';
-        str += to_string(value[i]);
-    }
-    return str;
-}
-template <typename T, int N>
-inline string to_string(const vec<T, N>& value) {
-    return to_string((const array<T, N>&)value);
-}
-template <typename T, int N>
-inline string to_string(const frame<T, N>& value) {
-    return to_string((const array<T, N*(N + 1)>&)value);
-}
-template <typename T, int N>
-inline string to_string(const affine<T, N>& value) {
-    return to_string((const array<T, N*(N + 1)>&)value);
-}
-template <typename T, int N, int M>
-inline string to_string(const mat<T, N, M>& value) {
-    return to_string((const array<T, N * M>&)value);
 }
 
 }  // namespace yocto

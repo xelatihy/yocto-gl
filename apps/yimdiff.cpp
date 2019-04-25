@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
         }
     }
     if (max(max_diff) > threshold) {
-        print_info("image max difference: " + to_string(max_diff));
+        print_info("image max difference: {}", max_diff);
         print_fatal("image content differs");
     }
 
