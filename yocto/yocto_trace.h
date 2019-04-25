@@ -122,7 +122,7 @@ enum struct trace_sampler_type {
     falsecolor,  // false color rendering
 };
 
-const auto trace_sampler_type_names = vector<string>{
+const auto trace_sampler_names = vector<string>{
     "path", "naive", "eyelight", "falsecolor"};
 
 // Type of tracing algorithm to use
@@ -145,7 +145,7 @@ enum struct trace_falsecolor_type {
     highlight,     // highlight
 };
 
-const auto trace_falsecolor_type_names = vector<string>{"normal", "frontfacing",
+const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "albedo", "texcoord", "color", "emission",
     "diffuse", "specular", "transmission", "roughness", "material", "shape",
     "instance", "highlight"};
@@ -184,30 +184,30 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-int trace_image_samples(image<vec4f>& image, trace_state& state,
+int trace_samples(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_params& params);
 
-// Progressively compute an image by calling trace_image_region multiple times.
-// Compared to `trace_image_samples` this always runs serially and is helpful
+// Progressively compute an image by calling trace_region multiple times.
+// Compared to `trace_samples` this always runs serially and is helpful
 // when building async applications.
-void trace_image_region(image<vec4f>& image, trace_state& state,
+void trace_region(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     const image_region& region, int num_samples,
     const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
-void trace_image_async_start(image<vec4f>& image, trace_state& state,
+void trace_async_start(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     vector<future<void>>& futures, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue, const trace_params& params);
 // Stop the asynchronous renderer.
-void trace_image_async_stop(vector<future<void>>& futures,
+void trace_async_stop(vector<future<void>>& futures,
     concurrent_queue<image_region>& queue, const trace_params& params);
 
 // Check is a sampler requires lights
-bool is_trace_sampler_lit(const trace_params& params);
+bool is_sampler_lit(const trace_params& params);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
@@ -222,20 +222,20 @@ void                     reset_trace_stats();
 namespace yocto {
 
 // Phong exponent to roughness.
-float convert_specular_exponent_to_roughness(float n);
+float exponent_to_roughness(float n);
 
 // Specular to fresnel eta.
-void compute_fresnel_from_specular(
+void specular_to_eta(
     const vec3f& specular, vec3f& es, vec3f& esk);
-float convert_specular_to_eta(const vec3f& specular);
+float specular_to_eta(const vec3f& specular);
 // Compute the fresnel term for dielectrics.
-vec3f evaluate_fresnel_dielectric(float direction_cosine, const vec3f& eta);
+vec3f fresnel_dielectric(float direction_cosine, const vec3f& eta);
 // Compute the fresnel term for metals.
-vec3f evaluate_fresnel_metal(
+vec3f fresnel_metal(
     float direction_cosine, const vec3f& eta, const vec3f& etak);
 // Schlick approximation of Fresnel term, optionally weighted by roughness;
-vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine);
-vec3f evaluate_fresnel_schlick(
+vec3f fresnel_schlick(const vec3f& specular, float direction_cosine);
+vec3f fresnel_schlick(
     const vec3f& specular, float direction_cosine, float roughness);
 
 // Evaluates the microfacet distribution and geometric term (ggx or beckman).
@@ -254,7 +254,7 @@ vec3f sample_phase_function(float vg, const vec2f& u);
 float evaluate_phase_function(float cos_theta, float vg);
 
 // Get a complex ior table with keys the metal name and values (eta, etak)
-bool get_metal_ior(const string& element, vec3f& eta, vec3f& etak);
+bool get_metal_eta(const string& element, vec3f& eta, vec3f& etak);
 
 }  // namespace yocto
 

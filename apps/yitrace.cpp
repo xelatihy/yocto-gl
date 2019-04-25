@@ -178,7 +178,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
             [num_samples, &trace_prms, &tonemap_prms, &render, &display,
                 &scene, &lights, &bvh, &state,
                 &queue](const image_region& region) {
-                trace_image_region(render, state, scene, bvh, lights, region,
+                trace_region(render, state, scene, bvh, lights, region,
                     num_samples, trace_prms);
                 tonemap(display, render, region, tonemap_prms);
                 queue.push(region);
@@ -280,9 +280,9 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_slider_opengl_widget(
             win, "nsamples", trace_prms.num_samples, 16, 4096);
         draw_combobox_opengl_widget(win, "tracer",
-            (int&)trace_prms.sampler_type, trace_sampler_type_names);
+            (int&)trace_prms.sampler_type, trace_sampler_names);
         draw_combobox_opengl_widget(win, "false color",
-            (int&)trace_prms.falsecolor_type, trace_falsecolor_type_names);
+            (int&)trace_prms.falsecolor_type, trace_falsecolor_names);
         draw_slider_opengl_widget(
             win, "nbounces", trace_prms.max_bounces, 1, 10);
         draw_slider_opengl_widget(
@@ -786,7 +786,7 @@ void update(app_state& app) {
                     scn.trace_prms.image_size);
                 if (scn.lights.instances.empty() &&
                     scn.lights.environments.empty() &&
-                    is_trace_sampler_lit(scn.trace_prms)) {
+                    is_sampler_lit(scn.trace_prms)) {
                     log_info(
                         "no lights presents, switching to eyelight shader");
                     scn.trace_prms.sampler_type =
@@ -917,14 +917,14 @@ int main(int argc, char* argv[]) {
 
     // names for enums
     auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
-    for (auto type = 0; type < trace_sampler_type_names.size(); type++) {
-        trace_sampler_type_namemap[trace_sampler_type_names[type]] =
+    for (auto type = 0; type < trace_sampler_names.size(); type++) {
+        trace_sampler_type_namemap[trace_sampler_names[type]] =
             (trace_sampler_type)type;
     }
     auto trace_falsecolor_type_namemap =
         std::map<string, trace_falsecolor_type>{};
-    for (auto type = 0; type < trace_falsecolor_type_names.size(); type++) {
-        trace_falsecolor_type_namemap[trace_falsecolor_type_names[type]] =
+    for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
+        trace_falsecolor_type_namemap[trace_falsecolor_names[type]] =
             (trace_falsecolor_type)type;
     }
 

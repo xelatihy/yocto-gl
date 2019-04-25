@@ -53,14 +53,14 @@ int main(int argc, char* argv[]) {
 
     // names for enums
     auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
-    for (auto type = 0; type < trace_sampler_type_names.size(); type++) {
-        trace_sampler_type_namemap[trace_sampler_type_names[type]] =
+    for (auto type = 0; type < trace_sampler_names.size(); type++) {
+        trace_sampler_type_namemap[trace_sampler_names[type]] =
             (trace_sampler_type)type;
     }
     auto trace_falsecolor_type_namemap =
         std::map<string, trace_falsecolor_type>{};
-    for (auto type = 0; type < trace_falsecolor_type_names.size(); type++) {
-        trace_falsecolor_type_namemap[trace_falsecolor_type_names[type]] =
+    for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
+        trace_falsecolor_type_namemap[trace_falsecolor_names[type]] =
             (trace_falsecolor_type)type;
     }
 
@@ -168,7 +168,7 @@ int main(int argc, char* argv[]) {
 
     // fix renderer type if no lights
     if ((lights.instances.empty() && lights.environments.empty()) &&
-        is_trace_sampler_lit(trace_prms)) {
+        is_sampler_lit(trace_prms)) {
         print_info("no lights presents, switching to eyelight shader");
         trace_prms.sampler_type = trace_sampler_type::eyelight;
     }
@@ -203,7 +203,7 @@ int main(int argc, char* argv[]) {
             {
                 auto timer = print_timed("rendering camera {} [{}/{}]",
                     trace_prms.camera_id, sample, trace_prms.num_samples);
-                trace_image_samples(
+                trace_samples(
                     render, state, scene, bvh, lights, sample, trace_prms);
             }
             if (save_batch) {

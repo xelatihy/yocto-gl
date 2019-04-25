@@ -253,7 +253,7 @@ vec3f evaluate_emission(const trace_volume& volume, const vec3f& outgoing) {
 #if YOCTO_TRACE_THINSHEET
 
 // Schlick approximation of the Fresnel term
-vec3f evaluate_fresnel_schlick(
+vec3f fresnel_schlick(
     const vec3f& specular, const vec3f& half_vector, const vec3f& incoming) {
     if (specular == zero3f) return zero3f;
     return specular +
@@ -261,10 +261,10 @@ vec3f evaluate_fresnel_schlick(
                pow(clamp(1.0f - fabs(dot(half_vector, incoming)), 0.0f, 1.0f),
                    5.0f);
 }
-vec3f evaluate_fresnel_schlick(const vec3f& specular, const vec3f& half_vector,
+vec3f fresnel_schlick(const vec3f& specular, const vec3f& half_vector,
     const vec3f& incoming, float roughness) {
     if (specular == zero3f) return zero3f;
-    auto fks = evaluate_fresnel_schlick(specular, half_vector, incoming);
+    auto fks = fresnel_schlick(specular, half_vector, incoming);
     return specular +
            (fks - specular) * (1 - sqrt(clamp(roughness, 0.0f, 1.0f)));
 }
@@ -331,7 +331,7 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
     if (brdf.diffuse != zero3f &&
         dot(normal, outgoing) * dot(normal, incoming) > 0) {
         auto half_vector = normalize(incoming + outgoing);
-        auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(brdf.specular,
+        auto fresnel = (brdf.fresnel) ? fresnel_schlick(brdf.specular,
                                             half_vector, outgoing)
                                       : brdf.specular;
         brdf_cosine += brdf.diffuse * (1 - fresnel) / pif;
@@ -341,7 +341,7 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
     if (brdf.specular != zero3f &&
         dot(normal, outgoing) * dot(normal, incoming) > 0) {
         auto half_vector = normalize(incoming + outgoing);
-        auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(brdf.specular,
+        auto fresnel = (brdf.fresnel) ? fresnel_schlick(brdf.specular,
                                             half_vector, outgoing)
                                       : brdf.specular;
         auto D = evaluate_ggx_distribution(brdf.roughness, normal, half_vector);
@@ -358,7 +358,7 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
         auto ir = (dot(normal, outgoing) >= 0) ? reflect(-incoming, normal)
                                                : reflect(-incoming, -normal);
         auto half_vector = normalize(ir + outgoing);
-        auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(brdf.specular,
+        auto fresnel = (brdf.fresnel) ? fresnel_schlick(brdf.specular,
                                             half_vector, outgoing)
                                       : brdf.specular;
         auto D = evaluate_ggx_distribution(brdf.roughness, normal, half_vector);
@@ -371,13 +371,13 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
     // refraction through rough surface
     if (brdf.transmission != zero3f && brdf.refract &&
         dot(normal, outgoing) * dot(normal, incoming) < 0) {
-        auto eta            = convert_specular_to_eta(brdf.specular);
+        auto eta            = specular_to_eta(brdf.specular);
         auto halfway_vector = dot(normal, outgoing) > 0
                                   ? -(outgoing + eta * incoming)
                                   : (eta * outgoing + incoming);
         auto halfway = normalize(halfway_vector);
 
-        auto fresnel = evaluate_fresnel_schlick(
+        auto fresnel = fresnel_schlick(
             brdf.specular, halfway, outgoing);
         auto D = evaluate_ggx_distribution(brdf.roughness, normal, halfway);
         auto G = evaluate_ggx_shadowing(
@@ -404,7 +404,7 @@ vec3f evaluate_delta_brdf_cosine(const microfacet_brdf& brdf,
     // specular
     if (brdf.specular != zero3f &&
         dot(normal, outgoing) * dot(normal, incoming) > 0) {
-        auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
+        auto fresnel = (brdf.fresnel) ? fresnel_schlick(
                                             brdf.specular, normal, outgoing)
                                       : brdf.specular;
         microfacet_brdf += fresnel;
@@ -413,7 +413,7 @@ vec3f evaluate_delta_brdf_cosine(const microfacet_brdf& brdf,
     // transmission (thin sheet)
     if (brdf.transmission != zero3f &&
         dot(normal, outgoing) * dot(normal, incoming) < 0) {
-        auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
+        auto fresnel = (brdf.fresnel) ? fresnel_schlick(
                                             brdf.specular, normal, outgoing)
                                       : brdf.specular;
         microfacet_brdf += brdf.transmission * (1 - fresnel);
@@ -426,7 +426,7 @@ vec3f evaluate_delta_brdf_cosine(const microfacet_brdf& brdf,
 vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (is_brdf_delta(brdf)) return zero3f;
-    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
+    auto fresnel = (brdf.fresnel) ? fresnel_schlick(
                                         brdf.specular, normal, outgoing)
                                   : brdf.specular;
     auto prob = vec3f{max(brdf.diffuse * (1 - fresnel)), max(fresnel),
@@ -473,7 +473,7 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
                       : make_frame_fromz(zero3f, -normal);
         auto halfway = transform_direction(fp, hl);
 
-        auto eta = convert_specular_to_eta(brdf.specular);
+        auto eta = specular_to_eta(brdf.specular);
         return refract(
             outgoing, halfway, dot(normal, outgoing) >= 0 ? 1 / eta : eta);
     }
@@ -487,7 +487,7 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
 vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (!is_brdf_delta(brdf)) return zero3f;
-    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
+    auto fresnel = (brdf.fresnel) ? fresnel_schlick(
                                         brdf.specular, normal, outgoing)
                                   : brdf.specular;
     auto prob = vec3f{0, max(fresnel), max(brdf.transmission * (1 - fresnel))};
@@ -508,10 +508,10 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
              rnl < prob.x + prob.y + prob.z) {
         if (dot(normal, outgoing) >= 0) {
             return refract(
-                outgoing, normal, 1 / convert_specular_to_eta(brdf.specular));
+                outgoing, normal, 1 / specular_to_eta(brdf.specular));
         } else {
             return refract(
-                outgoing, -normal, convert_specular_to_eta(brdf.specular));
+                outgoing, -normal, specular_to_eta(brdf.specular));
         }
     }
     // no sampling
@@ -524,7 +524,7 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
 float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (is_brdf_delta(brdf)) return 0;
-    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
+    auto fresnel = (brdf.fresnel) ? fresnel_schlick(
                                         brdf.specular, normal, outgoing)
                                   : brdf.specular;
     auto prob = vec3f{max(brdf.diffuse * (1 - fresnel)), max(fresnel),
@@ -556,7 +556,7 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
     // refraction through rough surface
     if (brdf.transmission != zero3f && brdf.refract &&
         dot(normal, outgoing) * dot(normal, incoming) < 0) {
-        auto eta            = convert_specular_to_eta(brdf.specular);
+        auto eta            = specular_to_eta(brdf.specular);
         auto outgoing_up    = dot(normal, outgoing) > 0;
         auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
                                           : (eta * outgoing + incoming);
@@ -576,7 +576,7 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (!is_brdf_delta(brdf)) return 0;
-    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
+    auto fresnel = (brdf.fresnel) ? fresnel_schlick(
                                         brdf.specular, normal, outgoing)
                                   : brdf.specular;
     auto prob = vec3f{0, max(fresnel), max(brdf.transmission * (1 - fresnel))};
@@ -600,7 +600,7 @@ float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
 #else
 
 // Schlick approximation of the Fresnel term
-vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine) {
+vec3f fresnel_schlick(const vec3f& specular, float direction_cosine) {
     if (specular == zero3f) return zero3f;
     return specular +
            (1 - specular) *
@@ -695,7 +695,7 @@ trace_scattering_weights compute_scattering_weights(
     const trace_material& material, const vec3f& normal, const vec3f& outgoing,
     trace_scattering_mode mode) {
     // fresnel
-    auto fresnel = evaluate_fresnel_schlick(
+    auto fresnel = fresnel_schlick(
         material.specular_color, abs(dot(normal, outgoing)));
 
     // load weights
@@ -785,7 +785,7 @@ vec3f evaluate_scattering(const trace_material& material, const vec3f& normal_,
     if (material.diffuse_color != zero3f &&
         mode == trace_scattering_mode::smooth && outgoing_up == incoming_up) {
         auto halfway = normalize(incoming + outgoing);
-        auto fresnel = evaluate_fresnel_schlick(
+        auto fresnel = fresnel_schlick(
             material.specular_color, dot(halfway, outgoing));
         brdf_cosine += material.diffuse_color * (1 - fresnel) / pif *
                        abs(dot(normal, incoming));
@@ -795,7 +795,7 @@ vec3f evaluate_scattering(const trace_material& material, const vec3f& normal_,
     if (material.specular_color != zero3f && material.specular_roughness &&
         mode == trace_scattering_mode::smooth && outgoing_up == incoming_up) {
         auto halfway = normalize(incoming + outgoing);
-        auto fresnel = evaluate_fresnel_schlick(
+        auto fresnel = fresnel_schlick(
             material.specular_color, dot(halfway, outgoing));
         auto D = evaluate_microfacet_distribution(
             material.specular_roughness, normal, halfway);
@@ -809,7 +809,7 @@ vec3f evaluate_scattering(const trace_material& material, const vec3f& normal_,
     // specular reflection
     if (material.specular_color != zero3f && !material.specular_roughness &&
         mode == trace_scattering_mode::delta && outgoing_up == incoming_up) {
-        auto fresnel = evaluate_fresnel_schlick(
+        auto fresnel = fresnel_schlick(
             material.specular_color, dot(normal, outgoing));
         brdf_cosine += fresnel;
     }
@@ -819,12 +819,12 @@ vec3f evaluate_scattering(const trace_material& material, const vec3f& normal_,
         material.transmission_roughness &&
         mode == trace_scattering_mode::smooth && outgoing_up != incoming_up) {
         if (material.transmission_refract) {
-            auto eta = convert_specular_to_eta(material.specular_color);
+            auto eta = specular_to_eta(material.specular_color);
             auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
                                               : (eta * outgoing + incoming);
             auto halfway = normalize(halfway_vector);
 
-            auto F = evaluate_fresnel_schlick(
+            auto F = fresnel_schlick(
                 material.specular_color, dot(halfway, outgoing));
             auto D = evaluate_microfacet_distribution(
                 material.transmission_roughness, normal, halfway);
@@ -844,7 +844,7 @@ vec3f evaluate_scattering(const trace_material& material, const vec3f& normal_,
         } else {
             auto ir      = reflect(-incoming, normal);
             auto halfway = normalize(ir + outgoing);
-            auto F       = evaluate_fresnel_schlick(
+            auto F       = fresnel_schlick(
                 material.specular_color, dot(halfway, outgoing));
             auto D = evaluate_microfacet_distribution(
                 material.transmission_roughness, normal, halfway);
@@ -862,11 +862,11 @@ vec3f evaluate_scattering(const trace_material& material, const vec3f& normal_,
         !material.transmission_roughness &&
         mode == trace_scattering_mode::delta && outgoing_up != incoming_up) {
         if (material.transmission_refract) {
-            auto fresnel = evaluate_fresnel_schlick(
+            auto fresnel = fresnel_schlick(
                 material.specular_color, dot(normal, outgoing));
             brdf_cosine += material.transmission_color * (1 - fresnel);
         } else {
-            auto fresnel = evaluate_fresnel_schlick(
+            auto fresnel = fresnel_schlick(
                 material.specular_color, dot(normal, outgoing));
             brdf_cosine += material.transmission_color * (1 - fresnel);
         }
@@ -925,7 +925,7 @@ vec3f sample_scattering_direction(const trace_material& material,
         if (material.transmission_refract) {
             auto halfway = sample_microfacet_distribution(
                 material.transmission_roughness, normal, rn);
-            auto eta = convert_specular_to_eta(material.specular_color);
+            auto eta = specular_to_eta(material.specular_color);
             return refract(outgoing, halfway, outgoing_up ? 1 / eta : eta);
         } else {
             auto halfway = sample_microfacet_distribution(
@@ -940,7 +940,7 @@ vec3f sample_scattering_direction(const trace_material& material,
         !material.transmission_roughness &&
         mode == trace_scattering_mode::delta && rnl <= weight_sum) {
         if (material.transmission_refract) {
-            auto eta = convert_specular_to_eta(material.specular_color);
+            auto eta = specular_to_eta(material.specular_color);
             return refract(outgoing, normal, outgoing_up ? 1 / eta : eta);
         } else {
             return -outgoing;
@@ -999,7 +999,7 @@ float sample_scattering_direction_pdf(const trace_material& material,
         material.transmission_roughness &&
         mode == trace_scattering_mode::smooth && outgoing_up != incoming_up) {
         if (material.transmission_refract) {
-            auto eta = convert_specular_to_eta(material.specular_color);
+            auto eta = specular_to_eta(material.specular_color);
             auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
                                               : (eta * outgoing + incoming);
             auto halfway = normalize(halfway_vector);
@@ -1793,7 +1793,7 @@ trace_sampler_func get_trace_sampler_func(const trace_params& params) {
 }
 
 // Check is a sampler requires lights
-bool is_trace_sampler_lit(const trace_params& params) {
+bool is_sampler_lit(const trace_params& params) {
     switch (params.sampler_type) {
         case trace_sampler_type::path: return true;
         case trace_sampler_type::naive: return true;
@@ -1812,7 +1812,7 @@ trace_pixel& get_trace_pixel(trace_state& state, int i, int j) {
 }
 
 // Trace a block of samples
-void trace_image_region(image<vec4f>& image, trace_state& state,
+void trace_region(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     const image_region& region, int num_samples,
     const trace_params& params) {
@@ -1912,7 +1912,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 
     parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, &params](
                                   const image_region& region) {
-        trace_image_region(image, state, scene, bvh, lights, region,
+        trace_region(image, state, scene, bvh, lights, region,
             params.num_samples, params);
     });
 
@@ -1920,7 +1920,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-int trace_image_samples(image<vec4f>& image, trace_state& state,
+int trace_samples(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_params& params) {
     auto regions = vector<image_region>{};
@@ -1930,14 +1930,14 @@ int trace_image_samples(image<vec4f>& image, trace_state& state,
     parallel_foreach(
         regions, [&image, &state, &scene, &bvh, &lights, num_samples, &params](
                      const image_region& region) {
-            trace_image_region(
+            trace_region(
                 image, state, scene, bvh, lights, region, num_samples, params);
         });
     return current_sample + num_samples;
 }
 
 // Starts an anyncrhounous renderer.
-void trace_image_async_start(image<vec4f>& image, trace_state& state,
+void trace_async_start(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     vector<future<void>>& futures, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue, const trace_params& params) {
@@ -1963,7 +1963,7 @@ void trace_image_async_start(image<vec4f>& image, trace_state& state,
                 regions,
                 [num_samples, &params, &image, &scene, &lights, &bvh, &state,
                     &queue](const image_region& region) {
-                    trace_image_region(image, state, scene, bvh, lights, region,
+                    trace_region(image, state, scene, bvh, lights, region,
                         num_samples, params);
                     queue.push(region);
                 },
@@ -1974,7 +1974,7 @@ void trace_image_async_start(image<vec4f>& image, trace_state& state,
 }
 
 // Stop the asynchronous renderer.
-void trace_image_async_stop(vector<future<void>>& futures,
+void trace_async_stop(vector<future<void>>& futures,
     concurrent_queue<image_region>& queue, const trace_params& params) {
     if (params.cancel_flag) *params.cancel_flag = true;
     for (auto& f : futures) f.get();
@@ -1999,12 +1999,12 @@ void reset_trace_stats() {
 namespace yocto {
 
 // Phong exponent to roughness.
-float convert_specular_exponent_to_roughness(float exponent) {
+float exponent_to_roughness(float exponent) {
     return sqrtf(2 / (exponent + 2));
 }
 
 // Specular to fresnel eta.
-void compute_fresnel_from_specular(
+void specular_to_eta(
     const vec3f& specular, vec3f& es, vec3f& esk) {
     es  = {(1 + sqrt(specular.x)) / (1 - sqrt(specular.x)),
         (1 + sqrt(specular.y)) / (1 - sqrt(specular.y)),
@@ -2013,14 +2013,14 @@ void compute_fresnel_from_specular(
 }
 
 // Specular to  eta.
-float convert_specular_to_eta(const vec3f& specular) {
+float specular_to_eta(const vec3f& specular) {
     auto f0 = (specular.x + specular.y + specular.z) / 3;
     return (1 + sqrt(f0)) / (1 - sqrt(f0));
 }
 
 // Compute the fresnel term for dielectrics. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-vec3f evaluate_fresnel_dielectric(float cosw, const vec3f& eta_) {
+vec3f fresnel_dielectric(float cosw, const vec3f& eta_) {
     auto eta = eta_;
     if (cosw < 0) {
         eta  = vec3f{1, 1, 1} / eta;
@@ -2047,8 +2047,8 @@ vec3f evaluate_fresnel_dielectric(float cosw, const vec3f& eta_) {
 
 // Compute the fresnel term for metals. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-vec3f evaluate_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
-    if (etak == zero3f) return evaluate_fresnel_dielectric(cosw, eta);
+vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
+    if (etak == zero3f) return fresnel_dielectric(cosw, eta);
 
     cosw       = clamp(cosw, (float)-1, (float)1);
     auto cos2  = cosw * cosw;
@@ -2160,7 +2160,7 @@ const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
 };
 
 // Get a complex ior table with keys the metal name and values (eta, etak)
-bool get_metal_ior(const string& name, vec3f& eta, vec3f& etak) {
+bool get_metal_eta(const string& name, vec3f& eta, vec3f& etak) {
     if (metal_ior_table.find(name) == metal_ior_table.end()) return false;
     auto value = metal_ior_table.at(name);
     eta        = value.first;
