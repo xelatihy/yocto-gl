@@ -55,9 +55,7 @@ atomic<uint64_t> _trace_nrays{0};
 // Surface material
 struct trace_material {
     // emission
-    vec3f emission  = zero3f;
-    vec3f specular  = zero3f;
-    float roughness = 1;
+    vec3f emission_color  = zero3f;
 
     // scattering
     vec3f diffuse_color          = zero3f;
@@ -124,9 +122,7 @@ pair<trace_material, trace_volume> make_trace_material(
         material.opacity_color = vec3f{1 - opacity};
     }
     if (emission != zero3f) {
-        material.emission  = emission * xyz(shape_color);
-        material.roughness = 1;
-        material.specular  = zero3f;
+        material.emission_color  = emission * xyz(shape_color);
     }
     if (point.volume_density != zero3f) {
         volume.emission = point.volume_emission;
@@ -201,7 +197,7 @@ ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
 
 vec3f eval_emission(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing) {
-    return material.emission;
+    return material.emission_color;
 }
 
 vec3f eval_emission(const trace_volume& volume, const vec3f& outgoing) {
@@ -1668,7 +1664,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {xyz(color), 1};
         }
         case trace_falsecolor_type::emission: {
-            return {point.material.emission, 1};
+            return {point.material.emission_color, 1};
         }
         case trace_falsecolor_type::diffuse: {
             return {point.material.diffuse_color, 1};
@@ -1698,7 +1694,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::highlight: {
-            auto emission = point.material.emission;
+            auto emission = point.material.emission_color;
             auto outgoing = -direction;
             if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
             return {emission * abs(dot(outgoing, point.normal)), 1};
