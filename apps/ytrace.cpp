@@ -146,11 +146,11 @@ int main(int argc, char* argv[]) {
     // add components
     if (validate) {
         auto timer = print_timed("validating scene");
-        print_validation_errors(scene);
+        print_validation(scene);
     }
 
     // add sky
-    if (add_skyenv) add_sky_environment(scene);
+    if (add_skyenv) add_sky(scene);
 
     // build bvh
     auto bvh = bvh_scene{};

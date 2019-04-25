@@ -156,7 +156,7 @@ void load_island_lights(
             auto shape = yocto_shape{};
             shape.uri  = "shapes/lights/" + name + ".ply";
             make_rect(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, {1, 1},
+                shape.texcoords, {1, 1},
                 {ljs.at("width").get<float>(), ljs.at("height").get<float>()},
                 {1, 1}, identity_frame3f);
             scene.shapes.push_back(shape);
@@ -372,8 +372,8 @@ struct load_island_shape_callbacks : obj_callbacks {
                         norm_map.at(verts[i].normal)});
         }
         if (dmaterials.back().color_ptex_faces) {
-            auto offset = (int)shapes.back().texturecoords.size();
-            auto face   = (int)shapes.back().quads_texturecoords.size();
+            auto offset = (int)shapes.back().texcoords.size();
+            auto face   = (int)shapes.back().quads_texcoords.size();
             face %= dmaterials.back().color_ptex_faces;
             auto face_i = face % dmaterials.back().color_ptex_rowfaces;
             auto face_j = face / dmaterials.back().color_ptex_rowfaces;
@@ -386,11 +386,11 @@ struct load_island_shape_callbacks : obj_callbacks {
                                        dmaterials.back().color_ptex_tilesize);
                 auto u0 = (face_i + 0) * du + dpu, v0 = (face_j + 0) * dv + dpv;
                 auto u1 = (face_i + 1) * du - dpu, v1 = (face_j + 1) * dv - dpv;
-                shapes.back().texturecoords.push_back({u0, v0});
-                shapes.back().texturecoords.push_back({u1, v0});
-                shapes.back().texturecoords.push_back({u1, v1});
-                shapes.back().texturecoords.push_back({u0, v1});
-                shapes.back().quads_texturecoords.push_back(
+                shapes.back().texcoords.push_back({u0, v0});
+                shapes.back().texcoords.push_back({u1, v0});
+                shapes.back().texcoords.push_back({u1, v1});
+                shapes.back().texcoords.push_back({u0, v1});
+                shapes.back().quads_texcoords.push_back(
                     {offset + 0, offset + 1, offset + 2, offset + 3});
             } else {
                 throw io_error("BAD PTEX TEXCOORDS");
@@ -450,16 +450,16 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
                 auto split_texcoords = vector<vec2f>{};
                 split_facevarying(split_quads, split_positions, split_normals,
                     split_texcoords, shape.quads_positions, shape.quads_normals,
-                    shape.quads_texturecoords, shape.positions, shape.normals,
-                    shape.texturecoords);
+                    shape.quads_texcoords, shape.positions, shape.normals,
+                    shape.texcoords);
                 shape.quads               = split_quads;
                 shape.positions           = split_positions;
                 shape.normals             = split_normals;
-                shape.texturecoords       = split_texcoords;
+                shape.texcoords       = split_texcoords;
                 shape.quads_positions     = {};
                 shape.quads_normals       = {};
-                shape.quads_texturecoords = {};
-                if (shape.texturecoords.empty()) {
+                shape.quads_texcoords = {};
+                if (shape.texcoords.empty()) {
                     auto all_triangles = true;
                     for (auto& q : shape.quads) {
                         if (q.z != q.w) {
@@ -782,7 +782,7 @@ void load_island_curvetube(const string& filename, const string& dirname,
                 auto qquads = vector<vec4i>{
                     {0, 1, 5, 4}, {1, 2, 6, 5}, {2, 3, 7, 6}, {3, 0, 4, 7}};
                 merge_quads(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, qquads, qpositions, qnormals, {});
+                    shape.texcoords, qquads, qpositions, qnormals, {});
             }
         }
         scene.shapes.push_back(shape);
@@ -976,14 +976,14 @@ void load_island_scene(const std::string& filename, yocto_scene& scene,
 
     // fix scene
     if (scene.uri == "") scene.uri = get_filename(filename);
-    add_missing_cameras(scene);
-    add_missing_materials(scene);
+    add_cameras(scene);
+    add_materials(scene);
     normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
 
     // print stats
-    print_info("{}", format_scene_stats(scene).c_str());
+    print_info("{}", format_stats(scene).c_str());
 }
 
 }  // namespace yocto
@@ -1054,11 +1054,11 @@ int main(int argc, char** argv) {
     // validate scene
     if (validate) {
         auto timer = print_timed("validating scene");
-        print_validation_errors(scene);
+        print_validation(scene);
     }
 
     // print info
-    if (info) print_info("{}", format_scene_stats(scene));
+    if (info) print_info("{}", format_stats(scene));
 
 // add missing mesh names if necessary
 #if 0

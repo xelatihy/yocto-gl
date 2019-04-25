@@ -102,11 +102,11 @@ int main(int argc, char** argv) {
     // validate scene
     if (validate) {
         auto timer = print_timed("validating scene");
-        print_validation_errors(scene);
+        print_validation(scene);
     }
 
     // print info
-    if (info) print_info("{}", format_scene_stats(scene));
+    if (info) print_info("{}", format_stats(scene));
 
     // change texture names
     if (uniform_txt) {

@@ -47,17 +47,17 @@ using std::unordered_map;
 namespace yocto {
 
 // Computes a shape bounding box.
-bbox3f compute_shape_bounds(const yocto_shape& shape) {
+bbox3f compute_bounds(const yocto_shape& shape) {
     auto bbox = invalid_bbox3f;
     for (auto p : shape.positions) bbox += p;
     return bbox;
 }
 
 // Updates the scene and scene's instances bounding boxes
-bbox3f compute_scene_bounds(const yocto_scene& scene) {
+bbox3f compute_bounds(const yocto_scene& scene) {
     auto shape_bbox = vector<bbox3f>(scene.shapes.size());
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++)
-        shape_bbox[shape_id] = compute_shape_bounds(scene.shapes[shape_id]);
+        shape_bbox[shape_id] = compute_bounds(scene.shapes[shape_id]);
     auto bbox = invalid_bbox3f;
     for (auto& instance : scene.instances) {
         bbox += transform_bbox(instance.frame, shape_bbox[instance.shape]);
@@ -66,7 +66,7 @@ bbox3f compute_scene_bounds(const yocto_scene& scene) {
 }
 
 // Compute vertex normals
-void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals) {
+void compute_normals(const yocto_shape& shape, vector<vec3f>& normals) {
     normals.assign(shape.positions.size(), {0, 0, 1});
     if (!shape.points.empty()) {
     } else if (!shape.lines.empty()) {
@@ -84,57 +84,57 @@ void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals) {
 
 // Apply subdivision and displacement rules.
 void subdivide_shape(yocto_shape& shape, int subdivision_level,
-    bool catmull_clark, bool compute_normals) {
+    bool catmull_clark, bool update_normals) {
     if (!subdivision_level) return;
     if (!shape.points.empty()) {
         throw runtime_error("point subdivision not supported");
     } else if (!shape.lines.empty()) {
         for (auto l = 0; l < subdivision_level; l++) {
             subdivide_lines(shape.lines, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius);
+                shape.texcoords, shape.colors, shape.radius);
         }
     } else if (!shape.triangles.empty()) {
         for (auto l = 0; l < subdivision_level; l++) {
             subdivide_triangles(shape.triangles, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius);
+                shape.texcoords, shape.colors, shape.radius);
         }
     } else if (!shape.quads.empty() && !catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
             subdivide_quads(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius);
+                shape.texcoords, shape.colors, shape.radius);
         }
     } else if (!shape.quads.empty() && catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
             subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius);
+                shape.texcoords, shape.colors, shape.radius);
         }
     } else if (!shape.quads_positions.empty() && !catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
             subdivide_quads(shape.quads_positions, shape.positions);
             subdivide_quads(shape.quads_normals, shape.normals);
-            subdivide_quads(shape.quads_texturecoords, shape.texturecoords);
+            subdivide_quads(shape.quads_texcoords, shape.texcoords);
         }
     } else if (!shape.quads_positions.empty() && catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
             subdivide_catmullclark(shape.quads_positions, shape.positions);
             subdivide_catmullclark(
-                shape.quads_texturecoords, shape.texturecoords, true);
+                shape.quads_texcoords, shape.texcoords, true);
         }
     } else {
         throw runtime_error("empty shape");
     }
 
-    if (compute_normals) {
+    if (update_normals) {
         if (!shape.quads_positions.empty()) {
             shape.quads_normals = shape.quads_positions;
         }
-        compute_shape_normals(shape, shape.normals);
+        compute_normals(shape, shape.normals);
     }
 }
 // Apply displacement to a shape
 void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     float scale, bool update_normals) {
-    if (shape.texturecoords.empty()) {
+    if (shape.texcoords.empty()) {
         throw runtime_error("missing texture coordinates");
         return;
     }
@@ -142,14 +142,14 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     // simple case
     if (shape.quads_positions.empty()) {
         auto normals = shape.normals;
-        if (shape.normals.empty()) compute_shape_normals(shape, normals);
+        if (shape.normals.empty()) compute_normals(shape, normals);
         for (auto vid = 0; vid < shape.positions.size(); vid++) {
             shape.positions[vid] += normals[vid] * scale *
-                                    mean(xyz(evaluate_texture(displacement,
-                                        shape.texturecoords[vid])));
+                                    mean(xyz(eval_texture(displacement,
+                                        shape.texcoords[vid])));
         }
         if (update_normals || !shape.normals.empty()) {
-            compute_shape_normals(shape, shape.normals);
+            compute_normals(shape, shape.normals);
         }
     } else {
         // facevarying case
@@ -157,11 +157,11 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
         auto count  = vector<int>(shape.positions.size(), 0);
         for (auto fid = 0; fid < shape.quads_positions.size(); fid++) {
             auto qpos = shape.quads_positions[fid];
-            auto qtxt = shape.quads_texturecoords[fid];
+            auto qtxt = shape.quads_texcoords[fid];
             for (auto i = 0; i < 4; i++) {
                 offset[qpos[i]] += scale *
-                                   mean(xyz(evaluate_texture(displacement,
-                                       shape.texturecoords[qtxt[i]])));
+                                   mean(xyz(eval_texture(displacement,
+                                       shape.texcoords[qtxt[i]])));
                 count[qpos[i]] += 1;
             }
         }
@@ -172,7 +172,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
         }
         if (update_normals || !shape.normals.empty()) {
             shape.quads_normals = shape.quads_positions;
-            compute_shape_normals(shape, shape.normals);
+            compute_normals(shape, shape.normals);
         }
     }
 }
@@ -181,7 +181,7 @@ void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv) {
     auto& shape               = scene.shapes[subdiv.tesselated_shape];
     shape.positions           = subdiv.positions;
     shape.normals             = subdiv.normals;
-    shape.texturecoords       = subdiv.texturecoords;
+    shape.texcoords       = subdiv.texcoords;
     shape.colors              = subdiv.colors;
     shape.radius              = subdiv.radius;
     shape.points              = subdiv.points;
@@ -190,7 +190,7 @@ void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv) {
     shape.quads               = subdiv.quads;
     shape.quads_positions     = subdiv.quads_positions;
     shape.quads_normals       = subdiv.quads_normals;
-    shape.quads_texturecoords = subdiv.quads_texturecoords;
+    shape.quads_texcoords = subdiv.quads_texcoords;
     shape.lines               = subdiv.lines;
     if (subdiv.subdivision_level) {
         subdivide_shape(shape, subdiv.subdivision_level, subdiv.catmull_clark,
@@ -317,7 +317,7 @@ vec2f compute_animation_range(
 }
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf) {
+void sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf) {
     cdf.clear();
     if (!shape.triangles.empty()) {
         sample_triangles_cdf(cdf, shape.triangles, shape.positions);
@@ -335,7 +335,7 @@ void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf) {
 }
 
 // Sample a shape based on a distribution.
-pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
+pair<int, vec2f> sample_shape(const yocto_shape& shape,
     const vector<float>& elements_cdf, float re, const vec2f& ruv) {
     // TODO: implement sampling without cdf
     if (elements_cdf.empty()) return {};
@@ -354,7 +354,7 @@ pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
     }
 }
 
-float sample_shape_element_pdf(const yocto_shape& shape,
+float sample_shape_pdf(const yocto_shape& shape,
     const vector<float>& elements_cdf, int element_id,
     const vec2f& element_uv) {
     // prob triangle * area triangle = area triangle mesh
@@ -369,7 +369,7 @@ void compute_environment_texels_cdf(const yocto_scene& scene,
         return;
     }
     auto& texture = scene.textures[environment.emission_texture];
-    auto  size    = evaluate_texture_size(texture);
+    auto  size    = get_texture_size(texture);
     texels_cdf.resize(size.x * size.y);
     if (size != zero2i) {
         for (auto i = 0; i < texels_cdf.size(); i++) {
@@ -391,7 +391,7 @@ vec3f sample_environment_direction(const yocto_scene& scene,
     if (!texels_cdf.empty() && environment.emission_texture >= 0) {
         auto& texture = scene.textures[environment.emission_texture];
         auto  idx     = sample_discrete(texels_cdf, re);
-        auto  size    = evaluate_texture_size(texture);
+        auto  size    = get_texture_size(texture);
         auto  u       = (idx % size.x + 0.5f) / size.x;
         auto  v       = (idx / size.x + 0.5f) / size.y;
         return evaluate_environment_direction(environment, {u, v});
@@ -406,7 +406,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
     const vec3f& direction) {
     if (!texels_cdf.empty() && environment.emission_texture >= 0) {
         auto& texture  = scene.textures[environment.emission_texture];
-        auto  size     = evaluate_texture_size(texture);
+        auto  size     = get_texture_size(texture);
         auto  texcoord = evaluate_environment_texturecoord(
             environment, direction);
         auto i    = (int)(texcoord.x * size.x);
@@ -474,7 +474,7 @@ bool intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     return intersect_bvh(
         bvh, scene, ray, intersection, find_any, non_rigid_frames);
 }
-bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
+bool intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     int instance_id, const ray3f& ray, bvh_intersection& intersection,
     bool find_any, bool non_rigid_frames) {
     auto& instance = scene.instances[instance_id];
@@ -539,12 +539,12 @@ void rename_instances(yocto_scene& scene) {
 }
 
 // Add missing tangent space if needed.
-void add_missing_tangent_space(yocto_scene& scene) {
+void add_tangent_spaces(yocto_scene& scene) {
     for (auto& instance : scene.instances) {
         auto& material = scene.materials[instance.material];
         if (material.normal_texture < 0) continue;
         auto& shape = scene.shapes[instance.shape];
-        if (!shape.tangentspaces.empty() || shape.texturecoords.empty())
+        if (!shape.tangentspaces.empty() || shape.texcoords.empty())
             continue;
         if (!shape.triangles.empty()) {
             if (shape.normals.empty()) {
@@ -554,7 +554,7 @@ void add_missing_tangent_space(yocto_scene& scene) {
             }
             shape.tangentspaces.resize(shape.positions.size());
             compute_tangent_spaces(shape.tangentspaces, shape.triangles,
-                shape.positions, shape.normals, shape.texturecoords);
+                shape.positions, shape.normals, shape.texcoords);
         } else {
             throw runtime_error("type not supported");
         }
@@ -562,7 +562,7 @@ void add_missing_tangent_space(yocto_scene& scene) {
 }
 
 // Add missing materials.
-void add_missing_materials(yocto_scene& scene) {
+void add_materials(yocto_scene& scene) {
     auto material_id = -1;
     for (auto& instance : scene.instances) {
         if (instance.material >= 0) continue;
@@ -578,18 +578,18 @@ void add_missing_materials(yocto_scene& scene) {
 }
 
 // Add missing cameras.
-void add_missing_cameras(yocto_scene& scene) {
+void add_cameras(yocto_scene& scene) {
     if (scene.cameras.empty()) {
         auto camera = yocto_camera{};
         camera.uri  = "cameras/default.yaml";
         set_camera_view_from_bbox(
-            camera, compute_scene_bounds(scene), {0, 0, 1});
+            camera, compute_bounds(scene), {0, 0, 1});
         scene.cameras.push_back(camera);
     }
 }
 
 // Add a sky environment
-void add_sky_environment(yocto_scene& scene, float sun_angle) {
+void add_sky(yocto_scene& scene, float sun_angle) {
     auto texture = yocto_texture{};
     texture.uri  = "textures/sky.hdr";
     make_sunsky(texture.hdr_image, {1024, 512}, sun_angle);
@@ -610,10 +610,10 @@ void trim_memory(yocto_scene& scene) {
         shape.quads.shrink_to_fit();
         shape.quads_positions.shrink_to_fit();
         shape.quads_normals.shrink_to_fit();
-        shape.quads_texturecoords.shrink_to_fit();
+        shape.quads_texcoords.shrink_to_fit();
         shape.positions.shrink_to_fit();
         shape.normals.shrink_to_fit();
-        shape.texturecoords.shrink_to_fit();
+        shape.texcoords.shrink_to_fit();
         shape.colors.shrink_to_fit();
         shape.radius.shrink_to_fit();
         shape.tangentspaces.shrink_to_fit();
@@ -671,7 +671,7 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
 }
 
 // Logs validations errors
-void print_validation_errors(const yocto_scene& scene, bool skip_textures) {
+void print_validation(const yocto_scene& scene, bool skip_textures) {
     for (auto err : validate_scene(scene, skip_textures))
         printf("%s [validation]\n", err.c_str());
 }
@@ -684,7 +684,7 @@ void print_validation_errors(const yocto_scene& scene, bool skip_textures) {
 namespace yocto {
 
 // Shape element normal.
-vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id) {
+vec3f eval_element_normal(const yocto_shape& shape, int element_id) {
     auto norm = zero3f;
     if (!shape.triangles.empty()) {
         auto t = shape.triangles[element_id];
@@ -709,22 +709,22 @@ vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id) {
 }
 
 // Shape element normal.
-pair<vec3f, bool> evaluate_shape_element_tangentspace(
+pair<vec3f, bool> eval_element_tangents(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
     if (!shape.triangles.empty()) {
         auto t    = shape.triangles[element_id];
         auto norm = triangle_normal(
             shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
         auto txty = pair<vec3f, vec3f>();
-        if (shape.texturecoords.empty()) {
+        if (shape.texcoords.empty()) {
             txty = triangle_tangents_fromuv(shape.positions[t.x],
                 shape.positions[t.y], shape.positions[t.z], {0, 0}, {1, 0},
                 {0, 1});
         } else {
             txty = triangle_tangents_fromuv(shape.positions[t.x],
                 shape.positions[t.y], shape.positions[t.z],
-                shape.texturecoords[t.x], shape.texturecoords[t.y],
-                shape.texturecoords[t.z]);
+                shape.texcoords[t.x], shape.texcoords[t.y],
+                shape.texcoords[t.z]);
         }
         auto tx = txty.first, ty = txty.second;
         tx     = orthonormalize(tx, norm);
@@ -735,7 +735,7 @@ pair<vec3f, bool> evaluate_shape_element_tangentspace(
         auto norm = quad_normal(shape.positions[q.x], shape.positions[q.y],
             shape.positions[q.z], shape.positions[q.w]);
         auto txty = pair<vec3f, vec3f>();
-        if (shape.texturecoords.empty()) {
+        if (shape.texcoords.empty()) {
             txty = quad_tangents_fromuv(shape.positions[q.x],
                 shape.positions[q.y], shape.positions[q.z],
                 shape.positions[q.w], {0, 0}, {1, 0}, {0, 1}, {1, 1},
@@ -743,9 +743,9 @@ pair<vec3f, bool> evaluate_shape_element_tangentspace(
         } else {
             txty = quad_tangents_fromuv(shape.positions[q.x],
                 shape.positions[q.y], shape.positions[q.z],
-                shape.positions[q.w], shape.texturecoords[q.x],
-                shape.texturecoords[q.y], shape.texturecoords[q.z],
-                shape.texturecoords[q.w], element_uv);
+                shape.positions[q.w], shape.texcoords[q.x],
+                shape.texcoords[q.y], shape.texcoords[q.z],
+                shape.texcoords[q.w], element_uv);
         }
         auto tx = txty.first, ty = txty.second;
         tx     = orthonormalize(tx, norm);
@@ -756,18 +756,18 @@ pair<vec3f, bool> evaluate_shape_element_tangentspace(
         auto norm = quad_normal(shape.positions[q.x], shape.positions[q.y],
             shape.positions[q.z], shape.positions[q.w]);
         auto txty = pair<vec3f, vec3f>();
-        if (shape.texturecoords.empty()) {
+        if (shape.texcoords.empty()) {
             txty = quad_tangents_fromuv(shape.positions[q.x],
                 shape.positions[q.y], shape.positions[q.z],
                 shape.positions[q.w], {0, 0}, {1, 0}, {0, 1}, {1, 1},
                 element_uv);
         } else {
-            auto qt = shape.quads_texturecoords[element_id];
+            auto qt = shape.quads_texcoords[element_id];
             txty    = quad_tangents_fromuv(shape.positions[q.x],
                 shape.positions[q.y], shape.positions[q.z],
-                shape.positions[q.w], shape.texturecoords[qt.x],
-                shape.texturecoords[qt.y], shape.texturecoords[qt.z],
-                shape.texturecoords[qt.w], element_uv);
+                shape.positions[q.w], shape.texcoords[qt.x],
+                shape.texcoords[qt.y], shape.texcoords[qt.z],
+                shape.texcoords[qt.w], element_uv);
         }
         auto tx = txty.first, ty = txty.second;
         tx     = orthonormalize(tx, norm);
@@ -813,50 +813,50 @@ T evaluate_shape_elem(const yocto_shape& shape,
 }
 
 // Shape values interpolated using barycentric coordinates
-vec3f evaluate_shape_position(
+vec3f eval_position(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
     return evaluate_shape_elem(
         shape, shape.quads_positions, shape.positions, element_id, element_uv);
 }
-vec3f evaluate_shape_normal(
+vec3f eval_normal(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
     if (shape.normals.empty())
-        return evaluate_shape_element_normal(shape, element_id);
+        return eval_element_normal(shape, element_id);
     return normalize(evaluate_shape_elem(
         shape, shape.quads_normals, shape.normals, element_id, element_uv));
 }
-vec2f evaluate_shape_texturecoord(
+vec2f eval_texturecoord(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
-    if (shape.texturecoords.empty()) return element_uv;
-    return evaluate_shape_elem(shape, shape.quads_texturecoords,
-        shape.texturecoords, element_id, element_uv);
+    if (shape.texcoords.empty()) return element_uv;
+    return evaluate_shape_elem(shape, shape.quads_texcoords,
+        shape.texcoords, element_id, element_uv);
 }
-vec4f evaluate_shape_color(
+vec4f eval_color(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
     if (shape.colors.empty()) return {1, 1, 1, 1};
     return evaluate_shape_elem(shape, {}, shape.colors, element_id, element_uv);
 }
-float evaluate_shape_radius(
+float eval_radius(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
     if (shape.radius.empty()) return 0.001f;
     return evaluate_shape_elem(shape, {}, shape.radius, element_id, element_uv);
 }
-pair<vec3f, bool> evaluate_shape_tangentspace(
+pair<vec3f, bool> eval_tangsp(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
     if (shape.tangentspaces.empty())
-        return evaluate_shape_element_tangentspace(
+        return eval_element_tangents(
             shape, element_id, element_uv);
     auto tangsp = evaluate_shape_elem(
         shape, {}, shape.tangentspaces, element_id, element_uv);
     return {xyz(tangsp), tangsp.w < 0};
 }
 // Shading normals including material perturbations.
-vec3f evaluate_shape_perturbed_normal(const yocto_scene& scene,
+vec3f eval_perturbed_normal(const yocto_scene& scene,
     const yocto_shape& shape, int element_id, const vec2f& element_uv,
     const vec3f& normalmap) {
-    auto normal = evaluate_shape_normal(shape, element_id, element_uv);
+    auto normal = eval_normal(shape, element_id, element_uv);
     if (shape.triangles.empty() && shape.quads.empty()) return normal;
-    auto [tu, left_handed] = evaluate_shape_tangentspace(
+    auto [tu, left_handed] = eval_tangsp(
         shape, element_id, element_uv);
     tu      = orthonormalize(tu, normal);
     auto tv = normalize(cross(normal, tu) * (left_handed ? -1.0f : 1.0f));
@@ -869,13 +869,13 @@ vec3f evaluate_shape_perturbed_normal(const yocto_scene& scene,
 vec3f evaluate_instance_position(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv) {
     return transform_point(
-        instance.frame, evaluate_shape_position(scene.shapes[instance.shape],
+        instance.frame, eval_position(scene.shapes[instance.shape],
                             element_id, element_uv));
 }
 vec3f evaluate_instance_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     bool non_rigid_frame) {
-    auto normal = evaluate_shape_normal(
+    auto normal = eval_normal(
         scene.shapes[instance.shape], element_id, element_uv);
     return non_rigid_frame
                ? transform_normal((const affine3f&)instance.frame, normal)
@@ -888,7 +888,7 @@ vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
     if (material.normal_texture < 0)
         return evaluate_instance_normal(
             scene, instance, element_id, element_uv);
-    auto normal = evaluate_shape_perturbed_normal(
+    auto normal = eval_perturbed_normal(
         scene, scene.shapes[instance.shape], element_id, element_uv, normalmap);
     return non_rigid_frame
                ? transform_normal((const affine3f&)instance.frame, normal)
@@ -897,7 +897,7 @@ vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
 // Instance element values.
 vec3f evaluate_instance_element_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, bool non_rigid_frame) {
-    auto normal = evaluate_shape_element_normal(
+    auto normal = eval_element_normal(
         scene.shapes[instance.shape], element_id);
     return non_rigid_frame
                ? transform_normal((const affine3f&)instance.frame, normal)
@@ -927,7 +927,7 @@ vec3f evaluate_environment_emission(const yocto_scene& scene,
     auto ke = environment.emission;
     if (environment.emission_texture >= 0) {
         auto& emission_texture = scene.textures[environment.emission_texture];
-        ke *= xyz(evaluate_texture(emission_texture,
+        ke *= xyz(eval_texture(emission_texture,
             evaluate_environment_texturecoord(environment, direction)));
     }
     return ke;
@@ -942,7 +942,7 @@ vec3f evaluate_environment_emission(
 }
 
 // Check texture size
-vec2i evaluate_texture_size(const yocto_texture& texture) {
+vec2i get_texture_size(const yocto_texture& texture) {
     if (!texture.hdr_image.empty()) {
         return texture.hdr_image.size();
     } else if (!texture.ldr_image.empty()) {
@@ -967,13 +967,13 @@ vec4f lookup_texture(
 }
 
 // Evaluate a texture
-vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord,
+vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
     if (texture.hdr_image.empty() && texture.ldr_image.empty())
         return {1, 1, 1, 1};
 
     // get image width/height
-    auto size  = evaluate_texture_size(texture);
+    auto size  = get_texture_size(texture);
     auto width = size.x, height = size.y;
 
     // get coordinates normalized for tiling
@@ -1013,7 +1013,7 @@ float lookup_voltexture(
 }
 
 // Evaluate a volume texture
-float evaluate_voltexture(const yocto_voltexture& texture,
+float eval_voltexture(const yocto_voltexture& texture,
     const vec3f& texcoord, bool ldr_as_linear, bool no_interpolation,
     bool clamp_to_edge) {
     if (texture.volume_data.empty()) return 1;
@@ -1241,13 +1241,13 @@ material_point evaluate_material_point(const yocto_scene& scene,
     point.emission = material.emission;
     if (material.emission_texture >= 0) {
         auto& emission_texture = scene.textures[material.emission_texture];
-        point.emission *= xyz(evaluate_texture(emission_texture, texturecoord));
+        point.emission *= xyz(eval_texture(emission_texture, texturecoord));
     }
     point.diffuse = material.diffuse;
     point.opacity = material.opacity;
     if (material.diffuse_texture >= 0) {
         auto& diffuse_texture = scene.textures[material.diffuse_texture];
-        auto  diffuse_txt     = evaluate_texture(diffuse_texture, texturecoord);
+        auto  diffuse_txt     = eval_texture(diffuse_texture, texturecoord);
         point.diffuse *= xyz(diffuse_txt);
         point.opacity *= diffuse_txt.w;
     }
@@ -1256,10 +1256,10 @@ material_point evaluate_material_point(const yocto_scene& scene,
         auto& specular_texture = scene.textures[material.specular_texture];
         if (!material.base_metallic) {
             point.specular *= xyz(
-                evaluate_texture(specular_texture, texturecoord));
+                eval_texture(specular_texture, texturecoord));
         } else {
             point.specular *=
-                evaluate_texture(specular_texture, texturecoord).z;
+                eval_texture(specular_texture, texturecoord).z;
         }
     }
     point.roughness = material.roughness;
@@ -1268,19 +1268,19 @@ material_point evaluate_material_point(const yocto_scene& scene,
             auto& roughness_texture =
                 scene.textures[material.roughness_texture];
             point.roughness *=
-                evaluate_texture(roughness_texture, texturecoord).x;
+                eval_texture(roughness_texture, texturecoord).x;
         } else if (!material.gltf_textures) {
             auto& roughness_texture =
                 scene.textures[material.roughness_texture];
             point.roughness *=
-                evaluate_texture(roughness_texture, texturecoord).x;
+                eval_texture(roughness_texture, texturecoord).x;
         } else {
             auto glossiness = 1 - point.roughness;
             if (material.roughness_texture >= 0) {
                 auto& roughness_texture =
                     scene.textures[material.roughness_texture];
                 glossiness *=
-                    evaluate_texture(roughness_texture, texturecoord).w;
+                    eval_texture(roughness_texture, texturecoord).w;
             }
             point.roughness = 1 - glossiness;
         }
@@ -1290,7 +1290,7 @@ material_point evaluate_material_point(const yocto_scene& scene,
         auto& transmission_texture =
             scene.textures[material.transmission_texture];
         point.transmission *= xyz(
-            evaluate_texture(transmission_texture, texturecoord));
+            eval_texture(transmission_texture, texturecoord));
     }
     point.refract       = material.refract;
     point.base_metallic = material.base_metallic;
@@ -1298,7 +1298,7 @@ material_point evaluate_material_point(const yocto_scene& scene,
     if (material.normal_texture >= 0) {
         auto& normal_texture = scene.textures[material.normal_texture];
         point.normalmap      = xyz(
-            evaluate_texture(normal_texture, texturecoord, true));
+            eval_texture(normal_texture, texturecoord, true));
         point.normalmap = point.normalmap * 2 - vec3f{1, 1, 1};
         // flip vertical axis to align green with image up
         point.normalmap.y = -point.normalmap.y;
@@ -1317,7 +1317,7 @@ material_point evaluate_material_point(const yocto_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
+void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
     auto offset_cameras      = scene.cameras.size();
     auto offset_textures     = scene.textures.size();
     auto offset_voltextures  = scene.voltextures.size();
@@ -1391,7 +1391,7 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
     }
 }
 
-string format_scene_stats(const yocto_scene& scene, bool verbose) {
+string format_stats(const yocto_scene& scene, bool verbose) {
     auto stats = vector<pair<string, size_t>>{};
     stats += {"cameras", scene.cameras.size()};
     stats += {"shapes", scene.shapes.size()};

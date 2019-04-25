@@ -443,11 +443,11 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     draw_label_opengl_widget(
         win, "quads norm", "%ld", value.quads_normals.size());
     draw_label_opengl_widget(
-        win, "quads texcoord", "%ld", value.quads_texturecoords.size());
+        win, "quads texcoord", "%ld", value.quads_texcoords.size());
     draw_label_opengl_widget(win, "pos", "%ld", value.positions.size());
     draw_label_opengl_widget(win, "norm", "%ld", value.normals.size());
     draw_label_opengl_widget(
-        win, "texcoord", "%ld", value.texturecoords.size());
+        win, "texcoord", "%ld", value.texcoords.size());
     draw_label_opengl_widget(win, "color", "%ld", value.colors.size());
     draw_label_opengl_widget(win, "radius", "%ld", value.radius.size());
     draw_label_opengl_widget(win, "tangsp", "%ld", value.tangentspaces.size());
@@ -460,10 +460,10 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             edited_value.quads               = value.quads;
             edited_value.quads_positions     = value.quads_positions;
             edited_value.quads_normals       = value.quads_normals;
-            edited_value.quads_texturecoords = value.quads_texturecoords;
+            edited_value.quads_texcoords = value.quads_texcoords;
             edited_value.positions           = value.positions;
             edited_value.normals             = value.normals;
-            edited_value.texturecoords       = value.texturecoords;
+            edited_value.texcoords       = value.texcoords;
             edited_value.colors              = value.colors;
             edited_value.radius              = value.radius;
             edited_value.tangentspaces       = value.tangentspaces;
@@ -527,11 +527,11 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     draw_label_opengl_widget(
         win, "quads norm", "%ld", value.quads_normals.size());
     draw_label_opengl_widget(
-        win, "quads texcoord", "%ld", value.quads_texturecoords.size());
+        win, "quads texcoord", "%ld", value.quads_texcoords.size());
     draw_label_opengl_widget(win, "pos", "%ld", value.positions.size());
     draw_label_opengl_widget(win, "norm", "%ld", value.normals.size());
     draw_label_opengl_widget(
-        win, "texcoord", "%ld", value.texturecoords.size());
+        win, "texcoord", "%ld", value.texcoords.size());
     draw_label_opengl_widget(win, "color", "%ld", value.colors.size());
     draw_label_opengl_widget(win, "radius", "%ld", value.radius.size());
     if (edited) {
@@ -543,10 +543,10 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             edited_value.quads               = value.quads;
             edited_value.quads_positions     = value.quads_positions;
             edited_value.quads_normals       = value.quads_normals;
-            edited_value.quads_texturecoords = value.quads_texturecoords;
+            edited_value.quads_texcoords = value.quads_texcoords;
             edited_value.positions           = value.positions;
             edited_value.normals             = value.normals;
-            edited_value.texturecoords       = value.texturecoords;
+            edited_value.texcoords       = value.texcoords;
             edited_value.colors              = value.colors;
             edited_value.radius              = value.radius;
         }

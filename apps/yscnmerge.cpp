@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
         } catch (const std::exception& e) {
             print_fatal(e.what());
         }
-        print_validation_errors(to_merge, true);
+        print_validation(to_merge, true);
         if (scene_postfix) {
             auto postfix = "{" + get_filename(filename) + "}";
             for (auto& val : to_merge.cameras) val.uri += postfix;
@@ -108,14 +108,14 @@ int main(int argc, char** argv) {
             for (auto& val : to_merge.nodes) val.uri += postfix;
             for (auto& val : to_merge.animations) val.uri += postfix;
         }
-        merge_scene_into(scene, to_merge);
+        merge_scene(scene, to_merge);
     }
 
     // validate scene
-    print_validation_errors(scene, true);
+    print_validation(scene, true);
 
     // print info
-    if (info) print_info("{}", format_scene_stats(scene));
+    if (info) print_info("{}", format_stats(scene));
 
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')

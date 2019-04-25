@@ -231,7 +231,7 @@ static string get_save_scene_message(
     str += line_prefix + " Written by Yocto/GL\n";
     str += line_prefix + " https://github.com/xelatihy/yocto-gl\n";
     str += line_prefix + "\n";
-    auto lines = splitlines(format_scene_stats(scene));
+    auto lines = splitlines(format_stats(scene));
     for (auto line : lines) str += line_prefix + " " + line + "\n";
     str += line_prefix + "\n";
     return str;
@@ -316,14 +316,14 @@ void load_shape(yocto_shape& shape, const string& dirname) {
         auto [type, nfilename] = get_shape_preset_type(shape.uri);
         make_preset(shape.points, shape.lines, shape.triangles,
             shape.quads, shape.quads_positions, shape.quads_normals,
-            shape.quads_texturecoords, shape.positions, shape.normals,
-            shape.texturecoords, shape.colors, shape.radius, type);
+            shape.quads_texcoords, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, type);
         shape.uri = nfilename;
     } else {
         load_shape(dirname + shape.uri, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.quads_positions,
-            shape.quads_normals, shape.quads_texturecoords, shape.positions,
-            shape.normals, shape.texturecoords, shape.colors, shape.radius,
+            shape.quads_normals, shape.quads_texcoords, shape.positions,
+            shape.normals, shape.texcoords, shape.colors, shape.radius,
             false);
     }
 }
@@ -331,8 +331,8 @@ void load_shape(yocto_shape& shape, const string& dirname) {
 void save_shape(const yocto_shape& shape, const string& dirname) {
     save_shape(dirname + shape.uri, shape.points, shape.lines, shape.triangles,
         shape.quads, shape.quads_positions, shape.quads_normals,
-        shape.quads_texturecoords, shape.positions, shape.normals,
-        shape.texturecoords, shape.colors, shape.radius);
+        shape.quads_texcoords, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius);
 }
 
 void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
@@ -340,14 +340,14 @@ void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
         auto [type, nfilename] = get_shape_preset_type(subdiv.uri);
         make_preset(subdiv.points, subdiv.lines, subdiv.triangles,
             subdiv.quads, subdiv.quads_positions, subdiv.quads_normals,
-            subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
-            subdiv.texturecoords, subdiv.colors, subdiv.radius, type);
+            subdiv.quads_texcoords, subdiv.positions, subdiv.normals,
+            subdiv.texcoords, subdiv.colors, subdiv.radius, type);
         subdiv.uri = nfilename;
     } else {
         load_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines,
             subdiv.triangles, subdiv.quads, subdiv.quads_positions,
-            subdiv.quads_normals, subdiv.quads_texturecoords, subdiv.positions,
-            subdiv.normals, subdiv.texturecoords, subdiv.colors, subdiv.radius,
+            subdiv.quads_normals, subdiv.quads_texcoords, subdiv.positions,
+            subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius,
             subdiv.preserve_facevarying);
     }
 }
@@ -355,8 +355,8 @@ void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
 void save_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
     save_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines,
         subdiv.triangles, subdiv.quads, subdiv.quads_positions,
-        subdiv.quads_normals, subdiv.quads_texturecoords, subdiv.positions,
-        subdiv.normals, subdiv.texturecoords, subdiv.colors, subdiv.radius);
+        subdiv.quads_normals, subdiv.quads_texcoords, subdiv.positions,
+        subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
 }
 
 // Load json meshes
@@ -836,8 +836,8 @@ static void load_yaml_scene(const string& filename, yocto_scene& scene,
 
     // fix scene
     scene.uri = get_filename(filename);
-    add_missing_cameras(scene);
-    add_missing_materials(scene);
+    add_cameras(scene);
+    add_materials(scene);
     normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
@@ -1148,7 +1148,7 @@ struct load_obj_cb : obj_callbacks {
             if (vert.position)
                 shape.positions.push_back(opos.at(vert.position - 1));
             if (vert.texturecoord)
-                shape.texturecoords.push_back(
+                shape.texcoords.push_back(
                     otexcoord.at(vert.texturecoord - 1));
             if (vert.normal) shape.normals.push_back(onorm.at(vert.normal - 1));
             if (shape.normals.size() != 0 &&
@@ -1156,10 +1156,10 @@ struct load_obj_cb : obj_callbacks {
                 while (shape.normals.size() != shape.positions.size())
                     shape.normals.push_back({0, 0, 1});
             }
-            if (shape.texturecoords.size() != 0 &&
-                shape.texturecoords.size() != shape.positions.size()) {
-                while (shape.texturecoords.size() != shape.positions.size())
-                    shape.texturecoords.push_back({0, 0});
+            if (shape.texcoords.size() != 0 &&
+                shape.texcoords.size() != shape.positions.size()) {
+                while (shape.texcoords.size() != shape.positions.size())
+                    shape.texcoords.push_back({0, 0});
             }
         }
     }
@@ -1177,9 +1177,9 @@ struct load_obj_cb : obj_callbacks {
             if (!vert.texturecoord) continue;
             auto texcoord_it = texcoord_map.find(vert.texturecoord);
             if (texcoord_it != texcoord_map.end()) continue;
-            auto nverts = (int)shape.texturecoords.size();
+            auto nverts = (int)shape.texcoords.size();
             texcoord_map.insert(texcoord_it, {vert.texturecoord, nverts});
-            shape.texturecoords.push_back(otexcoord.at(vert.texturecoord - 1));
+            shape.texcoords.push_back(otexcoord.at(vert.texturecoord - 1));
         }
         for (auto& vert : verts) {
             if (!vert.normal) continue;
@@ -1225,7 +1225,7 @@ struct load_obj_cb : obj_callbacks {
                             pos_map.at(verts[3].position)});
                 }
                 if (verts[0].texturecoord) {
-                    shape.quads_texturecoords.push_back(
+                    shape.quads_texcoords.push_back(
                         {texcoord_map.at(verts[0].texturecoord),
                             texcoord_map.at(verts[1].texturecoord),
                             texcoord_map.at(verts[2].texturecoord),
@@ -1248,7 +1248,7 @@ struct load_obj_cb : obj_callbacks {
                 }
                 if (verts[0].texturecoord) {
                     for (auto i = 2; i < verts.size(); i++)
-                        shape.quads_texturecoords.push_back(
+                        shape.quads_texcoords.push_back(
                             {texcoord_map.at(verts[0].texturecoord),
                                 texcoord_map.at(verts[i - 1].texturecoord),
                                 texcoord_map.at(verts[i].texturecoord),
@@ -1350,7 +1350,7 @@ struct load_obj_cb : obj_callbacks {
         shape.uri  = oproc.name;
         if (oproc.type == "floor") {
             make_floor(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords,
+                shape.texcoords,
                 {oproc.level < 0 ? 1 : pow2(oproc.level),
                     oproc.level < 0 ? 20 : pow2(oproc.level)},
                 {oproc.size, oproc.size}, {oproc.size / 2, oproc.size / 2},
@@ -1413,8 +1413,8 @@ static void load_obj_scene(const string& filename, yocto_scene& scene,
 
     // fix scene
     scene.uri = get_filename(filename);
-    add_missing_cameras(scene);
-    add_missing_materials(scene);
+    add_cameras(scene);
+    add_materials(scene);
     normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
@@ -1573,7 +1573,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         if (instance.frame == identity_frame3f) {
             for (auto& p : shape.positions) print_obj_keyvalue(fs, "v", p);
             for (auto& n : shape.normals) print_obj_keyvalue(fs, "vn", n);
-            for (auto& t : shape.texturecoords)
+            for (auto& t : shape.texcoords)
                 print_obj_keyvalue(
                     fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
         } else {
@@ -1585,11 +1585,11 @@ static void save_obj(const string& filename, const yocto_scene& scene,
                 print_obj_keyvalue(
                     fs, "vn", transform_direction(instance.frame, nn));
             }
-            for (auto& t : shape.texturecoords)
+            for (auto& t : shape.texcoords)
                 print_obj_keyvalue(
                     fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
         }
-        auto mask = obj_vertex{1, shape.texturecoords.empty() ? 0 : 1,
+        auto mask = obj_vertex{1, shape.texcoords.empty() ? 0 : 1,
             shape.normals.empty() ? 0 : 1};
         auto vert = [mask, offset](int i) {
             return obj_vertex{(i + offset.position + 1) * mask.position,
@@ -1618,13 +1618,13 @@ static void save_obj(const string& filename, const yocto_scene& scene,
             }
         }
         for (auto i = 0; i < shape.quads_positions.size(); i++) {
-            if (!shape.texturecoords.empty() && shape.normals.empty()) {
+            if (!shape.texcoords.empty() && shape.normals.empty()) {
                 auto vert = [offset](int ip, int it) {
                     return obj_vertex{ip + offset.position + 1,
                         it + offset.texturecoord + 1, 0};
                 };
                 auto qp = shape.quads_positions[i];
-                auto qt = shape.quads_texturecoords[i];
+                auto qt = shape.quads_texcoords[i];
                 if (qp.z == qp.w) {
                     print(fs, "f {} {} {}\n",
                         format_obj_vertex(vert(qp.x, qt.x)),
@@ -1637,13 +1637,13 @@ static void save_obj(const string& filename, const yocto_scene& scene,
                         format_obj_vertex(vert(qp.z, qt.z)),
                         format_obj_vertex(vert(qp.w, qt.w)));
                 }
-            } else if (!shape.texturecoords.empty() && !shape.normals.empty()) {
+            } else if (!shape.texcoords.empty() && !shape.normals.empty()) {
                 auto vert = [offset](int ip, int it, int in) {
                     return obj_vertex{ip + offset.position + 1,
                         it + offset.texturecoord + 1, in + offset.normal + 1};
                 };
                 auto qp = shape.quads_positions[i];
-                auto qt = shape.quads_texturecoords[i];
+                auto qt = shape.quads_texcoords[i];
                 auto qn = shape.quads_normals[i];
                 if (qp.z == qp.w) {
                     print(fs, "f {} {} {}\n",
@@ -1694,7 +1694,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
             }
         }
         offset.position += shape.positions.size();
-        offset.texturecoord += shape.texturecoords.size();
+        offset.texturecoord += shape.texcoords.size();
         offset.normal += shape.normals.size();
     }
 }
@@ -1745,8 +1745,8 @@ static void load_ply_scene(const string& filename, yocto_scene& scene,
         auto& shape = scene.shapes.back();
         load_shape(filename, shape.points, shape.lines, shape.triangles,
             shape.quads, shape.quads_positions, shape.quads_normals,
-            shape.quads_texturecoords, shape.positions, shape.normals,
-            shape.texturecoords, shape.colors, shape.radius, false);
+            shape.quads_texcoords, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, false);
 
         // add instance
         auto instance  = yocto_instance{};
@@ -1760,8 +1760,8 @@ static void load_ply_scene(const string& filename, yocto_scene& scene,
 
     // fix scene
     scene.uri = get_filename(filename);
-    add_missing_cameras(scene);
-    add_missing_materials(scene);
+    add_cameras(scene);
+    add_materials(scene);
     normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
@@ -1776,8 +1776,8 @@ static void save_ply_scene(const string& filename, const yocto_scene& scene,
         auto& shape = scene.shapes.front();
         save_shape(filename, shape.points, shape.lines, shape.triangles,
             shape.quads, shape.quads_positions, shape.quads_normals,
-            shape.quads_texturecoords, shape.positions, shape.normals,
-            shape.texturecoords, shape.colors, shape.radius);
+            shape.quads_texcoords, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
@@ -1958,9 +1958,9 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
                         shape.normals.push_back({(float)vals[i][0],
                             (float)vals[i][1], (float)vals[i][2]});
                 } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
-                    shape.texturecoords.reserve(vals.size());
+                    shape.texcoords.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
-                        shape.texturecoords.push_back(
+                        shape.texcoords.push_back(
                             {(float)vals[i][0], (float)vals[i][1]});
                 } else if (semantic == "COLOR" || semantic == "COLOR_0") {
                     shape.colors.reserve(vals.size());
@@ -2294,14 +2294,14 @@ static void load_gltf_scene(const string& filename, yocto_scene& scene,
 
     // fix scene
     scene.uri = get_filename(filename);
-    add_missing_cameras(scene);
-    add_missing_materials(scene);
+    add_cameras(scene);
+    add_materials(scene);
     normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
 
     // fix cameras
-    auto bbox = compute_scene_bounds(scene);
+    auto bbox = compute_bounds(scene);
     for (auto& camera : scene.cameras) {
         auto center   = (bbox.min + bbox.max) / 2;
         auto distance = dot(-camera.frame.z, center - camera.frame.o);
@@ -2440,7 +2440,7 @@ static void scene_to_gltf(const yocto_scene& scene, json& js) {
                 pjs["attributes"]["POSITION"] = add_accessor(nverts, "VEC3");
             if (!shape.normals.empty())
                 pjs["attributes"]["NORMAL"] = add_accessor(nverts, "VEC3");
-            if (!shape.texturecoords.empty())
+            if (!shape.texcoords.empty())
                 pjs["attributes"]["TEXCOORD_0"] = add_accessor(nverts, "VEC2");
             if (!shape.colors.empty())
                 pjs["attributes"]["COLOR_0"] = add_accessor(nverts, "VEC4");
@@ -2471,20 +2471,20 @@ static void scene_to_gltf(const yocto_scene& scene, json& js) {
         } else {
             auto positions     = vector<vec3f>{};
             auto normals       = vector<vec3f>{};
-            auto texturecoords = vector<vec2f>{};
+            auto texcoords = vector<vec2f>{};
             auto quads         = vector<vec4i>{};
             auto triangles     = vector<vec3i>{};
-            split_facevarying(quads, positions, normals, texturecoords,
+            split_facevarying(quads, positions, normals, texcoords,
                 shape.quads_positions, shape.quads_normals,
-                shape.quads_texturecoords, shape.positions, shape.normals,
-                shape.texturecoords);
+                shape.quads_texcoords, shape.positions, shape.normals,
+                shape.texcoords);
             quads_to_triangles(triangles, quads);
             auto nverts = (int)positions.size();
             if (!positions.empty())
                 pjs["attributes"]["POSITION"] = add_accessor(nverts, "VEC3");
             if (!normals.empty())
                 pjs["attributes"]["NORMAL"] = add_accessor(nverts, "VEC3");
-            if (!texturecoords.empty())
+            if (!texcoords.empty())
                 pjs["attributes"]["TEXCOORD_0"] = add_accessor(nverts, "VEC2");
             if (!triangles.empty()) {
                 pjs["indices"] = add_accessor(
@@ -2559,7 +2559,7 @@ static void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     if (shape.quads_positions.empty()) {
         write_values(fs, shape.positions);
         write_values(fs, shape.normals);
-        write_values(fs, shape.texturecoords);
+        write_values(fs, shape.texcoords);
         write_values(fs, shape.colors);
         write_values(fs, shape.radius);
         write_values(fs, shape.points);
@@ -2571,17 +2571,17 @@ static void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     } else {
         auto positions     = vector<vec3f>{};
         auto normals       = vector<vec3f>{};
-        auto texturecoords = vector<vec2f>{};
+        auto texcoords = vector<vec2f>{};
         auto quads         = vector<vec4i>{};
         auto triangles     = vector<vec3i>{};
-        split_facevarying(quads, positions, normals, texturecoords,
+        split_facevarying(quads, positions, normals, texcoords,
             shape.quads_positions, shape.quads_normals,
-            shape.quads_texturecoords, shape.positions, shape.normals,
-            shape.texturecoords);
+            shape.quads_texcoords, shape.positions, shape.normals,
+            shape.texcoords);
         quads_to_triangles(triangles, quads);
         write_values(fs, positions);
         write_values(fs, normals);
-        write_values(fs, texturecoords);
+        write_values(fs, texcoords);
         write_values(fs, triangles);
     }
 }
@@ -2808,8 +2808,8 @@ struct load_pbrt_cb : pbrt_callbacks {
             auto& mesh          = get<pbrt_trianglemesh_shape>(pshape);
             shape.positions     = mesh.P;
             shape.normals       = mesh.N;
-            shape.texturecoords = mesh.uv;
-            for (auto& uv : shape.texturecoords) uv.y = (1 - uv.y);
+            shape.texcoords = mesh.uv;
+            for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
             shape.triangles = mesh.indices;
         } else if (holds_alternative<pbrt_loopsubdiv_shape>(pshape)) {
             auto& mesh      = get<pbrt_loopsubdiv_shape>(pshape);
@@ -2825,18 +2825,18 @@ struct load_pbrt_cb : pbrt_callbacks {
                 load_shape(get_dirname(filename) + mesh.filename, shape.points,
                     shape.lines, shape.triangles, shape.quads,
                     shape.quads_positions, shape.quads_normals,
-                    shape.quads_texturecoords, shape.positions, shape.normals,
-                    shape.texturecoords, shape.colors, shape.radius, false);
+                    shape.quads_texcoords, shape.positions, shape.normals,
+                    shape.texcoords, shape.colors, shape.radius, false);
             }
         } else if (holds_alternative<pbrt_sphere_shape>(pshape)) {
             auto& sphere = get<pbrt_sphere_shape>(pshape);
             make_uvsphere(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, {64, 32}, 2 * sphere.radius, {1, 1},
+                shape.texcoords, {64, 32}, 2 * sphere.radius, {1, 1},
                 identity_frame3f);
         } else if (holds_alternative<pbrt_disk_shape>(pshape)) {
             auto& disk = get<pbrt_disk_shape>(pshape);
             make_uvdisk(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, {32, 16}, 2 * disk.radius, {1, 1},
+                shape.texcoords, {32, 16}, 2 * disk.radius, {1, 1},
                 identity_frame3f);
         } else {
             throw io_error(
@@ -3151,7 +3151,7 @@ struct load_pbrt_cb : pbrt_callbacks {
             auto dir    = normalize(distant.from - distant.to);
             auto size   = distant_dist * sin(5 * pif / 180);
             make_rect(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, {1, 1}, {size, size}, {1, 1},
+                shape.texcoords, {1, 1}, {size, size}, {1, 1},
                 identity_frame3f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
@@ -3173,7 +3173,7 @@ struct load_pbrt_cb : pbrt_callbacks {
             shape.uri   = name;
             auto size   = 0.01f;
             make_sphere(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
+                shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
             material.uri      = shape.uri;
@@ -3193,7 +3193,7 @@ struct load_pbrt_cb : pbrt_callbacks {
             shape.uri   = name;
             auto size   = 0.01f;
             make_sphere(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
+                shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
             material.uri      = shape.uri;
@@ -3212,7 +3212,7 @@ struct load_pbrt_cb : pbrt_callbacks {
             shape.uri   = name;
             auto size   = 0.01f;
             make_sphere(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, 4.0f, size, 1.0f, identity_frame3f);
+                shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
             scene.materials.push_back({});
             auto& material    = scene.materials.back();
             material.uri      = shape.uri;
@@ -3268,8 +3268,8 @@ static void load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     // fix scene
     scene.uri = get_filename(filename);
-    add_missing_cameras(scene);
-    add_missing_materials(scene);
+    add_cameras(scene);
+    add_materials(scene);
     normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
@@ -3374,8 +3374,8 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
             save_shape(get_noextension(dirname + shape.uri) + ".ply",
                 shape.points, shape.lines, shape.triangles, shape.quads,
                 shape.quads_positions, shape.quads_normals,
-                shape.quads_texturecoords, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius);
+                shape.quads_texcoords, shape.positions, shape.normals,
+                shape.texcoords, shape.colors, shape.radius);
         }
 
         // skip textures

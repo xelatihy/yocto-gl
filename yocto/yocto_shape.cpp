@@ -453,22 +453,22 @@ namespace yocto {
 // hack for CyHair data
 static  void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
+    vector<vec2f>& texcoords, vector<vec4f>& color, vector<float>& radius,
     bool flip_texcoord = true);
 
 // Load/Save a ply mesh
 static  void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& color,
+    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& color,
     vector<float>& radius, bool flip_texcoord = true);
 static  void save_ply_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<vec4i>& quads_texcoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec4f>& colors, const vector<float>& radius,
     bool ascii = false, bool flip_texcoord = true);
 
@@ -476,23 +476,23 @@ static  void save_ply_shape(const string& filename, const vector<int>& points,
 static  void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
     bool preserve_facevarying, bool flip_texcoord = true);
 static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<vec4i>& quads_texcoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     bool flip_texcoord = true);
 
 // Load ply mesh
 void load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, bool preserve_facevarrying) {
     points              = {};
     lines               = {};
@@ -500,25 +500,25 @@ void load_shape(const string& filename, vector<int>& points,
     quads               = {};
     quads_positions     = {};
     quads_normals       = {};
-    quads_texturecoords = {};
+    quads_texcoords = {};
     positions           = {};
     normals             = {};
-    texturecoords       = {};
+    texcoords       = {};
     colors              = {};
     radius              = {};
 
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
         load_ply_shape(filename, points, lines, triangles, quads,
-            quads_positions, quads_normals, quads_texturecoords, positions,
-            normals, texturecoords, colors, radius);
+            quads_positions, quads_normals, quads_texcoords, positions,
+            normals, texcoords, colors, radius);
     } else if (ext == "obj" || ext == "OBJ") {
         load_obj_shape(filename, points, lines, triangles, quads,
-            quads_positions, quads_normals, quads_texturecoords, positions,
-            normals, texturecoords, preserve_facevarrying);
+            quads_positions, quads_normals, quads_texcoords, positions,
+            normals, texcoords, preserve_facevarrying);
     } else if (ext == "hair" || ext == "HAIR") {
         load_cyhair_shape(
-            filename, lines, positions, normals, texturecoords, colors, radius);
+            filename, lines, positions, normals, texcoords, colors, radius);
     } else {
         throw shapeio_error("unsupported mesh type " + ext);
     }
@@ -529,18 +529,18 @@ void save_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<vec4i>& quads_texcoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii) {
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
         return save_ply_shape(filename, points, lines, triangles, quads,
-            quads_positions, quads_normals, quads_texturecoords, positions,
-            normals, texturecoords, colors, radius, ascii);
+            quads_positions, quads_normals, quads_texcoords, positions,
+            normals, texcoords, colors, radius, ascii);
     } else if (ext == "obj" || ext == "OBJ") {
         return save_obj_shape(filename, points, lines, triangles, quads,
-            quads_positions, quads_normals, quads_texturecoords, positions,
-            normals, texturecoords);
+            quads_positions, quads_normals, quads_texcoords, positions,
+            normals, texcoords);
     } else {
         throw shapeio_error("unsupported mesh type " + ext);
     }
@@ -549,8 +549,8 @@ void save_shape(const string& filename, const vector<int>& points,
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, bool flip_texcoord) {
     try {
         // load ply
@@ -584,17 +584,17 @@ static void load_ply_shape(const string& filename, vector<int>& points,
             if (vertex.hasProperty("u") && vertex.hasProperty("v")) {
                 auto x = vertex.getProperty<float>("u");
                 auto y = vertex.getProperty<float>("v");
-                texturecoords.resize(x.size());
-                for (auto i = 0; i < texturecoords.size(); i++) {
-                    texturecoords[i] = {x[i], y[i]};
+                texcoords.resize(x.size());
+                for (auto i = 0; i < texcoords.size(); i++) {
+                    texcoords[i] = {x[i], y[i]};
                 }
             }
             if (vertex.hasProperty("s") && vertex.hasProperty("t")) {
                 auto x = vertex.getProperty<float>("s");
                 auto y = vertex.getProperty<float>("t");
-                texturecoords.resize(x.size());
-                for (auto i = 0; i < texturecoords.size(); i++) {
-                    texturecoords[i] = {x[i], y[i]};
+                texcoords.resize(x.size());
+                for (auto i = 0; i < texcoords.size(); i++) {
+                    texcoords[i] = {x[i], y[i]};
                 }
             }
             if (vertex.hasProperty("red") && vertex.hasProperty("green") &&
@@ -619,8 +619,8 @@ static void load_ply_shape(const string& filename, vector<int>& points,
         }
 
         // fix texture coordinated
-        if (flip_texcoord && !texturecoords.empty()) {
-            for (auto& uv : texturecoords) uv.y = 1 - uv.y;
+        if (flip_texcoord && !texcoords.empty()) {
+            for (auto& uv : texcoords) uv.y = 1 - uv.y;
         }
 
         // copy face data
@@ -675,8 +675,8 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<vec4i>& quads_texcoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii,
     bool flip_texcoord) {
     if (!quads_positions.empty()) {
@@ -686,7 +686,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
         auto split_texturecoords = vector<vec2f>{};
         split_facevarying(split_quads, split_positions, split_normals,
             split_texturecoords, quads_positions, quads_normals,
-            quads_texturecoords, positions, normals, texturecoords);
+            quads_texcoords, positions, normals, texcoords);
         return save_ply_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
             split_positions, split_normals, split_texturecoords, {}, {}, ascii,
             flip_texcoord);
@@ -727,11 +727,11 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
         vertex.addProperty("ny", y);
         vertex.addProperty("nz", z);
     }
-    if (!texturecoords.empty()) {
+    if (!texcoords.empty()) {
         auto& vertex = ply.getElement("vertex");
         auto  x      = vector<float>{};
         auto  y      = vector<float>{};
-        for (auto& t : texturecoords) {
+        for (auto& t : texcoords) {
             x.push_back(t.x);
             y.push_back(flip_texcoord ? 1 - t.y : t.y);
         }
@@ -809,10 +809,10 @@ struct load_obj_cb : obj_callbacks {
     vector<vec4i>& quads;
     vector<vec4i>& quads_positions;
     vector<vec4i>& quads_normals;
-    vector<vec4i>& quads_texturecoords;
+    vector<vec4i>& quads_texcoords;
     vector<vec3f>& positions;
     vector<vec3f>& normals;
-    vector<vec2f>& texturecoords;
+    vector<vec2f>& texcoords;
     bool           facevarying = false;
 
     // TODO: implement me
@@ -834,18 +834,18 @@ struct load_obj_cb : obj_callbacks {
     load_obj_cb(vector<int>& points, vector<vec2i>& lines,
         vector<vec3i>& triangles, vector<vec4i>& quads,
         vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-        vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-        vector<vec3f>& normals, vector<vec2f>& texturecoords, bool facevarying)
+        vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+        vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying)
         : points{points}
         , lines{lines}
         , triangles{triangles}
         , quads{quads}
         , quads_positions{quads_positions}
         , quads_normals{quads_normals}
-        , quads_texturecoords{quads_texturecoords}
+        , quads_texcoords{quads_texcoords}
         , positions{positions}
         , normals{normals}
-        , texturecoords{texturecoords}
+        , texcoords{texcoords}
         , facevarying{facevarying} {}
 
     // Add  vertices to the current shape
@@ -857,7 +857,7 @@ struct load_obj_cb : obj_callbacks {
             vertex_map.insert(it, {vert, nverts});
             if (vert.position) positions.push_back(opos.at(vert.position - 1));
             if (vert.texturecoord)
-                texturecoords.push_back(otexcoord.at(vert.texturecoord - 1));
+                texcoords.push_back(otexcoord.at(vert.texturecoord - 1));
             if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
         }
     }
@@ -876,9 +876,9 @@ struct load_obj_cb : obj_callbacks {
             if (!vert.texturecoord) continue;
             auto texcoord_it = texcoord_map.find(vert.texturecoord);
             if (texcoord_it != texcoord_map.end()) continue;
-            auto nverts = (int)texturecoords.size();
+            auto nverts = (int)texcoords.size();
             texcoord_map.insert(texcoord_it, {vert.texturecoord, nverts});
-            texturecoords.push_back(otexcoord.at(vert.texturecoord - 1));
+            texcoords.push_back(otexcoord.at(vert.texturecoord - 1));
         }
         for (auto& vert : verts) {
             if (!vert.normal) continue;
@@ -915,7 +915,7 @@ struct load_obj_cb : obj_callbacks {
                         pos_map.at(verts[3].position)});
                 }
                 if (verts[0].texturecoord) {
-                    quads_texturecoords.push_back(
+                    quads_texcoords.push_back(
                         {texcoord_map.at(verts[0].texturecoord),
                             texcoord_map.at(verts[1].texturecoord),
                             texcoord_map.at(verts[2].texturecoord),
@@ -939,7 +939,7 @@ struct load_obj_cb : obj_callbacks {
                 }
                 if (verts[0].texturecoord) {
                     for (auto i = 2; i < verts.size(); i++)
-                        quads_texturecoords.push_back(
+                        quads_texcoords.push_back(
                             {texcoord_map.at(verts[0].texturecoord),
                                 texcoord_map.at(verts[1].texturecoord),
                                 texcoord_map.at(verts[i].texturecoord),
@@ -987,8 +987,8 @@ struct load_obj_cb : obj_callbacks {
 static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
     bool preserve_facevarying, bool flip_texcoord) {
     try {
         // load obj
@@ -997,8 +997,8 @@ static void load_obj_shape(const string& filename, vector<int>& points,
         obj_prms.geometry_only = true;
         obj_prms.flip_texcoord = flip_texcoord;
         auto cb = load_obj_cb{points, lines, triangles, quads,
-            quads_positions, quads_normals, quads_texturecoords, positions,
-            normals, texturecoords, preserve_facevarying};
+            quads_positions, quads_normals, quads_texcoords, positions,
+            normals, texcoords, preserve_facevarying};
         load_obj(filename, cb, obj_prms);
 
         // merging quads and triangles
@@ -1029,8 +1029,8 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
     const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<vec4i>& quads_texcoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     bool flip_texcoord) {
     // open file
     auto fs_ = open_output_file(filename);
@@ -1043,11 +1043,11 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
 
     for (auto& p : positions) print(fs, "v {} {} {}\n", p.x, p.y, p.z);
     for (auto& n : normals) print(fs, "vn {} {} {}\n", n.x, n.y, n.z);
-    for (auto& t : texturecoords)
+    for (auto& t : texcoords)
         print(fs, "vt {} {}\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
 
     auto mask = obj_vertex{
-        1, texturecoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
+        1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
     auto vert = [mask](int i) {
         return obj_vertex{(i + 1) * mask.position, (i + 1) * mask.texturecoord,
             (i + 1) * mask.normal};
@@ -1076,7 +1076,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     }
 
     auto fvmask = obj_vertex{
-        1, texturecoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
+        1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
     auto fvvert = [fvmask](int pi, int ti, int ni) {
         return obj_vertex{(pi + 1) * fvmask.position,
             (ti + 1) * fvmask.texturecoord, (ni + 1) * fvmask.normal};
@@ -1091,7 +1091,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
         //            last_material_id);
         //        }
         auto qp = quads_positions.at(i);
-        auto qt = !quads_texturecoords.empty() ? quads_texturecoords.at(i)
+        auto qt = !quads_texcoords.empty() ? quads_texcoords.at(i)
                                                : vec4i{-1, -1, -1, -1};
         auto qn = !quads_normals.empty() ? quads_normals.at(i)
                                          : vec4i{-1, -1, -1, -1};
@@ -1248,7 +1248,7 @@ static void load_cyhair(const string& filename, cyhair_data& hair) {
 
 static void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
+    vector<vec2f>& texcoords, vector<vec4f>& color, vector<float>& radius,
     bool flip_texcoord) {
     // load hair file
     auto hair = cyhair_data();

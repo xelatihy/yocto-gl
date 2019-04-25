@@ -43,7 +43,7 @@ void print_obj_camera(const yocto_camera& camera);
 struct drawgl_shape {
     opengl_array_buffer  positions_buffer     = {};
     opengl_array_buffer  normals_buffer       = {};
-    opengl_array_buffer  texturecoords_buffer = {};
+    opengl_array_buffer  texcoords_buffer = {};
     opengl_array_buffer  colors_buffer        = {};
     opengl_array_buffer  tangentspaces_buffer = {};
     opengl_elementbuffer points_buffer        = {};
@@ -74,7 +74,7 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
         auto& material = scene.materials[instance.material];
         if (material.emission == zero3f) continue;
         if (lights.positions.size() >= 16) break;
-        auto bbox = compute_shape_bounds(shape);
+        auto bbox = compute_bounds(shape);
         auto pos  = (bbox.max + bbox.min) / 2;
         auto area = 0.0f;
         if (!shape.triangles.empty()) {
@@ -581,7 +581,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     set_opengl_vertexattrib(
         state.program, "vert_norm", vbos.normals_buffer, zero3f);
     set_opengl_vertexattrib(
-        state.program, "vert_texcoord", vbos.texturecoords_buffer, zero2f);
+        state.program, "vert_texcoord", vbos.texcoords_buffer, zero2f);
     set_opengl_vertexattrib(
         state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
     set_opengl_vertexattrib(state.program, "vert_tangsp",
@@ -653,7 +653,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
             auto& material = scene.materials[instance.material];
             if (material.emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
-            auto bbox = compute_shape_bounds(shape);
+            auto bbox = compute_bounds(shape);
             auto pos  = (bbox.max + bbox.min) / 2;
             auto area = 0.0f;
             if (!shape.triangles.empty()) {
@@ -733,9 +733,9 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             if (!shape.normals.empty())
                 init_opengl_array_buffer(
                     vbos.normals_buffer, shape.normals, false);
-            if (!shape.texturecoords.empty())
+            if (!shape.texcoords.empty())
                 init_opengl_array_buffer(
-                    vbos.texturecoords_buffer, shape.texturecoords, false);
+                    vbos.texcoords_buffer, shape.texcoords, false);
             if (!shape.colors.empty())
                 init_opengl_array_buffer(
                     vbos.colors_buffer, shape.colors, false);
@@ -760,19 +760,19 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             auto quads         = vector<vec4i>{};
             auto positions     = vector<vec3f>{};
             auto normals       = vector<vec3f>{};
-            auto texturecoords = vector<vec2f>{};
-            split_facevarying(quads, positions, normals, texturecoords,
+            auto texcoords = vector<vec2f>{};
+            split_facevarying(quads, positions, normals, texcoords,
                 shape.quads_positions, shape.quads_normals,
-                shape.quads_texturecoords, shape.positions, shape.normals,
-                shape.texturecoords);
+                shape.quads_texcoords, shape.positions, shape.normals,
+                shape.texcoords);
             if (!positions.empty())
                 init_opengl_array_buffer(
                     vbos.positions_buffer, positions, false);
             if (!normals.empty())
                 init_opengl_array_buffer(vbos.normals_buffer, normals, false);
-            if (!texturecoords.empty())
+            if (!texcoords.empty())
                 init_opengl_array_buffer(
-                    vbos.texturecoords_buffer, texturecoords, false);
+                    vbos.texcoords_buffer, texcoords, false);
             if (!quads.empty()) {
                 auto triangles = vector<vec3i>{};
                 quads_to_triangles(triangles, quads);
@@ -786,7 +786,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
 void delete_drawgl_shape(drawgl_shape& glshape) {
     delete_opengl_array_buffer(glshape.positions_buffer);
     delete_opengl_array_buffer(glshape.normals_buffer);
-    delete_opengl_array_buffer(glshape.texturecoords_buffer);
+    delete_opengl_array_buffer(glshape.texcoords_buffer);
     delete_opengl_array_buffer(glshape.colors_buffer);
     delete_opengl_array_buffer(glshape.tangentspaces_buffer);
     delete_opengl_elementbuffer(glshape.points_buffer);
@@ -920,7 +920,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "print stats")) {
-            print_info("{}", format_scene_stats(scn.scene).c_str());
+            print_info("{}", format_stats(scn.scene).c_str());
         }
         end_header_opengl_widget(win);
     }
@@ -1018,8 +1018,8 @@ void load_element(
         auto& shape = scene.shapes[index];
         load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.quads_positions,
-            shape.quads_normals, shape.quads_texturecoords, shape.positions,
-            shape.normals, shape.texturecoords, shape.colors, shape.radius,
+            shape.quads_normals, shape.quads_texcoords, shape.positions,
+            shape.normals, shape.texcoords, shape.colors, shape.radius,
             false);
     } else if (type == typeid(yocto_subdiv)) {
         // TODO: this needs more fixing?
@@ -1027,8 +1027,8 @@ void load_element(
         load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
             subdiv.lines, subdiv.triangles, subdiv.quads,
             subdiv.quads_positions, subdiv.quads_normals,
-            subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
-            subdiv.texturecoords, subdiv.colors, subdiv.radius,
+            subdiv.quads_texcoords, subdiv.positions, subdiv.normals,
+            subdiv.texcoords, subdiv.colors, subdiv.radius,
             subdiv.preserve_facevarying);
         tesselate_subdiv(scene, scene.subdivs[index]);
     } else {

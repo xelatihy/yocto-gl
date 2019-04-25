@@ -324,7 +324,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "print stats")) {
-            print_info("{}", format_scene_stats(scn.scene).c_str());
+            print_info("{}", format_stats(scn.scene).c_str());
             print_info("{}", print_stats(scn.bvh).c_str());
         }
         auto mouse_pos = get_opengl_mouse_pos(win);
@@ -453,8 +453,8 @@ void load_element(
         auto& shape = scene.shapes[index];
         load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.quads_positions,
-            shape.quads_normals, shape.quads_texturecoords, shape.positions,
-            shape.normals, shape.texturecoords, shape.colors, shape.radius,
+            shape.quads_normals, shape.quads_texcoords, shape.positions,
+            shape.normals, shape.texcoords, shape.colors, shape.radius,
             false);
     } else if (type == typeid(yocto_subdiv)) {
         // TODO: this needs more fixing?
@@ -462,8 +462,8 @@ void load_element(
         load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
             subdiv.lines, subdiv.triangles, subdiv.quads,
             subdiv.quads_positions, subdiv.quads_normals,
-            subdiv.quads_texturecoords, subdiv.positions, subdiv.normals,
-            subdiv.texturecoords, subdiv.colors, subdiv.radius,
+            subdiv.quads_texcoords, subdiv.positions, subdiv.normals,
+            subdiv.texcoords, subdiv.colors, subdiv.radius,
             subdiv.preserve_facevarying);
         tesselate_subdiv(scene, scene.subdivs[index]);
     } else {
@@ -734,7 +734,7 @@ void update(app_state& app) {
                 task.result     = async([&scn]() {
                     load_scene(scn.filename, scn.scene, scn.sceneio_prms);
                     tesselate_subdivs(scn.scene);
-                    if (scn.add_skyenv) add_sky_environment(scn.scene);
+                    if (scn.add_skyenv) add_sky(scn.scene);
                 });
             } break;
             case app_task_type::load_element: {

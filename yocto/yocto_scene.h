@@ -171,12 +171,12 @@ struct yocto_shape {
     // face-varying primitives
     vector<vec4i> quads_positions     = {};
     vector<vec4i> quads_normals       = {};
-    vector<vec4i> quads_texturecoords = {};
+    vector<vec4i> quads_texcoords = {};
 
     // vertex data
     vector<vec3f> positions     = {};
     vector<vec3f> normals       = {};
-    vector<vec2f> texturecoords = {};
+    vector<vec2f> texcoords = {};
     vector<vec4f> colors        = {};
     vector<float> radius        = {};
     vector<vec4f> tangentspaces = {};
@@ -214,12 +214,12 @@ struct yocto_subdiv {
     // face-varying primitives
     vector<vec4i> quads_positions     = {};
     vector<vec4i> quads_normals       = {};
-    vector<vec4i> quads_texturecoords = {};
+    vector<vec4i> quads_texcoords = {};
 
     // vertex data
     vector<vec3f> positions     = {};
     vector<vec3f> normals       = {};
-    vector<vec2f> texturecoords = {};
+    vector<vec2f> texcoords = {};
     vector<vec4f> colors        = {};
     vector<float> radius        = {};
 };
@@ -304,10 +304,10 @@ struct yocto_scene {
 namespace yocto {
 
 // Merge a scene into another
-void merge_scene_into(yocto_scene& scene, const yocto_scene& merge);
+void merge_scene(yocto_scene& scene, const yocto_scene& merge);
 
 // Print scene statistics.
-string format_scene_stats(const yocto_scene& scene, bool verbose = false);
+string format_stats(const yocto_scene& scene, bool verbose = false);
 
 }  // namespace yocto
 
@@ -325,11 +325,11 @@ vec2f compute_animation_range(
     const yocto_scene& scene, const string& anim_group = "");
 
 // Computes shape/scene approximate bounds.
-bbox3f compute_shape_bounds(const yocto_shape& shape);
-bbox3f compute_scene_bounds(const yocto_scene& scene);
+bbox3f compute_bounds(const yocto_shape& shape);
+bbox3f compute_bounds(const yocto_scene& scene);
 
 // Compute shape vertex normals
-void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
+void compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Low level make/update bvh functions. The make functions take mutable objects
 // since adjustment might be frequired for the bvh to work in shared memory.
@@ -348,7 +348,7 @@ bool intersect_bvh(const yocto_shape& shape, const bvh_shape& bvh,
 bool intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
     bool non_rigid_frames = true);
-bool intersect_instance_bvh(const yocto_scene& scene, const bvh_scene& bvh,
+bool intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
     int instance_id, const ray3f& ray, bvh_intersection& intersection,
     bool find_any = false, bool non_rigid_frames = true);
 
@@ -361,63 +361,63 @@ void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv);
 void tesselate_subdivs(yocto_scene& scene);
 
 // Add missing names, normals, tangents and hierarchy.
-void add_missing_normals(yocto_scene& scene);
-void add_missing_tangent_space(yocto_scene& scene);
-void add_missing_materials(yocto_scene& scene);
-void add_missing_cameras(yocto_scene& scene);
+void add_normals(yocto_scene& scene);
+void add_tangent_spaces(yocto_scene& scene);
+void add_materials(yocto_scene& scene);
+void add_cameras(yocto_scene& scene);
 
 // Normalize URIs and add missing ones. Assumes names are unique.
 void normalize_uris(yocto_scene& sceme);
 void rename_instances(yocto_scene& scene);
 
 // Add a sky environment
-void add_sky_environment(yocto_scene& scene, float sun_angle = pif / 4);
+void add_sky(yocto_scene& scene, float sun_angle = pif / 4);
 
 // Reduce memory usage
 void trim_memory(yocto_scene& scene);
 
 // Checks for validity of the scene.
-void print_validation_errors(
+void print_validation(
     const yocto_scene& scene, bool skip_textures = false);
 
 // Shape values interpolated using barycentric coordinates.
-vec3f evaluate_shape_position(
+vec3f eval_position(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-vec3f evaluate_shape_normal(
+vec3f eval_normal(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-vec2f evaluate_shape_texturecoord(
+vec2f eval_texturecoord(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-vec4f evaluate_shape_color(
+vec4f eval_color(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-float evaluate_shape_radius(
+float eval_radius(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-pair<vec3f, bool> evaluate_shape_tangentspace(
+pair<vec3f, bool> eval_tangsp(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-vec3f evaluate_shape_perturbed_normal(const yocto_scene& scene,
+vec3f eval_perturbed_normal(const yocto_scene& scene,
     const yocto_shape& shape, int element_id, const vec2f& element_uv,
     const vec3f& normalmap);
 // Shape element values.
-vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id);
-pair<vec3f, bool> evaluate_shape_element_tangentspace(
+vec3f eval_element_normal(const yocto_shape& shape, int element_id);
+pair<vec3f, bool> eval_element_tangents(
     const yocto_shape& shape, int element_id, const vec2f& element_uv = zero2f);
 
 // Sample a shape element based on area/length.
-void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf);
-pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
+void sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf);
+pair<int, vec2f> sample_shape(const yocto_shape& shape,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
-float            sample_shape_element_pdf(const yocto_shape& shape,
+float            sample_shape_pdf(const yocto_shape& shape,
                const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
 // Evaluate a texture.
-vec2i evaluate_texture_size(const yocto_texture& texture);
+vec2i get_texture_size(const yocto_texture& texture);
 vec4f lookup_texture(
     const yocto_texture& texture, int i, int j, bool ldr_as_linear = false);
-vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord,
+vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 float lookup_voltexture(
     const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear);
-float evaluate_voltexture(const yocto_voltexture& texture,
+float eval_voltexture(const yocto_voltexture& texture,
     const vec3f& texcoord, bool ldr_as_linear = false,
     bool no_interpolation = false, bool clamp_to_edge = false);
 
