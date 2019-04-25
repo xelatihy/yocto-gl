@@ -237,7 +237,7 @@ static string get_save_scene_message(
     return str;
 }
 
-void load_scene_texture(yocto_texture& texture, const string& dirname) {
+void load_texture(yocto_texture& texture, const string& dirname) {
     if (is_image_preset_filename(texture.uri)) {
         auto [type, nfilename] = get_image_preset_type(texture.uri);
         make_preset(texture.hdr_image, texture.ldr_image, type);
@@ -247,7 +247,7 @@ void load_scene_texture(yocto_texture& texture, const string& dirname) {
     }
 }
 
-void load_scene_voltexture(yocto_voltexture& texture, const string& dirname) {
+void load_voltexture(yocto_voltexture& texture, const string& dirname) {
     if (is_volume_preset_filename(texture.uri)) {
         make_preset(texture.volume_data, get_basename(texture.uri));
         texture.uri = get_noextension(texture.uri) + ".yvol";
@@ -256,7 +256,7 @@ void load_scene_voltexture(yocto_voltexture& texture, const string& dirname) {
     }
 }
 
-void load_scene_textures(yocto_scene& scene, const string& dirname,
+void load_textures(yocto_scene& scene, const string& dirname,
     const sceneio_params& params) {
     if (params.skip_textures) return;
 
@@ -266,7 +266,7 @@ void load_scene_textures(yocto_scene& scene, const string& dirname,
         [&dirname](yocto_texture& texture) {
             if (!texture.hdr_image.empty() || !texture.ldr_image.empty())
                 return;
-            load_scene_texture(texture, dirname);
+            load_texture(texture, dirname);
         },
         params.cancel_flag, params.run_serially);
 
@@ -275,22 +275,22 @@ void load_scene_textures(yocto_scene& scene, const string& dirname,
         scene.voltextures,
         [&dirname](yocto_voltexture& texture) {
             if (!texture.volume_data.empty()) return;
-            load_scene_voltexture(texture, dirname);
+            load_voltexture(texture, dirname);
         },
         params.cancel_flag, params.run_serially);
 }
 
-void save_scene_texture(const yocto_texture& texture, const string& dirname) {
+void save_texture(const yocto_texture& texture, const string& dirname) {
     save_image(dirname + texture.uri, texture.hdr_image, texture.ldr_image);
 }
 
-void save_scene_voltexture(
+void save_voltexture(
     const yocto_voltexture& texture, const string& dirname) {
     save_volume(dirname + texture.uri, texture.volume_data);
 }
 
 // helper to save textures
-void save_scene_textures(const yocto_scene& scene, const string& dirname,
+void save_textures(const yocto_scene& scene, const string& dirname,
     const sceneio_params& params) {
     if (params.skip_textures) return;
 
@@ -298,7 +298,7 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
     parallel_foreach(
         scene.textures,
         [&dirname](const yocto_texture& texture) {
-            save_scene_texture(texture, dirname);
+            save_texture(texture, dirname);
         },
         params.cancel_flag, params.run_serially);
 
@@ -306,12 +306,12 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
     parallel_foreach(
         scene.voltextures,
         [&dirname](const yocto_voltexture& texture) {
-            save_scene_voltexture(texture, dirname);
+            save_voltexture(texture, dirname);
         },
         params.cancel_flag, params.run_serially);
 }
 
-void load_scene_shape(yocto_shape& shape, const string& dirname) {
+void load_shape(yocto_shape& shape, const string& dirname) {
     if (is_shape_preset_filename(shape.uri)) {
         auto [type, nfilename] = get_shape_preset_type(shape.uri);
         make_preset(shape.points, shape.lines, shape.triangles,
@@ -335,7 +335,7 @@ void save_scene_shape(const yocto_shape& shape, const string& dirname) {
         shape.texturecoords, shape.colors, shape.radius);
 }
 
-void load_scene_subdiv(yocto_subdiv& subdiv, const string& dirname) {
+void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
     if (is_shape_preset_filename(subdiv.uri)) {
         auto [type, nfilename] = get_shape_preset_type(subdiv.uri);
         make_preset(subdiv.points, subdiv.lines, subdiv.triangles,
@@ -352,7 +352,7 @@ void load_scene_subdiv(yocto_subdiv& subdiv, const string& dirname) {
     }
 }
 
-void save_scene_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
+void save_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
     save_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines,
         subdiv.triangles, subdiv.quads, subdiv.quads_positions,
         subdiv.quads_normals, subdiv.quads_texturecoords, subdiv.positions,
@@ -360,26 +360,26 @@ void save_scene_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
 }
 
 // Load json meshes
-void load_scene_shapes(yocto_scene& scene, const string& dirname,
+void load_shapes(yocto_scene& scene, const string& dirname,
     const sceneio_params& params) {
     if (params.skip_meshes) return;
 
     // load shapes
     parallel_foreach(
         scene.shapes,
-        [&dirname](yocto_shape& shape) { load_scene_shape(shape, dirname); },
+        [&dirname](yocto_shape& shape) { load_shape(shape, dirname); },
         params.cancel_flag, params.run_serially);
 
     // load subdivs
     parallel_foreach(
         scene.subdivs,
         [&dirname](
-            yocto_subdiv& subdiv) { load_scene_subdiv(subdiv, dirname); },
+            yocto_subdiv& subdiv) { load_subdiv(subdiv, dirname); },
         params.cancel_flag, params.run_serially);
 }
 
 // Save json meshes
-void save_scene_shapes(const yocto_scene& scene, const string& dirname,
+void save_shapes(const yocto_scene& scene, const string& dirname,
     const sceneio_params& params) {
     if (params.skip_meshes) return;
 
@@ -393,7 +393,7 @@ void save_scene_shapes(const yocto_scene& scene, const string& dirname,
     parallel_foreach(
         scene.subdivs,
         [&dirname](const yocto_subdiv& subdivs) {
-            save_scene_subdiv(subdivs, dirname);
+            save_subdiv(subdivs, dirname);
         },
         params.cancel_flag, params.run_serially);
 }
@@ -828,8 +828,8 @@ static void load_yaml_scene(const string& filename, yocto_scene& scene,
 
         // load shape and textures
         auto dirname = get_dirname(filename);
-        load_scene_shapes(scene, dirname, params);
-        load_scene_textures(scene, dirname, params);
+        load_shapes(scene, dirname, params);
+        load_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
@@ -1030,8 +1030,8 @@ static void save_yaml_scene(const string& filename, const yocto_scene& scene,
 
         // save meshes and textures
         auto dirname = get_dirname(filename);
-        save_scene_shapes(scene, dirname, params);
-        save_scene_textures(scene, dirname, params);
+        save_shapes(scene, dirname, params);
+        save_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
@@ -1397,7 +1397,7 @@ static void load_obj_scene(const string& filename, yocto_scene& scene,
 
         // load textures
         auto dirname = get_dirname(filename);
-        load_scene_textures(scene, dirname, params);
+        load_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
@@ -1703,7 +1703,7 @@ static void save_obj_scene(const string& filename, const yocto_scene& scene,
 
         // skip textures if needed
         auto dirname = get_dirname(filename);
-        save_scene_textures(scene, dirname, params);
+        save_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
@@ -2277,7 +2277,7 @@ static void load_gltf_scene(const string& filename, yocto_scene& scene,
 
         // load textures
         auto dirname = get_dirname(filename);
-        load_scene_textures(scene, dirname, params);
+        load_textures(scene, dirname, params);
 
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
@@ -2599,7 +2599,7 @@ static void save_gltf_scene(const string& filename, const yocto_scene& scene,
         }
 
         // save textures
-        save_scene_textures(scene, dirname, params);
+        save_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
@@ -3252,7 +3252,7 @@ static void load_pbrt_scene(const string& filename, yocto_scene& scene,
 
         // load textures
         auto dirname = get_dirname(filename);
-        load_scene_textures(scene, dirname, params);
+        load_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
@@ -3370,7 +3370,7 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
         }
 
         // skip textures
-        save_scene_textures(scene, dirname, params);
+        save_textures(scene, dirname, params);
 
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
