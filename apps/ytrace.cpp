@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
     // scene loading
     auto scene = yocto_scene{};
     try {
-        auto timer = print_timed("loading scene");
+        auto timer = print_timed("loading {}", filename);
         load_scene(filename, scene, sceneio_prms);
     } catch (const std::exception& e) {
         print_fatal(e.what());
@@ -139,13 +139,13 @@ int main(int argc, char* argv[]) {
 
     // tesselate
     {
-        auto timer = print_timed("tesselating scene");
+        auto timer = print_timed("tesselating");
         tesselate_subdivs(scene);
     }
 
     // add components
     if (validate) {
-        auto timer = print_timed("validating scene");
+        auto timer = print_timed("validating");
         print_validation(scene);
     }
 
@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
     // init renderer
     auto lights = trace_lights{};
     {
-        auto timer = print_timed("initializing lights");
+        auto timer = print_timed("building lights");
         init_trace_lights(lights, scene);
     }
 
@@ -201,13 +201,13 @@ int main(int argc, char* argv[]) {
             auto nsamples = min(trace_prms.samples_per_batch,
                 trace_prms.num_samples - sample);
             {
-                auto timer = print_timed("rendering camera {} [{}/{}]",
+                auto timer = print_timed("rendering cam{} at {:4}/{:4}",
                     trace_prms.camera_id, sample, trace_prms.num_samples);
                 trace_samples(
                     render, state, scene, bvh, lights, sample, trace_prms);
             }
             if (save_batch) {
-                auto outfilename = format("{}.cam{}.s{}.{}",
+                auto outfilename = format("{}.cam{}.s{:04}.{:04}",
                     get_noextension(imfilename), trace_prms.camera_id,
                     sample + nsamples, get_extension(imfilename));
                 try {
@@ -231,7 +231,7 @@ int main(int argc, char* argv[]) {
                 outfilename = format("{}.cam{}.{}", get_noextension(imfilename),
                     trace_prms.camera_id, get_extension(imfilename));
             }
-            auto timer = print_timed("saving image {}", outfilename);
+            auto timer = print_timed("saving {}", outfilename);
             if (logo) {
                 save_tonemapped_with_logo(
                     outfilename, render, tonemap_prms);
