@@ -237,7 +237,7 @@ bool trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
 // Sample camera
 ray3f sample_camera_ray(const yocto_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
-    return eval_ray(
+    return eval_camera(
         camera, ij, image_size, puv, sample_disk(luv));
 }
 

@@ -437,16 +437,16 @@ void set_view(yocto_camera& camera, const bbox3f& bbox,
     float focal = 0);
 
 // Generates a ray from a camera image coordinate and lens coordinates.
-ray3f eval_ray(
+ray3f eval_camera(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv);
 // Generates a ray from a camera for pixel `image_ij`, the image size,
 // the sub-pixel coordinates `pixel_uv` and the lens coordinates `lens_uv`
 // and the image resolution `image_size`.
-ray3f eval_ray(const yocto_camera& camera, const vec2i& image_ij,
+ray3f eval_camera(const yocto_camera& camera, const vec2i& image_ij,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
 // Generates a ray from a camera for pixel index `idx`, the image size,
 // the sub-pixel coordinates `pixel_uv` and the lens coordinates `lens_uv`.
-ray3f eval_ray(const yocto_camera& camera, int idx,
+ray3f eval_camera(const yocto_camera& camera, int idx,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
 
 // Material values packed into a convenience structure.
@@ -514,27 +514,27 @@ float sample_environment_pdf(const yocto_scene& scene,
 namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
-inline int evaluate_keyframed_index(
+inline int keyframe_index(
     const vector<float>& times, const float& time);
 
 // Evaluates a keyframed value using step interpolation.
 template <typename T>
-inline T evaluate_keyframed_step(
+inline T keyframe_step(
     const vector<float>& times, const vector<T>& vals, float time);
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline vec4f evaluate_keyframed_slerp(
+inline vec4f keyframe_slerp(
     const vector<float>& times, const vector<vec4f>& vals, float time);
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline T evaluate_keyframed_linear(
+inline T keyframe_linear(
     const vector<float>& times, const vector<T>& vals, float time);
 
 // Evaluates a keyframed value using Bezier interpolation.
 template <typename T>
-inline T evaluate_keyframed_bezier(
+inline T keyframe_bezier(
     const vector<float>& times, const vector<T>& vals, float time);
 
 }  // namespace yocto
@@ -545,7 +545,7 @@ inline T evaluate_keyframed_bezier(
 namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
-inline int evaluate_keyframed_index(
+inline int keyframe_index(
     const vector<float>& times, const float& time) {
     for (auto i = 0; i < times.size(); i++)
         if (times[i] > time) return i;
@@ -554,47 +554,47 @@ inline int evaluate_keyframed_index(
 
 // Evaluates a keyframed value using step interpolation.
 template <typename T>
-inline T evaluate_keyframed_step(
+inline T keyframe_step(
     const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = evaluate_keyframed_index(times, time);
+    auto idx = keyframe_index(times, time);
     return vals.at(idx - 1);
 }
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline vec4f evaluate_keyframed_slerp(
+inline vec4f keyframe_slerp(
     const vector<float>& times, const vector<vec4f>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = evaluate_keyframed_index(times, time);
+    auto idx = keyframe_index(times, time);
     auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
     return slerp(vals.at(idx - 1), vals.at(idx), t);
 }
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline T evaluate_keyframed_linear(
+inline T keyframe_linear(
     const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = evaluate_keyframed_index(times, time);
+    auto idx = keyframe_index(times, time);
     auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
     return vals.at(idx - 1) * (1 - t) + vals.at(idx) * t;
 }
 
 // Evaluates a keyframed value using Bezier interpolation.
 template <typename T>
-inline T evaluate_keyframed_bezier(
+inline T keyframe_bezier(
     const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = evaluate_keyframed_index(times, time);
+    auto idx = keyframe_index(times, time);
     auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
     return interpolate_bezier(
         vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);

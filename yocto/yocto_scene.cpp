@@ -216,15 +216,15 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
         auto value = vec3f{0, 0, 0};
         switch (animation.interpolation_type) {
             case yocto_interpolation_type::step:
-                value = evaluate_keyframed_step(animation.keyframes_times,
+                value = keyframe_step(animation.keyframes_times,
                     animation.translation_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                value = evaluate_keyframed_linear(animation.keyframes_times,
+                value = keyframe_linear(animation.keyframes_times,
                     animation.translation_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                value = evaluate_keyframed_bezier(animation.keyframes_times,
+                value = keyframe_bezier(animation.keyframes_times,
                     animation.translation_keyframes, time);
                 break;
             default: throw runtime_error("should not have been here");
@@ -236,15 +236,15 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
         auto value = vec4f{0, 0, 0, 1};
         switch (animation.interpolation_type) {
             case yocto_interpolation_type::step:
-                value = evaluate_keyframed_step(animation.keyframes_times,
+                value = keyframe_step(animation.keyframes_times,
                     animation.rotation_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                value = evaluate_keyframed_linear(animation.keyframes_times,
+                value = keyframe_linear(animation.keyframes_times,
                     animation.rotation_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                value = evaluate_keyframed_bezier(animation.keyframes_times,
+                value = keyframe_bezier(animation.keyframes_times,
                     animation.rotation_keyframes, time);
                 break;
         }
@@ -255,15 +255,15 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
         auto value = vec3f{1, 1, 1};
         switch (animation.interpolation_type) {
             case yocto_interpolation_type::step:
-                value = evaluate_keyframed_step(
+                value = keyframe_step(
                     animation.keyframes_times, animation.scale_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                value = evaluate_keyframed_linear(
+                value = keyframe_linear(
                     animation.keyframes_times, animation.scale_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                value = evaluate_keyframed_bezier(
+                value = keyframe_bezier(
                     animation.keyframes_times, animation.scale_keyframes, time);
                 break;
         }
@@ -1145,7 +1145,7 @@ void set_view(yocto_camera& camera, const bbox3f& bbox,
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f evaluate_perspective_camera_ray(
+ray3f eval_perspective_camera(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
     auto distance = camera.focal_length;
     if (camera.focus_distance < float_max) {
@@ -1180,7 +1180,7 @@ ray3f evaluate_perspective_camera_ray(
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f evaluate_orthographic_camera_ray(
+ray3f eval_orthographic_camera(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
     if (camera.lens_aperture) {
         auto scale = 1 / camera.focal_length;
@@ -1209,29 +1209,29 @@ ray3f evaluate_orthographic_camera_ray(
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f eval_ray(
+ray3f eval_camera(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
     if (camera.orthographic)
-        return evaluate_orthographic_camera_ray(camera, image_uv, lens_uv);
+        return eval_orthographic_camera(camera, image_uv, lens_uv);
     else
-        return evaluate_perspective_camera_ray(camera, image_uv, lens_uv);
+        return eval_perspective_camera(camera, image_uv, lens_uv);
 }
 
 // Generates a ray from a camera.
-ray3f eval_ray(const yocto_camera& camera, const vec2i& image_ij,
+ray3f eval_camera(const yocto_camera& camera, const vec2i& image_ij,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
     auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
         (image_ij.y + pixel_uv.y) / image_size.y};
-    return eval_ray(camera, image_uv, lens_uv);
+    return eval_camera(camera, image_uv, lens_uv);
 }
 
 // Generates a ray from a camera.
-ray3f eval_ray(const yocto_camera& camera, int idx,
+ray3f eval_camera(const yocto_camera& camera, int idx,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
     auto image_ij = vec2i{idx % image_size.x, idx / image_size.x};
     auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
         (image_ij.y + pixel_uv.y) / image_size.y};
-    return eval_ray(camera, image_uv, lens_uv);
+    return eval_camera(camera, image_uv, lens_uv);
 }
 
 // Evaluates the microfacet_brdf at a location.
