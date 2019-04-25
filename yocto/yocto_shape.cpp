@@ -802,7 +802,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
     }
 }
 
-struct load_obj_cb : obj_callbacks {
+struct load_obj_shape_cb : obj_callbacks {
     vector<int>&   points;
     vector<vec2i>& lines;
     vector<vec3i>& triangles;
@@ -831,7 +831,7 @@ struct load_obj_cb : obj_callbacks {
     unordered_map<int, int> texcoord_map = unordered_map<int, int>();
     unordered_map<int, int> norm_map     = unordered_map<int, int>();
 
-    load_obj_cb(vector<int>& points, vector<vec2i>& lines,
+    load_obj_shape_cb(vector<int>& points, vector<vec2i>& lines,
         vector<vec3i>& triangles, vector<vec4i>& quads,
         vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
         vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
@@ -996,7 +996,7 @@ static void load_obj_shape(const string& filename, vector<int>& points,
         obj_prms.exit_on_error = false;
         obj_prms.geometry_only = true;
         obj_prms.flip_texcoord = flip_texcoord;
-        auto cb = load_obj_cb{points, lines, triangles, quads,
+        auto cb = load_obj_shape_cb{points, lines, triangles, quads,
             quads_positions, quads_normals, quads_texcoords, positions,
             normals, texcoords, preserve_facevarying};
         load_obj(filename, cb, obj_prms);

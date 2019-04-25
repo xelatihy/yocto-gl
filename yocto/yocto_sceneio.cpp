@@ -536,7 +536,7 @@ inline void load_yaml(const string& filename, Callbacks& callbacks,
     }
 }
 
-struct load_yaml_cb : yaml_callbacks {
+struct load_yaml_scene_cb : yaml_callbacks {
     yocto_scene&              scene;
     const sceneio_params& params;
     string                    ply_instances = "";
@@ -559,7 +559,7 @@ struct load_yaml_cb : yaml_callbacks {
     unordered_map<string, int> mmap = {{"", -1}};
     unordered_map<string, int> smap = {{"", -1}};
 
-    load_yaml_cb(
+    load_yaml_scene_cb(
         yocto_scene& scene, const sceneio_params& params)
         : scene{scene}, params{params} {
         auto reserve_size = 1024 * 32;
@@ -823,7 +823,7 @@ static void load_yaml_scene(const string& filename, yocto_scene& scene,
     try {
         // Parse obj
         auto yaml_options = load_yaml_options();
-        auto cb           = load_yaml_cb{scene, params};
+        auto cb           = load_yaml_scene_cb{scene, params};
         load_yaml(filename, cb, yaml_options);
 
         // load shape and textures
@@ -1053,7 +1053,7 @@ static void save_yaml_scene(const string& filename, const yocto_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-struct load_obj_cb : obj_callbacks {
+struct load_obj_scene_cb : obj_callbacks {
     yocto_scene&              scene;
     const sceneio_params& params;
 
@@ -1082,7 +1082,7 @@ struct load_obj_cb : obj_callbacks {
     // current parse state
     bool preserve_facevarying_now = false;
 
-    load_obj_cb(
+    load_obj_scene_cb(
         yocto_scene& scene, const sceneio_params& params)
         : scene{scene}, params{params} {}
 
@@ -1380,7 +1380,7 @@ static void load_obj_scene(const string& filename, yocto_scene& scene,
         // Parse obj
         auto obj_prms          = obj_params();
         obj_prms.geometry_only = false;
-        auto cb                   = load_obj_cb{scene, params};
+        auto cb                   = load_obj_scene_cb{scene, params};
         load_obj(filename, cb, obj_prms);
 
         // cleanup empty
@@ -2676,12 +2676,12 @@ static vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak)
     return (rp + rs) / 2.0f;
 }
 
-struct load_pbrt_cb : pbrt_callbacks {
+struct load_pbrt_scene_cb : pbrt_callbacks {
     yocto_scene&              scene;
     const sceneio_params& params;
     const string&             filename;
 
-    load_pbrt_cb(yocto_scene& scene,
+    load_pbrt_scene_cb(yocto_scene& scene,
         const sceneio_params& params, const string& filename)
         : scene{scene}, params{params}, filename{filename} {}
 
@@ -3256,7 +3256,7 @@ static void load_pbrt_scene(const string& filename, yocto_scene& scene,
     try {
         // Parse pbrt
         auto pbrt_options = pbrt_params();
-        auto cb           = load_pbrt_cb{scene, params, filename};
+        auto cb           = load_pbrt_scene_cb{scene, params, filename};
         load_pbrt(filename, cb, pbrt_options);
 
         // load textures
