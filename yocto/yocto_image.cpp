@@ -32,11 +32,11 @@
 
 #include "yocto_image.h"
 
-#ifndef WIN32
+#if !defined(_WIN32) && !defined(_WIN64)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-variable"
-#ifndef _clang__
+#ifndef __clang__
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 #endif
@@ -57,7 +57,7 @@
 
 // #endif
 
-#ifndef WIN32
+#if !defined(_WIN32) && !defined(_WIN64)
 #pragma GCC diagnostic pop
 #endif
 

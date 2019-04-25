@@ -354,11 +354,12 @@ inline time_point get_time() {
 struct print_timer {
     print_timer(const string& msg) : msg{msg} {
         start = get_time();
-        print("{}\n", msg);
+        print("{}", msg);
+        fflush(stdout);
     }
     ~print_timer() {
         auto end = get_time();
-        print("{} {:%H:%M:%S}\n", msg, end - start);
+        print(" in {:%H:%M:%S}\n", end - start);
     }
 
    private:
@@ -379,6 +380,11 @@ inline void set_log_callback(function<void(const string&)> callback) {
     impl::log_callback = callback;
 }
 template <typename... Args>
+inline void log_msg(string_view format_str, const Args&... args) {
+    if (impl::log_callback)
+        impl::log_callback(format(format_str, args...));
+}
+template <typename... Args>
 inline void log_info(string_view format_str, const Args&... args) {
     if (impl::log_callback)
         impl::log_callback(format(format_str, args...) + "\n");
@@ -391,11 +397,11 @@ inline void log_error(string_view format_str, const Args&... args) {
 struct log_timer {
     log_timer(const string& msg) : msg{msg} {
         start = get_time();
-        log_info("{}", msg);
+        log_msg("{}", msg);
     }
     ~log_timer() {
         auto end = get_time();
-        log_info("{} {:%H:%M:%S}", msg, end - start);
+        log_msg("in {:%H:%M:%S}", end - start);
     }
 
    private:
