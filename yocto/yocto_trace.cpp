@@ -1181,7 +1181,7 @@ float sample_roulette(const vec3f& albedo, const vec3f& weight,
 }
 #endif
 
-pair<float, int> sample_volume_distance(
+pair<float, int> sample_transmission(
     const trace_material& material, float rl, float rd) {
     auto channel = clamp((int)(rl * 3), 0, 2);
     auto density = material.volume_density[channel];
@@ -1191,13 +1191,14 @@ pair<float, int> sample_volume_distance(
         return {-log(rd) / density, channel};
 }
 
-float sample_volume_distance_pdf(
+float sample_transmission_pdf(
     const trace_material& material, float distance, int channel) {
+    // TODO: why not mis?
     auto density = material.volume_density[channel];
     return exp(-density * distance);
 }
 
-vec3f eval_volume_transmission(const trace_material& material, float distance) {
+vec3f eval_transmission(const trace_material& material, float distance) {
     return exp(-material.volume_density * distance);
 }
 
@@ -1324,20 +1325,19 @@ tuple<vec3f, vec3f> sample_direction_volume(const yocto_scene& scene,
     }
 }
 
-tuple<vec3f, float, float> sample_volume_distance(const vec3f& position,
+// Returns weight and distance
+tuple<vec3f, float> sample_volume_distance(const vec3f& position,
     const vec3f& outgoing, float max_distance, const trace_material& material,
     rng_state& rng) {
+    if(material.volume_density == zero3f) return { vec3f{1}, max_distance };
     // clamp ray if inside a volume
-    auto [distance, channel] = sample_volume_distance(
+    auto [distance, channel] = sample_transmission(
         material, rand1f(rng), rand1f(rng));
-
-    // compute volume transmission
     distance          = min(distance, max_distance);
-    auto pdf          = sample_volume_distance_pdf(material, distance, channel);
-    auto transmission = eval_volume_transmission(material, distance);
-
-    // done
-    return {transmission, distance, pdf};
+    auto pdf          = sample_transmission_pdf(material, distance, channel);
+    auto transmission = eval_transmission(material, distance);
+    if(transmission == zero3f || pdf == 0) return {zero3f, 0};
+    return {transmission / pdf, distance};
 }
 
 // Recursive path tracing.
@@ -1365,10 +1365,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // clamp ray if inside a volume
         auto hit_surface = true;
         if (volume_stack_size) {
-            auto [transmission, distance, distance_pdf] =
+            auto [transmission, distance] =
                 sample_volume_distance(ray.o, -ray.d, intersection.distance,
                     volume_stack[volume_stack_size - 1], rng);
-            weight *= transmission / distance_pdf;
+            weight *= transmission;
             hit_surface           = distance >= intersection.distance;
             intersection.distance = distance;
         }
