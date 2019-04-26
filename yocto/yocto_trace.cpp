@@ -1161,23 +1161,23 @@ inline vec3f get_roulette_albedo(const trace_material& material) {
 // property and does not depend on the path. In this way we ensure that a path
 // has always low propabilty of being terminated on transmissive surfaces.
 
-// Russian roulette. Returns whether to stop and its pdf.
+// Russian roulette. Returns a weight, which is zero if stop ois requested.
 #if YOCTO_RUSSIAN_ROULETTE_MODE == 0
-pair<bool, float> sample_roulette(const vec3f& weight, int bounce, float rr,
+float sample_roulette(const vec3f& weight, int bounce, float rr,
     int min_bounce = 4, float rr_threadhold = 1) {
     if (max(weight) < rr_threadhold && bounce > min_bounce) {
         auto rr_prob = max((float)0.05, 1 - max(weight));
-        return {rr < rr_prob, 1 - rr_prob};
+        return rr < rr_prob ? 1 - rr_prob : 0;
     } else {
-        return {false, 1};
+        return 1;
     }
 }
 #elif YOCTO_RUSSIAN_ROULETTE_MODE == 1
-pair<bool, float> sample_roulette(const vec3f& albedo, const vec3f& weight,
+float sample_roulette(const vec3f& albedo, const vec3f& weight,
     int bounce, float rr, int min_bounce = 4, float rr_threadhold = 1) {
-    if (bounce <= min_bounce) return {false, 1};
+    if (bounce <= min_bounce) return 1;
     auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
-    return {rr < rr_prob, 1 - rr_prob};
+    return rr < rr_prob ? 1 - rr_prob : 0;
 }
 #endif
 
@@ -1387,9 +1387,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (is_scattering_zero(point.material)) break;
 
         // russian roulette
-        auto [rr_stop, rr_pdf] = sample_roulette(weight, bounce, rand1f(rng));
-        if (rr_stop) break;
-        weight /= rr_pdf;
+        weight *= sample_roulette(weight, bounce, rand1f(rng));
         if (weight == zero3f) break;
 
         // continue path
@@ -1451,9 +1449,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (is_scattering_zero(point.material)) break;
 
         // russian roulette
-        auto [rr_stop, rr_pdf] = sample_roulette(weight, bounce, rand1f(rng));
-        if (rr_stop) break;
-        weight /= rr_pdf;
+        weight *= sample_roulette(weight, bounce, rand1f(rng));
         if (weight == zero3f) break;
 
         // continue path
