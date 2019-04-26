@@ -169,15 +169,16 @@ trace_point make_surface_point(const yocto_scene& scene,
 }
 
 trace_point make_volume_point(const yocto_scene& scene, const vec3f& position,
-    float distance, const vec3f& shading_direction, const trace_material& last_material) {
-    auto point = trace_point{};
-    point.position = position + shading_direction * distance;
-    point.normal = shading_direction;
-    point.material = {};
-    point.material.volume_emission = point.material.volume_emission;
-    point.material.volume_albedo = last_material.volume_albedo;
-    point.material.volume_density = last_material.volume_density;
-    point.material.volume_phaseg = last_material.volume_phaseg;
+    const vec3f& direction, float distance,
+    const trace_material& last_material) {
+    auto point                     = trace_point{};
+    point.position                 = position + direction * distance;
+    point.normal                   = direction;
+    point.material                 = {};
+    point.material.volume_emission = last_material.volume_emission;
+    point.material.volume_albedo   = last_material.volume_albedo;
+    point.material.volume_density  = last_material.volume_density;
+    point.material.volume_phaseg   = last_material.volume_phaseg;
     return point;
 }
 
@@ -1409,10 +1410,9 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             }
 
             // clamp ray if inside a volume
-            auto& material = volume_stack[volume_stack_size - 1];
             auto [transmission, distance, distance_pdf] =
-                sample_volume_distance(
-                    ray.o, -ray.d, intersection.distance, material, rng);
+                sample_volume_distance(ray.o, -ray.d, intersection.distance,
+                    volume_stack[volume_stack_size - 1], rng);
             weight *= transmission / distance_pdf;
 
             // check hit
@@ -1421,11 +1421,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             if (!hit_surface) {
                 // prepare shading point
                 auto outgoing = -ray.d;
-                auto position = ray.o + ray.d * distance;
-                auto normal   = ray.d;
+                auto point = make_volume_point(scene, ray.o, ray.d, distance, volume_stack[volume_stack_size - 1]);
 
                 // emission
-                radiance += weight * eval_emission(material, normal, outgoing);
+                radiance += weight * eval_emission(point.material, point.normal, outgoing);
 
                 // russian roulette
                 auto [rr_stop, rr_pdf] = sample_roulette(
@@ -1436,8 +1435,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
                 // continue path
                 auto [vsdf_cosine, incoming, incoming_pdf] =
-                    sample_direction_volume(scene, lights, bvh, position,
-                        normal, material, outgoing, rng, true);
+                    sample_direction_volume(scene, lights, bvh, point.position,
+                        point.normal, point.material, outgoing, rng, true);
                 if (incoming == zero3f || incoming_pdf == 0 ||
                     vsdf_cosine == zero3f)
                     break;
@@ -1445,7 +1444,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 if (weight == zero3f) break;
 
                 // setup next iteration
-                ray = make_ray(position, incoming);
+                ray = make_ray(point.position, incoming);
                 continue;
             } else {
                 // prepare shading point
