@@ -1367,83 +1367,55 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 sample_volume_distance(ray.o, -ray.d, intersection.distance,
                     volume_stack[volume_stack_size - 1], rng);
             weight *= transmission / distance_pdf;
-            hit_surface = distance >= intersection.distance;
+            hit_surface           = distance >= intersection.distance;
             intersection.distance = distance;
         }
 
-        // surface or volume hit
-        if (hit_surface) {
-            // prepare shading point
-            auto outgoing = -ray.d;
-            auto point    = make_surface_point(scene, intersection, ray.d);
+        // prepare shading point
+        auto outgoing = -ray.d;
+        auto point    = hit_surface
+                         ? make_surface_point(scene, intersection, ray.d)
+                         : make_volume_point(scene, ray.o, ray.d,
+                               intersection.distance,
+                               volume_stack[volume_stack_size - 1]);
 
-            // accumulate emission
-            radiance += weight *
-                        eval_emission(point.material, point.normal, outgoing);
-            if (is_scattering_zero(point.material)) break;
+        // accumulate emission
+        radiance += weight *
+                    eval_emission(point.material, point.normal, outgoing);
+        if (is_scattering_zero(point.material)) break;
 
-            // russian roulette
-            auto [rr_stop, rr_pdf] = sample_roulette(
-                weight, bounce, rand1f(rng));
-            if (rr_stop) break;
-            weight /= rr_pdf;
-            if (weight == zero3f) break;
+        // russian roulette
+        auto [rr_stop, rr_pdf] = sample_roulette(weight, bounce, rand1f(rng));
+        if (rr_stop) break;
+        weight /= rr_pdf;
+        if (weight == zero3f) break;
 
-            // continue path
-            auto [brdf_cosine, incoming, incoming_pdf] = sample_direction(scene,
-                lights, bvh, point.position, point.normal, point.material,
-                outgoing, rng, true);
+        // continue path
+        auto [scattering, incoming, incoming_pdf] =
+            hit_surface
+                ? sample_direction(scene, lights, bvh, point.position,
+                      point.normal, point.material, outgoing, rng, true)
+                : sample_direction_volume(scene, lights, bvh, point.position,
+                      point.normal, point.material, outgoing, rng, true);
+        // continue path
+        if (incoming == zero3f || incoming_pdf == 0 || scattering == zero3f)
+            break;
+        weight *= scattering / incoming_pdf;
+        if (weight == zero3f) break;
 
-            // exit if no hit
-            if (incoming == zero3f || incoming_pdf == 0 ||
-                brdf_cosine == zero3f)
-                break;
-            weight *= brdf_cosine / incoming_pdf;
-            if (weight == zero3f) break;
-
-            // update volume_stack
-            if (point.material.volume_density != zero3f &&
-                dot(incoming, point.normal) > 0 !=
-                    dot(outgoing, point.normal) > 0) {
-                if (!volume_stack_size) {
-                    volume_stack[volume_stack_size++] = point.material;
-                } else {
-                    volume_stack_size--;
-                }
+        // update volume_stack
+        if (hit_surface && point.material.volume_density != zero3f &&
+            dot(incoming, point.normal) > 0 !=
+                dot(outgoing, point.normal) > 0) {
+            if (!volume_stack_size) {
+                volume_stack[volume_stack_size++] = point.material;
+            } else {
+                volume_stack_size--;
             }
-
-            // setup next iteration
-            ray = make_ray(point.position, incoming);
-        } else {
-            // prepare shading point
-            auto outgoing = -ray.d;
-            auto point    = make_volume_point(scene, ray.o, ray.d, intersection.distance,
-                volume_stack[volume_stack_size - 1]);
-
-            // emission
-            radiance += weight *
-                        eval_emission(point.material, point.normal, outgoing);
-
-            // russian roulette
-            auto [rr_stop, rr_pdf] = sample_roulette(
-                weight, bounce, rand1f(rng));
-            if (rr_stop) break;
-            weight /= rr_pdf;
-            if (weight == zero3f) break;
-
-            // continue path
-            auto [vsdf_cosine, incoming, incoming_pdf] =
-                sample_direction_volume(scene, lights, bvh, point.position,
-                    point.normal, point.material, outgoing, rng, true);
-            if (incoming == zero3f || incoming_pdf == 0 ||
-                vsdf_cosine == zero3f)
-                break;
-            weight *= vsdf_cosine / incoming_pdf;
-            if (weight == zero3f) break;
-
-            // setup next iteration
-            ray = make_ray(point.position, incoming);
         }
+
+        // setup next iteration
+        ray = make_ray(point.position, incoming);
     }
 
     return {radiance, hit};
