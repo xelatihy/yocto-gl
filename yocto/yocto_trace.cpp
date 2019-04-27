@@ -1423,27 +1423,28 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Recursive path tracing.
 pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    const trace_lights& lights, const vec3f& position_, const vec3f& direction_,
     rng_state& rng, const trace_params& params) {
     // initialize
     auto radiance = zero3f;
     auto weight   = vec3f{1, 1, 1};
-    auto ray      = make_ray(position, direction);
+    auto position = position_;
+    auto direction= direction_;
     auto hit      = false;
 
     // trace  path
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(scene, bvh, ray, intersection)) {
-            radiance += weight * eval_environment(scene, ray.d);
+        if (!trace_ray(scene, bvh, position, direction, intersection)) {
+            radiance += weight * eval_environment(scene, direction);
             break;
         }
         hit = true;
 
         // prepare shading point
-        auto outgoing = -ray.d;
-        auto point    = make_surface_point(scene, intersection, ray.d);
+        auto outgoing = -direction;
+        auto point    = make_surface_point(scene, intersection, direction);
 
         // accumulate emission
         radiance += weight *
@@ -1464,7 +1465,8 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // setup next iteration
-        ray = make_ray(point.position, incoming);
+        position = point.position;
+        direction = incoming;
     }
 
     return {radiance, hit};
