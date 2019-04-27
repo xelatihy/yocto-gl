@@ -1342,12 +1342,13 @@ tuple<vec3f, float> sample_volume_distance(const vec3f& position,
 
 // Recursive path tracing.
 pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction_,
     rng_state& rng, const trace_params& params) {
     // initialize
     auto radiance          = zero3f;
     auto weight            = vec3f{1, 1, 1};
-    auto ray               = make_ray(position, direction);
+    auto origin            = position;
+    auto direction         = direction_;
     auto volume_stack      = array<trace_material, 16>{};
     auto volume_stack_size = 0;
     auto hit               = false;
@@ -1356,8 +1357,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(scene, bvh, ray, intersection)) {
-            radiance += weight * eval_environment(scene, ray.d);
+        if (!trace_ray(scene, bvh, origin, direction, intersection)) {
+            radiance += weight * eval_environment(scene, direction);
             break;
         }
         hit = true;
@@ -1366,7 +1367,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto hit_surface = true;
         if (volume_stack_size) {
             auto [transmission, distance] =
-                sample_volume_distance(ray.o, -ray.d, intersection.distance,
+                sample_volume_distance(origin, -direction, intersection.distance,
                     volume_stack[volume_stack_size - 1], rng);
             weight *= transmission;
             hit_surface           = distance >= intersection.distance;
@@ -1374,10 +1375,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // prepare shading point
-        auto outgoing = -ray.d;
+        auto outgoing = -direction;
         auto point    = hit_surface
-                         ? make_surface_point(scene, intersection, ray.d)
-                         : make_volume_point(scene, ray.o, ray.d,
+                         ? make_surface_point(scene, intersection, direction)
+                         : make_volume_point(scene, origin, direction,
                                intersection.distance,
                                volume_stack[volume_stack_size - 1]);
 
@@ -1413,7 +1414,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // setup next iteration
-        ray = make_ray(point.position, incoming);
+        origin = point.position;
+        direction = incoming;
     }
 
     return {radiance, hit};
