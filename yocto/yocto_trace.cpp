@@ -1342,12 +1342,12 @@ tuple<vec3f, float> sample_volume_distance(const vec3f& position,
 
 // Recursive path tracing.
 pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction_,
+    const trace_lights& lights, const vec3f& position_, const vec3f& direction_,
     rng_state& rng, const trace_params& params) {
     // initialize
     auto radiance          = zero3f;
     auto weight            = vec3f{1, 1, 1};
-    auto origin            = position;
+    auto position          = position_;
     auto direction         = direction_;
     auto volume_stack      = array<trace_material, 16>{};
     auto volume_stack_size = 0;
@@ -1357,7 +1357,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(scene, bvh, origin, direction, intersection)) {
+        if (!trace_ray(scene, bvh, position, direction, intersection)) {
             radiance += weight * eval_environment(scene, direction);
             break;
         }
@@ -1367,7 +1367,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto hit_surface = true;
         if (volume_stack_size) {
             auto [transmission, distance] =
-                sample_volume_distance(origin, -direction, intersection.distance,
+                sample_volume_distance(position, -direction, intersection.distance,
                     volume_stack[volume_stack_size - 1], rng);
             weight *= transmission;
             hit_surface           = distance >= intersection.distance;
@@ -1378,7 +1378,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto outgoing = -direction;
         auto point    = hit_surface
                          ? make_surface_point(scene, intersection, direction)
-                         : make_volume_point(scene, origin, direction,
+                         : make_volume_point(scene, position, direction,
                                intersection.distance,
                                volume_stack[volume_stack_size - 1]);
 
@@ -1414,7 +1414,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // setup next iteration
-        origin = point.position;
+        position = point.position;
         direction = incoming;
     }
 
