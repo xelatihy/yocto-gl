@@ -205,8 +205,11 @@ ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
 }
 
 vec3f eval_emission(const trace_material& material, const vec3f& normal,
-    const vec3f& outgoing) {
-    return material.emission_color + material.volume_emission;
+    const vec3f& outgoing, trace_scattering_mode mode = trace_scattering_mode::smooth) {
+    auto emission = zero3f;
+    if(mode == trace_scattering_mode::smooth) emission += material.emission_color;
+    if(mode == trace_scattering_mode::volume) emission += material.volume_emission;
+    return emission;
 }
 
 #if YOCTO_TRACE_THINSHEET
@@ -1364,19 +1367,19 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         hit = true;
 
         // clamp ray if inside a volume
-        auto hit_surface = true;
+        auto on_surface = true;
         if (volume_stack_size) {
             auto [transmission, distance] =
                 sample_distance(position, -direction, intersection.distance,
                     volume_stack[volume_stack_size - 1], rng);
             weight *= transmission;
-            hit_surface           = distance >= intersection.distance;
+            on_surface           = distance >= intersection.distance;
             intersection.distance = distance;
         }
 
         // prepare shading point
         auto outgoing = -direction;
-        auto point    = hit_surface
+        auto point    = on_surface
                          ? make_surface_point(scene, intersection, direction)
                          : make_volume_point(scene, position, direction,
                                intersection.distance,
@@ -1384,7 +1387,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // accumulate emission
         radiance += weight *
-                    eval_emission(point.material, point.normal, outgoing);
+                    eval_emission(point.material, point.normal, outgoing, on_surface ? trace_scattering_mode::smooth : trace_scattering_mode::volume);
         if (is_scattering_zero(point.material)) break;
 
         // russian roulette
@@ -1395,7 +1398,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // continue path
         auto [scattering, incoming] =
-            hit_surface
+            on_surface
                 ? sample_direction(scene, lights, bvh, point.position,
                       point.normal, point.material, outgoing, rng, true)
                 : sample_direction_volume(scene, lights, bvh, point.position,
@@ -1405,7 +1408,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // update volume_stack
-        if (hit_surface && point.material.volume_density != zero3f &&
+        if (on_surface && point.material.volume_density != zero3f &&
             dot(incoming, point.normal) > 0 !=
                 dot(outgoing, point.normal) > 0) {
             if (!volume_stack_size) {
