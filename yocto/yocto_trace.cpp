@@ -1231,71 +1231,6 @@ float eval_phasefunction(float cos_theta, float g) {
 tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
     const vec3f& normal, const trace_material& material, const vec3f& outgoing,
-    rng_state& rng, bool mis, bool include_smooth = true,
-    bool include_delta = true) {
-    // choose delta or non-delta
-    auto weight_smooth = 0.0f, weight_delta = 0.0f;
-    if (include_smooth) {
-        weight_smooth = compute_weights(
-            material, normal, outgoing, trace_scattering_mode::smooth)
-                            .total_weight;
-    }
-    if (include_delta) {
-        weight_delta = compute_weights(
-            material, normal, outgoing, trace_scattering_mode::delta)
-                           .total_weight;
-    }
-    if (weight_smooth == 0 && weight_delta == 0) return {zero3f, zero3f};
-    auto weight_sum = weight_smooth + weight_delta;
-    weight_smooth /= weight_sum;
-    weight_delta /= weight_sum;
-    auto mode     = trace_scattering_mode::smooth;
-    auto mode_pdf = 0.0f;
-    if (rand1f(rng) < weight_delta) {
-        mode     = trace_scattering_mode::delta;
-        mode_pdf = weight_delta;
-    } else {
-        mode     = trace_scattering_mode::smooth;
-        mode_pdf = weight_smooth;
-    }
-    // continue path
-    auto incoming     = zero3f;
-    auto scattering   = zero3f;
-    auto incoming_pdf = 0.0f;
-    if (mis && mode == trace_scattering_mode::smooth) {
-        if (rand1f(rng) < 0.5f) {
-            incoming = sample_scattering(
-                material, normal, outgoing, rand1f(rng), rand2f(rng), mode);
-        } else {
-            incoming = sample_lights(scene, lights, bvh, position, rand1f(rng),
-                rand1f(rng), rand2f(rng));
-        }
-        scattering = eval_scattering(
-            material, normal, outgoing, incoming, mode);
-        incoming_pdf = 0.5f * sample_scattering_pdf(
-                                  material, normal, outgoing, incoming, mode) +
-                       0.5f * sample_lights_pdf(
-                                  scene, lights, bvh, position, incoming);
-    } else {
-        incoming = sample_scattering(
-            material, normal, outgoing, rand1f(rng), rand2f(rng), mode);
-        scattering = eval_scattering(
-            material, normal, outgoing, incoming, mode);
-        incoming_pdf = sample_scattering_pdf(
-            material, normal, outgoing, incoming, mode);
-    }
-    incoming_pdf *= mode_pdf;
-    if (incoming == zero3f || incoming_pdf == 0) {
-        return {zero3f, zero3f};
-    } else {
-        return {scattering / incoming_pdf, incoming};
-    }
-}
-
-// Sample next direction. Returns weight and direction.
-tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
-    const vec3f& normal, const trace_material& material, const vec3f& outgoing,
     trace_scattering_mode mode, bool mis, rng_state& rng) {
     // continue path
     auto incoming     = zero3f;
@@ -1349,45 +1284,6 @@ tuple<float, trace_scattering_mode> sample_mode(const vec3f& position,
         return {1 / pdf_delta, trace_scattering_mode::delta};
     } else {
         return {1 / pdf_smooth, trace_scattering_mode::smooth};
-    }
-}
-
-// Sample next direction. Returns weight and direction.
-tuple<vec3f, vec3f> sample_direction_volume(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
-    const vec3f& normal, const trace_material& material, const vec3f& outgoing,
-    rng_state& rng, bool mis) {
-    // continue path
-    auto mode         = trace_scattering_mode::volume;
-    auto incoming     = zero3f;
-    auto scattering   = zero3f;
-    auto incoming_pdf = 0.0f;
-    if (mis) {
-        if (rand1f(rng) < 0.5f) {
-            incoming = sample_scattering(
-                material, normal, outgoing, rand1f(rng), rand2f(rng), mode);
-        } else {
-            incoming = sample_lights(scene, lights, bvh, position, rand1f(rng),
-                rand1f(rng), rand2f(rng));
-        }
-        scattering = eval_scattering(
-            material, normal, outgoing, incoming, mode);
-        incoming_pdf = 0.5f * sample_scattering_pdf(
-                                  material, normal, outgoing, incoming, mode) +
-                       0.5f * sample_lights_pdf(
-                                  scene, lights, bvh, position, incoming);
-    } else {
-        incoming = sample_scattering(
-            material, normal, outgoing, rand1f(rng), rand2f(rng), mode);
-        scattering = eval_scattering(
-            material, normal, outgoing, incoming, mode);
-        incoming_pdf = sample_scattering_pdf(
-            material, normal, outgoing, incoming, mode);
-    }
-    if (incoming == zero3f || incoming_pdf == 0) {
-        return {zero3f, zero3f};
-    } else {
-        return {scattering / incoming_pdf, incoming};
     }
 }
 
@@ -1462,7 +1358,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= rr_weight;
         if (weight == zero3f) break;
 
-        // pick omde
+        // pick mode
         auto [mode_weight, mode] = sample_mode(point.position, point.normal,
             point.material, outgoing, on_surface, rng);
         weight *= mode_weight;
@@ -1531,9 +1427,18 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= rr_weight;
         if (weight == zero3f) break;
 
-        // continue path
+        // pick mode
+        auto [mode_weight, mode] = sample_mode(point.position, point.normal,
+            point.material, outgoing, true, rng);
+        weight *= mode_weight;
+        if (weight == zero3f) break;
+
+        // next direction
         auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            point.position, point.normal, point.material, outgoing, rng, false);
+            point.position, point.normal, point.material, outgoing, mode, false,
+            rng);
+        weight *= scattering;
+        if (weight == zero3f) break;
 
         // exit if no hit
         weight *= scattering;
@@ -1587,8 +1492,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
         // continue path
         auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            point.position, point.normal, point.material, outgoing, rng, false,
-            false, true);
+            point.position, point.normal, point.material, outgoing, trace_scattering_mode::delta, false, rng);
 
         // exit if no hit
         weight *= scattering;
