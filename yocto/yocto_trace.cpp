@@ -1302,17 +1302,36 @@ tuple<vec3f, float> sample_distance(const vec3f& position,
     return {transmission / pdf, distance};
 }
 
+// Updates trace volume stack upon entering and exiting a surface
+using trace_volume_stack = short_vector<pair<trace_material, int>, 32>;
+void update_volume_stack(trace_volume_stack& volume_stack,
+    trace_material& medium, const trace_material& material, int instance,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+    if (material.volume_density == zero3f) return;
+    if (dot(incoming, normal) > 0 != dot(outgoing, normal) > 0) {
+        if (volume_stack.empty()) {
+            volume_stack.push_back({material, instance});
+            medium = material;
+        } else {
+            volume_stack.pop_back();
+            medium = {};
+            if (!volume_stack.empty()) medium = volume_stack.back().first;
+        }
+    }
+}
+
 // Recursive path tracing.
 pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& origin_, const vec3f& direction_,
     rng_state& rng, const trace_params& params) {
     // initialize
-    auto radiance          = zero3f;
-    auto weight            = vec3f{1, 1, 1};
-    auto origin            = origin_;
-    auto direction         = direction_;
-    auto volume_stack      = short_vector<trace_material, 16>{};
-    auto hit               = false;
+    auto radiance     = zero3f;
+    auto weight       = vec3f{1, 1, 1};
+    auto origin       = origin_;
+    auto direction    = direction_;
+    auto volume_stack = trace_volume_stack{};
+    auto medium       = trace_material{};
+    auto hit          = false;
 
     // trace  path
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
@@ -1327,9 +1346,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // clamp ray if inside a volume
         auto on_surface = true;
         if (!volume_stack.empty()) {
-            auto [transmission, distance] = sample_distance(origin, -direction,
-                intersection.distance, volume_stack.back(),
-                rng);
+            auto [transmission, distance] = sample_distance(
+                origin, -direction, intersection.distance, medium, rng);
             weight *= transmission;
             on_surface            = distance >= intersection.distance;
             intersection.distance = distance;
@@ -1340,7 +1358,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto [position, normal, material] =
             on_surface ? make_surface_point(scene, intersection, direction)
                        : make_volume_point(scene, origin, direction,
-                             intersection.distance, volume_stack.back());
+                             intersection.distance, medium);
 
         // accumulate emission
         radiance += weight * eval_emission(material, normal, outgoing,
@@ -1368,13 +1386,9 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // update volume_stack
-        if (on_surface && material.volume_density != zero3f &&
-            dot(incoming, normal) > 0 != dot(outgoing, normal) > 0) {
-            if (volume_stack.empty()) {
-                volume_stack.push_back(material);
-            } else {
-                volume_stack.pop_back();
-            }
+        if (on_surface) {
+            update_volume_stack(volume_stack, medium, material,
+                intersection.instance_id, normal, outgoing, incoming);
         }
 
         // setup next iteration
