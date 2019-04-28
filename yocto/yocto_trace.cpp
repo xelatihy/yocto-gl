@@ -1161,19 +1161,19 @@ inline vec3f get_roulette_albedo(const trace_material& material) {
 // property and does not depend on the path. In this way we ensure that a path
 // has always low propabilty of being terminated on transmissive surfaces.
 
-// Russian roulette. Returns a weight, which is zero if stop ois requested.
+// Russian roulette. Returns a weight and whether to stop.
 #if YOCTO_RUSSIAN_ROULETTE_MODE == 0
-float sample_roulette(const vec3f& weight, int bounce, float rr,
+pair<float, bool> sample_roulette(const vec3f& weight, int bounce, float rr,
     int min_bounce = 4, float rr_threadhold = 1) {
     if (max(weight) < rr_threadhold && bounce > min_bounce) {
         auto rr_prob = max((float)0.05, 1 - max(weight));
-        return rr < rr_prob ? 1 - rr_prob : 0;
+        return {1 - rr_prob, rr >= rr_prob};
     } else {
-        return 1;
+        return {1, false};
     }
 }
 #elif YOCTO_RUSSIAN_ROULETTE_MODE == 1
-float sample_roulette(const vec3f& albedo, const vec3f& weight,
+pair<float, bool> sample_roulette(const vec3f& albedo, const vec3f& weight,
     int bounce, float rr, int min_bounce = 4, float rr_threadhold = 1) {
     if (bounce <= min_bounce) return 1;
     auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
@@ -1326,7 +1326,7 @@ tuple<vec3f, vec3f> sample_direction_volume(const yocto_scene& scene,
 }
 
 // Returns weight and distance
-tuple<vec3f, float> sample_volume_distance(const vec3f& position,
+tuple<vec3f, float> sample_distance(const vec3f& position,
     const vec3f& outgoing, float max_distance, const trace_material& material,
     rng_state& rng) {
     if(material.volume_density == zero3f) return { vec3f{1}, max_distance };
@@ -1367,7 +1367,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto hit_surface = true;
         if (volume_stack_size) {
             auto [transmission, distance] =
-                sample_volume_distance(position, -direction, intersection.distance,
+                sample_distance(position, -direction, intersection.distance,
                     volume_stack[volume_stack_size - 1], rng);
             weight *= transmission;
             hit_surface           = distance >= intersection.distance;
@@ -1388,7 +1388,9 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (is_scattering_zero(point.material)) break;
 
         // russian roulette
-        weight *= sample_roulette(weight, bounce, rand1f(rng));
+        auto [rr_weight, rr_stop] = sample_roulette(weight, bounce, rand1f(rng));
+        if(rr_stop) break;
+        weight *= rr_weight;
         if (weight == zero3f) break;
 
         // continue path
@@ -1452,7 +1454,9 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (is_scattering_zero(point.material)) break;
 
         // russian roulette
-        weight *= sample_roulette(weight, bounce, rand1f(rng));
+        auto [rr_weight, rr_stop] = sample_roulette(weight, bounce, rand1f(rng));
+        if(rr_stop) break;
+        weight *= rr_weight;
         if (weight == zero3f) break;
 
         // continue path
