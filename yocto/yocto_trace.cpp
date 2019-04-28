@@ -1455,7 +1455,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     // initialize
     auto radiance  = zero3f;
     auto weight    = vec3f{1, 1, 1};
-    auto origin  = origin_;
+    auto origin    = origin_;
     auto direction = direction_;
     auto hit       = false;
 
@@ -1470,33 +1470,33 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         hit = true;
 
         // prepare shading point
-        auto outgoing = -direction;
-        auto [position, normal, material]    = make_surface_point(scene, intersection, direction);
+        auto outgoing                     = -direction;
+        auto [position, normal, material] = make_surface_point(
+            scene, intersection, direction);
 
         // accumulate emission
-        radiance += weight *
-                    eval_emission(material, normal, outgoing);
+        radiance += weight * eval_emission(material, normal, outgoing);
         if (is_scattering_zero(material)) break;
 
         // brdf * light
         radiance += weight * pif *
-                    eval_scattering(material, normal, outgoing,
-                        outgoing, trace_scattering_mode::smooth);
+                    eval_scattering(material, normal, outgoing, outgoing,
+                        trace_scattering_mode::smooth);
 
         // exit if needed
         if (weight == zero3f) break;
 
         // continue path
         auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            position, normal, material, outgoing,
-            trace_scattering_mode::delta, false, rng);
+            position, normal, material, outgoing, trace_scattering_mode::delta,
+            false, rng);
 
         // exit if no hit
         weight *= scattering;
         if (weight == zero3f) break;
 
         // setup next iteration
-        origin  = position;
+        origin    = position;
         direction = incoming;
     }
 
