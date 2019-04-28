@@ -384,7 +384,7 @@ vec3f eval_position(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
 vec3f eval_normal(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-vec2f eval_texturecoord(
+vec2f eval_texcoord(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
 vec4f eval_color(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
@@ -481,7 +481,7 @@ vec3f eval_element_normal(const yocto_scene& scene,
     bool non_rigid_frame = false);
 
 // Environment texture coordinates from the incoming direction.
-vec2f eval_texturecoord(
+vec2f eval_texcoord(
     const yocto_environment& environment, const vec3f& direction);
 // Evaluate the incoming direction from the element_uv.
 vec3f eval_direction(

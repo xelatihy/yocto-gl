@@ -89,8 +89,8 @@ const auto trace_default_seed = 961748941ull;
 struct trace_lights {
     vector<int>           instances               = {};
     vector<int>           environments            = {};
-    vector<vector<float>> shape_elements_cdf      = {};
-    vector<vector<float>> environment_texture_cdf = {};
+    vector<vector<float>> shape_cdfs      = {};
+    vector<vector<float>> environment_cdfs = {};
 
     bool empty() const { return instances.empty() && environments.empty(); }
 };

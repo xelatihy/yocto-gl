@@ -179,6 +179,49 @@ struct formatter<yocto::bbox<T, N>>;
 }  // namespace fmt
 
 // -----------------------------------------------------------------------------
+// SPECIALIZED CONTAINERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Finite-size vector with no heap allocation. The interface is a subset of
+// std::vector.
+template <typename T, size_t N>
+struct short_vector {
+    constexpr short_vector();
+    constexpr short_vector(initializer_list<T> values);
+
+    constexpr size_t size();
+    constexpr bool   empty();
+
+    constexpr void push_back(const T& value);
+    constexpr void pop_back();
+
+    constexpr T&       operator[](size_t idx);
+    constexpr const T& operator[](size_t idx) const;
+    constexpr T&       at(size_t idx);
+    constexpr const T& at(size_t idx) const;
+
+    constexpr T&       front();
+    constexpr const T& front() const;
+    constexpr T&       back();
+    constexpr const T& back() const;
+
+    constexpr T*       data();
+    constexpr const T* data() const;
+
+    constexpr T*       begin();
+    constexpr const T* begin() const;
+    constexpr T*       end();
+    constexpr const T* end() const;
+
+   private:
+    T      ptr[N];
+    size_t count = 0;
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -456,6 +499,64 @@ template <typename T, int N>
 struct formatter<yocto::bbox<T, N>> : _formatter_base<yocto::bbox<T, N>, 2> {};
 
 }  // namespace fmt
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR SPECIALIZED CONTAINERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Finite-size vector with no heap allocation. The interface is a subset of
+// std::vector.
+template <typename T, size_t N>
+constexpr short_vector<T, N>::short_vector() : count{0} {}
+template <typename T, size_t N>
+constexpr short_vector<T, N>::short_vector(initializer_list<T> values) : count{0} {
+    for(auto value : values) ptr[count++] = value;
+}
+
+template <typename T, size_t N>
+constexpr size_t short_vector<T, N>::size() { return count; }
+template <typename T, size_t N>
+constexpr bool short_vector<T, N>::empty() { return count == 0; }
+
+template <typename T, size_t N>
+constexpr void short_vector<T, N>::push_back(const T& value) { ptr[count++] = value; }
+template <typename T, size_t N>
+constexpr void short_vector<T, N>::pop_back() { count--; }
+
+template <typename T, size_t N>
+constexpr T& short_vector<T, N>::operator[](size_t idx) { return ptr[idx]; }
+template <typename T, size_t N>
+constexpr const T& short_vector<T, N>::operator[](size_t idx) const { return ptr[idx]; }
+template <typename T, size_t N>
+constexpr T& short_vector<T, N>::at(size_t idx) { return ptr[idx]; }
+template <typename T, size_t N>
+constexpr const T& short_vector<T, N>::at(size_t idx) const { return ptr[idx]; }
+
+template <typename T, size_t N>
+constexpr T& short_vector<T, N>::front() { return ptr[0]; }
+template <typename T, size_t N>
+constexpr const T& short_vector<T, N>::front() const { return ptr[0]; }
+template <typename T, size_t N>
+constexpr T& short_vector<T, N>::back() { return ptr[count-1]; }
+template <typename T, size_t N>
+constexpr const T& short_vector<T, N>::back() const { return ptr[count-1]; }
+
+template <typename T, size_t N>
+constexpr T* short_vector<T, N>::data() { return count ? ptr : nullptr; }
+template <typename T, size_t N>
+constexpr const T* short_vector<T, N>::data() const { return count ? ptr : nullptr; }
+
+template <typename T, size_t N>
+constexpr T* short_vector<T, N>::begin() { return ptr; }
+template <typename T, size_t N>
+constexpr const T* short_vector<T, N>::begin() const { return ptr; }
+template <typename T, size_t N>
+constexpr T* short_vector<T, N>::end() { return ptr + count; }
+template <typename T, size_t N>
+constexpr const T* short_vector<T, N>::end() const { return ptr + count; }
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PYTHON-LIKE ITERATORS
