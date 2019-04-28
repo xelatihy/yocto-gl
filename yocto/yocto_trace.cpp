@@ -75,7 +75,7 @@ struct trace_material {
 };
 
 // trace scattering mode
-enum struct trace_scattering_mode { smooth, delta, volume };
+enum struct trace_scattering_mode { none, smooth, delta, volume };
 
 bool is_scattering_zero(const trace_material& material) {
     return material.diffuse_color == zero3f &&
@@ -205,10 +205,13 @@ ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
 }
 
 vec3f eval_emission(const trace_material& material, const vec3f& normal,
-    const vec3f& outgoing, trace_scattering_mode mode = trace_scattering_mode::smooth) {
+    const vec3f&          outgoing,
+    trace_scattering_mode mode = trace_scattering_mode::smooth) {
     auto emission = zero3f;
-    if(mode == trace_scattering_mode::smooth) emission += material.emission_color;
-    if(mode == trace_scattering_mode::volume) emission += material.volume_emission;
+    if (mode == trace_scattering_mode::smooth)
+        emission += material.emission_color;
+    if (mode == trace_scattering_mode::volume)
+        emission += material.volume_emission;
     return emission;
 }
 
@@ -1224,7 +1227,7 @@ float eval_phasefunction(float cos_theta, float g) {
     return (1 - g * g) / (4 * pif * denom * sqrt(denom));
 }
 
-// Sample next direction. Returns weight and direction. 
+// Sample next direction. Returns weight and direction.
 tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
     const vec3f& normal, const trace_material& material, const vec3f& outgoing,
@@ -1289,7 +1292,67 @@ tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
     }
 }
 
-// Sample next direction. Returns weight and direction. 
+// Sample next direction. Returns weight and direction.
+tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
+    const vec3f& normal, const trace_material& material, const vec3f& outgoing,
+    trace_scattering_mode mode, bool mis, rng_state& rng) {
+    // continue path
+    auto incoming     = zero3f;
+    auto scattering   = zero3f;
+    auto incoming_pdf = 0.0f;
+    if (mis && mode != trace_scattering_mode::delta) {
+        if (rand1f(rng) < 0.5f) {
+            incoming = sample_scattering(
+                material, normal, outgoing, rand1f(rng), rand2f(rng), mode);
+        } else {
+            incoming = sample_lights(scene, lights, bvh, position, rand1f(rng),
+                rand1f(rng), rand2f(rng));
+        }
+        scattering = eval_scattering(
+            material, normal, outgoing, incoming, mode);
+        incoming_pdf = 0.5f * sample_scattering_pdf(
+                                  material, normal, outgoing, incoming, mode) +
+                       0.5f * sample_lights_pdf(
+                                  scene, lights, bvh, position, incoming);
+    } else {
+        incoming = sample_scattering(
+            material, normal, outgoing, rand1f(rng), rand2f(rng), mode);
+        scattering = eval_scattering(
+            material, normal, outgoing, incoming, mode);
+        incoming_pdf = sample_scattering_pdf(
+            material, normal, outgoing, incoming, mode);
+    }
+    if (incoming == zero3f || incoming_pdf == 0) {
+        return {zero3f, zero3f};
+    } else {
+        return {scattering / incoming_pdf, incoming};
+    }
+}
+
+// Sample next mode. Returns weight and mode.
+tuple<float, trace_scattering_mode> sample_mode(const vec3f& position,
+    const vec3f& normal, const trace_material& material, const vec3f& outgoing,
+    bool on_surface, rng_state& rng) {
+    // handle volume
+    if (!on_surface) return {1, trace_scattering_mode::volume};
+    // choose delta or non-delta
+    auto weights_smooth = compute_weights(
+        material, normal, outgoing, trace_scattering_mode::smooth);
+    auto weights_delta = compute_weights(
+        material, normal, outgoing, trace_scattering_mode::delta);
+    auto weight_sum = weights_smooth.total_weight + weights_delta.total_weight;
+    if (!weight_sum) return {0, trace_scattering_mode::none};
+    auto pdf_smooth = weights_smooth.total_weight / weight_sum;
+    auto pdf_delta  = weights_delta.total_weight / weight_sum;
+    if (rand1f(rng) < pdf_delta) {
+        return {1 / pdf_delta, trace_scattering_mode::delta};
+    } else {
+        return {1 / pdf_smooth, trace_scattering_mode::smooth};
+    }
+}
+
+// Sample next direction. Returns weight and direction.
 tuple<vec3f, vec3f> sample_direction_volume(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
     const vec3f& normal, const trace_material& material, const vec3f& outgoing,
@@ -1332,14 +1395,14 @@ tuple<vec3f, vec3f> sample_direction_volume(const yocto_scene& scene,
 tuple<vec3f, float> sample_distance(const vec3f& position,
     const vec3f& outgoing, float max_distance, const trace_material& material,
     rng_state& rng) {
-    if(material.volume_density == zero3f) return { vec3f{1}, max_distance };
+    if (material.volume_density == zero3f) return {vec3f{1}, max_distance};
     // clamp ray if inside a volume
     auto [distance, channel] = sample_transmission(
         material, rand1f(rng), rand1f(rng));
     distance          = min(distance, max_distance);
     auto pdf          = sample_transmission_pdf(material, distance, channel);
     auto transmission = eval_transmission(material, distance);
-    if(transmission == zero3f || pdf == 0) return {zero3f, 0};
+    if (transmission == zero3f || pdf == 0) return {zero3f, 0};
     return {transmission / pdf, distance};
 }
 
@@ -1369,11 +1432,11 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // clamp ray if inside a volume
         auto on_surface = true;
         if (volume_stack_size) {
-            auto [transmission, distance] =
-                sample_distance(position, -direction, intersection.distance,
-                    volume_stack[volume_stack_size - 1], rng);
+            auto [transmission, distance] = sample_distance(position,
+                -direction, intersection.distance,
+                volume_stack[volume_stack_size - 1], rng);
             weight *= transmission;
-            on_surface           = distance >= intersection.distance;
+            on_surface            = distance >= intersection.distance;
             intersection.distance = distance;
         }
 
@@ -1386,24 +1449,29 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                                volume_stack[volume_stack_size - 1]);
 
         // accumulate emission
-        radiance += weight *
-                    eval_emission(point.material, point.normal, outgoing, on_surface ? trace_scattering_mode::smooth : trace_scattering_mode::volume);
+        radiance += weight * eval_emission(point.material, point.normal,
+                                 outgoing,
+                                 on_surface ? trace_scattering_mode::smooth
+                                            : trace_scattering_mode::volume);
         if (is_scattering_zero(point.material)) break;
 
         // russian roulette
-        auto [rr_weight, rr_stop] = sample_roulette(weight, bounce, rand1f(rng));
-        if(rr_stop) break;
+        auto [rr_weight, rr_stop] = sample_roulette(
+            weight, bounce, rand1f(rng));
+        if (rr_stop) break;
         weight *= rr_weight;
         if (weight == zero3f) break;
 
-        // continue path
-        auto [scattering, incoming] =
-            on_surface
-                ? sample_direction(scene, lights, bvh, point.position,
-                      point.normal, point.material, outgoing, rng, true)
-                : sample_direction_volume(scene, lights, bvh, point.position,
-                      point.normal, point.material, outgoing, rng, true);
-        // continue path
+        // pick omde
+        auto [mode_weight, mode] = sample_mode(point.position, point.normal,
+            point.material, outgoing, on_surface, rng);
+        weight *= mode_weight;
+        if (weight == zero3f) break;
+
+        // next direction
+        auto [scattering, incoming] = sample_direction(scene, lights, bvh,
+            point.position, point.normal, point.material, outgoing, mode, true,
+            rng);
         weight *= scattering;
         if (weight == zero3f) break;
 
@@ -1419,7 +1487,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // setup next iteration
-        position = point.position;
+        position  = point.position;
         direction = incoming;
     }
 
@@ -1431,11 +1499,11 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position_, const vec3f& direction_,
     rng_state& rng, const trace_params& params) {
     // initialize
-    auto radiance = zero3f;
-    auto weight   = vec3f{1, 1, 1};
-    auto position = position_;
-    auto direction= direction_;
-    auto hit      = false;
+    auto radiance  = zero3f;
+    auto weight    = vec3f{1, 1, 1};
+    auto position  = position_;
+    auto direction = direction_;
+    auto hit       = false;
 
     // trace  path
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
@@ -1457,22 +1525,22 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (is_scattering_zero(point.material)) break;
 
         // russian roulette
-        auto [rr_weight, rr_stop] = sample_roulette(weight, bounce, rand1f(rng));
-        if(rr_stop) break;
+        auto [rr_weight, rr_stop] = sample_roulette(
+            weight, bounce, rand1f(rng));
+        if (rr_stop) break;
         weight *= rr_weight;
         if (weight == zero3f) break;
 
         // continue path
-        auto [scattering, incoming] = sample_direction(scene,
-            lights, bvh, point.position, point.normal, point.material, outgoing,
-            rng, false);
+        auto [scattering, incoming] = sample_direction(scene, lights, bvh,
+            point.position, point.normal, point.material, outgoing, rng, false);
 
         // exit if no hit
         weight *= scattering;
         if (weight == zero3f) break;
 
         // setup next iteration
-        position = point.position;
+        position  = point.position;
         direction = incoming;
     }
 
@@ -1518,9 +1586,9 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // continue path
-        auto [scattering, incoming] = sample_direction(scene,
-            lights, bvh, point.position, point.normal, point.material, outgoing,
-            rng, false, false, true);
+        auto [scattering, incoming] = sample_direction(scene, lights, bvh,
+            point.position, point.normal, point.material, outgoing, rng, false,
+            false, true);
 
         // exit if no hit
         weight *= scattering;
