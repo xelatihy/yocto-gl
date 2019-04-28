@@ -1311,8 +1311,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto weight            = vec3f{1, 1, 1};
     auto origin            = origin_;
     auto direction         = direction_;
-    auto volume_stack      = array<trace_material, 16>{};
-    auto volume_stack_size = 0;
+    auto volume_stack      = short_vector<trace_material, 16>{};
     auto hit               = false;
 
     // trace  path
@@ -1327,9 +1326,9 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // clamp ray if inside a volume
         auto on_surface = true;
-        if (volume_stack_size) {
+        if (!volume_stack.empty()) {
             auto [transmission, distance] = sample_distance(origin, -direction,
-                intersection.distance, volume_stack[volume_stack_size - 1],
+                intersection.distance, volume_stack.back(),
                 rng);
             weight *= transmission;
             on_surface            = distance >= intersection.distance;
@@ -1341,8 +1340,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto [position, normal, material] =
             on_surface ? make_surface_point(scene, intersection, direction)
                        : make_volume_point(scene, origin, direction,
-                             intersection.distance,
-                             volume_stack[volume_stack_size - 1]);
+                             intersection.distance, volume_stack.back());
 
         // accumulate emission
         radiance += weight * eval_emission(material, normal, outgoing,
@@ -1372,10 +1370,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // update volume_stack
         if (on_surface && material.volume_density != zero3f &&
             dot(incoming, normal) > 0 != dot(outgoing, normal) > 0) {
-            if (!volume_stack_size) {
-                volume_stack[volume_stack_size++] = material;
+            if (volume_stack.empty()) {
+                volume_stack.push_back(material);
             } else {
-                volume_stack_size--;
+                volume_stack.pop_back();
             }
         }
 

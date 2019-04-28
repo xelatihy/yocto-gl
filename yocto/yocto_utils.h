@@ -215,7 +215,7 @@ struct short_vector {
     constexpr const T* end() const;
 
    private:
-    T*     ptr   = nullptr;
+    T      ptr[N];
     size_t count = 0;
 };
 
