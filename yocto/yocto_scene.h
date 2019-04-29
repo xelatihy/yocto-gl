@@ -131,6 +131,7 @@ struct yocto_material {
     vec3f transmission = {0, 0, 0};
     float roughness    = 0.001f;
     float ior          = 1.5;
+    float metallic     = 0;
     float opacity      = 1;
     bool  thin_walled  = false;
 
@@ -456,6 +457,7 @@ struct material_point {
     float roughness       = 1;
     float opacity         = 1;
     float ior             = 1;
+    float metallic        = 1;
     bool  base_metallic   = false;
     bool  thin_walled     = false;
     vec3f normalmap       = {0, 0, 1};

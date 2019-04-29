@@ -707,6 +707,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.transmission);
                 } else if (key == "roughness") {
                     get_yaml_value(value, material.roughness);
+                } else if (key == "metallic") {
+                    get_yaml_value(value, material.metallic);
                 } else if (key == "ior") {
                     get_yaml_value(value, material.ior);
                 } else if (key == "opacity") {

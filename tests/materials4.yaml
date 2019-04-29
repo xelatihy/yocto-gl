@@ -58,7 +58,7 @@ materials:
     diffuse: [0.7, 0.7, 0.7]
     diffuse_texture: textures/test-floor.png
   - uri: materials/test-volume-jade.yaml
-    specular: [0.04, 0.04, 0.04]
+    specular: [1, 1, 1]
     roughness: 0
     transmission: [1, 1, 1]
     volume_density: [50, 50, 50]
@@ -66,28 +66,24 @@ materials:
     volume_phaseg: 0
     thin_walled: false
   - uri: materials/test-volume-cloud.yaml
-    specular: [0, 0, 0]
     transmission: [1, 1, 1]
     volume_density: [20, 20, 20]
     volume_albedo: [0.9, 0.9, 0.9]
     volume_phaseg: 0
     thin_walled: true
   - uri: materials/test-volume-glass.yaml
-    specular: [0.04, 0.04, 0.04]
+    specular: [1, 1, 1]
     transmission: [1, 1, 1]
     roughness: 0
     volume_density: [0, 15, 15]
     thin_walled: false
   - uri: materials/test-volume-smoke.yaml
-    diffuse: [0, 0, 0]
-    specular: [0.0, 0.0, 0.0]
     transmission: [1, 1, 1]
     volume_density: [30, 30, 30]
     volume_albedo: [0.2, 0.2, 0.2]
     volume_phaseg: -0.8
     thin_walled: true
   - uri: materials/test-volume-emissive.yaml
-    diffuse: [0, 0, 0]
     transmission: [1, 1, 1]
     volume_density: [1, 1, 1]
     volume_emission: [15, 15, 10]

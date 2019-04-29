@@ -140,6 +140,10 @@ struct trace_material {
     vec3f specular_weight        = zero3f;
     float specular_roughness     = 1;
     vec3f specular_eta           = {1, 1, 1};
+    vec3f metal_weight           = zero3f;
+    float metal_roughness        = 1;
+    vec3f metal_eta              = {1, 1, 1};
+    vec3f metal_etak             = zero3f;
     vec3f transmission_color     = zero3f;
     float transmission_roughness = 1;
     vec3f transmission_eta       = {1, 1, 1};
@@ -159,6 +163,7 @@ enum struct trace_mode { none, smooth, delta, volume };
 bool is_scattering_zero(const trace_material& material) {
     return material.diffuse_weight == zero3f &&
            material.specular_weight == zero3f &&
+           material.metal_weight == zero3f &&
            material.transmission_color == zero3f &&
            material.opacity_color == zero3f && material.volume_albedo == zero3f;
 }
@@ -174,6 +179,8 @@ trace_material make_trace_material(
     auto transmission = point.transmission;
     auto opacity      = point.opacity * shape_color.w;
     auto roughness    = point.roughness * point.roughness;
+    auto metallic     = point.metallic;
+    auto ior          = point.ior;
     auto thin_walled  = point.thin_walled;
     if (diffuse != zero3f) {
         roughness = clamp(roughness, 0.03f * 0.03f, 1.0f);
@@ -183,17 +190,22 @@ trace_material make_trace_material(
     if (opacity > 0.999f) opacity = 1;
     auto material = trace_material{};
     if (diffuse != zero3f) {
-        material.diffuse_weight = opacity * diffuse;
+        material.diffuse_weight = opacity * diffuse * (1 - metallic);
+    }
+    if (diffuse != zero3f) {
+        material.metal_weight    = vec3f{opacity * metallic};
+        material.metal_roughness = roughness;
+        material.metal_eta       = specular_to_eta(diffuse);
     }
     if (specular != zero3f) {
-        material.specular_weight    = vec3f{opacity};
+        material.specular_weight    = opacity * specular;
         material.specular_roughness = roughness;
-        material.specular_eta       = specular_to_eta(specular);
+        material.specular_eta       = vec3f{ior};
     }
     if (transmission != zero3f) {
         material.transmission_color     = opacity * transmission;
         material.transmission_roughness = roughness;
-        material.transmission_eta       = specular_to_eta(specular);
+        material.transmission_eta       = vec3f{ior};
         material.transmission_thin      = thin_walled;
     }
     if (opacity < 0.999f) {
@@ -224,6 +236,7 @@ struct trace_weights {
     // sampling weights
     float diffuse_pdf      = 0;
     float specular_pdf     = 0;
+    float metal_pdf        = 0;
     float transmission_pdf = 0;
     float opacity_pdf      = 0;
     float volume_pdf       = 0;
@@ -234,33 +247,53 @@ struct trace_weights {
 
 trace_weights compute_weights(const trace_material& material,
     const vec3f& normal, const vec3f& outgoing, trace_mode mode) {
-    // fresnel
-    auto fresnel = fresnel_dielectric(
-        material.specular_eta, abs(dot(normal, outgoing)));
-
     // load weights
     auto weights = trace_weights{};
 
     // diffuse
     if (material.diffuse_weight != zero3f && mode == trace_mode::smooth) {
+        auto fresnel = fresnel_dielectric(
+            material.specular_eta, abs(dot(normal, outgoing)));
         weights.diffuse_pdf = max(material.diffuse_weight * (1 - fresnel));
+    }
+
+    // metal
+    if (material.metal_weight != zero3f && material.metal_roughness &&
+        mode == trace_mode::smooth) {
+        auto fresnel = fresnel_dielectric(
+            material.metal_eta, abs(dot(normal, outgoing)));
+        weights.metal_pdf = max(material.metal_weight * fresnel);
+    }
+
+    // metal
+    if (material.metal_weight != zero3f && !material.metal_roughness &&
+        mode == trace_mode::delta) {
+        auto fresnel = fresnel_dielectric(
+            material.metal_eta, abs(dot(normal, outgoing)));
+        weights.metal_pdf = max(material.metal_weight * fresnel);
     }
 
     // specular
     if (material.specular_weight != zero3f && material.specular_roughness &&
         mode == trace_mode::smooth) {
+        auto fresnel = fresnel_dielectric(
+            material.specular_eta, abs(dot(normal, outgoing)));
         weights.specular_pdf = max(material.specular_weight * fresnel);
     }
 
     // specular
     if (material.specular_weight != zero3f && !material.specular_roughness &&
         mode == trace_mode::delta) {
+        auto fresnel = fresnel_dielectric(
+            material.specular_eta, abs(dot(normal, outgoing)));
         weights.specular_pdf = max(material.specular_weight * fresnel);
     }
 
     // transmission
     if (material.transmission_color != zero3f &&
         material.transmission_roughness && mode == trace_mode::smooth) {
+        auto fresnel = fresnel_dielectric(
+            material.specular_eta, abs(dot(normal, outgoing)));
         weights.transmission_pdf = max(
             material.transmission_color * (1 - fresnel));
     }
@@ -268,6 +301,8 @@ trace_weights compute_weights(const trace_material& material,
     // transmission
     if (material.transmission_color != zero3f &&
         !material.transmission_roughness && mode == trace_mode::delta) {
+        auto fresnel = fresnel_dielectric(
+            material.specular_eta, abs(dot(normal, outgoing)));
         weights.transmission_pdf = max(
             material.transmission_color * (1 - fresnel));
     }
@@ -283,7 +318,7 @@ trace_weights compute_weights(const trace_material& material,
     }
 
     // accumulate
-    weights.total_weight = weights.diffuse_pdf + weights.specular_pdf +
+    weights.total_weight = weights.diffuse_pdf + weights.specular_pdf + weights.metal_pdf +
                            weights.transmission_pdf + weights.opacity_pdf +
                            weights.volume_pdf;
 
@@ -291,6 +326,7 @@ trace_weights compute_weights(const trace_material& material,
     if (weights.total_weight) {
         weights.diffuse_pdf /= weights.total_weight;
         weights.specular_pdf /= weights.total_weight;
+        weights.metal_pdf /= weights.total_weight;
         weights.transmission_pdf /= weights.total_weight;
         weights.opacity_pdf /= weights.total_weight;
         weights.volume_pdf /= weights.total_weight;
@@ -355,6 +391,28 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
         auto F = fresnel_dielectric(
             material.specular_eta, abs(dot(normal, outgoing)));
         scattering += material.specular_weight * F;
+    }
+
+    // metal
+    if (material.metal_weight != zero3f && material.metal_roughness &&
+        mode == trace_mode::smooth && outgoing_up == incoming_up) {
+        auto halfway = normalize(incoming + outgoing);
+        auto F       = fresnel_metal(material.metal_eta, material.metal_etak,
+            abs(dot(halfway, outgoing)));
+        auto D = eval_microfacetD(material.metal_roughness, normal, halfway);
+        auto G = eval_microfacetG(
+            material.metal_roughness, normal, halfway, outgoing, incoming);
+        scattering += material.metal_weight * F * D * G /
+                      fabs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+                      abs(dot(normal, incoming));
+    }
+
+    // metal reflection
+    if (material.metal_weight != zero3f && !material.metal_roughness &&
+        mode == trace_mode::delta && outgoing_up == incoming_up) {
+        auto F = fresnel_metal(material.metal_eta, material.metal_etak,
+            abs(dot(normal, outgoing)));
+        scattering += material.metal_weight * F;
     }
 
     // transmission through rough thin surface
@@ -463,6 +521,20 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
         return reflect(outgoing, normal);
     }
 
+    // sample according to specular GGX
+    weight_sum += weights.metal_pdf;
+    if (material.metal_weight != zero3f && material.metal_roughness &&
+        mode == trace_mode::smooth && rnl <= weight_sum) {
+        auto halfway = sample_microfacet(material.metal_roughness, normal, rn);
+        return reflect(outgoing, halfway);
+    }
+
+    // sample according to specular mirror
+    if (material.metal_weight != zero3f && !material.metal_roughness &&
+        mode == trace_mode::delta && rnl <= weight_sum) {
+        return reflect(outgoing, normal);
+    }
+
     // sample according to rough transmission
     weight_sum += weights.transmission_pdf;
     if (material.transmission_color != zero3f &&
@@ -545,6 +617,22 @@ float sample_scattering_pdf(const trace_material& material,
     if (material.specular_weight != zero3f && !material.specular_roughness &&
         mode == trace_mode::delta && outgoing_up == incoming_up) {
         pdf += weights.specular_pdf;
+    }
+
+    // specular reflection
+    if (material.metal_weight != zero3f && material.metal_roughness &&
+        mode == trace_mode::smooth && outgoing_up == incoming_up) {
+        auto halfway = normalize(incoming + outgoing);
+        auto d       = sample_microfacet_pdf(
+            material.metal_roughness, normal, halfway);
+        auto jacobian = 0.25f / abs(dot(outgoing, halfway));
+        pdf += weights.metal_pdf * d * jacobian;
+    }
+
+    // specular reflection
+    if (material.metal_weight != zero3f && !material.metal_roughness &&
+        mode == trace_mode::delta && outgoing_up == incoming_up) {
+        pdf += weights.metal_pdf;
     }
 
     // transmission through thin surface

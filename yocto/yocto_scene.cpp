@@ -1268,6 +1268,7 @@ material_point eval_material(const yocto_scene& scene,
             eval_texture(transmission_texture, texturecoord));
     }
     point.ior = material.ior;
+    point.metallic = material.metallic;
     point.thin_walled       = material.thin_walled;
     point.base_metallic = material.base_metallic;
     point.normalmap     = vec3f{0, 0, 1};

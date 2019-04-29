@@ -156,89 +156,83 @@ def make_tests():
             {
                 "uri": "materials/test-uvgrid.yaml",
                 "diffuse": [ 1, 1, 1 ],
-                "specular": [ 0.04, 0.04, 0.04 ],
+                "specular": [ 1, 1, 1 ],
                 "roughness": 0.1,
                 "diffuse_texture": "textures/test-uvgrid.png"
             },
             {
                 "uri": "materials/test-matte.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
-                "specular": [ 0, 0, 0 ],
                 "roughness": 1
             },
             {
                 "uri": "materials/test-plastic-sharp.yaml",
                 "diffuse": [ 0.5, 0.5, 0.7 ],
-                "specular": [ 0.04, 0.04, 0.04 ],
+                "specular": [ 1, 1, 1 ],
                 "roughness": 0.01
             },
             {
                 "uri": "materials/test-plastic-rough.yaml",
                 "diffuse": [ 0.5, 0.7, 0.5 ],
-                "specular": [ 0.04, 0.04, 0.04 ],
+                "specular": [ 1, 1, 1 ],
                 "roughness": 0.1
             },
             {
                 "uri": "materials/test-metal-sharp.yaml",
-                "diffuse": [ 0, 0, 0 ],
-                "specular": [ 0.7, 0.7, 0.7 ],
+                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "metallic": 1,
                 "roughness": 0
             },
             {
                 "uri": "materials/test-metal-rough.yaml",
-                "diffuse": [ 0, 0, 0 ],
-                "specular": [ 0.66, 0.45, 0.34 ],
+                "diffuse": [ 0.66, 0.45, 0.34 ],
+                "metallic": 1,
                 "roughness": 0.1
             },
             {
                 "uri": "materials/test-plastic-sharp-bumped.yaml",
                 "diffuse": [ 0.5, 0.5, 0.7 ],
-                "specular": [ 0.04, 0.04, 0.04 ],
+                "specular": [ 1, 1, 1 ],
                 "roughness": 0.01,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
                 "uri": "materials/test-metal-sharp-bumped.yaml",
-                "diffuse": [ 0, 0, 0 ],
-                "specular": [ 0.7, 0.7, 0.7 ],
+                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "metallic": 1,
                 "roughness": 0,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
                 "uri": "materials/test-transparent.yaml",
                 "diffuse": [ 0.7, 0.5, 0.5 ],
-                "specular": [ 0, 0, 0 ],
                 "roughness": 1,
                 "opacity": 0.2
             },
             {
                 "uri": "materials/test-glass-sharp.yaml",
-                "diffuse": [ 0, 0, 0 ],
-                "specular": [ 0.04, 0.04, 0.04 ],
+                "specular": [ 1, 1, 1 ],
                 "transmission": [ 1, 1, 1 ],
                 "roughness": 0,
                 "thin_walled": False
             },
             {
                 "uri": "materials/test-glass-rough.yaml",
-                "diffuse": [ 0, 0, 0 ],
-                "specular": [ 0.04, 0.04, 0.04 ],
+                "specular": [ 1, 1, 1 ],
                 "transmission": [ 1, 0.7, 0.7 ],
                 "roughness": 0.1,
                 "thin_walled": False
             },
             {
                 "uri": "materials/test-thinglass-sharp.yaml",
-                "diffuse": [ 0, 0, 0 ],
-                "specular": [ 0.04, 0.04, 0.04 ],
+                "specular": [ 1, 1, 1 ],
                 "transmission": [ 1, 1, 1 ],
                 "roughness": 0,
                 "thin_walled": True
             },
             {
                 "uri": "materials/test-thinglass-rough.yaml",
-                "diffuse": [ 0, 0, 0 ],
-                "specular": [ 0.04, 0.04, 0.04 ],
+                "specular": [ 1, 1, 1 ],
                 "transmission": [ 1, 0.7, 0.7 ],
                 "roughness": 0.05,
                 "thin_walled": True
@@ -246,12 +240,11 @@ def make_tests():
             {
                 "uri": "materials/test-hair.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
-                "specular": [ 0, 0, 0 ],
                 "roughness": 1
             },
             {
                 "uri": "materials/test-volume-jade.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [ 1, 1, 1 ],
                 "roughness": 0,
                 "transmission": [1, 1, 1],
                 "volume_density": [50, 50, 50],
@@ -261,7 +254,6 @@ def make_tests():
             },
             {
                 "uri": "materials/test-volume-cloud.yaml",
-                "specular": [0, 0, 0],
                 "transmission": [1, 1, 1],
                 "volume_density": [20, 20, 20],
                 "volume_albedo": [0.9, 0.9, 0.9],
@@ -270,7 +262,7 @@ def make_tests():
             },
             {
                 "uri": "materials/test-volume-glass.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [ 1, 1, 1 ],
                 "transmission": [1, 1, 1],
                 "roughness": 0,
                 "volume_density": [0, 15, 15],
@@ -278,8 +270,6 @@ def make_tests():
             },
             {
                 "uri": "materials/test-volume-smoke.yaml",
-                "diffuse": [0, 0, 0],
-                "specular": [0.0, 0.0, 0.0],
                 "transmission": [1, 1, 1],
                 "volume_density": [30, 30, 30],
                 "volume_albedo": [0.2, 0.2, 0.2],
@@ -288,7 +278,6 @@ def make_tests():
             },
             {
                 "uri": "materials/test-volume-emissive.yaml",
-                "diffuse": [0, 0, 0],
                 "transmission": [1, 1, 1],
                 "volume_density": [1, 1, 1],
                 "volume_emission": [15, 15, 10],
