@@ -1557,16 +1557,16 @@ static void save_objx(const string& filename, const yocto_scene& scene) {
     // environments
     for (auto& environment : scene.environments) {
         if (environment.emission_texture >= 0) {
-            auto emission = environment.emission_factor * environment.emission_color;
+            auto emission = environment.emission_factor *
+                            environment.emission_color;
             print(fs, "e {} {} {} {} {} ", get_basename(environment.uri),
-                emission.x, emission.y,
-                emission.z,
+                emission.x, emission.y, emission.z,
                 scene.textures[environment.emission_texture].uri);
         } else {
-            auto emission = environment.emission_factor * environment.emission_color;
-            print(fs, "e {} {} {} {} \"\" ", environment.uri,
-                emission.x, emission.y,
-                emission.z);
+            auto emission = environment.emission_factor *
+                            environment.emission_color;
+            print(fs, "e {} {} {} {} \"\" ", environment.uri, emission.x,
+                emission.y, emission.z);
         }
         print(fs, "{} {} {} {} {} {} {} {} {} {} {} {}\n",
             environment.frame.x.x, environment.frame.x.y, environment.frame.x.z,
@@ -3183,9 +3183,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             environment.frame = (frame3f)ctx.transform_start *
                                 frame3f{
                                     {1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-                                    environment.emission_factor = 1;
-            environment.emission_color = (vec3f)infinite.scale;
-            normalize_scaled_color(environment.emission_factor, environment.emission_color);
+            environment.emission_factor = 1;
+            environment.emission_color  = (vec3f)infinite.scale;
+            normalize_scaled_color(
+                environment.emission_factor, environment.emission_color);
             if (infinite.mapname != "") {
                 auto texture = yocto_texture{};
                 texture.uri  = infinite.mapname;

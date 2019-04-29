@@ -175,14 +175,16 @@ void load_island_lights(
             texture.uri  = ljs.at("map");
             load_image(dirname + texture.uri, texture.hdr_image);
             scene.textures.push_back(texture);
-            auto environment     = yocto_environment{};
-            environment.uri      = "environments/lights/" + name + ".yaml";
+            auto environment = yocto_environment{};
+            environment.uri  = "environments/lights/" + name + ".yaml";
             environment.emission_factor = 1;
-            environment.emission_color = xyz(ljs.at("color").get<vec4f>()) *
-                                   pow(2.0f, ljs.at("exposure").get<float>());
+            environment.emission_color =
+                xyz(ljs.at("color").get<vec4f>()) *
+                pow(2.0f, ljs.at("exposure").get<float>());
             environment.emission_texture = (int)scene.textures.size() - 1;
-            normalize_scaled_color(environment.emission_factor, environment.emission_color);
-            environment.frame            = frame3f(
+            normalize_scaled_color(
+                environment.emission_factor, environment.emission_color);
+            environment.frame = frame3f(
                 ljs.at("translationMatrix").get<mat4f>());
             scene.environments.push_back(environment);
         } else {
