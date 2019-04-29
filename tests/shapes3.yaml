@@ -55,21 +55,21 @@ textures:
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
-    diffuse: 1
+    diffuse_factor: 1
     base_color: [0.7, 0.7, 0.7]
     base_texture: textures/test-floor.png
   - uri: materials/test-matte.yaml
-    diffuse: 1
+    diffuse_factor: 1
     base_color: [0.7, 0.7, 0.7]
-    roughness: 1
+    specular_roughness: 1
   - uri: materials/test-hair.yaml
-    diffuse: 1
+    diffuse_factor: 1
     base_color: [0.7, 0.7, 0.7]
-    roughness: 1
+    specular_roughness: 1
   - uri: materials/test-arealight1.yaml
-    emission: 20
+    emission_factor: 20
   - uri: materials/test-arealight2.yaml
-    emission: 20
+    emission_factor: 20
 shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply
   - uri: ::yocto::test-sphere::shapes/test-sphere.ply

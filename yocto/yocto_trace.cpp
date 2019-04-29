@@ -173,42 +173,45 @@ trace_material make_trace_material(
     auto point = point_;
     point.emission_color *= xyz(shape_color);
     point.base_color *= xyz(shape_color);
-    point.opacity *= shape_color.w;
-    point.roughness = point.roughness * point.roughness;
-    if (point.diffuse && point.base_color != zero3f) {
-        point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
-    } else if (point.roughness <= 0.03f * 0.03f) {
-        point.roughness = 0;
+    point.opacity_factor *= shape_color.w;
+    point.specular_roughness = point.specular_roughness *
+                               point.specular_roughness;
+    if (point.diffuse_factor && point.base_color != zero3f) {
+        point.specular_roughness = clamp(
+            point.specular_roughness, 0.03f * 0.03f, 1.0f);
+    } else if (point.specular_roughness <= 0.03f * 0.03f) {
+        point.specular_roughness = 0;
     }
-    if (point.opacity > 0.999f) point.opacity = 1;
+    if (point.opacity_factor > 0.999f) point.opacity_factor = 1;
     auto material = trace_material{};
-    if (point.diffuse && point.base_color != zero3f) {
-        material.diffuse_weight = point.opacity * point.diffuse *
-                                  point.base_color * (1 - point.metallic);
+    if (point.diffuse_factor && point.base_color != zero3f) {
+        material.diffuse_weight = point.opacity_factor * point.diffuse_factor *
+                                  point.base_color *
+                                  (1 - point.metallic_factor);
     }
-    if (point.metallic && point.base_color != zero3f) {
-        material.metal_weight = point.opacity * point.metallic *
+    if (point.metallic_factor && point.base_color != zero3f) {
+        material.metal_weight = point.opacity_factor * point.metallic_factor *
                                 point.base_color;
-        material.metal_roughness = point.roughness;
+        material.metal_roughness = point.specular_roughness;
         material.metal_eta       = specular_to_eta(point.base_color);
     }
     if (point.specular != zero3f) {
-        material.specular_weight    = point.opacity * point.specular;
-        material.specular_roughness = point.roughness;
-        material.specular_eta       = vec3f{point.ior};
+        material.specular_weight    = point.opacity_factor * point.specular;
+        material.specular_roughness = point.specular_roughness;
+        material.specular_eta       = vec3f{point.specular_ior};
     }
     if (point.transmission != zero3f) {
-        material.transmission_color     = point.opacity * point.transmission;
-        material.transmission_roughness = point.roughness;
-        material.transmission_eta       = vec3f{point.ior};
+        material.transmission_color = point.opacity_factor * point.transmission;
+        material.transmission_roughness = point.specular_roughness;
+        material.transmission_eta       = vec3f{point.specular_ior};
         material.transmission_thin      = point.thin_walled;
     }
-    if (point.opacity < 0.999f) {
-        material.opacity_color = vec3f{1 - point.opacity};
+    if (point.opacity_factor < 0.999f) {
+        material.opacity_color = vec3f{1 - point.opacity_factor};
     }
-    if (point.emission && point.emission_color != zero3f) {
-        material.emission_weight = point.opacity * point.emission *
-                                   point.emission_color;
+    if (point.emission_factor && point.emission_color != zero3f) {
+        material.emission_weight = point.opacity_factor *
+                                   point.emission_factor * point.emission_color;
     }
     if (point.volume_density != zero3f) {
         material.volume_emission = point.volume_emission;
@@ -738,7 +741,7 @@ float sample_light_pdf(const yocto_scene& scene, const trace_lights& lights,
     const vec3f& direction) {
     auto& instance = scene.instances[instance_id];
     auto& material = scene.materials[instance.material];
-    if (!material.emission) return 0;
+    if (!material.emission_factor) return 0;
     auto& elements_cdf = lights.shape_cdfs[instance.shape];
     // check all intersection
     auto pdf           = 0.0f;
@@ -1001,7 +1004,7 @@ trace_point make_surface_point(const yocto_scene& scene,
         if (material.normal_texture >= 0) {
             point.normal = eval_perturbed_normal(scene, instance,
                 intersection.element_id, intersection.element_uv,
-                material_point.normalmap, trace_non_rigid_frames);
+                material_point.normal_map, trace_non_rigid_frames);
         }
     }
     return point;
@@ -1440,7 +1443,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
         auto& instance = scene.instances[instance_id];
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[instance.material];
-        if (!material.emission) continue;
+        if (!material.emission_factor) continue;
         if (shape.triangles.empty() && shape.quads.empty()) continue;
         lights.instances.push_back(instance_id);
         sample_shape_cdf(shape, lights.shape_cdfs[instance.shape]);

@@ -55,35 +55,35 @@ textures:
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
-    diffuse: 1
+    diffuse_factor: 1
     base_color: [0.7, 0.7, 0.7]
     base_texture: textures/test-floor.png
   - uri: materials/test-matte.yaml
-    diffuse: 1
+    diffuse_factor: 1
     base_color: [0.7, 0.7, 0.7]
-    roughness: 1
+    specular_roughness: 1
   - uri: materials/test-plastic-sharp.yaml
-    diffuse: 1
+    diffuse_factor: 1
     base_color: [0.5, 0.5, 0.7]
     specular: [1, 1, 1]
-    roughness: 0.01
+    specular_roughness: 0.01
   - uri: materials/test-plastic-rough.yaml
-    diffuse: 1
+    diffuse_factor: 1
     base_color: [0.5, 0.7, 0.5]
     specular: [1, 1, 1]
-    roughness: 0.1
+    specular_roughness: 0.1
   - uri: materials/test-metal-sharp.yaml
-    metallic: 1
+    metallic_factor: 1
     base_color: [0.7, 0.7, 0.7]
-    roughness: 0
+    specular_roughness: 0
   - uri: materials/test-metal-rough.yaml
-    metallic: 1
+    metallic_factor: 1
     base_color: [0.66, 0.45, 0.34]
-    roughness: 0.1
+    specular_roughness: 0.1
   - uri: materials/test-arealight1.yaml
-    emission: 20
+    emission_factor: 20
   - uri: materials/test-arealight2.yaml
-    emission: 20
+    emission_factor: 20
 shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply
   - uri: ::yocto::test-sphere::shapes/test-sphere.ply

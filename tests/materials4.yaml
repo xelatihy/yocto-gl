@@ -55,12 +55,12 @@ textures:
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
-    diffuse: 1
+    diffuse_factor: 1
     base_color: [0.7, 0.7, 0.7]
     base_texture: textures/test-floor.png
   - uri: materials/test-volume-jade.yaml
     specular: [1, 1, 1]
-    roughness: 0
+    specular_roughness: 0
     transmission: [1, 1, 1]
     volume_density: [50, 50, 50]
     volume_albedo: [0.3, 0.6, 0.3]
@@ -75,7 +75,7 @@ materials:
   - uri: materials/test-volume-glass.yaml
     specular: [1, 1, 1]
     transmission: [1, 1, 1]
-    roughness: 0
+    specular_roughness: 0
     volume_density: [0, 15, 15]
     thin_walled: false
   - uri: materials/test-volume-smoke.yaml
@@ -90,9 +90,9 @@ materials:
     volume_emission: [15, 15, 10]
     thin_walled: true
   - uri: materials/test-arealight1.yaml
-    emission: 20
+    emission_factor: 20
   - uri: materials/test-arealight2.yaml
-    emission: 20
+    emission_factor: 20
 shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply
   - uri: shapes/test-bunny.obj

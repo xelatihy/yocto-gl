@@ -350,18 +350,19 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
         edited = true;
     }
     if (draw_slider_opengl_widget(
-            win, "emission", edited_value.emission, 0, 10000)) {
+            win, "emission", edited_value.emission_factor, 0, 10000)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(
             win, "emission color", edited_value.emission_color)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(win, "diffuse", edited_value.diffuse, 0, 1)) {
+    if (draw_slider_opengl_widget(
+            win, "diffuse", edited_value.diffuse_factor, 0, 1)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
-            win, "metallic", edited_value.metallic, 0, 1)) {
+            win, "metallic", edited_value.metallic_factor, 0, 1)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(
@@ -376,13 +377,15 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
         edited = true;
     }
     if (draw_slider_opengl_widget(
-            win, "roughness", edited_value.roughness, 0, 1)) {
+            win, "roughness", edited_value.specular_roughness, 0, 1)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(win, "ior", edited_value.ior, 1, 2)) {
+    if (draw_slider_opengl_widget(
+            win, "ior", edited_value.specular_ior, 1, 2)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(win, "opacity", edited_value.opacity, 0, 1)) {
+    if (draw_slider_opengl_widget(
+            win, "opacity", edited_value.opacity_factor, 0, 1)) {
         edited = true;
     }
     continue_opengl_widget_line(win);

@@ -614,7 +614,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
             type = parsing_type::environment;
         } else {
             type = parsing_type::none;
-            throw io_error("unknown object type");
+            throw io_error("unknown object type " + key);
         }
     }
     void object_begin() {
@@ -655,7 +655,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
                 } else if (key == "lens_aperture") {
                     get_yaml_value(value, camera.lens_aperture);
                 } else {
-                    throw io_error("unknown property");
+                    throw io_error("unknown property " + string(key));
                 }
             } break;
             case parsing_type::texture: {
@@ -671,7 +671,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
                 } else if (key == "filename") {
                     get_yaml_value(value, texture.uri);
                 } else {
-                    throw io_error("unknown property");
+                    throw io_error("unknown property " + string(key));
                 }
             } break;
             case parsing_type::voltexture: {
@@ -685,7 +685,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     }
                     vmap[refname] = (int)scene.voltextures.size() - 1;
                 } else {
-                    throw io_error("unknown property");
+                    throw io_error("unknown property " + string(key));
                 }
             } break;
             case parsing_type::material: {
@@ -693,26 +693,26 @@ struct load_yaml_scene_cb : yaml_callbacks {
                 if (key == "uri") {
                     get_yaml_value(value, material.uri);
                     mmap[material.uri] = (int)scene.materials.size() - 1;
-                } else if (key == "emission") {
-                    get_yaml_value(value, material.emission);
+                } else if (key == "emission_factor") {
+                    get_yaml_value(value, material.emission_factor);
                 } else if (key == "emission_color") {
                     get_yaml_value(value, material.emission_color);
-                } else if (key == "diffuse") {
-                    get_yaml_value(value, material.diffuse);
-                } else if (key == "metallic") {
-                    get_yaml_value(value, material.metallic);
+                } else if (key == "diffuse_factor") {
+                    get_yaml_value(value, material.diffuse_factor);
+                } else if (key == "metallic_factor") {
+                    get_yaml_value(value, material.metallic_factor);
                 } else if (key == "base_color") {
                     get_yaml_value(value, material.base_color);
                 } else if (key == "specular") {
                     get_yaml_value(value, material.specular);
+                } else if (key == "specular_roughness") {
+                    get_yaml_value(value, material.specular_roughness);
+                } else if (key == "specular_ior") {
+                    get_yaml_value(value, material.specular_ior);
                 } else if (key == "transmission") {
                     get_yaml_value(value, material.transmission);
-                } else if (key == "roughness") {
-                    get_yaml_value(value, material.roughness);
-                } else if (key == "ior") {
-                    get_yaml_value(value, material.ior);
-                } else if (key == "opacity") {
-                    get_yaml_value(value, material.opacity);
+                } else if (key == "opacity_factor") {
+                    get_yaml_value(value, material.opacity_factor);
                 } else if (key == "thin_walled") {
                     get_yaml_value(value, material.thin_walled);
                 } else if (key == "volume_density") {
@@ -742,7 +742,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
                 } else if (key == "gltf_textures") {
                     get_yaml_value(value, material.gltf_textures);
                 } else {
-                    throw io_error("unknown property");
+                    throw io_error("unknown property " + string(key));
                 }
             } break;
             case parsing_type::shape: {
@@ -756,7 +756,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     }
                     smap[refname] = (int)scene.shapes.size() - 1;
                 } else {
-                    throw io_error("unknown property");
+                    throw io_error("unknown property " + string(key));
                 }
             } break;
             case parsing_type::subdiv: {
@@ -778,7 +778,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
                 } else if (key == "displacement_scale") {
                     get_yaml_value(value, subdiv.displacement_scale);
                 } else {
-                    throw io_error("unknown property");
+                    throw io_error("unknown property " + string(key));
                 }
             } break;
             case parsing_type::instance: {
@@ -792,7 +792,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
                 } else if (key == "material") {
                     get_yaml_ref(value, instance.material, mmap);
                 } else {
-                    throw io_error("unknown property");
+                    throw io_error("unknown property " + string(key));
                 }
             } break;
             case parsing_type::environment: {
@@ -806,7 +806,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
                 } else if (key == "emission_texture") {
                     get_yaml_ref(value, environment.emission_texture, tmap);
                 } else {
-                    throw io_error("unknown property");
+                    throw io_error("unknown property " + string(key));
                 }
             } break;
             default: throw io_error("unknown object type");
@@ -942,23 +942,26 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     if (!scene.materials.empty()) print(fs, "\n\nmaterials:\n");
     for (auto& material : scene.materials) {
         print(fs, "  - uri: {}\n", material.uri);
-        print_optional(
-            fs, "emission", material.emission, def_material.emission);
+        print_optional(fs, "emission_factor", material.emission_factor,
+            def_material.emission_factor);
         print_optional(fs, "emission_color", material.emission_color,
             def_material.emission_color);
-        print_optional(fs, "diffuse", material.diffuse, def_material.diffuse);
-        print_optional(
-            fs, "metallic", material.metallic, def_material.metallic);
+        print_optional(fs, "diffuse_factor", material.diffuse_factor,
+            def_material.diffuse_factor);
+        print_optional(fs, "metallic_factor", material.metallic_factor,
+            def_material.metallic_factor);
         print_optional(
             fs, "base_color", material.base_color, def_material.base_color);
         print_optional(
             fs, "specular", material.specular, def_material.specular);
+        print_optional(fs, "specular_roughness", material.specular_roughness,
+            def_material.specular_roughness);
+        print_optional(
+            fs, "specular_ior", material.specular_ior, def_material.specular_ior);
         print_optional(fs, "transmission", material.transmission,
             def_material.transmission);
-        print_optional(
-            fs, "roughness", material.roughness, def_material.roughness);
-        print_optional(fs, "ior", material.ior, def_material.ior);
-        print_optional(fs, "opacity", material.opacity, def_material.opacity);
+        print_optional(fs, "opacity_factor", material.opacity_factor,
+            def_material.opacity_factor);
         print_optional(
             fs, "thin_walled", material.thin_walled, def_material.thin_walled);
         print_ref(
@@ -1309,16 +1312,16 @@ struct load_obj_scene_cb : obj_callbacks {
     void material(const obj_material& omat) {
         auto material                   = yocto_material();
         material.uri                    = omat.name;
-        material.emission               = omat.ke == zero3f ? 0 : 1;
+        material.emission_factor        = omat.ke == zero3f ? 0 : 1;
         material.emission_color         = omat.ke;
-        material.diffuse                = omat.kd == zero3f ? 0 : 1;
-        material.metallic               = omat.km;
+        material.diffuse_factor         = omat.kd == zero3f ? 0 : 1;
+        material.metallic_factor        = omat.km;
         material.base_color             = omat.kd;
         material.specular               = omat.ks;
         material.transmission           = omat.kt;
-        material.roughness              = omat.rs;
-        material.ior                    = omat.ior;
-        material.opacity                = omat.op;
+        material.specular_roughness     = omat.rs;
+        material.specular_ior           = omat.ior;
+        material.opacity_factor         = omat.op;
         material.emission_texture       = add_texture(omat.ke_txt, false);
         material.base_texture           = add_texture(omat.kd_txt, false);
         material.metallic_texture       = add_texture(omat.km_txt, false);
@@ -1331,7 +1334,8 @@ struct load_obj_scene_cb : obj_callbacks {
         material.volume_density         = omat.vd;
         material.volume_phaseg          = omat.vg;
         material.volume_density_texture = add_voltexture(omat.vd_txt, false);
-        normalize_scaled_color(material.emission, material.emission_color);
+        normalize_scaled_color(
+            material.emission_factor, material.emission_color);
         scene.materials.push_back(material);
         mmap[material.uri] = (int)scene.materials.size() - 1;
     }
@@ -1463,18 +1467,19 @@ static void save_mtl(
         print(fs, "newmtl {}\n", get_basename(material.uri));
         print_obj_keyvalue(fs, "  illum", 2);
         print_obj_keyvalue(
-            fs, "  Ke", material.emission * material.emission_color);
-        print_obj_keyvalue(fs, "  Kd", material.diffuse);
-        print_obj_keyvalue(fs, "  Pm", material.metallic);
+            fs, "  Ke", material.emission_factor * material.emission_color);
+        print_obj_keyvalue(fs, "  Kd", material.diffuse_factor);
+        print_obj_keyvalue(fs, "  Pm", material.metallic_factor);
         print_obj_keyvalue(fs, "  Ks", material.specular);
         print_obj_keyvalue(fs, "  Kt", material.transmission);
         print_obj_keyvalue(fs, "  Ns",
-            (int)clamp(
-                2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) -
-                    2,
+            (int)clamp(2 / pow(clamp(material.specular_roughness, 0.0f, 0.99f) +
+                                   1e-10f,
+                               4.0f) -
+                           2,
                 0.0f, 1.0e9f));
-        print_obj_keyvalue(fs, "  Ni", material.ior);
-        print_obj_keyvalue(fs, "  d", material.opacity);
+        print_obj_keyvalue(fs, "  Ni", material.specular_ior);
+        print_obj_keyvalue(fs, "  d", material.opacity_factor);
         if (material.emission_texture >= 0)
             print_obj_keyvalue(
                 fs, "  map_Ke", scene.textures[material.emission_texture].uri);
@@ -1847,14 +1852,14 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
     // convert materials
     auto mmap = unordered_map<cgltf_material*, int>{{nullptr, -1}};
     for (auto mid = 0; mid < gltf->materials_count; mid++) {
-        auto gmat         = &gltf->materials[mid];
-        auto material     = yocto_material();
-        material.uri      = gmat->name ? gmat->name : "";
-        material.emission = (gmat->emissive_factor[0] ||
-                                gmat->emissive_factor[1] ||
-                                gmat->emissive_factor[2])
-                                ? 1
-                                : 0;
+        auto gmat                = &gltf->materials[mid];
+        auto material            = yocto_material();
+        material.uri             = gmat->name ? gmat->name : "";
+        material.emission_factor = (gmat->emissive_factor[0] ||
+                                       gmat->emissive_factor[1] ||
+                                       gmat->emissive_factor[2])
+                                       ? 1
+                                       : 0;
         material.emission_color   = {gmat->emissive_factor[0],
             gmat->emissive_factor[1], gmat->emissive_factor[2]};
         material.emission_texture = add_texture(gmat->emissive_texture, false);
@@ -1863,27 +1868,27 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
             auto gsg               = &gmat->pbr_specular_glossiness;
             auto kb = vec4f{gsg->diffuse_factor[0], gsg->diffuse_factor[1],
                 gsg->diffuse_factor[2], gsg->diffuse_factor[3]};
-            material.diffuse      = 1;
-            material.base_color   = {kb.x, kb.y, kb.z};
-            material.opacity      = kb.w;
-            material.specular     = {gsg->specular_factor[0],
+            material.diffuse_factor     = 1;
+            material.base_color         = {kb.x, kb.y, kb.z};
+            material.opacity_factor     = kb.w;
+            material.specular           = {gsg->specular_factor[0],
                 gsg->specular_factor[1], gsg->specular_factor[2]};
-            material.roughness    = 1 - gsg->glossiness_factor;
+            material.specular_roughness = 1 - gsg->glossiness_factor;
             material.base_texture = add_texture(gsg->diffuse_texture, false);
             material.specular_texture = add_texture(
                 gsg->specular_glossiness_texture, false);
             material.roughness_texture = material.specular_texture;
         } else if (gmat->has_pbr_metallic_roughness) {
-            material.gltf_textures = true;
-            auto gmr               = &gmat->pbr_metallic_roughness;
-            auto kb                = vec4f{gmr->base_color_factor[0],
+            material.gltf_textures      = true;
+            auto gmr                    = &gmat->pbr_metallic_roughness;
+            auto kb                     = vec4f{gmr->base_color_factor[0],
                 gmr->base_color_factor[1], gmr->base_color_factor[2],
                 gmr->base_color_factor[3]};
-            material.diffuse       = 1;
-            material.base_color    = {kb.x, kb.y, kb.z};
-            material.opacity       = kb.w;
-            material.metallic      = gmr->metallic_factor;
-            material.roughness     = gmr->roughness_factor;
+            material.diffuse_factor     = 1;
+            material.base_color         = {kb.x, kb.y, kb.z};
+            material.opacity_factor     = kb.w;
+            material.metallic_factor    = gmr->metallic_factor;
+            material.specular_roughness = gmr->roughness_factor;
             material.base_texture = add_texture(gmr->base_color_texture, false);
             material.metallic_texture = add_texture(
                 gmr->metallic_roughness_texture, true);
@@ -2387,16 +2392,17 @@ static void scene_to_gltf(const yocto_scene& scene, json& js) {
     for (auto& material : scene.materials) {
         auto mjs    = json();
         mjs["name"] = material.uri;
-        if (material.emission * material.emission_color != zero3f)
-            mjs["emissiveFactor"] = material.emission * material.emission_color;
+        if (material.emission_factor * material.emission_color != zero3f)
+            mjs["emissiveFactor"] = material.emission_factor *
+                                    material.emission_color;
         if (material.emission_texture >= 0)
             mjs["emissiveTexture"]["index"] = material.emission_texture;
         auto kd   = vec4f{material.base_color.x, material.base_color.y,
-            material.base_color.z, material.opacity};
+            material.base_color.z, material.opacity_factor};
         auto mmjs = json();
         mmjs["baseColorFactor"] = kd;
-        mmjs["metallicFactor"]  = material.metallic;
-        mmjs["roughnessFactor"] = material.roughness;
+        mmjs["metallicFactor"]  = material.metallic_factor;
+        mmjs["roughnessFactor"] = material.specular_roughness;
         if (material.base_texture >= 0)
             mmjs["baseColorTexture"]["index"] = material.base_texture;
         if (material.metallic_texture >= 0)
@@ -2736,9 +2742,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             return ammap.at(lookup_name);
         auto material = mmap.at(ctx.material);
         if (amap.at(ctx.arealight) != zero3f) {
-            material.emission       = 1;
-            material.emission_color = amap.at(ctx.arealight);
-            normalize_scaled_color(material.emission, material.emission_color);
+            material.emission_factor = 1;
+            material.emission_color  = amap.at(ctx.arealight);
+            normalize_scaled_color(
+                material.emission_factor, material.emission_color);
             material.uri += "_arealight_" + to_string(light_id++);
         }
         scene.materials.push_back(material);
@@ -2991,9 +2998,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             auto op     = vec3f{0, 0, 0};
             auto op_txt = -1;
             get_scaled_texture3f(uber.opacity, op, op_txt);
-            material.opacity   = (op.x + op.y + op.z) / 3;
-            material.roughness = get_pbrt_roughness(uber.uroughness.value,
-                uber.vroughness.value, uber.remaproughness);
+            material.opacity_factor     = (op.x + op.y + op.z) / 3;
+            material.specular_roughness = get_pbrt_roughness(
+                uber.uroughness.value, uber.vroughness.value,
+                uber.remaproughness);
         } else if (holds_alternative<pbrt_plastic_material>(pmaterial)) {
             auto& plastic = get<pbrt_plastic_material>(pmaterial);
             get_scaled_texture3f(
@@ -3001,39 +3009,41 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             // get_scaled_texture3f(
             //     plastic.Ks, material.specular,
             //     material.specular_texture);
-            material.specular  = {0.04f, 0.04f, 0.04f};
-            material.roughness = get_pbrt_roughness(plastic.uroughness.value,
-                plastic.vroughness.value, plastic.remaproughness);
+            material.specular           = {0.04f, 0.04f, 0.04f};
+            material.specular_roughness = get_pbrt_roughness(
+                plastic.uroughness.value, plastic.vroughness.value,
+                plastic.remaproughness);
         } else if (holds_alternative<pbrt_translucent_material>(pmaterial)) {
             auto& translucent = get<pbrt_translucent_material>(pmaterial);
             get_scaled_texture3f(
                 translucent.Kd, material.base_color, material.base_texture);
             // get_scaled_texture3f(translucent.Ks, material.specular,
             //     material.specular_texture);
-            material.specular  = {0.04f, 0.04f, 0.04f};
-            material.roughness = get_pbrt_roughness(
+            material.specular           = {0.04f, 0.04f, 0.04f};
+            material.specular_roughness = get_pbrt_roughness(
                 translucent.uroughness.value, translucent.vroughness.value,
                 translucent.remaproughness);
         } else if (holds_alternative<pbrt_matte_material>(pmaterial)) {
             auto& matte = get<pbrt_matte_material>(pmaterial);
             get_scaled_texture3f(
                 matte.Kd, material.base_color, material.base_texture);
-            material.roughness = 1;
+            material.specular_roughness = 1;
         } else if (holds_alternative<pbrt_mirror_material>(pmaterial)) {
             // auto& mirror          =
             // get<pbrt_mirror_material>(pmaterial);
-            material.base_color = {0, 0, 0};
-            material.specular   = {1, 1, 1};
-            material.roughness  = 0;
+            material.base_color         = {0, 0, 0};
+            material.specular           = {1, 1, 1};
+            material.specular_roughness = 0;
         } else if (holds_alternative<pbrt_metal_material>(pmaterial)) {
             auto& metal = get<pbrt_metal_material>(pmaterial);
             auto  eta = zero3f, k = zero3f;
             auto  eta_texture = -1, k_texture = -1;
             get_scaled_texture3f(metal.eta, eta, eta_texture);
             get_scaled_texture3f(metal.k, k, k_texture);
-            material.specular  = pbrt_fresnel_metal(1, eta, k);
-            material.roughness = get_pbrt_roughness(metal.uroughness.value,
-                metal.vroughness.value, metal.remaproughness);
+            material.specular           = pbrt_fresnel_metal(1, eta, k);
+            material.specular_roughness = get_pbrt_roughness(
+                metal.uroughness.value, metal.vroughness.value,
+                metal.remaproughness);
         } else if (holds_alternative<pbrt_substrate_material>(pmaterial)) {
             auto& substrate = get<pbrt_substrate_material>(pmaterial);
             get_scaled_texture3f(
@@ -3041,9 +3051,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             // get_scaled_texture3f(
             //     substrate.Ks, material.specular,
             //     material.specular_texture);
-            material.specular  = {0.04f, 0.04f, 0.04f};
-            material.roughness = get_pbrt_roughness(substrate.uroughness.value,
-                substrate.vroughness.value, substrate.remaproughness);
+            material.specular           = {0.04f, 0.04f, 0.04f};
+            material.specular_roughness = get_pbrt_roughness(
+                substrate.uroughness.value, substrate.vroughness.value,
+                substrate.remaproughness);
         } else if (holds_alternative<pbrt_glass_material>(pmaterial)) {
             // auto& glass       = get<pbrt_glass_material>(pmaterial);
             material.specular     = {0.04f, 0.04f, 0.04f};
@@ -3054,18 +3065,18 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             // get_scaled_texture3f(
             //     glass.Kt, material.transmission,
             //     material.transmission_texture);
-            material.roughness = 0;
+            material.specular_roughness = 0;
         } else if (holds_alternative<pbrt_hair_material>(pmaterial)) {
             auto& hair = get<pbrt_hair_material>(pmaterial);
             get_scaled_texture3f(
                 hair.color, material.base_color, material.base_texture);
-            material.roughness = 1;
+            material.specular_roughness = 1;
             if (verbose) printf("hair material not properly supported\n");
         } else if (holds_alternative<pbrt_disney_material>(pmaterial)) {
             auto& disney = get<pbrt_disney_material>(pmaterial);
             get_scaled_texture3f(
                 disney.color, material.base_color, material.base_texture);
-            material.roughness = 1;
+            material.specular_roughness = 1;
             if (verbose) printf("disney material not properly supported\n");
         } else if (holds_alternative<pbrt_kdsubsurface_material>(pmaterial)) {
             auto& kdsubdurface = get<pbrt_kdsubsurface_material>(pmaterial);
@@ -3073,8 +3084,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 kdsubdurface.Kd, material.base_color, material.base_texture);
             // get_scaled_texture3f(kdsubdurface.Kr, material.specular,
             //     material.specular_texture);
-            material.specular  = {0.04f, 0.04f, 0.04f};
-            material.roughness = get_pbrt_roughness(
+            material.specular           = {0.04f, 0.04f, 0.04f};
+            material.specular_roughness = get_pbrt_roughness(
                 kdsubdurface.uroughness.value, kdsubdurface.vroughness.value,
                 kdsubdurface.remaproughness);
             if (verbose)
@@ -3082,9 +3093,9 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         } else if (holds_alternative<pbrt_subsurface_material>(pmaterial)) {
             // auto& subdurface           =
             // get<pbrt_subsurface_material>(pmaterial);
-            material.diffuse    = 1;
-            material.base_color = {1, 0, 0};
-            material.roughness  = 1;
+            material.diffuse_factor     = 1;
+            material.base_color         = {1, 0, 0};
+            material.specular_roughness = 1;
             if (verbose) printf("subsurface material not properly supported\n");
         } else if (holds_alternative<pbrt_mix_material>(pmaterial)) {
             auto& mix     = get<pbrt_mix_material>(pmaterial);
@@ -3100,8 +3111,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                     plastic.Kd, material.base_color, material.base_texture);
                 // get_scaled_texture3f(plastic.Ks, material.specular,
                 //     material.specular_texture);
-                material.specular  = {0.04f, 0.04f, 0.04f};
-                material.roughness = get_pbrt_roughness(
+                material.specular           = {0.04f, 0.04f, 0.04f};
+                material.specular_roughness = get_pbrt_roughness(
                     plastic.uroughness.value, plastic.vroughness.value,
                     plastic.remaproughness);
             } else if (holds_alternative<pbrt_metal_material>(fourier.approx)) {
@@ -3110,16 +3121,17 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 auto  eta_texture = -1, k_texture = -1;
                 get_scaled_texture3f(metal.eta, eta, eta_texture);
                 get_scaled_texture3f(metal.k, k, k_texture);
-                material.specular  = pbrt_fresnel_metal(1, eta, k);
-                material.roughness = get_pbrt_roughness(metal.uroughness.value,
-                    metal.vroughness.value, metal.remaproughness);
+                material.specular           = pbrt_fresnel_metal(1, eta, k);
+                material.specular_roughness = get_pbrt_roughness(
+                    metal.uroughness.value, metal.vroughness.value,
+                    metal.remaproughness);
             } else if (holds_alternative<pbrt_glass_material>(fourier.approx)) {
                 // auto& glass = get<pbrt_metal_glass>(fourier.approx);
-                material.diffuse      = 0;
-                material.base_color   = {0, 0, 0};
-                material.specular     = {1, 1, 1};
-                material.transmission = {1, 1, 1};
-                material.roughness    = 0;
+                material.diffuse_factor     = 0;
+                material.base_color         = {0, 0, 0};
+                material.specular           = {1, 1, 1};
+                material.transmission       = {1, 1, 1};
+                material.specular_roughness = 0;
             } else {
                 throw io_error("material type not supported " +
                                to_string(fourier.approx.index()));
@@ -3175,12 +3187,14 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 shape.texcoords, {1, 1}, {size, size}, {1, 1},
                 identity_frame3f);
             scene.materials.push_back({});
-            auto& material          = scene.materials.back();
-            material.uri            = shape.uri;
-            material.emission       = 1;
-            material.emission_color = (vec3f)distant.L * (vec3f)distant.scale;
-            material.emission *= (distant_dist * distant_dist) / (size * size);
-            normalize_scaled_color(material.emission, material.emission_color);
+            auto& material           = scene.materials.back();
+            material.uri             = shape.uri;
+            material.emission_factor = 1;
+            material.emission_color  = (vec3f)distant.L * (vec3f)distant.scale;
+            material.emission_factor *= (distant_dist * distant_dist) /
+                                        (size * size);
+            normalize_scaled_color(
+                material.emission_factor, material.emission_color);
             auto instance     = yocto_instance();
             instance.uri      = shape.uri;
             instance.shape    = (int)scene.shapes.size() - 1;
@@ -3198,11 +3212,12 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             make_sphere(shape.quads, shape.positions, shape.normals,
                 shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
             scene.materials.push_back({});
-            auto& material          = scene.materials.back();
-            material.uri            = shape.uri;
-            material.emission       = 1;
-            material.emission_color = (vec3f)point.I * (vec3f)point.scale;
-            normalize_scaled_color(material.emission, material.emission_color);
+            auto& material           = scene.materials.back();
+            material.uri             = shape.uri;
+            material.emission_factor = 1;
+            material.emission_color  = (vec3f)point.I * (vec3f)point.scale;
+            normalize_scaled_color(
+                material.emission_factor, material.emission_color);
             // TODO: fix emission
             auto instance     = yocto_instance();
             instance.uri      = shape.uri;
@@ -3220,12 +3235,13 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             make_sphere(shape.quads, shape.positions, shape.normals,
                 shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
             scene.materials.push_back({});
-            auto& material          = scene.materials.back();
-            material.uri            = shape.uri;
-            material.emission       = 1;
-            material.emission_color = (vec3f)goniometric.I *
+            auto& material           = scene.materials.back();
+            material.uri             = shape.uri;
+            material.emission_factor = 1;
+            material.emission_color  = (vec3f)goniometric.I *
                                       (vec3f)goniometric.scale;
-            normalize_scaled_color(material.emission, material.emission_color);
+            normalize_scaled_color(
+                material.emission_factor, material.emission_color);
             // TODO: fix emission
             auto instance     = yocto_instance();
             instance.uri      = shape.uri;
@@ -3242,11 +3258,12 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             make_sphere(shape.quads, shape.positions, shape.normals,
                 shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
             scene.materials.push_back({});
-            auto& material          = scene.materials.back();
-            material.uri            = shape.uri;
-            material.emission       = 1;
-            material.emission_color = (vec3f)spot.I * (vec3f)spot.scale;
-            normalize_scaled_color(material.emission, material.emission_color);
+            auto& material           = scene.materials.back();
+            material.uri             = shape.uri;
+            material.emission_factor = 1;
+            material.emission_color  = (vec3f)spot.I * (vec3f)spot.scale;
+            normalize_scaled_color(
+                material.emission_factor, material.emission_color);
             // TODO: fix emission
             auto instance     = yocto_instance();
             instance.uri      = shape.uri;
@@ -3347,7 +3364,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
             print(fs, "    \"texture Kd\" \"{}\"\n",
                 get_basename(scene.textures[material.base_texture].uri));
         } else {
-            auto diffuse = material.base_color * material.diffuse;
+            auto diffuse = material.base_color * material.diffuse_factor;
             print(fs, "    \"rgb Kd\" [ {} {} {} ]\n", diffuse.x, diffuse.y,
                 diffuse.z);
         }
@@ -3359,7 +3376,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
                 material.specular.y, material.specular.z);
         }
         print(fs, "    \"float roughness\" {}\n",
-            material.roughness * material.roughness);
+            material.specular_roughness * material.specular_roughness);
     }
 
     // start world
@@ -3378,8 +3395,8 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
             instance.frame.z.x, instance.frame.z.y, instance.frame.z.z,
             instance.frame.o.x, instance.frame.o.y, instance.frame.o.z);
         print(fs, "    NamedMaterial \"{}\"\n", get_basename(material.uri));
-        if (material.emission * material.emission_color != zero3f) {
-            auto emission = material.emission * material.emission_color;
+        if (material.emission_factor * material.emission_color != zero3f) {
+            auto emission = material.emission_factor * material.emission_color;
             print(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [{} {} {}]\n",
                 emission.x, emission.y, emission.z);
         }
@@ -3426,47 +3443,47 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
 namespace yocto {
 
 void make_cornellbox_scene(yocto_scene& scene) {
-    scene.uri                = "cornellbox";
-    auto& camera             = scene.cameras.emplace_back();
-    camera.uri               = "cam";
-    camera.frame             = frame3f{{0, 1, 3.9}};
-    camera.focal_length      = 0.035;
-    camera.lens_aperture     = 0.0;
-    camera.film_width        = 0.024;
-    camera.film_height       = 0.024;
-    auto& floor_mat          = scene.materials.emplace_back();
-    floor_mat.uri            = "floor";
-    floor_mat.diffuse        = 1;
-    floor_mat.base_color     = {0.725, 0.71, 0.68};
-    auto& ceiling_mat        = scene.materials.emplace_back();
-    ceiling_mat.diffuse      = 1;
-    ceiling_mat.uri          = "ceiling";
-    ceiling_mat.base_color   = {0.725, 0.71, 0.68};
-    auto& backwall_mat       = scene.materials.emplace_back();
-    backwall_mat.diffuse     = 1;
-    backwall_mat.uri         = "backwall";
-    backwall_mat.base_color  = {0.725, 0.71, 0.68};
-    auto& rightwall_mat      = scene.materials.emplace_back();
-    rightwall_mat.diffuse    = 1;
-    rightwall_mat.uri        = "rightwall";
-    rightwall_mat.base_color = {0.14, 0.45, 0.091};
-    auto& leftwall_mat       = scene.materials.emplace_back();
-    leftwall_mat.diffuse     = 1;
-    leftwall_mat.uri         = "leftwall";
-    leftwall_mat.base_color  = {0.63, 0.065, 0.05};
-    auto& shortbox_mat       = scene.materials.emplace_back();
-    shortbox_mat.uri         = "shortbox";
-    shortbox_mat.diffuse     = 1;
-    shortbox_mat.base_color  = {0.725, 0.71, 0.68};
-    auto& tallbox_mat        = scene.materials.emplace_back();
-    tallbox_mat.uri          = "tallbox";
-    tallbox_mat.diffuse      = 1;
-    tallbox_mat.base_color   = {0.725, 0.71, 0.68};
-    auto& light_mat          = scene.materials.emplace_back();
-    light_mat.uri            = "light";
-    light_mat.emission       = 1;
-    light_mat.emission_color = {17, 12, 4};
-    normalize_scaled_color(light_mat.emission, light_mat.emission_color);
+    scene.uri                    = "cornellbox";
+    auto& camera                 = scene.cameras.emplace_back();
+    camera.uri                   = "cam";
+    camera.frame                 = frame3f{{0, 1, 3.9}};
+    camera.focal_length          = 0.035;
+    camera.lens_aperture         = 0.0;
+    camera.film_width            = 0.024;
+    camera.film_height           = 0.024;
+    auto& floor_mat              = scene.materials.emplace_back();
+    floor_mat.uri                = "floor";
+    floor_mat.diffuse_factor     = 1;
+    floor_mat.base_color         = {0.725, 0.71, 0.68};
+    auto& ceiling_mat            = scene.materials.emplace_back();
+    ceiling_mat.diffuse_factor   = 1;
+    ceiling_mat.uri              = "ceiling";
+    ceiling_mat.base_color       = {0.725, 0.71, 0.68};
+    auto& backwall_mat           = scene.materials.emplace_back();
+    backwall_mat.diffuse_factor  = 1;
+    backwall_mat.uri             = "backwall";
+    backwall_mat.base_color      = {0.725, 0.71, 0.68};
+    auto& rightwall_mat          = scene.materials.emplace_back();
+    rightwall_mat.diffuse_factor = 1;
+    rightwall_mat.uri            = "rightwall";
+    rightwall_mat.base_color     = {0.14, 0.45, 0.091};
+    auto& leftwall_mat           = scene.materials.emplace_back();
+    leftwall_mat.diffuse_factor  = 1;
+    leftwall_mat.uri             = "leftwall";
+    leftwall_mat.base_color      = {0.63, 0.065, 0.05};
+    auto& shortbox_mat           = scene.materials.emplace_back();
+    shortbox_mat.uri             = "shortbox";
+    shortbox_mat.diffuse_factor  = 1;
+    shortbox_mat.base_color      = {0.725, 0.71, 0.68};
+    auto& tallbox_mat            = scene.materials.emplace_back();
+    tallbox_mat.uri              = "tallbox";
+    tallbox_mat.diffuse_factor   = 1;
+    tallbox_mat.base_color       = {0.725, 0.71, 0.68};
+    auto& light_mat              = scene.materials.emplace_back();
+    light_mat.uri                = "light";
+    light_mat.emission_factor    = 1;
+    light_mat.emission_color     = {17, 12, 4};
+    normalize_scaled_color(light_mat.emission_factor, light_mat.emission_color);
     auto& floor_shp        = scene.shapes.emplace_back();
     floor_shp.uri          = "floor";
     floor_shp.positions    = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};

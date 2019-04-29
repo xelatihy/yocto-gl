@@ -120,30 +120,30 @@ struct yocto_voltexture {
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct yocto_material {
-    string uri           = "";
-    bool   gltf_textures = false;  // glTF packed textures
+    string uri = "";
 
     // base values
-    float emission       = 0;
-    vec3f emission_color = {1, 1, 1};
-    float diffuse        = 0;
-    float metallic       = 0;
-    vec3f base_color     = {0, 0, 0};
-    vec3f specular       = {0, 0, 0};
-    vec3f transmission   = {0, 0, 0};
-    float roughness      = 0.001f;
-    float ior            = 1.5;
-    float opacity        = 1;
-    bool  thin_walled    = false;
+    float emission_factor    = 0;
+    vec3f emission_color     = {1, 1, 1};
+    float diffuse_factor     = 0;
+    float metallic_factor    = 0;
+    vec3f base_color         = {0, 0, 0};
+    vec3f specular           = {0, 0, 0};
+    float specular_roughness = 0.001f;
+    float specular_ior       = 1.5;
+    vec3f transmission       = {0, 0, 0};
+    float opacity_factor     = 1;
+    bool  thin_walled        = false;
 
     // textures
-    int emission_texture     = -1;
-    int base_texture         = -1;
-    int metallic_texture     = -1;
-    int specular_texture     = -1;
-    int roughness_texture    = -1;
-    int transmission_texture = -1;
-    int normal_texture       = -1;
+    int  emission_texture     = -1;
+    int  base_texture         = -1;
+    int  metallic_texture     = -1;
+    int  specular_texture     = -1;
+    int  roughness_texture    = -1;
+    int  transmission_texture = -1;
+    int  normal_texture       = -1;
+    bool gltf_textures        = false;  // glTF packed textures
 
     // volume properties
     // albedo = scattering / (absorption + scattering)
@@ -455,22 +455,22 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    float emission        = 0;
-    vec3f emission_color  = {1, 1, 1};
-    float diffuse         = 0;
-    float metallic        = 0;
-    vec3f base_color      = {1, 1, 1};
-    vec3f specular        = {0, 0, 0};
-    vec3f transmission    = {0, 0, 0};
-    float roughness       = 1;
-    float opacity         = 1;
-    float ior             = 1;
-    bool  thin_walled     = false;
-    vec3f normalmap       = {0, 0, 1};
-    vec3f volume_emission = {0, 0, 0};
-    vec3f volume_albedo   = {0, 0, 0};
-    vec3f volume_density  = {0, 0, 0};
-    float volume_phaseg   = 0;
+    float emission_factor    = 0;
+    vec3f emission_color     = {1, 1, 1};
+    float diffuse_factor     = 0;
+    float metallic_factor    = 0;
+    vec3f base_color         = {1, 1, 1};
+    vec3f specular           = {0, 0, 0};
+    float specular_roughness = 1;
+    float specular_ior       = 1;
+    vec3f transmission       = {0, 0, 0};
+    float opacity_factor     = 1;
+    bool  thin_walled        = false;
+    vec3f normal_map         = {0, 0, 1};
+    vec3f volume_emission    = {0, 0, 0};
+    vec3f volume_albedo      = {0, 0, 0};
+    vec3f volume_density     = {0, 0, 0};
+    float volume_phaseg      = 0;
 };
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord);
