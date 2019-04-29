@@ -707,10 +707,10 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.transmission);
                 } else if (key == "roughness") {
                     get_yaml_value(value, material.roughness);
+                } else if (key == "ior") {
+                    get_yaml_value(value, material.ior);
                 } else if (key == "opacity") {
                     get_yaml_value(value, material.opacity);
-                } else if (key == "fresnel") {
-                    get_yaml_value(value, material.fresnel);
                 } else if (key == "refract") {
                     get_yaml_value(value, material.refract);
                 } else if (key == "volume_density") {
@@ -949,8 +949,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             def_material.transmission);
         print_optional(
             fs, "roughness", material.roughness, def_material.roughness);
+        print_optional(fs, "ior", material.ior, def_material.ior);
         print_optional(fs, "opacity", material.opacity, def_material.opacity);
-        print_optional(fs, "fresnel", material.fresnel, def_material.fresnel);
         print_optional(fs, "refract", material.refract, def_material.refract);
         print_ref(
             fs, "emission_texture", material.emission_texture, scene.textures);
@@ -1302,6 +1302,7 @@ struct load_obj_scene_cb : obj_callbacks {
         material.specular               = omat.ks;
         material.transmission           = omat.kt;
         material.roughness              = omat.rs;
+        material.ior                    = omat.ior;
         material.opacity                = omat.op;
         material.emission_texture       = add_texture(omat.ke_txt, false);
         material.diffuse_texture        = add_texture(omat.kd_txt, false);
@@ -1453,6 +1454,7 @@ static void save_mtl(
                 2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) -
                     2,
                 0.0f, 1.0e9f));
+        print_obj_keyvalue(fs, "  Ni", material.ior);
         print_obj_keyvalue(fs, "  d", material.opacity);
         if (material.emission_texture >= 0)
             print_obj_keyvalue(

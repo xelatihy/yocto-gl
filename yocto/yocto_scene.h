@@ -130,8 +130,8 @@ struct yocto_material {
     vec3f specular     = {0, 0, 0};
     vec3f transmission = {0, 0, 0};
     float roughness    = 0.001f;
+    float ior          = 1.5;
     float opacity      = 1;
-    bool  fresnel      = true;
     bool  refract      = false;
 
     // textures

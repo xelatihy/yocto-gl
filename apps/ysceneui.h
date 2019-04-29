@@ -365,10 +365,10 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "roughness", edited_value.roughness, 0, 1)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(win, "opacity", edited_value.opacity, 0, 1)) {
+    if (draw_slider_opengl_widget(win, "ior", edited_value.ior, 1, 2)) {
         edited = true;
     }
-    if (draw_checkbox_opengl_widget(win, "fresnel", edited_value.fresnel)) {
+    if (draw_slider_opengl_widget(win, "opacity", edited_value.opacity, 0, 1)) {
         edited = true;
     }
     continue_opengl_widget_line(win);
