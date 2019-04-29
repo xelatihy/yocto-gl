@@ -31,26 +31,9 @@
 #include <unordered_map>
 
 // -----------------------------------------------------------------------------
-// USING DIRECTIVES
+// IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-using std::pair;
-using std::unordered_map;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PATH TRACING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Set non-rigid frames as default
-constexpr bool trace_non_rigid_frames = true;
-
-// Trace stats.
-atomic<uint64_t> _trace_npaths{0};
-atomic<uint64_t> _trace_nrays{0};
 
 // Schlick approximation of the Fresnel term
 vec3f fresnel_schlick(const vec3f& specular, float direction_cosine) {
@@ -128,6 +111,221 @@ float sample_microfacet_pdf(
     if (cosine < 0) return 0;
     return eval_microfacetD(roughness, normal, half_vector, ggx) * cosine;
 }
+
+// Phong exponent to roughness.
+float exponent_to_roughness(float exponent) {
+    return sqrtf(2 / (exponent + 2));
+}
+
+// Specular to fresnel eta.
+void specular_to_eta(const vec3f& specular, vec3f& es, vec3f& esk) {
+    es  = {(1 + sqrt(specular.x)) / (1 - sqrt(specular.x)),
+        (1 + sqrt(specular.y)) / (1 - sqrt(specular.y)),
+        (1 + sqrt(specular.z)) / (1 - sqrt(specular.z))};
+    esk = {0, 0, 0};
+}
+
+// Specular to  eta.
+vec3f specular_to_eta(const vec3f& specular) {
+    return (1 + sqrt(specular)) / (1 - sqrt(specular));
+}
+
+// Compute the fresnel term for dielectrics. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+vec3f fresnel_dielectric(const vec3f& eta_, float cosw) {
+    auto eta = eta_;
+    if (cosw < 0) {
+        eta  = vec3f{1, 1, 1} / eta;
+        cosw = -cosw;
+    }
+
+    auto sin2 = 1 - cosw * cosw;
+    auto eta2 = eta * eta;
+
+    auto cos2t = vec3f{1, 1, 1} - vec3f{sin2, sin2, sin2} / eta2;
+    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
+        return vec3f{1, 1, 1};  // tir
+
+    auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
+    auto t1 = eta * t0;
+    auto t2 = eta * cosw;
+
+    auto roughness = (vec3f{cosw, cosw, cosw} - t1) /
+                     (vec3f{cosw, cosw, cosw} + t1);
+    auto rp = (t0 - t2) / (t0 + t2);
+
+    return (roughness * roughness + rp * rp) / 2.0f;
+}
+
+// Compute the fresnel term for metals. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+vec3f fresnel_metal(const vec3f& eta, const vec3f& etak, float cosw) {
+    if (etak == zero3f) return fresnel_dielectric(eta, cosw);
+
+    cosw       = clamp(cosw, (float)-1, (float)1);
+    auto cos2  = cosw * cosw;
+    auto sin2  = clamp(1 - cos2, (float)0, (float)1);
+    auto eta2  = eta * eta;
+    auto etak2 = etak * etak;
+
+    auto t0         = eta2 - etak2 - sin2;
+    auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
+    auto a2plusb2   = sqrt(a2plusb2_2);
+    auto t1         = a2plusb2 + cos2;
+    auto a_2        = (a2plusb2 + t0) / 2.0f;
+    auto a          = sqrt(a_2);
+    auto t2         = 2.0f * a * cosw;
+    auto roughness  = (t1 - t2) / (t1 + t2);
+
+    auto t3 = cos2 * a2plusb2 + sin2 * sin2;
+    auto t4 = t2 * sin2;
+    auto rp = roughness * (t3 - t4) / (t3 + t4);
+
+    return (rp + roughness) / 2.0f;
+}
+
+pair<float, int> sample_distance(const vec3f& density,
+    float rl, float rd) {
+    auto channel = clamp((int)(rl * 3), 0, 2);
+    auto density_channel = density[channel];
+    if (density_channel == 0 || rd == 0)
+        return {float_max, channel};
+    else
+        return {-log(rd) / density_channel, channel};
+}
+
+float sample_distance_pdf(const vec3f& density,
+    float distance, int channel) {
+    auto density_channel = density[channel];
+    return exp(-density_channel * distance);
+}
+
+vec3f eval_transmission(const vec3f& density, float distance) {
+    return exp(-density * distance);
+}
+
+vec3f sample_phasefunction(float g, const vec2f& u) {
+    auto cos_theta = 0.0f;
+    if (abs(g) < 1e-3) {
+        cos_theta = 1 - 2 * u.x;
+    } else {
+        float square = (1 - g * g) / (1 - g + 2 * g * u.x);
+        cos_theta    = (1 + g * g - square * square) / (2 * g);
+    }
+
+    auto sin_theta = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
+    auto phi       = 2 * pif * u.y;
+    return {sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
+}
+
+float eval_phasefunction(float cos_theta, float g) {
+    auto denom = 1 + g * g + 2 * g * cos_theta;
+    return (1 - g * g) / (4 * pif * denom * sqrt(denom));
+}
+
+// Tabulated ior for metals
+// https://github.com/tunabrain/tungsten
+const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
+    {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
+                {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
+    {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
+               {4.8283433224f, 3.1222459278f, 2.1469504455f}}},
+    {"Al", {{1.6574599595f, 0.8803689579f, 0.5212287346f},
+               {9.2238691996f, 6.2695232477f, 4.8370012281f}}},
+    {"AlAs", {{3.6051023902f, 3.2329365777f, 2.2175611545f},
+                 {0.0006670247f, -0.0004999400f, 0.0074261204f}}},
+    {"AlSb", {{-0.0485225705f, 4.1427547893f, 4.6697691348f},
+                 {-0.0363741915f, 0.0937665154f, 1.3007390124f}}},
+    {"Au", {{0.1431189557f, 0.3749570432f, 1.4424785571f},
+               {3.9831604247f, 2.3857207478f, 1.6032152899f}}},
+    {"Be", {{4.1850592788f, 3.1850604423f, 2.7840913457f},
+               {3.8354398268f, 3.0101260162f, 2.8690088743f}}},
+    {"Cr", {{4.3696828663f, 2.9167024892f, 1.6547005413f},
+               {5.2064337956f, 4.2313645277f, 3.7549467933f}}},
+    {"CsI", {{2.1449030413f, 1.7023164587f, 1.6624194173f},
+                {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+    {"Cu", {{0.2004376970f, 0.9240334304f, 1.1022119527f},
+               {3.9129485033f, 2.4528477015f, 2.1421879552f}}},
+    {"Cu2O", {{3.5492833755f, 2.9520622449f, 2.7369202137f},
+                 {0.1132179294f, 0.1946659670f, 0.6001681264f}}},
+    {"CuO", {{3.2453822204f, 2.4496293965f, 2.1974114493f},
+                {0.5202739621f, 0.5707372756f, 0.7172250613f}}},
+    {"d-C", {{2.7112524747f, 2.3185812849f, 2.2288565009f},
+                {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+    {"Hg", {{2.3989314904f, 1.4400254917f, 0.9095512090f},
+               {6.3276269444f, 4.3719414152f, 3.4217899270f}}},
+    {"HgTe", {{4.7795267752f, 3.2309984581f, 2.6600252401f},
+                 {1.6319827058f, 1.5808189339f, 1.7295753852f}}},
+    {"Ir", {{3.0864098394f, 2.0821938440f, 1.6178866805f},
+               {5.5921510077f, 4.0671757150f, 3.2672611269f}}},
+    {"K", {{0.0640493070f, 0.0464100621f, 0.0381842017f},
+              {2.1042155920f, 1.3489364357f, 0.9132113889f}}},
+    {"Li", {{0.2657871942f, 0.1956102432f, 0.2209198538f},
+               {3.5401743407f, 2.3111306542f, 1.6685930000f}}},
+    {"MgO", {{2.0895885542f, 1.6507224525f, 1.5948759692f},
+                {0.0000000000f, -0.0000000000f, 0.0000000000f}}},
+    {"Mo", {{4.4837010280f, 3.5254578255f, 2.7760769438f},
+               {4.1111307988f, 3.4208716252f, 3.1506031404f}}},
+    {"Na", {{0.0602665320f, 0.0561412435f, 0.0619909494f},
+               {3.1792906496f, 2.1124800781f, 1.5790940266f}}},
+    {"Nb", {{3.4201353595f, 2.7901921379f, 2.3955856658f},
+               {3.4413817900f, 2.7376437930f, 2.5799132708f}}},
+    {"Ni", {{2.3672753521f, 1.6633583302f, 1.4670554172f},
+               {4.4988329911f, 3.0501643957f, 2.3454274399f}}},
+    {"Rh", {{2.5857954933f, 1.8601866068f, 1.5544279524f},
+               {6.7822927110f, 4.7029501026f, 3.9760892461f}}},
+    {"Se-e", {{5.7242724833f, 4.1653992967f, 4.0816099264f},
+                 {0.8713747439f, 1.1052845009f, 1.5647788766f}}},
+    {"Se", {{4.0592611085f, 2.8426947380f, 2.8207582835f},
+               {0.7543791750f, 0.6385150558f, 0.5215872029f}}},
+    {"SiC", {{3.1723450205f, 2.5259677964f, 2.4793623897f},
+                {0.0000007284f, -0.0000006859f, 0.0000100150f}}},
+    {"SnTe", {{4.5251865890f, 1.9811525984f, 1.2816819226f},
+                 {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+    {"Ta", {{2.0625846607f, 2.3930915569f, 2.6280684948f},
+               {2.4080467973f, 1.7413705864f, 1.9470377016f}}},
+    {"Te-e", {{7.5090397678f, 4.2964603080f, 2.3698732430f},
+                 {5.5842076830f, 4.9476231084f, 3.9975145063f}}},
+    {"Te", {{7.3908396088f, 4.4821028985f, 2.6370708478f},
+               {3.2561412892f, 3.5273908133f, 3.2921683116f}}},
+    {"ThF4", {{1.8307187117f, 1.4422274283f, 1.3876488528f},
+                 {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+    {"TiC", {{3.7004673762f, 2.8374356509f, 2.5823030278f},
+                {3.2656905818f, 2.3515586388f, 2.1727857800f}}},
+    {"TiN", {{1.6484691607f, 1.1504482522f, 1.3797795097f},
+                {3.3684596226f, 1.9434888540f, 1.1020123347f}}},
+    {"TiO2-e", {{3.1065574823f, 2.5131551146f, 2.5823844157f},
+                   {0.0000289537f, -0.0000251484f, 0.0001775555f}}},
+    {"TiO2", {{3.4566203131f, 2.8017076558f, 2.9051485020f},
+                 {0.0001026662f, -0.0000897534f, 0.0006356902f}}},
+    {"VC", {{3.6575665991f, 2.7527298065f, 2.5326814570f},
+               {3.0683516659f, 2.1986687713f, 1.9631816252f}}},
+    {"VN", {{2.8656011588f, 2.1191817791f, 1.9400767149f},
+               {3.0323264950f, 2.0561075580f, 1.6162930914f}}},
+    {"V", {{4.2775126218f, 3.5131538236f, 2.7611257461f},
+              {3.4911844504f, 2.8893580874f, 3.1116965117f}}},
+    {"W", {{4.3707029924f, 3.3002972445f, 2.9982666528f},
+              {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
+};
+
+// Get a complex ior table with keys the metal name and values (eta, etak)
+bool get_metal_eta(const string& name, vec3f& eta, vec3f& etak) {
+    if (metal_ior_table.find(name) == metal_ior_table.end()) return false;
+    auto value = metal_ior_table.at(name);
+    eta        = value.first;
+    etak       = value.second;
+    return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR PATH TRACING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Set non-rigid frames as default
+constexpr bool trace_non_rigid_frames = true;
 
 // Surface material
 struct trace_material {
@@ -924,42 +1122,16 @@ pair<float, bool> sample_roulette(const vec3f& albedo, const vec3f& weight,
 
 pair<float, int> sample_distance(
     const trace_material& material, float rl, float rd) {
-    auto channel = clamp((int)(rl * 3), 0, 2);
-    auto density = material.volume_density[channel];
-    if (density == 0 || rd == 0)
-        return {float_max, channel};
-    else
-        return {-log(rd) / density, channel};
+    return sample_distance(material.volume_density, rl, rd);
 }
 
 float sample_distance_pdf(
     const trace_material& material, float distance, int channel) {
-    // TODO: why not mis?
-    auto density = material.volume_density[channel];
-    return exp(-density * distance);
+    return sample_distance_pdf(material.volume_density, distance, channel);
 }
 
 vec3f eval_transmission(const trace_material& material, float distance) {
-    return exp(-material.volume_density * distance);
-}
-
-vec3f sample_phasefunction(float g, const vec2f& u) {
-    auto cos_theta = 0.0f;
-    if (abs(g) < 1e-3) {
-        cos_theta = 1 - 2 * u.x;
-    } else {
-        float square = (1 - g * g) / (1 - g + 2 * g * u.x);
-        cos_theta    = (1 + g * g - square * square) / (2 * g);
-    }
-
-    auto sin_theta = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
-    auto phi       = 2 * pif * u.y;
-    return {sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
-}
-
-float eval_phasefunction(float cos_theta, float g) {
-    auto denom = 1 + g * g + 2 * g * cos_theta;
-    return (1 - g * g) / (4 * pif * denom * sqrt(denom));
+    return eval_transmission(material.volume_density, distance);
 }
 
 // Sample next direction. Returns weight and direction.
@@ -1107,6 +1279,10 @@ trace_point make_volume_point(const yocto_scene& scene, const vec3f& position,
     point.material.volume_phaseg   = last_material.volume_phaseg;
     return point;
 }
+
+// Trace stats.
+atomic<uint64_t> _trace_npaths{0};
+atomic<uint64_t> _trace_nrays{0};
 
 // Intersects a ray and returns a point
 bool trace_ray(const yocto_scene& scene, const bvh_scene& bvh, const ray3f& ray,
@@ -1639,179 +1815,6 @@ pair<uint64_t, uint64_t> get_trace_stats() {
 void reset_trace_stats() {
     _trace_nrays  = 0;
     _trace_npaths = 0;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Phong exponent to roughness.
-float exponent_to_roughness(float exponent) {
-    return sqrtf(2 / (exponent + 2));
-}
-
-// Specular to fresnel eta.
-void specular_to_eta(const vec3f& specular, vec3f& es, vec3f& esk) {
-    es  = {(1 + sqrt(specular.x)) / (1 - sqrt(specular.x)),
-        (1 + sqrt(specular.y)) / (1 - sqrt(specular.y)),
-        (1 + sqrt(specular.z)) / (1 - sqrt(specular.z))};
-    esk = {0, 0, 0};
-}
-
-// Specular to  eta.
-vec3f specular_to_eta(const vec3f& specular) {
-    return (1 + sqrt(specular)) / (1 - sqrt(specular));
-}
-
-// Compute the fresnel term for dielectrics. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-vec3f fresnel_dielectric(const vec3f& eta_, float cosw) {
-    auto eta = eta_;
-    if (cosw < 0) {
-        eta  = vec3f{1, 1, 1} / eta;
-        cosw = -cosw;
-    }
-
-    auto sin2 = 1 - cosw * cosw;
-    auto eta2 = eta * eta;
-
-    auto cos2t = vec3f{1, 1, 1} - vec3f{sin2, sin2, sin2} / eta2;
-    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
-        return vec3f{1, 1, 1};  // tir
-
-    auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
-    auto t1 = eta * t0;
-    auto t2 = eta * cosw;
-
-    auto roughness = (vec3f{cosw, cosw, cosw} - t1) /
-                     (vec3f{cosw, cosw, cosw} + t1);
-    auto rp = (t0 - t2) / (t0 + t2);
-
-    return (roughness * roughness + rp * rp) / 2.0f;
-}
-
-// Compute the fresnel term for metals. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-vec3f fresnel_metal(const vec3f& eta, const vec3f& etak, float cosw) {
-    if (etak == zero3f) return fresnel_dielectric(eta, cosw);
-
-    cosw       = clamp(cosw, (float)-1, (float)1);
-    auto cos2  = cosw * cosw;
-    auto sin2  = clamp(1 - cos2, (float)0, (float)1);
-    auto eta2  = eta * eta;
-    auto etak2 = etak * etak;
-
-    auto t0         = eta2 - etak2 - sin2;
-    auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
-    auto a2plusb2   = sqrt(a2plusb2_2);
-    auto t1         = a2plusb2 + cos2;
-    auto a_2        = (a2plusb2 + t0) / 2.0f;
-    auto a          = sqrt(a_2);
-    auto t2         = 2.0f * a * cosw;
-    auto roughness  = (t1 - t2) / (t1 + t2);
-
-    auto t3 = cos2 * a2plusb2 + sin2 * sin2;
-    auto t4 = t2 * sin2;
-    auto rp = roughness * (t3 - t4) / (t3 + t4);
-
-    return (rp + roughness) / 2.0f;
-}
-
-// Tabulated ior for metals
-// https://github.com/tunabrain/tungsten
-const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
-    {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
-                {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
-    {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
-               {4.8283433224f, 3.1222459278f, 2.1469504455f}}},
-    {"Al", {{1.6574599595f, 0.8803689579f, 0.5212287346f},
-               {9.2238691996f, 6.2695232477f, 4.8370012281f}}},
-    {"AlAs", {{3.6051023902f, 3.2329365777f, 2.2175611545f},
-                 {0.0006670247f, -0.0004999400f, 0.0074261204f}}},
-    {"AlSb", {{-0.0485225705f, 4.1427547893f, 4.6697691348f},
-                 {-0.0363741915f, 0.0937665154f, 1.3007390124f}}},
-    {"Au", {{0.1431189557f, 0.3749570432f, 1.4424785571f},
-               {3.9831604247f, 2.3857207478f, 1.6032152899f}}},
-    {"Be", {{4.1850592788f, 3.1850604423f, 2.7840913457f},
-               {3.8354398268f, 3.0101260162f, 2.8690088743f}}},
-    {"Cr", {{4.3696828663f, 2.9167024892f, 1.6547005413f},
-               {5.2064337956f, 4.2313645277f, 3.7549467933f}}},
-    {"CsI", {{2.1449030413f, 1.7023164587f, 1.6624194173f},
-                {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"Cu", {{0.2004376970f, 0.9240334304f, 1.1022119527f},
-               {3.9129485033f, 2.4528477015f, 2.1421879552f}}},
-    {"Cu2O", {{3.5492833755f, 2.9520622449f, 2.7369202137f},
-                 {0.1132179294f, 0.1946659670f, 0.6001681264f}}},
-    {"CuO", {{3.2453822204f, 2.4496293965f, 2.1974114493f},
-                {0.5202739621f, 0.5707372756f, 0.7172250613f}}},
-    {"d-C", {{2.7112524747f, 2.3185812849f, 2.2288565009f},
-                {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"Hg", {{2.3989314904f, 1.4400254917f, 0.9095512090f},
-               {6.3276269444f, 4.3719414152f, 3.4217899270f}}},
-    {"HgTe", {{4.7795267752f, 3.2309984581f, 2.6600252401f},
-                 {1.6319827058f, 1.5808189339f, 1.7295753852f}}},
-    {"Ir", {{3.0864098394f, 2.0821938440f, 1.6178866805f},
-               {5.5921510077f, 4.0671757150f, 3.2672611269f}}},
-    {"K", {{0.0640493070f, 0.0464100621f, 0.0381842017f},
-              {2.1042155920f, 1.3489364357f, 0.9132113889f}}},
-    {"Li", {{0.2657871942f, 0.1956102432f, 0.2209198538f},
-               {3.5401743407f, 2.3111306542f, 1.6685930000f}}},
-    {"MgO", {{2.0895885542f, 1.6507224525f, 1.5948759692f},
-                {0.0000000000f, -0.0000000000f, 0.0000000000f}}},
-    {"Mo", {{4.4837010280f, 3.5254578255f, 2.7760769438f},
-               {4.1111307988f, 3.4208716252f, 3.1506031404f}}},
-    {"Na", {{0.0602665320f, 0.0561412435f, 0.0619909494f},
-               {3.1792906496f, 2.1124800781f, 1.5790940266f}}},
-    {"Nb", {{3.4201353595f, 2.7901921379f, 2.3955856658f},
-               {3.4413817900f, 2.7376437930f, 2.5799132708f}}},
-    {"Ni", {{2.3672753521f, 1.6633583302f, 1.4670554172f},
-               {4.4988329911f, 3.0501643957f, 2.3454274399f}}},
-    {"Rh", {{2.5857954933f, 1.8601866068f, 1.5544279524f},
-               {6.7822927110f, 4.7029501026f, 3.9760892461f}}},
-    {"Se-e", {{5.7242724833f, 4.1653992967f, 4.0816099264f},
-                 {0.8713747439f, 1.1052845009f, 1.5647788766f}}},
-    {"Se", {{4.0592611085f, 2.8426947380f, 2.8207582835f},
-               {0.7543791750f, 0.6385150558f, 0.5215872029f}}},
-    {"SiC", {{3.1723450205f, 2.5259677964f, 2.4793623897f},
-                {0.0000007284f, -0.0000006859f, 0.0000100150f}}},
-    {"SnTe", {{4.5251865890f, 1.9811525984f, 1.2816819226f},
-                 {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"Ta", {{2.0625846607f, 2.3930915569f, 2.6280684948f},
-               {2.4080467973f, 1.7413705864f, 1.9470377016f}}},
-    {"Te-e", {{7.5090397678f, 4.2964603080f, 2.3698732430f},
-                 {5.5842076830f, 4.9476231084f, 3.9975145063f}}},
-    {"Te", {{7.3908396088f, 4.4821028985f, 2.6370708478f},
-               {3.2561412892f, 3.5273908133f, 3.2921683116f}}},
-    {"ThF4", {{1.8307187117f, 1.4422274283f, 1.3876488528f},
-                 {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"TiC", {{3.7004673762f, 2.8374356509f, 2.5823030278f},
-                {3.2656905818f, 2.3515586388f, 2.1727857800f}}},
-    {"TiN", {{1.6484691607f, 1.1504482522f, 1.3797795097f},
-                {3.3684596226f, 1.9434888540f, 1.1020123347f}}},
-    {"TiO2-e", {{3.1065574823f, 2.5131551146f, 2.5823844157f},
-                   {0.0000289537f, -0.0000251484f, 0.0001775555f}}},
-    {"TiO2", {{3.4566203131f, 2.8017076558f, 2.9051485020f},
-                 {0.0001026662f, -0.0000897534f, 0.0006356902f}}},
-    {"VC", {{3.6575665991f, 2.7527298065f, 2.5326814570f},
-               {3.0683516659f, 2.1986687713f, 1.9631816252f}}},
-    {"VN", {{2.8656011588f, 2.1191817791f, 1.9400767149f},
-               {3.0323264950f, 2.0561075580f, 1.6162930914f}}},
-    {"V", {{4.2775126218f, 3.5131538236f, 2.7611257461f},
-              {3.4911844504f, 2.8893580874f, 3.1116965117f}}},
-    {"W", {{4.3707029924f, 3.3002972445f, 2.9982666528f},
-              {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
-};
-
-// Get a complex ior table with keys the metal name and values (eta, etak)
-bool get_metal_eta(const string& name, vec3f& eta, vec3f& etak) {
-    if (metal_ior_table.find(name) == metal_ior_table.end()) return false;
-    auto value = metal_ior_table.at(name);
-    eta        = value.first;
-    etak       = value.second;
-    return true;
 }
 
 }  // namespace yocto
