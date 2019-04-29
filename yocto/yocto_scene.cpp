@@ -598,7 +598,7 @@ void add_sky(yocto_scene& scene, float sun_angle) {
     scene.textures.push_back(texture);
     auto environment             = yocto_environment{};
     environment.uri              = "environments/default.yaml";
-    environment.emission         = {1, 1, 1};
+    environment.emission_factor = 1;
     environment.emission_texture = (int)scene.textures.size() - 1;
     scene.environments.push_back(environment);
 }
@@ -918,20 +918,20 @@ vec3f eval_direction(
 // Evaluate the environment color.
 vec3f eval_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vec3f& direction) {
-    auto ke = environment.emission;
+    auto emission = environment.emission_factor * environment.emission_color;
     if (environment.emission_texture >= 0) {
         auto& emission_texture = scene.textures[environment.emission_texture];
-        ke *= xyz(eval_texture(
+        emission *= xyz(eval_texture(
             emission_texture, eval_texcoord(environment, direction)));
     }
-    return ke;
+    return emission;
 }
 // Evaluate all environment color.
-vec3f eval_environment(const yocto_scene& scene, const vec3f& direction) {
-    auto ke = zero3f;
+vec3f eval_environments(const yocto_scene& scene, const vec3f& direction) {
+    auto emission = zero3f;
     for (auto& environment : scene.environments)
-        ke += eval_environment(scene, environment, direction);
-    return ke;
+        emission += eval_environment(scene, environment, direction);
+    return emission;
 }
 
 // Check texture size

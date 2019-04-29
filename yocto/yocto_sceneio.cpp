@@ -805,8 +805,10 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, environment.uri);
                 } else if (key == "frame") {
                     get_yaml_value(value, environment.frame);
-                } else if (key == "emission") {
-                    get_yaml_value(value, environment.emission);
+                } else if (key == "emission_factor") {
+                    get_yaml_value(value, environment.emission_factor);
+                } else if (key == "emission_color") {
+                    get_yaml_value(value, environment.emission_color);
                 } else if (key == "emission_texture") {
                     get_yaml_ref(value, environment.emission_texture, tmap);
                 } else {
@@ -1040,8 +1042,10 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     for (auto& environment : scene.environments) {
         print(fs, "  - uri: {}\n", environment.uri);
         print_optional(fs, "frame", environment.frame, def_environment.frame);
-        print_optional(
-            fs, "emission", environment.emission, def_environment.emission);
+        print_optional(fs, "emission_factor", environment.emission_factor,
+            def_environment.emission_factor);
+        print_optional(fs, "emission_color", environment.emission_color,
+            def_environment.emission_color);
         print_ref(fs, "emission_texture", environment.emission_texture,
             scene.textures);
     }
@@ -1365,8 +1369,11 @@ struct load_obj_scene_cb : obj_callbacks {
         auto environment             = yocto_environment();
         environment.uri              = oenv.name;
         environment.frame            = oenv.frame;
-        environment.emission         = oenv.ke;
+        environment.emission_factor  = 1;
+        environment.emission_color   = oenv.ke;
         environment.emission_texture = add_texture(oenv.ke_txt, true);
+        normalize_scaled_color(
+            environment.emission_factor, environment.emission_color);
         scene.environments.push_back(environment);
     }
     void procedural(const obj_procedural& oproc) {
@@ -1550,14 +1557,16 @@ static void save_objx(const string& filename, const yocto_scene& scene) {
     // environments
     for (auto& environment : scene.environments) {
         if (environment.emission_texture >= 0) {
+            auto emission = environment.emission_factor * environment.emission_color;
             print(fs, "e {} {} {} {} {} ", get_basename(environment.uri),
-                environment.emission.x, environment.emission.y,
-                environment.emission.z,
+                emission.x, emission.y,
+                emission.z,
                 scene.textures[environment.emission_texture].uri);
         } else {
+            auto emission = environment.emission_factor * environment.emission_color;
             print(fs, "e {} {} {} {} \"\" ", environment.uri,
-                environment.emission.x, environment.emission.y,
-                environment.emission.z);
+                emission.x, emission.y,
+                emission.z);
         }
         print(fs, "{} {} {} {} {} {} {} {} {} {} {} {}\n",
             environment.frame.x.x, environment.frame.x.y, environment.frame.x.z,
@@ -3174,7 +3183,9 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             environment.frame = (frame3f)ctx.transform_start *
                                 frame3f{
                                     {1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-            environment.emission = (vec3f)infinite.scale;
+                                    environment.emission_factor = 1;
+            environment.emission_color = (vec3f)infinite.scale;
+            normalize_scaled_color(environment.emission_factor, environment.emission_color);
             if (infinite.mapname != "") {
                 auto texture = yocto_texture{};
                 texture.uri  = infinite.mapname;

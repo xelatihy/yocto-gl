@@ -424,7 +424,7 @@ def make_tests():
         "environments": [
             {
                 "uri": 'environments/test-sky.yaml',
-                "emission": [2, 2, 2],
+                "emission_factor": 2,
                 "emission_texture": "textures/test-sky.hdr"
             }
         ]
@@ -434,7 +434,7 @@ def make_tests():
         "environments": [
             {
                 "uri": 'environments/test-sunsky.yaml',
-                "emission": [1, 1, 1],
+                "emission_factor": 2,
                 "emission_texture": "textures/test-sunsky.hdr"
             }
         ]

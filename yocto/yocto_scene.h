@@ -241,7 +241,8 @@ struct yocto_instance {
 struct yocto_environment {
     string  uri              = "";
     frame3f frame            = identity_frame3f;
-    vec3f   emission         = {0, 0, 0};
+    float   emission_factor  = 0;
+    vec3f   emission_color   = {1, 1, 1};
     int     emission_texture = -1;
 };
 
@@ -503,7 +504,7 @@ vec3f eval_direction(
 vec3f eval_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vec3f& direction);
 // Evaluate all environment emission.
-vec3f eval_environment(const yocto_scene& scene, const vec3f& direction);
+vec3f eval_environments(const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
 void  sample_environment_cdf(const yocto_scene& scene,

@@ -642,10 +642,13 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "frame.o", edited_value.frame.o, -10, 10)) {
         edited = true;
     }
-    if (draw_hdr_coloredit_opengl_widget(win, "ke", edited_value.emission)) {
+    if (draw_slider_opengl_widget(win, "emission factor", edited_value.emission_factor, 0, 10000)) {
         edited = true;
     }
-    if (draw_combobox_opengl_widget(win, "ke texture",
+    if (draw_coloredit_opengl_widget(win, "emission color", edited_value.emission_color)) {
+        edited = true;
+    }
+    if (draw_combobox_opengl_widget(win, "emission texture",
             edited_value.emission_texture, scene.textures, true)) {
         edited = true;
     }

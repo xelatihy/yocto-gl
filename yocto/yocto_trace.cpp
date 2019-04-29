@@ -1067,7 +1067,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // intersect next point
         auto intersection = bvh_intersection{};
         if (!trace_ray(scene, bvh, origin, direction, intersection)) {
-            radiance += weight * eval_environment(scene, direction);
+            radiance += weight * eval_environments(scene, direction);
             break;
         }
         hit = true;
@@ -1142,7 +1142,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         // intersect next point
         auto intersection = bvh_intersection{};
         if (!trace_ray(scene, bvh, origin, direction, intersection)) {
-            radiance += weight * eval_environment(scene, direction);
+            radiance += weight * eval_environments(scene, direction);
             break;
         }
         hit = true;
@@ -1203,7 +1203,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         // intersect next point
         auto intersection = bvh_intersection{};
         if (!trace_ray(scene, bvh, origin, direction, intersection)) {
-            radiance += weight * eval_environment(scene, direction);
+            radiance += weight * eval_environments(scene, direction);
             break;
         }
         hit = true;
@@ -1446,7 +1446,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
         auto& instance = scene.instances[instance_id];
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[instance.material];
-        if (!material.emission_factor) continue;
+        if (!material.emission_factor || material.emission_color == zero3f) continue;
         if (shape.triangles.empty() && shape.quads.empty()) continue;
         lights.instances.push_back(instance_id);
         sample_shape_cdf(shape, lights.shape_cdfs[instance.shape]);
@@ -1455,7 +1455,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
     for (auto environment_id = 0; environment_id < scene.environments.size();
          environment_id++) {
         auto& environment = scene.environments[environment_id];
-        if (environment.emission == zero3f) continue;
+        if (!environment.emission_factor || environment.emission_color == zero3f) continue;
         lights.environments.push_back(environment_id);
         if (environment.emission_texture >= 0) {
             sample_environment_cdf(scene, environment,
