@@ -1176,7 +1176,7 @@ pair<float, bool> sample_roulette(const vec3f& albedo, const vec3f& weight,
 }
 #endif
 
-pair<float, int> sample_transmission(
+pair<float, int> sample_distance(
     const trace_material& material, float rl, float rd) {
     auto channel = clamp((int)(rl * 3), 0, 2);
     auto density = material.volume_density[channel];
@@ -1186,7 +1186,7 @@ pair<float, int> sample_transmission(
         return {-log(rd) / density, channel};
 }
 
-float sample_transmission_pdf(
+float sample_distance_pdf(
     const trace_material& material, float distance, int channel) {
     // TODO: why not mis?
     auto density = material.volume_density[channel];
@@ -1277,15 +1277,15 @@ tuple<float, trace_mode> sample_mode(const vec3f& position, const vec3f& normal,
 }
 
 // Returns weight and distance
-tuple<vec3f, float> sample_distance(const vec3f& position,
+tuple<vec3f, float> sample_transmission(const vec3f& position,
     const vec3f& outgoing, float max_distance, const trace_material& material,
     rng_state& rng) {
     if (material.volume_density == zero3f) return {vec3f{1}, max_distance};
     // clamp ray if inside a volume
-    auto [distance, channel] = sample_transmission(
+    auto [distance, channel] = sample_distance(
         material, rand1f(rng), rand1f(rng));
     distance          = min(distance, max_distance);
-    auto pdf          = sample_transmission_pdf(material, distance, channel);
+    auto pdf          = sample_distance_pdf(material, distance, channel);
     auto transmission = eval_transmission(material, distance);
     if (transmission == zero3f || pdf == 0) return {zero3f, 0};
     return {transmission / pdf, distance};
@@ -1336,17 +1336,16 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto outgoing = -direction;
 
         // clamp ray if inside a volume
-        auto [transmission, distance] = sample_distance(
+        auto [transmission, distance] = sample_transmission(
             origin, outgoing, intersection.distance, medium, rng);
         weight *= transmission;
         auto on_surface            = distance >= intersection.distance;
-        intersection.distance = distance;
 
         // prepare shading point
         auto [position, normal, material] =
             on_surface ? make_surface_point(scene, intersection, direction)
                        : make_volume_point(scene, origin, direction,
-                             intersection.distance, medium);
+                             distance, medium);
 
         // accumulate emission
         radiance += weight *
