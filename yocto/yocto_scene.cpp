@@ -1234,10 +1234,12 @@ material_point eval_material(const yocto_scene& scene,
     point.emission_color     = material.emission_color;
     point.diffuse_factor     = material.diffuse_factor;
     point.metallic_factor    = material.metallic_factor;
+    point.specular_factor    = material.specular_factor;
+    point.transmission_factor = material.transmission_factor;
     point.base_color         = material.base_color;
-    point.specular           = material.specular;
+    point.specular_color     = material.specular_color;
     point.specular_roughness = material.specular_roughness;
-    point.transmission       = material.transmission;
+    point.transmission_color       = material.transmission_color;
     point.opacity_factor     = material.opacity_factor;
     point.specular_ior       = material.specular_ior;
     point.thin_walled        = material.thin_walled;
@@ -1264,7 +1266,7 @@ material_point eval_material(const yocto_scene& scene,
     if (material.specular_texture >= 0) {
         auto& specular_texture = scene.textures[material.specular_texture];
         auto  specular_txt     = eval_texture(specular_texture, texturecoord);
-        point.specular *= xyz(specular_txt);
+        point.specular_color *= xyz(specular_txt);
         if (material.gltf_textures) {
             auto glossiness = 1 - point.specular_roughness;
             glossiness *= specular_txt.w;
@@ -1279,7 +1281,7 @@ material_point eval_material(const yocto_scene& scene,
     if (material.transmission_texture >= 0) {
         auto& transmission_texture =
             scene.textures[material.transmission_texture];
-        point.transmission *= xyz(
+        point.transmission_color *= xyz(
             eval_texture(transmission_texture, texturecoord));
     }
     if (material.normal_texture >= 0) {

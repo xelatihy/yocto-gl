@@ -127,11 +127,13 @@ struct yocto_material {
     vec3f emission_color     = {1, 1, 1};
     float diffuse_factor     = 0;
     float metallic_factor    = 0;
+    float specular_factor    = 0;
+    float transmission_factor = 0;
     vec3f base_color         = {0, 0, 0};
-    vec3f specular           = {0, 0, 0};
+    vec3f specular_color     = {1, 1, 1};
     float specular_roughness = 0.001f;
     float specular_ior       = 1.5;
-    vec3f transmission       = {0, 0, 0};
+    vec3f transmission_color = {1, 1, 1};
     float opacity_factor     = 1;
     bool  thin_walled        = false;
 
@@ -459,11 +461,13 @@ struct material_point {
     vec3f emission_color     = {1, 1, 1};
     float diffuse_factor     = 0;
     float metallic_factor    = 0;
+    float specular_factor    = 0;
+    float transmission_factor = 0;
     vec3f base_color         = {1, 1, 1};
-    vec3f specular           = {0, 0, 0};
+    vec3f specular_color     = {1, 1, 1};
     float specular_roughness = 1;
     float specular_ior       = 1;
-    vec3f transmission       = {0, 0, 0};
+    vec3f transmission_color = {1, 1, 1};
     float opacity_factor     = 1;
     bool  thin_walled        = false;
     vec3f normal_map         = {0, 0, 1};

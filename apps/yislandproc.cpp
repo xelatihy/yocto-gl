@@ -320,15 +320,14 @@ struct load_island_shape_callbacks : obj_callbacks {
         materials.back().uri = dmaterial.name;
         if (dmaterial.color_map != "") {
             materials.back().diffuse_factor = 1;
-            materials.back().base_color     = {1, 1, 1};
             materials.back().base_texture   = add_texture(
                 dmaterial.color_map_baked);
         } else if (dmaterial.refractive == 0) {
             materials.back().diffuse_factor = 1;
             materials.back().base_color     = dmaterial.color;
         } else {
-            materials.back().specular           = {1, 1, 1};
-            materials.back().transmission       = {1, 1, 1};
+            materials.back().specular_factor           = 1;
+            materials.back().transmission_factor       = 1;
             materials.back().specular_roughness = 0;
             materials.back().thin_walled        = false;
         }

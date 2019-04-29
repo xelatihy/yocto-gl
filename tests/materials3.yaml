@@ -61,14 +61,14 @@ materials:
     base_texture: textures/test-floor.png
   - uri: materials/test-plastic-sharp-bumped.yaml
     diffuse_factor: 1
+    specular_factor: 1
     base_color: [0.5, 0.5, 0.7]
-    specular: [1, 1, 1]
     specular_roughness: 0.01
     normal_texture: textures/test-bump-normal.png
   - uri: materials/test-metal-sharp-bumped.yaml
     diffuse_factor: 1
-    base_color: [0.7, 0.7, 0.7]
     metallic_factor: 1
+    base_color: [0.7, 0.7, 0.7]
     specular_roughness: 0
     normal_texture: textures/test-bump-normal.png
   - uri: materials/test-arealight1.yaml

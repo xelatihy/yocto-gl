@@ -61,8 +61,8 @@ materials:
     base_texture: textures/test-floor.png
   - uri: materials/test-uvgrid.yaml
     diffuse_factor: 1
+    specular_factor: 1
     base_color: [1, 1, 1]
-    specular: [1, 1, 1]
     specular_roughness: 0.1
     base_texture: textures/test-uvgrid.png
   - uri: materials/test-arealight1.yaml
