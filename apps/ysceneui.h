@@ -357,15 +357,15 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "emission color", edited_value.emission_color)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(
-            win, "diffuse", edited_value.diffuse, 0, 1)) {
+    if (draw_slider_opengl_widget(win, "diffuse", edited_value.diffuse, 0, 1)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
             win, "metallic", edited_value.metallic, 0, 1)) {
         edited = true;
     }
-    if (draw_coloredit_opengl_widget(win, "base color", edited_value.base_color)) {
+    if (draw_coloredit_opengl_widget(
+            win, "base color", edited_value.base_color)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(win, "specular", edited_value.specular)) {

@@ -515,51 +515,88 @@ namespace yocto {
 template <typename T, size_t N>
 constexpr short_vector<T, N>::short_vector() : count{0} {}
 template <typename T, size_t N>
-constexpr short_vector<T, N>::short_vector(initializer_list<T> values) : count{0} {
-    for(auto value : values) ptr[count++] = value;
+constexpr short_vector<T, N>::short_vector(initializer_list<T> values)
+    : count{0} {
+    for (auto value : values) ptr[count++] = value;
 }
 
 template <typename T, size_t N>
-constexpr size_t short_vector<T, N>::size() { return count; }
+constexpr size_t short_vector<T, N>::size() {
+    return count;
+}
 template <typename T, size_t N>
-constexpr bool short_vector<T, N>::empty() { return count == 0; }
+constexpr bool short_vector<T, N>::empty() {
+    return count == 0;
+}
 
 template <typename T, size_t N>
-constexpr void short_vector<T, N>::push_back(const T& value) { ptr[count++] = value; }
+constexpr void short_vector<T, N>::push_back(const T& value) {
+    ptr[count++] = value;
+}
 template <typename T, size_t N>
-constexpr void short_vector<T, N>::pop_back() { count--; }
+constexpr void short_vector<T, N>::pop_back() {
+    count--;
+}
 
 template <typename T, size_t N>
-constexpr T& short_vector<T, N>::operator[](size_t idx) { return ptr[idx]; }
+constexpr T& short_vector<T, N>::operator[](size_t idx) {
+    return ptr[idx];
+}
 template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::operator[](size_t idx) const { return ptr[idx]; }
+constexpr const T& short_vector<T, N>::operator[](size_t idx) const {
+    return ptr[idx];
+}
 template <typename T, size_t N>
-constexpr T& short_vector<T, N>::at(size_t idx) { return ptr[idx]; }
+constexpr T& short_vector<T, N>::at(size_t idx) {
+    return ptr[idx];
+}
 template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::at(size_t idx) const { return ptr[idx]; }
+constexpr const T& short_vector<T, N>::at(size_t idx) const {
+    return ptr[idx];
+}
 
 template <typename T, size_t N>
-constexpr T& short_vector<T, N>::front() { return ptr[0]; }
+constexpr T& short_vector<T, N>::front() {
+    return ptr[0];
+}
 template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::front() const { return ptr[0]; }
+constexpr const T& short_vector<T, N>::front() const {
+    return ptr[0];
+}
 template <typename T, size_t N>
-constexpr T& short_vector<T, N>::back() { return ptr[count-1]; }
+constexpr T& short_vector<T, N>::back() {
+    return ptr[count - 1];
+}
 template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::back() const { return ptr[count-1]; }
+constexpr const T& short_vector<T, N>::back() const {
+    return ptr[count - 1];
+}
 
 template <typename T, size_t N>
-constexpr T* short_vector<T, N>::data() { return count ? ptr : nullptr; }
+constexpr T* short_vector<T, N>::data() {
+    return count ? ptr : nullptr;
+}
 template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::data() const { return count ? ptr : nullptr; }
+constexpr const T* short_vector<T, N>::data() const {
+    return count ? ptr : nullptr;
+}
 
 template <typename T, size_t N>
-constexpr T* short_vector<T, N>::begin() { return ptr; }
+constexpr T* short_vector<T, N>::begin() {
+    return ptr;
+}
 template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::begin() const { return ptr; }
+constexpr const T* short_vector<T, N>::begin() const {
+    return ptr;
+}
 template <typename T, size_t N>
-constexpr T* short_vector<T, N>::end() { return ptr + count; }
+constexpr T* short_vector<T, N>::end() {
+    return ptr + count;
+}
 template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::end() const { return ptr + count; }
+constexpr const T* short_vector<T, N>::end() const {
+    return ptr + count;
+}
 
 }  // namespace yocto
 

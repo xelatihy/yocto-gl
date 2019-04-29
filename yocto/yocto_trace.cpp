@@ -207,7 +207,8 @@ trace_material make_trace_material(
         material.opacity_color = vec3f{1 - point.opacity};
     }
     if (point.emission && point.emission_color != zero3f) {
-        material.emission_weight = point.opacity * point.emission * point.emission_color;
+        material.emission_weight = point.opacity * point.emission *
+                                   point.emission_color;
     }
     if (point.volume_density != zero3f) {
         material.volume_emission = point.volume_emission;

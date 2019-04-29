@@ -124,17 +124,17 @@ struct yocto_material {
     bool   gltf_textures = false;  // glTF packed textures
 
     // base values
-    float emission     = 0;
+    float emission       = 0;
     vec3f emission_color = {1, 1, 1};
-    float diffuse      = 0;
-    float metallic     = 0;
-    vec3f base_color   = {0, 0, 0};
-    vec3f specular     = {0, 0, 0};
-    vec3f transmission = {0, 0, 0};
-    float roughness    = 0.001f;
-    float ior          = 1.5;
-    float opacity      = 1;
-    bool  thin_walled  = false;
+    float diffuse        = 0;
+    float metallic       = 0;
+    vec3f base_color     = {0, 0, 0};
+    vec3f specular       = {0, 0, 0};
+    vec3f transmission   = {0, 0, 0};
+    float roughness      = 0.001f;
+    float ior            = 1.5;
+    float opacity        = 1;
+    bool  thin_walled    = false;
 
     // textures
     int emission_texture     = -1;

@@ -151,8 +151,9 @@ void load_island_lights(
             auto material     = yocto_material{};
             material.uri      = "materials/lights/" + name + ".yaml";
             material.emission = 1;
-            material.emission_color = xyz(ljs.at("color").get<vec4f>()) *
-                                pow(2.0f, ljs.at("exposure").get<float>());
+            material.emission_color =
+                xyz(ljs.at("color").get<vec4f>()) *
+                pow(2.0f, ljs.at("exposure").get<float>());
             normalize_scaled_color(material.emission, material.emission_color);
             scene.materials.push_back(material);
             auto shape = yocto_shape{};
@@ -317,12 +318,12 @@ struct load_island_shape_callbacks : obj_callbacks {
         materials.push_back({});
         materials.back().uri = dmaterial.name;
         if (dmaterial.color_map != "") {
-            materials.back().diffuse         = 1;
-            materials.back().base_color      = {1, 1, 1};
+            materials.back().diffuse      = 1;
+            materials.back().base_color   = {1, 1, 1};
             materials.back().base_texture = add_texture(
                 dmaterial.color_map_baked);
         } else if (dmaterial.refractive == 0) {
-            materials.back().diffuse         = 1;
+            materials.back().diffuse    = 1;
             materials.back().base_color = dmaterial.color;
         } else {
             materials.back().specular     = {1, 1, 1};
@@ -715,9 +716,9 @@ void load_island_curvetube(const string& filename, const string& dirname,
     auto outname = "ply/" + get_dirname(filename).substr(5) +
                    get_filename(filename) + ".ply";
     if (smap.find(outname) == smap.end()) {
-        auto curves      = doc.get_root();
-        auto material    = yocto_material{};
-        material.diffuse = 1;
+        auto curves         = doc.get_root();
+        auto material       = yocto_material{};
+        material.diffuse    = 1;
         material.base_color = mmap.at(material_name).color;
         scene.materials.push_back(material);
         auto shape      = yocto_shape{};

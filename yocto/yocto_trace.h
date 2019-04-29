@@ -87,9 +87,9 @@ const auto trace_default_seed = 961748941ull;
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<int>           instances               = {};
-    vector<int>           environments            = {};
-    vector<vector<float>> shape_cdfs      = {};
+    vector<int>           instances        = {};
+    vector<int>           environments     = {};
+    vector<vector<float>> shape_cdfs       = {};
     vector<vector<float>> environment_cdfs = {};
 
     bool empty() const { return instances.empty() && environments.empty(); }
@@ -227,7 +227,8 @@ vec3f specular_to_eta(const vec3f& specular);
 // Compute the fresnel term for dielectrics.
 vec3f fresnel_dielectric(const vec3f& eta, float direction_cosine);
 // Compute the fresnel term for metals.
-vec3f fresnel_metal(const vec3f& eta, const vec3f& etak, float direction_cosine);
+vec3f fresnel_metal(
+    const vec3f& eta, const vec3f& etak, float direction_cosine);
 // Schlick approximation of Fresnel term, optionally weighted by roughness;
 vec3f fresnel_schlick(const vec3f& specular, float direction_cosine);
 vec3f fresnel_schlick(

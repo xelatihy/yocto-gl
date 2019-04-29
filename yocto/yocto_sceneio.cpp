@@ -1874,18 +1874,17 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
                 gsg->specular_glossiness_texture, false);
             material.roughness_texture = material.specular_texture;
         } else if (gmat->has_pbr_metallic_roughness) {
-            material.gltf_textures   = true;
-            auto gmr                 = &gmat->pbr_metallic_roughness;
-            auto kb                  = vec4f{gmr->base_color_factor[0],
+            material.gltf_textures = true;
+            auto gmr               = &gmat->pbr_metallic_roughness;
+            auto kb                = vec4f{gmr->base_color_factor[0],
                 gmr->base_color_factor[1], gmr->base_color_factor[2],
                 gmr->base_color_factor[3]};
-            material.diffuse         = 1;
-            material.base_color      = {kb.x, kb.y, kb.z};
-            material.opacity         = kb.w;
-            material.metallic        = gmr->metallic_factor;
-            material.roughness       = gmr->roughness_factor;
-            material.base_texture = add_texture(
-                gmr->base_color_texture, false);
+            material.diffuse       = 1;
+            material.base_color    = {kb.x, kb.y, kb.z};
+            material.opacity       = kb.w;
+            material.metallic      = gmr->metallic_factor;
+            material.roughness     = gmr->roughness_factor;
+            material.base_texture = add_texture(gmr->base_color_texture, false);
             material.metallic_texture = add_texture(
                 gmr->metallic_roughness_texture, true);
             material.roughness_texture = material.specular_texture;
@@ -3023,9 +3022,9 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         } else if (holds_alternative<pbrt_mirror_material>(pmaterial)) {
             // auto& mirror          =
             // get<pbrt_mirror_material>(pmaterial);
-            material.base_color   = {0, 0, 0};
-            material.specular  = {1, 1, 1};
-            material.roughness = 0;
+            material.base_color = {0, 0, 0};
+            material.specular   = {1, 1, 1};
+            material.roughness  = 0;
         } else if (holds_alternative<pbrt_metal_material>(pmaterial)) {
             auto& metal = get<pbrt_metal_material>(pmaterial);
             auto  eta = zero3f, k = zero3f;
@@ -3083,9 +3082,9 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         } else if (holds_alternative<pbrt_subsurface_material>(pmaterial)) {
             // auto& subdurface           =
             // get<pbrt_subsurface_material>(pmaterial);
-            material.diffuse = 1;
-            material.base_color   = {1, 0, 0};
-            material.roughness = 1;
+            material.diffuse    = 1;
+            material.base_color = {1, 0, 0};
+            material.roughness  = 1;
             if (verbose) printf("subsurface material not properly supported\n");
         } else if (holds_alternative<pbrt_mix_material>(pmaterial)) {
             auto& mix     = get<pbrt_mix_material>(pmaterial);
@@ -3349,8 +3348,8 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
                 get_basename(scene.textures[material.base_texture].uri));
         } else {
             auto diffuse = material.base_color * material.diffuse;
-            print(fs, "    \"rgb Kd\" [ {} {} {} ]\n", diffuse.x,
-                diffuse.y, diffuse.z);
+            print(fs, "    \"rgb Kd\" [ {} {} {} ]\n", diffuse.x, diffuse.y,
+                diffuse.z);
         }
         if (material.specular_texture >= 0) {
             print(fs, "    \"texture Ks\" \"{}\"\n",
@@ -3438,31 +3437,31 @@ void make_cornellbox_scene(yocto_scene& scene) {
     auto& floor_mat          = scene.materials.emplace_back();
     floor_mat.uri            = "floor";
     floor_mat.diffuse        = 1;
-    floor_mat.base_color        = {0.725, 0.71, 0.68};
+    floor_mat.base_color     = {0.725, 0.71, 0.68};
     auto& ceiling_mat        = scene.materials.emplace_back();
-    ceiling_mat.diffuse        = 1;
+    ceiling_mat.diffuse      = 1;
     ceiling_mat.uri          = "ceiling";
-    ceiling_mat.base_color      = {0.725, 0.71, 0.68};
+    ceiling_mat.base_color   = {0.725, 0.71, 0.68};
     auto& backwall_mat       = scene.materials.emplace_back();
-    backwall_mat.diffuse        = 1;
+    backwall_mat.diffuse     = 1;
     backwall_mat.uri         = "backwall";
-    backwall_mat.base_color     = {0.725, 0.71, 0.68};
+    backwall_mat.base_color  = {0.725, 0.71, 0.68};
     auto& rightwall_mat      = scene.materials.emplace_back();
-    rightwall_mat.diffuse        = 1;
+    rightwall_mat.diffuse    = 1;
     rightwall_mat.uri        = "rightwall";
-    rightwall_mat.base_color    = {0.14, 0.45, 0.091};
+    rightwall_mat.base_color = {0.14, 0.45, 0.091};
     auto& leftwall_mat       = scene.materials.emplace_back();
-    leftwall_mat.diffuse        = 1;
+    leftwall_mat.diffuse     = 1;
     leftwall_mat.uri         = "leftwall";
-    leftwall_mat.base_color     = {0.63, 0.065, 0.05};
+    leftwall_mat.base_color  = {0.63, 0.065, 0.05};
     auto& shortbox_mat       = scene.materials.emplace_back();
     shortbox_mat.uri         = "shortbox";
-    shortbox_mat.diffuse        = 1;
-    shortbox_mat.base_color     = {0.725, 0.71, 0.68};
+    shortbox_mat.diffuse     = 1;
+    shortbox_mat.base_color  = {0.725, 0.71, 0.68};
     auto& tallbox_mat        = scene.materials.emplace_back();
     tallbox_mat.uri          = "tallbox";
-    tallbox_mat.diffuse        = 1;
-    tallbox_mat.base_color      = {0.725, 0.71, 0.68};
+    tallbox_mat.diffuse      = 1;
+    tallbox_mat.base_color   = {0.725, 0.71, 0.68};
     auto& light_mat          = scene.materials.emplace_back();
     light_mat.uri            = "light";
     light_mat.emission       = 1;

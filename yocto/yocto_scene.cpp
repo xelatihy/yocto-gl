@@ -1272,8 +1272,7 @@ material_point eval_material(const yocto_scene& scene,
         }
     }
     if (material.roughness_texture >= 0) {
-        auto& roughness_texture =
-            scene.textures[material.roughness_texture];
+        auto& roughness_texture = scene.textures[material.roughness_texture];
         point.roughness *= eval_texture(roughness_texture, texturecoord).x;
     }
     if (material.transmission_texture >= 0) {
