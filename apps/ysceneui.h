@@ -347,8 +347,12 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
         edited = true;
     }
-    if (draw_hdr_coloredit_opengl_widget(
-            win, "emission", edited_value.emission)) {
+    if (draw_slider_opengl_widget(
+            win, "emission", edited_value.emission, 0, 10000)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "emission color", edited_value.emission_color)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(win, "diffuse", edited_value.diffuse)) {
@@ -372,7 +376,8 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
         edited = true;
     }
     continue_opengl_widget_line(win);
-    if (draw_checkbox_opengl_widget(win, "thin_walled", edited_value.thin_walled)) {
+    if (draw_checkbox_opengl_widget(
+            win, "thin_walled", edited_value.thin_walled)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(

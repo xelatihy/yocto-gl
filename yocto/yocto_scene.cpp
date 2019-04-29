@@ -530,6 +530,18 @@ void rename_instances(yocto_scene& scene) {
     }
 }
 
+// Normalized a scaled color in a material
+void normalize_scaled_color(float& scale, vec3f& color) {
+    auto scaled = scale * color;
+    if (max(scaled) == 0) {
+        scale = 0;
+        color = {1, 1, 1};
+    } else {
+        scale = max(scaled);
+        color = scaled / max(scaled);
+    }
+}
+
 // Add missing tangent space if needed.
 void add_tangent_spaces(yocto_scene& scene) {
     for (auto& instance : scene.instances) {
@@ -1217,11 +1229,13 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 // Evaluates the microfacet_brdf at a location.
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord) {
-    auto point     = material_point{};
-    point.emission = material.emission;
+    auto point           = material_point{};
+    point.emission       = material.emission;
+    point.emission_color = material.emission_color;
     if (material.emission_texture >= 0) {
         auto& emission_texture = scene.textures[material.emission_texture];
-        point.emission *= xyz(eval_texture(emission_texture, texturecoord));
+        point.emission_color *= xyz(
+            eval_texture(emission_texture, texturecoord));
     }
     point.diffuse = material.diffuse;
     point.opacity = material.opacity;
@@ -1267,9 +1281,9 @@ material_point eval_material(const yocto_scene& scene,
         point.transmission *= xyz(
             eval_texture(transmission_texture, texturecoord));
     }
-    point.ior = material.ior;
-    point.metallic = material.metallic;
-    point.thin_walled       = material.thin_walled;
+    point.ior           = material.ior;
+    point.metallic      = material.metallic;
+    point.thin_walled   = material.thin_walled;
     point.base_metallic = material.base_metallic;
     point.normalmap     = vec3f{0, 0, 1};
     if (material.normal_texture >= 0) {

@@ -125,7 +125,8 @@ struct yocto_material {
     bool   gltf_textures = false;  // glTF packed textures
 
     // base values
-    vec3f emission     = {0, 0, 0};
+    float emission     = 0;
+    vec3f emission_color = {1, 1, 1};
     vec3f diffuse      = {0, 0, 0};
     vec3f specular     = {0, 0, 0};
     vec3f transmission = {0, 0, 0};
@@ -371,6 +372,9 @@ void add_cameras(yocto_scene& scene);
 void normalize_uris(yocto_scene& sceme);
 void rename_instances(yocto_scene& scene);
 
+// Normalized a scaled color in a material
+void normalize_scaled_color(float& scale, vec3f& color);
+
 // Add a sky environment
 void add_sky(yocto_scene& scene, float sun_angle = pif / 4);
 
@@ -450,10 +454,11 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    vec3f emission        = zero3f;
-    vec3f diffuse         = zero3f;
-    vec3f specular        = zero3f;
-    vec3f transmission    = zero3f;
+    float emission        = 0;
+    vec3f emission_color  = {1, 1, 1};
+    vec3f diffuse         = {0, 0, 0};
+    vec3f specular        = {0, 0, 0};
+    vec3f transmission    = {0, 0, 0};
     float roughness       = 1;
     float opacity         = 1;
     float ior             = 1;

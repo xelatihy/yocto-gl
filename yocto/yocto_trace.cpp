@@ -132,7 +132,7 @@ float sample_microfacet_pdf(
 // Surface material
 struct trace_material {
     // emission
-    vec3f emission_color = zero3f;
+    vec3f emission_weight = zero3f;
 
     // scattering
     vec3f diffuse_weight         = zero3f;
@@ -170,7 +170,7 @@ bool is_scattering_zero(const trace_material& material) {
 
 trace_material make_trace_material(
     const material_point& point, const vec4f& shape_color) {
-    auto emission = point.emission;
+    auto emission = point.emission * point.emission_color;
     auto diffuse  = !point.base_metallic ? point.diffuse * xyz(shape_color)
                                         : point.diffuse * (1 - point.specular);
     auto specular = !point.base_metallic ? point.specular * xyz(shape_color)
@@ -212,7 +212,7 @@ trace_material make_trace_material(
         material.opacity_color = vec3f{1 - opacity};
     }
     if (emission != zero3f) {
-        material.emission_color = emission * xyz(shape_color);
+        material.emission_weight = emission * xyz(shape_color);
     }
     if (point.volume_density != zero3f) {
         material.volume_emission = point.volume_emission;
@@ -226,7 +226,7 @@ trace_material make_trace_material(
 vec3f eval_emission(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing, trace_mode mode = trace_mode::smooth) {
     auto emission = zero3f;
-    if (mode == trace_mode::smooth) emission += material.emission_color;
+    if (mode == trace_mode::smooth) emission += material.emission_weight;
     if (mode == trace_mode::volume) emission += material.volume_emission;
     return emission;
 }
@@ -742,7 +742,7 @@ float sample_light_pdf(const yocto_scene& scene, const trace_lights& lights,
     const vec3f& direction) {
     auto& instance = scene.instances[instance_id];
     auto& material = scene.materials[instance.material];
-    if (material.emission == zero3f) return 0;
+    if (!material.emission) return 0;
     auto& elements_cdf = lights.shape_cdfs[instance.shape];
     // check all intersection
     auto pdf           = 0.0f;
@@ -1256,15 +1256,15 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     // auto& material = scene.materials[instance.material];
 
     // prepare shading point
-    auto point = make_surface_point(scene, intersection, direction);
+    auto [position, normal, material] = make_surface_point(scene, intersection, direction);
 
     switch (params.falsecolor_type) {
         case trace_falsecolor_type::normal: {
-            return {point.normal * 0.5f + 0.5f, 1};
+            return {normal * 0.5f + 0.5f, 1};
         }
         case trace_falsecolor_type::frontfacing: {
             auto outgoing    = -direction;
-            auto frontfacing = dot(point.normal, outgoing) > 0 ? vec3f{0, 1, 0}
+            auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
                                                                : vec3f{1, 0, 0};
             return {frontfacing, 1};
         }
@@ -1282,10 +1282,11 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {frontfacing, 1};
         }
         case trace_falsecolor_type::albedo: {
-            return {point.material.diffuse_weight +
-                        point.material.specular_weight +
-                        point.material.transmission_color +
-                        point.material.opacity_color,
+            return {material.diffuse_weight +
+                        material.specular_weight +
+                        material.metal_weight +
+                        material.transmission_color +
+                        material.opacity_color,
                 1};
         }
         case trace_falsecolor_type::texcoord: {
@@ -1299,19 +1300,19 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {xyz(color), 1};
         }
         case trace_falsecolor_type::emission: {
-            return {point.material.emission_color, 1};
+            return {material.emission_weight, 1};
         }
         case trace_falsecolor_type::diffuse: {
-            return {point.material.diffuse_weight, 1};
+            return {material.diffuse_weight, 1};
         }
         case trace_falsecolor_type::specular: {
-            return {point.material.specular_weight, 1};
+            return {material.specular_weight, 1};
         }
         case trace_falsecolor_type::transmission: {
-            return {point.material.transmission_color, 1};
+            return {material.transmission_color, 1};
         }
         case trace_falsecolor_type::roughness: {
-            return {vec3f{point.material.specular_roughness}, 1};
+            return {vec3f{material.specular_roughness}, 1};
         }
         case trace_falsecolor_type::material: {
             auto hashed = std::hash<int>()(instance.material);
@@ -1329,10 +1330,10 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::highlight: {
-            auto emission = point.material.emission_color;
+            auto emission = material.emission_weight;
             auto outgoing = -direction;
             if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
-            return {emission * abs(dot(outgoing, point.normal)), 1};
+            return {emission * abs(dot(outgoing, normal)), 1};
         }
         default: {
             return {zero3f, false};
@@ -1444,7 +1445,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
         auto& instance = scene.instances[instance_id];
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[instance.material];
-        if (material.emission == zero3f) continue;
+        if (!material.emission) continue;
         if (shape.triangles.empty() && shape.quads.empty()) continue;
         lights.instances.push_back(instance_id);
         sample_shape_cdf(shape, lights.shape_cdfs[instance.shape]);

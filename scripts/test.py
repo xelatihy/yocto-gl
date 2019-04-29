@@ -285,11 +285,11 @@ def make_tests():
             },
             {
                 "uri": "materials/test-arealight1.yaml",
-                "emission": [ 20, 20, 20 ]
+                "emission": 20
             },
             {
                 "uri": "materials/test-arealight2.yaml",
-                "emission": [ 20, 20, 20 ]
+                "emission": 20
             }
         ],
         "shapes": [

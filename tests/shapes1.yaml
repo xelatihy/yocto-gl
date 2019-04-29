@@ -64,9 +64,9 @@ materials:
     roughness: 0.1
     diffuse_texture: textures/test-uvgrid.png
   - uri: materials/test-arealight1.yaml
-    emission: [20, 20, 20]
+    emission: 20
   - uri: materials/test-arealight2.yaml
-    emission: [20, 20, 20]
+    emission: 20
 shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply
   - uri: ::yocto::test-sphere::shapes/test-sphere.ply

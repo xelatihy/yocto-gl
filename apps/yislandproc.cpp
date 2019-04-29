@@ -150,8 +150,10 @@ void load_island_lights(
         if (ljs.at("type") == "quad") {
             auto material     = yocto_material{};
             material.uri      = "materials/lights/" + name + ".yaml";
-            material.emission = xyz(ljs.at("color").get<vec4f>()) *
+            material.emission = 1;
+            material.emission_color = xyz(ljs.at("color").get<vec4f>()) *
                                 pow(2.0f, ljs.at("exposure").get<float>());
+            normalize_scaled_color(material.emission, material.emission_color);
             scene.materials.push_back(material);
             auto shape = yocto_shape{};
             shape.uri  = "shapes/lights/" + name + ".ply";
