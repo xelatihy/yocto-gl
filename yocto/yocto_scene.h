@@ -131,9 +131,13 @@ struct yocto_material {
     float transmission_factor = 0;
     vec3f base_color          = {0, 0, 0};
     vec3f specular_color      = {1, 1, 1};
-    float specular_roughness  = 0.001f;
+    float specular_roughness  = 0.1;
     float specular_ior        = 1.5;
     vec3f transmission_color  = {1, 1, 1};
+    float coat_factor         = 0;
+    vec3f coat_color          = {1, 1, 1};
+    float coat_roughness      = 0;
+    float coat_ior            = 1.5;
     float opacity_factor      = 1;
     bool  thin_walled         = false;
 
@@ -144,6 +148,8 @@ struct yocto_material {
     int  specular_texture     = -1;
     int  roughness_texture    = -1;
     int  transmission_texture = -1;
+    int  coat_texture         = -1;
+    int  opacity_texture      = -1;
     int  normal_texture       = -1;
     bool gltf_textures        = false;  // glTF packed textures
 
@@ -467,8 +473,12 @@ struct material_point {
     vec3f base_color          = {1, 1, 1};
     vec3f specular_color      = {1, 1, 1};
     float specular_roughness  = 1;
-    float specular_ior        = 1;
+    float specular_ior        = 1.5;
     vec3f transmission_color  = {1, 1, 1};
+    float coat_factor         = 0;
+    vec3f coat_color          = {1, 1, 1};
+    float coat_roughness      = 1;
+    float coat_ior            = 1.5;
     float opacity_factor      = 1;
     bool  thin_walled         = false;
     vec3f normal_map          = {0, 0, 1};

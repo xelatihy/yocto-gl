@@ -148,6 +148,9 @@ struct trace_material {
     float transmission_roughness = 1;
     vec3f transmission_eta       = {1, 1, 1};
     bool  transmission_thin      = false;
+    vec3f coat_weight            = zero3f;
+    float coat_roughness         = 1;
+    vec3f coat_eta               = {1, 1, 1};
     vec3f opacity_weight         = zero3f;
 
     // volume
@@ -165,6 +168,7 @@ bool is_scattering_zero(const trace_material& material) {
            material.specular_weight == zero3f &&
            material.metal_weight == zero3f &&
            material.transmission_weight == zero3f &&
+           material.coat_weight == zero3f &&
            material.opacity_weight == zero3f &&
            material.volume_albedo == zero3f;
 }
@@ -190,6 +194,13 @@ trace_material eval_material(const material_point& point_,
         material.opacity_weight = vec3f{1 - point.opacity_factor};
         weight *= point.opacity_factor;
     }
+    if (point.coat_factor) {
+        material.coat_weight    = weight * point.coat_factor;
+        material.coat_roughness = point.coat_roughness;
+        material.coat_eta       = vec3f{point.coat_ior};
+        weight *= point.coat_color * (1 - fresnel_dielectric(material.coat_eta,
+                                              abs(dot(normal, outgoing))));
+    }
     if (point.emission_factor && point.emission_color != zero3f) {
         material.emission_weight = weight * point.emission_factor *
                                    point.emission_color;
@@ -213,7 +224,8 @@ trace_material eval_material(const material_point& point_,
                                    point.specular_color;
         material.specular_roughness = point.specular_roughness;
         material.specular_eta       = vec3f{point.specular_ior};
-        weight *= 1 - fresnel_dielectric(material.specular_eta, abs(dot(normal, outgoing)));
+        weight *= 1 - fresnel_dielectric(
+                          material.specular_eta, abs(dot(normal, outgoing)));
     }
     if (point.diffuse_factor && point.base_color != zero3f) {
         material.diffuse_weight = weight * point.diffuse_factor *
@@ -243,6 +255,7 @@ struct trace_weights {
     float specular_pdf     = 0;
     float metal_pdf        = 0;
     float transmission_pdf = 0;
+    float coat_pdf         = 0;
     float opacity_pdf      = 0;
     float volume_pdf       = 0;
 
@@ -310,6 +323,22 @@ trace_weights compute_weights(const trace_material& material,
             material.transmission_weight * (1 - fresnel));
     }
 
+    // coat
+    if (material.coat_weight != zero3f && material.coat_roughness &&
+        mode == trace_mode::smooth) {
+        auto fresnel = fresnel_dielectric(
+            material.coat_eta, abs(dot(normal, outgoing)));
+        weights.coat_pdf = max(material.coat_weight * fresnel);
+    }
+
+    // coat
+    if (material.coat_weight != zero3f && !material.coat_roughness &&
+        mode == trace_mode::delta) {
+        auto fresnel = fresnel_dielectric(
+            material.coat_eta, abs(dot(normal, outgoing)));
+        weights.coat_pdf = max(material.coat_weight * fresnel);
+    }
+
     // opacity
     if (material.opacity_weight != zero3f && mode == trace_mode::delta) {
         weights.opacity_pdf = max(material.opacity_weight);
@@ -323,7 +352,8 @@ trace_weights compute_weights(const trace_material& material,
     // accumulate
     weights.total_weight = weights.diffuse_pdf + weights.specular_pdf +
                            weights.metal_pdf + weights.transmission_pdf +
-                           weights.opacity_pdf + weights.volume_pdf;
+                           weights.coat_pdf + weights.opacity_pdf +
+                           weights.volume_pdf;
 
     // normalize
     if (weights.total_weight) {
@@ -331,6 +361,7 @@ trace_weights compute_weights(const trace_material& material,
         weights.specular_pdf /= weights.total_weight;
         weights.metal_pdf /= weights.total_weight;
         weights.transmission_pdf /= weights.total_weight;
+        weights.coat_pdf /= weights.total_weight;
         weights.opacity_pdf /= weights.total_weight;
         weights.volume_pdf /= weights.total_weight;
     }
@@ -366,7 +397,8 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
     // diffuse
     if (material.diffuse_weight != zero3f && mode == trace_mode::smooth &&
         outgoing_up == incoming_up) {
-        scattering += material.diffuse_weight / pif * abs(dot(normal, incoming));
+        scattering += material.diffuse_weight / pif *
+                      abs(dot(normal, incoming));
     }
 
     // specular
@@ -468,6 +500,28 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
         }
     }
 
+    // coat
+    if (material.coat_weight != zero3f && material.coat_roughness &&
+        mode == trace_mode::smooth && outgoing_up == incoming_up) {
+        auto halfway = normalize(incoming + outgoing);
+        auto F       = fresnel_dielectric(
+            material.coat_eta, abs(dot(halfway, outgoing)));
+        auto D = eval_microfacetD(material.coat_roughness, normal, halfway);
+        auto G = eval_microfacetG(
+            material.coat_roughness, normal, halfway, outgoing, incoming);
+        scattering += material.coat_weight * F * D * G /
+                      fabs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+                      abs(dot(normal, incoming));
+    }
+
+    // coat reflection
+    if (material.coat_weight != zero3f && !material.coat_roughness &&
+        mode == trace_mode::delta && outgoing_up == incoming_up) {
+        auto F = fresnel_dielectric(
+            material.coat_eta, abs(dot(normal, outgoing)));
+        scattering += material.coat_weight * F;
+    }
+
     // opacity passthrought
     if (material.opacity_weight != zero3f && mode == trace_mode::delta &&
         outgoing_up != incoming_up) {
@@ -561,6 +615,21 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
         } else {
             return -outgoing;
         }
+    }
+
+    // sample according to specular GGX
+    weight_sum += weights.coat_pdf;
+    if (material.coat_weight != zero3f && material.coat_roughness &&
+        mode == trace_mode::smooth && rnl <= weight_sum) {
+        auto halfway = sample_microfacet(
+            material.coat_roughness, normal, rn);
+        return reflect(outgoing, halfway);
+    }
+
+    // sample according to specular mirror
+    if (material.coat_weight != zero3f && !material.coat_roughness &&
+        mode == trace_mode::delta && rnl <= weight_sum) {
+        return reflect(outgoing, normal);
     }
 
     // sample according to opacity
@@ -666,6 +735,22 @@ float sample_scattering_pdf(const trace_material& material,
         !material.transmission_roughness && mode == trace_mode::delta &&
         outgoing_up != incoming_up) {
         pdf += weights.transmission_pdf;
+    }
+
+    // specular reflection
+    if (material.coat_weight != zero3f && material.coat_roughness &&
+        mode == trace_mode::smooth && outgoing_up == incoming_up) {
+        auto halfway = normalize(incoming + outgoing);
+        auto d       = sample_microfacet_pdf(
+            material.coat_roughness, normal, halfway);
+        auto jacobian = 0.25f / abs(dot(outgoing, halfway));
+        pdf += weights.coat_pdf * d * jacobian;
+    }
+
+    // specular reflection
+    if (material.coat_weight != zero3f && !material.coat_roughness &&
+        mode == trace_mode::delta && outgoing_up == incoming_up) {
+        pdf += weights.coat_pdf;
     }
 
     // opacity
@@ -994,7 +1079,8 @@ trace_point make_surface_point(const yocto_scene& scene,
     auto color = eval_color(
         shape, intersection.element_id, intersection.element_uv);
     auto material_point = eval_material(scene, material, texturecoord);
-    point.material      = eval_material(material_point, color, point.normal, -shading_direction);
+    point.material      = eval_material(
+        material_point, color, point.normal, -shading_direction);
     if (!shape.lines.empty()) {
         point.normal = orthonormalize(-shading_direction, point.normal);
     } else if (!shape.points.empty()) {

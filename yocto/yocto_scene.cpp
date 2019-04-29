@@ -1242,6 +1242,10 @@ material_point eval_material(const yocto_scene& scene,
     point.transmission_color  = material.transmission_color;
     point.opacity_factor      = material.opacity_factor;
     point.specular_ior        = material.specular_ior;
+    point.coat_factor         = material.coat_factor;
+    point.coat_color          = material.coat_color;
+    point.coat_roughness      = material.coat_roughness;
+    point.coat_ior            = material.coat_ior;
     point.thin_walled         = material.thin_walled;
     point.normal_map          = vec3f{0, 0, 1};
     if (material.emission_texture >= 0) {
@@ -1283,6 +1287,16 @@ material_point eval_material(const yocto_scene& scene,
             scene.textures[material.transmission_texture];
         point.transmission_color *= xyz(
             eval_texture(transmission_texture, texturecoord));
+    }
+    if (material.opacity_texture >= 0) {
+        auto& opacity_texture = scene.textures[material.opacity_texture];
+        point.opacity_factor *= mean(
+            xyz(eval_texture(opacity_texture, texturecoord)));
+    }
+    if (material.coat_texture >= 0) {
+        auto& coat_texture = scene.textures[material.coat_texture];
+        point.coat_factor *= mean(
+            xyz(eval_texture(coat_texture, texturecoord)));
     }
     if (material.normal_texture >= 0) {
         auto& normal_texture = scene.textures[material.normal_texture];
