@@ -621,8 +621,7 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
     weight_sum += weights.coat_pdf;
     if (material.coat_weight != zero3f && material.coat_roughness &&
         mode == trace_mode::smooth && rnl <= weight_sum) {
-        auto halfway = sample_microfacet(
-            material.coat_roughness, normal, rn);
+        auto halfway = sample_microfacet(material.coat_roughness, normal, rn);
         return reflect(outgoing, halfway);
     }
 
