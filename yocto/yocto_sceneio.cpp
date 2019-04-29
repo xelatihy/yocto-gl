@@ -238,8 +238,8 @@ static string get_save_scene_message(
 }
 
 void load_texture(yocto_texture& texture, const string& dirname) {
-    if (is_image_preset_filename(texture.uri)) {
-        auto [type, nfilename] = get_image_preset_type(texture.uri);
+    if (is_preset_filename(texture.uri)) {
+        auto [type, nfilename] = get_preset_type(texture.uri);
         make_preset(texture.hdr_image, texture.ldr_image, type);
         texture.uri = nfilename;
     } else {
@@ -248,7 +248,7 @@ void load_texture(yocto_texture& texture, const string& dirname) {
 }
 
 void load_voltexture(yocto_voltexture& texture, const string& dirname) {
-    if (is_volume_preset_filename(texture.uri)) {
+    if (is_preset_filename(texture.uri)) {
         make_preset(texture.volume_data, get_basename(texture.uri));
         texture.uri = get_noextension(texture.uri) + ".yvol";
     } else {
@@ -310,8 +310,8 @@ void save_textures(const yocto_scene& scene, const string& dirname,
 }
 
 void load_shape(yocto_shape& shape, const string& dirname) {
-    if (is_shape_preset_filename(shape.uri)) {
-        auto [type, nfilename] = get_shape_preset_type(shape.uri);
+    if (is_preset_filename(shape.uri)) {
+        auto [type, nfilename] = get_preset_type(shape.uri);
         make_preset(shape.points, shape.lines, shape.triangles, shape.quads,
             shape.quads_positions, shape.quads_normals, shape.quads_texcoords,
             shape.positions, shape.normals, shape.texcoords, shape.colors,
@@ -333,8 +333,8 @@ void save_shape(const yocto_shape& shape, const string& dirname) {
 }
 
 void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
-    if (is_shape_preset_filename(subdiv.uri)) {
-        auto [type, nfilename] = get_shape_preset_type(subdiv.uri);
+    if (is_preset_filename(subdiv.uri)) {
+        auto [type, nfilename] = get_preset_type(subdiv.uri);
         make_preset(subdiv.points, subdiv.lines, subdiv.triangles, subdiv.quads,
             subdiv.quads_positions, subdiv.quads_normals,
             subdiv.quads_texcoords, subdiv.positions, subdiv.normals,
@@ -663,8 +663,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
                 if (key == "uri") {
                     get_yaml_value(value, texture.uri);
                     auto refname = texture.uri;
-                    if (is_image_preset_filename(refname)) {
-                        auto [_, nname] = get_image_preset_type(refname);
+                    if (is_preset_filename(refname)) {
+                        auto [_, nname] = get_preset_type(refname);
                         refname         = nname;
                     }
                     tmap[refname] = (int)scene.textures.size() - 1;
@@ -679,8 +679,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
                 if (key == "uri") {
                     get_yaml_value(value, texture.uri);
                     auto refname = texture.uri;
-                    if (is_image_preset_filename(refname)) {
-                        auto [_, nname] = get_image_preset_type(refname);
+                    if (is_preset_filename(refname)) {
+                        auto [_, nname] = get_preset_type(refname);
                         refname         = nname;
                     }
                     vmap[refname] = (int)scene.voltextures.size() - 1;
@@ -744,8 +744,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
                 if (key == "uri") {
                     get_yaml_value(value, shape.uri);
                     auto refname = shape.uri;
-                    if (is_shape_preset_filename(refname)) {
-                        auto [_, nname] = get_shape_preset_type(refname);
+                    if (is_preset_filename(refname)) {
+                        auto [_, nname] = get_preset_type(refname);
                         refname         = nname;
                     }
                     smap[refname] = (int)scene.shapes.size() - 1;
