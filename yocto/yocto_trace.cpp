@@ -318,9 +318,9 @@ trace_weights compute_weights(const trace_material& material,
     }
 
     // accumulate
-    weights.total_weight = weights.diffuse_pdf + weights.specular_pdf + weights.metal_pdf +
-                           weights.transmission_pdf + weights.opacity_pdf +
-                           weights.volume_pdf;
+    weights.total_weight = weights.diffuse_pdf + weights.specular_pdf +
+                           weights.metal_pdf + weights.transmission_pdf +
+                           weights.opacity_pdf + weights.volume_pdf;
 
     // normalize
     if (weights.total_weight) {
