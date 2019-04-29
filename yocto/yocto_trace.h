@@ -223,12 +223,11 @@ float exponent_to_roughness(float n);
 
 // Specular to fresnel eta.
 void  specular_to_eta(const vec3f& specular, vec3f& es, vec3f& esk);
-float specular_to_eta(const vec3f& specular);
+vec3f specular_to_eta(const vec3f& specular);
 // Compute the fresnel term for dielectrics.
-vec3f fresnel_dielectric(float direction_cosine, const vec3f& eta);
+vec3f fresnel_dielectric(const vec3f& eta, float direction_cosine);
 // Compute the fresnel term for metals.
-vec3f fresnel_metal(
-    float direction_cosine, const vec3f& eta, const vec3f& etak);
+vec3f fresnel_metal(const vec3f& eta, const vec3f& etak, float direction_cosine);
 // Schlick approximation of Fresnel term, optionally weighted by roughness;
 vec3f fresnel_schlick(const vec3f& specular, float direction_cosine);
 vec3f fresnel_schlick(
