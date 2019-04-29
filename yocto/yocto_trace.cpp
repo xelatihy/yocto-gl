@@ -148,7 +148,7 @@ struct trace_material {
     float transmission_roughness = 1;
     vec3f transmission_eta       = {1, 1, 1};
     bool  transmission_thin      = false;
-    vec3f opacity_color          = zero3f;
+    vec3f opacity_weight         = zero3f;
 
     // volume
     vec3f volume_emission = zero3f;
@@ -165,11 +165,12 @@ bool is_scattering_zero(const trace_material& material) {
            material.specular_weight == zero3f &&
            material.metal_weight == zero3f &&
            material.transmission_weight == zero3f &&
-           material.opacity_color == zero3f && material.volume_albedo == zero3f;
+           material.opacity_weight == zero3f &&
+           material.volume_albedo == zero3f;
 }
 
-trace_material make_trace_material(
-    const material_point& point_, const vec4f& shape_color) {
+trace_material eval_material(const material_point& point_,
+    const vec4f& shape_color, const vec3f& normal, const vec3f& outgoing) {
     auto point = point_;
     point.emission_color *= xyz(shape_color);
     point.base_color *= xyz(shape_color);
@@ -184,37 +185,39 @@ trace_material make_trace_material(
     }
     if (point.opacity_factor > 0.999f) point.opacity_factor = 1;
     auto material = trace_material{};
-    if (point.diffuse_factor && point.base_color != zero3f) {
-        material.diffuse_weight = point.opacity_factor * point.diffuse_factor *
-                                  point.base_color *
-                                  (1 - point.metallic_factor);
+    auto weight   = vec3f{1};
+    if (point.opacity_factor < 0.999f) {
+        material.opacity_weight = vec3f{1 - point.opacity_factor};
+        weight *= point.opacity_factor;
+    }
+    if (point.emission_factor && point.emission_color != zero3f) {
+        material.emission_weight = weight * point.emission_factor *
+                                   point.emission_color;
     }
     if (point.metallic_factor && point.base_color != zero3f) {
-        material.metal_weight = point.opacity_factor * point.metallic_factor *
+        material.metal_weight = weight * point.metallic_factor *
                                 point.base_color;
         material.metal_roughness = point.specular_roughness;
         material.metal_eta       = specular_to_eta(point.base_color);
-    }
-    if (point.specular_factor && point.specular_color != zero3f) {
-        material.specular_weight = point.opacity_factor *
-                                   point.specular_factor * point.specular_color;
-        material.specular_roughness = point.specular_roughness;
-        material.specular_eta       = vec3f{point.specular_ior};
+        weight *= 1 - point.metallic_factor;
     }
     if (point.transmission_factor && point.transmission_color != zero3f) {
-        material.transmission_weight = point.opacity_factor *
-                                       point.transmission_factor *
+        material.transmission_weight = weight * point.transmission_factor *
                                        point.transmission_color;
         material.transmission_roughness = point.specular_roughness;
         material.transmission_eta       = vec3f{point.specular_ior};
         material.transmission_thin      = point.thin_walled;
     }
-    if (point.opacity_factor < 0.999f) {
-        material.opacity_color = vec3f{1 - point.opacity_factor};
+    if (point.specular_factor && point.specular_color != zero3f) {
+        material.specular_weight = weight * point.specular_factor *
+                                   point.specular_color;
+        material.specular_roughness = point.specular_roughness;
+        material.specular_eta       = vec3f{point.specular_ior};
+        weight *= 1 - fresnel_dielectric(material.specular_eta, abs(dot(normal, outgoing)));
     }
-    if (point.emission_factor && point.emission_color != zero3f) {
-        material.emission_weight = point.opacity_factor *
-                                   point.emission_factor * point.emission_color;
+    if (point.diffuse_factor && point.base_color != zero3f) {
+        material.diffuse_weight = weight * point.diffuse_factor *
+                                  point.base_color;
     }
     if (point.volume_density != zero3f) {
         material.volume_emission = point.volume_emission;
@@ -254,9 +257,7 @@ trace_weights compute_weights(const trace_material& material,
 
     // diffuse
     if (material.diffuse_weight != zero3f && mode == trace_mode::smooth) {
-        auto fresnel = fresnel_dielectric(
-            material.specular_eta, abs(dot(normal, outgoing)));
-        weights.diffuse_pdf = max(material.diffuse_weight * (1 - fresnel));
+        weights.diffuse_pdf = max(material.diffuse_weight);
     }
 
     // metal
@@ -310,8 +311,8 @@ trace_weights compute_weights(const trace_material& material,
     }
 
     // opacity
-    if (material.opacity_color != zero3f && mode == trace_mode::delta) {
-        weights.opacity_pdf = max(material.opacity_color);
+    if (material.opacity_weight != zero3f && mode == trace_mode::delta) {
+        weights.opacity_pdf = max(material.opacity_weight);
     }
 
     // volume
@@ -365,12 +366,7 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
     // diffuse
     if (material.diffuse_weight != zero3f && mode == trace_mode::smooth &&
         outgoing_up == incoming_up) {
-        auto fresnel = material.specular_weight == zero3f
-                           ? zero3f
-                           : fresnel_dielectric(material.specular_eta,
-                                 abs(dot(normal, outgoing)));
-        scattering += material.diffuse_weight * (1 - fresnel) / pif *
-                      abs(dot(normal, incoming));
+        scattering += material.diffuse_weight / pif * abs(dot(normal, incoming));
     }
 
     // specular
@@ -473,9 +469,9 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
     }
 
     // opacity passthrought
-    if (material.opacity_color != zero3f && mode == trace_mode::delta &&
+    if (material.opacity_weight != zero3f && mode == trace_mode::delta &&
         outgoing_up != incoming_up) {
-        scattering += material.opacity_color;
+        scattering += material.opacity_weight;
     }
 
     // volume
@@ -569,7 +565,7 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
 
     // sample according to opacity
     weight_sum += weights.opacity_pdf;
-    if (material.opacity_color != zero3f && mode == trace_mode::delta &&
+    if (material.opacity_weight != zero3f && mode == trace_mode::delta &&
         rnl <= weight_sum) {
         return -outgoing;
     }
@@ -673,7 +669,7 @@ float sample_scattering_pdf(const trace_material& material,
     }
 
     // opacity
-    if (material.opacity_color != zero3f && mode == trace_mode::delta &&
+    if (material.opacity_weight != zero3f && mode == trace_mode::delta &&
         outgoing_up != incoming_up) {
         pdf += weights.opacity_pdf;
     }
@@ -804,7 +800,7 @@ float sample_lights_pdf(const yocto_scene& scene, const trace_lights& lights,
 
 inline vec3f get_roulette_albedo(const trace_material& material) {
     return material.diffuse_weight + material.specular_weight +
-           material.transmission_weight + material.opacity_color +
+           material.transmission_weight + material.opacity_weight +
            material.volume_albedo;
 }
 
@@ -998,7 +994,7 @@ trace_point make_surface_point(const yocto_scene& scene,
     auto color = eval_color(
         shape, intersection.element_id, intersection.element_uv);
     auto material_point = eval_material(scene, material, texturecoord);
-    point.material      = make_trace_material(material_point, color);
+    point.material      = eval_material(material_point, color, point.normal, -shading_direction);
     if (!shape.lines.empty()) {
         point.normal = orthonormalize(-shading_direction, point.normal);
     } else if (!shape.points.empty()) {
@@ -1287,7 +1283,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
         case trace_falsecolor_type::albedo: {
             return {material.diffuse_weight + material.specular_weight +
                         material.metal_weight + material.transmission_weight +
-                        material.opacity_color,
+                        material.opacity_weight,
                 1};
         }
         case trace_falsecolor_type::texcoord: {
