@@ -711,8 +711,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.ior);
                 } else if (key == "opacity") {
                     get_yaml_value(value, material.opacity);
-                } else if (key == "refract") {
-                    get_yaml_value(value, material.refract);
+                } else if (key == "thin_walled") {
+                    get_yaml_value(value, material.thin_walled);
                 } else if (key == "volume_density") {
                     get_yaml_value(value, material.volume_density);
                 } else if (key == "volume_albedo") {
@@ -951,7 +951,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             fs, "roughness", material.roughness, def_material.roughness);
         print_optional(fs, "ior", material.ior, def_material.ior);
         print_optional(fs, "opacity", material.opacity, def_material.opacity);
-        print_optional(fs, "refract", material.refract, def_material.refract);
+        print_optional(fs, "thin_walled", material.thin_walled, def_material.thin_walled);
         print_ref(
             fs, "emission_texture", material.emission_texture, scene.textures);
         print_ref(

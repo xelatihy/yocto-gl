@@ -132,7 +132,7 @@ struct yocto_material {
     float roughness    = 0.001f;
     float ior          = 1.5;
     float opacity      = 1;
-    bool  refract      = false;
+    bool  thin_walled  = false;
 
     // textures
     int emission_texture     = -1;
@@ -456,7 +456,7 @@ struct material_point {
     float roughness       = 1;
     float opacity         = 1;
     bool  base_metallic   = false;
-    bool  refract         = false;
+    bool  thin_walled     = false;
     vec3f normalmap       = {0, 0, 1};
     vec3f volume_emission = {0, 0, 0};
     vec3f volume_albedo   = {0, 0, 0};

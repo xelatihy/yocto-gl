@@ -39,7 +39,7 @@ cameras:
     lens_aperture: 0.0
     film_width: 0.036
     film_height: 0.015
-    orthographic: True
+    orthographic: true
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
   - uri: cameras/orthographic-dof.yaml
@@ -47,7 +47,7 @@ cameras:
     lens_aperture: 0.02
     film_width: 0.036
     film_height: 0.015
-    orthographic: True
+    orthographic: true
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
 textures:
@@ -64,19 +64,20 @@ materials:
     volume_density: [50, 50, 50]
     volume_albedo: [0.3, 0.6, 0.3]
     volume_phaseg: 0
-    refract: True
+    thin_walled: false
   - uri: materials/test-volume-cloud.yaml
     specular: [0, 0, 0]
     transmission: [1, 1, 1]
     volume_density: [20, 20, 20]
     volume_albedo: [0.9, 0.9, 0.9]
     volume_phaseg: 0
+    thin_walled: true
   - uri: materials/test-volume-glass.yaml
     specular: [0.04, 0.04, 0.04]
     transmission: [1, 1, 1]
     roughness: 0
     volume_density: [0, 15, 15]
-    refract: True
+    thin_walled: false
   - uri: materials/test-volume-smoke.yaml
     diffuse: [0, 0, 0]
     specular: [0.0, 0.0, 0.0]
@@ -84,11 +85,13 @@ materials:
     volume_density: [30, 30, 30]
     volume_albedo: [0.2, 0.2, 0.2]
     volume_phaseg: -0.8
+    thin_walled: true
   - uri: materials/test-volume-emissive.yaml
     diffuse: [0, 0, 0]
     transmission: [1, 1, 1]
     volume_density: [1, 1, 1]
     volume_emission: [15, 15, 10]
+    thin_walled: true
   - uri: materials/test-arealight1.yaml
     emission: [20, 20, 20]
   - uri: materials/test-arealight2.yaml

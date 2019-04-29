@@ -64,7 +64,7 @@ struct trace_material {
     float specular_roughness     = 1;
     vec3f transmission_color     = zero3f;
     float transmission_roughness = 1;
-    bool  transmission_refract   = true;
+    bool  transmission_thin      = false;
     vec3f opacity_color          = zero3f;
 
     // volume
@@ -95,7 +95,7 @@ trace_material make_trace_material(
     auto transmission = point.transmission;
     auto opacity      = point.opacity * shape_color.w;
     auto roughness    = point.roughness * point.roughness;
-    auto refract      = point.refract;
+    auto thin_walled      = point.thin_walled;
     if (diffuse != zero3f) {
         roughness = clamp(roughness, 0.03f * 0.03f, 1.0f);
     } else if (roughness <= 0.03f * 0.03f) {
@@ -113,7 +113,7 @@ trace_material make_trace_material(
     if (transmission != zero3f) {
         material.transmission_color     = opacity * transmission;
         material.transmission_roughness = roughness;
-        material.transmission_refract   = refract;
+        material.transmission_thin   = thin_walled;
     }
     if (opacity < 0.999f) {
         material.opacity_color = vec3f{1 - opacity};
@@ -777,7 +777,7 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
     if (material.transmission_color != zero3f &&
         material.transmission_roughness && mode == trace_mode::smooth &&
         outgoing_up != incoming_up) {
-        if (material.transmission_refract) {
+        if (!material.transmission_thin) {
             auto eta            = specular_to_eta(material.specular_color);
             auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
                                               : (eta * outgoing + incoming);
@@ -819,7 +819,7 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
     if (material.transmission_color != zero3f &&
         !material.transmission_roughness && mode == trace_mode::delta &&
         outgoing_up != incoming_up) {
-        if (material.transmission_refract) {
+        if (!material.transmission_thin) {
             auto fresnel = fresnel_schlick(
                 material.specular_color, dot(normal, outgoing));
             scattering += material.transmission_color * (1 - fresnel);
@@ -886,7 +886,7 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
     if (material.transmission_color != zero3f &&
         material.transmission_roughness && mode == trace_mode::smooth &&
         rnl <= weight_sum) {
-        if (material.transmission_refract) {
+        if (!material.transmission_thin) {
             auto halfway = sample_microfacet(
                 material.transmission_roughness, normal, rn);
             auto eta = specular_to_eta(material.specular_color);
@@ -903,7 +903,7 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
     if (material.transmission_color != zero3f &&
         !material.transmission_roughness && mode == trace_mode::delta &&
         rnl <= weight_sum) {
-        if (material.transmission_refract) {
+        if (!material.transmission_thin) {
             auto eta = specular_to_eta(material.specular_color);
             return refract(outgoing, normal, outgoing_up ? 1 / eta : eta);
         } else {
@@ -969,7 +969,7 @@ float sample_scattering_pdf(const trace_material& material,
     if (material.transmission_color != zero3f &&
         material.transmission_roughness && mode == trace_mode::smooth &&
         outgoing_up != incoming_up) {
-        if (material.transmission_refract) {
+        if (!material.transmission_thin) {
             auto eta            = specular_to_eta(material.specular_color);
             auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
                                               : (eta * outgoing + incoming);
@@ -997,11 +997,7 @@ float sample_scattering_pdf(const trace_material& material,
     if (material.transmission_color != zero3f &&
         !material.transmission_roughness && mode == trace_mode::delta &&
         outgoing_up != incoming_up) {
-        if (material.transmission_refract) {
-            pdf += weights.transmission_pdf;
-        } else {
-            pdf += weights.transmission_pdf;
-        }
+        pdf += weights.transmission_pdf;
     }
 
     // opacity

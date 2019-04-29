@@ -1267,7 +1267,7 @@ material_point eval_material(const yocto_scene& scene,
         point.transmission *= xyz(
             eval_texture(transmission_texture, texturecoord));
     }
-    point.refract       = material.refract;
+    point.thin_walled       = material.thin_walled;
     point.base_metallic = material.base_metallic;
     point.normalmap     = vec3f{0, 0, 1};
     if (material.normal_texture >= 0) {

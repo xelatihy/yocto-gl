@@ -56,8 +56,6 @@ def lookat(eye, center, up, flipped=False):
 
 @cli.command()
 def make_tests():
-    true = True   # to cut and paste from json
-    false = False # to cut and paste from json
     default_scene = {
         "cameras": [
             {
@@ -111,7 +109,7 @@ def make_tests():
                 "lens_aperture": 0.0,
                 "film_width": 0.036,
                 "film_height": 0.015,
-                "orthographic": true,
+                "orthographic": True,
                 "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
@@ -121,7 +119,7 @@ def make_tests():
                 "lens_aperture": 0.02,
                 "film_width": 0.036,
                 "film_height": 0.015,
-                "orthographic": true,
+                "orthographic": True,
                 "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
@@ -219,7 +217,7 @@ def make_tests():
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 1, 1 ],
                 "roughness": 0,
-                "refract": true
+                "thin_walled": False
             },
             {
                 "uri": "materials/test-glass-rough.yaml",
@@ -227,7 +225,7 @@ def make_tests():
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 0.7, 0.7 ],
                 "roughness": 0.1,
-                "refract": true
+                "thin_walled": False
             },
             {
                 "uri": "materials/test-thinglass-sharp.yaml",
@@ -235,7 +233,7 @@ def make_tests():
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 1, 1 ],
                 "roughness": 0,
-                "refract": false
+                "thin_walled": True
             },
             {
                 "uri": "materials/test-thinglass-rough.yaml",
@@ -243,7 +241,7 @@ def make_tests():
                 "specular": [ 0.04, 0.04, 0.04 ],
                 "transmission": [ 1, 0.7, 0.7 ],
                 "roughness": 0.05,
-                "refract": false
+                "thin_walled": True
             },
             {
                 "uri": "materials/test-hair.yaml",
@@ -259,7 +257,7 @@ def make_tests():
                 "volume_density": [50, 50, 50],
                 "volume_albedo": [0.3, 0.6, 0.3],
                 "volume_phaseg": 0,
-                "refract": True
+                "thin_walled": False
             },
             {
                 "uri": "materials/test-volume-cloud.yaml",
@@ -267,7 +265,8 @@ def make_tests():
                 "transmission": [1, 1, 1],
                 "volume_density": [20, 20, 20],
                 "volume_albedo": [0.9, 0.9, 0.9],
-                "volume_phaseg": 0
+                "volume_phaseg": 0,
+                "thin_walled": True
             },
             {
                 "uri": "materials/test-volume-glass.yaml",
@@ -275,7 +274,7 @@ def make_tests():
                 "transmission": [1, 1, 1],
                 "roughness": 0,
                 "volume_density": [0, 15, 15],
-                "refract": True
+                "thin_walled": False
             },
             {
                 "uri": "materials/test-volume-smoke.yaml",
@@ -284,14 +283,16 @@ def make_tests():
                 "transmission": [1, 1, 1],
                 "volume_density": [30, 30, 30],
                 "volume_albedo": [0.2, 0.2, 0.2],
-                "volume_phaseg": -0.8
+                "volume_phaseg": -0.8,
+                "thin_walled": True
             },
             {
                 "uri": "materials/test-volume-emissive.yaml",
                 "diffuse": [0, 0, 0],
                 "transmission": [1, 1, 1],
                 "volume_density": [1, 1, 1],
-                "volume_emission": [15, 15, 10]
+                "volume_emission": [15, 15, 10],
+                "thin_walled": True
             },
             {
                 "uri": "materials/test-arealight1.yaml",
@@ -359,7 +360,7 @@ def make_tests():
             {
                 "uri": "::yocto::test-sphere-displaced::subdivs/test-sphere-displaced.obj",
                 "tesselated_shape": "shapes/test-sphere-displaced.obj",
-                "preserve_facevarying": true,
+                "preserve_facevarying": True,
                 "displacement_texture": "textures/test-fbm-displacement.png",
                 "displacement_scale": 0.025
             },
@@ -367,16 +368,16 @@ def make_tests():
                 "uri": "::yocto::test-cube-subdiv::subdivs/test-cube-subdiv.obj",
                 "tesselated_shape": "shapes/test-cube-subdiv.obj",
                 "subdivision_level": 4,
-                "catmull_clark": true,
-                "compute_normals": true,
-                "preserve_facevarying": true
+                "catmull_clark": True,
+                "compute_normals": True,
+                "preserve_facevarying": True
             },
             {
                 "uri": "::yocto::test-suzanne-subdiv::subdivs/test-suzanne-subdiv.obj",
                 "tesselated_shape": "shapes/test-suzanne-subdiv.obj",
                 "subdivision_level": 2,
-                "catmull_clark": true,
-                "compute_normals": true
+                "catmull_clark": True,
+                "compute_normals": True
             },
         ],
         "instances": [
@@ -512,7 +513,7 @@ def make_tests():
                 f.write('  - uri: ' + obj['uri'] + '\n')
                 for key, value in obj.items():
                     if key == 'uri': continue
-                    f.write('    ' + key + ': ' + str(value) + '\n')
+                    f.write('    ' + key + ': ' + str(value).lower() + '\n')
         with open(f'{name}', 'wt') as f:
             write_yaml_objects(f, 'cameras')
             write_yaml_objects(f, 'textures')
