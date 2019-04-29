@@ -252,6 +252,48 @@ def make_tests():
                 "roughness": 1
             },
             {
+                "uri": "materials/test-volume-jade.yaml",
+                "specular": [0.04, 0.04, 0.04],
+                "roughness": 0,
+                "transmission": [1, 1, 1],
+                "volume_density": [50, 50, 50],
+                "volume_albedo": [0.3, 0.6, 0.3],
+                "volume_phaseg": 0,
+                "refract": True
+            },
+            {
+                "uri": "materials/test-volume-cloud.yaml",
+                "specular": [0, 0, 0],
+                "transmission": [1, 1, 1],
+                "volume_density": [20, 20, 20],
+                "volume_albedo": [0.9, 0.9, 0.9],
+                "volume_phaseg": 0
+            },
+            {
+                "uri": "materials/test-volume-glass.yaml",
+                "specular": [0.04, 0.04, 0.04],
+                "transmission": [1, 1, 1],
+                "roughness": 0,
+                "volume_density": [0, 15, 15],
+                "refract": True
+            },
+            {
+                "uri": "materials/test-volume-smoke.yaml",
+                "diffuse": [0, 0, 0],
+                "specular": [0.0, 0.0, 0.0],
+                "transmission": [1, 1, 1],
+                "volume_density": [30, 30, 30],
+                "volume_albedo": [0.2, 0.2, 0.2],
+                "volume_phaseg": -0.8
+            },
+            {
+                "uri": "materials/test-volume-emissive.yaml",
+                "diffuse": [0, 0, 0],
+                "transmission": [1, 1, 1],
+                "volume_density": [1, 1, 1],
+                "volume_emission": [15, 15, 10]
+            },
+            {
                 "uri": "materials/test-arealight1.yaml",
                 "emission": [ 20, 20, 20 ]
             },
@@ -484,6 +526,7 @@ def make_tests():
     make_test('tests/materials1.yaml', ['shapes/test-sphere.ply'], ["materials/test-plastic-sharp.yaml", "materials/test-plastic-rough.yaml", "materials/test-matte.yaml", "materials/test-metal-sharp.yaml", "materials/test-metal-rough.yaml"], mixed_lights)
     make_test('tests/materials2.yaml', ['shapes/test-sphere.ply'], ["materials/test-glass-sharp.yaml", "materials/test-glass-rough.yaml", "materials/test-transparent.yaml", "materials/test-thinglass-sharp.yaml", "materials/test-thinglass-rough.yaml"], mixed_lights)
     make_test('tests/materials3.yaml', ['shapes/test-sphere.ply', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-sphere.ply'], ["materials/test-plastic-sharp-bumped.yaml", "materials/test-plastic-sharp-bumped.yaml", "materials/test-metal-sharp-bumped.yaml", "materials/test-metal-sharp-bumped.yaml", "materials/test-metal-sharp-bumped.yaml"], mixed_lights)
+    make_test('tests/materials4.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-volume-cloud.yaml", "materials/test-volume-glass.yaml", "materials/test-volume-jade.yaml", "materials/test-volume-emissive.yaml", "materials/test-volume-smoke.yaml"], mixed_lights)
     make_test('tests/shapes1.yaml', ['shapes/test-sphere.ply', "shapes/test-uvsphere-flipcap.ply", "shapes/test-disk.ply", "shapes/test-uvcylinder.ply", "shapes/test-cube.ply"], ["materials/test-uvgrid.yaml"], mixed_lights)
     make_test('tests/shapes2.yaml', ['shapes/test-cube-subdiv.obj', "shapes/test-suzanne-subdiv.obj", 'shapes/test-sphere-displaced.obj', "shapes/test-bunny.obj", "shapes/test-teapot.obj"], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-matte.yaml", "materials/test-uvgrid.yaml", "materials/test-uvgrid.yaml"], mixed_lights, subdivs=['subdivs/test-cube-subdiv.obj', "subdivs/test-suzanne-subdiv.obj", "subdivs/test-sphere-displaced.obj"])
     make_test('tests/shapes3.yaml', ['shapes/test-sphere.ply', "shapes/test-hairball1.ply", "shapes/test-hairball2.ply", "shapes/test-hairball3.ply", "shapes/test-sphere.ply", "", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", ""], ["materials/test-matte.yaml", "materials/test-hair.yaml", "materials/test-hair.yaml", "materials/test-hair.yaml", "materials/test-matte.yaml"], mixed_lights, xscales=[ 0.5, 1, 1, 1, 0.5 ])
