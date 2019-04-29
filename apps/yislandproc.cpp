@@ -326,10 +326,10 @@ struct load_island_shape_callbacks : obj_callbacks {
             materials.back().diffuse_factor = 1;
             materials.back().base_color     = dmaterial.color;
         } else {
-            materials.back().specular_factor           = 1;
-            materials.back().transmission_factor       = 1;
-            materials.back().specular_roughness = 0;
-            materials.back().thin_walled        = false;
+            materials.back().specular_factor     = 1;
+            materials.back().transmission_factor = 1;
+            materials.back().specular_roughness  = 0;
+            materials.back().thin_walled         = false;
         }
         shapes.push_back(yocto_shape{});
         shapes.back().uri = "shapes/" + parent_name + "/" +

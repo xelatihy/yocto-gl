@@ -123,19 +123,19 @@ struct yocto_material {
     string uri = "";
 
     // base values
-    float emission_factor    = 0;
-    vec3f emission_color     = {1, 1, 1};
-    float diffuse_factor     = 0;
-    float metallic_factor    = 0;
-    float specular_factor    = 0;
+    float emission_factor     = 0;
+    vec3f emission_color      = {1, 1, 1};
+    float diffuse_factor      = 0;
+    float metallic_factor     = 0;
+    float specular_factor     = 0;
     float transmission_factor = 0;
-    vec3f base_color         = {0, 0, 0};
-    vec3f specular_color     = {1, 1, 1};
-    float specular_roughness = 0.001f;
-    float specular_ior       = 1.5;
-    vec3f transmission_color = {1, 1, 1};
-    float opacity_factor     = 1;
-    bool  thin_walled        = false;
+    vec3f base_color          = {0, 0, 0};
+    vec3f specular_color      = {1, 1, 1};
+    float specular_roughness  = 0.001f;
+    float specular_ior        = 1.5;
+    vec3f transmission_color  = {1, 1, 1};
+    float opacity_factor      = 1;
+    bool  thin_walled         = false;
 
     // textures
     int  emission_texture     = -1;
@@ -457,24 +457,24 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    float emission_factor    = 0;
-    vec3f emission_color     = {1, 1, 1};
-    float diffuse_factor     = 0;
-    float metallic_factor    = 0;
-    float specular_factor    = 0;
+    float emission_factor     = 0;
+    vec3f emission_color      = {1, 1, 1};
+    float diffuse_factor      = 0;
+    float metallic_factor     = 0;
+    float specular_factor     = 0;
     float transmission_factor = 0;
-    vec3f base_color         = {1, 1, 1};
-    vec3f specular_color     = {1, 1, 1};
-    float specular_roughness = 1;
-    float specular_ior       = 1;
-    vec3f transmission_color = {1, 1, 1};
-    float opacity_factor     = 1;
-    bool  thin_walled        = false;
-    vec3f normal_map         = {0, 0, 1};
-    vec3f volume_emission    = {0, 0, 0};
-    vec3f volume_albedo      = {0, 0, 0};
-    vec3f volume_density     = {0, 0, 0};
-    float volume_phaseg      = 0;
+    vec3f base_color          = {1, 1, 1};
+    vec3f specular_color      = {1, 1, 1};
+    float specular_roughness  = 1;
+    float specular_ior        = 1;
+    vec3f transmission_color  = {1, 1, 1};
+    float opacity_factor      = 1;
+    bool  thin_walled         = false;
+    vec3f normal_map          = {0, 0, 1};
+    vec3f volume_emission     = {0, 0, 0};
+    vec3f volume_albedo       = {0, 0, 0};
+    vec3f volume_density      = {0, 0, 0};
+    float volume_phaseg       = 0;
 };
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord);

@@ -1229,21 +1229,21 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 // Evaluates the microfacet_brdf at a location.
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord) {
-    auto point               = material_point{};
-    point.emission_factor    = material.emission_factor;
-    point.emission_color     = material.emission_color;
-    point.diffuse_factor     = material.diffuse_factor;
-    point.metallic_factor    = material.metallic_factor;
-    point.specular_factor    = material.specular_factor;
+    auto point                = material_point{};
+    point.emission_factor     = material.emission_factor;
+    point.emission_color      = material.emission_color;
+    point.diffuse_factor      = material.diffuse_factor;
+    point.metallic_factor     = material.metallic_factor;
+    point.specular_factor     = material.specular_factor;
     point.transmission_factor = material.transmission_factor;
-    point.base_color         = material.base_color;
-    point.specular_color     = material.specular_color;
-    point.specular_roughness = material.specular_roughness;
-    point.transmission_color       = material.transmission_color;
-    point.opacity_factor     = material.opacity_factor;
-    point.specular_ior       = material.specular_ior;
-    point.thin_walled        = material.thin_walled;
-    point.normal_map         = vec3f{0, 0, 1};
+    point.base_color          = material.base_color;
+    point.specular_color      = material.specular_color;
+    point.specular_roughness  = material.specular_roughness;
+    point.transmission_color  = material.transmission_color;
+    point.opacity_factor      = material.opacity_factor;
+    point.specular_ior        = material.specular_ior;
+    point.thin_walled         = material.thin_walled;
+    point.normal_map          = vec3f{0, 0, 1};
     if (material.emission_texture >= 0) {
         auto& emission_texture = scene.textures[material.emission_texture];
         point.emission_color *= xyz(

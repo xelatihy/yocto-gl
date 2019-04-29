@@ -196,12 +196,15 @@ trace_material make_trace_material(
         material.metal_eta       = specular_to_eta(point.base_color);
     }
     if (point.specular_factor && point.specular_color != zero3f) {
-        material.specular_weight    = point.opacity_factor * point.specular_factor * point.specular_color;
+        material.specular_weight = point.opacity_factor *
+                                   point.specular_factor * point.specular_color;
         material.specular_roughness = point.specular_roughness;
         material.specular_eta       = vec3f{point.specular_ior};
     }
     if (point.transmission_factor && point.transmission_color != zero3f) {
-        material.transmission_weight = point.opacity_factor * point.transmission_factor * point.transmission_color;
+        material.transmission_weight = point.opacity_factor *
+                                       point.transmission_factor *
+                                       point.transmission_color;
         material.transmission_roughness = point.specular_roughness;
         material.transmission_eta       = vec3f{point.specular_ior};
         material.transmission_thin      = point.thin_walled;

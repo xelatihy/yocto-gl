@@ -3010,9 +3010,9 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 material.specular_color, material.specular_texture);
             get_scaled_texture3f(uber.Kt, material.transmission_factor,
                 material.transmission_color, material.transmission_texture);
-            float op_f = 1;
-            auto op     = vec3f{0, 0, 0};
-            auto op_txt = -1;
+            float op_f   = 1;
+            auto  op     = vec3f{0, 0, 0};
+            auto  op_txt = -1;
             get_scaled_texture3f(uber.opacity, op_f, op, op_txt);
             material.opacity_factor     = (op.x + op.y + op.z) / 3;
             material.specular_roughness = get_pbrt_roughness(
@@ -3048,9 +3048,9 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             material.specular_roughness = 0;
         } else if (holds_alternative<pbrt_metal_material>(pmaterial)) {
             auto& metal = get<pbrt_metal_material>(pmaterial);
-            float eta_f = 0, etak_f      = 0;
-            auto eta = zero3f, k = zero3f;
-            auto eta_texture = -1, k_texture = -1;
+            float eta_f = 0, etak_f = 0;
+            auto  eta = zero3f, k = zero3f;
+            auto  eta_texture = -1, k_texture = -1;
             get_scaled_texture3f(metal.eta, eta_f, eta, eta_texture);
             get_scaled_texture3f(metal.k, etak_f, k, k_texture);
             // TODO: fix me
@@ -3088,10 +3088,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             if (verbose) printf("disney material not properly supported\n");
         } else if (holds_alternative<pbrt_kdsubsurface_material>(pmaterial)) {
             auto& kdsubdurface = get<pbrt_kdsubsurface_material>(pmaterial);
-            get_scaled_texture3f(
-                kdsubdurface.Kd, material.diffuse_factor, material.base_color, material.base_texture);
-            get_scaled_texture3f(kdsubdurface.Kr, material.specular_factor, material.specular_color,
-                material.specular_texture);
+            get_scaled_texture3f(kdsubdurface.Kd, material.diffuse_factor,
+                material.base_color, material.base_texture);
+            get_scaled_texture3f(kdsubdurface.Kr, material.specular_factor,
+                material.specular_color, material.specular_texture);
             material.specular_roughness = get_pbrt_roughness(
                 kdsubdurface.uroughness.value, kdsubdurface.vroughness.value,
                 kdsubdurface.remaproughness);
@@ -3114,10 +3114,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             auto& fourier = get<pbrt_fourier_material>(pmaterial);
             if (holds_alternative<pbrt_plastic_material>(fourier.approx)) {
                 auto& plastic = get<pbrt_plastic_material>(fourier.approx);
-                get_scaled_texture3f(
-                    plastic.Kd, material.diffuse_factor, material.base_color, material.base_texture);
-                get_scaled_texture3f(plastic.Ks, material.specular_factor, material.specular_color,
-                    material.specular_texture);
+                get_scaled_texture3f(plastic.Kd, material.diffuse_factor,
+                    material.base_color, material.base_texture);
+                get_scaled_texture3f(plastic.Ks, material.specular_factor,
+                    material.specular_color, material.specular_texture);
                 material.specular_roughness = get_pbrt_roughness(
                     plastic.uroughness.value, plastic.vroughness.value,
                     plastic.remaproughness);
@@ -3380,8 +3380,8 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
                 get_basename(scene.textures[material.specular_texture].uri));
         } else {
             auto specular = material.specular_factor * material.specular_color;
-            print(fs, "    \"rgb Ks\" [ {} {} {} ]\n", specular.x,
-                specular.y, specular.z);
+            print(fs, "    \"rgb Ks\" [ {} {} {} ]\n", specular.x, specular.y,
+                specular.z);
         }
         print(fs, "    \"float roughness\" {}\n",
             material.specular_roughness * material.specular_roughness);

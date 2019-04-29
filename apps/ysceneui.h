@@ -369,15 +369,16 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "specular factor", edited_value.specular_factor, 0, 1)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(
-            win, "transmission factor", edited_value.transmission_factor, 0, 1)) {
+    if (draw_slider_opengl_widget(win, "transmission factor",
+            edited_value.transmission_factor, 0, 1)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(
             win, "base color", edited_value.base_color)) {
         edited = true;
     }
-    if (draw_coloredit_opengl_widget(win, "specular color", edited_value.specular_color)) {
+    if (draw_coloredit_opengl_widget(
+            win, "specular color", edited_value.specular_color)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
