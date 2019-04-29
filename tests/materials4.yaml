@@ -55,8 +55,9 @@ textures:
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
-    diffuse: [0.7, 0.7, 0.7]
-    diffuse_texture: textures/test-floor.png
+    diffuse: 1
+    base_color: [0.7, 0.7, 0.7]
+    base_texture: textures/test-floor.png
   - uri: materials/test-volume-jade.yaml
     specular: [1, 1, 1]
     roughness: 0

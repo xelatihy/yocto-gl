@@ -169,50 +169,45 @@ bool is_scattering_zero(const trace_material& material) {
 }
 
 trace_material make_trace_material(
-    const material_point& point, const vec4f& shape_color) {
-    auto emission = point.emission * point.emission_color;
-    auto diffuse  = !point.base_metallic ? point.diffuse * xyz(shape_color)
-                                        : point.diffuse * (1 - point.specular);
-    auto specular = !point.base_metallic ? point.specular * xyz(shape_color)
-                                         : point.diffuse * point.specular +
-                                               0.04f * (1 - point.specular);
-    auto transmission = point.transmission;
-    auto opacity      = point.opacity * shape_color.w;
-    auto roughness    = point.roughness * point.roughness;
-    auto metallic     = point.metallic;
-    auto ior          = point.ior;
-    auto thin_walled  = point.thin_walled;
-    if (diffuse != zero3f) {
-        roughness = clamp(roughness, 0.03f * 0.03f, 1.0f);
-    } else if (roughness <= 0.03f * 0.03f) {
-        roughness = 0;
+    const material_point& point_, const vec4f& shape_color) {
+    auto point = point_;
+    point.emission_color *= xyz(shape_color);
+    point.base_color *= xyz(shape_color);
+    point.opacity *= shape_color.w;
+    point.roughness = point.roughness * point.roughness;
+    if (point.diffuse && point.base_color != zero3f) {
+        point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
+    } else if (point.roughness <= 0.03f * 0.03f) {
+        point.roughness = 0;
     }
-    if (opacity > 0.999f) opacity = 1;
+    if (point.opacity > 0.999f) point.opacity = 1;
     auto material = trace_material{};
-    if (diffuse != zero3f) {
-        material.diffuse_weight = opacity * diffuse * (1 - metallic);
+    if (point.diffuse && point.base_color != zero3f) {
+        material.diffuse_weight = point.opacity * point.diffuse *
+                                  point.base_color * (1 - point.metallic);
     }
-    if (diffuse != zero3f) {
-        material.metal_weight    = vec3f{opacity * metallic};
-        material.metal_roughness = roughness;
-        material.metal_eta       = specular_to_eta(diffuse);
+    if (point.metallic && point.base_color != zero3f) {
+        material.metal_weight = point.opacity * point.metallic *
+                                point.base_color;
+        material.metal_roughness = point.roughness;
+        material.metal_eta       = specular_to_eta(point.base_color);
     }
-    if (specular != zero3f) {
-        material.specular_weight    = opacity * specular;
-        material.specular_roughness = roughness;
-        material.specular_eta       = vec3f{ior};
+    if (point.specular != zero3f) {
+        material.specular_weight    = point.opacity * point.specular;
+        material.specular_roughness = point.roughness;
+        material.specular_eta       = vec3f{point.ior};
     }
-    if (transmission != zero3f) {
-        material.transmission_color     = opacity * transmission;
-        material.transmission_roughness = roughness;
-        material.transmission_eta       = vec3f{ior};
-        material.transmission_thin      = thin_walled;
+    if (point.transmission != zero3f) {
+        material.transmission_color     = point.opacity * point.transmission;
+        material.transmission_roughness = point.roughness;
+        material.transmission_eta       = vec3f{point.ior};
+        material.transmission_thin      = point.thin_walled;
     }
-    if (opacity < 0.999f) {
-        material.opacity_color = vec3f{1 - opacity};
+    if (point.opacity < 0.999f) {
+        material.opacity_color = vec3f{1 - point.opacity};
     }
-    if (emission != zero3f) {
-        material.emission_weight = emission * xyz(shape_color);
+    if (point.emission && point.emission_color != zero3f) {
+        material.emission_weight = point.opacity * point.emission * point.emission_color;
     }
     if (point.volume_density != zero3f) {
         material.volume_emission = point.volume_emission;
@@ -1256,7 +1251,8 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     // auto& material = scene.materials[instance.material];
 
     // prepare shading point
-    auto [position, normal, material] = make_surface_point(scene, intersection, direction);
+    auto [position, normal, material] = make_surface_point(
+        scene, intersection, direction);
 
     switch (params.falsecolor_type) {
         case trace_falsecolor_type::normal: {
@@ -1265,7 +1261,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
         case trace_falsecolor_type::frontfacing: {
             auto outgoing    = -direction;
             auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
-                                                               : vec3f{1, 0, 0};
+                                                         : vec3f{1, 0, 0};
             return {frontfacing, 1};
         }
         case trace_falsecolor_type::gnormal: {
@@ -1282,10 +1278,8 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {frontfacing, 1};
         }
         case trace_falsecolor_type::albedo: {
-            return {material.diffuse_weight +
-                        material.specular_weight +
-                        material.metal_weight +
-                        material.transmission_color +
+            return {material.diffuse_weight + material.specular_weight +
+                        material.metal_weight + material.transmission_color +
                         material.opacity_color,
                 1};
         }

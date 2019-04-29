@@ -121,27 +121,28 @@ struct yocto_voltexture {
 // For the documentation on the values, please see the OBJ format.
 struct yocto_material {
     string uri           = "";
-    bool   base_metallic = false;  // base-metallic parametrization
     bool   gltf_textures = false;  // glTF packed textures
 
     // base values
     float emission     = 0;
     vec3f emission_color = {1, 1, 1};
-    vec3f diffuse      = {0, 0, 0};
+    float diffuse      = 0;
+    float metallic     = 0;
+    vec3f base_color   = {0, 0, 0};
     vec3f specular     = {0, 0, 0};
     vec3f transmission = {0, 0, 0};
     float roughness    = 0.001f;
     float ior          = 1.5;
-    float metallic     = 0;
     float opacity      = 1;
     bool  thin_walled  = false;
 
     // textures
     int emission_texture     = -1;
-    int diffuse_texture      = -1;
+    int base_texture         = -1;
+    int metallic_texture     = -1;
     int specular_texture     = -1;
-    int transmission_texture = -1;
     int roughness_texture    = -1;
+    int transmission_texture = -1;
     int normal_texture       = -1;
 
     // volume properties
@@ -456,14 +457,14 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 struct material_point {
     float emission        = 0;
     vec3f emission_color  = {1, 1, 1};
-    vec3f diffuse         = {0, 0, 0};
+    float diffuse         = 0;
+    float metallic        = 0;
+    vec3f base_color      = {1, 1, 1};
     vec3f specular        = {0, 0, 0};
     vec3f transmission    = {0, 0, 0};
     float roughness       = 1;
     float opacity         = 1;
     float ior             = 1;
-    float metallic        = 1;
-    bool  base_metallic   = false;
     bool  thin_walled     = false;
     vec3f normalmap       = {0, 0, 1};
     vec3f volume_emission = {0, 0, 0};

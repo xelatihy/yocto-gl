@@ -537,13 +537,12 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     set_opengl_uniform(
         state.program, "highlight", (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
 
-    auto mtype = 1;
-    if (material.base_metallic) mtype = 2;
-    if (material.gltf_textures) mtype = (material.base_metallic) ? 2 : 3;
+    auto mtype = 2;
+    if (material.gltf_textures) mtype = 3;
     set_opengl_uniform(state.program, "mat_type", mtype);
-    set_opengl_uniform(state.program, "mat_ke", material.emission);
-    set_opengl_uniform(state.program, "mat_kd", material.diffuse);
-    set_opengl_uniform(state.program, "mat_ks", material.specular);
+    set_opengl_uniform(state.program, "mat_ke", material.emission* material.emission_color);
+    set_opengl_uniform(state.program, "mat_kd", material.base_color);
+    set_opengl_uniform(state.program, "mat_ks", vec3f{material.metallic});
     set_opengl_uniform(state.program, "mat_rs", material.roughness);
     set_opengl_uniform(state.program, "mat_op", material.opacity);
     set_opengl_uniform(
@@ -554,13 +553,13 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             : opengl_texture{},
         0);
     set_opengl_uniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
-        material.diffuse_texture >= 0
-            ? state.textures.at(material.diffuse_texture)
+        material.base_texture >= 0
+            ? state.textures.at(material.base_texture)
             : opengl_texture{},
         1);
     set_opengl_uniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
-        material.specular_texture >= 0
-            ? state.textures.at(material.specular_texture)
+        material.metallic_texture >= 0
+            ? state.textures.at(material.metallic_texture)
             : opengl_texture{},
         2);
     set_opengl_uniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",

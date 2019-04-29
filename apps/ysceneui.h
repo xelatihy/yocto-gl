@@ -88,7 +88,9 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     draw_opengl_widgets_scene_tree(
         win, "emission", scene, value.emission_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
-        win, "diffuse", scene, value.diffuse_texture, scene.textures, sel);
+        win, "base", scene, value.base_texture, scene.textures, sel);
+    draw_opengl_widgets_scene_tree(
+        win, "metallic", scene, value.metallic_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
         win, "specular", scene, value.specular_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
@@ -355,7 +357,15 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "emission color", edited_value.emission_color)) {
         edited = true;
     }
-    if (draw_coloredit_opengl_widget(win, "diffuse", edited_value.diffuse)) {
+    if (draw_slider_opengl_widget(
+            win, "diffuse", edited_value.diffuse, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "metallic", edited_value.metallic, 0, 1)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(win, "base color", edited_value.base_color)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(win, "specular", edited_value.specular)) {
@@ -396,8 +406,12 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             edited_value.emission_texture, scene.textures, true)) {
         edited = true;
     }
-    if (draw_combobox_opengl_widget(win, "diffuse_texture",
-            edited_value.diffuse_texture, scene.textures, true)) {
+    if (draw_combobox_opengl_widget(win, "base_texture",
+            edited_value.base_texture, scene.textures, true)) {
+        edited = true;
+    }
+    if (draw_combobox_opengl_widget(win, "metallic_texture",
+            edited_value.metallic_texture, scene.textures, true)) {
         edited = true;
     }
     if (draw_combobox_opengl_widget(win, "specular_texture",
@@ -414,10 +428,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     }
     if (draw_combobox_opengl_widget(win, "normal_texture",
             edited_value.normal_texture, scene.textures, true)) {
-        edited = true;
-    }
-    if (draw_checkbox_opengl_widget(
-            win, "base metallic", edited_value.base_metallic)) {
         edited = true;
     }
     if (draw_checkbox_opengl_widget(

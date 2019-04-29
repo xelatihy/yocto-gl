@@ -317,20 +317,15 @@ struct load_island_shape_callbacks : obj_callbacks {
         materials.push_back({});
         materials.back().uri = dmaterial.name;
         if (dmaterial.color_map != "") {
-            materials.back().diffuse         = {1, 1, 1};
-            materials.back().diffuse_texture = add_texture(
+            materials.back().diffuse         = 1;
+            materials.back().base_color      = {1, 1, 1};
+            materials.back().base_texture = add_texture(
                 dmaterial.color_map_baked);
-            // materials.back().specular  = {0.04f, 0.04f, 0.04f};
-            materials.back().specular  = {0, 0, 0};
-            materials.back().roughness = 1;
         } else if (dmaterial.refractive == 0) {
-            materials.back().diffuse = dmaterial.color;
-            // materials.back().specular  = {0.04f, 0.04f, 0.04f};
-            materials.back().specular  = {0, 0, 0};
-            materials.back().roughness = 1;
+            materials.back().diffuse         = 1;
+            materials.back().base_color = dmaterial.color;
         } else {
-            materials.back().diffuse      = {0, 0, 0};
-            materials.back().specular     = {0.04f, 0.04f, 0.04f};
+            materials.back().specular     = {1, 1, 1};
             materials.back().transmission = {1, 1, 1};
             materials.back().roughness    = 0;
             materials.back().thin_walled  = false;
@@ -722,7 +717,8 @@ void load_island_curvetube(const string& filename, const string& dirname,
     if (smap.find(outname) == smap.end()) {
         auto curves      = doc.get_root();
         auto material    = yocto_material{};
-        material.diffuse = mmap.at(material_name).color;
+        material.diffuse = 1;
+        material.base_color = mmap.at(material_name).color;
         scene.materials.push_back(material);
         auto shape      = yocto_shape{};
         shape.uri       = outname;

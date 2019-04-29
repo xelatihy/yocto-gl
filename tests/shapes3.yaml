@@ -55,13 +55,16 @@ textures:
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
-    diffuse: [0.7, 0.7, 0.7]
-    diffuse_texture: textures/test-floor.png
+    diffuse: 1
+    base_color: [0.7, 0.7, 0.7]
+    base_texture: textures/test-floor.png
   - uri: materials/test-matte.yaml
-    diffuse: [0.7, 0.7, 0.7]
+    diffuse: 1
+    base_color: [0.7, 0.7, 0.7]
     roughness: 1
   - uri: materials/test-hair.yaml
-    diffuse: [0.7, 0.7, 0.7]
+    diffuse: 1
+    base_color: [0.7, 0.7, 0.7]
     roughness: 1
   - uri: materials/test-arealight1.yaml
     emission: 20

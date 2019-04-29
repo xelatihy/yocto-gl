@@ -150,62 +150,70 @@ def make_tests():
         "materials": [
             {
                 "uri": "materials/test-floor.yaml",
-                "diffuse": [ 0.7, 0.7, 0.7 ],
-                "diffuse_texture": "textures/test-floor.png"
+                "diffuse": 1,
+                "base_color": [ 0.7, 0.7, 0.7 ],
+                "base_texture": "textures/test-floor.png"
             },
             {
                 "uri": "materials/test-uvgrid.yaml",
-                "diffuse": [ 1, 1, 1 ],
+                "diffuse": 1,
+                "base_color": [ 1, 1, 1 ],
                 "specular": [ 1, 1, 1 ],
                 "roughness": 0.1,
-                "diffuse_texture": "textures/test-uvgrid.png"
+                "base_texture": "textures/test-uvgrid.png"
             },
             {
                 "uri": "materials/test-matte.yaml",
-                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "diffuse": 1,
+                "base_color": [ 0.7, 0.7, 0.7 ],
                 "roughness": 1
             },
             {
                 "uri": "materials/test-plastic-sharp.yaml",
-                "diffuse": [ 0.5, 0.5, 0.7 ],
+                "diffuse": 1,
+                "base_color": [ 0.5, 0.5, 0.7 ],
                 "specular": [ 1, 1, 1 ],
                 "roughness": 0.01
             },
             {
                 "uri": "materials/test-plastic-rough.yaml",
-                "diffuse": [ 0.5, 0.7, 0.5 ],
+                "diffuse": 1,
+                "base_color": [ 0.5, 0.7, 0.5 ],
                 "specular": [ 1, 1, 1 ],
                 "roughness": 0.1
             },
             {
                 "uri": "materials/test-metal-sharp.yaml",
-                "diffuse": [ 0.7, 0.7, 0.7 ],
                 "metallic": 1,
+                "base_color": [ 0.7, 0.7, 0.7 ],
                 "roughness": 0
             },
             {
                 "uri": "materials/test-metal-rough.yaml",
-                "diffuse": [ 0.66, 0.45, 0.34 ],
                 "metallic": 1,
+                "base_color": [ 0.66, 0.45, 0.34 ],
                 "roughness": 0.1
             },
             {
                 "uri": "materials/test-plastic-sharp-bumped.yaml",
-                "diffuse": [ 0.5, 0.5, 0.7 ],
+                "diffuse": 1,
+                "base_color": [ 0.5, 0.5, 0.7 ],
                 "specular": [ 1, 1, 1 ],
                 "roughness": 0.01,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
                 "uri": "materials/test-metal-sharp-bumped.yaml",
-                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "diffuse": 1,
+                "base_color": [ 0.7, 0.7, 0.7 ],
                 "metallic": 1,
                 "roughness": 0,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
                 "uri": "materials/test-transparent.yaml",
-                "diffuse": [ 0.7, 0.5, 0.5 ],
+                "diffuse": 1,
+                "base_color": [ 0.7, 0.5, 0.5 ],
                 "roughness": 1,
                 "opacity": 0.2
             },
@@ -239,7 +247,8 @@ def make_tests():
             },
             {
                 "uri": "materials/test-hair.yaml",
-                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "diffuse": 1,
+                "base_color": [ 0.7, 0.7, 0.7 ],
                 "roughness": 1
             },
             {
@@ -485,7 +494,7 @@ def make_tests():
                 used = False
                 for material in scene['materials']:
                     if 'emission_texture' in material and material['emission_texture'] == remove_preset(texture['uri']): used = True
-                    if 'diffuse_texture' in material and material['diffuse_texture'] == remove_preset(texture['uri']): used = True
+                    if 'base_texture' in material and material['base_texture'] == remove_preset(texture['uri']): used = True
                     if 'normal_texture' in material and material['normal_texture'] == remove_preset(texture['uri']): used = True
                     if 'displacement_texture' in material and material['displacement_texture'] == remove_preset(texture['uri']): used = True
                 for subdiv in scene['subdivs']:
