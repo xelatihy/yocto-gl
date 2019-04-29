@@ -715,6 +715,14 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.specular_ior);
                 } else if (key == "transmission_color") {
                     get_yaml_value(value, material.transmission_color);
+                } else if (key == "coat_factor") {
+                    get_yaml_value(value, material.coat_factor);
+                } else if (key == "coat_color") {
+                    get_yaml_value(value, material.coat_color);
+                } else if (key == "coat_roughness") {
+                    get_yaml_value(value, material.coat_roughness);
+                } else if (key == "coat_ior") {
+                    get_yaml_value(value, material.coat_ior);
                 } else if (key == "opacity_factor") {
                     get_yaml_value(value, material.opacity_factor);
                 } else if (key == "thin_walled") {
@@ -962,7 +970,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             def_material.transmission_factor);
         print_optional(
             fs, "base_color", material.base_color, def_material.base_color);
-        print_optional(fs, "specular", material.specular_color,
+        print_optional(fs, "specular_color", material.specular_color,
             def_material.specular_color);
         print_optional(fs, "specular_roughness", material.specular_roughness,
             def_material.specular_roughness);
@@ -970,6 +978,14 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             def_material.specular_ior);
         print_optional(fs, "transmission_color", material.transmission_color,
             def_material.transmission_color);
+        print_optional(fs, "coat_factor", material.coat_factor,
+            def_material.coat_factor);
+        print_optional(fs, "coat_color", material.coat_color,
+            def_material.coat_color);
+        print_optional(fs, "coat_roughness", material.coat_roughness,
+            def_material.coat_roughness);
+        print_optional(fs, "coat_ior", material.coat_ior,
+            def_material.coat_ior);
         print_optional(fs, "opacity_factor", material.opacity_factor,
             def_material.opacity_factor);
         print_optional(
@@ -1327,21 +1343,24 @@ struct load_obj_scene_cb : obj_callbacks {
         material.emission_factor        = omat.ke == zero3f ? 0 : 1;
         material.emission_color         = omat.ke;
         material.diffuse_factor         = omat.kd == zero3f ? 0 : 1;
-        material.metallic_factor        = omat.km;
+        material.metallic_factor        = omat.pm;
         material.base_color             = omat.kd;
         material.specular_factor        = omat.ks == zero3f ? 0 : 1;
         material.specular_color         = omat.ks;
         material.transmission_factor    = omat.kt == zero3f ? 0 : 1;
         material.transmission_color     = omat.kt;
-        material.specular_roughness     = omat.rs;
+        material.specular_roughness     = omat.pr;
         material.specular_ior           = omat.ior;
+        material.coat_factor            = omat.pc;
+        material.coat_roughness         = omat.pcr;
         material.opacity_factor         = omat.op;
         material.emission_texture       = add_texture(omat.ke_txt, false);
         material.base_texture           = add_texture(omat.kd_txt, false);
-        material.metallic_texture       = add_texture(omat.km_txt, false);
+        material.metallic_texture       = add_texture(omat.pm_txt, false);
         material.specular_texture       = add_texture(omat.ks_txt, false);
         material.transmission_texture   = add_texture(omat.kt_txt, false);
-        material.roughness_texture      = add_texture(omat.rs_txt, true);
+        material.roughness_texture      = add_texture(omat.pr_txt, true);
+        material.opacity_texture        = add_texture(omat.op_txt, true);
         material.normal_texture         = add_texture(omat.norm_txt, true);
         material.volume_emission        = omat.ve;
         material.volume_albedo          = omat.va;
@@ -1487,6 +1506,7 @@ static void save_mtl(
             fs, "  Ke", material.emission_factor * material.emission_color);
         print_obj_keyvalue(fs, "  Kd", material.base_color);
         print_obj_keyvalue(fs, "  Pm", material.metallic_factor);
+        print_obj_keyvalue(fs, "  Pc", material.coat_factor);
         print_obj_keyvalue(fs, "  Ks", material.specular_color);
         print_obj_keyvalue(fs, "  Kt",
             material.transmission_factor * material.transmission_color);

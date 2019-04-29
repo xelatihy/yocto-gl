@@ -73,7 +73,7 @@ materials:
     diffuse_factor: 1
     specular_factor: 1
     base_color: [0.5, 0.7, 0.5]
-    specular_roughness: 0.1
+    specular_roughness: 0.2
   - uri: materials/test-metal-sharp.yaml
     metallic_factor: 1
     base_color: [0.7, 0.7, 0.7]
@@ -81,7 +81,7 @@ materials:
   - uri: materials/test-metal-rough.yaml
     metallic_factor: 1
     base_color: [0.66, 0.45, 0.34]
-    specular_roughness: 0.1
+    specular_roughness: 0.2
   - uri: materials/test-arealight1.yaml
     emission_factor: 20
   - uri: materials/test-arealight2.yaml

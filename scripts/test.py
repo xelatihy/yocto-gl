@@ -180,7 +180,7 @@ def make_tests():
                 "diffuse_factor": 1,
                 "specular_factor": 1,
                 "base_color": [ 0.5, 0.7, 0.5 ],
-                "specular_roughness": 0.1
+                "specular_roughness": 0.2
             },
             {
                 "uri": "materials/test-metal-sharp.yaml",
@@ -192,7 +192,7 @@ def make_tests():
                 "uri": "materials/test-metal-rough.yaml",
                 "metallic_factor": 1,
                 "base_color": [ 0.66, 0.45, 0.34 ],
-                "specular_roughness": 0.1
+                "specular_roughness": 0.2
             },
             {
                 "uri": "materials/test-plastic-sharp-bumped.yaml",
@@ -209,6 +209,21 @@ def make_tests():
                 "base_color": [ 0.7, 0.7, 0.7 ],
                 "specular_roughness": 0,
                 "normal_texture": "textures/test-bump-normal.png"
+            },
+            {
+                "uri": "materials/test-plastic-rough-coated.yaml",
+                "diffuse_factor": 1,
+                "specular_factor": 1,
+                "coat_factor": 1,
+                "base_color": [ 0.5, 0.7, 0.5 ],
+                "specular_roughness": 0.2
+            },
+            {
+                "uri": "materials/test-metal-rough-coated.yaml",
+                "metallic_factor": 1,
+                "coat_factor": 1,
+                "base_color": [ 0.66, 0.45, 0.34 ],
+                "specular_roughness": 0.2
             },
             {
                 "uri": "materials/test-transparent.yaml",
@@ -526,7 +541,7 @@ def make_tests():
     make_test('tests/features1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-metal-rough.yaml", "materials/test-plastic-rough.yaml", "materials/test-metal-sharp.yaml"], mixed_lights)
     make_test('tests/materials1.yaml', ['shapes/test-sphere.ply'], ["materials/test-plastic-sharp.yaml", "materials/test-plastic-rough.yaml", "materials/test-matte.yaml", "materials/test-metal-sharp.yaml", "materials/test-metal-rough.yaml"], mixed_lights)
     make_test('tests/materials2.yaml', ['shapes/test-sphere.ply'], ["materials/test-glass-sharp.yaml", "materials/test-glass-rough.yaml", "materials/test-transparent.yaml", "materials/test-thinglass-sharp.yaml", "materials/test-thinglass-rough.yaml"], mixed_lights)
-    make_test('tests/materials3.yaml', ['shapes/test-sphere.ply', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-sphere.ply'], ["materials/test-plastic-sharp-bumped.yaml", "materials/test-plastic-sharp-bumped.yaml", "materials/test-metal-sharp-bumped.yaml", "materials/test-metal-sharp-bumped.yaml", "materials/test-metal-sharp-bumped.yaml"], mixed_lights)
+    make_test('tests/materials3.yaml', ['shapes/test-sphere.ply', 'shapes/test-sphere.ply', 'shapes/test-sphere.ply', 'shapes/test-sphere.ply', 'shapes/test-sphere.ply'], ["materials/test-plastic-sharp-bumped.yaml", "materials/test-plastic-rough-coated.yaml", "materials/test-metal-sharp-bumped.yaml", "materials/test-metal-rough-coated.yaml", "materials/test-metal-rough.yaml"], mixed_lights)
     make_test('tests/materials4.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-volume-cloud.yaml", "materials/test-volume-glass.yaml", "materials/test-volume-jade.yaml", "materials/test-volume-emissive.yaml", "materials/test-volume-smoke.yaml"], mixed_lights)
     make_test('tests/shapes1.yaml', ['shapes/test-sphere.ply', "shapes/test-uvsphere-flipcap.ply", "shapes/test-disk.ply", "shapes/test-uvcylinder.ply", "shapes/test-cube.ply"], ["materials/test-uvgrid.yaml"], mixed_lights)
     make_test('tests/shapes2.yaml', ['shapes/test-cube-subdiv.obj', "shapes/test-suzanne-subdiv.obj", 'shapes/test-sphere-displaced.obj', "shapes/test-bunny.obj", "shapes/test-teapot.obj"], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-matte.yaml", "materials/test-uvgrid.yaml", "materials/test-uvgrid.yaml"], mixed_lights, subdivs=['subdivs/test-cube-subdiv.obj', "subdivs/test-suzanne-subdiv.obj", "subdivs/test-sphere-displaced.obj"])
