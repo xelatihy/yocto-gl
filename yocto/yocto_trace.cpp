@@ -576,15 +576,16 @@ bool other_hemisphere(
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_diffuse_scattering(const vec3f& weight, float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
+vec3f eval_diffuse_scattering(const vec3f& weight, float roughness,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming,
+    trace_mode mode) {
     if (weight == zero3f || mode != trace_mode::smooth) return zero3f;
     if (!same_hemisphere(normal, outgoing, incoming)) return zero3f;
     return weight / pif * abs(dot(normal, incoming));
 }
-vec3f eval_specular_scattering(const vec3f& weight, float roughness, const vec3f& eta,
-    const vec3f& etak, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming, trace_mode mode) {
+vec3f eval_specular_scattering(const vec3f& weight, float roughness,
+    const vec3f& eta, const vec3f& etak, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
     if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
         (!roughness && mode != trace_mode::delta))
         return zero3f;
@@ -608,6 +609,16 @@ vec3f eval_specular_scattering(const vec3f& weight, float roughness, const vec3f
         return weight * F;
     }
 }
+vec3f eval_transparency_scattering(const vec3f& weight,
+    const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming, trace_mode mode) {
+    if (weight == zero3f || mode != trace_mode::delta)
+        return zero3f;
+    if(other_hemisphere(normal, outgoing, incoming)) return zero3f;
+    return weight;
+}
+
+// Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
     const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
     // orientation
@@ -620,13 +631,15 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
     scattering += eval_diffuse_scattering(material.diffuse_weight,
         material.diffuse_roughness, normal_, outgoing, incoming, mode);
     scattering += eval_specular_scattering(material.coat_weight,
-        material.coat_roughness, material.coat_eta, zero3f, normal_,
-        outgoing, incoming, mode);
+        material.coat_roughness, material.coat_eta, zero3f, normal_, outgoing,
+        incoming, mode);
     scattering += eval_specular_scattering(material.specular_weight,
         material.specular_roughness, material.specular_eta, zero3f, normal_,
         outgoing, incoming, mode);
     scattering += eval_specular_scattering(material.metal_weight,
-        material.metal_roughness, material.metal_eta, material.metal_etak, 
+        material.metal_roughness, material.metal_eta, material.metal_etak,
+        normal_, outgoing, incoming, mode);
+    scattering += eval_transparency_scattering(material.opacity_weight,
         normal_, outgoing, incoming, mode);
 
     // transmission through rough thin surface
