@@ -521,15 +521,14 @@ trace_material eval_material(const material_point& point_,
     return material;
 }
 
-vec3f eval_emission(const trace_emissions& emissions,
-    const vec3f& normal, const vec3f& outgoing) {
+vec3f eval_emission(const trace_emissions& emissions, const vec3f& normal,
+    const vec3f& outgoing) {
     auto emission = zero3f;
     for (auto& lobe : emissions) emission += lobe.weight;
     return emission;
 }
-vec3f eval_emission(const trace_mediums& mediums,
-    const vec3f& normal, const vec3f& outgoing,
-    trace_mode mode = trace_mode::smooth) {
+vec3f eval_emission(const trace_mediums& mediums, const vec3f& normal,
+    const vec3f& outgoing, trace_mode mode = trace_mode::smooth) {
     auto emission = zero3f;
     for (auto& lobe : mediums) emission += lobe.weight * lobe.emission;
     return emission;
@@ -637,8 +636,8 @@ vec3f eval_volume_scattering(const vec3f& albedo, float phaseg,
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_scattering(const trace_bsdfs& bsdfs,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+vec3f eval_scattering(const trace_bsdfs& bsdfs, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
     auto scattering = zero3f;
     for (auto& lobe : bsdfs) {
         if (lobe.weight == zero3f) continue;
@@ -668,8 +667,8 @@ vec3f eval_scattering(const trace_bsdfs& bsdfs,
     }
     return scattering;
 }
-vec3f eval_scattering(const trace_deltas& deltas,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+vec3f eval_scattering(const trace_deltas& deltas, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
     auto scattering = zero3f;
     for (auto& lobe : deltas) {
         if (lobe.weight == zero3f) continue;
@@ -697,8 +696,8 @@ vec3f eval_scattering(const trace_deltas& deltas,
     }
     return scattering;
 }
-vec3f eval_scattering(const trace_mediums& mediums,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+vec3f eval_scattering(const trace_mediums& mediums, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
     auto scattering = zero3f;
     for (auto& lobe : mediums) {
         if (lobe.weight == zero3f) continue;
@@ -765,8 +764,8 @@ vec3f sample_volume_scattering(const vec3f& albedo, float phaseg,
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_scattering(const trace_bsdfs& bsdfs,
-    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
+vec3f sample_scattering(const trace_bsdfs& bsdfs, const vec3f& normal,
+    const vec3f& outgoing, float rnl, const vec2f& rn) {
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
     for (auto& lobe : bsdfs) {
@@ -799,8 +798,8 @@ vec3f sample_scattering(const trace_bsdfs& bsdfs,
     // something went wrong if we got here
     return zero3f;
 }
-vec3f sample_scattering(const trace_deltas& deltas,
-    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
+vec3f sample_scattering(const trace_deltas& deltas, const vec3f& normal,
+    const vec3f& outgoing, float rnl, const vec2f& rn) {
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
     for (auto& lobe : deltas) {
@@ -831,8 +830,8 @@ vec3f sample_scattering(const trace_deltas& deltas,
     // something went wrong if we got here
     return zero3f;
 }
-vec3f sample_scattering(const trace_mediums& mediums,
-    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
+vec3f sample_scattering(const trace_mediums& mediums, const vec3f& normal,
+    const vec3f& outgoing, float rnl, const vec2f& rn) {
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
     for (auto& lobe : mediums) {
@@ -920,8 +919,8 @@ float sample_volume_scattering_pdf(const vec3f& albedo, float phaseg,
 }
 
 // Compute the weight for sampling the BRDF
-float sample_scattering_pdf(const trace_bsdfs& bsdfs,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+float sample_scattering_pdf(const trace_bsdfs& bsdfs, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
     auto pdf = 0.0f;
     for (auto& lobe : bsdfs) {
         if (lobe.pdf == 0) continue;
@@ -951,8 +950,8 @@ float sample_scattering_pdf(const trace_bsdfs& bsdfs,
 
     return pdf;
 }
-float sample_scattering_pdf(const trace_deltas& deltas,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+float sample_scattering_pdf(const trace_deltas& deltas, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
     auto pdf = 0.0f;
     for (auto& lobe : deltas) {
         if (lobe.pdf == 0) continue;
@@ -979,8 +978,8 @@ float sample_scattering_pdf(const trace_deltas& deltas,
 
     return pdf;
 }
-float sample_scattering_pdf(const trace_mediums& mediums,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+float sample_scattering_pdf(const trace_mediums& mediums, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
     auto pdf = 0.0f;
     for (auto& lobe : mediums) {
         if (lobe.pdf == 0) continue;
@@ -1159,19 +1158,25 @@ pair<float, bool> sample_roulette(const vec3f& albedo, const vec3f& weight,
 }
 #endif
 
-pair<float, int> sample_distance(
-    const trace_material& material, float rl, float rd) {
-    return sample_distance(material.volume_density, rl, rd);
+pair<float, vec2i> sample_distance(const trace_mediums& mediums,
+    float rl, float rd) {
+    if (mediums.empty()) return {0, {-1, -1}};
+    auto idx = sample_uniform((int)mediums.size(), rl);
+    rl       = clamp(rl * (int)mediums.size() - idx, 0.0f, 1.0f);
+    auto [distance, channel] = sample_distance(mediums[idx].density, rl, rd);
+    return {distance, {idx, channel}};
 }
 
 float sample_distance_pdf(
-    const trace_material& material, float distance, int channel) {
-    return sample_distance_pdf(material.volume_density, distance, channel);
+    const trace_mediums& mediums, float distance, const vec2i& channel) {
+    if (mediums.empty() || channel.x < 0) return 0;
+    return sample_distance_pdf(mediums[channel.x].density, distance, channel.y);
 }
 
 vec3f eval_transmission(const trace_mediums& mediums, float distance) {
     auto transmission = vec3f{1, 1, 1};
-    for(auto& lobe : mediums) transmission *= eval_transmission(lobe.density, distance);
+    for (auto& lobe : mediums)
+        transmission *= eval_transmission(lobe.density, distance);
     return transmission;
 }
 
@@ -1228,9 +1233,9 @@ pair<vec3f, float> sample_transmission(const vec3f& position,
     if (material.volume_density == zero3f) return {vec3f{1}, max_distance};
     // clamp ray if inside a volume
     auto [distance, channel] = sample_distance(
-        material, rand1f(rng), rand1f(rng));
-    distance          = min(distance, max_distance);
-    auto pdf          = sample_distance_pdf(material, distance, channel);
+        material.mediums, rand1f(rng), rand1f(rng));
+    distance = min(distance, max_distance);
+    auto pdf = sample_distance_pdf(material.mediums, distance, channel);
     auto transmission = eval_transmission(material.mediums, distance);
     if (transmission == zero3f || pdf == 0) return {zero3f, 0};
     return {transmission / pdf, distance};
