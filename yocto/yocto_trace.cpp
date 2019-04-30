@@ -329,6 +329,7 @@ struct trace_emission {
     type_t type   = type_t::diffuse;
     vec3f  weight = zero3f;
 };
+using trace_emissions = short_vector<trace_emission, 8>;
 // Scattering lobe
 struct trace_bsdf {
     enum struct type_t { diffuse, reflection, transmission, transparency };
@@ -339,6 +340,7 @@ struct trace_bsdf {
     float  roughness = 0;
     float  pdf       = 0;
 };
+using trace_bsdfs = short_vector<trace_bsdf, 8>;
 // Delta lobe
 struct trace_delta {
     enum struct type_t { reflection, transmission, transparency, passthrough };
@@ -348,6 +350,7 @@ struct trace_delta {
     vec3f  etak   = zero3f;
     float  pdf    = 0;
 };
+using trace_deltas = short_vector<trace_delta, 8>;
 // Scattering medium
 struct trace_medium {
     enum struct type_t { phaseg };
@@ -359,16 +362,17 @@ struct trace_medium {
     float  phaseg   = 0;
     float  pdf      = 0;
 };
+using trace_mediums = short_vector<trace_medium, 8>;
 
 // Surface material
 struct trace_material {
     // emission
-    short_vector<trace_emission, 8> emissions = {};
+    trace_emissions emissions = {};
 
     // scattering
-    short_vector<trace_bsdf, 8>   bsdfs   = {};
-    short_vector<trace_delta, 8>  deltas  = {};
-    short_vector<trace_medium, 8> mediums = {};
+    trace_bsdfs   bsdfs   = {};
+    trace_deltas  deltas  = {};
+    trace_mediums mediums = {};
 
     // mediums
     vec3f volume_emission = zero3f;
@@ -517,13 +521,13 @@ trace_material eval_material(const material_point& point_,
     return material;
 }
 
-vec3f eval_emission(const short_vector<trace_emission, 8>& emissions,
+vec3f eval_emission(const trace_emissions& emissions,
     const vec3f& normal, const vec3f& outgoing) {
     auto emission = zero3f;
     for (auto& lobe : emissions) emission += lobe.weight;
     return emission;
 }
-vec3f eval_emission(const short_vector<trace_medium, 8>& mediums,
+vec3f eval_emission(const trace_mediums& mediums,
     const vec3f& normal, const vec3f& outgoing,
     trace_mode mode = trace_mode::smooth) {
     auto emission = zero3f;
@@ -633,7 +637,7 @@ vec3f eval_volume_scattering(const vec3f& albedo, float phaseg,
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_scattering(const short_vector<trace_bsdf, 8>& bsdfs,
+vec3f eval_scattering(const trace_bsdfs& bsdfs,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     auto scattering = zero3f;
     for (auto& lobe : bsdfs) {
@@ -664,7 +668,7 @@ vec3f eval_scattering(const short_vector<trace_bsdf, 8>& bsdfs,
     }
     return scattering;
 }
-vec3f eval_scattering(const short_vector<trace_delta, 8>& deltas,
+vec3f eval_scattering(const trace_deltas& deltas,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     auto scattering = zero3f;
     for (auto& lobe : deltas) {
@@ -693,7 +697,7 @@ vec3f eval_scattering(const short_vector<trace_delta, 8>& deltas,
     }
     return scattering;
 }
-vec3f eval_scattering(const short_vector<trace_medium, 8>& mediums,
+vec3f eval_scattering(const trace_mediums& mediums,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     auto scattering = zero3f;
     for (auto& lobe : mediums) {
@@ -761,7 +765,7 @@ vec3f sample_volume_scattering(const vec3f& albedo, float phaseg,
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_scattering(const short_vector<trace_bsdf, 8>& bsdfs,
+vec3f sample_scattering(const trace_bsdfs& bsdfs,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
@@ -795,7 +799,7 @@ vec3f sample_scattering(const short_vector<trace_bsdf, 8>& bsdfs,
     // something went wrong if we got here
     return zero3f;
 }
-vec3f sample_scattering(const short_vector<trace_delta, 8>& deltas,
+vec3f sample_scattering(const trace_deltas& deltas,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
@@ -827,7 +831,7 @@ vec3f sample_scattering(const short_vector<trace_delta, 8>& deltas,
     // something went wrong if we got here
     return zero3f;
 }
-vec3f sample_scattering(const short_vector<trace_medium, 8>& mediums,
+vec3f sample_scattering(const trace_mediums& mediums,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
@@ -916,7 +920,7 @@ float sample_volume_scattering_pdf(const vec3f& albedo, float phaseg,
 }
 
 // Compute the weight for sampling the BRDF
-float sample_scattering_pdf(const short_vector<trace_bsdf, 8>& bsdfs,
+float sample_scattering_pdf(const trace_bsdfs& bsdfs,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     auto pdf = 0.0f;
     for (auto& lobe : bsdfs) {
@@ -947,7 +951,7 @@ float sample_scattering_pdf(const short_vector<trace_bsdf, 8>& bsdfs,
 
     return pdf;
 }
-float sample_scattering_pdf(const short_vector<trace_delta, 8>& deltas,
+float sample_scattering_pdf(const trace_deltas& deltas,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     auto pdf = 0.0f;
     for (auto& lobe : deltas) {
@@ -975,7 +979,7 @@ float sample_scattering_pdf(const short_vector<trace_delta, 8>& deltas,
 
     return pdf;
 }
-float sample_scattering_pdf(const short_vector<trace_medium, 8>& mediums,
+float sample_scattering_pdf(const trace_mediums& mediums,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     auto pdf = 0.0f;
     for (auto& lobe : mediums) {
