@@ -682,18 +682,22 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal,
                                   outgoing, incoming));
             } break;
             case trace_scattering_type::transmission: {
-                scattering += lobe.weight * (lobe.roughness ?
-                              eval_microfacet_transmission(lobe.roughness,
-                                  lobe.eta, normal, outgoing, incoming):
-                              eval_delta_transmission(
+                scattering +=
+                    lobe.weight *
+                    (lobe.roughness
+                            ? eval_microfacet_transmission(lobe.roughness,
+                                  lobe.eta, normal, outgoing, incoming)
+                            : eval_delta_transmission(
                                   lobe.eta, normal, outgoing, incoming));
 
             } break;
             case trace_scattering_type::transparency: {
-                scattering += lobe.weight * (lobe.roughness ?
-                              eval_microfacet_transparency(lobe.roughness,
-                                  lobe.eta, normal, outgoing, incoming):
-                              eval_delta_transparency(
+                scattering +=
+                    lobe.weight *
+                    (lobe.roughness
+                            ? eval_microfacet_transparency(lobe.roughness,
+                                  lobe.eta, normal, outgoing, incoming)
+                            : eval_delta_transparency(
                                   lobe.eta, normal, outgoing, incoming));
             } break;
             case trace_scattering_type::volume: {
@@ -707,63 +711,48 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal,
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_diffuse_scattering(const vec3f& weight, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn,
-    trace_mode mode) {
-    if (weight == zero3f || mode != trace_mode::smooth) return zero3f;
+vec3f sample_diffuse_reflection(float roughness, const vec3f& normal,
+    const vec3f& outgoing, const vec2f& rn) {
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
     return sample_hemisphere(up_normal, rn);
 }
-vec3f sample_specular_scattering(const vec3f& weight, float roughness,
-    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
-    const vec2f& rn, trace_mode mode) {
-    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
-        (!roughness && mode != trace_mode::delta))
-        return zero3f;
+vec3f sample_microfacet_reflection(float roughness, const vec3f& eta,
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
-    if (roughness) {
-        auto halfway = sample_microfacet(roughness, up_normal, rn);
-        return reflect(outgoing, halfway);
-    } else {
-        return reflect(outgoing, up_normal);
-    }
+    auto halfway   = sample_microfacet(roughness, up_normal, rn);
+    return reflect(outgoing, halfway);
 }
-vec3f sample_transmission_scattering(const vec3f& weight, float roughness,
-    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
-    const vec2f& rn, trace_mode mode) {
-    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
-        (!roughness && mode != trace_mode::delta))
-        return zero3f;
+vec3f sample_delta_reflection(const vec3f& eta, const vec3f& normal,
+    const vec3f& outgoing, const vec2f& rn) {
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
-    if (roughness) {
-        auto halfway = sample_microfacet(roughness, up_normal, rn);
-        return refract(outgoing, halfway,
-            dot(normal, outgoing) > 0 ? 1 / mean(eta) : mean(eta));
-    } else {
-        return refract(outgoing, up_normal,
-            dot(normal, outgoing) > 0 ? 1 / mean(eta) : mean(eta));
-    }
+    return reflect(outgoing, up_normal);
 }
-vec3f sample_transparency_scattering(const vec3f& weight, float roughness,
-    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
-    const vec2f& rn, trace_mode mode) {
-    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
-        (!roughness && mode != trace_mode::delta))
-        return zero3f;
+vec3f sample_microfacet_transmission(float roughness, const vec3f& eta,
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
-    if (roughness) {
-        auto halfway = sample_microfacet(roughness, up_normal, rn);
-        auto ir      = reflect(outgoing, halfway);
-        return -reflect(ir, up_normal);
-    } else {
-        return -outgoing;
-    }
+    auto halfway   = sample_microfacet(roughness, up_normal, rn);
+    return refract(outgoing, halfway,
+        dot(normal, outgoing) > 0 ? 1 / mean(eta) : mean(eta));
 }
-vec3f sample_volume_scattering(const vec3f& weight, const vec3f& albedo,
-    float phaseg, const vec3f& normal, const vec3f& outgoing, const vec2f& rn,
-    trace_mode mode) {
-    if (weight == zero3f || albedo == zero3f || mode != trace_mode::volume)
-        return zero3f;
+vec3f sample_delta_transmission(const vec3f& eta, const vec3f& normal,
+    const vec3f& outgoing, const vec2f& rn) {
+    auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
+    return refract(outgoing, up_normal,
+        dot(normal, outgoing) > 0 ? 1 / mean(eta) : mean(eta));
+}
+vec3f sample_microfacet_transparency(float roughness, const vec3f& eta,
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+    auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
+    auto halfway   = sample_microfacet(roughness, up_normal, rn);
+    auto ir        = reflect(outgoing, halfway);
+    return -reflect(ir, up_normal);
+}
+vec3f sample_delta_transparency(const vec3f& eta, const vec3f& normal,
+    const vec3f& outgoing, const vec2f& rn) {
+    return -outgoing;
+}
+vec3f sample_volume_scattering(const vec3f& albedo, float phaseg,
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
     auto direction = sample_phasefunction(phaseg, rn);
     return make_basis_fromz(-outgoing) * direction;
 }
@@ -787,24 +776,33 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal,
 
         switch (lobe.type) {
             case trace_scattering_type::diffuse: {
-                return sample_diffuse_scattering(
-                    lobe.weight, lobe.roughness, normal, outgoing, rn, mode);
+                return sample_diffuse_reflection(
+                    lobe.roughness, normal, outgoing, rn);
             } break;
             case trace_scattering_type::reflection: {
-                return sample_specular_scattering(lobe.weight, lobe.roughness,
-                    lobe.eta, normal, outgoing, rn, mode);
+                return lobe.roughness
+                           ? sample_microfacet_reflection(
+                                 lobe.roughness, lobe.eta, normal, outgoing, rn)
+                           : sample_delta_reflection(
+                                 lobe.eta, normal, outgoing, rn);
             } break;
             case trace_scattering_type::transmission: {
-                return sample_transmission_scattering(lobe.weight,
-                    lobe.roughness, lobe.eta, normal, outgoing, rn, mode);
+                return lobe.roughness
+                           ? sample_microfacet_transmission(
+                                 lobe.roughness, lobe.eta, normal, outgoing, rn)
+                           : sample_delta_transmission(
+                                 lobe.eta, normal, outgoing, rn);
             } break;
             case trace_scattering_type::transparency: {
-                return sample_transparency_scattering(lobe.weight,
-                    lobe.roughness, lobe.eta, normal, outgoing, rn, mode);
+                return lobe.roughness
+                           ? sample_microfacet_transparency(
+                                 lobe.roughness, lobe.eta, normal, outgoing, rn)
+                           : sample_delta_transparency(
+                                 lobe.eta, normal, outgoing, rn);
             } break;
             case trace_scattering_type::volume: {
-                return sample_volume_scattering({1, 1, 1}, lobe.albedo,
-                    lobe.phaseg, normal, outgoing, rn, mode);
+                return sample_volume_scattering(
+                    lobe.albedo, lobe.phaseg, normal, outgoing, rn);
             } break;
         }
     }
