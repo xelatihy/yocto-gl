@@ -471,109 +471,67 @@ struct trace_weights {
     float total = 0;
 };
 
+float eval_diffuse_weight(const vec3f& weight, float roughness,
+    const vec3f& normal, const vec3f& outgoing, trace_mode mode) {
+    if (weight == zero3f || mode != trace_mode::smooth) return 0;
+    return max(weight);
+}
+float eval_specular_weight(const vec3f& weight, float roughness,
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
+    trace_mode mode) {
+    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
+        (!roughness && mode != trace_mode::delta))
+        return 0;
+    auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+    return max(weight * fresnel);
+}
+float eval_transmission_weight(const vec3f& weight, float roughness,
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
+    trace_mode mode) {
+    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
+        (!roughness && mode != trace_mode::delta))
+        return 0;
+    auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+    return max(weight * (1 - fresnel));
+}
+float eval_transparency_weight(const vec3f& weight, float roughness,
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
+    trace_mode mode) {
+    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
+        (!roughness && mode != trace_mode::delta))
+        return 0;
+    if(eta == zero3f) return max(weight);
+    auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+    return max(weight * (1 - fresnel));
+}
+float eval_volume_weight(const vec3f& weight, const vec3f& albedo, float phaseg,
+    const vec3f& normal, const vec3f& outgoing, trace_mode mode) {
+    if (weight == zero3f || mode != trace_mode::volume) return 0;
+    return max(albedo);
+}
+
 trace_weights compute_weights(const trace_material& material,
     const vec3f& normal, const vec3f& outgoing, trace_mode mode) {
-    // load weights
-    auto weights = trace_weights{};
-
-    // diffuse
-    if (material.diffuse_weight != zero3f && mode == trace_mode::smooth) {
-        weights.diffuse = max(material.diffuse_weight);
-    }
-
-    // metal
-    if (material.metal_weight != zero3f && material.metal_roughness &&
-        mode == trace_mode::smooth) {
-        auto fresnel = fresnel_dielectric(
-            material.metal_eta, abs(dot(normal, outgoing)));
-        weights.metal = max(material.metal_weight * fresnel);
-    }
-
-    // metal
-    if (material.metal_weight != zero3f && !material.metal_roughness &&
-        mode == trace_mode::delta) {
-        auto fresnel = fresnel_dielectric(
-            material.metal_eta, abs(dot(normal, outgoing)));
-        weights.metal = max(material.metal_weight * fresnel);
-    }
-
-    // specular
-    if (material.specular_weight != zero3f && material.specular_roughness &&
-        mode == trace_mode::smooth) {
-        auto fresnel = fresnel_dielectric(
-            material.specular_eta, abs(dot(normal, outgoing)));
-        weights.specular = max(material.specular_weight * fresnel);
-    }
-
-    // specular
-    if (material.specular_weight != zero3f && !material.specular_roughness &&
-        mode == trace_mode::delta) {
-        auto fresnel = fresnel_dielectric(
-            material.specular_eta, abs(dot(normal, outgoing)));
-        weights.specular = max(material.specular_weight * fresnel);
-    }
-
-    // transmission
-    if (material.transmission_weight != zero3f &&
-        material.transmission_roughness && mode == trace_mode::smooth) {
-        auto fresnel = fresnel_dielectric(
-            material.specular_eta, abs(dot(normal, outgoing)));
-        weights.transmission = max(
-            material.transmission_weight * (1 - fresnel));
-    }
-
-    // transmission
-    if (material.transmission_weight != zero3f &&
-        !material.transmission_roughness && mode == trace_mode::delta) {
-        auto fresnel = fresnel_dielectric(
-            material.specular_eta, abs(dot(normal, outgoing)));
-        weights.transmission = max(
-            material.transmission_weight * (1 - fresnel));
-    }
-
-    // transparency
-    if (material.transparency_weight != zero3f &&
-        material.transparency_roughness && mode == trace_mode::smooth) {
-        auto fresnel = fresnel_dielectric(
-            material.specular_eta, abs(dot(normal, outgoing)));
-        weights.transparency = max(
-            material.transparency_weight * (1 - fresnel));
-    }
-
-    // transparency
-    if (material.transparency_weight != zero3f &&
-        !material.transparency_roughness && mode == trace_mode::delta) {
-        auto fresnel = fresnel_dielectric(
-            material.specular_eta, abs(dot(normal, outgoing)));
-        weights.transparency = max(
-            material.transparency_weight * (1 - fresnel));
-    }
-
-    // coat
-    if (material.coat_weight != zero3f && material.coat_roughness &&
-        mode == trace_mode::smooth) {
-        auto fresnel = fresnel_dielectric(
-            material.coat_eta, abs(dot(normal, outgoing)));
-        weights.coat = max(material.coat_weight * fresnel);
-    }
-
-    // coat
-    if (material.coat_weight != zero3f && !material.coat_roughness &&
-        mode == trace_mode::delta) {
-        auto fresnel = fresnel_dielectric(
-            material.coat_eta, abs(dot(normal, outgoing)));
-        weights.coat = max(material.coat_weight * fresnel);
-    }
-
-    // opacity
-    if (material.opacity_weight != zero3f && mode == trace_mode::delta) {
-        weights.opacity = max(material.opacity_weight);
-    }
-
-    // volume
-    if (material.volume_albedo != zero3f && mode == trace_mode::volume) {
-        weights.volume = max(material.volume_albedo);
-    }
+    auto weights         = trace_weights{};
+    weights.diffuse      = eval_diffuse_weight(material.diffuse_weight,
+        material.diffuse_roughness, normal, outgoing, mode);
+    weights.specular     = eval_specular_weight(material.specular_weight,
+        material.specular_roughness, material.specular_eta, normal, outgoing,
+        mode);
+    weights.metal        = eval_specular_weight(material.metal_weight,
+        material.metal_roughness, material.metal_eta, normal, outgoing, mode);
+    weights.coat        = eval_specular_weight(material.coat_weight,
+        material.coat_roughness, material.coat_eta, normal, outgoing, mode);
+    weights.transmission = eval_transmission_weight(
+        material.transmission_weight, material.transmission_roughness,
+        material.transmission_eta, normal, outgoing, mode);
+    weights.transparency = eval_transparency_weight(
+        material.transparency_weight, material.transparency_roughness,
+        material.transparency_eta, normal, outgoing, mode);
+    weights.opacity = eval_transparency_weight(
+        material.opacity_weight, 0, zero3f, normal, outgoing, mode);
+    weights.volume = eval_volume_weight({1, 1, 1},
+        material.volume_albedo, material.volume_phaseg, normal, outgoing, mode);
 
     // accumulate
     weights.total = weights.diffuse + weights.specular + weights.metal +
@@ -709,15 +667,15 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal,
     auto scattering = zero3f;
     scattering += eval_diffuse_scattering(material.diffuse_weight,
         material.diffuse_roughness, normal, outgoing, incoming, mode);
-    scattering += eval_specular_scattering(material.coat_weight,
-        material.coat_roughness, material.coat_eta, zero3f, normal, outgoing,
-        incoming, mode);
     scattering += eval_specular_scattering(material.specular_weight,
         material.specular_roughness, material.specular_eta, zero3f, normal,
         outgoing, incoming, mode);
     scattering += eval_specular_scattering(material.metal_weight,
         material.metal_roughness, material.metal_eta, material.metal_etak,
         normal, outgoing, incoming, mode);
+    scattering += eval_specular_scattering(material.coat_weight,
+        material.coat_roughness, material.coat_eta, zero3f, normal, outgoing,
+        incoming, mode);
     scattering += eval_transmission_scattering(material.transmission_weight,
         material.transmission_roughness, material.transmission_eta, normal,
         outgoing, incoming, mode);
