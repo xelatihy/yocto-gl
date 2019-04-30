@@ -1443,7 +1443,8 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
             scene, intersection, direction);
 
         // accumulate emission
-        radiance += weight * eval_emission(material.emissions, normal, outgoing);
+        radiance += weight *
+                    eval_emission(material.emissions, normal, outgoing);
         if (is_scattering_zero(material)) break;
 
         // russian roulette
@@ -1501,7 +1502,8 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
             scene, intersection, direction);
 
         // accumulate emission
-        radiance += weight * eval_emission(material.emissions, normal, outgoing);
+        radiance += weight *
+                    eval_emission(material.emissions, normal, outgoing);
         if (is_scattering_zero(material)) break;
 
         // brdf * light
