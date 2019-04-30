@@ -323,6 +323,12 @@ namespace yocto {
 // Set non-rigid frames as default
 constexpr bool trace_non_rigid_frames = true;
 
+// Emission lobe
+struct trace_emission {
+    enum struct type_t { diffuse };
+    type_t type   = type_t::diffuse;
+    vec3f  weight = zero3f;
+};
 // Scattering lobe
 struct trace_bsdf {
     enum struct type_t { diffuse, reflection, transmission, transparency };
@@ -345,18 +351,19 @@ struct trace_delta {
 // Scattering medium
 struct trace_medium {
     enum struct type_t { phaseg };
-    type_t type    = type_t::phaseg;
-    vec3f  weight  = zero3f;
-    vec3f  density = zero3f;
-    vec3f  albedo  = zero3f;
-    float  phaseg  = 0;
-    float  pdf     = 0;
+    type_t type     = type_t::phaseg;
+    vec3f  weight   = zero3f;
+    vec3f  emission = zero3f;
+    vec3f  density  = zero3f;
+    vec3f  albedo   = zero3f;
+    float  phaseg   = 0;
+    float  pdf      = 0;
 };
 
 // Surface material
 struct trace_material {
     // emission
-    vec3f emission_weight = zero3f;
+    short_vector<trace_emission, 8> emissions = {};
 
     // scattering
     short_vector<trace_bsdf, 8>   bsdfs   = {};
@@ -427,8 +434,9 @@ trace_material eval_material(const material_point& point_,
         weight *= point.coat_color * (1 - fresnel);
     }
     if (point.emission_factor && point.emission_color != zero3f) {
-        material.emission_weight = weight * point.emission_factor *
-                                   point.emission_color;
+        auto lweight = weight * point.emission_factor * point.emission_color;
+        material.emissions.push_back(
+            {trace_emission::type_t::diffuse, lweight});
     }
     if (point.metallic_factor && point.base_color != zero3f) {
         auto roughness = point.specular_roughness;
@@ -484,8 +492,8 @@ trace_material eval_material(const material_point& point_,
     }
     if (point.volume_density != zero3f) {
         material.mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
-            point.volume_density, point.volume_albedo, point.volume_phaseg,
-            max(point.volume_albedo)});
+            point.volume_emission, point.volume_density, point.volume_albedo,
+            point.volume_phaseg, max(point.volume_albedo)});
         material.volume_emission = point.volume_emission;
         material.volume_albedo   = point.volume_albedo;
         material.volume_density  = point.volume_density;
@@ -509,11 +517,17 @@ trace_material eval_material(const material_point& point_,
     return material;
 }
 
-vec3f eval_emission(const trace_material& material, const vec3f& normal,
-    const vec3f& outgoing, trace_mode mode = trace_mode::smooth) {
+vec3f eval_emission(const short_vector<trace_emission, 8>& emissions,
+    const vec3f& normal, const vec3f& outgoing) {
     auto emission = zero3f;
-    if (mode == trace_mode::smooth) emission += material.emission_weight;
-    if (mode == trace_mode::volume) emission += material.volume_emission;
+    for (auto& lobe : emissions) emission += lobe.weight;
+    return emission;
+}
+vec3f eval_emission(const short_vector<trace_medium, 8>& mediums,
+    const vec3f& normal, const vec3f& outgoing,
+    trace_mode mode = trace_mode::smooth) {
+    auto emission = zero3f;
+    for (auto& lobe : mediums) emission += lobe.weight * lobe.emission;
     return emission;
 }
 
@@ -1357,9 +1371,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 : make_volume_point(scene, origin, direction, distance, medium);
 
         // accumulate emission
-        radiance += weight *
-                    eval_emission(material, normal, outgoing,
-                        on_surface ? trace_mode::smooth : trace_mode::volume);
+        radiance +=
+            weight *
+            (on_surface ? eval_emission(material.emissions, normal, outgoing)
+                        : eval_emission(material.mediums, normal, outgoing));
         if (is_scattering_zero(material)) break;
 
         // russian roulette
@@ -1428,7 +1443,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
             scene, intersection, direction);
 
         // accumulate emission
-        radiance += weight * eval_emission(material, normal, outgoing);
+        radiance += weight * eval_emission(material.emissions, normal, outgoing);
         if (is_scattering_zero(material)) break;
 
         // russian roulette
@@ -1486,7 +1501,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
             scene, intersection, direction);
 
         // accumulate emission
-        radiance += weight * eval_emission(material, normal, outgoing);
+        radiance += weight * eval_emission(material.emissions, normal, outgoing);
         if (is_scattering_zero(material)) break;
 
         // brdf * light
@@ -1575,7 +1590,11 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {xyz(color), 1};
         }
         case trace_falsecolor_type::emission: {
-            return {material.emission_weight, 1};
+            auto weight = zero3f;
+            for (auto& lobe : material.emissions) {
+                weight += lobe.weight;
+            }
+            return {weight, 1};
         }
         case trace_falsecolor_type::diffuse: {
             auto weight = zero3f;
@@ -1633,7 +1652,10 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::highlight: {
-            auto emission = material.emission_weight;
+            auto emission = zero3f;
+            for (auto& lobe : material.emissions) {
+                emission += lobe.weight;
+            }
             auto outgoing = -direction;
             if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
             return {emission * abs(dot(outgoing, normal)), 1};
