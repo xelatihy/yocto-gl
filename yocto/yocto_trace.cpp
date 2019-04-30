@@ -369,36 +369,11 @@ using trace_mediums = short_vector<trace_medium, 8>;
 
 // Surface material
 struct trace_material {
-    // emission
     trace_emissions emissions = {};
-
-    // scattering
     trace_bsdfs   bsdfs   = {};
     trace_deltas  deltas  = {};
     trace_mediums mediums = {};
-
-    // mediums
-    vec3f volume_emission = zero3f;
-    vec3f volume_albedo   = zero3f;
-    vec3f volume_density  = zero3f;
-    float volume_phaseg   = 0.0f;
 };
-
-// trace scattering mode
-enum struct trace_mode { none, smooth, delta, volume };
-
-bool is_scattering_zero(const trace_material& material) {
-    for (auto& lobe : material.bsdfs) {
-        if (lobe.weight != zero3f) return false;
-    }
-    for (auto& lobe : material.deltas) {
-        if (lobe.weight != zero3f) return false;
-    }
-    for (auto& lobe : material.mediums) {
-        if (lobe.weight != zero3f) return false;
-    }
-    return true;
-}
 
 trace_material eval_material(const material_point& point_,
     const vec4f& shape_color, const vec3f& normal, const vec3f& outgoing) {
@@ -499,10 +474,6 @@ trace_material eval_material(const material_point& point_,
         material.mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
             point.volume_emission, point.volume_density, point.volume_albedo,
             point.volume_phaseg, max(point.volume_albedo)});
-        material.volume_emission = point.volume_emission;
-        material.volume_albedo   = point.volume_albedo;
-        material.volume_density  = point.volume_density;
-        material.volume_phaseg   = point.volume_phaseg;
     }
     auto normalize_weights = [](auto& lobes) {
         auto weight = 0.0f;
@@ -522,7 +493,7 @@ vec3f eval_emission(const trace_emissions& emissions, const vec3f& normal,
     return emission;
 }
 vec3f eval_emission(const trace_mediums& mediums, const vec3f& normal,
-    const vec3f& outgoing, trace_mode mode = trace_mode::smooth) {
+    const vec3f& outgoing) {
     auto emission = zero3f;
     for (auto& lobe : mediums) emission += lobe.weight * lobe.emission;
     return emission;
@@ -1384,7 +1355,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             on_surface
                 ? weight * eval_emission(material.emissions, normal, outgoing)
                 : weight * eval_emission(material.mediums, normal, outgoing);
-        if (is_scattering_zero(material)) break;
+        if (material.bsdfs.empty() && material.deltas.empty() && material.mediums.empty()) break;
 
         // russian roulette
         auto [rr_weight, rr_stop] = sample_roulette(
@@ -1457,7 +1428,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         // accumulate emission
         radiance += weight *
                     eval_emission(material.emissions, normal, outgoing);
-        if (is_scattering_zero(material)) break;
+        if (material.bsdfs.empty() && material.deltas.empty()) break;
 
         // russian roulette
         auto [rr_weight, rr_stop] = sample_roulette(
@@ -1517,7 +1488,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         // accumulate emission
         radiance += weight *
                     eval_emission(material.emissions, normal, outgoing);
-        if (is_scattering_zero(material)) break;
+        if (material.bsdfs.empty() && material.deltas.empty()) break;
 
         // brdf * light
         radiance += weight * pif *
