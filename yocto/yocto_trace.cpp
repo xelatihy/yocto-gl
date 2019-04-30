@@ -1191,38 +1191,18 @@ tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
 }
 
 // Sample next mode. Returns weight and whether it is a delta.
-tuple<float, bool> sample_delta(
-    const trace_material& material, rng_state& rng) {
+pair<float, bool> sample_delta(const trace_material& material, float rn) {
     // choose delta or non-delta
     if (material.delta_pdf == 0 && material.bsdf_pdf == 0) return {0, false};
-    if (rand1f(rng) < material.delta_pdf) {
+    if (rn < material.delta_pdf) {
         return {1 / material.delta_pdf, true};
     } else {
         return {1 / material.bsdf_pdf, false};
     }
 }
 
-// Sample next direction. Returns weight and direction.
-tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
-    const vec3f& normal, const trace_material& material, const vec3f& outgoing,
-    bool on_surface, bool mis, rng_state& rng) {
-    if (!on_surface) {
-        return sample_direction(scene, lights, bvh, position, normal,
-            material.mediums, outgoing, mis, rng);
-    } else {
-        auto [delta_weight, delta] = sample_delta(material, rng);
-        auto [weight, incoming] =
-            delta ? sample_direction(scene, lights, bvh, position, normal,
-                        material.deltas, outgoing, mis, rng)
-                  : sample_direction(scene, lights, bvh, position, normal,
-                        material.bsdfs, outgoing, mis, rng);
-        return {delta_weight * weight, incoming};
-    }
-}
-
 // Returns weight and distance
-tuple<vec3f, float> sample_transmission(const vec3f& position,
+pair<vec3f, float> sample_transmission(const vec3f& position,
     const vec3f& outgoing, float max_distance, const trace_material& material,
     rng_state& rng) {
     if (material.volume_density == zero3f) return {vec3f{1}, max_distance};
@@ -1389,9 +1369,21 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= rr_weight;
         if (weight == zero3f) break;
 
+        // pick delta
+        auto [delta_weight, delta] = on_surface
+                                         ? sample_delta(material, rand1f(rng))
+                                         : pair{1.0f, false};
+        weight *= delta_weight;
+
         // next direction
-        auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            position, normal, material, outgoing, on_surface, true, rng);
+        auto [scattering, incoming] =
+            on_surface
+                ? (delta ? sample_direction(scene, lights, bvh, position,
+                               normal, material.deltas, outgoing, false, rng)
+                         : sample_direction(scene, lights, bvh, position,
+                               normal, material.bsdfs, outgoing, true, rng))
+                : sample_direction(scene, lights, bvh, position, normal,
+                      material.mediums, outgoing, true, rng);
         weight *= scattering;
         if (weight == zero3f) break;
 
@@ -1446,9 +1438,16 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= rr_weight;
         if (weight == zero3f) break;
 
+        // pick delta
+        auto [delta_weight, delta] = sample_delta(material, rand1f(rng));
+        weight *= delta_weight;
+
         // next direction
-        auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            position, normal, material, outgoing, true, false, rng);
+        auto [scattering, incoming] =
+            delta ? sample_direction(scene, lights, bvh, position, normal,
+                        material.deltas, outgoing, false, rng)
+                  : sample_direction(scene, lights, bvh, position, normal,
+                        material.bsdfs, outgoing, true, rng);
         weight *= scattering;
         if (weight == zero3f) break;
 
@@ -1499,8 +1498,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
         // continue path
         auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            position, normal, material.deltas, outgoing, false,
-            rng);
+            position, normal, material.deltas, outgoing, false, rng);
 
         // exit if no hit
         weight *= scattering;
