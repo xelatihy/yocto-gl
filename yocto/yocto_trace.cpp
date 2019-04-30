@@ -343,7 +343,9 @@ struct trace_material {
     vec3f transmission_weight    = zero3f;
     float transmission_roughness = 1;
     vec3f transmission_eta       = {1, 1, 1};
-    bool  transmission_thin      = false;
+    vec3f transparency_weight    = zero3f;
+    float transparency_roughness = 1;
+    vec3f transparency_eta       = {1, 1, 1};
     vec3f coat_weight            = zero3f;
     float coat_roughness         = 1;
     vec3f coat_eta               = {1, 1, 1};
@@ -364,6 +366,7 @@ bool is_scattering_zero(const trace_material& material) {
            material.specular_weight == zero3f &&
            material.metal_weight == zero3f &&
            material.transmission_weight == zero3f &&
+           material.transparency_weight == zero3f &&
            material.coat_weight == zero3f &&
            material.opacity_weight == zero3f &&
            material.volume_albedo == zero3f;
@@ -408,15 +411,20 @@ trace_material eval_material(const material_point& point_,
         material.metal_eta       = specular_to_eta(point.base_color);
         weight *= 1 - point.metallic_factor;
     }
-    if (point.transmission_factor && point.transmission_color != zero3f) {
+    if (point.transmission_factor && point.transmission_color != zero3f &&
+        !point.thin_walled) {
         material.transmission_weight = weight * point.transmission_factor *
                                        point.transmission_color;
         material.transmission_roughness = point.specular_roughness;
         material.transmission_eta       = vec3f{point.specular_ior};
-        material.transmission_thin      = point.thin_walled;
-        if (point.thin_walled && !point.specular_factor) {
-            material.transmission_eta = {1, 1, 1};
-        }
+    }
+    if (point.transmission_factor && point.transmission_color != zero3f &&
+        point.thin_walled) {
+        material.transparency_weight = weight * point.transmission_factor *
+                                       point.transmission_color;
+        material.transparency_roughness = point.specular_roughness;
+        material.transparency_eta       = vec3f{point.specular_ior};
+        if (!point.specular_factor) material.transparency_eta = {1, 1, 1};
     }
     if (point.specular_factor && point.specular_color != zero3f) {
         material.specular_weight = weight * point.specular_factor *
@@ -454,6 +462,7 @@ struct trace_weights {
     float specular     = 0;
     float metal        = 0;
     float transmission = 0;
+    float transparency = 0;
     float coat         = 0;
     float opacity      = 0;
     float volume       = 0;
@@ -522,6 +531,24 @@ trace_weights compute_weights(const trace_material& material,
             material.transmission_weight * (1 - fresnel));
     }
 
+    // transparency
+    if (material.transparency_weight != zero3f &&
+        material.transparency_roughness && mode == trace_mode::smooth) {
+        auto fresnel = fresnel_dielectric(
+            material.specular_eta, abs(dot(normal, outgoing)));
+        weights.transparency = max(
+            material.transparency_weight * (1 - fresnel));
+    }
+
+    // transparency
+    if (material.transparency_weight != zero3f &&
+        !material.transparency_roughness && mode == trace_mode::delta) {
+        auto fresnel = fresnel_dielectric(
+            material.specular_eta, abs(dot(normal, outgoing)));
+        weights.transparency = max(
+            material.transparency_weight * (1 - fresnel));
+    }
+
     // coat
     if (material.coat_weight != zero3f && material.coat_roughness &&
         mode == trace_mode::smooth) {
@@ -550,8 +577,8 @@ trace_weights compute_weights(const trace_material& material,
 
     // accumulate
     weights.total = weights.diffuse + weights.specular + weights.metal +
-                    weights.transmission + weights.coat + weights.opacity +
-                    weights.volume;
+                    weights.transmission + weights.transparency + weights.coat +
+                    weights.opacity + weights.volume;
 
     // normalize
     if (weights.total) {
@@ -559,6 +586,7 @@ trace_weights compute_weights(const trace_material& material,
         weights.specular /= weights.total;
         weights.metal /= weights.total;
         weights.transmission /= weights.total;
+        weights.transparency /= weights.total;
         weights.coat /= weights.total;
         weights.opacity /= weights.total;
         weights.volume /= weights.total;
@@ -613,60 +641,60 @@ vec3f eval_specular_scattering(const vec3f& weight, float roughness,
     }
 }
 vec3f eval_transmission_scattering(const vec3f& weight, float roughness,
-    const vec3f& eta, bool thin, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming, trace_mode mode) {
     if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
         (!roughness && mode != trace_mode::delta))
         return zero3f;
     if (!other_hemisphere(normal, outgoing, incoming)) return zero3f;
     if (roughness) {
-        if (!thin) {
-            auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
-            auto halfway_vector = dot(outgoing, normal) > 0
-                                      ? -(outgoing + eta * incoming)
-                                      : (eta * outgoing + incoming);
-            auto halfway = normalize(halfway_vector);
-            auto F       = fresnel_dielectric(eta, abs(dot(halfway, outgoing)));
-            auto D       = eval_microfacetD(roughness, up_normal, halfway);
-            auto G       = eval_microfacetG(
-                roughness, up_normal, halfway, outgoing, incoming);
+        auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
+        auto halfway_vector = dot(outgoing, normal) > 0
+                                  ? -(outgoing + eta * incoming)
+                                  : (eta * outgoing + incoming);
+        auto halfway = normalize(halfway_vector);
+        auto F       = fresnel_dielectric(eta, abs(dot(halfway, outgoing)));
+        auto D       = eval_microfacetD(roughness, up_normal, halfway);
+        auto G       = eval_microfacetG(
+            roughness, up_normal, halfway, outgoing, incoming);
 
-            auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
-                             (dot(outgoing, normal) * dot(incoming, normal));
+        auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
+                         (dot(outgoing, normal) * dot(incoming, normal));
 
-            auto numerator   = weight * (1 - F) * D * G;
-            auto denominator = dot(halfway_vector, halfway_vector);
+        auto numerator   = weight * (1 - F) * D * G;
+        auto denominator = dot(halfway_vector, halfway_vector);
 
-            // [Walter 2007] equation 21
-            return abs(dot_terms) * numerator / denominator *
-                   abs(dot(normal, incoming));
-        } else {
-            auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
-            auto ir        = reflect(-incoming, up_normal);
-            auto halfway   = normalize(ir + outgoing);
-            auto F = fresnel_dielectric(eta, abs(dot(halfway, outgoing)));
-            auto D = eval_microfacetD(roughness, up_normal, halfway);
-            auto G = eval_microfacetG(
-                roughness, up_normal, halfway, outgoing, ir);
-            return weight * (1 - F) * D * G /
-                   abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
-                   abs(dot(normal, incoming));
-        }
+        // [Walter 2007] equation 21
+        return abs(dot_terms) * numerator / denominator *
+               abs(dot(normal, incoming));
     } else {
-        if (!thin) {
-            auto F = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
-            return weight * (1 - F);
-        } else {
-            auto F = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
-            return weight * (1 - F);
-        }
+        auto F = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+        return weight * (1 - F);
     }
 }
-vec3f eval_transparency_scattering(const vec3f& weight, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
-    if (weight == zero3f || mode != trace_mode::delta) return zero3f;
+vec3f eval_transparency_scattering(const vec3f& weight, float roughness,
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming, trace_mode mode) {
+    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
+        (!roughness && mode != trace_mode::delta))
+        return zero3f;
     if (!other_hemisphere(normal, outgoing, incoming)) return zero3f;
-    return weight;
+    if (roughness) {
+        auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
+        auto ir        = reflect(-incoming, up_normal);
+        auto halfway   = normalize(ir + outgoing);
+        auto F         = fresnel_dielectric(eta, abs(dot(halfway, outgoing)));
+        auto D         = eval_microfacetD(roughness, up_normal, halfway);
+        auto G = eval_microfacetG(roughness, up_normal, halfway, outgoing, ir);
+        return weight * (1 - F) * D * G /
+               abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+               abs(dot(normal, incoming));
+    } else if (eta == zero3f) {
+        return weight;
+    } else {
+        auto F = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+        return weight * (1 - F);
+    }
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
@@ -685,12 +713,14 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
     scattering += eval_specular_scattering(material.metal_weight,
         material.metal_roughness, material.metal_eta, material.metal_etak,
         normal_, outgoing, incoming, mode);
-    scattering += eval_transmission_scattering(
-        material.transmission_weight, material.transmission_roughness, 
-        material.transmission_eta, material.transmission_thin, normal_, 
+    scattering += eval_transmission_scattering(material.transmission_weight,
+        material.transmission_roughness, material.transmission_eta, normal_,
+        outgoing, incoming, mode);
+    scattering += eval_transparency_scattering(material.transparency_weight,
+        material.transparency_roughness, material.transparency_eta, normal_,
         outgoing, incoming, mode);
     scattering += eval_transparency_scattering(
-        material.opacity_weight, normal_, outgoing, incoming, mode);
+        material.opacity_weight, 0, zero3f, normal_, outgoing, incoming, mode);
 
     // volume
     if (material.volume_albedo != zero3f && mode == trace_mode::volume) {
@@ -756,29 +786,36 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
     if (material.transmission_weight != zero3f &&
         material.transmission_roughness && mode == trace_mode::smooth &&
         rnl <= weight_sum) {
-        if (!material.transmission_thin) {
-            auto halfway = sample_microfacet(
-                material.transmission_roughness, normal, rn);
-            auto eta = mean(material.transmission_eta);
-            return refract(outgoing, halfway, outgoing_up ? 1 / eta : eta);
-        } else {
-            auto halfway = sample_microfacet(
-                material.transmission_roughness, normal, rn);
-            auto ir = reflect(outgoing, halfway);
-            return -reflect(ir, normal);
-        }
+        auto halfway = sample_microfacet(
+            material.transmission_roughness, normal, rn);
+        auto eta = mean(material.transmission_eta);
+        return refract(outgoing, halfway, outgoing_up ? 1 / eta : eta);
     }
 
     // sample according to specular transmission
     if (material.transmission_weight != zero3f &&
         !material.transmission_roughness && mode == trace_mode::delta &&
         rnl <= weight_sum) {
-        if (!material.transmission_thin) {
-            auto eta = mean(material.transmission_eta);
-            return refract(outgoing, normal, outgoing_up ? 1 / eta : eta);
-        } else {
-            return -outgoing;
-        }
+        auto eta = mean(material.transmission_eta);
+        return refract(outgoing, normal, outgoing_up ? 1 / eta : eta);
+    }
+
+    // sample according to rough transmission
+    weight_sum += weights.transparency;
+    if (material.transparency_weight != zero3f &&
+        material.transparency_roughness && mode == trace_mode::smooth &&
+        rnl <= weight_sum) {
+        auto halfway = sample_microfacet(
+            material.transparency_roughness, normal, rn);
+        auto ir = reflect(outgoing, halfway);
+        return -reflect(ir, normal);
+    }
+
+    // sample according to specular transmission
+    if (material.transparency_weight != zero3f &&
+        !material.transparency_roughness && mode == trace_mode::delta &&
+        rnl <= weight_sum) {
+        return -outgoing;
     }
 
     // sample according to specular GGX
@@ -869,28 +906,19 @@ float sample_scattering_pdf(const trace_material& material,
     if (material.transmission_weight != zero3f &&
         material.transmission_roughness && mode == trace_mode::smooth &&
         outgoing_up != incoming_up) {
-        if (!material.transmission_thin) {
-            auto eta            = material.transmission_eta;
-            auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
-                                              : (eta * outgoing + incoming);
-            auto halfway = normalize(halfway_vector);
+        auto eta            = material.transmission_eta;
+        auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
+                                          : (eta * outgoing + incoming);
+        auto halfway = normalize(halfway_vector);
 
-            auto d = sample_microfacet_pdf(
-                material.transmission_roughness, normal, halfway);
+        auto d = sample_microfacet_pdf(
+            material.transmission_roughness, normal, halfway);
 
-            // [Walter 2007] equation 17
-            auto jacobian = fabs(dot(halfway, incoming)) /
-                            dot(halfway_vector, halfway_vector);
-            pdf += weights.transmission * d * jacobian;
-            // print("pdf refraction\n");
-        } else {
-            auto ir      = reflect(-incoming, normal);
-            auto halfway = normalize(ir + outgoing);
-            auto d       = sample_microfacet_pdf(
-                material.transmission_roughness, normal, halfway);
-            auto jacobian = 0.25f / fabs(dot(outgoing, halfway));
-            pdf += weights.transmission * d * jacobian;
-        }
+        // [Walter 2007] equation 17
+        auto jacobian = fabs(dot(halfway, incoming)) /
+                        dot(halfway_vector, halfway_vector);
+        pdf += weights.transmission * d * jacobian;
+        // print("pdf refraction\n");
     }
 
     // specular transmission
@@ -898,6 +926,25 @@ float sample_scattering_pdf(const trace_material& material,
         !material.transmission_roughness && mode == trace_mode::delta &&
         outgoing_up != incoming_up) {
         pdf += weights.transmission;
+    }
+
+    // transmission through thin surface
+    if (material.transparency_weight != zero3f &&
+        material.transparency_roughness && mode == trace_mode::smooth &&
+        outgoing_up != incoming_up) {
+        auto ir      = reflect(-incoming, normal);
+        auto halfway = normalize(ir + outgoing);
+        auto d       = sample_microfacet_pdf(
+            material.transparency_roughness, normal, halfway);
+        auto jacobian = 0.25f / fabs(dot(outgoing, halfway));
+        pdf += weights.transparency * d * jacobian;
+    }
+
+    // specular transmission
+    if (material.transparency_weight != zero3f &&
+        !material.transparency_roughness && mode == trace_mode::delta &&
+        outgoing_up != incoming_up) {
+        pdf += weights.transparency;
     }
 
     // specular reflection
