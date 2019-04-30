@@ -1158,8 +1158,8 @@ pair<float, bool> sample_roulette(const vec3f& albedo, const vec3f& weight,
 }
 #endif
 
-pair<float, vec2i> sample_distance(const trace_mediums& mediums,
-    float rl, float rd) {
+pair<float, vec2i> sample_distance(
+    const trace_mediums& mediums, float rl, float rd) {
     if (mediums.empty()) return {0, {-1, -1}};
     auto idx = sample_uniform((int)mediums.size(), rl);
     rl       = clamp(rl * (int)mediums.size() - idx, 0.0f, 1.0f);
@@ -1227,16 +1227,16 @@ pair<float, bool> sample_delta(const trace_material& material, float rn) {
 }
 
 // Returns weight and distance
-pair<vec3f, float> sample_transmission(const vec3f& position,
-    const vec3f& outgoing, float max_distance, const trace_material& material,
-    rng_state& rng) {
-    if (material.volume_density == zero3f) return {vec3f{1}, max_distance};
+pair<vec3f, float> sample_transmission(const trace_mediums& mediums,
+    const vec3f& position, const vec3f& outgoing, float max_distance,
+    float rl, float rn) {
+    if (mediums.empty()) return {vec3f{1}, max_distance};
     // clamp ray if inside a volume
     auto [distance, channel] = sample_distance(
-        material.mediums, rand1f(rng), rand1f(rng));
+        mediums,rl, rn);
     distance = min(distance, max_distance);
-    auto pdf = sample_distance_pdf(material.mediums, distance, channel);
-    auto transmission = eval_transmission(material.mediums, distance);
+    auto pdf = sample_distance_pdf(mediums, distance, channel);
+    auto transmission = eval_transmission(mediums, distance);
     if (transmission == zero3f || pdf == 0) return {zero3f, 0};
     return {transmission / pdf, distance};
 }
@@ -1370,8 +1370,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto outgoing = -direction;
 
         // clamp ray if inside a volume
-        auto [transmission, distance] = sample_transmission(
-            origin, outgoing, intersection.distance, medium, rng);
+        auto [transmission, distance] = sample_transmission(medium.mediums,
+            origin, outgoing, intersection.distance, rand1f(rng), rand1f(rng));
         weight *= transmission;
         auto on_surface = distance >= intersection.distance;
 
