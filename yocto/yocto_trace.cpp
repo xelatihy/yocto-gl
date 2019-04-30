@@ -398,21 +398,23 @@ trace_material eval_material(const material_point& point_,
     auto material = trace_material{};
     auto weight   = vec3f{1};
     if (point.opacity_factor < 0.999f) {
-        auto& lobe  = material.deltas.emplace_back();
-        lobe.type   = trace_bsdf::type_t::transparency;
-        lobe.weight = vec3f{1 - point.opacity_factor};
-        lobe.pdf    = max(lobe.weight);
+        auto lweight = vec3f{1 - point.opacity_factor};
+        material.deltas.push_back({trace_bsdf::type_t::transparency, lweight,
+            zero3f, zero3f, 0, max(lweight)});
         weight *= point.opacity_factor;
     }
     if (point.coat_factor) {
-        auto& lobe = point.coat_roughness ? material.bsdfs.emplace_back()
-                                          : material.deltas.emplace_back();
-        lobe.type      = trace_bsdf::type_t::reflection;
-        lobe.weight    = weight * point.coat_factor;
-        lobe.roughness = point.coat_roughness;
-        lobe.eta       = vec3f{point.coat_ior};
-        auto fresnel = fresnel_dielectric(lobe.eta, abs(dot(normal, outgoing)));
-        lobe.pdf     = max(lobe.weight * fresnel);
+        auto roughness = point.coat_roughness;
+        auto eta       = vec3f{point.coat_ior};
+        auto fresnel   = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+        auto lweight   = vec3f{1 - point.opacity_factor};
+        if (roughness) {
+            material.bsdfs.push_back({trace_bsdf::type_t::reflection, lweight,
+                eta, zero3f, roughness, max(lweight * fresnel)});
+        } else {
+            material.deltas.push_back({trace_bsdf::type_t::reflection, lweight,
+                eta, zero3f, roughness, max(lweight * fresnel)});
+        }
         weight *= point.coat_color * (1 - fresnel);
     }
     if (point.emission_factor && point.emission_color != zero3f) {
@@ -420,65 +422,61 @@ trace_material eval_material(const material_point& point_,
                                    point.emission_color;
     }
     if (point.metallic_factor && point.base_color != zero3f) {
-        auto& lobe = point.specular_roughness ? material.bsdfs.emplace_back()
-                                              : material.deltas.emplace_back();
-        lobe.type      = trace_bsdf::type_t::reflection;
-        lobe.weight    = weight * point.metallic_factor * point.base_color;
-        lobe.roughness = point.specular_roughness;
-        lobe.eta       = specular_to_eta(point.base_color);
-        auto fresnel = fresnel_dielectric(lobe.eta, abs(dot(normal, outgoing)));
-        lobe.pdf     = max(lobe.weight * fresnel);
+        auto roughness = point.specular_roughness;
+        auto eta       = specular_to_eta(point.base_color);
+        auto fresnel   = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+        auto lweight   = weight * point.metallic_factor * point.base_color;
+        if (roughness) {
+            material.bsdfs.push_back({trace_bsdf::type_t::reflection, lweight,
+                eta, zero3f, roughness, max(lweight * fresnel)});
+        } else {
+            material.deltas.push_back({trace_bsdf::type_t::reflection, lweight,
+                eta, zero3f, roughness, max(lweight * fresnel)});
+        }
         weight *= 1 - point.metallic_factor;
     }
-    if (point.transmission_factor && point.transmission_color != zero3f &&
-        !point.thin_walled) {
-        auto& lobe = point.specular_roughness ? material.bsdfs.emplace_back()
-                                              : material.deltas.emplace_back();
-        lobe.type   = trace_bsdf::type_t::transmission;
-        lobe.weight = weight * point.transmission_factor *
-                      point.transmission_color;
-        lobe.roughness = point.specular_roughness;
-        lobe.eta       = vec3f{point.specular_ior};
-        auto fresnel = fresnel_dielectric(lobe.eta, abs(dot(normal, outgoing)));
-        lobe.pdf     = max(lobe.weight * (1 - fresnel));
-    }
-    if (point.transmission_factor && point.transmission_color != zero3f &&
-        point.thin_walled) {
-        auto& lobe = point.specular_roughness ? material.bsdfs.emplace_back()
-                                              : material.deltas.emplace_back();
-        lobe.type   = trace_bsdf::type_t::transparency;
-        lobe.weight = weight * point.transmission_factor *
-                      point.transmission_color;
-        lobe.roughness = point.specular_roughness;
-        lobe.eta       = vec3f{point.specular_ior};
-        if (!point.specular_factor) lobe.eta = {1, 1, 1};
-        auto fresnel = fresnel_dielectric(lobe.eta, abs(dot(normal, outgoing)));
-        lobe.pdf     = max(lobe.weight * (1 - fresnel));
+    if (point.transmission_factor && point.transmission_color != zero3f) {
+        auto roughness = point.specular_roughness;
+        auto eta       = vec3f{point.specular_ior};
+        if (point.thin_walled && !point.specular_factor) eta = {1, 1, 1};
+        auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+        auto lweight = weight * point.transmission_factor *
+                       point.transmission_color;
+        if (roughness) {
+            material.bsdfs.push_back({point.thin_walled
+                                          ? trace_bsdf::type_t::transparency
+                                          : trace_bsdf::type_t::transmission,
+                lweight, eta, zero3f, roughness, max(lweight * (1 - fresnel))});
+        } else {
+            material.deltas.push_back({point.thin_walled
+                                           ? trace_bsdf::type_t::transparency
+                                           : trace_bsdf::type_t::transmission,
+                lweight, eta, zero3f, roughness, max(lweight * (1 - fresnel))});
+        }
     }
     if (point.specular_factor && point.specular_color != zero3f) {
-        auto& lobe = point.specular_roughness ? material.bsdfs.emplace_back()
-                                              : material.deltas.emplace_back();
-        lobe.type      = trace_bsdf::type_t::reflection;
-        lobe.weight    = weight * point.specular_factor * point.specular_color;
-        lobe.roughness = point.specular_roughness;
-        lobe.eta       = vec3f{point.specular_ior};
-        auto fresnel = fresnel_dielectric(lobe.eta, abs(dot(normal, outgoing)));
-        lobe.pdf     = max(lobe.weight * fresnel);
+        auto roughness = point.specular_roughness;
+        auto eta       = vec3f{point.specular_ior};
+        auto fresnel   = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+        auto lweight   = weight * point.specular_factor * point.specular_color;
+        if (roughness) {
+            material.bsdfs.push_back({trace_bsdf::type_t::reflection, lweight,
+                eta, zero3f, roughness, max(lweight * fresnel)});
+        } else {
+            material.deltas.push_back({trace_bsdf::type_t::reflection, lweight,
+                eta, zero3f, roughness, max(lweight * fresnel)});
+        }
         weight *= 1 - fresnel;
     }
     if (point.diffuse_factor && point.base_color != zero3f) {
-        auto& lobe  = material.bsdfs.emplace_back();
-        lobe.type   = trace_bsdf::type_t::diffuse;
-        lobe.weight = weight * point.diffuse_factor * point.base_color;
-        lobe.pdf    = max(lobe.weight);
+        auto lweight = weight * point.diffuse_factor * point.base_color;
+        material.bsdfs.push_back({trace_bsdf::type_t::diffuse, lweight, zero3f,
+            zero3f, 0, max(lweight)});
     }
     if (point.volume_density != zero3f) {
-        auto& lobe               = material.mediums.emplace_back();
-        lobe.type                = trace_medium::type_t::phaseg;
-        lobe.weight              = {1, 1, 1};
-        lobe.albedo              = point.volume_albedo;
-        lobe.phaseg              = point.volume_phaseg;
-        lobe.pdf                 = max(lobe.albedo);
+        material.mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
+            point.volume_density, point.volume_albedo, point.volume_phaseg,
+            max(point.volume_albedo)});
         material.volume_emission = point.volume_emission;
         material.volume_albedo   = point.volume_albedo;
         material.volume_density  = point.volume_density;
