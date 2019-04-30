@@ -135,26 +135,24 @@ vec3f specular_to_eta(const vec3f& specular) {
 vec3f fresnel_dielectric(const vec3f& eta_, float cosw) {
     auto eta = eta_;
     if (cosw < 0) {
-        eta  = vec3f{1, 1, 1} / eta;
+        eta  = 1 / eta;
         cosw = -cosw;
     }
 
     auto sin2 = 1 - cosw * cosw;
     auto eta2 = eta * eta;
 
-    auto cos2t = vec3f{1, 1, 1} - vec3f{sin2, sin2, sin2} / eta2;
-    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
-        return vec3f{1, 1, 1};  // tir
+    auto cos2t = 1 - sin2 / eta2;
+    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0) return {1, 1, 1};  // tir
 
-    auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
+    auto t0 = sqrt(cos2t);
     auto t1 = eta * t0;
     auto t2 = eta * cosw;
 
-    auto roughness = (vec3f{cosw, cosw, cosw} - t1) /
-                     (vec3f{cosw, cosw, cosw} + t1);
-    auto rp = (t0 - t2) / (t0 + t2);
+    auto roughness = (cosw - t1) / (cosw + t1);
+    auto rp        = (t0 - t2) / (t0 + t2);
 
-    return (roughness * roughness + rp * rp) / 2.0f;
+    return (roughness * roughness + rp * rp) / 2;
 }
 
 // Compute the fresnel term for metals. Implementation from
@@ -181,7 +179,7 @@ vec3f fresnel_metal(const vec3f& eta, const vec3f& etak, float cosw) {
     auto t4 = t2 * sin2;
     auto rp = roughness * (t3 - t4) / (t3 + t4);
 
-    return (rp + roughness) / 2.0f;
+    return (rp + roughness) / 2;
 }
 
 pair<float, int> sample_distance(const vec3f& density, float rl, float rd) {
