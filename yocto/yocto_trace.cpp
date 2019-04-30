@@ -333,6 +333,15 @@ struct trace_bsdf {
     float  roughness = 0;
     float  pdf       = 0;
 };
+// Delta lobe
+struct trace_delta {
+    enum struct type_t { reflection, transmission, transparency, passthrough };
+    type_t type      = type_t::reflection;
+    vec3f  weight    = zero3f;
+    vec3f  eta       = zero3f;
+    vec3f  etak      = zero3f;
+    float  pdf       = 0;
+};
 // Scattering medium
 struct trace_medium {
     enum struct type_t { phaseg };
@@ -351,7 +360,7 @@ struct trace_material {
 
     // scattering
     short_vector<trace_bsdf, 8>   bsdfs   = {};
-    short_vector<trace_bsdf, 8>   deltas  = {};
+    short_vector<trace_delta, 8>   deltas  = {};
     short_vector<trace_medium, 8> mediums = {};
 
     // mediums
@@ -399,8 +408,8 @@ trace_material eval_material(const material_point& point_,
     auto weight   = vec3f{1};
     if (point.opacity_factor < 0.999f) {
         auto lweight = vec3f{1 - point.opacity_factor};
-        material.deltas.push_back({trace_bsdf::type_t::transparency, lweight,
-            zero3f, zero3f, 0, max(lweight)});
+        material.deltas.push_back({trace_delta::type_t::passthrough, lweight,
+            zero3f, zero3f, max(lweight)});
         weight *= point.opacity_factor;
     }
     if (point.coat_factor) {
@@ -412,8 +421,8 @@ trace_material eval_material(const material_point& point_,
             material.bsdfs.push_back({trace_bsdf::type_t::reflection, lweight,
                 eta, zero3f, roughness, max(lweight * fresnel)});
         } else {
-            material.deltas.push_back({trace_bsdf::type_t::reflection, lweight,
-                eta, zero3f, roughness, max(lweight * fresnel)});
+            material.deltas.push_back({trace_delta::type_t::reflection, lweight,
+                eta, zero3f, max(lweight * fresnel)});
         }
         weight *= point.coat_color * (1 - fresnel);
     }
@@ -430,8 +439,8 @@ trace_material eval_material(const material_point& point_,
             material.bsdfs.push_back({trace_bsdf::type_t::reflection, lweight,
                 eta, zero3f, roughness, max(lweight * fresnel)});
         } else {
-            material.deltas.push_back({trace_bsdf::type_t::reflection, lweight,
-                eta, zero3f, roughness, max(lweight * fresnel)});
+            material.deltas.push_back({trace_delta::type_t::reflection, lweight,
+                eta, zero3f, max(lweight * fresnel)});
         }
         weight *= 1 - point.metallic_factor;
     }
@@ -449,9 +458,9 @@ trace_material eval_material(const material_point& point_,
                 lweight, eta, zero3f, roughness, max(lweight * (1 - fresnel))});
         } else {
             material.deltas.push_back({point.thin_walled
-                                           ? trace_bsdf::type_t::transparency
-                                           : trace_bsdf::type_t::transmission,
-                lweight, eta, zero3f, roughness, max(lweight * (1 - fresnel))});
+                                           ? trace_delta::type_t::transparency
+                                           : trace_delta::type_t::transmission,
+                lweight, eta, zero3f, max(lweight * (1 - fresnel))});
         }
     }
     if (point.specular_factor && point.specular_color != zero3f) {
@@ -463,8 +472,8 @@ trace_material eval_material(const material_point& point_,
             material.bsdfs.push_back({trace_bsdf::type_t::reflection, lweight,
                 eta, zero3f, roughness, max(lweight * fresnel)});
         } else {
-            material.deltas.push_back({trace_bsdf::type_t::reflection, lweight,
-                eta, zero3f, roughness, max(lweight * fresnel)});
+            material.deltas.push_back({trace_delta::type_t::reflection, lweight,
+                eta, zero3f, max(lweight * fresnel)});
         }
         weight *= 1 - fresnel;
     }
@@ -599,6 +608,11 @@ vec3f eval_delta_transparency(const vec3f& eta, const vec3f& normal,
         return (1 - F);
     }
 }
+vec3f eval_delta_passthrough(const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
+    if (!other_hemisphere(normal, outgoing, incoming)) return zero3f;
+    return {1, 1, 1};
+}
 vec3f eval_volume_scattering(const vec3f& albedo, float phaseg,
     const vec3f& outgoing, const vec3f& incoming) {
     return albedo * eval_phasefunction(dot(outgoing, incoming), phaseg);
@@ -636,25 +650,28 @@ vec3f eval_bsdf_scattering(const short_vector<trace_bsdf, 8>& bsdfs,
     }
     return scattering;
 }
-vec3f eval_delta_scattering(const short_vector<trace_bsdf, 8>& deltas,
+vec3f eval_delta_scattering(const short_vector<trace_delta, 8>& deltas,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     auto scattering = zero3f;
     for (auto& lobe : deltas) {
         if (lobe.weight == zero3f) continue;
         switch (lobe.type) {
-            case trace_bsdf::type_t::diffuse: break;
-            case trace_bsdf::type_t::reflection: {
+            case trace_delta::type_t::reflection: {
                 scattering += lobe.weight * eval_delta_reflection(lobe.eta,
                                                 zero3f, normal, outgoing,
                                                 incoming);
             } break;
-            case trace_bsdf::type_t::transmission: {
+            case trace_delta::type_t::transmission: {
                 scattering += lobe.weight * eval_delta_transmission(lobe.eta,
                                                 normal, outgoing, incoming);
 
             } break;
-            case trace_bsdf::type_t::transparency: {
+            case trace_delta::type_t::transparency: {
                 scattering += lobe.weight * eval_delta_transparency(lobe.eta,
+                                                normal, outgoing, incoming);
+            } break;
+            case trace_delta::type_t::passthrough: {
+                scattering += lobe.weight * eval_delta_passthrough(
                                                 normal, outgoing, incoming);
             } break;
             default: break;
@@ -719,6 +736,10 @@ vec3f sample_delta_transparency(const vec3f& eta, const vec3f& normal,
     const vec3f& outgoing, const vec2f& rn) {
     return -outgoing;
 }
+vec3f sample_delta_passthrough(const vec3f& normal,
+    const vec3f& outgoing, const vec2f& rn) {
+    return -outgoing;
+}
 vec3f sample_volume_scattering(const vec3f& albedo, float phaseg,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
     auto direction = sample_phasefunction(phaseg, rn);
@@ -760,7 +781,7 @@ vec3f sample_bsdf_scattering(const short_vector<trace_bsdf, 8>& bsdfs,
     // something went wrong if we got here
     return zero3f;
 }
-vec3f sample_delta_scattering(const short_vector<trace_bsdf, 8>& deltas,
+vec3f sample_delta_scattering(const short_vector<trace_delta, 8>& deltas,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
@@ -772,20 +793,20 @@ vec3f sample_delta_scattering(const short_vector<trace_bsdf, 8>& deltas,
         if (rnl > weight_sum) continue;
 
         switch (lobe.type) {
-            case trace_bsdf::type_t::diffuse: {
-                return sample_diffuse_reflection(
-                    lobe.roughness, normal, outgoing, rn);
-            } break;
-            case trace_bsdf::type_t::reflection: {
+            case trace_delta::type_t::reflection: {
                 return sample_delta_reflection(lobe.eta, normal, outgoing, rn);
             } break;
-            case trace_bsdf::type_t::transmission: {
+            case trace_delta::type_t::transmission: {
                 return sample_delta_transmission(
                     lobe.eta, normal, outgoing, rn);
             } break;
-            case trace_bsdf::type_t::transparency: {
+            case trace_delta::type_t::transparency: {
                 return sample_delta_transparency(
                     lobe.eta, normal, outgoing, rn);
+            } break;
+            case trace_delta::type_t::passthrough: {
+                return sample_delta_passthrough(
+                    normal, outgoing, rn);
             } break;
         }
     }
@@ -871,6 +892,11 @@ float sample_delta_transparency_pdf(const vec3f& eta, const vec3f& normal,
     if (!other_hemisphere(normal, outgoing, incoming)) return 0;
     return 1;
 }
+float sample_delta_passthrough_pdf(const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
+    if (!other_hemisphere(normal, outgoing, incoming)) return 0;
+    return 1;
+}
 float sample_volume_scattering_pdf(const vec3f& albedo, float phaseg,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     return eval_phasefunction(dot(outgoing, incoming), phaseg);
@@ -908,25 +934,28 @@ float sample_bsdf_scattering_pdf(const short_vector<trace_bsdf, 8>& bsdfs,
 
     return pdf;
 }
-float sample_delta_scattering_pdf(const short_vector<trace_bsdf, 8>& deltas,
+float sample_delta_scattering_pdf(const short_vector<trace_delta, 8>& deltas,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     auto pdf = 0.0f;
     for (auto& lobe : deltas) {
         if (lobe.pdf == 0) continue;
 
         switch (lobe.type) {
-            case trace_bsdf::type_t::diffuse: break;
-            case trace_bsdf::type_t::reflection: {
+            case trace_delta::type_t::reflection: {
                 pdf += lobe.pdf * sample_delta_reflection_pdf(lobe.eta,
                                       lobe.etak, normal, outgoing, incoming);
             } break;
-            case trace_bsdf::type_t::transmission: {
+            case trace_delta::type_t::transmission: {
                 pdf += lobe.pdf * sample_delta_transmission_pdf(
                                       lobe.eta, normal, outgoing, incoming);
             } break;
-            case trace_bsdf::type_t::transparency: {
+            case trace_delta::type_t::transparency: {
                 pdf += lobe.pdf * sample_delta_transparency_pdf(
                                       lobe.eta, normal, outgoing, incoming);
+            } break;
+            case trace_delta::type_t::passthrough: {
+                pdf += lobe.pdf * sample_delta_passthrough_pdf(
+                                      normal, outgoing, incoming);
             } break;
         }
     }
@@ -1594,10 +1623,6 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
                 if (lobe.type != trace_bsdf::type_t::diffuse) continue;
                 weight += lobe.weight;
             }
-            for (auto& lobe : material.deltas) {
-                if (lobe.type != trace_bsdf::type_t::diffuse) continue;
-                weight += lobe.weight;
-            }
             return {weight, 1};
         }
         case trace_falsecolor_type::specular: {
@@ -1607,7 +1632,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
                 weight += lobe.weight;
             }
             for (auto& lobe : material.deltas) {
-                if (lobe.type != trace_bsdf::type_t::reflection) continue;
+                if (lobe.type != trace_delta::type_t::reflection) continue;
                 weight += lobe.weight;
             }
             return {weight, 1};
@@ -1619,7 +1644,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
                 weight += lobe.weight;
             }
             for (auto& lobe : material.deltas) {
-                if (lobe.type != trace_bsdf::type_t::transmission) continue;
+                if (lobe.type != trace_delta::type_t::transmission) continue;
                 weight += lobe.weight;
             }
             return {weight, 1};
