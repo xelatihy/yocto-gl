@@ -1169,8 +1169,10 @@ float sample_distance_pdf(
     return sample_distance_pdf(material.volume_density, distance, channel);
 }
 
-vec3f eval_transmission(const trace_material& material, float distance) {
-    return eval_transmission(material.volume_density, distance);
+vec3f eval_transmission(const trace_mediums& mediums, float distance) {
+    auto transmission = vec3f{1, 1, 1};
+    for(auto& lobe : mediums) transmission *= eval_transmission(lobe.density, distance);
+    return transmission;
 }
 
 // Sample next direction. Returns weight and direction.
@@ -1229,7 +1231,7 @@ pair<vec3f, float> sample_transmission(const vec3f& position,
         material, rand1f(rng), rand1f(rng));
     distance          = min(distance, max_distance);
     auto pdf          = sample_distance_pdf(material, distance, channel);
-    auto transmission = eval_transmission(material, distance);
+    auto transmission = eval_transmission(material.mediums, distance);
     if (transmission == zero3f || pdf == 0) return {zero3f, 0};
     return {transmission / pdf, distance};
 }
