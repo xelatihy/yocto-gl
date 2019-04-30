@@ -449,16 +449,16 @@ vec3f eval_emission(const trace_material& material, const vec3f& normal,
 // Sampling weights
 struct trace_weights {
     // sampling weights
-    float diffuse_pdf      = 0;
-    float specular_pdf     = 0;
-    float metal_pdf        = 0;
-    float transmission_pdf = 0;
-    float coat_pdf         = 0;
-    float opacity_pdf      = 0;
-    float volume_pdf       = 0;
+    float diffuse      = 0;
+    float specular     = 0;
+    float metal        = 0;
+    float transmission = 0;
+    float coat         = 0;
+    float opacity      = 0;
+    float volume       = 0;
 
     // cumulative weight
-    float total_weight = 0;
+    float total = 0;
 };
 
 trace_weights compute_weights(const trace_material& material,
@@ -468,7 +468,7 @@ trace_weights compute_weights(const trace_material& material,
 
     // diffuse
     if (material.diffuse_weight != zero3f && mode == trace_mode::smooth) {
-        weights.diffuse_pdf = max(material.diffuse_weight);
+        weights.diffuse = max(material.diffuse_weight);
     }
 
     // metal
@@ -476,7 +476,7 @@ trace_weights compute_weights(const trace_material& material,
         mode == trace_mode::smooth) {
         auto fresnel = fresnel_dielectric(
             material.metal_eta, abs(dot(normal, outgoing)));
-        weights.metal_pdf = max(material.metal_weight * fresnel);
+        weights.metal = max(material.metal_weight * fresnel);
     }
 
     // metal
@@ -484,7 +484,7 @@ trace_weights compute_weights(const trace_material& material,
         mode == trace_mode::delta) {
         auto fresnel = fresnel_dielectric(
             material.metal_eta, abs(dot(normal, outgoing)));
-        weights.metal_pdf = max(material.metal_weight * fresnel);
+        weights.metal = max(material.metal_weight * fresnel);
     }
 
     // specular
@@ -492,7 +492,7 @@ trace_weights compute_weights(const trace_material& material,
         mode == trace_mode::smooth) {
         auto fresnel = fresnel_dielectric(
             material.specular_eta, abs(dot(normal, outgoing)));
-        weights.specular_pdf = max(material.specular_weight * fresnel);
+        weights.specular = max(material.specular_weight * fresnel);
     }
 
     // specular
@@ -500,7 +500,7 @@ trace_weights compute_weights(const trace_material& material,
         mode == trace_mode::delta) {
         auto fresnel = fresnel_dielectric(
             material.specular_eta, abs(dot(normal, outgoing)));
-        weights.specular_pdf = max(material.specular_weight * fresnel);
+        weights.specular = max(material.specular_weight * fresnel);
     }
 
     // transmission
@@ -508,7 +508,7 @@ trace_weights compute_weights(const trace_material& material,
         material.transmission_roughness && mode == trace_mode::smooth) {
         auto fresnel = fresnel_dielectric(
             material.specular_eta, abs(dot(normal, outgoing)));
-        weights.transmission_pdf = max(
+        weights.transmission = max(
             material.transmission_weight * (1 - fresnel));
     }
 
@@ -517,7 +517,7 @@ trace_weights compute_weights(const trace_material& material,
         !material.transmission_roughness && mode == trace_mode::delta) {
         auto fresnel = fresnel_dielectric(
             material.specular_eta, abs(dot(normal, outgoing)));
-        weights.transmission_pdf = max(
+        weights.transmission = max(
             material.transmission_weight * (1 - fresnel));
     }
 
@@ -526,7 +526,7 @@ trace_weights compute_weights(const trace_material& material,
         mode == trace_mode::smooth) {
         auto fresnel = fresnel_dielectric(
             material.coat_eta, abs(dot(normal, outgoing)));
-        weights.coat_pdf = max(material.coat_weight * fresnel);
+        weights.coat = max(material.coat_weight * fresnel);
     }
 
     // coat
@@ -534,34 +534,34 @@ trace_weights compute_weights(const trace_material& material,
         mode == trace_mode::delta) {
         auto fresnel = fresnel_dielectric(
             material.coat_eta, abs(dot(normal, outgoing)));
-        weights.coat_pdf = max(material.coat_weight * fresnel);
+        weights.coat = max(material.coat_weight * fresnel);
     }
 
     // opacity
     if (material.opacity_weight != zero3f && mode == trace_mode::delta) {
-        weights.opacity_pdf = max(material.opacity_weight);
+        weights.opacity = max(material.opacity_weight);
     }
 
     // volume
     if (material.volume_albedo != zero3f && mode == trace_mode::volume) {
-        weights.volume_pdf = max(material.volume_albedo);
+        weights.volume = max(material.volume_albedo);
     }
 
     // accumulate
-    weights.total_weight = weights.diffuse_pdf + weights.specular_pdf +
-                           weights.metal_pdf + weights.transmission_pdf +
-                           weights.coat_pdf + weights.opacity_pdf +
-                           weights.volume_pdf;
+    weights.total = weights.diffuse + weights.specular +
+                           weights.metal + weights.transmission +
+                           weights.coat + weights.opacity +
+                           weights.volume;
 
     // normalize
-    if (weights.total_weight) {
-        weights.diffuse_pdf /= weights.total_weight;
-        weights.specular_pdf /= weights.total_weight;
-        weights.metal_pdf /= weights.total_weight;
-        weights.transmission_pdf /= weights.total_weight;
-        weights.coat_pdf /= weights.total_weight;
-        weights.opacity_pdf /= weights.total_weight;
-        weights.volume_pdf /= weights.total_weight;
+    if (weights.total) {
+        weights.diffuse /= weights.total;
+        weights.specular /= weights.total;
+        weights.metal /= weights.total;
+        weights.transmission /= weights.total;
+        weights.coat /= weights.total;
+        weights.opacity /= weights.total;
+        weights.volume /= weights.total;
     }
 
     // done
@@ -750,14 +750,14 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
     auto weight_sum = 0.0f;
 
     // sample according to diffuse
-    weight_sum += weights.diffuse_pdf;
+    weight_sum += weights.diffuse;
     if (material.diffuse_weight != zero3f && mode == trace_mode::smooth &&
         rnl <= weight_sum) {
         return sample_hemisphere(normal, rn);
     }
 
     // sample according to specular GGX
-    weight_sum += weights.specular_pdf;
+    weight_sum += weights.specular;
     if (material.specular_weight != zero3f && material.specular_roughness &&
         mode == trace_mode::smooth && rnl <= weight_sum) {
         auto halfway = sample_microfacet(
@@ -772,7 +772,7 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
     }
 
     // sample according to specular GGX
-    weight_sum += weights.metal_pdf;
+    weight_sum += weights.metal;
     if (material.metal_weight != zero3f && material.metal_roughness &&
         mode == trace_mode::smooth && rnl <= weight_sum) {
         auto halfway = sample_microfacet(material.metal_roughness, normal, rn);
@@ -786,7 +786,7 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
     }
 
     // sample according to rough transmission
-    weight_sum += weights.transmission_pdf;
+    weight_sum += weights.transmission;
     if (material.transmission_weight != zero3f &&
         material.transmission_roughness && mode == trace_mode::smooth &&
         rnl <= weight_sum) {
@@ -816,7 +816,7 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
     }
 
     // sample according to specular GGX
-    weight_sum += weights.coat_pdf;
+    weight_sum += weights.coat;
     if (material.coat_weight != zero3f && material.coat_roughness &&
         mode == trace_mode::smooth && rnl <= weight_sum) {
         auto halfway = sample_microfacet(material.coat_roughness, normal, rn);
@@ -830,14 +830,14 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
     }
 
     // sample according to opacity
-    weight_sum += weights.opacity_pdf;
+    weight_sum += weights.opacity;
     if (material.opacity_weight != zero3f && mode == trace_mode::delta &&
         rnl <= weight_sum) {
         return -outgoing;
     }
 
     // sample volume
-    weight_sum += weights.volume_pdf;
+    weight_sum += weights.volume;
     if (material.volume_albedo != zero3f) {
         auto direction = sample_phasefunction(material.volume_phaseg, rn);
         return make_basis_fromz(-outgoing) * direction;
@@ -864,7 +864,7 @@ float sample_scattering_pdf(const trace_material& material,
     // diffuse
     if (material.diffuse_weight != zero3f && mode == trace_mode::smooth &&
         outgoing_up == incoming_up) {
-        pdf += weights.diffuse_pdf * abs(dot(normal, incoming)) / pif;
+        pdf += weights.diffuse * abs(dot(normal, incoming)) / pif;
     }
 
     // specular reflection
@@ -874,13 +874,13 @@ float sample_scattering_pdf(const trace_material& material,
         auto d       = sample_microfacet_pdf(
             material.specular_roughness, normal, halfway);
         auto jacobian = 0.25f / abs(dot(outgoing, halfway));
-        pdf += weights.specular_pdf * d * jacobian;
+        pdf += weights.specular * d * jacobian;
     }
 
     // specular reflection
     if (material.specular_weight != zero3f && !material.specular_roughness &&
         mode == trace_mode::delta && outgoing_up == incoming_up) {
-        pdf += weights.specular_pdf;
+        pdf += weights.specular;
     }
 
     // specular reflection
@@ -890,13 +890,13 @@ float sample_scattering_pdf(const trace_material& material,
         auto d       = sample_microfacet_pdf(
             material.metal_roughness, normal, halfway);
         auto jacobian = 0.25f / abs(dot(outgoing, halfway));
-        pdf += weights.metal_pdf * d * jacobian;
+        pdf += weights.metal * d * jacobian;
     }
 
     // specular reflection
     if (material.metal_weight != zero3f && !material.metal_roughness &&
         mode == trace_mode::delta && outgoing_up == incoming_up) {
-        pdf += weights.metal_pdf;
+        pdf += weights.metal;
     }
 
     // transmission through thin surface
@@ -915,7 +915,7 @@ float sample_scattering_pdf(const trace_material& material,
             // [Walter 2007] equation 17
             auto jacobian = fabs(dot(halfway, incoming)) /
                             dot(halfway_vector, halfway_vector);
-            pdf += weights.transmission_pdf * d * jacobian;
+            pdf += weights.transmission * d * jacobian;
             // print("pdf refraction\n");
         } else {
             auto ir      = reflect(-incoming, normal);
@@ -923,7 +923,7 @@ float sample_scattering_pdf(const trace_material& material,
             auto d       = sample_microfacet_pdf(
                 material.transmission_roughness, normal, halfway);
             auto jacobian = 0.25f / fabs(dot(outgoing, halfway));
-            pdf += weights.transmission_pdf * d * jacobian;
+            pdf += weights.transmission * d * jacobian;
         }
     }
 
@@ -931,7 +931,7 @@ float sample_scattering_pdf(const trace_material& material,
     if (material.transmission_weight != zero3f &&
         !material.transmission_roughness && mode == trace_mode::delta &&
         outgoing_up != incoming_up) {
-        pdf += weights.transmission_pdf;
+        pdf += weights.transmission;
     }
 
     // specular reflection
@@ -941,24 +941,24 @@ float sample_scattering_pdf(const trace_material& material,
         auto d       = sample_microfacet_pdf(
             material.coat_roughness, normal, halfway);
         auto jacobian = 0.25f / abs(dot(outgoing, halfway));
-        pdf += weights.coat_pdf * d * jacobian;
+        pdf += weights.coat * d * jacobian;
     }
 
     // specular reflection
     if (material.coat_weight != zero3f && !material.coat_roughness &&
         mode == trace_mode::delta && outgoing_up == incoming_up) {
-        pdf += weights.coat_pdf;
+        pdf += weights.coat;
     }
 
     // opacity
     if (material.opacity_weight != zero3f && mode == trace_mode::delta &&
         outgoing_up != incoming_up) {
-        pdf += weights.opacity_pdf;
+        pdf += weights.opacity;
     }
 
     // volume
     if (material.volume_albedo != zero3f && mode == trace_mode::volume) {
-        pdf += weights.volume_pdf * eval_phasefunction(dot(outgoing, incoming),
+        pdf += weights.volume * eval_phasefunction(dot(outgoing, incoming),
                                         material.volume_phaseg);
     }
 
@@ -1183,10 +1183,10 @@ tuple<float, trace_mode> sample_mode(const vec3f& position, const vec3f& normal,
         material, normal, outgoing, trace_mode::smooth);
     auto weights_delta = compute_weights(
         material, normal, outgoing, trace_mode::delta);
-    auto weight_sum = weights_smooth.total_weight + weights_delta.total_weight;
+    auto weight_sum = weights_smooth.total + weights_delta.total;
     if (!weight_sum) return {0, trace_mode::none};
-    auto pdf_smooth = weights_smooth.total_weight / weight_sum;
-    auto pdf_delta  = weights_delta.total_weight / weight_sum;
+    auto pdf_smooth = weights_smooth.total / weight_sum;
+    auto pdf_delta  = weights_delta.total / weight_sum;
     if (rand1f(rng) < pdf_delta) {
         return {1 / pdf_delta, trace_mode::delta};
     } else {
