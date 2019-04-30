@@ -812,74 +812,62 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal,
 }
 
 // Compute the weight for sampling the BRDF
-float sample_diffuse_scattering_pdf(const vec3f& weight, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming,
-    trace_mode mode) {
-    if (weight == zero3f || mode != trace_mode::smooth) return 0;
+float sample_diffuse_reflection_pdf(float roughness, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
     if (!same_hemisphere(normal, outgoing, incoming)) return 0;
     return abs(dot(normal, incoming)) / pif;
 }
-float sample_specular_scattering_pdf(const vec3f& weight, float roughness,
-    const vec3f& eta, const vec3f& etak, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
-    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
-        (!roughness && mode != trace_mode::delta))
-        return 0;
+float sample_microfacet_reflection_pdf(float roughness, const vec3f& eta,
+    const vec3f& etak, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming) {
     if (!same_hemisphere(normal, outgoing, incoming)) return 0;
-    if (roughness) {
-        auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
-        auto halfway   = normalize(incoming + outgoing);
-        auto d         = sample_microfacet_pdf(roughness, up_normal, halfway);
-        auto jacobian  = 0.25f / abs(dot(outgoing, halfway));
-        return d * jacobian;
-    } else {
-        return 1;
-    }
+    auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+    auto halfway   = normalize(incoming + outgoing);
+    auto d         = sample_microfacet_pdf(roughness, up_normal, halfway);
+    auto jacobian  = 0.25f / abs(dot(outgoing, halfway));
+    return d * jacobian;
 }
-float sample_transmission_scattering_pdf(const vec3f& weight, float roughness,
-    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming, trace_mode mode) {
-    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
-        (!roughness && mode != trace_mode::delta))
-        return 0;
+float sample_delta_reflection_pdf(const vec3f& eta, const vec3f& etak,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+    if (!same_hemisphere(normal, outgoing, incoming)) return 0;
+    return 1;
+}
+float sample_microfacet_transmission_pdf(float roughness, const vec3f& eta,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (!other_hemisphere(normal, outgoing, incoming)) return 0;
-    if (roughness) {
-        auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
-        auto halfway_vector = dot(outgoing, normal) > 0
-                                  ? -(outgoing + eta * incoming)
-                                  : (eta * outgoing + incoming);
-        auto halfway = normalize(halfway_vector);
-        auto d       = sample_microfacet_pdf(roughness, up_normal, halfway);
-        // [Walter 2007] equation 17
-        auto jacobian = abs(dot(halfway, incoming)) /
-                        dot(halfway_vector, halfway_vector);
-        return d * jacobian;
-    } else {
-        return 1;
-    }
+    auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
+    auto halfway_vector = dot(outgoing, normal) > 0
+                              ? -(outgoing + eta * incoming)
+                              : (eta * outgoing + incoming);
+    auto halfway = normalize(halfway_vector);
+    auto d       = sample_microfacet_pdf(roughness, up_normal, halfway);
+    // [Walter 2007] equation 17
+    auto jacobian = abs(dot(halfway, incoming)) /
+                    dot(halfway_vector, halfway_vector);
+    return d * jacobian;
 }
-float sample_transparency_scattering_pdf(const vec3f& weight, float roughness,
-    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming, trace_mode mode) {
-    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
-        (!roughness && mode != trace_mode::delta))
-        return 0;
+float sample_delta_transmission_pdf(const vec3f& eta, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
     if (!other_hemisphere(normal, outgoing, incoming)) return 0;
-    if (roughness) {
-        auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
-        auto ir        = reflect(-incoming, up_normal);
-        auto halfway   = normalize(ir + outgoing);
-        auto d         = sample_microfacet_pdf(roughness, up_normal, halfway);
-        auto jacobian  = 0.25f / abs(dot(outgoing, halfway));
-        return d * jacobian;
-    } else {
-        return 1;
-    }
+    return 1;
 }
-float sample_volume_scattering_pdf(const vec3f& weight, const vec3f& albedo,
-    float phaseg, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming, trace_mode mode) {
-    if (weight == zero3f || mode != trace_mode::volume) return 0;
+float sample_microfacet_transparency_pdf(float roughness, const vec3f& eta,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+    if (!other_hemisphere(normal, outgoing, incoming)) return 0;
+    auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
+    auto ir        = reflect(-incoming, up_normal);
+    auto halfway   = normalize(ir + outgoing);
+    auto d         = sample_microfacet_pdf(roughness, up_normal, halfway);
+    auto jacobian  = 0.25f / abs(dot(outgoing, halfway));
+    return d * jacobian;
+}
+float sample_delta_transparency_pdf(const vec3f& eta, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
+    if (!other_hemisphere(normal, outgoing, incoming)) return 0;
+    return 1;
+}
+float sample_volume_scattering_pdf(const vec3f& albedo, float phaseg,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     return eval_phasefunction(dot(outgoing, incoming), phaseg);
 }
 
@@ -897,29 +885,36 @@ float sample_scattering_pdf(const trace_material& material, const vec3f& normal,
 
         switch (lobe.type) {
             case trace_scattering_type::diffuse: {
-                pdf += weight * sample_diffuse_scattering_pdf(lobe.weight,
-                                    lobe.roughness, normal, outgoing, incoming,
-                                    mode);
+                pdf += weight * sample_diffuse_reflection_pdf(
+                                    lobe.roughness, normal, outgoing, incoming);
             } break;
             case trace_scattering_type::reflection: {
-                pdf += weight * sample_specular_scattering_pdf(lobe.weight,
-                                    lobe.roughness, lobe.eta, lobe.etak, normal,
-                                    outgoing, incoming, mode);
+                pdf += weight *
+                       (lobe.roughness
+                               ? sample_microfacet_reflection_pdf(
+                                     lobe.roughness, lobe.eta, lobe.etak,
+                                     normal, outgoing, incoming)
+                               : sample_delta_reflection_pdf(lobe.eta,
+                                     lobe.etak, normal, outgoing, incoming));
             } break;
             case trace_scattering_type::transmission: {
-                pdf += weight * sample_transmission_scattering_pdf(lobe.weight,
-                                    lobe.roughness, lobe.eta, normal, outgoing,
-                                    incoming, mode);
+                pdf += weight *
+                       (lobe.roughness ? sample_microfacet_transmission_pdf(
+                                             lobe.roughness, lobe.eta, normal,
+                                             outgoing, incoming)
+                                       : sample_delta_transmission_pdf(lobe.eta,
+                                             normal, outgoing, incoming));
             } break;
             case trace_scattering_type::transparency: {
-                pdf += weight * sample_transparency_scattering_pdf(lobe.weight,
-                                    lobe.roughness, lobe.eta, normal, outgoing,
-                                    incoming, mode);
+                pdf += weight * (lobe.roughness ?
+                       sample_microfacet_transparency_pdf(lobe.roughness,
+                           lobe.eta, normal, outgoing, incoming) :
+                       sample_delta_transparency_pdf(
+                           lobe.eta, normal, outgoing, incoming));
             } break;
             case trace_scattering_type::volume: {
-                pdf += weight * sample_volume_scattering_pdf({1, 1, 1},
-                                    lobe.albedo, lobe.phaseg, normal, outgoing,
-                                    incoming, mode);
+                pdf += weight * sample_volume_scattering_pdf(lobe.albedo,
+                                    lobe.phaseg, normal, outgoing, incoming);
             } break;
         }
     }
