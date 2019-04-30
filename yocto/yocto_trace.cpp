@@ -1246,11 +1246,11 @@ pair<vec3f, float> sample_transmission(const trace_mediums& mediums,
 }
 
 // Updates trace volume stack upon entering and exiting a surface
-using trace_volume_stack = short_vector<pair<trace_material, int>, 32>;
+using trace_volume_stack = short_vector<pair<trace_mediums, int>, 32>;
 void update_volume_stack(trace_volume_stack& volume_stack,
-    trace_material& medium, const trace_material& material, int instance,
+    trace_mediums& medium, const trace_mediums& material, int instance,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-    if (material.volume_density == zero3f) return;
+    if (material.empty()) return;
     if (dot(incoming, normal) > 0 != dot(outgoing, normal) > 0) {
         if (volume_stack.empty()) {
             volume_stack.push_back({material, instance});
@@ -1302,13 +1302,13 @@ trace_point make_surface_point(const yocto_scene& scene,
     return point;
 }
 
-trace_point make_volume_point(const yocto_scene& scene, const vec3f& position,
-    const vec3f& direction, float distance,
-    const trace_material& last_material) {
+trace_point make_volume_point(const trace_mediums& last_mediums,
+    const vec3f& last_position, const vec3f& last_direction, float distance) {
     auto point     = trace_point{};
-    point.position = position + direction * distance;
-    point.normal   = direction;
-    point.material = last_material;
+    point.position = last_position + last_direction * distance;
+    point.normal   = last_direction;
+    point.material = {};
+    point.material.mediums = last_mediums;
     //    point.material = {};
     //    for (auto& lobe : point.material.scatterings) {
     //        if (lobe.type == trace_bsdf::type_t::volume)
@@ -1357,7 +1357,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto origin       = origin_;
     auto direction    = direction_;
     auto volume_stack = trace_volume_stack{};
-    auto medium       = trace_material{};
+    auto medium       = trace_mediums{};
     auto hit          = false;
 
     // trace  path
@@ -1374,8 +1374,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto outgoing = -direction;
 
         // clamp ray if inside a volume
-        auto [transmission, distance] = sample_transmission(medium.mediums,
-            origin, outgoing, intersection.distance, rand1f(rng), rand1f(rng));
+        auto [transmission, distance] = sample_transmission(medium, origin,
+            outgoing, intersection.distance, rand1f(rng), rand1f(rng));
         weight *= transmission;
         auto on_surface = distance >= intersection.distance;
 
@@ -1383,7 +1383,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto [position, normal, material] =
             on_surface
                 ? make_surface_point(scene, intersection, direction)
-                : make_volume_point(scene, origin, direction, distance, medium);
+                : make_volume_point(medium, origin, direction, distance);
 
         // accumulate emission
         radiance +=
@@ -1411,9 +1411,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 ? (delta ? sample_direction(scene, lights, bvh, material.deltas,
                                position, normal, outgoing, rand1f(rng),
                                rand2f(rng))
-                         : sample_direction_mis(scene, lights, bvh, material.bsdfs,
-                               position, normal, outgoing, rand1f(rng),
-                               rand2f(rng), rand1f(rng), rand1f(rng)))
+                         : sample_direction_mis(scene, lights, bvh,
+                               material.bsdfs, position, normal, outgoing,
+                               rand1f(rng), rand2f(rng), rand1f(rng),
+                               rand1f(rng)))
                 : sample_direction_mis(scene, lights, bvh, material.mediums,
                       position, normal, outgoing, rand1f(rng), rand2f(rng),
                       rand1f(rng), rand1f(rng));
@@ -1422,7 +1423,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // update volume_stack
         if (on_surface) {
-            update_volume_stack(volume_stack, medium, material,
+            update_volume_stack(volume_stack, medium, material.mediums,
                 intersection.instance_id, normal, outgoing, incoming);
         }
 
