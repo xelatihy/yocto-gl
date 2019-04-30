@@ -1326,13 +1326,6 @@ atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
 
 // Intersects a ray and returns a point
-bool trace_ray(const yocto_scene& scene, const bvh_scene& bvh, const ray3f& ray,
-    bvh_intersection& intersection) {
-    _trace_nrays += 1;
-    return intersect_bvh(scene, bvh, ray, intersection);
-}
-
-// Intersects a ray and returns a point
 bool trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
     const vec3f& position, const vec3f& direction,
     bvh_intersection& intersection) {
@@ -1354,27 +1347,27 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     // initialize
     auto radiance     = zero3f;
     auto weight       = vec3f{1, 1, 1};
-    auto origin       = origin_;
-    auto direction    = direction_;
+    auto last_position       = origin_;
+    auto last_incoming    = direction_;
     auto volume_stack = trace_volume_stack{};
-    auto medium       = trace_mediums{};
+    auto last_medium       = trace_mediums{};
     auto hit          = false;
 
     // trace  path
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(scene, bvh, origin, direction, intersection)) {
-            radiance += weight * eval_environments(scene, direction);
+        if (!trace_ray(scene, bvh, last_position, last_incoming, intersection)) {
+            radiance += weight * eval_environments(scene, last_incoming);
             break;
         }
         hit = true;
 
         // prepare to shade
-        auto outgoing = -direction;
+        auto outgoing = -last_incoming;
 
         // clamp ray if inside a volume
-        auto [transmission, distance] = sample_transmission(medium, origin,
+        auto [transmission, distance] = sample_transmission(last_medium, last_position,
             outgoing, intersection.distance, rand1f(rng), rand1f(rng));
         weight *= transmission;
         auto on_surface = distance >= intersection.distance;
@@ -1382,8 +1375,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // prepare shading point
         auto [position, normal, material] =
             on_surface
-                ? make_surface_point(scene, intersection, direction)
-                : make_volume_point(medium, origin, direction, distance);
+                ? make_surface_point(scene, intersection, last_incoming)
+                : make_volume_point(last_medium, last_position, last_incoming, distance);
 
         // accumulate emission
         radiance +=
@@ -1423,13 +1416,13 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // update volume_stack
         if (on_surface) {
-            update_volume_stack(volume_stack, medium, material.mediums,
+            update_volume_stack(volume_stack, last_medium, material.mediums,
                 intersection.instance_id, normal, outgoing, incoming);
         }
 
         // setup next iteration
-        origin    = position;
-        direction = incoming;
+        last_position    = position;
+        last_incoming = incoming;
     }
 
     return {radiance, hit};
@@ -1442,24 +1435,24 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     // initialize
     auto radiance  = zero3f;
     auto weight    = vec3f{1, 1, 1};
-    auto origin    = origin_;
-    auto direction = direction_;
+    auto last_position    = origin_;
+    auto last_incoming = direction_;
     auto hit       = false;
 
     // trace  path
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(scene, bvh, origin, direction, intersection)) {
-            radiance += weight * eval_environments(scene, direction);
+        if (!trace_ray(scene, bvh, last_position, last_incoming, intersection)) {
+            radiance += weight * eval_environments(scene, last_incoming);
             break;
         }
         hit = true;
 
         // prepare shading point
-        auto outgoing                     = -direction;
+        auto outgoing                     = -last_incoming;
         auto [position, normal, material] = make_surface_point(
-            scene, intersection, direction);
+            scene, intersection, last_incoming);
 
         // accumulate emission
         radiance += weight *
@@ -1487,8 +1480,8 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // setup next iteration
-        origin    = position;
-        direction = incoming;
+        last_position    = position;
+        last_incoming = incoming;
     }
 
     return {radiance, hit};
@@ -1501,24 +1494,24 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     // initialize
     auto radiance  = zero3f;
     auto weight    = vec3f{1, 1, 1};
-    auto origin    = origin_;
-    auto direction = direction_;
+    auto last_position    = origin_;
+    auto last_incoming = direction_;
     auto hit       = false;
 
     // trace  path
     for (auto bounce = 0; bounce < max(params.max_bounces, 4); bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(scene, bvh, origin, direction, intersection)) {
-            radiance += weight * eval_environments(scene, direction);
+        if (!trace_ray(scene, bvh, last_position, last_incoming, intersection)) {
+            radiance += weight * eval_environments(scene, last_incoming);
             break;
         }
         hit = true;
 
         // prepare shading point
-        auto outgoing                     = -direction;
+        auto outgoing                     = -last_incoming;
         auto [position, normal, material] = make_surface_point(
-            scene, intersection, direction);
+            scene, intersection, last_incoming);
 
         // accumulate emission
         radiance += weight *
@@ -1541,8 +1534,8 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // setup next iteration
-        origin    = position;
-        direction = incoming;
+        last_position    = position;
+        last_incoming = incoming;
     }
 
     return {radiance, hit};
