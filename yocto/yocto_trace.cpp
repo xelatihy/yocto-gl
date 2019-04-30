@@ -414,6 +414,9 @@ trace_material eval_material(const material_point& point_,
         material.transmission_roughness = point.specular_roughness;
         material.transmission_eta       = vec3f{point.specular_ior};
         material.transmission_thin      = point.thin_walled;
+        if(point.thin_walled && !point.specular_factor) {
+            material.transmission_eta = {1, 1, 1};
+        }
     }
     if (point.specular_factor && point.specular_color != zero3f) {
         material.specular_weight = weight * point.specular_factor *
@@ -670,7 +673,7 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
             auto ir      = reflect(-incoming, normal);
             auto halfway = normalize(ir + outgoing);
             auto F       = fresnel_dielectric(
-                material.specular_eta, abs(dot(halfway, outgoing)));
+                material.transmission_eta, abs(dot(halfway, outgoing)));
             auto D = eval_microfacetD(
                 material.transmission_roughness, normal, halfway);
             auto G = eval_microfacetG(
@@ -688,11 +691,11 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
         outgoing_up != incoming_up) {
         if (!material.transmission_thin) {
             auto F = fresnel_dielectric(
-                material.specular_eta, abs(dot(normal, outgoing)));
+                material.transmission_eta, abs(dot(normal, outgoing)));
             scattering += material.transmission_weight * (1 - F);
         } else {
             auto F = fresnel_dielectric(
-                material.specular_eta, abs(dot(normal, outgoing)));
+                material.transmission_eta, abs(dot(normal, outgoing)));
             scattering += material.transmission_weight * (1 - F);
         }
     }
