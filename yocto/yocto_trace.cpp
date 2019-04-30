@@ -500,7 +500,7 @@ float eval_transparency_weight(const vec3f& weight, float roughness,
     if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
         (!roughness && mode != trace_mode::delta))
         return 0;
-    if(eta == zero3f) return max(weight);
+    if (eta == zero3f) return max(weight);
     auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
     return max(weight * (1 - fresnel));
 }
@@ -520,7 +520,7 @@ trace_weights compute_weights(const trace_material& material,
         mode);
     weights.metal        = eval_specular_weight(material.metal_weight,
         material.metal_roughness, material.metal_eta, normal, outgoing, mode);
-    weights.coat        = eval_specular_weight(material.coat_weight,
+    weights.coat         = eval_specular_weight(material.coat_weight,
         material.coat_roughness, material.coat_eta, normal, outgoing, mode);
     weights.transmission = eval_transmission_weight(
         material.transmission_weight, material.transmission_roughness,
@@ -530,8 +530,8 @@ trace_weights compute_weights(const trace_material& material,
         material.transparency_eta, normal, outgoing, mode);
     weights.opacity = eval_transparency_weight(
         material.opacity_weight, 0, zero3f, normal, outgoing, mode);
-    weights.volume = eval_volume_weight({1, 1, 1},
-        material.volume_albedo, material.volume_phaseg, normal, outgoing, mode);
+    weights.volume = eval_volume_weight({1, 1, 1}, material.volume_albedo,
+        material.volume_phaseg, normal, outgoing, mode);
 
     // accumulate
     weights.total = weights.diffuse + weights.specular + weights.metal +
