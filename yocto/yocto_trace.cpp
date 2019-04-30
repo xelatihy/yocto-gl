@@ -323,31 +323,31 @@ namespace yocto {
 // Set non-rigid frames as default
 constexpr bool trace_non_rigid_frames = true;
 
+// Scattering lobe
+enum struct trace_scattering_type {
+    diffuse,
+    reflection,
+    transmission,
+    transparency,
+    volume
+};
+struct trace_scattering_lobe {
+    trace_scattering_type type      = trace_scattering_type::diffuse;
+    vec3f                 weight    = zero3f;
+    vec3f                 eta       = zero3f;
+    vec3f                 etak      = zero3f;
+    float                 roughness = 0;
+    vec3f                 albedo    = zero3f;  // volume albedo
+    float                 phaseg    = 0;       // volume phaseg
+};
+
 // Surface material
 struct trace_material {
     // emission
     vec3f emission_weight = zero3f;
 
     // scattering
-    vec3f diffuse_weight         = zero3f;
-    float diffuse_roughness      = 1;
-    vec3f specular_weight        = zero3f;
-    float specular_roughness     = 1;
-    vec3f specular_eta           = {1, 1, 1};
-    vec3f metal_weight           = zero3f;
-    float metal_roughness        = 1;
-    vec3f metal_eta              = {1, 1, 1};
-    vec3f metal_etak             = zero3f;
-    vec3f transmission_weight    = zero3f;
-    float transmission_roughness = 1;
-    vec3f transmission_eta       = {1, 1, 1};
-    vec3f transparency_weight    = zero3f;
-    float transparency_roughness = 1;
-    vec3f transparency_eta       = {1, 1, 1};
-    vec3f coat_weight            = zero3f;
-    float coat_roughness         = 1;
-    vec3f coat_eta               = {1, 1, 1};
-    vec3f opacity_weight         = zero3f;
+    short_vector<trace_scattering_lobe, 8> scatterings = {};
 
     // volume
     vec3f volume_emission = zero3f;
@@ -360,14 +360,10 @@ struct trace_material {
 enum struct trace_mode { none, smooth, delta, volume };
 
 bool is_scattering_zero(const trace_material& material) {
-    return material.diffuse_weight == zero3f &&
-           material.specular_weight == zero3f &&
-           material.metal_weight == zero3f &&
-           material.transmission_weight == zero3f &&
-           material.transparency_weight == zero3f &&
-           material.coat_weight == zero3f &&
-           material.opacity_weight == zero3f &&
-           material.volume_albedo == zero3f;
+    for (auto& lobe : material.scatterings) {
+        if (lobe.weight != zero3f) return false;
+    }
+    return true;
 }
 
 trace_material eval_material(const material_point& point_,
@@ -388,14 +384,18 @@ trace_material eval_material(const material_point& point_,
     auto material = trace_material{};
     auto weight   = vec3f{1};
     if (point.opacity_factor < 0.999f) {
-        material.opacity_weight = vec3f{1 - point.opacity_factor};
+        auto& lobe  = material.scatterings.emplace_back();
+        lobe.type   = trace_scattering_type::transparency;
+        lobe.weight = vec3f{1 - point.opacity_factor};
         weight *= point.opacity_factor;
     }
     if (point.coat_factor) {
-        material.coat_weight    = weight * point.coat_factor;
-        material.coat_roughness = point.coat_roughness;
-        material.coat_eta       = vec3f{point.coat_ior};
-        weight *= point.coat_color * (1 - fresnel_dielectric(material.coat_eta,
+        auto& lobe     = material.scatterings.emplace_back();
+        lobe.type      = trace_scattering_type::reflection;
+        lobe.weight    = weight * point.coat_factor;
+        lobe.roughness = point.coat_roughness;
+        lobe.eta       = vec3f{point.coat_ior};
+        weight *= point.coat_color * (1 - fresnel_dielectric(lobe.eta,
                                               abs(dot(normal, outgoing))));
     }
     if (point.emission_factor && point.emission_color != zero3f) {
@@ -403,40 +403,51 @@ trace_material eval_material(const material_point& point_,
                                    point.emission_color;
     }
     if (point.metallic_factor && point.base_color != zero3f) {
-        material.metal_weight = weight * point.metallic_factor *
-                                point.base_color;
-        material.metal_roughness = point.specular_roughness;
-        material.metal_eta       = specular_to_eta(point.base_color);
+        auto& lobe     = material.scatterings.emplace_back();
+        lobe.type      = trace_scattering_type::reflection;
+        lobe.weight    = weight * point.metallic_factor * point.base_color;
+        lobe.roughness = point.specular_roughness;
+        lobe.eta       = specular_to_eta(point.base_color);
         weight *= 1 - point.metallic_factor;
     }
     if (point.transmission_factor && point.transmission_color != zero3f &&
         !point.thin_walled) {
-        material.transmission_weight = weight * point.transmission_factor *
-                                       point.transmission_color;
-        material.transmission_roughness = point.specular_roughness;
-        material.transmission_eta       = vec3f{point.specular_ior};
+        auto& lobe  = material.scatterings.emplace_back();
+        lobe.type   = trace_scattering_type::transmission;
+        lobe.weight = weight * point.transmission_factor *
+                      point.transmission_color;
+        lobe.roughness = point.specular_roughness;
+        lobe.eta       = vec3f{point.specular_ior};
     }
     if (point.transmission_factor && point.transmission_color != zero3f &&
         point.thin_walled) {
-        material.transparency_weight = weight * point.transmission_factor *
-                                       point.transmission_color;
-        material.transparency_roughness = point.specular_roughness;
-        material.transparency_eta       = vec3f{point.specular_ior};
-        if (!point.specular_factor) material.transparency_eta = {1, 1, 1};
+        auto& lobe  = material.scatterings.emplace_back();
+        lobe.type   = trace_scattering_type::transparency;
+        lobe.weight = weight * point.transmission_factor *
+                      point.transmission_color;
+        lobe.roughness = point.specular_roughness;
+        lobe.eta       = vec3f{point.specular_ior};
+        if (!point.specular_factor) lobe.eta = {1, 1, 1};
     }
     if (point.specular_factor && point.specular_color != zero3f) {
-        material.specular_weight = weight * point.specular_factor *
-                                   point.specular_color;
-        material.specular_roughness = point.specular_roughness;
-        material.specular_eta       = vec3f{point.specular_ior};
-        weight *= 1 - fresnel_dielectric(
-                          material.specular_eta, abs(dot(normal, outgoing)));
+        auto& lobe     = material.scatterings.emplace_back();
+        lobe.type      = trace_scattering_type::reflection;
+        lobe.weight    = weight * point.specular_factor * point.specular_color;
+        lobe.roughness = point.specular_roughness;
+        lobe.eta       = vec3f{point.specular_ior};
+        weight *= 1 - fresnel_dielectric(lobe.eta, abs(dot(normal, outgoing)));
     }
     if (point.diffuse_factor && point.base_color != zero3f) {
-        material.diffuse_weight = weight * point.diffuse_factor *
-                                  point.base_color;
+        auto& lobe  = material.scatterings.emplace_back();
+        lobe.type   = trace_scattering_type::diffuse;
+        lobe.weight = weight * point.diffuse_factor * point.base_color;
     }
     if (point.volume_density != zero3f) {
+        auto& lobe               = material.scatterings.emplace_back();
+        lobe.type                = trace_scattering_type::volume;
+        lobe.weight              = {1, 1, 1};
+        lobe.albedo              = point.volume_albedo;
+        lobe.phaseg              = point.volume_phaseg;
         material.volume_emission = point.volume_emission;
         material.volume_albedo   = point.volume_albedo;
         material.volume_density  = point.volume_density;
@@ -456,14 +467,7 @@ vec3f eval_emission(const trace_material& material, const vec3f& normal,
 // Sampling weights
 struct trace_weights {
     // sampling weights
-    float diffuse      = 0;
-    float specular     = 0;
-    float metal        = 0;
-    float transmission = 0;
-    float transparency = 0;
-    float coat         = 0;
-    float opacity      = 0;
-    float volume       = 0;
+    short_vector<float, 8> weights = {};
 
     // cumulative weight
     float total = 0;
@@ -510,42 +514,38 @@ float eval_volume_weight(const vec3f& weight, const vec3f& albedo, float phaseg,
 
 trace_weights compute_weights(const trace_material& material,
     const vec3f& normal, const vec3f& outgoing, trace_mode mode) {
-    auto weights         = trace_weights{};
-    weights.diffuse      = eval_diffuse_weight(material.diffuse_weight,
-        material.diffuse_roughness, normal, outgoing, mode);
-    weights.specular     = eval_specular_weight(material.specular_weight,
-        material.specular_roughness, material.specular_eta, normal, outgoing,
-        mode);
-    weights.metal        = eval_specular_weight(material.metal_weight,
-        material.metal_roughness, material.metal_eta, normal, outgoing, mode);
-    weights.coat         = eval_specular_weight(material.coat_weight,
-        material.coat_roughness, material.coat_eta, normal, outgoing, mode);
-    weights.transmission = eval_transmission_weight(
-        material.transmission_weight, material.transmission_roughness,
-        material.transmission_eta, normal, outgoing, mode);
-    weights.transparency = eval_transparency_weight(
-        material.transparency_weight, material.transparency_roughness,
-        material.transparency_eta, normal, outgoing, mode);
-    weights.opacity = eval_transparency_weight(
-        material.opacity_weight, 0, zero3f, normal, outgoing, mode);
-    weights.volume = eval_volume_weight({1, 1, 1}, material.volume_albedo,
-        material.volume_phaseg, normal, outgoing, mode);
-
-    // accumulate
-    weights.total = weights.diffuse + weights.specular + weights.metal +
-                    weights.transmission + weights.transparency + weights.coat +
-                    weights.opacity + weights.volume;
+    auto weights = trace_weights{};
+    for (auto& lobe : material.scatterings) {
+        auto weight = 0.0f;
+        switch (lobe.type) {
+            case trace_scattering_type::diffuse: {
+                weight = eval_diffuse_weight(
+                    lobe.weight, lobe.roughness, normal, outgoing, mode);
+            } break;
+            case trace_scattering_type::reflection: {
+                weight = eval_specular_weight(lobe.weight, lobe.roughness,
+                    lobe.eta, normal, outgoing, mode);
+            } break;
+            case trace_scattering_type::transmission: {
+                weight = eval_transmission_weight(lobe.weight, lobe.roughness,
+                    lobe.eta, normal, outgoing, mode);
+            } break;
+            case trace_scattering_type::transparency: {
+                weight = eval_transparency_weight(lobe.weight, lobe.roughness,
+                    lobe.eta, normal, outgoing, mode);
+            } break;
+            case trace_scattering_type::volume: {
+                weight = eval_volume_weight({1, 1, 1}, lobe.albedo, lobe.phaseg,
+                    normal, outgoing, mode);
+            } break;
+        }
+        weights.weights.push_back(weight);
+        weights.total += weight;
+    }
 
     // normalize
     if (weights.total) {
-        weights.diffuse /= weights.total;
-        weights.specular /= weights.total;
-        weights.metal /= weights.total;
-        weights.transmission /= weights.total;
-        weights.transparency /= weights.total;
-        weights.coat /= weights.total;
-        weights.opacity /= weights.total;
-        weights.volume /= weights.total;
+        for (auto& weight : weights.weights) weight /= weights.total;
     }
 
     // done
@@ -560,6 +560,18 @@ bool same_hemisphere(
 bool other_hemisphere(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     return dot(normal, outgoing) * dot(normal, incoming) < 0;
+}
+trace_mode get_mode(const trace_scattering_lobe& lobe) {
+    switch (lobe.type) {
+        case trace_scattering_type::diffuse: return trace_mode::smooth;
+        case trace_scattering_type::reflection:
+            return lobe.roughness ? trace_mode::smooth : trace_mode::delta;
+        case trace_scattering_type::transmission:
+            return lobe.roughness ? trace_mode::smooth : trace_mode::delta;
+        case trace_scattering_type::transparency:
+            return lobe.roughness ? trace_mode::smooth : trace_mode::delta;
+        case trace_scattering_type::volume: return trace_mode::volume;
+    }
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
@@ -663,27 +675,33 @@ vec3f eval_volume_scattering(const vec3f& weight, const vec3f& albedo,
 vec3f eval_scattering(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
     auto scattering = zero3f;
-    scattering += eval_diffuse_scattering(material.diffuse_weight,
-        material.diffuse_roughness, normal, outgoing, incoming, mode);
-    scattering += eval_specular_scattering(material.specular_weight,
-        material.specular_roughness, material.specular_eta, zero3f, normal,
-        outgoing, incoming, mode);
-    scattering += eval_specular_scattering(material.metal_weight,
-        material.metal_roughness, material.metal_eta, material.metal_etak,
-        normal, outgoing, incoming, mode);
-    scattering += eval_specular_scattering(material.coat_weight,
-        material.coat_roughness, material.coat_eta, zero3f, normal, outgoing,
-        incoming, mode);
-    scattering += eval_transmission_scattering(material.transmission_weight,
-        material.transmission_roughness, material.transmission_eta, normal,
-        outgoing, incoming, mode);
-    scattering += eval_transparency_scattering(material.transparency_weight,
-        material.transparency_roughness, material.transparency_eta, normal,
-        outgoing, incoming, mode);
-    scattering += eval_transparency_scattering(
-        material.opacity_weight, 0, zero3f, normal, outgoing, incoming, mode);
-    scattering += eval_volume_scattering({1, 1, 1}, material.volume_albedo,
-        material.volume_phaseg, normal, outgoing, incoming, mode);
+    for (auto& lobe : material.scatterings) {
+        if (lobe.weight == zero3f || get_mode(lobe) != mode) continue;
+        switch (lobe.type) {
+            case trace_scattering_type::diffuse: {
+                scattering += eval_diffuse_scattering(lobe.weight,
+                    lobe.roughness, normal, outgoing, incoming, mode);
+            } break;
+            case trace_scattering_type::reflection: {
+                scattering += eval_specular_scattering(lobe.weight,
+                    lobe.roughness, lobe.eta, zero3f, normal, outgoing,
+                    incoming, mode);
+            } break;
+            case trace_scattering_type::transmission: {
+                scattering += eval_transmission_scattering(lobe.weight,
+                    lobe.roughness, lobe.eta, normal, outgoing, incoming, mode);
+            } break;
+            case trace_scattering_type::transparency: {
+                scattering += eval_transparency_scattering(lobe.weight,
+                    lobe.roughness, lobe.eta, normal, outgoing, incoming, mode);
+            } break;
+            case trace_scattering_type::volume: {
+                scattering += eval_volume_scattering({1, 1, 1},
+                    material.volume_albedo, material.volume_phaseg, normal,
+                    outgoing, incoming, mode);
+            } break;
+        }
+    }
     return scattering;
 }
 
@@ -757,66 +775,37 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal,
 
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
+    for (auto idx = 0; idx < material.scatterings.size(); idx++) {
+        auto& lobe   = material.scatterings[idx];
+        auto  weight = weights.weights[idx];
+        if (lobe.weight == zero3f || get_mode(lobe) != mode) continue;
 
-    // sample according to diffuse
-    weight_sum += weights.diffuse;
-    if (rnl <= weight_sum) {
-        return sample_diffuse_scattering(material.diffuse_weight,
-            material.diffuse_roughness, normal, outgoing, rn, mode);
-    }
+        // check if we pick this lobe
+        weight_sum += weight;
+        if (rnl > weight_sum) continue;
 
-    // sample according to specular GGX
-    weight_sum += weights.specular;
-    if (rnl <= weight_sum) {
-        return sample_specular_scattering(material.specular_weight,
-            material.specular_roughness, material.specular_eta, normal,
-            outgoing, rn, mode);
-    }
-
-    // sample according to specular GGX
-    weight_sum += weights.metal;
-    if (rnl <= weight_sum) {
-        return sample_specular_scattering(material.metal_weight,
-            material.metal_roughness, material.metal_eta, normal, outgoing, rn,
-            mode);
-    }
-
-    // sample according to specular GGX
-    weight_sum += weights.coat;
-    if (rnl <= weight_sum) {
-        return sample_specular_scattering(material.coat_weight,
-            material.coat_roughness, material.coat_eta, normal, outgoing, rn,
-            mode);
-    }
-
-    // sample according to rough transmission
-    weight_sum += weights.transmission;
-    if (rnl <= weight_sum) {
-        return sample_transmission_scattering(material.transmission_weight,
-            material.transmission_roughness, material.transmission_eta, normal,
-            outgoing, rn, mode);
-    }
-
-    // sample according to rough transmission
-    weight_sum += weights.transparency;
-    if (rnl <= weight_sum) {
-        return sample_transparency_scattering(material.transparency_weight,
-            material.transparency_roughness, material.transparency_eta, normal,
-            outgoing, rn, mode);
-    }
-
-    // sample according to opacity
-    weight_sum += weights.opacity;
-    if (rnl <= weight_sum) {
-        return sample_transparency_scattering(
-            material.opacity_weight, 0, {1, 1, 1}, normal, outgoing, rn, mode);
-    }
-
-    // sample volume
-    weight_sum += weights.volume;
-    if (rnl <= weight_sum) {
-        return sample_volume_scattering({1, 1, 1}, material.volume_albedo,
-            material.volume_phaseg, normal, outgoing, rn, mode);
+        switch (lobe.type) {
+            case trace_scattering_type::diffuse: {
+                return sample_diffuse_scattering(
+                    lobe.weight, lobe.roughness, normal, outgoing, rn, mode);
+            } break;
+            case trace_scattering_type::reflection: {
+                return sample_specular_scattering(lobe.weight, lobe.roughness,
+                    lobe.eta, normal, outgoing, rn, mode);
+            } break;
+            case trace_scattering_type::transmission: {
+                return sample_transmission_scattering(lobe.weight,
+                    lobe.roughness, lobe.eta, normal, outgoing, rn, mode);
+            } break;
+            case trace_scattering_type::transparency: {
+                return sample_transparency_scattering(lobe.weight,
+                    lobe.roughness, lobe.eta, normal, outgoing, rn, mode);
+            } break;
+            case trace_scattering_type::volume: {
+                return sample_volume_scattering({1, 1, 1}, lobe.albedo,
+                    lobe.phaseg, normal, outgoing, rn, mode);
+            } break;
+        }
     }
 
     // something went wrong if we got here
@@ -902,34 +891,39 @@ float sample_scattering_pdf(const trace_material& material, const vec3f& normal,
     auto weights = compute_weights(material, normal, outgoing, mode);
 
     auto pdf = 0.0f;
-    pdf += weights.diffuse *
-           sample_diffuse_scattering_pdf(material.diffuse_weight,
-               material.diffuse_roughness, normal, outgoing, incoming, mode);
-    pdf += weights.specular *
-           sample_specular_scattering_pdf(material.specular_weight,
-               material.specular_roughness, material.specular_eta, zero3f,
-               normal, outgoing, incoming, mode);
-    pdf += weights.metal * sample_specular_scattering_pdf(material.metal_weight,
-                               material.metal_roughness, material.metal_eta,
-                               material.metal_etak, normal, outgoing, incoming,
-                               mode);
-    pdf += weights.coat * sample_specular_scattering_pdf(material.coat_weight,
-                              material.coat_roughness, material.coat_eta,
-                              zero3f, normal, outgoing, incoming, mode);
-    pdf += weights.transmission *
-           sample_transmission_scattering_pdf(material.transmission_weight,
-               material.transmission_roughness, material.transmission_eta,
-               normal, outgoing, incoming, mode);
-    pdf += weights.transparency *
-           sample_transparency_scattering_pdf(material.transparency_weight,
-               material.transparency_roughness, material.transparency_eta,
-               normal, outgoing, incoming, mode);
-    pdf += weights.opacity *
-           sample_transparency_scattering_pdf(material.opacity_weight, 0,
-               {1, 1, 1}, normal, outgoing, incoming, mode);
-    pdf += weights.volume * sample_volume_scattering_pdf({1, 1, 1},
-                                material.volume_albedo, material.volume_phaseg,
-                                normal, outgoing, incoming, mode);
+    for (auto idx = 0; idx < material.scatterings.size(); idx++) {
+        auto& lobe   = material.scatterings[idx];
+        auto  weight = weights.weights[idx];
+        if (lobe.weight == zero3f || get_mode(lobe) != mode) continue;
+
+        switch (lobe.type) {
+            case trace_scattering_type::diffuse: {
+                pdf += weight * sample_diffuse_scattering_pdf(lobe.weight,
+                                    lobe.roughness, normal, outgoing, incoming,
+                                    mode);
+            } break;
+            case trace_scattering_type::reflection: {
+                pdf += weight * sample_specular_scattering_pdf(lobe.weight,
+                                    lobe.roughness, lobe.eta, lobe.etak, normal,
+                                    outgoing, incoming, mode);
+            } break;
+            case trace_scattering_type::transmission: {
+                pdf += weight * sample_transmission_scattering_pdf(lobe.weight,
+                                    lobe.roughness, lobe.eta, normal, outgoing,
+                                    incoming, mode);
+            } break;
+            case trace_scattering_type::transparency: {
+                pdf += weight * sample_transparency_scattering_pdf(lobe.weight,
+                                    lobe.roughness, lobe.eta, normal, outgoing,
+                                    incoming, mode);
+            } break;
+            case trace_scattering_type::volume: {
+                pdf += weight * sample_volume_scattering_pdf({1, 1, 1},
+                                    lobe.albedo, lobe.phaseg, normal, outgoing,
+                                    incoming, mode);
+            } break;
+        }
+    }
 
     return pdf;
 }
@@ -1050,9 +1044,11 @@ float sample_lights_pdf(const yocto_scene& scene, const trace_lights& lights,
 }
 
 inline vec3f get_roulette_albedo(const trace_material& material) {
-    return material.diffuse_weight + material.specular_weight +
-           material.transmission_weight + material.opacity_weight +
-           material.volume_albedo;
+    auto weight = zero3f;
+    for (auto& lobe : material.scatterings) {
+        weight += lobe.weight;
+    }
+    return weight;
 }
 
 // Russian roulette mode: 0: weight (pbrt), 1: albedo
@@ -1238,14 +1234,19 @@ trace_point make_surface_point(const yocto_scene& scene,
 trace_point make_volume_point(const yocto_scene& scene, const vec3f& position,
     const vec3f& direction, float distance,
     const trace_material& last_material) {
-    auto point                     = trace_point{};
-    point.position                 = position + direction * distance;
-    point.normal                   = direction;
-    point.material                 = {};
-    point.material.volume_emission = last_material.volume_emission;
-    point.material.volume_albedo   = last_material.volume_albedo;
-    point.material.volume_density  = last_material.volume_density;
-    point.material.volume_phaseg   = last_material.volume_phaseg;
+    auto point     = trace_point{};
+    point.position = position + direction * distance;
+    point.normal   = direction;
+    point.material = last_material;
+    //    point.material = {};
+    //    for (auto& lobe : point.material.scatterings) {
+    //        if (lobe.type == trace_scattering_type::volume)
+    //            point.material.scatterings.push_back(lobe);
+    //    }
+    //    point.material.volume_emission = last_material.volume_emission;
+    //    point.material.volume_albedo   = last_material.volume_albedo;
+    //    point.material.volume_density  = last_material.volume_density;
+    //    point.material.volume_phaseg   = last_material.volume_phaseg;
     return point;
 }
 
@@ -1511,10 +1512,11 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {frontfacing, 1};
         }
         case trace_falsecolor_type::albedo: {
-            return {material.diffuse_weight + material.specular_weight +
-                        material.metal_weight + material.transmission_weight +
-                        material.opacity_weight,
-                1};
+            auto weight = zero3f;
+            for (auto& lobe : material.scatterings) {
+                weight += lobe.weight;
+            }
+            return {weight, 1};
         }
         case trace_falsecolor_type::texcoord: {
             auto texturecoord = eval_texcoord(
@@ -1530,16 +1532,36 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {material.emission_weight, 1};
         }
         case trace_falsecolor_type::diffuse: {
-            return {material.diffuse_weight, 1};
+            auto weight = zero3f;
+            for (auto& lobe : material.scatterings) {
+                if (lobe.type != trace_scattering_type::diffuse) continue;
+                weight += lobe.weight;
+            }
+            return {weight, 1};
         }
         case trace_falsecolor_type::specular: {
-            return {material.specular_weight, 1};
+            auto weight = zero3f;
+            for (auto& lobe : material.scatterings) {
+                if (lobe.type != trace_scattering_type::reflection) continue;
+                weight += lobe.weight;
+            }
+            return {weight, 1};
         }
         case trace_falsecolor_type::transmission: {
-            return {material.transmission_weight, 1};
+            auto weight = zero3f;
+            for (auto& lobe : material.scatterings) {
+                if (lobe.type != trace_scattering_type::transmission) continue;
+                weight += lobe.weight;
+            }
+            return {weight, 1};
         }
         case trace_falsecolor_type::roughness: {
-            return {vec3f{material.specular_roughness}, 1};
+            auto roughness = zero3f;
+            for (auto& lobe : material.scatterings) {
+                if (lobe.type != trace_scattering_type::reflection) continue;
+                roughness += lobe.roughness;
+            }
+            return {roughness, 1};
         }
         case trace_falsecolor_type::material: {
             auto hashed = std::hash<int>()(instance.material);

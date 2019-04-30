@@ -119,11 +119,11 @@ struct obj_material {
     obj_texture_info bump_txt;  // bump map
 
     // pbr values
-    float pr  = -1;         // roughness (-1 not defined)
-    float pm  = -1;         // metallic  (-1 not defined)
-    float ps  = -1;         // sheen  (-1 not defined)
-    float pc  = -1;         // coat  (-1 not defined)
-    float pcr  = -1;         // coat roughness (-1 not defined)
+    float pr  = -1;  // roughness (-1 not defined)
+    float pm  = -1;  // metallic  (-1 not defined)
+    float ps  = -1;  // sheen  (-1 not defined)
+    float pc  = -1;  // coat  (-1 not defined)
+    float pcr = -1;  // coat roughness (-1 not defined)
 
     // textures
     obj_texture_info pr_txt;    // roughness texture

@@ -978,14 +978,14 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             def_material.specular_ior);
         print_optional(fs, "transmission_color", material.transmission_color,
             def_material.transmission_color);
-        print_optional(fs, "coat_factor", material.coat_factor,
-            def_material.coat_factor);
-        print_optional(fs, "coat_color", material.coat_color,
-            def_material.coat_color);
+        print_optional(
+            fs, "coat_factor", material.coat_factor, def_material.coat_factor);
+        print_optional(
+            fs, "coat_color", material.coat_color, def_material.coat_color);
         print_optional(fs, "coat_roughness", material.coat_roughness,
             def_material.coat_roughness);
-        print_optional(fs, "coat_ior", material.coat_ior,
-            def_material.coat_ior);
+        print_optional(
+            fs, "coat_ior", material.coat_ior, def_material.coat_ior);
         print_optional(fs, "opacity_factor", material.opacity_factor,
             def_material.opacity_factor);
         print_optional(

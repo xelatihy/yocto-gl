@@ -190,11 +190,13 @@ struct short_vector {
     constexpr short_vector();
     constexpr short_vector(initializer_list<T> values);
 
-    constexpr size_t size();
-    constexpr bool   empty();
+    constexpr size_t size() const;
+    constexpr bool   empty() const;
 
     constexpr void push_back(const T& value);
     constexpr void pop_back();
+    template <typename... Args>
+    constexpr T& emplace_back(Args&&... args);
 
     constexpr T&       operator[](size_t idx);
     constexpr const T& operator[](size_t idx) const;
@@ -521,11 +523,11 @@ constexpr short_vector<T, N>::short_vector(initializer_list<T> values)
 }
 
 template <typename T, size_t N>
-constexpr size_t short_vector<T, N>::size() {
+constexpr size_t short_vector<T, N>::size() const {
     return count;
 }
 template <typename T, size_t N>
-constexpr bool short_vector<T, N>::empty() {
+constexpr bool short_vector<T, N>::empty() const {
     return count == 0;
 }
 
@@ -536,6 +538,12 @@ constexpr void short_vector<T, N>::push_back(const T& value) {
 template <typename T, size_t N>
 constexpr void short_vector<T, N>::pop_back() {
     count--;
+}
+template <typename T, size_t N>
+template <typename... Args>
+constexpr T& short_vector<T, N>::emplace_back(Args&&... args) {
+    ptr[count++] = T(std::forward(args)...);
+    return ptr[count - 1];
 }
 
 template <typename T, size_t N>
