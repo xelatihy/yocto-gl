@@ -688,12 +688,70 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal,
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
-    const vec3f& outgoing, float rnl, const vec2f& rn, trace_mode mode) {
-    // orientation
-    auto outgoing_up = dot(outgoing, normal_) > 0;
-    auto normal      = outgoing_up ? normal_ : -normal_;
+vec3f sample_diffuse_scattering(const vec3f& weight, float roughness,
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn,
+    trace_mode mode) {
+    if (weight == zero3f || mode != trace_mode::smooth) return zero3f;
+    auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
+    return sample_hemisphere(up_normal, rn);
+}
+vec3f sample_specular_scattering(const vec3f& weight, float roughness,
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
+    const vec2f& rn, trace_mode mode) {
+    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
+        (!roughness && mode != trace_mode::delta))
+        return zero3f;
+    auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
+    if (roughness) {
+        auto halfway = sample_microfacet(roughness, up_normal, rn);
+        return reflect(outgoing, halfway);
+    } else {
+        return reflect(outgoing, up_normal);
+    }
+}
+vec3f sample_transmission_scattering(const vec3f& weight, float roughness,
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
+    const vec2f& rn, trace_mode mode) {
+    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
+        (!roughness && mode != trace_mode::delta))
+        return zero3f;
+    auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
+    if (roughness) {
+        auto halfway = sample_microfacet(roughness, up_normal, rn);
+        return refract(outgoing, halfway,
+            dot(normal, outgoing) > 0 ? 1 / mean(eta) : mean(eta));
+    } else {
+        return refract(outgoing, up_normal,
+            dot(normal, outgoing) > 0 ? 1 / mean(eta) : mean(eta));
+    }
+}
+vec3f sample_transparency_scattering(const vec3f& weight, float roughness,
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
+    const vec2f& rn, trace_mode mode) {
+    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
+        (!roughness && mode != trace_mode::delta))
+        return zero3f;
+    auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
+    if (roughness) {
+        auto halfway = sample_microfacet(roughness, up_normal, rn);
+        auto ir      = reflect(outgoing, halfway);
+        return -reflect(ir, up_normal);
+    } else {
+        return -outgoing;
+    }
+}
+vec3f sample_volume_scattering(const vec3f& weight, const vec3f& albedo,
+    float phaseg, const vec3f& normal, const vec3f& outgoing, const vec2f& rn,
+    trace_mode mode) {
+    if (weight == zero3f || albedo == zero3f || mode != trace_mode::volume)
+        return zero3f;
+    auto direction = sample_phasefunction(phaseg, rn);
+    return make_basis_fromz(-outgoing) * direction;
+}
 
+// Picks a direction based on the BRDF
+vec3f sample_scattering(const trace_material& material, const vec3f& normal,
+    const vec3f& outgoing, float rnl, const vec2f& rn, trace_mode mode) {
     // weights
     auto weights = compute_weights(material, normal, outgoing, mode);
 
@@ -702,103 +760,63 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal_,
 
     // sample according to diffuse
     weight_sum += weights.diffuse;
-    if (material.diffuse_weight != zero3f && mode == trace_mode::smooth &&
-        rnl <= weight_sum) {
-        return sample_hemisphere(normal, rn);
+    if (rnl <= weight_sum) {
+        return sample_diffuse_scattering(material.diffuse_weight,
+            material.diffuse_roughness, normal, outgoing, rn, mode);
     }
 
     // sample according to specular GGX
     weight_sum += weights.specular;
-    if (material.specular_weight != zero3f && material.specular_roughness &&
-        mode == trace_mode::smooth && rnl <= weight_sum) {
-        auto halfway = sample_microfacet(
-            material.specular_roughness, normal, rn);
-        return reflect(outgoing, halfway);
-    }
-
-    // sample according to specular mirror
-    if (material.specular_weight != zero3f && !material.specular_roughness &&
-        mode == trace_mode::delta && rnl <= weight_sum) {
-        return reflect(outgoing, normal);
+    if (rnl <= weight_sum) {
+        return sample_specular_scattering(material.specular_weight,
+            material.specular_roughness, material.specular_eta, normal,
+            outgoing, rn, mode);
     }
 
     // sample according to specular GGX
     weight_sum += weights.metal;
-    if (material.metal_weight != zero3f && material.metal_roughness &&
-        mode == trace_mode::smooth && rnl <= weight_sum) {
-        auto halfway = sample_microfacet(material.metal_roughness, normal, rn);
-        return reflect(outgoing, halfway);
-    }
-
-    // sample according to specular mirror
-    if (material.metal_weight != zero3f && !material.metal_roughness &&
-        mode == trace_mode::delta && rnl <= weight_sum) {
-        return reflect(outgoing, normal);
-    }
-
-    // sample according to rough transmission
-    weight_sum += weights.transmission;
-    if (material.transmission_weight != zero3f &&
-        material.transmission_roughness && mode == trace_mode::smooth &&
-        rnl <= weight_sum) {
-        auto halfway = sample_microfacet(
-            material.transmission_roughness, normal, rn);
-        auto eta = mean(material.transmission_eta);
-        return refract(outgoing, halfway, outgoing_up ? 1 / eta : eta);
-    }
-
-    // sample according to specular transmission
-    if (material.transmission_weight != zero3f &&
-        !material.transmission_roughness && mode == trace_mode::delta &&
-        rnl <= weight_sum) {
-        auto eta = mean(material.transmission_eta);
-        return refract(outgoing, normal, outgoing_up ? 1 / eta : eta);
-    }
-
-    // sample according to rough transmission
-    weight_sum += weights.transparency;
-    if (material.transparency_weight != zero3f &&
-        material.transparency_roughness && mode == trace_mode::smooth &&
-        rnl <= weight_sum) {
-        auto halfway = sample_microfacet(
-            material.transparency_roughness, normal, rn);
-        auto ir = reflect(outgoing, halfway);
-        return -reflect(ir, normal);
-    }
-
-    // sample according to specular transmission
-    if (material.transparency_weight != zero3f &&
-        !material.transparency_roughness && mode == trace_mode::delta &&
-        rnl <= weight_sum) {
-        return -outgoing;
+    if (rnl <= weight_sum) {
+        return sample_specular_scattering(material.metal_weight,
+            material.metal_roughness, material.metal_eta, normal, outgoing, rn,
+            mode);
     }
 
     // sample according to specular GGX
     weight_sum += weights.coat;
-    if (material.coat_weight != zero3f && material.coat_roughness &&
-        mode == trace_mode::smooth && rnl <= weight_sum) {
-        auto halfway = sample_microfacet(material.coat_roughness, normal, rn);
-        return reflect(outgoing, halfway);
+    if (rnl <= weight_sum) {
+        return sample_specular_scattering(material.coat_weight,
+            material.coat_roughness, material.coat_eta, normal, outgoing, rn,
+            mode);
     }
 
-    // sample according to specular mirror
-    if (material.coat_weight != zero3f && !material.coat_roughness &&
-        mode == trace_mode::delta && rnl <= weight_sum) {
-        return reflect(outgoing, normal);
+    // sample according to rough transmission
+    weight_sum += weights.transmission;
+    if (rnl <= weight_sum) {
+        return sample_transmission_scattering(material.transmission_weight,
+            material.transmission_roughness, material.transmission_eta, normal,
+            outgoing, rn, mode);
+    }
+
+    // sample according to rough transmission
+    weight_sum += weights.transparency;
+    if (rnl <= weight_sum) {
+        return sample_transparency_scattering(material.transparency_weight,
+            material.transparency_roughness, material.transparency_eta, normal,
+            outgoing, rn, mode);
     }
 
     // sample according to opacity
     weight_sum += weights.opacity;
-    if (material.opacity_weight != zero3f && mode == trace_mode::delta &&
-        rnl <= weight_sum) {
-        return -outgoing;
+    if (rnl <= weight_sum) {
+        return sample_transparency_scattering(
+            material.opacity_weight, 0, {1, 1, 1}, normal, outgoing, rn, mode);
     }
 
     // sample volume
     weight_sum += weights.volume;
-    if (material.volume_albedo != zero3f) {
-        auto direction = sample_phasefunction(material.volume_phaseg, rn);
-        return make_basis_fromz(-outgoing) * direction;
+    if (rnl <= weight_sum) {
+        return sample_volume_scattering({1, 1, 1}, material.volume_albedo,
+            material.volume_phaseg, normal, outgoing, rn, mode);
     }
 
     // something went wrong if we got here
