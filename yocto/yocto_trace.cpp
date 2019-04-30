@@ -1452,10 +1452,6 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= scattering;
         if (weight == zero3f) break;
 
-        // exit if no hit
-        weight *= scattering;
-        if (weight == zero3f) break;
-
         // setup next iteration
         origin    = position;
         direction = incoming;
