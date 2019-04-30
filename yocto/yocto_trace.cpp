@@ -414,7 +414,7 @@ trace_material eval_material(const material_point& point_,
         material.transmission_roughness = point.specular_roughness;
         material.transmission_eta       = vec3f{point.specular_ior};
         material.transmission_thin      = point.thin_walled;
-        if(point.thin_walled && !point.specular_factor) {
+        if (point.thin_walled && !point.specular_factor) {
             material.transmission_eta = {1, 1, 1};
         }
     }
@@ -612,23 +612,66 @@ vec3f eval_specular_scattering(const vec3f& weight, float roughness,
         return weight * F;
     }
 }
-vec3f eval_transparency_scattering(const vec3f& weight,
-    const vec3f& normal, const vec3f& outgoing,
+vec3f eval_transmission_scattering(const vec3f& weight, float roughness,
+    const vec3f& eta, bool thin, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming, trace_mode mode) {
-    if (weight == zero3f || mode != trace_mode::delta)
+    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
+        (!roughness && mode != trace_mode::delta))
         return zero3f;
-    if(other_hemisphere(normal, outgoing, incoming)) return zero3f;
+    if (!other_hemisphere(normal, outgoing, incoming)) return zero3f;
+    if (roughness) {
+        if (!thin) {
+            auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
+            auto halfway_vector = dot(outgoing, normal) > 0
+                                      ? -(outgoing + eta * incoming)
+                                      : (eta * outgoing + incoming);
+            auto halfway = normalize(halfway_vector);
+            auto F       = fresnel_dielectric(eta, abs(dot(halfway, outgoing)));
+            auto D       = eval_microfacetD(roughness, up_normal, halfway);
+            auto G       = eval_microfacetG(
+                roughness, up_normal, halfway, outgoing, incoming);
+
+            auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
+                             (dot(outgoing, normal) * dot(incoming, normal));
+
+            auto numerator   = weight * (1 - F) * D * G;
+            auto denominator = dot(halfway_vector, halfway_vector);
+
+            // [Walter 2007] equation 21
+            return abs(dot_terms) * numerator / denominator *
+                   abs(dot(normal, incoming));
+        } else {
+            auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
+            auto ir        = reflect(-incoming, up_normal);
+            auto halfway   = normalize(ir + outgoing);
+            auto F = fresnel_dielectric(eta, abs(dot(halfway, outgoing)));
+            auto D = eval_microfacetD(roughness, up_normal, halfway);
+            auto G = eval_microfacetG(
+                roughness, up_normal, halfway, outgoing, ir);
+            return weight * (1 - F) * D * G /
+                   abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+                   abs(dot(normal, incoming));
+        }
+    } else {
+        if (!thin) {
+            auto F = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+            return weight * (1 - F);
+        } else {
+            auto F = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+            return weight * (1 - F);
+        }
+    }
+}
+vec3f eval_transparency_scattering(const vec3f& weight, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
+    if (weight == zero3f || mode != trace_mode::delta) return zero3f;
+    if (!other_hemisphere(normal, outgoing, incoming)) return zero3f;
     return weight;
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
     const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
-    // orientation
-    auto outgoing_up = dot(outgoing, normal_) > 0;
-    auto incoming_up = dot(incoming, normal_) > 0;
-    auto normal      = outgoing_up ? normal_ : -normal_;
-
     auto scattering = zero3f;
 
     scattering += eval_diffuse_scattering(material.diffuse_weight,
@@ -642,69 +685,12 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
     scattering += eval_specular_scattering(material.metal_weight,
         material.metal_roughness, material.metal_eta, material.metal_etak,
         normal_, outgoing, incoming, mode);
-    scattering += eval_transparency_scattering(material.opacity_weight,
-        normal_, outgoing, incoming, mode);
-
-    // transmission through rough thin surface
-    if (material.transmission_weight != zero3f &&
-        material.transmission_roughness && mode == trace_mode::smooth &&
-        outgoing_up != incoming_up) {
-        if (!material.transmission_thin) {
-            auto eta            = material.transmission_eta;
-            auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
-                                              : (eta * outgoing + incoming);
-            auto halfway = normalize(halfway_vector);
-            auto F       = fresnel_dielectric(eta, abs(dot(halfway, outgoing)));
-            auto D       = eval_microfacetD(
-                material.transmission_roughness, normal, halfway);
-            auto G = eval_microfacetG(material.transmission_roughness, normal,
-                halfway, outgoing, incoming);
-
-            auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
-                             (dot(outgoing, normal) * dot(incoming, normal));
-
-            auto numerator   = material.transmission_weight * (1 - F) * D * G;
-            auto denominator = dot(halfway_vector, halfway_vector);
-
-            // [Walter 2007] equation 21
-            scattering += abs(dot_terms) * numerator / denominator *
-                          abs(dot(normal, incoming));
-        } else {
-            auto ir      = reflect(-incoming, normal);
-            auto halfway = normalize(ir + outgoing);
-            auto F       = fresnel_dielectric(
-                material.transmission_eta, abs(dot(halfway, outgoing)));
-            auto D = eval_microfacetD(
-                material.transmission_roughness, normal, halfway);
-            auto G = eval_microfacetG(
-                material.transmission_roughness, normal, halfway, outgoing, ir);
-            scattering +=
-                material.transmission_weight * (1 - F) * D * G /
-                fabs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
-                abs(dot(normal, incoming));
-        }
-    }
-
-    // specular transmission
-    if (material.transmission_weight != zero3f &&
-        !material.transmission_roughness && mode == trace_mode::delta &&
-        outgoing_up != incoming_up) {
-        if (!material.transmission_thin) {
-            auto F = fresnel_dielectric(
-                material.transmission_eta, abs(dot(normal, outgoing)));
-            scattering += material.transmission_weight * (1 - F);
-        } else {
-            auto F = fresnel_dielectric(
-                material.transmission_eta, abs(dot(normal, outgoing)));
-            scattering += material.transmission_weight * (1 - F);
-        }
-    }
-
-    // opacity passthrought
-    if (material.opacity_weight != zero3f && mode == trace_mode::delta &&
-        outgoing_up != incoming_up) {
-        scattering += material.opacity_weight;
-    }
+    scattering += eval_transmission_scattering(
+        material.transmission_weight, material.transmission_roughness, 
+        material.transmission_eta, material.transmission_thin, normal_, 
+        outgoing, incoming, mode);
+    scattering += eval_transparency_scattering(
+        material.opacity_weight, normal_, outgoing, incoming, mode);
 
     // volume
     if (material.volume_albedo != zero3f && mode == trace_mode::volume) {
