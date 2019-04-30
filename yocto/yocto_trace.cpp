@@ -696,38 +696,39 @@ vec3f eval_transparency_scattering(const vec3f& weight, float roughness,
         return weight * (1 - F);
     }
 }
+vec3f eval_volume_scattering(const vec3f& weight, const vec3f& albedo,
+    float phaseg, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming, trace_mode mode) {
+    if (weight == zero3f || mode != trace_mode::volume) return zero3f;
+    return albedo * eval_phasefunction(dot(outgoing, incoming), phaseg);
+}
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_scattering(const trace_material& material, const vec3f& normal_,
+vec3f eval_scattering(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
     auto scattering = zero3f;
 
     scattering += eval_diffuse_scattering(material.diffuse_weight,
-        material.diffuse_roughness, normal_, outgoing, incoming, mode);
+        material.diffuse_roughness, normal, outgoing, incoming, mode);
     scattering += eval_specular_scattering(material.coat_weight,
-        material.coat_roughness, material.coat_eta, zero3f, normal_, outgoing,
+        material.coat_roughness, material.coat_eta, zero3f, normal, outgoing,
         incoming, mode);
     scattering += eval_specular_scattering(material.specular_weight,
-        material.specular_roughness, material.specular_eta, zero3f, normal_,
+        material.specular_roughness, material.specular_eta, zero3f, normal,
         outgoing, incoming, mode);
     scattering += eval_specular_scattering(material.metal_weight,
         material.metal_roughness, material.metal_eta, material.metal_etak,
-        normal_, outgoing, incoming, mode);
+        normal, outgoing, incoming, mode);
     scattering += eval_transmission_scattering(material.transmission_weight,
-        material.transmission_roughness, material.transmission_eta, normal_,
+        material.transmission_roughness, material.transmission_eta, normal,
         outgoing, incoming, mode);
     scattering += eval_transparency_scattering(material.transparency_weight,
-        material.transparency_roughness, material.transparency_eta, normal_,
+        material.transparency_roughness, material.transparency_eta, normal,
         outgoing, incoming, mode);
     scattering += eval_transparency_scattering(
-        material.opacity_weight, 0, zero3f, normal_, outgoing, incoming, mode);
-
-    // volume
-    if (material.volume_albedo != zero3f && mode == trace_mode::volume) {
-        scattering += material.volume_albedo *
-                      eval_phasefunction(
-                          dot(outgoing, incoming), material.volume_phaseg);
-    }
+        material.opacity_weight, 0, zero3f, normal, outgoing, incoming, mode);
+    scattering += eval_volume_scattering({1, 1, 1}, material.volume_albedo,
+        material.volume_phaseg, normal, outgoing, incoming, mode);
 
     return scattering;
 }
