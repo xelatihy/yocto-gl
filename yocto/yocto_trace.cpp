@@ -824,129 +824,112 @@ vec3f sample_scattering(const trace_material& material, const vec3f& normal,
 }
 
 // Compute the weight for sampling the BRDF
-float sample_scattering_pdf(const trace_material& material,
-    const vec3f& normal_, const vec3f& outgoing, const vec3f& incoming,
+float sample_diffuse_scattering_pdf(const vec3f& weight, float roughness,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming,
     trace_mode mode) {
-    // orientation
-    auto outgoing_up = dot(outgoing, normal_) > 0;
-    auto incoming_up = dot(incoming, normal_) > 0;
-    auto normal      = outgoing_up ? normal_ : -normal_;
+    if (weight == zero3f || mode != trace_mode::smooth) return 0;
+    if (!same_hemisphere(normal, outgoing, incoming)) return 0;
+    return abs(dot(normal, incoming)) / pif;
+}
+float sample_specular_scattering_pdf(const vec3f& weight, float roughness,
+    const vec3f& eta, const vec3f& etak, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
+    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
+        (!roughness && mode != trace_mode::delta))
+        return 0;
+    if (!same_hemisphere(normal, outgoing, incoming)) return 0;
+    if (roughness) {
+        auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+        auto halfway   = normalize(incoming + outgoing);
+        auto d         = sample_microfacet_pdf(roughness, up_normal, halfway);
+        auto jacobian  = 0.25f / abs(dot(outgoing, halfway));
+        return d * jacobian;
+    } else {
+        return 1;
+    }
+}
+float sample_transmission_scattering_pdf(const vec3f& weight, float roughness,
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming, trace_mode mode) {
+    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
+        (!roughness && mode != trace_mode::delta))
+        return 0;
+    if (!other_hemisphere(normal, outgoing, incoming)) return 0;
+    if (roughness) {
+        auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
+        auto halfway_vector = dot(outgoing, normal) > 0
+                                  ? -(outgoing + eta * incoming)
+                                  : (eta * outgoing + incoming);
+        auto halfway = normalize(halfway_vector);
+        auto d       = sample_microfacet_pdf(roughness, up_normal, halfway);
+        // [Walter 2007] equation 17
+        auto jacobian = abs(dot(halfway, incoming)) /
+                        dot(halfway_vector, halfway_vector);
+        return d * jacobian;
+    } else {
+        return 1;
+    }
+}
+float sample_transparency_scattering_pdf(const vec3f& weight, float roughness,
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming, trace_mode mode) {
+    if (weight == zero3f || (roughness && mode != trace_mode::smooth) ||
+        (!roughness && mode != trace_mode::delta))
+        return 0;
+    if (!other_hemisphere(normal, outgoing, incoming)) return 0;
+    if (roughness) {
+        auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
+        auto ir        = reflect(-incoming, up_normal);
+        auto halfway   = normalize(ir + outgoing);
+        auto d         = sample_microfacet_pdf(roughness, up_normal, halfway);
+        auto jacobian  = 0.25f / abs(dot(outgoing, halfway));
+        return d * jacobian;
+    } else {
+        return 1;
+    }
+}
+float sample_volume_scattering_pdf(const vec3f& weight, const vec3f& albedo,
+    float phaseg, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming, trace_mode mode) {
+    if (weight == zero3f || mode != trace_mode::volume) return 0;
+    return eval_phasefunction(dot(outgoing, incoming), phaseg);
+}
 
+// Compute the weight for sampling the BRDF
+float sample_scattering_pdf(const trace_material& material, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
     // weights
     auto weights = compute_weights(material, normal, outgoing, mode);
 
     auto pdf = 0.0f;
-
-    // diffuse
-    if (material.diffuse_weight != zero3f && mode == trace_mode::smooth &&
-        outgoing_up == incoming_up) {
-        pdf += weights.diffuse * abs(dot(normal, incoming)) / pif;
-    }
-
-    // specular reflection
-    if (material.specular_weight != zero3f && material.specular_roughness &&
-        mode == trace_mode::smooth && outgoing_up == incoming_up) {
-        auto halfway = normalize(incoming + outgoing);
-        auto d       = sample_microfacet_pdf(
-            material.specular_roughness, normal, halfway);
-        auto jacobian = 0.25f / abs(dot(outgoing, halfway));
-        pdf += weights.specular * d * jacobian;
-    }
-
-    // specular reflection
-    if (material.specular_weight != zero3f && !material.specular_roughness &&
-        mode == trace_mode::delta && outgoing_up == incoming_up) {
-        pdf += weights.specular;
-    }
-
-    // specular reflection
-    if (material.metal_weight != zero3f && material.metal_roughness &&
-        mode == trace_mode::smooth && outgoing_up == incoming_up) {
-        auto halfway = normalize(incoming + outgoing);
-        auto d       = sample_microfacet_pdf(
-            material.metal_roughness, normal, halfway);
-        auto jacobian = 0.25f / abs(dot(outgoing, halfway));
-        pdf += weights.metal * d * jacobian;
-    }
-
-    // specular reflection
-    if (material.metal_weight != zero3f && !material.metal_roughness &&
-        mode == trace_mode::delta && outgoing_up == incoming_up) {
-        pdf += weights.metal;
-    }
-
-    // transmission through thin surface
-    if (material.transmission_weight != zero3f &&
-        material.transmission_roughness && mode == trace_mode::smooth &&
-        outgoing_up != incoming_up) {
-        auto eta            = material.transmission_eta;
-        auto halfway_vector = outgoing_up ? -(outgoing + eta * incoming)
-                                          : (eta * outgoing + incoming);
-        auto halfway = normalize(halfway_vector);
-
-        auto d = sample_microfacet_pdf(
-            material.transmission_roughness, normal, halfway);
-
-        // [Walter 2007] equation 17
-        auto jacobian = fabs(dot(halfway, incoming)) /
-                        dot(halfway_vector, halfway_vector);
-        pdf += weights.transmission * d * jacobian;
-        // print("pdf refraction\n");
-    }
-
-    // specular transmission
-    if (material.transmission_weight != zero3f &&
-        !material.transmission_roughness && mode == trace_mode::delta &&
-        outgoing_up != incoming_up) {
-        pdf += weights.transmission;
-    }
-
-    // transmission through thin surface
-    if (material.transparency_weight != zero3f &&
-        material.transparency_roughness && mode == trace_mode::smooth &&
-        outgoing_up != incoming_up) {
-        auto ir      = reflect(-incoming, normal);
-        auto halfway = normalize(ir + outgoing);
-        auto d       = sample_microfacet_pdf(
-            material.transparency_roughness, normal, halfway);
-        auto jacobian = 0.25f / fabs(dot(outgoing, halfway));
-        pdf += weights.transparency * d * jacobian;
-    }
-
-    // specular transmission
-    if (material.transparency_weight != zero3f &&
-        !material.transparency_roughness && mode == trace_mode::delta &&
-        outgoing_up != incoming_up) {
-        pdf += weights.transparency;
-    }
-
-    // specular reflection
-    if (material.coat_weight != zero3f && material.coat_roughness &&
-        mode == trace_mode::smooth && outgoing_up == incoming_up) {
-        auto halfway = normalize(incoming + outgoing);
-        auto d       = sample_microfacet_pdf(
-            material.coat_roughness, normal, halfway);
-        auto jacobian = 0.25f / abs(dot(outgoing, halfway));
-        pdf += weights.coat * d * jacobian;
-    }
-
-    // specular reflection
-    if (material.coat_weight != zero3f && !material.coat_roughness &&
-        mode == trace_mode::delta && outgoing_up == incoming_up) {
-        pdf += weights.coat;
-    }
-
-    // opacity
-    if (material.opacity_weight != zero3f && mode == trace_mode::delta &&
-        outgoing_up != incoming_up) {
-        pdf += weights.opacity;
-    }
-
-    // volume
-    if (material.volume_albedo != zero3f && mode == trace_mode::volume) {
-        pdf += weights.volume * eval_phasefunction(dot(outgoing, incoming),
-                                    material.volume_phaseg);
-    }
+    pdf += weights.diffuse *
+           sample_diffuse_scattering_pdf(material.diffuse_weight,
+               material.diffuse_roughness, normal, outgoing, incoming, mode);
+    pdf += weights.specular *
+           sample_specular_scattering_pdf(material.specular_weight,
+               material.specular_roughness, material.specular_eta, zero3f,
+               normal, outgoing, incoming, mode);
+    pdf += weights.metal * sample_specular_scattering_pdf(material.metal_weight,
+                               material.metal_roughness, material.metal_eta,
+                               material.metal_etak, normal, outgoing, incoming,
+                               mode);
+    pdf += weights.coat * sample_specular_scattering_pdf(material.coat_weight,
+                              material.coat_roughness, material.coat_eta,
+                              zero3f, normal, outgoing, incoming, mode);
+    pdf += weights.transmission *
+           sample_transmission_scattering_pdf(material.transmission_weight,
+               material.transmission_roughness, material.transmission_eta,
+               normal, outgoing, incoming, mode);
+    pdf += weights.transparency *
+           sample_transparency_scattering_pdf(material.transparency_weight,
+               material.transparency_roughness, material.transparency_eta,
+               normal, outgoing, incoming, mode);
+    pdf += weights.opacity *
+           sample_transparency_scattering_pdf(material.opacity_weight, 0,
+               {1, 1, 1}, normal, outgoing, incoming, mode);
+    pdf += weights.volume * sample_volume_scattering_pdf({1, 1, 1},
+                                material.volume_albedo, material.volume_phaseg,
+                                normal, outgoing, incoming, mode);
 
     return pdf;
 }
