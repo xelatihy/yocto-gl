@@ -707,7 +707,6 @@ vec3f eval_volume_scattering(const vec3f& weight, const vec3f& albedo,
 vec3f eval_scattering(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming, trace_mode mode) {
     auto scattering = zero3f;
-
     scattering += eval_diffuse_scattering(material.diffuse_weight,
         material.diffuse_roughness, normal, outgoing, incoming, mode);
     scattering += eval_specular_scattering(material.coat_weight,
@@ -729,7 +728,6 @@ vec3f eval_scattering(const trace_material& material, const vec3f& normal,
         material.opacity_weight, 0, zero3f, normal, outgoing, incoming, mode);
     scattering += eval_volume_scattering({1, 1, 1}, material.volume_albedo,
         material.volume_phaseg, normal, outgoing, incoming, mode);
-
     return scattering;
 }
 
