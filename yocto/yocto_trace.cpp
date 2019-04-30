@@ -1349,7 +1349,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto last_position = origin_;
     auto last_incoming = direction_;
     auto volume_stack  = trace_volume_stack{};
-    auto last_medium   = trace_mediums{};
+    auto last_mediums  = trace_mediums{};
     auto hit           = false;
 
     // trace  path
@@ -1368,21 +1368,21 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // clamp ray if inside a volume
         auto [transmission, distance] = sample_transmission(
-            last_medium, intersection.distance, rand1f(rng), rand1f(rng));
+            last_mediums, intersection.distance, rand1f(rng), rand1f(rng));
         weight *= transmission;
         auto on_surface = distance >= intersection.distance;
 
         // prepare shading point
         auto [position, normal, material] =
             on_surface ? make_surface_point(scene, intersection, last_incoming)
-                       : make_volume_point(last_medium, last_position,
+                       : make_volume_point(last_mediums, last_position,
                              last_incoming, distance);
 
         // accumulate emission
         radiance +=
-            weight *
-            (on_surface ? eval_emission(material.emissions, normal, outgoing)
-                        : eval_emission(material.mediums, normal, outgoing));
+            on_surface
+                ? weight * eval_emission(material.emissions, normal, outgoing)
+                : weight * eval_emission(material.mediums, normal, outgoing);
         if (is_scattering_zero(material)) break;
 
         // russian roulette
@@ -1414,15 +1414,13 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= scattering;
         if (weight == zero3f) break;
 
-        // update volume_stack
-        if (on_surface) {
-            update_volume_stack(volume_stack, last_medium, material.mediums,
-                intersection.instance_id, normal, outgoing, incoming);
-        }
-
         // setup next iteration
         last_position = position;
         last_incoming = incoming;
+        if (on_surface) {
+            update_volume_stack(volume_stack, last_mediums, material.mediums,
+                intersection.instance_id, normal, outgoing, incoming);
+        }
     }
 
     return {radiance, hit};
