@@ -358,19 +358,35 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
         edited = true;
     }
     if (draw_slider_opengl_widget(
-            win, "diffuse factor", edited_value.diffuse_factor, 0, 1)) {
+            win, "coat", edited_value.coat_factor, 0, 1)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
-            win, "metallic factor", edited_value.metallic_factor, 0, 1)) {
+            win, "diffuse", edited_value.diffuse_factor, 0, 1)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
-            win, "specular factor", edited_value.specular_factor, 0, 1)) {
+            win, "metallic", edited_value.metallic_factor, 0, 1)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(win, "transmission factor",
+    if (draw_slider_opengl_widget(
+            win, "specular", edited_value.specular_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(win, "transmission",
             edited_value.transmission_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "coat color", edited_value.coat_color)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "coat roughness", edited_value.coat_roughness, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "coat ior", edited_value.coat_ior, 1, 2)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(
