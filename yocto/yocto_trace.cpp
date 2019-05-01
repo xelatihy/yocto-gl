@@ -376,12 +376,12 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     point.opacity_factor *= shape_color.w;
     point.specular_roughness = point.specular_roughness *
                                point.specular_roughness;
-    if (point.diffuse_factor && point.base_color != zero3f) {
+    if (point.specular_roughness)
         point.specular_roughness = clamp(
             point.specular_roughness, 0.03f * 0.03f, 1.0f);
-    } else if (point.specular_roughness <= 0.03f * 0.03f) {
-        point.specular_roughness = 0;
-    }
+    point.coat_roughness = point.coat_roughness * point.coat_roughness;
+    if (point.coat_roughness)
+        point.coat_roughness = clamp(point.coat_roughness, 0.03f * 0.03f, 1.0f);
     if (point.opacity_factor > 0.999f) point.opacity_factor = 1;
     auto weight = vec3f{1};
     if (point.opacity_factor < 0.999f) {
@@ -394,72 +394,84 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         auto roughness = point.coat_roughness;
         auto eta       = vec3f{point.coat_ior};
         auto fresnel   = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
-        auto lweight   = vec3f{1 - point.opacity_factor};
-        if (roughness) {
-            bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
-                zero3f, roughness, max(lweight * fresnel), 0});
-        } else {
-            deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
-                zero3f, max(lweight * fresnel), 0});
+        auto lweight   = weight;
+        if (lweight != zero3f) {
+            if (roughness) {
+                bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
+                    zero3f, roughness, max(lweight * fresnel), 0});
+            } else {
+                deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
+                    zero3f, max(lweight * fresnel), 0});
+            }
         }
-        weight *= point.coat_color * (1 - fresnel);
+        weight *= point.coat_color * point.coat_factor * (1 - fresnel);
     }
-    if (point.emission_factor && point.emission_color != zero3f) {
+    if (point.emission_factor) {
         auto lweight = weight * point.emission_factor * point.emission_color;
-        emissions.push_back({trace_emission::type_t::diffuse, lweight});
+        if (lweight != zero3f) {
+            emissions.push_back({trace_emission::type_t::diffuse, lweight});
+        }
     }
-    if (point.metallic_factor && point.base_color != zero3f) {
+    if (point.metallic_factor) {
         auto roughness = point.specular_roughness;
         auto eta       = specular_to_eta(point.base_color);
         auto fresnel   = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
         auto lweight   = weight * point.metallic_factor * point.base_color;
-        if (roughness) {
-            bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
-                zero3f, roughness, max(lweight * fresnel), 0});
-        } else {
-            deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
-                zero3f, max(lweight * fresnel), 0});
+        if (lweight != zero3f) {
+            if (roughness) {
+                bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
+                    zero3f, roughness, max(lweight * fresnel), 0});
+            } else {
+                deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
+                    zero3f, max(lweight * fresnel), 0});
+            }
         }
         weight *= 1 - point.metallic_factor;
     }
-    if (point.transmission_factor && point.transmission_color != zero3f) {
+    if (point.transmission_factor) {
         auto roughness = point.specular_roughness;
         auto eta       = vec3f{point.specular_ior};
         if (point.thin_walled && !point.specular_factor) eta = {1, 1, 1};
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
         auto lweight = weight * point.transmission_factor *
                        point.transmission_color;
-        if (roughness) {
-            bsdfs.push_back(
-                {point.thin_walled ? trace_bsdf::type_t::transparency
-                                   : trace_bsdf::type_t::transmission,
-                    lweight, eta, zero3f, roughness,
-                    max(lweight * (1 - fresnel)), 0});
-        } else {
-            deltas.push_back(
-                {point.thin_walled ? trace_delta::type_t::transparency
-                                   : trace_delta::type_t::transmission,
-                    lweight, eta, zero3f, max(lweight * (1 - fresnel)), 0});
+        if (lweight != zero3f) {
+            if (roughness) {
+                bsdfs.push_back(
+                    {point.thin_walled ? trace_bsdf::type_t::transparency
+                                       : trace_bsdf::type_t::transmission,
+                        lweight, eta, zero3f, roughness,
+                        max(lweight * (1 - fresnel)), 0});
+            } else {
+                deltas.push_back(
+                    {point.thin_walled ? trace_delta::type_t::transparency
+                                       : trace_delta::type_t::transmission,
+                        lweight, eta, zero3f, max(lweight * (1 - fresnel)), 0});
+            }
         }
     }
-    if (point.specular_factor && point.specular_color != zero3f) {
+    if (point.specular_factor) {
         auto roughness = point.specular_roughness;
         auto eta       = vec3f{point.specular_ior};
         auto fresnel   = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
         auto lweight   = weight * point.specular_factor * point.specular_color;
-        if (roughness) {
-            bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
-                zero3f, roughness, max(lweight * fresnel), 0});
-        } else {
-            deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
-                zero3f, max(lweight * fresnel), 0});
+        if (lweight != zero3f) {
+            if (roughness) {
+                bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
+                    zero3f, roughness, max(lweight * fresnel), 0});
+            } else {
+                deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
+                    zero3f, max(lweight * fresnel), 0});
+            }
         }
         weight *= 1 - fresnel;
     }
-    if (point.diffuse_factor && point.base_color != zero3f) {
+    if (point.diffuse_factor) {
         auto lweight = weight * point.diffuse_factor * point.base_color;
-        bsdfs.push_back({trace_bsdf::type_t::diffuse, lweight, zero3f, zero3f,
-            0, max(lweight), 0});
+        if (lweight != zero3f) {
+            bsdfs.push_back({trace_bsdf::type_t::diffuse, lweight, zero3f,
+                zero3f, 0, max(lweight), 0});
+        }
     }
     if (point.volume_density != zero3f) {
         mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
@@ -1497,7 +1509,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     // auto& material = scene.materials[instance.material];
 
     // prepare shading point
-    auto outgoing    = -direction;
+    auto outgoing = -direction;
     auto [position, normal, emissions, bsdfs, deltas, mediums] =
         make_surface_point(scene, intersection, direction);
 
