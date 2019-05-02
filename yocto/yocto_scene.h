@@ -122,13 +122,15 @@ struct yocto_voltexture {
 struct yocto_material {
     string uri = "";
 
-    // base values
+    // factor values
     float emission_factor     = 0;
-    vec3f emission_color      = {1, 1, 1};
     float diffuse_factor      = 0;
     float metallic_factor     = 0;
     float specular_factor     = 0;
     float transmission_factor = 0;
+
+    // lobe values
+    vec3f emission_color      = {1, 1, 1};
     vec3f base_color          = {0, 0, 0};
     vec3f specular_color      = {1, 1, 1};
     float specular_roughness  = 0.1;
@@ -465,11 +467,11 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 // Material values packed into a convenience structure.
 struct material_point {
     float emission_factor     = 0;
-    vec3f emission_color      = {1, 1, 1};
     float diffuse_factor      = 0;
     float metallic_factor     = 0;
     float specular_factor     = 0;
     float transmission_factor = 0;
+    vec3f emission_color      = {1, 1, 1};
     vec3f base_color          = {1, 1, 1};
     vec3f specular_color      = {1, 1, 1};
     float specular_roughness  = 1;
