@@ -462,18 +462,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "sheen roughness", edited_value.sheen_roughness, -1, 1)) {
         edited = true;
     }
-    if (draw_coloredit_opengl_widget(
-            win, "volume_density", edited_value.volume_density)) {
-        edited = true;
-    }  // 0, 10
-    if (draw_coloredit_opengl_widget(
-            win, "volume_albedo", edited_value.volume_albedo)) {
-        edited = true;
-    }  // 0, 1
-    if (draw_slider_opengl_widget(
-            win, "volume_phaseg", edited_value.volume_phaseg, -1, 1)) {
-        edited = true;
-    }
     if (draw_combobox_opengl_widget(win, "emission_texture",
             edited_value.emission_texture, scene.textures, true)) {
         edited = true;

@@ -469,6 +469,9 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
                         lweight, eta, zero3f, max(lweight * (1 - fresnel)), 0});
             }
         }
+        // mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
+        //     point.volume_emission, point.volume_density, point.volume_albedo,
+        //     point.volume_phaseg, max(point.volume_albedo)});
     }
     if (point.specular_factor) {
         auto roughness = point.specular_roughness;
@@ -492,11 +495,6 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
             bsdfs.push_back({trace_bsdf::type_t::diffuse, lweight, zero3f,
                 zero3f, 0, max(lweight), 0});
         }
-    }
-    if (point.volume_density != zero3f) {
-        mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
-            point.volume_emission, point.volume_density, point.volume_albedo,
-            point.volume_phaseg, max(point.volume_albedo)});
     }
     auto normalize_weights = [](auto& lobes) {
         auto weight = 0.0f;

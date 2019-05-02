@@ -133,15 +133,6 @@ struct obj_material {
     obj_texture_info disp_txt;  // displacement map
     obj_texture_info occ_txt;   // occlusion map
 
-    // volume data [extension]
-    vec3f ve = {0, 0, 0};  // volume emission
-    vec3f va = {0, 0, 0};  // albedo: scattering / (absorption + scattering)
-    vec3f vd = {0, 0, 0};  // density: absorption + scattering
-    float vg = 0;          // phase function shape
-
-    // volume textures [extension]
-    obj_texture_info vd_txt;  // density
-
     // Properties not explicitly handled.
     unordered_map<string, vector<string>> props;
 };
@@ -359,16 +350,6 @@ inline void load_mtl(
             parse_value(line, material.disp_txt);
         } else if (cmd == "map_norm" || cmd == "norm") {
             parse_value(line, material.norm_txt);
-        } else if (cmd == "Ve") {
-            parse_value(line, material.ve);
-        } else if (cmd == "Va") {
-            parse_value(line, material.va);
-        } else if (cmd == "Vd") {
-            parse_value(line, material.vd);
-        } else if (cmd == "Vg") {
-            parse_value(line, material.vg);
-        } else if (cmd == "map_Vd") {
-            parse_value(line, material.vd_txt);
         }
     }
 

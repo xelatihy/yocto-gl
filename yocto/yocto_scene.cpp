@@ -1324,10 +1324,6 @@ material_point eval_material(const yocto_scene& scene,
         // flip vertical axis to align green with image up
         point.normal_map.y = -point.normal_map.y;
     }
-    point.volume_emission = material.volume_emission;
-    point.volume_albedo   = material.volume_albedo;
-    point.volume_density  = material.volume_density;
-    point.volume_phaseg   = material.volume_phaseg;
     return point;
 }
 

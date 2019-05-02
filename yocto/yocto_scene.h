@@ -169,14 +169,6 @@ struct yocto_material {
     int  normal_texture       = -1;
     bool gltf_textures        = false;  // glTF packed textures
 
-    // volume properties
-    // albedo = scattering / (absorption + scattering)
-    // density = absorption + scattering
-    vec3f volume_emission = {0, 0, 0};
-    vec3f volume_albedo   = {0, 0, 0};
-    vec3f volume_density  = {0, 0, 0};
-    float volume_phaseg   = 0;
-
     // volume textures
     int volume_density_texture = -1;
 };
@@ -511,10 +503,6 @@ struct material_point {
     float opacity_factor          = 1;
     bool  thin_walled             = false;
     vec3f normal_map              = {0, 0, 1};
-    vec3f volume_emission         = {0, 0, 0};
-    vec3f volume_albedo           = {0, 0, 0};
-    vec3f volume_density          = {0, 0, 0};
-    float volume_phaseg           = 0;
 };
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord);

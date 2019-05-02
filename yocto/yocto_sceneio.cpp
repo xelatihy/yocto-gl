@@ -753,14 +753,6 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.coat_ior);
                 } else if (key == "thin_walled") {
                     get_yaml_value(value, material.thin_walled);
-                } else if (key == "volume_density") {
-                    get_yaml_value(value, material.volume_density);
-                } else if (key == "volume_albedo") {
-                    get_yaml_value(value, material.volume_albedo);
-                } else if (key == "volume_emission") {
-                    get_yaml_value(value, material.volume_emission);
-                } else if (key == "volume_phaseg") {
-                    get_yaml_value(value, material.volume_phaseg);
                 } else if (key == "emission_texture") {
                     get_yaml_ref(value, material.emission_texture, tmap);
                 } else if (key == "base_texture") {
@@ -1065,14 +1057,6 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             fs, "normal_texture", material.normal_texture, scene.textures);
         print_optional(fs, "gltf_textures", material.gltf_textures,
             def_material.gltf_textures);
-        print_optional(fs, "volume_emission", material.volume_emission,
-            def_material.volume_emission);
-        print_optional(fs, "volume_albedo", material.volume_albedo,
-            def_material.volume_albedo);
-        print_optional(fs, "volume_density", material.volume_density,
-            def_material.volume_density);
-        print_optional(fs, "volume_phaseg", material.volume_phaseg,
-            def_material.volume_phaseg);
         print_ref(fs, "volume_density_texture", material.volume_density_texture,
             scene.voltextures);
     }
@@ -1422,11 +1406,6 @@ struct load_obj_scene_cb : obj_callbacks {
         material.roughness_texture      = add_texture(omat.pr_txt, true);
         material.opacity_texture        = add_texture(omat.op_txt, true);
         material.normal_texture         = add_texture(omat.norm_txt, true);
-        material.volume_emission        = omat.ve;
-        material.volume_albedo          = omat.va;
-        material.volume_density         = omat.vd;
-        material.volume_phaseg          = omat.vg;
-        material.volume_density_texture = add_voltexture(omat.vd_txt, false);
         normalize_scaled_color(
             material.emission_factor, material.emission_color);
         scene.materials.push_back(material);
@@ -1599,17 +1578,6 @@ static void save_mtl(
         if (material.normal_texture >= 0)
             print_obj_keyvalue(
                 fs, "  map_norm", scene.textures[material.normal_texture].uri);
-        if (material.volume_emission != zero3f)
-            print_obj_keyvalue(fs, "  Ve", material.volume_emission);
-        if (material.volume_density != zero3f)
-            print_obj_keyvalue(fs, "  Vd", material.volume_density);
-        if (material.volume_albedo != zero3f)
-            print_obj_keyvalue(fs, "  Va", material.volume_albedo);
-        if (material.volume_phaseg != 0)
-            print_obj_keyvalue(fs, "  Vg", material.volume_phaseg);
-        if (material.volume_density_texture >= 0)
-            print_obj_keyvalue(fs, "  map_Vd",
-                scene.voltextures[material.volume_density_texture].uri);
         print(fs, "\n");
     }
 }
