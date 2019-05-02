@@ -463,11 +463,14 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         if (point.thin_walled || !point.transmission_depth) {
             lweight *= point.transmission_color;
         } else {
-            auto density = -log(point.transmission_color) /
+            auto density = -log(clamp(point.transmission_color,
+            0.0001f, 1.0f)) /
                            point.transmission_depth;
+            // auto density = point.transmission_color * point.transmission_depth;
             mediums.push_back(
                 {trace_medium::type_t::phaseg, {1, 1, 1}, zero3f, density,
-                    point.transmission_scatter, point.transmission_anisotropy});
+                    point.transmission_scatter, point.transmission_anisotropy,
+                    max(point.transmission_scatter)});
         }
         if (lweight != zero3f) {
             if (roughness) {
@@ -511,8 +514,8 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
             auto density = 1 /
                            (point.subsurface_radius * point.subsurface_scale);
             mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
-                point.subsurface_emission, density, point.transmission_scatter,
-                point.transmission_anisotropy});
+                point.subsurface_emission, density, point.subsurface_color,
+                point.subsurface_anisotropy, max(point.subsurface_color)});
             deltas.push_back({trace_delta::type_t::transparency, lweight,
                 zero3f, zero3f, max(lweight), 0});
         }

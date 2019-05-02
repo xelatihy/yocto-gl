@@ -430,6 +430,10 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "transmission depth", edited_value.transmission_depth, 0, 1)) {
         edited = true;
     }
+    if (draw_coloredit_opengl_widget(
+            win, "transmission scatter", edited_value.transmission_scatter)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(win, "transmission anisotropy",
             edited_value.transmission_anisotropy, -1, 1)) {
         edited = true;
