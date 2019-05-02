@@ -288,8 +288,8 @@ def make_tests():
                 "specular_factor": 1,
                 "transmission_factor": 1,
                 "specular_roughness": 0,
-                "transmission_color": [1, 0, 0],
-                "transmission_depth": 0.5
+                "transmission_color": [1, 0.1, 0.1],
+                "transmission_depth": 0.03
             },
             {
                 "uri": "materials/test-volume-smoke.yaml",
