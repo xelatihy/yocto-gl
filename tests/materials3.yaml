@@ -39,7 +39,7 @@ cameras:
     lens_aperture: 0.0
     film_width: 0.036
     film_height: 0.015
-    orthographic: True
+    orthographic: true
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
   - uri: cameras/orthographic-dof.yaml
@@ -47,7 +47,7 @@ cameras:
     lens_aperture: 0.02
     film_width: 0.036
     film_height: 0.015
-    orthographic: True
+    orthographic: true
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
 textures:
@@ -56,25 +56,42 @@ textures:
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
-    diffuse: [0.7, 0.7, 0.7]
-    diffuse_texture: textures/test-floor.png
+    diffuse_factor: 1
+    base_color: [0.7, 0.7, 0.7]
+    base_texture: textures/test-floor.png
+  - uri: materials/test-metal-rough.yaml
+    metallic_factor: 1
+    base_color: [0.66, 0.45, 0.34]
+    specular_roughness: 0.2
   - uri: materials/test-plastic-sharp-bumped.yaml
-    diffuse: [0.5, 0.5, 0.7]
-    specular: [0.04, 0.04, 0.04]
-    roughness: 0.01
+    diffuse_factor: 1
+    specular_factor: 1
+    base_color: [0.5, 0.5, 0.7]
+    specular_roughness: 0.01
     normal_texture: textures/test-bump-normal.png
   - uri: materials/test-metal-sharp-bumped.yaml
-    diffuse: [0, 0, 0]
-    specular: [0.7, 0.7, 0.7]
-    roughness: 0
+    diffuse_factor: 1
+    metallic_factor: 1
+    base_color: [0.7, 0.7, 0.7]
+    specular_roughness: 0
     normal_texture: textures/test-bump-normal.png
+  - uri: materials/test-plastic-rough-coated.yaml
+    diffuse_factor: 1
+    specular_factor: 1
+    coat_factor: 1
+    base_color: [0.5, 0.7, 0.5]
+    specular_roughness: 0.2
+  - uri: materials/test-metal-rough-coated.yaml
+    metallic_factor: 1
+    coat_factor: 1
+    base_color: [0.66, 0.45, 0.34]
+    specular_roughness: 0.2
   - uri: materials/test-arealight1.yaml
-    emission: [20, 20, 20]
+    emission_factor: 20
   - uri: materials/test-arealight2.yaml
-    emission: [20, 20, 20]
+    emission_factor: 20
 shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply
-  - uri: shapes/test-bunny.obj
   - uri: ::yocto::test-sphere::shapes/test-sphere.ply
   - uri: ::yocto::test-arealight1::shapes/test-arealight1.ply
   - uri: ::yocto::test-arealight2::shapes/test-arealight2.ply
@@ -94,23 +111,23 @@ instances:
     shape: shapes/test-sphere.ply
     material: materials/test-plastic-sharp-bumped.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - uri: instances/test-sphere_test-plastic-sharp-bumped.yaml
+  - uri: instances/test-sphere_test-plastic-rough-coated.yaml
     shape: shapes/test-sphere.ply
-    material: materials/test-plastic-sharp-bumped.yaml
+    material: materials/test-plastic-rough-coated.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - uri: instances/test-bunny_test-metal-sharp-bumped.yaml
-    shape: shapes/test-bunny.obj
+  - uri: instances/test-sphere_test-metal-sharp-bumped.yaml
+    shape: shapes/test-sphere.ply
     material: materials/test-metal-sharp-bumped.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - uri: instances/test-sphere_test-metal-sharp-bumped.yaml
+  - uri: instances/test-sphere_test-metal-rough-coated.yaml
     shape: shapes/test-sphere.ply
-    material: materials/test-metal-sharp-bumped.yaml
+    material: materials/test-metal-rough-coated.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - uri: instances/test-sphere_test-metal-sharp-bumped.yaml
+  - uri: instances/test-sphere_test-metal-rough.yaml
     shape: shapes/test-sphere.ply
-    material: materials/test-metal-sharp-bumped.yaml
+    material: materials/test-metal-rough.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
   - uri: environments/test-sky.yaml
-    emission: [2, 2, 2]
+    emission_factor: 2
     emission_texture: textures/test-sky.hdr

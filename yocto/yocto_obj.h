@@ -105,8 +105,6 @@ struct obj_material {
     float ns  = 0;          // Phong exponent color
     float ior = 1;          // index of refraction
     float op  = 1;          // opacity
-    float rs  = -1;         // roughness (-1 not defined)
-    float km  = -1;         // metallic  (-1 not defined)
 
     // textures
     obj_texture_info ke_txt;    // emission texture
@@ -117,22 +115,23 @@ struct obj_material {
     obj_texture_info kt_txt;    // transmission texture
     obj_texture_info ns_txt;    // Phong exponent texture
     obj_texture_info op_txt;    // opacity texture
-    obj_texture_info rs_txt;    // roughness texture
-    obj_texture_info km_txt;    // metallic texture
     obj_texture_info ior_txt;   // ior texture
-    obj_texture_info occ_txt;   // occlusion map
     obj_texture_info bump_txt;  // bump map
-    obj_texture_info disp_txt;  // displacement map
+
+    // pbr values
+    float pr  = -1;  // roughness (-1 not defined)
+    float pm  = -1;  // metallic  (-1 not defined)
+    float ps  = -1;  // sheen  (-1 not defined)
+    float pc  = -1;  // coat  (-1 not defined)
+    float pcr = -1;  // coat roughness (-1 not defined)
+
+    // textures
+    obj_texture_info pr_txt;    // roughness texture
+    obj_texture_info pm_txt;    // metallic texture
+    obj_texture_info ps_txt;    // sheen texture
     obj_texture_info norm_txt;  // normal map
-
-    // volume data [extension]
-    vec3f ve = {0, 0, 0};  // volume emission
-    vec3f va = {0, 0, 0};  // albedo: scattering / (absorption + scattering)
-    vec3f vd = {0, 0, 0};  // density: absorption + scattering
-    float vg = 0;          // phase function shape
-
-    // volume textures [extension]
-    obj_texture_info vd_txt;  // density
+    obj_texture_info disp_txt;  // displacement map
+    obj_texture_info occ_txt;   // occlusion map
 
     // Properties not explicitly handled.
     unordered_map<string, vector<string>> props;
@@ -312,13 +311,11 @@ inline void load_mtl(
             if (params.flip_tr) material.op = 1 - material.op;
         } else if (cmd == "Ns") {
             parse_value(line, material.ns);
-            material.rs = pow(2 / (material.ns + 2), 1 / 4.0f);
-            if (material.rs < 0.01f) material.rs = 0;
-            if (material.rs > 0.99f) material.rs = 1;
+            material.pr = pow(2 / (material.ns + 2), 1 / 4.0f);
+            if (material.pr < 0.01f) material.pr = 0;
+            if (material.pr > 0.99f) material.pr = 1;
         } else if (cmd == "d") {
             parse_value(line, material.op);
-        } else if (cmd == "Pr" || cmd == "rs") {
-            parse_value(line, material.rs);
         } else if (cmd == "map_Ke") {
             parse_value(line, material.ke_txt);
         } else if (cmd == "map_Kd") {
@@ -329,26 +326,30 @@ inline void load_mtl(
             parse_value(line, material.kt_txt);
         } else if (cmd == "map_d" || cmd == "map_Tr") {
             parse_value(line, material.op_txt);
-        } else if (cmd == "map_Pr" || cmd == "map_rs") {
-            parse_value(line, material.rs_txt);
-        } else if (cmd == "map_occ" || cmd == "occ") {
-            parse_value(line, material.occ_txt);
         } else if (cmd == "map_bump" || cmd == "bump") {
             parse_value(line, material.bump_txt);
+        } else if (cmd == "Pm") {
+            parse_value(line, material.pm);
+        } else if (cmd == "Pr") {
+            parse_value(line, material.pr);
+        } else if (cmd == "Ps") {
+            parse_value(line, material.ps);
+        } else if (cmd == "Pc") {
+            parse_value(line, material.pc);
+        } else if (cmd == "Pcr") {
+            parse_value(line, material.pcr);
+        } else if (cmd == "map_Pm") {
+            parse_value(line, material.pm_txt);
+        } else if (cmd == "map_Pr") {
+            parse_value(line, material.pr_txt);
+        } else if (cmd == "map_Ps") {
+            parse_value(line, material.ps_txt);
+        } else if (cmd == "map_occ" || cmd == "occ") {
+            parse_value(line, material.occ_txt);
         } else if (cmd == "map_disp" || cmd == "disp") {
             parse_value(line, material.disp_txt);
         } else if (cmd == "map_norm" || cmd == "norm") {
             parse_value(line, material.norm_txt);
-        } else if (cmd == "Ve") {
-            parse_value(line, material.ve);
-        } else if (cmd == "Va") {
-            parse_value(line, material.va);
-        } else if (cmd == "Vd") {
-            parse_value(line, material.vd);
-        } else if (cmd == "Vg") {
-            parse_value(line, material.vg);
-        } else if (cmd == "map_Vd") {
-            parse_value(line, material.vd_txt);
         }
     }
 

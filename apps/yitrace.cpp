@@ -406,9 +406,9 @@ void apply_edit(const string& filename, yocto_scene& scene,
             updated_bvh    = true;
         }
     } else if (type == typeid(yocto_material)) {
-        auto old_emission      = scene.materials[index].emission;
+        auto old_emission      = scene.materials[index].emission_factor;
         scene.materials[index] = any_cast<yocto_material>(data);
-        if (old_emission != scene.materials[index].emission) {
+        if (old_emission != scene.materials[index].emission_factor) {
             updated_lights = true;
         }
     } else if (type == typeid(yocto_instance)) {
@@ -419,9 +419,9 @@ void apply_edit(const string& filename, yocto_scene& scene,
             updated_bvh = true;
         }
     } else if (type == typeid(yocto_environment)) {
-        auto old_emission         = scene.materials[index].emission;
+        auto old_emission         = scene.materials[index].emission_factor;
         scene.environments[index] = any_cast<yocto_environment>(data);
-        if (old_emission != scene.materials[index].emission) {
+        if (old_emission != scene.materials[index].emission_factor) {
             updated_lights = true;
         }
     } else if (type == typeid(trace_params)) {

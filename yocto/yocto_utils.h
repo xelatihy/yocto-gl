@@ -190,11 +190,13 @@ struct short_vector {
     constexpr short_vector();
     constexpr short_vector(initializer_list<T> values);
 
-    constexpr size_t size();
-    constexpr bool   empty();
+    constexpr size_t size() const;
+    constexpr bool   empty() const;
 
     constexpr void push_back(const T& value);
     constexpr void pop_back();
+    template <typename... Args>
+    constexpr T& emplace_back(Args&&... args);
 
     constexpr T&       operator[](size_t idx);
     constexpr const T& operator[](size_t idx) const;
@@ -289,6 +291,11 @@ inline string get_basename(const string& filename);
 
 // Check if a file can be opened for reading.
 inline bool exists_file(const string& filename);
+
+// Return the preset type and the remaining filename
+inline bool is_preset_filename(const string& filename);
+// Return the preset type and the filename. Call only if this is a preset.
+inline pair<string, string> get_preset_type(const string& filename);
 
 }  // namespace yocto
 
@@ -510,51 +517,94 @@ namespace yocto {
 template <typename T, size_t N>
 constexpr short_vector<T, N>::short_vector() : count{0} {}
 template <typename T, size_t N>
-constexpr short_vector<T, N>::short_vector(initializer_list<T> values) : count{0} {
-    for(auto value : values) ptr[count++] = value;
+constexpr short_vector<T, N>::short_vector(initializer_list<T> values)
+    : count{0} {
+    for (auto value : values) ptr[count++] = value;
 }
 
 template <typename T, size_t N>
-constexpr size_t short_vector<T, N>::size() { return count; }
+constexpr size_t short_vector<T, N>::size() const {
+    return count;
+}
 template <typename T, size_t N>
-constexpr bool short_vector<T, N>::empty() { return count == 0; }
+constexpr bool short_vector<T, N>::empty() const {
+    return count == 0;
+}
 
 template <typename T, size_t N>
-constexpr void short_vector<T, N>::push_back(const T& value) { ptr[count++] = value; }
+constexpr void short_vector<T, N>::push_back(const T& value) {
+    ptr[count++] = value;
+}
 template <typename T, size_t N>
-constexpr void short_vector<T, N>::pop_back() { count--; }
+constexpr void short_vector<T, N>::pop_back() {
+    count--;
+}
+template <typename T, size_t N>
+template <typename... Args>
+constexpr T& short_vector<T, N>::emplace_back(Args&&... args) {
+    ptr[count++] = T(std::forward(args)...);
+    return ptr[count - 1];
+}
 
 template <typename T, size_t N>
-constexpr T& short_vector<T, N>::operator[](size_t idx) { return ptr[idx]; }
+constexpr T& short_vector<T, N>::operator[](size_t idx) {
+    return ptr[idx];
+}
 template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::operator[](size_t idx) const { return ptr[idx]; }
+constexpr const T& short_vector<T, N>::operator[](size_t idx) const {
+    return ptr[idx];
+}
 template <typename T, size_t N>
-constexpr T& short_vector<T, N>::at(size_t idx) { return ptr[idx]; }
+constexpr T& short_vector<T, N>::at(size_t idx) {
+    return ptr[idx];
+}
 template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::at(size_t idx) const { return ptr[idx]; }
+constexpr const T& short_vector<T, N>::at(size_t idx) const {
+    return ptr[idx];
+}
 
 template <typename T, size_t N>
-constexpr T& short_vector<T, N>::front() { return ptr[0]; }
+constexpr T& short_vector<T, N>::front() {
+    return ptr[0];
+}
 template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::front() const { return ptr[0]; }
+constexpr const T& short_vector<T, N>::front() const {
+    return ptr[0];
+}
 template <typename T, size_t N>
-constexpr T& short_vector<T, N>::back() { return ptr[count-1]; }
+constexpr T& short_vector<T, N>::back() {
+    return ptr[count - 1];
+}
 template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::back() const { return ptr[count-1]; }
+constexpr const T& short_vector<T, N>::back() const {
+    return ptr[count - 1];
+}
 
 template <typename T, size_t N>
-constexpr T* short_vector<T, N>::data() { return count ? ptr : nullptr; }
+constexpr T* short_vector<T, N>::data() {
+    return count ? ptr : nullptr;
+}
 template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::data() const { return count ? ptr : nullptr; }
+constexpr const T* short_vector<T, N>::data() const {
+    return count ? ptr : nullptr;
+}
 
 template <typename T, size_t N>
-constexpr T* short_vector<T, N>::begin() { return ptr; }
+constexpr T* short_vector<T, N>::begin() {
+    return ptr;
+}
 template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::begin() const { return ptr; }
+constexpr const T* short_vector<T, N>::begin() const {
+    return ptr;
+}
 template <typename T, size_t N>
-constexpr T* short_vector<T, N>::end() { return ptr + count; }
+constexpr T* short_vector<T, N>::end() {
+    return ptr + count;
+}
 template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::end() const { return ptr + count; }
+constexpr const T* short_vector<T, N>::end() const {
+    return ptr + count;
+}
 
 }  // namespace yocto
 
@@ -757,6 +807,22 @@ bool exists_file(const string& filename) {
     if (!f) return false;
     fclose(f);
     return true;
+}
+
+// Return the preset type and the remaining filename
+inline bool is_preset_filename(const string& filename) {
+    return filename.find("::yocto::") == 0;
+}
+// Return the preset type and the filename. Call only if this is a preset.
+inline pair<string, string> get_preset_type(const string& filename) {
+    if (filename.find("::yocto::") == 0) {
+        auto aux = filename.substr(string("::yocto::").size());
+        auto pos = aux.find("::");
+        if (pos == aux.npos) throw runtime_error("bad preset name" + filename);
+        return {aux.substr(0, pos), aux.substr(pos + 2)};
+    } else {
+        return {"", filename};
+    }
 }
 
 }  // namespace yocto

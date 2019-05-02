@@ -120,35 +120,54 @@ struct yocto_voltexture {
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct yocto_material {
-    string uri           = "";
-    bool   base_metallic = false;  // base-metallic parametrization
-    bool   gltf_textures = false;  // glTF packed textures
+    string uri = "";
 
-    // base values
-    vec3f emission     = {0, 0, 0};
-    vec3f diffuse      = {0, 0, 0};
-    vec3f specular     = {0, 0, 0};
-    vec3f transmission = {0, 0, 0};
-    float roughness    = 0.001f;
-    float opacity      = 1;
-    bool  fresnel      = true;
-    bool  refract      = false;
+    // factors
+    float emission_factor     = 0;
+    float metallic_factor     = 0;
+    float specular_factor     = 0;
+    float coat_factor         = 0;
+    float sheen_factor        = 0;
+    float transmission_factor = 0;
+    float subsurface_factor   = 0;
+    float diffuse_factor      = 0;
+    float opacity_factor      = 1;
+
+    // lobes
+    vec3f emission_color          = {1, 1, 1};
+    vec3f base_color              = {1, 1, 1};
+    vec3f specular_color          = {1, 1, 1};
+    float specular_roughness      = 1;
+    float specular_ior            = 1.5;
+    vec3f sheen_color             = {1, 1, 1};
+    float sheen_roughness         = 0.3;
+    float diffuse_roughness       = 0;
+    vec3f coat_color              = {1, 1, 1};
+    float coat_roughness          = 1;
+    float coat_ior                = 1.5;
+    vec3f transmission_color      = {1, 1, 1};
+    float transmission_depth      = 0;
+    vec3f transmission_scatter    = {0, 0, 0};
+    float transmission_anisotropy = 0;
+    vec3f subsurface_emission     = {0, 0, 0};
+    vec3f subsurface_color        = {1, 1, 1};
+    vec3f subsurface_radius       = {1, 1, 1};
+    float subsurface_scale        = 1;
+    float subsurface_anisotropy   = 0;
+    bool  thin_walled             = false;
 
     // textures
-    int emission_texture     = -1;
-    int diffuse_texture      = -1;
-    int specular_texture     = -1;
-    int transmission_texture = -1;
-    int roughness_texture    = -1;
-    int normal_texture       = -1;
-
-    // volume properties
-    // albedo = scattering / (absorption + scattering)
-    // density = absorption + scattering
-    vec3f volume_emission = {0, 0, 0};
-    vec3f volume_albedo   = {0, 0, 0};
-    vec3f volume_density  = {0, 0, 0};
-    float volume_phaseg   = 0;
+    int  emission_texture     = -1;
+    int  base_texture         = -1;
+    int  metallic_texture     = -1;
+    int  specular_texture     = -1;
+    int  roughness_texture    = -1;
+    int  transmission_texture = -1;
+    int  subsurface_texture   = -1;
+    int  coat_texture         = -1;
+    int  opacity_texture      = -1;
+    int  normal_texture       = -1;
+    bool gltf_textures        = false;  // glTF packed textures
 
     // volume textures
     int volume_density_texture = -1;
@@ -236,7 +255,8 @@ struct yocto_instance {
 struct yocto_environment {
     string  uri              = "";
     frame3f frame            = identity_frame3f;
-    vec3f   emission         = {0, 0, 0};
+    float   emission_factor  = 0;
+    vec3f   emission_color   = {1, 1, 1};
     int     emission_texture = -1;
 };
 
@@ -370,6 +390,9 @@ void add_cameras(yocto_scene& scene);
 void normalize_uris(yocto_scene& sceme);
 void rename_instances(yocto_scene& scene);
 
+// Normalized a scaled color in a material
+void normalize_scaled_color(float& scale, vec3f& color);
+
 // Add a sky environment
 void add_sky(yocto_scene& scene, float sun_angle = pif / 4);
 
@@ -449,19 +472,37 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    vec3f emission        = zero3f;
-    vec3f diffuse         = zero3f;
-    vec3f specular        = zero3f;
-    vec3f transmission    = zero3f;
-    float roughness       = 1;
-    float opacity         = 1;
-    bool  base_metallic   = false;
-    bool  refract         = false;
-    vec3f normalmap       = {0, 0, 1};
-    vec3f volume_emission = {0, 0, 0};
-    vec3f volume_albedo   = {0, 0, 0};
-    vec3f volume_density  = {0, 0, 0};
-    float volume_phaseg   = 0;
+    float emission_factor         = 0;
+    float diffuse_factor          = 0;
+    float metallic_factor         = 0;
+    float specular_factor         = 0;
+    float transmission_factor     = 0;
+    float subsurface_factor       = 0;
+    float sheen_factor            = 0;
+    float coat_factor             = 0;
+    vec3f coat_color              = {1, 1, 1};
+    float coat_roughness          = 1;
+    float coat_ior                = 1.5;
+    vec3f emission_color          = {1, 1, 1};
+    vec3f base_color              = {1, 1, 1};
+    vec3f specular_color          = {1, 1, 1};
+    float specular_roughness      = 1;
+    float specular_ior            = 1.5;
+    vec3f sheen_color             = {1, 1, 1};
+    float sheen_roughness         = 0.3;
+    float diffuse_roughness       = 0;
+    vec3f transmission_color      = {1, 1, 1};
+    float transmission_depth      = 0;
+    vec3f transmission_scatter    = {0, 0, 0};
+    float transmission_anisotropy = 0;
+    vec3f subsurface_emission     = {0, 0, 0};
+    vec3f subsurface_color        = {1, 1, 1};
+    vec3f subsurface_radius       = {1, 1, 1};
+    float subsurface_scale        = 1;
+    float subsurface_anisotropy   = 0;
+    float opacity_factor          = 1;
+    bool  thin_walled             = false;
+    vec3f normal_map              = {0, 0, 1};
 };
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord);
@@ -490,7 +531,7 @@ vec3f eval_direction(
 vec3f eval_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vec3f& direction);
 // Evaluate all environment emission.
-vec3f eval_environment(const yocto_scene& scene, const vec3f& direction);
+vec3f eval_environments(const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
 void  sample_environment_cdf(const yocto_scene& scene,

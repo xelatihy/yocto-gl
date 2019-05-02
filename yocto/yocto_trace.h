@@ -87,9 +87,9 @@ const auto trace_default_seed = 961748941ull;
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<int>           instances               = {};
-    vector<int>           environments            = {};
-    vector<vector<float>> shape_cdfs      = {};
+    vector<int>           instances        = {};
+    vector<int>           environments     = {};
+    vector<vector<float>> shape_cdfs       = {};
     vector<vector<float>> environment_cdfs = {};
 
     bool empty() const { return instances.empty() && environments.empty(); }
@@ -222,13 +222,17 @@ namespace yocto {
 float exponent_to_roughness(float n);
 
 // Specular to fresnel eta.
-void  specular_to_eta(const vec3f& specular, vec3f& es, vec3f& esk);
-float specular_to_eta(const vec3f& specular);
+vec3f              reflectance_to_eta(const vec3f& reflectance);
+vec3f              eta_to_reflectance(const vec3f& eta);
+pair<vec3f, vec3f> reflectance_to_eta(
+    const vec3f& reflectance, const vec3f& edge_tint);
+vec3f eta_to_reflectance(const vec3f& eta, const vec3f& etak);
+vec3f eta_to_edge_tint(const vec3f& eta, const vec3f& etak);
 // Compute the fresnel term for dielectrics.
-vec3f fresnel_dielectric(float direction_cosine, const vec3f& eta);
+vec3f fresnel_dielectric(const vec3f& eta, float direction_cosine);
 // Compute the fresnel term for metals.
-vec3f fresnel_metal(
-    float direction_cosine, const vec3f& eta, const vec3f& etak);
+vec3f fresnel_conductor(
+    const vec3f& eta, const vec3f& etak, float direction_cosine);
 // Schlick approximation of Fresnel term, optionally weighted by roughness;
 vec3f fresnel_schlick(const vec3f& specular, float direction_cosine);
 vec3f fresnel_schlick(
@@ -249,8 +253,9 @@ float sample_microfacet_pdf(float roughness, const vec3f& normal,
 vec3f sample_phasefunction(float vg, const vec2f& u);
 float eval_phasefunction(float cos_theta, float vg);
 
-// Get a complex ior table with keys the metal name and values (eta, etak)
-bool get_metal_eta(const string& element, vec3f& eta, vec3f& etak);
+// Get complex ior from metal names (eta, etak).
+// Return zeros if not available.
+pair<vec3f, vec3f> get_conductor_eta(const string& element);
 
 }  // namespace yocto
 

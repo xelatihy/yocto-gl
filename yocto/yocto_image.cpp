@@ -387,7 +387,7 @@ static inline void load_stb_image_from_memory(
 template <int N>
 static inline void load_image_preset(
     const string& filename, image<vec<float, N>>& img) {
-    auto [type, nfilename] = get_image_preset_type(filename);
+    auto [type, nfilename] = get_preset_type(filename);
     if constexpr (N == 4) {
         img.resize({1024, 1024});
         if (type == "images2") img.resize({2048, 1024});
@@ -421,7 +421,7 @@ static inline void save_image_impl(
 template <int N>
 static inline void load_image_impl(
     const string& filename, image<vec<float, N>>& img) {
-    if (is_image_preset_filename(filename)) {
+    if (is_preset_filename(filename)) {
         return load_image_preset(filename, img);
     }
     auto ext = get_extension(filename);
@@ -464,7 +464,7 @@ static inline void save_image_impl(
 template <int N>
 static inline void load_image_impl(
     const string& filename, image<vec<byte, N>>& img) {
-    if (is_image_preset_filename(filename)) {
+    if (is_preset_filename(filename)) {
         return load_image_preset(filename, img);
     }
     auto ext = get_extension(filename);

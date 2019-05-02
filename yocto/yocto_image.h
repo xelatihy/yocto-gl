@@ -273,10 +273,6 @@ namespace yocto {
 
 // Check if an image is HDR based on filename.
 inline bool is_hdr_filename(const string& filename);
-// Return the preset type and the remaining filename
-inline bool is_image_preset_filename(const string& filename);
-// Return the preset type and the filename. Call only if this is a preset.
-inline pair<string, string> get_image_preset_type(const string& filename);
 
 // Loads/saves a 1-4 channels float image in linear color space.
 void load_image(const string& filename, image<float>& img);
@@ -698,9 +694,6 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
 // VOLUME IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Check if an image is a preset based on filename.
-inline bool is_volume_preset_filename(const string& filename);
 
 // Loads/saves a 1 channel volume.
 void load_volume(const string& filename, volume<float>& vol);
@@ -1434,21 +1427,6 @@ namespace yocto {
 inline bool is_hdr_filename(const string& filename) {
     return get_extension(filename) == "hdr" ||
            get_extension(filename) == "exr" || get_extension(filename) == "pfm";
-}
-// Return the preset type and the remaining filename
-inline bool is_image_preset_filename(const string& filename) {
-    return filename.find("::yocto::") == 0;
-}
-// Return the preset type and the filename. Call only if this is a preset.
-inline pair<string, string> get_image_preset_type(const string& filename) {
-    if (filename.find("::yocto::") == 0) {
-        auto aux = filename.substr(string("::yocto::").size());
-        auto pos = aux.find("::");
-        if (pos == aux.npos) throw runtime_error("bad preset name" + filename);
-        return {aux.substr(0, pos), aux.substr(pos + 2)};
-    } else {
-        return {"", filename};
-    }
 }
 
 // Convenience helper for loading HDR or LDR based on filename
@@ -2601,18 +2579,6 @@ inline void make_preset(volume<float>& vol, const string& type) {
     } else {
         throw runtime_error("unknown volume preset " + type);
     }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// VOLUME IMAGE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Check if an image is a preset based on filename.
-inline bool is_volume_preset_filename(const string& filename) {
-    return get_extension(filename) == "ypreset";
 }
 
 }  // namespace yocto

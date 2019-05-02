@@ -1566,6 +1566,38 @@ constexpr vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T1 eta) {
 
 // Max element and clamp.
 template <typename T, int N>
+constexpr vec<T, N> max(const vec<T, N>& a, T b) {
+    if constexpr (N == 1) {
+        return {max(a.x, b)};
+    } else if constexpr (N == 2) {
+        return {max(a.x, b), max(a.y, b)};
+    } else if constexpr (N == 3) {
+        return {max(a.x, b), max(a.y, b), max(a.z, b)};
+    } else if constexpr (N == 4) {
+        return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
+    } else {
+        auto c = vec<T, N>{};
+        for (auto i = 0; i < N; i++) c[i] = max(a[i], b);
+        return c;
+    }
+}
+template <typename T, int N>
+constexpr vec<T, N> min(const vec<T, N>& a, T b) {
+    if constexpr (N == 1) {
+        return {min(a.x, b)};
+    } else if constexpr (N == 2) {
+        return {min(a.x, b), min(a.y, b)};
+    } else if constexpr (N == 3) {
+        return {min(a.x, b), min(a.y, b), min(a.z, b)};
+    } else if constexpr (N == 4) {
+        return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
+    } else {
+        auto c = vec<T, N>{};
+        for (auto i = 0; i < N; i++) c[i] = min(a[i], b);
+        return c;
+    }
+}
+template <typename T, int N>
 constexpr vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
     if constexpr (N == 1) {
         return {max(a.x, b.x)};

@@ -39,7 +39,7 @@ cameras:
     lens_aperture: 0.0
     film_width: 0.036
     film_height: 0.015
-    orthographic: True
+    orthographic: true
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
   - uri: cameras/orthographic-dof.yaml
@@ -47,7 +47,7 @@ cameras:
     lens_aperture: 0.02
     film_width: 0.036
     film_height: 0.015
-    orthographic: True
+    orthographic: true
     focus_distance: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
 textures:
@@ -56,29 +56,33 @@ textures:
   - uri: ::yocto::test-sunsky::textures/test-sunsky.hdr
 materials:
   - uri: materials/test-floor.yaml
-    diffuse: [0.7, 0.7, 0.7]
-    diffuse_texture: textures/test-floor.png
+    diffuse_factor: 1
+    base_color: [0.7, 0.7, 0.7]
+    base_texture: textures/test-floor.png
   - uri: materials/test-uvgrid.yaml
-    diffuse: [1, 1, 1]
-    specular: [0.04, 0.04, 0.04]
-    roughness: 0.1
-    diffuse_texture: textures/test-uvgrid.png
+    diffuse_factor: 1
+    specular_factor: 1
+    base_color: [1, 1, 1]
+    specular_roughness: 0.1
+    base_texture: textures/test-uvgrid.png
   - uri: materials/test-plastic-sharp.yaml
-    diffuse: [0.5, 0.5, 0.7]
-    specular: [0.04, 0.04, 0.04]
-    roughness: 0.01
+    diffuse_factor: 1
+    specular_factor: 1
+    base_color: [0.5, 0.5, 0.7]
+    specular_roughness: 0.01
   - uri: materials/test-plastic-rough.yaml
-    diffuse: [0.5, 0.7, 0.5]
-    specular: [0.04, 0.04, 0.04]
-    roughness: 0.1
+    diffuse_factor: 1
+    specular_factor: 1
+    base_color: [0.5, 0.7, 0.5]
+    specular_roughness: 0.2
   - uri: materials/test-metal-sharp.yaml
-    diffuse: [0, 0, 0]
-    specular: [0.7, 0.7, 0.7]
-    roughness: 0
+    metallic_factor: 1
+    base_color: [0.7, 0.7, 0.7]
+    specular_roughness: 0
   - uri: materials/test-metal-rough.yaml
-    diffuse: [0, 0, 0]
-    specular: [0.66, 0.45, 0.34]
-    roughness: 0.1
+    metallic_factor: 1
+    base_color: [0.66, 0.45, 0.34]
+    specular_roughness: 0.2
 shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply
   - uri: shapes/test-bunny.obj
@@ -109,5 +113,5 @@ instances:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
   - uri: environments/test-sunsky.yaml
-    emission: [1, 1, 1]
+    emission_factor: 2
     emission_texture: textures/test-sunsky.hdr

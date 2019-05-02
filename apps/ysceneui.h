@@ -88,7 +88,9 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     draw_opengl_widgets_scene_tree(
         win, "emission", scene, value.emission_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
-        win, "diffuse", scene, value.diffuse_texture, scene.textures, sel);
+        win, "base", scene, value.base_texture, scene.textures, sel);
+    draw_opengl_widgets_scene_tree(
+        win, "metallic", scene, value.metallic_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
         win, "specular", scene, value.specular_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
@@ -347,52 +349,133 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
         edited = true;
     }
-    if (draw_hdr_coloredit_opengl_widget(
-            win, "emission", edited_value.emission)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(win, "diffuse", edited_value.diffuse)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(win, "specular", edited_value.specular)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(
-            win, "transmission", edited_value.transmission)) {
+    if (draw_slider_opengl_widget(
+            win, "coat", edited_value.coat_factor, 0, 1)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
-            win, "roughness", edited_value.roughness, 0, 1)) {
+            win, "emission", edited_value.emission_factor, 0, 10000)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(win, "opacity", edited_value.opacity, 0, 1)) {
-        edited = true;
-    }
-    if (draw_checkbox_opengl_widget(win, "fresnel", edited_value.fresnel)) {
-        edited = true;
-    }
-    continue_opengl_widget_line(win);
-    if (draw_checkbox_opengl_widget(win, "refract", edited_value.refract)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(
-            win, "volume_density", edited_value.volume_density)) {
-        edited = true;
-    }  // 0, 10
-    if (draw_coloredit_opengl_widget(
-            win, "volume_albedo", edited_value.volume_albedo)) {
-        edited = true;
-    }  // 0, 1
     if (draw_slider_opengl_widget(
-            win, "volume_phaseg", edited_value.volume_phaseg, -1, 1)) {
+            win, "metallic", edited_value.metallic_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "specular", edited_value.specular_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "sheen", edited_value.sheen_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "diffuse", edited_value.diffuse_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "subsurface", edited_value.subsurface_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "transmission", edited_value.transmission_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "opacity factor", edited_value.opacity_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_checkbox_opengl_widget(
+            win, "thin_walled", edited_value.thin_walled)) {
+        edited = true;
+    }
+
+    if (draw_coloredit_opengl_widget(
+            win, "emission color", edited_value.emission_color)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "base color", edited_value.base_color)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "coat color", edited_value.coat_color)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "coat roughness", edited_value.coat_roughness, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "coat ior", edited_value.coat_ior, 1, 2)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "specular color", edited_value.specular_color)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "specular roughness", edited_value.specular_roughness, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "specular ior", edited_value.specular_ior, 1, 2)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "transmission color", edited_value.transmission_color)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "transmission depth", edited_value.transmission_depth, 0, 1)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "transmission scatter", edited_value.transmission_scatter)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(win, "transmission anisotropy",
+            edited_value.transmission_anisotropy, -1, 1)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "subsurface emission", edited_value.subsurface_emission)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "subsurface color", edited_value.subsurface_color)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "subsurface radius", edited_value.subsurface_radius)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "subsurface scale", edited_value.subsurface_scale, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(win, "subsurface anisotropy",
+            edited_value.subsurface_anisotropy, -1, 1)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "sheen color", edited_value.sheen_color)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "sheen roughness", edited_value.sheen_roughness, -1, 1)) {
         edited = true;
     }
     if (draw_combobox_opengl_widget(win, "emission_texture",
             edited_value.emission_texture, scene.textures, true)) {
         edited = true;
     }
-    if (draw_combobox_opengl_widget(win, "diffuse_texture",
-            edited_value.diffuse_texture, scene.textures, true)) {
+    if (draw_combobox_opengl_widget(win, "base_texture",
+            edited_value.base_texture, scene.textures, true)) {
+        edited = true;
+    }
+    if (draw_combobox_opengl_widget(win, "metallic_texture",
+            edited_value.metallic_texture, scene.textures, true)) {
         edited = true;
     }
     if (draw_combobox_opengl_widget(win, "specular_texture",
@@ -409,10 +492,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     }
     if (draw_combobox_opengl_widget(win, "normal_texture",
             edited_value.normal_texture, scene.textures, true)) {
-        edited = true;
-    }
-    if (draw_checkbox_opengl_widget(
-            win, "base metallic", edited_value.base_metallic)) {
         edited = true;
     }
     if (draw_checkbox_opengl_widget(
@@ -615,10 +694,15 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "frame.o", edited_value.frame.o, -10, 10)) {
         edited = true;
     }
-    if (draw_hdr_coloredit_opengl_widget(win, "ke", edited_value.emission)) {
+    if (draw_slider_opengl_widget(
+            win, "emission factor", edited_value.emission_factor, 0, 10000)) {
         edited = true;
     }
-    if (draw_combobox_opengl_widget(win, "ke texture",
+    if (draw_coloredit_opengl_widget(
+            win, "emission color", edited_value.emission_color)) {
+        edited = true;
+    }
+    if (draw_combobox_opengl_widget(win, "emission texture",
             edited_value.emission_texture, scene.textures, true)) {
         edited = true;
     }
