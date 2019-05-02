@@ -222,9 +222,10 @@ namespace yocto {
 float exponent_to_roughness(float n);
 
 // Specular to fresnel eta.
-vec3f reflectance_to_eta(const vec3f& reflectance);
-vec3f eta_to_reflectance(const vec3f& eta);
-pair<vec3f, vec3f> reflectance_to_eta(const vec3f& reflectance, const vec3f& edge_tint);
+vec3f              reflectance_to_eta(const vec3f& reflectance);
+vec3f              eta_to_reflectance(const vec3f& eta);
+pair<vec3f, vec3f> reflectance_to_eta(
+    const vec3f& reflectance, const vec3f& edge_tint);
 vec3f eta_to_reflectance(const vec3f& eta, const vec3f& etak);
 vec3f eta_to_edge_tint(const vec3f& eta, const vec3f& etak);
 // Compute the fresnel term for dielectrics.

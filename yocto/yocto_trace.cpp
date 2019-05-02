@@ -145,9 +145,9 @@ vec3f eta_to_reflectance(const vec3f& eta, const vec3f& etak) {
            ((eta + 1) * (eta + 1) + etak * etak);
 }
 vec3f eta_to_edge_tint(const vec3f& eta, const vec3f& etak) {
-    auto r = eta_to_reflectance(eta, etak);
-    auto numer = (1+sqrt(r)) / (1 - sqrt(r)) - eta;
-    auto denom = (1+sqrt(r)) / (1 - sqrt(r)) - (1-r)/(1+r);
+    auto r     = eta_to_reflectance(eta, etak);
+    auto numer = (1 + sqrt(r)) / (1 - sqrt(r)) - eta;
+    auto denom = (1 + sqrt(r)) / (1 - sqrt(r)) - (1 - r) / (1 + r);
     return numer / denom;
 }
 
@@ -327,7 +327,8 @@ const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
 
 // Get a complex ior table with keys the metal name and values (eta, etak)
 pair<vec3f, vec3f> get_conductor_eta(const string& name) {
-    if (metal_ior_table.find(name) == metal_ior_table.end()) return {zero3f, zero3f};
+    if (metal_ior_table.find(name) == metal_ior_table.end())
+        return {zero3f, zero3f};
     return metal_ior_table.at(name);
 }
 
