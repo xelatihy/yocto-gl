@@ -350,19 +350,11 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
         edited = true;
     }
     if (draw_slider_opengl_widget(
-            win, "emission", edited_value.emission_factor, 0, 10000)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(
-            win, "emission color", edited_value.emission_color)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
             win, "coat", edited_value.coat_factor, 0, 1)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
-            win, "diffuse", edited_value.diffuse_factor, 0, 1)) {
+            win, "emission", edited_value.emission_factor, 0, 10000)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
@@ -373,8 +365,37 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "specular", edited_value.specular_factor, 0, 1)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(win, "transmission",
-            edited_value.transmission_factor, 0, 1)) {
+    if (draw_slider_opengl_widget(
+            win, "sheen", edited_value.sheen_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "diffuse", edited_value.diffuse_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "subsurface", edited_value.subsurface_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "transmission", edited_value.transmission_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "opacity factor", edited_value.opacity_factor, 0, 1)) {
+        edited = true;
+    }
+    if (draw_checkbox_opengl_widget(
+            win, "thin_walled", edited_value.thin_walled)) {
+        edited = true;
+    }
+
+    if (draw_coloredit_opengl_widget(
+            win, "emission color", edited_value.emission_color)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "base color", edited_value.base_color)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(
@@ -387,10 +408,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     }
     if (draw_slider_opengl_widget(
             win, "coat ior", edited_value.coat_ior, 1, 2)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(
-            win, "base color", edited_value.base_color)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(
@@ -410,12 +427,39 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
         edited = true;
     }
     if (draw_slider_opengl_widget(
-            win, "opacity factor", edited_value.opacity_factor, 0, 1)) {
+            win, "transmission depth", edited_value.transmission_depth, 0, 1)) {
         edited = true;
     }
-    continue_opengl_widget_line(win);
-    if (draw_checkbox_opengl_widget(
-            win, "thin_walled", edited_value.thin_walled)) {
+    if (draw_slider_opengl_widget(win, "transmission anisotropy",
+            edited_value.transmission_anisotropy, -1, 1)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "subsurface emission", edited_value.subsurface_emission)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "subsurface color", edited_value.subsurface_color)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "subsurface radius", edited_value.subsurface_radius)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "subsurface scale", edited_value.subsurface_scale, 0, 1)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(win, "subsurface anisotropy",
+            edited_value.subsurface_anisotropy, -1, 1)) {
+        edited = true;
+    }
+    if (draw_coloredit_opengl_widget(
+            win, "sheen color", edited_value.sheen_color)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "sheen roughness", edited_value.sheen_roughness, -1, 1)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(
