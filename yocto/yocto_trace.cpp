@@ -115,6 +115,11 @@ float exponent_to_roughness(float exponent) {
     return sqrtf(2 / (exponent + 2));
 }
 
+// Specular to  eta.
+vec3f reflectance_to_eta(const vec3f& reflectance) {
+    return (1 + sqrt(reflectance)) / (1 - sqrt(reflectance));
+}
+
 // Specular to fresnel eta.
 pair<vec3f, vec3f> reflectance_to_eta(
     const vec3f& reflectance, const vec3f& edge_tint) {
@@ -130,11 +135,6 @@ pair<vec3f, vec3f> reflectance_to_eta(
     k2      = max(k2, 0.0f);
     auto k  = sqrt(k2);
     return {n, k};
-}
-
-// Specular to  eta.
-vec3f reflectance_to_eta(const vec3f& reflectance) {
-    return (1 + sqrt(reflectance)) / (1 - sqrt(reflectance));
 }
 
 vec3f eta_to_reflectance(const vec3f& eta) {
@@ -170,10 +170,10 @@ vec3f fresnel_dielectric(const vec3f& eta_, float cosw) {
     auto t1 = eta * t0;
     auto t2 = eta * cosw;
 
-    auto roughness = (cosw - t1) / (cosw + t1);
-    auto rp        = (t0 - t2) / (t0 + t2);
+    auto rs = (cosw - t1) / (cosw + t1);
+    auto rp = (t0 - t2) / (t0 + t2);
 
-    return (roughness * roughness + rp * rp) / 2;
+    return (rs * rs + rp * rp) / 2;
 }
 
 // Compute the fresnel term for metals. Implementation from
@@ -188,19 +188,17 @@ vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosw) {
     auto etak2 = etak * etak;
 
     auto t0         = eta2 - etak2 - sin2;
-    auto a2plusb2_2 = t0 * t0 + 4 * eta2 * etak2;
-    auto a2plusb2   = sqrt(a2plusb2_2);
+    auto a2plusb2   = sqrt(t0 * t0 + 4 * eta2 * etak2);
     auto t1         = a2plusb2 + cos2;
-    auto a_2        = (a2plusb2 + t0) / 2;
-    auto a          = sqrt(a_2);
-    auto t2         = 2.0f * a * cosw;
-    auto roughness  = (t1 - t2) / (t1 + t2);
+    auto a          = sqrt((a2plusb2 + t0) / 2);
+    auto t2         = 2 * a * cosw;
+    auto rs  = (t1 - t2) / (t1 + t2);
 
     auto t3 = cos2 * a2plusb2 + sin2 * sin2;
     auto t4 = t2 * sin2;
-    auto rp = roughness * (t3 - t4) / (t3 + t4);
+    auto rp = rs * (t3 - t4) / (t3 + t4);
 
-    return (rp + roughness) / 2;
+    return (rp + rs) / 2;
 }
 
 pair<float, int> sample_distance(const vec3f& density, float rl, float rd) {
@@ -439,10 +437,16 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     }
     if (point.metallic_factor) {
         auto roughness   = point.specular_roughness;
-        auto [eta, etak] = reflectance_to_eta(
-            point.base_color, point.specular_color);
-        auto fresnel = fresnel_conductor(eta, etak, abs(dot(normal, outgoing)));
-        auto lweight = weight * point.metallic_factor * point.base_color;
+        auto eta = reflectance_to_eta(point.base_color), etak = zero3f;
+        // auto [eta1, etak1] = reflectance_to_eta(point.base_color, point.specular_color);
+        // auto eta2 = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
+        // auto etak2 = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
+        // etak = zero3f;
+        // print("1: {} {}\n 2: {} {}\n 3: {} {}\n", eta1, etak1, eta2, etak2, eta3, etak3);
+        // auto eta = eta2, etak = etak3;
+        // auto fresnel = fresnel_conductor(eta, etak, abs(dot(normal, outgoing)));
+        auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+        auto lweight = weight * point.metallic_factor;
         if (lweight != zero3f) {
             if (roughness) {
                 bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
