@@ -1229,43 +1229,43 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 // Evaluates the microfacet_brdf at a location.
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord) {
-    auto point                = material_point{};
+    auto point = material_point{};
     // factors
     point.coat_factor         = material.coat_factor;
     point.emission_factor     = material.emission_factor;
     point.metallic_factor     = material.metallic_factor;
     point.transmission_factor = material.transmission_factor;
     point.specular_factor     = material.specular_factor;
-    point.sheen_factor     = material.sheen_factor;
-    point.subsurface_factor      = material.subsurface_factor;
+    point.sheen_factor        = material.sheen_factor;
+    point.subsurface_factor   = material.subsurface_factor;
     point.diffuse_factor      = material.diffuse_factor;
     point.opacity_factor      = material.opacity_factor;
 
     // lobes
-    point.coat_color          = material.coat_color;
-    point.coat_roughness      = material.coat_roughness;
-    point.coat_ior            = material.coat_ior;
-    point.emission_color      = material.emission_color;
-    point.base_color          = material.base_color;
-    point.specular_color      = material.specular_color;
-    point.specular_roughness  = material.specular_roughness;
-    point.specular_ior        = material.specular_ior;
-    point.sheen_color  = material.sheen_color;
-    point.sheen_roughness  = material.sheen_roughness;
-    point.diffuse_roughness  = material.diffuse_roughness;
-    point.transmission_color  = material.transmission_color;
-    point.transmission_depth  = material.transmission_depth;
-    point.transmission_scatter  = material.transmission_scatter;
-    point.transmission_anisotropy  = material.transmission_anisotropy;
-    point.subsurface_emission  = material.subsurface_emission;
-    point.subsurface_color  = material.subsurface_color;
-    point.subsurface_radius  = material.subsurface_radius;
-    point.subsurface_scale  = material.subsurface_scale;
-    point.subsurface_anisotropy  = material.subsurface_anisotropy;
-    point.thin_walled         = material.thin_walled;
+    point.coat_color              = material.coat_color;
+    point.coat_roughness          = material.coat_roughness;
+    point.coat_ior                = material.coat_ior;
+    point.emission_color          = material.emission_color;
+    point.base_color              = material.base_color;
+    point.specular_color          = material.specular_color;
+    point.specular_roughness      = material.specular_roughness;
+    point.specular_ior            = material.specular_ior;
+    point.sheen_color             = material.sheen_color;
+    point.sheen_roughness         = material.sheen_roughness;
+    point.diffuse_roughness       = material.diffuse_roughness;
+    point.transmission_color      = material.transmission_color;
+    point.transmission_depth      = material.transmission_depth;
+    point.transmission_scatter    = material.transmission_scatter;
+    point.transmission_anisotropy = material.transmission_anisotropy;
+    point.subsurface_emission     = material.subsurface_emission;
+    point.subsurface_color        = material.subsurface_color;
+    point.subsurface_radius       = material.subsurface_radius;
+    point.subsurface_scale        = material.subsurface_scale;
+    point.subsurface_anisotropy   = material.subsurface_anisotropy;
+    point.thin_walled             = material.thin_walled;
 
     // textures
-    point.normal_map          = vec3f{0, 0, 1};
+    point.normal_map = vec3f{0, 0, 1};
     if (material.emission_texture >= 0) {
         auto& emission_texture = scene.textures[material.emission_texture];
         point.emission_color *= xyz(
