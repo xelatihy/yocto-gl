@@ -463,10 +463,11 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         if (point.thin_walled || !point.transmission_depth) {
             lweight *= point.transmission_color;
         } else {
-            auto density = -log(clamp(point.transmission_color,
-            0.0001f, 1.0f)) /
+            auto density = -log(
+                               clamp(point.transmission_color, 0.0001f, 1.0f)) /
                            point.transmission_depth;
-            // auto density = point.transmission_color * point.transmission_depth;
+            // auto density = point.transmission_color *
+            // point.transmission_depth;
             mediums.push_back(
                 {trace_medium::type_t::phaseg, {1, 1, 1}, zero3f, density,
                     point.transmission_scatter, point.transmission_anisotropy,
