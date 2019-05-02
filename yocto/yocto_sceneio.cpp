@@ -727,6 +727,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.transmission_color);
                 } else if (key == "transmission_depth") {
                     get_yaml_value(value, material.transmission_depth);
+                } else if (key == "transmission_scatter") {
+                    get_yaml_value(value, material.transmission_scatter);
                 } else if (key == "transmission_anisotropy") {
                     get_yaml_value(value, material.transmission_anisotropy);
                 } else if (key == "subsurface_emission") {
@@ -765,6 +767,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_ref(value, material.transmission_texture, tmap);
                 } else if (key == "roughness_texture") {
                     get_yaml_ref(value, material.roughness_texture, tmap);
+                } else if (key == "subsurface_texture") {
+                    get_yaml_ref(value, material.subsurface_texture, tmap);
                 } else if (key == "normal_texture") {
                     get_yaml_ref(value, material.normal_texture, tmap);
                 } else if (key == "volume_density_texture") {

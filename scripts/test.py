@@ -273,41 +273,36 @@ def make_tests():
                 "specular_factor": 1,
                 "transmission_factor": 1,
                 "specular_roughness": 0,
-                "volume_density": [50, 50, 50],
-                "volume_albedo": [0.3, 0.6, 0.3],
-                "volume_phaseg": 0,
-                "thin_walled": False
+                "transmission_color": [0.5, 0.5, 0.5],
+                "transmission_depth": 0.06,
+                "transmission_scatter": [0.3, 0.6, 0.3]
             },
             {
                 "uri": "materials/test-volume-cloud.yaml",
-                "transmission_factor": 1,
-                "volume_density": [20, 20, 20],
-                "volume_albedo": [0.9, 0.9, 0.9],
-                "volume_phaseg": 0,
-                "thin_walled": True
+                "subsurface_factor": 1,
+                "subsurface_scale": 0.05,
+                "subsurface_color": [0.9, 0.9, 0.9]
             },
             {
                 "uri": "materials/test-volume-glass.yaml",
                 "specular_factor": 1,
                 "transmission_factor": 1,
                 "specular_roughness": 0,
-                "volume_density": [0, 15, 15],
-                "thin_walled": False
+                "transmission_color": [1, 0, 0],
+                "transmission_depth": 0.5
             },
             {
                 "uri": "materials/test-volume-smoke.yaml",
-                "transmission_factor": 1,
-                "volume_density": [30, 30, 30],
-                "volume_albedo": [0.2, 0.2, 0.2],
-                "volume_phaseg": -0.8,
-                "thin_walled": True
+                "subsurface_factor": 1,
+                "subsurface_scale": 0.03,
+                "subsurface_color": [0.2, 0.2, 0.2],
+                "subsurface_anisotropy": -0.8
             },
             {
                 "uri": "materials/test-volume-emissive.yaml",
-                "transmission_factor": 1,
-                "volume_density": [1, 1, 1],
-                "volume_emission": [15, 15, 10],
-                "thin_walled": True
+                "subsurface_factor": 1,
+                "subsurface_scale": 1,
+                "subsurface_emission": [15, 15, 10]
             },
             {
                 "uri": "materials/test-arealight1.yaml",

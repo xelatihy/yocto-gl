@@ -351,7 +351,7 @@ struct trace_emission {
 using trace_emissions = short_vector<trace_emission, 8>;
 // Scattering lobe
 struct trace_bsdf {
-    enum struct type_t { diffuse, reflection, transmission, transparency };
+    enum struct type_t { diffuse, reflection, transmission, transparency, translucency };
     type_t type      = type_t::diffuse;
     vec3f  weight    = zero3f;
     vec3f  eta       = zero3f;
@@ -453,8 +453,16 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         auto eta       = vec3f{point.specular_ior};
         if (point.thin_walled && !point.specular_factor) eta = {1, 1, 1};
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
-        auto lweight = weight * point.transmission_factor *
-                       point.transmission_color;
+        auto lweight = weight * point.transmission_factor;
+        if (point.thin_walled || !point.transmission_depth) {
+            lweight *= point.transmission_color;
+        } else {
+            auto density = -log(point.transmission_color) /
+                           point.transmission_depth;
+            mediums.push_back(
+                {trace_medium::type_t::phaseg, {1, 1, 1}, zero3f, density,
+                    point.transmission_scatter, point.transmission_anisotropy});
+        }
         if (lweight != zero3f) {
             if (roughness) {
                 bsdfs.push_back(
@@ -469,9 +477,6 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
                         lweight, eta, zero3f, max(lweight * (1 - fresnel)), 0});
             }
         }
-        // mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
-        //     point.volume_emission, point.volume_density, point.volume_albedo,
-        //     point.volume_phaseg, max(point.volume_albedo)});
     }
     if (point.specular_factor) {
         auto roughness = point.specular_roughness;
@@ -489,6 +494,23 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         }
         weight *= 1 - fresnel;
     }
+    if (point.subsurface_factor) {
+        auto roughness = point.subsurface_factor;
+        auto lweight   = weight * point.subsurface_factor;
+        if (point.thin_walled) {
+            lweight *= point.subsurface_color;
+            bsdfs.push_back({trace_bsdf::type_t::translucency, lweight, zero3f,
+                zero3f, roughness, max(lweight), 0});
+        } else {
+            auto density = 1 / (point.subsurface_radius * point.subsurface_scale);
+            mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
+                point.subsurface_emission, density, point.transmission_scatter,
+                point.transmission_anisotropy});
+            deltas.push_back({trace_delta::type_t::transparency, lweight, zero3f,
+                zero3f, max(lweight), 0});
+        }
+        weight *= 1 - point.subsurface_factor;
+    }
     if (point.diffuse_factor) {
         auto lweight = weight * point.diffuse_factor * point.base_color;
         if (lweight != zero3f) {
@@ -504,7 +526,7 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     normalize_weights(bsdfs);
     normalize_weights(deltas);
     normalize_weights(mediums);
-}
+}  // namespace yocto
 
 vec3f eval_emission(const trace_emissions& emissions, const vec3f& normal,
     const vec3f& outgoing) {
@@ -533,6 +555,11 @@ bool other_hemisphere(
 vec3f eval_diffuse_reflection(float roughness, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
     if (!same_hemisphere(normal, outgoing, incoming)) return zero3f;
+    return vec3f{abs(dot(normal, incoming)) / pif};
+}
+vec3f eval_diffuse_translucency(float roughness, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
+    if (!other_hemisphere(normal, outgoing, incoming)) return zero3f;
     return vec3f{abs(dot(normal, incoming)) / pif};
 }
 vec3f eval_microfacet_reflection(float roughness, const vec3f& eta,
@@ -632,6 +659,11 @@ vec3f eval_scattering(const trace_bsdfs& bsdfs, const vec3f& normal,
                               eval_diffuse_reflection(
                                   lobe.roughness, normal, outgoing, incoming);
             } break;
+            case trace_bsdf::type_t::translucency: {
+                scattering += lobe.weight *
+                              eval_diffuse_translucency(
+                                  lobe.roughness, normal, outgoing, incoming);
+            } break;
             case trace_bsdf::type_t::reflection: {
                 scattering += lobe.weight *
                               eval_microfacet_reflection(lobe.roughness,
@@ -703,6 +735,11 @@ vec3f sample_diffuse_reflection(float roughness, const vec3f& normal,
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
     return sample_hemisphere(up_normal, rn);
 }
+vec3f sample_diffuse_translucency(float roughness, const vec3f& normal,
+    const vec3f& outgoing, const vec2f& rn) {
+    auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
+    return sample_hemisphere(-up_normal, rn);
+}
 vec3f sample_microfacet_reflection(float roughness, const vec3f& eta,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
@@ -763,6 +800,10 @@ vec3f sample_scattering(const trace_bsdfs& bsdfs, const vec3f& normal,
         switch (lobe.type) {
             case trace_bsdf::type_t::diffuse: {
                 return sample_diffuse_reflection(
+                    lobe.roughness, normal, outgoing, rn);
+            } break;
+            case trace_bsdf::type_t::translucency: {
+                return sample_diffuse_translucency(
                     lobe.roughness, normal, outgoing, rn);
             } break;
             case trace_bsdf::type_t::reflection: {
@@ -844,6 +885,11 @@ float sample_diffuse_reflection_pdf(float roughness, const vec3f& normal,
     if (!same_hemisphere(normal, outgoing, incoming)) return 0;
     return abs(dot(normal, incoming)) / pif;
 }
+float sample_diffuse_translucency_pdf(float roughness, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
+    if (!other_hemisphere(normal, outgoing, incoming)) return 0;
+    return abs(dot(normal, incoming)) / pif;
+}
 float sample_microfacet_reflection_pdf(float roughness, const vec3f& eta,
     const vec3f& etak, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
@@ -913,6 +959,10 @@ float sample_scattering_pdf(const trace_bsdfs& bsdfs, const vec3f& normal,
         switch (lobe.type) {
             case trace_bsdf::type_t::diffuse: {
                 pdf += lobe.pdf * sample_diffuse_reflection_pdf(lobe.roughness,
+                                      normal, outgoing, incoming);
+            } break;
+            case trace_bsdf::type_t::translucency: {
+                pdf += lobe.pdf * sample_diffuse_translucency_pdf(lobe.roughness,
                                       normal, outgoing, incoming);
             } break;
             case trace_bsdf::type_t::reflection: {
