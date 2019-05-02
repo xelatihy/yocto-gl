@@ -28,8 +28,6 @@
 
 #include "yocto_trace.h"
 
-#include <unordered_map>
-
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
@@ -118,16 +116,39 @@ float exponent_to_roughness(float exponent) {
 }
 
 // Specular to fresnel eta.
-void specular_to_eta(const vec3f& specular, vec3f& es, vec3f& esk) {
-    es  = {(1 + sqrt(specular.x)) / (1 - sqrt(specular.x)),
-        (1 + sqrt(specular.y)) / (1 - sqrt(specular.y)),
-        (1 + sqrt(specular.z)) / (1 - sqrt(specular.z))};
-    esk = {0, 0, 0};
+pair<vec3f, vec3f> reflectance_to_eta(
+    const vec3f& reflectance, const vec3f& edge_tint) {
+    auto r = clamp(reflectance, 0.0f, 0.99f);
+    auto g = edge_tint;
+
+    auto r_sqrt = sqrt(r);
+    auto n_min  = (1 - r) / (1 + r);
+    auto n_max  = (1 + r_sqrt) / (1 - r_sqrt);
+
+    auto n  = lerp(n_max, n_min, g);
+    auto k2 = ((n + 1) * (n + 1) * r - (n - 1) * (n - 1)) / (1 - r);
+    k2      = max(k2, 0.0f);
+    auto k  = sqrt(k2);
+    return {n, k};
 }
 
 // Specular to  eta.
-vec3f specular_to_eta(const vec3f& specular) {
-    return (1 + sqrt(specular)) / (1 - sqrt(specular));
+vec3f reflectance_to_eta(const vec3f& reflectance) {
+    return (1 + sqrt(reflectance)) / (1 - sqrt(reflectance));
+}
+
+vec3f eta_to_reflectance(const vec3f& eta) {
+    { return ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1)); }
+}
+vec3f eta_to_reflectance(const vec3f& eta, const vec3f& etak) {
+    return ((eta - 1) * (eta - 1) + etak * etak) /
+           ((eta + 1) * (eta + 1) + etak * etak);
+}
+vec3f eta_to_edge_tint(const vec3f& eta, const vec3f& etak) {
+    auto r = eta_to_reflectance(eta, etak);
+    auto numer = (1+sqrt(r)) / (1 - sqrt(r)) - eta;
+    auto denom = (1+sqrt(r)) / (1 - sqrt(r)) - (1-r)/(1+r);
+    return numer / denom;
 }
 
 // Compute the fresnel term for dielectrics. Implementation from
@@ -157,7 +178,7 @@ vec3f fresnel_dielectric(const vec3f& eta_, float cosw) {
 
 // Compute the fresnel term for metals. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-vec3f fresnel_metal(const vec3f& eta, const vec3f& etak, float cosw) {
+vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosw) {
     if (etak == zero3f) return fresnel_dielectric(eta, cosw);
 
     cosw       = clamp(cosw, (float)-1, (float)1);
@@ -167,10 +188,10 @@ vec3f fresnel_metal(const vec3f& eta, const vec3f& etak, float cosw) {
     auto etak2 = etak * etak;
 
     auto t0         = eta2 - etak2 - sin2;
-    auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
+    auto a2plusb2_2 = t0 * t0 + 4 * eta2 * etak2;
     auto a2plusb2   = sqrt(a2plusb2_2);
     auto t1         = a2plusb2 + cos2;
-    auto a_2        = (a2plusb2 + t0) / 2.0f;
+    auto a_2        = (a2plusb2 + t0) / 2;
     auto a          = sqrt(a_2);
     auto t2         = 2.0f * a * cosw;
     auto roughness  = (t1 - t2) / (t1 + t2);
@@ -305,12 +326,9 @@ const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
 };
 
 // Get a complex ior table with keys the metal name and values (eta, etak)
-bool get_metal_eta(const string& name, vec3f& eta, vec3f& etak) {
-    if (metal_ior_table.find(name) == metal_ior_table.end()) return false;
-    auto value = metal_ior_table.at(name);
-    eta        = value.first;
-    etak       = value.second;
-    return true;
+pair<vec3f, vec3f> get_conductor_eta(const string& name) {
+    if (metal_ior_table.find(name) == metal_ior_table.end()) return {zero3f, zero3f};
+    return metal_ior_table.at(name);
 }
 
 }  // namespace yocto
@@ -413,17 +431,18 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         }
     }
     if (point.metallic_factor) {
-        auto roughness = point.specular_roughness;
-        auto eta       = specular_to_eta(point.base_color);
-        auto fresnel   = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
-        auto lweight   = weight * point.metallic_factor * point.base_color;
+        auto roughness   = point.specular_roughness;
+        auto [eta, etak] = reflectance_to_eta(
+            point.base_color, point.specular_color);
+        auto fresnel = fresnel_conductor(eta, etak, abs(dot(normal, outgoing)));
+        auto lweight = weight * point.metallic_factor * point.base_color;
         if (lweight != zero3f) {
             if (roughness) {
                 bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
-                    zero3f, roughness, max(lweight * fresnel), 0});
+                    etak, roughness, max(lweight * fresnel), 0});
             } else {
                 deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
-                    zero3f, max(lweight * fresnel), 0});
+                    etak, max(lweight * fresnel), 0});
             }
         }
         weight *= 1 - point.metallic_factor;
@@ -525,7 +544,7 @@ vec3f eval_microfacet_reflection(float roughness, const vec3f& eta,
     auto halfway   = normalize(incoming + outgoing);
     auto F         = etak == zero3f
                  ? fresnel_dielectric(eta, abs(dot(halfway, outgoing)))
-                 : fresnel_metal(eta, etak, abs(dot(halfway, outgoing)));
+                 : fresnel_conductor(eta, etak, abs(dot(halfway, outgoing)));
     auto D = eval_microfacetD(roughness, up_normal, halfway);
     auto G = eval_microfacetG(
         roughness, up_normal, halfway, outgoing, incoming);
@@ -537,7 +556,7 @@ vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
     if (!same_hemisphere(normal, outgoing, incoming)) return zero3f;
     auto F = etak == zero3f
                  ? fresnel_dielectric(eta, abs(dot(normal, outgoing)))
-                 : fresnel_metal(eta, etak, abs(dot(normal, outgoing)));
+                 : fresnel_conductor(eta, etak, abs(dot(normal, outgoing)));
     return F;
 }
 vec3f eval_microfacet_transmission(float roughness, const vec3f& eta,
