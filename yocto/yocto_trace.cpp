@@ -351,7 +351,13 @@ struct trace_emission {
 using trace_emissions = short_vector<trace_emission, 8>;
 // Scattering lobe
 struct trace_bsdf {
-    enum struct type_t { diffuse, reflection, transmission, transparency, translucency };
+    enum struct type_t {
+        diffuse,
+        reflection,
+        transmission,
+        transparency,
+        translucency
+    };
     type_t type      = type_t::diffuse;
     vec3f  weight    = zero3f;
     vec3f  eta       = zero3f;
@@ -502,12 +508,13 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
             bsdfs.push_back({trace_bsdf::type_t::translucency, lweight, zero3f,
                 zero3f, roughness, max(lweight), 0});
         } else {
-            auto density = 1 / (point.subsurface_radius * point.subsurface_scale);
+            auto density = 1 /
+                           (point.subsurface_radius * point.subsurface_scale);
             mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
                 point.subsurface_emission, density, point.transmission_scatter,
                 point.transmission_anisotropy});
-            deltas.push_back({trace_delta::type_t::transparency, lweight, zero3f,
-                zero3f, max(lweight), 0});
+            deltas.push_back({trace_delta::type_t::transparency, lweight,
+                zero3f, zero3f, max(lweight), 0});
         }
         weight *= 1 - point.subsurface_factor;
     }
@@ -962,8 +969,9 @@ float sample_scattering_pdf(const trace_bsdfs& bsdfs, const vec3f& normal,
                                       normal, outgoing, incoming);
             } break;
             case trace_bsdf::type_t::translucency: {
-                pdf += lobe.pdf * sample_diffuse_translucency_pdf(lobe.roughness,
-                                      normal, outgoing, incoming);
+                pdf += lobe.pdf *
+                       sample_diffuse_translucency_pdf(
+                           lobe.roughness, normal, outgoing, incoming);
             } break;
             case trace_bsdf::type_t::reflection: {
                 pdf += lobe.pdf *
