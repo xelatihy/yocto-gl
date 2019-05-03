@@ -873,8 +873,8 @@ void run_ui(app_state& app) {
             auto& scn = app.scenes[app.selected];
             auto  ij  = get_image_coords(mouse_pos, scn.image_center,
                 scn.image_scale, scn.render.size());
-            if (ij.x < 0 || ij.x >= scn.render.size().x || ij.y < 0 ||
-                ij.y >= scn.render.size().y) {
+            if (ij.x >= 0 && ij.x < scn.render.size().x && ij.y >= 0 &&
+                ij.y < scn.render.size().y) {
                 auto& camera = scn.scene.cameras.at(scn.trace_prms.camera_id);
                 auto  ray    = eval_camera(
                     camera, ij, scn.render.size(), {0.5f, 0.5f}, zero2f);

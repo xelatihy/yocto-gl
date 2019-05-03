@@ -769,12 +769,16 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_ref(value, material.roughness_texture, tmap);
                 } else if (key == "subsurface_texture") {
                     get_yaml_ref(value, material.subsurface_texture, tmap);
+                } else if (key == "opacity_texture") {
+                    get_yaml_ref(value, material.normal_texture, tmap);
                 } else if (key == "normal_texture") {
                     get_yaml_ref(value, material.normal_texture, tmap);
                 } else if (key == "volume_density_texture") {
                     get_yaml_ref(value, material.volume_density_texture, vmap);
                 } else if (key == "gltf_textures") {
                     get_yaml_value(value, material.gltf_textures);
+                } else if (key == "specular_ior_from_color") {
+                    get_yaml_value(value, material.specular_ior_from_color);
                 } else {
                     throw io_error("unknown property " + string(key));
                 }
@@ -1061,6 +1065,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             fs, "normal_texture", material.normal_texture, scene.textures);
         print_optional(fs, "gltf_textures", material.gltf_textures,
             def_material.gltf_textures);
+        print_optional(fs, "specular_ior_from_color", material.specular_ior_from_color,
+            def_material.specular_ior_from_color);
         print_ref(fs, "volume_density_texture", material.volume_density_texture,
             scene.voltextures);
     }
@@ -1552,9 +1558,10 @@ static void save_mtl(
         print_obj_keyvalue(fs, "  illum", 2);
         print_obj_keyvalue(
             fs, "  Ke", material.emission_factor * material.emission_color);
-        if(material.metallic_factor > 0.5) {
+        if (material.metallic_factor > 0.5) {
             print_obj_keyvalue(fs, "  Kd", zero3f);
-            print_obj_keyvalue(fs, "  Ks", material.base_color * material.metallic_factor);
+            print_obj_keyvalue(
+                fs, "  Ks", material.base_color * material.metallic_factor);
         } else {
             print_obj_keyvalue(fs, "  Kd", material.base_color);
             print_obj_keyvalue(fs, "  Ks",
@@ -2837,12 +2844,14 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
     void get_scaled_texture3f(const pbrt_textured<pbrt_spectrum3f>& textured,
         float& factor, vec3f& color, int& texture) {
         if (textured.texture == "") {
-            color   = {textured.value.x, textured.value.y, textured.value.z};
-            factor  = color == zero3f ? 0 : 1;
+            color  = {textured.value.x, textured.value.y, textured.value.z};
+            factor = color == zero3f ? 0 : 1;
+            if (!factor) color = {1, 1, 1};
             texture = -1;
         } else if (is_constant_texture(textured.texture)) {
-            color   = get_constant_texture_color(textured.texture);
-            factor  = color == zero3f ? 0 : 1;
+            color  = get_constant_texture_color(textured.texture);
+            factor = color == zero3f ? 0 : 1;
+            if (!factor) color = {1, 1, 1};
             texture = -1;
         } else {
             color   = {1, 1, 1};
@@ -3082,12 +3091,13 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 material.transmission_color, material.transmission_texture);
             float op_f   = 1;
             auto  op     = vec3f{0, 0, 0};
-            auto  op_txt = -1;
-            get_scaled_texture3f(uber.opacity, op_f, op, op_txt);
+            get_scaled_texture3f(
+                uber.opacity, op_f, op, material.opacity_texture);
             material.opacity_factor     = (op.x + op.y + op.z) / 3;
             material.specular_roughness = get_pbrt_roughness(
                 uber.uroughness.value, uber.vroughness.value,
                 uber.remaproughness);
+            material.thin_walled = true;
         } else if (holds_alternative<pbrt_plastic_material>(pmaterial)) {
             auto& plastic = get<pbrt_plastic_material>(pmaterial);
             get_scaled_texture3f(plastic.Kd, material.diffuse_factor,
