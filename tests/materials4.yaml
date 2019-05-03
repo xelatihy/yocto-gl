@@ -58,9 +58,9 @@ materials:
     diffuse: [0.7, 0.7, 0.7]
     diffuse_texture: textures/test-floor.png
   - uri: materials/test-volume-jade.yaml
-    specular_factor: 1
+    specular: [0.04, 0.04, 0.04]
     transmission_factor: 1
-    specular_roughness: 0
+    roughness: 0
     transmission_color: [0.5, 0.5, 0.5]
     transmission_depth: 0.006
     transmission_scatter: [0.3, 0.6, 0.3]
@@ -69,9 +69,9 @@ materials:
     subsurface_scale: 0.05
     subsurface_color: [0.9, 0.9, 0.9]
   - uri: materials/test-volume-glass.yaml
-    specular_factor: 1
+    specular: [0.04, 0.04, 0.04]
     transmission_factor: 1
-    specular_roughness: 0
+    roughness: 0
     transmission_color: [1, 0.5, 0.5]
     transmission_depth: 0.02
   - uri: materials/test-volume-smoke.yaml

@@ -59,9 +59,9 @@ materials:
     diffuse: [0.7, 0.7, 0.7]
     diffuse_texture: textures/test-floor.png
   - uri: materials/test-uvgrid.yaml
-    specular_factor: 1
+    specular: [0.04, 0.04, 0.04]
     diffuse: [1, 1, 1]
-    specular_roughness: 0.1
+    roughness: 0.1
     diffuse_texture: textures/test-uvgrid.png
   - uri: materials/test-arealight1.yaml
     emission: [20, 20, 20]

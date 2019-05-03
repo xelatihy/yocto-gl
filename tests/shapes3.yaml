@@ -59,10 +59,10 @@ materials:
     diffuse_texture: textures/test-floor.png
   - uri: materials/test-matte.yaml
     diffuse: [0.7, 0.7, 0.7]
-    specular_roughness: 1
+    roughness: 1
   - uri: materials/test-hair.yaml
     diffuse: [0.7, 0.7, 0.7]
-    specular_roughness: 1
+    roughness: 1
   - uri: materials/test-arealight1.yaml
     emission: [20, 20, 20]
   - uri: materials/test-arealight2.yaml

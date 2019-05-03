@@ -542,10 +542,9 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     set_opengl_uniform(state.program, "mat_type", mtype);
     set_opengl_uniform(state.program, "mat_ke", material.emission);
     set_opengl_uniform(state.program, "mat_kd", material.diffuse);
-    set_opengl_uniform(
-        state.program, "mat_ks", vec3f{material.metallic_factor});
-    set_opengl_uniform(state.program, "mat_rs", material.specular_roughness);
-    set_opengl_uniform(state.program, "mat_op", material.opacity_factor);
+    set_opengl_uniform(state.program, "mat_ks", vec3f{material.metallic});
+    set_opengl_uniform(state.program, "mat_rs", material.roughness);
+    set_opengl_uniform(state.program, "mat_op", material.opacity);
     set_opengl_uniform(
         state.program, "mat_double_sided", (int)options.double_sided);
     set_opengl_uniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",

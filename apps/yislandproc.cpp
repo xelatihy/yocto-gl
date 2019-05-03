@@ -323,9 +323,9 @@ struct load_island_shape_callbacks : obj_callbacks {
         } else if (dmaterial.refractive == 0) {
             materials.back().diffuse = dmaterial.color;
         } else {
-            materials.back().specular_factor     = 1;
+            materials.back().specular            = {0.04f, 0.04f, 0.04f};
             materials.back().transmission_factor = 1;
-            materials.back().specular_roughness  = 0;
+            materials.back().roughness  = 0;
             materials.back().thin_walled         = false;
         }
         shapes.push_back(yocto_shape{});

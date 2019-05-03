@@ -59,23 +59,23 @@ materials:
     diffuse_texture: textures/test-floor.png
   - uri: materials/test-matte.yaml
     diffuse: [0.7, 0.7, 0.7]
-    specular_roughness: 1
+    roughness: 1
   - uri: materials/test-plastic-sharp.yaml
-    specular_factor: 1
+    specular: [0.04, 0.04, 0.04]
     diffuse: [0.5, 0.5, 0.7]
-    specular_roughness: 0.01
+    roughness: 0.01
   - uri: materials/test-plastic-rough.yaml
-    specular_factor: 1
+    specular: [0.04, 0.04, 0.04]
     diffuse: [0.5, 0.7, 0.5]
-    specular_roughness: 0.2
+    roughness: 0.2
   - uri: materials/test-metal-sharp.yaml
-    metallic_factor: 1
+    specular: [0.04, 0.04, 0.04]
     diffuse: [0.7, 0.7, 0.7]
-    specular_roughness: 0
+    roughness: 0
   - uri: materials/test-metal-rough.yaml
-    metallic_factor: 1
+    specular: [0.04, 0.04, 0.04]
     diffuse: [0.66, 0.45, 0.34]
-    specular_roughness: 0.2
+    roughness: 0.2
   - uri: materials/test-arealight1.yaml
     emission: [20, 20, 20]
   - uri: materials/test-arealight2.yaml

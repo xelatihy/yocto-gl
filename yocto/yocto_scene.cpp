@@ -1231,26 +1231,18 @@ material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord) {
     auto point = material_point{};
     // factors
-    point.coat_factor         = material.coat_factor;
     point.emission     = material.emission;
     point.diffuse      = material.diffuse;
-    point.metallic_factor     = material.metallic_factor;
+    point.specular     = material.specular;
+    point.metallic     = material.metallic;
+    point.sheen        = material.sheen;
+    point.coat         = material.coat;
+    point.edge_tint    = material.edge_tint;
     point.transmission_factor = material.transmission_factor;
-    point.specular_factor     = material.specular_factor;
-    point.sheen_factor        = material.sheen_factor;
     point.subsurface_factor   = material.subsurface_factor;
-    point.opacity_factor      = material.opacity_factor;
+    point.opacity      = material.opacity;
 
     // lobes
-    point.coat_color              = material.coat_color;
-    point.coat_roughness          = material.coat_roughness;
-    point.coat_ior                = material.coat_ior;
-    point.specular_color          = material.specular_color;
-    point.specular_roughness      = material.specular_roughness;
-    point.specular_ior            = material.specular_ior;
-    point.sheen_color             = material.sheen_color;
-    point.sheen_roughness         = material.sheen_roughness;
-    point.diffuse_roughness       = material.diffuse_roughness;
     point.transmission_color      = material.transmission_color;
     point.transmission_depth      = material.transmission_depth;
     point.transmission_scatter    = material.transmission_scatter;
@@ -1261,7 +1253,6 @@ material_point eval_material(const yocto_scene& scene,
     point.subsurface_scale        = material.subsurface_scale;
     point.subsurface_anisotropy   = material.subsurface_anisotropy;
     point.thin_walled             = material.thin_walled;
-    point.specular_ior_from_color = material.specular_ior_from_color;
 
     // textures
     point.normal_map = vec3f{0, 0, 1};
@@ -1274,29 +1265,29 @@ material_point eval_material(const yocto_scene& scene,
         auto& diffuse_texture = scene.textures[material.diffuse_texture];
         auto  base_txt     = eval_texture(diffuse_texture, texturecoord);
         point.diffuse *= xyz(base_txt);
-        point.opacity_factor *= base_txt.w;
+        point.opacity *= base_txt.w;
     }
     if (material.metallic_texture >= 0) {
         auto& metallic_texture = scene.textures[material.metallic_texture];
         auto  metallic_txt     = eval_texture(metallic_texture, texturecoord);
-        point.metallic_factor *= metallic_txt.z;
+        point.metallic *= metallic_txt.z;
         if (material.gltf_textures) {
-            point.specular_roughness *= metallic_txt.x;
+            point.roughness *= metallic_txt.x;
         }
     }
     if (material.specular_texture >= 0) {
         auto& specular_texture = scene.textures[material.specular_texture];
         auto  specular_txt     = eval_texture(specular_texture, texturecoord);
-        point.specular_color *= xyz(specular_txt);
+        point.specular *= xyz(specular_txt);
         if (material.gltf_textures) {
-            auto glossiness = 1 - point.specular_roughness;
+            auto glossiness = 1 - point.roughness;
             glossiness *= specular_txt.w;
-            point.specular_roughness = 1 - glossiness;
+            point.roughness = 1 - glossiness;
         }
     }
     if (material.roughness_texture >= 0) {
         auto& roughness_texture = scene.textures[material.roughness_texture];
-        point.specular_roughness *=
+        point.roughness *=
             eval_texture(roughness_texture, texturecoord).x;
     }
     if (material.transmission_texture >= 0) {
@@ -1307,13 +1298,13 @@ material_point eval_material(const yocto_scene& scene,
     }
     if (material.opacity_texture >= 0) {
         auto& opacity_texture = scene.textures[material.opacity_texture];
-        point.opacity_factor *= mean(
+        point.opacity *= mean(
             xyz(eval_texture(opacity_texture, texturecoord)));
     }
     if (material.coat_texture >= 0) {
         auto& coat_texture = scene.textures[material.coat_texture];
-        point.coat_factor *= mean(
-            xyz(eval_texture(coat_texture, texturecoord)));
+        point.coat *= 
+            xyz(eval_texture(coat_texture, texturecoord));
     }
     if (material.normal_texture >= 0) {
         auto& normal_texture = scene.textures[material.normal_texture];

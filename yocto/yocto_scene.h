@@ -123,26 +123,18 @@ struct yocto_material {
     string uri = "";
 
     // factors
-    float metallic_factor     = 0;
-    float specular_factor     = 0;
-    float coat_factor         = 0;
-    float sheen_factor        = 0;
     float transmission_factor = 0;
     float subsurface_factor   = 0;
-    float opacity_factor      = 1;
 
     // lobes
-    vec3f emission          = {0, 0, 0};
-    vec3f diffuse           = {0, 0, 0};
-    vec3f specular_color          = {1, 1, 1};
-    float specular_roughness      = 0;
-    float specular_ior            = 1.5;
-    vec3f sheen_color             = {1, 1, 1};
-    float sheen_roughness         = 0.3;
-    float diffuse_roughness       = 0;
-    vec3f coat_color              = {1, 1, 1};
-    float coat_roughness          = 0;
-    float coat_ior                = 1.5;
+    vec3f emission                = {0, 0, 0};
+    vec3f diffuse                 = {0, 0, 0};
+    vec3f specular                = {0, 0, 0};
+    float roughness               = 0;
+    float metallic                = 0;
+    vec3f sheen                   = {0, 0, 0};
+    vec3f coat                    = {0, 0, 0};
+    vec3f edge_tint               = {1, 1, 1};
     vec3f transmission_color      = {1, 1, 1};
     float transmission_depth      = 0;
     vec3f transmission_scatter    = {0, 0, 0};
@@ -152,14 +144,14 @@ struct yocto_material {
     vec3f subsurface_radius       = {1, 1, 1};
     float subsurface_scale        = 1;
     float subsurface_anisotropy   = 0;
+    float opacity                 = 1;
     bool  thin_walled             = false;
-    bool specular_ior_from_color  = false;
 
     // textures
     int  emission_texture     = -1;
     int  diffuse_texture      = -1;
-    int  metallic_texture     = -1;
     int  specular_texture     = -1;
+    int  metallic_texture     = -1;
     int  roughness_texture    = -1;
     int  transmission_texture = -1;
     int  subsurface_texture   = -1;
@@ -254,7 +246,7 @@ struct yocto_instance {
 struct yocto_environment {
     string  uri              = "";
     frame3f frame            = identity_frame3f;
-    vec3f   emission   = {0, 0, 0};
+    vec3f   emission         = {0, 0, 0};
     int     emission_texture = -1;
 };
 
@@ -467,24 +459,17 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    float metallic_factor         = 0;
-    float specular_factor         = 0;
-    float transmission_factor     = 0;
-    float subsurface_factor       = 0;
-    float sheen_factor            = 0;
-    float coat_factor             = 0;
-    vec3f coat_color              = {1, 1, 1};
-    float coat_roughness          = 0;
-    float coat_ior                = 1.5;
-    
+    float transmission_factor = 0;
+    float subsurface_factor   = 0;
+
     vec3f emission                = {0, 0, 0};
     vec3f diffuse                 = {0, 0, 0};
-    vec3f specular_color          = {0, 0, 0};
-    float specular_roughness      = 0;
-    float specular_ior            = 1.5;
-    vec3f sheen_color             = {1, 1, 1};
-    float sheen_roughness         = 0.3;
-    float diffuse_roughness       = 0;
+    vec3f specular                = {0, 0, 0};
+    float metallic                = 0;
+    float roughness               = 0;
+    vec3f coat                    = {0, 0, 0};
+    vec3f sheen                   = {0, 0, 0};
+    vec3f edge_tint               = {1, 1, 1};
     vec3f transmission_color      = {1, 1, 1};
     float transmission_depth      = 0;
     vec3f transmission_scatter    = {0, 0, 0};
@@ -494,9 +479,8 @@ struct material_point {
     vec3f subsurface_radius       = {1, 1, 1};
     float subsurface_scale        = 1;
     float subsurface_anisotropy   = 0;
-    float opacity_factor          = 1;
+    float opacity                 = 1;
     bool  thin_walled             = false;
-    bool specular_ior_from_color  = false;
     vec3f normal_map              = {0, 0, 1};
 };
 material_point eval_material(const yocto_scene& scene,

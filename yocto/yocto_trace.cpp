@@ -396,26 +396,21 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     auto point = point_;
     point.emission *= xyz(shape_color);
     point.diffuse *= xyz(shape_color);
-    point.opacity_factor *= shape_color.w;
-    point.specular_roughness = point.specular_roughness *
-                               point.specular_roughness;
-    if (point.specular_roughness)
-        point.specular_roughness = clamp(
-            point.specular_roughness, 0.03f * 0.03f, 1.0f);
-    point.coat_roughness = point.coat_roughness * point.coat_roughness;
-    if (point.coat_roughness)
-        point.coat_roughness = clamp(point.coat_roughness, 0.03f * 0.03f, 1.0f);
-    if (point.opacity_factor > 0.999f) point.opacity_factor = 1;
+    point.opacity *= shape_color.w;
+    point.roughness = point.roughness * point.roughness;
+    if (point.roughness)
+        point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
+    if (point.opacity > 0.999f) point.opacity = 1;
     auto weight = vec3f{1};
-    if (point.opacity_factor < 0.999f) {
-        auto lweight = vec3f{1 - point.opacity_factor};
+    if (point.opacity < 0.999f) {
+        auto lweight = vec3f{1 - point.opacity};
         deltas.push_back({trace_delta::type_t::passthrough, lweight, zero3f,
             zero3f, max(lweight), 0});
-        weight *= point.opacity_factor;
+        weight *= point.opacity;
     }
-    if (point.coat_factor) {
-        auto roughness = point.coat_roughness;
-        auto eta       = vec3f{point.coat_ior};
+    if (point.coat != zero3f) {
+        auto roughness = 0.0f;
+        auto eta       = vec3f{1.5};
         auto fresnel   = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
         auto lweight   = weight;
         if (lweight != zero3f) {
@@ -427,7 +422,7 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
                     zero3f, max(lweight * fresnel), 0});
             }
         }
-        weight *= point.coat_color * point.coat_factor * (1 - fresnel);
+        weight *= point.coat * (1 - fresnel);
     }
     if (point.emission != zero3f) {
         auto lweight = weight * point.emission;
@@ -435,17 +430,18 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
             emissions.push_back({trace_emission::type_t::diffuse, lweight});
         }
     }
-    if (point.metallic_factor) {
-        auto roughness = point.specular_roughness;
+    if (point.metallic) {
+        auto roughness = point.roughness;
         auto eta = reflectivity_to_eta(point.diffuse), etak = zero3f;
-        // auto [eta, etak] = reflectivity_to_eta(point.base_color, point.specular_color); 
-        // auto eta = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f}; 
-        // auto etak = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f}; 
-        // print("1: {} {}\n 2: {} {}\n 3: {} {}\n", eta1, etak1, eta2, etak2,
-        // eta3, etak3); auto eta = eta2, etak = etak3; auto fresnel =
-        // fresnel_conductor(eta, etak, abs(dot(normal, outgoing)));
+        // auto [eta, etak] = reflectivity_to_eta(point.base_color,
+        // point.specular_color); auto eta = vec3f{0.1431189557f,
+        // 0.3749570432f, 1.4424785571f}; auto etak =
+        // vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f}; print("1: {} {}\n
+        // 2: {} {}\n 3: {} {}\n", eta1, etak1, eta2, etak2, eta3, etak3); auto
+        // eta = eta2, etak = etak3; auto fresnel = fresnel_conductor(eta, etak,
+        // abs(dot(normal, outgoing)));
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
-        auto lweight = weight * point.metallic_factor;
+        auto lweight = weight * point.metallic;
         if (lweight != zero3f) {
             if (roughness) {
                 bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
@@ -455,12 +451,12 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
                     etak, max(lweight * fresnel), 0});
             }
         }
-        weight *= 1 - point.metallic_factor;
+        weight *= 1 - point.metallic;
     }
     if (point.transmission_factor) {
-        auto roughness = point.specular_roughness;
-        auto eta       = vec3f{point.specular_ior};
-        if (point.thin_walled && !point.specular_factor) eta = {1, 1, 1};
+        auto roughness = point.roughness;
+        auto eta       = reflectivity_to_eta(point.specular);
+        if (point.thin_walled && point.specular == zero3f) eta = {1, 1, 1};
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
         auto lweight = weight * point.transmission_factor;
         if (point.thin_walled || !point.transmission_depth) {
@@ -491,17 +487,11 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
             }
         }
     }
-    if (point.specular_factor) {
-        auto roughness = point.specular_roughness;
-        auto eta       = point.specular_ior_from_color
-                       ? reflectivity_to_eta(
-                             point.specular_factor * point.specular_color)
-                       : vec3f{point.specular_ior};
+    if (point.specular != zero3f) {
+        auto roughness = point.roughness;
+        auto eta       = reflectivity_to_eta(point.specular);
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
-        auto lweight = weight *
-                       (point.specular_ior_from_color
-                               ? vec3f{1, 1, 1}
-                               : point.specular_factor * point.specular_color);
+        auto lweight = weight * point.edge_tint;
         if (lweight != zero3f) {
             if (roughness) {
                 bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
@@ -1827,8 +1817,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
         auto& instance = scene.instances[instance_id];
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[instance.material];
-        if (material.emission == zero3f)
-            continue;
+        if (material.emission == zero3f) continue;
         if (shape.triangles.empty() && shape.quads.empty()) continue;
         lights.instances.push_back(instance_id);
         sample_shape_cdf(shape, lights.shape_cdfs[instance.shape]);
@@ -1837,8 +1826,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
     for (auto environment_id = 0; environment_id < scene.environments.size();
          environment_id++) {
         auto& environment = scene.environments[environment_id];
-        if (environment.emission == zero3f)
-            continue;
+        if (environment.emission == zero3f) continue;
         lights.environments.push_back(environment_id);
         if (environment.emission_texture >= 0) {
             sample_environment_cdf(scene, environment,

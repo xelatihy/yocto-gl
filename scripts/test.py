@@ -155,114 +155,114 @@ def make_tests():
             },
             {
                 "uri": "materials/test-uvgrid.yaml",
-                "specular_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 1, 1, 1 ],
-                "specular_roughness": 0.1,
+                "roughness": 0.1,
                 "diffuse_texture": "textures/test-uvgrid.png"
             },
             {
                 "uri": "materials/test-matte.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
-                "specular_roughness": 1
+                "roughness": 1
             },
             {
                 "uri": "materials/test-plastic-sharp.yaml",
-                "specular_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.5, 0.5, 0.7 ],
-                "specular_roughness": 0.01
+                "roughness": 0.01
             },
             {
                 "uri": "materials/test-plastic-rough.yaml",
-                "specular_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.5, 0.7, 0.5 ],
-                "specular_roughness": 0.2
+                "roughness": 0.2
             },
             {
                 "uri": "materials/test-metal-sharp.yaml",
-                "metallic_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.7, 0.7, 0.7 ],
-                "specular_roughness": 0
+                "roughness": 0
             },
             {
                 "uri": "materials/test-metal-rough.yaml",
-                "metallic_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.66, 0.45, 0.34 ],
-                "specular_roughness": 0.2
+                "roughness": 0.2
             },
             {
                 "uri": "materials/test-plastic-sharp-bumped.yaml",
-                "specular_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.5, 0.5, 0.7 ],
-                "specular_roughness": 0.01,
+                "roughness": 0.01,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
                 "uri": "materials/test-metal-sharp-bumped.yaml",
-                "metallic_factor": 1,
+                "metallic": 1,
                 "diffuse": [ 0.7, 0.7, 0.7 ],
-                "specular_roughness": 0,
+                "roughness": 0,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
                 "uri": "materials/test-plastic-rough-coated.yaml",
-                "specular_factor": 1,
-                "coat_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
+                "coat": [1, 1, 1],
                 "diffuse": [ 0.5, 0.7, 0.5 ],
-                "specular_roughness": 0.2
+                "roughness": 0.2
             },
             {
                 "uri": "materials/test-metal-rough-coated.yaml",
-                "metallic_factor": 1,
-                "coat_factor": 1,
+                "metallic": 1,
+                "coat": [1, 1, 1],
                 "diffuse": [ 0.66, 0.45, 0.34 ],
-                "specular_roughness": 0.2
+                "roughness": 0.2
             },
             {
                 "uri": "materials/test-transparent.yaml",
                 "diffuse": [ 0.7, 0.5, 0.5 ],
-                "specular_roughness": 1,
-                "opacity_factor": 0.2
+                "roughness": 1,
+                "opacity": 0.2
             },
             {
                 "uri": "materials/test-glass-sharp.yaml",
-                "specular_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "transmission_factor": 1,
-                "specular_roughness": 0,
+                "roughness": 0,
                 "thin_walled": False
             },
             {
                 "uri": "materials/test-glass-rough.yaml",
-                "specular_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "transmission_factor": 1,
                 "transmission_color": [ 1, 0.7, 0.7 ],
-                "specular_roughness": 0.1,
+                "roughness": 0.1,
                 "thin_walled": False
             },
             {
                 "uri": "materials/test-thinglass-sharp.yaml",
-                "specular_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "transmission_factor": 1,
-                "specular_roughness": 0,
+                "roughness": 0,
                 "thin_walled": True
             },
             {
                 "uri": "materials/test-thinglass-rough.yaml",
-                "specular_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "transmission_factor": 1,
                 "transmission_color": [ 1, 0.7, 0.7 ],
-                "specular_roughness": 0.05,
+                "roughness": 0.05,
                 "thin_walled": True
             },
             {
                 "uri": "materials/test-hair.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
-                "specular_roughness": 1
+                "roughness": 1
             },
             {
                 "uri": "materials/test-volume-jade.yaml",
-                "specular_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "transmission_factor": 1,
-                "specular_roughness": 0,
+                "roughness": 0,
                 "transmission_color": [0.5, 0.5, 0.5],
                 "transmission_depth": 0.006,
                 "transmission_scatter": [0.3, 0.6, 0.3]
@@ -275,9 +275,9 @@ def make_tests():
             },
             {
                 "uri": "materials/test-volume-glass.yaml",
-                "specular_factor": 1,
+                "specular": [0.04, 0.04, 0.04],
                 "transmission_factor": 1,
-                "specular_roughness": 0,
+                "roughness": 0,
                 "transmission_color": [1, 0.5, 0.5],
                 "transmission_depth": 0.02
             },
