@@ -353,24 +353,20 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "emission", edited_value.emission)) {
         edited = true;
     }
-    if (draw_coloredit_opengl_widget(
-            win, "diffuse", edited_value.diffuse)) {
+    if (draw_coloredit_opengl_widget(win, "diffuse", edited_value.diffuse)) {
         edited = true;
     }
-    if (draw_coloredit_opengl_widget(
-            win, "specular", edited_value.specular)) {
+    if (draw_coloredit_opengl_widget(win, "specular", edited_value.specular)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
             win, "metallic", edited_value.metallic, 0, 1)) {
         edited = true;
     }
-    if (draw_coloredit_opengl_widget(
-            win, "coat", edited_value.coat)) {
+    if (draw_coloredit_opengl_widget(win, "coat", edited_value.coat)) {
         edited = true;
     }
-    if (draw_coloredit_opengl_widget(
-            win, "sheen", edited_value.sheen)) {
+    if (draw_coloredit_opengl_widget(win, "sheen", edited_value.sheen)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
@@ -381,12 +377,10 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "transmission", edited_value.transmission_factor, 0, 1)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(
-            win, "opacity", edited_value.opacity, 0, 1)) {
+    if (draw_slider_opengl_widget(win, "opacity", edited_value.opacity, 0, 1)) {
         edited = true;
     }
-    if (draw_checkbox_opengl_widget(
-            win, "thin", edited_value.thin)) {
+    if (draw_checkbox_opengl_widget(win, "thin", edited_value.thin)) {
         edited = true;
     }
     continue_opengl_widget_line(win);
@@ -399,8 +393,7 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "roughness", edited_value.roughness, 0, 1)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(
-            win, "ior", edited_value.roughness, 1, 2.5)) {
+    if (draw_slider_opengl_widget(win, "ior", edited_value.roughness, 1, 2.5)) {
         edited = true;
     }
     if (draw_coloredit_opengl_widget(

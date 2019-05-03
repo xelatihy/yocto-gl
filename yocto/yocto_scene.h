@@ -132,7 +132,7 @@ struct yocto_material {
     vec3f specular                = {0, 0, 0};
     float roughness               = 0;
     float metallic                = 0;
-    vec3f ior                     = { 1.5, 1.5, 1.5 };
+    vec3f ior                     = {1.5, 1.5, 1.5};
     vec3f sheen                   = {0, 0, 0};
     vec3f coat                    = {0, 0, 0};
     vec3f transmission_color      = {1, 1, 1};
@@ -146,7 +146,7 @@ struct yocto_material {
     float subsurface_anisotropy   = 0;
     float opacity                 = 1;
     bool  thin                    = false;
-    bool ior_from_specular        = false;
+    bool  ior_from_specular       = false;
 
     // textures
     int  emission_texture     = -1;
@@ -468,7 +468,7 @@ struct material_point {
     vec3f specular                = {0, 0, 0};
     float metallic                = 0;
     float roughness               = 0;
-    vec3f ior                     = { 1.5, 1.5, 1.5 };
+    vec3f ior                     = {1.5, 1.5, 1.5};
     vec3f coat                    = {0, 0, 0};
     vec3f sheen                   = {0, 0, 0};
     vec3f transmission_color      = {1, 1, 1};
@@ -482,7 +482,7 @@ struct material_point {
     float subsurface_anisotropy   = 0;
     float opacity                 = 1;
     bool  thin                    = false;
-    bool ior_from_specular        = false;
+    bool  ior_from_specular       = false;
     vec3f normal_map              = {0, 0, 1};
 };
 material_point eval_material(const yocto_scene& scene,
