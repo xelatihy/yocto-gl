@@ -139,6 +139,7 @@ enum struct trace_falsecolor_type {
     specular,      // specular
     transmission,  // transmission
     roughness,     // roughness
+    lobes,         // number of lobes
     material,      // material
     shape,         // shape
     instance,      // instance
@@ -147,7 +148,7 @@ enum struct trace_falsecolor_type {
 
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "albedo", "texcoord", "color", "emission",
-    "diffuse", "specular", "transmission", "roughness", "material", "shape",
+    "diffuse", "specular", "transmission", "roughness", "lobes", "material", "shape",
     "instance", "highlight"};
 
 // Options for trace functions
@@ -157,7 +158,7 @@ struct trace_params {
     trace_sampler_type    sampler_type        = trace_sampler_type::path;
     trace_falsecolor_type falsecolor_type     = trace_falsecolor_type::albedo;
     int                   num_samples         = 512;
-    int                   max_bounces         = 8;
+    int                   max_bounces         = 64;
     int                   samples_per_batch   = 16;
     int                   region_size         = 16;
     float                 pixel_clamp         = 10;
@@ -222,11 +223,11 @@ namespace yocto {
 float exponent_to_roughness(float n);
 
 // Specular to fresnel eta.
-vec3f              reflectance_to_eta(const vec3f& reflectance);
-vec3f              eta_to_reflectance(const vec3f& eta);
-pair<vec3f, vec3f> reflectance_to_eta(
-    const vec3f& reflectance, const vec3f& edge_tint);
-vec3f eta_to_reflectance(const vec3f& eta, const vec3f& etak);
+vec3f              reflectivity_to_eta(const vec3f& reflectivity);
+vec3f              eta_to_reflectivity(const vec3f& eta);
+pair<vec3f, vec3f> reflectivity_to_eta(
+    const vec3f& reflectivity, const vec3f& edge_tint);
+vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak);
 vec3f eta_to_edge_tint(const vec3f& eta, const vec3f& etak);
 // Compute the fresnel term for dielectrics.
 vec3f fresnel_dielectric(const vec3f& eta, float direction_cosine);

@@ -155,6 +155,7 @@ struct yocto_material {
     float subsurface_scale        = 1;
     float subsurface_anisotropy   = 0;
     bool  thin_walled             = false;
+    bool specular_ior_from_color  = false;
 
     // textures
     int  emission_texture     = -1;
@@ -502,6 +503,7 @@ struct material_point {
     float subsurface_anisotropy   = 0;
     float opacity_factor          = 1;
     bool  thin_walled             = false;
+    bool specular_ior_from_color  = false;
     vec3f normal_map              = {0, 0, 1};
 };
 material_point eval_material(const yocto_scene& scene,

@@ -392,19 +392,19 @@ using pbrt_texture = variant<pbrt_constant_texture, pbrt_bilerp_texture,
 
 // pbrt materials
 struct pbrt_matte_material {
-    pbrt_textured<pbrt_spectrum3f> Kd      = {0.5f, 0.5f, 0.5f};
+    pbrt_textured<pbrt_spectrum3f> Kd      = {0.5, 0.5, 0.5};
     pbrt_textured<float>           sigma   = 0;
     pbrt_textured<float>           bumpmap = 0;
 };
 struct pbrt_mirror_material {
-    pbrt_textured<pbrt_spectrum3f> Kr      = {0.9f, 0.9f, 0.9f};
+    pbrt_textured<pbrt_spectrum3f> Kr      = {0.9, 0.9, 0.9};
     pbrt_textured<float>           bumpmap = 0;
 };
 struct pbrt_plastic_material {
-    pbrt_textured<pbrt_spectrum3f> Kd             = {0.25f, 0.25f, 0.25f};
-    pbrt_textured<pbrt_spectrum3f> Ks             = {0.25f, 0.25f, 0.25f};
-    pbrt_textured<float>           uroughness     = 0.1f;
-    pbrt_textured<float>           vroughness     = 0.1f;
+    pbrt_textured<pbrt_spectrum3f> Kd             = {0.25, 0.25, 0.25};
+    pbrt_textured<pbrt_spectrum3f> Ks             = {0.25, 0.25, 0.25};
+    pbrt_textured<float>           uroughness     = 0.1;
+    pbrt_textured<float>           vroughness     = 0.1;
     bool                           remaproughness = true;
     pbrt_textured<float>           bumpmap        = 0;
 };
@@ -421,30 +421,30 @@ struct pbrt_metal_material {
 struct pbrt_glass_material {
     pbrt_textured<pbrt_spectrum3f> Kr             = {1, 1, 1};
     pbrt_textured<pbrt_spectrum3f> Kt             = {1, 1, 1};
-    pbrt_textured<float>           eta            = 1;
+    pbrt_textured<float>           eta            = 1.5;
     pbrt_textured<float>           uroughness     = 0;
     pbrt_textured<float>           vroughness     = 0;
     bool                           remaproughness = true;
     pbrt_textured<float>           bumpmap        = 0;
 };
 struct pbrt_translucent_material {
-    pbrt_textured<pbrt_spectrum3f> Kd             = {0, 0, 0};
-    pbrt_textured<pbrt_spectrum3f> Ks             = {0, 0, 0};
-    pbrt_textured<pbrt_spectrum3f> reflect        = {0, 0, 0};
-    pbrt_textured<pbrt_spectrum3f> transmit       = {0, 0, 0};
-    pbrt_textured<float>           uroughness     = 0;
-    pbrt_textured<float>           vroughness     = 0;
+    pbrt_textured<pbrt_spectrum3f> Kd             = {0.25, 0.25, 0.25};
+    pbrt_textured<pbrt_spectrum3f> Ks             = {0.25, 0.25, 0.25};
+    pbrt_textured<pbrt_spectrum3f> reflect        = {0.5, 0.5, 0.5};
+    pbrt_textured<pbrt_spectrum3f> transmit       = {0.5, 0.5, 0.5};
+    pbrt_textured<float>           uroughness     = 0.1;
+    pbrt_textured<float>           vroughness     = 0.1;
     bool                           remaproughness = true;
     pbrt_textured<float>           bumpmap        = 0;
 };
 struct pbrt_uber_material {
-    pbrt_textured<pbrt_spectrum3f> Kd             = {0, 0, 0};
-    pbrt_textured<pbrt_spectrum3f> Ks             = {0, 0, 0};
+    pbrt_textured<pbrt_spectrum3f> Kd             = {0.25, 0.25, 0.25};
+    pbrt_textured<pbrt_spectrum3f> Ks             = {0.25, 0.25, 0.25};
     pbrt_textured<pbrt_spectrum3f> Kr             = {0, 0, 0};
     pbrt_textured<pbrt_spectrum3f> Kt             = {0, 0, 0};
-    pbrt_textured<float>           uroughness     = 0;
-    pbrt_textured<float>           vroughness     = 0;
-    pbrt_textured<float>           eta            = 1;
+    pbrt_textured<float>           uroughness     = 0.1;
+    pbrt_textured<float>           vroughness     = 0.1;
+    pbrt_textured<float>           eta            = 1.5;
     pbrt_textured<pbrt_spectrum3f> opacity        = {1, 1, 1};
     bool                           remaproughness = true;
     pbrt_textured<float>           bumpmap        = 0;
@@ -454,10 +454,10 @@ struct pbrt_disney_material {
     pbrt_textured<float>           anisotropic     = 0;
     pbrt_textured<float>           clearcoat       = 0;
     pbrt_textured<float>           clearcoatgloss  = 1;
-    pbrt_textured<float>           eta             = 1.5f;
+    pbrt_textured<float>           eta             = 1.5;
     pbrt_textured<float>           metallic        = 0;
-    pbrt_textured<float>           uroughness      = 0;
-    pbrt_textured<float>           vroughness      = 0;
+    pbrt_textured<float>           uroughness      = 0.5;
+    pbrt_textured<float>           vroughness      = 0.5;
     pbrt_textured<pbrt_spectrum3f> scatterdistance = {0, 0, 0};
     pbrt_textured<float>           sheen           = 0;
     pbrt_textured<float>           sheentint       = 0.5;
@@ -488,9 +488,9 @@ struct pbrt_hair_material {
     pbrt_textured<float> bumpmap     = 0;
 };
 struct pbrt_kdsubsurface_material {
-    pbrt_textured<pbrt_spectrum3f> Kd             = {0, 0, 0};
+    pbrt_textured<pbrt_spectrum3f> Kd             = {0.5, 0.5, 0.5};
     pbrt_textured<pbrt_spectrum3f> mfp            = {1, 1, 1};
-    pbrt_textured<float>           eta            = 1;
+    pbrt_textured<float>           eta            = 1.3;
     pbrt_textured<pbrt_spectrum3f> Kr             = {1, 1, 1};
     pbrt_textured<pbrt_spectrum3f> Kt             = {1, 1, 1};
     pbrt_textured<float>           uroughness     = 0;
@@ -505,10 +505,10 @@ struct pbrt_mix_material {
     pbrt_textured<float>           bumpmap        = 0;
 };
 struct pbrt_substrate_material {
-    pbrt_textured<pbrt_spectrum3f> Kd             = {0, 0, 0};
-    pbrt_textured<pbrt_spectrum3f> Ks             = {0, 0, 0};
-    pbrt_textured<float>           uroughness     = 0;
-    pbrt_textured<float>           vroughness     = 0;
+    pbrt_textured<pbrt_spectrum3f> Kd             = {0.5, 0.5, 0.5};
+    pbrt_textured<pbrt_spectrum3f> Ks             = {0.5, 0.5, 0.5};
+    pbrt_textured<float>           uroughness     = 0.1;
+    pbrt_textured<float>           vroughness     = 0.1;
     bool                           remaproughness = true;
     pbrt_textured<float>           bumpmap        = 0;
 };
@@ -1214,8 +1214,8 @@ static inline void parse_param(
         auto blackbody = zero2f;
         parse_param(stream, blackbody);
         (vec3f&)value = blackbody_to_rgb(blackbody.x) * blackbody.y;
-    } else if (type == "pbrt_spectrum" && is_string(stream)) {
-        if (verbose) printf("pbrt_spectrum  not well supported\n");
+    } else if (type == "spectrum" && is_string(stream)) {
+        if (verbose) printf("spectrum  not well supported\n");
         auto filename = ""s;
         parse_param(stream, filename);
         filename = get_filename(filename);
@@ -1234,19 +1234,19 @@ static inline void parse_param(
                              .second;
                 value = {k.x, k.y, k.z};
             } else {
-                throw io_error("unknown pbrt_spectrum file " + filename);
+                throw io_error("unknown spectrum file " + filename);
             }
         } else {
-            throw io_error("unsupported pbrt_spectrum format");
+            throw io_error("unsupported spectrum format");
             // value = {1, 0, 0};
         }
-    } else if (type == "pbrt_spectrum" && !is_string(stream)) {
-        if (verbose) printf("pbrt_spectrum  not well supported\n");
+    } else if (type == "spectrum" && !is_string(stream)) {
+        if (verbose) printf("spectrum  not well supported\n");
         auto values = vector<float>{};
         parse_param(stream, values);
         value = {1, 0, 0};
     } else {
-        throw io_error("unsupported pbrt_spectrum type");
+        throw io_error("unsupported spectrum type");
     }
 }
 

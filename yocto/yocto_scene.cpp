@@ -1263,6 +1263,7 @@ material_point eval_material(const yocto_scene& scene,
     point.subsurface_scale        = material.subsurface_scale;
     point.subsurface_anisotropy   = material.subsurface_anisotropy;
     point.thin_walled             = material.thin_walled;
+    point.specular_ior_from_color = material.specular_ior_from_color;
 
     // textures
     point.normal_map = vec3f{0, 0, 1};

@@ -282,7 +282,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_combobox_opengl_widget(win, "false color",
             (int&)trace_prms.falsecolor_type, trace_falsecolor_names);
         draw_slider_opengl_widget(
-            win, "nbounces", trace_prms.max_bounces, 1, 10);
+            win, "nbounces", trace_prms.max_bounces, 1, 128);
         draw_slider_opengl_widget(
             win, "seed", (int&)trace_prms.random_seed, 0, 1000000);
         draw_slider_opengl_widget(win, "pratio", scn.preview_ratio, 1, 64);
@@ -873,8 +873,8 @@ void run_ui(app_state& app) {
             auto& scn = app.scenes[app.selected];
             auto  ij  = get_image_coords(mouse_pos, scn.image_center,
                 scn.image_scale, scn.render.size());
-            if (ij.x < 0 || ij.x >= scn.render.size().x || ij.y < 0 ||
-                ij.y >= scn.render.size().y) {
+            if (ij.x >= 0 && ij.x < scn.render.size().x && ij.y >= 0 &&
+                ij.y < scn.render.size().y) {
                 auto& camera = scn.scene.cameras.at(scn.trace_prms.camera_id);
                 auto  ray    = eval_camera(
                     camera, ij, scn.render.size(), {0.5f, 0.5f}, zero2f);
