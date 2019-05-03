@@ -1412,6 +1412,7 @@ struct load_obj_scene_cb : obj_callbacks {
         material.normal_texture       = add_texture(omat.norm_txt, true);
         normalize_scaled_color(
             material.emission_factor, material.emission_color);
+        material.specular_ior_from_color = !omat.has_pbr;
         scene.materials.push_back(material);
         mmap[material.uri] = (int)scene.materials.size() - 1;
     }

@@ -187,12 +187,12 @@ vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosw) {
     auto eta2  = eta * eta;
     auto etak2 = etak * etak;
 
-    auto t0         = eta2 - etak2 - sin2;
-    auto a2plusb2   = sqrt(t0 * t0 + 4 * eta2 * etak2);
-    auto t1         = a2plusb2 + cos2;
-    auto a          = sqrt((a2plusb2 + t0) / 2);
-    auto t2         = 2 * a * cosw;
-    auto rs  = (t1 - t2) / (t1 + t2);
+    auto t0       = eta2 - etak2 - sin2;
+    auto a2plusb2 = sqrt(t0 * t0 + 4 * eta2 * etak2);
+    auto t1       = a2plusb2 + cos2;
+    auto a        = sqrt((a2plusb2 + t0) / 2);
+    auto t2       = 2 * a * cosw;
+    auto rs       = (t1 - t2) / (t1 + t2);
 
     auto t3 = cos2 * a2plusb2 + sin2 * sin2;
     auto t4 = t2 * sin2;
@@ -436,15 +436,15 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         }
     }
     if (point.metallic_factor) {
-        auto roughness   = point.specular_roughness;
+        auto roughness = point.specular_roughness;
         auto eta = reflectivity_to_eta(point.base_color), etak = zero3f;
-        // auto [eta1, etak1] = reflectivity_to_eta(point.base_color, point.specular_color);
-        // auto eta2 = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
-        // auto etak2 = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
-        // etak = zero3f;
-        // print("1: {} {}\n 2: {} {}\n 3: {} {}\n", eta1, etak1, eta2, etak2, eta3, etak3);
-        // auto eta = eta2, etak = etak3;
-        // auto fresnel = fresnel_conductor(eta, etak, abs(dot(normal, outgoing)));
+        // auto [eta1, etak1] = reflectivity_to_eta(point.base_color,
+        // point.specular_color); auto eta2 = vec3f{0.1431189557f,
+        // 0.3749570432f, 1.4424785571f}; auto etak2 =
+        // vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f}; etak = zero3f;
+        // print("1: {} {}\n 2: {} {}\n 3: {} {}\n", eta1, etak1, eta2, etak2,
+        // eta3, etak3); auto eta = eta2, etak = etak3; auto fresnel =
+        // fresnel_conductor(eta, etak, abs(dot(normal, outgoing)));
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
         auto lweight = weight * point.metallic_factor;
         if (lweight != zero3f) {
@@ -494,9 +494,15 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     }
     if (point.specular_factor) {
         auto roughness = point.specular_roughness;
-        auto eta       = vec3f{point.specular_ior};
-        auto fresnel   = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
-        auto lweight   = weight * point.specular_factor * point.specular_color;
+        auto eta       = point.specular_ior_from_color
+                       ? reflectivity_to_eta(
+                             point.specular_factor * point.specular_color)
+                       : vec3f{point.specular_ior};
+        auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
+        auto lweight = weight *
+                       (point.specular_ior_from_color
+                               ? vec3f{1, 1, 1}
+                               : point.specular_factor * point.specular_color);
         if (lweight != zero3f) {
             if (roughness) {
                 bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
