@@ -455,11 +455,11 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     }
     if (point.transmission_factor) {
         auto roughness = point.roughness;
-        auto eta       = reflectivity_to_eta(point.specular);
-        if (point.thin_walled && point.specular == zero3f) eta = {1, 1, 1};
+        auto eta       = point.ior_from_specular ? reflectivity_to_eta(point.specular) : point.ior;
+        if (point.thin && point.specular == zero3f) eta = {1, 1, 1};
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
         auto lweight = weight * point.transmission_factor;
-        if (point.thin_walled || !point.transmission_depth) {
+        if (point.thin || !point.transmission_depth) {
             lweight *= point.transmission_color;
         } else {
             auto density = -log(
@@ -475,13 +475,13 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         if (lweight != zero3f) {
             if (roughness) {
                 bsdfs.push_back(
-                    {point.thin_walled ? trace_bsdf::type_t::transparency
+                    {point.thin ? trace_bsdf::type_t::transparency
                                        : trace_bsdf::type_t::transmission,
                         lweight, eta, zero3f, roughness,
                         max(lweight * (1 - fresnel)), 0});
             } else {
                 deltas.push_back(
-                    {point.thin_walled ? trace_delta::type_t::transparency
+                    {point.thin ? trace_delta::type_t::transparency
                                        : trace_delta::type_t::transmission,
                         lweight, eta, zero3f, max(lweight * (1 - fresnel)), 0});
             }
@@ -489,9 +489,9 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     }
     if (point.specular != zero3f) {
         auto roughness = point.roughness;
-        auto eta       = reflectivity_to_eta(point.specular);
+        auto eta       = point.ior_from_specular ? reflectivity_to_eta(point.specular) : point.ior;
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
-        auto lweight = weight * point.edge_tint;
+        auto lweight = weight * (point.ior_from_specular ? vec3f{1,1,1} : point.specular);
         if (lweight != zero3f) {
             if (roughness) {
                 bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
@@ -501,12 +501,12 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
                     zero3f, max(lweight * fresnel), 0});
             }
         }
-        weight *= 1 - fresnel;
+        weight *= 1 - fresnel * (point.ior_from_specular ? vec3f{1,1,1} : point.specular);
     }
     if (point.subsurface_factor) {
         auto roughness = point.subsurface_factor;
         auto lweight   = weight * point.subsurface_factor;
-        if (point.thin_walled) {
+        if (point.thin) {
             lweight *= point.subsurface_color;
             bsdfs.push_back({trace_bsdf::type_t::translucency, lweight, zero3f,
                 zero3f, roughness, max(lweight), 0});

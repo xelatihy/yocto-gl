@@ -326,7 +326,7 @@ struct load_island_shape_callbacks : obj_callbacks {
             materials.back().specular            = {0.04f, 0.04f, 0.04f};
             materials.back().transmission_factor = 1;
             materials.back().roughness  = 0;
-            materials.back().thin_walled         = false;
+            materials.back().thin         = false;
         }
         shapes.push_back(yocto_shape{});
         shapes.back().uri = "shapes/" + parent_name + "/" +

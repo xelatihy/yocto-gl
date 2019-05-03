@@ -155,7 +155,7 @@ def make_tests():
             },
             {
                 "uri": "materials/test-uvgrid.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [1, 1, 1],
                 "diffuse": [ 1, 1, 1 ],
                 "roughness": 0.1,
                 "diffuse_texture": "textures/test-uvgrid.png"
@@ -167,13 +167,13 @@ def make_tests():
             },
             {
                 "uri": "materials/test-plastic-sharp.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [1, 1, 1],
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "roughness": 0.01
             },
             {
                 "uri": "materials/test-plastic-rough.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [1, 1, 1],
                 "diffuse": [ 0.5, 0.7, 0.5 ],
                 "roughness": 0.2
             },
@@ -191,7 +191,7 @@ def make_tests():
             },
             {
                 "uri": "materials/test-plastic-sharp-bumped.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [1, 1, 1],
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "roughness": 0.01,
                 "normal_texture": "textures/test-bump-normal.png"
@@ -205,7 +205,7 @@ def make_tests():
             },
             {
                 "uri": "materials/test-plastic-rough-coated.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [1, 1, 1],
                 "coat": [1, 1, 1],
                 "diffuse": [ 0.5, 0.7, 0.5 ],
                 "roughness": 0.2
@@ -225,33 +225,33 @@ def make_tests():
             },
             {
                 "uri": "materials/test-glass-sharp.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [1, 1, 1],
                 "transmission_factor": 1,
                 "roughness": 0,
-                "thin_walled": False
+                "thin": False
             },
             {
                 "uri": "materials/test-glass-rough.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [1, 1, 1],
                 "transmission_factor": 1,
                 "transmission_color": [ 1, 0.7, 0.7 ],
                 "roughness": 0.1,
-                "thin_walled": False
+                "thin": False
             },
             {
                 "uri": "materials/test-thinglass-sharp.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [1, 1, 1],
                 "transmission_factor": 1,
                 "roughness": 0,
-                "thin_walled": True
+                "thin": True
             },
             {
                 "uri": "materials/test-thinglass-rough.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [1, 1, 1],
                 "transmission_factor": 1,
                 "transmission_color": [ 1, 0.7, 0.7 ],
                 "roughness": 0.05,
-                "thin_walled": True
+                "thin": True
             },
             {
                 "uri": "materials/test-hair.yaml",
@@ -260,7 +260,7 @@ def make_tests():
             },
             {
                 "uri": "materials/test-volume-jade.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [1, 1, 1],
                 "transmission_factor": 1,
                 "roughness": 0,
                 "transmission_color": [0.5, 0.5, 0.5],
@@ -275,7 +275,7 @@ def make_tests():
             },
             {
                 "uri": "materials/test-volume-glass.yaml",
-                "specular": [0.04, 0.04, 0.04],
+                "specular": [1, 1, 1],
                 "transmission_factor": 1,
                 "roughness": 0,
                 "transmission_color": [1, 0.5, 0.5],

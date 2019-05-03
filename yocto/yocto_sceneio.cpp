@@ -713,16 +713,14 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.transmission_factor);
                 } else if (key == "opacity") {
                     get_yaml_value(value, material.opacity);
-                } else if (key == "edge_tint") {
-                    get_yaml_value(value, material.edge_tint);
                 } else if (key == "roughness") {
                     get_yaml_value(value, material.roughness);
+                } else if (key == "ios") {
+                    get_yaml_value(value, material.ior);
                 } else if (key == "coat") {
                     get_yaml_value(value, material.coat);
                 } else if (key == "sheen") {
                     get_yaml_value(value, material.sheen);
-                } else if (key == "edge_tint") {
-                    get_yaml_value(value, material.edge_tint);
                 } else if (key == "transmission_color") {
                     get_yaml_value(value, material.transmission_color);
                 } else if (key == "transmission_depth") {
@@ -741,8 +739,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.subsurface_scale);
                 } else if (key == "subsurface_anisotropy") {
                     get_yaml_value(value, material.subsurface_anisotropy);
-                } else if (key == "thin_walled") {
-                    get_yaml_value(value, material.thin_walled);
+                } else if (key == "thin") {
+                    get_yaml_value(value, material.thin);
                 } else if (key == "emission_texture") {
                     get_yaml_ref(value, material.emission_texture, tmap);
                 } else if (key == "diffuse_texture") {
@@ -981,9 +979,9 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
         print_optional(fs, "coat", material.coat, def_material.coat);
         print_optional(fs, "opacity", material.opacity, def_material.opacity);
         print_optional(
-            fs, "edge_tint", material.edge_tint, def_material.edge_tint);
-        print_optional(
             fs, "roughness", material.roughness, def_material.roughness);
+        print_optional(
+            fs, "ior", material.ior, def_material.ior);
         print_optional(fs, "transmission_color", material.transmission_color,
             def_material.transmission_color);
         print_optional(fs, "transmission_depth", material.transmission_depth,
@@ -1004,7 +1002,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
         print_optional(fs, "subsurface_anisotropy",
             material.subsurface_anisotropy, def_material.subsurface_anisotropy);
         print_optional(
-            fs, "thin_walled", material.thin_walled, def_material.thin_walled);
+            fs, "thin", material.thin, def_material.thin);
         print_ref(
             fs, "emission_texture", material.emission_texture, scene.textures);
         print_ref(
@@ -1367,6 +1365,7 @@ struct load_obj_scene_cb : obj_callbacks {
         material.roughness_texture    = add_texture(omat.pr_txt, true);
         material.opacity_texture      = add_texture(omat.op_txt, true);
         material.normal_texture       = add_texture(omat.norm_txt, true);
+        material.ior_from_specular    = true;
         scene.materials.push_back(material);
         mmap[material.uri] = (int)scene.materials.size() - 1;
     }
@@ -3039,7 +3038,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             material.roughness = get_pbrt_roughness(
                 uber.uroughness.value, uber.vroughness.value,
                 uber.remaproughness);
-            material.thin_walled = true;
+            material.thin = true;
         } else if (holds_alternative<pbrt_plastic_material>(pmaterial)) {
             auto& plastic = get<pbrt_plastic_material>(pmaterial);
             get_scaled_texture3f(
@@ -3098,7 +3097,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             material.roughness = get_pbrt_roughness(
                 glass.uroughness.value, glass.vroughness.value,
                 glass.remaproughness);
-            material.thin_walled = true;
+            material.thin = true;
         } else if (holds_alternative<pbrt_hair_material>(pmaterial)) {
             auto& hair = get<pbrt_hair_material>(pmaterial);
             get_scaled_texture3f(

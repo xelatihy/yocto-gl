@@ -1237,10 +1237,11 @@ material_point eval_material(const yocto_scene& scene,
     point.metallic     = material.metallic;
     point.sheen        = material.sheen;
     point.coat         = material.coat;
-    point.edge_tint    = material.edge_tint;
+    point.ior          = material.ior;
     point.transmission_factor = material.transmission_factor;
     point.subsurface_factor   = material.subsurface_factor;
     point.opacity      = material.opacity;
+    point.ior_from_specular = material.ior_from_specular;
 
     // lobes
     point.transmission_color      = material.transmission_color;
@@ -1252,7 +1253,7 @@ material_point eval_material(const yocto_scene& scene,
     point.subsurface_radius       = material.subsurface_radius;
     point.subsurface_scale        = material.subsurface_scale;
     point.subsurface_anisotropy   = material.subsurface_anisotropy;
-    point.thin_walled             = material.thin_walled;
+    point.thin             = material.thin;
 
     // textures
     point.normal_map = vec3f{0, 0, 1};
