@@ -1691,6 +1691,9 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             }
             return {roughness, 1};
         }
+        case trace_falsecolor_type::lobes: {
+            return {vec3f{float(bsdfs.size() + deltas.size()) / 4}, 1};
+        }
         case trace_falsecolor_type::material: {
             auto hashed = std::hash<int>()(instance.material);
             auto rng_   = make_rng(trace_default_seed, hashed);

@@ -139,6 +139,7 @@ enum struct trace_falsecolor_type {
     specular,      // specular
     transmission,  // transmission
     roughness,     // roughness
+    lobes,         // number of lobes
     material,      // material
     shape,         // shape
     instance,      // instance
@@ -147,7 +148,7 @@ enum struct trace_falsecolor_type {
 
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "albedo", "texcoord", "color", "emission",
-    "diffuse", "specular", "transmission", "roughness", "material", "shape",
+    "diffuse", "specular", "transmission", "roughness", "lobes", "material", "shape",
     "instance", "highlight"};
 
 // Options for trace functions
