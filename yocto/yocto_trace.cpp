@@ -438,10 +438,9 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     if (point.metallic_factor) {
         auto roughness = point.specular_roughness;
         auto eta = reflectivity_to_eta(point.base_color), etak = zero3f;
-        // auto [eta1, etak1] = reflectivity_to_eta(point.base_color,
-        // point.specular_color); auto eta2 = vec3f{0.1431189557f,
-        // 0.3749570432f, 1.4424785571f}; auto etak2 =
-        // vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f}; etak = zero3f;
+        // auto [eta, etak] = reflectivity_to_eta(point.base_color, point.specular_color); 
+        // auto eta = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f}; 
+        // auto etak = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f}; 
         // print("1: {} {}\n 2: {} {}\n 3: {} {}\n", eta1, etak1, eta2, etak2,
         // eta3, etak3); auto eta = eta2, etak = etak3; auto fresnel =
         // fresnel_conductor(eta, etak, abs(dot(normal, outgoing)));
