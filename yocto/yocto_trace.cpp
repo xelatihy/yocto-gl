@@ -395,7 +395,7 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     const vec4f& shape_color, const vec3f& normal, const vec3f& outgoing) {
     auto point = point_;
     point.emission *= xyz(shape_color);
-    point.base_color *= xyz(shape_color);
+    point.diffuse *= xyz(shape_color);
     point.opacity_factor *= shape_color.w;
     point.specular_roughness = point.specular_roughness *
                                point.specular_roughness;
@@ -437,7 +437,7 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     }
     if (point.metallic_factor) {
         auto roughness = point.specular_roughness;
-        auto eta = reflectivity_to_eta(point.base_color), etak = zero3f;
+        auto eta = reflectivity_to_eta(point.diffuse), etak = zero3f;
         // auto [eta, etak] = reflectivity_to_eta(point.base_color, point.specular_color); 
         // auto eta = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f}; 
         // auto etak = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f}; 
@@ -531,8 +531,8 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         }
         weight *= 1 - point.subsurface_factor;
     }
-    if (point.diffuse_factor) {
-        auto lweight = weight * point.diffuse_factor * point.base_color;
+    if (point.diffuse != zero3f) {
+        auto lweight = weight * point.diffuse;
         if (lweight != zero3f) {
             bsdfs.push_back({trace_bsdf::type_t::diffuse, lweight, zero3f,
                 zero3f, 0, max(lweight), 0});

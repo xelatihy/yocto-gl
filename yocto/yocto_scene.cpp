@@ -572,7 +572,7 @@ void add_materials(yocto_scene& scene) {
         if (material_id < 0) {
             auto material           = yocto_material{};
             material.uri            = "materails/default.yaml";
-            material.diffuse_factor = 0.2f;
+            material.diffuse = {0.2f, 0.2f, 0.2f};
             scene.materials.push_back(material);
             material_id = (int)scene.materials.size() - 1;
         }
@@ -1233,19 +1233,18 @@ material_point eval_material(const yocto_scene& scene,
     // factors
     point.coat_factor         = material.coat_factor;
     point.emission     = material.emission;
+    point.diffuse      = material.diffuse;
     point.metallic_factor     = material.metallic_factor;
     point.transmission_factor = material.transmission_factor;
     point.specular_factor     = material.specular_factor;
     point.sheen_factor        = material.sheen_factor;
     point.subsurface_factor   = material.subsurface_factor;
-    point.diffuse_factor      = material.diffuse_factor;
     point.opacity_factor      = material.opacity_factor;
 
     // lobes
     point.coat_color              = material.coat_color;
     point.coat_roughness          = material.coat_roughness;
     point.coat_ior                = material.coat_ior;
-    point.base_color              = material.base_color;
     point.specular_color          = material.specular_color;
     point.specular_roughness      = material.specular_roughness;
     point.specular_ior            = material.specular_ior;
@@ -1271,10 +1270,10 @@ material_point eval_material(const yocto_scene& scene,
         point.emission *= xyz(
             eval_texture(emission_texture, texturecoord));
     }
-    if (material.base_texture >= 0) {
-        auto& base_texture = scene.textures[material.base_texture];
-        auto  base_txt     = eval_texture(base_texture, texturecoord);
-        point.base_color *= xyz(base_txt);
+    if (material.diffuse_texture >= 0) {
+        auto& diffuse_texture = scene.textures[material.diffuse_texture];
+        auto  base_txt     = eval_texture(diffuse_texture, texturecoord);
+        point.diffuse *= xyz(base_txt);
         point.opacity_factor *= base_txt.w;
     }
     if (material.metallic_texture >= 0) {
@@ -1360,8 +1359,8 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
         auto& material = scene.materials[material_id];
         if (material.emission_texture >= 0)
             material.emission_texture += offset_textures;
-        if (material.base_texture >= 0)
-            material.base_texture += offset_textures;
+        if (material.diffuse_texture >= 0)
+            material.diffuse_texture += offset_textures;
         if (material.metallic_texture >= 0)
             material.metallic_texture += offset_textures;
         if (material.specular_texture >= 0)

@@ -55,12 +55,10 @@ textures:
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
-    diffuse_factor: 1
-    base_color: [0.7, 0.7, 0.7]
-    base_texture: textures/test-floor.png
+    diffuse: [0.7, 0.7, 0.7]
+    diffuse_texture: textures/test-floor.png
   - uri: materials/test-transparent.yaml
-    diffuse_factor: 1
-    base_color: [0.7, 0.5, 0.5]
+    diffuse: [0.7, 0.5, 0.5]
     specular_roughness: 1
     opacity_factor: 0.2
   - uri: materials/test-glass-sharp.yaml

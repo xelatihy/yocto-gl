@@ -88,7 +88,7 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     draw_opengl_widgets_scene_tree(
         win, "emission", scene, value.emission_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
-        win, "base", scene, value.base_texture, scene.textures, sel);
+        win, "diffuse", scene, value.diffuse_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
         win, "metallic", scene, value.metallic_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
@@ -353,6 +353,10 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "emission", edited_value.emission)) {
         edited = true;
     }
+    if (draw_coloredit_opengl_widget(
+            win, "diffuse", edited_value.diffuse)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
             win, "specular", edited_value.specular_factor, 0, 1)) {
         edited = true;
@@ -367,10 +371,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     }
     if (draw_slider_opengl_widget(
             win, "sheen", edited_value.sheen_factor, 0, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "diffuse", edited_value.diffuse_factor, 0, 1)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
@@ -390,10 +390,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
         edited = true;
     }
 
-    if (draw_coloredit_opengl_widget(
-            win, "base color", edited_value.base_color)) {
-        edited = true;
-    }
     if (draw_coloredit_opengl_widget(
             win, "coat color", edited_value.coat_color)) {
         edited = true;
@@ -466,8 +462,8 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             edited_value.emission_texture, scene.textures, true)) {
         edited = true;
     }
-    if (draw_combobox_opengl_widget(win, "base_texture",
-            edited_value.base_texture, scene.textures, true)) {
+    if (draw_combobox_opengl_widget(win, "diffuse_texture",
+            edited_value.diffuse_texture, scene.textures, true)) {
         edited = true;
     }
     if (draw_combobox_opengl_widget(win, "metallic_texture",

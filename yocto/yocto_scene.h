@@ -129,12 +129,11 @@ struct yocto_material {
     float sheen_factor        = 0;
     float transmission_factor = 0;
     float subsurface_factor   = 0;
-    float diffuse_factor      = 0;
     float opacity_factor      = 1;
 
     // lobes
     vec3f emission          = {0, 0, 0};
-    vec3f base_color              = {1, 1, 1};
+    vec3f diffuse           = {0, 0, 0};
     vec3f specular_color          = {1, 1, 1};
     float specular_roughness      = 0;
     float specular_ior            = 1.5;
@@ -158,7 +157,7 @@ struct yocto_material {
 
     // textures
     int  emission_texture     = -1;
-    int  base_texture         = -1;
+    int  diffuse_texture      = -1;
     int  metallic_texture     = -1;
     int  specular_texture     = -1;
     int  roughness_texture    = -1;
@@ -468,7 +467,6 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    float diffuse_factor          = 0;
     float metallic_factor         = 0;
     float specular_factor         = 0;
     float transmission_factor     = 0;
@@ -478,9 +476,10 @@ struct material_point {
     vec3f coat_color              = {1, 1, 1};
     float coat_roughness          = 0;
     float coat_ior                = 1.5;
-    vec3f emission                = {1, 1, 1};
-    vec3f base_color              = {1, 1, 1};
-    vec3f specular_color          = {1, 1, 1};
+    
+    vec3f emission                = {0, 0, 0};
+    vec3f diffuse                 = {0, 0, 0};
+    vec3f specular_color          = {0, 0, 0};
     float specular_roughness      = 0;
     float specular_ior            = 1.5;
     vec3f sheen_color             = {1, 1, 1};
