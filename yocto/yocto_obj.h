@@ -119,11 +119,12 @@ struct obj_material {
     obj_texture_info bump_txt;  // bump map
 
     // pbr values
-    float pr  = -1;  // roughness (-1 not defined)
-    float pm  = -1;  // metallic  (-1 not defined)
-    float ps  = -1;  // sheen  (-1 not defined)
-    float pc  = -1;  // coat  (-1 not defined)
-    float pcr = -1;  // coat roughness (-1 not defined)
+    bool  has_pbr = false;  // whether pbr values are defined
+    float pr      = 0;      // roughness
+    float pm      = 0;      // metallic
+    float ps      = 0;      // sheen
+    float pc      = 0;      // coat
+    float pcr     = 0;      // coat roughness
 
     // textures
     obj_texture_info pr_txt;    // roughness texture
@@ -329,20 +330,28 @@ inline void load_mtl(
         } else if (cmd == "map_bump" || cmd == "bump") {
             parse_value(line, material.bump_txt);
         } else if (cmd == "Pm") {
+            material.has_pbr = true;
             parse_value(line, material.pm);
         } else if (cmd == "Pr") {
+            material.has_pbr = true;
             parse_value(line, material.pr);
         } else if (cmd == "Ps") {
+            material.has_pbr = true;
             parse_value(line, material.ps);
         } else if (cmd == "Pc") {
+            material.has_pbr = true;
             parse_value(line, material.pc);
         } else if (cmd == "Pcr") {
+            material.has_pbr = true;
             parse_value(line, material.pcr);
         } else if (cmd == "map_Pm") {
+            material.has_pbr = true;
             parse_value(line, material.pm_txt);
         } else if (cmd == "map_Pr") {
+            material.has_pbr = true;
             parse_value(line, material.pr_txt);
         } else if (cmd == "map_Ps") {
+            material.has_pbr = true;
             parse_value(line, material.ps_txt);
         } else if (cmd == "map_occ" || cmd == "occ") {
             parse_value(line, material.occ_txt);

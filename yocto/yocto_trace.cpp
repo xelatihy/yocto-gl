@@ -116,14 +116,14 @@ float exponent_to_roughness(float exponent) {
 }
 
 // Specular to  eta.
-vec3f reflectance_to_eta(const vec3f& reflectance) {
-    return (1 + sqrt(reflectance)) / (1 - sqrt(reflectance));
+vec3f reflectivity_to_eta(const vec3f& reflectivity) {
+    return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
 }
 
 // Specular to fresnel eta.
-pair<vec3f, vec3f> reflectance_to_eta(
-    const vec3f& reflectance, const vec3f& edge_tint) {
-    auto r = clamp(reflectance, 0.0f, 0.99f);
+pair<vec3f, vec3f> reflectivity_to_eta(
+    const vec3f& reflectivity, const vec3f& edge_tint) {
+    auto r = clamp(reflectivity, 0.0f, 0.99f);
     auto g = edge_tint;
 
     auto r_sqrt = sqrt(r);
@@ -137,15 +137,15 @@ pair<vec3f, vec3f> reflectance_to_eta(
     return {n, k};
 }
 
-vec3f eta_to_reflectance(const vec3f& eta) {
+vec3f eta_to_reflectivity(const vec3f& eta) {
     { return ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1)); }
 }
-vec3f eta_to_reflectance(const vec3f& eta, const vec3f& etak) {
+vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak) {
     return ((eta - 1) * (eta - 1) + etak * etak) /
            ((eta + 1) * (eta + 1) + etak * etak);
 }
 vec3f eta_to_edge_tint(const vec3f& eta, const vec3f& etak) {
-    auto r     = eta_to_reflectance(eta, etak);
+    auto r     = eta_to_reflectivity(eta, etak);
     auto numer = (1 + sqrt(r)) / (1 - sqrt(r)) - eta;
     auto denom = (1 + sqrt(r)) / (1 - sqrt(r)) - (1 - r) / (1 + r);
     return numer / denom;
@@ -437,8 +437,8 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     }
     if (point.metallic_factor) {
         auto roughness   = point.specular_roughness;
-        auto eta = reflectance_to_eta(point.base_color), etak = zero3f;
-        // auto [eta1, etak1] = reflectance_to_eta(point.base_color, point.specular_color);
+        auto eta = reflectivity_to_eta(point.base_color), etak = zero3f;
+        // auto [eta1, etak1] = reflectivity_to_eta(point.base_color, point.specular_color);
         // auto eta2 = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
         // auto etak2 = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
         // etak = zero3f;

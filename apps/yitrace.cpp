@@ -282,7 +282,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_combobox_opengl_widget(win, "false color",
             (int&)trace_prms.falsecolor_type, trace_falsecolor_names);
         draw_slider_opengl_widget(
-            win, "nbounces", trace_prms.max_bounces, 1, 10);
+            win, "nbounces", trace_prms.max_bounces, 1, 128);
         draw_slider_opengl_widget(
             win, "seed", (int&)trace_prms.random_seed, 0, 1000000);
         draw_slider_opengl_widget(win, "pratio", scn.preview_ratio, 1, 64);
