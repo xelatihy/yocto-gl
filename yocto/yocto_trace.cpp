@@ -138,7 +138,7 @@ pair<vec3f, vec3f> reflectivity_to_eta(
 }
 
 vec3f eta_to_reflectivity(const vec3f& eta) {
-    { return ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1)); }
+    return ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1));
 }
 vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak) {
     return ((eta - 1) * (eta - 1) + etak * etak) /
