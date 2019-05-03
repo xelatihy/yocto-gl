@@ -123,7 +123,6 @@ struct yocto_material {
     string uri = "";
 
     // factors
-    float emission_factor     = 0;
     float metallic_factor     = 0;
     float specular_factor     = 0;
     float coat_factor         = 0;
@@ -134,7 +133,7 @@ struct yocto_material {
     float opacity_factor      = 1;
 
     // lobes
-    vec3f emission_color          = {1, 1, 1};
+    vec3f emission          = {0, 0, 0};
     vec3f base_color              = {1, 1, 1};
     vec3f specular_color          = {1, 1, 1};
     float specular_roughness      = 0;
@@ -256,8 +255,7 @@ struct yocto_instance {
 struct yocto_environment {
     string  uri              = "";
     frame3f frame            = identity_frame3f;
-    float   emission_factor  = 0;
-    vec3f   emission_color   = {1, 1, 1};
+    vec3f   emission   = {0, 0, 0};
     int     emission_texture = -1;
 };
 
@@ -391,9 +389,6 @@ void add_cameras(yocto_scene& scene);
 void normalize_uris(yocto_scene& sceme);
 void rename_instances(yocto_scene& scene);
 
-// Normalized a scaled color in a material
-void normalize_scaled_color(float& scale, vec3f& color);
-
 // Add a sky environment
 void add_sky(yocto_scene& scene, float sun_angle = pif / 4);
 
@@ -473,7 +468,6 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    float emission_factor         = 0;
     float diffuse_factor          = 0;
     float metallic_factor         = 0;
     float specular_factor         = 0;
@@ -484,7 +478,7 @@ struct material_point {
     vec3f coat_color              = {1, 1, 1};
     float coat_roughness          = 0;
     float coat_ior                = 1.5;
-    vec3f emission_color          = {1, 1, 1};
+    vec3f emission                = {1, 1, 1};
     vec3f base_color              = {1, 1, 1};
     vec3f specular_color          = {1, 1, 1};
     float specular_roughness      = 0;

@@ -81,9 +81,9 @@ materials:
     base_color: [0.66, 0.45, 0.34]
     specular_roughness: 0.2
   - uri: materials/test-arealight1.yaml
-    emission_factor: 20
+    emission: [20, 20, 20]
   - uri: materials/test-arealight2.yaml
-    emission_factor: 20
+    emission: [20, 20, 20]
 shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply
   - uri: ::yocto::test-sphere::shapes/test-sphere.ply
@@ -123,5 +123,5 @@ instances:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
   - uri: environments/test-sky.yaml
-    emission_factor: 2
+    emission: [2, 2, 2]
     emission_texture: textures/test-sky.hdr

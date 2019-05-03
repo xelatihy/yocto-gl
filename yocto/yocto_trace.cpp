@@ -394,7 +394,7 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
     trace_deltas& deltas, trace_mediums& mediums, const material_point& point_,
     const vec4f& shape_color, const vec3f& normal, const vec3f& outgoing) {
     auto point = point_;
-    point.emission_color *= xyz(shape_color);
+    point.emission *= xyz(shape_color);
     point.base_color *= xyz(shape_color);
     point.opacity_factor *= shape_color.w;
     point.specular_roughness = point.specular_roughness *
@@ -429,8 +429,8 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         }
         weight *= point.coat_color * point.coat_factor * (1 - fresnel);
     }
-    if (point.emission_factor) {
-        auto lweight = weight * point.emission_factor * point.emission_color;
+    if (point.emission != zero3f) {
+        auto lweight = weight * point.emission;
         if (lweight != zero3f) {
             emissions.push_back({trace_emission::type_t::diffuse, lweight});
         }
@@ -1108,7 +1108,7 @@ float sample_light_pdf(const yocto_scene& scene, const trace_lights& lights,
     const vec3f& direction) {
     auto& instance = scene.instances[instance_id];
     auto& material = scene.materials[instance.material];
-    if (!material.emission_factor) return 0;
+    if (material.emission == zero3f) return 0;
     auto& elements_cdf = lights.shape_cdfs[instance.shape];
     // check all intersection
     auto pdf           = 0.0f;
@@ -1827,7 +1827,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
         auto& instance = scene.instances[instance_id];
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[instance.material];
-        if (!material.emission_factor || material.emission_color == zero3f)
+        if (material.emission == zero3f)
             continue;
         if (shape.triangles.empty() && shape.quads.empty()) continue;
         lights.instances.push_back(instance_id);
@@ -1837,8 +1837,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
     for (auto environment_id = 0; environment_id < scene.environments.size();
          environment_id++) {
         auto& environment = scene.environments[environment_id];
-        if (!environment.emission_factor ||
-            environment.emission_color == zero3f)
+        if (environment.emission == zero3f)
             continue;
         lights.environments.push_back(environment_id);
         if (environment.emission_texture >= 0) {

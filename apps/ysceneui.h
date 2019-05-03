@@ -349,20 +349,20 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
         edited = true;
     }
+    if (draw_hdr_coloredit_opengl_widget(
+            win, "emission", edited_value.emission)) {
+        edited = true;
+    }
+    if (draw_slider_opengl_widget(
+            win, "specular", edited_value.specular_factor, 0, 1)) {
+        edited = true;
+    }
     if (draw_slider_opengl_widget(
             win, "coat", edited_value.coat_factor, 0, 1)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
-            win, "emission", edited_value.emission_factor, 0, 10000)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
             win, "metallic", edited_value.metallic_factor, 0, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "specular", edited_value.specular_factor, 0, 1)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(
@@ -390,10 +390,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
         edited = true;
     }
 
-    if (draw_coloredit_opengl_widget(
-            win, "emission color", edited_value.emission_color)) {
-        edited = true;
-    }
     if (draw_coloredit_opengl_widget(
             win, "base color", edited_value.base_color)) {
         edited = true;
@@ -694,12 +690,8 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "frame.o", edited_value.frame.o, -10, 10)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(
-            win, "emission factor", edited_value.emission_factor, 0, 10000)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(
-            win, "emission color", edited_value.emission_color)) {
+    if (draw_hdr_coloredit_opengl_widget(
+            win, "emission", edited_value.emission)) {
         edited = true;
     }
     if (draw_combobox_opengl_widget(win, "emission texture",

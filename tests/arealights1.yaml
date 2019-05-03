@@ -83,9 +83,9 @@ materials:
     base_color: [0.66, 0.45, 0.34]
     specular_roughness: 0.2
   - uri: materials/test-arealight1.yaml
-    emission_factor: 20
+    emission: [20, 20, 20]
   - uri: materials/test-arealight2.yaml
-    emission_factor: 20
+    emission: [20, 20, 20]
 shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply
   - uri: shapes/test-bunny.obj

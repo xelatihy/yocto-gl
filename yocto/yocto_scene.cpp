@@ -598,7 +598,7 @@ void add_sky(yocto_scene& scene, float sun_angle) {
     scene.textures.push_back(texture);
     auto environment             = yocto_environment{};
     environment.uri              = "environments/default.yaml";
-    environment.emission_factor  = 1;
+    environment.emission  = {1, 1, 1};
     environment.emission_texture = (int)scene.textures.size() - 1;
     scene.environments.push_back(environment);
 }
@@ -918,7 +918,7 @@ vec3f eval_direction(
 // Evaluate the environment color.
 vec3f eval_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vec3f& direction) {
-    auto emission = environment.emission_factor * environment.emission_color;
+    auto emission = environment.emission;
     if (environment.emission_texture >= 0) {
         auto& emission_texture = scene.textures[environment.emission_texture];
         emission *= xyz(eval_texture(
@@ -1232,7 +1232,7 @@ material_point eval_material(const yocto_scene& scene,
     auto point = material_point{};
     // factors
     point.coat_factor         = material.coat_factor;
-    point.emission_factor     = material.emission_factor;
+    point.emission     = material.emission;
     point.metallic_factor     = material.metallic_factor;
     point.transmission_factor = material.transmission_factor;
     point.specular_factor     = material.specular_factor;
@@ -1245,7 +1245,6 @@ material_point eval_material(const yocto_scene& scene,
     point.coat_color              = material.coat_color;
     point.coat_roughness          = material.coat_roughness;
     point.coat_ior                = material.coat_ior;
-    point.emission_color          = material.emission_color;
     point.base_color              = material.base_color;
     point.specular_color          = material.specular_color;
     point.specular_roughness      = material.specular_roughness;
@@ -1269,7 +1268,7 @@ material_point eval_material(const yocto_scene& scene,
     point.normal_map = vec3f{0, 0, 1};
     if (material.emission_texture >= 0) {
         auto& emission_texture = scene.textures[material.emission_texture];
-        point.emission_color *= xyz(
+        point.emission *= xyz(
             eval_texture(emission_texture, texturecoord));
     }
     if (material.base_texture >= 0) {

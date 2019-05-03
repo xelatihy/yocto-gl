@@ -72,7 +72,7 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
         if (instance.shape < 0) continue;
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[instance.material];
-        if (!material.emission_factor) continue;
+        if (material.emission != zero3f) continue;
         if (lights.positions.size() >= 16) break;
         auto bbox = compute_bounds(shape);
         auto pos  = (bbox.max + bbox.min) / 2;
@@ -91,7 +91,7 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
         } else {
             area += shape.positions.size();
         }
-        auto ke = material.emission_factor * material.emission_color * area;
+        auto ke = material.emission * area;
         lights.positions.push_back(transform_point(instance.frame, pos));
         lights.emission.push_back(ke);
         lights.types.push_back(0);
@@ -540,8 +540,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     auto mtype = 2;
     if (material.gltf_textures) mtype = 3;
     set_opengl_uniform(state.program, "mat_type", mtype);
-    set_opengl_uniform(state.program, "mat_ke",
-        material.emission_factor * material.emission_color);
+    set_opengl_uniform(state.program, "mat_ke", material.emission);
     set_opengl_uniform(state.program, "mat_kd", material.base_color);
     set_opengl_uniform(
         state.program, "mat_ks", vec3f{material.metallic_factor});
@@ -651,7 +650,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
             if (instance.shape < 0) continue;
             auto& shape    = scene.shapes[instance.shape];
             auto& material = scene.materials[instance.material];
-            if (!material.emission_factor) continue;
+            if (material.emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
             auto bbox = compute_bounds(shape);
             auto pos  = (bbox.max + bbox.min) / 2;
@@ -672,7 +671,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
             } else {
                 area += shape.positions.size();
             }
-            auto ke = material.emission_factor * material.emission_color * area;
+            auto ke = material.emission * area;
             lights_pos.push_back(transform_point(instance.frame, pos));
             lights_ke.push_back(ke);
             lights_type.push_back(0);

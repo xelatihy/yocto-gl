@@ -306,11 +306,11 @@ def make_tests():
             },
             {
                 "uri": "materials/test-arealight1.yaml",
-                "emission_factor": 20
+                "emission": [20, 20, 20]
             },
             {
                 "uri": "materials/test-arealight2.yaml",
-                "emission_factor": 20
+                "emission": [20, 20, 20]
             }
         ],
         "shapes": [
@@ -434,7 +434,7 @@ def make_tests():
         "environments": [
             {
                 "uri": 'environments/test-sky.yaml',
-                "emission_factor": 2,
+                "emission": [2, 2, 2],
                 "emission_texture": "textures/test-sky.hdr"
             }
         ]
@@ -444,7 +444,7 @@ def make_tests():
         "environments": [
             {
                 "uri": 'environments/test-sunsky.yaml',
-                "emission_factor": 2,
+                "emission": [2, 2, 2],
                 "emission_texture": "textures/test-sunsky.hdr"
             }
         ]
