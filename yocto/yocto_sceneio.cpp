@@ -705,40 +705,30 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.sheen);
                 } else if (key == "coat") {
                     get_yaml_value(value, material.coat);
-                } else if (key == "transmission_factor") {
-                    get_yaml_value(value, material.transmission_factor);
-                } else if (key == "subsurface_factor") {
-                    get_yaml_value(value, material.subsurface_factor);
-                } else if (key == "transmission_factor") {
-                    get_yaml_value(value, material.transmission_factor);
+                } else if (key == "transmission") {
+                    get_yaml_value(value, material.transmission);
+                } else if (key == "subsurface") {
+                    get_yaml_value(value, material.subsurface);
                 } else if (key == "opacity") {
                     get_yaml_value(value, material.opacity);
                 } else if (key == "roughness") {
                     get_yaml_value(value, material.roughness);
-                } else if (key == "ios") {
+                } else if (key == "ior") {
                     get_yaml_value(value, material.ior);
                 } else if (key == "coat") {
                     get_yaml_value(value, material.coat);
                 } else if (key == "sheen") {
                     get_yaml_value(value, material.sheen);
-                } else if (key == "transmission_color") {
-                    get_yaml_value(value, material.transmission_color);
-                } else if (key == "transmission_depth") {
-                    get_yaml_value(value, material.transmission_depth);
-                } else if (key == "transmission_scatter") {
-                    get_yaml_value(value, material.transmission_scatter);
-                } else if (key == "transmission_anisotropy") {
-                    get_yaml_value(value, material.transmission_anisotropy);
-                } else if (key == "subsurface_emission") {
-                    get_yaml_value(value, material.subsurface_emission);
-                } else if (key == "subsurface_color") {
-                    get_yaml_value(value, material.subsurface_color);
-                } else if (key == "subsurface_radius") {
-                    get_yaml_value(value, material.subsurface_radius);
-                } else if (key == "subsurface_scale") {
-                    get_yaml_value(value, material.subsurface_scale);
-                } else if (key == "subsurface_anisotropy") {
-                    get_yaml_value(value, material.subsurface_anisotropy);
+                } else if (key == "scatter") {
+                    get_yaml_value(value, material.scatter);
+                } else if (key == "meanfreepath") {
+                    get_yaml_value(value, material.meanfreepath);
+                } else if (key == "volemission") {
+                    get_yaml_value(value, material.volemission);
+                } else if (key == "volanisotropy") {
+                    get_yaml_value(value, material.volanisotropy);
+                } else if (key == "volscale") {
+                    get_yaml_value(value, material.volscale);
                 } else if (key == "thin") {
                     get_yaml_value(value, material.thin);
                 } else if (key == "emission_texture") {
@@ -971,35 +961,25 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             fs, "specular", material.specular, def_material.specular);
         print_optional(
             fs, "metallic", material.metallic, def_material.metallic);
-        print_optional(fs, "transmission_factor", material.transmission_factor,
-            def_material.transmission_factor);
-        print_optional(fs, "subsurface_factor", material.subsurface_factor,
-            def_material.subsurface_factor);
+        print_optional(fs, "transmission", material.transmission,
+            def_material.transmission);
+        print_optional(
+            fs, "subsurface", material.subsurface, def_material.subsurface);
         print_optional(fs, "sheen", material.sheen, def_material.sheen);
         print_optional(fs, "coat", material.coat, def_material.coat);
         print_optional(fs, "opacity", material.opacity, def_material.opacity);
         print_optional(
             fs, "roughness", material.roughness, def_material.roughness);
         print_optional(fs, "ior", material.ior, def_material.ior);
-        print_optional(fs, "transmission_color", material.transmission_color,
-            def_material.transmission_color);
-        print_optional(fs, "transmission_depth", material.transmission_depth,
-            def_material.transmission_depth);
-        print_optional(fs, "transmission_scatter",
-            material.transmission_scatter, def_material.transmission_scatter);
-        print_optional(fs, "transmission_anisotropy",
-            material.transmission_anisotropy,
-            def_material.transmission_anisotropy);
-        print_optional(fs, "subsurface_emission", material.subsurface_emission,
-            def_material.subsurface_emission);
-        print_optional(fs, "subsurface_color", material.subsurface_color,
-            def_material.subsurface_color);
-        print_optional(fs, "subsurface_radius", material.subsurface_radius,
-            def_material.subsurface_radius);
-        print_optional(fs, "subsurface_scale", material.subsurface_scale,
-            def_material.subsurface_scale);
-        print_optional(fs, "subsurface_anisotropy",
-            material.subsurface_anisotropy, def_material.subsurface_anisotropy);
+        print_optional(fs, "scatter", material.scatter, def_material.scatter);
+        print_optional(fs, "meanfreepath", material.meanfreepath,
+            def_material.meanfreepath);
+        print_optional(
+            fs, "volemission", material.volemission, def_material.volemission);
+        print_optional(fs, "volanisotropy", material.volanisotropy,
+            def_material.volanisotropy);
+        print_optional(fs, "volscale", material.volscale,
+            def_material.volscale);
         print_optional(fs, "thin", material.thin, def_material.thin);
         print_ref(
             fs, "emission_texture", material.emission_texture, scene.textures);
@@ -1351,8 +1331,7 @@ struct load_obj_scene_cb : obj_callbacks {
         material.diffuse              = omat.kd;
         material.specular             = omat.ks;
         material.metallic             = omat.has_pbr ? omat.pm : 0;
-        material.transmission_factor  = omat.kt == zero3f ? 0 : 1;
-        material.transmission_color   = omat.kt;
+        material.transmission         = omat.kt;
         material.roughness            = omat.pr;
         material.opacity              = omat.op;
         material.emission_texture     = add_texture(omat.ke_txt, false);
@@ -1507,8 +1486,7 @@ static void save_mtl(
             print_obj_keyvalue(fs, "  Kd", material.diffuse);
             print_obj_keyvalue(fs, "  Ks", material.specular);
         }
-        print_obj_keyvalue(fs, "  Kt",
-            material.transmission_factor * material.transmission_color);
+        print_obj_keyvalue(fs, "  Kt", material.transmission);
         print_obj_keyvalue(fs, "  Ns",
             (int)clamp(
                 2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) -
@@ -3025,8 +3003,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 uber.Kd, material.diffuse, material.diffuse_texture);
             get_scaled_texture3f(
                 uber.Ks, material.specular, material.specular_texture);
-            get_scaled_texture3f(uber.Kt, material.transmission_factor,
-                material.transmission_color, material.transmission_texture);
+            get_scaled_texture3f(
+                uber.Kt, material.transmission, material.transmission_texture);
             float op_f = 1;
             auto  op   = vec3f{0, 0, 0};
             get_scaled_texture3f(
@@ -3086,8 +3064,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             auto& glass = get<pbrt_glass_material>(pmaterial);
             get_scaled_texture3f(
                 glass.Kr, material.specular, material.specular_texture);
-            get_scaled_texture3f(glass.Kt, material.transmission_factor,
-                material.transmission_color, material.transmission_texture);
+            get_scaled_texture3f(
+                glass.Kt, material.transmission, material.transmission_texture);
             material.roughness = get_pbrt_roughness(glass.uroughness.value,
                 glass.vroughness.value, glass.remaproughness);
             material.thin      = true;
@@ -3152,8 +3130,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 auto& glass = get<pbrt_glass_material>(fourier.approx);
                 get_scaled_texture3f(
                     glass.Kr, material.specular, material.specular_texture);
-                get_scaled_texture3f(glass.Kt, material.transmission_factor,
-                    material.transmission_color, material.transmission_texture);
+                get_scaled_texture3f(glass.Kt, material.transmission,
+                    material.transmission_texture);
             } else {
                 throw io_error("material type not supported " +
                                to_string(fourier.approx.index()));

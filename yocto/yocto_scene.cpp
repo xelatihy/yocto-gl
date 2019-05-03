@@ -1238,21 +1238,15 @@ material_point eval_material(const yocto_scene& scene,
     point.sheen               = material.sheen;
     point.coat                = material.coat;
     point.ior                 = material.ior;
-    point.transmission_factor = material.transmission_factor;
-    point.subsurface_factor   = material.subsurface_factor;
+    point.transmission = material.transmission;
+    point.subsurface   = material.subsurface;
     point.opacity             = material.opacity;
     point.ior_from_specular   = material.ior_from_specular;
-
-    // lobes
-    point.transmission_color      = material.transmission_color;
-    point.transmission_depth      = material.transmission_depth;
-    point.transmission_scatter    = material.transmission_scatter;
-    point.transmission_anisotropy = material.transmission_anisotropy;
-    point.subsurface_emission     = material.subsurface_emission;
-    point.subsurface_color        = material.subsurface_color;
-    point.subsurface_radius       = material.subsurface_radius;
-    point.subsurface_scale        = material.subsurface_scale;
-    point.subsurface_anisotropy   = material.subsurface_anisotropy;
+    point.scatter    = material.scatter;
+    point.meanfreepath       = material.meanfreepath;
+    point.volanisotropy = material.volanisotropy;
+    point.volemission     = material.volemission;
+    point.volscale = material.volscale;
     point.thin                    = material.thin;
 
     // textures
@@ -1292,8 +1286,14 @@ material_point eval_material(const yocto_scene& scene,
     if (material.transmission_texture >= 0) {
         auto& transmission_texture =
             scene.textures[material.transmission_texture];
-        point.transmission_color *= xyz(
+        point.transmission *= xyz(
             eval_texture(transmission_texture, texturecoord));
+    }
+    if (material.subsurface_texture >= 0) {
+        auto& subsurface_texture =
+            scene.textures[material.subsurface_texture];
+        point.subsurface *= xyz(
+            eval_texture(subsurface_texture, texturecoord));
     }
     if (material.opacity_texture >= 0) {
         auto& opacity_texture = scene.textures[material.opacity_texture];

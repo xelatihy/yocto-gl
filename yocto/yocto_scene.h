@@ -122,10 +122,6 @@ struct yocto_voltexture {
 struct yocto_material {
     string uri = "";
 
-    // factors
-    float transmission_factor = 0;
-    float subsurface_factor   = 0;
-
     // lobes
     vec3f emission                = {0, 0, 0};
     vec3f diffuse                 = {0, 0, 0};
@@ -135,15 +131,13 @@ struct yocto_material {
     vec3f ior                     = {1.5, 1.5, 1.5};
     vec3f sheen                   = {0, 0, 0};
     vec3f coat                    = {0, 0, 0};
-    vec3f transmission_color      = {1, 1, 1};
-    float transmission_depth      = 0;
-    vec3f transmission_scatter    = {0, 0, 0};
-    float transmission_anisotropy = 0;
-    vec3f subsurface_emission     = {0, 0, 0};
-    vec3f subsurface_color        = {1, 1, 1};
-    vec3f subsurface_radius       = {1, 1, 1};
-    float subsurface_scale        = 1;
-    float subsurface_anisotropy   = 0;
+    vec3f transmission            = {0, 0, 0};
+    vec3f scatter                 = {0, 0, 0};
+    vec3f subsurface              = {0, 0, 0};
+    vec3f meanfreepath            = {1, 1, 1};
+    vec3f volemission             = {0, 0, 0};
+    float volanisotropy           = 0;
+    float volscale                = 0.01;
     float opacity                 = 1;
     bool  thin                    = false;
     bool  ior_from_specular       = false;
@@ -460,9 +454,6 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    float transmission_factor = 0;
-    float subsurface_factor   = 0;
-
     vec3f emission                = {0, 0, 0};
     vec3f diffuse                 = {0, 0, 0};
     vec3f specular                = {0, 0, 0};
@@ -471,15 +462,13 @@ struct material_point {
     vec3f ior                     = {1.5, 1.5, 1.5};
     vec3f coat                    = {0, 0, 0};
     vec3f sheen                   = {0, 0, 0};
-    vec3f transmission_color      = {1, 1, 1};
-    float transmission_depth      = 0;
-    vec3f transmission_scatter    = {0, 0, 0};
-    float transmission_anisotropy = 0;
-    vec3f subsurface_emission     = {0, 0, 0};
-    vec3f subsurface_color        = {1, 1, 1};
-    vec3f subsurface_radius       = {1, 1, 1};
-    float subsurface_scale        = 1;
-    float subsurface_anisotropy   = 0;
+    vec3f transmission            = {0, 0, 0};
+    vec3f scatter                 = {0, 0, 0};
+    vec3f subsurface              = {0, 0, 0};
+    vec3f meanfreepath            = {1.0, 0.35, 0.2};
+    vec3f volemission             = {0, 0, 0};
+    float volanisotropy           = 0;
+    float volscale                = 0.01;
     float opacity                 = 1;
     bool  thin                    = false;
     bool  ior_from_specular       = false;

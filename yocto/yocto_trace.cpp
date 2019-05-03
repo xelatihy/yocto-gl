@@ -431,7 +431,6 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         }
     }
     if (point.metallic) {
-        auto roughness = point.roughness;
         auto eta = reflectivity_to_eta(point.diffuse), etak = zero3f;
         // auto [eta, etak] = reflectivity_to_eta(point.base_color,
         // point.specular_color); auto eta = vec3f{0.1431189557f,
@@ -443,9 +442,9 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
         auto lweight = weight * point.metallic;
         if (lweight != zero3f) {
-            if (roughness) {
+            if (point.roughness) {
                 bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
-                    etak, roughness, max(lweight * fresnel), 0});
+                    etak, point.roughness, max(lweight * fresnel), 0});
             } else {
                 deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
                     etak, max(lweight * fresnel), 0});
@@ -453,31 +452,26 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         }
         weight *= 1 - point.metallic;
     }
-    if (point.transmission_factor) {
-        auto roughness = point.roughness;
+    if (point.transmission != zero3f) {
         auto eta = point.ior_from_specular ? reflectivity_to_eta(point.specular)
                                            : point.ior;
         if (point.thin && point.specular == zero3f) eta = {1, 1, 1};
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
-        auto lweight = weight * point.transmission_factor;
-        if (point.thin || !point.transmission_depth) {
-            lweight *= point.transmission_color;
-        } else {
-            auto density = -log(
-                               clamp(point.transmission_color, 0.0001f, 1.0f)) /
-                           point.transmission_depth;
-            // auto density = point.transmission_color *
-            // point.transmission_depth;
+        auto lweight = weight;
+        if (point.thin) {
+            lweight *= point.transmission;
+        } else if (point.transmission != vec3f{1, 1, 1} && point.volscale) {
+            auto density = -log(clamp(point.transmission, 0.0001f, 1.0f)) /
+                           point.volscale;
             mediums.push_back(
-                {trace_medium::type_t::phaseg, {1, 1, 1}, zero3f, density,
-                    point.transmission_scatter, point.transmission_anisotropy,
-                    max(point.transmission_scatter)});
+                {trace_medium::type_t::phaseg, {1, 1, 1}, point.volemission, density,
+                    point.scatter, point.volanisotropy, max(point.scatter)});
         }
         if (lweight != zero3f) {
-            if (roughness) {
+            if (point.roughness) {
                 bsdfs.push_back({point.thin ? trace_bsdf::type_t::transparency
                                             : trace_bsdf::type_t::transmission,
-                    lweight, eta, zero3f, roughness,
+                    lweight, eta, zero3f, point.roughness,
                     max(lweight * (1 - fresnel)), 0});
             } else {
                 deltas.push_back(
@@ -488,16 +482,15 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         }
     }
     if (point.specular != zero3f) {
-        auto roughness = point.roughness;
         auto eta = point.ior_from_specular ? reflectivity_to_eta(point.specular)
                                            : point.ior;
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
         auto lweight = weight * (point.ior_from_specular ? vec3f{1, 1, 1}
                                                          : point.specular);
         if (lweight != zero3f) {
-            if (roughness) {
+            if (point.roughness) {
                 bsdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
-                    zero3f, roughness, max(lweight * fresnel), 0});
+                    zero3f, point.roughness, max(lweight * fresnel), 0});
             } else {
                 deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
                     zero3f, max(lweight * fresnel), 0});
@@ -506,23 +499,26 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         weight *= 1 - fresnel * (point.ior_from_specular ? vec3f{1, 1, 1}
                                                          : point.specular);
     }
-    if (point.subsurface_factor) {
-        auto roughness = point.subsurface_factor;
-        auto lweight   = weight * point.subsurface_factor;
+    if (point.subsurface != zero3f) {
+        auto lweight = weight;
         if (point.thin) {
-            lweight *= point.subsurface_color;
+            lweight *= point.subsurface;
             bsdfs.push_back({trace_bsdf::type_t::translucency, lweight, zero3f,
-                zero3f, roughness, max(lweight), 0});
+                zero3f, point.roughness, max(lweight), 0});
         } else {
-            auto density = 1 /
-                           (point.subsurface_radius * point.subsurface_scale);
+            // hardcoded depth scale of 0.01 m
+            auto density = 1 / (point.meanfreepath * point.volscale);
             mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
-                point.subsurface_emission, density, point.subsurface_color,
-                point.subsurface_anisotropy, max(point.subsurface_color)});
-            deltas.push_back({trace_delta::type_t::transparency, lweight,
-                zero3f, zero3f, max(lweight), 0});
+                point.volemission, density, point.subsurface,
+                point.volanisotropy, max(point.subsurface)});
+            if(point.specular == zero3f) {
+                deltas.push_back({trace_delta::type_t::transparency, lweight,
+                    zero3f, zero3f, max(lweight), 0});
+            } else {
+                deltas.push_back({trace_delta::type_t::transmission, lweight,
+                    point.ior, zero3f, max(lweight), 0});
+            }
         }
-        weight *= 1 - point.subsurface_factor;
     }
     if (point.diffuse != zero3f) {
         auto lweight = weight * point.diffuse;

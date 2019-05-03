@@ -226,30 +226,28 @@ def make_tests():
             {
                 "uri": "materials/test-glass-sharp.yaml",
                 "specular": [1, 1, 1],
-                "transmission_factor": 1,
+                "transmission": [1, 1, 1],
                 "roughness": 0,
                 "thin": False
             },
             {
                 "uri": "materials/test-glass-rough.yaml",
                 "specular": [1, 1, 1],
-                "transmission_factor": 1,
-                "transmission_color": [ 1, 0.7, 0.7 ],
+                "transmission": [ 1, 0.7, 0.7 ],
                 "roughness": 0.1,
                 "thin": False
             },
             {
                 "uri": "materials/test-thinglass-sharp.yaml",
                 "specular": [1, 1, 1],
-                "transmission_factor": 1,
+                "transmission": [1, 1, 1],
                 "roughness": 0,
                 "thin": True
             },
             {
                 "uri": "materials/test-thinglass-rough.yaml",
                 "specular": [1, 1, 1],
-                "transmission_factor": 1,
-                "transmission_color": [ 1, 0.7, 0.7 ],
+                "transmission": [ 1, 0.7, 0.7 ],
                 "roughness": 0.05,
                 "thin": True
             },
@@ -261,38 +259,36 @@ def make_tests():
             {
                 "uri": "materials/test-volume-jade.yaml",
                 "specular": [1, 1, 1],
-                "transmission_factor": 1,
                 "roughness": 0,
-                "transmission_color": [0.5, 0.5, 0.5],
-                "transmission_depth": 0.006,
-                "transmission_scatter": [0.3, 0.6, 0.3]
+                "subsurface": [0.3, 0.6, 0.3],
+                "meanfreepath": [1, 1, 1]
             },
             {
                 "uri": "materials/test-volume-cloud.yaml",
-                "subsurface_factor": 1,
-                "subsurface_scale": 0.05,
-                "subsurface_color": [0.9, 0.9, 0.9]
+                "transmission": [0.65, 0.65, 0.65],
+                "scatter": [0.9, 0.9, 0.9],
+                "ior": [1, 1, 1]
             },
             {
                 "uri": "materials/test-volume-glass.yaml",
                 "specular": [1, 1, 1],
-                "transmission_factor": 1,
                 "roughness": 0,
-                "transmission_color": [1, 0.5, 0.5],
-                "transmission_depth": 0.02
+                "transmission": [1, 0.5, 0.5],
+                "volscale": 0.02
             },
             {
                 "uri": "materials/test-volume-smoke.yaml",
-                "subsurface_factor": 1,
-                "subsurface_scale": 0.03,
-                "subsurface_color": [0.2, 0.2, 0.2],
-                "subsurface_anisotropy": -0.8
+                "ior": [1, 1, 1],
+                "transmission": [0.5, 0.5, 0.5],
+                "scatter": [0.2, 0.2, 0.2],
+                "volanisotropy": -0.8
             },
             {
                 "uri": "materials/test-volume-emissive.yaml",
-                "subsurface_factor": 1,
-                "subsurface_scale": 1,
-                "subsurface_emission": [15, 15, 10]
+                "ior": [1, 1, 1],
+                "transmission": [0.95, 0.95, 0.95],
+                "volemission": [15, 15, 10],
+                "scatter": [0.01, 0.01, 0.01]
             },
             {
                 "uri": "materials/test-arealight1.yaml",
