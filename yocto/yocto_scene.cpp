@@ -1238,6 +1238,7 @@ material_point eval_material(const yocto_scene& scene,
     point.sheen               = material.sheen;
     point.coat                = material.coat;
     point.ior                 = material.ior;
+    point.roughness           = material.roughness;
     point.transmission = material.transmission;
     point.subsurface   = material.subsurface;
     point.opacity             = material.opacity;

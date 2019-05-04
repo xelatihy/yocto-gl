@@ -978,8 +978,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             fs, "volemission", material.volemission, def_material.volemission);
         print_optional(fs, "volanisotropy", material.volanisotropy,
             def_material.volanisotropy);
-        print_optional(fs, "volscale", material.volscale,
-            def_material.volscale);
+        print_optional(
+            fs, "volscale", material.volscale, def_material.volscale);
         print_optional(fs, "thin", material.thin, def_material.thin);
         print_ref(
             fs, "emission_texture", material.emission_texture, scene.textures);
@@ -1484,7 +1484,8 @@ static void save_mtl(
                 fs, "  Ks", material.diffuse * material.metallic);
         } else {
             print_obj_keyvalue(fs, "  Kd", material.diffuse);
-            print_obj_keyvalue(fs, "  Ks", material.specular);
+            print_obj_keyvalue(fs, "  Ks",
+                material.specular * obj_eta_to_reflectivity(material.ior));
         }
         print_obj_keyvalue(fs, "  Kt", material.transmission);
         print_obj_keyvalue(fs, "  Ns",
