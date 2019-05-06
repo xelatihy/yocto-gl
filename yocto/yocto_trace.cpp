@@ -1196,23 +1196,23 @@ pair<float, bool> sample_roulette(const vec3f& albedo, const vec3f& weight,
 #endif
 
 pair<float, vec2i> sample_distance(
-    const trace_mediums& mediums, float rl, float rd) {
-    if (mediums.empty()) return {0, {-1, -1}};
-    auto idx = sample_uniform((int)mediums.size(), rl);
-    rl       = clamp(rl * (int)mediums.size() - idx, 0.0f, 1.0f);
-    auto [distance, channel] = sample_distance(mediums[idx].density, rl, rd);
+    const trace_material& material, float rl, float rd) {
+    if (material.mediums.empty()) return {0, {-1, -1}};
+    auto idx = sample_uniform((int)material.mediums.size(), rl);
+    rl       = clamp(rl * (int)material.mediums.size() - idx, 0.0f, 1.0f);
+    auto [distance, channel] = sample_distance(material.mediums[idx].density, rl, rd);
     return {distance, {idx, channel}};
 }
 
-float sample_distance_pdf(
-    const trace_mediums& mediums, float distance, const vec2i& channel) {
-    if (mediums.empty() || channel.x < 0) return 0;
-    return sample_distance_pdf(mediums[channel.x].density, distance, channel.y);
+float sample_distance_pdf(const trace_material& material, 
+    float distance, const vec2i& channel) {
+    if (material.mediums.empty() || channel.x < 0) return 0;
+    return sample_distance_pdf(material.mediums[channel.x].density, distance, channel.y);
 }
 
-vec3f eval_transmission(const trace_mediums& mediums, float distance) {
+vec3f eval_transmission(const trace_material& material, float distance) {
     auto transmission = vec3f{1, 1, 1};
-    for (auto& lobe : mediums)
+    for (auto& lobe : material.mediums)
         transmission *= eval_transmission(lobe.density, distance);
     return transmission;
 }
@@ -1331,13 +1331,13 @@ tuple<vec3f, vec3f> sample_voldirection_mis(const yocto_scene& scene,
 
 // Returns weight and distance
 pair<vec3f, float> sample_transmission(
-    const trace_mediums& mediums, float max_distance, float rl, float rn) {
-    if (mediums.empty()) return {vec3f{1}, max_distance};
+    const trace_material& material, float max_distance, float rl, float rn) {
+    if (material.mediums.empty()) return {vec3f{1}, max_distance};
     // clamp ray if inside a volume
-    auto [distance, channel] = sample_distance(mediums, rl, rn);
+    auto [distance, channel] = sample_distance(material, rl, rn);
     distance                 = min(distance, max_distance);
-    auto pdf                 = sample_distance_pdf(mediums, distance, channel);
-    auto transmission        = eval_transmission(mediums, distance);
+    auto pdf                 = sample_distance_pdf(material, distance, channel);
+    auto transmission        = eval_transmission(material, distance);
     if (transmission == zero3f || pdf == 0) return {zero3f, 0};
     return {transmission / pdf, distance};
 }
@@ -1438,7 +1438,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto last_position = origin_;
     auto last_incoming = direction_;
     auto volume_stack  = trace_volume_stack{};
-    auto last_mediums  = trace_material{};
+    auto last_medium  = trace_material{};
     auto hit           = false;
 
     // trace  path
@@ -1457,7 +1457,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // clamp ray if inside a volume
         auto [transmission, distance] = sample_transmission(
-            last_mediums.mediums, intersection.distance, rand1f(rng),
+            last_medium, intersection.distance, rand1f(rng),
             rand1f(rng));
         weight *= transmission;
         auto on_surface = distance >= intersection.distance;
@@ -1465,7 +1465,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // prepare shading point
         auto [position, normal, material] =
             on_surface ? make_surface_point(scene, intersection, last_incoming)
-                       : make_volume_point(last_mediums, last_position,
+                       : make_volume_point(last_medium, last_position,
                              last_incoming, distance);
 
         // accumulate emission
@@ -1498,7 +1498,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         last_position = position;
         last_incoming = incoming;
         if (on_surface) {
-            update_volume_stack(volume_stack, last_mediums, material,
+            update_volume_stack(volume_stack, last_medium, material,
                 intersection.instance_id, normal, outgoing, incoming);
         }
     }
