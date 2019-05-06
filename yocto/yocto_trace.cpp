@@ -340,13 +340,6 @@ namespace yocto {
 // Set non-rigid frames as default
 constexpr bool trace_non_rigid_frames = true;
 
-// Emission lobe
-struct trace_emission {
-    enum struct type_t { diffuse };
-    type_t type   = type_t::diffuse;
-    vec3f  weight = zero3f;
-};
-using trace_emissions = short_vector<trace_emission, 8>;
 // Scattering lobe
 struct trace_bsdf {
     enum struct type_t {
@@ -391,7 +384,7 @@ struct trace_medium {
 using trace_mediums = short_vector<trace_medium, 8>;
 
 struct trace_material {
-    trace_emissions emissions;
+    vec3f emission = zero3f;
     trace_bsdfs     brdfs;
     trace_deltas    deltas;
     trace_mediums   mediums;
@@ -432,11 +425,7 @@ void eval_material(trace_material& material, const material_point& point_,
         weight *= point.coat * (1 - fresnel);
     }
     if (point.emission != zero3f) {
-        auto lweight = weight * point.emission;
-        if (lweight != zero3f) {
-            material.emissions.push_back(
-                {trace_emission::type_t::diffuse, lweight});
-        }
+        material.emission = weight * point.emission;
     }
     if (point.metallic) {
         auto eta = reflectivity_to_eta(point.diffuse), etak = zero3f;
@@ -550,9 +539,7 @@ void eval_material(trace_material& material, const material_point& point_,
 
 vec3f eval_emission(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing) {
-    auto emission = zero3f;
-    for (auto& lobe : material.emissions) emission += lobe.weight;
-    return emission;
+    return material.emission;
 }
 vec3f eval_volemission(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing) {
@@ -1676,11 +1663,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {xyz(color), 1};
         }
         case trace_falsecolor_type::emission: {
-            auto weight = zero3f;
-            for (auto& lobe : material.emissions) {
-                weight += lobe.weight;
-            }
-            return {weight, 1};
+            return {material.emission, 1};
         }
         case trace_falsecolor_type::diffuse: {
             auto weight = zero3f;
@@ -1744,10 +1727,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
         }
         case trace_falsecolor_type::highlight: {
-            auto emission = zero3f;
-            for (auto& lobe : material.emissions) {
-                emission += lobe.weight;
-            }
+            auto emission = material.emission;
             auto outgoing = -direction;
             if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
             return {emission * abs(dot(outgoing, normal)), 1};
