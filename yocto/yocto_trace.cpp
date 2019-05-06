@@ -973,7 +973,7 @@ float sample_brdf_pdf(const trace_material& material, const vec3f& normal,
 
 vec3f eval_volscattering(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-    if(!has_volume(material)) return zero3f;
+    if (!has_volume(material)) return zero3f;
     auto scattering = zero3f;
     if (material.voldensity != zero3f) {
         scattering += eval_volume_scattering(
@@ -983,7 +983,7 @@ vec3f eval_volscattering(const trace_material& material, const vec3f& normal,
 }
 vec3f sample_volscattering(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-    if(!has_volume(material)) return zero3f;
+    if (!has_volume(material)) return zero3f;
     auto weights = vec1f{max(material.voldensity)};
     if (weights == zero1f) return zero3f;
     weights /= sum(weights);
@@ -1001,14 +1001,14 @@ vec3f sample_volscattering(const trace_material& material, const vec3f& normal,
 }
 float sample_volscattering_pdf(const trace_material& material,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-    if(!has_volume(material)) return 0;
+    if (!has_volume(material)) return 0;
     auto weights = vec1f{max(material.voldensity)};
     if (weights == zero1f) return 0;
     weights /= sum(weights);
 
     // commpute pdf
     auto pdf = 0.0f;
-    if(weights[0]) {
+    if (weights[0]) {
         pdf += weights[0] * sample_volume_scattering_pdf(material.volscatter,
                                 material.volphaseg, normal, outgoing, incoming);
     }
@@ -1167,7 +1167,7 @@ pair<float, bool> sample_roulette(const vec3f& albedo, const vec3f& weight,
 
 pair<float, vec2i> sample_distance(
     const trace_material& material, float rl, float rd) {
-    if(!has_volume(material)) return {0, {-1, -1}};
+    if (!has_volume(material)) return {0, {-1, -1}};
     // auto idx = sample_uniform((int)material.mediums.size(), rl);
     // rl       = clamp(rl * (int)material.mediums.size() - idx, 0.0f, 1.0f);
     auto [distance, channel] = sample_distance(material.voldensity, rl, rd);
@@ -1176,9 +1176,8 @@ pair<float, vec2i> sample_distance(
 
 float sample_distance_pdf(
     const trace_material& material, float distance, const vec2i& channel) {
-    if(!has_volume(material)) return 0;
-    return sample_distance_pdf(
-        material.voldensity, distance, channel.y);
+    if (!has_volume(material)) return 0;
+    return sample_distance_pdf(material.voldensity, distance, channel.y);
 }
 
 vec3f eval_transmission(const trace_material& material, float distance) {
@@ -1441,7 +1440,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         radiance += on_surface
                         ? weight * eval_emission(material, normal, outgoing)
                         : weight * eval_volemission(material, normal, outgoing);
-        if (material.brdfs.empty() && material.deltas.empty() && !has_volume(material))
+        if (material.brdfs.empty() && material.deltas.empty() &&
+            !has_volume(material))
             break;
 
         // russian roulette
