@@ -726,21 +726,6 @@ vec3f eval_brdfcos(const trace_deltas& deltas, const vec3f& normal,
     }
     return brdfcos;
 }
-vec3f eval_scattering(const trace_mediums& mediums, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-    auto scattering = zero3f;
-    for (auto& lobe : mediums) {
-        if (lobe.weight == zero3f) continue;
-        switch (lobe.type) {
-            case trace_medium::type_t::phaseg: {
-                scattering += lobe.weight * eval_volume_scattering(lobe.albedo,
-                                                lobe.phaseg, outgoing,
-                                                incoming);
-            } break;
-        }
-    }
-    return scattering;
-}
 
 // Picks a direction based on the BRDF
 vec3f sample_diffuse_reflection(float roughness, const vec3f& normal,
@@ -862,28 +847,6 @@ vec3f sample_brdf(const trace_deltas& deltas, const vec3f& normal,
             } break;
             case trace_delta::type_t::passthrough: {
                 return sample_delta_passthrough(normal, outgoing, rn);
-            } break;
-        }
-    }
-
-    // something went wrong if we got here
-    return zero3f;
-}
-vec3f sample_scattering(const trace_mediums& mediums, const vec3f& normal,
-    const vec3f& outgoing, float rnl, const vec2f& rn) {
-    // keep a weight sum to pick a lobe
-    auto weight_sum = 0.0f;
-    for (auto& lobe : mediums) {
-        if (lobe.pdf == 0) continue;
-
-        // check if we pick this lobe
-        weight_sum += lobe.pdf;
-        if (rnl > weight_sum) continue;
-
-        switch (lobe.type) {
-            case trace_medium::type_t::phaseg: {
-                return sample_volume_scattering(
-                    lobe.albedo, lobe.phaseg, normal, outgoing, rn);
             } break;
         }
     }
@@ -1027,10 +990,48 @@ float sample_brdf_pdf(const trace_deltas& deltas, const vec3f& normal,
 
     return pdf;
 }
-float sample_scattering_pdf(const trace_mediums& mediums, const vec3f& normal,
+
+vec3f eval_volscattering(const trace_material& material, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
+    auto scattering = zero3f;
+    for (auto& lobe : material.mediums) {
+        if (lobe.weight == zero3f) continue;
+        switch (lobe.type) {
+            case trace_medium::type_t::phaseg: {
+                scattering += lobe.weight * eval_volume_scattering(lobe.albedo,
+                                                lobe.phaseg, outgoing,
+                                                incoming);
+            } break;
+        }
+    }
+    return scattering;
+}
+vec3f sample_volscattering(const trace_material& material, const vec3f& normal,
+    const vec3f& outgoing, float rnl, const vec2f& rn) {
+    // keep a weight sum to pick a lobe
+    auto weight_sum = 0.0f;
+    for (auto& lobe : material.mediums) {
+        if (lobe.pdf == 0) continue;
+
+        // check if we pick this lobe
+        weight_sum += lobe.pdf;
+        if (rnl > weight_sum) continue;
+
+        switch (lobe.type) {
+            case trace_medium::type_t::phaseg: {
+                return sample_volume_scattering(
+                    lobe.albedo, lobe.phaseg, normal, outgoing, rn);
+            } break;
+        }
+    }
+
+    // something went wrong if we got here
+    return zero3f;
+}
+float sample_volscattering_pdf(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
     auto pdf = 0.0f;
-    for (auto& lobe : mediums) {
+    for (auto& lobe : material.mediums) {
         if (lobe.pdf == 0) continue;
 
         switch (lobe.type) {
@@ -1263,17 +1264,17 @@ tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
 
 tuple<vec3f, vec3f> sample_voldirection(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
-    const trace_mediums& medium, const vec3f& position, const vec3f& normal,
+    const trace_material& material, const vec3f& position, const vec3f& normal,
     const vec3f& outgoing, bool mis, float rl, const vec2f& ruv, float re,
     float rmis) {
     if (mis) {
         auto incoming =
             (rmis < 0.5f)
-                ? sample_scattering(medium, normal, outgoing, rl, ruv)
+                ? sample_volscattering(material, normal, outgoing, rl, ruv)
                 : sample_lights(scene, lights, bvh, position, re, rl, ruv);
-        auto scattering = eval_scattering(medium, normal, outgoing, incoming);
+        auto scattering = eval_volscattering(material, normal, outgoing, incoming);
         auto incoming_pdf =
-            0.5f * sample_scattering_pdf(medium, normal, outgoing, incoming) +
+            0.5f * sample_volscattering_pdf(material, normal, outgoing, incoming) +
             0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming);
         if (incoming == zero3f || incoming_pdf == 0) {
             return {zero3f, zero3f};
@@ -1281,10 +1282,10 @@ tuple<vec3f, vec3f> sample_voldirection(const yocto_scene& scene,
             return {scattering / incoming_pdf, incoming};
         }
     } else {
-        auto incoming = sample_scattering(medium, normal, outgoing, rl, ruv);
-        auto brdfcos  = eval_scattering(medium, normal, outgoing, incoming);
-        auto incoming_pdf = sample_scattering_pdf(
-            medium, normal, outgoing, incoming);
+        auto incoming = sample_volscattering(material, normal, outgoing, rl, ruv);
+        auto brdfcos  = eval_volscattering(material, normal, outgoing, incoming);
+        auto incoming_pdf = sample_volscattering_pdf(
+            material, normal, outgoing, incoming);
         if (incoming == zero3f || incoming_pdf == 0) {
             return {zero3f, zero3f};
         } else {
@@ -1478,7 +1479,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                          : sample_direction(scene, lights, bvh, material.brdfs, position,
                                normal, outgoing, true, rand1f(rng), rand2f(rng),
                                rand1f(rng), rand1f(rng)))
-                : sample_voldirection(scene, lights, bvh, material.mediums, position,
+                : sample_voldirection(scene, lights, bvh, material, position,
                       normal, outgoing, true, rand1f(rng), rand2f(rng),
                       rand1f(rng), rand1f(rng));
         weight *= scattering;
