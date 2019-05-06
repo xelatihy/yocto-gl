@@ -1484,7 +1484,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // next direction
         auto [scattering, incoming] =
             on_surface ? sample_direction_mis(scene, lights, bvh, material,
-                             position, normal, outgoing, delta, true, 
+                             position, normal, outgoing, delta, true,
                              rand1f(rng), rand2f(rng), rand1f(rng), rand1f(rng))
                        : sample_voldirection_mis(scene, lights, bvh, material,
                              position, normal, outgoing, true, rand1f(rng),
@@ -1602,8 +1602,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
         // continue path
         auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            material, position, normal, outgoing, true, rand1f(rng),
-            zero2f);
+            material, position, normal, outgoing, true, rand1f(rng), zero2f);
 
         // exit if no hit
         weight *= scattering;
