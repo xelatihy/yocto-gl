@@ -364,7 +364,7 @@ struct trace_material {
     vec3f      volemission = zero3f;
     vec3f      voldensity  = zero3f;
     vec3f      volscatter  = zero3f;
-    float      volphaseg   = 0;
+    float      volanisotropy   = 0;
 };
 
 void eval_material(trace_material& material, const material_point& point_,
@@ -430,13 +430,11 @@ void eval_material(trace_material& material, const material_point& point_,
                 trace_bsdf::type_t::diffuse, lweight, zero3f, zero3f, 0};
         }
     }
-    if (point.voltransmission != zero3f && !point.thin) {
-        auto density = -log(clamp(point.voltransmission, 0.0001f, 1.0f)) /
-                        point.volscale;
+    if (point.voldensity != zero3f && !point.thin) {
         material.volemission = point.volemission;
-        material.voldensity  = density;
+        material.voldensity  = point.voldensity;
         material.volscatter  = point.volscatter;
-        material.volphaseg   = point.volanisotropy;
+        material.volanisotropy   = point.volanisotropy;
     }
 }
 
@@ -977,7 +975,7 @@ vec3f eval_volscattering(const trace_material& material, const vec3f& normal,
     auto scattering = zero3f;
     if (material.voldensity != zero3f) {
         scattering += eval_volume_scattering(
-            material.volscatter, material.volphaseg, outgoing, incoming);
+            material.volscatter, material.volanisotropy, outgoing, incoming);
     }
     return scattering;
 }
@@ -993,7 +991,7 @@ vec3f sample_volscattering(const trace_material& material, const vec3f& normal,
     weight_sum += weights[0];
     if (rnl < weight_sum) {
         return sample_volume_scattering(
-            material.volscatter, material.volphaseg, normal, outgoing, rn);
+            material.volscatter, material.volanisotropy, normal, outgoing, rn);
     }
 
     // something went wrong if we got here
@@ -1010,7 +1008,7 @@ float sample_volscattering_pdf(const trace_material& material,
     auto pdf = 0.0f;
     if (weights[0]) {
         pdf += weights[0] * sample_volume_scattering_pdf(material.volscatter,
-                                material.volphaseg, normal, outgoing, incoming);
+                                material.volanisotropy, normal, outgoing, incoming);
     }
 
     return pdf;

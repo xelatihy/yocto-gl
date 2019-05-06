@@ -1241,11 +1241,11 @@ material_point eval_material(const yocto_scene& scene,
     point.sheen           = material.sheen;
     point.coat            = material.coat;
     point.transmission    = material.transmission;
-    point.voltransmission = material.voltransmission;
+    auto voltransmission  = material.voltransmission;
     point.volemission     = material.volemission;
     point.volscatter      = material.volscatter;
     point.volanisotropy   = material.volanisotropy;
-    point.volscale        = material.volscale;
+    auto volscale         = material.volscale;
     point.opacity         = material.opacity * shape_color.w;
     point.thin            = material.thin;
 
@@ -1318,6 +1318,12 @@ material_point eval_material(const yocto_scene& scene,
         point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
     }
     if (point.opacity > 0.999f) point.opacity = 1;
+    if (voltransmission != zero3f) {
+        point.voldensity = -log(clamp(voltransmission, 0.0001f, 1.0f)) /
+                        volscale;
+    } else {
+        point.voldensity = zero3f;
+    }
     return point;
 }
 
