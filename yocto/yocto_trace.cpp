@@ -1368,7 +1368,7 @@ struct trace_point {
 };
 
 // Make a trace point
-trace_point make_surface_point(const yocto_scene& scene,
+trace_point make_point(const yocto_scene& scene,
     const bvh_intersection& intersection, const vec3f& shading_direction) {
     auto& instance = scene.instances[intersection.instance_id];
     auto& shape    = scene.shapes[instance.shape];
@@ -1399,7 +1399,7 @@ trace_point make_surface_point(const yocto_scene& scene,
     return point;
 }
 
-trace_point make_volume_point(const trace_material& last_material,
+trace_point make_volpoint(const trace_material& last_material,
     const vec3f& last_position, const vec3f& last_direction, float distance) {
     auto point                         = trace_point{};
     auto& [position, normal, material] = point;
@@ -1464,8 +1464,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // prepare shading point
         auto [position, normal, material] =
-            on_surface ? make_surface_point(scene, intersection, last_incoming)
-                       : make_volume_point(last_medium, last_position,
+            on_surface ? make_point(scene, intersection, last_incoming)
+                       : make_volpoint(last_medium, last_position,
                              last_incoming, distance);
 
         // accumulate emission
@@ -1530,7 +1530,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 
         // prepare shading point
         auto outgoing                     = -last_incoming;
-        auto [position, normal, material] = make_surface_point(
+        auto [position, normal, material] = make_point(
             scene, intersection, last_incoming);
 
         // accumulate emission
@@ -1583,7 +1583,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
         // prepare shading point
         auto outgoing                     = -last_incoming;
-        auto [position, normal, material] = make_surface_point(
+        auto [position, normal, material] = make_point(
             scene, intersection, last_incoming);
 
         // accumulate emission
@@ -1631,7 +1631,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
 
     // prepare shading point
     auto outgoing                     = -direction;
-    auto [position, normal, material] = make_surface_point(
+    auto [position, normal, material] = make_point(
         scene, intersection, direction);
 
     switch (params.falsecolor_type) {
