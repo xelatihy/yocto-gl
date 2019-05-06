@@ -360,7 +360,7 @@ struct trace_bsdf {
 struct trace_material {
     vec3f      emission = zero3f;
     trace_bsdf coat, diffuse, specular, metal, transmission;
-    float opacity = 1;
+    float      opacity     = 1;
     vec3f      volemission = zero3f;
     vec3f      voldensity  = zero3f;
     vec3f      volscatter  = zero3f;
@@ -377,7 +377,7 @@ void eval_material(trace_material& material, const material_point& point_,
     if (point.roughness)
         point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
     if (point.opacity > 0.999f) point.opacity = 1;
-    auto weight = vec3f{1};
+    auto weight      = vec3f{1};
     material.opacity = point.opacity;
     if (point.coat != zero3f) {
         auto roughness = 0.0f;
@@ -826,7 +826,7 @@ pair<array<float, 5>, float> compute_brdf_pdfs(const trace_material& material,
                            (1 - fresnel_dielectric(material.transmission.eta,
                                     abs(dot(outgoing, normal)))))
                      : 0;
-    auto sum   = 0.0f;
+    auto sum = 0.0f;
     for (auto w : weights) sum += w;
     if (!sum) return {weights, sum};
     for (auto& w : weights) w /= sum;
@@ -1453,11 +1453,12 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             on_surface ? make_point(scene, intersection, last_incoming)
                        : make_volpoint(last_medium, last_position,
                              last_incoming, distance);
-        
+
         // handle opacity
-        auto [op_weight, op_hit] = sample_opacity(material.opacity, rand1f(rng));
+        auto [op_weight, op_hit] = sample_opacity(
+            material.opacity, rand1f(rng));
         weight *= op_weight;
-        if(!op_hit) {
+        if (!op_hit) {
             last_position = position;
             bounce -= 1;
             continue;
@@ -1520,12 +1521,22 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
             radiance += weight * eval_environments(scene, last_incoming);
             break;
         }
-        hit = true;
 
         // prepare shading point
         auto outgoing                     = -last_incoming;
         auto [position, normal, material] = make_point(
             scene, intersection, last_incoming);
+
+        // handle opacity
+        auto [op_weight, op_hit] = sample_opacity(
+            material.opacity, rand1f(rng));
+        weight *= op_weight;
+        if (!op_hit) {
+            last_position = position;
+            bounce -= 1;
+            continue;
+        }
+        hit = true;
 
         // accumulate emission
         radiance += weight * eval_emission(material, normal, outgoing);
@@ -1573,12 +1584,22 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
             radiance += weight * eval_environments(scene, last_incoming);
             break;
         }
-        hit = true;
 
         // prepare shading point
         auto outgoing                     = -last_incoming;
         auto [position, normal, material] = make_point(
             scene, intersection, last_incoming);
+
+        // handle opacity
+        auto [op_weight, op_hit] = sample_opacity(
+            material.opacity, rand1f(rng));
+        weight *= op_weight;
+        if (!op_hit) {
+            last_position = position;
+            bounce -= 1;
+            continue;
+        }
+        hit = true;
 
         // accumulate emission
         radiance += weight * eval_emission(material, normal, outgoing);
