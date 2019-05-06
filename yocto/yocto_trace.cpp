@@ -463,9 +463,9 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
         } else if (point.transmission != vec3f{1, 1, 1} && point.volscale) {
             auto density = -log(clamp(point.transmission, 0.0001f, 1.0f)) /
                            point.volscale;
-            mediums.push_back(
-                {trace_medium::type_t::phaseg, {1, 1, 1}, point.volemission, density,
-                    point.scatter, point.volanisotropy, max(point.scatter)});
+            mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
+                point.volemission, density, point.scatter, point.volanisotropy,
+                max(point.scatter)});
         }
         if (lweight != zero3f) {
             if (point.roughness) {
@@ -511,7 +511,7 @@ void eval_material(trace_emissions& emissions, trace_bsdfs& bsdfs,
             mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
                 point.volemission, density, point.subsurface,
                 point.volanisotropy, max(point.subsurface)});
-            if(point.specular == zero3f) {
+            if (point.specular == zero3f) {
                 deltas.push_back({trace_delta::type_t::transparency, lweight,
                     zero3f, zero3f, max(lweight), 0});
             } else {
@@ -657,70 +657,68 @@ vec3f eval_volume_scattering(const vec3f& albedo, float phaseg,
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_scattering(const trace_bsdfs& bsdfs, const vec3f& normal,
+vec3f eval_brdfcos(const trace_bsdfs& bsdfs, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-    auto scattering = zero3f;
+    auto brdfcos = zero3f;
     for (auto& lobe : bsdfs) {
         if (lobe.weight == zero3f) continue;
         switch (lobe.type) {
             case trace_bsdf::type_t::diffuse: {
-                scattering += lobe.weight *
-                              eval_diffuse_reflection(
-                                  lobe.roughness, normal, outgoing, incoming);
+                brdfcos += lobe.weight * eval_diffuse_reflection(lobe.roughness,
+                                             normal, outgoing, incoming);
             } break;
             case trace_bsdf::type_t::translucency: {
-                scattering += lobe.weight *
-                              eval_diffuse_translucency(
-                                  lobe.roughness, normal, outgoing, incoming);
+                brdfcos += lobe.weight *
+                           eval_diffuse_translucency(
+                               lobe.roughness, normal, outgoing, incoming);
             } break;
             case trace_bsdf::type_t::reflection: {
-                scattering += lobe.weight *
-                              eval_microfacet_reflection(lobe.roughness,
-                                  lobe.eta, zero3f, normal, outgoing, incoming);
+                brdfcos += lobe.weight *
+                           eval_microfacet_reflection(lobe.roughness, lobe.eta,
+                               zero3f, normal, outgoing, incoming);
             } break;
             case trace_bsdf::type_t::transmission: {
-                scattering += lobe.weight *
-                              eval_microfacet_transmission(lobe.roughness,
-                                  lobe.eta, normal, outgoing, incoming);
+                brdfcos += lobe.weight *
+                           eval_microfacet_transmission(lobe.roughness,
+                               lobe.eta, normal, outgoing, incoming);
 
             } break;
             case trace_bsdf::type_t::transparency: {
-                scattering += lobe.weight *
-                              eval_microfacet_transparency(lobe.roughness,
-                                  lobe.eta, normal, outgoing, incoming);
+                brdfcos += lobe.weight *
+                           eval_microfacet_transparency(lobe.roughness,
+                               lobe.eta, normal, outgoing, incoming);
             } break;
         }
     }
-    return scattering;
+    return brdfcos;
 }
-vec3f eval_scattering(const trace_deltas& deltas, const vec3f& normal,
+vec3f eval_brdfcos(const trace_deltas& deltas, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-    auto scattering = zero3f;
+    auto brdfcos = zero3f;
     for (auto& lobe : deltas) {
         if (lobe.weight == zero3f) continue;
         switch (lobe.type) {
             case trace_delta::type_t::reflection: {
-                scattering += lobe.weight * eval_delta_reflection(lobe.eta,
-                                                zero3f, normal, outgoing,
-                                                incoming);
+                brdfcos += lobe.weight * eval_delta_reflection(lobe.eta, zero3f,
+                                             normal, outgoing, incoming);
             } break;
             case trace_delta::type_t::transmission: {
-                scattering += lobe.weight * eval_delta_transmission(lobe.eta,
-                                                normal, outgoing, incoming);
+                brdfcos += lobe.weight * eval_delta_transmission(lobe.eta,
+                                             normal, outgoing, incoming);
 
             } break;
             case trace_delta::type_t::transparency: {
-                scattering += lobe.weight * eval_delta_transparency(lobe.eta,
-                                                normal, outgoing, incoming);
+                brdfcos += lobe.weight * eval_delta_transparency(lobe.eta,
+                                             normal, outgoing, incoming);
             } break;
             case trace_delta::type_t::passthrough: {
-                scattering += lobe.weight * eval_delta_passthrough(
-                                                normal, outgoing, incoming);
+                brdfcos += lobe.weight *
+                           eval_delta_passthrough(normal, outgoing, incoming);
             } break;
             default: break;
         }
     }
-    return scattering;
+    return brdfcos;
 }
 vec3f eval_scattering(const trace_mediums& mediums, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
@@ -795,7 +793,7 @@ vec3f sample_volume_scattering(const vec3f& albedo, float phaseg,
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_scattering(const trace_bsdfs& bsdfs, const vec3f& normal,
+vec3f sample_brdf(const trace_bsdfs& bsdfs, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
@@ -833,7 +831,7 @@ vec3f sample_scattering(const trace_bsdfs& bsdfs, const vec3f& normal,
     // something went wrong if we got here
     return zero3f;
 }
-vec3f sample_scattering(const trace_deltas& deltas, const vec3f& normal,
+vec3f sample_brdf(const trace_deltas& deltas, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
@@ -959,7 +957,7 @@ float sample_volume_scattering_pdf(const vec3f& albedo, float phaseg,
 }
 
 // Compute the weight for sampling the BRDF
-float sample_scattering_pdf(const trace_bsdfs& bsdfs, const vec3f& normal,
+float sample_brdf_pdf(const trace_bsdfs& bsdfs, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
     auto pdf = 0.0f;
     for (auto& lobe : bsdfs) {
@@ -995,7 +993,7 @@ float sample_scattering_pdf(const trace_bsdfs& bsdfs, const vec3f& normal,
 
     return pdf;
 }
-float sample_scattering_pdf(const trace_deltas& deltas, const vec3f& normal,
+float sample_brdf_pdf(const trace_deltas& deltas, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
     auto pdf = 0.0f;
     for (auto& lobe : deltas) {
@@ -1212,42 +1210,80 @@ vec3f eval_transmission(const trace_mediums& mediums, float distance) {
 }
 
 // Sample next direction. Returns weight and direction.
-template <typename Lobe>
 tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
-    const short_vector<Lobe, 8>& lobes, const vec3f& position,
-    const vec3f& normal, const vec3f& outgoing, float rl, const vec2f& ruv) {
+    const trace_deltas& deltas, const vec3f& position, const vec3f& normal,
+    const vec3f& outgoing, float rl, const vec2f& ruv) {
     // continue path
-    auto incoming     = sample_scattering(lobes, normal, outgoing, rl, ruv);
-    auto scattering   = eval_scattering(lobes, normal, outgoing, incoming);
-    auto incoming_pdf = sample_scattering_pdf(
-        lobes, normal, outgoing, incoming);
+    auto incoming     = sample_brdf(deltas, normal, outgoing, rl, ruv);
+    auto brdfcos      = eval_brdfcos(deltas, normal, outgoing, incoming);
+    auto incoming_pdf = sample_brdf_pdf(deltas, normal, outgoing, incoming);
     if (incoming == zero3f || incoming_pdf == 0) {
         return {zero3f, zero3f};
     } else {
-        return {scattering / incoming_pdf, incoming};
+        return {brdfcos / incoming_pdf, incoming};
     }
 }
 
-template <typename Lobe>
-tuple<vec3f, vec3f> sample_direction_mis(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh,
-    const short_vector<Lobe, 8>& lobes, const vec3f& position,
-    const vec3f& normal, const vec3f& outgoing, float rl, const vec2f& ruv,
-    float re, float rmis) {
-    // continue path
-    auto incoming = (rmis < 0.5f)
-                        ? sample_scattering(lobes, normal, outgoing, rl, ruv)
-                        : sample_lights(
-                              scene, lights, bvh, position, re, rl, ruv);
-    auto scattering = eval_scattering(lobes, normal, outgoing, incoming);
-    auto incoming_pdf =
-        0.5f * sample_scattering_pdf(lobes, normal, outgoing, incoming) +
-        0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming);
-    if (incoming == zero3f || incoming_pdf == 0) {
-        return {zero3f, zero3f};
+tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_scene& bvh, const trace_bsdfs& brdfs,
+    const vec3f& position, const vec3f& normal, const vec3f& outgoing, bool mis,
+    float rl, const vec2f& ruv, float re, float rmis) {
+    if (mis) {
+        auto incoming = (rmis < 0.5f)
+                            ? sample_brdf(brdfs, normal, outgoing, rl, ruv)
+                            : sample_lights(
+                                  scene, lights, bvh, position, re, rl, ruv);
+        auto scattering = eval_brdfcos(brdfs, normal, outgoing, incoming);
+        auto incoming_pdf =
+            0.5f * sample_brdf_pdf(brdfs, normal, outgoing, incoming) +
+            0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming);
+        if (incoming == zero3f || incoming_pdf == 0) {
+            return {zero3f, zero3f};
+        } else {
+            return {scattering / incoming_pdf, incoming};
+        }
     } else {
-        return {scattering / incoming_pdf, incoming};
+        auto incoming     = sample_brdf(brdfs, normal, outgoing, rl, ruv);
+        auto brdfcos      = eval_brdfcos(brdfs, normal, outgoing, incoming);
+        auto incoming_pdf = sample_brdf_pdf(brdfs, normal, outgoing, incoming);
+        if (incoming == zero3f || incoming_pdf == 0) {
+            return {zero3f, zero3f};
+        } else {
+            return {brdfcos / incoming_pdf, incoming};
+        }
+    }
+}
+
+tuple<vec3f, vec3f> sample_voldirection(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_scene& bvh,
+    const trace_mediums& medium, const vec3f& position, const vec3f& normal,
+    const vec3f& outgoing, bool mis, float rl, const vec2f& ruv, float re,
+    float rmis) {
+    if (mis) {
+        auto incoming =
+            (rmis < 0.5f)
+                ? sample_scattering(medium, normal, outgoing, rl, ruv)
+                : sample_lights(scene, lights, bvh, position, re, rl, ruv);
+        auto scattering = eval_scattering(medium, normal, outgoing, incoming);
+        auto incoming_pdf =
+            0.5f * sample_scattering_pdf(medium, normal, outgoing, incoming) +
+            0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming);
+        if (incoming == zero3f || incoming_pdf == 0) {
+            return {zero3f, zero3f};
+        } else {
+            return {scattering / incoming_pdf, incoming};
+        }
+    } else {
+        auto incoming = sample_scattering(medium, normal, outgoing, rl, ruv);
+        auto brdfcos  = eval_scattering(medium, normal, outgoing, incoming);
+        auto incoming_pdf = sample_scattering_pdf(
+            medium, normal, outgoing, incoming);
+        if (incoming == zero3f || incoming_pdf == 0) {
+            return {zero3f, zero3f};
+        } else {
+            return {brdfcos / incoming_pdf, incoming};
+        }
     }
 }
 
@@ -1437,12 +1473,12 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                 ? (delta ? sample_direction(scene, lights, bvh, deltas,
                                position, normal, outgoing, rand1f(rng),
                                rand2f(rng))
-                         : sample_direction_mis(scene, lights, bvh, bsdfs,
-                               position, normal, outgoing, rand1f(rng),
-                               rand2f(rng), rand1f(rng), rand1f(rng)))
-                : sample_direction_mis(scene, lights, bvh, mediums, position,
-                      normal, outgoing, rand1f(rng), rand2f(rng), rand1f(rng),
-                      rand1f(rng));
+                         : sample_direction(scene, lights, bvh, bsdfs, position,
+                               normal, outgoing, true, rand1f(rng), rand2f(rng),
+                               rand1f(rng), rand1f(rng)))
+                : sample_voldirection(scene, lights, bvh, mediums, position,
+                      normal, outgoing, true, rand1f(rng), rand2f(rng),
+                      rand1f(rng), rand1f(rng));
         weight *= scattering;
         if (weight == zero3f) break;
 
@@ -1504,8 +1540,9 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         auto [scattering, incoming] =
             delta ? sample_direction(scene, lights, bvh, deltas, position,
                         normal, outgoing, rand1f(rng), rand2f(rng))
-                  : sample_direction(scene, lights, bvh, bsdfs, position,
-                        normal, outgoing, rand1f(rng), rand2f(rng));
+                         : sample_direction(scene, lights, bvh, bsdfs,
+                               position, normal, outgoing, true, rand1f(rng),
+                               rand2f(rng), rand1f(rng), rand1f(rng));
         weight *= scattering;
         if (weight == zero3f) break;
 
@@ -1550,7 +1587,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
         // brdf * light
         radiance += weight * pif *
-                    eval_scattering(bsdfs, normal, outgoing, outgoing);
+                    eval_brdfcos(bsdfs, normal, outgoing, outgoing);
 
         // exit if needed
         if (weight == zero3f) break;
