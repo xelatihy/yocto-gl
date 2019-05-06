@@ -423,10 +423,10 @@ void eval_material(trace_material& material, const material_point& point_,
         } else if (point.transmission != vec3f{1, 1, 1} && point.volscale) {
             auto density = -log(clamp(point.transmission, 0.0001f, 1.0f)) /
                            point.volscale;
-             material.volemission = point.volemission;
-             material.voldensity  = density;
-             material.volscatter  = point.scatter;
-             material.volphaseg   = point.volanisotropy;
+            material.volemission = point.volemission;
+            material.voldensity  = density;
+            material.volscatter  = point.scatter;
+            material.volphaseg   = point.volanisotropy;
         }
         if (lweight != zero3f) {
             material.transmission = {point.thin
@@ -442,8 +442,8 @@ void eval_material(trace_material& material, const material_point& point_,
         auto lweight = weight * (point.ior_from_specular ? vec3f{1, 1, 1}
                                                          : point.specular);
         if (lweight != zero3f) {
-           material.specular = {trace_bsdf::type_t::reflection, lweight, eta,
-               zero3f, point.roughness};
+            material.specular = {trace_bsdf::type_t::reflection, lweight, eta,
+                zero3f, point.roughness};
         }
         weight *= 1 - fresnel * (point.ior_from_specular ? vec3f{1, 1, 1}
                                                          : point.specular);
@@ -457,10 +457,10 @@ void eval_material(trace_material& material, const material_point& point_,
         } else {
             // hardcoded depth scale of 0.01 m
             auto density         = 1 / (point.meanfreepath * point.volscale);
-             material.volemission = point.volemission;
-             material.voldensity  = density;
-             material.volscatter  = point.subsurface;
-             material.volphaseg   = point.volanisotropy;
+            material.volemission = point.volemission;
+            material.voldensity  = density;
+            material.volscatter  = point.subsurface;
+            material.volphaseg   = point.volanisotropy;
             if (point.specular == zero3f) {
                 material.transmission = {
                     trace_bsdf::type_t::transparency, lweight, zero3f, zero3f};
@@ -789,10 +789,9 @@ vec3f eval_brdfcos(const trace_material& material, const vec3f& normal,
                 eval_microfacet_transmission(material.transmission.roughness,
                     material.transmission.eta, normal, outgoing, incoming);
         } else {
-            brdfcos +=
-                material.transmission.weight *
-                eval_delta_transmission(
-                    material.transmission.eta, normal, outgoing, incoming);
+            brdfcos += material.transmission.weight *
+                       eval_delta_transmission(material.transmission.eta,
+                           normal, outgoing, incoming);
         }
     }
     if (material.transmission.weight != zero3f &&
@@ -838,7 +837,7 @@ pair<array<float, 6>, float> compute_brdf_pdfs(const trace_material& material,
     weights[4] = (bool)material.transmission.roughness != delta
                      ? max(material.transmission.weight *
                            (1 - fresnel_dielectric(material.transmission.eta,
-                               abs(dot(outgoing, normal)))))
+                                    abs(dot(outgoing, normal)))))
                      : 0;
     weights[5] = delta ? max(material.opacity.weight) : 0;
     auto sum   = 0.0f;
@@ -949,7 +948,7 @@ float sample_brdf_pdf(const trace_material& material, const vec3f& normal,
                                  incoming);
         }
     }
-    
+
     if (pdfs[1]) {
         if (material.metal.roughness) {
             pdf += pdfs[1] *
