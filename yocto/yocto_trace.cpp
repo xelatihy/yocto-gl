@@ -543,16 +543,16 @@ void eval_material(trace_material& material, const material_point& point_,
     normalize_weights(material.mediums);
 }  // namespace yocto
 
-vec3f eval_emission(const trace_emissions& emissions, const vec3f& normal,
+vec3f eval_emission(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing) {
     auto emission = zero3f;
-    for (auto& lobe : emissions) emission += lobe.weight;
+    for (auto& lobe : material.emissions) emission += lobe.weight;
     return emission;
 }
-vec3f eval_emission(
-    const trace_mediums& mediums, const vec3f& normal, const vec3f& outgoing) {
+vec3f eval_volemission(
+    const trace_material& material, const vec3f& normal, const vec3f& outgoing) {
     auto emission = zero3f;
-    for (auto& lobe : mediums) emission += lobe.weight * lobe.emission;
+    for (auto& lobe : material.mediums) emission += lobe.weight * lobe.emission;
     return emission;
 }
 
@@ -1452,8 +1452,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // accumulate emission
         radiance += on_surface
-                        ? weight * eval_emission(material.emissions, normal, outgoing)
-                        : weight * eval_emission(material.mediums, normal, outgoing);
+                        ? weight * eval_emission(material, normal, outgoing)
+                        : weight * eval_volemission(material, normal, outgoing);
         if (material.brdfs.empty() && material.deltas.empty() && material.mediums.empty()) break;
 
         // russian roulette
@@ -1524,7 +1524,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
             make_surface_point(scene, intersection, last_incoming);
 
         // accumulate emission
-        radiance += weight * eval_emission(material.emissions, normal, outgoing);
+        radiance += weight * eval_emission(material, normal, outgoing);
         if (material.brdfs.empty() && material.deltas.empty()) break;
 
         // russian roulette
@@ -1584,7 +1584,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
             make_surface_point(scene, intersection, last_incoming);
 
         // accumulate emission
-        radiance += weight * eval_emission(material.emissions, normal, outgoing);
+        radiance += weight * eval_emission(material, normal, outgoing);
         if (material.brdfs.empty() && material.deltas.empty()) break;
 
         // brdf * light
