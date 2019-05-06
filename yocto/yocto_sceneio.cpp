@@ -701,34 +701,32 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.metallic);
                 } else if (key == "specular") {
                     get_yaml_value(value, material.specular);
+                } else if (key == "roughness") {
+                    get_yaml_value(value, material.roughness);
+                } else if (key == "ior") {
+                    get_yaml_value(value, material.ior);
                 } else if (key == "sheen") {
                     get_yaml_value(value, material.sheen);
                 } else if (key == "coat") {
                     get_yaml_value(value, material.coat);
                 } else if (key == "transmission") {
                     get_yaml_value(value, material.transmission);
-                } else if (key == "subsurface") {
-                    get_yaml_value(value, material.subsurface);
-                } else if (key == "opacity") {
-                    get_yaml_value(value, material.opacity);
-                } else if (key == "roughness") {
-                    get_yaml_value(value, material.roughness);
-                } else if (key == "ior") {
-                    get_yaml_value(value, material.ior);
-                } else if (key == "coat") {
-                    get_yaml_value(value, material.coat);
-                } else if (key == "sheen") {
-                    get_yaml_value(value, material.sheen);
-                } else if (key == "scatter") {
-                    get_yaml_value(value, material.scatter);
-                } else if (key == "meanfreepath") {
-                    get_yaml_value(value, material.meanfreepath);
+                } else if (key == "voltransmission") {
+                    get_yaml_value(value, material.voltransmission);
+                } else if (key == "volscatter") {
+                    get_yaml_value(value, material.volscatter);
                 } else if (key == "volemission") {
                     get_yaml_value(value, material.volemission);
                 } else if (key == "volanisotropy") {
                     get_yaml_value(value, material.volanisotropy);
                 } else if (key == "volscale") {
                     get_yaml_value(value, material.volscale);
+                } else if (key == "opacity") {
+                    get_yaml_value(value, material.opacity);
+                } else if (key == "coat") {
+                    get_yaml_value(value, material.coat);
+                } else if (key == "sheen") {
+                    get_yaml_value(value, material.sheen);
                 } else if (key == "thin") {
                     get_yaml_value(value, material.thin);
                 } else if (key == "emission_texture") {
@@ -964,22 +962,20 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
         print_optional(fs, "transmission", material.transmission,
             def_material.transmission);
         print_optional(
-            fs, "subsurface", material.subsurface, def_material.subsurface);
-        print_optional(fs, "sheen", material.sheen, def_material.sheen);
-        print_optional(fs, "coat", material.coat, def_material.coat);
-        print_optional(fs, "opacity", material.opacity, def_material.opacity);
-        print_optional(
             fs, "roughness", material.roughness, def_material.roughness);
         print_optional(fs, "ior", material.ior, def_material.ior);
-        print_optional(fs, "scatter", material.scatter, def_material.scatter);
-        print_optional(fs, "meanfreepath", material.meanfreepath,
-            def_material.meanfreepath);
+        print_optional(fs, "voltransmission", material.voltransmission,
+            def_material.voltransmission);
+        print_optional(fs, "volscatter", material.volscatter, def_material.volscatter);
         print_optional(
             fs, "volemission", material.volemission, def_material.volemission);
         print_optional(fs, "volanisotropy", material.volanisotropy,
             def_material.volanisotropy);
         print_optional(
             fs, "volscale", material.volscale, def_material.volscale);
+        print_optional(fs, "sheen", material.sheen, def_material.sheen);
+        print_optional(fs, "coat", material.coat, def_material.coat);
+        print_optional(fs, "opacity", material.opacity, def_material.opacity);
         print_optional(fs, "thin", material.thin, def_material.thin);
         print_ref(
             fs, "emission_texture", material.emission_texture, scene.textures);

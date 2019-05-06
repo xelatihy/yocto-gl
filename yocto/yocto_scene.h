@@ -132,10 +132,9 @@ struct yocto_material {
     vec3f sheen                   = {0, 0, 0};
     vec3f coat                    = {0, 0, 0};
     vec3f transmission            = {0, 0, 0};
-    vec3f scatter                 = {0, 0, 0};
-    vec3f subsurface              = {0, 0, 0};
-    vec3f meanfreepath            = {1, 1, 1};
+    vec3f voltransmission         = {0, 0, 0};
     vec3f volemission             = {0, 0, 0};
+    vec3f volscatter              = {0, 0, 0};
     float volanisotropy           = 0;
     float volscale                = 0.01;
     float opacity                 = 1;
@@ -463,10 +462,9 @@ struct material_point {
     vec3f coat                    = {0, 0, 0};
     vec3f sheen                   = {0, 0, 0};
     vec3f transmission            = {0, 0, 0};
-    vec3f scatter                 = {0, 0, 0};
-    vec3f subsurface              = {0, 0, 0};
-    vec3f meanfreepath            = {1.0, 0.35, 0.2};
+    vec3f voltransmission         = {0, 0, 0};
     vec3f volemission             = {0, 0, 0};
+    vec3f volscatter              = {0, 0, 0};
     float volanisotropy           = 0;
     float volscale                = 0.01;
     float opacity                 = 1;

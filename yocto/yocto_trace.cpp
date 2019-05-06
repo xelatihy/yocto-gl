@@ -412,17 +412,7 @@ void eval_material(trace_material& material, const material_point& point_,
     if (point.transmission != zero3f) {
         auto eta = point.ior;
         if (point.thin && point.specular == zero3f) eta = {1, 1, 1};
-        auto lweight = weight;
-        if (point.thin) {
-            lweight *= point.transmission;
-        } else if (point.transmission != vec3f{1, 1, 1} && point.volscale) {
-            auto density = -log(clamp(point.transmission, 0.0001f, 1.0f)) /
-                           point.volscale;
-            material.volemission = point.volemission;
-            material.voldensity  = density;
-            material.volscatter  = point.scatter;
-            material.volphaseg   = point.volanisotropy;
-        }
+        auto lweight = weight * point.transmission;
         if (lweight != zero3f) {
             material.transmission = {point.thin
                                          ? trace_bsdf::type_t::transparency
@@ -440,34 +430,20 @@ void eval_material(trace_material& material, const material_point& point_,
         }
         weight *= 1 - fresnel * point.specular;
     }
-    if (point.subsurface != zero3f) {
-        auto lweight = weight;
-        if (point.thin) {
-            lweight *= point.subsurface;
-            material.transmission = {trace_bsdf::type_t::translucency, lweight,
-                zero3f, zero3f, point.roughness};
-        } else {
-            // hardcoded depth scale of 0.01 m
-            auto density         = 1 / (point.meanfreepath * point.volscale);
-            material.volemission = point.volemission;
-            material.voldensity  = density;
-            material.volscatter  = point.subsurface;
-            material.volphaseg   = point.volanisotropy;
-            if (point.specular == zero3f) {
-                material.transmission = {
-                    trace_bsdf::type_t::transparency, lweight, zero3f, zero3f};
-            } else {
-                material.transmission = {trace_bsdf::type_t::transmission,
-                    lweight, point.ior, zero3f};
-            }
-        }
-    }
     if (point.diffuse != zero3f) {
         auto lweight = weight * point.diffuse;
         if (lweight != zero3f) {
             material.diffuse = {
                 trace_bsdf::type_t::diffuse, lweight, zero3f, zero3f, 0};
         }
+    }
+    if (point.voltransmission != zero3f && !point.thin) {
+        auto density = -log(clamp(point.voltransmission, 0.0001f, 1.0f)) /
+                        point.volscale;
+        material.volemission = point.volemission;
+        material.voldensity  = density;
+        material.volscatter  = point.volscatter;
+        material.volphaseg   = point.volanisotropy;
     }
 }
 
