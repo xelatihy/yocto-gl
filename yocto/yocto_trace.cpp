@@ -392,9 +392,9 @@ using trace_mediums = short_vector<trace_medium, 8>;
 
 struct trace_material {
     trace_emissions emissions;
-    trace_bsdfs brdfs;
-    trace_deltas deltas;
-    trace_mediums mediums;
+    trace_bsdfs     brdfs;
+    trace_deltas    deltas;
+    trace_mediums   mediums;
 };
 
 void eval_material(trace_material& material, const material_point& point_,
@@ -410,8 +410,8 @@ void eval_material(trace_material& material, const material_point& point_,
     auto weight = vec3f{1};
     if (point.opacity < 0.999f) {
         auto lweight = vec3f{1 - point.opacity};
-        material.deltas.push_back({trace_delta::type_t::passthrough, lweight, zero3f,
-            zero3f, max(lweight), 0});
+        material.deltas.push_back({trace_delta::type_t::passthrough, lweight,
+            zero3f, zero3f, max(lweight), 0});
         weight *= point.opacity;
     }
     if (point.coat != zero3f) {
@@ -421,11 +421,12 @@ void eval_material(trace_material& material, const material_point& point_,
         auto lweight   = weight;
         if (lweight != zero3f) {
             if (roughness) {
-                material.brdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
-                    zero3f, roughness, max(lweight * fresnel), 0});
+                material.brdfs.push_back(
+                    {trace_bsdf::type_t::reflection, lweight, eta, zero3f,
+                        roughness, max(lweight * fresnel), 0});
             } else {
-                material.deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
-                    zero3f, max(lweight * fresnel), 0});
+                material.deltas.push_back({trace_delta::type_t::reflection,
+                    lweight, eta, zero3f, max(lweight * fresnel), 0});
             }
         }
         weight *= point.coat * (1 - fresnel);
@@ -433,7 +434,8 @@ void eval_material(trace_material& material, const material_point& point_,
     if (point.emission != zero3f) {
         auto lweight = weight * point.emission;
         if (lweight != zero3f) {
-            material.emissions.push_back({trace_emission::type_t::diffuse, lweight});
+            material.emissions.push_back(
+                {trace_emission::type_t::diffuse, lweight});
         }
     }
     if (point.metallic) {
@@ -449,11 +451,12 @@ void eval_material(trace_material& material, const material_point& point_,
         auto lweight = weight * point.metallic;
         if (lweight != zero3f) {
             if (point.roughness) {
-                material.brdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
-                    etak, point.roughness, max(lweight * fresnel), 0});
+                material.brdfs.push_back(
+                    {trace_bsdf::type_t::reflection, lweight, eta, etak,
+                        point.roughness, max(lweight * fresnel), 0});
             } else {
-                material.deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
-                    etak, max(lweight * fresnel), 0});
+                material.deltas.push_back({trace_delta::type_t::reflection,
+                    lweight, eta, etak, max(lweight * fresnel), 0});
             }
         }
         weight *= 1 - point.metallic;
@@ -475,10 +478,11 @@ void eval_material(trace_material& material, const material_point& point_,
         }
         if (lweight != zero3f) {
             if (point.roughness) {
-                material.brdfs.push_back({point.thin ? trace_bsdf::type_t::transparency
-                                            : trace_bsdf::type_t::transmission,
-                    lweight, eta, zero3f, point.roughness,
-                    max(lweight * (1 - fresnel)), 0});
+                material.brdfs.push_back(
+                    {point.thin ? trace_bsdf::type_t::transparency
+                                : trace_bsdf::type_t::transmission,
+                        lweight, eta, zero3f, point.roughness,
+                        max(lweight * (1 - fresnel)), 0});
             } else {
                 material.deltas.push_back(
                     {point.thin ? trace_delta::type_t::transparency
@@ -495,11 +499,12 @@ void eval_material(trace_material& material, const material_point& point_,
                                                          : point.specular);
         if (lweight != zero3f) {
             if (point.roughness) {
-                material.brdfs.push_back({trace_bsdf::type_t::reflection, lweight, eta,
-                    zero3f, point.roughness, max(lweight * fresnel), 0});
+                material.brdfs.push_back(
+                    {trace_bsdf::type_t::reflection, lweight, eta, zero3f,
+                        point.roughness, max(lweight * fresnel), 0});
             } else {
-                material.deltas.push_back({trace_delta::type_t::reflection, lweight, eta,
-                    zero3f, max(lweight * fresnel), 0});
+                material.deltas.push_back({trace_delta::type_t::reflection,
+                    lweight, eta, zero3f, max(lweight * fresnel), 0});
             }
         }
         weight *= 1 - fresnel * (point.ior_from_specular ? vec3f{1, 1, 1}
@@ -509,8 +514,8 @@ void eval_material(trace_material& material, const material_point& point_,
         auto lweight = weight;
         if (point.thin) {
             lweight *= point.subsurface;
-            material.brdfs.push_back({trace_bsdf::type_t::translucency, lweight, zero3f,
-                zero3f, point.roughness, max(lweight), 0});
+            material.brdfs.push_back({trace_bsdf::type_t::translucency, lweight,
+                zero3f, zero3f, point.roughness, max(lweight), 0});
         } else {
             // hardcoded depth scale of 0.01 m
             auto density = 1 / (point.meanfreepath * point.volscale);
@@ -518,19 +523,19 @@ void eval_material(trace_material& material, const material_point& point_,
                 point.volemission, density, point.subsurface,
                 point.volanisotropy, max(point.subsurface)});
             if (point.specular == zero3f) {
-                material.deltas.push_back({trace_delta::type_t::transparency, lweight,
-                    zero3f, zero3f, max(lweight), 0});
+                material.deltas.push_back({trace_delta::type_t::transparency,
+                    lweight, zero3f, zero3f, max(lweight), 0});
             } else {
-                material.deltas.push_back({trace_delta::type_t::transmission, lweight,
-                    point.ior, zero3f, max(lweight), 0});
+                material.deltas.push_back({trace_delta::type_t::transmission,
+                    lweight, point.ior, zero3f, max(lweight), 0});
             }
         }
     }
     if (point.diffuse != zero3f) {
         auto lweight = weight * point.diffuse;
         if (lweight != zero3f) {
-            material.brdfs.push_back({trace_bsdf::type_t::diffuse, lweight, zero3f,
-                zero3f, 0, max(lweight), 0});
+            material.brdfs.push_back({trace_bsdf::type_t::diffuse, lweight,
+                zero3f, zero3f, 0, max(lweight), 0});
         }
     }
     auto normalize_weights = [](auto& lobes) {
@@ -549,8 +554,8 @@ vec3f eval_emission(const trace_material& material, const vec3f& normal,
     for (auto& lobe : material.emissions) emission += lobe.weight;
     return emission;
 }
-vec3f eval_volemission(
-    const trace_material& material, const vec3f& normal, const vec3f& outgoing) {
+vec3f eval_volemission(const trace_material& material, const vec3f& normal,
+    const vec3f& outgoing) {
     auto emission = zero3f;
     for (auto& lobe : material.mediums) emission += lobe.weight * lobe.emission;
     return emission;
@@ -662,71 +667,6 @@ vec3f eval_volume_scattering(const vec3f& albedo, float phaseg,
     return albedo * eval_phasefunction(dot(outgoing, incoming), phaseg);
 }
 
-// Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_brdfcos(const trace_bsdfs& brdfs, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-    auto brdfcos = zero3f;
-    for (auto& lobe : brdfs) {
-        if (lobe.weight == zero3f) continue;
-        switch (lobe.type) {
-            case trace_bsdf::type_t::diffuse: {
-                brdfcos += lobe.weight * eval_diffuse_reflection(lobe.roughness,
-                                             normal, outgoing, incoming);
-            } break;
-            case trace_bsdf::type_t::translucency: {
-                brdfcos += lobe.weight *
-                           eval_diffuse_translucency(
-                               lobe.roughness, normal, outgoing, incoming);
-            } break;
-            case trace_bsdf::type_t::reflection: {
-                brdfcos += lobe.weight *
-                           eval_microfacet_reflection(lobe.roughness, lobe.eta,
-                               zero3f, normal, outgoing, incoming);
-            } break;
-            case trace_bsdf::type_t::transmission: {
-                brdfcos += lobe.weight *
-                           eval_microfacet_transmission(lobe.roughness,
-                               lobe.eta, normal, outgoing, incoming);
-
-            } break;
-            case trace_bsdf::type_t::transparency: {
-                brdfcos += lobe.weight *
-                           eval_microfacet_transparency(lobe.roughness,
-                               lobe.eta, normal, outgoing, incoming);
-            } break;
-        }
-    }
-    return brdfcos;
-}
-vec3f eval_brdfcos(const trace_deltas& deltas, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-    auto brdfcos = zero3f;
-    for (auto& lobe : deltas) {
-        if (lobe.weight == zero3f) continue;
-        switch (lobe.type) {
-            case trace_delta::type_t::reflection: {
-                brdfcos += lobe.weight * eval_delta_reflection(lobe.eta, zero3f,
-                                             normal, outgoing, incoming);
-            } break;
-            case trace_delta::type_t::transmission: {
-                brdfcos += lobe.weight * eval_delta_transmission(lobe.eta,
-                                             normal, outgoing, incoming);
-
-            } break;
-            case trace_delta::type_t::transparency: {
-                brdfcos += lobe.weight * eval_delta_transparency(lobe.eta,
-                                             normal, outgoing, incoming);
-            } break;
-            case trace_delta::type_t::passthrough: {
-                brdfcos += lobe.weight *
-                           eval_delta_passthrough(normal, outgoing, incoming);
-            } break;
-            default: break;
-        }
-    }
-    return brdfcos;
-}
-
 // Picks a direction based on the BRDF
 vec3f sample_diffuse_reflection(float roughness, const vec3f& normal,
     const vec3f& outgoing, const vec2f& rn) {
@@ -781,78 +721,6 @@ vec3f sample_volume_scattering(const vec3f& albedo, float phaseg,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
     auto direction = sample_phasefunction(phaseg, rn);
     return make_basis_fromz(-outgoing) * direction;
-}
-
-// Picks a direction based on the BRDF
-vec3f sample_brdf(const trace_bsdfs& brdfs, const vec3f& normal,
-    const vec3f& outgoing, float rnl, const vec2f& rn) {
-    // keep a weight sum to pick a lobe
-    auto weight_sum = 0.0f;
-    for (auto& lobe : brdfs) {
-        if (lobe.pdf == 0) continue;
-
-        // check if we pick this lobe
-        weight_sum += lobe.pdf;
-        if (rnl > weight_sum) continue;
-
-        switch (lobe.type) {
-            case trace_bsdf::type_t::diffuse: {
-                return sample_diffuse_reflection(
-                    lobe.roughness, normal, outgoing, rn);
-            } break;
-            case trace_bsdf::type_t::translucency: {
-                return sample_diffuse_translucency(
-                    lobe.roughness, normal, outgoing, rn);
-            } break;
-            case trace_bsdf::type_t::reflection: {
-                return sample_microfacet_reflection(
-                    lobe.roughness, lobe.eta, normal, outgoing, rn);
-            } break;
-            case trace_bsdf::type_t::transmission: {
-                return sample_microfacet_transmission(
-                    lobe.roughness, lobe.eta, normal, outgoing, rn);
-            } break;
-            case trace_bsdf::type_t::transparency: {
-                return sample_microfacet_transparency(
-                    lobe.roughness, lobe.eta, normal, outgoing, rn);
-            } break;
-        }
-    }
-
-    // something went wrong if we got here
-    return zero3f;
-}
-vec3f sample_brdf(const trace_deltas& deltas, const vec3f& normal,
-    const vec3f& outgoing, float rnl, const vec2f& rn) {
-    // keep a weight sum to pick a lobe
-    auto weight_sum = 0.0f;
-    for (auto& lobe : deltas) {
-        if (lobe.pdf == 0) continue;
-
-        // check if we pick this lobe
-        weight_sum += lobe.pdf;
-        if (rnl > weight_sum) continue;
-
-        switch (lobe.type) {
-            case trace_delta::type_t::reflection: {
-                return sample_delta_reflection(lobe.eta, normal, outgoing, rn);
-            } break;
-            case trace_delta::type_t::transmission: {
-                return sample_delta_transmission(
-                    lobe.eta, normal, outgoing, rn);
-            } break;
-            case trace_delta::type_t::transparency: {
-                return sample_delta_transparency(
-                    lobe.eta, normal, outgoing, rn);
-            } break;
-            case trace_delta::type_t::passthrough: {
-                return sample_delta_passthrough(normal, outgoing, rn);
-            } break;
-        }
-    }
-
-    // something went wrong if we got here
-    return zero3f;
 }
 
 // Compute the weight for sampling the BRDF
@@ -925,66 +793,199 @@ float sample_volume_scattering_pdf(const vec3f& albedo, float phaseg,
     return eval_phasefunction(dot(outgoing, incoming), phaseg);
 }
 
-// Compute the weight for sampling the BRDF
-float sample_brdf_pdf(const trace_bsdfs& brdfs, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-    auto pdf = 0.0f;
-    for (auto& lobe : brdfs) {
-        if (lobe.pdf == 0) continue;
+// Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
+vec3f eval_brdfcos(const trace_material& material, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming, bool delta) {
+    auto brdfcos = zero3f;
+    if (!delta) {
+        for (auto& lobe : material.brdfs) {
+            if (lobe.weight == zero3f) continue;
+            switch (lobe.type) {
+                case trace_bsdf::type_t::diffuse: {
+                    brdfcos += lobe.weight *
+                               eval_diffuse_reflection(
+                                   lobe.roughness, normal, outgoing, incoming);
+                } break;
+                case trace_bsdf::type_t::translucency: {
+                    brdfcos += lobe.weight *
+                               eval_diffuse_translucency(
+                                   lobe.roughness, normal, outgoing, incoming);
+                } break;
+                case trace_bsdf::type_t::reflection: {
+                    brdfcos += lobe.weight *
+                               eval_microfacet_reflection(lobe.roughness,
+                                   lobe.eta, zero3f, normal, outgoing,
+                                   incoming);
+                } break;
+                case trace_bsdf::type_t::transmission: {
+                    brdfcos += lobe.weight *
+                               eval_microfacet_transmission(lobe.roughness,
+                                   lobe.eta, normal, outgoing, incoming);
 
-        switch (lobe.type) {
-            case trace_bsdf::type_t::diffuse: {
-                pdf += lobe.pdf * sample_diffuse_reflection_pdf(lobe.roughness,
-                                      normal, outgoing, incoming);
-            } break;
-            case trace_bsdf::type_t::translucency: {
-                pdf += lobe.pdf *
-                       sample_diffuse_translucency_pdf(
-                           lobe.roughness, normal, outgoing, incoming);
-            } break;
-            case trace_bsdf::type_t::reflection: {
-                pdf += lobe.pdf *
-                       sample_microfacet_reflection_pdf(lobe.roughness,
-                           lobe.eta, lobe.etak, normal, outgoing, incoming);
-            } break;
-            case trace_bsdf::type_t::transmission: {
-                pdf += lobe.pdf *
-                       sample_microfacet_transmission_pdf(lobe.roughness,
-                           lobe.eta, normal, outgoing, incoming);
-            } break;
-            case trace_bsdf::type_t::transparency: {
-                pdf += lobe.pdf *
-                       sample_microfacet_transparency_pdf(lobe.roughness,
-                           lobe.eta, normal, outgoing, incoming);
-            } break;
+                } break;
+                case trace_bsdf::type_t::transparency: {
+                    brdfcos += lobe.weight *
+                               eval_microfacet_transparency(lobe.roughness,
+                                   lobe.eta, normal, outgoing, incoming);
+                } break;
+            }
+        }
+    } else {
+        for (auto& lobe : material.deltas) {
+            if (lobe.weight == zero3f) continue;
+            switch (lobe.type) {
+                case trace_delta::type_t::reflection: {
+                    brdfcos += lobe.weight * eval_delta_reflection(lobe.eta,
+                                                 zero3f, normal, outgoing,
+                                                 incoming);
+                } break;
+                case trace_delta::type_t::transmission: {
+                    brdfcos += lobe.weight * eval_delta_transmission(lobe.eta,
+                                                 normal, outgoing, incoming);
+
+                } break;
+                case trace_delta::type_t::transparency: {
+                    brdfcos += lobe.weight * eval_delta_transparency(lobe.eta,
+                                                 normal, outgoing, incoming);
+                } break;
+                case trace_delta::type_t::passthrough: {
+                    brdfcos += lobe.weight * eval_delta_passthrough(
+                                                 normal, outgoing, incoming);
+                } break;
+                default: break;
+            }
+        }
+    }
+    return brdfcos;
+}
+
+// Picks a direction based on the BRDF
+vec3f sample_brdf(const trace_material& material, const vec3f& normal,
+    const vec3f& outgoing, bool delta, float rnl, const vec2f& rn) {
+    // keep a weight sum to pick a lobe
+    auto weight_sum = 0.0f;
+    if (!delta) {
+        for (auto& lobe : material.brdfs) {
+            if (lobe.pdf == 0) continue;
+
+            // check if we pick this lobe
+            weight_sum += lobe.pdf;
+            if (rnl > weight_sum) continue;
+
+            switch (lobe.type) {
+                case trace_bsdf::type_t::diffuse: {
+                    return sample_diffuse_reflection(
+                        lobe.roughness, normal, outgoing, rn);
+                } break;
+                case trace_bsdf::type_t::translucency: {
+                    return sample_diffuse_translucency(
+                        lobe.roughness, normal, outgoing, rn);
+                } break;
+                case trace_bsdf::type_t::reflection: {
+                    return sample_microfacet_reflection(
+                        lobe.roughness, lobe.eta, normal, outgoing, rn);
+                } break;
+                case trace_bsdf::type_t::transmission: {
+                    return sample_microfacet_transmission(
+                        lobe.roughness, lobe.eta, normal, outgoing, rn);
+                } break;
+                case trace_bsdf::type_t::transparency: {
+                    return sample_microfacet_transparency(
+                        lobe.roughness, lobe.eta, normal, outgoing, rn);
+                } break;
+            }
+        }
+    } else {
+        for (auto& lobe : material.deltas) {
+            if (lobe.pdf == 0) continue;
+
+            // check if we pick this lobe
+            weight_sum += lobe.pdf;
+            if (rnl > weight_sum) continue;
+
+            switch (lobe.type) {
+                case trace_delta::type_t::reflection: {
+                    return sample_delta_reflection(
+                        lobe.eta, normal, outgoing, rn);
+                } break;
+                case trace_delta::type_t::transmission: {
+                    return sample_delta_transmission(
+                        lobe.eta, normal, outgoing, rn);
+                } break;
+                case trace_delta::type_t::transparency: {
+                    return sample_delta_transparency(
+                        lobe.eta, normal, outgoing, rn);
+                } break;
+                case trace_delta::type_t::passthrough: {
+                    return sample_delta_passthrough(normal, outgoing, rn);
+                } break;
+            }
         }
     }
 
-    return pdf;
+    // something went wrong if we got here
+    return zero3f;
 }
-float sample_brdf_pdf(const trace_deltas& deltas, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-    auto pdf = 0.0f;
-    for (auto& lobe : deltas) {
-        if (lobe.pdf == 0) continue;
 
-        switch (lobe.type) {
-            case trace_delta::type_t::reflection: {
-                pdf += lobe.pdf * sample_delta_reflection_pdf(lobe.eta,
-                                      lobe.etak, normal, outgoing, incoming);
-            } break;
-            case trace_delta::type_t::transmission: {
-                pdf += lobe.pdf * sample_delta_transmission_pdf(
-                                      lobe.eta, normal, outgoing, incoming);
-            } break;
-            case trace_delta::type_t::transparency: {
-                pdf += lobe.pdf * sample_delta_transparency_pdf(
-                                      lobe.eta, normal, outgoing, incoming);
-            } break;
-            case trace_delta::type_t::passthrough: {
-                pdf += lobe.pdf *
-                       sample_delta_passthrough_pdf(normal, outgoing, incoming);
-            } break;
+// Compute the weight for sampling the BRDF
+float sample_brdf_pdf(const trace_material& material, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming, bool delta) {
+    auto pdf = 0.0f;
+    if (!delta) {
+        for (auto& lobe : material.brdfs) {
+            if (lobe.pdf == 0) continue;
+
+            switch (lobe.type) {
+                case trace_bsdf::type_t::diffuse: {
+                    pdf += lobe.pdf *
+                           sample_diffuse_reflection_pdf(
+                               lobe.roughness, normal, outgoing, incoming);
+                } break;
+                case trace_bsdf::type_t::translucency: {
+                    pdf += lobe.pdf *
+                           sample_diffuse_translucency_pdf(
+                               lobe.roughness, normal, outgoing, incoming);
+                } break;
+                case trace_bsdf::type_t::reflection: {
+                    pdf += lobe.pdf *
+                           sample_microfacet_reflection_pdf(lobe.roughness,
+                               lobe.eta, lobe.etak, normal, outgoing, incoming);
+                } break;
+                case trace_bsdf::type_t::transmission: {
+                    pdf += lobe.pdf *
+                           sample_microfacet_transmission_pdf(lobe.roughness,
+                               lobe.eta, normal, outgoing, incoming);
+                } break;
+                case trace_bsdf::type_t::transparency: {
+                    pdf += lobe.pdf *
+                           sample_microfacet_transparency_pdf(lobe.roughness,
+                               lobe.eta, normal, outgoing, incoming);
+                } break;
+            }
+        }
+    } else {
+        for (auto& lobe : material.deltas) {
+            if (lobe.pdf == 0) continue;
+
+            switch (lobe.type) {
+                case trace_delta::type_t::reflection: {
+                    pdf += lobe.pdf * sample_delta_reflection_pdf(lobe.eta,
+                                          lobe.etak, normal, outgoing,
+                                          incoming);
+                } break;
+                case trace_delta::type_t::transmission: {
+                    pdf += lobe.pdf * sample_delta_transmission_pdf(
+                                          lobe.eta, normal, outgoing, incoming);
+                } break;
+                case trace_delta::type_t::transparency: {
+                    pdf += lobe.pdf * sample_delta_transparency_pdf(
+                                          lobe.eta, normal, outgoing, incoming);
+                } break;
+                case trace_delta::type_t::passthrough: {
+                    pdf += lobe.pdf * sample_delta_passthrough_pdf(
+                                          normal, outgoing, incoming);
+                } break;
+            }
         }
     }
 
@@ -1028,8 +1029,8 @@ vec3f sample_volscattering(const trace_material& material, const vec3f& normal,
     // something went wrong if we got here
     return zero3f;
 }
-float sample_volscattering_pdf(const trace_material& material, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+float sample_volscattering_pdf(const trace_material& material,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     auto pdf = 0.0f;
     for (auto& lobe : material.mediums) {
         if (lobe.pdf == 0) continue;
@@ -1216,34 +1217,35 @@ vec3f eval_transmission(const trace_mediums& mediums, float distance) {
     return transmission;
 }
 
-// Sample next direction. Returns weight and direction.
 tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
-    const trace_deltas& deltas, const vec3f& position, const vec3f& normal,
-    const vec3f& outgoing, float rl, const vec2f& ruv) {
-    // continue path
-    auto incoming     = sample_brdf(deltas, normal, outgoing, rl, ruv);
-    auto brdfcos      = eval_brdfcos(deltas, normal, outgoing, incoming);
-    auto incoming_pdf = sample_brdf_pdf(deltas, normal, outgoing, incoming);
+    const trace_material& material, const vec3f& position, const vec3f& normal,
+    const vec3f& outgoing, bool delta, float rl, const vec2f& ruv) {
+    auto incoming = sample_brdf(material, normal, outgoing, delta, rl, ruv);
+    auto brdfcos  = eval_brdfcos(material, normal, outgoing, incoming, delta);
+    auto incoming_pdf = sample_brdf_pdf(
+        material, normal, outgoing, incoming, delta);
     if (incoming == zero3f || incoming_pdf == 0) {
         return {zero3f, zero3f};
     } else {
         return {brdfcos / incoming_pdf, incoming};
     }
 }
-
-tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh, const trace_bsdfs& brdfs,
-    const vec3f& position, const vec3f& normal, const vec3f& outgoing, bool mis,
-    float rl, const vec2f& ruv, float re, float rmis) {
-    if (mis) {
-        auto incoming = (rmis < 0.5f)
-                            ? sample_brdf(brdfs, normal, outgoing, rl, ruv)
-                            : sample_lights(
-                                  scene, lights, bvh, position, re, rl, ruv);
-        auto scattering = eval_brdfcos(brdfs, normal, outgoing, incoming);
+tuple<vec3f, vec3f> sample_direction_mis(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_scene& bvh,
+    const trace_material& material, const vec3f& position, const vec3f& normal,
+    const vec3f& outgoing, bool delta, bool mis, float rl, const vec2f& ruv,
+    float re, float rmis) {
+    if (mis && !delta) {
+        auto incoming =
+            (rmis < 0.5f)
+                ? sample_brdf(material, normal, outgoing, delta, rl, ruv)
+                : sample_lights(scene, lights, bvh, position, re, rl, ruv);
+        auto scattering = eval_brdfcos(
+            material, normal, outgoing, incoming, delta);
         auto incoming_pdf =
-            0.5f * sample_brdf_pdf(brdfs, normal, outgoing, incoming) +
+            0.5f *
+                sample_brdf_pdf(material, normal, outgoing, incoming, delta) +
             0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming);
         if (incoming == zero3f || incoming_pdf == 0) {
             return {zero3f, zero3f};
@@ -1251,9 +1253,11 @@ tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
             return {scattering / incoming_pdf, incoming};
         }
     } else {
-        auto incoming     = sample_brdf(brdfs, normal, outgoing, rl, ruv);
-        auto brdfcos      = eval_brdfcos(brdfs, normal, outgoing, incoming);
-        auto incoming_pdf = sample_brdf_pdf(brdfs, normal, outgoing, incoming);
+        auto incoming = sample_brdf(material, normal, outgoing, delta, rl, ruv);
+        auto brdfcos  = eval_brdfcos(
+            material, normal, outgoing, incoming, delta);
+        auto incoming_pdf = sample_brdf_pdf(
+            material, normal, outgoing, incoming, delta);
         if (incoming == zero3f || incoming_pdf == 0) {
             return {zero3f, zero3f};
         } else {
@@ -1262,7 +1266,7 @@ tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
     }
 }
 
-tuple<vec3f, vec3f> sample_voldirection(const yocto_scene& scene,
+tuple<vec3f, vec3f> sample_voldirection_mis(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
     const trace_material& material, const vec3f& position, const vec3f& normal,
     const vec3f& outgoing, bool mis, float rl, const vec2f& ruv, float re,
@@ -1272,9 +1276,11 @@ tuple<vec3f, vec3f> sample_voldirection(const yocto_scene& scene,
             (rmis < 0.5f)
                 ? sample_volscattering(material, normal, outgoing, rl, ruv)
                 : sample_lights(scene, lights, bvh, position, re, rl, ruv);
-        auto scattering = eval_volscattering(material, normal, outgoing, incoming);
+        auto scattering = eval_volscattering(
+            material, normal, outgoing, incoming);
         auto incoming_pdf =
-            0.5f * sample_volscattering_pdf(material, normal, outgoing, incoming) +
+            0.5f *
+                sample_volscattering_pdf(material, normal, outgoing, incoming) +
             0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming);
         if (incoming == zero3f || incoming_pdf == 0) {
             return {zero3f, zero3f};
@@ -1282,8 +1288,9 @@ tuple<vec3f, vec3f> sample_voldirection(const yocto_scene& scene,
             return {scattering / incoming_pdf, incoming};
         }
     } else {
-        auto incoming = sample_volscattering(material, normal, outgoing, rl, ruv);
-        auto brdfcos  = eval_volscattering(material, normal, outgoing, incoming);
+        auto incoming = sample_volscattering(
+            material, normal, outgoing, rl, ruv);
+        auto brdfcos = eval_volscattering(material, normal, outgoing, incoming);
         auto incoming_pdf = sample_volscattering_pdf(
             material, normal, outgoing, incoming);
         if (incoming == zero3f || incoming_pdf == 0) {
@@ -1346,9 +1353,9 @@ void update_volume_stack(trace_volume_stack& volume_stack,
 
 // Trace point
 struct trace_point {
-    vec3f           position  = zero3f;
-    vec3f           normal    = zero3f;
-    trace_material  material = {};
+    vec3f          position = zero3f;
+    vec3f          normal   = zero3f;
+    trace_material material = {};
 };
 
 // Make a trace point
@@ -1358,17 +1365,17 @@ trace_point make_surface_point(const yocto_scene& scene,
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
     auto  point    = trace_point{};
-    point.position                                                    = eval_position(
+    point.position = eval_position(
         scene, instance, intersection.element_id, intersection.element_uv);
-    point.normal         = eval_normal(scene, instance, intersection.element_id,
+    point.normal   = eval_normal(scene, instance, intersection.element_id,
         intersection.element_uv, trace_non_rigid_frames);
     auto texcoords = eval_texcoord(
         shape, intersection.element_id, intersection.element_uv);
     auto color = eval_color(
         shape, intersection.element_id, intersection.element_uv);
     auto material_point = eval_material(scene, material, texcoords);
-    eval_material(point.material, material_point, color,
-        point.normal, -shading_direction);
+    eval_material(point.material, material_point, color, point.normal,
+        -shading_direction);
     if (!shape.lines.empty()) {
         point.normal = orthonormalize(-shading_direction, point.normal);
     } else if (!shape.points.empty()) {
@@ -1385,11 +1392,11 @@ trace_point make_surface_point(const yocto_scene& scene,
 
 trace_point make_volume_point(const trace_material& last_material,
     const vec3f& last_position, const vec3f& last_direction, float distance) {
-    auto point                                                  = trace_point{};
+    auto point                         = trace_point{};
     auto& [position, normal, material] = point;
     position = last_position + last_direction * distance;
     normal   = last_direction;
-    material  = last_material;
+    material = last_material;
     return point;
 }
 
@@ -1441,7 +1448,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // clamp ray if inside a volume
         auto [transmission, distance] = sample_transmission(
-            last_mediums.mediums, intersection.distance, rand1f(rng), rand1f(rng));
+            last_mediums.mediums, intersection.distance, rand1f(rng),
+            rand1f(rng));
         weight *= transmission;
         auto on_surface = distance >= intersection.distance;
 
@@ -1455,7 +1463,9 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         radiance += on_surface
                         ? weight * eval_emission(material, normal, outgoing)
                         : weight * eval_volemission(material, normal, outgoing);
-        if (material.brdfs.empty() && material.deltas.empty() && material.mediums.empty()) break;
+        if (material.brdfs.empty() && material.deltas.empty() &&
+            material.mediums.empty())
+            break;
 
         // russian roulette
         auto [rr_weight, rr_stop] = sample_roulette(
@@ -1466,22 +1476,19 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // pick delta
         auto [delta_weight, delta] =
-            on_surface ? sample_delta(material.brdfs, material.deltas, rand1f(rng))
-                       : pair{1.0f, false};
+            on_surface
+                ? sample_delta(material.brdfs, material.deltas, rand1f(rng))
+                : pair{1.0f, false};
         weight *= delta_weight;
 
         // next direction
         auto [scattering, incoming] =
-            on_surface
-                ? (delta ? sample_direction(scene, lights, bvh, material.deltas,
-                               position, normal, outgoing, rand1f(rng),
-                               rand2f(rng))
-                         : sample_direction(scene, lights, bvh, material.brdfs, position,
-                               normal, outgoing, true, rand1f(rng), rand2f(rng),
-                               rand1f(rng), rand1f(rng)))
-                : sample_voldirection(scene, lights, bvh, material, position,
-                      normal, outgoing, true, rand1f(rng), rand2f(rng),
-                      rand1f(rng), rand1f(rng));
+            on_surface ? sample_direction_mis(scene, lights, bvh, material,
+                             position, normal, outgoing, delta, true, 
+                             rand1f(rng), rand2f(rng), rand1f(rng), rand1f(rng))
+                       : sample_voldirection_mis(scene, lights, bvh, material,
+                             position, normal, outgoing, true, rand1f(rng),
+                             rand2f(rng), rand1f(rng), rand1f(rng));
         weight *= scattering;
         if (weight == zero3f) break;
 
@@ -1520,9 +1527,9 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         hit = true;
 
         // prepare shading point
-        auto outgoing = -last_incoming;
-        auto [position, normal, material] =
-            make_surface_point(scene, intersection, last_incoming);
+        auto outgoing                     = -last_incoming;
+        auto [position, normal, material] = make_surface_point(
+            scene, intersection, last_incoming);
 
         // accumulate emission
         radiance += weight * eval_emission(material, normal, outgoing);
@@ -1536,16 +1543,14 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // pick delta
-        auto [delta_weight, delta] = sample_delta(material.brdfs, material.deltas, rand1f(rng));
+        auto [delta_weight, delta] = sample_delta(
+            material.brdfs, material.deltas, rand1f(rng));
         weight *= delta_weight;
 
         // next direction
-        auto [scattering, incoming] =
-            delta ? sample_direction(scene, lights, bvh, material.deltas, position,
-                        normal, outgoing, rand1f(rng), rand2f(rng))
-                         : sample_direction(scene, lights, bvh, material.brdfs,
-                               position, normal, outgoing, true, rand1f(rng),
-                               rand2f(rng), rand1f(rng), rand1f(rng));
+        auto [scattering, incoming] = sample_direction(scene, lights, bvh,
+            material, position, normal, outgoing, delta, rand1f(rng),
+            rand2f(rng));
         weight *= scattering;
         if (weight == zero3f) break;
 
@@ -1580,9 +1585,9 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         hit = true;
 
         // prepare shading point
-        auto outgoing = -last_incoming;
-        auto [position, normal, material] =
-            make_surface_point(scene, intersection, last_incoming);
+        auto outgoing                     = -last_incoming;
+        auto [position, normal, material] = make_surface_point(
+            scene, intersection, last_incoming);
 
         // accumulate emission
         radiance += weight * eval_emission(material, normal, outgoing);
@@ -1590,14 +1595,15 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
         // brdf * light
         radiance += weight * pif *
-                    eval_brdfcos(material.brdfs, normal, outgoing, outgoing);
+                    eval_brdfcos(material, normal, outgoing, outgoing, false);
 
         // exit if needed
         if (weight == zero3f) break;
 
         // continue path
         auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            material.deltas, position, normal, outgoing, rand1f(rng), zero2f);
+            material, position, normal, outgoing, true, rand1f(rng),
+            zero2f);
 
         // exit if no hit
         weight *= scattering;
@@ -1627,9 +1633,9 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     // auto& material = scene.materials[instance.material];
 
     // prepare shading point
-    auto outgoing = -direction;
-    auto [position, normal, material] =
-        make_surface_point(scene, intersection, direction);
+    auto outgoing                     = -direction;
+    auto [position, normal, material] = make_surface_point(
+        scene, intersection, direction);
 
     switch (params.falsecolor_type) {
         case trace_falsecolor_type::normal: {
@@ -1720,7 +1726,10 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
             return {roughness, 1};
         }
         case trace_falsecolor_type::lobes: {
-            return {vec3f{float(material.brdfs.size() + material.deltas.size()) / 4}, 1};
+            return {
+                vec3f{
+                    float(material.brdfs.size() + material.deltas.size()) / 4},
+                1};
         }
         case trace_falsecolor_type::material: {
             auto hashed = std::hash<int>()(instance.material);
