@@ -472,7 +472,8 @@ struct material_point {
     vec3f normal_map              = {0, 0, 1};
 };
 material_point eval_material(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord);
+    const yocto_material& material, const vec2f& texturecoord,
+    const vec4f& shape_color);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.

@@ -1228,25 +1228,26 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Evaluates the microfacet_brdf at a location.
 material_point eval_material(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord) {
+    const yocto_material& material, const vec2f& texturecoord,
+    const vec4f& shape_color) {
     auto point = material_point{};
     // factors
-    point.emission            = material.emission;
-    point.diffuse             = material.diffuse;
-    point.specular            = material.specular;
-    point.metallic            = material.metallic;
-    point.ior                 = material.ior;
-    point.roughness           = material.roughness;
-    point.sheen               = material.sheen;
-    point.coat                = material.coat;
-    point.transmission = material.transmission;
-    point.voltransmission   = material.voltransmission;
+    point.emission        = material.emission * xyz(shape_color);
+    point.diffuse         = material.diffuse * xyz(shape_color);
+    point.specular        = material.specular;
+    point.metallic        = material.metallic;
+    point.ior             = material.ior;
+    point.roughness       = material.roughness;
+    point.sheen           = material.sheen;
+    point.coat            = material.coat;
+    point.transmission    = material.transmission;
+    point.voltransmission = material.voltransmission;
     point.volemission     = material.volemission;
-    point.volscatter    = material.volscatter;
-    point.volanisotropy = material.volanisotropy;
-    point.volscale = material.volscale;
-    point.opacity             = material.opacity;
-    point.thin                    = material.thin;
+    point.volscatter      = material.volscatter;
+    point.volanisotropy   = material.volanisotropy;
+    point.volscale        = material.volscale;
+    point.opacity         = material.opacity * shape_color.w;
+    point.thin            = material.thin;
 
     // textures
     point.normal_map = vec3f{0, 0, 1};
@@ -1289,10 +1290,8 @@ material_point eval_material(const yocto_scene& scene,
             eval_texture(transmission_texture, texturecoord));
     }
     if (material.subsurface_texture >= 0) {
-        auto& subsurface_texture =
-            scene.textures[material.subsurface_texture];
-        point.volscatter *= xyz(
-            eval_texture(subsurface_texture, texturecoord));
+        auto& subsurface_texture = scene.textures[material.subsurface_texture];
+        point.volscatter *= xyz(eval_texture(subsurface_texture, texturecoord));
     }
     if (material.opacity_texture >= 0) {
         auto& opacity_texture = scene.textures[material.opacity_texture];
@@ -1310,10 +1309,15 @@ material_point eval_material(const yocto_scene& scene,
         // flip vertical axis to align green with image up
         point.normal_map.y = -point.normal_map.y;
     }
-    if(material.ior_from_specular && point.specular != zero3f) {
+    if (material.ior_from_specular && point.specular != zero3f) {
         point.ior = (1 + sqrt(point.specular)) / (1 - sqrt(point.specular));
         point.specular = {1, 1, 1};
     }
+    if (point.roughness) {
+        point.roughness = point.roughness * point.roughness;
+        point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
+    }
+    if (point.opacity > 0.999f) point.opacity = 1;
     return point;
 }
 

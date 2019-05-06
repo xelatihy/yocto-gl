@@ -368,15 +368,8 @@ struct trace_material {
 };
 
 void eval_material(trace_material& material, const material_point& point_,
-    const vec4f& shape_color, const vec3f& normal, const vec3f& outgoing) {
+    const vec3f& normal, const vec3f& outgoing) {
     auto point = point_;
-    point.emission *= xyz(shape_color);
-    point.diffuse *= xyz(shape_color);
-    point.opacity *= shape_color.w;
-    point.roughness = point.roughness * point.roughness;
-    if (point.roughness)
-        point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
-    if (point.opacity > 0.999f) point.opacity = 1;
     auto weight      = vec3f{1};
     material.opacity = point.opacity;
     if (point.coat != zero3f) {
@@ -1356,8 +1349,8 @@ trace_point make_point(const yocto_scene& scene,
         shape, intersection.element_id, intersection.element_uv);
     auto color = eval_color(
         shape, intersection.element_id, intersection.element_uv);
-    auto material_point = eval_material(scene, material, texcoords);
-    eval_material(point.material, material_point, color, point.normal,
+    auto material_point = eval_material(scene, material, texcoords, color);
+    eval_material(point.material, material_point, point.normal,
         -shading_direction);
     if (!shape.lines.empty()) {
         point.normal = orthonormalize(-shading_direction, point.normal);
