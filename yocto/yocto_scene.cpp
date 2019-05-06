@@ -1242,7 +1242,6 @@ material_point eval_material(const yocto_scene& scene,
     point.transmission = material.transmission;
     point.subsurface   = material.subsurface;
     point.opacity             = material.opacity;
-    point.ior_from_specular   = material.ior_from_specular;
     point.scatter    = material.scatter;
     point.meanfreepath       = material.meanfreepath;
     point.volanisotropy = material.volanisotropy;
@@ -1311,6 +1310,10 @@ material_point eval_material(const yocto_scene& scene,
         point.normal_map = point.normal_map * 2 - vec3f{1, 1, 1};
         // flip vertical axis to align green with image up
         point.normal_map.y = -point.normal_map.y;
+    }
+    if(material.ior_from_specular && point.specular != zero3f) {
+        point.ior = (1 + sqrt(point.specular)) / (1 - sqrt(point.specular));
+        point.specular = {1, 1, 1};
     }
     return point;
 }

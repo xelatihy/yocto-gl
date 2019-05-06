@@ -414,8 +414,7 @@ void eval_material(trace_material& material, const material_point& point_,
         weight *= 1 - point.metallic;
     }
     if (point.transmission != zero3f) {
-        auto eta = point.ior_from_specular ? reflectivity_to_eta(point.specular)
-                                           : point.ior;
+        auto eta = point.ior;
         if (point.thin && point.specular == zero3f) eta = {1, 1, 1};
         auto lweight = weight;
         if (point.thin) {
@@ -436,17 +435,14 @@ void eval_material(trace_material& material, const material_point& point_,
         }
     }
     if (point.specular != zero3f) {
-        auto eta = point.ior_from_specular ? reflectivity_to_eta(point.specular)
-                                           : point.ior;
+        auto eta = point.ior;
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
-        auto lweight = weight * (point.ior_from_specular ? vec3f{1, 1, 1}
-                                                         : point.specular);
+        auto lweight = weight * point.specular;
         if (lweight != zero3f) {
             material.specular = {trace_bsdf::type_t::reflection, lweight, eta,
                 zero3f, point.roughness};
         }
-        weight *= 1 - fresnel * (point.ior_from_specular ? vec3f{1, 1, 1}
-                                                         : point.specular);
+        weight *= 1 - fresnel * point.specular;
     }
     if (point.subsurface != zero3f) {
         auto lweight = weight;

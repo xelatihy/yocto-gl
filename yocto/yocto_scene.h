@@ -471,7 +471,6 @@ struct material_point {
     float volscale                = 0.01;
     float opacity                 = 1;
     bool  thin                    = false;
-    bool  ior_from_specular       = false;
     vec3f normal_map              = {0, 0, 1};
 };
 material_point eval_material(const yocto_scene& scene,
