@@ -477,6 +477,7 @@ vec3f eval_volemission(const trace_material& material, const vec3f& normal,
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
+constexpr auto trace_min_roughness = 0.03f * 0.03f;
 vec3f eval_diffuse_reflection(float roughness, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
     if (!same_hemisphere(normal, outgoing, incoming)) return zero3f;
@@ -491,6 +492,7 @@ vec3f eval_microfacet_reflection(float roughness, const vec3f& eta,
     const vec3f& etak, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
     if (!same_hemisphere(normal, outgoing, incoming)) return zero3f;
+    roughness = clamp(roughness, trace_min_roughness, 1.0f);
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
     auto halfway   = normalize(incoming + outgoing);
     auto F         = etak == zero3f
@@ -513,6 +515,7 @@ vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
 vec3f eval_microfacet_transmission(float roughness, const vec3f& eta,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (!other_hemisphere(normal, outgoing, incoming)) return zero3f;
+    roughness = clamp(roughness, trace_min_roughness, 1.0f);
     auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
     auto halfway_vector = dot(outgoing, normal) > 0
                               ? -(outgoing + eta * incoming)
@@ -542,6 +545,7 @@ vec3f eval_delta_transmission(const vec3f& eta, const vec3f& normal,
 vec3f eval_microfacet_transparency(float roughness, const vec3f& eta,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (!other_hemisphere(normal, outgoing, incoming)) return zero3f;
+    roughness = clamp(roughness, trace_min_roughness, 1.0f);
     auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
     auto ir        = reflect(-incoming, up_normal);
     auto halfway   = normalize(ir + outgoing);
@@ -585,6 +589,7 @@ vec3f sample_diffuse_translucency(float roughness, const vec3f& normal,
 }
 vec3f sample_microfacet_reflection(float roughness, const vec3f& eta,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+    roughness = clamp(roughness, trace_min_roughness, 1.0f);
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
     auto halfway   = sample_microfacet(roughness, up_normal, rn);
     return reflect(outgoing, halfway);
@@ -596,6 +601,7 @@ vec3f sample_delta_reflection(const vec3f& eta, const vec3f& normal,
 }
 vec3f sample_microfacet_transmission(float roughness, const vec3f& eta,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+    roughness = clamp(roughness, trace_min_roughness, 1.0f);
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
     auto halfway   = sample_microfacet(roughness, up_normal, rn);
     return refract(outgoing, halfway,
@@ -609,6 +615,7 @@ vec3f sample_delta_transmission(const vec3f& eta, const vec3f& normal,
 }
 vec3f sample_microfacet_transparency(float roughness, const vec3f& eta,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+    roughness = clamp(roughness, trace_min_roughness, 1.0f);
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
     auto halfway   = sample_microfacet(roughness, up_normal, rn);
     auto ir        = reflect(outgoing, halfway);
@@ -643,6 +650,7 @@ float sample_microfacet_reflection_pdf(float roughness, const vec3f& eta,
     const vec3f& etak, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
     if (!same_hemisphere(normal, outgoing, incoming)) return 0;
+    roughness = clamp(roughness, trace_min_roughness, 1.0f);
     auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
     auto halfway   = normalize(incoming + outgoing);
     auto d         = sample_microfacet_pdf(roughness, up_normal, halfway);
@@ -657,6 +665,7 @@ float sample_delta_reflection_pdf(const vec3f& eta, const vec3f& etak,
 float sample_microfacet_transmission_pdf(float roughness, const vec3f& eta,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (!other_hemisphere(normal, outgoing, incoming)) return 0;
+    roughness = clamp(roughness, trace_min_roughness, 1.0f);
     auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
     auto halfway_vector = dot(outgoing, normal) > 0
                               ? -(outgoing + eta * incoming)
@@ -676,6 +685,7 @@ float sample_delta_transmission_pdf(const vec3f& eta, const vec3f& normal,
 float sample_microfacet_transparency_pdf(float roughness, const vec3f& eta,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (!other_hemisphere(normal, outgoing, incoming)) return 0;
+    roughness = clamp(roughness, trace_min_roughness, 1.0f);
     auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
     auto ir        = reflect(-incoming, up_normal);
     auto halfway   = normalize(ir + outgoing);
