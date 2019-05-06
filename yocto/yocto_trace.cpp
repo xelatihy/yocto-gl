@@ -359,7 +359,8 @@ struct trace_bsdf {
 
 struct trace_material {
     vec3f      emission = zero3f;
-    trace_bsdf coat, diffuse, specular, metal, transmission, opacity;
+    trace_bsdf coat, diffuse, specular, metal, transmission;
+    float opacity = 1;
     vec3f      volemission = zero3f;
     vec3f      voldensity  = zero3f;
     vec3f      volscatter  = zero3f;
@@ -377,12 +378,7 @@ void eval_material(trace_material& material, const material_point& point_,
         point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
     if (point.opacity > 0.999f) point.opacity = 1;
     auto weight = vec3f{1};
-    if (point.opacity < 0.999f) {
-        auto lweight     = vec3f{1 - point.opacity};
-        material.opacity = {
-            trace_bsdf::type_t::passthrough, lweight, zero3f, zero3f, 0};
-        weight *= point.opacity;
-    }
+    material.opacity = point.opacity;
     if (point.coat != zero3f) {
         auto roughness = 0.0f;
         auto eta       = vec3f{1.5};
@@ -435,7 +431,7 @@ void eval_material(trace_material& material, const material_point& point_,
         }
     }
     if (point.specular != zero3f) {
-        auto eta = point.ior;
+        auto eta     = point.ior;
         auto fresnel = fresnel_dielectric(eta, abs(dot(normal, outgoing)));
         auto lweight = weight * point.specular;
         if (lweight != zero3f) {
@@ -489,8 +485,7 @@ bool has_brdf(const trace_material& material) {
            material.specular.weight != zero3f ||
            material.metal.weight != zero3f ||
            material.diffuse.weight != zero3f ||
-           material.transmission.weight != zero3f ||
-           material.opacity.weight != zero3f;
+           material.transmission.weight != zero3f;
 }
 bool has_volume(const trace_material& material) {
     return material.voldensity != zero3f;
@@ -804,16 +799,12 @@ vec3f eval_brdfcos(const trace_material& material, const vec3f& normal,
                            normal, outgoing, incoming);
         }
     }
-    if (material.opacity.weight != zero3f) {
-        brdfcos += material.opacity.weight *
-                   eval_delta_passthrough(normal, outgoing, incoming);
-    }
     return brdfcos;
 }
 
-pair<array<float, 6>, float> compute_brdf_pdfs(const trace_material& material,
+pair<array<float, 5>, float> compute_brdf_pdfs(const trace_material& material,
     const vec3f& normal, const vec3f& outgoing, bool delta) {
-    auto weights = array<float, 6>{};
+    auto weights = array<float, 5>{};
     weights[0] =
         (bool)material.coat.roughness != delta
             ? max(material.coat.weight * fresnel_dielectric(material.coat.eta,
@@ -835,7 +826,6 @@ pair<array<float, 6>, float> compute_brdf_pdfs(const trace_material& material,
                            (1 - fresnel_dielectric(material.transmission.eta,
                                     abs(dot(outgoing, normal)))))
                      : 0;
-    weights[5] = delta ? max(material.opacity.weight) : 0;
     auto sum   = 0.0f;
     for (auto w : weights) sum += w;
     if (!sum) return {weights, sum};
@@ -913,11 +903,6 @@ vec3f sample_brdf(const trace_material& material, const vec3f& normal,
             return sample_delta_transparency(
                 material.transmission.eta, normal, outgoing, rn);
         }
-    }
-
-    weight_sum += pdfs[5];
-    if (rnl < weight_sum) {
-        return sample_delta_passthrough(normal, outgoing, rn);
     }
 
     // something went wrong if we got here
@@ -1002,11 +987,6 @@ float sample_brdf_pdf(const trace_material& material, const vec3f& normal,
                    sample_delta_transparency_pdf(
                        material.transmission.eta, normal, outgoing, incoming);
         }
-    }
-
-    if (pdfs[5]) {
-        pdf += pdfs[5] *
-               sample_delta_passthrough_pdf(normal, outgoing, incoming);
     }
 
     return pdf;
@@ -1205,6 +1185,10 @@ pair<float, bool> sample_roulette(const vec3f& albedo, const vec3f& weight,
     return rr < rr_prob ? 1 - rr_prob : 0;
 }
 #endif
+
+pair<float, bool> sample_opacity(float opacity, float rn) {
+    return (rn < opacity) ? pair{1.0f, true} : pair{1.0f, false};
+}
 
 pair<float, vec2i> sample_distance(
     const trace_material& material, float rl, float rd) {
@@ -1454,7 +1438,6 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             radiance += weight * eval_environments(scene, last_incoming);
             break;
         }
-        hit = true;
 
         // prepare to shade
         auto outgoing = -last_incoming;
@@ -1470,6 +1453,16 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             on_surface ? make_point(scene, intersection, last_incoming)
                        : make_volpoint(last_medium, last_position,
                              last_incoming, distance);
+        
+        // handle opacity
+        auto [op_weight, op_hit] = sample_opacity(material.opacity, rand1f(rng));
+        weight *= op_weight;
+        if(!op_hit) {
+            last_position = position;
+            bounce -= 1;
+            continue;
+        }
+        hit = true;
 
         // accumulate emission
         radiance += on_surface

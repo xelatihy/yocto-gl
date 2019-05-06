@@ -489,6 +489,8 @@ vec3f eval_perturbed_normal(const yocto_scene& scene,
 vec3f eval_element_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id,
     bool non_rigid_frame = false);
+vec3f eval_opacity(const yocto_scene& scene, const yocto_instance& instance,
+    int element_id, const vec2f& element_uv);
 
 // Environment texture coordinates from the incoming direction.
 vec2f eval_texcoord(
