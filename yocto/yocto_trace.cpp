@@ -369,25 +369,15 @@ struct trace_delta {
     float  pdf     = 0;
 };
 using trace_deltas = short_vector<trace_delta, 8>;
-// Scattering medium
-struct trace_medium {
-    enum struct type_t { phaseg };
-    type_t type     = type_t::phaseg;
-    vec3f  weight   = zero3f;
-    vec3f  emission = zero3f;
-    vec3f  density  = zero3f;
-    vec3f  albedo   = zero3f;
-    float  phaseg   = 0;
-    float  samplew  = 0;
-    float  pdf      = 0;
-};
-using trace_mediums = short_vector<trace_medium, 8>;
 
 struct trace_material {
-    vec3f emission = zero3f;
-    trace_bsdfs     brdfs;
-    trace_deltas    deltas;
-    trace_mediums   mediums;
+    vec3f        emission = zero3f;
+    trace_bsdfs  brdfs;
+    trace_deltas deltas;
+    vec3f        volemission = zero3f;
+    vec3f        voldensity  = zero3f;
+    vec3f        volscatter  = zero3f;
+    float        volphaseg   = 0;
 };
 
 void eval_material(trace_material& material, const material_point& point_,
@@ -461,9 +451,10 @@ void eval_material(trace_material& material, const material_point& point_,
         } else if (point.transmission != vec3f{1, 1, 1} && point.volscale) {
             auto density = -log(clamp(point.transmission, 0.0001f, 1.0f)) /
                            point.volscale;
-            material.mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
-                point.volemission, density, point.scatter, point.volanisotropy,
-                max(point.scatter)});
+            material.volemission = point.volemission;
+            material.voldensity  = density;
+            material.volscatter  = point.scatter;
+            material.volphaseg   = point.volanisotropy;
         }
         if (lweight != zero3f) {
             if (point.roughness) {
@@ -507,10 +498,11 @@ void eval_material(trace_material& material, const material_point& point_,
                 zero3f, zero3f, point.roughness, max(lweight), 0});
         } else {
             // hardcoded depth scale of 0.01 m
-            auto density = 1 / (point.meanfreepath * point.volscale);
-            material.mediums.push_back({trace_medium::type_t::phaseg, {1, 1, 1},
-                point.volemission, density, point.subsurface,
-                point.volanisotropy, max(point.subsurface)});
+            auto density         = 1 / (point.meanfreepath * point.volscale);
+            material.volemission = point.volemission;
+            material.voldensity  = density;
+            material.volscatter  = point.subsurface;
+            material.volphaseg   = point.volanisotropy;
             if (point.specular == zero3f) {
                 material.deltas.push_back({trace_delta::type_t::transparency,
                     lweight, zero3f, zero3f, max(lweight), 0});
@@ -534,18 +526,6 @@ void eval_material(trace_material& material, const material_point& point_,
     };
     normalize_weights(material.brdfs);
     normalize_weights(material.deltas);
-    normalize_weights(material.mediums);
-}  // namespace yocto
-
-vec3f eval_emission(const trace_material& material, const vec3f& normal,
-    const vec3f& outgoing) {
-    return material.emission;
-}
-vec3f eval_volemission(const trace_material& material, const vec3f& normal,
-    const vec3f& outgoing) {
-    auto emission = zero3f;
-    for (auto& lobe : material.mediums) emission += lobe.weight * lobe.emission;
-    return emission;
 }
 
 // Check if we are on the same side of the hemisphere
@@ -556,6 +536,18 @@ bool same_hemisphere(
 bool other_hemisphere(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     return dot(normal, outgoing) * dot(normal, incoming) < 0;
+}
+bool has_volume(const trace_material& material) {
+    return material.voldensity != zero3f;
+}
+
+vec3f eval_emission(const trace_material& material, const vec3f& normal,
+    const vec3f& outgoing) {
+    return material.emission;
+}
+vec3f eval_volemission(const trace_material& material, const vec3f& normal,
+    const vec3f& outgoing) {
+    return material.volemission;
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
@@ -981,36 +973,27 @@ float sample_brdf_pdf(const trace_material& material, const vec3f& normal,
 
 vec3f eval_volscattering(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
+    if(!has_volume(material)) return zero3f;
     auto scattering = zero3f;
-    for (auto& lobe : material.mediums) {
-        if (lobe.weight == zero3f) continue;
-        switch (lobe.type) {
-            case trace_medium::type_t::phaseg: {
-                scattering += lobe.weight * eval_volume_scattering(lobe.albedo,
-                                                lobe.phaseg, outgoing,
-                                                incoming);
-            } break;
-        }
+    if (material.voldensity != zero3f) {
+        scattering += eval_volume_scattering(
+            material.volscatter, material.volphaseg, outgoing, incoming);
     }
     return scattering;
 }
 vec3f sample_volscattering(const trace_material& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
+    if(!has_volume(material)) return zero3f;
+    auto weights = vec1f{max(material.voldensity)};
+    if (weights == zero1f) return zero3f;
+    weights /= sum(weights);
+
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
-    for (auto& lobe : material.mediums) {
-        if (lobe.pdf == 0) continue;
-
-        // check if we pick this lobe
-        weight_sum += lobe.pdf;
-        if (rnl > weight_sum) continue;
-
-        switch (lobe.type) {
-            case trace_medium::type_t::phaseg: {
-                return sample_volume_scattering(
-                    lobe.albedo, lobe.phaseg, normal, outgoing, rn);
-            } break;
-        }
+    weight_sum += weights[0];
+    if (rnl < weight_sum) {
+        return sample_volume_scattering(
+            material.volscatter, material.volphaseg, normal, outgoing, rn);
     }
 
     // something went wrong if we got here
@@ -1018,16 +1001,16 @@ vec3f sample_volscattering(const trace_material& material, const vec3f& normal,
 }
 float sample_volscattering_pdf(const trace_material& material,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-    auto pdf = 0.0f;
-    for (auto& lobe : material.mediums) {
-        if (lobe.pdf == 0) continue;
+    if(!has_volume(material)) return 0;
+    auto weights = vec1f{max(material.voldensity)};
+    if (weights == zero1f) return 0;
+    weights /= sum(weights);
 
-        switch (lobe.type) {
-            case trace_medium::type_t::phaseg: {
-                pdf += lobe.pdf * sample_volume_scattering_pdf(lobe.albedo,
-                                      lobe.phaseg, normal, outgoing, incoming);
-            } break;
-        }
+    // commpute pdf
+    auto pdf = 0.0f;
+    if(weights[0]) {
+        pdf += weights[0] * sample_volume_scattering_pdf(material.volscatter,
+                                material.volphaseg, normal, outgoing, incoming);
     }
 
     return pdf;
@@ -1184,23 +1167,23 @@ pair<float, bool> sample_roulette(const vec3f& albedo, const vec3f& weight,
 
 pair<float, vec2i> sample_distance(
     const trace_material& material, float rl, float rd) {
-    if (material.mediums.empty()) return {0, {-1, -1}};
-    auto idx = sample_uniform((int)material.mediums.size(), rl);
-    rl       = clamp(rl * (int)material.mediums.size() - idx, 0.0f, 1.0f);
-    auto [distance, channel] = sample_distance(material.mediums[idx].density, rl, rd);
-    return {distance, {idx, channel}};
+    if(!has_volume(material)) return {0, {-1, -1}};
+    // auto idx = sample_uniform((int)material.mediums.size(), rl);
+    // rl       = clamp(rl * (int)material.mediums.size() - idx, 0.0f, 1.0f);
+    auto [distance, channel] = sample_distance(material.voldensity, rl, rd);
+    return {distance, {0, channel}};
 }
 
-float sample_distance_pdf(const trace_material& material, 
-    float distance, const vec2i& channel) {
-    if (material.mediums.empty() || channel.x < 0) return 0;
-    return sample_distance_pdf(material.mediums[channel.x].density, distance, channel.y);
+float sample_distance_pdf(
+    const trace_material& material, float distance, const vec2i& channel) {
+    if(!has_volume(material)) return 0;
+    return sample_distance_pdf(
+        material.voldensity, distance, channel.y);
 }
 
 vec3f eval_transmission(const trace_material& material, float distance) {
     auto transmission = vec3f{1, 1, 1};
-    for (auto& lobe : material.mediums)
-        transmission *= eval_transmission(lobe.density, distance);
+    transmission *= eval_transmission(material.voldensity, distance);
     return transmission;
 }
 
@@ -1319,7 +1302,7 @@ tuple<vec3f, vec3f> sample_voldirection_mis(const yocto_scene& scene,
 // Returns weight and distance
 pair<vec3f, float> sample_transmission(
     const trace_material& material, float max_distance, float rl, float rn) {
-    if (material.mediums.empty()) return {vec3f{1}, max_distance};
+    if (material.voldensity == zero3f) return {vec3f{1}, max_distance};
     // clamp ray if inside a volume
     auto [distance, channel] = sample_distance(material, rl, rn);
     distance                 = min(distance, max_distance);
@@ -1334,7 +1317,7 @@ using trace_volume_stack = short_vector<pair<trace_material, int>, 32>;
 void update_volume_stack(trace_volume_stack& volume_stack,
     trace_material& medium, const trace_material& material, int instance,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-    if (material.mediums.empty()) return;
+    if (material.voldensity == zero3f) return;
     if (dot(incoming, normal) > 0 != dot(outgoing, normal) > 0) {
         if (volume_stack.empty()) {
             volume_stack.push_back({material, instance});
@@ -1425,7 +1408,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto last_position = origin_;
     auto last_incoming = direction_;
     auto volume_stack  = trace_volume_stack{};
-    auto last_medium  = trace_material{};
+    auto last_medium   = trace_material{};
     auto hit           = false;
 
     // trace  path
@@ -1444,8 +1427,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // clamp ray if inside a volume
         auto [transmission, distance] = sample_transmission(
-            last_medium, intersection.distance, rand1f(rng),
-            rand1f(rng));
+            last_medium, intersection.distance, rand1f(rng), rand1f(rng));
         weight *= transmission;
         auto on_surface = distance >= intersection.distance;
 
@@ -1459,8 +1441,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         radiance += on_surface
                         ? weight * eval_emission(material, normal, outgoing)
                         : weight * eval_volemission(material, normal, outgoing);
-        if (material.brdfs.empty() && material.deltas.empty() &&
-            material.mediums.empty())
+        if (material.brdfs.empty() && material.deltas.empty() && !has_volume(material))
             break;
 
         // russian roulette
