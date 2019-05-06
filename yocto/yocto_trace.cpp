@@ -1220,7 +1220,25 @@ vec3f eval_transmission(const trace_mediums& mediums, float distance) {
 tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
     const trace_material& material, const vec3f& position, const vec3f& normal,
-    const vec3f& outgoing, bool delta, float rl, const vec2f& ruv) {
+    const vec3f& outgoing, bool delta_only, float rd, float rl,
+    const vec2f& ruv) {
+    auto delta     = false;
+    auto delta_pdf = 0.0f;
+    if (!delta_only) {
+        auto compute_weight = [](const auto& lobes) {
+            auto weight = 0.0f;
+            for (auto& lobe : lobes) weight += lobe.samplew;
+            return weight;
+        };
+        auto bsdf_weight  = compute_weight(material.brdfs);
+        auto delta_weight = compute_weight(material.deltas);
+        if (bsdf_weight == 0 && delta_weight == 0) return {zero3f, zero3f};
+        delta_pdf = delta_weight / (bsdf_weight + delta_weight);
+        delta     = rd < delta_pdf;
+    } else {
+        delta     = true;
+        delta_pdf = 1;
+    }
     auto incoming = sample_brdf(material, normal, outgoing, delta, rl, ruv);
     auto brdfcos  = eval_brdfcos(material, normal, outgoing, incoming, delta);
     auto incoming_pdf = sample_brdf_pdf(
@@ -1234,8 +1252,18 @@ tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
 tuple<vec3f, vec3f> sample_direction_mis(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
     const trace_material& material, const vec3f& position, const vec3f& normal,
-    const vec3f& outgoing, bool delta, bool mis, float rl, const vec2f& ruv,
+    const vec3f& outgoing, bool mis, float rd, float rl, const vec2f& ruv,
     float re, float rmis) {
+    auto compute_weight = [](const auto& lobes) {
+        auto weight = 0.0f;
+        for (auto& lobe : lobes) weight += lobe.samplew;
+        return weight;
+    };
+    auto bsdf_weight  = compute_weight(material.brdfs);
+    auto delta_weight = compute_weight(material.deltas);
+    if (bsdf_weight == 0 && delta_weight == 0) return {zero3f, zero3f};
+    auto delta_pdf = delta_weight / (bsdf_weight + delta_weight);
+    auto delta     = rd < delta_pdf;
     if (mis && !delta) {
         auto incoming =
             (rmis < 0.5f)
@@ -1298,25 +1326,6 @@ tuple<vec3f, vec3f> sample_voldirection_mis(const yocto_scene& scene,
         } else {
             return {brdfcos / incoming_pdf, incoming};
         }
-    }
-}
-
-// Sample next mode. Returns weight and whether it is a delta.
-pair<float, bool> sample_delta(
-    const trace_bsdfs& brdfs, const trace_deltas& deltas, float rn) {
-    auto compute_weight = [](const auto& lobes) {
-        auto weight = 0.0f;
-        for (auto& lobe : lobes) weight += lobe.samplew;
-        return weight;
-    };
-    auto bsdf_weight  = compute_weight(brdfs);
-    auto delta_weight = compute_weight(deltas);
-    if (bsdf_weight == 0 && delta_weight == 0) return {0, false};
-    auto delta_pdf = delta_weight / (bsdf_weight + delta_weight);
-    if (rn < delta_pdf) {
-        return {1 / delta_pdf, true};
-    } else {
-        return {1 / (1 - delta_pdf), false};
     }
 }
 
@@ -1474,17 +1483,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= rr_weight;
         if (weight == zero3f) break;
 
-        // pick delta
-        auto [delta_weight, delta] =
-            on_surface
-                ? sample_delta(material.brdfs, material.deltas, rand1f(rng))
-                : pair{1.0f, false};
-        weight *= delta_weight;
-
         // next direction
         auto [scattering, incoming] =
             on_surface ? sample_direction_mis(scene, lights, bvh, material,
-                             position, normal, outgoing, delta, true,
+                             position, normal, outgoing, true, rand1f(rng),
                              rand1f(rng), rand2f(rng), rand1f(rng), rand1f(rng))
                        : sample_voldirection_mis(scene, lights, bvh, material,
                              position, normal, outgoing, true, rand1f(rng),
@@ -1542,15 +1544,10 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         weight *= rr_weight;
         if (weight == zero3f) break;
 
-        // pick delta
-        auto [delta_weight, delta] = sample_delta(
-            material.brdfs, material.deltas, rand1f(rng));
-        weight *= delta_weight;
-
         // next direction
         auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            material, position, normal, outgoing, delta, rand1f(rng),
-            rand2f(rng));
+            material, position, normal, outgoing, false, rand1f(rng),
+            rand1f(rng), rand2f(rng));
         weight *= scattering;
         if (weight == zero3f) break;
 
@@ -1602,7 +1599,8 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
         // continue path
         auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            material, position, normal, outgoing, true, rand1f(rng), zero2f);
+            material, position, normal, outgoing, true, rand1f(rng),
+            rand1f(rng), zero2f);
 
         // exit if no hit
         weight *= scattering;
