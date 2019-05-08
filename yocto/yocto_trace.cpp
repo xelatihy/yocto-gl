@@ -1300,7 +1300,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto intersection = bvh_intersection{};
         if (!trace_ray(
                 scene, bvh, last_position, last_incoming, intersection)) {
-            radiance += weight * eval_environments(scene, last_incoming);
+            radiance += weight * eval_environment(scene, last_incoming);
             break;
         }
 
@@ -1383,7 +1383,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         auto intersection = bvh_intersection{};
         if (!trace_ray(
                 scene, bvh, last_position, last_incoming, intersection)) {
-            radiance += weight * eval_environments(scene, last_incoming);
+            radiance += weight * eval_environment(scene, last_incoming);
             break;
         }
 
@@ -1446,7 +1446,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         auto intersection = bvh_intersection{};
         if (!trace_ray(
                 scene, bvh, last_position, last_incoming, intersection)) {
-            radiance += weight * eval_environments(scene, last_incoming);
+            radiance += weight * eval_environment(scene, last_incoming);
             break;
         }
 

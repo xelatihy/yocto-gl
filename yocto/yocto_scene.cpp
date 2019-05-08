@@ -927,7 +927,7 @@ vec3f eval_environment(const yocto_scene& scene,
     return emission;
 }
 // Evaluate all environment color.
-vec3f eval_environments(const yocto_scene& scene, const vec3f& direction) {
+vec3f eval_environment(const yocto_scene& scene, const vec3f& direction) {
     auto emission = zero3f;
     for (auto& environment : scene.environments)
         emission += eval_environment(scene, environment, direction);

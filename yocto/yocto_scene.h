@@ -500,7 +500,7 @@ vec3f eval_direction(
 vec3f eval_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vec3f& direction);
 // Evaluate all environment emission.
-vec3f eval_environments(const yocto_scene& scene, const vec3f& direction);
+vec3f eval_environment(const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
 void  sample_environment_cdf(const yocto_scene& scene,
