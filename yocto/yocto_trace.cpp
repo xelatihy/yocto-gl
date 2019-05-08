@@ -608,8 +608,10 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming, bool delta) {
     auto brdfcos = zero3f;
 
-    auto cw = (material.coat == zero3f) ? vec3f{1} : material.coat * (1 -
-                      fresnel_dielectric(coat_eta, abs(dot(normal, outgoing))));
+    auto cw = (material.coat == zero3f)
+                  ? vec3f{1}
+                  : material.coat * (1 - fresnel_dielectric(coat_eta,
+                                             abs(dot(normal, outgoing))));
     auto mw = cw * (1 - material.metallic);
     auto sw = mw * (1 - material.specular * fresnel_dielectric(coat_eta,
                                                 abs(dot(normal, outgoing))));
@@ -679,8 +681,10 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 
 pair<array<float, 5>, float> compute_brdf_pdfs(const material_point& material,
     const vec3f& normal, const vec3f& outgoing, bool delta) {
-    auto cw = (material.coat == zero3f) ? vec3f{1} : material.coat * (1 -
-                      fresnel_dielectric(coat_eta, abs(dot(normal, outgoing))));
+    auto cw = (material.coat == zero3f)
+                  ? vec3f{1}
+                  : material.coat * (1 - fresnel_dielectric(coat_eta,
+                                             abs(dot(normal, outgoing))));
     auto mw      = cw * (1 - material.metallic);
     auto sw      = mw * (1 - material.specular * fresnel_dielectric(coat_eta,
                                                 abs(dot(normal, outgoing))));
@@ -793,14 +797,11 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
 
     if (pdfs[0]) {
         if (coat_roughness) {
-            pdf += pdfs[0] *
-                   sample_microfacet_reflection_pdf(coat_roughness,
-                       coat_eta, zero3f, normal, outgoing,
-                       incoming);
+            pdf += pdfs[0] * sample_microfacet_reflection_pdf(coat_roughness,
+                                 coat_eta, zero3f, normal, outgoing, incoming);
         } else {
-            pdf += pdfs[0] * sample_delta_reflection_pdf(coat_eta,
-                                 zero3f, normal, outgoing,
-                                 incoming);
+            pdf += pdfs[0] * sample_delta_reflection_pdf(
+                                 coat_eta, zero3f, normal, outgoing, incoming);
         }
     }
 
@@ -811,9 +812,9 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
                        reflectivity_to_eta(material.eta), zero3f, normal,
                        outgoing, incoming);
         } else {
-            pdf += pdfs[1] * sample_delta_reflection_pdf(reflectivity_to_eta(material.eta),
-                                 zero3f, normal, outgoing,
-                                 incoming);
+            pdf += pdfs[1] * sample_delta_reflection_pdf(
+                                 reflectivity_to_eta(material.eta), zero3f,
+                                 normal, outgoing, incoming);
         }
     }
 
@@ -821,43 +822,36 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
         if (material.roughness) {
             pdf += pdfs[2] *
                    sample_microfacet_reflection_pdf(material.roughness,
-                       material.eta, zero3f, normal,
-                       outgoing, incoming);
+                       material.eta, zero3f, normal, outgoing, incoming);
         } else {
-            pdf += pdfs[2] * sample_delta_reflection_pdf(material.eta,
-                                 zero3f, normal, outgoing,
-                                 incoming);
+            pdf += pdfs[2] * sample_delta_reflection_pdf(material.eta, zero3f,
+                                 normal, outgoing, incoming);
         }
     }
 
     if (pdfs[3]) {
-        pdf += pdfs[3] *
-               sample_diffuse_reflection_pdf(
-                   material.roughness, normal, outgoing, incoming);
+        pdf += pdfs[3] * sample_diffuse_reflection_pdf(
+                             material.roughness, normal, outgoing, incoming);
     }
 
     if (pdfs[4] && !material.thin) {
         if (material.roughness) {
-            pdf += pdfs[4] * sample_microfacet_transmission_pdf(
-                                 material.roughness,
-                                 material.eta, normal, outgoing,
-                                 incoming);
-        } else {
             pdf += pdfs[4] *
-                   sample_delta_transmission_pdf(
+                   sample_microfacet_transmission_pdf(material.roughness,
                        material.eta, normal, outgoing, incoming);
+        } else {
+            pdf += pdfs[4] * sample_delta_transmission_pdf(
+                                 material.eta, normal, outgoing, incoming);
         }
     }
     if (pdfs[4] && material.thin) {
         if (material.roughness) {
-            pdf += pdfs[4] * sample_microfacet_transparency_pdf(
-                                 material.roughness,
-                                 material.eta, normal, outgoing,
-                                 incoming);
-        } else {
             pdf += pdfs[4] *
-                   sample_delta_transparency_pdf(
+                   sample_microfacet_transparency_pdf(material.roughness,
                        material.eta, normal, outgoing, incoming);
+        } else {
+            pdf += pdfs[4] * sample_delta_transparency_pdf(
+                                 material.eta, normal, outgoing, incoming);
         }
     }
 
