@@ -608,8 +608,8 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming, bool delta) {
     auto brdfcos = zero3f;
 
-    auto cw = 1 - material.coat *
-                      fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
+    auto cw = (material.coat == zero3f) ? vec3f{1} : material.coat * (1 -
+                      fresnel_dielectric(coat_eta, abs(dot(normal, outgoing))));
     auto mw = cw * (1 - material.metallic);
     auto sw = mw * (1 - material.specular * fresnel_dielectric(coat_eta,
                                                 abs(dot(normal, outgoing))));
@@ -679,8 +679,8 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 
 pair<array<float, 5>, float> compute_brdf_pdfs(const material_point& material,
     const vec3f& normal, const vec3f& outgoing, bool delta) {
-    auto cw = 1 - material.coat *
-                      fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
+    auto cw = (material.coat == zero3f) ? vec3f{1} : material.coat * (1 -
+                      fresnel_dielectric(coat_eta, abs(dot(normal, outgoing))));
     auto mw      = cw * (1 - material.metallic);
     auto sw      = mw * (1 - material.specular * fresnel_dielectric(coat_eta,
                                                 abs(dot(normal, outgoing))));
