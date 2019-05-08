@@ -1313,7 +1313,7 @@ material_point eval_material(const yocto_scene& scene,
         point.eta = (1 + sqrt(point.specular)) / (1 - sqrt(point.specular));
         point.specular = {1, 1, 1};
     }
-    if (point.diffuse * point.metallic != zero3f || point.roughness) {
+    if (point.diffuse * (1 - point.metallic) != zero3f || point.roughness) {
         point.roughness = point.roughness * point.roughness;
         point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
     }

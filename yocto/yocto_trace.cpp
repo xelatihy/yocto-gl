@@ -221,7 +221,7 @@ vec3f eval_transmission(const vec3f& density, float distance) {
 
 vec3f sample_phasefunction(float g, const vec2f& u) {
     auto cos_theta = 0.0f;
-    if (abs(g) < 1e-3) {
+    if (abs(g) < 1e-3f) {
         cos_theta = 1 - 2 * u.x;
     } else {
         float square = (1 - g * g) / (1 - g + 2 * g * u.x);
@@ -360,6 +360,9 @@ bool has_brdf(const material_point& material) {
 }
 bool has_volume(const material_point& material) {
     return material.voldensity != zero3f;
+}
+bool is_delta(const material_point& material) {
+    return material.roughness == 0;
 }
 
 vec3f eval_emission(const material_point& material, const vec3f& normal,
@@ -1078,114 +1081,82 @@ vec3f eval_transmission(const material_point& material, float distance) {
     return transmission;
 }
 
-tuple<vec3f, vec3f> sample_direction(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh,
-    const material_point& material, const vec3f& position, const vec3f& normal,
-    const vec3f& outgoing, bool delta_only, float rd, float rl,
-    const vec2f& ruv) {
-    auto delta     = false;
-    auto delta_pdf = 0.0f;
-    if (!delta_only) {
-        auto [bw, brdf_weight] = compute_brdf_pdfs(
-            material, normal, outgoing, false);
-        auto [dw, delta_weight] = compute_brdf_pdfs(
-            material, normal, outgoing, true);
-        if (brdf_weight == 0 && delta_weight == 0) return {zero3f, zero3f};
-        delta_pdf = delta_weight / (brdf_weight + delta_weight);
-        delta     = rd < delta_pdf;
-    } else {
-        delta     = true;
-        delta_pdf = 1;
-    }
-    auto incoming = sample_brdf(material, normal, outgoing, delta, rl, ruv);
-    auto brdfcos  = eval_brdfcos(material, normal, outgoing, incoming, delta);
+tuple<vec3f, vec3f> sample_delta_direction(const material_point& material,
+    const vec3f& normal, const vec3f& outgoing, float rl) {
+    auto incoming = sample_brdf(material, normal, outgoing, true, rl, zero2f);
+    auto brdfcos  = eval_brdfcos(material, normal, outgoing, incoming, true);
     auto incoming_pdf = sample_brdf_pdf(
-        material, normal, outgoing, incoming, delta);
+        material, normal, outgoing, incoming, true);
     if (incoming == zero3f || incoming_pdf == 0) {
         return {zero3f, zero3f};
     } else {
         return {brdfcos / incoming_pdf, incoming};
     }
 }
-tuple<vec3f, vec3f> sample_direction_mis(const yocto_scene& scene,
+tuple<vec3f, vec3f> sample_brdf_direction(const material_point& material,
+    const vec3f& normal, const vec3f& outgoing, float rl, const vec2f& ruv) {
+    auto incoming = sample_brdf(material, normal, outgoing, true, rl, ruv);
+    auto brdfcos  = eval_brdfcos(material, normal, outgoing, incoming, true);
+    auto incoming_pdf = sample_brdf_pdf(
+        material, normal, outgoing, incoming, true);
+    if (incoming == zero3f || incoming_pdf == 0) {
+        return {zero3f, zero3f};
+    } else {
+        return {brdfcos / incoming_pdf, incoming};
+    }
+}
+tuple<vec3f, vec3f> sample_brdf_direction_mis(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
     const material_point& material, const vec3f& position, const vec3f& normal,
-    const vec3f& outgoing, bool mis, float rd, float rl, const vec2f& ruv,
-    float re, float rmis) {
-    auto [bw, brdf_weight] = compute_brdf_pdfs(
-        material, normal, outgoing, false);
-    auto [dw, delta_weight] = compute_brdf_pdfs(
-        material, normal, outgoing, true);
-    if (brdf_weight == 0 && delta_weight == 0) return {zero3f, zero3f};
-    auto delta_pdf = delta_weight / (brdf_weight + delta_weight);
-    auto delta     = rd < delta_pdf;
-    if (mis && !delta) {
-        auto incoming =
-            (rmis < 0.5f)
-                ? sample_brdf(material, normal, outgoing, delta, rl, ruv)
-                : sample_lights(scene, lights, bvh, position, re, rl, ruv);
-        auto scattering = eval_brdfcos(
-            material, normal, outgoing, incoming, delta);
-        auto incoming_pdf =
-            0.5f *
-                sample_brdf_pdf(material, normal, outgoing, incoming, delta) +
-            0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming);
-        if (incoming == zero3f || incoming_pdf == 0) {
-            return {zero3f, zero3f};
-        } else {
-            return {scattering / incoming_pdf, incoming};
-        }
+    const vec3f& outgoing, float rl, const vec2f& ruv, float re, float rmis) {
+    auto incoming =
+        (rmis < 0.5f)
+            ? sample_brdf(material, normal, outgoing, false, rl, ruv)
+            : sample_lights(scene, lights, bvh, position, re, rl, ruv);
+    auto brdfcos = eval_brdfcos(material, normal, outgoing, incoming, false);
+    auto incoming_pdf =
+        0.5f * sample_brdf_pdf(material, normal, outgoing, incoming, false) +
+        0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming);
+    if (incoming == zero3f || incoming_pdf == 0) {
+        return {zero3f, zero3f};
     } else {
-        auto incoming = sample_brdf(material, normal, outgoing, delta, rl, ruv);
-        auto brdfcos  = eval_brdfcos(
-            material, normal, outgoing, incoming, delta);
-        auto incoming_pdf = sample_brdf_pdf(
-            material, normal, outgoing, incoming, delta);
-        if (incoming == zero3f || incoming_pdf == 0) {
-            return {zero3f, zero3f};
-        } else {
-            return {brdfcos / incoming_pdf, incoming};
-        }
+        return {brdfcos / incoming_pdf, incoming};
     }
 }
 
-tuple<vec3f, vec3f> sample_voldirection_mis(const yocto_scene& scene,
+tuple<vec3f, vec3f> sample_volume_direction(const material_point& material,
+    const vec3f& normal, const vec3f& outgoing, float rl, const vec2f& ruv) {
+    auto incoming = sample_volscattering(material, normal, outgoing, rl, ruv);
+    auto brdfcos  = eval_volscattering(material, normal, outgoing, incoming);
+    auto incoming_pdf = sample_volscattering_pdf(
+        material, normal, outgoing, incoming);
+    if (incoming == zero3f || incoming_pdf == 0) {
+        return {zero3f, zero3f};
+    } else {
+        return {brdfcos / incoming_pdf, incoming};
+    }
+}
+tuple<vec3f, vec3f> sample_volume_direction_mis(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
     const material_point& material, const vec3f& position, const vec3f& normal,
-    const vec3f& outgoing, bool mis, float rl, const vec2f& ruv, float re,
-    float rmis) {
-    if (mis) {
-        auto incoming =
-            (rmis < 0.5f)
-                ? sample_volscattering(material, normal, outgoing, rl, ruv)
-                : sample_lights(scene, lights, bvh, position, re, rl, ruv);
-        auto scattering = eval_volscattering(
-            material, normal, outgoing, incoming);
-        auto incoming_pdf =
-            0.5f *
-                sample_volscattering_pdf(material, normal, outgoing, incoming) +
-            0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming);
-        if (incoming == zero3f || incoming_pdf == 0) {
-            return {zero3f, zero3f};
-        } else {
-            return {scattering / incoming_pdf, incoming};
-        }
+    const vec3f& outgoing, float rl, const vec2f& ruv, float re, float rmis) {
+    auto incoming =
+        (rmis < 0.5f)
+            ? sample_volscattering(material, normal, outgoing, rl, ruv)
+            : sample_lights(scene, lights, bvh, position, re, rl, ruv);
+    auto scattering = eval_volscattering(material, normal, outgoing, incoming);
+    auto incoming_pdf =
+        0.5f * sample_volscattering_pdf(material, normal, outgoing, incoming) +
+        0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming);
+    if (incoming == zero3f || incoming_pdf == 0) {
+        return {zero3f, zero3f};
     } else {
-        auto incoming = sample_volscattering(
-            material, normal, outgoing, rl, ruv);
-        auto brdfcos = eval_volscattering(material, normal, outgoing, incoming);
-        auto incoming_pdf = sample_volscattering_pdf(
-            material, normal, outgoing, incoming);
-        if (incoming == zero3f || incoming_pdf == 0) {
-            return {zero3f, zero3f};
-        } else {
-            return {brdfcos / incoming_pdf, incoming};
-        }
+        return {scattering / incoming_pdf, incoming};
     }
 }
 
 // Returns weight and distance
-pair<vec3f, float> sample_transmission(
+pair<vec3f, float> sample_volume_transmission(
     const material_point& material, float max_distance, float rl, float rn) {
     if (material.voldensity == zero3f) return {vec3f{1}, max_distance};
     // clamp ray if inside a volume
@@ -1308,7 +1279,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto outgoing = -last_incoming;
 
         // clamp ray if inside a volume
-        auto [transmission, distance] = sample_transmission(
+        auto [transmission, distance] = sample_volume_transmission(
             last_medium, intersection.distance, rand1f(rng), rand1f(rng));
         weight *= transmission;
         auto on_surface = distance >= intersection.distance;
@@ -1345,12 +1316,16 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // next direction
         auto [scattering, incoming] =
-            on_surface ? sample_direction_mis(scene, lights, bvh, material,
-                             position, normal, outgoing, true, rand1f(rng),
-                             rand1f(rng), rand2f(rng), rand1f(rng), rand1f(rng))
-                       : sample_voldirection_mis(scene, lights, bvh, material,
-                             position, normal, outgoing, true, rand1f(rng),
-                             rand2f(rng), rand1f(rng), rand1f(rng));
+            on_surface
+                ? (is_delta(material) ? sample_delta_direction(material, normal,
+                                            outgoing, rand1f(rng))
+                                      : sample_brdf_direction_mis(scene, lights,
+                                            bvh, material, position, normal,
+                                            outgoing, rand1f(rng), rand2f(rng),
+                                            rand1f(rng), rand1f(rng)))
+                : sample_volume_direction_mis(scene, lights, bvh, material,
+                      position, normal, outgoing, rand1f(rng), rand2f(rng),
+                      rand1f(rng), rand1f(rng));
         weight *= scattering;
         if (weight == zero3f) break;
 
@@ -1415,9 +1390,11 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // next direction
-        auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            material, position, normal, outgoing, false, rand1f(rng),
-            rand1f(rng), rand2f(rng));
+        auto [scattering, incoming] =
+            is_delta(material) ? sample_delta_direction(
+                                     material, normal, outgoing, rand1f(rng))
+                               : sample_brdf_direction(material, normal,
+                                     outgoing, rand1f(rng), rand2f(rng));
         weight *= scattering;
         if (weight == zero3f) break;
 
@@ -1478,9 +1455,8 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // continue path
-        auto [scattering, incoming] = sample_direction(scene, lights, bvh,
-            material, position, normal, outgoing, true, rand1f(rng),
-            rand1f(rng), zero2f);
+        auto [scattering, incoming] = sample_delta_direction(
+            material, normal, outgoing, rand1f(rng));
 
         // exit if no hit
         weight *= scattering;
