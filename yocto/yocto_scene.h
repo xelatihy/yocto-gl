@@ -458,7 +458,7 @@ struct material_point {
     vec3f specular                = {0, 0, 0};
     float metallic                = 0;
     float roughness               = 0;
-    vec3f ior                     = {1.5, 1.5, 1.5};
+    vec3f eta                     = {1.5, 1.5, 1.5};
     vec3f coat                    = {0, 0, 0};
     vec3f sheen                   = {0, 0, 0};
     vec3f transmission            = {0, 0, 0};
