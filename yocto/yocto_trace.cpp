@@ -700,19 +700,30 @@ array<float, 5> compute_brdf_pdfs(const material_point& material,
     auto mw      = cw * (1 - material.metallic);
     auto sw      = mw * (1 - material.specular * fresnel_dielectric(coat_eta,
                                                 abs(dot(normal, outgoing))));
-    auto weights = array<float, 5>{};
-    weights[0]   = max(material.coat *
-                     fresnel_dielectric(coat_eta, abs(dot(outgoing, normal))));
-    weights[1]   = max(cw * material.metallic *
-                     fresnel_dielectric(reflectivity_to_eta(material.diffuse),
-                         abs(dot(outgoing, normal))));
-    weights[2]   = max(
-        mw * material.specular *
-        fresnel_dielectric(material.eta, abs(dot(outgoing, normal))));
-    weights[3] = max(sw * material.diffuse);
-    weights[4] = max(
-        mw * material.transmission *
-        (1 - fresnel_dielectric(material.eta, abs(dot(outgoing, normal)))));
+    auto weight = vec3f{1};
+    auto weights = array<float, 5>{0,0,0,0,0};
+    if(material.coat != zero3f) {
+        auto F = fresnel_dielectric(coat_eta, abs(dot(outgoing, normal)));
+        weights[0] = max(weight * F);
+        weight *= 1 - F * material.coat;
+    }
+    if(material.metallic != 0) {
+        auto F = fresnel_dielectric(reflectivity_to_eta(material.diffuse),
+                         abs(dot(outgoing, normal)));
+        weights[1] = max(weight * material.metallic * F);
+        weight *= 1 - material.metallic;
+    }
+    if(material.specular != zero3f) {
+        auto F = fresnel_dielectric(material.eta, abs(dot(outgoing, normal)));
+        weights[2] = max(weight * material.specular * F);
+        weight *= 1 - F * material.specular;
+    }
+    if(material.diffuse != zero3f) {
+        weights[3] = max(weight * material.diffuse);
+    }
+    if(material.transmission != zero3f) {
+        weights[4] = max(weight * material.transmission);
+    }
     return weights;
 }
 
