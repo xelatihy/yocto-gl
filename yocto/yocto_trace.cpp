@@ -330,20 +330,6 @@ pair<vec3f, vec3f> get_conductor_eta(const string& name) {
     return metal_ior_table.at(name);
 }
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PATH TRACING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Set non-rigid frames as default
-constexpr bool trace_non_rigid_frames = true;
-
-// defaults
-constexpr auto coat_eta       = vec3f{1.5};
-constexpr auto coat_roughness = 0.0f;
-
 // Check if we are on the same side of the hemisphere
 bool same_hemisphere(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
@@ -352,26 +338,6 @@ bool same_hemisphere(
 bool other_hemisphere(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     return dot(normal, outgoing) * dot(normal, incoming) < 0;
-}
-bool has_brdf(const material_point& material) {
-    return material.coat != zero3f || material.specular != zero3f ||
-           material.metallic != 0 || material.diffuse != zero3f ||
-           material.transmission != zero3f;
-}
-bool has_volume(const material_point& material) {
-    return material.voldensity != zero3f;
-}
-bool is_delta(const material_point& material) {
-    return material.roughness == 0;
-}
-
-vec3f eval_emission(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing) {
-    return material.emission;
-}
-vec3f eval_volemission(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing) {
-    return material.volemission;
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
@@ -492,8 +458,8 @@ vec3f sample_microfacet_reflection(float roughness, const vec3f& eta,
     auto halfway   = sample_microfacet(roughness, up_normal, rn);
     return reflect(outgoing, halfway);
 }
-vec3f sample_delta_reflection(const vec3f& eta, const vec3f& normal,
-    const vec3f& outgoing) {
+vec3f sample_delta_reflection(
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing) {
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
     return reflect(outgoing, up_normal);
 }
@@ -505,8 +471,8 @@ vec3f sample_microfacet_transmission(float roughness, const vec3f& eta,
     return refract(outgoing, halfway,
         dot(normal, outgoing) > 0 ? 1 / mean(eta) : mean(eta));
 }
-vec3f sample_delta_transmission(const vec3f& eta, const vec3f& normal,
-    const vec3f& outgoing) {
+vec3f sample_delta_transmission(
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing) {
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
     return refract(outgoing, up_normal,
         dot(normal, outgoing) > 0 ? 1 / mean(eta) : mean(eta));
@@ -519,12 +485,11 @@ vec3f sample_microfacet_transparency(float roughness, const vec3f& eta,
     auto ir        = reflect(outgoing, halfway);
     return -reflect(ir, up_normal);
 }
-vec3f sample_delta_transparency(const vec3f& eta, const vec3f& normal,
-    const vec3f& outgoing) {
+vec3f sample_delta_transparency(
+    const vec3f& eta, const vec3f& normal, const vec3f& outgoing) {
     return -outgoing;
 }
-vec3f sample_delta_passthrough(
-    const vec3f& normal, const vec3f& outgoing) {
+vec3f sample_delta_passthrough(const vec3f& normal, const vec3f& outgoing) {
     return -outgoing;
 }
 vec3f sample_volume_scattering(const vec3f& albedo, float phaseg,
@@ -606,6 +571,41 @@ float sample_volume_scattering_pdf(const vec3f& albedo, float phaseg,
     return eval_phasefunction(dot(outgoing, incoming), phaseg);
 }
 
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR PATH TRACING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Set non-rigid frames as default
+constexpr bool trace_non_rigid_frames = true;
+
+// defaults
+constexpr auto coat_eta       = vec3f{1.5};
+constexpr auto coat_roughness = 0.0f;
+
+bool has_brdf(const material_point& material) {
+    return material.coat != zero3f || material.specular != zero3f ||
+           material.metallic != 0 || material.diffuse != zero3f ||
+           material.transmission != zero3f;
+}
+bool has_volume(const material_point& material) {
+    return material.voldensity != zero3f;
+}
+bool is_delta(const material_point& material) {
+    return material.roughness == 0;
+}
+
+vec3f eval_emission(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing) {
+    return material.emission;
+}
+vec3f eval_volemission(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing) {
+    return material.volemission;
+}
+
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
@@ -656,65 +656,60 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
     if (!is_delta(material)) return zero3f;
     auto brdfcos = zero3f;
 
-    auto cw = (material.coat == zero3f)
-                  ? vec3f{1}
-                  : material.coat * (1 - fresnel_dielectric(coat_eta,
-                                             abs(dot(normal, outgoing))));
-    auto mw = cw * (1 - material.metallic);
-    auto sw = mw * (1 - material.specular * fresnel_dielectric(coat_eta,
-                                                abs(dot(normal, outgoing))));
+    auto ndo        = abs(dot(normal, outgoing));
+    auto same_hemi  = dot(normal, outgoing) * dot(normal, incoming) > 0;
+    auto other_hemi = dot(normal, outgoing) * dot(normal, incoming) < 0;
+
+    auto weight = vec3f{1};
     if (material.coat != zero3f) {
-        brdfcos += eval_delta_reflection(
-            coat_eta, zero3f, normal, outgoing, incoming);
+        auto F = fresnel_dielectric(coat_eta, ndo);
+        if (same_hemi) brdfcos += weight * F;
+        weight *= 1 - F * material.coat;
     }
-    if (material.metallic * cw != zero3f) {
-        auto eta = reflectivity_to_eta(material.diffuse);
-        brdfcos += cw * material.metallic *
-                   eval_delta_reflection(
-                       eta, zero3f, normal, outgoing, incoming);
+    if (material.metallic * weight != zero3f) {
+        auto F = material.metallic *
+                 fresnel_dielectric(reflectivity_to_eta(material.diffuse), ndo);
+        if (same_hemi) brdfcos += weight * F;
+        weight *= 1 - material.metallic;
     }
-    if (material.specular * mw != zero3f) {
-        brdfcos += mw * material.specular *
-                   eval_delta_reflection(
-                       material.eta, zero3f, normal, outgoing, incoming);
+    if (material.specular * weight != zero3f) {
+        auto F = fresnel_dielectric(coat_eta, ndo);
+        if (same_hemi) brdfcos += weight * material.specular * F;
+        weight *= 1 - material.specular * F;
     }
-    if (material.transmission * mw != zero3f && !material.thin) {
-        brdfcos += mw * material.transmission *
-                   eval_delta_transmission(
-                       material.eta, normal, outgoing, incoming);
+    if (material.transmission * weight != zero3f && !material.thin) {
+        if (other_hemi) brdfcos += weight * material.transmission;
     }
-    if (material.transmission * mw != zero3f && material.thin) {
-        brdfcos += mw * material.transmission *
-                   eval_delta_transparency(
-                       material.eta, normal, outgoing, incoming);
+    if (material.transmission * weight != zero3f && material.thin) {
+        if (other_hemi) brdfcos += weight * material.transmission;
     }
     return brdfcos;
 }
 
 array<float, 5> compute_brdf_pdfs(const material_point& material,
     const vec3f& normal, const vec3f& outgoing) {
-    auto weight = vec3f{1};
-    auto weights = array<float, 5>{0,0,0,0,0};
-    if(material.coat != zero3f) {
-        auto F = fresnel_dielectric(coat_eta, abs(dot(outgoing, normal)));
+    auto weight  = vec3f{1};
+    auto weights = array<float, 5>{0, 0, 0, 0, 0};
+    if (material.coat != zero3f) {
+        auto F     = fresnel_dielectric(coat_eta, abs(dot(outgoing, normal)));
         weights[0] = max(weight * F);
         weight *= 1 - F * material.coat;
     }
-    if(material.metallic != 0) {
-        auto F = fresnel_dielectric(reflectivity_to_eta(material.diffuse),
-                         abs(dot(outgoing, normal)));
+    if (material.metallic != 0) {
+        auto F = fresnel_dielectric(
+            reflectivity_to_eta(material.diffuse), abs(dot(outgoing, normal)));
         weights[1] = max(weight * material.metallic * F);
         weight *= 1 - material.metallic;
     }
-    if(material.specular != zero3f) {
+    if (material.specular != zero3f) {
         auto F = fresnel_dielectric(material.eta, abs(dot(outgoing, normal)));
         weights[2] = max(weight * material.specular * F);
         weight *= 1 - F * material.specular;
     }
-    if(material.diffuse != zero3f) {
+    if (material.diffuse != zero3f) {
         weights[3] = max(weight * material.diffuse);
     }
-    if(material.transmission != zero3f) {
+    if (material.transmission != zero3f) {
         weights[4] = max(weight * material.transmission);
     }
     return weights;
@@ -1106,10 +1101,9 @@ vec3f eval_transmission(const material_point& material, float distance) {
 
 tuple<vec3f, vec3f> sample_delta_direction(const material_point& material,
     const vec3f& normal, const vec3f& outgoing, float rl) {
-    auto incoming = sample_delta(material, normal, outgoing, rl);
-    auto brdfcos  = eval_delta(material, normal, outgoing, incoming);
-    auto incoming_pdf = sample_delta_pdf(
-        material, normal, outgoing, incoming);
+    auto incoming     = sample_delta(material, normal, outgoing, rl);
+    auto brdfcos      = eval_delta(material, normal, outgoing, incoming);
+    auto incoming_pdf = sample_delta_pdf(material, normal, outgoing, incoming);
     if (incoming == zero3f || incoming_pdf == 0) {
         return {zero3f, zero3f};
     } else {
@@ -1118,10 +1112,9 @@ tuple<vec3f, vec3f> sample_delta_direction(const material_point& material,
 }
 tuple<vec3f, vec3f> sample_brdf_direction(const material_point& material,
     const vec3f& normal, const vec3f& outgoing, float rl, const vec2f& ruv) {
-    auto incoming = sample_brdf(material, normal, outgoing, rl, ruv);
-    auto brdfcos  = eval_brdfcos(material, normal, outgoing, incoming);
-    auto incoming_pdf = sample_brdf_pdf(
-        material, normal, outgoing, incoming);
+    auto incoming     = sample_brdf(material, normal, outgoing, rl, ruv);
+    auto brdfcos      = eval_brdfcos(material, normal, outgoing, incoming);
+    auto incoming_pdf = sample_brdf_pdf(material, normal, outgoing, incoming);
     if (incoming == zero3f || incoming_pdf == 0) {
         return {zero3f, zero3f};
     } else {
@@ -1132,10 +1125,10 @@ tuple<vec3f, vec3f> sample_brdf_direction_mis(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
     const material_point& material, const vec3f& position, const vec3f& normal,
     const vec3f& outgoing, float rl, const vec2f& ruv, float re, float rmis) {
-    auto incoming =
-        (rmis < 0.5f)
-            ? sample_brdf(material, normal, outgoing, rl, ruv)
-            : sample_lights(scene, lights, bvh, position, re, rl, ruv);
+    auto incoming = (rmis < 0.5f)
+                        ? sample_brdf(material, normal, outgoing, rl, ruv)
+                        : sample_lights(
+                              scene, lights, bvh, position, re, rl, ruv);
     auto brdfcos = eval_brdfcos(material, normal, outgoing, incoming);
     auto incoming_pdf =
         0.5f * sample_brdf_pdf(material, normal, outgoing, incoming) +
