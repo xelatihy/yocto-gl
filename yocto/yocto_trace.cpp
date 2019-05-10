@@ -693,13 +693,6 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
 
 array<float, 5> compute_brdf_pdfs(const material_point& material,
     const vec3f& normal, const vec3f& outgoing) {
-    auto cw = (material.coat == zero3f)
-                  ? vec3f{1}
-                  : material.coat * (1 - fresnel_dielectric(coat_eta,
-                                             abs(dot(normal, outgoing))));
-    auto mw      = cw * (1 - material.metallic);
-    auto sw      = mw * (1 - material.specular * fresnel_dielectric(coat_eta,
-                                                abs(dot(normal, outgoing))));
     auto weight = vec3f{1};
     auto weights = array<float, 5>{0,0,0,0,0};
     if(material.coat != zero3f) {
