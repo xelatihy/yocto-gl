@@ -1235,10 +1235,9 @@ material_point eval_material(const yocto_scene& scene,
     point.emission        = material.emission * xyz(shape_color);
     point.diffuse         = material.diffuse * xyz(shape_color);
     point.specular        = material.specular;
-    point.metallic        = material.metallic;
+    auto metallic         = material.metallic;
     point.eta             = material.ior;
     point.roughness       = material.roughness;
-    point.sheen           = material.sheen;
     point.coat            = material.coat;
     point.transmission    = material.transmission;
     auto voltransmission  = material.voltransmission;
@@ -1264,7 +1263,7 @@ material_point eval_material(const yocto_scene& scene,
     if (material.metallic_texture >= 0) {
         auto& metallic_texture = scene.textures[material.metallic_texture];
         auto  metallic_txt     = eval_texture(metallic_texture, texturecoord);
-        point.metallic *= metallic_txt.z;
+        metallic *= metallic_txt.z;
         if (material.gltf_textures) {
             point.roughness *= metallic_txt.x;
         }
@@ -1309,11 +1308,15 @@ material_point eval_material(const yocto_scene& scene,
         // flip vertical axis to align green with image up
         point.normal_map.y = -point.normal_map.y;
     }
-    if (material.ior_from_specular && point.specular != zero3f) {
+    if(metallic) {
+        point.eta = (1 + sqrt(point.diffuse)) / (1 - sqrt(point.diffuse));
+        point.specular = vec3f{metallic};
+        point.diffuse *= 1 - metallic;
+    } else if(material.ior_from_specular && point.specular != zero3f) {
         point.eta = (1 + sqrt(point.specular)) / (1 - sqrt(point.specular));
         point.specular = {1, 1, 1};
     }
-    if (point.diffuse * (1 - point.metallic) != zero3f || point.roughness) {
+    if (point.diffuse != zero3f || point.roughness) {
         point.roughness = point.roughness * point.roughness;
         point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
     }

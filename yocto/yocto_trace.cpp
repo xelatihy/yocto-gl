@@ -587,8 +587,7 @@ constexpr auto coat_roughness = 0.0f;
 
 bool has_brdf(const material_point& material) {
     return material.coat != zero3f || material.specular != zero3f ||
-           material.metallic != 0 || material.diffuse != zero3f ||
-           material.transmission != zero3f;
+           material.diffuse != zero3f || material.transmission != zero3f;
 }
 bool has_volume(const material_point& material) {
     return material.voldensity != zero3f;
@@ -612,40 +611,27 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     if (is_delta(material)) return zero3f;
     auto brdfcos = zero3f;
 
-    auto cw = (material.coat == zero3f)
-                  ? vec3f{1}
-                  : material.coat * (1 - fresnel_dielectric(coat_eta,
-                                             abs(dot(normal, outgoing))));
-    auto mw = cw * (1 - material.metallic);
-    auto sw = mw * (1 - material.specular * fresnel_dielectric(coat_eta,
-                                                abs(dot(normal, outgoing))));
     if (material.coat != zero3f) {
         brdfcos += eval_microfacet_reflection(
             coat_roughness, coat_eta, zero3f, normal, outgoing, incoming);
     }
-    if (material.metallic * cw != zero3f) {
-        auto eta = reflectivity_to_eta(material.diffuse);
-        brdfcos += cw * material.metallic *
-                   eval_microfacet_reflection(material.roughness, eta, zero3f,
-                       normal, outgoing, incoming);
-    }
-    if (material.specular * mw != zero3f) {
-        brdfcos += mw * material.specular *
+    if (material.specular != zero3f) {
+        brdfcos += material.specular *
                    eval_microfacet_reflection(material.roughness, material.eta,
                        zero3f, normal, outgoing, incoming);
     }
-    if (material.diffuse * sw != zero3f) {
-        brdfcos += sw * material.diffuse *
+    if (material.diffuse != zero3f) {
+        brdfcos += material.diffuse *
                    eval_diffuse_reflection(
                        material.roughness, normal, outgoing, incoming);
     }
-    if (material.transmission * mw != zero3f && !material.thin) {
-        brdfcos += mw * material.transmission *
+    if (material.transmission != zero3f && !material.thin) {
+        brdfcos += material.transmission *
                    eval_microfacet_transmission(material.roughness,
                        material.eta, normal, outgoing, incoming);
     }
-    if (material.transmission * mw != zero3f && material.thin) {
-        brdfcos += mw * material.transmission *
+    if (material.transmission != zero3f && material.thin) {
+        brdfcos += material.transmission *
                    eval_microfacet_transparency(material.roughness,
                        material.eta, normal, outgoing, incoming);
     }
@@ -666,13 +652,8 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
         if (same_hemi) brdfcos += weight * fresnel;
         weight *= 1 - fresnel * material.coat;
     }
-    if (material.metallic * weight != zero3f) {
-        auto fresnel = fresnel_dielectric(reflectivity_to_eta(material.diffuse), ndo);
-        if (same_hemi) brdfcos += weight * material.metallic * fresnel;
-        weight *= 1 - material.metallic;
-    }
     if (material.specular * weight != zero3f) {
-        auto fresnel = fresnel_dielectric(coat_eta, ndo);
+        auto fresnel = fresnel_dielectric(material.eta, ndo);
         if (same_hemi) brdfcos += weight * material.specular * fresnel;
         weight *= 1 - material.specular * fresnel;
     }
@@ -685,31 +666,25 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
     return brdfcos;
 }
 
-array<float, 5> compute_brdf_pdfs(const material_point& material,
+array<float, 4> compute_brdf_pdfs(const material_point& material,
     const vec3f& normal, const vec3f& outgoing) {
     auto weight  = vec3f{1};
-    auto weights = array<float, 5>{0, 0, 0, 0, 0};
+    auto weights = array<float, 4>{0, 0, 0, 0};
     if (material.coat != zero3f) {
         auto F     = fresnel_dielectric(coat_eta, abs(dot(outgoing, normal)));
         weights[0] = max(weight * F);
         weight *= 1 - F * material.coat;
     }
-    if (material.metallic != 0) {
-        auto F = fresnel_dielectric(
-            reflectivity_to_eta(material.diffuse), abs(dot(outgoing, normal)));
-        weights[1] = max(weight * material.metallic * F);
-        weight *= 1 - material.metallic;
-    }
     if (material.specular != zero3f) {
         auto F = fresnel_dielectric(material.eta, abs(dot(outgoing, normal)));
-        weights[2] = max(weight * material.specular * F);
+        weights[1] = max(weight * material.specular * F);
         weight *= 1 - F * material.specular;
     }
     if (material.diffuse != zero3f) {
-        weights[3] = max(weight * material.diffuse);
+        weights[2] = max(weight * material.diffuse);
     }
     if (material.transmission != zero3f) {
-        weights[4] = max(weight * material.transmission);
+        weights[3] = max(weight * material.transmission);
     }
     return weights;
 }
@@ -731,23 +706,17 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
 
     weight_sum += pdfs[1];
     if (rnl < weight_sum) {
-        return sample_microfacet_reflection(material.roughness,
-            reflectivity_to_eta(material.diffuse), normal, outgoing, rn);
-    }
-
-    weight_sum += pdfs[2];
-    if (rnl < weight_sum) {
         return sample_microfacet_reflection(
             material.roughness, material.eta, normal, outgoing, rn);
     }
 
-    weight_sum += pdfs[3];
+    weight_sum += pdfs[2];
     if (rnl < weight_sum) {
         return sample_diffuse_reflection(
             material.roughness, normal, outgoing, rn);
     }
 
-    weight_sum += pdfs[4];
+    weight_sum += pdfs[3];
     if (rnl < weight_sum && !material.thin) {
         return sample_microfacet_transmission(
             material.roughness, material.eta, normal, outgoing, rn);
@@ -765,7 +734,7 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
     if (!is_delta(material)) return zero3f;
 
     auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
-    auto pdfs = compute_brdf_pdfs(material, normal, outgoing);
+    auto pdfs      = compute_brdf_pdfs(material, normal, outgoing);
 
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
@@ -781,17 +750,13 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
     }
 
     weight_sum += pdfs[2];
-    if (rnl < weight_sum) {
-        return reflect(outgoing, up_normal);
-    }
-
-    weight_sum += pdfs[3];
     // skip diffuse
 
-    weight_sum += pdfs[4];
+    weight_sum += pdfs[3];
     if (rnl < weight_sum && !material.thin) {
         return refract(outgoing, up_normal,
-            dot(normal, outgoing) > 0 ? 1 / mean(material.eta) : mean(material.eta));
+            dot(normal, outgoing) > 0 ? 1 / mean(material.eta)
+                                      : mean(material.eta));
     }
     if (rnl < weight_sum && material.thin) {
         return -outgoing;
@@ -816,26 +781,20 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
 
     if (pdfs[1]) {
         pdf += pdfs[1] * sample_microfacet_reflection_pdf(material.roughness,
-                             reflectivity_to_eta(material.eta), zero3f, normal,
-                             outgoing, incoming);
-    }
-
-    if (pdfs[2]) {
-        pdf += pdfs[2] * sample_microfacet_reflection_pdf(material.roughness,
                              material.eta, zero3f, normal, outgoing, incoming);
     }
 
-    if (pdfs[3]) {
-        pdf += pdfs[3] * sample_diffuse_reflection_pdf(
+    if (pdfs[2]) {
+        pdf += pdfs[2] * sample_diffuse_reflection_pdf(
                              material.roughness, normal, outgoing, incoming);
     }
 
-    if (pdfs[4] && !material.thin) {
-        pdf += pdfs[4] * sample_microfacet_transmission_pdf(material.roughness,
+    if (pdfs[3] && !material.thin) {
+        pdf += pdfs[3] * sample_microfacet_transmission_pdf(material.roughness,
                              material.eta, normal, outgoing, incoming);
     }
-    if (pdfs[4] && material.thin) {
-        pdf += pdfs[4] * sample_microfacet_transparency_pdf(material.roughness,
+    if (pdfs[3] && material.thin) {
+        pdf += pdfs[3] * sample_microfacet_transparency_pdf(material.roughness,
                              material.eta, normal, outgoing, incoming);
     }
 
@@ -853,23 +812,19 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
     auto pdf = 0.0f;
 
     if (pdfs[0]) {
-        if(same_hemi) pdf += pdfs[0];
+        if (same_hemi) pdf += pdfs[0];
     }
 
     if (pdfs[1]) {
-        if(same_hemi) pdf += pdfs[1];
+        if (same_hemi) pdf += pdfs[1];
     }
 
     if (pdfs[2]) {
-        if(same_hemi) pdf += pdfs[2];
-    }
-
-    if (pdfs[3]) {
         // skip diffuse
     }
 
-    if (pdfs[4]) {
-        if(other_hemi) pdf += pdfs[4];
+    if (pdfs[3]) {
+        if (other_hemi) pdf += pdfs[3];
     }
 
     return pdf;
