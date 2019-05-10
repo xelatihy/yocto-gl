@@ -662,20 +662,19 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
 
     auto weight = vec3f{1};
     if (material.coat != zero3f) {
-        auto F = fresnel_dielectric(coat_eta, ndo);
-        if (same_hemi) brdfcos += weight * F;
-        weight *= 1 - F * material.coat;
+        auto fresnel = fresnel_dielectric(coat_eta, ndo);
+        if (same_hemi) brdfcos += weight * fresnel;
+        weight *= 1 - fresnel * material.coat;
     }
     if (material.metallic * weight != zero3f) {
-        auto F = material.metallic *
-                 fresnel_dielectric(reflectivity_to_eta(material.diffuse), ndo);
-        if (same_hemi) brdfcos += weight * F;
+        auto fresnel = fresnel_dielectric(reflectivity_to_eta(material.diffuse), ndo);
+        if (same_hemi) brdfcos += weight * material.metallic * fresnel;
         weight *= 1 - material.metallic;
     }
     if (material.specular * weight != zero3f) {
-        auto F = fresnel_dielectric(coat_eta, ndo);
-        if (same_hemi) brdfcos += weight * material.specular * F;
-        weight *= 1 - material.specular * F;
+        auto fresnel = fresnel_dielectric(coat_eta, ndo);
+        if (same_hemi) brdfcos += weight * material.specular * fresnel;
+        weight *= 1 - material.specular * fresnel;
     }
     if (material.transmission * weight != zero3f && !material.thin) {
         if (other_hemi) brdfcos += weight * material.transmission;
@@ -764,6 +763,8 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
 vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
     if (!is_delta(material)) return zero3f;
+
+    auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
     auto pdfs = compute_brdf_pdfs(material, normal, outgoing);
 
     // keep a weight sum to pick a lobe
@@ -771,18 +772,17 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
 
     weight_sum += pdfs[0];
     if (rnl < weight_sum) {
-        return sample_delta_reflection(coat_eta, normal, outgoing);
+        return reflect(outgoing, up_normal);
     }
 
     weight_sum += pdfs[1];
     if (rnl < weight_sum) {
-        return sample_delta_reflection(
-            reflectivity_to_eta(material.diffuse), normal, outgoing);
+        return reflect(outgoing, up_normal);
     }
 
     weight_sum += pdfs[2];
     if (rnl < weight_sum) {
-        return sample_delta_reflection(material.eta, normal, outgoing);
+        return reflect(outgoing, up_normal);
     }
 
     weight_sum += pdfs[3];
@@ -790,10 +790,11 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
 
     weight_sum += pdfs[4];
     if (rnl < weight_sum && !material.thin) {
-        return sample_delta_transmission(material.eta, normal, outgoing);
+        return refract(outgoing, up_normal,
+            dot(normal, outgoing) > 0 ? 1 / mean(material.eta) : mean(material.eta));
     }
     if (rnl < weight_sum && material.thin) {
-        return sample_delta_transparency(material.eta, normal, outgoing);
+        return -outgoing;
     }
 
     // something went wrong if we got here
@@ -843,37 +844,32 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
 float sample_delta_pdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
     if (!is_delta(material)) return 0;
+
+    auto same_hemi  = dot(normal, outgoing) * dot(normal, incoming) > 0;
+    auto other_hemi = dot(normal, outgoing) * dot(normal, incoming) < 0;
+
     auto pdfs = compute_brdf_pdfs(material, normal, outgoing);
 
     auto pdf = 0.0f;
 
     if (pdfs[0]) {
-        pdf += pdfs[0] * sample_delta_reflection_pdf(
-                             coat_eta, zero3f, normal, outgoing, incoming);
+        if(same_hemi) pdf += pdfs[0];
     }
 
     if (pdfs[1]) {
-        pdf += pdfs[1] *
-               sample_delta_reflection_pdf(reflectivity_to_eta(material.eta),
-                   zero3f, normal, outgoing, incoming);
+        if(same_hemi) pdf += pdfs[1];
     }
 
     if (pdfs[2]) {
-        pdf += pdfs[2] * sample_delta_reflection_pdf(
-                             material.eta, zero3f, normal, outgoing, incoming);
+        if(same_hemi) pdf += pdfs[2];
     }
 
     if (pdfs[3]) {
         // skip diffuse
     }
 
-    if (pdfs[4] && !material.thin) {
-        pdf += pdfs[4] * sample_delta_transmission_pdf(
-                             material.eta, normal, outgoing, incoming);
-    }
-    if (pdfs[4] && material.thin) {
-        pdf += pdfs[4] * sample_delta_transparency_pdf(
-                             material.eta, normal, outgoing, incoming);
+    if (pdfs[4]) {
+        if(other_hemi) pdf += pdfs[4];
     }
 
     return pdf;
