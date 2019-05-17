@@ -550,8 +550,7 @@ float sample_microfacet_transparency_pdf(float roughness, const vec3f& eta,
     auto ir        = reflect(-incoming, up_normal);
     auto halfway   = normalize(ir + outgoing);
     auto d         = sample_microfacet_pdf(roughness, up_normal, halfway);
-    auto jacobian  = 0.25f / abs(dot(outgoing, halfway));
-    return d * jacobian;
+    return d / (4 * abs(dot(outgoing, halfway)));
 }
 float sample_delta_transparency_pdf(const vec3f& eta, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
@@ -826,29 +825,45 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
     auto pdf = 0.0f;
 
     if (pdfs[0] && same_hemisphere(normal, outgoing, incoming)) {
-        pdf += pdfs[0] * sample_microfacet_reflection_pdf(coat_roughness,
-                             coat_eta, zero3f, normal, outgoing, incoming);
+        auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+        auto halfway   = normalize(incoming + outgoing);
+        pdf += pdfs[0] *
+               sample_microfacet_pdf(coat_roughness, up_normal, halfway) /
+               (4 * abs(dot(outgoing, halfway)));
     }
 
     if (pdfs[1] && same_hemisphere(normal, outgoing, incoming)) {
-        pdf += pdfs[1] * sample_microfacet_reflection_pdf(material.roughness,
-                             material.eta, zero3f, normal, outgoing, incoming);
+        auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+        auto halfway   = normalize(incoming + outgoing);
+        pdf += pdfs[1] *
+               sample_microfacet_pdf(material.roughness, up_normal, halfway) /
+               (4 * abs(dot(outgoing, halfway)));
     }
 
     if (pdfs[2] && same_hemisphere(normal, outgoing, incoming)) {
-        pdf += pdfs[2] * sample_diffuse_reflection_pdf(
-                             material.roughness, normal, outgoing, incoming);
+        pdf += pdfs[2] * sample_hemisphere_pdf(normal, incoming);
     }
 
     if (pdfs[3] && other_hemisphere(normal, outgoing, incoming) &&
         !material.thin) {
-        pdf += pdfs[3] * sample_microfacet_transmission_pdf(material.roughness,
-                             material.eta, normal, outgoing, incoming);
+        auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
+        auto halfway_vector = dot(outgoing, normal) > 0
+                                  ? -(outgoing + material.eta * incoming)
+                                  : (material.eta * outgoing + incoming);
+        auto halfway = normalize(halfway_vector);
+        // [Walter 2007] equation 17
+        pdf += pdfs[3] *
+               sample_microfacet_pdf(material.roughness, up_normal, halfway) *
+               abs(dot(halfway, incoming)) /
+               dot(halfway_vector, halfway_vector);
     }
     if (pdfs[3] && other_hemisphere(normal, outgoing, incoming) &&
         material.thin) {
-        pdf += pdfs[3] * sample_microfacet_transparency_pdf(material.roughness,
-                             material.eta, normal, outgoing, incoming);
+        auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
+        auto ir        = reflect(-incoming, up_normal);
+        auto halfway   = normalize(ir + outgoing);
+        auto d = sample_microfacet_pdf(material.roughness, up_normal, halfway);
+        pdf += pdfs[3] * d / (4 * abs(dot(outgoing, halfway)));
     }
 
     return pdf;
