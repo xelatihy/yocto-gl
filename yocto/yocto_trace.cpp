@@ -1260,62 +1260,83 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // clamp ray if inside a volume
         auto in_volume = false;
-        if(!volume_stack.empty()) {
+        if (!volume_stack.empty()) {
             auto [transmission, distance] = sample_volume_transmission(
                 last_medium, intersection.distance, rand1f(rng), rand1f(rng));
             weight *= transmission;
-            in_volume = distance < intersection.distance;
+            in_volume             = distance < intersection.distance;
             intersection.distance = distance;
         }
 
-        // prepare shading point
-        auto [position, normal, material] =
-            !in_volume ? make_point(scene, intersection, last_incoming)
-                       : make_volpoint(last_medium, last_position,
-                             last_incoming, intersection.distance);
-
-        // handle opacity
-        if(material.opacity < 1 && rand1f(rng) >= material.opacity) {
-            last_position = position;
-            bounce -= 1;
-            continue;
-        }
-        hit = true;
-
-        // accumulate emission
-        radiance += !in_volume
-                        ? weight * eval_emission(material, normal, outgoing)
-                        : weight * eval_volemission(material, normal, outgoing);
-        if (!has_brdf(material) && !has_volume(material)) break;
-
-        // russian roulette
-        if (max(weight) < 1 && bounce > 2) {
-            auto rr_prob = max((float)0.05, 1 - max(weight));
-            if(rand1f(rng) > rr_prob) break;
-            weight *= rr_prob;
-        }
-
-        // next direction
-        auto [scattering, incoming] =
-            !in_volume
-                ? (is_delta(material) ? sample_delta_direction(material, normal,
-                                            outgoing, rand1f(rng))
-                                      : sample_brdf_direction_mis(scene, lights,
-                                            bvh, material, position, normal,
-                                            outgoing, rand1f(rng), rand2f(rng),
-                                            rand1f(rng), rand1f(rng)))
-                : sample_volume_direction_mis(scene, lights, bvh, material,
-                      position, normal, outgoing, rand1f(rng), rand2f(rng),
-                      rand1f(rng), rand1f(rng));
-        weight *= scattering;
-        if (weight == zero3f) break;
-
-        // setup next iteration
-        last_position = position;
-        last_incoming = incoming;
+        // switch between surface and volume
         if (!in_volume) {
+            // prepare shading point
+            auto [position, normal, material] = make_point(
+                scene, intersection, last_incoming);
+
+            // handle opacity
+            if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+                last_position = position;
+                bounce -= 1;
+                continue;
+            }
+            hit = true;
+
+            // accumulate emission
+            radiance += weight * eval_emission(material, normal, outgoing);
+            if (!has_brdf(material) && !has_volume(material)) break;
+
+            // russian roulette
+            if (max(weight) < 1 && bounce > 2) {
+                auto rr_prob = max((float)0.05, 1 - max(weight));
+                if (rand1f(rng) > rr_prob) break;
+                weight *= rr_prob;
+            }
+
+            // next direction
+            auto [scattering, incoming] =
+                (is_delta(material)
+                        ? sample_delta_direction(
+                              material, normal, outgoing, rand1f(rng))
+                        : sample_brdf_direction_mis(scene, lights, bvh,
+                              material, position, normal, outgoing, rand1f(rng),
+                              rand2f(rng), rand1f(rng), rand1f(rng)));
+            weight *= scattering;
+            if (weight == zero3f) break;
+
+            // setup next iteration
+            last_position = position;
+            last_incoming = incoming;
             update_volume_stack(volume_stack, last_medium, material,
                 intersection.instance_id, normal, outgoing, incoming);
+        } else {
+            // prepare shading point
+            auto [position, normal, material] = make_volpoint(last_medium,
+                last_position, last_incoming, intersection.distance);
+
+            // handle opacity
+            hit = true;
+
+            // accumulate emission
+            radiance += weight * eval_volemission(material, normal, outgoing);
+
+            // russian roulette
+            if (max(weight) < 1 && bounce > 2) {
+                auto rr_prob = max((float)0.05, 1 - max(weight));
+                if (rand1f(rng) > rr_prob) break;
+                weight *= rr_prob;
+            }
+
+            // next direction
+            auto [scattering, incoming] = sample_volume_direction_mis(scene,
+                lights, bvh, material, position, normal, outgoing, rand1f(rng),
+                rand2f(rng), rand1f(rng), rand1f(rng));
+            weight *= scattering;
+            if (weight == zero3f) break;
+
+            // setup next iteration
+            last_position = position;
+            last_incoming = incoming;
         }
     }
 
@@ -1349,7 +1370,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
             scene, intersection, last_incoming);
 
         // handle opacity
-        if(material.opacity < 1 && rand1f(rng) >= material.opacity) {
+        if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
             last_position = position;
             bounce -= 1;
             continue;
@@ -1363,7 +1384,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         // russian roulette
         if (max(weight) < 1 && bounce > 2) {
             auto rr_prob = max((float)0.05, 1 - max(weight));
-            if(rand1f(rng) > rr_prob) break;
+            if (rand1f(rng) > rr_prob) break;
             weight *= rr_prob;
         }
 
@@ -1411,7 +1432,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
             scene, intersection, last_incoming);
 
         // handle opacity
-        if(material.opacity < 1 && rand1f(rng) >= material.opacity) {
+        if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
             last_position = position;
             bounce -= 1;
             continue;
