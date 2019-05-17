@@ -492,8 +492,8 @@ vec3f sample_delta_transparency(
 vec3f sample_delta_passthrough(const vec3f& normal, const vec3f& outgoing) {
     return -outgoing;
 }
-vec3f sample_volume_scattering(const vec3f& albedo, float phaseg,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+vec3f sample_volume_scattering(
+    const vec3f& albedo, float phaseg, const vec3f& outgoing, const vec2f& rn) {
     auto direction = sample_phasefunction(phaseg, rn);
     return make_basis_fromz(-outgoing) * direction;
 }
@@ -563,7 +563,7 @@ float sample_delta_passthrough_pdf(
     return 1;
 }
 float sample_volume_scattering_pdf(const vec3f& albedo, float phaseg,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+    const vec3f& outgoing, const vec3f& incoming) {
     return eval_phasefunction(dot(outgoing, incoming), phaseg);
 }
 
@@ -596,8 +596,7 @@ vec3f eval_emission(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
     return material.emission;
 }
-vec3f eval_volemission(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing) {
+vec3f eval_volemission(const material_point& material, const vec3f& outgoing) {
     return material.volemission;
 }
 
@@ -881,8 +880,8 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
     return pdf;
 }
 
-vec3f eval_volscattering(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+vec3f eval_volscattering(const material_point& material, const vec3f& outgoing,
+    const vec3f& incoming) {
     if (!has_volume(material)) return zero3f;
     auto scattering = zero3f;
     if (material.voldensity != zero3f) {
@@ -891,7 +890,7 @@ vec3f eval_volscattering(const material_point& material, const vec3f& normal,
     }
     return scattering;
 }
-vec3f sample_volscattering(const material_point& material, const vec3f& normal,
+vec3f sample_volscattering(const material_point& material,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (!has_volume(material)) return zero3f;
     auto weights = vec1f{max(material.voldensity)};
@@ -903,14 +902,14 @@ vec3f sample_volscattering(const material_point& material, const vec3f& normal,
     weight_sum += weights[0];
     if (rnl < weight_sum) {
         return sample_volume_scattering(
-            material.volscatter, material.volanisotropy, normal, outgoing, rn);
+            material.volscatter, material.volanisotropy, outgoing, rn);
     }
 
     // something went wrong if we got here
     return zero3f;
 }
 float sample_volscattering_pdf(const material_point& material,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+    const vec3f& outgoing, const vec3f& incoming) {
     if (!has_volume(material)) return 0;
     auto weights = vec1f{max(material.voldensity)};
     if (weights == zero1f) return 0;
@@ -920,8 +919,7 @@ float sample_volscattering_pdf(const material_point& material,
     auto pdf = 0.0f;
     if (weights[0]) {
         pdf += weights[0] * sample_volume_scattering_pdf(material.volscatter,
-                                material.volanisotropy, normal, outgoing,
-                                incoming);
+                                material.volanisotropy, outgoing, incoming);
     }
 
     return pdf;
@@ -1105,11 +1103,10 @@ tuple<vec3f, vec3f> sample_brdf_direction_mis(const yocto_scene& scene,
 }
 
 tuple<vec3f, vec3f> sample_volume_direction(const material_point& material,
-    const vec3f& normal, const vec3f& outgoing, float rl, const vec2f& ruv) {
-    auto incoming = sample_volscattering(material, normal, outgoing, rl, ruv);
-    auto brdfcos  = eval_volscattering(material, normal, outgoing, incoming);
-    auto incoming_pdf = sample_volscattering_pdf(
-        material, normal, outgoing, incoming);
+    const vec3f& outgoing, float rl, const vec2f& ruv) {
+    auto incoming     = sample_volscattering(material, outgoing, rl, ruv);
+    auto brdfcos      = eval_volscattering(material, outgoing, incoming);
+    auto incoming_pdf = sample_volscattering_pdf(material, outgoing, incoming);
     if (incoming == zero3f || incoming_pdf == 0) {
         return {zero3f, zero3f};
     } else {
@@ -1118,15 +1115,15 @@ tuple<vec3f, vec3f> sample_volume_direction(const material_point& material,
 }
 tuple<vec3f, vec3f> sample_volume_direction_mis(const yocto_scene& scene,
     const trace_lights& lights, const bvh_scene& bvh,
-    const material_point& material, const vec3f& position, const vec3f& normal,
+    const material_point& material, const vec3f& position,
     const vec3f& outgoing, float rl, const vec2f& ruv, float re, float rmis) {
-    auto incoming =
-        (rmis < 0.5f)
-            ? sample_volscattering(material, normal, outgoing, rl, ruv)
-            : sample_lights(scene, lights, bvh, position, re, rl, ruv);
-    auto scattering = eval_volscattering(material, normal, outgoing, incoming);
+    auto incoming = (rmis < 0.5f)
+                        ? sample_volscattering(material, outgoing, rl, ruv)
+                        : sample_lights(
+                              scene, lights, bvh, position, re, rl, ruv);
+    auto scattering = eval_volscattering(material, outgoing, incoming);
     auto incoming_pdf =
-        0.5f * sample_volscattering_pdf(material, normal, outgoing, incoming) +
+        0.5f * sample_volscattering_pdf(material, outgoing, incoming) +
         0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming);
     if (incoming == zero3f || incoming_pdf == 0) {
         return {zero3f, zero3f};
@@ -1185,16 +1182,6 @@ trace_point make_point(const yocto_scene& scene,
     return point;
 }
 
-trace_point make_volpoint(const material_point& last_material,
-    const vec3f& origin, const vec3f& last_direction, float distance) {
-    auto point                         = trace_point{};
-    auto& [position, normal, material] = point;
-    position = origin + last_direction * distance;
-    normal   = last_direction;
-    material = last_material;
-    return point;
-}
-
 // Trace stats.
 atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
@@ -1219,19 +1206,18 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& origin_, const vec3f& direction_,
     rng_state& rng, const trace_params& params) {
     // initialize
-    auto radiance      = zero3f;
-    auto weight        = vec3f{1, 1, 1};
-    auto origin = origin_;
-    auto direction = direction_;
-    auto volume_stack  = short_vector<pair<material_point, int>, 8>{};
-    auto hit           = false;
+    auto radiance     = zero3f;
+    auto weight       = vec3f{1, 1, 1};
+    auto origin       = origin_;
+    auto direction    = direction_;
+    auto volume_stack = short_vector<pair<material_point, int>, 8>{};
+    auto hit          = false;
 
     // trace  path
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(
-                scene, bvh, origin, direction, intersection)) {
+        if (!trace_ray(scene, bvh, origin, direction, intersection)) {
             radiance += weight * eval_environment(scene, direction);
             break;
         }
@@ -1249,12 +1235,11 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             intersection.distance = distance;
         }
 
-        // prepare to shade
-        auto outgoing = -direction;
-
         // switch between surface and volume
         if (!in_volume) {
             // prepare shading point
+            auto outgoing                     = -direction;
+            auto incoming                     = -direction;
             auto [position, normal, material] = make_point(
                 scene, intersection, direction);
 
@@ -1271,14 +1256,26 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             if (!has_brdf(material) && !has_volume(material)) break;
 
             // next direction
-            auto [scattering, incoming] =
-                (is_delta(material)
-                        ? sample_delta_direction(
-                              material, normal, outgoing, rand1f(rng))
-                        : sample_brdf_direction_mis(scene, lights, bvh,
-                              material, position, normal, outgoing, rand1f(rng),
-                              rand2f(rng), rand1f(rng), rand1f(rng)));
-            weight *= scattering;
+            if (!is_delta(material)) {
+                if (rand1f(rng) < 0.5f) {
+                    incoming = sample_brdf(
+                        material, normal, outgoing, rand1f(rng), rand2f(rng));
+                } else {
+                    incoming = sample_lights(scene, lights, bvh, position,
+                        rand1f(rng), rand1f(rng), rand2f(rng));
+                }
+                weight *= eval_brdfcos(material, normal, outgoing, incoming) /
+                          (0.5f * sample_brdf_pdf(
+                                      material, normal, outgoing, incoming) +
+                              0.5f * sample_lights_pdf(scene, lights, bvh,
+                                         position, incoming));
+            } else {
+                incoming = sample_delta(
+                    material, normal, outgoing, rand1f(rng));
+                weight *= eval_delta(material, normal, outgoing, incoming) /
+                          sample_delta_pdf(
+                              material, normal, outgoing, incoming);
+            }
 
             // update volume stack
             if (material.voldensity != zero3f &&
@@ -1292,33 +1289,33 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             }
 
             // setup next iteration
-            origin = position;
+            origin    = position;
             direction = incoming;
         } else {
             // prepare shading point
-            auto medium                       = volume_stack.back().first;
-            auto [position, normal, material] = make_volpoint(
-                medium, origin, direction, intersection.distance);
+            auto outgoing = -direction;
+            auto position = origin + direction * intersection.distance;
+            auto material = volume_stack.back().first;
 
             // handle opacity
             hit = true;
 
             // accumulate emission
-            radiance += weight * eval_volemission(material, normal, outgoing);
+            radiance += weight * eval_volemission(material, outgoing);
 
             // next direction
             auto [scattering, incoming] = sample_volume_direction_mis(scene,
-                lights, bvh, material, position, normal, outgoing, rand1f(rng),
+                lights, bvh, material, position, outgoing, rand1f(rng),
                 rand2f(rng), rand1f(rng), rand1f(rng));
             weight *= scattering;
 
             // setup next iteration
-            origin = position;
+            origin    = position;
             direction = incoming;
         }
 
         // check weight
-        if(weight == zero3f || !isfinite(weight)) break;
+        if (weight == zero3f || !isfinite(weight)) break;
 
         // russian roulette
         if (max(weight) < 1 && bounce > 3) {
@@ -1336,24 +1333,24 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& origin_, const vec3f& direction_,
     rng_state& rng, const trace_params& params) {
     // initialize
-    auto radiance      = zero3f;
-    auto weight        = vec3f{1, 1, 1};
-    auto origin = origin_;
+    auto radiance  = zero3f;
+    auto weight    = vec3f{1, 1, 1};
+    auto origin    = origin_;
     auto direction = direction_;
-    auto hit           = false;
+    auto hit       = false;
 
     // trace  path
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(
-                scene, bvh, origin, direction, intersection)) {
+        if (!trace_ray(scene, bvh, origin, direction, intersection)) {
             radiance += weight * eval_environment(scene, direction);
             break;
         }
 
         // prepare shading point
         auto outgoing                     = -direction;
+        auto incoming                     = outgoing;
         auto [position, normal, material] = make_point(
             scene, intersection, direction);
 
@@ -1369,24 +1366,28 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         radiance += weight * eval_emission(material, normal, outgoing);
         if (!has_brdf(material)) break;
 
+        // next direction
+        if (!is_delta(material)) {
+            incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+            weight *= eval_delta(material, normal, outgoing, incoming) /
+                      sample_delta_pdf(material, normal, outgoing, incoming);
+        } else {
+            incoming = sample_brdf(
+                material, normal, outgoing, rand1f(rng), rand2f(rng));
+            weight *= eval_brdfcos(material, normal, outgoing, incoming) /
+                      sample_brdf_pdf(material, normal, outgoing, incoming);
+        }
+        if (weight == zero3f || !isfinite(weight)) break;
+
         // russian roulette
-        if (max(weight) < 1 && bounce > 2) {
+        if (max(weight) < 1 && bounce > 3) {
             auto rr_prob = max((float)0.05, 1 - max(weight));
             if (rand1f(rng) > rr_prob) break;
             weight *= rr_prob;
         }
 
-        // next direction
-        auto [scattering, incoming] =
-            is_delta(material) ? sample_delta_direction(
-                                     material, normal, outgoing, rand1f(rng))
-                               : sample_brdf_direction(material, normal,
-                                     outgoing, rand1f(rng), rand2f(rng));
-        weight *= scattering;
-        if (weight == zero3f) break;
-
         // setup next iteration
-        origin = position;
+        origin    = position;
         direction = incoming;
     }
 
@@ -1398,18 +1399,17 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& origin_, const vec3f& direction_,
     rng_state& rng, const trace_params& params) {
     // initialize
-    auto radiance      = zero3f;
-    auto weight        = vec3f{1, 1, 1};
-    auto origin = origin_;
+    auto radiance  = zero3f;
+    auto weight    = vec3f{1, 1, 1};
+    auto origin    = origin_;
     auto direction = direction_;
-    auto hit           = false;
+    auto hit       = false;
 
     // trace  path
     for (auto bounce = 0; bounce < max(params.max_bounces, 4); bounce++) {
         // intersect next point
         auto intersection = bvh_intersection{};
-        if (!trace_ray(
-                scene, bvh, origin, direction, intersection)) {
+        if (!trace_ray(scene, bvh, origin, direction, intersection)) {
             radiance += weight * eval_environment(scene, direction);
             break;
         }
@@ -1447,7 +1447,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         if (weight == zero3f) break;
 
         // setup next iteration
-        origin = position;
+        origin    = position;
         direction = incoming;
     }
 
