@@ -1040,27 +1040,6 @@ float sample_lights_pdf(const yocto_scene& scene, const trace_lights& lights,
     return pdf;
 }
 
-pair<float, vec2i> sample_distance(
-    const material_point& material, float rl, float rd) {
-    if (!has_volume(material)) return {0, {-1, -1}};
-    // auto idx = sample_uniform((int)material.mediums.size(), rl);
-    // rl       = clamp(rl * (int)material.mediums.size() - idx, 0.0f, 1.0f);
-    auto [distance, channel] = sample_distance(material.voldensity, rl, rd);
-    return {distance, {0, channel}};
-}
-
-float sample_distance_pdf(
-    const material_point& material, float distance, const vec2i& channel) {
-    if (!has_volume(material)) return 0;
-    return sample_distance_pdf(material.voldensity, distance, channel.y);
-}
-
-vec3f eval_transmission(const material_point& material, float distance) {
-    auto transmission = vec3f{1, 1, 1};
-    transmission *= eval_transmission(material.voldensity, distance);
-    return transmission;
-}
-
 // Trace point
 struct trace_point {
     vec3f          position = zero3f;
@@ -1125,7 +1104,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // intersect next point
         _trace_nrays += 1;
         auto intersection = bvh_intersection{};
-        if (!intersect_bvh(scene, bvh, make_ray(origin, direction), intersection)) {
+        if (!intersect_bvh(
+                scene, bvh, make_ray(origin, direction), intersection)) {
             radiance += weight * eval_environment(scene, direction);
             break;
         }
@@ -1135,10 +1115,10 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (!volume_stack.empty()) {
             auto medium              = volume_stack.back().first;
             auto [distance, channel] = sample_distance(
-                medium, rand1f(rng), rand1f(rng));
+                medium.voldensity, rand1f(rng), rand1f(rng));
             distance = min(distance, intersection.distance);
-            weight *= eval_transmission(medium, distance) /
-                      sample_distance_pdf(medium, distance, channel);
+            weight *= eval_transmission(medium.voldensity, distance) /
+                      sample_distance_pdf(medium.voldensity, distance, channel);
             in_volume             = distance < intersection.distance;
             intersection.distance = distance;
         }
@@ -1147,7 +1127,6 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (!in_volume) {
             // prepare shading point
             auto outgoing                     = -direction;
-            auto incoming                     = -direction;
             auto [position, normal, material] = make_point(
                 scene, intersection, direction);
 
@@ -1161,9 +1140,9 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
             // accumulate emission
             radiance += weight * eval_emission(material, normal, outgoing);
-            if (!has_brdf(material) && !has_volume(material)) break;
 
             // next direction
+            auto incoming = zero3f;
             if (!is_delta(material)) {
                 if (rand1f(rng) < 0.5f) {
                     incoming = sample_brdf(
@@ -1212,11 +1191,14 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             radiance += weight * eval_volemission(material, outgoing);
 
             // next direction
-            auto incoming = (rand1f(rng) < 0.5f)
-                           ? sample_volscattering(
-                                 material, outgoing, rand1f(rng), rand2f(rng))
-                           : sample_lights(scene, lights, bvh, position,
-                                 rand1f(rng), rand1f(rng), rand2f(rng));
+            auto incoming = zero3f;
+            if (rand1f(rng) < 0.5f) {
+                incoming = sample_volscattering(
+                    material, outgoing, rand1f(rng), rand2f(rng));
+            } else {
+                incoming = sample_lights(scene, lights, bvh, position,
+                    rand1f(rng), rand1f(rng), rand2f(rng));
+            }
             weight *=
                 eval_volscattering(material, outgoing, incoming) /
                 (0.5f * sample_volscattering_pdf(material, outgoing, incoming) +
@@ -1258,7 +1240,8 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         // intersect next point
         _trace_nrays += 1;
         auto intersection = bvh_intersection{};
-        if (!intersect_bvh(scene, bvh, make_ray(origin, direction), intersection)) {
+        if (!intersect_bvh(
+                scene, bvh, make_ray(origin, direction), intersection)) {
             radiance += weight * eval_environment(scene, direction);
             break;
         }
@@ -1279,7 +1262,6 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 
         // accumulate emission
         radiance += weight * eval_emission(material, normal, outgoing);
-        if (!has_brdf(material)) break;
 
         // next direction
         if (!is_delta(material)) {
@@ -1325,7 +1307,8 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         // intersect next point
         _trace_nrays += 1;
         auto intersection = bvh_intersection{};
-        if (!intersect_bvh(scene, bvh, make_ray(origin, direction), intersection)) {
+        if (!intersect_bvh(
+                scene, bvh, make_ray(origin, direction), intersection)) {
             radiance += weight * eval_environment(scene, direction);
             break;
         }
@@ -1345,14 +1328,10 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
         // accumulate emission
         radiance += weight * eval_emission(material, normal, outgoing);
-        if (!has_brdf(material)) break;
 
         // brdf * light
         radiance += weight * pif *
                     eval_brdfcos(material, normal, outgoing, outgoing);
-
-        // exit if needed
-        if (weight == zero3f) break;
 
         // continue path
         if (!is_delta(material)) break;
