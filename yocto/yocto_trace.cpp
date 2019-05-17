@@ -1076,10 +1076,6 @@ pair<float, bool> sample_roulette(const vec3f& albedo, const vec3f& weight,
 }
 #endif
 
-pair<float, bool> sample_opacity(float opacity, float rn) {
-    return (rn < opacity) ? pair{1.0f, true} : pair{1.0f, false};
-}
-
 pair<float, vec2i> sample_distance(
     const material_point& material, float rl, float rd) {
     if (!has_volume(material)) return {0, {-1, -1}};
@@ -1309,10 +1305,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                              last_incoming, distance);
 
         // handle opacity
-        auto [op_weight, op_hit] = sample_opacity(
-            material.opacity, rand1f(rng));
-        weight *= op_weight;
-        if (!op_hit) {
+        if(material.opacity < 1 && rand1f(rng) >= material.opacity) {
             last_position = position;
             bounce -= 1;
             continue;
@@ -1386,10 +1379,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
             scene, intersection, last_incoming);
 
         // handle opacity
-        auto [op_weight, op_hit] = sample_opacity(
-            material.opacity, rand1f(rng));
-        weight *= op_weight;
-        if (!op_hit) {
+        if(material.opacity < 1 && rand1f(rng) >= material.opacity) {
             last_position = position;
             bounce -= 1;
             continue;
@@ -1451,10 +1441,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
             scene, intersection, last_incoming);
 
         // handle opacity
-        auto [op_weight, op_hit] = sample_opacity(
-            material.opacity, rand1f(rng));
-        weight *= op_weight;
-        if (!op_hit) {
+        if(material.opacity < 1 && rand1f(rng) >= material.opacity) {
             last_position = position;
             bounce -= 1;
             continue;
