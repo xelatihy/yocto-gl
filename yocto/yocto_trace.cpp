@@ -1148,24 +1148,6 @@ pair<vec3f, float> sample_volume_transmission(
     return {transmission / pdf, distance};
 }
 
-// Updates trace volume stack upon entering and exiting a surface
-using trace_volume_stack = short_vector<pair<material_point, int>, 32>;
-void update_volume_stack(trace_volume_stack& volume_stack,
-    material_point& medium, const material_point& material, int instance,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-    if (material.voldensity == zero3f) return;
-    if (dot(incoming, normal) > 0 != dot(outgoing, normal) > 0) {
-        if (volume_stack.empty()) {
-            volume_stack.push_back({material, instance});
-            medium = material;
-        } else {
-            volume_stack.pop_back();
-            medium = {};
-            if (!volume_stack.empty()) medium = volume_stack.back().first;
-        }
-    }
-}
-
 // Trace point
 struct trace_point {
     vec3f          position = zero3f;
@@ -1241,8 +1223,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto weight        = vec3f{1, 1, 1};
     auto last_position = origin_;
     auto last_incoming = direction_;
-    auto volume_stack  = trace_volume_stack{};
-    auto last_medium   = material_point{};
+    auto volume_stack  = short_vector<pair<material_point, int>, 8>{};
     auto hit           = false;
 
     // trace  path
@@ -1255,18 +1236,19 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             break;
         }
 
-        // prepare to shade
-        auto outgoing = -last_incoming;
-
         // clamp ray if inside a volume
         auto in_volume = false;
         if (!volume_stack.empty()) {
+            auto medium                   = volume_stack.back().first;
             auto [transmission, distance] = sample_volume_transmission(
-                last_medium, intersection.distance, rand1f(rng), rand1f(rng));
+                medium, intersection.distance, rand1f(rng), rand1f(rng));
             weight *= transmission;
             in_volume             = distance < intersection.distance;
             intersection.distance = distance;
         }
+
+        // prepare to shade
+        auto outgoing = -last_incoming;
 
         // switch between surface and volume
         if (!in_volume) {
@@ -1304,15 +1286,24 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             weight *= scattering;
             if (weight == zero3f) break;
 
+            // update volume stack
+            if (material.voldensity != zero3f && other_hemisphere(normal, outgoing, incoming)) {
+                if (volume_stack.empty()) {
+                    volume_stack.push_back(
+                        {material, intersection.instance_id});
+                } else {
+                    volume_stack.pop_back();
+                }
+            }
+
             // setup next iteration
             last_position = position;
             last_incoming = incoming;
-            update_volume_stack(volume_stack, last_medium, material,
-                intersection.instance_id, normal, outgoing, incoming);
         } else {
             // prepare shading point
-            auto [position, normal, material] = make_volpoint(last_medium,
-                last_position, last_incoming, intersection.distance);
+            auto medium                       = volume_stack.back().first;
+            auto [position, normal, material] = make_volpoint(
+                medium, last_position, last_incoming, intersection.distance);
 
             // handle opacity
             hit = true;
