@@ -610,26 +610,63 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 
     if (material.coat != zero3f &&
         same_hemisphere(normal, outgoing, incoming)) {
-        brdfcos += eval_microfacet_reflection(
-            coat_roughness, coat_eta, zero3f, normal, outgoing, incoming);
+        if (!same_hemisphere(normal, outgoing, incoming)) return zero3f;
+        auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
+        auto halfway   = normalize(incoming + outgoing);
+        auto fresnel   = fresnel_dielectric(
+            coat_eta, abs(dot(halfway, outgoing)));
+        auto D = eval_microfacetD(coat_roughness, up_normal, halfway);
+        auto G = eval_microfacetG(
+            coat_roughness, up_normal, halfway, outgoing, incoming);
+        brdfcos += fresnel * D * G /
+                   abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+                   abs(dot(normal, incoming));
     }
     if (material.specular != zero3f &&
         same_hemisphere(normal, outgoing, incoming)) {
-        brdfcos += material.specular *
-                   eval_microfacet_reflection(material.roughness, material.eta,
-                       zero3f, normal, outgoing, incoming);
+        auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
+        auto halfway   = normalize(incoming + outgoing);
+        auto coat      = material.coat *
+                    fresnel_dielectric(coat_eta, abs(dot(halfway, outgoing)));
+        auto F = fresnel_dielectric(material.eta, abs(dot(halfway, outgoing)));
+        auto D = eval_microfacetD(material.roughness, up_normal, halfway);
+        auto G = eval_microfacetG(
+            material.roughness, up_normal, halfway, outgoing, incoming);
+        brdfcos += (1 - coat) * material.specular * F * D * G /
+                   abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+                   abs(dot(normal, incoming));
     }
     if (material.diffuse != zero3f &&
         same_hemisphere(normal, outgoing, incoming)) {
-        brdfcos += material.diffuse *
+        auto halfway = normalize(incoming + outgoing);
+        auto coat    = material.coat *
+                    fresnel_dielectric(coat_eta, abs(dot(halfway, outgoing)));
+        auto specular = material.specular * fresnel_dielectric(material.eta,
+                                                abs(dot(halfway, outgoing)));
+        brdfcos += (1 - coat) * (1 - specular) * material.diffuse *
                    eval_diffuse_reflection(
                        material.roughness, normal, outgoing, incoming);
     }
     if (material.transmission != zero3f &&
         other_hemisphere(normal, outgoing, incoming) && !material.thin) {
-        brdfcos += material.transmission *
-                   eval_microfacet_transmission(material.roughness,
-                       material.eta, normal, outgoing, incoming);
+        auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
+        auto halfway_vector = dot(outgoing, normal) > 0
+                                  ? -(outgoing + mean(material.eta) * incoming)
+                                  : (mean(material.eta) * outgoing + incoming);
+        auto halfway = normalize(halfway_vector);
+        auto coat    = material.coat *
+                    fresnel_dielectric(coat_eta, abs(dot(halfway, outgoing)));
+        auto F = fresnel_dielectric(material.eta, abs(dot(halfway, outgoing)));
+        auto D = eval_microfacetD(material.roughness, up_normal, halfway);
+        auto G = eval_microfacetG(
+            material.roughness, up_normal, halfway, outgoing, incoming);
+
+        auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
+                         (dot(outgoing, normal) * dot(incoming, normal));
+
+        // [Walter 2007] equation 21
+        brdfcos += (1 - coat) * material.transmission * abs(dot_terms) * (1 - F) * D * G / dot(halfway_vector, halfway_vector) *
+               abs(dot(normal, incoming));
     }
     if (material.transmission != zero3f &&
         other_hemisphere(normal, outgoing, incoming) && material.thin) {
