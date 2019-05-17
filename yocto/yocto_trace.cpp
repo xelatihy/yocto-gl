@@ -1236,13 +1236,15 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             break;
         }
 
-        // clamp ray if inside a volume
+        // handle transmission if inside a volume
         auto in_volume = false;
         if (!volume_stack.empty()) {
-            auto medium                   = volume_stack.back().first;
-            auto [transmission, distance] = sample_volume_transmission(
-                medium, intersection.distance, rand1f(rng), rand1f(rng));
-            weight *= transmission;
+            auto medium              = volume_stack.back().first;
+            auto [distance, channel] = sample_distance(
+                medium, rand1f(rng), rand1f(rng));
+            distance = min(distance, intersection.distance);
+            weight *= eval_transmission(medium, distance) /
+                      sample_distance_pdf(medium, distance, channel);
             in_volume             = distance < intersection.distance;
             intersection.distance = distance;
         }
@@ -1287,7 +1289,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             if (weight == zero3f) break;
 
             // update volume stack
-            if (material.voldensity != zero3f && other_hemisphere(normal, outgoing, incoming)) {
+            if (material.voldensity != zero3f &&
+                other_hemisphere(normal, outgoing, incoming)) {
                 if (volume_stack.empty()) {
                     volume_stack.push_back(
                         {material, intersection.instance_id});
