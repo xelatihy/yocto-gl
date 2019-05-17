@@ -1217,7 +1217,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (max(weight) < 1 && bounce > 3) {
             auto rr_prob = max((float)0.05, 1 - max(weight));
             if (rand1f(rng) > rr_prob) break;
-            weight *= rr_prob;
+            weight *= 1 / rr_prob;
         }
     }
 
@@ -1280,7 +1280,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (max(weight) < 1 && bounce > 3) {
             auto rr_prob = max((float)0.05, 1 - max(weight));
             if (rand1f(rng) > rr_prob) break;
-            weight *= rr_prob;
+            weight *= 1 / rr_prob;
         }
 
         // setup next iteration
