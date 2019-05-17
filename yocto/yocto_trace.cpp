@@ -665,8 +665,9 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
                          (dot(outgoing, normal) * dot(incoming, normal));
 
         // [Walter 2007] equation 21
-        brdfcos += (1 - coat) * material.transmission * abs(dot_terms) * (1 - F) * D * G / dot(halfway_vector, halfway_vector) *
-               abs(dot(normal, incoming));
+        brdfcos += (1 - coat) * material.transmission * abs(dot_terms) *
+                   (1 - F) * D * G / dot(halfway_vector, halfway_vector) *
+                   abs(dot(normal, incoming));
     }
     if (material.transmission != zero3f &&
         other_hemisphere(normal, outgoing, incoming) && material.thin) {
