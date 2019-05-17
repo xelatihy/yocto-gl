@@ -1259,16 +1259,20 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto outgoing = -last_incoming;
 
         // clamp ray if inside a volume
-        auto [transmission, distance] = sample_volume_transmission(
-            last_medium, intersection.distance, rand1f(rng), rand1f(rng));
-        weight *= transmission;
-        auto on_surface = distance >= intersection.distance;
+        auto in_volume = false;
+        if(!volume_stack.empty()) {
+            auto [transmission, distance] = sample_volume_transmission(
+                last_medium, intersection.distance, rand1f(rng), rand1f(rng));
+            weight *= transmission;
+            in_volume = distance < intersection.distance;
+            intersection.distance = distance;
+        }
 
         // prepare shading point
         auto [position, normal, material] =
-            on_surface ? make_point(scene, intersection, last_incoming)
+            !in_volume ? make_point(scene, intersection, last_incoming)
                        : make_volpoint(last_medium, last_position,
-                             last_incoming, distance);
+                             last_incoming, intersection.distance);
 
         // handle opacity
         if(material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1279,7 +1283,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         hit = true;
 
         // accumulate emission
-        radiance += on_surface
+        radiance += !in_volume
                         ? weight * eval_emission(material, normal, outgoing)
                         : weight * eval_volemission(material, normal, outgoing);
         if (!has_brdf(material) && !has_volume(material)) break;
@@ -1293,7 +1297,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
         // next direction
         auto [scattering, incoming] =
-            on_surface
+            !in_volume
                 ? (is_delta(material) ? sample_delta_direction(material, normal,
                                             outgoing, rand1f(rng))
                                       : sample_brdf_direction_mis(scene, lights,
@@ -1309,7 +1313,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // setup next iteration
         last_position = position;
         last_incoming = incoming;
-        if (on_surface) {
+        if (!in_volume) {
             update_volume_stack(volume_stack, last_medium, material,
                 intersection.instance_id, normal, outgoing, incoming);
         }
