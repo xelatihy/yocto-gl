@@ -579,7 +579,7 @@ constexpr bool trace_non_rigid_frames = true;
 
 // defaults
 constexpr auto coat_eta       = vec3f{1.5};
-constexpr auto coat_roughness = 0.0f;
+constexpr auto coat_roughness = 0.03f * 0.03f;
 
 bool has_brdf(const material_point& material) {
     return material.coat != zero3f || material.specular != zero3f ||
