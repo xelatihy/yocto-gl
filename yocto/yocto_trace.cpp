@@ -611,26 +611,26 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     if (is_delta(material)) return zero3f;
     auto brdfcos = zero3f;
 
-    if (material.coat != zero3f) {
+    if (material.coat != zero3f && same_hemisphere(normal, outgoing, incoming)) {
         brdfcos += eval_microfacet_reflection(
             coat_roughness, coat_eta, zero3f, normal, outgoing, incoming);
     }
-    if (material.specular != zero3f) {
+    if (material.specular != zero3f && same_hemisphere(normal, outgoing, incoming)) {
         brdfcos += material.specular *
                    eval_microfacet_reflection(material.roughness, material.eta,
                        zero3f, normal, outgoing, incoming);
     }
-    if (material.diffuse != zero3f) {
+    if (material.diffuse != zero3f && same_hemisphere(normal, outgoing, incoming)) {
         brdfcos += material.diffuse *
                    eval_diffuse_reflection(
                        material.roughness, normal, outgoing, incoming);
     }
-    if (material.transmission != zero3f && !material.thin) {
+    if (material.transmission != zero3f && other_hemisphere(normal, outgoing, incoming) && !material.thin) {
         brdfcos += material.transmission *
-                   eval_microfacet_transmission(material.roughness,
-                       material.eta, normal, outgoing, incoming);
+                eval_microfacet_transmission(material.roughness,
+                    material.eta, normal, outgoing, incoming);
     }
-    if (material.transmission != zero3f && material.thin) {
+    if (material.transmission != zero3f && other_hemisphere(normal, outgoing, incoming) && material.thin) {
         brdfcos += material.transmission *
                    eval_microfacet_transparency(material.roughness,
                        material.eta, normal, outgoing, incoming);
@@ -642,20 +642,16 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
     if (!is_delta(material)) return zero3f;
     auto brdfcos = zero3f;
 
-    auto same_hemi  = dot(normal, outgoing) * dot(normal, incoming) > 0;
-    auto other_hemi = dot(normal, outgoing) * dot(normal, incoming) < 0;
-
-    if (material.coat != zero3f && same_hemi) {
+    if (material.coat != zero3f && same_hemisphere(normal, outgoing, incoming)) {
         brdfcos += fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
     }
-    if (material.specular != zero3f && same_hemi) {
+    if (material.specular != zero3f && same_hemisphere(normal, outgoing, incoming)) {
         auto coat = material.coat *
                     fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
         brdfcos += (1 - coat) * material.specular *
-                   fresnel_dielectric(
-                       material.eta, abs(dot(normal, outgoing)));
+                   fresnel_dielectric(material.eta, abs(dot(normal, outgoing)));
     }
-    if (material.transmission != zero3f && other_hemi) {
+    if (material.transmission != zero3f && other_hemisphere(normal, outgoing, incoming)) {
         auto coat = material.coat *
                     fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
         auto specular = material.specular * fresnel_dielectric(material.eta,
@@ -665,31 +661,32 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
     return brdfcos;
 }
 
-vec4f compute_brdf_pdfs(const material_point& material,
-    const vec3f& normal, const vec3f& outgoing) {
+vec4f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing) {
     auto weights = zero4f;
     if (material.coat != zero3f) {
         auto fresnel = fresnel_dielectric(coat_eta, abs(dot(outgoing, normal)));
-        weights[0] = max(fresnel);
+        weights[0]   = max(fresnel);
     }
     if (material.specular != zero3f) {
         auto coat = material.coat *
                     fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
-        auto fresnel = fresnel_dielectric(material.eta, abs(dot(outgoing, normal)));
+        auto fresnel = fresnel_dielectric(
+            material.eta, abs(dot(outgoing, normal)));
         weights[1] = max((1 - coat) * material.specular * fresnel);
     }
     if (material.diffuse != zero3f) {
         auto coat = material.coat *
                     fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
-        auto specular = material.specular *
-                    fresnel_dielectric(material.eta, abs(dot(normal, outgoing)));
-        weights[2] = max((1 - coat) * (1 - specular) * material.diffuse);
+        auto specular = material.specular * fresnel_dielectric(material.eta,
+                                                abs(dot(normal, outgoing)));
+        weights[2]    = max((1 - coat) * (1 - specular) * material.diffuse);
     }
     if (material.transmission != zero3f) {
         auto coat = material.coat *
                     fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
-        auto specular = material.specular *
-                    fresnel_dielectric(material.eta, abs(dot(normal, outgoing)));
+        auto specular = material.specular * fresnel_dielectric(material.eta,
+                                                abs(dot(normal, outgoing)));
         weights[3] = max((1 - coat) * (1 - specular) * material.transmission);
     }
     weights /= sum(weights);
@@ -700,37 +697,41 @@ vec4f compute_brdf_pdfs(const material_point& material,
 vec3f sample_brdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (is_delta(material)) return zero3f;
-    auto pdfs = compute_brdf_pdfs(material, normal, outgoing);
+
+    auto pdfs      = compute_brdf_pdfs(material, normal, outgoing);
+    auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
     // keep a weight sum to pick a lobe
     auto weight_sum = 0.0f;
 
     weight_sum += pdfs[0];
     if (rnl < weight_sum) {
-        return sample_microfacet_reflection(
-            coat_roughness, coat_eta, normal, outgoing, rn);
+        auto halfway = sample_microfacet(coat_roughness, up_normal, rn);
+        return reflect(outgoing, halfway);
     }
 
     weight_sum += pdfs[1];
     if (rnl < weight_sum) {
-        return sample_microfacet_reflection(
-            material.roughness, material.eta, normal, outgoing, rn);
+        auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+        return reflect(outgoing, halfway);
     }
 
     weight_sum += pdfs[2];
     if (rnl < weight_sum) {
-        return sample_diffuse_reflection(
-            material.roughness, normal, outgoing, rn);
+        return sample_hemisphere(up_normal, rn);
     }
 
     weight_sum += pdfs[3];
     if (rnl < weight_sum && !material.thin) {
-        return sample_microfacet_transmission(
-            material.roughness, material.eta, normal, outgoing, rn);
+        auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+        return refract(outgoing, halfway,
+            dot(normal, outgoing) > 0 ? 1 / mean(material.eta)
+                                      : mean(material.eta));
     }
     if (rnl < weight_sum && material.thin) {
-        return sample_microfacet_transparency(
-            material.roughness, material.eta, normal, outgoing, rn);
+        auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+        auto ir      = reflect(outgoing, halfway);
+        return -reflect(ir, up_normal);
     }
 
     // something went wrong if we got here
@@ -781,26 +782,26 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
 
     auto pdf = 0.0f;
 
-    if (pdfs[0]) {
+    if (pdfs[0] && same_hemisphere(normal, outgoing, incoming)) {
         pdf += pdfs[0] * sample_microfacet_reflection_pdf(coat_roughness,
                              coat_eta, zero3f, normal, outgoing, incoming);
     }
 
-    if (pdfs[1]) {
+    if (pdfs[1] && same_hemisphere(normal, outgoing, incoming)) {
         pdf += pdfs[1] * sample_microfacet_reflection_pdf(material.roughness,
                              material.eta, zero3f, normal, outgoing, incoming);
     }
 
-    if (pdfs[2]) {
+    if (pdfs[2] && same_hemisphere(normal, outgoing, incoming)) {
         pdf += pdfs[2] * sample_diffuse_reflection_pdf(
                              material.roughness, normal, outgoing, incoming);
     }
 
-    if (pdfs[3] && !material.thin) {
+    if (pdfs[3] && other_hemisphere(normal, outgoing, incoming) && !material.thin) {
         pdf += pdfs[3] * sample_microfacet_transmission_pdf(material.roughness,
                              material.eta, normal, outgoing, incoming);
     }
-    if (pdfs[3] && material.thin) {
+    if (pdfs[3] && other_hemisphere(normal, outgoing, incoming) && material.thin) {
         pdf += pdfs[3] * sample_microfacet_transparency_pdf(material.roughness,
                              material.eta, normal, outgoing, incoming);
     }
@@ -810,29 +811,12 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
 float sample_delta_pdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
     if (!is_delta(material)) return 0;
-
-    auto same_hemi  = dot(normal, outgoing) * dot(normal, incoming) > 0;
-    auto other_hemi = dot(normal, outgoing) * dot(normal, incoming) < 0;
-
     auto pdfs = compute_brdf_pdfs(material, normal, outgoing);
 
     auto pdf = 0.0f;
-
-    if (pdfs[0]) {
-        if (same_hemi) pdf += pdfs[0];
-    }
-
-    if (pdfs[1]) {
-        if (same_hemi) pdf += pdfs[1];
-    }
-
-    if (pdfs[2]) {
-        // skip diffuse
-    }
-
-    if (pdfs[3]) {
-        if (other_hemi) pdf += pdfs[3];
-    }
+    if (pdfs[0] && same_hemisphere(normal, outgoing, incoming)) pdf += pdfs[0];
+    if (pdfs[1] && same_hemisphere(normal, outgoing, incoming)) pdf += pdfs[1];
+    if (pdfs[3] && other_hemisphere(normal, outgoing, incoming)) pdf += pdfs[3];
 
     return pdf;
 }
