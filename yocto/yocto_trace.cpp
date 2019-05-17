@@ -1042,40 +1042,6 @@ float sample_lights_pdf(const yocto_scene& scene, const trace_lights& lights,
     return pdf;
 }
 
-// Russian roulette mode: 0: weight (pbrt), 1: albedo
-#define YOCTO_RUSSIAN_ROULETTE_MODE 0
-// Russian roulette on weight causes extremely high noise with prefectly
-// transmissive materials because when reaching transparent surfaces (where you
-// just want to continue path tracing) a path may still have low weight, hence
-// high probability of beign terminated by Russian roulette.
-// This causes to throw away almost every path that passes through multiple
-// transparent surfaces: the path gets terminated very often, but it doesn't
-// carry any radiance yet (since we don't split to trace lights) hence gives no
-// contribution.
-// The current fix is to sample Russian roulette on albedo, which is a local
-// property and does not depend on the path. In this way we ensure that a path
-// has always low propabilty of being terminated on transmissive surfaces.
-
-// Russian roulette. Returns a weight and whether to stop.
-#if YOCTO_RUSSIAN_ROULETTE_MODE == 0
-pair<float, bool> sample_roulette(const vec3f& weight, int bounce, float rr,
-    int min_bounce = 4, float rr_threadhold = 1) {
-    if (max(weight) < rr_threadhold && bounce > min_bounce) {
-        auto rr_prob = max((float)0.05, 1 - max(weight));
-        return {1 - rr_prob, rr >= rr_prob};
-    } else {
-        return {1, false};
-    }
-}
-#elif YOCTO_RUSSIAN_ROULETTE_MODE == 1
-pair<float, bool> sample_roulette(const vec3f& albedo, const vec3f& weight,
-    int bounce, float rr, int min_bounce = 4, float rr_threadhold = 1) {
-    if (bounce <= min_bounce) return 1;
-    auto rr_prob = clamp(1.0f - max(albedo), 0.0f, 0.95f);
-    return rr < rr_prob ? 1 - rr_prob : 0;
-}
-#endif
-
 pair<float, vec2i> sample_distance(
     const material_point& material, float rl, float rd) {
     if (!has_volume(material)) return {0, {-1, -1}};
@@ -1319,11 +1285,11 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (!has_brdf(material) && !has_volume(material)) break;
 
         // russian roulette
-        auto [rr_weight, rr_stop] = sample_roulette(
-            weight, bounce, rand1f(rng));
-        if (rr_stop) break;
-        weight *= rr_weight;
-        if (weight == zero3f) break;
+        if (max(weight) < 1 && bounce > 2) {
+            auto rr_prob = max((float)0.05, 1 - max(weight));
+            if(rand1f(rng) > rr_prob) break;
+            weight *= rr_prob;
+        }
 
         // next direction
         auto [scattering, incoming] =
@@ -1391,11 +1357,11 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         if (!has_brdf(material)) break;
 
         // russian roulette
-        auto [rr_weight, rr_stop] = sample_roulette(
-            weight, bounce, rand1f(rng));
-        if (rr_stop) break;
-        weight *= rr_weight;
-        if (weight == zero3f) break;
+        if (max(weight) < 1 && bounce > 2) {
+            auto rr_prob = max((float)0.05, 1 - max(weight));
+            if(rand1f(rng) > rr_prob) break;
+            weight *= rr_prob;
+        }
 
         // next direction
         auto [scattering, incoming] =
