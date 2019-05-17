@@ -642,50 +642,57 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
     if (!is_delta(material)) return zero3f;
     auto brdfcos = zero3f;
 
-    auto ndo        = abs(dot(normal, outgoing));
     auto same_hemi  = dot(normal, outgoing) * dot(normal, incoming) > 0;
     auto other_hemi = dot(normal, outgoing) * dot(normal, incoming) < 0;
 
-    auto weight = vec3f{1};
-    if (material.coat != zero3f) {
-        auto fresnel = fresnel_dielectric(coat_eta, ndo);
-        if (same_hemi) brdfcos += weight * fresnel;
-        weight *= 1 - fresnel * material.coat;
+    if (material.coat != zero3f && same_hemi) {
+        brdfcos += fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
     }
-    if (material.specular * weight != zero3f) {
-        auto fresnel = fresnel_dielectric(material.eta, ndo);
-        if (same_hemi) brdfcos += weight * material.specular * fresnel;
-        weight *= 1 - material.specular * fresnel;
+    if (material.specular != zero3f && same_hemi) {
+        auto coat = material.coat *
+                    fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
+        brdfcos += (1 - coat) * material.specular *
+                   fresnel_dielectric(
+                       material.eta, abs(dot(normal, outgoing)));
     }
-    if (material.transmission * weight != zero3f && !material.thin) {
-        if (other_hemi) brdfcos += weight * material.transmission;
-    }
-    if (material.transmission * weight != zero3f && material.thin) {
-        if (other_hemi) brdfcos += weight * material.transmission;
+    if (material.transmission != zero3f && other_hemi) {
+        auto coat = material.coat *
+                    fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
+        auto specular = material.specular * fresnel_dielectric(material.eta,
+                                                abs(dot(normal, outgoing)));
+        brdfcos += (1 - coat) * (1 - specular) * material.transmission;
     }
     return brdfcos;
 }
 
-array<float, 4> compute_brdf_pdfs(const material_point& material,
+vec4f compute_brdf_pdfs(const material_point& material,
     const vec3f& normal, const vec3f& outgoing) {
-    auto weight  = vec3f{1};
-    auto weights = array<float, 4>{0, 0, 0, 0};
+    auto weights = zero4f;
     if (material.coat != zero3f) {
-        auto F     = fresnel_dielectric(coat_eta, abs(dot(outgoing, normal)));
-        weights[0] = max(weight * F);
-        weight *= 1 - F * material.coat;
+        auto fresnel = fresnel_dielectric(coat_eta, abs(dot(outgoing, normal)));
+        weights[0] = max(fresnel);
     }
     if (material.specular != zero3f) {
-        auto F = fresnel_dielectric(material.eta, abs(dot(outgoing, normal)));
-        weights[1] = max(weight * material.specular * F);
-        weight *= 1 - F * material.specular;
+        auto coat = material.coat *
+                    fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
+        auto fresnel = fresnel_dielectric(material.eta, abs(dot(outgoing, normal)));
+        weights[1] = max((1 - coat) * material.specular * fresnel);
     }
     if (material.diffuse != zero3f) {
-        weights[2] = max(weight * material.diffuse);
+        auto coat = material.coat *
+                    fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
+        auto specular = material.specular *
+                    fresnel_dielectric(material.eta, abs(dot(normal, outgoing)));
+        weights[2] = max((1 - coat) * (1 - specular) * material.diffuse);
     }
     if (material.transmission != zero3f) {
-        weights[3] = max(weight * material.transmission);
+        auto coat = material.coat *
+                    fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
+        auto specular = material.specular *
+                    fresnel_dielectric(material.eta, abs(dot(normal, outgoing)));
+        weights[3] = max((1 - coat) * (1 - specular) * material.transmission);
     }
+    weights /= sum(weights);
     return weights;
 }
 
