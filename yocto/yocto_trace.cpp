@@ -1274,6 +1274,8 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
             weight *= eval_brdfcos(material, normal, outgoing, incoming) /
                       sample_brdf_pdf(material, normal, outgoing, incoming);
         }
+
+        // check weight
         if (weight == zero3f || !isfinite(weight)) break;
 
         // russian roulette
