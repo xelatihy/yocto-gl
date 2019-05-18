@@ -431,8 +431,7 @@ void build_bvh(yocto_shape& shape, bvh_shape& bvh, const bvh_params& params) {
         shape.radius.empty()) {
         shape.radius.assign(shape.positions.size(), 0.001f);
     }
-    build_bvh(bvh, shape.points, shape.lines, shape.triangles, shape.quads,
-        shape.quads_positions, shape.positions, shape.radius, params);
+    build_bvh(bvh, shape, params);
 }
 void build_bvh(yocto_scene& scene, bvh_scene& bvh, const bvh_params& params) {
     bvh.shapes.resize(scene.shapes.size());
@@ -444,8 +443,7 @@ void build_bvh(yocto_scene& scene, bvh_scene& bvh, const bvh_params& params) {
 
 // Refits a scene BVH
 void refit_bvh(yocto_shape& shape, bvh_shape& bvh, const bvh_params& params) {
-    refit_bvh(bvh, shape.points, shape.lines, shape.triangles, shape.quads,
-        shape.quads_positions, shape.positions, shape.radius, params);
+    refit_bvh(bvh, shape, params);
 }
 void refit_bvh(yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
