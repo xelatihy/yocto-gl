@@ -454,33 +454,27 @@ void refit_bvh(yocto_scene& scene, bvh_scene& bvh,
         refit_bvh(scene.shapes[shape_id], bvh.shapes[shape_id], params);
     refit_bvh(bvh, scene, params);
 }
-bool intersect_bvh(const yocto_shape& shape, const bvh_shape& bvh,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any) {
-    return intersect_bvh(bvh, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.quads_positions, shape.positions, shape.radius, ray,
-        intersection, find_any);
+bvh_intersection intersect_bvh(const yocto_shape& shape, const bvh_shape& bvh,
+    const ray3f& ray, bool find_any) {
+    return intersect_bvh(bvh, shape, ray, find_any);
 }
-bool intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any,
+bvh_intersection intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
+    const ray3f& ray, bool find_any,
     bool non_rigid_frames) {
-    return intersect_bvh(
-        bvh, scene, ray, intersection, find_any, non_rigid_frames);
+    return intersect_bvh(bvh, scene, ray, find_any, non_rigid_frames);
 }
-bool intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
-    int instance_id, const ray3f& ray, bvh_intersection& intersection,
+bvh_intersection intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
+    int instance_id, const ray3f& ray, 
     bool find_any, bool non_rigid_frames) {
     auto& instance = scene.instances[instance_id];
     auto  inv_ray  = non_rigid_frames
                        ? transform_ray(
                              inverse((const affine3f&)instance.frame), ray)
                        : transform_ray_inverse(instance.frame, ray);
-    if (intersect_bvh(scene.shapes[instance.shape], bvh.shapes[instance.shape],
-            inv_ray, intersection, find_any)) {
-        intersection.instance_id = instance_id;
-        return true;
-    } else {
-        return false;
-    }
+    auto intersection = intersect_bvh(scene.shapes[instance.shape], bvh.shapes[instance.shape],
+            inv_ray, find_any);
+    if(intersection.hit) intersection.instance = instance_id;
+    return intersection;
 }
 
 // Add missing names and resolve duplicated names.

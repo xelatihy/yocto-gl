@@ -347,13 +347,13 @@ void refit_bvh(yocto_scene& scene, bvh_shape& bvh,
 void refit_bvh(yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params = {});
-bool intersect_bvh(const yocto_shape& shape, const bvh_shape& bvh,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
-bool intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
+bvh_intersection intersect_bvh(const yocto_shape& shape, const bvh_shape& bvh,
+    const ray3f& ray, bool find_any = false);
+bvh_intersection intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
+    const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
-bool intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
-    int instance_id, const ray3f& ray, bvh_intersection& intersection,
+bvh_intersection intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
+    int instance_id, const ray3f& ray, 
     bool find_any = false, bool non_rigid_frames = true);
 
 // Apply subdivision and displacement rules.

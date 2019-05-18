@@ -878,9 +878,8 @@ void run_ui(app_state& app) {
                 auto& camera = scn.scene.cameras.at(scn.trace_prms.camera_id);
                 auto  ray    = eval_camera(
                     camera, ij, scn.render.size(), {0.5f, 0.5f}, zero2f);
-                if (auto isec = bvh_intersection{};
-                    intersect_bvh(scn.scene, scn.bvh, ray, isec)) {
-                    scn.selection = {typeid(yocto_instance), isec.instance_id};
+                if (auto isec = intersect_bvh(scn.scene, scn.bvh, ray); isec.hit) {
+                    scn.selection = {typeid(yocto_instance), isec.instance};
                 }
             }
         }
