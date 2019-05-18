@@ -1040,27 +1040,6 @@ float sample_lights_pdf(const yocto_scene& scene, const trace_lights& lights,
     return pdf;
 }
 
-// Trace point
-struct trace_point {
-    vec3f          position = zero3f;
-    vec3f          normal   = zero3f;
-    material_point material = {};
-};
-
-// Make a trace point
-trace_point make_point(const yocto_scene& scene,
-    const bvh_intersection& intersection, const vec3f& view_direction) {
-    auto& instance = scene.instances[intersection.instance_id];
-    auto  point    = trace_point{};
-    point.position = eval_position(
-        scene, instance, intersection.element_id, intersection.element_uv);
-    point.normal   = eval_shading_normal(scene, instance, intersection.element_id,
-        intersection.element_uv, view_direction, trace_non_rigid_frames);
-    point.material = eval_material(
-        scene, instance, intersection.element_id, intersection.element_uv);
-    return point;
-}
-
 // Trace stats.
 atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
@@ -1110,9 +1089,15 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // switch between surface and volume
         if (!in_volume) {
             // prepare shading point
-            auto outgoing                     = -direction;
-            auto [position, normal, material] = make_point(
-                scene, intersection, direction);
+            auto  outgoing = -direction;
+            auto& instance = scene.instances[intersection.instance_id];
+            auto  position = eval_position(scene, instance,
+                intersection.element_id, intersection.element_uv);
+            auto  normal   = eval_shading_normal(scene, instance,
+                intersection.element_id, intersection.element_uv, direction,
+                trace_non_rigid_frames);
+            auto  material = eval_material(scene, instance,
+                intersection.element_id, intersection.element_uv);
 
             // handle opacity
             if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1231,10 +1216,16 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // prepare shading point
-        auto outgoing                     = -direction;
-        auto incoming                     = outgoing;
-        auto [position, normal, material] = make_point(
-            scene, intersection, direction);
+        auto  outgoing = -direction;
+        auto  incoming = outgoing;
+        auto& instance = scene.instances[intersection.instance_id];
+        auto  position = eval_position(
+            scene, instance, intersection.element_id, intersection.element_uv);
+        auto normal   = eval_shading_normal(scene, instance,
+            intersection.element_id, intersection.element_uv, direction,
+            trace_non_rigid_frames);
+        auto material = eval_material(
+            scene, instance, intersection.element_id, intersection.element_uv);
 
         // handle opacity
         if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1300,9 +1291,15 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         }
 
         // prepare shading point
-        auto outgoing                     = -direction;
-        auto [position, normal, material] = make_point(
-            scene, intersection, direction);
+        auto  outgoing = -direction;
+        auto& instance = scene.instances[intersection.instance_id];
+        auto  position = eval_position(
+            scene, instance, intersection.element_id, intersection.element_uv);
+        auto normal   = eval_shading_normal(scene, instance,
+            intersection.element_id, intersection.element_uv, direction,
+            trace_non_rigid_frames);
+        auto material = eval_material(
+            scene, instance, intersection.element_id, intersection.element_uv);
 
         // handle opacity
         if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1350,9 +1347,13 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     // auto& material = scene.materials[instance.material];
 
     // prepare shading point
-    auto outgoing                     = -direction;
-    auto [position, normal, material] = make_point(
-        scene, intersection, direction);
+    auto  outgoing = -direction;
+    auto  position = eval_position(
+        scene, instance, intersection.element_id, intersection.element_uv);
+    auto normal = eval_shading_normal(scene, instance, intersection.element_id,
+        intersection.element_uv, direction, trace_non_rigid_frames);
+    auto material = eval_material(
+        scene, instance, intersection.element_id, intersection.element_uv);
 
     switch (params.falsecolor_type) {
         case trace_falsecolor_type::normal: {
