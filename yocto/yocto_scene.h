@@ -466,7 +466,6 @@ struct material_point {
     float volanisotropy           = 0;
     float opacity                 = 1;
     bool  thin                    = false;
-    vec3f normal_map              = {0, 0, 1};
 };
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord,
@@ -478,15 +477,15 @@ vec3f eval_position(const yocto_scene& scene, const yocto_instance& instance,
     int element_id, const vec2f& element_uv);
 vec3f eval_normal(const yocto_scene& scene, const yocto_instance& instance,
     int element_id, const vec2f& element_uv, bool non_rigid_frame = false);
-vec3f eval_perturbed_normal(const yocto_scene& scene,
+vec3f eval_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    const vec3f& normalmap, bool non_rigid_frame = false);
+    const vec3f& direction, bool non_rigid_frame = false);
 // Instance element values.
 vec3f eval_element_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id,
     bool non_rigid_frame = false);
-vec3f eval_opacity(const yocto_scene& scene, const yocto_instance& instance,
-    int element_id, const vec2f& element_uv);
+material_point eval_material(const yocto_scene& scene, 
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
 
 // Environment texture coordinates from the incoming direction.
 vec2f eval_texcoord(

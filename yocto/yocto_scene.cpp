@@ -877,17 +877,31 @@ vec3f eval_normal(const yocto_scene& scene, const yocto_instance& instance,
                ? transform_normal((const affine3f&)instance.frame, normal)
                : transform_normal(instance.frame, normal);
 }
-vec3f eval_perturbed_normal(const yocto_scene& scene,
+vec3f eval_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    const vec3f& normalmap, bool non_rigid_frame) {
+    const vec3f& direction, bool non_rigid_frame) {
+    auto& shape  = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
-    if (material.normal_texture < 0)
-        return eval_normal(scene, instance, element_id, element_uv);
-    auto normal = eval_perturbed_normal(
-        scene, scene.shapes[instance.shape], element_id, element_uv, normalmap);
-    return non_rigid_frame
-               ? transform_normal((const affine3f&)instance.frame, normal)
-               : transform_normal(instance.frame, normal);
+    if (!shape.points.empty()) {
+        return -direction;
+    } else if (!shape.lines.empty()) {
+        auto normal = eval_normal(
+            scene, instance, element_id, element_uv, non_rigid_frame);
+        return orthonormalize(-direction, normal);
+    } else if(material.normal_texture < 0) {
+        return eval_normal(
+            scene, instance, element_id, element_uv, non_rigid_frame);
+    } else {
+        auto& normal_texture = scene.textures[material.normal_texture];
+        auto  normalmap      = xyz(eval_texture(normal_texture,
+            eval_texcoord(shape, element_id, element_uv), true)) * 2 - 1;
+        normalmap.y          = -normalmap.y;  // flip vertical axis
+        auto normal = eval_perturbed_normal(scene, scene.shapes[instance.shape],
+            element_id, element_uv, normalmap);
+        return non_rigid_frame
+                   ? transform_normal((const affine3f&)instance.frame, normal)
+                   : transform_normal(instance.frame, normal);
+    }
 }
 // Instance element values.
 vec3f eval_element_normal(const yocto_scene& scene,
@@ -896,6 +910,15 @@ vec3f eval_element_normal(const yocto_scene& scene,
     return non_rigid_frame
                ? transform_normal((const affine3f&)instance.frame, normal)
                : transform_normal(instance.frame, normal);
+}
+// Instance material
+material_point eval_material(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
+    auto& shape     = scene.shapes[instance.shape];
+    auto& material  = scene.materials[instance.material];
+    auto  texcoords = eval_texcoord(shape, element_id, element_uv);
+    auto  color     = eval_color(shape, element_id, element_uv);
+    return eval_material(scene, material, texcoords, color);
 }
 
 // Environment texture coordinates from the direction.
@@ -1232,24 +1255,23 @@ material_point eval_material(const yocto_scene& scene,
     const vec4f& shape_color) {
     auto point = material_point{};
     // factors
-    point.emission        = material.emission * xyz(shape_color);
-    point.diffuse         = material.diffuse * xyz(shape_color);
-    point.specular        = material.specular;
-    auto metallic         = material.metallic;
-    point.eta             = material.ior;
-    point.roughness       = material.roughness;
-    point.coat            = material.coat;
-    point.transmission    = material.transmission;
-    auto voltransmission  = material.voltransmission;
-    point.volemission     = material.volemission;
-    point.volscatter      = material.volscatter;
-    point.volanisotropy   = material.volanisotropy;
-    auto volscale         = material.volscale;
-    point.opacity         = material.opacity * shape_color.w;
-    point.thin            = material.thin;
+    point.emission       = material.emission * xyz(shape_color);
+    point.diffuse        = material.diffuse * xyz(shape_color);
+    point.specular       = material.specular;
+    auto metallic        = material.metallic;
+    point.eta            = material.ior;
+    point.roughness      = material.roughness;
+    point.coat           = material.coat;
+    point.transmission   = material.transmission;
+    auto voltransmission = material.voltransmission;
+    point.volemission    = material.volemission;
+    point.volscatter     = material.volscatter;
+    point.volanisotropy  = material.volanisotropy;
+    auto volscale        = material.volscale;
+    point.opacity        = material.opacity * shape_color.w;
+    point.thin           = material.thin;
 
     // textures
-    point.normal_map = vec3f{0, 0, 1};
     if (material.emission_texture >= 0) {
         auto& emission_texture = scene.textures[material.emission_texture];
         point.emission *= xyz(eval_texture(emission_texture, texturecoord));
@@ -1300,19 +1322,11 @@ material_point eval_material(const yocto_scene& scene,
         auto& coat_texture = scene.textures[material.coat_texture];
         point.coat *= xyz(eval_texture(coat_texture, texturecoord));
     }
-    if (material.normal_texture >= 0) {
-        auto& normal_texture = scene.textures[material.normal_texture];
-        point.normal_map     = xyz(
-            eval_texture(normal_texture, texturecoord, true));
-        point.normal_map = point.normal_map * 2 - vec3f{1, 1, 1};
-        // flip vertical axis to align green with image up
-        point.normal_map.y = -point.normal_map.y;
-    }
-    if(metallic) {
-        point.eta = (1 + sqrt(point.diffuse)) / (1 - sqrt(point.diffuse));
+    if (metallic) {
+        point.eta      = (1 + sqrt(point.diffuse)) / (1 - sqrt(point.diffuse));
         point.specular = vec3f{metallic};
         point.diffuse *= 1 - metallic;
-    } else if(material.ior_from_specular && point.specular != zero3f) {
+    } else if (material.ior_from_specular && point.specular != zero3f) {
         point.eta = (1 + sqrt(point.specular)) / (1 - sqrt(point.specular));
         point.specular = {1, 1, 1};
     }
@@ -1323,7 +1337,7 @@ material_point eval_material(const yocto_scene& scene,
     if (point.opacity > 0.999f) point.opacity = 1;
     if (voltransmission != zero3f) {
         point.voldensity = -log(clamp(voltransmission, 0.0001f, 1.0f)) /
-                        volscale;
+                           volscale;
     } else {
         point.voldensity = zero3f;
     }

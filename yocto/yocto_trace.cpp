@@ -1049,31 +1049,15 @@ struct trace_point {
 
 // Make a trace point
 trace_point make_point(const yocto_scene& scene,
-    const bvh_intersection& intersection, const vec3f& shading_direction) {
+    const bvh_intersection& intersection, const vec3f& view_direction) {
     auto& instance = scene.instances[intersection.instance_id];
-    auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
     auto  point    = trace_point{};
     point.position = eval_position(
         scene, instance, intersection.element_id, intersection.element_uv);
-    point.normal   = eval_normal(scene, instance, intersection.element_id,
-        intersection.element_uv, trace_non_rigid_frames);
-    auto texcoords = eval_texcoord(
-        shape, intersection.element_id, intersection.element_uv);
-    auto color = eval_color(
-        shape, intersection.element_id, intersection.element_uv);
-    point.material = eval_material(scene, material, texcoords, color);
-    if (!shape.lines.empty()) {
-        point.normal = orthonormalize(-shading_direction, point.normal);
-    } else if (!shape.points.empty()) {
-        point.normal = -shading_direction;
-    } else {
-        if (material.normal_texture >= 0) {
-            point.normal = eval_perturbed_normal(scene, instance,
-                intersection.element_id, intersection.element_uv,
-                point.material.normal_map, trace_non_rigid_frames);
-        }
-    }
+    point.normal   = eval_shading_normal(scene, instance, intersection.element_id,
+        intersection.element_uv, view_direction, trace_non_rigid_frames);
+    point.material = eval_material(
+        scene, instance, intersection.element_id, intersection.element_uv);
     return point;
 }
 
