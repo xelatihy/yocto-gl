@@ -236,7 +236,7 @@ struct bvh_shape_data {
 };
 
 // Instance for a scene BVH.
-struct bvh_instance {
+struct bvh_instance_data {
     frame3f frame = identity_frame3f;
     int     shape = -1;
 };
@@ -244,9 +244,9 @@ struct bvh_instance {
 // BVH data for scenes. You can store data here or use any other
 // data view that has the same variable names.
 struct bvh_scene_data {
-    vector<bvh_instance>   instances        = {};
-    vector<bvh_shape_data> shapes           = {};
-    bool                   non_rigid_frames = true;
+    vector<bvh_instance_data> instances        = {};
+    vector<bvh_shape_data>    shapes           = {};
+    bool                      non_rigid_frames = true;
 };
 
 // bvh build params
@@ -1571,8 +1571,8 @@ inline void refit_bvh(
 }
 
 template <typename Scene>
-inline void refit_bvh(bvh_scene& bvh, const Scene& scene, 
-    const bvh_params& params) {
+inline void refit_bvh(
+    bvh_scene& bvh, const Scene& scene, const bvh_params& params) {
 #if YOCTO_EMBREE
     if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
 #endif
@@ -1580,7 +1580,7 @@ inline void refit_bvh(bvh_scene& bvh, const Scene& scene,
     if (!scene.instances.empty()) {
         // get the number of primitives and the primitive type
         return refit_bvh(bvh.nodes, 0, [&scene, &bvh](int idx) {
-            auto&  instance = scene.instances[idx];
+            auto& instance = scene.instances[idx];
             auto& sbvh     = bvh.shapes[instance.shape];
             return sbvh.nodes.empty()
                        ? invalid_bbox3f
