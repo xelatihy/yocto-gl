@@ -1782,10 +1782,10 @@ inline bool intersect_bvh(const bvh_scene& bvh, const Scene& scene,
 }
 
 // Intersect ray with a bvh.
-template <typename PrimitiveOverlap>
-inline bool overlap_bvh(const bvh_shape& bvh, const vec3f& pos,
-    float max_distance, int& element, vec2f& uv, float& distance, bool find_any,
-    const PrimitiveOverlap& overlap) {
+template <typename Shape>
+inline bool overlap_bvh(const bvh_shape& bvh, const Shape& shape,
+    const vec3f& pos, float max_distance, int& element, vec2f& uv,
+    float& distance, bool find_any) {
     // check if empty
     if (bvh.nodes.empty()) return false;
 
@@ -1811,12 +1811,57 @@ inline bool overlap_bvh(const bvh_shape& bvh, const vec3f& pos,
             // internal node
             node_stack[node_cur++] = node.primitive_ids[0];
             node_stack[node_cur++] = node.primitive_ids[1];
-        } else {
-            for (auto i = 0; i < node.num_primitives; i++) {
-                if (overlap(pos, max_distance, node.primitive_ids[i], uv,
+        } else if (!shape.points.empty()) {
+            for (auto idx = 0; idx < node.num_primitives; idx++) {
+                auto& p = shape.points[node.primitive_ids[idx]];
+                if (overlap_point(pos, max_distance, shape.positions[p],
+                        shape.radius[p], uv, distance)) {
+                    hit          = true;
+                    element      = node.primitive_ids[idx];
+                    max_distance = distance;
+                }
+            }
+        } else if (!shape.lines.empty()) {
+            for (auto idx = 0; idx < node.num_primitives; idx++) {
+                auto& l = shape.lines[node.primitive_ids[idx]];
+                if (overlap_line(pos, max_distance, shape.positions[l.x],
+                        shape.positions[l.y], shape.radius[l.x],
+                        shape.radius[l.y], uv, distance)) {
+                    hit          = true;
+                    element      = node.primitive_ids[idx];
+                    max_distance = distance;
+                }
+            }
+        } else if (!shape.triangles.empty()) {
+            for (auto idx = 0; idx < node.num_primitives; idx++) {
+                auto& t = shape.triangles[node.primitive_ids[idx]];
+                if (overlap_triangle(pos, max_distance, shape.positions[t.x],
+                        shape.positions[t.y], shape.positions[t.z], uv,
                         distance)) {
                     hit          = true;
-                    element      = node.primitive_ids[i];
+                    element      = node.primitive_ids[idx];
+                    max_distance = distance;
+                }
+            }
+        } else if (!shape.quads.empty()) {
+            for (auto idx = 0; idx < node.num_primitives; idx++) {
+                auto& q = shape.quads[node.primitive_ids[idx]];
+                if (overlap_quad(pos, max_distance, shape.positions[q.x],
+                        shape.positions[q.y], shape.positions[q.z],
+                        shape.positions[q.w], uv, distance)) {
+                    hit          = true;
+                    element      = node.primitive_ids[idx];
+                    max_distance = distance;
+                }
+            }
+        } else if (!shape.quads_positions.empty()) {
+            for (auto idx = 0; idx < node.num_primitives; idx++) {
+                auto& q = shape.quads_positions[node.primitive_ids[idx]];
+                if (overlap_quad(pos, max_distance, shape.positions[q.x],
+                        shape.positions[q.y], shape.positions[q.z],
+                        shape.positions[q.w], uv, distance)) {
+                    hit          = true;
+                    element      = node.primitive_ids[idx];
                     max_distance = distance;
                 }
             }
@@ -1827,76 +1872,6 @@ inline bool overlap_bvh(const bvh_shape& bvh, const vec3f& pos,
     }
 
     return hit;
-}
-
-// Finds the closest element with a bvh.
-template <typename Shape>
-inline bool overlap_bvh(const bvh_shape& bvh, const Shape& shape,
-    const vec3f& pos, float max_distance, int& element, vec2f& uv,
-    float& distance, bool find_any) {
-    if (!shape.points.empty()) {
-        return overlap_bvh(bvh, pos, max_distance, element, uv, distance,
-            find_any,
-            [&shape](const vec3f& pos, float max_distance, int idx,
-                vec2f& element_uv, float& distance) {
-                auto& p = shape.points[idx];
-                return overlap_point(pos, max_distance, shape.positions[p],
-                    shape.radius[p], element_uv, distance);
-            });
-    } else if (!shape.lines.empty()) {
-        return overlap_bvh(bvh, pos, max_distance, element, uv, distance,
-            find_any,
-            [&shape](const vec3f& pos, float max_distance, int idx,
-                vec2f& element_uv, float& distance) {
-                auto& l = shape.lines[idx];
-                return overlap_line(pos, max_distance, shape.positions[l.x],
-                    shape.positions[l.y], shape.radius[l.x], shape.radius[l.y],
-                    element_uv, distance);
-            });
-    } else if (!shape.triangles.empty()) {
-        return overlap_bvh(bvh, pos, max_distance, element, uv, distance,
-            find_any,
-            [&shape](const vec3f& pos, float max_distance, int idx,
-                vec2f& element_uv, float& distance) {
-                auto& t = shape.triangles[idx];
-                return overlap_triangle(pos, max_distance, shape.positions[t.x],
-                    shape.positions[t.y], shape.positions[t.z], 0, 0, 0,
-                    element_uv, distance);
-                // return overlap_triangle(pos, max_distance, positions[t.x],
-                //     positions[t.y], positions[t.z], radius[t.x],
-                //     radius[t.y], radius[t.z], element_uv, distance);
-            });
-    } else if (!shape.quads.empty()) {
-        return overlap_bvh(bvh, pos, max_distance, element, uv, distance,
-            find_any,
-            [&shape](const vec3f& pos, float max_distance, int idx,
-                vec2f& element_uv, float& distance) {
-                auto& q = shape.quads[idx];
-                return overlap_quad(pos, max_distance, shape.positions[q.x],
-                    shape.positions[q.y], shape.positions[q.z],
-                    shape.positions[q.w], 0, 0, 0, 0, element_uv, distance);
-                // return overlap_quad(pos, max_distance, positions[q.x],
-                //     positions[q.y], positions[q.z], positions[q.w],
-                //     radius[q.x], radius[q.y], radius[q.z],
-                //     radius[q.w], element_uv, distance);
-            });
-    } else if (!shape.quads_positions.empty()) {
-        return overlap_bvh(bvh, pos, max_distance, element, uv, distance,
-            find_any,
-            [&shape](const vec3f& pos, float max_distance, int idx,
-                vec2f& element_uv, float& distance) {
-                auto& q = shape.quads_positions[idx];
-                return overlap_quad(pos, max_distance, shape.positions[q.x],
-                    shape.positions[q.y], shape.positions[q.z],
-                    shape.positions[q.w], 0, 0, 0, 0, element_uv, distance);
-                // return overlap_quad(pos, max_distance, positions[q.x],
-                //     positions[q.y], positions[q.z], positions[q.w],
-                //     radius[q.x], radius[q.y], radius[q.z],
-                //     radius[q.w], element_uv, distance);
-            });
-    } else {
-        return false;
-    }
 }
 
 // Intersect ray with a bvh.
