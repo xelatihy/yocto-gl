@@ -26,9 +26,7 @@
 // 2. use `compute_shape_box()/compute_scene_box()` to compute element bounds
 // 3. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
-// 4. for ray-intersection and closest point queries, create a BVH with
-//    `build_bvh()` and intersect with with `intersect_bvh()`;
-//     you can also update the BVH with `refit_bvh()`
+// 4. for ray-intersection and closest point queries, use Yocto/Bvh
 //
 //
 
@@ -64,7 +62,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_bvh.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
 
@@ -334,27 +331,6 @@ bbox3f compute_bounds(const yocto_scene& scene);
 
 // Compute shape vertex normals
 void compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
-
-// Low level make/update bvh functions. The make functions take mutable objects
-// since adjustment might be frequired for the bvh to work in shared memory.
-void build_bvh(
-    yocto_shape& shape, bvh_shape& bvh, const bvh_params& params = {});
-void build_bvh(
-    yocto_scene& scene, bvh_scene& bvh, const bvh_params& params = {});
-void refit_bvh(yocto_scene& scene, bvh_shape& bvh,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params = {});
-void refit_bvh(yocto_scene& scene, bvh_scene& bvh,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params = {});
-bvh_intersection intersect_bvh(const yocto_shape& shape, const bvh_shape& bvh,
-    const ray3f& ray, bool find_any = false);
-bvh_intersection intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
-    const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
-bvh_intersection intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
-    int instance_id, const ray3f& ray, 
-    bool find_any = false, bool non_rigid_frames = true);
 
 // Apply subdivision and displacement rules.
 void subdivide_shape(yocto_shape& shape, int subdivision_level,

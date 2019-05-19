@@ -483,7 +483,7 @@ void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
         throw runtime_error("unsupported type "s + type.name());
     }
 
-    refit_bvh(scene, bvh, updated_instances, updated_shapes);
+    refit_bvh(bvh, scene, updated_shapes, bvh_prms);
 }
 
 void update(app_state& app) {
@@ -743,7 +743,7 @@ void update(app_state& app) {
                 log_info("start building bvh {}", scn.filename);
                 scn.bvh_done = false;
                 task.result  = async(
-                    [&scn]() { build_bvh(scn.scene, scn.bvh, scn.bvh_prms); });
+                    [&scn]() { build_bvh(scn.bvh, scn.scene, scn.bvh_prms); });
             } break;
             case app_task_type::refit_bvh: {
                 log_info("start refitting bvh {}", scn.filename);
@@ -878,7 +878,7 @@ void run_ui(app_state& app) {
                 auto& camera = scn.scene.cameras.at(scn.trace_prms.camera_id);
                 auto  ray    = eval_camera(
                     camera, ij, scn.render.size(), {0.5f, 0.5f}, zero2f);
-                if (auto isec = intersect_bvh(scn.scene, scn.bvh, ray); isec.hit) {
+                if (auto isec = intersect_bvh(scn.bvh, scn.scene, ray); isec.hit) {
                     scn.selection = {typeid(yocto_instance), isec.instance};
                 }
             }

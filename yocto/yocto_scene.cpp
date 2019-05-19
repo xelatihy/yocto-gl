@@ -419,46 +419,6 @@ float sample_environment_pdf(const yocto_scene& scene,
     }
 }
 
-// Build BVH
-void build_bvh(yocto_shape& shape, bvh_shape& bvh, const bvh_params& params) {
-    build_bvh(bvh, shape, params);
-}
-void build_bvh(yocto_scene& scene, bvh_scene& bvh, const bvh_params& params) {
-    build_bvh(bvh, scene, params);
-}
-
-// Refits a scene BVH
-void refit_bvh(yocto_shape& shape, bvh_shape& bvh, const bvh_params& params) {
-    refit_bvh(bvh, shape, params);
-}
-void refit_bvh(yocto_scene& scene, bvh_scene& bvh,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params) {
-    refit_bvh(bvh, scene, updated_shapes, params);
-}
-bvh_intersection intersect_bvh(const yocto_shape& shape, const bvh_shape& bvh,
-    const ray3f& ray, bool find_any) {
-    return intersect_bvh(bvh, shape, ray, find_any);
-}
-bvh_intersection intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
-    const ray3f& ray, bool find_any,
-    bool non_rigid_frames) {
-    return intersect_bvh(bvh, scene, ray, find_any, non_rigid_frames);
-}
-bvh_intersection intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
-    int instance_id, const ray3f& ray, 
-    bool find_any, bool non_rigid_frames) {
-    auto& instance = scene.instances[instance_id];
-    auto  inv_ray  = non_rigid_frames
-                       ? transform_ray(
-                             inverse((const affine3f&)instance.frame), ray)
-                       : transform_ray_inverse(instance.frame, ray);
-    auto intersection = intersect_bvh(scene.shapes[instance.shape], bvh.shapes[instance.shape],
-            inv_ray, find_any);
-    if(intersection.hit) intersection.instance = instance_id;
-    return intersection;
-}
-
 // Add missing names and resolve duplicated names.
 void normalize_uris(yocto_scene& scene) {
     auto normalize = [](string& name, const string& base, const string& ext,
