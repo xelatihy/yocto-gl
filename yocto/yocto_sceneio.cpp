@@ -847,6 +847,7 @@ static void load_yaml_scene(
     scene.uri = get_filename(filename);
     add_cameras(scene);
     add_materials(scene);
+    add_radius(scene);
     normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
@@ -1432,6 +1433,7 @@ static void load_obj_scene(
     scene.uri = get_filename(filename);
     add_cameras(scene);
     add_materials(scene);
+    add_radius(scene);
     normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
@@ -1778,6 +1780,7 @@ static void load_ply_scene(
     scene.uri = get_filename(filename);
     add_cameras(scene);
     add_materials(scene);
+    add_radius(scene);
     normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
@@ -2309,6 +2312,7 @@ static void load_gltf_scene(
     scene.uri = get_filename(filename);
     add_cameras(scene);
     add_materials(scene);
+    add_radius(scene);
     normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);
@@ -3300,6 +3304,7 @@ static void load_pbrt_scene(
     scene.uri = get_filename(filename);
     add_cameras(scene);
     add_materials(scene);
+    add_radius(scene);
     normalize_uris(scene);
     trim_memory(scene);
     update_transforms(scene);

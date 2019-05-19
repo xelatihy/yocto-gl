@@ -369,6 +369,7 @@ void add_normals(yocto_scene& scene);
 void add_tangent_spaces(yocto_scene& scene);
 void add_materials(yocto_scene& scene);
 void add_cameras(yocto_scene& scene);
+void add_radius(yocto_scene& scene, float radius = 0.001f);
 
 // Normalize URIs and add missing ones. Assumes names are unique.
 void normalize_uris(yocto_scene& sceme);

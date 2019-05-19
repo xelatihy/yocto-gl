@@ -421,19 +421,6 @@ float sample_environment_pdf(const yocto_scene& scene,
 
 // Build BVH
 void build_bvh(yocto_shape& shape, bvh_shape& bvh, const bvh_params& params) {
-    // fix data
-#if YOCTO_EMBREE
-    if (params.embree_compact &&
-        shape.positions.size() == shape.positions.capacity()) {
-        shape.positions.reserve(shape.positions.size() + 1);
-    }
-#endif
-    if ((!shape.lines.empty() || !shape.points.empty()) &&
-        shape.radius.empty()) {
-        shape.radius.assign(shape.positions.size(), 0.001f);
-    }
-
-    // build
     build_bvh(bvh, shape, params);
 }
 void build_bvh(yocto_scene& scene, bvh_scene& bvh, const bvh_params& params) {
@@ -566,6 +553,15 @@ void add_materials(yocto_scene& scene) {
             material_id = (int)scene.materials.size() - 1;
         }
         instance.material = material_id;
+    }
+}
+
+// Add missing radius.
+void add_radius(yocto_scene& scene, float radius) {
+    for (auto& shape : scene.shapes) {
+        if(shape.points.empty() && shape.lines.empty()) continue;
+        if(!shape.radius.empty()) continue;
+        shape.radius.assign(shape.positions.size(), radius);
     }
 }
 
