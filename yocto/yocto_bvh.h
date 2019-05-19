@@ -1426,6 +1426,44 @@ static inline void build_bvh(vector<bvh_node>& nodes, size_t num_elements,
     }
 }
 
+// Get shape element bounds
+template <typename Shape>
+inline auto get_shape_bounds(const Shape& shape) {
+    // get element bounds from geometry type
+    auto element_bounds = (bbox3f(*)(const Shape& shape, int idx)) nullptr;
+    if (!shape.points.empty()) {
+        element_bounds = [](const Shape& shape, int idx) {
+            auto& p = shape.points[idx];
+            return point_bounds(shape.positions[p], shape.radius[p]);
+        };
+    } else if (!shape.lines.empty()) {
+        element_bounds = [](const Shape& shape, int idx) {
+            auto& l = shape.lines[idx];
+            return line_bounds(shape.positions[l.x], shape.positions[l.y],
+                shape.radius[l.x], shape.radius[l.y]);
+        };
+    } else if (!shape.triangles.empty()) {
+        element_bounds = [](const Shape& shape, int idx) {
+            auto& t = shape.triangles[idx];
+            return triangle_bounds(shape.positions[t.x], shape.positions[t.y],
+                shape.positions[t.z]);
+        };
+    } else if (!shape.quads.empty()) {
+        element_bounds = [](const Shape& shape, int idx) {
+            auto& q = shape.quads[idx];
+            return quad_bounds(shape.positions[q.x], shape.positions[q.y],
+                shape.positions[q.z], shape.positions[q.w]);
+        };
+    } else if (!shape.quads_positions.empty()) {
+        element_bounds = [](const Shape& shape, int idx) {
+            auto& q = shape.quads_positions[idx];
+            return quad_bounds(shape.positions[q.x], shape.positions[q.y],
+                shape.positions[q.z], shape.positions[q.w]);
+        };
+    }
+    return element_bounds;
+}
+
 template <typename Shape>
 inline void build_bvh(
     bvh_shape& bvh, const Shape& shape, const bvh_params& params) {
@@ -1436,56 +1474,42 @@ inline void build_bvh(
     }
 #endif
 
-    if (!shape.points.empty()) {
-        return build_bvh(
-            bvh.nodes, shape.points.size(),
-            [&shape](int idx) {
-                auto& p = shape.points[idx];
-                return point_bounds(shape.positions[p], shape.radius[p]);
-            },
-            params);
-    } else if (!shape.lines.empty()) {
-        return build_bvh(
-            bvh.nodes, shape.lines.size(),
-            [&shape](int idx) {
-                auto& l = shape.lines[idx];
-                return line_bounds(shape.positions[l.x], shape.positions[l.y],
-                    shape.radius[l.x], shape.radius[l.y]);
-            },
-            params);
-    } else if (!shape.triangles.empty()) {
-        return build_bvh(
-            bvh.nodes, shape.triangles.size(),
-            [&shape](int idx) {
-                auto& t = shape.triangles[idx];
-                return triangle_bounds(shape.positions[t.x],
-                    shape.positions[t.y], shape.positions[t.z]);
-            },
-            params);
-    } else if (!shape.quads.empty()) {
-        return build_bvh(
-            bvh.nodes, shape.quads.size(),
-            [&shape](int idx) {
-                auto& q = shape.quads[idx];
-                return quad_bounds(shape.positions[q.x], shape.positions[q.y],
-                    shape.positions[q.z], shape.positions[q.w]);
-            },
-            params);
-    } else if (!shape.quads_positions.empty()) {
-        return build_bvh(
-            bvh.nodes, shape.quads_positions.size(),
-            [&shape](int idx) {
-                auto& q = shape.quads_positions[idx];
-                return quad_bounds(shape.positions[q.x], shape.positions[q.y],
-                    shape.positions[q.z], shape.positions[q.w]);
-            },
-            params);
+    // get element bounds from geometry type
+    auto element_bounds = get_shape_bounds(shape);
+
+    // get the number of primitives
+    auto num_elements = (size_t)0;
+    num_elements = max(num_elements, shape.points.size());
+    num_elements = max(num_elements, shape.lines.size());
+    num_elements = max(num_elements, shape.triangles.size());
+    num_elements = max(num_elements, shape.quads.size());
+    num_elements = max(num_elements, shape.quads_positions.size());
+
+    // build primitives
+    auto prims = vector<bvh_prim>(num_elements);
+    for (auto element_id = 0; element_id < num_elements; element_id++) {
+        prims[element_id].bbox   = element_bounds(shape, element_id);
+        prims[element_id].center = bbox_center(prims[element_id].bbox);
+        prims[element_id].primid = element_id;
+    }
+
+    // build nodes
+    if (params.run_serially) {
+        build_bvh_serial(bvh.nodes, prims, params);
     } else {
+        build_bvh_parallel(bvh.nodes, prims, params);
     }
 }
 template <typename Scene>
 inline void build_bvh(
     bvh_scene& bvh, const Scene& scene, const bvh_params& params) {
+    // shapes
+    bvh.shapes.resize(scene.shapes.size());
+    for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+        build_bvh(bvh.shapes[idx], scene.shapes[idx], params);
+    }
+
+    // embree
 #if YOCTO_EMBREE
     if (params.use_embree) {
         if (params.embree_flatten) {
@@ -1496,17 +1520,25 @@ inline void build_bvh(
     }
 #endif
 
-    if (!scene.instances.empty()) {
-        return build_bvh(
-            bvh.nodes, scene.instances.size(),
-            [&bvh, &scene](int idx) {
-                auto& instance = scene.instances[idx];
-                auto& sbvh     = bvh.shapes[instance.shape];
-                return sbvh.nodes.empty()
-                           ? invalid_bbox3f
-                           : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
-            },
-            params);
+    // get the number of primitives and the primitive type
+    if (scene.instances.empty()) return;
+    auto prims = vector<bvh_prim>(scene.instances.size());
+    for (auto idx = 0; idx < prims.size(); idx++) {
+        auto& instance = scene.instances[idx];
+        auto& sbvh     = bvh.shapes[instance.shape];
+        auto  bbox     = sbvh.nodes.empty()
+                        ? invalid_bbox3f
+                        : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
+        prims[idx].bbox   = bbox;
+        prims[idx].center = bbox_center(bbox);
+        prims[idx].primid = idx;
+    }
+
+    // build nodes
+    if (params.run_serially) {
+        build_bvh_serial(bvh.nodes, prims, params);
+    } else {
+        build_bvh_parallel(bvh.nodes, prims, params);
     }
 }
 

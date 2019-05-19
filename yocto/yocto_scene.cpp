@@ -434,10 +434,6 @@ void build_bvh(yocto_shape& shape, bvh_shape& bvh, const bvh_params& params) {
     build_bvh(bvh, shape, params);
 }
 void build_bvh(yocto_scene& scene, bvh_scene& bvh, const bvh_params& params) {
-    bvh.shapes.resize(scene.shapes.size());
-    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
-        build_bvh(scene.shapes[shape_id], bvh.shapes[shape_id], params);
-    }
     build_bvh(bvh, scene, params);
 }
 
