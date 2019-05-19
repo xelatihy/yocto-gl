@@ -967,7 +967,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
         print_optional(fs, "ior", material.ior, def_material.ior);
         print_optional(fs, "voltransmission", material.voltransmission,
             def_material.voltransmission);
-        print_optional(fs, "volscatter", material.volscatter, def_material.volscatter);
+        print_optional(
+            fs, "volscatter", material.volscatter, def_material.volscatter);
         print_optional(
             fs, "volemission", material.volemission, def_material.volemission);
         print_optional(fs, "volanisotropy", material.volanisotropy,

@@ -148,11 +148,10 @@ void load_island_lights(
     load_json(dirname + filename, js);
     for (auto& [name, ljs] : js.items()) {
         if (ljs.at("type") == "quad") {
-            auto material            = yocto_material{};
-            material.uri             = "materials/lights/" + name + ".yaml";
-            material.emission =
-                xyz(ljs.at("color").get<vec4f>()) *
-                pow(2.0f, ljs.at("exposure").get<float>());
+            auto material     = yocto_material{};
+            material.uri      = "materials/lights/" + name + ".yaml";
+            material.emission = xyz(ljs.at("color").get<vec4f>()) *
+                                pow(2.0f, ljs.at("exposure").get<float>());
             scene.materials.push_back(material);
             auto shape = yocto_shape{};
             shape.uri  = "shapes/lights/" + name + ".ply";
@@ -172,13 +171,12 @@ void load_island_lights(
             texture.uri  = ljs.at("map");
             load_image(dirname + texture.uri, texture.hdr_image);
             scene.textures.push_back(texture);
-            auto environment = yocto_environment{};
-            environment.uri  = "environments/lights/" + name + ".yaml";
-            environment.emission =
-                xyz(ljs.at("color").get<vec4f>()) *
-                pow(2.0f, ljs.at("exposure").get<float>());
+            auto environment     = yocto_environment{};
+            environment.uri      = "environments/lights/" + name + ".yaml";
+            environment.emission = xyz(ljs.at("color").get<vec4f>()) *
+                                   pow(2.0f, ljs.at("exposure").get<float>());
             environment.emission_texture = (int)scene.textures.size() - 1;
-            environment.frame = frame3f(
+            environment.frame            = frame3f(
                 ljs.at("translationMatrix").get<mat4f>());
             scene.environments.push_back(environment);
         } else {
@@ -317,15 +315,15 @@ struct load_island_shape_callbacks : obj_callbacks {
         materials.push_back({});
         materials.back().uri = dmaterial.name;
         if (dmaterial.color_map != "") {
-            materials.back().diffuse = {1, 1, 1};
-            materials.back().diffuse_texture   = add_texture(
+            materials.back().diffuse         = {1, 1, 1};
+            materials.back().diffuse_texture = add_texture(
                 dmaterial.color_map_baked);
         } else if (dmaterial.refractive == 0) {
             materials.back().diffuse = dmaterial.color;
         } else {
-            materials.back().specular            = {1, 1, 1};
+            materials.back().specular     = {1, 1, 1};
             materials.back().transmission = {1, 1, 1};
-            materials.back().roughness  = 0;
+            materials.back().roughness    = 0;
             materials.back().thin         = false;
         }
         shapes.push_back(yocto_shape{});
@@ -713,8 +711,8 @@ void load_island_curvetube(const string& filename, const string& dirname,
     auto outname = "ply/" + get_dirname(filename).substr(5) +
                    get_filename(filename) + ".ply";
     if (smap.find(outname) == smap.end()) {
-        auto curves             = doc.get_root();
-        auto material           = yocto_material{};
+        auto curves      = doc.get_root();
+        auto material    = yocto_material{};
         material.diffuse = mmap.at(material_name).color;
         scene.materials.push_back(material);
         auto shape      = yocto_shape{};

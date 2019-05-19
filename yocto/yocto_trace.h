@@ -145,9 +145,9 @@ enum struct trace_falsecolor_type {
 };
 
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
-    "gnormal", "gfrontfacing", "texcoord", "color", "emission",
-    "diffuse", "specular", "transmission", "roughness", "material", "shape",
-    "instance", "highlight"};
+    "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
+    "specular", "transmission", "roughness", "material", "shape", "instance",
+    "highlight"};
 
 // Options for trace functions
 struct trace_params {

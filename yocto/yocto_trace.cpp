@@ -988,15 +988,15 @@ float sample_light_pdf(const yocto_scene& scene, const trace_lights& lights,
     auto pdf           = 0.0f;
     auto next_position = position;
     for (auto bounce = 0; bounce < 100; bounce++) {
-        auto isec = intersect_bvh(bvh, scene, instance_id,
-                make_ray(next_position, direction));
-        if(!isec.hit) break;
+        auto isec = intersect_bvh(
+            bvh, scene, instance_id, make_ray(next_position, direction));
+        if (!isec.hit) break;
         // accumulate pdf
         auto& instance       = scene.instances[isec.instance];
         auto  light_position = eval_position(
             scene, instance, isec.element, isec.uv);
-        auto light_normal = eval_normal(scene, instance, isec.element,
-            isec.uv, trace_non_rigid_frames);
+        auto light_normal = eval_normal(
+            scene, instance, isec.element, isec.uv, trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = elements_cdf.back();
         pdf += distance_squared(light_position, position) /
@@ -1065,7 +1065,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(bvh, scene, make_ray(origin, direction));
+        auto intersection = intersect_bvh(
+            bvh, scene, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1089,13 +1090,13 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             // prepare shading point
             auto  outgoing = -direction;
             auto& instance = scene.instances[intersection.instance];
-            auto  position = eval_position(scene, instance,
-                intersection.element, intersection.uv);
-            auto  normal   = eval_shading_normal(scene, instance,
+            auto  position = eval_position(
+                scene, instance, intersection.element, intersection.uv);
+            auto normal   = eval_shading_normal(scene, instance,
                 intersection.element, intersection.uv, direction,
                 trace_non_rigid_frames);
-            auto  material = eval_material(scene, instance,
-                intersection.element, intersection.uv);
+            auto material = eval_material(
+                scene, instance, intersection.element, intersection.uv);
 
             // handle opacity
             if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1135,8 +1136,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
             if (material.voldensity != zero3f &&
                 other_hemisphere(normal, outgoing, incoming)) {
                 if (volume_stack.empty()) {
-                    volume_stack.push_back(
-                        {material, intersection.instance});
+                    volume_stack.push_back({material, intersection.instance});
                 } else {
                     volume_stack.pop_back();
                 }
@@ -1206,7 +1206,8 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(bvh, scene, make_ray(origin, direction));
+        auto intersection = intersect_bvh(
+            bvh, scene, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1218,9 +1219,8 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         auto& instance = scene.instances[intersection.instance];
         auto  position = eval_position(
             scene, instance, intersection.element, intersection.uv);
-        auto normal   = eval_shading_normal(scene, instance,
-            intersection.element, intersection.uv, direction,
-            trace_non_rigid_frames);
+        auto normal = eval_shading_normal(scene, instance, intersection.element,
+            intersection.uv, direction, trace_non_rigid_frames);
         auto material = eval_material(
             scene, instance, intersection.element, intersection.uv);
 
@@ -1280,7 +1280,8 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < max(params.max_bounces, 4); bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(bvh, scene, make_ray(origin, direction));
+        auto intersection = intersect_bvh(
+            bvh, scene, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1291,9 +1292,8 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         auto& instance = scene.instances[intersection.instance];
         auto  position = eval_position(
             scene, instance, intersection.element, intersection.uv);
-        auto normal   = eval_shading_normal(scene, instance,
-            intersection.element, intersection.uv, direction,
-            trace_non_rigid_frames);
+        auto normal = eval_shading_normal(scene, instance, intersection.element,
+            intersection.uv, direction, trace_non_rigid_frames);
         auto material = eval_material(
             scene, instance, intersection.element, intersection.uv);
 
@@ -1343,10 +1343,10 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     // auto& material = scene.materials[instance.material];
 
     // prepare shading point
-    auto  outgoing = -direction;
+    auto outgoing = -direction;
     // auto  position = eval_position(
     //     scene, instance, intersection.element, intersection.uv);
-    auto normal = eval_shading_normal(scene, instance, intersection.element,
+    auto normal   = eval_shading_normal(scene, instance, intersection.element,
         intersection.uv, direction, trace_non_rigid_frames);
     auto material = eval_material(
         scene, instance, intersection.element, intersection.uv);

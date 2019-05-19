@@ -120,23 +120,23 @@ struct yocto_material {
     string uri = "";
 
     // lobes
-    vec3f emission                = {0, 0, 0};
-    vec3f diffuse                 = {0, 0, 0};
-    vec3f specular                = {0, 0, 0};
-    float roughness               = 0;
-    float metallic                = 0;
-    vec3f ior                     = {1.5, 1.5, 1.5};
-    vec3f sheen                   = {0, 0, 0};
-    vec3f coat                    = {0, 0, 0};
-    vec3f transmission            = {0, 0, 0};
-    vec3f voltransmission         = {0, 0, 0};
-    vec3f volemission             = {0, 0, 0};
-    vec3f volscatter              = {0, 0, 0};
-    float volanisotropy           = 0;
-    float volscale                = 0.01;
-    float opacity                 = 1;
-    bool  thin                    = false;
-    bool  ior_from_specular       = false;
+    vec3f emission          = {0, 0, 0};
+    vec3f diffuse           = {0, 0, 0};
+    vec3f specular          = {0, 0, 0};
+    float roughness         = 0;
+    float metallic          = 0;
+    vec3f ior               = {1.5, 1.5, 1.5};
+    vec3f sheen             = {0, 0, 0};
+    vec3f coat              = {0, 0, 0};
+    vec3f transmission      = {0, 0, 0};
+    vec3f voltransmission   = {0, 0, 0};
+    vec3f volemission       = {0, 0, 0};
+    vec3f volscatter        = {0, 0, 0};
+    float volanisotropy     = 0;
+    float volscale          = 0.01;
+    float opacity           = 1;
+    bool  thin              = false;
+    bool  ior_from_specular = false;
 
     // textures
     int  emission_texture     = -1;
@@ -430,19 +430,19 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    vec3f emission                = {0, 0, 0};
-    vec3f diffuse                 = {0, 0, 0};
-    vec3f specular                = {0, 0, 0};
-    vec3f coat                    = {0, 0, 0};
-    vec3f transmission            = {0, 0, 0};
-    float roughness               = 0;
-    vec3f eta                     = {1.5, 1.5, 1.5};
-    vec3f voldensity              = {0, 0, 0};
-    vec3f volemission             = {0, 0, 0};
-    vec3f volscatter              = {0, 0, 0};
-    float volanisotropy           = 0;
-    float opacity                 = 1;
-    bool  thin                    = false;
+    vec3f emission      = {0, 0, 0};
+    vec3f diffuse       = {0, 0, 0};
+    vec3f specular      = {0, 0, 0};
+    vec3f coat          = {0, 0, 0};
+    vec3f transmission  = {0, 0, 0};
+    float roughness     = 0;
+    vec3f eta           = {1.5, 1.5, 1.5};
+    vec3f voldensity    = {0, 0, 0};
+    vec3f volemission   = {0, 0, 0};
+    vec3f volscatter    = {0, 0, 0};
+    float volanisotropy = 0;
+    float opacity       = 1;
+    bool  thin          = false;
 };
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord,
@@ -458,10 +458,10 @@ vec3f eval_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     const vec3f& direction, bool non_rigid_frame = false);
 // Instance element values.
-vec3f eval_element_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id,
-    bool non_rigid_frame = false);
-material_point eval_material(const yocto_scene& scene, 
+vec3f          eval_element_normal(const yocto_scene& scene,
+             const yocto_instance& instance, int element_id,
+             bool non_rigid_frame = false);
+material_point eval_material(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 
 // Environment texture coordinates from the incoming direction.

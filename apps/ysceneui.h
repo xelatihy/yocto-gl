@@ -392,12 +392,12 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "vol emission", edited_value.volemission)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(win, "vol scale",
-            edited_value.volscale, 0, 1)) {
+    if (draw_slider_opengl_widget(
+            win, "vol scale", edited_value.volscale, 0, 1)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(win, "vol anisotropy",
-            edited_value.volanisotropy, -1, 1)) {
+    if (draw_slider_opengl_widget(
+            win, "vol anisotropy", edited_value.volanisotropy, -1, 1)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(win, "opacity", edited_value.opacity, 0, 1)) {

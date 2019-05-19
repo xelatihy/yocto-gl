@@ -290,8 +290,8 @@ inline bool intersect_bvh(const bvh_scene& bvh, const Scene& scene,
     bool find_any = false, bool non_rigid_frames = true);
 // Intersects a single instance.
 template <typename Scene>
-inline bool intersect_bvh(const bvh_scene& bvh, const Scene& scene, int instance,
-    const ray3f& ray, int& element, vec2f& uv, float& distance,
+inline bool intersect_bvh(const bvh_scene& bvh, const Scene& scene,
+    int instance, const ray3f& ray, int& element, vec2f& uv, float& distance,
     bool find_any = false, bool non_rigid_frames = true);
 
 // Find a shape element that overlaps a point within a given distance
@@ -329,7 +329,8 @@ inline bvh_intersection intersect_bvh(const bvh_scene& bvh, const Scene& scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 template <typename Scene>
 inline bvh_intersection intersect_bvh(const bvh_scene& bvh, const Scene& scene,
-    int instance, const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+    int instance, const ray3f& ray, bool find_any = false,
+    bool non_rigid_frames = true);
 
 template <typename Shape>
 inline bvh_intersection overlap_bvh(const bvh_shape& bvh, const Shape& shape,
@@ -1794,16 +1795,17 @@ inline bool intersect_bvh(const bvh_scene& bvh, const Scene& scene,
 }
 // Intersect ray with a bvh.
 template <typename Scene>
-inline bool intersect_bvh(const bvh_scene& bvh, const Scene& scene, int instance,
-    const ray3f& ray, int& element, vec2f& uv, float& distance,
+inline bool intersect_bvh(const bvh_scene& bvh, const Scene& scene,
+    int instance, const ray3f& ray, int& element, vec2f& uv, float& distance,
     bool find_any, bool non_rigid_frames) {
     auto& instance_ = scene.instances[instance];
-    auto  inv_ray  = non_rigid_frames
+    auto  inv_ray   = non_rigid_frames
                        ? transform_ray(
                              inverse((const affine3f&)instance_.frame), ray)
                        : transform_ray_inverse(instance_.frame, ray);
-    return intersect_bvh(bvh.shapes[instance_.shape], scene.shapes[instance_.shape],
-            inv_ray, element, uv, distance, find_any);
+    return intersect_bvh(bvh.shapes[instance_.shape],
+        scene.shapes[instance_.shape], inv_ray, element, uv, distance,
+        find_any);
 }
 
 // Intersect ray with a bvh.
@@ -2034,8 +2036,8 @@ inline bvh_intersection intersect_bvh(const bvh_scene& bvh, const Scene& scene,
 template <typename Scene>
 inline bvh_intersection intersect_bvh(const bvh_scene& bvh, const Scene& scene,
     int instance, const ray3f& ray, bool find_any, bool non_rigid_frames) {
-    auto intersection = bvh_intersection{};
-    intersection.hit  = intersect_bvh(bvh, scene, instance, ray,
+    auto intersection     = bvh_intersection{};
+    intersection.hit      = intersect_bvh(bvh, scene, instance, ray,
         intersection.element, intersection.uv, intersection.distance, find_any);
     intersection.instance = instance;
     return intersection;

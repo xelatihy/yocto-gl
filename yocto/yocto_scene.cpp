@@ -519,8 +519,8 @@ void add_materials(yocto_scene& scene) {
 // Add missing radius.
 void add_radius(yocto_scene& scene, float radius) {
     for (auto& shape : scene.shapes) {
-        if(shape.points.empty() && shape.lines.empty()) continue;
-        if(!shape.radius.empty()) continue;
+        if (shape.points.empty() && shape.lines.empty()) continue;
+        if (!shape.radius.empty()) continue;
         shape.radius.assign(shape.positions.size(), radius);
     }
 }
@@ -825,7 +825,7 @@ vec3f eval_normal(const yocto_scene& scene, const yocto_instance& instance,
 vec3f eval_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     const vec3f& direction, bool non_rigid_frame) {
-    auto& shape  = scene.shapes[instance.shape];
+    auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
     if (!shape.points.empty()) {
         return -direction;
@@ -833,14 +833,17 @@ vec3f eval_shading_normal(const yocto_scene& scene,
         auto normal = eval_normal(
             scene, instance, element_id, element_uv, non_rigid_frame);
         return orthonormalize(-direction, normal);
-    } else if(material.normal_texture < 0) {
+    } else if (material.normal_texture < 0) {
         return eval_normal(
             scene, instance, element_id, element_uv, non_rigid_frame);
     } else {
         auto& normal_texture = scene.textures[material.normal_texture];
-        auto  normalmap      = xyz(eval_texture(normal_texture,
-            eval_texcoord(shape, element_id, element_uv), true)) * 2 - 1;
-        normalmap.y          = -normalmap.y;  // flip vertical axis
+        auto  normalmap =
+            xyz(eval_texture(normal_texture,
+                eval_texcoord(shape, element_id, element_uv), true)) *
+                2 -
+            1;
+        normalmap.y = -normalmap.y;  // flip vertical axis
         auto normal = eval_perturbed_normal(scene, scene.shapes[instance.shape],
             element_id, element_uv, normalmap);
         return non_rigid_frame

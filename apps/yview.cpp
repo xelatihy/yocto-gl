@@ -553,8 +553,9 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             : opengl_texture{},
         0);
     set_opengl_uniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
-        material.diffuse_texture >= 0 ? state.textures.at(material.diffuse_texture)
-                                   : opengl_texture{},
+        material.diffuse_texture >= 0
+            ? state.textures.at(material.diffuse_texture)
+            : opengl_texture{},
         1);
     set_opengl_uniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
         material.metallic_texture >= 0
