@@ -705,8 +705,6 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.roughness);
                 } else if (key == "ior") {
                     get_yaml_value(value, material.ior);
-                } else if (key == "sheen") {
-                    get_yaml_value(value, material.sheen);
                 } else if (key == "coat") {
                     get_yaml_value(value, material.coat);
                 } else if (key == "transmission") {
@@ -725,8 +723,6 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.opacity);
                 } else if (key == "coat") {
                     get_yaml_value(value, material.coat);
-                } else if (key == "sheen") {
-                    get_yaml_value(value, material.sheen);
                 } else if (key == "thin") {
                     get_yaml_value(value, material.thin);
                 } else if (key == "emission_texture") {
@@ -975,7 +971,6 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             def_material.volanisotropy);
         print_optional(
             fs, "volscale", material.volscale, def_material.volscale);
-        print_optional(fs, "sheen", material.sheen, def_material.sheen);
         print_optional(fs, "coat", material.coat, def_material.coat);
         print_optional(fs, "opacity", material.opacity, def_material.opacity);
         print_optional(fs, "thin", material.thin, def_material.thin);

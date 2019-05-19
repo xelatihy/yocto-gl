@@ -373,9 +373,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     if (draw_coloredit_opengl_widget(win, "coat", edited_value.coat)) {
         edited = true;
     }
-    if (draw_coloredit_opengl_widget(win, "sheen", edited_value.sheen)) {
-        edited = true;
-    }
     if (draw_coloredit_opengl_widget(
             win, "transmission", edited_value.transmission)) {
         edited = true;

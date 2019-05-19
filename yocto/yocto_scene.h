@@ -126,7 +126,6 @@ struct yocto_material {
     float roughness         = 0;
     float metallic          = 0;
     vec3f ior               = {1.5, 1.5, 1.5};
-    vec3f sheen             = {0, 0, 0};
     vec3f coat              = {0, 0, 0};
     vec3f transmission      = {0, 0, 0};
     vec3f voltransmission   = {0, 0, 0};
