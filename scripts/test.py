@@ -150,167 +150,158 @@ def make_tests():
         "materials": [
             {
                 "uri": "materials/test-floor.yaml",
-                "diffuse_factor": 1,
-                "base_color": [ 0.7, 0.7, 0.7 ],
-                "base_texture": "textures/test-floor.png"
+                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "diffuse_texture": "textures/test-floor.png"
             },
             {
                 "uri": "materials/test-uvgrid.yaml",
-                "diffuse_factor": 1,
-                "specular_factor": 1,
-                "base_color": [ 1, 1, 1 ],
-                "specular_roughness": 0.1,
-                "base_texture": "textures/test-uvgrid.png"
+                "specular": [1, 1, 1],
+                "diffuse": [ 1, 1, 1 ],
+                "roughness": 0.1,
+                "diffuse_texture": "textures/test-uvgrid.png"
             },
             {
                 "uri": "materials/test-matte.yaml",
-                "diffuse_factor": 1,
-                "base_color": [ 0.7, 0.7, 0.7 ],
-                "specular_roughness": 1
+                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "roughness": 1
             },
             {
                 "uri": "materials/test-plastic-sharp.yaml",
-                "diffuse_factor": 1,
-                "specular_factor": 1,
-                "base_color": [ 0.5, 0.5, 0.7 ],
-                "specular_roughness": 0.01
+                "specular": [1, 1, 1],
+                "diffuse": [ 0.5, 0.5, 0.7 ],
+                "roughness": 0.01
             },
             {
                 "uri": "materials/test-plastic-rough.yaml",
-                "diffuse_factor": 1,
-                "specular_factor": 1,
-                "base_color": [ 0.5, 0.7, 0.5 ],
-                "specular_roughness": 0.2
+                "specular": [1, 1, 1],
+                "diffuse": [ 0.5, 0.7, 0.5 ],
+                "roughness": 0.2
             },
             {
                 "uri": "materials/test-metal-sharp.yaml",
-                "metallic_factor": 1,
-                "base_color": [ 0.7, 0.7, 0.7 ],
-                "specular_roughness": 0
+                "metallic": 1,
+                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "roughness": 0
             },
             {
                 "uri": "materials/test-metal-rough.yaml",
-                "metallic_factor": 1,
-                "base_color": [ 0.66, 0.45, 0.34 ],
-                "specular_roughness": 0.2
+                "metallic": 1,
+                "diffuse": [ 0.66, 0.45, 0.34 ],
+                "roughness": 0.2
             },
             {
                 "uri": "materials/test-plastic-sharp-bumped.yaml",
-                "diffuse_factor": 1,
-                "specular_factor": 1,
-                "base_color": [ 0.5, 0.5, 0.7 ],
-                "specular_roughness": 0.01,
+                "specular": [1, 1, 1],
+                "diffuse": [ 0.5, 0.5, 0.7 ],
+                "roughness": 0.01,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
                 "uri": "materials/test-metal-sharp-bumped.yaml",
-                "diffuse_factor": 1,
-                "metallic_factor": 1,
-                "base_color": [ 0.7, 0.7, 0.7 ],
-                "specular_roughness": 0,
+                "metallic": 1,
+                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "roughness": 0,
                 "normal_texture": "textures/test-bump-normal.png"
             },
             {
                 "uri": "materials/test-plastic-rough-coated.yaml",
-                "diffuse_factor": 1,
-                "specular_factor": 1,
-                "coat_factor": 1,
-                "base_color": [ 0.5, 0.7, 0.5 ],
-                "specular_roughness": 0.2
+                "specular": [1, 1, 1],
+                "coat": [1, 1, 1],
+                "diffuse": [ 0.5, 0.7, 0.5 ],
+                "roughness": 0.2
             },
             {
                 "uri": "materials/test-metal-rough-coated.yaml",
-                "metallic_factor": 1,
-                "coat_factor": 1,
-                "base_color": [ 0.66, 0.45, 0.34 ],
-                "specular_roughness": 0.2
+                "metallic": 1,
+                "coat": [1, 1, 1],
+                "diffuse": [ 0.66, 0.45, 0.34 ],
+                "roughness": 0.2
             },
             {
                 "uri": "materials/test-transparent.yaml",
-                "diffuse_factor": 1,
-                "base_color": [ 0.7, 0.5, 0.5 ],
-                "specular_roughness": 1,
-                "opacity_factor": 0.2
+                "diffuse": [ 0.7, 0.5, 0.5 ],
+                "roughness": 1,
+                "opacity": 0.2
             },
             {
                 "uri": "materials/test-glass-sharp.yaml",
-                "specular_factor": 1,
-                "transmission_factor": 1,
-                "specular_roughness": 0,
-                "thin_walled": False
+                "specular": [1, 1, 1],
+                "transmission": [1, 1, 1],
+                "roughness": 0,
+                "thin": False
             },
             {
                 "uri": "materials/test-glass-rough.yaml",
-                "specular_factor": 1,
-                "transmission_factor": 1,
-                "transmission_color": [ 1, 0.7, 0.7 ],
-                "specular_roughness": 0.1,
-                "thin_walled": False
+                "specular": [1, 1, 1],
+                "transmission": [ 1, 0.7, 0.7 ],
+                "roughness": 0.1,
+                "thin": False
             },
             {
                 "uri": "materials/test-thinglass-sharp.yaml",
-                "specular_factor": 1,
-                "transmission_factor": 1,
-                "specular_roughness": 0,
-                "thin_walled": True
+                "specular": [1, 1, 1],
+                "transmission": [1, 1, 1],
+                "roughness": 0,
+                "thin": True
             },
             {
                 "uri": "materials/test-thinglass-rough.yaml",
-                "specular_factor": 1,
-                "transmission_factor": 1,
-                "transmission_color": [ 1, 0.7, 0.7 ],
-                "specular_roughness": 0.05,
-                "thin_walled": True
+                "specular": [1, 1, 1],
+                "transmission": [ 1, 0.7, 0.7 ],
+                "roughness": 0.05,
+                "thin": True
             },
             {
                 "uri": "materials/test-hair.yaml",
-                "diffuse_factor": 1,
-                "base_color": [ 0.7, 0.7, 0.7 ],
-                "specular_roughness": 1
+                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "roughness": 1
             },
             {
                 "uri": "materials/test-volume-jade.yaml",
-                "specular_factor": 1,
-                "transmission_factor": 1,
-                "specular_roughness": 0,
-                "transmission_color": [0.5, 0.5, 0.5],
-                "transmission_depth": 0.006,
-                "transmission_scatter": [0.3, 0.6, 0.3]
+                "specular": [1, 1, 1],
+                "roughness": 0,
+                "transmission": [1, 1, 1],
+                "voltransmission": [0.5, 0.5, 0.5],
+                "volscatter": [0.3, 0.6, 0.3]
             },
             {
                 "uri": "materials/test-volume-cloud.yaml",
-                "subsurface_factor": 1,
-                "subsurface_scale": 0.05,
-                "subsurface_color": [0.9, 0.9, 0.9]
+                "transmission": [1, 1, 1],
+                "voltransmission": [0.65, 0.65, 0.65],
+                "volscatter": [0.9, 0.9, 0.9],
+                "ior": [1, 1, 1]
             },
             {
                 "uri": "materials/test-volume-glass.yaml",
-                "specular_factor": 1,
-                "transmission_factor": 1,
-                "specular_roughness": 0,
-                "transmission_color": [1, 0.5, 0.5],
-                "transmission_depth": 0.02
+                "specular": [1, 1, 1],
+                "roughness": 0,
+                "transmission": [1, 1, 1],
+                "voltransmission": [1, 0.5, 0.5],
+                "volscale": 0.02
             },
             {
                 "uri": "materials/test-volume-smoke.yaml",
-                "subsurface_factor": 1,
-                "subsurface_scale": 0.03,
-                "subsurface_color": [0.2, 0.2, 0.2],
-                "subsurface_anisotropy": -0.8
+                "ior": [1, 1, 1],
+                "transmission": [1, 1, 1],
+                "voltransmission": [0.5, 0.5, 0.5],
+                "volscatter": [0.2, 0.2, 0.2],
+                "volanisotropy": -0.8
             },
             {
                 "uri": "materials/test-volume-emissive.yaml",
-                "subsurface_factor": 1,
-                "subsurface_scale": 1,
-                "subsurface_emission": [15, 15, 10]
+                "ior": [1, 1, 1],
+                "transmission": [1, 1, 1],
+                "voltransmission": [0.95, 0.95, 0.95],
+                "volemission": [15, 15, 10],
+                "volscatter": [0.01, 0.01, 0.01]
             },
             {
                 "uri": "materials/test-arealight1.yaml",
-                "emission_factor": 20
+                "emission": [20, 20, 20]
             },
             {
                 "uri": "materials/test-arealight2.yaml",
-                "emission_factor": 20
+                "emission": [20, 20, 20]
             }
         ],
         "shapes": [
@@ -434,7 +425,7 @@ def make_tests():
         "environments": [
             {
                 "uri": 'environments/test-sky.yaml',
-                "emission_factor": 2,
+                "emission": [2, 2, 2],
                 "emission_texture": "textures/test-sky.hdr"
             }
         ]
@@ -444,7 +435,7 @@ def make_tests():
         "environments": [
             {
                 "uri": 'environments/test-sunsky.yaml',
-                "emission_factor": 2,
+                "emission": [2, 2, 2],
                 "emission_texture": "textures/test-sunsky.hdr"
             }
         ]
@@ -506,7 +497,7 @@ def make_tests():
                 used = False
                 for material in scene['materials']:
                     if 'emission_texture' in material and material['emission_texture'] == remove_preset(texture['uri']): used = True
-                    if 'base_texture' in material and material['base_texture'] == remove_preset(texture['uri']): used = True
+                    if 'diffuse_texture' in material and material['diffuse_texture'] == remove_preset(texture['uri']): used = True
                     if 'normal_texture' in material and material['normal_texture'] == remove_preset(texture['uri']): used = True
                     if 'displacement_texture' in material and material['displacement_texture'] == remove_preset(texture['uri']): used = True
                 for subdiv in scene['subdivs']:

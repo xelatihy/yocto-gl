@@ -26,9 +26,7 @@
 // 2. use `compute_shape_box()/compute_scene_box()` to compute element bounds
 // 3. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
-// 4. for ray-intersection and closest point queries, create a BVH with
-//    `build_bvh()` and intersect with with `intersect_bvh()`;
-//     you can also update the BVH with `refit_bvh()`
+// 4. for ray-intersection and closest point queries, use Yocto/Bvh
 //
 //
 
@@ -64,7 +62,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_bvh.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
 
@@ -122,46 +119,29 @@ struct yocto_voltexture {
 struct yocto_material {
     string uri = "";
 
-    // factors
-    float emission_factor     = 0;
-    float metallic_factor     = 0;
-    float specular_factor     = 0;
-    float coat_factor         = 0;
-    float sheen_factor        = 0;
-    float transmission_factor = 0;
-    float subsurface_factor   = 0;
-    float diffuse_factor      = 0;
-    float opacity_factor      = 1;
-
     // lobes
-    vec3f emission_color          = {1, 1, 1};
-    vec3f base_color              = {1, 1, 1};
-    vec3f specular_color          = {1, 1, 1};
-    float specular_roughness      = 0;
-    float specular_ior            = 1.5;
-    vec3f sheen_color             = {1, 1, 1};
-    float sheen_roughness         = 0.3;
-    float diffuse_roughness       = 0;
-    vec3f coat_color              = {1, 1, 1};
-    float coat_roughness          = 0;
-    float coat_ior                = 1.5;
-    vec3f transmission_color      = {1, 1, 1};
-    float transmission_depth      = 0;
-    vec3f transmission_scatter    = {0, 0, 0};
-    float transmission_anisotropy = 0;
-    vec3f subsurface_emission     = {0, 0, 0};
-    vec3f subsurface_color        = {1, 1, 1};
-    vec3f subsurface_radius       = {1, 1, 1};
-    float subsurface_scale        = 1;
-    float subsurface_anisotropy   = 0;
-    bool  thin_walled             = false;
-    bool specular_ior_from_color  = false;
+    vec3f emission          = {0, 0, 0};
+    vec3f diffuse           = {0, 0, 0};
+    vec3f specular          = {0, 0, 0};
+    float roughness         = 0;
+    float metallic          = 0;
+    vec3f ior               = {1.5, 1.5, 1.5};
+    vec3f coat              = {0, 0, 0};
+    vec3f transmission      = {0, 0, 0};
+    vec3f voltransmission   = {0, 0, 0};
+    vec3f volemission       = {0, 0, 0};
+    vec3f volscatter        = {0, 0, 0};
+    float volanisotropy     = 0;
+    float volscale          = 0.01;
+    float opacity           = 1;
+    bool  thin              = false;
+    bool  ior_from_specular = false;
 
     // textures
     int  emission_texture     = -1;
-    int  base_texture         = -1;
-    int  metallic_texture     = -1;
+    int  diffuse_texture      = -1;
     int  specular_texture     = -1;
+    int  metallic_texture     = -1;
     int  roughness_texture    = -1;
     int  transmission_texture = -1;
     int  subsurface_texture   = -1;
@@ -256,8 +236,7 @@ struct yocto_instance {
 struct yocto_environment {
     string  uri              = "";
     frame3f frame            = identity_frame3f;
-    float   emission_factor  = 0;
-    vec3f   emission_color   = {1, 1, 1};
+    vec3f   emission         = {0, 0, 0};
     int     emission_texture = -1;
 };
 
@@ -352,27 +331,6 @@ bbox3f compute_bounds(const yocto_scene& scene);
 // Compute shape vertex normals
 void compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
-// Low level make/update bvh functions. The make functions take mutable objects
-// since adjustment might be frequired for the bvh to work in shared memory.
-void build_bvh(
-    yocto_shape& shape, bvh_shape& bvh, const bvh_params& params = {});
-void build_bvh(
-    yocto_scene& scene, bvh_scene& bvh, const bvh_params& params = {});
-void refit_bvh(yocto_scene& scene, bvh_shape& bvh,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params = {});
-void refit_bvh(yocto_scene& scene, bvh_scene& bvh,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params = {});
-bool intersect_bvh(const yocto_shape& shape, const bvh_shape& bvh,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any = false);
-bool intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
-    const ray3f& ray, bvh_intersection& intersection, bool find_any = false,
-    bool non_rigid_frames = true);
-bool intersect_bvh(const yocto_scene& scene, const bvh_scene& bvh,
-    int instance_id, const ray3f& ray, bvh_intersection& intersection,
-    bool find_any = false, bool non_rigid_frames = true);
-
 // Apply subdivision and displacement rules.
 void subdivide_shape(yocto_shape& shape, int subdivision_level,
     bool catmull_clark, bool compute_normals);
@@ -386,13 +344,11 @@ void add_normals(yocto_scene& scene);
 void add_tangent_spaces(yocto_scene& scene);
 void add_materials(yocto_scene& scene);
 void add_cameras(yocto_scene& scene);
+void add_radius(yocto_scene& scene, float radius = 0.001f);
 
 // Normalize URIs and add missing ones. Assumes names are unique.
 void normalize_uris(yocto_scene& sceme);
 void rename_instances(yocto_scene& scene);
-
-// Normalized a scaled color in a material
-void normalize_scaled_color(float& scale, vec3f& color);
 
 // Add a sky environment
 void add_sky(yocto_scene& scene, float sun_angle = pif / 4);
@@ -473,41 +429,23 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    float emission_factor         = 0;
-    float diffuse_factor          = 0;
-    float metallic_factor         = 0;
-    float specular_factor         = 0;
-    float transmission_factor     = 0;
-    float subsurface_factor       = 0;
-    float sheen_factor            = 0;
-    float coat_factor             = 0;
-    vec3f coat_color              = {1, 1, 1};
-    float coat_roughness          = 0;
-    float coat_ior                = 1.5;
-    vec3f emission_color          = {1, 1, 1};
-    vec3f base_color              = {1, 1, 1};
-    vec3f specular_color          = {1, 1, 1};
-    float specular_roughness      = 0;
-    float specular_ior            = 1.5;
-    vec3f sheen_color             = {1, 1, 1};
-    float sheen_roughness         = 0.3;
-    float diffuse_roughness       = 0;
-    vec3f transmission_color      = {1, 1, 1};
-    float transmission_depth      = 0;
-    vec3f transmission_scatter    = {0, 0, 0};
-    float transmission_anisotropy = 0;
-    vec3f subsurface_emission     = {0, 0, 0};
-    vec3f subsurface_color        = {1, 1, 1};
-    vec3f subsurface_radius       = {1, 1, 1};
-    float subsurface_scale        = 1;
-    float subsurface_anisotropy   = 0;
-    float opacity_factor          = 1;
-    bool  thin_walled             = false;
-    bool specular_ior_from_color  = false;
-    vec3f normal_map              = {0, 0, 1};
+    vec3f emission      = {0, 0, 0};
+    vec3f diffuse       = {0, 0, 0};
+    vec3f specular      = {0, 0, 0};
+    vec3f coat          = {0, 0, 0};
+    vec3f transmission  = {0, 0, 0};
+    float roughness     = 0;
+    vec3f eta           = {1.5, 1.5, 1.5};
+    vec3f voldensity    = {0, 0, 0};
+    vec3f volemission   = {0, 0, 0};
+    vec3f volscatter    = {0, 0, 0};
+    float volanisotropy = 0;
+    float opacity       = 1;
+    bool  thin          = false;
 };
 material_point eval_material(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord);
+    const yocto_material& material, const vec2f& texturecoord,
+    const vec4f& shape_color);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
@@ -515,13 +453,15 @@ vec3f eval_position(const yocto_scene& scene, const yocto_instance& instance,
     int element_id, const vec2f& element_uv);
 vec3f eval_normal(const yocto_scene& scene, const yocto_instance& instance,
     int element_id, const vec2f& element_uv, bool non_rigid_frame = false);
-vec3f eval_perturbed_normal(const yocto_scene& scene,
+vec3f eval_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    const vec3f& normalmap, bool non_rigid_frame = false);
+    const vec3f& direction, bool non_rigid_frame = false);
 // Instance element values.
-vec3f eval_element_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id,
-    bool non_rigid_frame = false);
+vec3f          eval_element_normal(const yocto_scene& scene,
+             const yocto_instance& instance, int element_id,
+             bool non_rigid_frame = false);
+material_point eval_material(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
 
 // Environment texture coordinates from the incoming direction.
 vec2f eval_texcoord(
@@ -533,7 +473,7 @@ vec3f eval_direction(
 vec3f eval_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vec3f& direction);
 // Evaluate all environment emission.
-vec3f eval_environments(const yocto_scene& scene, const vec3f& direction);
+vec3f eval_environment(const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
 void  sample_environment_cdf(const yocto_scene& scene,

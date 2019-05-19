@@ -393,6 +393,8 @@ constexpr T min(const vec<T, N>& a);
 template <typename T, int N>
 constexpr T mean(const vec<T, N>& a);
 template <typename T, int N>
+constexpr T sum(const vec<T, N>& a);
+template <typename T, int N>
 constexpr int max_element(const vec<T, N>& a);
 template <typename T, int N>
 constexpr int min_element(const vec<T, N>& a);
@@ -1697,20 +1699,24 @@ constexpr T min(const vec<T, N>& a) {
     }
 }
 template <typename T, int N>
-constexpr T mean(const vec<T, N>& a) {
+constexpr T sum(const vec<T, N>& a) {
     if constexpr (N == 1) {
         return a.x;
     } else if constexpr (N == 2) {
-        return (a.x + a.y) / 2;
+        return a.x + a.y;
     } else if constexpr (N == 3) {
-        return (a.x + a.y + a.z) / 3;
+        return a.x + a.y + a.z;
     } else if constexpr (N == 4) {
-        return (a.x + a.y + a.z + a.w) / 4;
+        return a.x + a.y + a.z + a.w;
     } else {
         auto m = a[0];
         for (auto i = 1; i < N; i++) m += a[i];
-        return m / N;
+        return m;
     }
+}
+template <typename T, int N>
+constexpr T mean(const vec<T, N>& a) {
+    return sum(a) / N;
 }
 template <typename T, int N>
 constexpr int max_element(const vec<T, N>& a) {

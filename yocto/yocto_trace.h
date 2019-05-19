@@ -131,7 +131,6 @@ enum struct trace_falsecolor_type {
     frontfacing,   // faceforward
     gnormal,       // geometric normal
     gfrontfacing,  // geometric faceforward
-    albedo,        // albedo
     texcoord,      // texcoord
     color,         // color
     emission,      // emission
@@ -139,7 +138,6 @@ enum struct trace_falsecolor_type {
     specular,      // specular
     transmission,  // transmission
     roughness,     // roughness
-    lobes,         // number of lobes
     material,      // material
     shape,         // shape
     instance,      // instance
@@ -147,16 +145,16 @@ enum struct trace_falsecolor_type {
 };
 
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
-    "gnormal", "gfrontfacing", "albedo", "texcoord", "color", "emission",
-    "diffuse", "specular", "transmission", "roughness", "lobes", "material", "shape",
-    "instance", "highlight"};
+    "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
+    "specular", "transmission", "roughness", "material", "shape", "instance",
+    "highlight"};
 
 // Options for trace functions
 struct trace_params {
     int                   camera_id           = 0;
     vec2i                 image_size          = {1280, 720};
     trace_sampler_type    sampler_type        = trace_sampler_type::path;
-    trace_falsecolor_type falsecolor_type     = trace_falsecolor_type::albedo;
+    trace_falsecolor_type falsecolor_type     = trace_falsecolor_type::diffuse;
     int                   num_samples         = 512;
     int                   max_bounces         = 64;
     int                   samples_per_batch   = 16;
