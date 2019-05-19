@@ -1407,44 +1407,6 @@ static inline void build_bvh_parallel(vector<bvh_node>& nodes,
     nodes.shrink_to_fit();
 }
 
-// Get shape element bounds
-template <typename Shape>
-inline auto get_shape_bounds(const Shape& shape) {
-    // get element bounds from geometry type
-    auto element_bounds = (bbox3f(*)(const Shape& shape, int idx)) nullptr;
-    if (!shape.points.empty()) {
-        element_bounds = [](const Shape& shape, int idx) {
-            auto& p = shape.points[idx];
-            return point_bounds(shape.positions[p], shape.radius[p]);
-        };
-    } else if (!shape.lines.empty()) {
-        element_bounds = [](const Shape& shape, int idx) {
-            auto& l = shape.lines[idx];
-            return line_bounds(shape.positions[l.x], shape.positions[l.y],
-                shape.radius[l.x], shape.radius[l.y]);
-        };
-    } else if (!shape.triangles.empty()) {
-        element_bounds = [](const Shape& shape, int idx) {
-            auto& t = shape.triangles[idx];
-            return triangle_bounds(shape.positions[t.x], shape.positions[t.y],
-                shape.positions[t.z]);
-        };
-    } else if (!shape.quads.empty()) {
-        element_bounds = [](const Shape& shape, int idx) {
-            auto& q = shape.quads[idx];
-            return quad_bounds(shape.positions[q.x], shape.positions[q.y],
-                shape.positions[q.z], shape.positions[q.w]);
-        };
-    } else if (!shape.quads_positions.empty()) {
-        element_bounds = [](const Shape& shape, int idx) {
-            auto& q = shape.quads_positions[idx];
-            return quad_bounds(shape.positions[q.x], shape.positions[q.y],
-                shape.positions[q.z], shape.positions[q.w]);
-        };
-    }
-    return element_bounds;
-}
-
 template <typename Shape>
 inline void build_bvh(
     bvh_shape& bvh, const Shape& shape, const bvh_params& params) {
@@ -1455,23 +1417,49 @@ inline void build_bvh(
     }
 #endif
 
-    // get element bounds from geometry type
-    auto element_bounds = get_shape_bounds(shape);
-
-    // get the number of primitives
-    auto num_elements = (size_t)0;
-    num_elements      = max(num_elements, shape.points.size());
-    num_elements      = max(num_elements, shape.lines.size());
-    num_elements      = max(num_elements, shape.triangles.size());
-    num_elements      = max(num_elements, shape.quads.size());
-    num_elements      = max(num_elements, shape.quads_positions.size());
-
     // build primitives
-    auto prims = vector<bvh_prim>(num_elements);
-    for (auto idx = 0; idx < num_elements; idx++) {
-        prims[idx].bbox   = element_bounds(shape, idx);
-        prims[idx].center = bbox_center(prims[idx].bbox);
-        prims[idx].primid = idx;
+    auto prims = vector<bvh_prim>{};
+    if(!shape.points.empty()) {
+        prims = vector<bvh_prim>(shape.points.size());
+        for (auto idx = 0; idx < prims.size(); idx++) {
+            auto& p = shape.points[idx];
+            auto bbox = point_bounds(shape.positions[p], shape.radius[p]);
+            prims[idx]   = {bbox, bbox_center(bbox), idx};
+        }
+    } else if(!shape.lines.empty()) {
+        prims = vector<bvh_prim>(shape.lines.size());
+        for (auto idx = 0; idx < prims.size(); idx++) {
+            auto& l = shape.lines[idx];
+            auto bbox = line_bounds(shape.positions[l.x], shape.positions[l.y],
+                shape.radius[l.x], shape.radius[l.y]);
+            prims[idx]   = {bbox, bbox_center(bbox), idx};
+        }
+    } else if(!shape.triangles.empty()) {
+        prims = vector<bvh_prim>(shape.triangles.size());
+        for (auto idx = 0; idx < prims.size(); idx++) {
+            auto& t = shape.triangles[idx];
+            auto bbox = triangle_bounds(shape.positions[t.x], shape.positions[t.y],
+                shape.positions[t.z]);
+            prims[idx]   = {bbox, bbox_center(bbox), idx};
+        }
+    } else if(!shape.quads.empty()) {
+        prims = vector<bvh_prim>(shape.quads.size());
+        for (auto idx = 0; idx < prims.size(); idx++) {
+            auto& q = shape.quads[idx];
+            auto bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+                shape.positions[q.z], shape.positions[q.w]);
+            prims[idx]   = {bbox, bbox_center(bbox), idx};
+        }
+    } else if(!shape.quads_positions.empty()) {
+        prims = vector<bvh_prim>(shape.quads_positions.size());
+        for (auto idx = 0; idx < prims.size(); idx++) {
+            auto& q = shape.quads_positions[idx];
+            auto bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+                shape.positions[q.z], shape.positions[q.w]);
+            prims[idx]   = {bbox, bbox_center(bbox), idx};
+        }
+    } else {
+
     }
 
     // build nodes
@@ -1501,24 +1489,18 @@ inline void build_bvh(
     }
 #endif
 
-    // get element bounds from geometry type
-    auto element_bounds = [](const Scene& scene, const bvh_scene& bvh, int idx) {
-        auto& instance = scene.instances[idx];
-        auto& sbvh     = bvh.shapes[instance.shape];
-        return sbvh.nodes.empty()
-                        ? invalid_bbox3f
-                        : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
-    };
-
     // get the number of primitives
     auto num_elements = scene.instances.size();
 
     // build primitives
     auto prims = vector<bvh_prim>(num_elements);
     for (auto idx = 0; idx < prims.size(); idx++) {
-        prims[idx].bbox   = element_bounds(scene, bvh, idx);
-        prims[idx].center = bbox_center(prims[idx].bbox);
-        prims[idx].primid = idx;
+        auto& instance = scene.instances[idx];
+        auto& sbvh     = bvh.shapes[instance.shape];
+        auto bbox = sbvh.nodes.empty()
+                        ? invalid_bbox3f
+                        : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
+        prims[idx]   = {bbox, bbox_center(bbox), idx};
     }
 
     // build nodes
@@ -1536,9 +1518,6 @@ inline void refit_bvh(
     if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
 #endif
 
-    // get element bounds
-    auto element_bounds = get_shape_bounds(shape);
-
     // refit
     for(auto nodeid = (int)bvh.nodes.size()-1; nodeid >= 0; nodeid --) {
         auto& node = bvh.nodes[nodeid];
@@ -1547,10 +1526,35 @@ inline void refit_bvh(
             for (auto i = 0; i < 2; i++) {
                 node.bbox += bvh.nodes[node.primitive_ids[i]].bbox;
             }
-        } else {
+        } else if(!shape.points.empty()) {
             for (auto idx = 0; idx < node.num_primitives;
                 idx++) {
-                node.bbox += element_bounds(shape, node.primitive_ids[idx]);
+                auto& p = shape.points[node.primitive_ids[idx]];
+                node.bbox += point_bounds(shape.positions[p], shape.radius[p]);
+            }
+        } else if(!shape.lines.empty()) {
+            for (auto idx = 0; idx < node.num_primitives;
+                idx++) {
+                auto& l = shape.lines[node.primitive_ids[idx]];
+                node.bbox += line_bounds(shape.positions[l.x], shape.positions[l.y], shape.radius[l.x], shape.radius[l.y]);
+            }
+        } else if(!shape.triangles.empty()) {
+            for (auto idx = 0; idx < node.num_primitives;
+                idx++) {
+                auto& t = shape.triangles[node.primitive_ids[idx]];
+                node.bbox += triangle_bounds(shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+            }
+        } else if(!shape.quads.empty()) {
+            for (auto idx = 0; idx < node.num_primitives;
+                idx++) {
+                auto& q = shape.quads[node.primitive_ids[idx]];
+                node.bbox += quad_bounds(shape.positions[q.x], shape.positions[q.y], shape.positions[q.z], shape.positions[q.w]);
+            }
+        } else if(!shape.quads_positions.empty()) {
+            for (auto idx = 0; idx < node.num_primitives;
+                idx++) {
+                auto& q = shape.quads_positions[node.primitive_ids[idx]];
+                node.bbox += quad_bounds(shape.positions[q.x], shape.positions[q.y], shape.positions[q.z], shape.positions[q.w]);
             }
         }
     }
