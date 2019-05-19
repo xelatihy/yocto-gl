@@ -421,6 +421,7 @@ float sample_environment_pdf(const yocto_scene& scene,
 
 // Build BVH
 void build_bvh(yocto_shape& shape, bvh_shape& bvh, const bvh_params& params) {
+    // fix data
 #if YOCTO_EMBREE
     if (params.embree_compact &&
         shape.positions.size() == shape.positions.capacity()) {
@@ -431,6 +432,8 @@ void build_bvh(yocto_shape& shape, bvh_shape& bvh, const bvh_params& params) {
         shape.radius.empty()) {
         shape.radius.assign(shape.positions.size(), 0.001f);
     }
+
+    // build
     build_bvh(bvh, shape, params);
 }
 void build_bvh(yocto_scene& scene, bvh_scene& bvh, const bvh_params& params) {
@@ -444,9 +447,7 @@ void refit_bvh(yocto_shape& shape, bvh_shape& bvh, const bvh_params& params) {
 void refit_bvh(yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params) {
-    for (auto shape_id : updated_shapes)
-        refit_bvh(scene.shapes[shape_id], bvh.shapes[shape_id], params);
-    refit_bvh(bvh, scene, params);
+    refit_bvh(bvh, scene, updated_shapes, params);
 }
 bvh_intersection intersect_bvh(const yocto_shape& shape, const bvh_shape& bvh,
     const ray3f& ray, bool find_any) {

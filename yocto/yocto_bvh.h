@@ -275,7 +275,8 @@ inline void refit_bvh(
     bvh_shape& bvh, const Shape& shape, const bvh_params& params);
 template <typename Scene>
 inline void refit_bvh(
-    bvh_scene& bvh, const Scene& scene, const bvh_params& params);
+    bvh_scene& bvh, const Scene& scene, const vector<int>& updated_shapes, 
+    const bvh_params& params);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
@@ -1406,26 +1407,6 @@ static inline void build_bvh_parallel(vector<bvh_node>& nodes,
     nodes.shrink_to_fit();
 }
 
-// Build a BVH from a set of primitives.
-template <typename ElemBounds>
-static inline void build_bvh(vector<bvh_node>& nodes, size_t num_elements,
-    const ElemBounds& element_bounds, const bvh_params& params) {
-    // get the number of primitives and the primitive type
-    auto prims = vector<bvh_prim>(num_elements);
-    for (auto element_id = 0; element_id < num_elements; element_id++) {
-        prims[element_id].bbox   = element_bounds(element_id);
-        prims[element_id].center = bbox_center(prims[element_id].bbox);
-        prims[element_id].primid = element_id;
-    }
-
-    // build nodes
-    if (params.run_serially) {
-        build_bvh_serial(nodes, prims, params);
-    } else {
-        build_bvh_parallel(nodes, prims, params);
-    }
-}
-
 // Get shape element bounds
 template <typename Shape>
 inline auto get_shape_bounds(const Shape& shape) {
@@ -1479,18 +1460,18 @@ inline void build_bvh(
 
     // get the number of primitives
     auto num_elements = (size_t)0;
-    num_elements = max(num_elements, shape.points.size());
-    num_elements = max(num_elements, shape.lines.size());
-    num_elements = max(num_elements, shape.triangles.size());
-    num_elements = max(num_elements, shape.quads.size());
-    num_elements = max(num_elements, shape.quads_positions.size());
+    num_elements      = max(num_elements, shape.points.size());
+    num_elements      = max(num_elements, shape.lines.size());
+    num_elements      = max(num_elements, shape.triangles.size());
+    num_elements      = max(num_elements, shape.quads.size());
+    num_elements      = max(num_elements, shape.quads_positions.size());
 
     // build primitives
     auto prims = vector<bvh_prim>(num_elements);
-    for (auto element_id = 0; element_id < num_elements; element_id++) {
-        prims[element_id].bbox   = element_bounds(shape, element_id);
-        prims[element_id].center = bbox_center(prims[element_id].bbox);
-        prims[element_id].primid = element_id;
+    for (auto idx = 0; idx < num_elements; idx++) {
+        prims[idx].bbox   = element_bounds(shape, idx);
+        prims[idx].center = bbox_center(prims[idx].bbox);
+        prims[idx].primid = idx;
     }
 
     // build nodes
@@ -1520,17 +1501,23 @@ inline void build_bvh(
     }
 #endif
 
-    // get the number of primitives and the primitive type
-    if (scene.instances.empty()) return;
-    auto prims = vector<bvh_prim>(scene.instances.size());
-    for (auto idx = 0; idx < prims.size(); idx++) {
+    // get element bounds from geometry type
+    auto element_bounds = [](const Scene& scene, const bvh_scene& bvh, int idx) {
         auto& instance = scene.instances[idx];
         auto& sbvh     = bvh.shapes[instance.shape];
-        auto  bbox     = sbvh.nodes.empty()
+        return sbvh.nodes.empty()
                         ? invalid_bbox3f
                         : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
-        prims[idx].bbox   = bbox;
-        prims[idx].center = bbox_center(bbox);
+    };
+
+    // get the number of primitives
+    auto num_elements = scene.instances.size();
+
+    // build primitives
+    auto prims = vector<bvh_prim>(num_elements);
+    for (auto idx = 0; idx < prims.size(); idx++) {
+        prims[idx].bbox   = element_bounds(scene, bvh, idx);
+        prims[idx].center = bbox_center(prims[idx].bbox);
         prims[idx].primid = idx;
     }
 
@@ -1542,26 +1529,6 @@ inline void build_bvh(
     }
 }
 
-// Recursively recomputes the node bounds for a shape bvh
-template <typename ElemBound>
-static inline void refit_bvh(
-    vector<bvh_node>& nodes, int nodeid, const ElemBound& element_bounds) {
-    // refit
-    auto& node = nodes[nodeid];
-    node.bbox  = invalid_bbox3f;
-    if (node.is_internal) {
-        for (auto i = 0; i < 2; i++) {
-            refit_bvh(nodes, node.primitive_ids[i], element_bounds);
-            node.bbox += nodes[node.primitive_ids[i]].bbox;
-        }
-    } else {
-        for (auto elememt_id = 0; elememt_id < node.num_primitives;
-             elememt_id++) {
-            node.bbox += element_bounds(elememt_id);
-        }
-    }
-}
-
 template <typename Shape>
 inline void refit_bvh(
     bvh_shape& bvh, const Shape& shape, const bvh_params& params) {
@@ -1569,57 +1536,59 @@ inline void refit_bvh(
     if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
 #endif
 
-    if (!shape.points.empty()) {
-        return refit_bvh(bvh.nodes, 0, [&shape](int idx) {
-            auto& p = shape.points[idx];
-            return point_bounds(shape.positions[p], shape.radius[p]);
-        });
-    } else if (!shape.lines.empty()) {
-        return refit_bvh(bvh.nodes, 0, [&shape](int idx) {
-            auto& l = shape.lines[idx];
-            return line_bounds(shape.positions[l.x], shape.positions[l.y],
-                shape.radius[l.x], shape.radius[l.y]);
-        });
-    } else if (!shape.triangles.empty()) {
-        return refit_bvh(bvh.nodes, 0, [&shape](int idx) {
-            auto& t = shape.triangles[idx];
-            return triangle_bounds(shape.positions[t.x], shape.positions[t.y],
-                shape.positions[t.z]);
-        });
-    } else if (!shape.quads.empty()) {
-        return refit_bvh(bvh.nodes, 0, [&shape](int idx) {
-            auto& q = shape.quads[idx];
-            return quad_bounds(shape.positions[q.x], shape.positions[q.y],
-                shape.positions[q.z], shape.positions[q.w]);
-        });
-    } else if (!shape.quads_positions.empty()) {
-        return refit_bvh(bvh.nodes, 0, [&shape](int idx) {
-            auto& q = shape.quads_positions[idx];
-            return quad_bounds(shape.positions[q.x], shape.positions[q.y],
-                shape.positions[q.z], shape.positions[q.w]);
-        });
-    } else {
+    // get element bounds
+    auto element_bounds = get_shape_bounds(shape);
+
+    // refit
+    for(auto nodeid = (int)bvh.nodes.size()-1; nodeid >= 0; nodeid --) {
+        auto& node = bvh.nodes[nodeid];
+        node.bbox  = invalid_bbox3f;
+        if (node.is_internal) {
+            for (auto i = 0; i < 2; i++) {
+                node.bbox += bvh.nodes[node.primitive_ids[i]].bbox;
+            }
+        } else {
+            for (auto idx = 0; idx < node.num_primitives;
+                idx++) {
+                node.bbox += element_bounds(shape, node.primitive_ids[idx]);
+            }
+        }
     }
 }
 
 template <typename Scene>
 inline void refit_bvh(
-    bvh_scene& bvh, const Scene& scene, const bvh_params& params) {
+    bvh_scene& bvh, const Scene& scene, const vector<int>& updated_shapes,
+    const bvh_params& params) {
+    // update shapes
+    for(auto shape : updated_shapes) refit_bvh(bvh.shapes[shape], scene.shapes[shape], params);
+
 #if YOCTO_EMBREE
     if (bvh.embree_bvh) throw runtime_error("Embree reftting disabled");
 #endif
 
-    if (!scene.instances.empty()) {
-        // get the number of primitives and the primitive type
-        return refit_bvh(bvh.nodes, 0, [&scene, &bvh](int idx) {
-            auto& instance = scene.instances[idx];
-            auto& sbvh     = bvh.shapes[instance.shape];
-            return sbvh.nodes.empty()
-                       ? invalid_bbox3f
-                       : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
-        });
-    } else {
-        throw runtime_error("empty instances");
+    // get element bounds from geometry type
+    auto element_bounds = [](const Scene& scene, const bvh_scene& bvh, int idx) {
+        auto& instance = scene.instances[idx];
+        auto& sbvh     = bvh.shapes[instance.shape];
+        return sbvh.nodes.empty()
+                        ? invalid_bbox3f
+                        : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
+    };
+
+    // refit
+    for(auto nodeid = (int)bvh.nodes.size()-1; nodeid >= 0; nodeid --) {
+        auto& node = bvh.nodes[nodeid];
+        node.bbox  = invalid_bbox3f;
+        if (node.is_internal) {
+            for (auto i = 0; i < 2; i++) {
+                node.bbox += bvh.nodes[node.primitive_ids[i]].bbox;
+            }
+        } else {
+            for (auto idx = 0; idx < node.num_primitives; idx++) {
+                node.bbox += element_bounds(scene, bvh, node.primitive_ids[idx]);
+            }
+        }
     }
 }
 
