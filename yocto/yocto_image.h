@@ -95,133 +95,6 @@
 #include "yocto_utils.h"
 
 // -----------------------------------------------------------------------------
-// COLOR CONVERSION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Conversion between flots and bytes
-inline vec4b float_to_byte(const vec4f& a) {
-    return {(byte)clamp(int(a.x * 256), 0, 255),
-        (byte)clamp(int(a.y * 256), 0, 255),
-        (byte)clamp(int(a.z * 256), 0, 255),
-        (byte)clamp(int(a.w * 256), 0, 255)};
-}
-inline vec4f byte_to_float(const vec4b& a) {
-    return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
-}
-
-// Luminance
-inline float luminance(const vec3f& a) {
-    return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
-}
-
-// sRGB non-linear curve
-inline float srgb_to_rgb(float srgb) {
-    return (srgb <= 0.04045) ? srgb / 12.92f
-                             : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
-}
-inline float rgb_to_srgb(float lin) {
-    return (lin <= 0.0031308f) ? 12.92f * lin
-                               : (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
-}
-inline vec3f srgb_to_rgb(const vec3f& srgb) {
-    return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
-}
-inline vec4f srgb_to_rgb(const vec4f& srgb) {
-    return {
-        srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
-}
-inline vec3f rgb_to_srgb(const vec3f& lin) {
-    return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z)};
-}
-inline vec4f rgb_to_srgb(const vec4f& lin) {
-    return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z), lin.w};
-}
-
-// Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey) {
-    return max(zero3f, grey + (rgb - grey) * (contrast * 2));
-}
-// Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_logcontrast(
-    const vec3f& rgb, float logcontrast, float grey) {
-    auto epsilon  = (float)0.0001;
-    auto log_grey = log2(grey);
-    auto log_ldr  = log2(rgb + epsilon);
-    auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
-    return max(zero3f, exp2(adjusted) - epsilon);
-}
-// Apply saturation.
-inline vec3f apply_saturation(const vec3f& rgb, float saturation,
-    const vec3f& weights = vec3f{0.333333f}) {
-    auto grey = dot(weights, rgb);
-    return max(zero3f, grey + (rgb - grey) * (saturation * 2));
-}
-
-// Convert between CIE XYZ and RGB
-inline vec3f rgb_to_xyz(const vec3f& rgb) {
-    // https://en.wikipedia.org/wiki/SRGB
-    constexpr mat3f mat = {{0.4124, 0.2126, 0.0193}, {0.3576, 0.7152, 0.1192},
-        {0.1805, 0.0722, 0.9504}};
-    return mat * rgb;
-}
-inline vec3f xyz_to_rgb(const vec3f& xyz) {
-    // https://en.wikipedia.org/wiki/SRGB
-    constexpr mat3f mat = {{+3.2406, -1.5372, -0.4986},
-        {-0.9689, +1.8758, +0.0415}, {+0.0557, -0.2040, +1.0570}};
-    return mat * xyz;
-}
-
-// Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz) {
-    if (xyz == zero3f) return zero3f;
-    return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
-        xyz.y};
-}
-inline vec3f xyY_to_xyz(const vec3f& xyY) {
-    if (xyY.y == 0) return zero3f;
-    return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
-}
-
-// Approximate color of blackbody radiation from wavelength in nm.
-vec3f blackbody_to_rgb(float temperature);
-
-// Converts between HSV and RGB color spaces.
-vec3f hsv_to_rgb(const vec3f& hsv);
-vec3f rgb_to_hsv(const vec3f& rgb);
-
-// RGB color spaces
-enum struct color_space {
-    linear_srgb,   // default linear space (srgb linear)
-    srgb,          // srgb color space (non-linear)
-    adobe_rgb,     // Adobe rgb color space (non-linear)
-    prophoto_rgb,  // ProPhoto Kodak rgb color space (non-linear)
-    rec_709,       // hdtv color space (non-linear)
-    rec_2020,      // uhtv color space (non-linear)
-    rec_2100_pq,   // hdr color space with perceptual quantizer (non-linear)
-    rec_2100_hlg,  // hdr color space with hybrid log gamma (non-linear)
-    aces_2065,     // ACES storage format (linear)
-    aces_cg,       // ACES CG computation (linear)
-    aces_cc,       // ACES color correction (non-linear)
-    aces_cct,      // ACES color correction 2 (non-linear)
-    p3_dci,        // P3 DCI (non-linear)
-    p3_d60,        // P3 variation for D60 (non-linear)
-    p3_d65,        // P3 variation for D65 (non-linear)
-    p3_display,    // Apple display P3
-};
-
-// Conversion between rgb color spaces
-vec3f        color_to_xyz(const vec3f& col, color_space from);
-vec3f        xyz_to_color(const vec3f& xyz, color_space to);
-inline vec3f convert_color(
-    const vec3f& col, color_space from, color_space to) {
-    if (from == to) return col;
-    return xyz_to_color(color_to_xyz(col, from), to);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -584,6 +457,133 @@ namespace yocto {
 // Loads/saves a 1 channel volume.
 void load_volume(const string& filename, volume<float>& vol);
 void save_volume(const string& filename, const volume<float>& vol);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// COLOR CONVERSION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Conversion between flots and bytes
+inline vec4b float_to_byte(const vec4f& a) {
+    return {(byte)clamp(int(a.x * 256), 0, 255),
+        (byte)clamp(int(a.y * 256), 0, 255),
+        (byte)clamp(int(a.z * 256), 0, 255),
+        (byte)clamp(int(a.w * 256), 0, 255)};
+}
+inline vec4f byte_to_float(const vec4b& a) {
+    return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
+}
+
+// Luminance
+inline float luminance(const vec3f& a) {
+    return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
+}
+
+// sRGB non-linear curve
+inline float srgb_to_rgb(float srgb) {
+    return (srgb <= 0.04045) ? srgb / 12.92f
+                             : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
+}
+inline float rgb_to_srgb(float lin) {
+    return (lin <= 0.0031308f) ? 12.92f * lin
+                               : (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
+}
+inline vec3f srgb_to_rgb(const vec3f& srgb) {
+    return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
+}
+inline vec4f srgb_to_rgb(const vec4f& srgb) {
+    return {
+        srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
+}
+inline vec3f rgb_to_srgb(const vec3f& lin) {
+    return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z)};
+}
+inline vec4f rgb_to_srgb(const vec4f& lin) {
+    return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z), lin.w};
+}
+
+// Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
+inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey) {
+    return max(zero3f, grey + (rgb - grey) * (contrast * 2));
+}
+// Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
+inline vec3f apply_logcontrast(
+    const vec3f& rgb, float logcontrast, float grey) {
+    auto epsilon  = (float)0.0001;
+    auto log_grey = log2(grey);
+    auto log_ldr  = log2(rgb + epsilon);
+    auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
+    return max(zero3f, exp2(adjusted) - epsilon);
+}
+// Apply saturation.
+inline vec3f apply_saturation(const vec3f& rgb, float saturation,
+    const vec3f& weights = vec3f{0.333333f}) {
+    auto grey = dot(weights, rgb);
+    return max(zero3f, grey + (rgb - grey) * (saturation * 2));
+}
+
+// Convert between CIE XYZ and RGB
+inline vec3f rgb_to_xyz(const vec3f& rgb) {
+    // https://en.wikipedia.org/wiki/SRGB
+    constexpr mat3f mat = {{0.4124, 0.2126, 0.0193}, {0.3576, 0.7152, 0.1192},
+        {0.1805, 0.0722, 0.9504}};
+    return mat * rgb;
+}
+inline vec3f xyz_to_rgb(const vec3f& xyz) {
+    // https://en.wikipedia.org/wiki/SRGB
+    constexpr mat3f mat = {{+3.2406, -1.5372, -0.4986},
+        {-0.9689, +1.8758, +0.0415}, {+0.0557, -0.2040, +1.0570}};
+    return mat * xyz;
+}
+
+// Convert between CIE XYZ and xyY
+inline vec3f xyz_to_xyY(const vec3f& xyz) {
+    if (xyz == zero3f) return zero3f;
+    return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
+        xyz.y};
+}
+inline vec3f xyY_to_xyz(const vec3f& xyY) {
+    if (xyY.y == 0) return zero3f;
+    return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
+}
+
+// Approximate color of blackbody radiation from wavelength in nm.
+vec3f blackbody_to_rgb(float temperature);
+
+// Converts between HSV and RGB color spaces.
+vec3f hsv_to_rgb(const vec3f& hsv);
+vec3f rgb_to_hsv(const vec3f& rgb);
+
+// RGB color spaces
+enum struct color_space {
+    linear_srgb,   // default linear space (srgb linear)
+    srgb,          // srgb color space (non-linear)
+    adobe_rgb,     // Adobe rgb color space (non-linear)
+    prophoto_rgb,  // ProPhoto Kodak rgb color space (non-linear)
+    rec_709,       // hdtv color space (non-linear)
+    rec_2020,      // uhtv color space (non-linear)
+    rec_2100_pq,   // hdr color space with perceptual quantizer (non-linear)
+    rec_2100_hlg,  // hdr color space with hybrid log gamma (non-linear)
+    aces_2065,     // ACES storage format (linear)
+    aces_cg,       // ACES CG computation (linear)
+    aces_cc,       // ACES color correction (non-linear)
+    aces_cct,      // ACES color correction 2 (non-linear)
+    p3_dci,        // P3 DCI (non-linear)
+    p3_d60,        // P3 variation for D60 (non-linear)
+    p3_d65,        // P3 variation for D65 (non-linear)
+    p3_display,    // Apple display P3
+};
+
+// Conversion between rgb color spaces
+vec3f        color_to_xyz(const vec3f& col, color_space from);
+vec3f        xyz_to_color(const vec3f& xyz, color_space to);
+inline vec3f convert_color(
+    const vec3f& col, color_space from, color_space to) {
+    if (from == to) return col;
+    return xyz_to_color(color_to_xyz(col, from), to);
+}
 
 }  // namespace yocto
 
