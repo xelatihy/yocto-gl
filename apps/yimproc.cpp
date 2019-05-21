@@ -236,7 +236,7 @@ int main(int argc, char* argv[]) {
     try {
         if (do_tonemap && tonemap_prms.srgb) {
             auto linear = image<vec4f>{};
-            srgb_to_linear(linear, img);
+            srgb_to_rgb(linear, img);
             save_image(output, linear);
         } else {
             save_image(output, img);

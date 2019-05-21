@@ -61,7 +61,424 @@
 #pragma GCC diagnostic pop
 #endif
 
+#include "ext/ArHosekSkyModel.h"
 #include "ext/ArHosekSkyModel.cpp"
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR COLOR UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Approximate color of blackbody radiation from wavelength in nm.
+vec3f blackbody_to_rgb(float temperature) {
+    // https://github.com/neilbartlett/color-temperature
+    auto rgb = zero3f;
+    if ((temperature / 100) < 66) {
+        rgb.x = 255;
+    } else {
+        // a + b x + c Log[x] /.
+        // {a -> 351.97690566805693`,
+        // b -> 0.114206453784165`,
+        // c -> -40.25366309332127
+        // x -> (kelvin/100) - 55}
+        rgb.x = (temperature / 100) - 55;
+        rgb.x = 351.97690566805693f + 0.114206453784165f * rgb.x -
+                40.25366309332127f * log(rgb.x);
+        if (rgb.x < 0) rgb.x = 0;
+        if (rgb.x > 255) rgb.x = 255;
+    }
+
+    if ((temperature / 100) < 66) {
+        // a + b x + c Log[x] /.
+        // {a -> -155.25485562709179`,
+        // b -> -0.44596950469579133`,
+        // c -> 104.49216199393888`,
+        // x -> (kelvin/100) - 2}
+        rgb.y = (temperature / 100) - 2;
+        rgb.y = -155.25485562709179f - 0.44596950469579133f * rgb.y +
+                104.49216199393888f * log(rgb.y);
+        if (rgb.y < 0) rgb.y = 0;
+        if (rgb.y > 255) rgb.y = 255;
+    } else {
+        // a + b x + c Log[x] /.
+        // {a -> 325.4494125711974`,
+        // b -> 0.07943456536662342`,
+        // c -> -28.0852963507957`,
+        // x -> (kelvin/100) - 50}
+        rgb.y = (temperature / 100) - 50;
+        rgb.y = 325.4494125711974f + 0.07943456536662342f * rgb.y -
+                28.0852963507957f * log(rgb.y);
+        if (rgb.y < 0) rgb.y = 0;
+        if (rgb.y > 255) rgb.y = 255;
+    }
+
+    if ((temperature / 100) >= 66) {
+        rgb.z = 255;
+    } else {
+        if ((temperature / 100) <= 20) {
+            rgb.z = 0;
+        } else {
+            // a + b x + c Log[x] /.
+            // {a -> -254.76935184120902`,
+            // b -> 0.8274096064007395`,
+            // c -> 115.67994401066147`,
+            // x -> kelvin/100 - 10}
+            rgb.z = (temperature / 100) - 10;
+            rgb.z = -254.76935184120902f + 0.8274096064007395f * rgb.z +
+                    115.67994401066147f * log(rgb.z);
+            if (rgb.z < 0) rgb.z = 0;
+            if (rgb.z > 255) rgb.z = 255;
+        }
+    }
+
+    return srgb_to_rgb(rgb / 255);
+}
+
+// Convert HSV to RGB
+vec3f hsv_to_rgb(const vec3f& hsv) {
+    // from Imgui.cpp
+    auto h = hsv.x, s = hsv.y, v = hsv.z;
+    if (hsv.y == 0) return {v, v, v};
+
+    h       = fmod(h, 1.0f) / (60.0f / 360.0f);
+    int   i = (int)h;
+    float f = h - (float)i;
+    float p = v * (1 - s);
+    float q = v * (1 - s * f);
+    float t = v * (1 - s * (1 - f));
+
+    switch (i) {
+        case 0: return {v, t, p};
+        case 1: return {q, v, p};
+        case 2: return {p, v, t};
+        case 3: return {p, q, v};
+        case 4: return {t, p, v};
+        case 5: return {v, p, q};
+        default: return {v, p, q};
+    }
+}
+vec3f rgb_to_hsv(const vec3f& rgb) {
+    // from Imgui.cpp
+    auto r = rgb.x, g = rgb.y, b = rgb.z;
+    auto K = 0.f;
+    if (g < b) {
+        swap(g, b);
+        K = -1;
+    }
+    if (r < g) {
+        swap(r, g);
+        K = -2 / 6.0f - K;
+    }
+
+    auto chroma = r - (g < b ? g : b);
+    return {abs(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
+}
+
+// Forward declaration
+struct rgb_space;
+
+// Tone curves
+// Pure gamma tone curve: y = x^gamma
+constexpr float apply_gamma(float x, float gamma);
+constexpr float apply_gamma_inv(float x, float gamma);
+// Pure gamma tone curve: y = (x < d) ? x * c : pow(x * a + b, gamma)
+constexpr float apply_gamma(float x, float gamma, const vec4f& abcd);
+constexpr float apply_gamma_inv(float x, float gamma, const vec4f& abcd);
+
+// get the color space definition for builtin color spaces
+constexpr rgb_space get_rgb_space(color_space type);
+
+// Curve type
+enum struct rgb_curve_type {
+    linear,
+    gamma,
+    linear_gamma,
+    aces_cc,
+    aces_cct,
+    pq,
+    hlg
+};
+
+// RGB color space definition. Various predefined color spaces are listed below.
+struct rgb_space {
+    // primaries
+    vec2f red_chromaticity;    // xy chromaticity of the red primary
+    vec2f green_chromaticity;  // xy chromaticity of the green primary
+    vec2f blue_chromaticity;   // xy chromaticity of the blue primary
+    vec2f white_chromaticity;  // xy chromaticity of the white point
+    mat3f rgb_to_xyz_mat;      // matrix from rgb to xyz
+    mat3f xyz_to_rgb_mat;      // matrix from xyz to rgb
+    // tone curve
+    rgb_curve_type curve_type;
+    float          curve_gamma;  // gamma for power curves
+    vec4f          curve_abcd;   // tone curve values for linear_gamma curves
+};
+
+// Compute the rgb -> xyz matrix from the color space definition
+// Input: red, green, blue, white (x,y) chromoticities
+// Algorithm from: SMPTE Recommended Practice RP 177-1993
+// http://car.france3.mars.free.fr/HD/INA-%2026%20jan%2006/SMPTE%20normes%20et%20confs/rp177.pdf
+constexpr mat3f rgb_to_xyz_mat(
+    const vec2f& rc, const vec2f& gc, const vec2f& bc, const vec2f& wc) {
+    auto rgb = mat3f{
+        {rc.x, rc.y, 1 - rc.x - rc.y},
+        {gc.x, gc.y, 1 - gc.x - gc.y},
+        {bc.x, bc.y, 1 - bc.x - bc.y},
+    };
+    auto w = vec3f{wc.x, wc.y, 1 - wc.x - wc.y};
+    auto c = inverse(rgb) * vec3f{w.x / w.y, 1, w.z / w.y};
+    return mat3f{c.x * rgb.x, c.y * rgb.y, c.z * rgb.z};
+}
+
+// Construct an RGB color space. Predefined color spaces below
+constexpr rgb_space make_linear_rgb_space(const vec2f& red, const vec2f& green,
+    const vec2f& blue, const vec2f& white) {
+    return rgb_space{red, green, blue, white,
+        rgb_to_xyz_mat(red, green, blue, white),
+        inverse(rgb_to_xyz_mat(red, green, blue, white)),
+        rgb_curve_type::linear};
+}
+constexpr rgb_space make_gamma_rgb_space(const vec2f& red, const vec2f& green,
+    const vec2f& blue, const vec2f& white, float gamma,
+    const vec4f& curve_abcd = zero4f) {
+    return rgb_space{red, green, blue, white,
+        rgb_to_xyz_mat(red, green, blue, white),
+        inverse(rgb_to_xyz_mat(red, green, blue, white)),
+        curve_abcd == zero4f ? rgb_curve_type::gamma
+                             : rgb_curve_type::linear_gamma};
+}
+constexpr rgb_space make_other_rgb_space(const vec2f& red, const vec2f& green,
+    const vec2f& blue, const vec2f& white, rgb_curve_type curve_type) {
+    return rgb_space{red, green, blue, white,
+        rgb_to_xyz_mat(red, green, blue, white),
+        inverse(rgb_to_xyz_mat(red, green, blue, white)), curve_type};
+}
+
+constexpr rgb_space get_rgb_space(color_space space) {
+    switch (space) {
+        // https://en.wikipedia.org/wiki/Rec._709
+        case color_space::linear_srgb:
+            return make_linear_rgb_space({0.6400, 0.3300}, {0.3000, 0.6000},
+                {0.1500, 0.0600}, {0.3127, 0.3290});
+        // https://en.wikipedia.org/wiki/Rec._709
+        case color_space::srgb:
+            return make_gamma_rgb_space({0.6400, 0.3300}, {0.3000, 0.6000},
+                {0.1500, 0.0600}, {0.3127, 0.3290}, 2.4,
+                {1.055, 0.055, 12.92, 0.0031308});
+        // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System
+        case color_space::aces_2065:
+            return make_linear_rgb_space({0.7347, 0.2653}, {0.0000, 1.0000},
+                {0.0001, -0.0770}, {0.32168, 0.33767});
+        // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
+        case color_space::aces_cg:
+            return make_linear_rgb_space({0.7130, 0.2930}, {0.1650, 0.8300},
+                {0.1280, +0.0440}, {0.32168, 0.33767});
+        // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
+        case color_space::aces_cc:
+            return make_other_rgb_space({0.7130, 0.2930}, {0.1650, 0.8300},
+                {0.1280, +0.0440}, {0.32168, 0.33767}, rgb_curve_type::aces_cc);
+        // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
+        case color_space::aces_cct:
+            return make_other_rgb_space({0.7130, 0.2930}, {0.1650, 0.8300},
+                {0.1280, +0.0440}, {0.32168, 0.33767},
+                rgb_curve_type::aces_cct);
+        // https://en.wikipedia.org/wiki/Adobe_RGB_color_space
+        case color_space::adobe_rgb:
+            return make_gamma_rgb_space({0.6400, 0.3300}, {0.2100, 0.7100},
+                {0.1500, 0.0600}, {0.3127, 0.3290}, 2.19921875);
+        // https://en.wikipedia.org/wiki/Rec._709
+        case color_space::rec_709:
+            return make_gamma_rgb_space({0.6400, 0.3300}, {0.3000, 0.6000},
+                {0.1500, 0.0600}, {0.3127, 0.3290}, 1 / 0.45,
+                {1.099, 0.099, 4.500, 0.018});
+        // https://en.wikipedia.org/wiki/Rec._2020
+        case color_space::rec_2020:
+            return make_gamma_rgb_space({0.7080, 0.2920}, {0.1700, 0.7970},
+                {0.1310, 0.0460}, {0.3127, 0.3290}, 1 / 0.45,
+                {1.09929682680944, 0.09929682680944, 4.5, 0.018053968510807});
+        // https://en.wikipedia.org/wiki/Rec._2020
+        case color_space::rec_2100_pq:
+            return make_other_rgb_space({0.7080, 0.2920}, {0.1700, 0.7970},
+                {0.1310, 0.0460}, {0.3127, 0.3290}, rgb_curve_type::pq);
+        // https://en.wikipedia.org/wiki/Rec._2020
+        case color_space::rec_2100_hlg:
+            return make_other_rgb_space({0.7080, 0.2920}, {0.1700, 0.7970},
+                {0.1310, 0.0460}, {0.3127, 0.3290}, rgb_curve_type::hlg);
+        // https://en.wikipedia.org/wiki/DCI-P3
+        case color_space::p3_dci:
+            return make_gamma_rgb_space({0.6800, 0.3200}, {0.2650, 0.6900},
+                {0.1500, 0.0600}, {0.3140, 0.3510}, 1.6);
+        // https://en.wikipedia.org/wiki/DCI-P3
+        case color_space::p3_d60:
+            return make_gamma_rgb_space({0.6800, 0.3200}, {0.2650, 0.6900},
+                {0.1500, 0.0600}, {0.32168, 0.33767}, 1.6);
+        // https://en.wikipedia.org/wiki/DCI-P3
+        case color_space::p3_d65:
+            return make_gamma_rgb_space({0.6800, 0.3200}, {0.2650, 0.6900},
+                {0.1500, 0.0600}, {0.3127, 0.3290}, 1.6);
+        // https://en.wikipedia.org/wiki/DCI-P3
+        case color_space::p3_display:
+            return make_gamma_rgb_space({0.6800, 0.3200}, {0.2650, 0.6900},
+                {0.1500, 0.0600}, {0.3127, 0.3290}, 2.4,
+                {1.055, 0.055, 12.92, 0.0031308});
+        // https://en.wikipedia.org/wiki/ProPhoto_RGB_color_space
+        case color_space::prophoto_rgb:
+            return make_gamma_rgb_space({0.7347, 0.2653}, {0.1596, 0.8404},
+                {0.0366, 0.0001}, {0.3457, 0.3585}, 1.8,
+                {1, 0, 16, 0.001953125});
+        default: throw "unknown color space";
+    }
+}
+
+// https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
+constexpr float acescc_display_to_linear(float x) {
+    if (x < -0.3013698630f) {  // (9.72-15)/17.52
+        return (exp2(x * 17.52f - 9.72f) - exp2(-16.0f)) * 2;
+    } else if (x < (log2(65504.0f) + 9.72f) / 17.52f) {
+        return exp2(x * 17.52f - 9.72f);
+    } else {  // (in >= (log2(65504)+9.72)/17.52)
+        return 65504.0f;
+    }
+}
+// https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
+constexpr float acescct_display_to_linear(float x) {
+    if (x < 0.155251141552511f) {
+        return (x - 0.0729055341958355f) / 10.5402377416545f;
+    } else {
+        return exp2(x * 17.52f - 9.72f);
+    }
+}
+// https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
+constexpr float acescc_linear_to_display(float x) {
+    if (x <= 0) {
+        return -0.3584474886f;  // =(log2( pow(2.,-16.))+9.72)/17.52
+    } else if (x < exp2(-15.0f)) {
+        return (log2(exp2(-16.0f) + x * 0.5f) + 9.72f) / 17.52f;
+    } else {  // (in >= pow(2.,-15))
+        return (log2(x) + 9.72f) / 17.52f;
+    }
+}
+// https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
+constexpr float acescct_linear_to_display(float x) {
+    if (x <= 0.0078125f) {
+        return 10.5402377416545f * x + 0.0729055341958355f;
+    } else {
+        return (log2(x) + 9.72f) / 17.52f;
+    }
+}
+
+// https://en.wikipedia.org/wiki/High-dynamic-range_video#Perceptual_Quantizer
+// https://github.com/ampas/aces-dev/blob/master/transforms/ctl/lib/ACESlib.Utilities_Color.ctl
+// In PQ, we assume that the linear luminance in [0,1] corresponds to
+// [0,10000] cd m^2
+inline float pq_display_to_linear(float x) {
+    auto Np = pow(x, 1 / 78.84375f);
+    auto L  = max(Np - 0.8359375f, 0.0f);
+    L       = L / (18.8515625f - 18.6875f * Np);
+    L       = pow(L, 1 / 0.1593017578125f);
+    return L;
+}
+inline float pq_linear_to_display(float x) {
+    return pow((0.8359375 + 18.8515625 * pow(x, 0.1593017578125f)) /
+                   (1 + 18.6875f * pow(x, 0.1593017578125f)),
+        78.84375f);
+}
+// https://en.wikipedia.org/wiki/High-dynamic-range_video#Perceptual_Quantizer
+// In HLG, we assume that the linear luminance in [0,1] corresponds to
+// [0,1000] cd m^2. Note that the version we report here is scaled in [0,1]
+// range for nominal luminance. But HLG was initially defined in the [0,12]
+// range where it maps 1 to 0.5 and 12 to 1. For use in HDR tonemapping that is
+// likely a better range to use.
+constexpr float hlg_display_to_linear(float x) {
+    if (x < 0.5f) {
+        return 3 * 3 * x * x;
+    } else {
+        return (exp((x - 0.55991073f) / 0.17883277f) + 0.28466892f) / 12;
+    }
+}
+constexpr float hlg_linear_to_display(float x) {
+    if (x < 1 / 12.0f) {
+        return sqrt(3 * x);
+    } else {
+        return 0.17883277f * log(12 * x - 0.28466892f) + 0.55991073f;
+    }
+}
+
+// Applies linear to display transformations and vice-verse
+constexpr vec3f linear_to_display(const vec3f& rgb, const rgb_space& space) {
+    if (space.curve_type == rgb_curve_type::linear) {
+        return rgb;
+    } else if (space.curve_type == rgb_curve_type::gamma) {
+        return pow(rgb, 1 / space.curve_gamma);
+    } else if (space.curve_type == rgb_curve_type::linear_gamma) {
+        auto& [a, b, c, d] = space.curve_abcd;
+        auto lim           = d;
+        auto lin           = rgb * c;
+        auto gamma         = a * pow(rgb, 1 / space.curve_gamma) - b;
+        return {
+            rgb.x < lim ? lin.x : gamma.x,
+            rgb.y < lim ? lin.y : gamma.y,
+            rgb.z < lim ? lin.z : gamma.z,
+        };
+    } else if (space.curve_type == rgb_curve_type::aces_cc) {
+        return {acescc_linear_to_display(rgb.x),
+            acescc_linear_to_display(rgb.y), acescc_linear_to_display(rgb.z)};
+    } else if (space.curve_type == rgb_curve_type::aces_cct) {
+        return {acescct_linear_to_display(rgb.x),
+            acescct_linear_to_display(rgb.y), acescct_linear_to_display(rgb.z)};
+    } else if (space.curve_type == rgb_curve_type::pq) {
+        return {pq_linear_to_display(rgb.x), pq_linear_to_display(rgb.y),
+            pq_linear_to_display(rgb.z)};
+    } else if (space.curve_type == rgb_curve_type::hlg) {
+        return {hlg_linear_to_display(rgb.x), hlg_linear_to_display(rgb.y),
+            hlg_linear_to_display(rgb.z)};
+    } else {
+        throw runtime_error("should not have gotten here");
+    }
+}
+constexpr vec3f display_to_linear(const vec3f& rgb, const rgb_space& space) {
+    if (space.curve_type == rgb_curve_type::linear) {
+        return rgb;
+    } else if (space.curve_type == rgb_curve_type::gamma) {
+        return pow(rgb, space.curve_gamma);
+    } else if (space.curve_type == rgb_curve_type::linear_gamma) {
+        auto& [a, b, c, d] = space.curve_abcd;
+        auto lim           = 1 / d;
+        auto lin           = rgb / c;
+        auto gamma         = pow((rgb + b) / a, space.curve_gamma);
+        return {
+            rgb.x < lim ? lin.x : gamma.x,
+            rgb.y < lim ? lin.y : gamma.y,
+            rgb.z < lim ? lin.z : gamma.z,
+        };
+    } else if (space.curve_type == rgb_curve_type::aces_cc) {
+        return {acescc_display_to_linear(rgb.x),
+            acescc_display_to_linear(rgb.y), acescc_display_to_linear(rgb.z)};
+    } else if (space.curve_type == rgb_curve_type::aces_cct) {
+        return {acescct_display_to_linear(rgb.x),
+            acescct_display_to_linear(rgb.y), acescct_display_to_linear(rgb.z)};
+    } else if (space.curve_type == rgb_curve_type::pq) {
+        return {pq_display_to_linear(rgb.x), pq_display_to_linear(rgb.y),
+            pq_display_to_linear(rgb.z)};
+    } else if (space.curve_type == rgb_curve_type::hlg) {
+        return {hlg_display_to_linear(rgb.x), hlg_display_to_linear(rgb.y),
+            hlg_display_to_linear(rgb.z)};
+    } else {
+        throw runtime_error("should not have gotten here");
+    }
+}
+
+// Conversion to/from xyz
+vec3f color_to_xyz(const vec3f& col, color_space from) {
+    auto space = get_rgb_space(from);
+    return space.rgb_to_xyz_mat * display_to_linear(col, space);
+}
+inline vec3f xyz_to_color(const vec3f& xyz, color_space to) {
+    auto space = get_rgb_space(to);
+    return linear_to_display(space.xyz_to_rgb_mat * xyz, space);
+}
+
+}
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE UTILITIES
@@ -115,21 +532,21 @@ void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl) {
 }
 
 // Conversion between linear and gamma-encoded images.
-void srgb_to_linear(image<vec4f>& lin, const image<vec4f>& srgb) {
+void srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb) {
     return apply_image(
-        lin, srgb, [](const auto& a) { return srgb_to_linear(a); });
+        lin, srgb, [](const auto& a) { return srgb_to_rgb(a); });
 }
-void linear_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin) {
+void rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin) {
     return apply_image(
-        srgb, lin, [](const auto& a) { return linear_to_srgb(a); });
+        srgb, lin, [](const auto& a) { return rgb_to_srgb(a); });
 }
-void srgb_to_linear(image<vec4f>& lin, const image<vec4b>& srgb) {
+void srgb_to_rgb(image<vec4f>& lin, const image<vec4b>& srgb) {
     return apply_image(lin, srgb,
-        [](const auto& a) { return srgb_to_linear(byte_to_float(a)); });
+        [](const auto& a) { return srgb_to_rgb(byte_to_float(a)); });
 }
-void linear_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin) {
+void rgb_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin) {
     return apply_image(srgb, lin,
-        [](const auto& a) { return float_to_byte(linear_to_srgb(a)); });
+        [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
 }
 
 // Filmic tonemapping
@@ -176,7 +593,7 @@ vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
     if (params.saturation != 0.5f)
         rgb = apply_saturation(rgb, params.saturation);
     if (params.filmic) rgb = tonemap_filmic(rgb);
-    if (params.srgb) rgb = linear_to_srgb(rgb);
+    if (params.srgb) rgb = rgb_to_srgb(rgb);
     return rgb;
 }
 
@@ -798,7 +1215,7 @@ void make_logo(image<vec4f>& img, const string& type) {
     auto img8 = image<vec4b>();
     make_logo(img8, type);
     img.resize(img8.size());
-    srgb_to_linear(img, img8);
+    srgb_to_rgb(img, img8);
 }
 
 void make_preset(image<vec4f>& img, const string& type) {
@@ -924,7 +1341,7 @@ void make_preset(image<vec4b>& img, const string& type) {
     auto imgf = image<vec4f>{};
     make_preset(imgf, type);
     if (type.find("-normal") == type.npos) {
-        linear_to_srgb(img, imgf);
+        rgb_to_srgb(img, imgf);
     } else {
         float_to_byte(img, imgf);
     }
@@ -1285,7 +1702,7 @@ static inline void load_image_preset(
     auto imgf = image<vec4f>{};
     load_image_preset(filename, imgf);
     img.resize(imgf.size());
-    linear_to_srgb(img, imgf);
+    rgb_to_srgb(img, imgf);
 }
 
 // Check if an image is HDR based on filename.
@@ -1309,7 +1726,7 @@ void load_image(const string& filename, image<vec4f>& img) {
     } else if (!is_hdr_filename(filename)) {
         auto img8 = image<vec4b>{};
         load_image(filename, img8);
-        srgb_to_linear(img, img8);
+        srgb_to_rgb(img, img8);
     } else {
         throw io_error("unsupported image format " + ext);
     }
@@ -1326,7 +1743,7 @@ void save_image(const string& filename, const image<vec4f>& img) {
         save_exr(filename, img);
     } else if (!is_hdr_filename(filename)) {
         auto img8 = image<vec4b>{img.size()};
-        linear_to_srgb(img8, img);
+        rgb_to_srgb(img8, img);
         save_image(filename, img8);
     } else {
         throw io_error("unsupported image format " + ext);
@@ -1350,7 +1767,7 @@ void load_image(const string& filename, image<vec4b>& img) {
     } else if (is_hdr_filename(filename)) {
         auto imgf = image<vec4f>{};
         load_image(filename, imgf);
-        linear_to_srgb(img, imgf);
+        rgb_to_srgb(img, imgf);
     } else {
         throw io_error("unsupported image format " + ext);
     }
@@ -1369,7 +1786,7 @@ void save_image(const string& filename, const image<vec4b>& img) {
         save_bmp(filename, img);
     } else if (is_hdr_filename(filename)) {
         auto imgf = image<vec4f>{img.size()};
-        srgb_to_linear(imgf, img);
+        srgb_to_rgb(imgf, img);
         save_image(filename, imgf);
     } else {
         throw io_error("unsupported image format " + ext);

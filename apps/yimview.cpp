@@ -433,7 +433,7 @@ void update(app_state& app) {
                         save_image(img.outname, ldr);
                     } else {
                         auto aux = image<vec4f>{};
-                        srgb_to_linear(aux, img.display);
+                        srgb_to_rgb(aux, img.display);
                         save_image(img.outname, aux);
                     }
                 });

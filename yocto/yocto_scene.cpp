@@ -922,7 +922,7 @@ vec4f lookup_texture(
     if (!texture.hdr_image.empty()) {
         return texture.hdr_image[{i, j}];
     } else if (!texture.ldr_image.empty() && !ldr_as_linear) {
-        return srgb_to_linear(byte_to_float(texture.ldr_image[{i, j}]));
+        return srgb_to_rgb(byte_to_float(texture.ldr_image[{i, j}]));
     } else if (!texture.ldr_image.empty() && ldr_as_linear) {
         return byte_to_float(texture.ldr_image[{i, j}]);
     } else {
