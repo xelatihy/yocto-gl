@@ -64,6 +64,205 @@
 #include "ext/ArHosekSkyModel.cpp"
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Splits an image into an array of regions
+void make_regions(vector<image_region>& regions, const vec2i& size,
+    int region_size, bool shuffled) {
+    regions.clear();
+    for (auto y = 0; y < size.y; y += region_size) {
+        for (auto x = 0; x < size.x; x += region_size) {
+            regions.push_back({{x, y},
+                {min(x + region_size, size.x), min(y + region_size, size.y)}});
+        }
+    }
+    if (shuffled) {
+        auto rng = rng_state{};
+        shuffle(regions, rng);
+    }
+}
+
+// Apply a function to each image pixel
+template <typename T1, typename T2, typename Func>
+static inline void apply_image(
+    image<T1>& result, const image<T2>& source, const Func& func) {
+    result.resize(source.size());
+    for (auto j = 0; j < result.size().y; j++) {
+        for (auto i = 0; i < result.size().x; i++) {
+            result[{i, j}] = func(source[{i, j}]);
+        }
+    }
+}
+template <typename T1, typename T2, typename Func>
+static inline void apply_image(image<T1>& result, const image<T2>& source,
+    const image_region& region, const Func& func) {
+    result.resize(source.size());
+    for (auto j = region.min.y; j < region.max.y; j++) {
+        for (auto i = region.min.x; i < region.max.x; i++) {
+            result[{i, j}] = func(source[{i, j}]);
+        }
+    }
+}
+
+// Conversion from/to floats.
+void byte_to_float(image<vec4f>& fl, const image<vec4b>& bt) {
+    return apply_image(fl, bt, [](const auto& a) { return byte_to_float(a); });
+}
+void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl) {
+    return apply_image(bt, fl, [](const auto& a) { return float_to_byte(a); });
+}
+
+// Conversion between linear and gamma-encoded images.
+void srgb_to_linear(image<vec4f>& lin, const image<vec4f>& srgb) {
+    return apply_image(
+        lin, srgb, [](const auto& a) { return srgb_to_linear(a); });
+}
+void linear_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin) {
+    return apply_image(
+        srgb, lin, [](const auto& a) { return linear_to_srgb(a); });
+}
+void srgb_to_linear(image<vec4f>& lin, const image<vec4b>& srgb) {
+    return apply_image(lin, srgb,
+        [](const auto& a) { return srgb_to_linear(byte_to_float(a)); });
+}
+inline void linear_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin) {
+    return apply_image(srgb, lin,
+        [](const auto& a) { return float_to_byte(linear_to_srgb(a)); });
+}
+
+vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
+    auto rgb = hdr;
+    if (params.exposure != 0) rgb *= exp2(params.exposure);
+    if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
+    if (params.contrast != 0.5f)
+        rgb = apply_contrast(rgb, params.contrast, 0.18f);
+    if (params.logcontrast != 0.5f)
+        rgb = apply_logcontrast(rgb, params.logcontrast, 0.18f);
+    if (params.saturation != 0.5f)
+        rgb = apply_saturation(rgb, params.saturation);
+    if (params.filmic) rgb = tonemap_filmic(rgb);
+    if (params.srgb) rgb = linear_to_srgb(rgb);
+    return rgb;
+}
+
+// Apply exposure and filmic tone mapping
+void tonemap(
+    image<vec4f>& ldr, const image<vec4f>& hdr, const tonemap_params& params) {
+    return apply_image(ldr, hdr,
+        [scale = exp2(params.exposure) * params.tint, params](
+            const vec4f& hdr) {
+            return vec4f{tonemap(xyz(hdr), params), hdr.w};
+        });
+}
+void tonemap(
+    image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params) {
+    return apply_image(ldr, hdr, [params](const vec4f& hdr) {
+        return float_to_byte(vec4f{tonemap(xyz(hdr), params), hdr.w});
+    });
+}
+void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
+    const image_region& region, const tonemap_params& params) {
+    return apply_image(ldr, hdr, region, [params](const vec4f& hdr) {
+        return vec4f{tonemap(xyz(hdr), params), hdr.w};
+    });
+}
+
+vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
+    auto rgb = ldr;
+    if (params.contrast != 0.5f) {
+        rgb = gain(ldr, 1 - params.contrast);
+    }
+    if (params.shadows != 0.5f || params.midtones != 0.5f ||
+        params.highlights != 0.5f || params.shadows_color != vec3f{1, 1, 1} ||
+        params.midtones_color != vec3f{1, 1, 1} ||
+        params.highlights_color != vec3f{1, 1, 1}) {
+        auto lift  = params.shadows_color;
+        auto gamma = params.midtones_color;
+        auto gain  = params.highlights_color;
+
+        lift      = lift - mean(lift) + params.shadows - (float)0.5;
+        gain      = gain - mean(gain) + params.highlights + (float)0.5;
+        auto grey = gamma - mean(gamma) + params.midtones;
+        gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
+
+        // apply_image
+        auto lerp_value = clamp01(pow(rgb, 1 / gamma));
+        rgb             = gain * lerp_value + lift * (1 - lerp_value);
+    }
+    return rgb;
+}
+
+// Apply exposure and filmic tone mapping
+void colorgrade(image<vec4f>& corrected, const image<vec4f>& ldr,
+    const image_region& region, const colorgrade_params& params) {
+    return apply_image(corrected, ldr, region, [&params](const vec4f& hdr) {
+        return vec4f{colorgrade(xyz(hdr), params), hdr.w};
+    });
+}
+
+// compute white balance
+vec3f compute_white_balance(const image<vec4f>& img) {
+    auto rgb = zero3f;
+    for (auto& p : img) rgb += xyz(p);
+    if (rgb == zero3f) return zero3f;
+    return rgb / max(rgb);
+}
+
+template <int N1, int N2>
+inline void convert_channels(
+    image<vec<float, N1>>& result, const image<vec<float, N2>>& source) {
+    return apply_image(result, source, [](const vec<float, N2>& a) {
+        return convert_channels<float, N1, N2>(a);
+    });
+}
+template <int N1, int N2>
+inline void convert_channels(
+    image<vec<byte, N1>>& result, const image<vec<byte, N2>>& source) {
+    return apply_image(result, source, [](const vec<byte, N2>& a) {
+        return convert_channels<byte, N1, N2>(a);
+    });
+}
+
+void resize(image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
+    auto size = size_;
+    if (size == zero2i) {
+        throw std::invalid_argument("bad image size in resize");
+    }
+    if (size.y == 0) {
+        size.y = (int)round(size.x * (float)img.size().y / (float)img.size().x);
+    } else if (size.x == 0) {
+        size.x = (int)round(size.y * (float)img.size().x / (float)img.size().y);
+    }
+    res_img = {size};
+    stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
+        sizeof(vec4f) * img.size().x, (float*)res_img.data(),
+        res_img.size().x, res_img.size().y,
+        sizeof(vec4f) * res_img.size().x, 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+}
+void resize(image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
+    auto size = size_;
+    if (size == zero2i) {
+        throw std::invalid_argument("bad image size in resize");
+    }
+    if (size.y == 0) {
+        size.y = (int)round(size.x * (float)img.size().y / (float)img.size().x);
+    } else if (size.x == 0) {
+        size.x = (int)round(size.y * (float)img.size().x / (float)img.size().y);
+    }
+    res_img = {size};
+    stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
+        sizeof(vec4b) * img.size().x, (byte*)res_img.data(),
+        res_img.size().x, res_img.size().y,
+        sizeof(vec4b) * res_img.size().x, 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE EXAMPLES
 // -----------------------------------------------------------------------------
 namespace yocto {
