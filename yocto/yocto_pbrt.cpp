@@ -529,9 +529,16 @@ static inline void parse_param(
     parse_param(stream, value);
 }
 
-template <typename T>
 static inline void parse_param(
-    pbrt_stream& stream, const string& type, pbrt_textured<T>& value) {
+    pbrt_stream& stream, const string& type, pbrt_textured3f& value) {
+    if (type == "texture") {
+        parse_param(stream, value.texture);
+    } else {
+        parse_param(stream, type, value.value);
+    }
+}
+static inline void parse_param(
+    pbrt_stream& stream, const string& type, pbrt_textured1f& value) {
     if (type == "texture") {
         parse_param(stream, value.texture);
     } else {
@@ -1536,7 +1543,7 @@ static inline void parse_typeparam(pbrt_stream& stream, string& value) {
 
 // Parse param and resolve constant textures
 static inline void parse_texture(pbrt_stream& stream, const string& ptype,
-    pbrt_textured<pbrt_spectrum3f>&               value,
+    pbrt_textured3f&               value,
     const unordered_map<string, pbrt_spectrum3f>& constant_values) {
     parse_param(stream, ptype, value);
     if (value.texture == "") return;
@@ -1545,7 +1552,7 @@ static inline void parse_texture(pbrt_stream& stream, const string& ptype,
     value.texture = "";
 }
 static inline void parse_texture(pbrt_stream& stream, const string& ptype,
-    pbrt_textured<float>&                         value,
+    pbrt_textured1f&                         value,
     const unordered_map<string, pbrt_spectrum3f>& constant_values) {
     parse_param(stream, ptype, value);
     if (value.texture == "") return;
@@ -1607,7 +1614,7 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
             } else if (pname == "Ks") {
                 parse_texture(stream, ptype, tvalue.Ks, constant_values);
             } else if (pname == "roughness") {
-                pbrt_textured<float> roughness = 0.01f;
+                pbrt_textured1f roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
@@ -1642,7 +1649,7 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
             } else if (pname == "index") {
                 parse_texture(stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "roughness") {
-                pbrt_textured<float> roughness = 0.01f;
+                pbrt_textured1f roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
@@ -1679,7 +1686,7 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
             } else if (pname == "index") {
                 parse_texture(stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "roughness") {
-                pbrt_textured<float> roughness = 0.01f;
+                pbrt_textured1f roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
@@ -1716,7 +1723,7 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
             } else if (pname == "transmit") {
                 parse_texture(stream, ptype, tvalue.transmit, constant_values);
             } else if (pname == "roughness") {
-                pbrt_textured<float> roughness = 0.01f;
+                pbrt_textured1f roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
@@ -1759,7 +1766,7 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
             } else if (pname == "opacity") {
                 parse_texture(stream, ptype, tvalue.opacity, constant_values);
             } else if (pname == "roughness") {
-                pbrt_textured<float> roughness = 0.01f;
+                pbrt_textured1f roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
@@ -1804,7 +1811,7 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
             } else if (pname == "metallic") {
                 parse_texture(stream, ptype, tvalue.metallic, constant_values);
             } else if (pname == "roughness") {
-                pbrt_textured<float> roughness = 0.01f;
+                pbrt_textured1f roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
@@ -1895,7 +1902,7 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
             } else if (pname == "index") {
                 parse_texture(stream, ptype, tvalue.eta, constant_values);
             } else if (pname == "roughness") {
-                pbrt_textured<float> roughness = 0.01f;
+                pbrt_textured1f roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
@@ -1969,7 +1976,7 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
             } else if (pname == "Ks") {
                 parse_texture(stream, ptype, tvalue.Ks, constant_values);
             } else if (pname == "roughness") {
-                pbrt_textured<float> roughness = 0.01f;
+                pbrt_textured1f roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
@@ -2022,7 +2029,7 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
             } else if (pname == "Kt") {
                 parse_texture(stream, ptype, tvalue.Kt, constant_values);
             } else if (pname == "roughness") {
-                pbrt_textured<float> roughness = 0.01f;
+                pbrt_textured1f roughness = 0.01f;
                 parse_param(stream, ptype, roughness);
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;

@@ -2725,7 +2725,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         return (int)scene.materials.size() - 1;
     }
 
-    void get_scaled_texture3f(const pbrt_textured<pbrt_spectrum3f>& textured,
+    void get_scaled_texture3f(const pbrt_textured3f& textured,
         float& factor, vec3f& color, int& texture) {
         if (textured.texture == "") {
             color  = {textured.value.x, textured.value.y, textured.value.z};
@@ -2744,7 +2744,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         }
     }
 
-    void get_scaled_texture3f(const pbrt_textured<pbrt_spectrum3f>& textured,
+    void get_scaled_texture3f(const pbrt_textured3f& textured,
         vec3f& color, int& texture) {
         if (textured.texture == "") {
             color   = {textured.value.x, textured.value.y, textured.value.z};
