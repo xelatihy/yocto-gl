@@ -455,7 +455,7 @@ struct pbrt_texture {
     pbrt_scale_texture        scale        = {};
     pbrt_uv_texture           uv           = {};
     pbrt_windy_texture        windy        = {};
-    pbrt_wrinkled_texture     wrinkled      = {};
+    pbrt_wrinkled_texture     wrinkled     = {};
 };
 
 // pbrt materials
@@ -540,8 +540,11 @@ struct pbrt_disney_material {
 struct pbrt_fourier_material {
     string               bsdffile = "";
     pbrt_textured<float> bumpmap  = 0;
-    variant<pbrt_plastic_material, pbrt_metal_material, pbrt_glass_material>
-        approx = {};
+    enum struct approx_type_t { plastic, metal, glass };
+    approx_type_t         approx_type    = approx_type_t::plastic;
+    pbrt_plastic_material approx_plastic = {};
+    pbrt_metal_material   approx_metal   = {};
+    pbrt_glass_material   approx_glass   = {};
 };
 struct pbrt_hair_material {
     pbrt_textured<pbrt_spectrum3f> color = {0, 0, 0};  // TODO: missing default
@@ -593,11 +596,39 @@ struct pbrt_subsurface_material {
     bool                           remaproughness = true;
     pbrt_textured<float>           bumpmap        = 0;
 };
-using pbrt_material = variant<pbrt_matte_material, pbrt_mirror_material,
-    pbrt_plastic_material, pbrt_metal_material, pbrt_glass_material,
-    pbrt_translucent_material, pbrt_uber_material, pbrt_disney_material,
-    pbrt_fourier_material, pbrt_hair_material, pbrt_kdsubsurface_material,
-    pbrt_mix_material, pbrt_substrate_material, pbrt_subsurface_material>;
+enum struct pbrt_material_type {
+    matte,
+    mirror,
+    plastic,
+    metal,
+    glass,
+    translucent,
+    uber,
+    disney,
+    fourier,
+    hair,
+    kdsubsurface,
+    mix,
+    substrate,
+    subsurface
+};
+struct pbrt_material {
+    pbrt_material_type         type         = pbrt_material_type::matte;
+    pbrt_matte_material        matte        = {};
+    pbrt_mirror_material       mirror       = {};
+    pbrt_plastic_material      plastic      = {};
+    pbrt_metal_material        metal        = {};
+    pbrt_glass_material        glass        = {};
+    pbrt_translucent_material  translucent  = {};
+    pbrt_uber_material         uber         = {};
+    pbrt_disney_material       disney       = {};
+    pbrt_fourier_material      fourier      = {};
+    pbrt_hair_material         hair         = {};
+    pbrt_kdsubsurface_material kdsubsurface = {};
+    pbrt_mix_material          mix          = {};
+    pbrt_substrate_material    substrate    = {};
+    pbrt_subsurface_material   subsurface{};
+};
 
 // pbrt shapes
 struct pbrt_trianglemesh_shape {
@@ -682,10 +713,35 @@ struct pbrt_heightfield_shape {
     int           nv = 0;
     vector<float> Pz = {};
 };
-using pbrt_shape = variant<pbrt_trianglemesh_shape, pbrt_plymesh_shape,
-    pbrt_curve_shape, pbrt_loopsubdiv_shape, pbrt_nurbs_shape,
-    pbrt_sphere_shape, pbrt_disk_shape, pbrt_cone_shape, pbrt_cylinder_shape,
-    pbrt_hyperboloid_shape, pbrt_paraboloid_shape, pbrt_heightfield_shape>;
+enum struct pbrt_shape_type {
+    trianglemesh,
+    plymesh,
+    curve,
+    loopsubdiv,
+    nurbs,
+    sphere,
+    disk,
+    cone,
+    cylinder,
+    hyperboloid,
+    paraboloid,
+    heightfield
+};
+struct pbrt_shape {
+    pbrt_shape_type         type         = pbrt_shape_type::trianglemesh;
+    pbrt_trianglemesh_shape trianglemesh = {};
+    pbrt_plymesh_shape      plymesh{};
+    pbrt_curve_shape        curve       = {};
+    pbrt_loopsubdiv_shape   loopsubdiv  = {};
+    pbrt_nurbs_shape        nurbs       = {};
+    pbrt_sphere_shape       sphere      = {};
+    pbrt_disk_shape         disk        = {};
+    pbrt_cone_shape         cone        = {};
+    pbrt_cylinder_shape     cylinder    = {};
+    pbrt_hyperboloid_shape  hyperboloid = {};
+    pbrt_paraboloid_shape   paraboloid  = {};
+    pbrt_heightfield_shape  heightfield = {};
+};
 
 // pbrt lights
 struct pbrt_distant_light {
@@ -724,9 +780,23 @@ struct pbrt_spot_light {
     float           coneangle      = 30;
     float           conedeltaangle = 5;
 };
-using pbrt_light =
-    variant<pbrt_distant_light, pbrt_goniometric_light, pbrt_infinite_light,
-        pbrt_point_light, pbrt_projection_light, pbrt_spot_light>;
+enum struct pbrt_light_type {
+    distant,
+    goniometric,
+    infinite,
+    point,
+    projection,
+    spot
+};
+struct pbrt_light {
+    pbrt_light_type        type        = pbrt_light_type::distant;
+    pbrt_distant_light     distant     = {};
+    pbrt_goniometric_light goniometric = {};
+    pbrt_infinite_light    infinite    = {};
+    pbrt_point_light       point       = {};
+    pbrt_projection_light  projection  = {};
+    pbrt_spot_light        spot        = {};
+};
 
 // pbrt area lights
 struct pbrt_none_arealight {};

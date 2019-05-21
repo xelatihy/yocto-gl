@@ -2829,42 +2829,50 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         static auto shape_id = 0;
         auto        shape    = yocto_shape{};
         shape.uri = "shapes/shape__" + to_string(shape_id++) + ".ply";
-        if (holds_alternative<pbrt_trianglemesh_shape>(pshape)) {
-            auto& mesh      = get<pbrt_trianglemesh_shape>(pshape);
-            shape.positions = mesh.P;
-            shape.normals   = mesh.N;
-            shape.texcoords = mesh.uv;
-            for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
-            shape.triangles = mesh.indices;
-        } else if (holds_alternative<pbrt_loopsubdiv_shape>(pshape)) {
-            auto& mesh      = get<pbrt_loopsubdiv_shape>(pshape);
-            shape.positions = mesh.P;
-            shape.triangles = mesh.indices;
-            shape.normals.resize(shape.positions.size());
-            compute_normals(shape.normals, shape.triangles, shape.positions);
-        } else if (holds_alternative<pbrt_plymesh_shape>(pshape)) {
-            auto& mesh = get<pbrt_plymesh_shape>(pshape);
-            shape.uri  = mesh.filename;
-            if (!params.skip_meshes) {
-                load_shape(get_dirname(filename) + mesh.filename, shape.points,
-                    shape.lines, shape.triangles, shape.quads,
-                    shape.quads_positions, shape.quads_normals,
-                    shape.quads_texcoords, shape.positions, shape.normals,
-                    shape.texcoords, shape.colors, shape.radius, false);
+        switch (pshape.type) {
+            case pbrt_shape_type::trianglemesh: {
+                auto& mesh      = pshape.trianglemesh;
+                shape.positions = mesh.P;
+                shape.normals   = mesh.N;
+                shape.texcoords = mesh.uv;
+                for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
+                shape.triangles = mesh.indices;
+            } break;
+            case pbrt_shape_type::loopsubdiv: {
+                auto& mesh      = pshape.loopsubdiv;
+                shape.positions = mesh.P;
+                shape.triangles = mesh.indices;
+                shape.normals.resize(shape.positions.size());
+                compute_normals(
+                    shape.normals, shape.triangles, shape.positions);
+            } break;
+            case pbrt_shape_type::plymesh: {
+                auto& mesh = pshape.plymesh;
+                shape.uri  = mesh.filename;
+                if (!params.skip_meshes) {
+                    load_shape(get_dirname(filename) + mesh.filename,
+                        shape.points, shape.lines, shape.triangles, shape.quads,
+                        shape.quads_positions, shape.quads_normals,
+                        shape.quads_texcoords, shape.positions, shape.normals,
+                        shape.texcoords, shape.colors, shape.radius, false);
+                }
+            } break;
+            case pbrt_shape_type::sphere: {
+                auto& sphere = pshape.sphere;
+                make_uvsphere(shape.quads, shape.positions, shape.normals,
+                    shape.texcoords, {64, 32}, 2 * sphere.radius, {1, 1},
+                    identity_frame3f);
+            } break;
+            case pbrt_shape_type::disk: {
+                auto& disk = pshape.disk;
+                make_uvdisk(shape.quads, shape.positions, shape.normals,
+                    shape.texcoords, {32, 16}, 2 * disk.radius, {1, 1},
+                    identity_frame3f);
+            } break;
+            default: {
+                throw io_error(
+                    "unsupported shape type " + to_string((int)pshape.type));
             }
-        } else if (holds_alternative<pbrt_sphere_shape>(pshape)) {
-            auto& sphere = get<pbrt_sphere_shape>(pshape);
-            make_uvsphere(shape.quads, shape.positions, shape.normals,
-                shape.texcoords, {64, 32}, 2 * sphere.radius, {1, 1},
-                identity_frame3f);
-        } else if (holds_alternative<pbrt_disk_shape>(pshape)) {
-            auto& disk = get<pbrt_disk_shape>(pshape);
-            make_uvdisk(shape.quads, shape.positions, shape.normals,
-                shape.texcoords, {32, 16}, 2 * disk.radius, {1, 1},
-                identity_frame3f);
-        } else {
-            throw io_error(
-                "unsupported shape type " + to_string(pshape.index()));
         }
         scene.shapes.push_back(shape);
         auto instance     = yocto_instance{};
@@ -2997,119 +3005,26 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         const pbrt_context& ctx) {
         auto material = yocto_material{};
         material.uri  = name;
-        if (holds_alternative<pbrt_uber_material>(pmaterial)) {
-            auto& uber = get<pbrt_uber_material>(pmaterial);
-            get_scaled_texture3f(
-                uber.Kd, material.diffuse, material.diffuse_texture);
-            get_scaled_texture3f(
-                uber.Ks, material.specular, material.specular_texture);
-            get_scaled_texture3f(
-                uber.Kt, material.transmission, material.transmission_texture);
-            float op_f = 1;
-            auto  op   = vec3f{0, 0, 0};
-            get_scaled_texture3f(
-                uber.opacity, op_f, op, material.opacity_texture);
-            material.opacity   = (op.x + op.y + op.z) / 3;
-            material.roughness = get_pbrt_roughness(uber.uroughness.value,
-                uber.vroughness.value, uber.remaproughness);
-            material.thin      = true;
-        } else if (holds_alternative<pbrt_plastic_material>(pmaterial)) {
-            auto& plastic = get<pbrt_plastic_material>(pmaterial);
-            get_scaled_texture3f(
-                plastic.Kd, material.diffuse, material.diffuse_texture);
-            get_scaled_texture3f(
-                plastic.Ks, material.specular, material.specular_texture);
-            material.specular *= 0.04f;
-            material.roughness = get_pbrt_roughness(plastic.uroughness.value,
-                plastic.vroughness.value, plastic.remaproughness);
-        } else if (holds_alternative<pbrt_translucent_material>(pmaterial)) {
-            auto& translucent = get<pbrt_translucent_material>(pmaterial);
-            get_scaled_texture3f(
-                translucent.Kd, material.diffuse, material.diffuse_texture);
-            get_scaled_texture3f(
-                translucent.Ks, material.specular, material.specular_texture);
-            material.specular *= 0.04f;
-            material.roughness = get_pbrt_roughness(
-                translucent.uroughness.value, translucent.vroughness.value,
-                translucent.remaproughness);
-        } else if (holds_alternative<pbrt_matte_material>(pmaterial)) {
-            auto& matte = get<pbrt_matte_material>(pmaterial);
-            get_scaled_texture3f(
-                matte.Kd, material.diffuse, material.diffuse_texture);
-            material.roughness = 1;
-        } else if (holds_alternative<pbrt_mirror_material>(pmaterial)) {
-            auto& mirror = get<pbrt_mirror_material>(pmaterial);
-            get_scaled_texture3f(mirror.Kr, material.metallic, material.diffuse,
-                material.diffuse_texture);
-            material.roughness = 0;
-        } else if (holds_alternative<pbrt_metal_material>(pmaterial)) {
-            auto& metal = get<pbrt_metal_material>(pmaterial);
-            float eta_f = 0, etak_f = 0;
-            auto  eta = zero3f, k = zero3f;
-            auto  eta_texture = -1, k_texture = -1;
-            get_scaled_texture3f(metal.eta, eta_f, eta, eta_texture);
-            get_scaled_texture3f(metal.k, etak_f, k, k_texture);
-            material.specular  = pbrt_fresnel_metal(1, eta, k);
-            material.roughness = get_pbrt_roughness(metal.uroughness.value,
-                metal.vroughness.value, metal.remaproughness);
-        } else if (holds_alternative<pbrt_substrate_material>(pmaterial)) {
-            auto& substrate = get<pbrt_substrate_material>(pmaterial);
-            get_scaled_texture3f(
-                substrate.Kd, material.diffuse, material.diffuse_texture);
-            get_scaled_texture3f(
-                substrate.Ks, material.specular, material.specular_texture);
-            material.roughness = get_pbrt_roughness(substrate.uroughness.value,
-                substrate.vroughness.value, substrate.remaproughness);
-        } else if (holds_alternative<pbrt_glass_material>(pmaterial)) {
-            auto& glass = get<pbrt_glass_material>(pmaterial);
-            get_scaled_texture3f(
-                glass.Kr, material.specular, material.specular_texture);
-            material.specular *= 0.04f;
-            get_scaled_texture3f(
-                glass.Kt, material.transmission, material.transmission_texture);
-            material.roughness = get_pbrt_roughness(glass.uroughness.value,
-                glass.vroughness.value, glass.remaproughness);
-            material.thin      = true;
-        } else if (holds_alternative<pbrt_hair_material>(pmaterial)) {
-            auto& hair = get<pbrt_hair_material>(pmaterial);
-            get_scaled_texture3f(
-                hair.color, material.diffuse, material.diffuse_texture);
-            material.roughness = 1;
-            if (verbose) printf("hair material not properly supported\n");
-        } else if (holds_alternative<pbrt_disney_material>(pmaterial)) {
-            auto& disney = get<pbrt_disney_material>(pmaterial);
-            get_scaled_texture3f(
-                disney.color, material.diffuse, material.diffuse_texture);
-            material.roughness = 1;
-            if (verbose) printf("disney material not properly supported\n");
-        } else if (holds_alternative<pbrt_kdsubsurface_material>(pmaterial)) {
-            auto& kdsubdurface = get<pbrt_kdsubsurface_material>(pmaterial);
-            get_scaled_texture3f(
-                kdsubdurface.Kd, material.diffuse, material.diffuse_texture);
-            get_scaled_texture3f(
-                kdsubdurface.Kr, material.specular, material.specular_texture);
-            material.specular *= 0.04f;
-            material.roughness = get_pbrt_roughness(
-                kdsubdurface.uroughness.value, kdsubdurface.vroughness.value,
-                kdsubdurface.remaproughness);
-            if (verbose)
-                printf("kdsubsurface material not properly supported\n");
-        } else if (holds_alternative<pbrt_subsurface_material>(pmaterial)) {
-            // auto& subdurface           =
-            // get<pbrt_subsurface_material>(pmaterial);
-            material.diffuse   = {1, 0, 0};
-            material.roughness = 1;
-            if (verbose) printf("subsurface material not properly supported\n");
-        } else if (holds_alternative<pbrt_mix_material>(pmaterial)) {
-            auto& mix     = get<pbrt_mix_material>(pmaterial);
-            auto  matname = (!mix.namedmaterial1.empty()) ? mix.namedmaterial1
-                                                         : mix.namedmaterial2;
-            material = mmap.at(matname);
-            if (verbose) printf("mix material not properly supported\n");
-        } else if (holds_alternative<pbrt_fourier_material>(pmaterial)) {
-            auto& fourier = get<pbrt_fourier_material>(pmaterial);
-            if (holds_alternative<pbrt_plastic_material>(fourier.approx)) {
-                auto& plastic = get<pbrt_plastic_material>(fourier.approx);
+        switch (pmaterial.type) {
+            case pbrt_material_type::uber: {
+                auto& uber = pmaterial.uber;
+                get_scaled_texture3f(
+                    uber.Kd, material.diffuse, material.diffuse_texture);
+                get_scaled_texture3f(
+                    uber.Ks, material.specular, material.specular_texture);
+                get_scaled_texture3f(uber.Kt, material.transmission,
+                    material.transmission_texture);
+                float op_f = 1;
+                auto  op   = vec3f{0, 0, 0};
+                get_scaled_texture3f(
+                    uber.opacity, op_f, op, material.opacity_texture);
+                material.opacity   = (op.x + op.y + op.z) / 3;
+                material.roughness = get_pbrt_roughness(uber.uroughness.value,
+                    uber.vroughness.value, uber.remaproughness);
+                material.thin      = true;
+            } break;
+            case pbrt_material_type::plastic: {
+                auto& plastic = pmaterial.plastic;
                 get_scaled_texture3f(
                     plastic.Kd, material.diffuse, material.diffuse_texture);
                 get_scaled_texture3f(
@@ -3118,8 +3033,32 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 material.roughness = get_pbrt_roughness(
                     plastic.uroughness.value, plastic.vroughness.value,
                     plastic.remaproughness);
-            } else if (holds_alternative<pbrt_metal_material>(fourier.approx)) {
-                auto& metal = get<pbrt_metal_material>(fourier.approx);
+            } break;
+            case pbrt_material_type::translucent: {
+                auto& translucent = pmaterial.translucent;
+                get_scaled_texture3f(
+                    translucent.Kd, material.diffuse, material.diffuse_texture);
+                get_scaled_texture3f(translucent.Ks, material.specular,
+                    material.specular_texture);
+                material.specular *= 0.04f;
+                material.roughness = get_pbrt_roughness(
+                    translucent.uroughness.value, translucent.vroughness.value,
+                    translucent.remaproughness);
+            } break;
+            case pbrt_material_type::matte: {
+                auto& matte = pmaterial.matte;
+                get_scaled_texture3f(
+                    matte.Kd, material.diffuse, material.diffuse_texture);
+                material.roughness = 1;
+            } break;
+            case pbrt_material_type::mirror: {
+                auto& mirror = pmaterial.mirror;
+                get_scaled_texture3f(mirror.Kr, material.metallic,
+                    material.diffuse, material.diffuse_texture);
+                material.roughness = 0;
+            } break;
+            case pbrt_material_type::metal: {
+                auto& metal = pmaterial.metal;
                 float eta_f = 0, etak_f = 0;
                 auto  eta = zero3f, k = zero3f;
                 auto  eta_texture = -1, k_texture = -1;
@@ -3128,20 +3067,104 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 material.specular  = pbrt_fresnel_metal(1, eta, k);
                 material.roughness = get_pbrt_roughness(metal.uroughness.value,
                     metal.vroughness.value, metal.remaproughness);
-            } else if (holds_alternative<pbrt_glass_material>(fourier.approx)) {
-                auto& glass = get<pbrt_glass_material>(fourier.approx);
+            } break;
+            case pbrt_material_type::substrate: {
+                auto& substrate = pmaterial.substrate;
+                get_scaled_texture3f(
+                    substrate.Kd, material.diffuse, material.diffuse_texture);
+                get_scaled_texture3f(
+                    substrate.Ks, material.specular, material.specular_texture);
+                material.roughness = get_pbrt_roughness(
+                    substrate.uroughness.value, substrate.vroughness.value,
+                    substrate.remaproughness);
+            } break;
+            case pbrt_material_type::glass: {
+                auto& glass = pmaterial.glass;
                 get_scaled_texture3f(
                     glass.Kr, material.specular, material.specular_texture);
                 material.specular *= 0.04f;
                 get_scaled_texture3f(glass.Kt, material.transmission,
                     material.transmission_texture);
-            } else {
-                throw io_error("material type not supported " +
-                               to_string(fourier.approx.index()));
-            }
-        } else {
-            throw io_error(
-                "material type not supported " + to_string(pmaterial.index()));
+                material.roughness = get_pbrt_roughness(glass.uroughness.value,
+                    glass.vroughness.value, glass.remaproughness);
+                material.thin      = true;
+            } break;
+            case pbrt_material_type::hair: {
+                auto& hair = pmaterial.hair;
+                get_scaled_texture3f(
+                    hair.color, material.diffuse, material.diffuse_texture);
+                material.roughness = 1;
+                if (verbose) printf("hair material not properly supported\n");
+            } break;
+            case pbrt_material_type::disney: {
+                auto& disney = pmaterial.disney;
+                get_scaled_texture3f(
+                    disney.color, material.diffuse, material.diffuse_texture);
+                material.roughness = 1;
+                if (verbose) printf("disney material not properly supported\n");
+            } break;
+            case pbrt_material_type::kdsubsurface: {
+                auto& kdsubsurface = pmaterial.kdsubsurface;
+                get_scaled_texture3f(kdsubsurface.Kd, material.diffuse,
+                    material.diffuse_texture);
+                get_scaled_texture3f(kdsubsurface.Kr, material.specular,
+                    material.specular_texture);
+                material.specular *= 0.04f;
+                material.roughness = get_pbrt_roughness(
+                    kdsubsurface.uroughness.value,
+                    kdsubsurface.vroughness.value, kdsubsurface.remaproughness);
+                if (verbose)
+                    printf("kdsubsurface material not properly supported\n");
+            } break;
+            case pbrt_material_type::subsurface: {
+                material.diffuse   = {1, 0, 0};
+                material.roughness = 1;
+                if (verbose)
+                    printf("subsurface material not properly supported\n");
+            } break;
+            case pbrt_material_type::mix: {
+                auto& mix     = pmaterial.mix;
+                auto  matname = (!mix.namedmaterial1.empty())
+                                   ? mix.namedmaterial1
+                                   : mix.namedmaterial2;
+                material = mmap.at(matname);
+                if (verbose) printf("mix material not properly supported\n");
+            } break;
+            case pbrt_material_type::fourier: {
+                auto& fourier = pmaterial.fourier;
+                if (fourier.approx_type ==
+                    pbrt_fourier_material::approx_type_t::plastic) {
+                    auto& plastic = fourier.approx_plastic;
+                    get_scaled_texture3f(
+                        plastic.Kd, material.diffuse, material.diffuse_texture);
+                    get_scaled_texture3f(plastic.Ks, material.specular,
+                        material.specular_texture);
+                    material.specular *= 0.04f;
+                    material.roughness = get_pbrt_roughness(
+                        plastic.uroughness.value, plastic.vroughness.value,
+                        plastic.remaproughness);
+                } else if (fourier.approx_type ==
+                           pbrt_fourier_material::approx_type_t::metal) {
+                    auto& metal = fourier.approx_metal;
+                    float eta_f = 0, etak_f = 0;
+                    auto  eta = zero3f, k = zero3f;
+                    auto  eta_texture = -1, k_texture = -1;
+                    get_scaled_texture3f(metal.eta, eta_f, eta, eta_texture);
+                    get_scaled_texture3f(metal.k, etak_f, k, k_texture);
+                    material.specular  = pbrt_fresnel_metal(1, eta, k);
+                    material.roughness = get_pbrt_roughness(
+                        metal.uroughness.value, metal.vroughness.value,
+                        metal.remaproughness);
+                } else if (fourier.approx_type ==
+                           pbrt_fourier_material::approx_type_t::glass) {
+                    auto& glass = fourier.approx_glass;
+                    get_scaled_texture3f(
+                        glass.Kr, material.specular, material.specular_texture);
+                    material.specular *= 0.04f;
+                    get_scaled_texture3f(glass.Kt, material.transmission,
+                        material.transmission_texture);
+                }
+            } break;
         }
         mmap[name] = material;
     }
@@ -3162,109 +3185,119 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
     void light(const pbrt_light& plight, const pbrt_context& ctx) {
         static auto light_id = 0;
         auto        name     = "light_" + to_string(light_id++);
-        if (holds_alternative<pbrt_infinite_light>(plight)) {
-            auto& infinite    = get<pbrt_infinite_light>(plight);
-            auto  environment = yocto_environment();
-            environment.uri   = name;
-            // environment.frame =
-            // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
-            // * stack.back().frame;
-            environment.frame = (frame3f)ctx.transform_start *
-                                frame3f{
-                                    {1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-            environment.emission = (vec3f)infinite.scale;
-            if (infinite.mapname != "") {
-                auto texture = yocto_texture{};
-                texture.uri  = infinite.mapname;
-                scene.textures.push_back(texture);
-                environment.emission_texture = (int)scene.textures.size() - 1;
+        switch (plight.type) {
+            case pbrt_light_type::infinite: {
+                auto& infinite    = plight.infinite;
+                auto  environment = yocto_environment();
+                environment.uri   = name;
+                // environment.frame =
+                // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
+                // * stack.back().frame;
+                environment.frame =
+                    (frame3f)ctx.transform_start *
+                    frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+                environment.emission = (vec3f)infinite.scale;
+                if (infinite.mapname != "") {
+                    auto texture = yocto_texture{};
+                    texture.uri  = infinite.mapname;
+                    scene.textures.push_back(texture);
+                    environment.emission_texture = (int)scene.textures.size() -
+                                                   1;
+                }
+                scene.environments.push_back(environment);
+            } break;
+            case pbrt_light_type::distant: {
+                auto& distant      = plight.distant;
+                auto  distant_dist = 100;
+                scene.shapes.push_back({});
+                auto& shape = scene.shapes.back();
+                shape.uri   = name;
+                auto dir    = normalize(distant.from - distant.to);
+                auto size   = distant_dist * sin(5 * pif / 180);
+                make_rect(shape.quads, shape.positions, shape.normals,
+                    shape.texcoords, {1, 1}, {size, size}, {1, 1},
+                    identity_frame3f);
+                scene.materials.push_back({});
+                auto& material    = scene.materials.back();
+                material.uri      = shape.uri;
+                material.emission = (vec3f)distant.L * (vec3f)distant.scale;
+                material.emission *= (distant_dist * distant_dist) /
+                                     (size * size);
+                auto instance     = yocto_instance();
+                instance.uri      = shape.uri;
+                instance.shape    = (int)scene.shapes.size() - 1;
+                instance.material = (int)scene.materials.size() - 1;
+                instance.frame    = (frame3f)ctx.transform_start *
+                                 make_lookat_frame(dir * distant_dist, zero3f,
+                                     {0, 1, 0}, true);
+                scene.instances.push_back(instance);
+            } break;
+            case pbrt_light_type::point: {
+                auto& point = plight.point;
+                scene.shapes.push_back({});
+                auto& shape = scene.shapes.back();
+                shape.uri   = name;
+                auto size   = 0.01f;
+                make_sphere(shape.quads, shape.positions, shape.normals,
+                    shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
+                scene.materials.push_back({});
+                auto& material    = scene.materials.back();
+                material.uri      = shape.uri;
+                material.emission = (vec3f)point.I * (vec3f)point.scale;
+                // TODO: fix emission
+                auto instance     = yocto_instance();
+                instance.uri      = shape.uri;
+                instance.shape    = (int)scene.shapes.size() - 1;
+                instance.material = (int)scene.materials.size() - 1;
+                instance.frame    = (frame3f)ctx.transform_start *
+                                 make_translation_frame(point.from);
+                scene.instances.push_back(instance);
+            } break;
+            case pbrt_light_type::goniometric: {
+                auto& goniometric = plight.goniometric;
+                scene.shapes.push_back({});
+                auto& shape = scene.shapes.back();
+                shape.uri   = name;
+                auto size   = 0.01f;
+                make_sphere(shape.quads, shape.positions, shape.normals,
+                    shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
+                scene.materials.push_back({});
+                auto& material    = scene.materials.back();
+                material.uri      = shape.uri;
+                material.emission = (vec3f)goniometric.I *
+                                    (vec3f)goniometric.scale;
+                // TODO: fix emission
+                auto instance     = yocto_instance();
+                instance.uri      = shape.uri;
+                instance.shape    = (int)scene.shapes.size() - 1;
+                instance.material = (int)scene.materials.size() - 1;
+                instance.frame    = (frame3f)ctx.transform_start;
+                scene.instances.push_back(instance);
+            } break;
+            case pbrt_light_type::spot: {
+                auto& spot = plight.spot;
+                scene.shapes.push_back({});
+                auto& shape = scene.shapes.back();
+                shape.uri   = name;
+                auto size   = 0.01f;
+                make_sphere(shape.quads, shape.positions, shape.normals,
+                    shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
+                scene.materials.push_back({});
+                auto& material    = scene.materials.back();
+                material.uri      = shape.uri;
+                material.emission = (vec3f)spot.I * (vec3f)spot.scale;
+                // TODO: fix emission
+                auto instance     = yocto_instance();
+                instance.uri      = shape.uri;
+                instance.shape    = (int)scene.shapes.size() - 1;
+                instance.material = (int)scene.materials.size() - 1;
+                instance.frame    = (frame3f)ctx.transform_start;
+                scene.instances.push_back(instance);
+            } break;
+            default: {
+                throw io_error(
+                    "light type not supported " + to_string((int)plight.type));
             }
-            scene.environments.push_back(environment);
-        } else if (holds_alternative<pbrt_distant_light>(plight)) {
-            auto& distant      = get<pbrt_distant_light>(plight);
-            auto  distant_dist = 100;
-            scene.shapes.push_back({});
-            auto& shape = scene.shapes.back();
-            shape.uri   = name;
-            auto dir    = normalize(distant.from - distant.to);
-            auto size   = distant_dist * sin(5 * pif / 180);
-            make_rect(shape.quads, shape.positions, shape.normals,
-                shape.texcoords, {1, 1}, {size, size}, {1, 1},
-                identity_frame3f);
-            scene.materials.push_back({});
-            auto& material    = scene.materials.back();
-            material.uri      = shape.uri;
-            material.emission = (vec3f)distant.L * (vec3f)distant.scale;
-            material.emission *= (distant_dist * distant_dist) / (size * size);
-            auto instance     = yocto_instance();
-            instance.uri      = shape.uri;
-            instance.shape    = (int)scene.shapes.size() - 1;
-            instance.material = (int)scene.materials.size() - 1;
-            instance.frame    = (frame3f)ctx.transform_start *
-                             make_lookat_frame(
-                                 dir * distant_dist, zero3f, {0, 1, 0}, true);
-            scene.instances.push_back(instance);
-        } else if (holds_alternative<pbrt_point_light>(plight)) {
-            auto& point = get<pbrt_point_light>(plight);
-            scene.shapes.push_back({});
-            auto& shape = scene.shapes.back();
-            shape.uri   = name;
-            auto size   = 0.01f;
-            make_sphere(shape.quads, shape.positions, shape.normals,
-                shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
-            scene.materials.push_back({});
-            auto& material    = scene.materials.back();
-            material.uri      = shape.uri;
-            material.emission = (vec3f)point.I * (vec3f)point.scale;
-            // TODO: fix emission
-            auto instance     = yocto_instance();
-            instance.uri      = shape.uri;
-            instance.shape    = (int)scene.shapes.size() - 1;
-            instance.material = (int)scene.materials.size() - 1;
-            instance.frame    = (frame3f)ctx.transform_start *
-                             make_translation_frame(point.from);
-            scene.instances.push_back(instance);
-        } else if (holds_alternative<pbrt_goniometric_light>(plight)) {
-            auto& goniometric = get<pbrt_goniometric_light>(plight);
-            scene.shapes.push_back({});
-            auto& shape = scene.shapes.back();
-            shape.uri   = name;
-            auto size   = 0.01f;
-            make_sphere(shape.quads, shape.positions, shape.normals,
-                shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
-            scene.materials.push_back({});
-            auto& material    = scene.materials.back();
-            material.uri      = shape.uri;
-            material.emission = (vec3f)goniometric.I * (vec3f)goniometric.scale;
-            // TODO: fix emission
-            auto instance     = yocto_instance();
-            instance.uri      = shape.uri;
-            instance.shape    = (int)scene.shapes.size() - 1;
-            instance.material = (int)scene.materials.size() - 1;
-            instance.frame    = (frame3f)ctx.transform_start;
-            scene.instances.push_back(instance);
-        } else if (holds_alternative<pbrt_spot_light>(plight)) {
-            auto& spot = get<pbrt_spot_light>(plight);
-            scene.shapes.push_back({});
-            auto& shape = scene.shapes.back();
-            shape.uri   = name;
-            auto size   = 0.01f;
-            make_sphere(shape.quads, shape.positions, shape.normals,
-                shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
-            scene.materials.push_back({});
-            auto& material    = scene.materials.back();
-            material.uri      = shape.uri;
-            material.emission = (vec3f)spot.I * (vec3f)spot.scale;
-            // TODO: fix emission
-            auto instance     = yocto_instance();
-            instance.uri      = shape.uri;
-            instance.shape    = (int)scene.shapes.size() - 1;
-            instance.material = (int)scene.materials.size() - 1;
-            instance.frame    = (frame3f)ctx.transform_start;
-            scene.instances.push_back(instance);
-        } else {
-            throw io_error(
-                "light type not supported " + to_string(plight.index()));
         }
     }
     void begin_object(const pbrt_object& pobject, const pbrt_context& ctx) {
@@ -3432,7 +3465,6 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
 void make_cornellbox_scene(yocto_scene& scene) {
     scene.uri              = "cornellbox";
     auto& camera           = scene.cameras.emplace_back();
