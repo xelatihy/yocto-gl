@@ -69,228 +69,226 @@ struct pbrt_spectrum3f {
 };
 
 // pbrt cameras
-struct pbrt_perspective_camera {
-    float  fov              = 90;
-    float  frameaspectratio = -1;  // or computed from film
-    float  lensradius       = 0;
-    float  focaldistance    = 1e30;
-    bbox2f screenwindow     = {{-1, -1}, {1, 1}};
-    float  shutteropen      = 0;
-    float  shutterclose     = 1;
-};
-struct pbrt_orthographic_camera {
-    float  frameaspectratio = -1;  // or computed from film
-    float  lensradius       = 0;
-    float  focaldistance    = 1e30;
-    bbox2f screenwindow     = {{-1, -1}, {1, 1}};
-    float  shutteropen      = 0;
-    float  shutterclose     = 1;
-};
-struct pbrt_environment_camera {
-    float shutteropen  = 0;
-    float shutterclose = 1;
-};
-struct pbrt_realistic_camera {
-    string lensfile           = "";
-    float  aperturediameter   = 1;
-    float  focusdistance      = 10;
-    bool   simpleweighting    = true;
-    float  shutteropen        = 0;
-    float  shutterclose       = 1;
-    float  approx_focallength = 0;
-};
-enum struct pbrt_camera_type {
-    perspective,
-    orthographic,
-    environment,
-    realistic
-};
 struct pbrt_camera {
-    pbrt_camera_type         type         = pbrt_camera_type::perspective;
-    pbrt_perspective_camera  perspective  = {};
-    pbrt_orthographic_camera orthographic = {};
-    pbrt_environment_camera  environment  = {};
-    pbrt_realistic_camera    realistic    = {};
+    struct perspective_t {
+        float  fov              = 90;
+        float  frameaspectratio = -1;  // or computed from film
+        float  lensradius       = 0;
+        float  focaldistance    = 1e30;
+        bbox2f screenwindow     = {{-1, -1}, {1, 1}};
+        float  shutteropen      = 0;
+        float  shutterclose     = 1;
+    };
+    struct orthographic_t {
+        float  frameaspectratio = -1;  // or computed from film
+        float  lensradius       = 0;
+        float  focaldistance    = 1e30;
+        bbox2f screenwindow     = {{-1, -1}, {1, 1}};
+        float  shutteropen      = 0;
+        float  shutterclose     = 1;
+    };
+    struct environment_t {
+        float shutteropen  = 0;
+        float shutterclose = 1;
+    };
+    struct realistic_t {
+        string lensfile           = "";
+        float  aperturediameter   = 1;
+        float  focusdistance      = 10;
+        bool   simpleweighting    = true;
+        float  shutteropen        = 0;
+        float  shutterclose       = 1;
+        float  approx_focallength = 0;
+    };
+    enum struct type_t { perspective, orthographic, environment, realistic };
+    type_t         type         = type_t::perspective;
+    perspective_t  perspective  = {};
+    orthographic_t orthographic = {};
+    environment_t  environment  = {};
+    realistic_t    realistic    = {};
 };
 
 // pbrt samplers
-struct pbrt_random_sampler {
-    int pixelsamples = 16;
-};
-struct pbrt_halton_sampler {
-    int pixelsamples = 16;
-};
-struct pbrt_sobol_sampler {
-    int pixelsamples = 16;
-};
-struct pbrt_zerotwosequence_sampler {
-    int pixelsamples = 16;
-};
-struct pbrt_maxmindist_sampler {
-    int pixelsamples = 16;
-};
-struct pbrt_stratified_sampler {
-    bool jitter   = true;
-    int  xsamples = 2;
-    int  ysamples = 2;
-};
-enum struct pbrt_sampler_type {
-    random,
-    halton,
-    sobol,
-    zerotwosequence,
-    maxmindist,
-    stratified
-};
 struct pbrt_sampler {
-    pbrt_sampler_type            type            = pbrt_sampler_type::random;
-    pbrt_random_sampler          random          = {};
-    pbrt_halton_sampler          halton          = {};
-    pbrt_sobol_sampler           sobol           = {};
-    pbrt_zerotwosequence_sampler zerotwosequence = {};
-    pbrt_maxmindist_sampler      maxmindist      = {};
-    pbrt_stratified_sampler      stratified      = {};
+    struct random_t {
+        int pixelsamples = 16;
+    };
+    struct halton_t {
+        int pixelsamples = 16;
+    };
+    struct sobol_t {
+        int pixelsamples = 16;
+    };
+    struct zerotwosequence_t {
+        int pixelsamples = 16;
+    };
+    struct maxmindist_t {
+        int pixelsamples = 16;
+    };
+    struct stratified_t {
+        bool jitter   = true;
+        int  xsamples = 2;
+        int  ysamples = 2;
+    };
+    enum struct type_t {
+        random,
+        halton,
+        sobol,
+        zerotwosequence,
+        maxmindist,
+        stratified
+    };
+    type_t            type            = type_t::random;
+    random_t          random          = {};
+    halton_t          halton          = {};
+    sobol_t           sobol           = {};
+    zerotwosequence_t zerotwosequence = {};
+    maxmindist_t      maxmindist      = {};
+    stratified_t      stratified      = {};
 };
 
 // pbrt film
-struct pbrt_image_film {
-    int    xresolution        = 640;
-    int    yresolution        = 480;
-    bbox2f cropwindow         = {{0, 0}, {1, 1}};
-    float  scale              = 1;
-    float  maxsampleluminance = float_max;
-    float  diagonal           = 35;
-    string filename           = "pbrt.exr";
-};
-enum struct pbrt_film_type { image };
 struct pbrt_film {
-    pbrt_film_type  type  = pbrt_film_type::image;
-    pbrt_image_film image = {};
+    struct image_t {
+        int    xresolution        = 640;
+        int    yresolution        = 480;
+        bbox2f cropwindow         = {{0, 0}, {1, 1}};
+        float  scale              = 1;
+        float  maxsampleluminance = float_max;
+        float  diagonal           = 35;
+        string filename           = "pbrt.exr";
+    };
+    enum struct type_t { image };
+    type_t  type  = type_t::image;
+    image_t image = {};
 };
 
 // pbrt filters
-struct pbrt_box_filter {
-    float xwidth = 0.5f;
-    float ywidth = 0.5f;
-};
-struct pbrt_gaussian_filter {
-    float xwidth = 2;
-    float ywidth = 2;
-    float alpha  = 2;
-};
-struct pbrt_mitchell_filter {
-    float xwidth = 2;
-    float ywidth = 2;
-    float B      = 1.0f / 3.0f;
-    float C      = 1.0f / 3.0f;
-};
-struct pbrt_sinc_filter {
-    float xwidth = 4;
-    float ywidth = 4;
-    float tau    = 3;
-};
-struct pbrt_triangle_filter {
-    float xwidth = 2;
-    float ywidth = 2;
-};
-enum struct pbrt_filter_type { box, gaussian, mitchell, sinc, triangle };
 struct pbrt_filter {
-    pbrt_filter_type     type     = pbrt_filter_type::box;
-    pbrt_box_filter      box      = {};
-    pbrt_gaussian_filter gaussian = {};
-    pbrt_mitchell_filter mitchell = {};
-    pbrt_sinc_filter     sinc     = {};
-    pbrt_triangle_filter triangle = {};
+    struct box_t {
+        float xwidth = 0.5f;
+        float ywidth = 0.5f;
+    };
+    struct gaussian_t {
+        float xwidth = 2;
+        float ywidth = 2;
+        float alpha  = 2;
+    };
+    struct mitchell_t {
+        float xwidth = 2;
+        float ywidth = 2;
+        float B      = 1.0f / 3.0f;
+        float C      = 1.0f / 3.0f;
+    };
+    struct sinc_t {
+        float xwidth = 4;
+        float ywidth = 4;
+        float tau    = 3;
+    };
+    struct triangle_t {
+        float xwidth = 2;
+        float ywidth = 2;
+    };
+    enum struct type_t { box, gaussian, mitchell, sinc, triangle };
+    type_t     type     = type_t::box;
+    box_t      box      = {};
+    gaussian_t gaussian = {};
+    mitchell_t mitchell = {};
+    sinc_t     sinc     = {};
+    triangle_t triangle = {};
 };
 
 // pbrt integrators
-struct pbrt_path_integrator {
-    enum struct lightsamplestrategy_t { uniform, power, spatial };
-    int    maxdepth    = 5;
-    bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
-    float  rrthreshold = 1;
-    lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::spatial;
-};
-struct pbrt_volpath_integrator {
-    enum struct lightsamplestrategy_t { uniform, power, spatial };
-    int    maxdepth    = 5;
-    bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
-    float  rrthreshold = 1;
-    lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::spatial;
-};
-struct pbrt_bdpt_integrator {
-    enum struct lightsamplestrategy_t { uniform, power, spatial };
-    int    maxdepth    = 5;
-    bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
-    lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::power;
-    bool                  visualizestrategies = false;
-    bool                  visualizeweights    = false;
-};
-struct pbrt_directlighting_integrator {
-    enum struct strategy_t { all, one };
-    strategy_t strategy    = strategy_t::all;
-    int        maxdepth    = 5;
-    bbox2i     pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
-};
-struct pbrt_mlt_integrator {
-    int    maxdepth             = 5;
-    bbox2i pixelbounds          = {{0, 0}, {type_max<int>, type_max<int>}};
-    int    bootstrapsamples     = 100000;
-    int    chains               = 1000;
-    int    mutationsperpixel    = 100;
-    float  largestepprobability = 0.3;
-    float  sigma                = 0.01;
-};
-struct pbrt_sppm_integrator {
-    int    maxdepth            = 5;
-    bbox2i pixelbounds         = {{0, 0}, {type_max<int>, type_max<int>}};
-    int    iterations          = 64;
-    int    photonsperiteration = -1;
-    int    imagewritefrequency = pow2(31);
-    float  radius              = 5;
-};
-struct pbrt_whitted_integrator {
-    int    maxdepth    = 5;
-    bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
-};
-enum struct pbrt_integrator_type {
-    path,
-    volpath,
-    bdpt,
-    directlighting,
-    mlt,
-    sppm,
-    whitted
-};
 struct pbrt_integrator {
-    pbrt_integrator_type           type           = pbrt_integrator_type::path;
-    pbrt_path_integrator           path           = {};
-    pbrt_volpath_integrator        volpath        = {};
-    pbrt_bdpt_integrator           bdpt           = {};
-    pbrt_directlighting_integrator directlighting = {};
-    pbrt_mlt_integrator            mlt            = {};
-    pbrt_sppm_integrator           sppm           = {};
-    pbrt_whitted_integrator        whitted        = {};
+    struct path_t {
+        enum struct lightsamplestrategy_t { uniform, power, spatial };
+        int    maxdepth    = 5;
+        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+        float  rrthreshold = 1;
+        lightsamplestrategy_t lightsamplestrategy =
+            lightsamplestrategy_t::spatial;
+    };
+    struct volpath_t {
+        enum struct lightsamplestrategy_t { uniform, power, spatial };
+        int    maxdepth    = 5;
+        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+        float  rrthreshold = 1;
+        lightsamplestrategy_t lightsamplestrategy =
+            lightsamplestrategy_t::spatial;
+    };
+    struct bdpt_t {
+        enum struct lightsamplestrategy_t { uniform, power, spatial };
+        int    maxdepth    = 5;
+        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+        lightsamplestrategy_t lightsamplestrategy =
+            lightsamplestrategy_t::power;
+        bool visualizestrategies = false;
+        bool visualizeweights    = false;
+    };
+    struct directlighting_t {
+        enum struct strategy_t { all, one };
+        strategy_t strategy    = strategy_t::all;
+        int        maxdepth    = 5;
+        bbox2i     pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+    };
+    struct mlt_t {
+        int    maxdepth             = 5;
+        bbox2i pixelbounds          = {{0, 0}, {type_max<int>, type_max<int>}};
+        int    bootstrapsamples     = 100000;
+        int    chains               = 1000;
+        int    mutationsperpixel    = 100;
+        float  largestepprobability = 0.3;
+        float  sigma                = 0.01;
+    };
+    struct sppm_t {
+        int    maxdepth            = 5;
+        bbox2i pixelbounds         = {{0, 0}, {type_max<int>, type_max<int>}};
+        int    iterations          = 64;
+        int    photonsperiteration = -1;
+        int    imagewritefrequency = pow2(31);
+        float  radius              = 5;
+    };
+    struct whitted_t {
+        int    maxdepth    = 5;
+        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+    };
+    enum struct type_t {
+        path,
+        volpath,
+        bdpt,
+        directlighting,
+        mlt,
+        sppm,
+        whitted
+    };
+    type_t           type           = type_t::path;
+    path_t           path           = {};
+    volpath_t        volpath        = {};
+    bdpt_t           bdpt           = {};
+    directlighting_t directlighting = {};
+    mlt_t            mlt            = {};
+    sppm_t           sppm           = {};
+    whitted_t        whitted        = {};
 };
 
 // pbrt accellerators
-struct pbrt_bvh_accelerator {
-    enum struct splitmethod_t { sah, equal, middle, hlbvh };
-    int           maxnodeprims = 4;
-    splitmethod_t splitmethod  = splitmethod_t::sah;
-};
-struct pbrt_kdtree_accelerator {
-    int   intersectcost = 80;
-    int   traversalcost = 1;
-    float emptybonus    = 0.2;
-    int   maxprims      = 1;
-    int   maxdepth      = -1;
-};
-enum struct pbrt_accelerator_type { bvh, kdtree };
 struct pbrt_accelerator {
-    pbrt_accelerator_type   type   = pbrt_accelerator_type::bvh;
-    pbrt_bvh_accelerator    bvh    = {};
-    pbrt_kdtree_accelerator kdtree = {};
+    struct bvh_t {
+        enum struct splitmethod_t { sah, equal, middle, hlbvh };
+        int           maxnodeprims = 4;
+        splitmethod_t splitmethod  = splitmethod_t::sah;
+    };
+    struct kdtree_t {
+        int   intersectcost = 80;
+        int   traversalcost = 1;
+        float emptybonus    = 0.2;
+        int   maxprims      = 1;
+        int   maxdepth      = -1;
+    };
+    enum struct type_t { bvh, kdtree };
+    type_t   type   = type_t::bvh;
+    bvh_t    bvh    = {};
+    kdtree_t kdtree = {};
 };
 
 // pbrt texture or value
@@ -308,514 +306,511 @@ struct pbrt_textured3f {
 };
 
 // pbrt textures
-struct pbrt_constant_texture {
-    pbrt_textured3f value = {1, 1, 1};
-};
-struct pbrt_bilerp_texture {
-    pbrt_textured3f v00 = {0, 0, 0};
-    pbrt_textured3f v01 = {1, 1, 1};
-    pbrt_textured3f v10 = {0, 0, 0};
-    pbrt_textured3f v11 = {1, 1, 1};
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
-};
-struct pbrt_checkerboard_texture {
-    enum struct aamode_type { closedform, none };
-    int                            dimension = 2;
-    pbrt_textured3f tex1      = {1, 1, 1};
-    pbrt_textured3f tex2      = {0, 0, 0};
-    aamode_type                    aamode    = aamode_type::closedform;
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
-};
-struct pbrt_dots_texture {
-    pbrt_textured3f inside  = {1, 1, 1};
-    pbrt_textured3f outside = {0, 0, 0};
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
-};
-struct pbrt_fbm_texture {
-    int   octaves   = 8;
-    float roughness = 0.5;
-};
-struct pbrt_imagemap_texture {
-    enum wrap_type { repeat, black, clamp };
-    string    filename      = "";
-    wrap_type wrap          = wrap_type::repeat;
-    float     maxanisotropy = 8;
-    bool      trilinear     = false;
-    float     scale         = 1;
-    bool      gamma         = true;
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
-};
-struct pbrt_marble_texture {
-    int   octaves   = 8;
-    float roughness = 0.5f;
-    float scale     = 1;
-    float variation = 0.2f;
-};
-struct pbrt_mix_texture {
-    pbrt_textured3f tex1   = {1, 1, 1};
-    pbrt_textured3f tex2   = {1, 1, 1};
-    pbrt_textured1f           amount = 0.5f;
-};
-struct pbrt_scale_texture {
-    pbrt_textured3f tex1 = {1, 1, 1};
-    pbrt_textured3f tex2 = {1, 1, 1};
-};
-struct pbrt_uv_texture {
-    enum struct mapping_type { uv, spherical, cylindrical, planar };
-    mapping_type mapping = mapping_type::uv;
-    float        uscale  = 1;
-    float        vscale  = 1;
-    float        udelta  = 0;
-    float        vdelta  = 0;
-    vec3f        v1      = {1, 0, 0};
-    vec3f        v2      = {0, 1, 0};
-};
-struct pbrt_windy_texture {
-    // TODO: missing parameters
-};
-struct pbrt_wrinkled_texture {
-    int   octaves   = 8;
-    float roughness = 0.5;
-};
-enum struct pbrt_texture_type {
-    constant,
-    bilerp,
-    checkerboard,
-    dots,
-    fbm,
-    imagemap,
-    marble,
-    mix,
-    scale,
-    uv,
-    windy,
-    wrinkled
-};
 struct pbrt_texture {
-    pbrt_texture_type         type         = pbrt_texture_type::constant;
-    pbrt_constant_texture     constant     = {};
-    pbrt_bilerp_texture       bilerp       = {};
-    pbrt_checkerboard_texture checkerboard = {};
-    pbrt_dots_texture         dots         = {};
-    pbrt_fbm_texture          fbm          = {};
-    pbrt_imagemap_texture     imagemap     = {};
-    pbrt_marble_texture       marble       = {};
-    pbrt_mix_texture          mix          = {};
-    pbrt_scale_texture        scale        = {};
-    pbrt_uv_texture           uv           = {};
-    pbrt_windy_texture        windy        = {};
-    pbrt_wrinkled_texture     wrinkled     = {};
+    struct constant_t {
+        pbrt_textured3f value = {1, 1, 1};
+    };
+    struct bilerp_t {
+        pbrt_textured3f v00 = {0, 0, 0};
+        pbrt_textured3f v01 = {1, 1, 1};
+        pbrt_textured3f v10 = {0, 0, 0};
+        pbrt_textured3f v11 = {1, 1, 1};
+        enum struct mapping_type { uv, spherical, cylindrical, planar };
+        mapping_type mapping = mapping_type::uv;
+        float        uscale  = 1;
+        float        vscale  = 1;
+        float        udelta  = 0;
+        float        vdelta  = 0;
+        vec3f        v1      = {1, 0, 0};
+        vec3f        v2      = {0, 1, 0};
+    };
+    struct checkerboard_t {
+        enum struct aamode_type { closedform, none };
+        int             dimension = 2;
+        pbrt_textured3f tex1      = {1, 1, 1};
+        pbrt_textured3f tex2      = {0, 0, 0};
+        aamode_type     aamode    = aamode_type::closedform;
+        enum struct mapping_type { uv, spherical, cylindrical, planar };
+        mapping_type mapping = mapping_type::uv;
+        float        uscale  = 1;
+        float        vscale  = 1;
+        float        udelta  = 0;
+        float        vdelta  = 0;
+        vec3f        v1      = {1, 0, 0};
+        vec3f        v2      = {0, 1, 0};
+    };
+    struct dots_t {
+        pbrt_textured3f inside  = {1, 1, 1};
+        pbrt_textured3f outside = {0, 0, 0};
+        enum struct mapping_type { uv, spherical, cylindrical, planar };
+        mapping_type mapping = mapping_type::uv;
+        float        uscale  = 1;
+        float        vscale  = 1;
+        float        udelta  = 0;
+        float        vdelta  = 0;
+        vec3f        v1      = {1, 0, 0};
+        vec3f        v2      = {0, 1, 0};
+    };
+    struct fbm_t {
+        int   octaves   = 8;
+        float roughness = 0.5;
+    };
+    struct imagemap_t {
+        enum wrap_type { repeat, black, clamp };
+        string    filename      = "";
+        wrap_type wrap          = wrap_type::repeat;
+        float     maxanisotropy = 8;
+        bool      trilinear     = false;
+        float     scale         = 1;
+        bool      gamma         = true;
+        enum struct mapping_type { uv, spherical, cylindrical, planar };
+        mapping_type mapping = mapping_type::uv;
+        float        uscale  = 1;
+        float        vscale  = 1;
+        float        udelta  = 0;
+        float        vdelta  = 0;
+        vec3f        v1      = {1, 0, 0};
+        vec3f        v2      = {0, 1, 0};
+    };
+    struct marble_t {
+        int   octaves   = 8;
+        float roughness = 0.5f;
+        float scale     = 1;
+        float variation = 0.2f;
+    };
+    struct mix_t {
+        pbrt_textured3f tex1   = {1, 1, 1};
+        pbrt_textured3f tex2   = {1, 1, 1};
+        pbrt_textured1f amount = 0.5f;
+    };
+    struct scale_t {
+        pbrt_textured3f tex1 = {1, 1, 1};
+        pbrt_textured3f tex2 = {1, 1, 1};
+    };
+    struct uv_t {
+        enum struct mapping_type { uv, spherical, cylindrical, planar };
+        mapping_type mapping = mapping_type::uv;
+        float        uscale  = 1;
+        float        vscale  = 1;
+        float        udelta  = 0;
+        float        vdelta  = 0;
+        vec3f        v1      = {1, 0, 0};
+        vec3f        v2      = {0, 1, 0};
+    };
+    struct windy_t {
+        // TODO: missing parameters
+    };
+    struct wrinkled_t {
+        int   octaves   = 8;
+        float roughness = 0.5;
+    };
+    enum struct type_t {
+        constant,
+        bilerp,
+        checkerboard,
+        dots,
+        fbm,
+        imagemap,
+        marble,
+        mix,
+        scale,
+        uv,
+        windy,
+        wrinkled
+    };
+    type_t         type         = type_t::constant;
+    constant_t     constant     = {};
+    bilerp_t       bilerp       = {};
+    checkerboard_t checkerboard = {};
+    dots_t         dots         = {};
+    fbm_t          fbm          = {};
+    imagemap_t     imagemap     = {};
+    marble_t       marble       = {};
+    mix_t          mix          = {};
+    scale_t        scale        = {};
+    uv_t           uv           = {};
+    windy_t        windy        = {};
+    wrinkled_t     wrinkled     = {};
 };
 
 // pbrt materials
-struct pbrt_matte_material {
-    pbrt_textured3f Kd      = {0.5, 0.5, 0.5};
-    pbrt_textured1f           sigma   = 0;
-    pbrt_textured1f           bumpmap = 0;
-};
-struct pbrt_mirror_material {
-    pbrt_textured3f Kr      = {0.9, 0.9, 0.9};
-    pbrt_textured1f           bumpmap = 0;
-};
-struct pbrt_plastic_material {
-    pbrt_textured3f Kd             = {0.25, 0.25, 0.25};
-    pbrt_textured3f Ks             = {0.25, 0.25, 0.25};
-    pbrt_textured1f           uroughness     = 0.1;
-    pbrt_textured1f           vroughness     = 0.1;
-    bool                           remaproughness = true;
-    pbrt_textured1f           bumpmap        = 0;
-};
-struct pbrt_metal_material {
-    pbrt_textured3f eta = {
-        0.2004376970f, 0.9240334304f, 1.1022119527f};
-    pbrt_textured3f k = {
-        3.9129485033f, 2.4528477015f, 2.1421879552f};
-    pbrt_textured1f uroughness     = 0.01;
-    pbrt_textured1f vroughness     = 0.01;
-    bool                 remaproughness = true;
-    pbrt_textured1f bumpmap        = 0;
-};
-struct pbrt_glass_material {
-    pbrt_textured3f Kr             = {1, 1, 1};
-    pbrt_textured3f Kt             = {1, 1, 1};
-    pbrt_textured1f           eta            = 1.5;
-    pbrt_textured1f           uroughness     = 0;
-    pbrt_textured1f           vroughness     = 0;
-    bool                           remaproughness = true;
-    pbrt_textured1f           bumpmap        = 0;
-};
-struct pbrt_translucent_material {
-    pbrt_textured3f Kd             = {0.25, 0.25, 0.25};
-    pbrt_textured3f Ks             = {0.25, 0.25, 0.25};
-    pbrt_textured3f reflect        = {0.5, 0.5, 0.5};
-    pbrt_textured3f transmit       = {0.5, 0.5, 0.5};
-    pbrt_textured1f           uroughness     = 0.1;
-    pbrt_textured1f           vroughness     = 0.1;
-    bool                           remaproughness = true;
-    pbrt_textured1f           bumpmap        = 0;
-};
-struct pbrt_uber_material {
-    pbrt_textured3f Kd             = {0.25, 0.25, 0.25};
-    pbrt_textured3f Ks             = {0.25, 0.25, 0.25};
-    pbrt_textured3f Kr             = {0, 0, 0};
-    pbrt_textured3f Kt             = {0, 0, 0};
-    pbrt_textured1f           uroughness     = 0.1;
-    pbrt_textured1f           vroughness     = 0.1;
-    pbrt_textured1f           eta            = 1.5;
-    pbrt_textured3f opacity        = {1, 1, 1};
-    bool                           remaproughness = true;
-    pbrt_textured1f           bumpmap        = 0;
-};
-struct pbrt_disney_material {
-    pbrt_textured3f color           = {0.5f, 0.5f, 0.5f};
-    pbrt_textured1f           anisotropic     = 0;
-    pbrt_textured1f           clearcoat       = 0;
-    pbrt_textured1f           clearcoatgloss  = 1;
-    pbrt_textured1f           eta             = 1.5;
-    pbrt_textured1f           metallic        = 0;
-    pbrt_textured1f           uroughness      = 0.5;
-    pbrt_textured1f           vroughness      = 0.5;
-    pbrt_textured3f scatterdistance = {0, 0, 0};
-    pbrt_textured1f           sheen           = 0;
-    pbrt_textured1f           sheentint       = 0.5;
-    pbrt_textured1f           spectrans       = 0;
-    pbrt_textured1f           speculartint    = 0;
-    bool                           thin            = false;
-    pbrt_textured3f difftrans       = {1, 1, 1};
-    pbrt_textured3f flatness        = {0, 0, 0};
-    bool                           remaproughness  = true;
-    pbrt_textured1f           bumpmap         = 0;
-};
-struct pbrt_fourier_material {
-    string               bsdffile = "";
-    pbrt_textured1f bumpmap  = 0;
-    enum struct approx_type_t { plastic, metal, glass };
-    approx_type_t         approx_type    = approx_type_t::plastic;
-    pbrt_plastic_material approx_plastic = {};
-    pbrt_metal_material   approx_metal   = {};
-    pbrt_glass_material   approx_glass   = {};
-};
-struct pbrt_hair_material {
-    pbrt_textured3f color = {0, 0, 0};  // TODO: missing default
-    pbrt_textured3f sigma_a = {
-        0, 0, 0};                          // TODO: missing default
-    pbrt_textured1f eumelanin   = 0;  // TODO: missing default
-    pbrt_textured1f pheomelanin = 0;  // TODO: missing default
-    pbrt_textured1f eta         = 1.55f;
-    pbrt_textured1f beta_m      = 0.3f;
-    pbrt_textured1f beta_n      = 0.3f;
-    pbrt_textured1f alpha       = 2;
-    pbrt_textured1f bumpmap     = 0;
-};
-struct pbrt_kdsubsurface_material {
-    pbrt_textured3f Kd             = {0.5, 0.5, 0.5};
-    pbrt_textured3f mfp            = {1, 1, 1};
-    pbrt_textured1f           eta            = 1.3;
-    pbrt_textured3f Kr             = {1, 1, 1};
-    pbrt_textured3f Kt             = {1, 1, 1};
-    pbrt_textured1f           uroughness     = 0;
-    pbrt_textured1f           vroughness     = 0;
-    bool                           remaproughness = true;
-    pbrt_textured1f           bumpmap        = 0;
-};
-struct pbrt_mix_material {
-    pbrt_textured3f amount         = {0, 0, 0};
-    string                         namedmaterial1 = "";
-    string                         namedmaterial2 = "";
-    pbrt_textured1f           bumpmap        = 0;
-};
-struct pbrt_substrate_material {
-    pbrt_textured3f Kd             = {0.5, 0.5, 0.5};
-    pbrt_textured3f Ks             = {0.5, 0.5, 0.5};
-    pbrt_textured1f           uroughness     = 0.1;
-    pbrt_textured1f           vroughness     = 0.1;
-    bool                           remaproughness = true;
-    pbrt_textured1f           bumpmap        = 0;
-};
-struct pbrt_subsurface_material {
-    string                         name           = "";
-    pbrt_textured3f sigma_a        = {.0011, .0024, .014};
-    pbrt_textured3f sigma_prime_s  = {2.55, 3.12, 3.77};
-    float                          scale          = 1;
-    pbrt_textured1f           eta            = 1;
-    pbrt_textured3f Kr             = {1, 1, 1};
-    pbrt_textured3f Kt             = {1, 1, 1};
-    pbrt_textured1f           uroughness     = 0;
-    pbrt_textured1f           vroughness     = 0;
-    bool                           remaproughness = true;
-    pbrt_textured1f           bumpmap        = 0;
-};
-enum struct pbrt_material_type {
-    matte,
-    mirror,
-    plastic,
-    metal,
-    glass,
-    translucent,
-    uber,
-    disney,
-    fourier,
-    hair,
-    kdsubsurface,
-    mix,
-    substrate,
-    subsurface
-};
 struct pbrt_material {
-    pbrt_material_type         type         = pbrt_material_type::matte;
-    pbrt_matte_material        matte        = {};
-    pbrt_mirror_material       mirror       = {};
-    pbrt_plastic_material      plastic      = {};
-    pbrt_metal_material        metal        = {};
-    pbrt_glass_material        glass        = {};
-    pbrt_translucent_material  translucent  = {};
-    pbrt_uber_material         uber         = {};
-    pbrt_disney_material       disney       = {};
-    pbrt_fourier_material      fourier      = {};
-    pbrt_hair_material         hair         = {};
-    pbrt_kdsubsurface_material kdsubsurface = {};
-    pbrt_mix_material          mix          = {};
-    pbrt_substrate_material    substrate    = {};
-    pbrt_subsurface_material   subsurface{};
+    struct matte_t {
+        pbrt_textured3f Kd      = {0.5, 0.5, 0.5};
+        pbrt_textured1f sigma   = 0;
+        pbrt_textured1f bumpmap = 0;
+    };
+    struct mirror_t {
+        pbrt_textured3f Kr      = {0.9, 0.9, 0.9};
+        pbrt_textured1f bumpmap = 0;
+    };
+    struct plastic_t {
+        pbrt_textured3f Kd             = {0.25, 0.25, 0.25};
+        pbrt_textured3f Ks             = {0.25, 0.25, 0.25};
+        pbrt_textured1f uroughness     = 0.1;
+        pbrt_textured1f vroughness     = 0.1;
+        bool            remaproughness = true;
+        pbrt_textured1f bumpmap        = 0;
+    };
+    struct metal_t {
+        pbrt_textured3f eta = {0.2004376970f, 0.9240334304f, 1.1022119527f};
+        pbrt_textured3f k   = {3.9129485033f, 2.4528477015f, 2.1421879552f};
+        pbrt_textured1f uroughness     = 0.01;
+        pbrt_textured1f vroughness     = 0.01;
+        bool            remaproughness = true;
+        pbrt_textured1f bumpmap        = 0;
+    };
+    struct glass_t {
+        pbrt_textured3f Kr             = {1, 1, 1};
+        pbrt_textured3f Kt             = {1, 1, 1};
+        pbrt_textured1f eta            = 1.5;
+        pbrt_textured1f uroughness     = 0;
+        pbrt_textured1f vroughness     = 0;
+        bool            remaproughness = true;
+        pbrt_textured1f bumpmap        = 0;
+    };
+    struct translucent_t {
+        pbrt_textured3f Kd             = {0.25, 0.25, 0.25};
+        pbrt_textured3f Ks             = {0.25, 0.25, 0.25};
+        pbrt_textured3f reflect        = {0.5, 0.5, 0.5};
+        pbrt_textured3f transmit       = {0.5, 0.5, 0.5};
+        pbrt_textured1f uroughness     = 0.1;
+        pbrt_textured1f vroughness     = 0.1;
+        bool            remaproughness = true;
+        pbrt_textured1f bumpmap        = 0;
+    };
+    struct uber_t {
+        pbrt_textured3f Kd             = {0.25, 0.25, 0.25};
+        pbrt_textured3f Ks             = {0.25, 0.25, 0.25};
+        pbrt_textured3f Kr             = {0, 0, 0};
+        pbrt_textured3f Kt             = {0, 0, 0};
+        pbrt_textured1f uroughness     = 0.1;
+        pbrt_textured1f vroughness     = 0.1;
+        pbrt_textured1f eta            = 1.5;
+        pbrt_textured3f opacity        = {1, 1, 1};
+        bool            remaproughness = true;
+        pbrt_textured1f bumpmap        = 0;
+    };
+    struct disney_t {
+        pbrt_textured3f color           = {0.5f, 0.5f, 0.5f};
+        pbrt_textured1f anisotropic     = 0;
+        pbrt_textured1f clearcoat       = 0;
+        pbrt_textured1f clearcoatgloss  = 1;
+        pbrt_textured1f eta             = 1.5;
+        pbrt_textured1f metallic        = 0;
+        pbrt_textured1f uroughness      = 0.5;
+        pbrt_textured1f vroughness      = 0.5;
+        pbrt_textured3f scatterdistance = {0, 0, 0};
+        pbrt_textured1f sheen           = 0;
+        pbrt_textured1f sheentint       = 0.5;
+        pbrt_textured1f spectrans       = 0;
+        pbrt_textured1f speculartint    = 0;
+        bool            thin            = false;
+        pbrt_textured3f difftrans       = {1, 1, 1};
+        pbrt_textured3f flatness        = {0, 0, 0};
+        bool            remaproughness  = true;
+        pbrt_textured1f bumpmap         = 0;
+    };
+    struct fourier_t {
+        string          bsdffile = "";
+        pbrt_textured1f bumpmap  = 0;
+        enum struct approx_type_t { plastic, metal, glass };
+        approx_type_t approx_type    = approx_type_t::plastic;
+        plastic_t     approx_plastic = {};
+        metal_t       approx_metal   = {};
+        glass_t       approx_glass   = {};
+    };
+    struct hair_t {
+        pbrt_textured3f color       = {0, 0, 0};  // TODO: missing default
+        pbrt_textured3f sigma_a     = {0, 0, 0};  // TODO: missing default
+        pbrt_textured1f eumelanin   = 0;          // TODO: missing default
+        pbrt_textured1f pheomelanin = 0;          // TODO: missing default
+        pbrt_textured1f eta         = 1.55f;
+        pbrt_textured1f beta_m      = 0.3f;
+        pbrt_textured1f beta_n      = 0.3f;
+        pbrt_textured1f alpha       = 2;
+        pbrt_textured1f bumpmap     = 0;
+    };
+    struct kdsubsurface_t {
+        pbrt_textured3f Kd             = {0.5, 0.5, 0.5};
+        pbrt_textured3f mfp            = {1, 1, 1};
+        pbrt_textured1f eta            = 1.3;
+        pbrt_textured3f Kr             = {1, 1, 1};
+        pbrt_textured3f Kt             = {1, 1, 1};
+        pbrt_textured1f uroughness     = 0;
+        pbrt_textured1f vroughness     = 0;
+        bool            remaproughness = true;
+        pbrt_textured1f bumpmap        = 0;
+    };
+    struct mix_t {
+        pbrt_textured3f amount         = {0, 0, 0};
+        string          namedmaterial1 = "";
+        string          namedmaterial2 = "";
+        pbrt_textured1f bumpmap        = 0;
+    };
+    struct substrate_t {
+        pbrt_textured3f Kd             = {0.5, 0.5, 0.5};
+        pbrt_textured3f Ks             = {0.5, 0.5, 0.5};
+        pbrt_textured1f uroughness     = 0.1;
+        pbrt_textured1f vroughness     = 0.1;
+        bool            remaproughness = true;
+        pbrt_textured1f bumpmap        = 0;
+    };
+    struct subsurface_t {
+        string          name           = "";
+        pbrt_textured3f sigma_a        = {.0011, .0024, .014};
+        pbrt_textured3f sigma_prime_s  = {2.55, 3.12, 3.77};
+        float           scale          = 1;
+        pbrt_textured1f eta            = 1;
+        pbrt_textured3f Kr             = {1, 1, 1};
+        pbrt_textured3f Kt             = {1, 1, 1};
+        pbrt_textured1f uroughness     = 0;
+        pbrt_textured1f vroughness     = 0;
+        bool            remaproughness = true;
+        pbrt_textured1f bumpmap        = 0;
+    };
+    enum struct type_t {
+        matte,
+        mirror,
+        plastic,
+        metal,
+        glass,
+        translucent,
+        uber,
+        disney,
+        fourier,
+        hair,
+        kdsubsurface,
+        mix,
+        substrate,
+        subsurface
+    };
+    type_t         type         = type_t::matte;
+    matte_t        matte        = {};
+    mirror_t       mirror       = {};
+    plastic_t      plastic      = {};
+    metal_t        metal        = {};
+    glass_t        glass        = {};
+    translucent_t  translucent  = {};
+    uber_t         uber         = {};
+    disney_t       disney       = {};
+    fourier_t      fourier      = {};
+    hair_t         hair         = {};
+    kdsubsurface_t kdsubsurface = {};
+    mix_t          mix          = {};
+    substrate_t    substrate    = {};
+    subsurface_t   subsurface{};
 };
 
 // pbrt shapes
-struct pbrt_trianglemesh_shape {
-    vector<vec3i>        indices     = {};
-    vector<vec3f>        P           = {};
-    vector<vec3f>        N           = {};
-    vector<vec3f>        S           = {};
-    vector<vec2f>        uv          = {};
-    pbrt_textured1f alpha       = 1;
-    pbrt_textured1f shadowalpha = 1;
-};
-struct pbrt_plymesh_shape {
-    string               filename    = {};
-    pbrt_textured1f alpha       = 1;
-    pbrt_textured1f shadowalpha = 1;
-};
-struct pbrt_curve_shape {
-    enum struct type_t { flat, ribbon, cylinder };
-    enum struct basis_t { bezier, bspline };
-    vector<vec3f> P          = {};
-    basis_t       basis      = basis_t::bezier;
-    int           degree     = 3;
-    type_t        type       = type_t::flat;
-    vector<vec3f> N          = {};
-    float         width0     = 1;
-    float         width1     = 1;
-    int           splitdepth = 3;
-};
-struct pbrt_loopsubdiv_shape {
-    int           levels  = 3;
-    vector<vec3i> indices = {};
-    vector<vec3f> P       = {};
-};
-struct pbrt_nurbs_shape {
-    int           nu     = -1;
-    int           nv     = -1;
-    vector<float> uknots = {};
-    vector<float> vknots = {};
-    float         u0     = -1;
-    float         v0     = -1;
-    float         u1     = -1;
-    float         v1     = -1;
-    vector<vec3f> P      = {};
-    vector<float> Pw     = {};
-};
-struct pbrt_sphere_shape {
-    float radius = 1;
-    float zmin   = -radius;
-    float zmax   = radius;
-    float phimax = 360;
-};
-struct pbrt_disk_shape {
-    float height      = 0;
-    float radius      = 1;
-    float innerradius = 0;
-    float phimax      = 360;
-};
-struct pbrt_cone_shape {
-    float radius = 1;
-    float height = 1;
-    float phimax = 360;
-};
-struct pbrt_cylinder_shape {
-    float radius = 1;
-    float zmin   = -1;
-    float zmax   = 1;
-    float phimax = 360;
-};
-struct pbrt_hyperboloid_shape {
-    vec3f p1     = {0, 0, 0};
-    vec3f p2     = {1, 1, 1};
-    float phimax = 360;
-};
-struct pbrt_paraboloid_shape {
-    float radius = 1;
-    float zmin   = 0;
-    float zmax   = 1;
-    float phimax = 360;
-};
-struct pbrt_heightfield_shape {
-    int           nu = 0;
-    int           nv = 0;
-    vector<float> Pz = {};
-};
-enum struct pbrt_shape_type {
-    trianglemesh,
-    plymesh,
-    curve,
-    loopsubdiv,
-    nurbs,
-    sphere,
-    disk,
-    cone,
-    cylinder,
-    hyperboloid,
-    paraboloid,
-    heightfield
-};
 struct pbrt_shape {
-    pbrt_shape_type         type         = pbrt_shape_type::trianglemesh;
-    pbrt_trianglemesh_shape trianglemesh = {};
-    pbrt_plymesh_shape      plymesh{};
-    pbrt_curve_shape        curve       = {};
-    pbrt_loopsubdiv_shape   loopsubdiv  = {};
-    pbrt_nurbs_shape        nurbs       = {};
-    pbrt_sphere_shape       sphere      = {};
-    pbrt_disk_shape         disk        = {};
-    pbrt_cone_shape         cone        = {};
-    pbrt_cylinder_shape     cylinder    = {};
-    pbrt_hyperboloid_shape  hyperboloid = {};
-    pbrt_paraboloid_shape   paraboloid  = {};
-    pbrt_heightfield_shape  heightfield = {};
+    struct trianglemesh_t {
+        vector<vec3i>   indices     = {};
+        vector<vec3f>   P           = {};
+        vector<vec3f>   N           = {};
+        vector<vec3f>   S           = {};
+        vector<vec2f>   uv          = {};
+        pbrt_textured1f alpha       = 1;
+        pbrt_textured1f shadowalpha = 1;
+    };
+    struct plymesh_t {
+        string          filename    = {};
+        pbrt_textured1f alpha       = 1;
+        pbrt_textured1f shadowalpha = 1;
+    };
+    struct curve_t {
+        enum struct type_t { flat, ribbon, cylinder };
+        enum struct basis_t { bezier, bspline };
+        vector<vec3f> P          = {};
+        basis_t       basis      = basis_t::bezier;
+        int           degree     = 3;
+        type_t        type       = type_t::flat;
+        vector<vec3f> N          = {};
+        float         width0     = 1;
+        float         width1     = 1;
+        int           splitdepth = 3;
+    };
+    struct loopsubdiv_t {
+        int           levels  = 3;
+        vector<vec3i> indices = {};
+        vector<vec3f> P       = {};
+    };
+    struct nurbs_t {
+        int           nu     = -1;
+        int           nv     = -1;
+        vector<float> uknots = {};
+        vector<float> vknots = {};
+        float         u0     = -1;
+        float         v0     = -1;
+        float         u1     = -1;
+        float         v1     = -1;
+        vector<vec3f> P      = {};
+        vector<float> Pw     = {};
+    };
+    struct sphere_t {
+        float radius = 1;
+        float zmin   = -radius;
+        float zmax   = radius;
+        float phimax = 360;
+    };
+    struct disk_t {
+        float height      = 0;
+        float radius      = 1;
+        float innerradius = 0;
+        float phimax      = 360;
+    };
+    struct cone_t {
+        float radius = 1;
+        float height = 1;
+        float phimax = 360;
+    };
+    struct cylinder_t {
+        float radius = 1;
+        float zmin   = -1;
+        float zmax   = 1;
+        float phimax = 360;
+    };
+    struct hyperboloid_t {
+        vec3f p1     = {0, 0, 0};
+        vec3f p2     = {1, 1, 1};
+        float phimax = 360;
+    };
+    struct paraboloid_t {
+        float radius = 1;
+        float zmin   = 0;
+        float zmax   = 1;
+        float phimax = 360;
+    };
+    struct heightfield_t {
+        int           nu = 0;
+        int           nv = 0;
+        vector<float> Pz = {};
+    };
+    enum struct type_t {
+        trianglemesh,
+        plymesh,
+        curve,
+        loopsubdiv,
+        nurbs,
+        sphere,
+        disk,
+        cone,
+        cylinder,
+        hyperboloid,
+        paraboloid,
+        heightfield
+    };
+    type_t         type         = type_t::trianglemesh;
+    trianglemesh_t trianglemesh = {};
+    plymesh_t      plymesh{};
+    curve_t        curve       = {};
+    loopsubdiv_t   loopsubdiv  = {};
+    nurbs_t        nurbs       = {};
+    sphere_t       sphere      = {};
+    disk_t         disk        = {};
+    cone_t         cone        = {};
+    cylinder_t     cylinder    = {};
+    hyperboloid_t  hyperboloid = {};
+    paraboloid_t   paraboloid  = {};
+    heightfield_t  heightfield = {};
 };
 
 // pbrt lights
-struct pbrt_distant_light {
-    pbrt_spectrum3f scale = {1, 1, 1};
-    pbrt_spectrum3f L     = {1, 1, 1};
-    vec3f           from{0, 0, 0};
-    vec3f           to = {0, 0, 1};
-};
-struct pbrt_goniometric_light {
-    pbrt_spectrum3f scale   = {1, 1, 1};
-    pbrt_spectrum3f I       = {1, 1, 1};
-    string          mapname = "";
-};
-struct pbrt_infinite_light {
-    pbrt_spectrum3f scale   = {1, 1, 1};
-    pbrt_spectrum3f L       = {1, 1, 1};
-    int             samples = 1;
-    string          mapname = "";
-};
-struct pbrt_point_light {
-    pbrt_spectrum3f scale = {1, 1, 1};
-    pbrt_spectrum3f I     = {1, 1, 1};
-    vec3f           from{0, 0, 0};
-};
-struct pbrt_projection_light {
-    pbrt_spectrum3f scale   = {1, 1, 1};
-    pbrt_spectrum3f I       = {1, 1, 1};
-    float           fov     = 45;
-    string          mapname = "";
-};
-struct pbrt_spot_light {
-    pbrt_spectrum3f scale          = {1, 1, 1};
-    pbrt_spectrum3f I              = {1, 1, 1};
-    vec3f           from           = {0, 0, 0};
-    vec3f           to             = {0, 0, 1};
-    float           coneangle      = 30;
-    float           conedeltaangle = 5;
-};
-enum struct pbrt_light_type {
-    distant,
-    goniometric,
-    infinite,
-    point,
-    projection,
-    spot
-};
 struct pbrt_light {
-    pbrt_light_type        type        = pbrt_light_type::distant;
-    pbrt_distant_light     distant     = {};
-    pbrt_goniometric_light goniometric = {};
-    pbrt_infinite_light    infinite    = {};
-    pbrt_point_light       point       = {};
-    pbrt_projection_light  projection  = {};
-    pbrt_spot_light        spot        = {};
+    struct distant_t {
+        pbrt_spectrum3f scale = {1, 1, 1};
+        pbrt_spectrum3f L     = {1, 1, 1};
+        vec3f           from{0, 0, 0};
+        vec3f           to = {0, 0, 1};
+    };
+    struct goniometric_t {
+        pbrt_spectrum3f scale   = {1, 1, 1};
+        pbrt_spectrum3f I       = {1, 1, 1};
+        string          mapname = "";
+    };
+    struct infinite_t {
+        pbrt_spectrum3f scale   = {1, 1, 1};
+        pbrt_spectrum3f L       = {1, 1, 1};
+        int             samples = 1;
+        string          mapname = "";
+    };
+    struct point_t {
+        pbrt_spectrum3f scale = {1, 1, 1};
+        pbrt_spectrum3f I     = {1, 1, 1};
+        vec3f           from{0, 0, 0};
+    };
+    struct projection_t {
+        pbrt_spectrum3f scale   = {1, 1, 1};
+        pbrt_spectrum3f I       = {1, 1, 1};
+        float           fov     = 45;
+        string          mapname = "";
+    };
+    struct spot_t {
+        pbrt_spectrum3f scale          = {1, 1, 1};
+        pbrt_spectrum3f I              = {1, 1, 1};
+        vec3f           from           = {0, 0, 0};
+        vec3f           to             = {0, 0, 1};
+        float           coneangle      = 30;
+        float           conedeltaangle = 5;
+    };
+    enum struct type_t {
+        distant,
+        goniometric,
+        infinite,
+        point,
+        projection,
+        spot
+    };
+    type_t        type        = type_t::distant;
+    distant_t     distant     = {};
+    goniometric_t goniometric = {};
+    infinite_t    infinite    = {};
+    point_t       point       = {};
+    projection_t  projection  = {};
+    spot_t        spot        = {};
 };
 
 // pbrt area lights
-struct pbrt_none_arealight {};
-struct pbrt_diffuse_arealight {
-    pbrt_spectrum3f scale    = {1, 1, 1};
-    pbrt_spectrum3f L        = {1, 1, 1};
-    bool            twosided = false;
-    int             samples  = 1;
-};
-enum struct pbrt_arealight_type { none, diffuse };
 struct pbrt_arealight {
-    pbrt_arealight_type    type    = pbrt_arealight_type::none;
-    pbrt_none_arealight    none    = {};
-    pbrt_diffuse_arealight diffuse = {};
+    struct none_t {};
+    struct diffuse_t {
+        pbrt_spectrum3f scale    = {1, 1, 1};
+        pbrt_spectrum3f L        = {1, 1, 1};
+        bool            twosided = false;
+        int             samples  = 1;
+    };
+    enum struct type_t { none, diffuse };
+    type_t    type    = type_t::none;
+    none_t    none    = {};
+    diffuse_t diffuse = {};
 };
 
 // pbrt mediums
-struct pbrt_homogeneous_medium {
-    pbrt_spectrum3f sigma_a = {0.0011f, 0.0024f, 0.014f};
-    pbrt_spectrum3f sigma_s = {2.55f, 3.21f, 3.77f};
-    string          preset  = "";
-    float           g       = 0;
-    float           scale   = 1;
-};
-struct pbrt_heterogeneous_medium {
-    pbrt_spectrum3f sigma_a = {0.0011f, 0.0024f, 0.014f};
-    pbrt_spectrum3f sigma_s = {2.55f, 3.21f, 3.77f};
-    string          preset  = "";
-    float           g       = 0;
-    float           scale   = 1;
-    vec3f           p0      = {0, 0, 0};
-    vec3f           p1      = {1, 1, 1};
-    int             nx      = 1;
-    int             ny      = 1;
-    int             nz      = 1;
-    vector<float>   density = {};
-};
-enum struct pbrt_medium_type { homogeneous, heterogeneous };
 struct pbrt_medium {
-    pbrt_medium_type          type          = pbrt_medium_type::homogeneous;
-    pbrt_homogeneous_medium   homogeneous   = {};
-    pbrt_heterogeneous_medium heterogeneous = {};
+    struct homogeneous_t {
+        pbrt_spectrum3f sigma_a = {0.0011f, 0.0024f, 0.014f};
+        pbrt_spectrum3f sigma_s = {2.55f, 3.21f, 3.77f};
+        string          preset  = "";
+        float           g       = 0;
+        float           scale   = 1;
+    };
+    struct heterogeneous_t {
+        pbrt_spectrum3f sigma_a = {0.0011f, 0.0024f, 0.014f};
+        pbrt_spectrum3f sigma_s = {2.55f, 3.21f, 3.77f};
+        string          preset  = "";
+        float           g       = 0;
+        float           scale   = 1;
+        vec3f           p0      = {0, 0, 0};
+        vec3f           p1      = {1, 1, 1};
+        int             nx      = 1;
+        int             ny      = 1;
+        int             nz      = 1;
+        vector<float>   density = {};
+    };
+    enum struct type_t { homogeneous, heterogeneous };
+    type_t          type          = type_t::homogeneous;
+    homogeneous_t   homogeneous   = {};
+    heterogeneous_t heterogeneous = {};
 };
 
 // pbrt medium interface

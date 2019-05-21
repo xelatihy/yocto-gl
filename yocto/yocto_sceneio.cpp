@@ -2776,7 +2776,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         camera.frame   = inverse((frame3f)ctx.transform_start);
         camera.frame.z = -camera.frame.z;
         switch (pcamera.type) {
-            case pbrt_camera_type::perspective: {
+            case pbrt_camera::type_t::perspective: {
                 auto& perspective = pcamera.perspective;
                 auto  aspect      = perspective.frameaspectratio;
                 if (aspect < 0) aspect = last_film_aspect;
@@ -2789,13 +2789,13 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                         clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
                 }
             } break;
-            case pbrt_camera_type::orthographic: {
+            case pbrt_camera::type_t::orthographic: {
                 throw io_error("unsupported Camera type");
             } break;
-            case pbrt_camera_type::environment: {
+            case pbrt_camera::type_t::environment: {
                 throw io_error("unsupported Camera type");
             } break;
-            case pbrt_camera_type::realistic: {
+            case pbrt_camera::type_t::realistic: {
                 auto& realistic     = pcamera.realistic;
                 camera.focal_length = max(realistic.approx_focallength, 35.0f) *
                                       0.001f;
@@ -2815,7 +2815,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
     }
     void film(const pbrt_film& pfilm, const pbrt_context& ctx) {
         switch (pfilm.type) {
-            case pbrt_film_type::image: {
+            case pbrt_film::type_t::image: {
                 auto& image      = pfilm.image;
                 last_film_aspect = (float)image.xresolution /
                                    (float)image.yresolution;
@@ -2830,7 +2830,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto        shape    = yocto_shape{};
         shape.uri = "shapes/shape__" + to_string(shape_id++) + ".ply";
         switch (pshape.type) {
-            case pbrt_shape_type::trianglemesh: {
+            case pbrt_shape::type_t::trianglemesh: {
                 auto& mesh      = pshape.trianglemesh;
                 shape.positions = mesh.P;
                 shape.normals   = mesh.N;
@@ -2838,7 +2838,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
                 shape.triangles = mesh.indices;
             } break;
-            case pbrt_shape_type::loopsubdiv: {
+            case pbrt_shape::type_t::loopsubdiv: {
                 auto& mesh      = pshape.loopsubdiv;
                 shape.positions = mesh.P;
                 shape.triangles = mesh.indices;
@@ -2846,7 +2846,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 compute_normals(
                     shape.normals, shape.triangles, shape.positions);
             } break;
-            case pbrt_shape_type::plymesh: {
+            case pbrt_shape::type_t::plymesh: {
                 auto& mesh = pshape.plymesh;
                 shape.uri  = mesh.filename;
                 if (!params.skip_meshes) {
@@ -2857,13 +2857,13 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                         shape.texcoords, shape.colors, shape.radius, false);
                 }
             } break;
-            case pbrt_shape_type::sphere: {
+            case pbrt_shape::type_t::sphere: {
                 auto& sphere = pshape.sphere;
                 make_uvsphere(shape.quads, shape.positions, shape.normals,
                     shape.texcoords, {64, 32}, 2 * sphere.radius, {1, 1},
                     identity_frame3f);
             } break;
-            case pbrt_shape_type::disk: {
+            case pbrt_shape::type_t::disk: {
                 auto& disk = pshape.disk;
                 make_uvdisk(shape.quads, shape.positions, shape.normals,
                     shape.texcoords, {32, 16}, 2 * disk.radius, {1, 1},
@@ -2888,7 +2888,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
     void texture(const pbrt_texture& ptexture, const string& name,
         const pbrt_context& ctx) {
         if (remove_contant_textures &&
-            ptexture.type == pbrt_texture_type::constant) {
+            ptexture.type == pbrt_texture::type_t::constant) {
             auto& constant = ptexture.constant;
             ctmap[name]    = (vec3f)constant.value.value;
             timap[name]    = false;
@@ -2897,23 +2897,23 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto texture = yocto_texture{};
         texture.uri  = "textures/" + name + ".png";
         switch (ptexture.type) {
-            case pbrt_texture_type::imagemap: {
+            case pbrt_texture::type_t::imagemap: {
                 auto& imagemap = ptexture.imagemap;
                 texture.uri    = imagemap.filename;
             } break;
-            case pbrt_texture_type::constant: {
+            case pbrt_texture::type_t::constant: {
                 auto& constant = ptexture.constant;
                 texture.ldr_image.resize({1, 1});
                 texture.ldr_image[{0, 0}] = float_to_byte(
                     vec4f{(vec3f)constant.value.value, 1});
             } break;
-            case pbrt_texture_type::bilerp: {
-                // auto& bilerp   = get<pbrt_bilerp_texture>(ptexture);
+            case pbrt_texture::type_t::bilerp: {
+                // auto& bilerp   = get<pbrt_texture::bilerp_t>(ptexture);
                 texture.ldr_image.resize({1, 1});
                 texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
                 if (verbose) printf("texture bilerp not supported well");
             } break;
-            case pbrt_texture_type::checkerboard: {
+            case pbrt_texture::type_t::checkerboard: {
                 auto& checkerboard = ptexture.checkerboard;
                 auto  rgb1         = checkerboard.tex1.texture == ""
                                 ? checkerboard.tex1.value
@@ -2927,13 +2927,13 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 texture.hdr_image = {};
                 if (verbose) printf("texture checkerboard not supported well");
             } break;
-            case pbrt_texture_type::dots: {
-                // auto& dots   = get<pbrt_dots_texture>(ptexture);
+            case pbrt_texture::type_t::dots: {
+                // auto& dots   = get<pbrt_texture::dots_t>(ptexture);
                 texture.ldr_image.resize({1, 1});
                 texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
                 if (verbose) printf("texture dots not supported well");
             } break;
-            case pbrt_texture_type::fbm: {
+            case pbrt_texture::type_t::fbm: {
                 auto& fbm = ptexture.fbm;
                 make_fbm(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
                     {1, 1, 1, 1}, (float)1, (float)2, (float)0.5f, fbm.octaves);
@@ -2941,7 +2941,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 texture.hdr_image = {};
                 if (verbose) printf("texture fbm not supported well");
             } break;
-            case pbrt_texture_type::marble: {
+            case pbrt_texture::type_t::marble: {
                 auto& marble = ptexture.marble;
                 make_fbm(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
                     {1, 1, 1, 1}, (float)marble.scale, (float)2, (float)0.5f,
@@ -2950,7 +2950,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 texture.hdr_image = {};
                 if (verbose) printf("texture marble not supported well");
             } break;
-            case pbrt_texture_type::mix: {
+            case pbrt_texture::type_t::mix: {
                 auto& mix = ptexture.mix;
                 if (timap.at(mix.tex1.texture)) {
                     texture.uri =
@@ -2964,7 +2964,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 }
                 if (verbose) printf("texture mix not supported well");
             } break;
-            case pbrt_texture_type::scale: {
+            case pbrt_texture::type_t::scale: {
                 auto& scale = ptexture.scale;
                 if (timap.at(scale.tex1.texture)) {
                     texture.uri =
@@ -2978,20 +2978,20 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 }
                 if (verbose) printf("texture scale not supported well");
             } break;
-            case pbrt_texture_type::uv: {
-                // auto& uv   = get<pbrt_uv_texture>(ptexture);
+            case pbrt_texture::type_t::uv: {
+                // auto& uv   = get<pbrt_texture::uv_t>(ptexture);
                 texture.ldr_image.resize({1, 1});
                 texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
                 if (verbose) printf("texture uv not supported well");
             } break;
-            case pbrt_texture_type::windy: {
-                // auto& uv   = get<pbrt_uv_texture>(ptexture);
+            case pbrt_texture::type_t::windy: {
+                // auto& uv   = get<pbrt_texture::uv_t>(ptexture);
                 texture.ldr_image.resize({1, 1});
                 texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
                 if (verbose) printf("texture windy not supported well");
             } break;
-            case pbrt_texture_type::wrinkled: {
-                // auto& uv   = get<pbrt_wrinkled_texture>(ptexture);
+            case pbrt_texture::type_t::wrinkled: {
+                // auto& uv   = get<pbrt_texture::wrinkled_t>(ptexture);
                 texture.ldr_image.resize({1, 1});
                 texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
                 if (verbose) printf("texture wrinkled not supported well");
@@ -2999,14 +2999,14 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         }
         scene.textures.push_back(texture);
         tmap[name]  = (int)scene.textures.size() - 1;
-        timap[name] = ptexture.type == pbrt_texture_type::imagemap;
+        timap[name] = ptexture.type == pbrt_texture::type_t::imagemap;
     }
     void material(const pbrt_material& pmaterial, const string& name,
         const pbrt_context& ctx) {
         auto material = yocto_material{};
         material.uri  = name;
         switch (pmaterial.type) {
-            case pbrt_material_type::uber: {
+            case pbrt_material::type_t::uber: {
                 auto& uber = pmaterial.uber;
                 get_scaled_texture3f(
                     uber.Kd, material.diffuse, material.diffuse_texture);
@@ -3023,7 +3023,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                     uber.vroughness.value, uber.remaproughness);
                 material.thin      = true;
             } break;
-            case pbrt_material_type::plastic: {
+            case pbrt_material::type_t::plastic: {
                 auto& plastic = pmaterial.plastic;
                 get_scaled_texture3f(
                     plastic.Kd, material.diffuse, material.diffuse_texture);
@@ -3034,7 +3034,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                     plastic.uroughness.value, plastic.vroughness.value,
                     plastic.remaproughness);
             } break;
-            case pbrt_material_type::translucent: {
+            case pbrt_material::type_t::translucent: {
                 auto& translucent = pmaterial.translucent;
                 get_scaled_texture3f(
                     translucent.Kd, material.diffuse, material.diffuse_texture);
@@ -3045,19 +3045,19 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                     translucent.uroughness.value, translucent.vroughness.value,
                     translucent.remaproughness);
             } break;
-            case pbrt_material_type::matte: {
+            case pbrt_material::type_t::matte: {
                 auto& matte = pmaterial.matte;
                 get_scaled_texture3f(
                     matte.Kd, material.diffuse, material.diffuse_texture);
                 material.roughness = 1;
             } break;
-            case pbrt_material_type::mirror: {
+            case pbrt_material::type_t::mirror: {
                 auto& mirror = pmaterial.mirror;
                 get_scaled_texture3f(mirror.Kr, material.metallic,
                     material.diffuse, material.diffuse_texture);
                 material.roughness = 0;
             } break;
-            case pbrt_material_type::metal: {
+            case pbrt_material::type_t::metal: {
                 auto& metal = pmaterial.metal;
                 float eta_f = 0, etak_f = 0;
                 auto  eta = zero3f, k = zero3f;
@@ -3068,7 +3068,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 material.roughness = get_pbrt_roughness(metal.uroughness.value,
                     metal.vroughness.value, metal.remaproughness);
             } break;
-            case pbrt_material_type::substrate: {
+            case pbrt_material::type_t::substrate: {
                 auto& substrate = pmaterial.substrate;
                 get_scaled_texture3f(
                     substrate.Kd, material.diffuse, material.diffuse_texture);
@@ -3078,7 +3078,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                     substrate.uroughness.value, substrate.vroughness.value,
                     substrate.remaproughness);
             } break;
-            case pbrt_material_type::glass: {
+            case pbrt_material::type_t::glass: {
                 auto& glass = pmaterial.glass;
                 get_scaled_texture3f(
                     glass.Kr, material.specular, material.specular_texture);
@@ -3089,21 +3089,21 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                     glass.vroughness.value, glass.remaproughness);
                 material.thin      = true;
             } break;
-            case pbrt_material_type::hair: {
+            case pbrt_material::type_t::hair: {
                 auto& hair = pmaterial.hair;
                 get_scaled_texture3f(
                     hair.color, material.diffuse, material.diffuse_texture);
                 material.roughness = 1;
                 if (verbose) printf("hair material not properly supported\n");
             } break;
-            case pbrt_material_type::disney: {
+            case pbrt_material::type_t::disney: {
                 auto& disney = pmaterial.disney;
                 get_scaled_texture3f(
                     disney.color, material.diffuse, material.diffuse_texture);
                 material.roughness = 1;
                 if (verbose) printf("disney material not properly supported\n");
             } break;
-            case pbrt_material_type::kdsubsurface: {
+            case pbrt_material::type_t::kdsubsurface: {
                 auto& kdsubsurface = pmaterial.kdsubsurface;
                 get_scaled_texture3f(kdsubsurface.Kd, material.diffuse,
                     material.diffuse_texture);
@@ -3116,13 +3116,13 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 if (verbose)
                     printf("kdsubsurface material not properly supported\n");
             } break;
-            case pbrt_material_type::subsurface: {
+            case pbrt_material::type_t::subsurface: {
                 material.diffuse   = {1, 0, 0};
                 material.roughness = 1;
                 if (verbose)
                     printf("subsurface material not properly supported\n");
             } break;
-            case pbrt_material_type::mix: {
+            case pbrt_material::type_t::mix: {
                 auto& mix     = pmaterial.mix;
                 auto  matname = (!mix.namedmaterial1.empty())
                                    ? mix.namedmaterial1
@@ -3130,10 +3130,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 material = mmap.at(matname);
                 if (verbose) printf("mix material not properly supported\n");
             } break;
-            case pbrt_material_type::fourier: {
+            case pbrt_material::type_t::fourier: {
                 auto& fourier = pmaterial.fourier;
                 if (fourier.approx_type ==
-                    pbrt_fourier_material::approx_type_t::plastic) {
+                    pbrt_material::fourier_t::approx_type_t::plastic) {
                     auto& plastic = fourier.approx_plastic;
                     get_scaled_texture3f(
                         plastic.Kd, material.diffuse, material.diffuse_texture);
@@ -3144,7 +3144,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                         plastic.uroughness.value, plastic.vroughness.value,
                         plastic.remaproughness);
                 } else if (fourier.approx_type ==
-                           pbrt_fourier_material::approx_type_t::metal) {
+                           pbrt_material::fourier_t::approx_type_t::metal) {
                     auto& metal = fourier.approx_metal;
                     float eta_f = 0, etak_f = 0;
                     auto  eta = zero3f, k = zero3f;
@@ -3156,7 +3156,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                         metal.uroughness.value, metal.vroughness.value,
                         metal.remaproughness);
                 } else if (fourier.approx_type ==
-                           pbrt_fourier_material::approx_type_t::glass) {
+                           pbrt_material::fourier_t::approx_type_t::glass) {
                     auto& glass = fourier.approx_glass;
                     get_scaled_texture3f(
                         glass.Kr, material.specular, material.specular_texture);
@@ -3172,11 +3172,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         const pbrt_context& ctx) {
         auto emission = zero3f;
         switch (plight.type) {
-            case pbrt_arealight_type::diffuse: {
+            case pbrt_arealight::type_t::diffuse: {
                 auto& diffuse = plight.diffuse;
                 emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
             } break;
-            case pbrt_arealight_type::none: {
+            case pbrt_arealight::type_t::none: {
                 throw io_error("should not have gotten here");
             } break;
         }
@@ -3186,7 +3186,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         static auto light_id = 0;
         auto        name     = "light_" + to_string(light_id++);
         switch (plight.type) {
-            case pbrt_light_type::infinite: {
+            case pbrt_light::type_t::infinite: {
                 auto& infinite    = plight.infinite;
                 auto  environment = yocto_environment();
                 environment.uri   = name;
@@ -3206,7 +3206,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 }
                 scene.environments.push_back(environment);
             } break;
-            case pbrt_light_type::distant: {
+            case pbrt_light::type_t::distant: {
                 auto& distant      = plight.distant;
                 auto  distant_dist = 100;
                 scene.shapes.push_back({});
@@ -3232,7 +3232,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                                      {0, 1, 0}, true);
                 scene.instances.push_back(instance);
             } break;
-            case pbrt_light_type::point: {
+            case pbrt_light::type_t::point: {
                 auto& point = plight.point;
                 scene.shapes.push_back({});
                 auto& shape = scene.shapes.back();
@@ -3253,7 +3253,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                                  make_translation_frame(point.from);
                 scene.instances.push_back(instance);
             } break;
-            case pbrt_light_type::goniometric: {
+            case pbrt_light::type_t::goniometric: {
                 auto& goniometric = plight.goniometric;
                 scene.shapes.push_back({});
                 auto& shape = scene.shapes.back();
@@ -3274,7 +3274,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 instance.frame    = (frame3f)ctx.transform_start;
                 scene.instances.push_back(instance);
             } break;
-            case pbrt_light_type::spot: {
+            case pbrt_light::type_t::spot: {
                 auto& spot = plight.spot;
                 scene.shapes.push_back({});
                 auto& shape = scene.shapes.back();
