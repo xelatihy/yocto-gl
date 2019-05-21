@@ -1258,42 +1258,42 @@ void draw_histogram_opengl_widget(
 void draw_histogram_opengl_widget(
     const opengl_window& win, const char* lbl, const vector<float>& values) {
     ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
-        type_max<float>, type_max<float>, {0, 0}, 4);
+        float_max, float_max, {0, 0}, 4);
 }
 void draw_histogram_opengl_widget(
     const opengl_window& win, const char* lbl, const vector<vec2f>& values) {
     ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        (int)values.size(), 0, nullptr, float_max, float_max,
         {0, 0}, sizeof(vec2f));
     ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        (int)values.size(), 0, nullptr, float_max, float_max,
         {0, 0}, sizeof(vec2f));
 }
 void draw_histogram_opengl_widget(
     const opengl_window& win, const char* lbl, const vector<vec3f>& values) {
     ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        (int)values.size(), 0, nullptr, float_max, float_max,
         {0, 0}, sizeof(vec3f));
     ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        (int)values.size(), 0, nullptr, float_max, float_max,
         {0, 0}, sizeof(vec3f));
     ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
-        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        (int)values.size(), 0, nullptr, float_max, float_max,
         {0, 0}, sizeof(vec3f));
 }
 void draw_histogram_opengl_widget(
     const opengl_window& win, const char* lbl, const vector<vec4f>& values) {
     ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        (int)values.size(), 0, nullptr, float_max, float_max,
         {0, 0}, sizeof(vec4f));
     ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        (int)values.size(), 0, nullptr, float_max, float_max,
         {0, 0}, sizeof(vec4f));
     ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
-        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        (int)values.size(), 0, nullptr, float_max, float_max,
         {0, 0}, sizeof(vec4f));
     ImGui::PlotHistogram((lbl + " w"s).c_str(), (const float*)values.data() + 3,
-        (int)values.size(), 0, nullptr, type_max<float>, type_max<float>,
+        (int)values.size(), 0, nullptr, float_max, float_max,
         {0, 0}, sizeof(vec4f));
 }
 

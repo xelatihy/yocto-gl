@@ -164,7 +164,7 @@ struct pbrt_film_image {
     int    yresolution        = 480;
     bbox2f cropwindow         = {{0, 0}, {1, 1}};
     float  scale              = 1;
-    float  maxsampleluminance = type_max<float>;
+    float  maxsampleluminance = float_max;
     float  diagonal           = 35;
     string filename           = "pbrt.exr";
 };
