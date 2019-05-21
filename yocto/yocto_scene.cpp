@@ -623,6 +623,73 @@ void print_validation(const yocto_scene& scene, bool skip_textures) {
         printf("%s [validation]\n", err.c_str());
 }
 
+void build_bvh(
+    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
+    bvh.shapes.resize(scene.shapes.size());
+    for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+        auto& shape = scene.shapes[idx];
+        auto& sbvh  = bvh.shapes[idx];
+#if YOCTO_EMBREE
+        // call Embree if needed
+        if (params.use_embree) {
+            if (params.embree_compact &&
+                shape.positions.size() == shape.positions.capacity()) {
+                ((yocto_shape&)shape)
+                    .positions.reserve(shape.positions.size() + 1);
+            }
+        }
+#endif
+        sbvh.points          = shape.points;
+        sbvh.lines           = shape.lines;
+        sbvh.triangles       = shape.triangles;
+        sbvh.quads           = shape.quads;
+        sbvh.quads_positions = shape.quads_positions;
+        sbvh.positions       = shape.positions;
+        sbvh.radius          = shape.radius;
+    }
+    if (!scene.instances.empty()) {
+        bvh.instances = {&scene.instances[0].frame, (int)scene.instances.size(),
+            sizeof(scene.instances[0])};
+    } else {
+        bvh.instances = {};
+    }
+
+    build_bvh(bvh, params);
+}
+
+inline void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
+    const vector<int>& updated_shapes, const bvh_params& params) {
+    for (auto idx : updated_shapes) {
+        auto& shape = scene.shapes[idx];
+        auto& sbvh  = bvh.shapes[idx];
+#if YOCTO_EMBREE
+        // call Embree if needed
+        if (params.use_embree) {
+            if (params.embree_compact &&
+                shape.positions.size() == shape.positions.capacity()) {
+                ((yocto_shape&)shape)
+                    .positions.reserve(shape.positions.size() + 1);
+            }
+        }
+#endif
+        sbvh.points          = shape.points;
+        sbvh.lines           = shape.lines;
+        sbvh.triangles       = shape.triangles;
+        sbvh.quads           = shape.quads;
+        sbvh.quads_positions = shape.quads_positions;
+        sbvh.positions       = shape.positions;
+        sbvh.radius          = shape.radius;
+    }
+    if (!scene.instances.empty()) {
+        bvh.instances = {&scene.instances[0].frame, (int)scene.instances.size(),
+            sizeof(scene.instances[0])};
+    } else {
+        bvh.instances = {};
+    }
+
+    refit_bvh(bvh, updated_shapes, params);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1270,7 +1337,8 @@ material_point eval_material(const yocto_scene& scene,
         point.coat *= xyz(eval_texture(coat_texture, texturecoord));
     }
     if (metallic) {
-        point.specular = point.specular * (1 - metallic) + metallic * point.diffuse;
+        point.specular = point.specular * (1 - metallic) +
+                         metallic * point.diffuse;
         point.diffuse = metallic * point.diffuse * (1 - metallic);
     }
     if (point.diffuse != zero3f || point.roughness) {
