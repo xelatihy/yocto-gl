@@ -58,7 +58,7 @@ materials:
     diffuse: [0.7, 0.7, 0.7]
     diffuse_texture: textures/test-floor.png
   - uri: materials/test-volume-jade.yaml
-    specular: [1, 1, 1]
+    specular: [0.04, 0.04, 0.04]
     roughness: 0
     transmission: [1, 1, 1]
     voltransmission: [0.5, 0.5, 0.5]
@@ -67,21 +67,18 @@ materials:
     transmission: [1, 1, 1]
     voltransmission: [0.65, 0.65, 0.65]
     volscatter: [0.9, 0.9, 0.9]
-    ior: [1, 1, 1]
   - uri: materials/test-volume-glass.yaml
-    specular: [1, 1, 1]
+    specular: [0.04, 0.04, 0.04]
     roughness: 0
     transmission: [1, 1, 1]
     voltransmission: [1, 0.5, 0.5]
     volscale: 0.02
   - uri: materials/test-volume-smoke.yaml
-    ior: [1, 1, 1]
     transmission: [1, 1, 1]
     voltransmission: [0.5, 0.5, 0.5]
     volscatter: [0.2, 0.2, 0.2]
     volanisotropy: -0.8
   - uri: materials/test-volume-emissive.yaml
-    ior: [1, 1, 1]
     transmission: [1, 1, 1]
     voltransmission: [0.95, 0.95, 0.95]
     volemission: [15, 15, 10]

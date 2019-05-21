@@ -125,7 +125,6 @@ struct yocto_material {
     vec3f specular          = {0, 0, 0};
     float roughness         = 0;
     float metallic          = 0;
-    vec3f ior               = {1.5, 1.5, 1.5};
     vec3f coat              = {0, 0, 0};
     vec3f transmission      = {0, 0, 0};
     vec3f voltransmission   = {0, 0, 0};
@@ -135,7 +134,6 @@ struct yocto_material {
     float volscale          = 0.01;
     float opacity           = 1;
     bool  thin              = false;
-    bool  ior_from_specular = false;
 
     // textures
     int  emission_texture     = -1;
@@ -435,7 +433,6 @@ struct material_point {
     vec3f coat          = {0, 0, 0};
     vec3f transmission  = {0, 0, 0};
     float roughness     = 0;
-    vec3f eta           = {1.5, 1.5, 1.5};
     vec3f voldensity    = {0, 0, 0};
     vec3f volemission   = {0, 0, 0};
     vec3f volscatter    = {0, 0, 0};

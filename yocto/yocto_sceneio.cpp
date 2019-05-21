@@ -703,8 +703,6 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.specular);
                 } else if (key == "roughness") {
                     get_yaml_value(value, material.roughness);
-                } else if (key == "ior") {
-                    get_yaml_value(value, material.ior);
                 } else if (key == "coat") {
                     get_yaml_value(value, material.coat);
                 } else if (key == "transmission") {
@@ -960,7 +958,6 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             def_material.transmission);
         print_optional(
             fs, "roughness", material.roughness, def_material.roughness);
-        print_optional(fs, "ior", material.ior, def_material.ior);
         print_optional(fs, "voltransmission", material.voltransmission,
             def_material.voltransmission);
         print_optional(
@@ -1323,7 +1320,7 @@ struct load_obj_scene_cb : obj_callbacks {
         material.emission             = omat.ke;
         material.diffuse              = omat.kd;
         material.specular             = omat.ks;
-        material.metallic             = omat.has_pbr ? omat.pm : 0;
+        material.metallic             = omat.pm;
         material.transmission         = omat.kt;
         material.roughness            = omat.pr;
         material.opacity              = omat.op;
@@ -1335,7 +1332,6 @@ struct load_obj_scene_cb : obj_callbacks {
         material.roughness_texture    = add_texture(omat.pr_txt, true);
         material.opacity_texture      = add_texture(omat.op_txt, true);
         material.normal_texture       = add_texture(omat.norm_txt, true);
-        material.ior_from_specular    = true;
         scene.materials.push_back(material);
         mmap[material.uri] = (int)scene.materials.size() - 1;
     }
@@ -1454,10 +1450,6 @@ static inline void print_obj_keyvalue(
     print(fs, "{} {}\n", name, value);
 }
 
-static inline vec3f obj_eta_to_reflectivity(const vec3f& eta) {
-    return ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1));
-}
-
 static void save_mtl(
     const string& filename, const yocto_scene& scene, bool flip_tr = true) {
     // open file
@@ -1472,15 +1464,9 @@ static void save_mtl(
         print(fs, "newmtl {}\n", get_basename(material.uri));
         print_obj_keyvalue(fs, "  illum", 2);
         print_obj_keyvalue(fs, "  Ke", material.emission);
-        if (material.metallic > 0.5) {
-            print_obj_keyvalue(fs, "  Kd", zero3f);
-            print_obj_keyvalue(
-                fs, "  Ks", material.diffuse * material.metallic);
-        } else {
-            print_obj_keyvalue(fs, "  Kd", material.diffuse);
-            print_obj_keyvalue(fs, "  Ks",
-                material.specular * obj_eta_to_reflectivity(material.ior));
-        }
+        print_obj_keyvalue(fs, "  Kd", material.diffuse * (1 - material.metallic));
+        print_obj_keyvalue(fs, "  Ks", material.specular * (1 - material.metallic) 
+            + material.metallic * material.diffuse);
         print_obj_keyvalue(fs, "  Kt", material.transmission);
         print_obj_keyvalue(fs, "  Ns",
             (int)clamp(
@@ -1872,6 +1858,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
                 gmr->base_color_factor[3]};
             material.diffuse         = {kb.x, kb.y, kb.z};
             material.opacity         = kb.w;
+            material.specular        = {0.04, 0.04, 0.04};
             material.metallic        = gmr->metallic_factor;
             material.roughness       = gmr->roughness_factor;
             material.diffuse_texture = add_texture(
@@ -2686,10 +2673,6 @@ static vec3f pbrt_fresnel_metal(
     return (rp + rs) / 2.0f;
 }
 
-static vec3f pbrt_reflectivity_to_eta(const vec3f& reflectivity) {
-    return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
-}
-
 struct load_pbrt_scene_cb : pbrt_callbacks {
     yocto_scene&          scene;
     const sceneio_params& params;
@@ -3016,6 +2999,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 plastic.Kd, material.diffuse, material.diffuse_texture);
             get_scaled_texture3f(
                 plastic.Ks, material.specular, material.specular_texture);
+            material.specular *= 0.04f;
             material.roughness = get_pbrt_roughness(plastic.uroughness.value,
                 plastic.vroughness.value, plastic.remaproughness);
         } else if (holds_alternative<pbrt_translucent_material>(pmaterial)) {
@@ -3024,6 +3008,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 translucent.Kd, material.diffuse, material.diffuse_texture);
             get_scaled_texture3f(
                 translucent.Ks, material.specular, material.specular_texture);
+            material.specular *= 0.04f;
             material.roughness = get_pbrt_roughness(
                 translucent.uroughness.value, translucent.vroughness.value,
                 translucent.remaproughness);
@@ -3044,9 +3029,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             auto  eta_texture = -1, k_texture = -1;
             get_scaled_texture3f(metal.eta, eta_f, eta, eta_texture);
             get_scaled_texture3f(metal.k, etak_f, k, k_texture);
-            // TODO: fix me
-            material.metallic  = 1;
-            material.diffuse   = pbrt_fresnel_metal(1, eta, k);
+            material.specular  = pbrt_fresnel_metal(1, eta, k);
             material.roughness = get_pbrt_roughness(metal.uroughness.value,
                 metal.vroughness.value, metal.remaproughness);
         } else if (holds_alternative<pbrt_substrate_material>(pmaterial)) {
@@ -3061,6 +3044,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             auto& glass = get<pbrt_glass_material>(pmaterial);
             get_scaled_texture3f(
                 glass.Kr, material.specular, material.specular_texture);
+            material.specular *= 0.04f;
             get_scaled_texture3f(
                 glass.Kt, material.transmission, material.transmission_texture);
             material.roughness = get_pbrt_roughness(glass.uroughness.value,
@@ -3084,6 +3068,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 kdsubdurface.Kd, material.diffuse, material.diffuse_texture);
             get_scaled_texture3f(
                 kdsubdurface.Kr, material.specular, material.specular_texture);
+            material.specular *= 0.04f;
             material.roughness = get_pbrt_roughness(
                 kdsubdurface.uroughness.value, kdsubdurface.vroughness.value,
                 kdsubdurface.remaproughness);
@@ -3109,6 +3094,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                     plastic.Kd, material.diffuse, material.diffuse_texture);
                 get_scaled_texture3f(
                     plastic.Ks, material.specular, material.specular_texture);
+                material.specular *= 0.04f;
                 material.roughness = get_pbrt_roughness(
                     plastic.uroughness.value, plastic.vroughness.value,
                     plastic.remaproughness);
@@ -3119,7 +3105,6 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 auto  eta_texture = -1, k_texture = -1;
                 get_scaled_texture3f(metal.eta, eta_f, eta, eta_texture);
                 get_scaled_texture3f(metal.k, etak_f, k, k_texture);
-                // TODO: fix me
                 material.specular  = pbrt_fresnel_metal(1, eta, k);
                 material.roughness = get_pbrt_roughness(metal.uroughness.value,
                     metal.vroughness.value, metal.remaproughness);
@@ -3127,6 +3112,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 auto& glass = get<pbrt_glass_material>(fourier.approx);
                 get_scaled_texture3f(
                     glass.Kr, material.specular, material.specular_texture);
+                material.specular *= 0.04f;
                 get_scaled_texture3f(glass.Kt, material.transmission,
                     material.transmission_texture);
             } else {
@@ -3355,8 +3341,9 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
             print(fs, "    \"texture Ks\" \"{}\"\n",
                 get_basename(scene.textures[material.specular_texture].uri));
         } else {
-            print(fs, "    \"rgb Ks\" [ {} {} {} ]\n", material.specular.x,
-                material.specular.y, material.specular.z);
+            auto specular = vec3f{1};
+            print(fs, "    \"rgb Ks\" [ {} {} {} ]\n", specular.x,
+                specular.y, specular.z);
         }
         print(fs, "    \"float roughness\" {}\n",
             material.roughness * material.roughness);
