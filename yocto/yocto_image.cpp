@@ -1250,6 +1250,76 @@ void save_image(const string& filename, const image<vec4b>& img) {
     save_image_impl(filename, img);
 }
 
+// Check if an image is HDR based on filename.
+bool is_hdr_filename(const string& filename) {
+    return get_extension(filename) == "hdr" ||
+           get_extension(filename) == "exr" || get_extension(filename) == "pfm";
+}
+
+// Convenience helper for loading HDR or LDR based on filename
+void load_image(
+    const string& filename, image<vec4f>& hdr, image<vec4b>& ldr) {
+    if (is_hdr_filename(filename)) {
+        load_image(filename, hdr);
+    } else {
+        load_image(filename, ldr);
+    }
+}
+void save_image(
+    const string& filename, const image<vec4f>& hdr, const image<vec4b>& ldr) {
+    if (!hdr.empty()) {
+        save_image(filename, hdr);
+    } else {
+        save_image(filename, ldr);
+    }
+}
+
+// Convenience helper that saves an HDR images as wither a linear HDR file or
+// a tonemapped LDR file depending on file name
+void save_tonemapped(const string& filename,
+    const image<vec4f>& hdr, const tonemap_params& params) {
+    if (is_hdr_filename(filename)) {
+        save_image(filename, hdr);
+    } else {
+        auto ldr = image<vec4b>{hdr.size()};
+        tonemap(ldr, hdr, params);
+        save_image(filename, ldr);
+    }
+}
+
+// Save with a logo embedded
+void save_image_with_logo(
+    const string& filename, const image<vec4f>& img) {
+    auto logo = image<vec4f>{};
+    make_logo(logo, "logo-render");
+    auto img_copy = img;
+    auto offset   = img.size() - logo.size() - 8;
+    set_region(img_copy, logo, offset);
+    save_image(filename, img_copy);
+}
+void save_image_with_logo(
+    const string& filename, const image<vec4b>& img) {
+    auto logo = image<vec4b>{};
+    make_logo(logo, "logo-render");
+    auto img_copy = img;
+    auto offset   = img.size() - logo.size() - 8;
+    set_region(img_copy, logo, offset);
+    save_image(filename, img_copy);
+}
+
+// Convenience helper that saves an HDR images as wither a linear HDR file or
+// a tonemapped LDR file depending on file name
+void save_tonemapped_with_logo(const string& filename,
+    const image<vec4f>& hdr, const tonemap_params& params) {
+    if (is_hdr_filename(filename)) {
+        save_image_with_logo(filename, hdr);
+    } else {
+        auto ldr = image<vec4b>{hdr.size()};
+        tonemap(ldr, hdr, params);
+        save_image_with_logo(filename, ldr);
+    }
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
