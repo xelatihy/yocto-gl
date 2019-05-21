@@ -3038,7 +3038,6 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 substrate.Kd, material.diffuse, material.diffuse_texture);
             get_scaled_texture3f(
                 substrate.Ks, material.specular, material.specular_texture);
-            material.specular *= 0.04f;
             material.roughness = get_pbrt_roughness(substrate.uroughness.value,
                 substrate.vroughness.value, substrate.remaproughness);
         } else if (holds_alternative<pbrt_glass_material>(pmaterial)) {

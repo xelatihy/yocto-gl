@@ -640,7 +640,7 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
         auto coat = fresnel_schlick(material.coat, abs(dot(halfway, outgoing)));
         auto specular = fresnel_schlick(
             material.specular, abs(dot(halfway, outgoing)));
-        brdfcos += (1 - coat) * (1 - specular) * material.diffuse / pif;
+        brdfcos += (1 - coat) * (1 - specular) * material.diffuse / pif * abs(dot(normal, incoming));
     }
     if (material.transmission != zero3f &&
         other_hemisphere(normal, outgoing, incoming) && !material.thin) {
