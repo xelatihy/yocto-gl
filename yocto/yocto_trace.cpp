@@ -973,7 +973,7 @@ float sample_light_pdf(const yocto_scene& scene, const trace_lights& lights,
     auto next_position = position;
     for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = intersect_bvh(
-            bvh, scene, instance_id, make_ray(next_position, direction));
+            bvh, instance_id, make_ray(next_position, direction));
         if (!isec.hit) break;
         // accumulate pdf
         auto& instance       = scene.instances[isec.instance];
@@ -1050,7 +1050,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // intersect next point
         _trace_nrays += 1;
         auto intersection = intersect_bvh(
-            bvh, scene, make_ray(origin, direction));
+            bvh, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1191,7 +1191,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         // intersect next point
         _trace_nrays += 1;
         auto intersection = intersect_bvh(
-            bvh, scene, make_ray(origin, direction));
+            bvh, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1265,7 +1265,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
         // intersect next point
         _trace_nrays += 1;
         auto intersection = intersect_bvh(
-            bvh, scene, make_ray(origin, direction));
+            bvh, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1316,7 +1316,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& origin,
     const vec3f& direction, rng_state& rng, const trace_params& params) {
     // intersect next point
-    auto intersection = intersect_bvh(bvh, scene, make_ray(origin, direction));
+    auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
     if (!intersection.hit) {
         return {zero3f, false};
     }
