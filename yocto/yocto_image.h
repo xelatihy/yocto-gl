@@ -99,28 +99,73 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Float to byte conversion.
-inline byte  float_to_byte(float a);
-inline float byte_to_float(byte a);
-inline vec4b float_to_byte(const vec4f& a);
-inline vec4f byte_to_float(const vec4b& a);
+// Conversion between flots and bytes
+inline vec4b float_to_byte(const vec4f& a) {
+    return {(byte)clamp(int(a.x * 256), 0, 255),
+        (byte)clamp(int(a.y * 256), 0, 255),
+        (byte)clamp(int(a.z * 256), 0, 255),
+        (byte)clamp(int(a.w * 256), 0, 255)};
+}
+inline vec4f byte_to_float(const vec4b& a) {
+    return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
+}
 
-// Color luminance
-inline float luminance(const vec3f& a);
+// Luminance
+inline float luminance(const vec3f& a) {
+    return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
+}
 
 // sRGB non-linear curve
-inline float srgb_to_linear(float srgb);
-inline float linear_to_srgb(float lin);
-inline vec4f srgb_to_linear(const vec4f& srgb);
-inline vec4f linear_to_srgb(const vec4f& lin);
+inline float srgb_to_linear(float srgb) {
+    if (srgb <= 0.04045) {
+        return srgb / 12.92f;
+    } else {
+        return pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
+    }
+}
+inline float linear_to_srgb(float lin) {
+    if (lin <= 0.0031308f) {
+        return 12.92f * lin;
+    } else {
+        return (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
+    }
+}
+inline vec3f srgb_to_linear(const vec3f& srgb) {
+    return {
+        srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
+}
+inline vec4f srgb_to_linear(const vec4f& srgb) {
+    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
+        srgb_to_linear(srgb.z), srgb.w};
+}
+inline vec3f linear_to_srgb(const vec3f& lin) {
+    return {
+        linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
+}
+inline vec4f linear_to_srgb(const vec4f& lin) {
+    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z),
+        lin.w};
+}
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey);
+inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey) {
+    return max(zero3f, grey + (rgb - grey) * (contrast * 2));
+}
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_logcontrast(const vec3f& rgb, float logcontrast, float grey);
+inline vec3f apply_logcontrast(
+    const vec3f& rgb, float logcontrast, float grey) {
+    auto epsilon  = (float)0.0001;
+    auto log_grey = log2(grey);
+    auto log_ldr  = log2(rgb + epsilon);
+    auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
+    return max(zero3f, exp2(adjusted) - epsilon);
+}
 // Apply saturation.
-inline vec3f apply_saturation(const vec3f& rgb, float saturation,
-    const vec3f& luminance_weights = vec3f{0.25, 0.5, 0.25});
+inline vec3f apply_saturation(
+    const vec3f& rgb, float saturation, const vec3f& weights = vec3f{0.333333f}) {
+    auto grey = dot(weights, rgb);
+    return max(zero3f, grey + (rgb - grey) * (saturation * 2));
+}
 
 // Fitted ACES tonemapping curve.
 inline vec3f tonemap_filmic(const vec3f& hdr, bool accurate_fit = true);
@@ -551,102 +596,6 @@ void save_volume(const string& filename, const volume<float>& vol);
 // IMPLEMENTATION OF COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-template <typename T>
-constexpr bool type_error = std::false_type::value;
-template <int N>
-constexpr bool channel_error = std::false_type::value;
-template <int N>
-constexpr bool space_error = std::false_type::value;
-
-// Default alpha
-template <typename T>
-constexpr T default_alpha() {
-    if constexpr (std::is_same_v<T, byte>) {
-        return (byte)255;
-    } else {
-        return (T)1;
-    }
-}
-
-inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
-inline float byte_to_float(byte a) { return a / 255.0f; }
-inline vec4b float_to_byte(const vec4f& a) {
-    return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z),
-        float_to_byte(a.w)};
-}
-inline vec4f byte_to_float(const vec4b& a) {
-    return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z),
-        byte_to_float(a.w)};
-}
-
-inline float luminance(const vec3f& a) {
-    return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
-}
-
-// sRGB non-linear curve
-inline float srgb_to_linear(float srgb) {
-    if (srgb <= 0.04045) {
-        return srgb / 12.92f;
-    } else {
-        return pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
-    }
-}
-inline float linear_to_srgb(float lin) {
-    if (lin <= 0.0031308f) {
-        return 12.92f * lin;
-    } else {
-        return (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
-    }
-}
-inline vec1f srgb_to_linear(const vec1f& srgb) {
-    return {srgb_to_linear(srgb.x)};
-}
-inline vec2f srgb_to_linear(const vec2f& srgb) {
-    return {srgb_to_linear(srgb.x), srgb.y};
-}
-inline vec3f srgb_to_linear(const vec3f& srgb) {
-    return {
-        srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
-}
-inline vec4f srgb_to_linear(const vec4f& srgb) {
-    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
-        srgb_to_linear(srgb.z), srgb.w};
-}
-inline vec1f linear_to_srgb(const vec1f& lin) {
-    return {linear_to_srgb(lin.x)};
-}
-inline vec2f linear_to_srgb(const vec2f& lin) {
-    return {linear_to_srgb(lin.x), lin.y};
-}
-inline vec3f linear_to_srgb(const vec3f& lin) {
-    return {
-        linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
-}
-inline vec4f linear_to_srgb(const vec4f& lin) {
-    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z),
-        lin.w};
-}
-
-// Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey) {
-    return max(zero3f, grey + (rgb - grey) * (contrast * 2));
-}
-// Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_logcontrast(
-    const vec3f& rgb, float logcontrast, float grey) {
-    auto epsilon  = (float)0.0001;
-    auto log_grey = log2(grey);
-    auto log_ldr  = log2(rgb + epsilon);
-    auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
-    return max(zero3f, exp2(adjusted) - epsilon);
-}
-// Apply saturation.
-inline vec3f apply_saturation(
-    const vec3f& rgb, float saturation, const vec3f& weights) {
-    auto grey = dot(weights, rgb);
-    return max(zero3f, grey + (rgb - grey) * (saturation * 2));
-}
 
 // Fitted ACES tonemapping curve.
 inline float tonemap_filmic(float hdr_) {
