@@ -117,13 +117,18 @@ struct pbrt_realistic_camera {
     float  shutterclose       = 1;
     float  approx_focallength = 0;
 };
-enum struct pbrt_camera_type { perspective, orthographic, environment, realistic };
+enum struct pbrt_camera_type {
+    perspective,
+    orthographic,
+    environment,
+    realistic
+};
 struct pbrt_camera {
-    pbrt_camera_type type = pbrt_camera_type::perspective;
-    pbrt_perspective_camera perspective = {};
+    pbrt_camera_type         type         = pbrt_camera_type::perspective;
+    pbrt_perspective_camera  perspective  = {};
     pbrt_orthographic_camera orthographic = {};
-    pbrt_environment_camera environment = {};
-    pbrt_realistic_camera realistic = {};
+    pbrt_environment_camera  environment  = {};
+    pbrt_realistic_camera    realistic    = {};
 };
 
 // pbrt samplers
@@ -147,16 +152,22 @@ struct pbrt_stratified_sampler {
     int  xsamples = 2;
     int  ysamples = 2;
 };
-enum struct pbrt_sampler_type { random, halton, sobol, zerotwosequence, maxmindist, stratified };
+enum struct pbrt_sampler_type {
+    random,
+    halton,
+    sobol,
+    zerotwosequence,
+    maxmindist,
+    stratified
+};
 struct pbrt_sampler {
-    pbrt_sampler_type type = pbrt_sampler_type::random;
-    pbrt_random_sampler random = {};
-    pbrt_halton_sampler halton = {};
-    pbrt_sobol_sampler sobol = {};
+    pbrt_sampler_type            type            = pbrt_sampler_type::random;
+    pbrt_random_sampler          random          = {};
+    pbrt_halton_sampler          halton          = {};
+    pbrt_sobol_sampler           sobol           = {};
     pbrt_zerotwosequence_sampler zerotwosequence = {};
-    pbrt_maxmindist_sampler maxmindist = {};
-    pbrt_stratified_sampler stratified = {};
-
+    pbrt_maxmindist_sampler      maxmindist      = {};
+    pbrt_stratified_sampler      stratified      = {};
 };
 
 // pbrt film
@@ -171,7 +182,7 @@ struct pbrt_image_film {
 };
 enum struct pbrt_film_type { image };
 struct pbrt_film {
-    pbrt_film_type type = pbrt_film_type::image;
+    pbrt_film_type  type  = pbrt_film_type::image;
     pbrt_image_film image = {};
 };
 
@@ -202,11 +213,11 @@ struct pbrt_triangle_filter {
 };
 enum struct pbrt_filter_type { box, gaussian, mitchell, sinc, triangle };
 struct pbrt_filter {
-    pbrt_filter_type type = pbrt_filter_type::box;
-    pbrt_box_filter box = {};
+    pbrt_filter_type     type     = pbrt_filter_type::box;
+    pbrt_box_filter      box      = {};
     pbrt_gaussian_filter gaussian = {};
     pbrt_mitchell_filter mitchell = {};
-    pbrt_sinc_filter sinc = {};
+    pbrt_sinc_filter     sinc     = {};
     pbrt_triangle_filter triangle = {};
 };
 
@@ -260,16 +271,24 @@ struct pbrt_whitted_integrator {
     int    maxdepth    = 5;
     bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
 };
-enum struct pbrt_integrator_type { path, volpath, bdpt, directlighting, mlt, sppm, whitted };
+enum struct pbrt_integrator_type {
+    path,
+    volpath,
+    bdpt,
+    directlighting,
+    mlt,
+    sppm,
+    whitted
+};
 struct pbrt_integrator {
-    pbrt_integrator_type type = pbrt_integrator_type::path;
-    pbrt_path_integrator path = {};
-    pbrt_volpath_integrator volpath = {};
-    pbrt_bdpt_integrator bdpt = {};
+    pbrt_integrator_type           type           = pbrt_integrator_type::path;
+    pbrt_path_integrator           path           = {};
+    pbrt_volpath_integrator        volpath        = {};
+    pbrt_bdpt_integrator           bdpt           = {};
     pbrt_directlighting_integrator directlighting = {};
-    pbrt_mlt_integrator mlt = {};
-    pbrt_sppm_integrator sppm = {};
-    pbrt_whitted_integrator whitted = {};
+    pbrt_mlt_integrator            mlt            = {};
+    pbrt_sppm_integrator           sppm           = {};
+    pbrt_whitted_integrator        whitted        = {};
 };
 
 // pbrt accellerators
@@ -287,8 +306,8 @@ struct pbrt_kdtree_accelerator {
 };
 enum struct pbrt_accelerator_type { bvh, kdtree };
 struct pbrt_accelerator {
-    pbrt_accelerator_type type = pbrt_accelerator_type::bvh;
-    pbrt_bvh_accelerator bvh = {};
+    pbrt_accelerator_type   type   = pbrt_accelerator_type::bvh;
+    pbrt_bvh_accelerator    bvh    = {};
     pbrt_kdtree_accelerator kdtree = {};
 };
 
@@ -409,11 +428,35 @@ struct pbrt_wrinkled_texture {
     int   octaves   = 8;
     float roughness = 0.5;
 };
-using pbrt_texture = variant<pbrt_constant_texture, pbrt_bilerp_texture,
-    pbrt_checkerboard_texture, pbrt_dots_texture, pbrt_fbm_texture,
-    pbrt_imagemap_texture, pbrt_marble_texture, pbrt_mix_texture,
-    pbrt_scale_texture, pbrt_uv_texture, pbrt_windy_texture,
-    pbrt_wrinkled_texture>;
+enum struct pbrt_texture_type {
+    constant,
+    bilerp,
+    checkerboard,
+    dots,
+    fbm,
+    imagemap,
+    marble,
+    mix,
+    scale,
+    uv,
+    windy,
+    wrinkled
+};
+struct pbrt_texture {
+    pbrt_texture_type         type         = pbrt_texture_type::constant;
+    pbrt_constant_texture     constant     = {};
+    pbrt_bilerp_texture       bilerp       = {};
+    pbrt_checkerboard_texture checkerboard = {};
+    pbrt_dots_texture         dots         = {};
+    pbrt_fbm_texture          fbm          = {};
+    pbrt_imagemap_texture     imagemap     = {};
+    pbrt_marble_texture       marble       = {};
+    pbrt_mix_texture          mix          = {};
+    pbrt_scale_texture        scale        = {};
+    pbrt_uv_texture           uv           = {};
+    pbrt_windy_texture        windy        = {};
+    pbrt_wrinkled_texture     wrinkled      = {};
+};
 
 // pbrt materials
 struct pbrt_matte_material {
@@ -695,8 +738,8 @@ struct pbrt_diffuse_arealight {
 };
 enum struct pbrt_arealight_type { none, diffuse };
 struct pbrt_arealight {
-    pbrt_arealight_type type = pbrt_arealight_type::none;
-    pbrt_none_arealight none = {};
+    pbrt_arealight_type    type    = pbrt_arealight_type::none;
+    pbrt_none_arealight    none    = {};
     pbrt_diffuse_arealight diffuse = {};
 };
 
@@ -723,8 +766,8 @@ struct pbrt_heterogeneous_medium {
 };
 enum struct pbrt_medium_type { homogeneous, heterogeneous };
 struct pbrt_medium {
-    pbrt_medium_type type = pbrt_medium_type::homogeneous;
-    pbrt_homogeneous_medium homogeneous = {};
+    pbrt_medium_type          type          = pbrt_medium_type::homogeneous;
+    pbrt_homogeneous_medium   homogeneous   = {};
     pbrt_heterogeneous_medium heterogeneous = {};
 };
 
@@ -756,8 +799,10 @@ struct pbrt_context {
 // pbrt callbacks
 struct pbrt_callbacks {
     virtual void sampler(const pbrt_sampler& value, const pbrt_context& ctx) {}
-    virtual void integrator(const pbrt_integrator& value, const pbrt_context& ctx) {}
-    virtual void accelerator(const pbrt_accelerator& value, const pbrt_context& ctx) {}
+    virtual void integrator(
+        const pbrt_integrator& value, const pbrt_context& ctx) {}
+    virtual void accelerator(
+        const pbrt_accelerator& value, const pbrt_context& ctx) {}
     virtual void film(const pbrt_film& value, const pbrt_context& ctx) {}
     virtual void filter(const pbrt_filter& value, const pbrt_context& ctx) {}
     virtual void camera(const pbrt_camera& value, const pbrt_context& ctx) {}
@@ -771,9 +816,12 @@ struct pbrt_callbacks {
     virtual void light(const pbrt_light& value, const pbrt_context& ctx) {}
     virtual void arealight(const pbrt_arealight& value, const string& name,
         const pbrt_context& ctx) {}
-    virtual void object_instance(const pbrt_object& value, const pbrt_context& ctx) {}
-    virtual void begin_object(const pbrt_object& value, const pbrt_context& ctx) {}
-    virtual void end_object(const pbrt_object& value, const pbrt_context& ctx) {}
+    virtual void object_instance(
+        const pbrt_object& value, const pbrt_context& ctx) {}
+    virtual void begin_object(
+        const pbrt_object& value, const pbrt_context& ctx) {}
+    virtual void end_object(const pbrt_object& value, const pbrt_context& ctx) {
+    }
 };
 
 // Load pbrt params

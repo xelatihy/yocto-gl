@@ -1124,7 +1124,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::constant;
+        value.constant = tvalue;
     } else if (type == "bilerp") {
         auto tvalue = pbrt_bilerp_texture{};
         while (is_param(stream)) {
@@ -1155,7 +1156,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::bilerp;
+        value.bilerp = tvalue;
     } else if (type == "checkerboard") {
         auto tvalue = pbrt_checkerboard_texture{};
         while (is_param(stream)) {
@@ -1186,7 +1188,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::checkerboard;
+        value.checkerboard = tvalue;
     } else if (type == "dots") {
         auto tvalue = pbrt_dots_texture{};
         while (is_param(stream)) {
@@ -1213,7 +1216,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::dots;
+        value.dots = tvalue;
     } else if (type == "imagemap") {
         auto tvalue = pbrt_imagemap_texture{};
         while (is_param(stream)) {
@@ -1248,7 +1252,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::imagemap;
+        value.imagemap = tvalue;
     } else if (type == "mix") {
         auto tvalue = pbrt_mix_texture{};
         while (is_param(stream)) {
@@ -1263,7 +1268,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::mix;
+        value.mix = tvalue;
     } else if (type == "scale") {
         auto tvalue = pbrt_scale_texture{};
         while (is_param(stream)) {
@@ -1276,7 +1282,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::scale;
+        value.scale = tvalue;
     } else if (type == "fbm") {
         auto tvalue = pbrt_fbm_texture{};
         while (is_param(stream)) {
@@ -1289,7 +1296,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::fbm;
+        value.fbm = tvalue;
     } else if (type == "wrinkled") {
         auto tvalue = pbrt_wrinkled_texture{};
         while (is_param(stream)) {
@@ -1302,7 +1310,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::wrinkled;
+        value.wrinkled = tvalue;
     } else if (type == "windy") {
         auto tvalue = pbrt_windy_texture{};
         while (is_param(stream)) {
@@ -1313,7 +1322,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::windy;
+        value.windy = tvalue;
     } else if (type == "marble") {
         auto tvalue = pbrt_marble_texture{};
         while (is_param(stream)) {
@@ -1330,7 +1340,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::marble;
+        value.marble = tvalue;
     } else if (type == "uv") {
         auto tvalue = pbrt_uv_texture{};
         while (is_param(stream)) {
@@ -1353,7 +1364,8 @@ static inline void parse_texture(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_texture_type::uv;
+        value.uv = tvalue;
     } else {
         throw io_error("unknown Texture " + type);
     }
@@ -2658,8 +2670,7 @@ void load_pbrt(
             auto value = pbrt_texture{};
             parse_texture(stream, type, value);
             if (type == "constant") {
-                constant_values[name] =
-                    get<pbrt_constant_texture>(value).value.value;
+                constant_values[name] = value.constant.value.value;
             }
             cb.texture(value, name, stack.back());
         } else if (cmd == "Material") {
