@@ -468,6 +468,7 @@ struct make_shape_params {
     make_shape_type type        = make_shape_type::rect;
     int             subdivision = 0;
     float           size        = 1;
+    float           uvsize      = 1;
     float           rounded     = 0;
     int             num         = 0;
     vec3i           steps       = {1, 1, 1};

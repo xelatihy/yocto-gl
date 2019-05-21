@@ -2481,6 +2481,115 @@ void make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& positions,
     _transform_points_inplace(frame, positions);
 }
 
+// Make a procedural shape
+void make_shape(vector<int>& points, vector<vec2i>& lines,
+    vector<vec4i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const make_shape_params& params) {
+    switch (params.type) {
+        case make_shape_type::rect: {
+            auto steps  = pow2(params.subdivision) * params.steps;
+            auto uvsize = params.uvsize * params.uvscale;
+            auto size   = params.size * params.scale;
+            if (!params.rounded) {
+                make_rect(quads, positions, normals, texcoords,
+                    {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
+                    params.frame);
+            } else {
+                make_bulged_rect(quads, positions, normals, texcoords, steps.x,
+                    size.x, uvsize.x, params.rounded, params.frame);
+            }
+        } break;
+        case make_shape_type::rect_stack: {
+            auto steps  = pow2(params.subdivision) * params.steps;
+            auto uvsize = params.uvsize * params.uvscale;
+            auto size   = params.size * params.scale;
+            make_rect_stack(quads, positions, normals, texcoords, steps, size,
+                {uvsize.x, uvsize.y}, params.frame);
+        } break;
+        case make_shape_type::floor: {
+            auto steps  = pow2(params.subdivision) * params.steps;
+            auto uvsize = params.uvsize * params.uvscale;
+            auto size   = params.size * params.scale;
+            if (!params.rounded) {
+                make_floor(quads, positions, normals, texcoords,
+                    {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
+                    params.frame);
+            } else {
+                make_bent_floor(quads, positions, normals, texcoords,
+                    {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
+                    params.rounded, params.frame);
+            }
+        } break;
+        case make_shape_type::box: {
+            auto steps  = pow2(params.subdivision) * params.steps;
+            auto uvsize = params.uvsize * params.uvscale;
+            auto size   = params.size * params.scale;
+            if (!params.rounded) {
+                make_box(quads, positions, normals, texcoords, steps, size,
+                    uvsize, params.frame);
+            } else {
+                make_rounded_box(quads, positions, normals, texcoords, steps,
+                    size, uvsize, params.rounded, params.frame);
+            }
+        } break;
+        case make_shape_type::sphere: {
+            auto steps  = pow2(params.subdivision) * params.steps;
+            auto uvsize = params.uvsize * params.uvscale;
+            auto size   = params.size * params.scale;
+            make_sphere(quads, positions, normals, texcoords, steps.x, size.x,
+                uvsize.x, params.frame);
+        } break;
+        case make_shape_type::uvsphere: {
+            auto steps  = pow2(params.subdivision) * params.steps;
+            auto uvsize = params.uvsize * params.uvscale;
+            auto size   = params.size * params.scale;
+            if (!params.rounded) {
+                make_uvsphere(quads, positions, normals, texcoords,
+                    {steps.x, steps.x}, size.x, {uvsize.x, uvsize.y},
+                    params.frame);
+            } else {
+                make_flipcap_uvsphere(quads, positions, normals, texcoords,
+                    {steps.x, steps.y}, size.x, {uvsize.x, uvsize.y},
+                    vec2f{params.rounded}, params.frame);
+            }
+        } break;
+        case make_shape_type::disk: {
+            auto steps  = pow2(params.subdivision) * params.steps;
+            auto uvsize = params.uvsize * params.uvscale;
+            auto size   = params.size * params.scale;
+            if (!params.rounded) {
+                make_disk(quads, positions, normals, texcoords, steps.x, size.x,
+                    uvsize.x, params.frame);
+            } else {
+                make_bulged_disk(quads, positions, normals, texcoords, steps.x,
+                    size.x, uvsize.x, params.rounded, params.frame);
+            }
+        } break;
+        case make_shape_type::uvdisk: {
+            auto steps  = pow2(params.subdivision) * params.steps;
+            auto uvsize = params.uvsize * params.uvscale;
+            auto size   = params.size * params.scale;
+            make_uvdisk(quads, positions, normals, texcoords,
+                {steps.x, steps.y}, size.x, {uvsize.x, uvsize.y}, params.frame);
+        } break;
+        case make_shape_type::uvcylinder: {
+            auto steps  = pow2(params.subdivision) * params.steps;
+            auto uvsize = params.uvsize * params.uvscale;
+            auto size   = params.size * params.scale;
+            if (!params.rounded) {
+                make_uvcylinder(quads, positions, normals, texcoords, steps,
+                    {size.x, size.y}, uvsize, params.frame);
+            } else {
+                make_rounded_uvcylinder(quads, positions, normals, texcoords,
+                    steps, {size.x, size.y}, uvsize, params.rounded, params.frame);
+            }
+        } break;
+        case make_shape_type::geosphere: {
+        } break;
+    }
+}
+
 // Make a hair ball around a shape
 void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
