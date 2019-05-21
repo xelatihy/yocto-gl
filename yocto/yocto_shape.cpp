@@ -446,6 +446,865 @@ const vector<vec4i>& get_suzanne_quads() {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE EXAMPLES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+static inline void _transform_points_inplace(
+    const frame3f& frame, vector<vec3f>& positions) {
+    if (frame == identity_frame3f) return;
+    for (auto& p : positions) p = transform_point(frame, p);
+}
+
+// Make a quad.
+void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize, const frame3f& frame) {
+    positions.resize((steps.x + 1) * (steps.y + 1));
+    normals.resize((steps.x + 1) * (steps.y + 1));
+    texcoords.resize((steps.x + 1) * (steps.y + 1));
+    for (auto j = 0; j <= steps.y; j++) {
+        for (auto i = 0; i <= steps.x; i++) {
+            auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
+            positions[j * (steps.x + 1) + i] = {
+                (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
+            normals[j * (steps.x + 1) + i]   = {0, 0, 1};
+            texcoords[j * (steps.x + 1) + i] = uv * uvsize;
+        }
+    }
+
+    for (auto& uv : texcoords) uv.y = 1 - uv.y;
+    _transform_points_inplace(frame, positions);
+
+    quads.resize(steps.x * steps.y);
+    for (auto j = 0; j < steps.y; j++) {
+        for (auto i = 0; i < steps.x; i++) {
+            quads[j * steps.x + i] = {j * (steps.x + 1) + i,
+                j * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i + 1,
+                (j + 1) * (steps.x + 1) + i};
+        }
+    }
+    // shape.triangles.resize(steps.x * steps.y * 2);
+    // for (auto j = 0; j < steps.y; j++) {
+    //     for (auto i = 0; i < steps.x; i++) {
+    //         shape.triangles[(j * steps.x + i) * 2 + 0] = {
+    //             j * (steps.x + 1) + i, j * (steps.x + 1) + i + 1,
+    //             (j + 1) * (steps.x + 1) + i + 1};
+    //         shape.triangles[(j * steps.x + i) * 2 + 1] = {
+    //             j * (steps.x + 1) + i, (j + 1) * (steps.x + 1) + i + 1,
+    //             (j + 1) * (steps.x + 1) + i};
+    //     }
+    // }
+}
+
+void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize, const frame3f& frame) {
+    make_rect(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame3f);
+    for (auto& p : positions) p = {p.x, p.z, p.y};
+    for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
+    for (auto& q : quads) swap(q.y, q.w);
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a rounded cube.
+void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize, float radius,
+    const frame3f& frame) {
+    make_floor(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame3f);
+    auto start = (size.y / 2 - radius) / 2;
+    auto end   = start + radius;
+    for (auto i = 0; i < positions.size(); i++) {
+        if (positions[i].z < -end) {
+            positions[i] = {
+                positions[i].x, -positions[i].z - end + radius, -end};
+            normals[i] = {0, 0, 1};
+        } else if (positions[i].z < -start && positions[i].z >= -end) {
+            auto phi     = (pif / 2) * (-positions[i].z - start) / radius;
+            positions[i] = {positions[i].x, -cos(phi) * radius + radius,
+                -sin(phi) * radius - start};
+            normals[i]   = {0, cos(phi), sin(phi)};
+        } else {
+        }
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a stack of quads
+void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec3f& size, const vec2f& uvsize, const frame3f& frame) {
+    quads.clear();
+    positions.clear();
+    normals.clear();
+    texcoords.clear();
+    auto qquads         = vector<vec4i>{};
+    auto qpositions     = vector<vec3f>{};
+    auto qnormals       = vector<vec3f>{};
+    auto qtexturecoords = vector<vec2f>{};
+    for (auto i = 0; i <= steps.z; i++) {
+        make_rect(qquads, qpositions, qnormals, qtexturecoords,
+            {steps.x, steps.y}, {size.x, size.y}, uvsize, identity_frame3f);
+        for (auto& p : qpositions) p.z = (-0.5f + (float)i / steps.z) * size.z;
+        merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+            qnormals, qtexturecoords);
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a cube.
+void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize, const frame3f& frame) {
+    quads.clear();
+    positions.clear();
+    normals.clear();
+    texcoords.clear();
+    auto qquads         = vector<vec4i>{};
+    auto qpositions     = vector<vec3f>{};
+    auto qnormals       = vector<vec3f>{};
+    auto qtexturecoords = vector<vec2f>{};
+    // + z
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.y},
+        {size.x, size.y}, {uvsize.x, uvsize.y}, identity_frame3f);
+    for (auto& p : qpositions) p = {p.x, p.y, size.z / 2};
+    for (auto& n : qnormals) n = {0, 0, 1};
+    merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+        qnormals, qtexturecoords);
+    // - z
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.y},
+        {size.x, size.y}, {uvsize.x, uvsize.y}, identity_frame3f);
+    for (auto& p : qpositions) p = {-p.x, p.y, -size.z / 2};
+    for (auto& n : qnormals) n = {0, 0, -1};
+    merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+        qnormals, qtexturecoords);
+    // + x
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.z, steps.y},
+        {size.z, size.y}, {uvsize.z, uvsize.y}, identity_frame3f);
+    for (auto& p : qpositions) p = {size.x / 2, p.y, -p.x};
+    for (auto& n : qnormals) n = {1, 0, 0};
+    merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+        qnormals, qtexturecoords);
+    // - x
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.z, steps.y},
+        {size.z, size.y}, {uvsize.z, uvsize.y}, identity_frame3f);
+    for (auto& p : qpositions) p = {-size.x / 2, p.y, p.x};
+    for (auto& n : qnormals) n = {-1, 0, 0};
+    merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+        qnormals, qtexturecoords);
+    // + y
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.z},
+        {size.x, size.z}, {uvsize.x, uvsize.z}, identity_frame3f);
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i] = {qpositions[i].x, size.y / 2, -qpositions[i].y};
+        qnormals[i]   = {0, 1, 0};
+    }
+    merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+        qnormals, qtexturecoords);
+    // - y
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.z},
+        {size.x, size.z}, {uvsize.x, uvsize.z}, identity_frame3f);
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i] = {qpositions[i].x, -size.y / 2, qpositions[i].y};
+        qnormals[i]   = {0, -1, 0};
+    }
+    merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+        qnormals, qtexturecoords);
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a rounded cube.
+void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize, float rounded,
+    const frame3f& frame) {
+    make_box(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame3f);
+    auto radius = rounded * min(size) / 2;
+    auto c      = size / 2 - vec3f{radius, radius, radius};
+    for (auto i = 0; i < positions.size(); i++) {
+        auto pc = vec3f{
+            fabs(positions[i].x), fabs(positions[i].y), fabs(positions[i].z)};
+        auto ps = vec3f{positions[i].x < 0 ? -1.0f : 1.0f,
+            positions[i].y < 0 ? -1.0f : 1.0f,
+            positions[i].z < 0 ? -1.0f : 1.0f};
+        if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
+            auto pn      = normalize(pc - c);
+            positions[i] = c + radius * pn;
+            normals[i]   = pn;
+        } else if (pc.x >= c.x && pc.y >= c.y) {
+            auto pn      = normalize((pc - c) * vec3f{1, 1, 0});
+            positions[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
+            normals[i]   = pn;
+        } else if (pc.x >= c.x && pc.z >= c.z) {
+            auto pn      = normalize((pc - c) * vec3f{1, 0, 1});
+            positions[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
+            normals[i]   = pn;
+        } else if (pc.y >= c.y && pc.z >= c.z) {
+            auto pn      = normalize((pc - c) * vec3f{0, 1, 1});
+            positions[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
+            normals[i]   = pn;
+        } else {
+            continue;
+        }
+        positions[i] *= ps;
+        normals[i] *= ps;
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a sphere.
+void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float size, const vec2f& uvsize, const frame3f& frame) {
+    make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1},
+        identity_frame3f);
+    for (auto i = 0; i < positions.size(); i++) {
+        auto uv = texcoords[i];
+        auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+        auto p  = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
+        positions[i] = p * (size / 2);
+        normals[i]   = normalize(p);
+        texcoords[i] = uv * uvsize;
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a spherecube.
+void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
+    float uvsize, const frame3f& frame) {
+    make_box(quads, positions, normals, texcoords, {steps, steps, steps},
+        {1, 1, 1}, {uvsize, uvsize, uvsize}, identity_frame3f);
+    for (auto i = 0; i < positions.size(); i++) {
+        auto p       = positions[i];
+        positions[i] = normalize(p) * (size / 2);
+        normals[i]   = normalize(p);
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a flipped sphere. This is not watertight.
+void make_flipcap_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float size, const vec2f& uvsize, const vec2f& zflip_,
+    const frame3f& frame) {
+    make_uvsphere(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame3f);
+    auto zflip = zflip_ * size / 2;
+    for (auto i = 0; i < positions.size(); i++) {
+        if (positions[i].z > zflip.y) {
+            positions[i].z = 2 * zflip.y - positions[i].z;
+            normals[i].x   = -normals[i].x;
+            normals[i].y   = -normals[i].y;
+        } else if (positions[i].z < zflip.x) {
+            positions[i].z = 2 * zflip.x - positions[i].z;
+            normals[i].x   = -normals[i].x;
+            normals[i].y   = -normals[i].y;
+        }
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a disk.
+void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float size, const vec2f& uvsize, const frame3f& frame) {
+    make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1},
+        identity_frame3f);
+    for (auto i = 0; i < positions.size(); i++) {
+        auto uv      = texcoords[i];
+        auto phi     = 2 * pif * uv.x;
+        positions[i] = {
+            cos(phi) * uv.y * size / 2, sin(phi) * uv.y * size / 2, 0};
+        normals[i]   = {0, 0, 1};
+        texcoords[i] = uv * uvsize;
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a disk from a quad.
+void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
+    float uvsize, const frame3f& frame) {
+    make_rect(quads, positions, normals, texcoords, {steps, steps}, {2, 2},
+        {uvsize, uvsize}, identity_frame3f);
+    for (auto i = 0; i < positions.size(); i++) {
+        // Analytical Methods for Squaring the Disc, by C. Fong
+        // https://arxiv.org/abs/1509.06344
+        auto xy = vec2f{positions[i].x, positions[i].y};
+        auto uv = vec2f{
+            xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
+        positions[i] = {uv.x * size / 2, uv.y * size / 2, 0};
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a bulged disk from a quad.
+void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
+    float uvsize, float height, const frame3f& frame) {
+    make_disk(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame3f);
+    if (height == 0) return;
+    auto radius = (size * size / 4 + height * height) / (2 * height);
+    auto center = vec3f{0, 0, -radius + height};
+    for (auto i = 0; i < positions.size(); i++) {
+        auto pn      = normalize(positions[i] - center);
+        positions[i] = center + pn * radius;
+        normals[i]   = pn;
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a bulged quad.
+void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
+    float uvsize, float height, const frame3f& frame) {
+    make_rect(quads, positions, normals, texcoords, {steps, steps},
+        {size, size}, {uvsize, uvsize}, identity_frame3f);
+    if (height == 0) return;
+    auto radius = (size * size / 4 + height * height) / (2 * height);
+    auto center = vec3f{0, 0, -radius + height};
+    for (auto i = 0; i < positions.size(); i++) {
+        auto pn      = normalize(positions[i] - center);
+        positions[i] = center + pn * radius;
+        normals[i]   = pn;
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a cylinder (side-only).
+void make_cylinder_side_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize, const frame3f& frame) {
+    make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1},
+        identity_frame3f);
+    for (auto i = 0; i < positions.size(); i++) {
+        auto uv      = texcoords[i];
+        auto phi     = 2 * pif * uv.x;
+        positions[i] = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
+            (uv.y - 0.5f) * size.y};
+        normals[i]   = {cos(phi), sin(phi), 0};
+        texcoords[i] = uv * uvsize;
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a cylinder.
+void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, const frame3f& frame) {
+    quads.clear();
+    positions.clear();
+    normals.clear();
+    texcoords.clear();
+    auto qquads         = vector<vec4i>{};
+    auto qpositions     = vector<vec3f>{};
+    auto qnormals       = vector<vec3f>{};
+    auto qtexturecoords = vector<vec2f>{};
+    // side
+    make_cylinder_side_shape(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
+        identity_frame3f);
+    merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+        qnormals, qtexturecoords);
+    // top
+    make_uvdisk(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, identity_frame3f);
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i].z = size.y / 2;
+    }
+    merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+        qnormals, qtexturecoords);
+    // bottom
+    make_uvdisk(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, identity_frame3f);
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i].z = -size.y / 2;
+        qnormals[i]     = -qnormals[i];
+    }
+    for (auto i = 0; i < qquads.size(); i++) swap(qquads[i].x, qquads[i].z);
+    merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+        qnormals, qtexturecoords);
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a rounded cylinder.
+void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, float rounded,
+    const frame3f& frame) {
+    make_uvcylinder(quads, positions, normals, texcoords, steps, size, uvsize,
+        identity_frame3f);
+    auto radius = rounded * max(size) / 2;
+    auto c      = size / 2 - vec2f{radius, radius};
+    for (auto i = 0; i < positions.size(); i++) {
+        auto phi = atan2(positions[i].y, positions[i].x);
+        auto r   = length(vec2f{positions[i].x, positions[i].y});
+        auto z   = positions[i].z;
+        auto pc  = vec2f{r, fabs(z)};
+        auto ps  = (z < 0) ? -1.0f : 1.0f;
+        if (pc.x >= c.x && pc.y >= c.y) {
+            auto pn      = normalize(pc - c);
+            positions[i] = {cos(phi) * (c.x + radius * pn.x),
+                sin(phi) * (c.x + radius * pn.x), ps * (c.y + radius * pn.y)};
+            normals[i]   = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
+        } else {
+            continue;
+        }
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a geodesic sphere.
+void make_geosphere(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, int tesselation, float size, const frame3f& frame) {
+    // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
+    const float X                = 0.525731112119133606f;
+    const float Z                = 0.850650808352039932f;
+    static auto sphere_pos       = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
+        {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X},
+        {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
+    static auto sphere_triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9},
+        {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
+        {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
+        {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
+    positions                    = sphere_pos;
+    triangles                    = sphere_triangles;
+    for (auto l = 0; l < max(0, tesselation - 2); l++) {
+        subdivide_triangles(triangles, positions);
+    }
+    for (auto& p : positions) p = normalize(p) * size / 2;
+    normals = positions;
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a facevarying cube.
+void make_fvbox(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize, const frame3f& frame) {
+    make_box(quads_positions, positions, normals, texcoords, steps, size,
+        uvsize, identity_frame3f);
+    quads_normals   = quads_positions;
+    quads_texcoords = quads_positions;
+    auto positions_ = positions;
+    weld_quads(quads_positions, positions,
+        min(0.1f * size /
+            vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a faceavrying spherecube.
+void make_fvsphere(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
+    float uvsize, const frame3f& frame) {
+    make_fvbox(quads_positions, quads_normals, quads_texcoords, positions,
+        normals, texcoords, {steps, steps, steps}, {1, 1, 1},
+        {uvsize, uvsize, uvsize}, identity_frame3f);
+    quads_normals = quads_positions;
+    normals       = positions;
+    for (auto i = 0; i < positions.size(); i++) {
+        auto p       = positions[i];
+        positions[i] = normalize(p) * (size / 2);
+        normals[i]   = normalize(p);
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+const vector<vec3f>& get_suzanne_positions();
+const vector<vec4i>& get_suzanne_quads();
+
+// Make a suzanne monkey model for testing.
+void make_suzanne(vector<vec4i>& quads, vector<vec3f>& positions, float size,
+    const frame3f& frame) {
+    positions = get_suzanne_positions();
+    for (auto& p : positions) p *= size / 2;
+    quads = get_suzanne_quads();
+    _transform_points_inplace(frame, positions);
+}
+
+// Watertight cube
+void make_box(vector<vec4i>& quads, vector<vec3f>& positions, const vec3f& size,
+    const frame3f& frame) {
+    static auto cube_pos     = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1},
+        {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1},
+        {+1, -1, +1}};
+    static auto cube_quads   = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
+        {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
+    static auto cube_quad_uv = vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+    positions                = cube_pos;
+    for (auto& p : positions) p *= size / 2;
+    quads = cube_quads;
+    _transform_points_inplace(frame, positions);
+}
+
+// Generate lines set along a quad.
+void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize,
+    const vec2f& line_radius, const frame3f& frame) {
+    auto nverts = (steps.x + 1) * steps.y;
+    auto nlines = steps.x * steps.y;
+    auto vid    = [steps](int i, int j) { return j * (steps.x + 1) + i; };
+    auto fid    = [steps](int i, int j) { return j * steps.x + i; };
+
+    positions.resize(nverts);
+    normals.resize(nverts);
+    texcoords.resize(nverts);
+    radius.resize(nverts);
+    if (steps.y > 1) {
+        for (auto j = 0; j < steps.y; j++) {
+            for (auto i = 0; i <= steps.x; i++) {
+                auto uv              = vec2f{i / (float)steps.x,
+                    j / (float)(steps.y > 1 ? steps.y - 1 : 1)};
+                positions[vid(i, j)] = {
+                    (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
+                normals[vid(i, j)]   = {1, 0, 0};
+                texcoords[vid(i, j)] = uv * uvsize;
+            }
+        }
+    } else {
+        for (auto i = 0; i <= steps.x; i++) {
+            auto uv              = vec2f{i / (float)steps.x, 0};
+            positions[vid(i, 0)] = {(uv.x - 0.5f) * size.x, 0, 0};
+            normals[vid(i, 0)]   = {1, 0, 0};
+            texcoords[vid(i, 0)] = uv * uvsize;
+        }
+    }
+
+    lines.resize(nlines);
+    for (int j = 0; j < steps.y; j++) {
+        for (int i = 0; i < steps.x; i++) {
+            lines[fid(i, j)] = {vid(i, j), vid(i + 1, j)};
+        }
+    }
+
+    _transform_points_inplace(frame, positions);
+}
+
+// Generate a point set with points placed at the origin with texcoords
+// varying along u.
+void make_points(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    int num, float uvsize, float point_radius, const frame3f& frame) {
+    points.resize(num);
+    for (auto i = 0; i < num; i++) points[i] = i;
+    positions.assign(num, {0, 0, 0});
+    normals.assign(num, {0, 0, 1});
+    texcoords.assign(num, {0, 0});
+    radius.assign(num, point_radius);
+    for (auto i = 0; i < texcoords.size(); i++)
+        texcoords[i] = {(float)i / (float)num, 0};
+
+    _transform_points_inplace(frame, positions);
+}
+
+// Generate a point set.
+void make_random_points(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    int num, const vec3f& size, float uvsize, float point_radius, uint64_t seed,
+    const frame3f& frame) {
+    make_points(points, positions, normals, texcoords, radius, num, uvsize,
+        point_radius, identity_frame3f);
+    auto rng = make_rng(seed);
+    for (auto i = 0; i < positions.size(); i++) {
+        positions[i] = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
+    }
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a point.
+void make_point(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    float point_radius, const frame3f& frame) {
+    points    = {0};
+    positions = {{0, 0, 0}};
+    normals   = {{0, 0, 1}};
+    texcoords = {{0, 0}};
+    radius    = {point_radius};
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a bezier circle. Returns bezier, pos.
+void make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& positions,
+    float size, const frame3f& frame) {
+    // constant from http://spencermortensen.com/articles/bezier-circle/
+    const auto  c              = 0.551915024494f;
+    static auto circle_pos     = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
+        {0, 1, 0}, {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
+        {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
+    static auto circle_beziers = vector<vec4i>{
+        {0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
+    positions = circle_pos;
+    beziers   = circle_beziers;
+    for (auto& p : positions) p *= size;
+    _transform_points_inplace(frame, positions);
+}
+
+// Make a hair ball around a shape
+void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    const vec2i& steps, const vector<vec3i>& striangles,
+    const vector<vec4i>& squads, const vector<vec3f>& spos,
+    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
+    const vec2f& rotation, int seed) {
+    auto alltriangles    = striangles;
+    auto quads_triangles = vector<vec3i>{};
+    quads_to_triangles(quads_triangles, squads);
+    alltriangles.insert(
+        alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
+    auto bpos      = vector<vec3f>{};
+    auto bnorm     = vector<vec3f>{};
+    auto btexcoord = vector<vec2f>{};
+    sample_triangles(bpos, bnorm, btexcoord, alltriangles, spos, snorm,
+        stexcoord, steps.y, seed);
+
+    auto rng  = make_rng(seed, 3);
+    auto blen = vector<float>(bpos.size());
+    for (auto& l : blen) l = lerp(len.x, len.y, rand1f(rng));
+
+    auto cidx = vector<int>();
+    if (clump.x > 0) {
+        for (auto bidx = 0; bidx < bpos.size(); bidx++) {
+            cidx.push_back(0);
+            auto cdist = type_max<float>;
+            for (auto c = 0; c < clump.y; c++) {
+                auto d = length(bpos[bidx] - bpos[c]);
+                if (d < cdist) {
+                    cdist       = d;
+                    cidx.back() = c;
+                }
+            }
+        }
+    }
+
+    make_lines(lines, positions, normals, texcoords, radius, steps, {1, 1},
+        {1, 1}, {1, 1}, identity_frame3f);
+    for (auto i = 0; i < positions.size(); i++) {
+        auto u       = texcoords[i].x;
+        auto bidx    = i / (steps.x + 1);
+        positions[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
+        normals[i]   = bnorm[bidx];
+        radius[i]    = lerp(rad.x, rad.y, u);
+        if (clump.x > 0) {
+            positions[i] = positions[i] +
+                           (positions[i + (cidx[bidx] - bidx) * (steps.x + 1)] -
+                               positions[i]) *
+                               u * clump.x;
+        }
+        if (noise.x > 0) {
+            auto nx = perlin_noise(positions[i] * noise.y + vec3f{0, 0, 0}) *
+                      noise.x;
+            auto ny = perlin_noise(positions[i] * noise.y + vec3f{3, 7, 11}) *
+                      noise.x;
+            auto nz = perlin_noise(positions[i] * noise.y + vec3f{13, 17, 19}) *
+                      noise.x;
+            positions[i] += {nx, ny, nz};
+        }
+    }
+
+    if (clump.x > 0 || noise.x > 0 || rotation.x > 0) {
+        compute_tangents(normals, lines, positions);
+    }
+}
+
+// Thickens a shape by copy9ing the shape content, rescaling it and flipping its
+// normals. Note that this is very much not robust and only useful for trivial
+// cases.
+void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness) {
+    auto bbox = invalid_bbox3f;
+    for (auto p : positions) bbox += p;
+    auto center              = bbox_center(bbox);
+    auto inner_quads         = quads;
+    auto inner_positions     = positions;
+    auto inner_normals       = normals;
+    auto inner_texturecoords = texcoords;
+    for (auto& p : inner_positions) p = (1 - thickness) * (p - center) + center;
+    for (auto& n : inner_normals) n = -n;
+    merge_quads(quads, positions, normals, texcoords, inner_quads,
+        inner_positions, inner_normals, inner_texturecoords);
+}
+
+// Shape presets used ofr testing.
+void make_preset(vector<int>& points, vector<vec2i>& lines,
+    vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
+    vector<float>& radius, const string& type) {
+    if (type == "default-quad") {
+        make_rect(quads, positions, normals, texcoords, {1, 1}, {2, 2}, {1, 1},
+            identity_frame3f);
+    } else if (type == "default-quady") {
+        make_rect(quads, positions, normals, texcoords, {1, 1}, {2, 2}, {1, 1},
+            identity_frame3f);
+    } else if (type == "default-quad-stack") {
+        make_rect_stack(quads, positions, normals, texcoords, {1, 1, 1},
+            {2, 2, 2}, {1, 1}, identity_frame3f);
+    } else if (type == "default-box") {
+        make_box(quads, positions, normals, texcoords, {1, 1, 1}, {2, 2, 2},
+            {1, 1, 1}, identity_frame3f);
+    } else if (type == "default-box-rounded") {
+        make_rounded_box(quads, positions, normals, texcoords, {32, 32, 32},
+            {2, 2, 2}, {1, 1, 1}, (float)0.15, identity_frame3f);
+    } else if (type == "default-uvsphere") {
+        make_uvsphere(quads, positions, normals, texcoords, {64, 32}, 2, {1, 1},
+            identity_frame3f);
+    } else if (type == "default-sphere") {
+        make_sphere(
+            quads, positions, normals, texcoords, 32, 2, 1, identity_frame3f);
+    } else if (type == "default-uvsphere-flipcap") {
+        make_flipcap_uvsphere(quads, positions, normals, texcoords, {64, 32}, 2,
+            {1, 1}, {-0.75, 0.75}, identity_frame3f);
+    } else if (type == "default-uvdisk") {
+        make_uvdisk(quads, positions, normals, texcoords, {32, 16}, 2, {1, 1},
+            identity_frame3f);
+    } else if (type == "default-disk") {
+        make_disk(
+            quads, positions, normals, texcoords, 32, 2, 1, identity_frame3f);
+    } else if (type == "default-disk-bulged") {
+        make_bulged_disk(quads, positions, normals, texcoords, 32, 2, 1, 0.25,
+            identity_frame3f);
+    } else if (type == "default-quad-bulged") {
+        make_bulged_rect(quads, positions, normals, texcoords, 32, 2, 1, 0.25,
+            identity_frame3f);
+    } else if (type == "default-uvcylinder") {
+        make_uvcylinder(quads, positions, normals, texcoords, {64, 32, 16},
+            {2, 2}, {1, 1, 1}, identity_frame3f);
+    } else if (type == "default-uvcylinder-rounded") {
+        make_rounded_uvcylinder(quads, positions, normals, texcoords,
+            {64, 32, 16}, {2, 2}, {1, 1, 1}, 0.075, identity_frame3f);
+    } else if (type == "default-sphere-geodesic") {
+        make_geosphere(triangles, positions, normals, 4, 2, identity_frame3f);
+    } else if (type == "default-floor") {
+        make_floor(quads, positions, normals, texcoords, {1, 1}, {40, 40},
+            {20, 20}, identity_frame3f);
+    } else if (type == "default-floor-bent") {
+        make_bent_floor(quads, positions, normals, texcoords, {1, 40}, {40, 40},
+            {20, 20}, 10, identity_frame3f);
+    } else if (type == "default-matball") {
+        make_sphere(
+            quads, positions, normals, texcoords, 32, 2, 1, identity_frame3f);
+    } else if (type == "default-hairball") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 2 * 0.8f, 1, identity_frame3f);
+        make_hair(lines, positions, normals, texcoords, radius, {4, 65536}, {},
+            base_quads, base_positions, base_normals, base_texturecoords,
+            {0.2, 0.2}, {0.002, 0.001}, {0, 0}, {0, 0}, {0, 0});
+    } else if (type == "default-hairball-interior") {
+        make_sphere(quads, positions, normals, texcoords, 32, 2 * 0.8f, 1,
+            identity_frame3f);
+    } else if (type == "default-suzanne") {
+        make_suzanne(quads, positions, 2, identity_frame3f);
+    } else if (type == "default-cube-posonly") {
+        auto ignore1 = vector<vec4i>{};
+        auto ignore2 = vector<vec4i>{};
+        auto ignore3 = vector<vec3f>{};
+        auto ignore4 = vector<vec2f>{};
+        make_fvbox(quads, ignore1, ignore2, positions, ignore3, ignore4,
+            {1, 1, 1}, {2, 2, 2}, {1, 1, 1}, identity_frame3f);
+    } else if (type == "default-cube-facevarying") {
+        make_fvbox(quads_positions, quads_normals, quads_texcoords, positions,
+            normals, texcoords, {1, 1, 1}, {2, 2, 2}, {1, 1, 1},
+            identity_frame3f);
+    } else if (type == "default-sphere-facevarying") {
+        make_fvsphere(quads_positions, quads_normals, quads_texcoords,
+            positions, normals, texcoords, 32, 2, 1, identity_frame3f);
+    } else if (type == "test-cube") {
+        make_rounded_box(quads, positions, normals, texcoords, {32, 32, 32},
+            {0.15, 0.15, 0.15}, {1, 1, 1}, 0.3, frame3f{{0, 0.075, 0}});
+    } else if (type == "test-uvsphere") {
+        make_uvsphere(quads, positions, normals, texcoords, {64, 32}, 0.15,
+            {1, 1}, frame3f{{0, 0.075, 0}});
+    } else if (type == "test-uvsphere-flipcap") {
+        make_flipcap_uvsphere(quads, positions, normals, texcoords, {64, 32},
+            0.15, {1, 1}, {-0.75, 0.75}, frame3f{{0, 0.075, 0}});
+    } else if (type == "test-sphere") {
+        make_sphere(quads, positions, normals, texcoords, 32, 0.15, 1.0,
+            frame3f{{0, 0.075, 0}});
+    } else if (type == "test-sphere-displaced") {
+        make_sphere(quads, positions, normals, texcoords, 32, 0.15, 1.0,
+            frame3f{{0, 0.075, 0}});
+    } else if (type == "test-disk") {
+        make_disk(quads, positions, normals, texcoords, 32, 0.15, 1.0,
+            frame3f{{0, 0.075, 0}});
+    } else if (type == "test-uvcylinder") {
+        make_rounded_uvcylinder(quads, positions, normals, texcoords,
+            {64, 32, 16}, {0.15, 0.15}, {1, 1, 1}, 0.3, frame3f{{0, 0.075, 0}});
+    } else if (type == "test-floor") {
+        make_floor(quads, positions, normals, texcoords, {1, 1}, {4, 4},
+            {20, 20}, identity_frame3f);
+    } else if (type == "test-matball") {
+        make_sphere(quads, positions, normals, texcoords, 32, 0.15, 1,
+            frame3f{{0, 0.075, 0}});
+    } else if (type == "test-hairball1") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 0.15 * 0.8, 1, frame3f{{0, 0.075, 0}});
+        make_hair(lines, positions, normals, texcoords, radius, {4, 65536}, {},
+            base_quads, base_positions, base_normals, base_texturecoords,
+            vec2f{0.1, 0.1} * 0.15f, vec2f{0.001, 0.0005} * 0.15f, {0.03, 100},
+            {0, 0}, {0, 0});
+    } else if (type == "test-hairball2") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 0.15 * 0.8, 1, frame3f{{0, 0.075, 0}});
+        make_hair(lines, positions, normals, texcoords, radius, {4, 65536}, {},
+            base_quads, base_positions, base_normals, base_texturecoords,
+            vec2f{0.1, 0.1} * 0.15f, vec2f{0.001, 0.0005} * 0.15f, {0, 0},
+            {0, 0}, {0, 0});
+    } else if (type == "test-hairball3") {
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
+        auto base_texturecoords = vector<vec2f>{};
+        make_sphere(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, 0.15 * 0.8, 1, frame3f{{0, 0.075, 0}});
+        make_hair(lines, positions, normals, texcoords, radius, {4, 65536}, {},
+            base_quads, base_positions, base_normals, base_texturecoords,
+            vec2f{0.1, 0.1} * 0.15f, vec2f{0.001, 0.0005} * 0.15f, {0, 0},
+            {0.5, 128}, {0, 0});
+    } else if (type == "test-hairball-interior") {
+        make_sphere(quads, positions, normals, texcoords, 32, 0.15 * 0.8, 1,
+            frame3f{{0, 0.075, 0}});
+    } else if (type == "test-suzanne-subdiv") {
+        make_suzanne(quads, positions, 0.15, frame3f{{0, 0.075, 0}});
+    } else if (type == "test-cube-subdiv") {
+        make_fvbox(quads_positions, quads_normals, quads_texcoords, positions,
+            normals, texcoords, {1, 1, 1}, {0.15, 0.15, 0.15}, {1, 1, 1},
+            frame3f{{0, 0.075, 0}});
+    } else if (type == "test-arealight1") {
+        make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4},
+            {1, 1}, identity_frame3f);
+    } else if (type == "test-arealight2") {
+        make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4},
+            {1, 1}, identity_frame3f);
+    } else {
+        throw std::invalid_argument("unknown shape preset " + type);
+    }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
