@@ -1207,7 +1207,6 @@ material_point eval_material(const yocto_scene& scene,
     point.diffuse        = material.diffuse * xyz(shape_color);
     point.specular       = material.specular;
     auto metallic        = material.metallic;
-    point.eta            = material.ior;
     point.roughness      = material.roughness;
     point.coat           = material.coat;
     point.transmission   = material.transmission;
@@ -1271,12 +1270,8 @@ material_point eval_material(const yocto_scene& scene,
         point.coat *= xyz(eval_texture(coat_texture, texturecoord));
     }
     if (metallic) {
-        point.eta      = (1 + sqrt(point.diffuse)) / (1 - sqrt(point.diffuse));
-        point.specular = vec3f{metallic};
-        point.diffuse *= 1 - metallic;
-    } else if (material.ior_from_specular && point.specular != zero3f) {
-        point.eta = (1 + sqrt(point.specular)) / (1 - sqrt(point.specular));
-        point.specular = {1, 1, 1};
+        point.specular = point.specular * (1 - metallic) + metallic * point.diffuse;
+        point.diffuse = metallic * point.diffuse * (1 - metallic);
     }
     if (point.diffuse != zero3f || point.roughness) {
         point.roughness = point.roughness * point.roughness;

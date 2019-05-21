@@ -703,8 +703,6 @@ struct load_yaml_scene_cb : yaml_callbacks {
                     get_yaml_value(value, material.specular);
                 } else if (key == "roughness") {
                     get_yaml_value(value, material.roughness);
-                } else if (key == "ior") {
-                    get_yaml_value(value, material.ior);
                 } else if (key == "coat") {
                     get_yaml_value(value, material.coat);
                 } else if (key == "transmission") {
@@ -960,7 +958,6 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
             def_material.transmission);
         print_optional(
             fs, "roughness", material.roughness, def_material.roughness);
-        print_optional(fs, "ior", material.ior, def_material.ior);
         print_optional(fs, "voltransmission", material.voltransmission,
             def_material.voltransmission);
         print_optional(
@@ -1323,7 +1320,7 @@ struct load_obj_scene_cb : obj_callbacks {
         material.emission             = omat.ke;
         material.diffuse              = omat.kd;
         material.specular             = omat.ks;
-        material.metallic             = omat.has_pbr ? omat.pm : 0;
+        material.metallic             = omat.pm;
         material.transmission         = omat.kt;
         material.roughness            = omat.pr;
         material.opacity              = omat.op;
@@ -1335,7 +1332,6 @@ struct load_obj_scene_cb : obj_callbacks {
         material.roughness_texture    = add_texture(omat.pr_txt, true);
         material.opacity_texture      = add_texture(omat.op_txt, true);
         material.normal_texture       = add_texture(omat.norm_txt, true);
-        material.ior_from_specular    = true;
         scene.materials.push_back(material);
         mmap[material.uri] = (int)scene.materials.size() - 1;
     }
@@ -1472,15 +1468,9 @@ static void save_mtl(
         print(fs, "newmtl {}\n", get_basename(material.uri));
         print_obj_keyvalue(fs, "  illum", 2);
         print_obj_keyvalue(fs, "  Ke", material.emission);
-        if (material.metallic > 0.5) {
-            print_obj_keyvalue(fs, "  Kd", zero3f);
-            print_obj_keyvalue(
-                fs, "  Ks", material.diffuse * material.metallic);
-        } else {
-            print_obj_keyvalue(fs, "  Kd", material.diffuse);
-            print_obj_keyvalue(fs, "  Ks",
-                material.specular * obj_eta_to_reflectivity(material.ior));
-        }
+        print_obj_keyvalue(fs, "  Kd", material.diffuse * (1 - material.metallic));
+        print_obj_keyvalue(fs, "  Ks", material.specular * (1 - material.metallic) 
+            + material.metallic * material.diffuse;
         print_obj_keyvalue(fs, "  Kt", material.transmission);
         print_obj_keyvalue(fs, "  Ns",
             (int)clamp(

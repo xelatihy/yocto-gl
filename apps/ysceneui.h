@@ -367,9 +367,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
             win, "roughness", edited_value.roughness, 0, 1)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(win, "ior", edited_value.ior, 1, 2.5)) {
-        edited = true;
-    }
     if (draw_coloredit_opengl_widget(win, "coat", edited_value.coat)) {
         edited = true;
     }
@@ -401,11 +398,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
         edited = true;
     }
     if (draw_checkbox_opengl_widget(win, "thin", edited_value.thin)) {
-        edited = true;
-    }
-    continue_opengl_widget_line(win);
-    if (draw_checkbox_opengl_widget(
-            win, "ior from spec", edited_value.ior_from_specular)) {
         edited = true;
     }
 

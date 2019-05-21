@@ -59,16 +59,16 @@ materials:
     diffuse: [0.7, 0.7, 0.7]
     diffuse_texture: textures/test-floor.png
   - uri: materials/test-uvgrid.yaml
-    specular: [1, 1, 1]
+    specular: [0.04, 0.04, 0.04]
     diffuse: [1, 1, 1]
     roughness: 0.1
     diffuse_texture: textures/test-uvgrid.png
   - uri: materials/test-plastic-sharp.yaml
-    specular: [1, 1, 1]
+    specular: [0.04, 0.04, 0.04]
     diffuse: [0.5, 0.5, 0.7]
     roughness: 0.01
   - uri: materials/test-plastic-rough.yaml
-    specular: [1, 1, 1]
+    specular: [0.04, 0.04, 0.04]
     diffuse: [0.5, 0.7, 0.5]
     roughness: 0.2
   - uri: materials/test-metal-sharp.yaml

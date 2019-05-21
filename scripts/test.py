@@ -155,7 +155,7 @@ def make_tests():
             },
             {
                 "uri": "materials/test-uvgrid.yaml",
-                "specular": [1, 1, 1],
+                "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 1, 1, 1 ],
                 "roughness": 0.1,
                 "diffuse_texture": "textures/test-uvgrid.png"
@@ -167,13 +167,13 @@ def make_tests():
             },
             {
                 "uri": "materials/test-plastic-sharp.yaml",
-                "specular": [1, 1, 1],
+                "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "roughness": 0.01
             },
             {
                 "uri": "materials/test-plastic-rough.yaml",
-                "specular": [1, 1, 1],
+                "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.5, 0.7, 0.5 ],
                 "roughness": 0.2
             },
@@ -191,7 +191,7 @@ def make_tests():
             },
             {
                 "uri": "materials/test-plastic-sharp-bumped.yaml",
-                "specular": [1, 1, 1],
+                "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "roughness": 0.01,
                 "normal_texture": "textures/test-bump-normal.png"
@@ -205,15 +205,15 @@ def make_tests():
             },
             {
                 "uri": "materials/test-plastic-rough-coated.yaml",
-                "specular": [1, 1, 1],
-                "coat": [1, 1, 1],
+                "specular": [0.04, 0.04, 0.04],
+                "coat": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.5, 0.7, 0.5 ],
                 "roughness": 0.2
             },
             {
                 "uri": "materials/test-metal-rough-coated.yaml",
                 "metallic": 1,
-                "coat": [1, 1, 1],
+                "coat": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.66, 0.45, 0.34 ],
                 "roughness": 0.2
             },
@@ -225,28 +225,28 @@ def make_tests():
             },
             {
                 "uri": "materials/test-glass-sharp.yaml",
-                "specular": [1, 1, 1],
+                "specular": [0.04, 0.04, 0.04],
                 "transmission": [1, 1, 1],
                 "roughness": 0,
                 "thin": False
             },
             {
                 "uri": "materials/test-glass-rough.yaml",
-                "specular": [1, 1, 1],
+                "specular": [0.04, 0.04, 0.04],
                 "transmission": [ 1, 0.7, 0.7 ],
                 "roughness": 0.1,
                 "thin": False
             },
             {
                 "uri": "materials/test-thinglass-sharp.yaml",
-                "specular": [1, 1, 1],
+                "specular": [0.04, 0.04, 0.04],
                 "transmission": [1, 1, 1],
                 "roughness": 0,
                 "thin": True
             },
             {
                 "uri": "materials/test-thinglass-rough.yaml",
-                "specular": [1, 1, 1],
+                "specular": [0.04, 0.04, 0.04],
                 "transmission": [ 1, 0.7, 0.7 ],
                 "roughness": 0.05,
                 "thin": True
@@ -258,7 +258,7 @@ def make_tests():
             },
             {
                 "uri": "materials/test-volume-jade.yaml",
-                "specular": [1, 1, 1],
+                "specular": [0.04, 0.04, 0.04],
                 "roughness": 0,
                 "transmission": [1, 1, 1],
                 "voltransmission": [0.5, 0.5, 0.5],
@@ -268,12 +268,11 @@ def make_tests():
                 "uri": "materials/test-volume-cloud.yaml",
                 "transmission": [1, 1, 1],
                 "voltransmission": [0.65, 0.65, 0.65],
-                "volscatter": [0.9, 0.9, 0.9],
-                "ior": [1, 1, 1]
+                "volscatter": [0.9, 0.9, 0.9]
             },
             {
                 "uri": "materials/test-volume-glass.yaml",
-                "specular": [1, 1, 1],
+                "specular": [0.04, 0.04, 0.04],
                 "roughness": 0,
                 "transmission": [1, 1, 1],
                 "voltransmission": [1, 0.5, 0.5],
@@ -281,7 +280,6 @@ def make_tests():
             },
             {
                 "uri": "materials/test-volume-smoke.yaml",
-                "ior": [1, 1, 1],
                 "transmission": [1, 1, 1],
                 "voltransmission": [0.5, 0.5, 0.5],
                 "volscatter": [0.2, 0.2, 0.2],
@@ -289,7 +287,6 @@ def make_tests():
             },
             {
                 "uri": "materials/test-volume-emissive.yaml",
-                "ior": [1, 1, 1],
                 "transmission": [1, 1, 1],
                 "voltransmission": [0.95, 0.95, 0.95],
                 "volemission": [15, 15, 10],

@@ -578,7 +578,6 @@ namespace yocto {
 constexpr bool trace_non_rigid_frames = true;
 
 // defaults
-constexpr auto coat_eta       = vec3f{1.5};
 constexpr auto coat_roughness = 0.03f * 0.03f;
 
 bool has_brdf(const material_point& material) {
@@ -611,8 +610,8 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
         if (!same_hemisphere(normal, outgoing, incoming)) return zero3f;
         auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
         auto halfway   = normalize(incoming + outgoing);
-        auto fresnel   = fresnel_dielectric(
-            coat_eta, abs(dot(halfway, outgoing)));
+        auto fresnel   = fresnel_schlick(
+            material.coat, abs(dot(halfway, outgoing)));
         auto D = eval_microfacetD(coat_roughness, up_normal, halfway);
         auto G = eval_microfacetG(
             coat_roughness, up_normal, halfway, outgoing, incoming);
@@ -624,23 +623,22 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
         same_hemisphere(normal, outgoing, incoming)) {
         auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
         auto halfway   = normalize(incoming + outgoing);
-        auto coat      = material.coat *
-                    fresnel_dielectric(coat_eta, abs(dot(halfway, outgoing)));
-        auto F = fresnel_dielectric(material.eta, abs(dot(halfway, outgoing)));
+        auto coat = fresnel_schlick(material.coat, abs(dot(halfway, outgoing)));
+        auto fresnel = fresnel_schlick(
+            material.specular, abs(dot(halfway, outgoing)));
         auto D = eval_microfacetD(material.roughness, up_normal, halfway);
         auto G = eval_microfacetG(
             material.roughness, up_normal, halfway, outgoing, incoming);
-        brdfcos += (1 - coat) * material.specular * F * D * G /
+        brdfcos += (1 - coat) * fresnel * D * G /
                    abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                    abs(dot(normal, incoming));
     }
     if (material.diffuse != zero3f &&
         same_hemisphere(normal, outgoing, incoming)) {
         auto halfway = normalize(incoming + outgoing);
-        auto coat    = material.coat *
-                    fresnel_dielectric(coat_eta, abs(dot(halfway, outgoing)));
-        auto specular = material.specular * fresnel_dielectric(material.eta,
-                                                abs(dot(halfway, outgoing)));
+        auto coat = fresnel_schlick(material.coat, abs(dot(halfway, outgoing)));
+        auto specular = fresnel_schlick(
+            material.specular, abs(dot(halfway, outgoing)));
         brdfcos += (1 - coat) * (1 - specular) * material.diffuse *
                    eval_diffuse_reflection(
                        material.roughness, normal, outgoing, incoming);
@@ -648,13 +646,14 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     if (material.transmission != zero3f &&
         other_hemisphere(normal, outgoing, incoming) && !material.thin) {
         auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
+        auto eta            = mean(reflectivity_to_eta(material.specular));
         auto halfway_vector = dot(outgoing, normal) > 0
-                                  ? -(outgoing + mean(material.eta) * incoming)
-                                  : (mean(material.eta) * outgoing + incoming);
+                                  ? -(outgoing + eta * incoming)
+                                  : (eta * outgoing + incoming);
         auto halfway = normalize(halfway_vector);
-        auto coat    = material.coat *
-                    fresnel_dielectric(coat_eta, abs(dot(halfway, outgoing)));
-        auto F = fresnel_dielectric(material.eta, abs(dot(halfway, outgoing)));
+        auto coat = fresnel_schlick(material.coat, abs(dot(halfway, outgoing)));
+        auto fresnel = fresnel_schlick(
+            material.specular, abs(dot(halfway, outgoing)));
         auto D = eval_microfacetD(material.roughness, up_normal, halfway);
         auto G = eval_microfacetG(
             material.roughness, up_normal, halfway, outgoing, incoming);
@@ -664,14 +663,22 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 
         // [Walter 2007] equation 21
         brdfcos += (1 - coat) * material.transmission * abs(dot_terms) *
-                   (1 - F) * D * G / dot(halfway_vector, halfway_vector) *
+                   (1 - fresnel) * D * G / dot(halfway_vector, halfway_vector) *
                    abs(dot(normal, incoming));
     }
     if (material.transmission != zero3f &&
         other_hemisphere(normal, outgoing, incoming) && material.thin) {
-        brdfcos += material.transmission *
-                   eval_microfacet_transparency(material.roughness,
-                       material.eta, normal, outgoing, incoming);
+        auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
+        auto ir        = reflect(-incoming, up_normal);
+        auto halfway   = normalize(ir + outgoing);
+        auto fresnel   = fresnel_schlick(
+            material.specular, abs(dot(halfway, outgoing)));
+        auto D = eval_microfacetD(material.roughness, up_normal, halfway);
+        auto G = eval_microfacetG(
+            material.roughness, up_normal, halfway, outgoing, ir);
+        brdfcos += material.transmission * (1 - fresnel) * D * G /
+                   abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+                   abs(dot(normal, incoming));
     }
     return brdfcos;
 }
@@ -682,21 +689,19 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
 
     if (material.coat != zero3f &&
         same_hemisphere(normal, outgoing, incoming)) {
-        brdfcos += fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
+        brdfcos += fresnel_schlick(material.coat, abs(dot(normal, outgoing)));
     }
     if (material.specular != zero3f &&
         same_hemisphere(normal, outgoing, incoming)) {
-        auto coat = material.coat *
-                    fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
-        brdfcos += (1 - coat) * material.specular *
-                   fresnel_dielectric(material.eta, abs(dot(normal, outgoing)));
+        auto coat = fresnel_schlick(material.coat, abs(dot(normal, outgoing)));
+        brdfcos += (1 - coat) * fresnel_schlick(material.specular,
+                                    abs(dot(normal, outgoing)));
     }
     if (material.transmission != zero3f &&
         other_hemisphere(normal, outgoing, incoming)) {
-        auto coat = material.coat *
-                    fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
-        auto specular = material.specular * fresnel_dielectric(material.eta,
-                                                abs(dot(normal, outgoing)));
+        auto coat = fresnel_schlick(material.coat, abs(dot(normal, outgoing)));
+        auto specular = fresnel_schlick(
+            material.specular, abs(dot(normal, outgoing)));
         brdfcos += (1 - coat) * (1 - specular) * material.transmission;
     }
     return brdfcos;
@@ -706,28 +711,26 @@ vec4f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
     auto weights = zero4f;
     if (material.coat != zero3f) {
-        auto fresnel = fresnel_dielectric(coat_eta, abs(dot(outgoing, normal)));
-        weights[0]   = max(fresnel);
+        auto fresnel = fresnel_schlick(
+            material.coat, abs(dot(outgoing, normal)));
+        weights[0] = max(fresnel);
     }
     if (material.specular != zero3f) {
-        auto coat = material.coat *
-                    fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
-        auto fresnel = fresnel_dielectric(
-            material.eta, abs(dot(outgoing, normal)));
-        weights[1] = max((1 - coat) * material.specular * fresnel);
+        auto coat = fresnel_schlick(material.coat, abs(dot(normal, outgoing)));
+        auto fresnel = fresnel_schlick(
+            material.specular, abs(dot(outgoing, normal)));
+        weights[1] = max((1 - coat) * fresnel);
     }
     if (material.diffuse != zero3f) {
-        auto coat = material.coat *
-                    fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
-        auto specular = material.specular * fresnel_dielectric(material.eta,
-                                                abs(dot(normal, outgoing)));
-        weights[2]    = max((1 - coat) * (1 - specular) * material.diffuse);
+        auto coat = fresnel_schlick(material.coat, abs(dot(normal, outgoing)));
+        auto specular = fresnel_schlick(
+            material.specular, abs(dot(normal, outgoing)));
+        weights[2] = max((1 - coat) * (1 - specular) * material.diffuse);
     }
     if (material.transmission != zero3f) {
-        auto coat = material.coat *
-                    fresnel_dielectric(coat_eta, abs(dot(normal, outgoing)));
-        auto specular = material.specular * fresnel_dielectric(material.eta,
-                                                abs(dot(normal, outgoing)));
+        auto coat = fresnel_schlick(material.coat, abs(dot(normal, outgoing)));
+        auto specular = fresnel_schlick(
+            material.specular, abs(dot(normal, outgoing)));
         weights[3] = max((1 - coat) * (1 - specular) * material.transmission);
     }
     weights /= sum(weights);
@@ -765,9 +768,9 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
     weight_sum += pdfs[3];
     if (rnl < weight_sum && !material.thin) {
         auto halfway = sample_microfacet(material.roughness, up_normal, rn);
-        return refract(outgoing, halfway,
-            dot(normal, outgoing) > 0 ? 1 / mean(material.eta)
-                                      : mean(material.eta));
+        auto eta     = mean(reflectivity_to_eta(material.specular));
+        return refract(
+            outgoing, halfway, dot(normal, outgoing) > 0 ? 1 / eta : eta);
     }
     if (rnl < weight_sum && material.thin) {
         auto halfway = sample_microfacet(material.roughness, up_normal, rn);
@@ -803,9 +806,9 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
 
     weight_sum += pdfs[3];
     if (rnl < weight_sum && !material.thin) {
-        return refract(outgoing, up_normal,
-            dot(normal, outgoing) > 0 ? 1 / mean(material.eta)
-                                      : mean(material.eta));
+        auto eta = mean(reflectivity_to_eta(material.specular));
+        return refract(
+            outgoing, up_normal, dot(normal, outgoing) > 0 ? 1 / eta : eta);
     }
     if (rnl < weight_sum && material.thin) {
         return -outgoing;
@@ -846,9 +849,10 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
     if (pdfs[3] && other_hemisphere(normal, outgoing, incoming) &&
         !material.thin) {
         auto up_normal      = dot(outgoing, normal) > 0 ? normal : -normal;
+        auto eta = mean(reflectivity_to_eta(material.specular));
         auto halfway_vector = dot(outgoing, normal) > 0
-                                  ? -(outgoing + material.eta * incoming)
-                                  : (material.eta * outgoing + incoming);
+                                  ? -(outgoing + eta * incoming)
+                                  : (eta * outgoing + incoming);
         auto halfway = normalize(halfway_vector);
         // [Walter 2007] equation 17
         pdf += pdfs[3] *
