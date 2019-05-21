@@ -102,12 +102,6 @@ namespace yocto {
 // Float to byte conversion.
 inline byte  float_to_byte(float a);
 inline float byte_to_float(byte a);
-inline vec1b float_to_byte(const vec1f& a);
-inline vec1f byte_to_float(const vec1b& a);
-inline vec2b float_to_byte(const vec2f& a);
-inline vec2f byte_to_float(const vec2b& a);
-inline vec3b float_to_byte(const vec3f& a);
-inline vec3f byte_to_float(const vec3b& a);
 inline vec4b float_to_byte(const vec4f& a);
 inline vec4f byte_to_float(const vec4b& a);
 
@@ -117,12 +111,6 @@ inline float luminance(const vec3f& a);
 // sRGB non-linear curve
 inline float srgb_to_linear(float srgb);
 inline float linear_to_srgb(float lin);
-inline vec1f srgb_to_linear(const vec1f& srgb);
-inline vec1f linear_to_srgb(const vec1f& lin);
-inline vec2f srgb_to_linear(const vec2f& srgb);
-inline vec2f linear_to_srgb(const vec2f& lin);
-inline vec3f srgb_to_linear(const vec3f& srgb);
-inline vec3f linear_to_srgb(const vec3f& lin);
 inline vec4f srgb_to_linear(const vec4f& srgb);
 inline vec4f linear_to_srgb(const vec4f& lin);
 
@@ -136,10 +124,6 @@ inline vec3f apply_saturation(const vec3f& rgb, float saturation,
 
 // Fitted ACES tonemapping curve.
 inline vec3f tonemap_filmic(const vec3f& hdr, bool accurate_fit = true);
-
-// Convert number of channels
-template <typename T, int N1, int N2>
-inline vec<T, N1> convert_channels(const vec<T, N2>& a);
 
 // Forward declaration
 struct rgb_space;
@@ -206,31 +190,48 @@ namespace yocto {
 template <typename T>
 struct image {
     // constructors
-    image();
-    image(const vec2i& size, const T& value = {});
-    image(const vec2i& size, const T* value);
+    image() : extent{0, 0}, pixels{} {}
+    image(const vec2i& size, const T& value = {})
+        : extent{size}, pixels((size_t)size.x * (size_t)size.y, value) {}
+    image(const vec2i& size, const T* value)
+        : extent{size}
+        , pixels(value, value + (size_t)size.x * (size_t)size.y) {}
 
     // size
-    bool  empty() const;
-    vec2i size() const;
-    bool  contains(const vec2i& ij) const;
-    void  resize(const vec2i& size);
-    void  assign(const vec2i& size, const T& value = {});
-    void  shrink_to_fit();
+    bool   empty() const { return pixels.empty(); }
+    vec2i  size() const { return extent; }
+    size_t count() const { return pixels.size(); }
+    bool   contains(const vec2i& ij) const {
+        return ij.x > 0 && ij.x < extent.x && ij.y > 0 && ij.y < extent.y;
+    }
+    void resize(const vec2i& size) {
+        if (size == extent) return;
+        extent = size;
+        pixels.resize((size_t)size.x * (size_t)size.y);
+    }
+    void assign(const vec2i& size, const T& value = {}) {
+        extent = size;
+        pixels.assign((size_t)size.x * (size_t)size.y, value);
+    }
+    void shrink_to_fit() { pixels.shrink_to_fit(); }
 
     // element access
-    T&       operator[](const vec2i& ij);
-    const T& operator[](const vec2i& ij) const;
+    T&       operator[](int i) { return pixels[i]; }
+    const T& operator[](int i) const { return pixels[i]; }
+    T& operator[](const vec2i& ij) { return pixels[ij.y * extent.x + ij.x]; }
+    const T& operator[](const vec2i& ij) const {
+        return pixels[ij.y * extent.x + ij.x];
+    }
 
     // data access
-    T*       data();
-    const T* data() const;
+    T*       data() { return pixels.data(); }
+    const T* data() const { return pixels.data(); }
 
     // iteration
-    T*       begin();
-    T*       end();
-    const T* begin() const;
-    const T* end() const;
+    T*       begin() { return pixels.data(); }
+    T*       end() { return pixels.data() + pixels.size(); }
+    const T* begin() const { return pixels.data(); }
+    const T* end() const { return pixels.data() + pixels.size(); }
 
    private:
     // data
@@ -240,9 +241,13 @@ struct image {
 
 // equality
 template <typename T>
-inline bool operator==(const image<T>& a, const image<T>& b);
+inline bool operator==(const image<T>& a, const image<T>& b) {
+    return a.size() == b.size() && a.pixels == b.pixels;
+}
 template <typename T>
-inline bool operator!=(const image<T>& a, const image<T>& b);
+inline bool operator!=(const image<T>& a, const image<T>& b) {
+    return a.size() != b.size() || a.pixels != b.pixels;
+}
 
 }  // namespace yocto
 
@@ -261,8 +266,7 @@ void load_image(const string& filename, image<vec4b>& img);
 void save_image(const string& filename, const image<vec4b>& img);
 
 // Convenience helper for loading HDR or LDR based on filename
-void load_image(
-    const string& filename, image<vec4f>& hdr, image<vec4b>& ldr);
+void load_image(const string& filename, image<vec4f>& hdr, image<vec4b>& ldr);
 void save_image(
     const string& filename, const image<vec4f>& hdr, const image<vec4b>& ldr);
 
@@ -287,10 +291,24 @@ void make_regions(vector<image_region>& regions, const vec2i& size,
 // Gets pixels in an image region
 template <typename T>
 inline void get_region(
-    image<T>& clipped, const image<T>& img, const image_region& region);
+    image<T>& clipped, const image<T>& img, const image_region& region) {
+    clipped.resize(region.size());
+    for (auto j = 0; j < region.size().y; j++) {
+        for (auto i = 0; i < region.size().x; i++) {
+            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+        }
+    }
+}
 template <typename T>
 inline void set_region(
-    image<T>& img, const image<T>& region, const vec2i& offset);
+    image<T>& img, const image<T>& region, const vec2i& offset) {
+    for (auto j = 0; j < region.size().y; j++) {
+        for (auto i = 0; i < region.size().x; i++) {
+            if (!img.contains({i, j})) continue;
+            img[vec2i{i, j} + offset] = region[{i, j}];
+        }
+    }
+}
 
 // Conversion from/to floats.
 void byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
@@ -440,15 +458,13 @@ void save_tonemapped(const string& filename, const image<vec4f>& hdr,
     const tonemap_params& params);
 
 // Save with a logo embedded
-void save_image_with_logo(
-    const string& filename, const image<vec4f>& img);
-void save_image_with_logo(
-    const string& filename, const image<vec4b>& img);
+void save_image_with_logo(const string& filename, const image<vec4f>& img);
+void save_image_with_logo(const string& filename, const image<vec4b>& img);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-void save_tonemapped_with_logo(const string& filename,
-    const image<vec4f>& hdr, const tonemap_params& params);
+void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
+    const tonemap_params& params);
 
 }  // namespace yocto
 
@@ -512,100 +528,6 @@ void make_preset(volume<float>& vol, const string& type);
 // ---------------------------------------------------------------------------//
 
 // -----------------------------------------------------------------------------
-// IMAGE DATA AND UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// constructors
-template <typename T>
-inline image<T>::image() : extent{0, 0}, pixels{} {}
-template <typename T>
-inline image<T>::image(const vec2i& size, const T& value)
-    : extent{size}, pixels((size_t)size.x * (size_t)size.y, value) {}
-template <typename T>
-inline image<T>::image(const vec2i& size, const T* value)
-    : extent{size}, pixels(value, value + (size_t)size.x * (size_t)size.y) {}
-
-// size
-template <typename T>
-inline bool image<T>::empty() const {
-    return pixels.empty();
-}
-template <typename T>
-inline vec2i image<T>::size() const {
-    return extent;
-}
-template <typename T>
-inline bool image<T>::contains(const vec2i& ij) const {
-    return ij.x > 0 && ij.x < extent.x && ij.y > 0 && ij.y < extent.y;
-}
-template <typename T>
-inline void image<T>::resize(const vec2i& size) {
-    if (size == extent) return;
-    extent = size;
-    pixels.resize((size_t)size.x * (size_t)size.y);
-}
-template <typename T>
-inline void image<T>::assign(const vec2i& size, const T& value) {
-    extent = size;
-    pixels.assign((size_t)size.x * (size_t)size.y, value);
-}
-template <typename T>
-inline void image<T>::shrink_to_fit() {
-    pixels.shrink_to_fit();
-}
-
-// element access
-template <typename T>
-inline T& image<T>::operator[](const vec2i& ij) {
-    return pixels[ij.y * extent.x + ij.x];
-}
-template <typename T>
-inline const T& image<T>::operator[](const vec2i& ij) const {
-    return pixels[ij.y * extent.x + ij.x];
-}
-
-// data access
-template <typename T>
-inline T* image<T>::data() {
-    return pixels.data();
-}
-template <typename T>
-inline const T* image<T>::data() const {
-    return pixels.data();
-}
-
-// iteration
-template <typename T>
-inline T* image<T>::begin() {
-    return pixels.data();
-}
-template <typename T>
-inline T* image<T>::end() {
-    return pixels.data() + pixels.size();
-}
-template <typename T>
-inline const T* image<T>::begin() const {
-    return pixels.data();
-}
-template <typename T>
-inline const T* image<T>::end() const {
-    return pixels.data() + pixels.size();
-}
-
-// equality
-template <typename T>
-inline bool operator==(const image<T>& a, const image<T>& b) {
-    return a.size() == b.size() && a.pixels == b.pixels;
-}
-template <typename T>
-inline bool operator!=(const image<T>& a, const image<T>& b) {
-    return a.size() != b.size() || a.pixels != b.pixels;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // VOLUME IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -649,23 +571,9 @@ constexpr T default_alpha() {
 
 inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
 inline float byte_to_float(byte a) { return a / 255.0f; }
-inline vec1b float_to_byte(const vec1f& a) { return {float_to_byte(a.x)}; }
-inline vec2b float_to_byte(const vec2f& a) {
-    return {float_to_byte(a.x), float_to_byte(a.y)};
-}
-inline vec3b float_to_byte(const vec3f& a) {
-    return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z)};
-}
 inline vec4b float_to_byte(const vec4f& a) {
     return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z),
         float_to_byte(a.w)};
-}
-inline vec1f byte_to_float(const vec1b& a) { return {byte_to_float(a.x)}; }
-inline vec2f byte_to_float(const vec2b& a) {
-    return {byte_to_float(a.x), byte_to_float(a.y)};
-}
-inline vec3f byte_to_float(const vec3b& a) {
-    return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z)};
 }
 inline vec4f byte_to_float(const vec4b& a) {
     return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z),
@@ -725,7 +633,8 @@ inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey) {
     return max(zero3f, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_logcontrast(const vec3f& rgb, float logcontrast, float grey) {
+inline vec3f apply_logcontrast(
+    const vec3f& rgb, float logcontrast, float grey) {
     auto epsilon  = (float)0.0001;
     auto log_grey = log2(grey);
     auto log_ldr  = log2(rgb + epsilon);
@@ -776,62 +685,6 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit) {
 
         auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
         return max(zero3f, ldr);
-    }
-}
-
-// Convert number of channels
-template <typename T, int N1, int N2>
-inline vec<T, N1> convert_channels(const vec<T, N2>& a) {
-    if constexpr (N1 == 1) {
-        if constexpr (N2 == 1) {
-            return {a.x};
-        } else if constexpr (N2 == 2) {
-            return {a.x};
-        } else if constexpr (N2 == 3) {
-            return {(a.x + a.y + a.z) / 3};
-        } else if constexpr (N2 == 4) {
-            return {(a.x + a.y + a.z) / 3};
-        } else {
-            static_assert(channel_error<N2>, "unsupported number of channels");
-        }
-    } else if constexpr (N1 == 2) {
-        if constexpr (N2 == 1) {
-            return {a.x, default_alpha<T>()};
-        } else if constexpr (N2 == 2) {
-            return {a.x, a.y};
-        } else if constexpr (N2 == 3) {
-            return {(a.x + a.y + a.z) / 3, default_alpha<T>()};
-        } else if constexpr (N2 == 4) {
-            return {(a.x + a.y + a.z) / 3, a.w};
-        } else {
-            static_assert(channel_error<N2>, "unsupported number of channels");
-        }
-    } else if constexpr (N1 == 3) {
-        if constexpr (N2 == 1) {
-            return {a.x, a.x, a.x};
-        } else if constexpr (N2 == 2) {
-            return {a.x, a.x, a.x};
-        } else if constexpr (N2 == 3) {
-            return {a.x, a.y, a.z};
-        } else if constexpr (N2 == 4) {
-            return {a.x, a.y, a.z};
-        } else {
-            static_assert(channel_error<N2>, "unsupported number of channels");
-        }
-    } else if constexpr (N1 == 4) {
-        if constexpr (N2 == 1) {
-            return {a.x, a.x, a.x, default_alpha<T>()};
-        } else if constexpr (N2 == 2) {
-            return {a.x, a.x, a.x};
-        } else if constexpr (N2 == 3) {
-            return {a.x, a.y, a.z, default_alpha<T>()};
-        } else if constexpr (N2 == 4) {
-            return {a.x, a.y, a.z};
-        } else {
-            static_assert(channel_error<N2>, "unsupported number of channels");
-        }
-    } else {
-        static_assert(channel_error<N1>, "unsupported number of channels");
     }
 }
 
@@ -1281,35 +1134,6 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
     float chroma = r - (g < b ? g : b);
     return {
         fabsf(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR IMAGE UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Gets pixels in an image region
-template <typename T>
-inline void get_region(
-    image<T>& clipped, const image<T>& img, const image_region& region) {
-    clipped.resize(region.size());
-    for (auto j = 0; j < region.size().y; j++) {
-        for (auto i = 0; i < region.size().x; i++) {
-            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-        }
-    }
-}
-template <typename T>
-inline void set_region(
-    image<T>& img, const image<T>& region, const vec2i& offset) {
-    for (auto j = 0; j < region.size().y; j++) {
-        for (auto i = 0; i < region.size().x; i++) {
-            if (!img.contains({i, j})) continue;
-            img[vec2i{i, j} + offset] = region[{i, j}];
-        }
-    }
 }
 
 }  // namespace yocto

@@ -210,22 +210,8 @@ vec3f compute_white_balance(const image<vec4f>& img) {
     return rgb / max(rgb);
 }
 
-template <int N1, int N2>
-inline void convert_channels(
-    image<vec<float, N1>>& result, const image<vec<float, N2>>& source) {
-    return apply_image(result, source, [](const vec<float, N2>& a) {
-        return convert_channels<float, N1, N2>(a);
-    });
-}
-template <int N1, int N2>
-inline void convert_channels(
-    image<vec<byte, N1>>& result, const image<vec<byte, N2>>& source) {
-    return apply_image(result, source, [](const vec<byte, N2>& a) {
-        return convert_channels<byte, N1, N2>(a);
-    });
-}
-
-void resize(image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
+void resize(
+    image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
     auto size = size_;
     if (size == zero2i) {
         throw std::invalid_argument("bad image size in resize");
@@ -237,12 +223,13 @@ void resize(image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) 
     }
     res_img = {size};
     stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
-        sizeof(vec4f) * img.size().x, (float*)res_img.data(),
-        res_img.size().x, res_img.size().y,
-        sizeof(vec4f) * res_img.size().x, 4, 3, 0, STBIR_EDGE_CLAMP,
-        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+        sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
+        res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
+        STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
+        nullptr);
 }
-void resize(image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
+void resize(
+    image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
     auto size = size_;
     if (size == zero2i) {
         throw std::invalid_argument("bad image size in resize");
@@ -254,10 +241,10 @@ void resize(image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) 
     }
     res_img = {size};
     stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
-        sizeof(vec4b) * img.size().x, (byte*)res_img.data(),
-        res_img.size().x, res_img.size().y,
-        sizeof(vec4b) * res_img.size().x, 4, 3, 0, STBIR_EDGE_CLAMP,
-        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+        sizeof(vec4b) * img.size().x, (byte*)res_img.data(), res_img.size().x,
+        res_img.size().y, sizeof(vec4b) * res_img.size().x, 4, 3, 0,
+        STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
+        nullptr);
 }
 
 }  // namespace yocto
@@ -413,7 +400,8 @@ void make_noise(image<vec4f>& img, const vec2i& size, const vec4f& c0,
 
 // Make a noise image. Wrap works only if size is a power of two.
 void make_fbm(image<vec4f>& img, const vec2i& size, const vec4f& c0,
-    const vec4f& c1, float scale, float lacunarity, float gain, int octaves, bool wrap) {
+    const vec4f& c1, float scale, float lacunarity, float gain, int octaves,
+    bool wrap) {
     make_fromij(img, size,
         [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale,
             lacunarity, gain, octaves, &c0, &c1](int i, int j) {
@@ -426,8 +414,8 @@ void make_fbm(image<vec4f>& img, const vec2i& size, const vec4f& c0,
 
 // Make a noise image. Wrap works only if size is a power of two.
 void make_ridge(image<vec4f>& img, const vec2i& size, const vec4f& c0,
-    const vec4f& c1, float scale, float lacunarity, float gain, float offset, int octaves,
-    bool wrap) {
+    const vec4f& c1, float scale, float lacunarity, float gain, float offset,
+    int octaves, bool wrap) {
     make_fromij(img, size,
         [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale,
             lacunarity, gain, offset, octaves, &c0, &c1](int i, int j) {
@@ -440,9 +428,9 @@ void make_ridge(image<vec4f>& img, const vec2i& size, const vec4f& c0,
 }
 
 // Make a noise image. Wrap works only if size is a power of two.
-void make_turbulence(image<vec4f>& img, const vec2i& size,
-    const vec4f& c0, const vec4f& c1, float scale, float lacunarity, float gain,
-    int octaves, bool wrap) {
+void make_turbulence(image<vec4f>& img, const vec2i& size, const vec4f& c0,
+    const vec4f& c1, float scale, float lacunarity, float gain, int octaves,
+    bool wrap) {
     make_fromij(img, size,
         [wrap3i = (wrap) ? vec3i{size.x, size.y, 2} : zero3i, size, scale,
             lacunarity, gain, octaves, &c0, &c1](int i, int j) {
@@ -455,8 +443,7 @@ void make_turbulence(image<vec4f>& img, const vec2i& size,
 }
 
 // Comvert a bump map to a normal map.
-void bump_to_normal(
-    image<vec4f>& norm, const image<vec4f>& img, float scale) {
+void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
     norm.resize(img.size());
     auto dx = 1.0f / img.size().x, dy = 1.0f / img.size().y;
     for (int j = 0; j < img.size().y; j++) {
@@ -532,7 +519,8 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
             auto phi       = (i + 0.5f) * 2 * pif / img.size().x;
             auto direction = vec3f{
                 cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-            auto gamma = acos(clamp(dot(direction, sun_direction), -1.0f, 1.0f));
+            auto gamma = acos(
+                clamp(dot(direction, sun_direction), -1.0f, 1.0f));
             for (int c = 0; c < 9; ++c) {
                 auto val =
                     (has_sun)
@@ -764,9 +752,10 @@ void make_logo(image<vec4b>& img, const string& type) {
     };
     // clang-format on
     if (type == "logo-render") {
-        auto img1 = image<vec<byte, 1>>{size, (vec1b*)logo_render.data()};
         img.resize(size);
-        convert_channels(img, img1);
+        for (auto i = 0; i < img.count(); i++)
+            img[i] = vec4b{
+                logo_render[i], logo_render[i], logo_render[i], (byte)255};
     } else {
         throw io_error("unknown builtin image " + type);
     }
@@ -908,8 +897,7 @@ void make_preset(image<vec4b>& img, const string& type) {
     }
 }
 
-void make_preset(
-    image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
+void make_preset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
     if (type.find("sky") == type.npos) {
         make_preset(ldr, type);
     } else {
@@ -1129,8 +1117,7 @@ static inline void load_pfm(const string& filename, image<vec4f>& img) {
     img = image{{width, height}, (const vec4f*)pixels};
     delete[] pixels;
 }
-static inline void save_pfm(
-    const string& filename, const image<vec4f>& img) {
+static inline void save_pfm(const string& filename, const image<vec4f>& img) {
     if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data())) {
         throw io_error("error saving image " + filename);
@@ -1168,8 +1155,7 @@ static inline void load_exr(const string& filename, image<vec4f>& img) {
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
 }
-static inline void save_exr(
-    const string& filename, const image<vec4f>& img) {
+static inline void save_exr(const string& filename, const image<vec4f>& img) {
     if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
             filename.c_str())) {
         throw io_error("error saving image " + filename);
@@ -1197,36 +1183,31 @@ static inline void load_stb(const string& filename, image<vec4f>& img) {
 }
 
 // save an image with stbi
-static inline void save_png(
-    const string& filename, const image<vec4b>& img) {
+static inline void save_png(const string& filename, const image<vec4b>& img) {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
             img.data(), img.size().x * 4)) {
         throw io_error("error saving image " + filename);
     }
 }
-static inline void save_jpg(
-    const string& filename, const image<vec4b>& img) {
+static inline void save_jpg(const string& filename, const image<vec4b>& img) {
     if (!stbi_write_jpg(
             filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
         throw io_error("error saving image " + filename);
     }
 }
-static inline void save_tga(
-    const string& filename, const image<vec4b>& img) {
+static inline void save_tga(const string& filename, const image<vec4b>& img) {
     if (!stbi_write_tga(
             filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
-static inline void save_bmp(
-    const string& filename, const image<vec4b>& img) {
+static inline void save_bmp(const string& filename, const image<vec4b>& img) {
     if (!stbi_write_bmp(
             filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
-static inline void save_hdr(
-    const string& filename, const image<vec4f>& img) {
+static inline void save_hdr(const string& filename, const image<vec4f>& img) {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data())) {
         throw io_error("error saving image " + filename);
@@ -1262,9 +1243,9 @@ static inline void load_stb_image_from_memory(
 static inline void load_image_preset(
     const string& filename, image<vec4f>& img) {
     auto [type, nfilename] = get_preset_type(filename);
-        img.resize({1024, 1024});
-        if (type == "images2") img.resize({2048, 1024});
-        make_preset(img, type);
+    img.resize({1024, 1024});
+    if (type == "images2") img.resize({2048, 1024});
+    make_preset(img, type);
 }
 static inline void load_image_preset(
     const string& filename, image<vec4b>& img) {
@@ -1281,8 +1262,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an hdr image.
-void load_image(
-    const string& filename, image<vec4f>& img) {
+void load_image(const string& filename, image<vec4f>& img) {
     if (is_preset_filename(filename)) {
         return load_image_preset(filename, img);
     }
@@ -1303,8 +1283,7 @@ void load_image(
 }
 
 // Saves an hdr image.
-void save_image(
-    const string& filename, const image<vec4f>& img) {
+void save_image(const string& filename, const image<vec4f>& img) {
     auto ext = get_extension(filename);
     if (ext == "hdr" || ext == "HDR") {
         save_hdr(filename, img);
@@ -1322,8 +1301,7 @@ void save_image(
 }
 
 // Loads an hdr image.
-void load_image(
-    const string& filename, image<vec4b>& img) {
+void load_image(const string& filename, image<vec4b>& img) {
     if (is_preset_filename(filename)) {
         return load_image_preset(filename, img);
     }
@@ -1346,8 +1324,7 @@ void load_image(
 }
 
 // Saves an ldr image.
-void save_image(
-    const string& filename, const image<vec4b>& img) {
+void save_image(const string& filename, const image<vec4b>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
         save_png(filename, img);
@@ -1367,8 +1344,7 @@ void save_image(
 }
 
 // Convenience helper for loading HDR or LDR based on filename
-void load_image(
-    const string& filename, image<vec4f>& hdr, image<vec4b>& ldr) {
+void load_image(const string& filename, image<vec4f>& hdr, image<vec4b>& ldr) {
     if (is_hdr_filename(filename)) {
         load_image(filename, hdr);
     } else {
@@ -1386,8 +1362,8 @@ void save_image(
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-void save_tonemapped(const string& filename,
-    const image<vec4f>& hdr, const tonemap_params& params) {
+void save_tonemapped(const string& filename, const image<vec4f>& hdr,
+    const tonemap_params& params) {
     if (is_hdr_filename(filename)) {
         save_image(filename, hdr);
     } else {
@@ -1398,8 +1374,7 @@ void save_tonemapped(const string& filename,
 }
 
 // Save with a logo embedded
-void save_image_with_logo(
-    const string& filename, const image<vec4f>& img) {
+void save_image_with_logo(const string& filename, const image<vec4f>& img) {
     auto logo = image<vec4f>{};
     make_logo(logo, "logo-render");
     auto img_copy = img;
@@ -1407,8 +1382,7 @@ void save_image_with_logo(
     set_region(img_copy, logo, offset);
     save_image(filename, img_copy);
 }
-void save_image_with_logo(
-    const string& filename, const image<vec4b>& img) {
+void save_image_with_logo(const string& filename, const image<vec4b>& img) {
     auto logo = image<vec4b>{};
     make_logo(logo, "logo-render");
     auto img_copy = img;
@@ -1419,8 +1393,8 @@ void save_image_with_logo(
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-void save_tonemapped_with_logo(const string& filename,
-    const image<vec4f>& hdr, const tonemap_params& params) {
+void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
+    const tonemap_params& params) {
     if (is_hdr_filename(filename)) {
         save_image_with_logo(filename, hdr);
     } else {
