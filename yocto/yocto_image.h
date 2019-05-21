@@ -102,94 +102,75 @@ namespace yocto {
 // Float to byte conversion.
 inline byte  float_to_byte(float a);
 inline float byte_to_float(byte a);
-
-// Element-wise float to byte conversion.
-template <int N>
-inline vec<byte, N> float_to_byte(const vec<float, N>& a);
-template <int N>
-inline vec<float, N> byte_to_float(const vec<byte, N>& a);
+inline vec1b float_to_byte(const vec1f& a);
+inline vec1f byte_to_float(const vec1b& a);
+inline vec2b float_to_byte(const vec2f& a);
+inline vec2f byte_to_float(const vec2b& a);
+inline vec3b float_to_byte(const vec3f& a);
+inline vec3f byte_to_float(const vec3b& a);
+inline vec4b float_to_byte(const vec4f& a);
+inline vec4f byte_to_float(const vec4b& a);
 
 // Color luminance
-template <typename T>
-inline T luminance(const vec<T, 3>& a);
+inline float luminance(const vec3f& a);
 
 // sRGB non-linear curve
-template <typename T>
-inline T srgb_to_linear(T srgb);
-template <typename T>
-inline T linear_to_srgb(T lin);
-template <typename T, int N>
-inline vec<T, N> srgb_to_linear(const vec<T, N>& srgb);
-template <typename T, int N>
-inline vec<T, N> linear_to_srgb(const vec<T, N>& lin);
+inline float srgb_to_linear(float srgb);
+inline float linear_to_srgb(float lin);
+inline vec1f srgb_to_linear(const vec1f& srgb);
+inline vec1f linear_to_srgb(const vec1f& lin);
+inline vec2f srgb_to_linear(const vec2f& srgb);
+inline vec2f linear_to_srgb(const vec2f& lin);
+inline vec3f srgb_to_linear(const vec3f& srgb);
+inline vec3f linear_to_srgb(const vec3f& lin);
+inline vec4f srgb_to_linear(const vec4f& srgb);
+inline vec4f linear_to_srgb(const vec4f& lin);
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-template <typename T>
-inline vec<T, 3> apply_contrast(const vec<T, 3>& rgb, T contrast, T grey);
+inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey);
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-template <typename T>
-inline vec<T, 3> apply_logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey);
+inline vec3f apply_logcontrast(const vec3f& rgb, float logcontrast, float grey);
 // Apply saturation.
-template <typename T>
-inline vec<T, 3> apply_saturation(const vec<T, 3>& rgb, T saturation,
-    const vec<T, 3>& luminance_weights = vec<T, 3>{0.25, 0.5, 0.25});
+inline vec3f apply_saturation(const vec3f& rgb, float saturation,
+    const vec3f& luminance_weights = vec3f{0.25, 0.5, 0.25});
 
 // Fitted ACES tonemapping curve.
-template <typename T>
-inline T tonemap_filmic(T hdr);
-template <typename T>
-inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr, bool accurate_fit = true);
+inline vec3f tonemap_filmic(const vec3f& hdr, bool accurate_fit = true);
 
 // Convert number of channels
 template <typename T, int N1, int N2>
 inline vec<T, N1> convert_channels(const vec<T, N2>& a);
 
 // Forward declaration
-template <typename T>
 struct rgb_space;
 
 // Conversion between rgb color spaces
-template <typename T>
-constexpr vec<T, 3> rgb_to_rgb(const vec<T, 3>& rgb,
-    const rgb_space<T>& from_space, const rgb_space<T>& to_space);
+inline vec3f rgb_to_rgb(
+    const vec3f& rgb, const rgb_space& from_space, const rgb_space& to_space);
 
 // Conversion to/from xyz
-template <typename T>
-constexpr vec<T, 3> rgb_to_xyz(
-    const vec<T, 3>& rgb, const rgb_space<T>& rgb_space);
-template <typename T>
-constexpr vec<T, 3> xyz_to_rgb(
-    const vec<T, 3>& xyz, const rgb_space<T>& rgb_space);
+inline vec3f rgb_to_xyz(const vec3f& rgb, const rgb_space& rgb_space);
+inline vec3f xyz_to_rgb(const vec3f& xyz, const rgb_space& rgb_space);
 
 // Convert between CIE XYZ and xyY
-template <typename T>
-inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz);
+inline vec3f xyz_to_xyY(const vec3f& xyz);
 // Convert between CIE XYZ and xyY
-template <typename T>
-inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY);
+inline vec3f xyY_to_xyz(const vec3f& xyY);
 
 // Approximate color of blackbody radiation from wavelength in nm.
-// Returns values in linear color space.
-template <typename T>
-inline vec<T, 3> blackbody_to_rgb(T temperature);
+inline vec3f blackbody_to_rgb(float temperature);
 
 // Converts between HSV and RGB color spaces.
-template <typename T>
-inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv);
-template <typename T>
-inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
+inline vec3f hsv_to_rgb(const vec3f& hsv);
+inline vec3f rgb_to_hsv(const vec3f& rgb);
 
 // Tone curves
 // Pure gamma tone curve: y = x^gamma
-template <typename T>
-constexpr T apply_gamma(T x, T gamma);
-template <typename T>
-constexpr T apply_gamma_inv(T x, T gamma);
+constexpr float apply_gamma(float x, float gamma);
+constexpr float apply_gamma_inv(float x, float gamma);
 // Pure gamma tone curve: y = (x < d) ? x * c : pow(x * a + b, gamma)
-template <typename T>
-constexpr T apply_gamma(T x, T gamma, const vec<T, 4>& abcd);
-template <typename T>
-constexpr T apply_gamma_inv(T x, T gamma, const vec<T, 4>& abcd);
+constexpr float apply_gamma(float x, float gamma, const vec4f& abcd);
+constexpr float apply_gamma_inv(float x, float gamma, const vec4f& abcd);
 
 // RGB color spaces
 enum struct rgb_space_type {
@@ -213,7 +194,7 @@ enum struct rgb_space_type {
 
 // get the color space definition for builtin color spaces
 template <typename T>
-constexpr rgb_space<T> get_rgb_space(rgb_space_type type);
+constexpr rgb_space get_rgb_space(rgb_space_type type);
 
 }  // namespace yocto
 
@@ -430,12 +411,12 @@ namespace yocto {
 
 // Make example images in linear color space. Takes as input images allocated
 // to the desired size and fill the pixel with expected values.
-void make_grid(
-    image<vec4f>& img, const vec2i& size, int tile, const vec4f& c0, const vec4f& c1);
-void make_checker(
-    image<vec4f>& img, const vec2i& size, int tile, const vec4f& c0, const vec4f& c1);
-void make_bumpdimple(
-    image<vec4f>& img, const vec2i& size, int tile, const vec4f& c0, const vec4f& c1);
+void make_grid(image<vec4f>& img, const vec2i& size, int tile, const vec4f& c0,
+    const vec4f& c1);
+void make_checker(image<vec4f>& img, const vec2i& size, int tile,
+    const vec4f& c0, const vec4f& c1);
+void make_bumpdimple(image<vec4f>& img, const vec2i& size, int tile,
+    const vec4f& c0, const vec4f& c1);
 void make_ramp(
     image<vec4f>& img, const vec2i& size, const vec4f& c0, const vec4f& c1);
 void make_ramp(image<vec4f>& img, const vec2i& size, const vec4f& c00,
@@ -443,13 +424,14 @@ void make_ramp(image<vec4f>& img, const vec2i& size, const vec4f& c00,
 void make_gammaramp(
     image<vec4f>& img, const vec2i& size, const vec4f& c0, const vec4f& c1);
 void make_uvramp(image<vec4f>& img, const vec2i& size);
-void make_uvgrid(image<vec4f>& img, const vec2i& size, int tile = 8,
-    bool colored = true);
+void make_uvgrid(
+    image<vec4f>& img, const vec2i& size, int tile = 8, bool colored = true);
 void make_blackbodyramp(image<vec4f>& img, const vec2i& size,
     float start_temperature = 1000, float end_temperature = 12000);
 
 // Comvert a bump map to a normal map. All linear color spaces.
-void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
+void bump_to_normal(
+    image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
@@ -458,8 +440,7 @@ void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale = 1
 // of 0 sets the eath sun defaults (ignoring intensity too).
 void make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-    float                sun_temperature = 0,
-    const vec3f& ground_albedo   = {0.2, 0.2, 0.2});
+    float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
 void make_lights(image<vec4f>& img, const vec2i& size,
     const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
@@ -468,9 +449,9 @@ void make_lights(image<vec4f>& img, const vec2i& size,
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 void make_noise(image<vec4f>& img, const vec2i& size, const vec4f& c0,
     const vec4f& c1, float scale = 1, bool wrap = true);
-void make_fbm(image<vec4f>& img, const vec2i& size, const vec4f& c0, const vec4f& c1,
-    float scale = 1, float lacunarity = 2, float gain = 0.5, int octaves = 6,
-    bool wrap = true);
+void make_fbm(image<vec4f>& img, const vec2i& size, const vec4f& c0,
+    const vec4f& c1, float scale = 1, float lacunarity = 2, float gain = 0.5,
+    int octaves = 6, bool wrap = true);
 void make_ridge(image<vec4f>& img, const vec2i& size, const vec4f& c0,
     const vec4f& c1, float scale = 1, float lacunarity = 2, float gain = 0.5,
     float offset = 1, int octaves = 6, bool wrap = true);
@@ -479,8 +460,8 @@ void make_turbulence(image<vec4f>& img, const vec2i& size, const vec4f& c0,
     int octaves = 6, bool wrap = true);
 
 // Add a border to an image
-void add_border(
-    image<vec4f>& img, const vec2i& size, int border_width, const vec4f& border_color);
+void add_border(image<vec4f>& img, const vec2i& size, int border_width,
+    const vec4f& border_color);
 
 // Make logo images. Image is resized to proper size.
 void make_logo(image<vec4f>& img, const string& name);
@@ -715,42 +696,31 @@ constexpr T default_alpha() {
 
 inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
 inline float byte_to_float(byte a) { return a / 255.0f; }
-
-// Element-wise float to byte conversion.
-template <int N>
-inline vec<byte, N> float_to_byte(const vec<float, N>& a) {
-    if constexpr (N == 1) {
-        return {float_to_byte(a.x)};
-    } else if constexpr (N == 2) {
-        return {float_to_byte(a.x), float_to_byte(a.y)};
-    } else if constexpr (N == 3) {
-        return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z)};
-    } else if constexpr (N == 4) {
-        return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z),
-            float_to_byte(a.w)};
-    } else {
-        throw runtime_error("Bad number of arguments");
-    }
+inline vec1b float_to_byte(const vec1f& a) { return {float_to_byte(a.x)}; }
+inline vec2b float_to_byte(const vec2f& a) {
+    return {float_to_byte(a.x), float_to_byte(a.y)};
 }
-template <int N>
-inline vec<float, N> byte_to_float(const vec<byte, N>& a) {
-    if constexpr (N == 1) {
-        return {byte_to_float(a.x)};
-    } else if constexpr (N == 2) {
-        return {byte_to_float(a.x), byte_to_float(a.y)};
-    } else if constexpr (N == 3) {
-        return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z)};
-    } else if constexpr (N == 4) {
-        return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z),
-            byte_to_float(a.w)};
-    } else {
-        throw runtime_error("Bad number of arguments");
-    }
+inline vec3b float_to_byte(const vec3f& a) {
+    return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z)};
+}
+inline vec4b float_to_byte(const vec4f& a) {
+    return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z),
+        float_to_byte(a.w)};
+}
+inline vec1f byte_to_float(const vec1b& a) { return {byte_to_float(a.x)}; }
+inline vec2f byte_to_float(const vec2b& a) {
+    return {byte_to_float(a.x), byte_to_float(a.y)};
+}
+inline vec3f byte_to_float(const vec3b& a) {
+    return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z)};
+}
+inline vec4f byte_to_float(const vec4b& a) {
+    return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z),
+        byte_to_float(a.w)};
 }
 
-template <typename T>
-inline T luminance(const vec<T, 3>& a) {
-    return ((T)0.2126 * a.x + (T)0.7152 * a.y + (T)0.0722 * a.z);
+inline float luminance(const vec3f& a) {
+    return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
 }
 
 // sRGB non-linear curve
@@ -768,101 +738,91 @@ inline float linear_to_srgb(float lin) {
         return (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
     }
 }
-template <typename T, int N>
-inline vec<T, N> srgb_to_linear(const vec<T, N>& srgb) {
-    if constexpr (N == 1) {
-        return {srgb_to_linear(srgb.x)};
-    } else if constexpr (N == 2) {
-        return {srgb_to_linear(srgb.x), srgb.y};
-    } else if constexpr (N == 3) {
-        return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
-            srgb_to_linear(srgb.z)};
-    } else if constexpr (N == 4) {
-        return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
-            srgb_to_linear(srgb.z), srgb.w};
-    } else {
-        static_assert(channel_error<N>, "unsupported number of channels");
-    }
+inline vec1f srgb_to_linear(const vec1f& srgb) {
+    return {srgb_to_linear(srgb.x)};
 }
-template <typename T, int N>
-inline vec<T, N> linear_to_srgb(const vec<T, N>& lin) {
-    if constexpr (N == 1) {
-        return {linear_to_srgb(lin.x)};
-    } else if constexpr (N == 2) {
-        return {linear_to_srgb(lin.x), lin.y};
-    } else if constexpr (N == 3) {
-        return {linear_to_srgb(lin.x), linear_to_srgb(lin.y),
-            linear_to_srgb(lin.z)};
-    } else if constexpr (N == 4) {
-        return {linear_to_srgb(lin.x), linear_to_srgb(lin.y),
-            linear_to_srgb(lin.z), lin.w};
-    } else {
-        static_assert(channel_error<N>, "unsupported number of channels");
-    }
+inline vec2f srgb_to_linear(const vec2f& srgb) {
+    return {srgb_to_linear(srgb.x), srgb.y};
+}
+inline vec3f srgb_to_linear(const vec3f& srgb) {
+    return {
+        srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
+}
+inline vec4f srgb_to_linear(const vec4f& srgb) {
+    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
+        srgb_to_linear(srgb.z), srgb.w};
+}
+inline vec1f linear_to_srgb(const vec1f& lin) {
+    return {linear_to_srgb(lin.x)};
+}
+inline vec2f linear_to_srgb(const vec2f& lin) {
+    return {linear_to_srgb(lin.x), lin.y};
+}
+inline vec3f linear_to_srgb(const vec3f& lin) {
+    return {
+        linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
+}
+inline vec4f linear_to_srgb(const vec4f& lin) {
+    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z),
+        lin.w};
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-template <typename T>
-inline vec<T, 3> apply_contrast(const vec<T, 3>& rgb, T contrast, T grey) {
-    return max(zero<T, 3>, grey + (rgb - grey) * (contrast * 2));
+inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey) {
+    return max(zero3f, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-template <typename T>
-inline vec<T, 3> apply_logcontrast(
-    const vec<T, 3>& rgb, T logcontrast, T grey) {
+inline vec3f apply_logcontrast(const vec3f& rgb, float logcontrast, float grey) {
     auto epsilon  = (float)0.0001;
     auto log_grey = log2(grey);
     auto log_ldr  = log2(rgb + epsilon);
     auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
-    return max(zero<T, 3>, exp2(adjusted) - epsilon);
+    return max(zero3f, exp2(adjusted) - epsilon);
 }
 // Apply saturation.
-template <typename T>
-inline vec<T, 3> apply_saturation(
-    const vec<T, 3>& rgb, T saturation, const vec<T, 3>& weights) {
+inline vec3f apply_saturation(
+    const vec3f& rgb, float saturation, const vec3f& weights) {
     auto grey = dot(weights, rgb);
-    return max(zero<T, 3>, grey + (rgb - grey) * (saturation * 2));
+    return max(zero3f, grey + (rgb - grey) * (saturation * 2));
 }
 
 // Fitted ACES tonemapping curve.
-template <typename T>
-inline T tonemap_filmic(T hdr_) {
+inline float tonemap_filmic(float hdr_) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
-    auto ldr = (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
-               (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
-    return max((T)0, ldr);
+    auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
+    auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
+               (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+    return max(0.0f, ldr);
 }
-template <typename T>
-inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr_, bool accurate_fit) {
+inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit) {
     if (!accurate_fit) {
         // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-        auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
-        auto ldr = (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
-                   (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
-        return max(zero<T, 3>, ldr);
+        auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
+        auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
+                   (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+        return max(zero3f, ldr);
     } else {
         // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
         // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-        static const auto ACESInputMat = transpose(mat<T, 3, 3>{
+        static const auto ACESInputMat = transpose(mat3f{
             {0.59719, 0.35458, 0.04823},
             {0.07600, 0.90834, 0.01566},
             {0.02840, 0.13383, 0.83777},
         });
         // ODT_SAT => XYZ => D60_2_D65 => sRGB
-        static const auto ACESOutputMat = transpose(mat<T, 3, 3>{
+        static const auto ACESOutputMat = transpose(mat3f{
             {1.60475, -0.53108, -0.07367},
             {-0.10208, 1.10813, -0.00605},
             {-0.00327, -0.07276, 1.07602},
         });
         // RRT => ODT
-        auto RRTAndODTFit = [](const vec<T, 3>& v) -> vec<T, 3> {
-            return (v * v + v * (T)0.0245786 - (T)0.000090537) /
-                   (v * v * (T)0.983729 + v * (T)0.4329510 + (T)0.238081);
+        auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
+            return (v * v + v * 0.0245786f - 0.000090537f) /
+                   (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
         };
 
         auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
-        return max(zero<T, 3>, ldr);
+        return max(zero3f, ldr);
     }
 }
 
@@ -923,14 +883,12 @@ inline vec<T, N1> convert_channels(const vec<T, N2>& a) {
 }
 
 // https://en.wikipedia.org/wiki/SRGB
-template <typename T>
-constexpr mat<T, 3, 3> srgb_to_xyz_mat = {
+constexpr mat3f srgb_to_xyz_mat = {
     {0.4124, 0.2126, 0.0193},
     {0.3576, 0.7152, 0.1192},
     {0.1805, 0.0722, 0.9504},
 };
-template <typename T>
-constexpr mat<T, 3, 3> xyz_to_srgb_mat = {
+constexpr mat3f xyz_to_srgb_mat = {
     {+3.2406, -1.5372, -0.4986},
     {-0.9689, +1.8758, +0.0415},
     {+0.0557, -0.2040, +1.0570},
@@ -948,137 +906,130 @@ enum struct rgb_curve_type {
 };
 
 // RGB color space definition. Various predefined color spaces are listed below.
-template <typename T>
 struct rgb_space {
     // primaries
-    vec<T, 2>    red_chromaticity;    // xy chromaticity of the red primary
-    vec<T, 2>    green_chromaticity;  // xy chromaticity of the green primary
-    vec<T, 2>    blue_chromaticity;   // xy chromaticity of the blue primary
-    vec<T, 2>    white_chromaticity;  // xy chromaticity of the white point
-    mat<T, 3, 3> rgb_to_xyz_mat;      // matrix from rgb to xyz
-    mat<T, 3, 3> xyz_to_rgb_mat;      // matrix from xyz to rgb
+    vec2f red_chromaticity;    // xy chromaticity of the red primary
+    vec2f green_chromaticity;  // xy chromaticity of the green primary
+    vec2f blue_chromaticity;   // xy chromaticity of the blue primary
+    vec2f white_chromaticity;  // xy chromaticity of the white point
+    mat3f rgb_to_xyz_mat;      // matrix from rgb to xyz
+    mat3f xyz_to_rgb_mat;      // matrix from xyz to rgb
     // tone curve
     rgb_curve_type curve_type;
-    T              curve_gamma;  // gamma for power curves
-    vec<T, 4>      curve_abcd;   // tone curve values for linear_gamma curves
+    float          curve_gamma;  // gamma for power curves
+    vec4f          curve_abcd;   // tone curve values for linear_gamma curves
 };
 
 // Compute the rgb -> xyz matrix from the color space definition
 // Input: red, green, blue, white (x,y) chromoticities
 // Algorithm from: SMPTE Recommended Practice RP 177-1993
 // http://car.france3.mars.free.fr/HD/INA-%2026%20jan%2006/SMPTE%20normes%20et%20confs/rp177.pdf
-template <typename T>
-constexpr mat<T, 3, 3> rgb_to_xyz_mat(const vec<T, 2>& rc, const vec<T, 2>& gc,
-    const vec<T, 2>& bc, const vec<T, 2>& wc) {
-    auto rgb = mat<T, 3, 3>{
+constexpr mat3f rgb_to_xyz_mat(
+    const vec2f& rc, const vec2f& gc, const vec2f& bc, const vec2f& wc) {
+    auto rgb = mat3f{
         {rc.x, rc.y, 1 - rc.x - rc.y},
         {gc.x, gc.y, 1 - gc.x - gc.y},
         {bc.x, bc.y, 1 - bc.x - bc.y},
     };
-    auto w = vec<T, 3>{wc.x, wc.y, 1 - wc.x - wc.y};
-    auto c = inverse(rgb) * vec<T, 3>{w.x / w.y, 1, w.z / w.y};
-    return mat<T, 3, 3>{c.x * rgb.x, c.y * rgb.y, c.z * rgb.z};
+    auto w = vec3f{wc.x, wc.y, 1 - wc.x - wc.y};
+    auto c = inverse(rgb) * vec3f{w.x / w.y, 1, w.z / w.y};
+    return mat3f{c.x * rgb.x, c.y * rgb.y, c.z * rgb.z};
 }
 
 // Construct an RGB color space. Predefined color spaces below
-template <typename T>
-constexpr rgb_space<T> make_linear_rgb_space(const vec<T, 2>& red,
-    const vec<T, 2>& green, const vec<T, 2>& blue, const vec<T, 2>& white) {
+constexpr rgb_space make_linear_rgb_space(const vec2f& red, const vec2f& green,
+    const vec2f& blue, const vec2f& white) {
     return rgb_space{red, green, blue, white,
-        rgb_to_xyz_mat<T>(red, green, blue, white),
-        inverse(rgb_to_xyz_mat<T>(red, green, blue, white)),
+        rgb_to_xyz_mat(red, green, blue, white),
+        inverse(rgb_to_xyz_mat(red, green, blue, white)),
         rgb_curve_type::linear};
 }
-template <typename T>
-constexpr rgb_space<T> make_gamma_rgb_space(const vec<T, 2>& red,
-    const vec<T, 2>& green, const vec<T, 2>& blue, const vec<T, 2>& white,
-    T gamma, const vec<T, 4>& curve_abcd = zero<T, 4>) {
+constexpr rgb_space make_gamma_rgb_space(const vec2f& red, const vec2f& green,
+    const vec2f& blue, const vec2f& white, float gamma,
+    const vec4f& curve_abcd = zero4f) {
     return rgb_space{red, green, blue, white,
-        rgb_to_xyz_mat<T>(red, green, blue, white),
-        inverse(rgb_to_xyz_mat<T>(red, green, blue, white)),
-        curve_abcd == zero<T, 4> ? rgb_curve_type::gamma
-                                 : rgb_curve_type::linear_gamma};
+        rgb_to_xyz_mat(red, green, blue, white),
+        inverse(rgb_to_xyz_mat(red, green, blue, white)),
+        curve_abcd == zero4f ? rgb_curve_type::gamma
+                             : rgb_curve_type::linear_gamma};
 }
-template <typename T>
-constexpr rgb_space<T> make_other_rgb_space(const vec<T, 2>& red,
-    const vec<T, 2>& green, const vec<T, 2>& blue, const vec<T, 2>& white,
-    rgb_curve_type curve_type) {
+constexpr rgb_space make_other_rgb_space(const vec2f& red, const vec2f& green,
+    const vec2f& blue, const vec2f& white, rgb_curve_type curve_type) {
     return rgb_space{red, green, blue, white,
-        rgb_to_xyz_mat<T>(red, green, blue, white),
-        inverse(rgb_to_xyz_mat<T>(red, green, blue, white)), curve_type};
+        rgb_to_xyz_mat(red, green, blue, white),
+        inverse(rgb_to_xyz_mat(red, green, blue, white)), curve_type};
 }
 
-template <typename T>
-constexpr rgb_space<T> get_rgb_space(rgb_space_type space) {
+constexpr rgb_space get_rgb_space(rgb_space_type space) {
     switch (space) {
         // https://en.wikipedia.org/wiki/Rec._709
         case rgb_space_type::linear_srgb:
-            return make_linear_rgb_space<T>({0.6400, 0.3300}, {0.3000, 0.6000},
+            return make_linear_rgb_space({0.6400, 0.3300}, {0.3000, 0.6000},
                 {0.1500, 0.0600}, {0.3127, 0.3290});
         // https://en.wikipedia.org/wiki/Rec._709
         case rgb_space_type::srgb:
-            return make_gamma_rgb_space<T>({0.6400, 0.3300}, {0.3000, 0.6000},
+            return make_gamma_rgb_space({0.6400, 0.3300}, {0.3000, 0.6000},
                 {0.1500, 0.0600}, {0.3127, 0.3290}, 2.4,
                 {1.055, 0.055, 12.92, 0.0031308});
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System
         case rgb_space_type::aces_2065:
-            return make_linear_rgb_space<T>({0.7347, 0.2653}, {0.0000, 1.0000},
+            return make_linear_rgb_space({0.7347, 0.2653}, {0.0000, 1.0000},
                 {0.0001, -0.0770}, {0.32168, 0.33767});
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
         case rgb_space_type::aces_cg:
-            return make_linear_rgb_space<T>({0.7130, 0.2930}, {0.1650, 0.8300},
+            return make_linear_rgb_space({0.7130, 0.2930}, {0.1650, 0.8300},
                 {0.1280, +0.0440}, {0.32168, 0.33767});
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
         case rgb_space_type::aces_cc:
-            return make_other_rgb_space<T>({0.7130, 0.2930}, {0.1650, 0.8300},
+            return make_other_rgb_space({0.7130, 0.2930}, {0.1650, 0.8300},
                 {0.1280, +0.0440}, {0.32168, 0.33767}, rgb_curve_type::aces_cc);
         // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
         case rgb_space_type::aces_cct:
-            return make_other_rgb_space<T>({0.7130, 0.2930}, {0.1650, 0.8300},
+            return make_other_rgb_space({0.7130, 0.2930}, {0.1650, 0.8300},
                 {0.1280, +0.0440}, {0.32168, 0.33767},
                 rgb_curve_type::aces_cct);
         // https://en.wikipedia.org/wiki/Adobe_RGB_color_space
         case rgb_space_type::adobe_rgb:
-            return make_gamma_rgb_space<T>({0.6400, 0.3300}, {0.2100, 0.7100},
+            return make_gamma_rgb_space({0.6400, 0.3300}, {0.2100, 0.7100},
                 {0.1500, 0.0600}, {0.3127, 0.3290}, 2.19921875);
         // https://en.wikipedia.org/wiki/Rec._709
         case rgb_space_type::rec_709:
-            return make_gamma_rgb_space<T>({0.6400, 0.3300}, {0.3000, 0.6000},
+            return make_gamma_rgb_space({0.6400, 0.3300}, {0.3000, 0.6000},
                 {0.1500, 0.0600}, {0.3127, 0.3290}, 1 / 0.45,
                 {1.099, 0.099, 4.500, 0.018});
         // https://en.wikipedia.org/wiki/Rec._2020
         case rgb_space_type::rec_2020:
-            return make_gamma_rgb_space<T>({0.7080, 0.2920}, {0.1700, 0.7970},
+            return make_gamma_rgb_space({0.7080, 0.2920}, {0.1700, 0.7970},
                 {0.1310, 0.0460}, {0.3127, 0.3290}, 1 / 0.45,
                 {1.09929682680944, 0.09929682680944, 4.5, 0.018053968510807});
         // https://en.wikipedia.org/wiki/Rec._2020
         case rgb_space_type::rec_2100_pq:
-            return make_other_rgb_space<T>({0.7080, 0.2920}, {0.1700, 0.7970},
+            return make_other_rgb_space({0.7080, 0.2920}, {0.1700, 0.7970},
                 {0.1310, 0.0460}, {0.3127, 0.3290}, rgb_curve_type::pq);
         // https://en.wikipedia.org/wiki/Rec._2020
         case rgb_space_type::rec_2100_hlg:
-            return make_other_rgb_space<T>({0.7080, 0.2920}, {0.1700, 0.7970},
+            return make_other_rgb_space({0.7080, 0.2920}, {0.1700, 0.7970},
                 {0.1310, 0.0460}, {0.3127, 0.3290}, rgb_curve_type::hlg);
         // https://en.wikipedia.org/wiki/DCI-P3
         case rgb_space_type::p3_dci:
-            return make_gamma_rgb_space<T>({0.6800, 0.3200}, {0.2650, 0.6900},
+            return make_gamma_rgb_space({0.6800, 0.3200}, {0.2650, 0.6900},
                 {0.1500, 0.0600}, {0.3140, 0.3510}, 1.6);
         // https://en.wikipedia.org/wiki/DCI-P3
         case rgb_space_type::p3_d60:
-            return make_gamma_rgb_space<T>({0.6800, 0.3200}, {0.2650, 0.6900},
+            return make_gamma_rgb_space({0.6800, 0.3200}, {0.2650, 0.6900},
                 {0.1500, 0.0600}, {0.32168, 0.33767}, 1.6);
         // https://en.wikipedia.org/wiki/DCI-P3
         case rgb_space_type::p3_d65:
-            return make_gamma_rgb_space<T>({0.6800, 0.3200}, {0.2650, 0.6900},
+            return make_gamma_rgb_space({0.6800, 0.3200}, {0.2650, 0.6900},
                 {0.1500, 0.0600}, {0.3127, 0.3290}, 1.6);
         // https://en.wikipedia.org/wiki/DCI-P3
         case rgb_space_type::p3_display:
-            return make_gamma_rgb_space<T>({0.6800, 0.3200}, {0.2650, 0.6900},
+            return make_gamma_rgb_space({0.6800, 0.3200}, {0.2650, 0.6900},
                 {0.1500, 0.0600}, {0.3127, 0.3290}, 2.4,
                 {1.055, 0.055, 12.92, 0.0031308});
         // https://en.wikipedia.org/wiki/ProPhoto_RGB_color_space
         case rgb_space_type::prophoto_rgb:
-            return make_gamma_rgb_space<T>({0.7347, 0.2653}, {0.1596, 0.8404},
+            return make_gamma_rgb_space({0.7347, 0.2653}, {0.1596, 0.8404},
                 {0.0366, 0.0001}, {0.3457, 0.3585}, 1.8,
                 {1, 0, 16, 0.001953125});
         default: throw "unknown color space";
@@ -1086,43 +1037,39 @@ constexpr rgb_space<T> get_rgb_space(rgb_space_type space) {
 }
 
 // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-template <typename T>
-constexpr T acescc_display_to_linear(T x) {
-    if (x < (T)-0.3013698630) {  // (9.72-15)/17.52
-        return (exp2(x * (T)17.52 - (T)9.72) - exp2((T)-16)) * 2;
-    } else if (x < (log2((T)65504) + (T)9.72) / (T)17.52) {
-        return exp2(x * (T)17.52 - (T)9.72);
+constexpr float acescc_display_to_linear(float x) {
+    if (x < -0.3013698630f) {  // (9.72-15)/17.52
+        return (exp2(x * 17.52f - 9.72f) - exp2(-16.0f)) * 2;
+    } else if (x < (log2(65504.0f) + 9.72f) / 17.52f) {
+        return exp2(x * 17.52f - 9.72f);
     } else {  // (in >= (log2(65504)+9.72)/17.52)
-        return (T)65504;
+        return 65504.0f;
     }
 }
 // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-template <typename T>
-constexpr T acescct_display_to_linear(T x) {
-    if (x < (T)0.155251141552511) {
-        return (x - (T)0.0729055341958355) / (T)10.5402377416545;
+constexpr float acescct_display_to_linear(float x) {
+    if (x < 0.155251141552511f) {
+        return (x - 0.0729055341958355f) / 10.5402377416545f;
     } else {
-        return exp2(x * (T)17.52 - (T)9.72);
+        return exp2(x * 17.52f - 9.72f);
     }
 }
 // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-template <typename T>
-constexpr T acescc_linear_to_display(T x) {
+constexpr float acescc_linear_to_display(float x) {
     if (x <= 0) {
-        return (T)-0.3584474886;  // =(log2( pow(2.,-16.))+9.72)/17.52
-    } else if (x < exp2((T)-15)) {
-        return (log2(exp2((T)-16) + x * (T)0.5) + (T)9.72) / (T)17.52;
+        return -0.3584474886f;  // =(log2( pow(2.,-16.))+9.72)/17.52
+    } else if (x < exp2(-15.0f)) {
+        return (log2(exp2(-16.0f) + x * 0.5f) + 9.72f) / 17.52f;
     } else {  // (in >= pow(2.,-15))
-        return (log2(x) + (T)9.72) / (T)17.52;
+        return (log2(x) + 9.72f) / 17.52f;
     }
 }
 // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-template <typename T>
-constexpr T acescct_linear_to_display_to(T x) {
-    if (x <= (T)0.0078125) {
-        return (T)10.5402377416545 * x + (T)0.0729055341958355;
+constexpr float acescct_linear_to_display(float x) {
+    if (x <= 0.0078125f) {
+        return 10.5402377416545f * x + 0.0729055341958355f;
     } else {
-        return (log2(x) + (T)9.72) / (T)17.52;
+        return (log2(x) + 9.72f) / 17.52f;
     }
 }
 
@@ -1130,19 +1077,17 @@ constexpr T acescct_linear_to_display_to(T x) {
 // https://github.com/ampas/aces-dev/blob/master/transforms/ctl/lib/ACESlib.Utilities_Color.ctl
 // In PQ, we assume that the linear luminance in [0,1] corresponds to
 // [0,10000] cd m^2
-template <typename T>
-constexpr T pq_display_to_linear(T x) {
-    T Np = pow(x, 1 / (T)78.84375);
-    T L  = max(Np - (T)0.8359375, (T)0);
-    L    = L / ((T)18.8515625 - (T)18.6875 * Np);
-    L    = pow(L, 1 / (T)0.1593017578125);
+inline float pq_display_to_linear(float x) {
+    auto Np = pow(x, 1 / 78.84375f);
+    auto L  = max(Np - 0.8359375f, 0.0f);
+    L       = L / (18.8515625f - 18.6875f * Np);
+    L       = pow(L, 1 / 0.1593017578125f);
     return L;
 }
-template <typename T>
-constexpr T pq_linear_to_display(T x) {
-    return pow(((T)0.8359375 + (T)18.8515625 * pow(x, (T)0.1593017578125)) /
-                   (1 + (T)18.6875 * pow(x, (T)0.1593017578125)),
-        (T)78.84375);
+inline float pq_linear_to_display(float x) {
+    return pow((0.8359375 + 18.8515625 * pow(x, 0.1593017578125f)) /
+                   (1 + 18.6875f * pow(x, 0.1593017578125f)),
+        78.84375f);
 }
 // https://en.wikipedia.org/wiki/High-dynamic-range_video#Perceptual_Quantizer
 // In HLG, we assume that the linear luminance in [0,1] corresponds to
@@ -1150,36 +1095,32 @@ constexpr T pq_linear_to_display(T x) {
 // range for nominal luminance. But HLG was initially defined in the [0,12]
 // range where it maps 1 to 0.5 and 12 to 1. For use in HDR tonemapping that is
 // likely a better range to use.
-template <typename T>
-constexpr T hlg_display_to_linear(T x) {
-    if (x < (T)0.5) {
+constexpr float hlg_display_to_linear(float x) {
+    if (x < 0.5f) {
         return 3 * 3 * x * x;
     } else {
-        return (exp((x - (T)0.55991073) / (T)0.17883277) + (T)0.28466892) / 12;
+        return (exp((x - 0.55991073f) / 0.17883277f) + 0.28466892f) / 12;
     }
 }
-template <typename T>
-constexpr T hlg_linear_to_display(T x) {
-    if (x < 1 / (T)12) {
+constexpr float hlg_linear_to_display(float x) {
+    if (x < 1 / 12.0f) {
         return sqrt(3 * x);
     } else {
-        return (T)0.17883277 * log(12 * x - (T)0.28466892) + (T)0.55991073;
+        return 0.17883277f * log(12 * x - 0.28466892f) + 0.55991073f;
     }
 }
 
 // Applies linear to display transformations and vice-verse
-template <typename T>
-constexpr vec<T, 3> linear_to_display(
-    const vec<T, 3>& rgb, const rgb_space<T>& space) {
+constexpr vec3f linear_to_display(const vec3f& rgb, const rgb_space& space) {
     if (space.curve_type == rgb_curve_type::linear) {
         return rgb;
     } else if (space.curve_type == rgb_curve_type::gamma) {
-        return pow(rgb, 1 / space.gamma);
+        return pow(rgb, 1 / space.curve_gamma);
     } else if (space.curve_type == rgb_curve_type::linear_gamma) {
         auto& [a, b, c, d] = space.curve_abcd;
         auto lim           = d;
         auto lin           = rgb * c;
-        auto gamma         = a * pow(rgb, 1 / space.gamma) - b;
+        auto gamma         = a * pow(rgb, 1 / space.curve_gamma) - b;
         return {
             rgb.x < lim ? lin.x : gamma.x,
             rgb.y < lim ? lin.y : gamma.y,
@@ -1197,20 +1138,20 @@ constexpr vec<T, 3> linear_to_display(
     } else if (space.curve_type == rgb_curve_type::hlg) {
         return {hlg_linear_to_display(rgb.x), hlg_linear_to_display(rgb.y),
             hlg_linear_to_display(rgb.z)};
+    } else {
+        throw runtime_error("should not have gotten here");
     }
 }
-template <typename T>
-constexpr vec<T, 3> display_to_linear(
-    const vec<T, 3>& rgb, const rgb_space<T>& space) {
+constexpr vec3f display_to_linear(const vec3f& rgb, const rgb_space& space) {
     if (space.curve_type == rgb_curve_type::linear) {
         return rgb;
     } else if (space.curve_type == rgb_curve_type::gamma) {
-        return pow(rgb, space.gamma);
+        return pow(rgb, space.curve_gamma);
     } else if (space.curve_type == rgb_curve_type::linear_gamma) {
         auto& [a, b, c, d] = space.curve_abcd;
         auto lim           = 1 / d;
         auto lin           = rgb / c;
-        auto gamma         = pow((rgb + b) / a, space.gamma);
+        auto gamma         = pow((rgb + b) / a, space.curve_gamma);
         return {
             rgb.x < lim ? lin.x : gamma.x,
             rgb.y < lim ? lin.y : gamma.y,
@@ -1228,14 +1169,15 @@ constexpr vec<T, 3> display_to_linear(
     } else if (space.curve_type == rgb_curve_type::hlg) {
         return {hlg_display_to_linear(rgb.x), hlg_display_to_linear(rgb.y),
             hlg_display_to_linear(rgb.z)};
+    } else {
+        throw runtime_error("should not have gotten here");
     }
 }
 
 // Conversion between rgb color spaces
-template <typename T>
-constexpr vec<T, 3> rgb_to_rgb(
-    const vec<T, 3>& rgb, const rgb_space<T>& from, const rgb_space<T>& to) {
-    if (from == to) {
+inline vec3f rgb_to_rgb(
+    const vec3f& rgb, const rgb_space& from, const rgb_space& to) {
+    if (memcmp(&from, &to, sizeof(from)) == 0) {
         return rgb;
     } else if (from.rgb_to_xyz_mat == to.rgb_to_xyz_mat) {
         return linear_to_display(display_to_linear(rgb, from), to);
@@ -1245,54 +1187,47 @@ constexpr vec<T, 3> rgb_to_rgb(
 }
 
 // Conversion to/from xyz
-template <typename T>
-constexpr vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb, const rgb_space<T>& from) {
+inline vec3f rgb_to_xyz(const vec3f& rgb, const rgb_space& from) {
     return from.rgb_to_xyz_mat * display_to_linear(rgb, from);
 }
-template <typename T>
-constexpr vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz, const rgb_space<T>& to) {
+inline vec3f xyz_to_rgb(const vec3f& xyz, const rgb_space& to) {
     return linear_to_display(to.xyz_to_rgb_mat * xyz, to);
 }
 
 // Convert between CIE XYZ and xyY
-template <typename T>
-inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
-    if (xyz == zero<T, 3>) return zero<T, 3>;
+inline vec3f xyz_to_xyY(const vec3f& xyz) {
+    if (xyz == zero3f) return zero3f;
     return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
         xyz.y};
 }
 // Convert between CIE XYZ and xyY
-template <typename T>
-inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY) {
-    if (xyY.y == 0) return zero<T, 3>;
+inline vec3f xyY_to_xyz(const vec3f& xyY) {
+    if (xyY.y == 0) return zero3f;
     return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 // Convert between CIE XYZ and RGB
-template <typename T>
-inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
+inline vec3f xyz_to_rgb(const vec3f& xyz) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
     return {
-        (T) + 3.2404542 * xyz.x - (T)1.5371385 * xyz.y - (T)0.4985314 * xyz.z,
-        (T)-0.9692660 * xyz.x + (T)1.8760108 * xyz.y + (T)0.0415560 * xyz.z,
-        (T) + 0.0556434 * xyz.x - (T)0.2040259 * xyz.y + (T)1.0572252 * xyz.z,
+        +3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz.z,
+        -0.9692660f * xyz.x + 1.8760108f * xyz.y + 0.0415560f * xyz.z,
+        +0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz.z,
     };
 }
 // Convert between CIE XYZ and RGB
-template <typename T>
-inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
+inline vec3f rgb_to_xyz(const vec3f& rgb) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
     return {
-        (T)0.4124564 * rgb.x + (T)0.3575761 * rgb.y + (T)0.1804375 * rgb.z,
-        (T)0.2126729 * rgb.x + (T)0.7151522 * rgb.y + (T)0.0721750 * rgb.z,
-        (T)0.0193339 * rgb.x + (T)0.1191920 * rgb.y + (T)0.9503041 * rgb.z,
+        0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb.z,
+        0.2126729f * rgb.x + 0.7151522f * rgb.y + 0.0721750f * rgb.z,
+        0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z,
     };
 }
 
 // Approximate color of blackbody radiation from wavelength in nm.
-template <typename T>
-inline vec<T, 3> blackbody_to_rgb(T temperature) {
+inline vec3f blackbody_to_rgb(float temperature) {
     // https://github.com/neilbartlett/color-temperature
-    auto rgb = zero<T, 3>;
+    auto rgb = zero3f;
     if ((temperature / 100) < 66) {
         rgb.x = 255;
     } else {
@@ -1302,8 +1237,8 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
         // c -> -40.25366309332127
         // x -> (kelvin/100) - 55}
         rgb.x = (temperature / 100) - 55;
-        rgb.x = (T)351.97690566805693 + (T)0.114206453784165 * rgb.x -
-                (T)40.25366309332127 * log(rgb.x);
+        rgb.x = 351.97690566805693f + 0.114206453784165f * rgb.x -
+                40.25366309332127f * log(rgb.x);
         if (rgb.x < 0) rgb.x = 0;
         if (rgb.x > 255) rgb.x = 255;
     }
@@ -1315,8 +1250,8 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
         // c -> 104.49216199393888`,
         // x -> (kelvin/100) - 2}
         rgb.y = (temperature / 100) - 2;
-        rgb.y = (T)-155.25485562709179 - (T)0.44596950469579133 * rgb.y +
-                (T)104.49216199393888 * log(rgb.y);
+        rgb.y = -155.25485562709179f - 0.44596950469579133f * rgb.y +
+                104.49216199393888f * log(rgb.y);
         if (rgb.y < 0) rgb.y = 0;
         if (rgb.y > 255) rgb.y = 255;
     } else {
@@ -1326,8 +1261,8 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
         // c -> -28.0852963507957`,
         // x -> (kelvin/100) - 50}
         rgb.y = (temperature / 100) - 50;
-        rgb.y = (T)325.4494125711974 + (T)0.07943456536662342 * rgb.y -
-                (T)28.0852963507957 * log(rgb.y);
+        rgb.y = 325.4494125711974f + 0.07943456536662342f * rgb.y -
+                28.0852963507957f * log(rgb.y);
         if (rgb.y < 0) rgb.y = 0;
         if (rgb.y > 255) rgb.y = 255;
     }
@@ -1344,8 +1279,8 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
             // c -> 115.67994401066147`,
             // x -> kelvin/100 - 10}
             rgb.z = (temperature / 100) - 10;
-            rgb.z = (T)-254.76935184120902 + (T)0.8274096064007395 * rgb.z +
-                    (T)115.67994401066147 * log(rgb.z);
+            rgb.z = -254.76935184120902f + 0.8274096064007395f * rgb.z +
+                    115.67994401066147f * log(rgb.z);
             if (rgb.z < 0) rgb.z = 0;
             if (rgb.z > 255) rgb.z = 255;
         }
@@ -1355,13 +1290,12 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
 }
 
 // Convert HSV to RGB
-template <typename T>
-inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
+inline vec3f hsv_to_rgb(const vec3f& hsv) {
     // from Imgui.cpp
     auto h = hsv.x, s = hsv.y, v = hsv.z;
     if (hsv.y == 0) return {v, v, v};
 
-    h       = fmod(h, (T)1) / ((T)60 / (T)360);
+    h       = fmod(h, 1.0f) / (60.0f / 360.0f);
     int   i = (int)h;
     float f = h - (float)i;
     float p = v * (1 - s);
@@ -1378,8 +1312,7 @@ inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
         default: return {v, p, q};
     }
 }
-template <typename T>
-inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
+inline vec3f rgb_to_hsv(const vec3f& rgb) {
     // from Imgui.cpp
     auto  r = rgb.x, g = rgb.y, b = rgb.z;
     float K = 0.f;
@@ -1389,12 +1322,12 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
     }
     if (r < g) {
         swap(r, g);
-        K = -2 / (T)6 - K;
+        K = -2 / 6.0f - K;
     }
 
     float chroma = r - (g < b ? g : b);
-    return {fabsf(K + (g - b) / (6 * chroma + (T)1e-20)),
-        chroma / (r + (T)1e-20), r};
+    return {
+        fabsf(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
 }
 
 }  // namespace yocto
