@@ -127,9 +127,42 @@ void srgb_to_linear(image<vec4f>& lin, const image<vec4b>& srgb) {
     return apply_image(lin, srgb,
         [](const auto& a) { return srgb_to_linear(byte_to_float(a)); });
 }
-inline void linear_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin) {
+void linear_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin) {
     return apply_image(srgb, lin,
         [](const auto& a) { return float_to_byte(linear_to_srgb(a)); });
+}
+
+// Filmic tonemapping
+static vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
+    if (!accurate_fit) {
+        // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+        auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
+        auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
+                   (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+        return max(zero3f, ldr);
+    } else {
+        // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+        // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
+        static const auto ACESInputMat = transpose(mat3f{
+            {0.59719, 0.35458, 0.04823},
+            {0.07600, 0.90834, 0.01566},
+            {0.02840, 0.13383, 0.83777},
+        });
+        // ODT_SAT => XYZ => D60_2_D65 => sRGB
+        static const auto ACESOutputMat = transpose(mat3f{
+            {1.60475, -0.53108, -0.07367},
+            {-0.10208, 1.10813, -0.00605},
+            {-0.00327, -0.07276, 1.07602},
+        });
+        // RRT => ODT
+        auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
+            return (v * v + v * 0.0245786f - 0.000090537f) /
+                   (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
+        };
+
+        auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
+        return max(zero3f, ldr);
+    }
 }
 
 vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
@@ -169,7 +202,7 @@ void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     });
 }
 
-vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
+static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
     auto rgb = ldr;
     if (params.contrast != 0.5f) {
         rgb = gain(ldr, 1 - params.contrast);

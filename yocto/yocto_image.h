@@ -117,18 +117,12 @@ inline float luminance(const vec3f& a) {
 
 // sRGB non-linear curve
 inline float srgb_to_linear(float srgb) {
-    if (srgb <= 0.04045) {
-        return srgb / 12.92f;
-    } else {
-        return pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
-    }
+    return (srgb <= 0.04045) ? srgb / 12.92f
+                             : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
 }
 inline float linear_to_srgb(float lin) {
-    if (lin <= 0.0031308f) {
-        return 12.92f * lin;
-    } else {
-        return (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
-    }
+    return (lin <= 0.0031308f) ? 12.92f * lin
+                               : (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
 }
 inline vec3f srgb_to_linear(const vec3f& srgb) {
     return {
@@ -161,14 +155,11 @@ inline vec3f apply_logcontrast(
     return max(zero3f, exp2(adjusted) - epsilon);
 }
 // Apply saturation.
-inline vec3f apply_saturation(
-    const vec3f& rgb, float saturation, const vec3f& weights = vec3f{0.333333f}) {
+inline vec3f apply_saturation(const vec3f& rgb, float saturation,
+    const vec3f& weights = vec3f{0.333333f}) {
     auto grey = dot(weights, rgb);
     return max(zero3f, grey + (rgb - grey) * (saturation * 2));
 }
-
-// Fitted ACES tonemapping curve.
-inline vec3f tonemap_filmic(const vec3f& hdr, bool accurate_fit = true);
 
 // Forward declaration
 struct rgb_space;
@@ -178,12 +169,13 @@ inline vec3f rgb_to_rgb(
     const vec3f& rgb, const rgb_space& from_space, const rgb_space& to_space);
 
 // Conversion to/from xyz
+inline vec3f rgb_to_xyz(const vec3f& rgb);
+inline vec3f xyz_to_rgb(const vec3f& xyz);
 inline vec3f rgb_to_xyz(const vec3f& rgb, const rgb_space& rgb_space);
 inline vec3f xyz_to_rgb(const vec3f& xyz, const rgb_space& rgb_space);
 
 // Convert between CIE XYZ and xyY
 inline vec3f xyz_to_xyY(const vec3f& xyz);
-// Convert between CIE XYZ and xyY
 inline vec3f xyY_to_xyz(const vec3f& xyY);
 
 // Approximate color of blackbody radiation from wavelength in nm.
@@ -522,30 +514,53 @@ namespace yocto {
 template <typename T>
 struct volume {
     // constructors
-    volume();
-    volume(const vec3i& size, const T& value = {});
-    volume(const vec3i& size, const T* value);
+    volume() : extent{0, 0, 0}, voxels{} {}
+    volume(const vec3i& size, const T& value)
+        : extent{size}
+        , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
+    volume(const vec3i& size, const T* value)
+        : extent{size}
+        , voxels(value,
+              value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
 
     // size
-    bool  empty() const;
-    vec3i size() const;
-    void  resize(const vec3i& size);
-    void  assign(const vec3i& size, const T& value = {});
-    void  shrink_to_fit();
+    bool  empty() const { return voxels.empty(); }
+    vec3i size() const { return extent; }
+    size_t count() const { return voxels.size(); }
+    void  resize(const vec3i& size) {
+        if (size == extent) return;
+        extent = size;
+        voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
+    }
+    void assign(const vec3i& size, const T& value) {
+        extent = size;
+        voxels.assign((size_t)size.x * (size_t)size.y * (size_t)size.z, value);
+    }
+    void shrink_to_fit() { voxels.shrink_to_fit(); }
 
     // element access
-    T&       operator[](const vec3i& ijk);
-    const T& operator[](const vec3i& ijk) const;
+    T& operator[](size_t i) {
+        return voxels[i];
+    }
+    const T& operator[](size_t i) const {
+        return voxels[i];
+    }
+    T& operator[](const vec3i& ijk) {
+        return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
+    }
+    const T& operator[](const vec3i& ijk) const {
+        return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
+    }
 
     // data access
-    T*       data();
-    const T* data() const;
+    T*       data() { return voxels.data(); }
+    const T* data() const { return voxels.data(); }
 
     // iteration
-    T*       begin();
-    T*       end();
-    const T* begin() const;
-    const T* end() const;
+    T*       begin() { return voxels.data(); }
+    T*       end() { return voxels.data() + voxels.size(); }
+    const T* begin() const { return voxels.data(); }
+    const T* end() const { return voxels.data() + voxels.size(); }
 
    private:
     // data
@@ -555,9 +570,13 @@ struct volume {
 
 // equality
 template <typename T>
-inline bool operator==(const volume<T>& a, const volume<T>& b);
+inline bool operator==(const volume<T>& a, const volume<T>& b) {
+    return a.size() == b.size() && a.voxels == b.voxels;
+}
 template <typename T>
-inline bool operator!=(const volume<T>& a, const volume<T>& b);
+inline bool operator!=(const volume<T>& a, const volume<T>& b) {
+    return a.size() != b.size() || a.voxels != b.voxels;
+}
 
 // make a simple example volume
 void make_test(volume<float>& vol, const vec3i& size, float scale = 10,
@@ -596,46 +615,6 @@ void save_volume(const string& filename, const volume<float>& vol);
 // IMPLEMENTATION OF COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Fitted ACES tonemapping curve.
-inline float tonemap_filmic(float hdr_) {
-    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
-    auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
-               (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
-    return max(0.0f, ldr);
-}
-inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit) {
-    if (!accurate_fit) {
-        // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-        auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
-        auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
-                   (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
-        return max(zero3f, ldr);
-    } else {
-        // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
-        // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-        static const auto ACESInputMat = transpose(mat3f{
-            {0.59719, 0.35458, 0.04823},
-            {0.07600, 0.90834, 0.01566},
-            {0.02840, 0.13383, 0.83777},
-        });
-        // ODT_SAT => XYZ => D60_2_D65 => sRGB
-        static const auto ACESOutputMat = transpose(mat3f{
-            {1.60475, -0.53108, -0.07367},
-            {-0.10208, 1.10813, -0.00605},
-            {-0.00327, -0.07276, 1.07602},
-        });
-        // RRT => ODT
-        auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
-            return (v * v + v * 0.0245786f - 0.000090537f) /
-                   (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
-        };
-
-        auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
-        return max(zero3f, ldr);
-    }
-}
 
 // https://en.wikipedia.org/wiki/SRGB
 constexpr mat3f srgb_to_xyz_mat = {
@@ -1069,8 +1048,8 @@ inline vec3f hsv_to_rgb(const vec3f& hsv) {
 }
 inline vec3f rgb_to_hsv(const vec3f& rgb) {
     // from Imgui.cpp
-    auto  r = rgb.x, g = rgb.y, b = rgb.z;
-    float K = 0.f;
+    auto r = rgb.x, g = rgb.y, b = rgb.z;
+    auto K = 0.f;
     if (g < b) {
         swap(g, b);
         K = -1;
@@ -1080,91 +1059,8 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
         K = -2 / 6.0f - K;
     }
 
-    float chroma = r - (g < b ? g : b);
-    return {
-        fabsf(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR VOLUME
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// constructors
-template <typename T>
-inline volume<T>::volume() : extent{0, 0, 0}, voxels{} {}
-template <typename T>
-inline volume<T>::volume(const vec3i& size, const T& value)
-    : extent{size}
-    , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
-template <typename T>
-inline volume<T>::volume(const vec3i& size, const T* value)
-    : extent{size}
-    , voxels(value, value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
-
-// size
-template <typename T>
-inline bool volume<T>::empty() const {
-    return voxels.empty();
-}
-template <typename T>
-inline vec3i volume<T>::size() const {
-    return extent;
-}
-template <typename T>
-inline void volume<T>::resize(const vec3i& size) {
-    if (size == extent) return;
-    extent = size;
-    voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
-}
-template <typename T>
-inline void volume<T>::assign(const vec3i& size, const T& value) {
-    extent = size;
-    voxels.assign((size_t)size.x * (size_t)size.y * (size_t)size.z, value);
-}
-template <typename T>
-inline void volume<T>::shrink_to_fit() {
-    voxels.shrink_to_fit();
-}
-
-// element access
-template <typename T>
-inline T& volume<T>::operator[](const vec3i& ijk) {
-    return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
-}
-template <typename T>
-inline const T& volume<T>::operator[](const vec3i& ijk) const {
-    return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
-}
-
-// data access
-template <typename T>
-inline T* volume<T>::data() {
-    return voxels.data();
-}
-template <typename T>
-inline const T* volume<T>::data() const {
-    return voxels.data();
-}
-
-// iteration
-template <typename T>
-inline T* volume<T>::begin() {
-    return voxels.data();
-}
-template <typename T>
-inline T* volume<T>::end() {
-    return voxels.data() + voxels.size();
-}
-template <typename T>
-inline const T* volume<T>::begin() const {
-    return voxels.data();
-}
-template <typename T>
-inline const T* volume<T>::end() const {
-    return voxels.data() + voxels.size();
+    auto chroma = r - (g < b ? g : b);
+    return {abs(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
 }
 
 }  // namespace yocto
