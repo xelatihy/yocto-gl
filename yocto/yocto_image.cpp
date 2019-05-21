@@ -699,7 +699,7 @@ void make_preset(image<vec4f>& img, const string& type) {
     }
 }
 
-void make_preset(image<vec<byte, 4>>& img, const string& type) {
+void make_preset(image<vec4b>& img, const string& type) {
     auto imgf = image<vec4f>{};
     make_preset(imgf, type);
     if (type.find("-normal") == type.npos) {
@@ -921,20 +921,18 @@ static inline bool save_pfm(
 }
 
 // load pfm image
-template <int N>
-static inline void load_pfm(const string& filename, image<vec<float, N>>& img) {
+static inline void load_pfm(const string& filename, image<vec4f>& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, N);
+    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
         throw io_error("error loading image " + filename);
     }
-    img = image{{width, height}, (const vec<float, N>*)pixels};
+    img = image{{width, height}, (const vec4f*)pixels};
     delete[] pixels;
 }
-template <int N>
 static inline void save_pfm(
-    const string& filename, const image<vec<float, N>>& img) {
-    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, N,
+    const string& filename, const image<vec4f>& img) {
+    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data())) {
         throw io_error("error saving image " + filename);
     }
@@ -956,10 +954,7 @@ static inline const char* get_tinyexr_error(int error) {
     }
 }
 
-template <int N>
-static inline void load_exr(const string& filename, image<vec<float, N>>& img) {
-    // TODO
-    if (N != 4) throw runtime_error("bad number of channels");
+static inline void load_exr(const string& filename, image<vec4f>& img) {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
     if (auto error = LoadEXR(
@@ -971,147 +966,124 @@ static inline void load_exr(const string& filename, image<vec<float, N>>& img) {
     if (!pixels) {
         throw io_error("error loading image " + filename);
     }
-    img = image{{width, height}, (const vec<float, N>*)pixels};
+    img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
 }
-template <int N>
 static inline void save_exr(
-    const string& filename, const image<vec<float, N>>& img) {
-    // TODO
-    if (N != 4) throw runtime_error("bad number of channels");
-    if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, N,
+    const string& filename, const image<vec4f>& img) {
+    if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
             filename.c_str())) {
         throw io_error("error saving image " + filename);
     }
 }
 
 // load an image using stbi library
-template <int N>
-static inline void load_stb(const string& filename, image<vec<byte, N>>& img) {
+static inline void load_stb(const string& filename, image<vec4b>& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, N);
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
         throw io_error("error loading image " + filename);
     }
-    img = image{{width, height}, (const vec<byte, N>*)pixels};
+    img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
 }
-template <int N>
-static inline void load_stb(const string& filename, image<vec<float, N>>& img) {
+static inline void load_stb(const string& filename, image<vec4f>& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, N);
+    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
         throw io_error("error loading image " + filename);
     }
-    img = image{{width, height}, (const vec<float, N>*)pixels};
+    img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
 }
 
 // save an image with stbi
-template <int N>
 static inline void save_png(
-    const string& filename, const image<vec<byte, N>>& img) {
-    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, N,
+    const string& filename, const image<vec4b>& img) {
+    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
             img.data(), img.size().x * 4)) {
         throw io_error("error saving image " + filename);
     }
 }
-template <int N>
 static inline void save_jpg(
-    const string& filename, const image<vec<byte, N>>& img) {
+    const string& filename, const image<vec4b>& img) {
     if (!stbi_write_jpg(
             filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
         throw io_error("error saving image " + filename);
     }
 }
-template <int N>
 static inline void save_tga(
-    const string& filename, const image<vec<byte, N>>& img) {
+    const string& filename, const image<vec4b>& img) {
     if (!stbi_write_tga(
             filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
-template <int N>
 static inline void save_bmp(
-    const string& filename, const image<vec<byte, N>>& img) {
+    const string& filename, const image<vec4b>& img) {
     if (!stbi_write_bmp(
             filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
-template <int N>
 static inline void save_hdr(
-    const string& filename, const image<vec<float, N>>& img) {
+    const string& filename, const image<vec4f>& img) {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
 
+#if 0
 // load an image using stbi library
-template <int N>
 static inline void load_stb_image_from_memory(
-    const byte* data, int data_size, image<vec<byte, N>>& img) {
+    const byte* data, int data_size, image<vec4b>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
         throw io_error("error loading in-memory image");
     }
-    img = image{{width, height}, (const vec<byte, N>*)pixels};
+    img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
 }
-template <int N>
 static inline void load_stb_image_from_memory(
-    const byte* data, int data_size, image<vec<float, N>>& img) {
+    const byte* data, int data_size, image<vec4f>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
         throw io_error("error loading in-memory image {}");
     }
-    img = image{{width, height}, (const vec<float, N>*)pixels};
+    img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
 }
+#endif
 
-template <int N>
 static inline void load_image_preset(
-    const string& filename, image<vec<float, N>>& img) {
+    const string& filename, image<vec4f>& img) {
     auto [type, nfilename] = get_preset_type(filename);
-    if constexpr (N == 4) {
         img.resize({1024, 1024});
         if (type == "images2") img.resize({2048, 1024});
         make_preset(img, type);
-    } else {
-        auto img4 = image<vec<float, 4>>({1024, 1024});
-        if (type == "images2") img4.resize({2048, 1024});
-        make_preset(img4, type);
-        img.resize(img4.size());
-        convert_channels(img, img4);
-    }
 }
-template <int N>
 static inline void load_image_preset(
-    const string& filename, image<vec<byte, N>>& img) {
-    auto imgf = image<vec<float, N>>{};
+    const string& filename, image<vec4b>& img) {
+    auto imgf = image<vec4f>{};
     load_image_preset(filename, imgf);
     img.resize(imgf.size());
     linear_to_srgb(img, imgf);
 }
 
-// Forward declarations
-template <int N>
-static inline void load_image_impl(
-    const string& filename, image<vec<byte, N>>& img);
-template <int N>
-static inline void save_image_impl(
-    const string& filename, const image<vec<byte, N>>& img);
+// Check if an image is HDR based on filename.
+bool is_hdr_filename(const string& filename) {
+    return get_extension(filename) == "hdr" ||
+           get_extension(filename) == "exr" || get_extension(filename) == "pfm";
+}
 
 // Loads an hdr image.
-template <int N>
-static inline void load_image_impl(
-    const string& filename, image<vec<float, N>>& img) {
+void load_image(
+    const string& filename, image<vec4f>& img) {
     if (is_preset_filename(filename)) {
         return load_image_preset(filename, img);
     }
@@ -1123,8 +1095,8 @@ static inline void load_image_impl(
     } else if (ext == "hdr" || ext == "HDR") {
         load_stb(filename, img);
     } else if (!is_hdr_filename(filename)) {
-        auto img8 = image<vec<byte, N>>{};
-        load_image_impl(filename, img8);
+        auto img8 = image<vec4b>{};
+        load_image(filename, img8);
         srgb_to_linear(img, img8);
     } else {
         throw io_error("unsupported image format " + ext);
@@ -1132,9 +1104,8 @@ static inline void load_image_impl(
 }
 
 // Saves an hdr image.
-template <int N>
-static inline void save_image_impl(
-    const string& filename, const image<vec<float, N>>& img) {
+void save_image(
+    const string& filename, const image<vec4f>& img) {
     auto ext = get_extension(filename);
     if (ext == "hdr" || ext == "HDR") {
         save_hdr(filename, img);
@@ -1143,18 +1114,17 @@ static inline void save_image_impl(
     } else if (ext == "exr" || ext == "EXR") {
         save_exr(filename, img);
     } else if (!is_hdr_filename(filename)) {
-        auto img8 = image<vec<byte, N>>{img.size()};
+        auto img8 = image<vec4b>{img.size()};
         linear_to_srgb(img8, img);
-        save_image_impl(filename, img8);
+        save_image(filename, img8);
     } else {
         throw io_error("unsupported image format " + ext);
     }
 }
 
 // Loads an hdr image.
-template <int N>
-static inline void load_image_impl(
-    const string& filename, image<vec<byte, N>>& img) {
+void load_image(
+    const string& filename, image<vec4b>& img) {
     if (is_preset_filename(filename)) {
         return load_image_preset(filename, img);
     }
@@ -1168,8 +1138,8 @@ static inline void load_image_impl(
     } else if (ext == "bmp" || ext == "BMP") {
         load_stb(filename, img);
     } else if (is_hdr_filename(filename)) {
-        auto imgf = image<vec<float, N>>{};
-        load_image_impl(filename, imgf);
+        auto imgf = image<vec4f>{};
+        load_image(filename, imgf);
         linear_to_srgb(img, imgf);
     } else {
         throw io_error("unsupported image format " + ext);
@@ -1177,9 +1147,8 @@ static inline void load_image_impl(
 }
 
 // Saves an ldr image.
-template <int N>
-static inline void save_image_impl(
-    const string& filename, const image<vec<byte, N>>& img) {
+void save_image(
+    const string& filename, const image<vec4b>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
         save_png(filename, img);
@@ -1190,70 +1159,12 @@ static inline void save_image_impl(
     } else if (ext == "bmp" || ext == "BMP") {
         save_bmp(filename, img);
     } else if (is_hdr_filename(filename)) {
-        auto imgf = image<vec<float, N>>{img.size()};
+        auto imgf = image<vec4f>{img.size()};
         srgb_to_linear(imgf, img);
-        save_image_impl(filename, imgf);
+        save_image(filename, imgf);
     } else {
         throw io_error("unsupported image format " + ext);
     }
-}
-
-// Loads/saves a 1-4 channels float image in linear color space.
-void load_image(const string& filename, image<float>& img) {
-    load_image_impl(filename, (image<vec1f>&)img);
-}
-void load_image(const string& filename, image<vec2f>& img) {
-    load_image_impl(filename, img);
-}
-void load_image(const string& filename, image<vec3f>& img) {
-    load_image_impl(filename, img);
-}
-void load_image(const string& filename, image<vec4f>& img) {
-    load_image_impl(filename, img);
-}
-void save_image(const string& filename, const image<float>& img) {
-    save_image_impl(filename, (const image<vec1f>&)img);
-}
-void save_image(const string& filename, const image<vec2f>& img) {
-    save_image_impl(filename, img);
-}
-void save_image(const string& filename, const image<vec3f>& img) {
-    save_image_impl(filename, img);
-}
-void save_image(const string& filename, const image<vec4f>& img) {
-    save_image_impl(filename, img);
-}
-
-// Loads/saves a 1-4 byte image in sRGB color space.
-void load_image(const string& filename, image<byte>& img) {
-    load_image_impl(filename, (image<vec1b>&)img);
-}
-void load_image(const string& filename, image<vec2b>& img) {
-    load_image_impl(filename, img);
-}
-void load_image(const string& filename, image<vec3b>& img) {
-    load_image_impl(filename, img);
-}
-void load_image(const string& filename, image<vec4b>& img) {
-    load_image_impl(filename, img);
-}
-void save_image(const string& filename, const image<byte>& img) {
-    save_image_impl(filename, (const image<vec1b>&)img);
-}
-void save_image(const string& filename, const image<vec2b>& img) {
-    save_image_impl(filename, img);
-}
-void save_image(const string& filename, const image<vec3b>& img) {
-    save_image_impl(filename, img);
-}
-void save_image(const string& filename, const image<vec4b>& img) {
-    save_image_impl(filename, img);
-}
-
-// Check if an image is HDR based on filename.
-bool is_hdr_filename(const string& filename) {
-    return get_extension(filename) == "hdr" ||
-           get_extension(filename) == "exr" || get_extension(filename) == "pfm";
 }
 
 // Convenience helper for loading HDR or LDR based on filename

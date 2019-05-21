@@ -254,24 +254,10 @@ namespace yocto {
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename);
 
-// Loads/saves a 1-4 channels float image in linear color space.
-void load_image(const string& filename, image<float>& img);
-void load_image(const string& filename, image<vec2f>& img);
-void load_image(const string& filename, image<vec3f>& img);
+// Loads/saves a 4 channels float/byte image in linear color space.
 void load_image(const string& filename, image<vec4f>& img);
-void save_image(const string& filename, const image<float>& img);
-void save_image(const string& filename, const image<vec2f>& img);
-void save_image(const string& filename, const image<vec3f>& img);
 void save_image(const string& filename, const image<vec4f>& img);
-
-// Loads/saves a 1-4 byte image in sRGB color space.
-void load_image(const string& filename, image<byte>& img);
-void load_image(const string& filename, image<vec2b>& img);
-void load_image(const string& filename, image<vec3b>& img);
 void load_image(const string& filename, image<vec4b>& img);
-void save_image(const string& filename, const image<byte>& img);
-void save_image(const string& filename, const image<vec2b>& img);
-void save_image(const string& filename, const image<vec3b>& img);
 void save_image(const string& filename, const image<vec4b>& img);
 
 // Convenience helper for loading HDR or LDR based on filename
