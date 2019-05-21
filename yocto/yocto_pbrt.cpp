@@ -622,7 +622,8 @@ static inline void parse_accelerator(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_accelerator_type::bvh;
+        value.bvh = tvalue;
     } else if (type == "kdtree") {
         auto tvalue = pbrt_kdtree_accelerator{};
         while (is_param(stream)) {
@@ -641,7 +642,8 @@ static inline void parse_accelerator(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_accelerator_type::kdtree;
+        value.kdtree = tvalue;
     } else {
         throw io_error("unknown Accelerator " + type);
     }
@@ -669,7 +671,8 @@ static inline void parse_integrator(
             // parse_optional_param(stream, "lightsamplestrategy",
             // tvalue.lightsamplestrategy); // TODO: enums
         }
-        value = tvalue;
+        value.type = pbrt_integrator_type::path;
+        value.path = tvalue;
     } else if (type == "volpath") {
         auto tvalue = pbrt_volpath_integrator{};
         while (is_param(stream)) {
@@ -686,7 +689,8 @@ static inline void parse_integrator(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_integrator_type::volpath;
+        value.volpath = tvalue;
     } else if (type == "directlighting") {
         auto tvalue = pbrt_directlighting_integrator{};
         while (is_param(stream)) {
@@ -701,7 +705,8 @@ static inline void parse_integrator(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_integrator_type::directlighting;
+        value.directlighting = tvalue;
     } else if (type == "bdpt") {
         auto tvalue = pbrt_bdpt_integrator{};
         while (is_param(stream)) {
@@ -720,7 +725,8 @@ static inline void parse_integrator(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_integrator_type::bdpt;
+        value.bdpt = tvalue;
     } else if (type == "mlt") {
         auto tvalue = pbrt_mlt_integrator{};
         while (is_param(stream)) {
@@ -743,7 +749,8 @@ static inline void parse_integrator(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_integrator_type::mlt;
+        value.mlt = tvalue;
     } else if (type == "sppm") {
         auto tvalue = pbrt_sppm_integrator{};
         while (is_param(stream)) {
@@ -766,7 +773,8 @@ static inline void parse_integrator(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_integrator_type::sppm;
+        value.sppm = tvalue;
     } else if (type == "whitted") {
         auto tvalue = pbrt_whitted_integrator{};
         while (is_param(stream)) {
@@ -779,7 +787,8 @@ static inline void parse_integrator(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_integrator_type::whitted;
+        value.whitted = tvalue;
     } else {
         throw io_error("unknown Integrator " + type);
     }
@@ -799,7 +808,8 @@ static inline void parse_sampler(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_sampler_type::random;
+        value.random = tvalue;
     } else if (type == "halton") {
         auto tvalue = pbrt_halton_sampler{};
         while (is_param(stream)) {
@@ -810,7 +820,8 @@ static inline void parse_sampler(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_sampler_type::halton;
+        value.halton = tvalue;
     } else if (type == "sobol") {
         auto tvalue = pbrt_sobol_sampler{};
         while (is_param(stream)) {
@@ -821,7 +832,8 @@ static inline void parse_sampler(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_sampler_type::sobol;
+        value.sobol = tvalue;
     } else if (type == "02sequence") {
         auto tvalue = pbrt_zerotwosequence_sampler{};
         while (is_param(stream)) {
@@ -832,7 +844,8 @@ static inline void parse_sampler(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_sampler_type::zerotwosequence;
+        value.zerotwosequence = tvalue;
     } else if (type == "lowdiscrepancy") {
         auto tvalue = pbrt_zerotwosequence_sampler{};
         while (is_param(stream)) {
@@ -843,7 +856,8 @@ static inline void parse_sampler(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_sampler_type::zerotwosequence;
+        value.zerotwosequence = tvalue;
     } else if (type == "maxmindist") {
         auto tvalue = pbrt_maxmindist_sampler{};
         while (is_param(stream)) {
@@ -854,7 +868,8 @@ static inline void parse_sampler(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_sampler_type::maxmindist;
+        value.maxmindist = tvalue;
     } else if (type == "stratified") {
         auto tvalue = pbrt_stratified_sampler{};
         while (is_param(stream)) {
@@ -869,7 +884,8 @@ static inline void parse_sampler(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_sampler_type::stratified;
+        value.stratified = tvalue;
     } else {
         throw io_error("unknown Sampler " + type);
     }
@@ -891,7 +907,8 @@ static inline void parse_filter(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_filter_type::box;
+        value.box = tvalue;
     } else if (type == "gaussian") {
         auto tvalue = pbrt_gaussian_filter{};
         while (is_param(stream)) {
@@ -906,7 +923,8 @@ static inline void parse_filter(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_filter_type::gaussian;
+        value.gaussian = tvalue;
     } else if (type == "mitchell") {
         auto tvalue = pbrt_mitchell_filter{};
         while (is_param(stream)) {
@@ -923,7 +941,8 @@ static inline void parse_filter(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_filter_type::mitchell;
+        value.mitchell = tvalue;
     } else if (type == "sinc") {
         auto tvalue = pbrt_sinc_filter{};
         while (is_param(stream)) {
@@ -938,7 +957,8 @@ static inline void parse_filter(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_filter_type::sinc;
+        value.sinc = tvalue;
     } else if (type == "triangle") {
         auto tvalue = pbrt_triangle_filter{};
         while (is_param(stream)) {
@@ -951,7 +971,8 @@ static inline void parse_filter(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_filter_type::triangle;
+        value.triangle = tvalue;
     } else {
         throw io_error("unknown PixelFilter " + type);
     }
@@ -962,7 +983,7 @@ static inline void parse_film(
     pbrt_stream& stream, const string& type, pbrt_film& value) {
     auto pname = ""s, ptype = ""s;
     if (type == "image") {
-        auto tvalue = pbrt_film_image{};
+        auto tvalue = pbrt_image_film{};
         while (is_param(stream)) {
             parse_nametype(stream, pname, ptype);
             if (pname == "xresolution") {
@@ -985,7 +1006,8 @@ static inline void parse_film(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_film_type::image;
+        value.image = tvalue;
     } else {
         throw io_error("unknown Film " + type);
     }
@@ -1017,7 +1039,8 @@ static inline void parse_camera(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_camera_type::perspective;
+        value.perspective = tvalue;
     } else if (type == "orthographic") {
         auto tvalue = pbrt_orthographic_camera{};
         while (is_param(stream)) {
@@ -1038,7 +1061,8 @@ static inline void parse_camera(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_camera_type::orthographic;
+        value.orthographic = tvalue;
     } else if (type == "environment") {
         auto tvalue = pbrt_environment_camera{};
         while (is_param(stream)) {
@@ -1051,7 +1075,8 @@ static inline void parse_camera(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_camera_type::environment;
+        value.environment = tvalue;
     } else if (type == "realistic") {
         auto tvalue = pbrt_realistic_camera{};
         while (is_param(stream)) {
@@ -1078,7 +1103,8 @@ static inline void parse_camera(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_camera_type::realistic;
+        value.realistic = tvalue;
     } else {
         throw io_error("unknown Film " + type);
     }
@@ -2265,7 +2291,8 @@ static inline void parse_arealight(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_arealight_type::diffuse;
+        value.diffuse = tvalue;
     } else {
         throw io_error("unknown Film " + type);
     }
@@ -2425,7 +2452,8 @@ static inline void parse_pbrt_medium(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_medium_type::homogeneous;
+        value.homogeneous = tvalue;
     } else if (type == "heterogeneous") {
         auto tvalue = pbrt_heterogeneous_medium{};
         while (is_param(stream)) {
@@ -2458,7 +2486,8 @@ static inline void parse_pbrt_medium(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value = tvalue;
+        value.type = pbrt_medium_type::heterogeneous;
+        value.heterogeneous = tvalue;
     } else {
         throw io_error("unknown Medium " + type);
     }

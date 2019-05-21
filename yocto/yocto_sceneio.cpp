@@ -1464,9 +1464,11 @@ static void save_mtl(
         print(fs, "newmtl {}\n", get_basename(material.uri));
         print_obj_keyvalue(fs, "  illum", 2);
         print_obj_keyvalue(fs, "  Ke", material.emission);
-        print_obj_keyvalue(fs, "  Kd", material.diffuse * (1 - material.metallic));
-        print_obj_keyvalue(fs, "  Ks", material.specular * (1 - material.metallic) 
-            + material.metallic * material.diffuse);
+        print_obj_keyvalue(
+            fs, "  Kd", material.diffuse * (1 - material.metallic));
+        print_obj_keyvalue(fs, "  Ks",
+            material.specular * (1 - material.metallic) +
+                material.metallic * material.diffuse);
         print_obj_keyvalue(fs, "  Kt", material.transmission);
         print_obj_keyvalue(fs, "  Ns",
             (int)clamp(
@@ -2773,48 +2775,54 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto camera    = yocto_camera{};
         camera.frame   = inverse((frame3f)ctx.transform_start);
         camera.frame.z = -camera.frame.z;
-        if (holds_alternative<pbrt_perspective_camera>(pcamera)) {
-            auto& perspective = get<pbrt_perspective_camera>(pcamera);
-            auto  aspect      = perspective.frameaspectratio;
-            if (aspect < 0) aspect = last_film_aspect;
-            if (aspect < 0) aspect = 1;
-            if (aspect >= 1) {
-                set_perspectivey(camera, radians(perspective.fov), aspect,
-                    clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
-            } else {
-                set_perspectivex(camera, radians(perspective.fov), aspect,
-                    clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
-            }
-        } else if (holds_alternative<pbrt_realistic_camera>(pcamera)) {
-            auto& realistic     = get<pbrt_realistic_camera>(pcamera);
-            camera.focal_length = max(realistic.approx_focallength, 35.0f) *
-                                  0.001f;
-            auto aspect = 1.0f;
-            if (aspect < 0) aspect = last_film_aspect;
-            if (aspect < 0) aspect = 1;
-            if (aspect >= 1) {
-                camera.film_height = camera.film_width / aspect;
-            } else {
-                camera.film_width = camera.film_height * aspect;
-            }
-            camera.focus_distance = realistic.focusdistance;
-            camera.lens_aperture  = realistic.aperturediameter / 2;
-        } else {
-            throw io_error(
-                "unsupported Camera type " + to_string(pcamera.index()));
+        switch (pcamera.type) {
+            case pbrt_camera_type::perspective: {
+                auto& perspective = pcamera.perspective;
+                auto  aspect      = perspective.frameaspectratio;
+                if (aspect < 0) aspect = last_film_aspect;
+                if (aspect < 0) aspect = 1;
+                if (aspect >= 1) {
+                    set_perspectivey(camera, radians(perspective.fov), aspect,
+                        clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+                } else {
+                    set_perspectivex(camera, radians(perspective.fov), aspect,
+                        clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+                }
+            } break;
+            case pbrt_camera_type::orthographic: {
+                throw io_error("unsupported Camera type");
+            } break;
+            case pbrt_camera_type::environment: {
+                throw io_error("unsupported Camera type");
+            } break;
+            case pbrt_camera_type::realistic: {
+                auto& realistic     = pcamera.realistic;
+                camera.focal_length = max(realistic.approx_focallength, 35.0f) *
+                                      0.001f;
+                auto aspect = 1.0f;
+                if (aspect < 0) aspect = last_film_aspect;
+                if (aspect < 0) aspect = 1;
+                if (aspect >= 1) {
+                    camera.film_height = camera.film_width / aspect;
+                } else {
+                    camera.film_width = camera.film_height * aspect;
+                }
+                camera.focus_distance = realistic.focusdistance;
+                camera.lens_aperture  = realistic.aperturediameter / 2;
+            } break;
         }
         scene.cameras.push_back(camera);
     }
     void film(const pbrt_film& pfilm, const pbrt_context& ctx) {
-        if (holds_alternative<pbrt_film_image>(pfilm)) {
-            auto& perspective = get<pbrt_film_image>(pfilm);
-            last_film_aspect  = (float)perspective.xresolution /
-                               (float)perspective.yresolution;
-            for (auto& camera : scene.cameras) {
-                camera.film_width = camera.film_height * last_film_aspect;
-            }
-        } else {
-            throw io_error("unsupported pbrt type");
+        switch (pfilm.type) {
+            case pbrt_film_type::image: {
+                auto& image      = pfilm.image;
+                last_film_aspect = (float)image.xresolution /
+                                   (float)image.yresolution;
+                for (auto& camera : scene.cameras) {
+                    camera.film_width = camera.film_height * last_film_aspect;
+                }
+            } break;
         }
     }
     void shape(const pbrt_shape& pshape, const pbrt_context& ctx) {
@@ -3128,12 +3136,14 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
     void arealight(const pbrt_arealight& plight, const string& name,
         const pbrt_context& ctx) {
         auto emission = zero3f;
-        if (holds_alternative<pbrt_diffuse_arealight>(plight)) {
-            auto& diffuse = get<pbrt_diffuse_arealight>(plight);
-            emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
-        } else {
-            throw io_error(
-                "area light type not supported " + to_string(plight.index()));
+        switch (plight.type) {
+            case pbrt_arealight_type::diffuse: {
+                auto& diffuse = plight.diffuse;
+                emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
+            } break;
+            case pbrt_arealight_type::none: {
+                throw io_error("should not have gotten here");
+            } break;
         }
         amap[name] = emission;
     }
@@ -3342,8 +3352,8 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
                 get_basename(scene.textures[material.specular_texture].uri));
         } else {
             auto specular = vec3f{1};
-            print(fs, "    \"rgb Ks\" [ {} {} {} ]\n", specular.x,
-                specular.y, specular.z);
+            print(fs, "    \"rgb Ks\" [ {} {} {} ]\n", specular.x, specular.y,
+                specular.z);
         }
         print(fs, "    \"float roughness\" {}\n",
             material.roughness * material.roughness);
