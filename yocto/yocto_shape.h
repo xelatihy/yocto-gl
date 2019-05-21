@@ -460,14 +460,16 @@ enum make_shape_type {
     disk,
     uvdisk,
     uvcylinder,
-    geosphere
+    geosphere,
+    matball,
+    suzanne
 };
 
 // Parameters for make shape function
 struct make_shape_params {
     make_shape_type type        = make_shape_type::rect;
     int             subdivision = 0;
-    float           size        = 1;
+    float           size        = 2;
     float           uvsize      = 1;
     float           rounded     = 0;
     int             num         = 0;
@@ -479,7 +481,7 @@ struct make_shape_params {
 
 // Make a procedural shape
 void make_shape(vector<int>& points, vector<vec2i>& lines,
-    vector<vec4i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const make_shape_params& params);
 
