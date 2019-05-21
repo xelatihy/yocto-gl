@@ -1018,7 +1018,7 @@ float sample_lights_pdf(const yocto_scene& scene, const trace_lights& lights,
     for (auto environment : lights.environments) {
         pdf += sample_environment_pdf(scene, lights, environment, direction);
     }
-    pdf *= sample_uniform_pdf<float>(
+    pdf *= sample_uniform_pdf(
         lights.instances.size() + lights.environments.size());
     return pdf;
 }
