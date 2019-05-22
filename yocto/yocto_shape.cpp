@@ -3391,10 +3391,10 @@ struct load_obj_shape_cb : obj_callbacks {
         }
     }
 
-    void vert(const vec3f& v) { opos.push_back(v); }
-    void norm(const vec3f& v) { onorm.push_back(v); }
-    void texcoord(const vec2f& v) { otexcoord.push_back(v); }
-    void face(const vector<obj_vertex>& verts) {
+    void vert(const vec3f& v) override { opos.push_back(v); }
+    void norm(const vec3f& v) override { onorm.push_back(v); }
+    void texcoord(const vec2f& v) override { otexcoord.push_back(v); }
+    void face(const vector<obj_vertex>& verts) override {
         if (!facevarying) {
             add_verts(verts);
             if (verts.size() == 4) {
@@ -3459,13 +3459,13 @@ struct load_obj_shape_cb : obj_callbacks {
             }
         }
     }
-    void line(const vector<obj_vertex>& verts) {
+    void line(const vector<obj_vertex>& verts) override {
         add_verts(verts);
         for (auto i = 1; i < verts.size(); i++)
             lines.push_back(
                 {vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
     }
-    void point(const vector<obj_vertex>& verts) {
+    void point(const vector<obj_vertex>& verts) override {
         add_verts(verts);
         for (auto i = 0; i < verts.size(); i++)
             points.push_back(vertex_map.at(verts[i]));

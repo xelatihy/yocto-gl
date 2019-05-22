@@ -400,9 +400,9 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
 namespace yocto {
 
 struct yaml_callbacks {
-    void object_group(const string& key);
-    void object_begin();
-    void key_value(string_view key, string_view value);
+    virtual void object_group(const string& key) {}
+    virtual void object_begin() {}
+    virtual void key_value(string_view key, string_view value) {}
 };
 
 inline void get_yaml_value(string_view str, string& value) {
@@ -473,8 +473,7 @@ inline void get_yaml_value(string_view str, mat<T, N, M>& value) {
 
 struct load_yaml_options {};
 
-template <typename Callbacks>
-inline void load_yaml(const string& filename, Callbacks& callbacks,
+inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
     const load_yaml_options& params) {
     // open file
     auto fs_ = open_input_file(filename);
@@ -595,7 +594,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
         }
     }
 
-    void object_group(const string& key) {
+    void object_group(const string& key) override {
         if (key == "cameras") {
             type = parsing_type::camera;
         } else if (key == "textures") {
@@ -617,7 +616,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
             throw io_error("unknown object type " + key);
         }
     }
-    void object_begin() {
+    void object_begin() override {
         switch (type) {
             case parsing_type::camera: scene.cameras.push_back({}); break;
             case parsing_type::texture: scene.textures.push_back({}); break;
@@ -634,7 +633,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
             default: throw io_error("unknown object type");
         }
     }
-    void key_value(string_view key, string_view value) {
+    void key_value(string_view key, string_view value) override {
         switch (type) {
             case parsing_type::camera: {
                 auto& camera = scene.cameras.back();
@@ -1204,10 +1203,10 @@ struct load_obj_scene_cb : obj_callbacks {
     }
 
     // callbacks
-    void vert(const vec3f& v) { opos.push_back(v); }
-    void norm(const vec3f& v) { onorm.push_back(v); }
-    void texcoord(const vec2f& v) { otexcoord.push_back(v); }
-    void face(const vector<obj_vertex>& verts) {
+    void vert(const vec3f& v) override { opos.push_back(v); }
+    void norm(const vec3f& v) override { onorm.push_back(v); }
+    void texcoord(const vec2f& v) override { otexcoord.push_back(v); }
+    void face(const vector<obj_vertex>& verts) override {
         if (scene.shapes.empty()) add_shape();
         if (!scene.shapes.back().positions.empty() &&
             (!scene.shapes.back().lines.empty() ||
@@ -1277,7 +1276,7 @@ struct load_obj_scene_cb : obj_callbacks {
             }
         }
     }
-    void line(const vector<obj_vertex>& verts) {
+    void line(const vector<obj_vertex>& verts) override {
         if (scene.shapes.empty()) add_shape();
         if (!scene.shapes.back().positions.empty() &&
             scene.shapes.back().lines.empty()) {
@@ -1289,7 +1288,7 @@ struct load_obj_scene_cb : obj_callbacks {
             shape.lines.push_back(
                 {vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
     }
-    void point(const vector<obj_vertex>& verts) {
+    void point(const vector<obj_vertex>& verts) override {
         if (scene.shapes.empty()) add_shape();
         if (!scene.shapes.back().positions.empty() &&
             scene.shapes.back().points.empty()) {
@@ -1300,21 +1299,21 @@ struct load_obj_scene_cb : obj_callbacks {
         for (auto i = 0; i < verts.size(); i++)
             shape.points.push_back(vertex_map.at(verts[i]));
     }
-    void object(const string& name) {
+    void object(const string& name) override {
         oname = name;
         gname = "";
         mname = "";
         add_shape();
     }
-    void group(const string& name) {
+    void group(const string& name) override {
         gname = name;
         add_shape();
     }
-    void usemtl(const string& name) {
+    void usemtl(const string& name) override {
         mname = name;
         add_shape();
     }
-    void material(const obj_material& omat) {
+    void material(const obj_material& omat) override {
         auto material                 = yocto_material();
         material.uri                  = omat.name;
         material.emission             = omat.ke;
@@ -1335,7 +1334,7 @@ struct load_obj_scene_cb : obj_callbacks {
         scene.materials.push_back(material);
         mmap[material.uri] = (int)scene.materials.size() - 1;
     }
-    void camera(const obj_camera& ocam) {
+    void camera(const obj_camera& ocam) override {
         auto camera           = yocto_camera();
         camera.uri            = ocam.name;
         camera.frame          = ocam.frame;
@@ -1347,7 +1346,7 @@ struct load_obj_scene_cb : obj_callbacks {
         camera.lens_aperture  = ocam.aperture;
         scene.cameras.push_back(camera);
     }
-    void environmnet(const obj_environment& oenv) {
+    void environmnet(const obj_environment& oenv) override {
         auto environment             = yocto_environment();
         environment.uri              = oenv.name;
         environment.frame            = oenv.frame;
@@ -1355,7 +1354,7 @@ struct load_obj_scene_cb : obj_callbacks {
         environment.emission_texture = add_texture(oenv.ke_txt, true);
         scene.environments.push_back(environment);
     }
-    void procedural(const obj_procedural& oproc) {
+    void procedural(const obj_procedural& oproc) override {
         auto shape = yocto_shape();
         shape.uri  = oproc.name;
         if (oproc.type == "floor") {
@@ -2771,7 +2770,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         return sqrt(roughness);
     }
 
-    void camera(const pbrt_camera& pcamera, const pbrt_context& ctx) {
+    void camera(const pbrt_camera& pcamera, const pbrt_context& ctx) override {
         auto camera    = yocto_camera{};
         camera.frame   = inverse((frame3f)ctx.transform_start);
         camera.frame.z = -camera.frame.z;
@@ -2813,7 +2812,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         }
         scene.cameras.push_back(camera);
     }
-    void film(const pbrt_film& pfilm, const pbrt_context& ctx) {
+    void film(const pbrt_film& pfilm, const pbrt_context& ctx) override {
         switch (pfilm.type) {
             case pbrt_film::type_t::image: {
                 auto& image      = pfilm.image;
@@ -2825,7 +2824,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             } break;
         }
     }
-    void shape(const pbrt_shape& pshape, const pbrt_context& ctx) {
+    void shape(const pbrt_shape& pshape, const pbrt_context& ctx) override {
         static auto shape_id = 0;
         auto        shape    = yocto_shape{};
         shape.uri = "shapes/shape__" + to_string(shape_id++) + ".ply";
@@ -2886,7 +2885,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         }
     }
     void texture(const pbrt_texture& ptexture, const string& name,
-        const pbrt_context& ctx) {
+        const pbrt_context& ctx) override {
         if (remove_contant_textures &&
             ptexture.type == pbrt_texture::type_t::constant) {
             auto& constant = ptexture.constant;
@@ -3002,7 +3001,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         timap[name] = ptexture.type == pbrt_texture::type_t::imagemap;
     }
     void material(const pbrt_material& pmaterial, const string& name,
-        const pbrt_context& ctx) {
+        const pbrt_context& ctx) override {
         auto material = yocto_material{};
         material.uri  = name;
         switch (pmaterial.type) {
@@ -3169,7 +3168,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         mmap[name] = material;
     }
     void arealight(const pbrt_arealight& plight, const string& name,
-        const pbrt_context& ctx) {
+        const pbrt_context& ctx) override {
         auto emission = zero3f;
         switch (plight.type) {
             case pbrt_arealight::type_t::diffuse: {
@@ -3182,7 +3181,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         }
         amap[name] = emission;
     }
-    void light(const pbrt_light& plight, const pbrt_context& ctx) {
+    void light(const pbrt_light& plight, const pbrt_context& ctx) override {
         static auto light_id = 0;
         auto        name     = "light_" + to_string(light_id++);
         switch (plight.type) {
@@ -3300,14 +3299,14 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             }
         }
     }
-    void begin_object(const pbrt_object& pobject, const pbrt_context& ctx) {
+    void begin_object(const pbrt_object& pobject, const pbrt_context& ctx) override {
         cur_object       = pobject.name;
         omap[cur_object] = {};
     }
-    void end_object(const pbrt_object& pobject, const pbrt_context& ctx) {
+    void end_object(const pbrt_object& pobject, const pbrt_context& ctx) override {
         cur_object = "";
     }
-    void object_instance(const pbrt_object& pobject, const pbrt_context& ctx) {
+    void object_instance(const pbrt_object& pobject, const pbrt_context& ctx) override {
         auto& pinstances = omap.at(pobject.name);
         for (auto& pinstance : pinstances) {
             auto instance     = yocto_instance();

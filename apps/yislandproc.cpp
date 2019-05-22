@@ -336,10 +336,10 @@ struct load_island_shape_callbacks : obj_callbacks {
         norm_map.reserve(1024 * 1024);
     }
 
-    void vert(const vec3f& v) { opos.push_back(v); }
-    void norm(const vec3f& v) { onorm.push_back(v); }
-    void texcoord(const vec2f& v) { throw io_error("texture coord not supported"); }
-    void face(const vector<obj_vertex>& verts) {
+    void vert(const vec3f& v) override { opos.push_back(v); }
+    void norm(const vec3f& v) override { onorm.push_back(v); }
+    void texcoord(const vec2f& v) override { throw io_error("texture coord not supported"); }
+    void face(const vector<obj_vertex>& verts) override {
         split_shape();
         add_fvverts(verts);
         if (verts.size() == 4) {
@@ -390,11 +390,11 @@ struct load_island_shape_callbacks : obj_callbacks {
             }
         }
     }
-    void group(const string& name) {
+    void group(const string& name) override {
         gname      = name;
         split_next = true;
     }
-    void usemtl(const string& name) {
+    void usemtl(const string& name) override {
         mname      = name;
         split_next = true;
     }
