@@ -1550,24 +1550,12 @@ struct bbox {
 };
 
 // Typedefs
-using bbox1f = bbox<float, 1>;
 using bbox2f = bbox<float, 2>;
 using bbox3f = bbox<float, 3>;
-using bbox4f = bbox<float, 4>;
-using bbox1i = bbox<int, 1>;
-using bbox2i = bbox<int, 2>;
-using bbox3i = bbox<int, 3>;
-using bbox4i = bbox<int, 4>;
 
 // Empty bbox constant.
-constexpr auto invalid_bbox1f = bbox1f{};
 constexpr auto invalid_bbox2f = bbox2f{};
 constexpr auto invalid_bbox3f = bbox3f{};
-constexpr auto invalid_bbox4f = bbox4f{};
-constexpr auto invalid_bbox1i = bbox1i{};
-constexpr auto invalid_bbox2i = bbox2i{};
-constexpr auto invalid_bbox3i = bbox3i{};
-constexpr auto invalid_bbox4i = bbox4i{};
 
 // Bounding box properties
 constexpr vec2f bbox_center(const bbox2f& a) {
