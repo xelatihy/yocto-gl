@@ -89,37 +89,28 @@ void subdivide_shape(yocto_shape& shape, int subdivision_level,
     if (!shape.points.empty()) {
         throw runtime_error("point subdivision not supported");
     } else if (!shape.lines.empty()) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_lines(shape.lines, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius);
-        }
+        subdivide_lines(shape.lines, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, subdivision_level);
     } else if (!shape.triangles.empty()) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_triangles(shape.triangles, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius);
-        }
+        subdivide_triangles(shape.triangles, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, subdivision_level);
     } else if (!shape.quads.empty() && !catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_quads(shape.quads, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius);
-        }
+        subdivide_quads(shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, subdivision_level);
     } else if (!shape.quads.empty() && catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius);
-        }
+        subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, subdivision_level);
     } else if (!shape.quads_positions.empty() && !catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_quads(shape.quads_positions, shape.positions);
-            subdivide_quads(shape.quads_normals, shape.normals);
-            subdivide_quads(shape.quads_texcoords, shape.texcoords);
-        }
+        subdivide_quads(
+            shape.quads_positions, shape.positions, subdivision_level);
+        subdivide_quads(shape.quads_normals, shape.normals, subdivision_level);
+        subdivide_quads(
+            shape.quads_texcoords, shape.texcoords, subdivision_level);
     } else if (!shape.quads_positions.empty() && catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_catmullclark(shape.quads_positions, shape.positions);
-            subdivide_catmullclark(
-                shape.quads_texcoords, shape.texcoords, true);
-        }
+        subdivide_catmullclark(
+            shape.quads_positions, shape.positions, subdivision_level);
+        subdivide_catmullclark(
+            shape.quads_texcoords, shape.texcoords, subdivision_level, true);
     } else {
         throw runtime_error("empty shape");
     }
@@ -623,6 +614,73 @@ void print_validation(const yocto_scene& scene, bool skip_textures) {
         printf("%s [validation]\n", err.c_str());
 }
 
+void build_bvh(
+    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
+    bvh.shapes.resize(scene.shapes.size());
+    for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+        auto& shape = scene.shapes[idx];
+        auto& sbvh  = bvh.shapes[idx];
+#if YOCTO_EMBREE
+        // call Embree if needed
+        if (params.use_embree) {
+            if (params.embree_compact &&
+                shape.positions.size() == shape.positions.capacity()) {
+                ((yocto_shape&)shape)
+                    .positions.reserve(shape.positions.size() + 1);
+            }
+        }
+#endif
+        sbvh.points          = shape.points;
+        sbvh.lines           = shape.lines;
+        sbvh.triangles       = shape.triangles;
+        sbvh.quads           = shape.quads;
+        sbvh.quads_positions = shape.quads_positions;
+        sbvh.positions       = shape.positions;
+        sbvh.radius          = shape.radius;
+    }
+    if (!scene.instances.empty()) {
+        bvh.instances = {&scene.instances[0].frame, (int)scene.instances.size(),
+            sizeof(scene.instances[0])};
+    } else {
+        bvh.instances = {};
+    }
+
+    build_bvh(bvh, params);
+}
+
+void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
+    const vector<int>& updated_shapes, const bvh_params& params) {
+    for (auto idx : updated_shapes) {
+        auto& shape = scene.shapes[idx];
+        auto& sbvh  = bvh.shapes[idx];
+#if YOCTO_EMBREE
+        // call Embree if needed
+        if (params.use_embree) {
+            if (params.embree_compact &&
+                shape.positions.size() == shape.positions.capacity()) {
+                ((yocto_shape&)shape)
+                    .positions.reserve(shape.positions.size() + 1);
+            }
+        }
+#endif
+        sbvh.points          = shape.points;
+        sbvh.lines           = shape.lines;
+        sbvh.triangles       = shape.triangles;
+        sbvh.quads           = shape.quads;
+        sbvh.quads_positions = shape.quads_positions;
+        sbvh.positions       = shape.positions;
+        sbvh.radius          = shape.radius;
+    }
+    if (!scene.instances.empty()) {
+        bvh.instances = {&scene.instances[0].frame, (int)scene.instances.size(),
+            sizeof(scene.instances[0])};
+    } else {
+        bvh.instances = {};
+    }
+
+    refit_bvh(bvh, updated_shapes, params);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -922,7 +980,7 @@ vec4f lookup_texture(
     if (!texture.hdr_image.empty()) {
         return texture.hdr_image[{i, j}];
     } else if (!texture.ldr_image.empty() && !ldr_as_linear) {
-        return srgb_to_linear(byte_to_float(texture.ldr_image[{i, j}]));
+        return srgb_to_rgb(byte_to_float(texture.ldr_image[{i, j}]));
     } else if (!texture.ldr_image.empty() && ldr_as_linear) {
         return byte_to_float(texture.ldr_image[{i, j}]);
     } else {
@@ -1270,7 +1328,8 @@ material_point eval_material(const yocto_scene& scene,
         point.coat *= xyz(eval_texture(coat_texture, texturecoord));
     }
     if (metallic) {
-        point.specular = point.specular * (1 - metallic) + metallic * point.diffuse;
+        point.specular = point.specular * (1 - metallic) +
+                         metallic * point.diffuse;
         point.diffuse = metallic * point.diffuse * (1 - metallic);
     }
     if (point.diffuse != zero3f || point.roughness) {

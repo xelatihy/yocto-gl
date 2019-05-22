@@ -52,7 +52,7 @@ cameras:
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
 textures:
   - uri: ::yocto::test-floor::textures/test-floor.png
-  - uri: ::yocto::test-bump-normal::textures/test-bump-normal.png
+  - uri: ::yocto::test-bumps-normal::textures/test-bumps-normal.png
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
@@ -66,12 +66,12 @@ materials:
     specular: [0.04, 0.04, 0.04]
     diffuse: [0.5, 0.5, 0.7]
     roughness: 0.01
-    normal_texture: textures/test-bump-normal.png
+    normal_texture: textures/test-bumps-normal.png
   - uri: materials/test-metal-sharp-bumped.yaml
     metallic: 1
     diffuse: [0.7, 0.7, 0.7]
     roughness: 0
-    normal_texture: textures/test-bump-normal.png
+    normal_texture: textures/test-bumps-normal.png
   - uri: materials/test-plastic-rough-coated.yaml
     specular: [0.04, 0.04, 0.04]
     coat: [0.04, 0.04, 0.04]

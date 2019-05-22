@@ -26,7 +26,8 @@
 // 2. use `compute_shape_box()/compute_scene_box()` to compute element bounds
 // 3. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
-// 4. for ray-intersection and closest point queries, use Yocto/Bvh
+// 4. for ray-intersection and closest point queries, use
+// 'build_bvh()`/`refit_bvh()`
 //
 //
 
@@ -62,6 +63,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include "yocto_bvh.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
 
@@ -120,20 +122,20 @@ struct yocto_material {
     string uri = "";
 
     // lobes
-    vec3f emission          = {0, 0, 0};
-    vec3f diffuse           = {0, 0, 0};
-    vec3f specular          = {0, 0, 0};
-    float roughness         = 0;
-    float metallic          = 0;
-    vec3f coat              = {0, 0, 0};
-    vec3f transmission      = {0, 0, 0};
-    vec3f voltransmission   = {0, 0, 0};
-    vec3f volemission       = {0, 0, 0};
-    vec3f volscatter        = {0, 0, 0};
-    float volanisotropy     = 0;
-    float volscale          = 0.01;
-    float opacity           = 1;
-    bool  thin              = false;
+    vec3f emission        = {0, 0, 0};
+    vec3f diffuse         = {0, 0, 0};
+    vec3f specular        = {0, 0, 0};
+    float roughness       = 0;
+    float metallic        = 0;
+    vec3f coat            = {0, 0, 0};
+    vec3f transmission    = {0, 0, 0};
+    vec3f voltransmission = {0, 0, 0};
+    vec3f volemission     = {0, 0, 0};
+    vec3f volscatter      = {0, 0, 0};
+    float volanisotropy   = 0;
+    float volscale        = 0.01;
+    float opacity         = 1;
+    bool  thin            = false;
 
     // textures
     int  emission_texture     = -1;
@@ -356,6 +358,12 @@ void trim_memory(yocto_scene& scene);
 
 // Checks for validity of the scene.
 void print_validation(const yocto_scene& scene, bool skip_textures = false);
+
+// Build/refit the bvh acceleration structure.
+void build_bvh(
+    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params);
+void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
+    const vector<int>& updated_shapes, const bvh_params& params);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f eval_position(

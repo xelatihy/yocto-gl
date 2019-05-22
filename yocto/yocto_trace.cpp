@@ -706,7 +706,7 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
 
 vec4f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
-    auto ndo = abs(dot(outgoing, normal));
+    auto ndo      = abs(dot(outgoing, normal));
     auto coat     = fresnel_schlick(material.coat, ndo);
     auto specular = fresnel_schlick(material.specular, ndo);
 
@@ -973,7 +973,7 @@ float sample_light_pdf(const yocto_scene& scene, const trace_lights& lights,
     auto next_position = position;
     for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = intersect_bvh(
-            bvh, scene, instance_id, make_ray(next_position, direction));
+            bvh, instance_id, make_ray(next_position, direction));
         if (!isec.hit) break;
         // accumulate pdf
         auto& instance       = scene.instances[isec.instance];
@@ -1018,7 +1018,7 @@ float sample_lights_pdf(const yocto_scene& scene, const trace_lights& lights,
     for (auto environment : lights.environments) {
         pdf += sample_environment_pdf(scene, lights, environment, direction);
     }
-    pdf *= sample_uniform_pdf<float>(
+    pdf *= sample_uniform_pdf(
         lights.instances.size() + lights.environments.size());
     return pdf;
 }
@@ -1049,8 +1049,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(
-            bvh, scene, make_ray(origin, direction));
+        auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1190,8 +1189,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(
-            bvh, scene, make_ray(origin, direction));
+        auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1264,8 +1262,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < max(params.max_bounces, 4); bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(
-            bvh, scene, make_ray(origin, direction));
+        auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1316,7 +1313,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& origin,
     const vec3f& direction, rng_state& rng, const trace_params& params) {
     // intersect next point
-    auto intersection = intersect_bvh(bvh, scene, make_ray(origin, direction));
+    auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
     if (!intersection.hit) {
         return {zero3f, false};
     }
