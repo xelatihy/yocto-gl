@@ -1455,7 +1455,7 @@ constexpr frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, int N>
 constexpr frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false) {
-    if(non_rigid) {
+    if (non_rigid) {
         auto minv = inverse(a.m());
         return {minv, -(minv * a.o)};
     } else {
@@ -1569,88 +1569,104 @@ constexpr auto invalid_bbox2i = bbox2i{};
 constexpr auto invalid_bbox3i = bbox3i{};
 constexpr auto invalid_bbox4i = bbox4i{};
 
-// Bounding box comparisons.
-template <typename T, int N>
-constexpr bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
-    return a.min == b.min && a.max == b.max;
-}
-template <typename T, int N>
-constexpr bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
-    return a.min != b.min || a.max != b.max;
-}
-
-// Bbox properties
-template <typename T, int N>
-constexpr vec<T, N> bbox_center(const bbox<T, N>& a) {
+// Bounding box properties
+constexpr vec2f bbox_center(const bbox2f& a) {
     return (a.min + a.max) / 2;
 }
-template <typename T, int N>
-constexpr vec<T, N> bbox_size(const bbox<T, N>& a) {
+constexpr vec2f bbox_size(const bbox2f& a) {
     return a.max - a.min;
 }
 
+// Bounding box comparisons.
+constexpr bool operator==(const bbox2f& a, const bbox2f& b) {
+    return a.min == b.min && a.max == b.max;
+}
+constexpr bool operator!=(const bbox2f& a, const bbox2f& b) {
+    return a.min != b.min || a.max != b.max;
+}
+
 // Bounding box expansions with points and other boxes.
-template <typename T, int N>
-constexpr bbox<T, N> operator+(const bbox<T, N>& a, const vec<T, N>& b) {
+constexpr bbox2f operator+(const bbox2f& a, const vec2f& b) {
     return {min(a.min, b), max(a.max, b)};
 }
-template <typename T, int N>
-constexpr bbox<T, N> operator+(const bbox<T, N>& a, const bbox<T, N>& b) {
+constexpr bbox2f operator+(const bbox2f& a, const bbox2f& b) {
     return {min(a.min, b.min), max(a.max, b.max)};
 }
-template <typename T, int N>
-constexpr bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b) {
+constexpr bbox2f& operator+=(bbox2f& a, const vec2f& b) {
     return a = a + b;
 }
-template <typename T, int N>
-constexpr bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b) {
+constexpr bbox2f& operator+=(bbox2f& a, const bbox2f& b) {
+    return a = a + b;
+}
+
+// Bounding box properties
+constexpr vec3f bbox_center(const bbox3f& a) {
+    return (a.min + a.max) / 2;
+}
+constexpr vec3f bbox_size(const bbox3f& a) {
+    return a.max - a.min;
+}
+
+// Bounding box comparisons.
+constexpr bool operator==(const bbox3f& a, const bbox3f& b) {
+    return a.min == b.min && a.max == b.max;
+}
+constexpr bool operator!=(const bbox3f& a, const bbox3f& b) {
+    return a.min != b.min || a.max != b.max;
+}
+
+// Bounding box expansions with points and other boxes.
+constexpr bbox3f operator+(const bbox3f& a, const vec3f& b) {
+    return {min(a.min, b), max(a.max, b)};
+}
+constexpr bbox3f operator+(const bbox3f& a, const bbox3f& b) {
+    return {min(a.min, b.min), max(a.max, b.max)};
+}
+constexpr bbox3f& operator+=(bbox3f& a, const vec3f& b) {
+    return a = a + b;
+}
+constexpr bbox3f& operator+=(bbox3f& a, const bbox3f& b) {
     return a = a + b;
 }
 
 // Primitive bounds.
-template <typename T, int N, typename T1>
-constexpr bbox<T, N> point_bounds(const vec<T, N>& p) {
-    auto a = bbox<T, N>{};
+constexpr bbox3f point_bounds(const vec3f& p) {
+    auto a = bbox3f{};
     a += p;
     return a;
 }
-template <typename T, int N, typename T1>
-constexpr bbox<T, N> point_bounds(const vec<T, N>& p, T1 r) {
-    auto a = bbox<T, N>{};
-    a += p - vec<T, N>{r};
-    a += p + vec<T, N>{r};
+constexpr bbox3f point_bounds(const vec3f& p, float r) {
+    auto a = bbox3f{};
+    a += p - r;
+    a += p + r;
     return a;
 }
-template <typename T, int N, typename T1>
-constexpr bbox<T, N> line_bounds(const vec<T, N>& p0, const vec<T, N>& p1) {
-    auto a = bbox<T, N>{};
+constexpr bbox3f line_bounds(const vec3f& p0, const vec3f& p1) {
+    auto a = bbox3f{};
     a += p0;
     a += p1;
     return a;
 }
-template <typename T, int N, typename T1>
-constexpr bbox<T, N> line_bounds(
-    const vec<T, N>& p0, const vec<T, N>& p1, T1 r0, T1 r1) {
-    auto a = bbox<T, N>{};
-    a += p0 - vec<T, N>{r0, r0, r0};
-    a += p0 + vec<T, N>{r0, r0, r0};
-    a += p1 - vec<T, N>{r1, r1, r1};
-    a += p1 + vec<T, N>{r1, r1, r1};
+constexpr bbox3f line_bounds(
+    const vec3f& p0, const vec3f& p1, float r0, float r1) {
+    auto a = bbox3f{};
+    a += p0 - r0;
+    a += p0 + r0;
+    a += p1 - r1;
+    a += p1 + r1;
     return a;
 }
-template <typename T, int N>
-constexpr bbox<T, N> triangle_bounds(
-    const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2) {
-    auto a = bbox<T, 3>{};
+constexpr bbox3f triangle_bounds(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    auto a = bbox3f{};
     a += p0;
     a += p1;
     a += p2;
     return a;
 }
-template <typename T, int N>
-constexpr bbox<T, N> quad_bounds(const vec<T, N>& p0, const vec<T, N>& p1,
-    const vec<T, N>& p2, const vec<T, N>& p3) {
-    auto a = bbox<T, N>{};
+constexpr bbox3f quad_bounds(const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3) {
+    auto a = bbox3f{};
     a += p0;
     a += p1;
     a += p2;
@@ -1668,36 +1684,30 @@ namespace yocto {
 // Ray esplison
 constexpr auto ray_eps = 1e-4f;
 
-// Rays with origin, direction and min/max t value.
-template <typename T, int N>
-struct ray;
+struct ray2f {
+    vec2f o = {0, 0};
+    vec2f d = {0, 1};
+    float tmin = ray_eps;
+    float tmax = float_max;
 
-template <typename T>
-struct ray<T, 2> {
-    vec<T, 2> o = {0, 0}, d = {0, 1};
-    T         tmin = ray_eps, tmax = float_max;
-
-    constexpr ray() {}
-    constexpr ray(const vec<T, 2>& o, const vec<T, 2>& d, T tmin = ray_eps,
-        T tmax = float_max)
+    constexpr ray2f() {}
+    constexpr ray2f(const vec2f& o, const vec2f& d, float tmin = ray_eps,
+        float tmax = float_max)
         : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };
 
 // Rays with origin, direction and min/max t value.
-template <typename T>
-struct ray<T, 3> {
-    vec<T, 3> o = {0, 0, 0}, d = {0, 0, 1};
-    T         tmin = ray_eps, tmax = float_max;
+struct ray3f {
+    vec3f o = {0, 0, 0};
+    vec3f d = {0, 0, 1};
+    float tmin = ray_eps;
+    float tmax = float_max;
 
-    constexpr ray() : o{0, 0, 0}, d{0, 0, 1}, tmin{0}, tmax{type_max<T>} {}
-    constexpr ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin = ray_eps,
-        T tmax = float_max)
+    constexpr ray3f() {}
+    constexpr ray3f(const vec3f& o, const vec3f& d, float tmin = ray_eps,
+        float tmax = float_max)
         : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };
-
-// Typedefs
-using ray2f = ray<float, 2>;
-using ray3f = ray<float, 3>;
 
 }  // namespace yocto
 
@@ -1707,73 +1717,55 @@ using ray3f = ray<float, 3>;
 namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
-inline vec2f transform_point(
-    const mat3f& a, const vec2f& b) {
-        auto tvb = a * vec3f{b.x, b.y, 1};
-        return vec2f{tvb.x, tvb.y} / tvb.z;
+inline vec2f transform_point(const mat3f& a, const vec2f& b) {
+    auto tvb = a * vec3f{b.x, b.y, 1};
+    return vec2f{tvb.x, tvb.y} / tvb.z;
 }
-inline vec2f transform_vector(
-    const mat3f& a, const vec2f& b) {
-        auto tvb = a * vec3f{b.x, b.y, 0};
-        return vec2f{tvb.x, tvb.y} / tvb.z;
+inline vec2f transform_vector(const mat3f& a, const vec2f& b) {
+    auto tvb = a * vec3f{b.x, b.y, 0};
+    return vec2f{tvb.x, tvb.y} / tvb.z;
 }
-inline vec2f transform_direction(
-    const mat3f& a, const vec2f& b) {
+inline vec2f transform_direction(const mat3f& a, const vec2f& b) {
     return normalize(transform_vector(a, b));
 }
-inline vec2f transform_normal(
-    const mat3f& a, const vec2f& b) {
+inline vec2f transform_normal(const mat3f& a, const vec2f& b) {
     return normalize(transform_vector(transpose(inverse(a)), b));
 }
-inline vec2f transform_vector(
-    const mat2f& a, const vec2f& b) {
-    return a * b;
-}
-inline vec2f transform_direction(
-    const mat2f& a, const vec2f& b) {
+inline vec2f transform_vector(const mat2f& a, const vec2f& b) { return a * b; }
+inline vec2f transform_direction(const mat2f& a, const vec2f& b) {
     return normalize(transform_vector(a, b));
 }
-inline vec2f transform_normal(
-    const mat2f& a, const vec2f& b) {
+inline vec2f transform_normal(const mat2f& a, const vec2f& b) {
     return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
-inline vec3f transform_point(
-    const mat4f& a, const vec3f& b) {
-        auto tvb = a * vec4f{b.x, b.y, b.z, 1};
-        return vec3f{tvb.x, tvb.y, tvb.z} / tvb.w;
+inline vec3f transform_point(const mat4f& a, const vec3f& b) {
+    auto tvb = a * vec4f{b.x, b.y, b.z, 1};
+    return vec3f{tvb.x, tvb.y, tvb.z} / tvb.w;
 }
-inline vec3f transform_vector(
-    const mat4f& a, const vec3f& b) {
-        auto tvb = a * vec4f{b.x, b.y, b.z, 0};
-        return vec3f{tvb.x, tvb.y, tvb.z};
+inline vec3f transform_vector(const mat4f& a, const vec3f& b) {
+    auto tvb = a * vec4f{b.x, b.y, b.z, 0};
+    return vec3f{tvb.x, tvb.y, tvb.z};
 }
-inline vec3f transform_direction(
-    const mat4f& a, const vec3f& b) {
+inline vec3f transform_direction(const mat4f& a, const vec3f& b) {
     return normalize(transform_vector(a, b));
 }
-inline vec3f transform_vector(
-    const mat3f& a, const vec3f& b) {
-    return a * b;
-}
-inline vec3f transform_direction(
-    const mat3f& a, const vec3f& b) {
+inline vec3f transform_vector(const mat3f& a, const vec3f& b) { return a * b; }
+inline vec3f transform_direction(const mat3f& a, const vec3f& b) {
     return normalize(transform_vector(a, b));
 }
-inline vec3f transform_normal(
-    const mat3f& a, const vec3f& b) {
+inline vec3f transform_normal(const mat3f& a, const vec3f& b) {
     return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
 // Transforms points, vectors and directions by frames.
 inline vec2f transform_point(const frame2f& a, const vec2f& b) {
-        return a.x * b.x + a.y * b.y + a.o;
+    return a.x * b.x + a.y * b.y + a.o;
 }
 inline vec2f transform_vector(const frame2f& a, const vec2f& b) {
-        return a.x * b.x + a.y * b.y;
+    return a.x * b.x + a.y * b.y;
 }
-inline vec2f transform_direction(
-    const frame2f& a, const vec2f& b) {
+inline vec2f transform_direction(const frame2f& a, const vec2f& b) {
     return normalize(transform_vector(a, b));
 }
 inline vec2f transform_normal(
@@ -1787,13 +1779,12 @@ inline vec2f transform_normal(
 
 // Transforms points, vectors and directions by frames.
 inline vec3f transform_point(const frame3f& a, const vec3f& b) {
-        return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
 }
 inline vec3f transform_vector(const frame3f& a, const vec3f& b) {
-        return a.x * b.x + a.y * b.y + a.z * b.z;
+    return a.x * b.x + a.y * b.y + a.z * b.z;
 }
-inline vec3f transform_direction(
-    const frame3f& a, const vec3f& b) {
+inline vec3f transform_direction(const frame3f& a, const vec3f& b) {
     return normalize(transform_vector(a, b));
 }
 inline vec3f transform_normal(
@@ -1806,22 +1797,17 @@ inline vec3f transform_normal(
 }
 
 // Transforms rays and bounding boxes by matrices.
-inline ray3f transform_ray(
-    const mat4f& a, const ray3f& b) {
+inline ray3f transform_ray(const mat4f& a, const ray3f& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 inline ray3f transform_ray(const frame3f& a, const ray3f& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
-inline bbox3f transform_bbox(
-    const mat4f& a, const bbox3f& b) {
+inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b) {
     auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
-        vec3f{b.min.x, b.min.y, b.max.z},
-        vec3f{b.min.x, b.max.y, b.min.z},
-        vec3f{b.min.x, b.max.y, b.max.z},
-        vec3f{b.max.x, b.min.y, b.min.z},
-        vec3f{b.max.x, b.min.y, b.max.z},
-        vec3f{b.max.x, b.max.y, b.min.z},
+        vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
+        vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
+        vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
         vec3f{b.max.x, b.max.y, b.max.z}};
     auto xformed = bbox3f();
     for (auto& corner : corners) xformed += transform_point(a, corner);
@@ -1829,12 +1815,9 @@ inline bbox3f transform_bbox(
 }
 inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
     auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
-        vec3f{b.min.x, b.min.y, b.max.z},
-        vec3f{b.min.x, b.max.y, b.min.z},
-        vec3f{b.min.x, b.max.y, b.max.z},
-        vec3f{b.max.x, b.min.y, b.min.z},
-        vec3f{b.max.x, b.min.y, b.max.z},
-        vec3f{b.max.x, b.max.y, b.min.z},
+        vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
+        vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
+        vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
         vec3f{b.max.x, b.max.y, b.max.z}};
     auto xformed = bbox3f();
     for (auto& corner : corners) xformed += transform_point(a, corner);
@@ -1886,8 +1869,8 @@ inline frame3f make_rotation_frame(const mat3f& rot) {
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
-inline frame3f make_lookat_frame(const vec3f& eye,
-    const vec3f& center, const vec3f& up, bool inv_xz = false) {
+inline frame3f make_lookat_frame(const vec3f& eye, const vec3f& center,
+    const vec3f& up, bool inv_xz = false) {
     auto w = normalize(eye - center);
     auto u = normalize(cross(up, w));
     auto v = normalize(cross(w, u));
@@ -1899,24 +1882,28 @@ inline frame3f make_lookat_frame(const vec3f& eye,
 }
 
 // OpenGL frustum, ortho and perspecgive matrices.
-inline mat4f make_frustum_mat(float l, float r, float b, float t, float n, float f) {
+inline mat4f make_frustum_mat(
+    float l, float r, float b, float t, float n, float f) {
     return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
         {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
         {0, 0, -2 * f * n / (f - n), 0}};
 }
-inline mat4f make_ortho_mat(float l, float r, float b, float t, float n, float f) {
+inline mat4f make_ortho_mat(
+    float l, float r, float b, float t, float n, float f) {
     return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
         {0, 0, -2 / (f - n), 0},
         {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
-inline mat4f make_ortho2d_mat(float left, float right, float bottom, float top) {
+inline mat4f make_ortho2d_mat(
+    float left, float right, float bottom, float top) {
     return make_ortho_mat(left, right, bottom, top, -1, 1);
 }
 inline mat4f make_ortho_mat(float xmag, float ymag, float near, float far) {
     return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0},
         {0, 0, 2 / (near - far), 0}, {0, 0, (far + near) / (near - far), 1}};
 }
-inline mat4f make_perspective_mat(float fovy, float aspect, float near, float far) {
+inline mat4f make_perspective_mat(
+    float fovy, float aspect, float near, float far) {
     auto tg = tan(fovy / 2);
     return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
         {0, 0, (far + near) / (near - far), -1},
@@ -1935,9 +1922,8 @@ inline pair<vec3f, float> make_rotation_axisangle(const vec4f& quat) {
 inline vec4f make_rotation_quat(const vec3f& axis, float angle) {
     auto len = length(axis);
     if (!len) return {0, 0, 0, 1};
-    return vec4f{sin(angle / 2) * axis.x / len,
-        sin(angle / 2) * axis.y / len, sin(angle / 2) * axis.z / len,
-        cos(angle / 2)};
+    return vec4f{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
+        sin(angle / 2) * axis.z / len, cos(angle / 2)};
 }
 inline vec4f make_rotation_quat(const vec4f& axisangle) {
     return make_rotation_quat(
@@ -1946,16 +1932,16 @@ inline vec4f make_rotation_quat(const vec4f& axisangle) {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-inline vec2i get_image_coords(const vec2f& mouse_pos,
-    const vec2f& center, float scale, const vec2i& txt_size) {
+inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
+    float scale, const vec2i& txt_size) {
     auto xyf = (mouse_pos - center) / scale;
     return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
         (int)round(xyf.y + txt_size.y / 2.0f)};
 }
 
 // Center image and autofit.
-inline void update_image_view(vec2f& center, float& scale,
-    const vec2i& imsize, const vec2i& winsize, bool zoom_to_fit) {
+inline void update_image_view(vec2f& center, float& scale, const vec2i& imsize,
+    const vec2i& winsize, bool zoom_to_fit) {
     if (zoom_to_fit) {
         scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
         center = {(float)winsize.x / 2, (float)winsize.y / 2};
@@ -1966,8 +1952,8 @@ inline void update_image_view(vec2f& center, float& scale,
 }
 
 // Turntable for UI navigation.
-inline void update_camera_turntable(vec3f& from, vec3f& to,
-    vec3f& up, const vec2f& rotate, float dolly, const vec2f& pan) {
+inline void update_camera_turntable(vec3f& from, vec3f& to, vec3f& up,
+    const vec2f& rotate, float dolly, const vec2f& pan) {
     // rotate if necessary
     if (rotate.x || rotate.y) {
         auto z     = normalize(to - from);
@@ -2038,8 +2024,7 @@ inline void update_camera_first_person(
     auto x = cross(y, z);
 
     auto rot = make_rotation_frame(vec3f{1, 0, 0}, rotate.y) *
-               yocto::frame3f{
-                   frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
+               yocto::frame3f{frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
                make_rotation_frame(vec3f{0, 1, 0}, rotate.x);
     auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
