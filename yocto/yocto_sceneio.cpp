@@ -81,15 +81,6 @@ static inline void from_json(const json& js, vec<T, N>& val) {
     nlohmann::from_json(js, (std::array<T, N>&)val);
 }
 
-template <typename T, int N>
-static inline void to_json(json& js, const frame<T, N>& val) {
-    nlohmann::to_json(js, (const std::array<T, N*(N + 1)>&)val);
-}
-template <typename T, int N>
-static inline void from_json(const json& js, frame<T, N>& val) {
-    nlohmann::from_json(js, (std::array<T, N*(N + 1)>&)val);
-}
-
 template <typename T, int N, int M>
 static inline void to_json(json& js, const mat<T, N, M>& val) {
     nlohmann::to_json(js, (const std::array<T, N * M>&)val);
@@ -453,9 +444,11 @@ template <typename T, int N>
 inline void get_yaml_value(string_view str, vec<T, N>& value) {
     return get_yaml_value(str, (array<T, N>&)value);
 }
-template <typename T, int N>
-inline void get_yaml_value(string_view str, frame<T, N>& value) {
-    return get_yaml_value(str, (array<T, N*(N + 1)>&)value);
+inline void get_yaml_value(string_view str, frame2f& value) {
+    return get_yaml_value(str, (array<float, 6>&)value);
+}
+inline void get_yaml_value(string_view str, frame3f& value) {
+    return get_yaml_value(str, (array<float, 12>&)value);
 }
 template <typename T, int N, int M>
 inline void get_yaml_value(string_view str, mat<T, N, M>& value) {
@@ -866,9 +859,8 @@ static inline void print_yaml_keyvalue(
     FILE* fs, const char* name, const vec<T, 3>& value) {
     print(fs, "    {}: [ {}, {}, {} ]\n", name, value.x, value.y, value.z);
 }
-template <typename T>
 static inline void print_yaml_keyvalue(
-    FILE* fs, const char* name, const frame<T, 3>& value) {
+    FILE* fs, const char* name, const frame3f& value) {
     print(fs, "    {}: [ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {} ]\n",
         name, value.x.x, value.x.y, value.x.z, value.y.x, value.y.y, value.y.z,
         value.z.x, value.z.y, value.z.z, value.o.x, value.o.y, value.o.z);

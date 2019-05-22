@@ -81,15 +81,6 @@ inline void from_json(const json& js, vec<T, N>& val) {
     nlohmann::from_json(js, (std::array<T, N>&)val);
 }
 
-template <typename T, int N>
-inline void to_json(json& js, const frame<T, N>& val) {
-    nlohmann::to_json(js, (const std::array<T, N*(N + 1)>&)val);
-}
-template <typename T, int N>
-inline void from_json(const json& js, frame<T, N>& val) {
-    nlohmann::from_json(js, (std::array<T, N*(N + 1)>&)val);
-}
-
 template <typename T, int N, int M>
 inline void to_json(json& js, const mat<T, N, M>& val) {
     nlohmann::to_json(js, (const std::array<T, N * M>&)val);

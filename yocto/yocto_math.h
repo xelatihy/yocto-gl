@@ -17,24 +17,21 @@
 // constructed by column. The one dimensional version is for completeness only.
 //
 // To represent transformations, most of the library facilities prefer the use
-// coordinate frames, aka rigid transforms, represented as `frame<T, 2>` and
-// `frame<T, 3>`. The structure store three coordinate axes and the origin.
+// coordinate frames, aka rigid transforms, represented as `frame2f` and
+// `frame3f`. The structure store three coordinate axes and the origin.
 // This is equivalent to a rigid transform written as a column-major affine
 // matrix. Transform operations are fater with this representation.
 //
-// We represent ranges of values in 1-4 dimensions with `bbox<T, 1>`, `bbox<T,
-// 2>`, `bbox<T, 3>`, `bbox<T, 4>`. Each range support construction from points
-// and other ranges. These can be used to represent generic ranges and
-// axis-aligned bounding boxes, for which we define the aliases `bbox<T, 1>`,
-// `bbox<T, 2>`, `bbox<T, 3>`,`bbox<T, 4>`. We provide operations to compute
-// bounds for points, lines, triangles and quads.
+// We represent bounding boxes in 2-3 dimensions with `bbox2f`, `bbox3f`
+// Each bounding box support construction from points and other bounding box. 
+// We provide operations to compute bounds for points, lines, triangles and 
+// quads.
 //
 // For both matrices and frames we support transform operations for points,
 // vectors and directions (`transform_point()`, `transform_vector()`,
-// `transform_direction()`). For frames we also the support inverse operations
-// (`transform_xxx_inverse()`). Transform matrices and frames can be
+// `transform_direction()`). Transform matrices and frames can be
 // constructed from basic translation, rotation and scaling, e.g. with
-// `translation_mat()` or `make_translation_frame()` respectively, etc.
+// `make_translation_mat()` or `make_translation_frame()` respectively, etc.
 // For rotation we support axis-angle and quaternions, with slerp.
 //
 //
@@ -1311,148 +1308,91 @@ constexpr mat<T, 3, 3> make_basis_fromz(const vec<T, 3>& v) {
 namespace yocto {
 
 // Rigid frames stored as a column-major affine transform matrix.
-template <typename T, int N>
-struct frame;
+struct frame2f {
+    vec2f x = {1, 0};
+    vec2f y = {0, 1};
+    vec2f o = {0, 0};
 
-// Rigid frames stored as a column-major affine transform matrix.
-template <typename T>
-struct frame<T, 2> {
-    vec<T, 2> x, y, o;
-
-    constexpr frame() : x{}, y{}, o{} {}
-    constexpr frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
+    constexpr frame2f() : x{}, y{}, o{} {}
+    constexpr frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
         : x{x}, y{y}, o{o} {}
-    constexpr explicit frame(const vec<T, 2>& o) : x{1, 0}, y{0, 1}, o{o} {}
-    constexpr frame(const mat<T, 2, 2>& m, const vec<T, 2>& t)
+    constexpr explicit frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
+    constexpr frame2f(const mat2f& m, const vec2f& t)
         : x{m.x}, y{m.y}, o{t} {}
-    constexpr explicit frame(const mat<T, 3, 3>& m)
+    constexpr explicit frame2f(const mat3f& m)
         : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-    constexpr operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
+    constexpr operator mat3f() const { return {{x, 0}, {y, 0}, {o, 1}}; }
 
-    constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec2f&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec2f& operator[](int i) const { return (&x)[i]; }
 
-    constexpr mat<T, 2, 2>&       m() { return *(mat<T, 2, 2>*)&x; }
-    constexpr const mat<T, 2, 2>& m() const { return *(mat<T, 2, 2>*)&x; }
-    constexpr vec<T, 2>&          t() { return o; }
-    constexpr const vec<T, 2>&    t() const { return o; }
+    constexpr mat2f&       m() { return *(mat2f*)&x; }
+    constexpr const mat2f& m() const { return *(mat2f*)&x; }
+    constexpr vec2f&          t() { return o; }
+    constexpr const vec2f&    t() const { return o; }
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
-template <typename T>
-struct frame<T, 3> {
-    vec<T, 3> x, y, z, o;
+struct frame3f {
+    vec3f x = {1,0,0};
+    vec3f y = {0,1,0};
+    vec3f z = {0,0,1};
+    vec3f o = {0,0,0};
 
-    constexpr frame() : x{}, y{}, z{}, o{} {}
-    constexpr frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
-        const vec<T, 3>& o)
+    constexpr frame3f() : x{}, y{}, z{}, o{} {}
+    constexpr frame3f(const vec3f& x, const vec3f& y, const vec3f& z,
+        const vec3f& o)
         : x{x}, y{y}, z{z}, o{o} {}
-    constexpr explicit frame(const vec<T, 3>& o)
+    constexpr explicit frame3f(const vec3f& o)
         : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
-    constexpr frame(const mat<T, 3, 3>& m, const vec<T, 3>& t)
+    constexpr frame3f(const mat3f& m, const vec3f& t)
         : x{m.x}, y{m.y}, z{m.z}, o{t} {}
-    constexpr explicit frame(const mat<T, 4, 4>& m)
+    constexpr explicit frame3f(const mat4f& m)
         : x{m.x.x, m.x.y, m.x.z}
         , y{m.y.x, m.y.y, m.y.z}
         , z{m.z.x, m.z.y, m.z.z}
         , o{m.w.x, m.w.y, m.w.z} {}
-    constexpr operator mat<T, 4, 4>() const {
+    constexpr operator mat4f() const {
         return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
     }
 
-    constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec3f&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec3f& operator[](int i) const { return (&x)[i]; }
 
-    constexpr mat<T, 3, 3>&       m() { return *(mat<T, 3, 3>*)&x; }
-    constexpr const mat<T, 3, 3>& m() const { return *(mat<T, 3, 3>*)&x; }
-    constexpr vec<T, 3>&          t() { return o; }
-    constexpr const vec<T, 3>&    t() const { return o; }
+    constexpr mat3f&       m() { return *(mat3f*)&x; }
+    constexpr const mat3f& m() const { return *(mat3f*)&x; }
+    constexpr vec3f&          t() { return o; }
+    constexpr const vec3f&    t() const { return o; }
 };
-
-// Typedefs
-using frame2f = frame<float, 2>;
-using frame3f = frame<float, 3>;
 
 // Indentity frames.
 constexpr auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
 constexpr auto identity_frame3f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
-// Indentity frames.
-template <typename T, int N>
-constexpr frame<T, N> _identity_frame() {
-    if constexpr (N == 2) {
-        return {{1, 0}, {0, 1}, {0, 0}};
-    } else if constexpr (N == 3) {
-        return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
-    } else {
-    }
-}
-template <typename T, int N>
-constexpr auto identity_frame = _identity_frame<T, N>();
-
-// Frame construction from axis.
-template <typename T>
-constexpr frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
-    // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-    auto z    = normalize(v);
-    auto sign = copysignf(1.0f, z.z);
-    auto a    = -1.0f / (sign + z.z);
-    auto b    = z.x * z.y * a;
-    auto x    = vec<T, 3>{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
-    auto y    = vec<T, 3>{b, sign + z.y * z.y * a, -z.y};
-    return {x, y, z, o};
-}
-template <typename T>
-constexpr frame<T, 3> make_frame_fromzx(
-    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
-    auto z = normalize(z_);
-    auto x = orthonormalize(x_, z);
-    auto y = normalize(cross(z, x));
-    return {x, y, z, o};
-}
-
-template <typename T, int N>
-constexpr mat<T, N, N>& linear_component(frame<T, N>& a) {
-    return (mat<T, N, N>&)a;
-}
-
-template <typename T, int N>
-constexpr const mat<T, N, N>& linear_component(const frame<T, N>& a) {
-    return (mat<T, N, N>&)a;
+// Frame properties
+inline const mat2f& linear_component(const frame2f& a) {
+    return (const mat2f&)a;
 }
 
 // Frame comparisons.
-template <typename T, int N>
-constexpr bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
-    if constexpr (N == 2) {
+constexpr bool operator==(const frame2f& a, const frame2f& b) {
         return a.x == b.x && a.y == b.y && a.o == b.o;
-    } else if constexpr (N == 3) {
-        return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
-    } else {
-        for (auto i = 0; i < N; i++)
-            if (a[i] != b[i]) return false;
-        return a[N] == b[N];
-    }
 }
-template <typename T, int N>
-constexpr bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
+constexpr bool operator!=(const frame2f& a, const frame2f& b) {
     return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
-template <typename T, int N>
-constexpr frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
+constexpr frame2f operator*(const frame2f& a, const frame2f& b) {
     return {a.m() * b.m(), a.m() * b.o + a.o};
 }
-template <typename T, int N>
-constexpr frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
+constexpr frame2f& operator*=(frame2f& a, const frame2f& b) {
     return a = a * b;
 }
 
 // Frame inverse, equivalent to rigid affine inverse.
-template <typename T, int N>
-constexpr frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false) {
+constexpr frame2f inverse(const frame2f& a, bool non_rigid = false) {
     if (non_rigid) {
         auto minv = inverse(a.m());
         return {minv, -(minv * a.o)};
@@ -1460,6 +1400,57 @@ constexpr frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false) {
         auto minv = transpose(a.m());
         return {minv, -(minv * a.o)};
     }
+}
+
+// Frame properties
+inline const mat3f& linear_component(const frame3f& a) {
+    return (const mat3f&)a;
+}
+
+// Frame comparisons.
+constexpr bool operator==(const frame3f& a, const frame3f& b) {
+        return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
+}
+constexpr bool operator!=(const frame3f& a, const frame3f& b) {
+    return !(a == b);
+}
+
+// Frame composition, equivalent to affine matrix product.
+constexpr frame3f operator*(const frame3f& a, const frame3f& b) {
+    return {a.m() * b.m(), a.m() * b.o + a.o};
+}
+constexpr frame3f& operator*=(frame3f& a, const frame3f& b) {
+    return a = a * b;
+}
+
+// Frame inverse, equivalent to rigid affine inverse.
+constexpr frame3f inverse(const frame3f& a, bool non_rigid = false) {
+    if (non_rigid) {
+        auto minv = inverse(a.m());
+        return {minv, -(minv * a.o)};
+    } else {
+        auto minv = transpose(a.m());
+        return {minv, -(minv * a.o)};
+    }
+}
+
+// Frame construction from axis.
+inline frame3f make_frame_fromz(const vec3f& o, const vec3f& v) {
+    // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+    auto z    = normalize(v);
+    auto sign = copysignf(1.0f, z.z);
+    auto a    = -1.0f / (sign + z.z);
+    auto b    = z.x * z.y * a;
+    auto x    = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
+    auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
+    return {x, y, z, o};
+}
+inline frame3f make_frame_fromzx(
+    const vec3f& o, const vec3f& z_, const vec3f& x_) {
+    auto z = normalize(z_);
+    auto x = orthonormalize(x_, z);
+    auto y = normalize(cross(z, x));
+    return {x, y, z, o};
 }
 
 }  // namespace yocto
