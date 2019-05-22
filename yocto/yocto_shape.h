@@ -451,37 +451,41 @@ namespace yocto {
 
 // Type of procedural shape
 enum make_shape_type {
+    quad,
+    floor,
+    cube,
+    sphere,
+    disk,
+    matball,
+    suzanne,
+    box,
     rect,
     rect_stack,
-    floor,
-    box,
-    sphere,
     uvsphere,
-    disk,
     uvdisk,
     uvcylinder,
     geosphere,
-    matball,
-    suzanne
 };
 
 // Parameters for make shape function
 struct make_shape_params {
-    make_shape_type type        = make_shape_type::rect;
-    int             subdivision = 0;
-    float           size        = 2;
-    float           uvsize      = 1;
-    float           rounded     = 0;
-    int             num         = 0;
-    vec3i           steps       = {1, 1, 1};
-    vec3f           scale       = {1, 1, 1};
-    vec3f           uvscale     = {1, 1, 1};
-    frame3f         frame       = identity_frame3f;
+    make_shape_type type         = make_shape_type::quad;
+    int             subdivisions = 0;
+    float           size         = 2;
+    float           uvsize       = 1;
+    float           rounded      = 0;
+    vec3f           aspect       = {1, 1, 1};  // for rect, box, cylinder
+    frame3f         frame        = identity_frame3f;
 };
 
 // Make a procedural shape
-void make_shape(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
+void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const make_shape_params& params);
+// Make face-varying quads. For now supports only quad, cube, suzanne, sphere,
+// rect, box. Rounding not supported for now.
+void make_fvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const make_shape_params& params);
 
@@ -629,27 +633,27 @@ constexpr float triangle_area(
 }
 
 // Quad propeties.
-constexpr vec3f quad_normal(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3) {
+constexpr vec3f quad_normal(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
     return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
 }
-constexpr float quad_area(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3) {
+constexpr float quad_area(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
     return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
 }
 
 // Triangle tangent and bitangent from uv
-constexpr pair<vec3f, vec3f> triangle_tangents_fromuv(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2,
-    const vec2f& uv0, const vec2f& uv1, const vec2f& uv2);
+constexpr pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2);
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
 // to do it. If not interested in the split, just pass zero2f here.
 constexpr pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3,
-    const vec2f& uv0, const vec2f& uv1, const vec2f& uv2,
-    const vec2f& uv3, const vec2f& current_uv);
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
@@ -696,9 +700,9 @@ constexpr T interpolate_bezier_derivative(
 }
 
 // Triangle tangent and bitangent from uv
-constexpr pair<vec3f, vec3f> triangle_tangents_fromuv(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2,
-    const vec2f& uv0, const vec2f& uv1, const vec2f& uv2) {
+constexpr pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
     // https://gist.github.com/aras-p/2843984
     // normal points up from texture space
@@ -723,9 +727,9 @@ constexpr pair<vec3f, vec3f> triangle_tangents_fromuv(
 
 // Quad tangent and bitangent from uv.
 constexpr pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3,
-    const vec2f& uv0, const vec2f& uv1, const vec2f& uv2,
-    const vec2f& uv3, const vec2f& current_uv) {
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv) {
 #if YOCTO_QUADS_AS_TRIANGLES
     if (current_uv.x + current_uv.y <= 1) {
         return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);

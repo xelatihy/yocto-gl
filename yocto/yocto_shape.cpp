@@ -2482,49 +2482,87 @@ void make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& positions,
 }
 
 // Make a procedural shape
-void make_shape(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
+void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     const make_shape_params& params) {
     switch (params.type) {
-        case make_shape_type::rect: {
-            auto steps  = pow2(params.subdivision) * params.steps;
-            auto uvsize = params.uvsize * params.uvscale;
-            auto size   = params.size * params.scale;
+        case make_shape_type::quad: {
             if (!params.rounded) {
                 make_rect(quads, positions, normals, texcoords,
-                    {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
-                    params.frame);
+                    vec2i{pow2(params.subdivisions)}, vec2f{params.size},
+                    vec2f{params.uvsize}, params.frame);
             } else {
-                make_bulged_rect(quads, positions, normals, texcoords, steps.x,
-                    size.x, uvsize.x, params.rounded, params.frame);
-            }
-        } break;
-        case make_shape_type::rect_stack: {
-            auto steps  = pow2(params.subdivision) * params.steps;
-            auto uvsize = params.uvsize * params.uvscale;
-            auto size   = params.size * params.scale;
-            make_rect_stack(quads, positions, normals, texcoords, steps, size,
-                {uvsize.x, uvsize.y}, params.frame);
-        } break;
-        case make_shape_type::floor: {
-            auto steps  = pow2(params.subdivision) * params.steps;
-            auto uvsize = params.uvsize * params.uvscale;
-            auto size   = params.size * params.scale;
-            if (!params.rounded) {
-                make_floor(quads, positions, normals, texcoords,
-                    {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
-                    params.frame);
-            } else {
-                make_bent_floor(quads, positions, normals, texcoords,
-                    {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y},
+                make_bulged_rect(quads, positions, normals, texcoords,
+                    pow2(params.subdivisions), params.size, params.uvsize,
                     params.rounded, params.frame);
             }
         } break;
+        case make_shape_type::floor: {
+            if (!params.rounded) {
+                make_floor(quads, positions, normals, texcoords,
+                    vec2i{pow2(params.subdivisions)}, vec2f{params.size},
+                    vec2f{params.uvsize}, params.frame);
+            } else {
+                make_bent_floor(quads, positions, normals, texcoords,
+                    vec2i{pow2(params.subdivisions)}, vec2f{params.size},
+                    vec2f{params.uvsize}, params.rounded, params.frame);
+            }
+        } break;
+        case make_shape_type::cube: {
+            if (!params.rounded) {
+                make_box(quads, positions, normals, texcoords,
+                    vec3i{pow2(params.subdivisions)}, vec3f{params.size},
+                    vec3f{params.uvsize}, params.frame);
+            } else {
+                make_rounded_box(quads, positions, normals, texcoords,
+                    vec3i{pow2(params.subdivisions)}, vec3f{params.size},
+                    vec3f{params.uvsize}, params.rounded, params.frame);
+            }
+        } break;
+        case make_shape_type::sphere: {
+            make_sphere(quads, positions, normals, texcoords,
+                pow2(params.subdivisions), params.size, params.uvsize,
+                params.frame);
+        } break;
+        case make_shape_type::uvsphere: {
+            if (!params.rounded) {
+                make_uvsphere(quads, positions, normals, texcoords,
+                    {pow2(params.subdivisions + 1), pow2(params.subdivisions)},
+                    params.size, vec2f{params.uvsize}, params.frame);
+            } else {
+                make_flipcap_uvsphere(quads, positions, normals, texcoords,
+                    {pow2(params.subdivisions + 1), pow2(params.subdivisions)},
+                    params.size, vec2f{params.uvsize},
+                    vec2f{-(1 - params.rounded), 1 - params.rounded},
+                    params.frame);
+            }
+        } break;
+        case make_shape_type::disk: {
+            if (!params.rounded) {
+                make_disk(quads, positions, normals, texcoords,
+                    pow2(params.subdivisions), params.size, params.uvsize,
+                    params.frame);
+            } else {
+                make_bulged_disk(quads, positions, normals, texcoords,
+                    pow2(params.subdivisions), params.size, params.uvsize,
+                    params.rounded, params.frame);
+            }
+        } break;
+        case make_shape_type::matball: {
+            make_sphere(quads, positions, normals, texcoords,
+                pow2(params.subdivisions), params.size, params.uvsize,
+                params.frame);
+        } break;
+        case make_shape_type::suzanne: {
+            make_suzanne(quads, positions, params.size, params.frame);
+        } break;
         case make_shape_type::box: {
-            auto steps  = pow2(params.subdivision) * params.steps;
-            auto uvsize = params.uvsize * params.uvscale;
-            auto size   = params.size * params.scale;
+            auto steps = vec3i{
+                (int)round(pow2(params.subdivisions) * params.aspect.x),
+                (int)round(pow2(params.subdivisions) * params.aspect.y),
+                (int)round(pow2(params.subdivisions) * params.aspect.z)};
+            auto uvsize = params.uvsize * params.aspect;
+            auto size   = params.size * params.aspect;
             if (!params.rounded) {
                 make_box(quads, positions, normals, texcoords, steps, size,
                     uvsize, params.frame);
@@ -2533,74 +2571,78 @@ void make_shape(vector<int>& points, vector<vec2i>& lines,
                     size, uvsize, params.rounded, params.frame);
             }
         } break;
-        case make_shape_type::sphere: {
-            auto steps  = pow2(params.subdivision) * params.steps;
-            auto uvsize = params.uvsize * params.uvscale;
-            auto size   = params.size * params.scale;
-            make_sphere(quads, positions, normals, texcoords, steps.x, size.x,
-                uvsize.x, params.frame);
+        case make_shape_type::rect: {
+            auto steps = vec2i{
+                (int)round(pow2(params.subdivisions) * params.aspect.x),
+                (int)round(pow2(params.subdivisions) * params.aspect.y)};
+            auto uvsize = params.uvsize *
+                          vec2f{params.aspect.x, params.aspect.y};
+            auto size = params.size * vec2f{params.aspect.x, params.aspect.y};
+            make_rect(quads, positions, normals, texcoords, steps, size, uvsize,
+                params.frame);
         } break;
-        case make_shape_type::uvsphere: {
-            auto steps  = pow2(params.subdivision) * vec3i{2, 1, 1} * params.steps;
-            auto uvsize = params.uvsize * params.uvscale;
-            auto size   = params.size * params.scale;
-            if (!params.rounded) {
-                make_uvsphere(quads, positions, normals, texcoords,
-                    {steps.x, steps.x}, size.x, {uvsize.x, uvsize.y},
-                    params.frame);
-            } else {
-                make_flipcap_uvsphere(quads, positions, normals, texcoords,
-                    {steps.x, steps.y}, size.x, {uvsize.x, uvsize.y},
-                    vec2f{params.rounded}, params.frame);
-            }
-        } break;
-        case make_shape_type::disk: {
-            auto steps  = pow2(params.subdivision) * params.steps;
-            auto uvsize = params.uvsize * params.uvscale;
-            auto size   = params.size * params.scale;
-            if (!params.rounded) {
-                make_disk(quads, positions, normals, texcoords, steps.x, size.x,
-                    uvsize.x, params.frame);
-            } else {
-                make_bulged_disk(quads, positions, normals, texcoords, steps.x,
-                    size.x, uvsize.x, params.rounded, params.frame);
-            }
+        case make_shape_type::rect_stack: {
+            auto steps = vec3i{
+                (int)round(pow2(params.subdivisions) * params.aspect.x),
+                (int)round(pow2(params.subdivisions) * params.aspect.y),
+                (int)round(pow2(params.subdivisions) * params.aspect.z)};
+            auto uvsize = params.uvsize *
+                          vec2f{params.aspect.x, params.aspect.y};
+            auto size = params.size * params.aspect;
+            make_rect_stack(quads, positions, normals, texcoords, steps, size,
+                uvsize, params.frame);
         } break;
         case make_shape_type::uvdisk: {
-            auto steps  = pow2(params.subdivision) * params.steps;
-            auto uvsize = params.uvsize * params.uvscale;
-            auto size   = params.size * params.scale;
             make_uvdisk(quads, positions, normals, texcoords,
-                {steps.x, steps.y}, size.x, {uvsize.x, uvsize.y}, params.frame);
+                {pow2(params.subdivisions + 1), pow2(params.subdivisions)},
+                params.size, vec2f{params.uvsize}, params.frame);
         } break;
         case make_shape_type::uvcylinder: {
-            auto steps  = pow2(params.subdivision) * params.steps;
-            auto uvsize = params.uvsize * params.uvscale;
-            auto size   = params.size * params.scale;
+            auto steps = vec3i{
+                (int)round(pow2(params.subdivisions) * params.aspect.x),
+                (int)round(pow2(params.subdivisions) * params.aspect.y),
+                (int)round(pow2(params.subdivisions) * params.aspect.z)};
+            auto uvsize = params.uvsize * params.aspect;
+            auto size   = params.size * vec2f{params.aspect.x, params.aspect.y};
             if (!params.rounded) {
                 make_uvcylinder(quads, positions, normals, texcoords, steps,
-                    {size.x, size.y}, uvsize, params.frame);
+                    size, uvsize, params.frame);
             } else {
                 make_rounded_uvcylinder(quads, positions, normals, texcoords,
-                    steps, {size.x, size.y}, uvsize, params.rounded,
-                    params.frame);
+                    steps, size, uvsize, params.rounded, params.frame);
             }
         } break;
         case make_shape_type::geosphere: {
-            make_geosphere(triangles, positions, normals, params.subdivision,
+            make_geosphere(triangles, positions, normals, params.subdivisions,
                 params.size, params.frame);
         } break;
-        case make_shape_type::matball: {
-            auto steps  = pow2(params.subdivision) * params.steps;
-            auto uvsize = params.uvsize * params.uvscale;
-            auto size   = params.size * params.scale;
-            make_sphere(quads, positions, normals, texcoords, steps.x, size.x,
-                uvsize.x, params.frame);
-        } break;
+    }
+}
+
+// Make face-varying quads
+void make_fvquads(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const make_shape_params& params_) {
+    auto params    = params_;
+    params.rounded = 0;
+    switch (params.type) {
+        case make_shape_type::cube: {
+            make_fvbox(quads_positions, quads_normals, quads_texcoords,
+                positions, normals, texcoords, vec3i{pow2(params.subdivisions)},
+                vec3f{params.size}, vec3f{params.uvsize}, params.frame);
+        };
+        case make_shape_type::sphere: {
+            make_fvsphere(quads_positions, quads_normals, quads_texcoords,
+                positions, normals, texcoords, pow2(params.subdivisions),
+                params.size, params.uvsize, params.frame);
+        };
         case make_shape_type::suzanne: {
-            auto size   = params.size * params.scale;
-            make_suzanne(quads, positions, size.x, params.frame);
-        } break;
+            make_suzanne(quads_positions, positions, params.size, params.frame);
+        };
+        default: {
+            throw runtime_error("shape type not supported");
+        };
     }
 }
 
@@ -2700,74 +2742,62 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     if (type == "default-quad") {
         auto params = make_shape_params{};
         params.type = make_shape_type::rect;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-quady") {
         auto params = make_shape_params{};
         params.type = make_shape_type::rect;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-quad-stack") {
         auto params = make_shape_params{};
         params.type = make_shape_type::rect_stack;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-box") {
         auto params = make_shape_params{};
         params.type = make_shape_type::box;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-box-rounded") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::rect;
+        auto params    = make_shape_params{};
+        params.type    = make_shape_type::rect;
         params.rounded = 0.15;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-uvsphere") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::uvsphere;
-        params.subdivision = 5;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::uvsphere;
+        params.subdivisions = 5;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-sphere") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::sphere;
-        params.subdivision = 5;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::sphere;
+        params.subdivisions = 5;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-uvsphere-flipcap") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::uvsphere;
-        params.subdivision = 5;
-        params.rounded = 0.75;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::uvsphere;
+        params.subdivisions = 5;
+        params.rounded      = 0.75;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-uvdisk") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::uvdisk;
-        params.subdivision = 4;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::uvdisk;
+        params.subdivisions = 4;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-disk") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::disk;
-        params.subdivision = 5;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::disk;
+        params.subdivisions = 5;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-disk-bulged") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::disk;
-        params.subdivision = 5;
-        params.rounded = 0.25;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::disk;
+        params.subdivisions = 5;
+        params.rounded      = 0.25;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-quad-bulged") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::rect;
-        params.subdivision = 5;
-        params.rounded = 0.25;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::rect;
+        params.subdivisions = 5;
+        params.rounded      = 0.25;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-uvcylinder") {
         make_uvcylinder(quads, positions, normals, texcoords, {64, 32, 16},
             {2, 2}, {1, 1, 1}, identity_frame3f);
@@ -2775,34 +2805,30 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         make_rounded_uvcylinder(quads, positions, normals, texcoords,
             {64, 32, 16}, {2, 2}, {1, 1, 1}, 0.075, identity_frame3f);
     } else if (type == "default-sphere-geodesic") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::geosphere;
-        params.subdivision = 5;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::geosphere;
+        params.subdivisions = 5;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-floor") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::floor;
-        params.size = 40;
-        params.uvsize = 20;
-        params.subdivision = 1;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::floor;
+        params.size         = 40;
+        params.uvsize       = 20;
+        params.subdivisions = 1;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-floor-bent") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::floor;
-        params.size = 40;
-        params.uvsize = 20;
-        params.subdivision = 5;
-        params.rounded = 0.5;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::floor;
+        params.size         = 40;
+        params.uvsize       = 20;
+        params.subdivisions = 5;
+        params.rounded      = 0.5;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-matball") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::matball;
-        params.subdivision = 5;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::matball;
+        params.subdivisions = 5;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-hairball") {
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
@@ -2819,8 +2845,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     } else if (type == "default-suzanne") {
         auto params = make_shape_params{};
         params.type = make_shape_type::suzanne;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-cube-posonly") {
         auto ignore1 = vector<vec4i>{};
         auto ignore2 = vector<vec4i>{};
@@ -2836,77 +2861,70 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         make_fvsphere(quads_positions, quads_normals, quads_texcoords,
             positions, normals, texcoords, 32, 2, 1, identity_frame3f);
     } else if (type == "test-cube") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::box;
-        params.subdivision = 5;
-        params.size = 0.15;
-        params.rounded = 0.3;
-        params.frame = frame3f{{0, 0.075, 0}};
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::box;
+        params.subdivisions = 5;
+        params.size         = 0.15;
+        params.rounded      = 0.3;
+        params.frame        = frame3f{{0, 0.075, 0}};
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-uvsphere") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::uvsphere;
-        params.subdivision = 5;
-        params.size = 0.15;
-        params.frame = frame3f{{0, 0.075, 0}};
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::uvsphere;
+        params.subdivisions = 5;
+        params.size         = 0.15;
+        params.frame        = frame3f{{0, 0.075, 0}};
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-uvsphere-flipcap") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::uvsphere;
-        params.subdivision = 5;
-        params.size = 0.15;
-        params.rounded = 0.3;
-        params.frame = frame3f{{0, 0.075, 0}};
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::uvsphere;
+        params.subdivisions = 5;
+        params.size         = 0.15;
+        params.rounded      = 0.3;
+        params.frame        = frame3f{{0, 0.075, 0}};
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-sphere") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::sphere;
-        params.subdivision = 5;
-        params.size = 0.15;
-        params.frame = frame3f{{0, 0.075, 0}};
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::sphere;
+        params.subdivisions = 5;
+        params.size         = 0.15;
+        params.frame        = frame3f{{0, 0.075, 0}};
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-sphere-displaced") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::sphere;
-        params.subdivision = 5;
-        params.size = 0.15;
-        params.frame = frame3f{{0, 0.075, 0}};
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::sphere;
+        params.subdivisions = 5;
+        params.size         = 0.15;
+        params.frame        = frame3f{{0, 0.075, 0}};
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-disk") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::disk;
-        params.subdivision = 5;
-        params.size = 0.15;
-        params.frame = frame3f{{0, 0.075, 0}};
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::disk;
+        params.subdivisions = 5;
+        params.size         = 0.15;
+        params.frame        = frame3f{{0, 0.075, 0}};
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-uvcylinder") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::uvcylinder;
-        params.subdivision = 5;
-        params.size = 0.15;
-        params.rounded = 0.3;
-        params.frame = frame3f{{0, 0.075, 0}};
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::uvcylinder;
+        params.subdivisions = 5;
+        params.size         = 0.15;
+        params.rounded      = 0.3;
+        params.frame        = frame3f{{0, 0.075, 0}};
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-floor") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::floor;
-        params.subdivision = 0;
-        params.size = 4;
-        params.uvsize = 20;
-        params.frame = identity_frame3f;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::floor;
+        params.subdivisions = 0;
+        params.size         = 4;
+        params.uvsize       = 20;
+        params.frame        = identity_frame3f;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-matball") {
         make_sphere(quads, positions, normals, texcoords, 32, 0.15, 1,
             frame3f{{0, 0.075, 0}});
     } else if (type == "test-hairball1") {
+        auto base_triangles     = vector<vec2i>{};
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
         auto base_normals       = vector<vec3f>{};
@@ -2918,6 +2936,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
             vec2f{0.1, 0.1} * 0.15f, vec2f{0.001, 0.0005} * 0.15f, {0.03, 100},
             {0, 0}, {0, 0});
     } else if (type == "test-hairball2") {
+        auto base_triangles     = vector<vec2i>{};
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
         auto base_normals       = vector<vec3f>{};
@@ -2929,6 +2948,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
             vec2f{0.1, 0.1} * 0.15f, vec2f{0.001, 0.0005} * 0.15f, {0, 0},
             {0, 0}, {0, 0});
     } else if (type == "test-hairball3") {
+        auto base_triangles     = vector<vec2i>{};
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
         auto base_normals       = vector<vec3f>{};
@@ -2940,20 +2960,18 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
             vec2f{0.1, 0.1} * 0.15f, vec2f{0.001, 0.0005} * 0.15f, {0, 0},
             {0.5, 128}, {0, 0});
     } else if (type == "test-hairball-interior") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::sphere;
-        params.subdivision = 5;
-        params.size = (float)(0.15 * 0.8);
-        params.frame = frame3f{{0, 0.075, 0}};
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::sphere;
+        params.subdivisions = 5;
+        params.size         = (float)(0.15 * 0.8);
+        params.frame        = frame3f{{0, 0.075, 0}};
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-suzanne-subdiv") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::suzanne;
-        params.size = 0.15 * 0.8;
+        auto params  = make_shape_params{};
+        params.type  = make_shape_type::suzanne;
+        params.size  = 0.15 * 0.8;
         params.frame = frame3f{{0, 0.075, 0}};
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-cube-subdiv") {
         make_fvbox(quads_positions, quads_normals, quads_texcoords, positions,
             normals, texcoords, {1, 1, 1}, {0.15, 0.15, 0.15}, {1, 1, 1},
@@ -2962,14 +2980,12 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto params = make_shape_params{};
         params.type = make_shape_type::rect;
         params.size = 0.4;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-arealight2") {
         auto params = make_shape_params{};
         params.type = make_shape_type::rect;
         params.size = 0.4;
-        make_shape(points, lines, triangles, quads, positions, normals,
-            texcoords, params);
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else {
         throw std::invalid_argument("unknown shape preset " + type);
     }
