@@ -2927,8 +2927,12 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 auto rgb2 = checkerboard.tex1.texture == ""
                                 ? checkerboard.tex2.value
                                 : pbrt_spectrum3f{0.6f, 0.6f, 0.6f};
-                make_checker(texture.hdr_image, {1024, 1024}, 16,
-                    {rgb1.x, rgb1.y, rgb1.z, 1}, {rgb2.x, rgb2.y, rgb2.z, 1});
+                auto params = make_image_params{};
+                params.type = make_image_type::checker;
+                params.color0 = {rgb1.x, rgb1.y, rgb1.z, 1};
+                params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1};
+                params.scale = 2;
+                make_image(texture.hdr_image, params);
                 float_to_byte(texture.ldr_image, texture.hdr_image);
                 texture.hdr_image = {};
                 if (verbose) printf("texture checkerboard not supported well");
@@ -2940,18 +2944,19 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 if (verbose) printf("texture dots not supported well");
             } break;
             case pbrt_texture::type_t::fbm: {
-                auto& fbm = ptexture.fbm;
-                make_fbm(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
-                    {1, 1, 1, 1}, (float)1, (float)2, (float)0.5f, fbm.octaves);
+                // auto& fbm = ptexture.fbm;
+                auto params = make_image_params{};
+                params.type = make_image_type::fbm;
+                make_image(texture.hdr_image, params);
                 float_to_byte(texture.ldr_image, texture.hdr_image);
                 texture.hdr_image = {};
                 if (verbose) printf("texture fbm not supported well");
             } break;
             case pbrt_texture::type_t::marble: {
-                auto& marble = ptexture.marble;
-                make_fbm(texture.hdr_image, {1024, 1024}, {0, 0, 0, 1},
-                    {1, 1, 1, 1}, (float)marble.scale, (float)2, (float)0.5f,
-                    marble.octaves);
+                // auto& marble = ptexture.marble;
+                auto params = make_image_params{};
+                params.type = make_image_type::fbm;
+                make_image(texture.hdr_image, params);
                 float_to_byte(texture.ldr_image, texture.hdr_image);
                 texture.hdr_image = {};
                 if (verbose) printf("texture marble not supported well");

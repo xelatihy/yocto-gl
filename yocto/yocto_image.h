@@ -27,10 +27,9 @@
 // 3. resize images with `resize()`
 // 4. tonemap images with `tonemap()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
-// 5. make various image examples with the `make_XXX_image()` functions
+// 5. make various image examples with the `make_image()` functions
 // 6. create procedural sun-sky images with `make_sunsky()`
-// 7. load and save images with Yocto/ImageIO
-// 8. many color conversion functions are available in the code below
+// 7. many color conversion functions are available in the code below
 //
 //
 
@@ -340,30 +339,6 @@ struct make_image_params {
 // Make an image
 void make_image(image<vec4f>& img, const make_image_params& params);
 
-// Make example images in linear color space. Takes as input images allocated
-// to the desired size and fill the pixel with expected values.
-void make_grid(image<vec4f>& img, const vec2i& size, int tile, const vec4f& c0,
-    const vec4f& c1);
-void make_checker(image<vec4f>& img, const vec2i& size, int tile,
-    const vec4f& c0, const vec4f& c1);
-void make_bumpdimple(image<vec4f>& img, const vec2i& size, int tile,
-    const vec4f& c0, const vec4f& c1);
-void make_ramp(
-    image<vec4f>& img, const vec2i& size, const vec4f& c0, const vec4f& c1);
-void make_ramp(image<vec4f>& img, const vec2i& size, const vec4f& c00,
-    const vec4f& c10, const vec4f& c11, const vec4f& c01);
-void make_gammaramp(
-    image<vec4f>& img, const vec2i& size, const vec4f& c0, const vec4f& c1);
-void make_uvramp(image<vec4f>& img, const vec2i& size);
-void make_uvgrid(
-    image<vec4f>& img, const vec2i& size, int tile = 8, bool colored = true);
-void make_blackbodyramp(image<vec4f>& img, const vec2i& size,
-    float start_temperature = 1000, float end_temperature = 12000);
-
-// Comvert a bump map to a normal map. All linear color spaces.
-void bump_to_normal(
-    image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
-
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
 // disabled with has_sun. The sun parameters can be slightly modified by
@@ -377,18 +352,9 @@ void make_lights(image<vec4f>& img, const vec2i& size,
     const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
     float lwidth = pif / 16, float lheight = pif / 16);
 
-// Make a noise image. Wrap works only if both resx and resy are powers of two.
-void make_noise(image<vec4f>& img, const vec2i& size, const vec4f& c0,
-    const vec4f& c1, float scale = 1, bool wrap = true);
-void make_fbm(image<vec4f>& img, const vec2i& size, const vec4f& c0,
-    const vec4f& c1, float scale = 1, float lacunarity = 2, float gain = 0.5,
-    int octaves = 6, bool wrap = true);
-void make_ridge(image<vec4f>& img, const vec2i& size, const vec4f& c0,
-    const vec4f& c1, float scale = 1, float lacunarity = 2, float gain = 0.5,
-    float offset = 1, int octaves = 6, bool wrap = true);
-void make_turbulence(image<vec4f>& img, const vec2i& size, const vec4f& c0,
-    const vec4f& c1, float scale = 1, float lacunarity = 2, float gain = 0.5,
-    int octaves = 6, bool wrap = true);
+// Comvert a bump map to a normal map. All linear color spaces.
+void bump_to_normal(
+    image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
 
 // Add a border to an image
 void add_border(image<vec4f>& img, const vec2i& size, int border_width,
