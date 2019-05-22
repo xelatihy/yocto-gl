@@ -1846,7 +1846,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
         case make_shape_type::cube: {
             auto steps  = vec3i{pow2(params.subdivisions)};
             auto uvsize = vec3f{1};
-            auto size   = vec3f{1};
+            auto size   = vec3f{2};
             make_box(quads, positions, normals, texcoords, steps, size, uvsize);
             if (params.rounded) {
                 auto radius = params.rounded;
@@ -2350,7 +2350,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-quad-bulged") {
         auto params         = make_shape_params{};
-        params.type         = make_shape_type::rect;
+        params.type         = make_shape_type::quad;
         params.subdivisions = 5;
         params.rounded      = 0.25;
         make_shape(triangles, quads, positions, normals, texcoords, params);
