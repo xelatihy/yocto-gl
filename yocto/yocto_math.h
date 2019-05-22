@@ -790,50 +790,67 @@ constexpr frame<T, N> inverse(const frame<T, N>& a);
 namespace yocto {
 
 // Quaternions to represent rotations
-template <typename T, int N>
-struct quat;
-
-// Quaternions to represent rotations
-template <typename T>
-struct quat<T, 4> {
-    T x, y, z, w;
+struct quat4f {
+    float x, y, z, w;
 
     // constructors
-    constexpr quat() : x{0}, y{0}, z{0}, w{1} {}
-    constexpr quat(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
+    constexpr quat4f() : x{0}, y{0}, z{0}, w{1} {}
+    constexpr quat4f(float x, float y, float z, float w) : x{x}, y{y}, z{z}, w{w} {}
 };
-
-// Typedefs
-using quat4f = quat<float, 4>;
 
 // Constants
 constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 // Quaternion operatons
-template <typename T, typename T1>
-constexpr quat<T, 4> operator*(const quat<T, 4>& a, T1 b);
-template <typename T>
-constexpr quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b);
+inline quat4f operator+(const quat4f& a, const quat4f& b) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+}
+inline quat4f operator*(const quat4f& a, float b) {
+    return {a.x * b, a.y * b, a.z * b, a.w * b};
+}
+inline quat4f operator/(const quat4f& a, float b) {
+    return {a.x / b, a.y / b, a.z / b, a.w / b};
+}
+inline quat4f operator*(const quat4f& a, const quat4f& b) {
+    return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
+        a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
+        a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
+        a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
+}
 
 // Quaterion operations
-template <typename T>
-constexpr T dot(const quat<T, 4>& a, const quat<T, 4>& b);
-template <typename T>
-constexpr T length(const quat<T, 4>& a);
-template <typename T>
-constexpr quat<T, 4> normalize(const quat<T, 4>& a);
-template <typename T>
-constexpr quat<T, 4> conjugate(const quat<T, 4>& a);
-template <typename T>
-constexpr quat<T, 4> inverse(const quat<T, 4>& a);
-template <typename T>
-constexpr T uangle(const quat<T, 4>& a, const quat<T, 4>& b);
-template <typename T>
-constexpr quat<T, 4> lerp(const quat<T, 4>& a, const quat<T, 4>& b, T t);
-template <typename T>
-inline quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T t);
-template <typename T>
-constexpr quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t);
+inline float dot(const quat4f& a, const quat4f& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+inline float length(const quat4f& a) {
+    return sqrt(dot(a, a));
+}
+inline quat4f normalize(const quat4f& a) {
+    auto l = length(a);
+    return (l != 0) ? a / l : a;
+}
+inline quat4f conjugate(const quat4f& a) {
+    return {-a.x, -a.y, -a.z, a.w};
+}
+inline quat4f inverse(const quat4f& a) {
+    return conjugate(a) / dot(a, a);
+}
+inline float uangle(const quat4f& a, const quat4f& b) {
+    auto d = dot(a, b);
+    return d > 1 ? 0 : std::acos(d < -1 ? -1 : d);
+}
+inline quat4f lerp(const quat4f& a, const quat4f& b, float t) {
+    return a * (1 - t) + b * t;
+}
+inline quat4f nlerp(const quat4f& a, const quat4f& b, float t) {
+    return normalize(lerp(a, b, t));
+}
+inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
+    auto th = uangle(a, b);
+    return th == 0 ? a
+                   : a * (sin(th * (1 - t)) / sin(th)) +
+                         b * (sin(th * t) / sin(th));
+}
 
 }  // namespace yocto
 
@@ -1056,7 +1073,7 @@ constexpr frame<T, 3> make_rotation_frame(const vec<T, 3>& axis, T1 angle);
 template <typename T>
 constexpr frame<T, 3> make_rotation_frame(const vec<T, 4>& quat);
 template <typename T>
-constexpr frame<T, 3> make_rotation_frame(const quat<T, 4>& quat);
+constexpr frame<T, 3> make_rotation_frame(const quat4f& quat);
 template <typename T>
 constexpr frame<T, 3> make_rotation_frame(const mat<T, 3, 3>& rot);
 
@@ -2243,69 +2260,6 @@ constexpr frame<T, N> inverse(const frame<T, N>& a) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF QUATERNIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Quaternion operatons
-template <typename T, typename T1>
-constexpr quat<T, 4> operator*(const quat<T, 4>& a, T1 b) {
-    return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-template <typename T>
-constexpr quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
-    return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
-        a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
-        a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
-        a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
-}
-
-// Quaterion operations
-template <typename T>
-constexpr T dot(const quat<T, 4>& a, const quat<T, 4>& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-}
-template <typename T>
-constexpr T length(const quat<T, 4>& a) {
-    return sqrt(dot(a, a));
-}
-template <typename T>
-constexpr quat<T, 4> normalize(const quat<T, 4>& a) {
-    auto l = length(a);
-    return (l != 0) ? a / l : a;
-}
-template <typename T>
-constexpr quat<T, 4> conjugate(const quat<T, 4>& a) {
-    return {-a.x, -a.y, -a.z, a.w};
-}
-template <typename T>
-constexpr quat<T, 4> inverse(const quat<T, 4>& a) {
-    return conjugate(a) / dot(a, a);
-}
-template <typename T>
-constexpr T uangle(const quat<T, 4>& a, const quat<T, 4>& b) {
-    T d = dot(a, b);
-    return d > 1 ? 0 : std::acos(d < -1 ? -1 : d);
-}
-template <typename T>
-constexpr quat<T, 4> lerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
-    return a * (1 - t) + b * t;
-}
-template <typename T>
-inline quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
-    return normalize(lerp(a, b, t));
-}
-template <typename T>
-constexpr quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
-    auto th = uangle(a, b);
-    return th == 0 ? a
-                   : a * (sin(th * (1 - t)) / sin(th)) +
-                         b * (sin(th * t) / sin(th));
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF AXIS ALIGNED BOUNDING BOXES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -2672,7 +2626,7 @@ constexpr frame<T, 3> make_rotation_frame(const vec<T, 4>& quat) {
         {0, 0, 0}};
 }
 template <typename T>
-constexpr frame<T, 3> make_rotation_frame(const quat<T, 4>& quat) {
+constexpr frame<T, 3> make_rotation_frame(const quat4f& quat) {
     auto v = quat;
     return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
                 (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
