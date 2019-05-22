@@ -997,7 +997,7 @@ void make_image(image<vec4f>& img, const make_image_params& params) {
                 uv.y     = 1 - uv.y;
                 auto hsv = zero3f;
                 hsv.x    = (clamp((int)(uv.x * 8), 0, 7) +
-                            clamp((int)(uv.y * 8), 0, 7) * 8) /
+                            (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
                         64.0f;
                 auto vuv = uv * 4;
                 vuv -= vec2f{(float)(int)vuv.x, (float)(int)vuv.y};
