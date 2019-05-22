@@ -1527,6 +1527,7 @@ void make_preset(image<vec4f>& img, const string& type) {
     } else if (type == "test-fbm-displacement") {
         auto params   = make_image_params{};
         params.type   = make_image_type::fbm;
+        params.scale = 2;
         make_image(img, params);
     } else {
         throw std::invalid_argument("unknown image preset " + type);
