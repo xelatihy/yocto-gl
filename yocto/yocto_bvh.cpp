@@ -1378,11 +1378,8 @@ bool intersect_bvh(const bvh_scene& scene, const ray3f& ray_, int& instance,
         } else {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance_ = scene.instances[node.primitive_ids[i]];
-                auto  inv_ray =
-                    non_rigid_frames
-                        ? transform_ray(
-                              inverse((const affine3f&)instance_.frame), ray)
-                        : transform_ray_inverse(instance_.frame, ray);
+                auto  inv_ray   = transform_ray(
+                    inverse(instance_.frame, non_rigid_frames), ray);
                 if (intersect_bvh(scene.shapes[instance_.shape], inv_ray,
                         element, uv, distance, find_any)) {
                     hit      = true;
@@ -1403,10 +1400,8 @@ bool intersect_bvh(const bvh_scene& scene, int instance, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
     auto& instance_ = scene.instances[instance];
-    auto  inv_ray   = non_rigid_frames
-                       ? transform_ray(
-                             inverse((const affine3f&)instance_.frame), ray)
-                       : transform_ray_inverse(instance_.frame, ray);
+    auto  inv_ray   = transform_ray(
+        inverse(instance_.frame, non_rigid_frames), ray);
     return intersect_bvh(scene.shapes[instance_.shape], inv_ray, element, uv,
         distance, find_any);
 }
@@ -1539,11 +1534,8 @@ bool overlap_bvh(const bvh_scene& scene, const vec3f& pos, float max_distance,
         } else {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto instance_ = scene.instances[node.primitive_ids[i]];
-                auto inv_pos =
-                    non_rigid_frames
-                        ? transform_point(
-                              inverse((const affine3f&)instance_.frame), pos)
-                        : transform_point_inverse(instance_.frame, pos);
+                auto inv_pos   = transform_point(
+                    inverse(instance_.frame, non_rigid_frames), pos);
                 if (overlap_bvh(scene.shapes[instance_.shape], inv_pos,
                         max_distance, element, uv, distance, find_any)) {
                     hit          = true;

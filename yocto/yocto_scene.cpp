@@ -876,9 +876,7 @@ vec3f eval_normal(const yocto_scene& scene, const yocto_instance& instance,
     int element_id, const vec2f& element_uv, bool non_rigid_frame) {
     auto normal = eval_normal(
         scene.shapes[instance.shape], element_id, element_uv);
-    return non_rigid_frame
-               ? transform_normal((const affine3f&)instance.frame, normal)
-               : transform_normal(instance.frame, normal);
+    return transform_normal(instance.frame, normal, non_rigid_frame);
 }
 vec3f eval_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
@@ -904,18 +902,14 @@ vec3f eval_shading_normal(const yocto_scene& scene,
         normalmap.y = -normalmap.y;  // flip vertical axis
         auto normal = eval_perturbed_normal(scene, scene.shapes[instance.shape],
             element_id, element_uv, normalmap);
-        return non_rigid_frame
-                   ? transform_normal((const affine3f&)instance.frame, normal)
-                   : transform_normal(instance.frame, normal);
+        return transform_normal(instance.frame, normal, non_rigid_frame);
     }
 }
 // Instance element values.
 vec3f eval_element_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, bool non_rigid_frame) {
     auto normal = eval_element_normal(scene.shapes[instance.shape], element_id);
-    return non_rigid_frame
-               ? transform_normal((const affine3f&)instance.frame, normal)
-               : transform_normal(instance.frame, normal);
+    return transform_normal(instance.frame, normal, non_rigid_frame);
 }
 // Instance material
 material_point eval_material(const yocto_scene& scene,

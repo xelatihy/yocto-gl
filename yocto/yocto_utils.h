@@ -170,8 +170,6 @@ struct formatter<yocto::vec<T, N>>;
 template <typename T, int N, int M>
 struct formatter<yocto::mat<T, N, M>>;
 template <typename T, int N>
-struct formatter<yocto::affine<T, N>>;
-template <typename T, int N>
 struct formatter<yocto::frame<T, N>>;
 template <typename T, int N>
 struct formatter<yocto::bbox<T, N>>;
@@ -496,9 +494,6 @@ struct formatter<yocto::vec<T, N>> : _formatter_base<yocto::vec<T, N>, N> {};
 template <typename T, int N, int M>
 struct formatter<yocto::mat<T, N, M>>
     : _formatter_base<yocto::mat<T, N, M>, M> {};
-template <typename T, int N>
-struct formatter<yocto::affine<T, N>>
-    : _formatter_base<yocto::affine<T, N>, N + 1> {};
 template <typename T, int N>
 struct formatter<yocto::frame<T, N>>
     : _formatter_base<yocto::frame<T, N>, N + 1> {};

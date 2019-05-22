@@ -2559,16 +2559,16 @@ void load_pbrt(
     // parsing stack
     auto stack    = vector<pbrt_context>{{}};
     auto object   = pbrt_object{};
-    auto coordsys = unordered_map<string, pair<affine3f, affine3f>>{};
+    auto coordsys = unordered_map<string, pair<frame3f, frame3f>>{};
 
     // helpders
     auto set_transform = [](pbrt_context& ctx, const mat4f& xform) {
-        if (ctx.active_transform_start) ctx.transform_start = (affine3f)xform;
-        if (ctx.active_transform_end) ctx.transform_end = (affine3f)xform;
+        if (ctx.active_transform_start) ctx.transform_start = (frame3f)xform;
+        if (ctx.active_transform_end) ctx.transform_end = (frame3f)xform;
     };
     auto concat_transform = [](pbrt_context& ctx, const mat4f& xform) {
-        if (ctx.active_transform_start) ctx.transform_start *= (affine3f)xform;
-        if (ctx.active_transform_end) ctx.transform_end *= (affine3f)xform;
+        if (ctx.active_transform_start) ctx.transform_start *= (frame3f)xform;
+        if (ctx.active_transform_end) ctx.transform_end *= (frame3f)xform;
     };
 
     // constant values

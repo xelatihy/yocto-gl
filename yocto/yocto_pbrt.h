@@ -826,8 +826,8 @@ struct pbrt_object {
 
 // pbrt stack ctm
 struct pbrt_context {
-    affine3f transform_start        = identity_affine3f;
-    affine3f transform_end          = identity_affine3f;
+    frame3f transform_start        = identity_frame3f;
+    frame3f transform_end          = identity_frame3f;
     string   material               = "";
     string   arealight              = "";
     string   medium_interior        = "";
