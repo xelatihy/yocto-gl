@@ -332,7 +332,7 @@ struct make_image_params {
     float           scale  = 1;
     vec4f           color0 = {0, 0, 0, 1};
     vec4f           color1 = {1, 1, 1, 1};
-    vec4f noise = {2, 0.5, 8, 1};  // lacunarity, gain, octaves, offset
+    vec4f noise   = {2, 0.5, 8, 1};  // lacunarity, gain, octaves, offset
 };
 
 // Make an image
