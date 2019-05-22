@@ -314,51 +314,51 @@ void merge_triangles_and_quads(
 namespace yocto {
 
 // Subdivide lines by splitting each line in half.
-void subdivide_lines(vector<vec2i>& lines, vector<float>& vert);
-void subdivide_lines(vector<vec2i>& lines, vector<vec2f>& vert);
-void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& vert);
-void subdivide_lines(vector<vec2i>& lines, vector<vec4f>& vert);
+void subdivide_lines(vector<vec2i>& lines, vector<float>& vert, int level);
+void subdivide_lines(vector<vec2i>& lines, vector<vec2f>& vert, int level);
+void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& vert, int level);
+void subdivide_lines(vector<vec2i>& lines, vector<vec4f>& vert, int level);
 void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius);
+    vector<float>& radius, int level);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
-void subdivide_triangles(vector<vec3i>& triangles, vector<float>& vert);
-void subdivide_triangles(vector<vec3i>& triangles, vector<vec2f>& vert);
-void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& vert);
-void subdivide_triangles(vector<vec3i>& triangles, vector<vec4f>& vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<float>& vert, int level);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec2f>& vert, int level);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& vert, int level);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec4f>& vert, int level);
 void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius);
+    vector<float>& radius, int level);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
-void subdivide_quads(vector<vec4i>& quads, vector<float>& vert);
-void subdivide_quads(vector<vec4i>& quads, vector<vec2f>& vert);
-void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& vert);
-void subdivide_quads(vector<vec4i>& quads, vector<vec4f>& vert);
+void subdivide_quads(vector<vec4i>& quads, vector<float>& vert, int level);
+void subdivide_quads(vector<vec4i>& quads, vector<vec2f>& vert, int level);
+void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& vert, int level);
+void subdivide_quads(vector<vec4i>& quads, vector<vec4f>& vert, int level);
 void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius);
+    vector<float>& radius, int level);
 // Subdivide beziers by splitting each segment in two.
-void subdivide_beziers(vector<vec4i>& beziers, vector<float>& vert);
-void subdivide_beziers(vector<vec4i>& beziers, vector<vec2f>& vert);
-void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& vert);
-void subdivide_beziers(vector<vec4i>& beziers, vector<vec4f>& vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<float>& vert, int level);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec2f>& vert, int level);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& vert, int level);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec4f>& vert, int level);
 void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius);
+    vector<float>& radius, int level);
 // Subdivide quads using Carmull-Clark subdivision rules.
 void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<float>& vert, bool lock_boundary = false);
+    vector<vec4i>& quads, vector<float>& vert, int level, bool lock_boundary = false);
 void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec2f>& vert, bool lock_boundary = false);
+    vector<vec4i>& quads, vector<vec2f>& vert, int level, bool lock_boundary = false);
 void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec3f>& vert, bool lock_boundary = false);
+    vector<vec4i>& quads, vector<vec3f>& vert, int level, bool lock_boundary = false);
 void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec4f>& vert, bool lock_boundary = false);
+    vector<vec4i>& quads, vector<vec4f>& vert, int level, bool lock_boundary = false);
 void subdivide_catmullclark(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius);
+    vector<float>& radius, int level);
 
 }  // namespace yocto
 

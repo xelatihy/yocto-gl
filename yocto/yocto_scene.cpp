@@ -89,37 +89,28 @@ void subdivide_shape(yocto_shape& shape, int subdivision_level,
     if (!shape.points.empty()) {
         throw runtime_error("point subdivision not supported");
     } else if (!shape.lines.empty()) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_lines(shape.lines, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius);
-        }
+        subdivide_lines(shape.lines, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, subdivision_level);
     } else if (!shape.triangles.empty()) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_triangles(shape.triangles, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius);
-        }
+        subdivide_triangles(shape.triangles, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, subdivision_level);
     } else if (!shape.quads.empty() && !catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_quads(shape.quads, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius);
-        }
+        subdivide_quads(shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, subdivision_level);
     } else if (!shape.quads.empty() && catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius);
-        }
+        subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius, subdivision_level);
     } else if (!shape.quads_positions.empty() && !catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_quads(shape.quads_positions, shape.positions);
-            subdivide_quads(shape.quads_normals, shape.normals);
-            subdivide_quads(shape.quads_texcoords, shape.texcoords);
-        }
+        subdivide_quads(
+            shape.quads_positions, shape.positions, subdivision_level);
+        subdivide_quads(shape.quads_normals, shape.normals, subdivision_level);
+        subdivide_quads(
+            shape.quads_texcoords, shape.texcoords, subdivision_level);
     } else if (!shape.quads_positions.empty() && catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_catmullclark(shape.quads_positions, shape.positions);
-            subdivide_catmullclark(
-                shape.quads_texcoords, shape.texcoords, true);
-        }
+        subdivide_catmullclark(
+            shape.quads_positions, shape.positions, subdivision_level);
+        subdivide_catmullclark(
+            shape.quads_texcoords, shape.texcoords, subdivision_level, true);
     } else {
         throw runtime_error("empty shape");
     }
