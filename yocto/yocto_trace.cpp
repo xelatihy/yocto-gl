@@ -877,8 +877,8 @@ vec3f eval_volscattering(const material_point& material, const vec3f& outgoing,
 vec3f sample_volscattering(const material_point& material,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (!has_volume(material)) return zero3f;
-    auto weights = vec1f{max(material.voldensity)};
-    if (weights == zero1f) return zero3f;
+    auto weights = vec2f{max(material.voldensity), 0};
+    if (weights == zero2f) return zero3f;
     weights /= sum(weights);
 
     // keep a weight sum to pick a lobe
@@ -895,8 +895,8 @@ vec3f sample_volscattering(const material_point& material,
 float sample_volscattering_pdf(const material_point& material,
     const vec3f& outgoing, const vec3f& incoming) {
     if (!has_volume(material)) return 0;
-    auto weights = vec1f{max(material.voldensity)};
-    if (weights == zero1f) return 0;
+    auto weights = vec2f{max(material.voldensity), 0};
+    if (weights == zero2f) return 0;
     weights /= sum(weights);
 
     // commpute pdf
