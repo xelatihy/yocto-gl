@@ -753,8 +753,8 @@ void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert) {
         tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(b.w)});
         tvert.push_back(vert[b.x] / 2 + vert[b.y] / 2);
         tvert.push_back(vert[b.x] / 4 + vert[b.y] / 2 + vert[b.z] / 4);
-        tvert.push_back(vert[b.x] / 8 + 3 * vert[b.y] / 8 + 3 * vert[b.z] / 8 +
-                        vert[b.w] / 8);
+        tvert.push_back(vert[b.x] / 8 + vert[b.y] * ((float)3 / (float)8) +
+                        vert[b.z] * ((float)3 / (float)8) + vert[b.w] / 8);
         tvert.push_back(vert[b.y] / 4 + vert[b.z] / 2 + vert[b.w] / 4);
         tvert.push_back(vert[b.z] / 2 + vert[b.w] / 2);
     }
@@ -861,7 +861,7 @@ void subdivide_catmullclark_impl(
         acount[p] += 1;
     }
     for (auto& e : tcrease_edges) {
-        auto c = (tvert[e.x] + tvert[e.y]) / 2.0f;
+        auto c = (tvert[e.x] + tvert[e.y]) / 2;
         for (auto vid : {e.x, e.y}) {
             if (tvert_val[vid] != 1) continue;
             avert[vid] += c;
@@ -869,20 +869,20 @@ void subdivide_catmullclark_impl(
         }
     }
     for (auto& q : tquads) {
-        auto c = (tvert[q.x] + tvert[q.y] + tvert[q.z] + tvert[q.w]) / 4.0f;
+        auto c = (tvert[q.x] + tvert[q.y] + tvert[q.z] + tvert[q.w]) / 4;
         for (auto vid : {q.x, q.y, q.z, q.w}) {
             if (tvert_val[vid] != 2) continue;
             avert[vid] += c;
             acount[vid] += 1;
         }
     }
-    for (auto i = 0; i < tvert.size(); i++) avert[i] /= (T)acount[i];
+    for (auto i = 0; i < tvert.size(); i++) avert[i] /= (float)acount[i];
 
     // correction pass ----------------------------------
     // p = p + (avg_p - p) * (4/avg_count)
     for (auto i = 0; i < tvert.size(); i++) {
         if (tvert_val[i] != 2) continue;
-        avert[i] = tvert[i] + (avert[i] - tvert[i]) * (4.0f / acount[i]);
+        avert[i] = tvert[i] + (avert[i] - tvert[i]) * (4 / (float)acount[i]);
     }
     tvert = avert;
 
@@ -895,23 +895,76 @@ template <typename T, typename SubdivideFunc>
 void subdivide_elems_impl(vector<T>& elems, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, const SubdivideFunc&& subdivied_func) {
+    struct vertex {
+        vec3f position = zero3f;
+        vec3f normal   = zero3f;
+        vec2f texcoord = zero2f;
+        vec4f color    = zero4f;
+        float radius   = 0;
+
+        vertex& operator+=(const vertex& a) { return *this = *this + a; };
+        vertex& operator/=(float s) { return *this = *this / s; };
+        vertex  operator+(const vertex& a) const {
+            return {position + a.position, normal + a.normal,
+                texcoord + a.texcoord, color + a.color, radius + a.radius};
+        };
+        vertex operator-(const vertex& a) const {
+            return {position - a.position, normal - a.normal,
+                texcoord - a.texcoord, color - a.color, radius - a.radius};
+        };
+        vertex operator*(float s) const {
+            return {
+                position * s, normal * s, texcoord * s, color * s, radius * s};
+        };
+        vertex operator/(float s) const { return operator*(1 / s); };
+    };
+    auto vertices = vector<vertex>(positions.size());
+    if (!positions.empty()) {
+        for (auto i = 0; i < vertices.size(); i++)
+            vertices[i].position = positions[i];
+    }
     if (!normals.empty()) {
-        auto elems_ = elems;
-        subdivied_func(elems_, normals);
+        for (auto i = 0; i < vertices.size(); i++)
+            vertices[i].normal = normals[i];
     }
     if (!texcoords.empty()) {
-        auto elems_ = elems;
-        subdivied_func(elems_, texcoords);
+        for (auto i = 0; i < vertices.size(); i++)
+            vertices[i].texcoord = texcoords[i];
     }
     if (!colors.empty()) {
-        auto elems_ = elems;
-        subdivied_func(elems_, colors);
+        for (auto i = 0; i < vertices.size(); i++)
+            vertices[i].color = colors[i];
     }
     if (!radius.empty()) {
-        auto elems_ = elems;
-        subdivied_func(elems_, radius);
+        for (auto i = 0; i < vertices.size(); i++)
+            vertices[i].radius = radius[i];
     }
-    subdivied_func(elems, positions);
+    subdivied_func(elems, vertices);
+    if (!positions.empty()) {
+        positions.resize(vertices.size());
+        for (auto i = 0; i < vertices.size(); i++)
+            positions[i] = vertices[i].position;
+    }
+    if (!normals.empty()) {
+        normals.resize(vertices.size());
+        for (auto i = 0; i < vertices.size(); i++)
+            normals[i] = vertices[i].normal;
+    }
+    if (!texcoords.empty()) {
+        texcoords.resize(vertices.size());
+        for (auto i = 0; i < vertices.size(); i++)
+            texcoords[i] = vertices[i].texcoord;
+    }
+    if (!colors.empty()) {
+        colors.resize(vertices.size());
+        for (auto i = 0; i < vertices.size(); i++)
+            colors[i] = vertices[i].color;
+    }
+    if (!radius.empty()) {
+        radius.resize(vertices.size());
+        for (auto i = 0; i < vertices.size(); i++)
+            radius[i] = vertices[i].radius;
+    }
 }
 
 void subdivide_lines(vector<vec2i>& lines, vector<float>& vert) {
