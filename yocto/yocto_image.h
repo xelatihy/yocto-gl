@@ -309,6 +309,35 @@ void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Types for make_image
+enum struct make_image_type {
+    grid,
+    checker,
+    bumps,
+    ramp,
+    gammaramp,
+    uvramp,
+    uvgrid,
+    blackbody,
+    noise,
+    turbulence,
+    fbm,
+    ridge
+};
+
+// Parameters for make_image
+struct make_image_params {
+    make_image_type type   = make_image_type::grid;
+    vec2i           size   = {1024, 1024};
+    float           scale  = 1;
+    vec4f           color0 = {0, 0, 0, 1};
+    vec4f           color1 = {1, 1, 1, 1};
+    vec4f noise = {2, 0.5, 8, 1};  // lacunarity, gain, octaves, offset
+};
+
+// Make an image
+void make_image(image<vec4f>& img, const make_image_params& params);
+
 // Make example images in linear color space. Takes as input images allocated
 // to the desired size and fill the pixel with expected values.
 void make_grid(image<vec4f>& img, const vec2i& size, int tile, const vec4f& c0,

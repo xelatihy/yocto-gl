@@ -408,6 +408,8 @@ constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a, T b);
 
 // Functions applied to vector elements
 template <typename T, int N>
+constexpr vec<T, N> abs(const vec<T, N>& a);
+template <typename T, int N>
 constexpr vec<T, N> sqrt(const vec<T, N>& a);
 template <typename T, int N, typename T1>
 constexpr vec<T, N> pow(const vec<T, N>& a, const T1& b);
@@ -1789,6 +1791,10 @@ constexpr vec<T, N> apply(
 }
 
 // Functions applied to vector elements
+template <typename T, int N>
+constexpr vec<T, N> abs(const vec<T, N>& a) {
+    return apply([](const T& a) { return abs(a); }, a);
+};
 template <typename T, int N>
 constexpr vec<T, N> sqrt(const vec<T, N>& a) {
     return apply([](const T& a) { return sqrt(a); }, a);

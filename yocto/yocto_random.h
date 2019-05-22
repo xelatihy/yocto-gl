@@ -314,7 +314,7 @@ namespace yocto {
 // offset=1.0 (used to invert the ridges).
 inline float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
 inline float perlin_ridge_noise(const vec3f& p, float lacunarity = 2,
-    float gain = 0.5, float offset = 1, int octaves = 6,
+    float gain = 0.5, int octaves = 6, float offset = 1, 
     const vec3i& wrap = zero3i);
 inline float perlin_fbm_noise(const vec3f& p, float lacunarity = 2,
     float gain = 0.5, int octaves = 6, const vec3i& wrap = zero3i);
@@ -532,7 +532,7 @@ inline float perlin_noise(const vec3f& p, const vec3i& wrap) {
 
 // adapeted  stb_perlin.h
 inline float perlin_ridge_noise(const vec3f& p, float lacunarity, float gain,
-    float offset, int octaves, const vec3i& wrap) {
+    int octaves, float offset, const vec3i& wrap) {
     return _stb_perlin_ridge_noise3(p.x, p.y, p.z, lacunarity, gain, offset,
         octaves, wrap.x, wrap.y, wrap.z);
 }
