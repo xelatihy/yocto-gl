@@ -486,16 +486,15 @@ void make_fvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     int num, int subdivisions, const vec2f& size, const vec2f& uvsize,
-    const vec2f& line_radius, const frame3f& frame);
+    const vec2f& line_radius);
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
 void make_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, float uvsize, float point_radius, const frame3f& frame);
+    int num, float uvsize, float point_radius);
 void make_random_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, const vec3f& size, float uvsize, float point_radius, uint64_t seed,
-    const frame3f& frame);
+    int num, const vec3f& size, float uvsize, float point_radius, uint64_t seed);
 
 // Make fair params
 struct make_hair_params {
