@@ -924,7 +924,7 @@ material_point eval_material(const yocto_scene& scene,
 // Environment texture coordinates from the direction.
 vec2f eval_texcoord(
     const yocto_environment& environment, const vec3f& direction) {
-    auto wl = transform_direction_inverse(environment.frame, direction);
+    auto wl = transform_direction(inverse(environment.frame), direction);
     auto environment_uv = vec2f{
         atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
     if (environment_uv.x < 0) environment_uv.x += 1;

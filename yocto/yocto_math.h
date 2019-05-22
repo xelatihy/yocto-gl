@@ -1839,48 +1839,6 @@ constexpr bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
     return xformed;
 }
 
-// Inverse transforms by frames, assuming they are rigid transforms.
-template <typename T, int N>
-constexpr vec<T, N> transform_point_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
-    if constexpr (N == 1) {
-        return {dot(b - a.o, a.x)};
-    } else if constexpr (N == 2) {
-        return {dot(b - a.o, a.x), dot(b - a.o, a.y)};
-    } else if constexpr (N == 3) {
-        return {dot(b - a.o, a.x), dot(b - a.o, a.y), dot(b - a.o, a.z)};
-    } else {
-    }
-}
-template <typename T, int N>
-constexpr vec<T, N> transform_vector_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
-    if constexpr (N == 1) {
-        return {dot(b, a.x)};
-    } else if constexpr (N == 2) {
-        return {dot(b, a.x), dot(b, a.y)};
-    } else if constexpr (N == 3) {
-        return {dot(b, a.x), dot(b, a.y), dot(b, a.z)};
-    } else {
-    }
-}
-template <typename T, int N>
-constexpr vec<T, N> transform_direction_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
-    return normalize(transform_vector_inverse(a, b));
-}
-template <typename T, int N>
-constexpr ray<T, N> transform_ray_inverse(
-    const frame<T, N>& a, const ray<T, N>& b) {
-    return {transform_point_inverse(a, b.o),
-        transform_direction_inverse(a, b.d), b.tmin, b.tmax};
-}
-template <typename T, int N>
-constexpr bbox<T, N> transform_bbox_inverse(
-    const frame<T, N>& a, const bbox<T, N>& b) {
-    return transform_bbox(inverse(a), b);
-}
-
 // Translation, scaling and rotations transforms.
 template <typename T>
 constexpr frame<T, 3> make_translation_frame(const vec<T, 3>& a) {
