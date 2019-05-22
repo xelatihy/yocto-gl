@@ -338,7 +338,7 @@ struct load_island_shape_callbacks : obj_callbacks {
 
     void vert(const vec3f& v) { opos.push_back(v); }
     void norm(const vec3f& v) { onorm.push_back(v); }
-    void texcoord(vec2f v) { throw io_error("texture coord not supported"); }
+    void texcoord(const vec2f& v) { throw io_error("texture coord not supported"); }
     void face(const vector<obj_vertex>& verts) {
         split_shape();
         add_fvverts(verts);
