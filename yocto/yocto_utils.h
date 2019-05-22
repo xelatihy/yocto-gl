@@ -171,8 +171,10 @@ template <typename T, int N, int M>
 struct formatter<yocto::mat<T, N, M>>;
 template <typename T, int N>
 struct formatter<yocto::frame<T, N>>;
-template <typename T, int N>
-struct formatter<yocto::bbox<T, N>>;
+template <>
+struct formatter<yocto::bbox2f>;
+template <>
+struct formatter<yocto::bbox3f>;
 
 }  // namespace fmt
 
@@ -497,8 +499,10 @@ struct formatter<yocto::mat<T, N, M>>
 template <typename T, int N>
 struct formatter<yocto::frame<T, N>>
     : _formatter_base<yocto::frame<T, N>, N + 1> {};
-template <typename T, int N>
-struct formatter<yocto::bbox<T, N>> : _formatter_base<yocto::bbox<T, N>, 2> {};
+template <>
+struct formatter<yocto::bbox2f> : _formatter_base<yocto::bbox2f, 2> {};
+template <>
+struct formatter<yocto::bbox3f> : _formatter_base<yocto::bbox3f, 2> {};
 
 }  // namespace fmt
 

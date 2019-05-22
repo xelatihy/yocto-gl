@@ -1372,8 +1372,6 @@ struct frame<T, 3> {
 // Typedefs
 using frame2f = frame<float, 2>;
 using frame3f = frame<float, 3>;
-using frame2d = frame<double, 2>;
-using frame3d = frame<double, 3>;
 
 // Indentity frames.
 constexpr auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
@@ -1537,21 +1535,30 @@ inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
 namespace yocto {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T, int N>
-struct bbox {
-    vec<T, N> min, max;
+struct bbox2f {
+    vec2f min = {float_max, float_max};
+    vec2f max = {float_min, float_min};
 
-    constexpr bbox() : min{type_max<T>}, max{type_min<T>} {}
-    constexpr bbox(const vec<T, N>& min, const vec<T, N>& max)
+    constexpr bbox2f() {}
+    constexpr bbox2f(const vec2f& min, const vec2f& max)
         : min{min}, max{max} {}
 
-    constexpr vec<T, N>&       operator[](int i) { return (&min)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&min)[i]; }
+    constexpr vec2f&       operator[](int i) { return (&min)[i]; }
+    constexpr const vec2f& operator[](int i) const { return (&min)[i]; }
 };
 
-// Typedefs
-using bbox2f = bbox<float, 2>;
-using bbox3f = bbox<float, 3>;
+// Axis aligned bounding box represented as a min/max vector pairs.
+struct bbox3f {
+    vec3f min = {float_max, float_max, float_max};
+    vec3f max = {float_min, float_min, float_min};
+
+    constexpr bbox3f() {}
+    constexpr bbox3f(const vec3f& min, const vec3f& max)
+        : min{min}, max{max} {}
+
+    constexpr vec3f&       operator[](int i) { return (&min)[i]; }
+    constexpr const vec3f& operator[](int i) const { return (&min)[i]; }
+};
 
 // Empty bbox constant.
 constexpr auto invalid_bbox2f = bbox2f{};

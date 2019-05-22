@@ -265,13 +265,6 @@ template <typename T, int N, int M>
 static inline void parse_value(pbrt_stream& stream, mat<T, N, M>& value) {
     for (auto i = 0; i < M; i++) parse_value(stream, value[i]);
 }
-template <typename T>
-static inline void parse_value(pbrt_stream& stream, bbox<T, 2>& value) {
-    parse_value(stream, value[0][0]);
-    parse_value(stream, value[1][0]);
-    parse_value(stream, value[0][1]);
-    parse_value(stream, value[1][1]);
-}
 static inline void parse_value(pbrt_stream& stream, pbrt_spectrum3f& value) {
     for (auto i = 0; i < 3; i++) parse_value(stream, value[i]);
 }

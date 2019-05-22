@@ -75,7 +75,7 @@ struct pbrt_camera {
         float  frameaspectratio = -1;  // or computed from film
         float  lensradius       = 0;
         float  focaldistance    = 1e30;
-        bbox2f screenwindow     = {{-1, -1}, {1, 1}};
+        vec4f screenwindow      = {-1, 1, -1, 1};
         float  shutteropen      = 0;
         float  shutterclose     = 1;
     };
@@ -83,7 +83,7 @@ struct pbrt_camera {
         float  frameaspectratio = -1;  // or computed from film
         float  lensradius       = 0;
         float  focaldistance    = 1e30;
-        bbox2f screenwindow     = {{-1, -1}, {1, 1}};
+        vec4f screenwindow      = {-1, 1, -1, 1};
         float  shutteropen      = 0;
         float  shutterclose     = 1;
     };
@@ -152,7 +152,7 @@ struct pbrt_film {
     struct image_t {
         int    xresolution        = 640;
         int    yresolution        = 480;
-        bbox2f cropwindow         = {{0, 0}, {1, 1}};
+        vec4f  cropwindow         = {0, 1, 0, 1};
         float  scale              = 1;
         float  maxsampleluminance = float_max;
         float  diagonal           = 35;
