@@ -1361,8 +1361,8 @@ struct load_obj_scene_cb : obj_callbacks {
             auto params         = make_shape_params{};
             params.type         = make_shape_type::floor;
             params.subdivisions = oproc.level < 0 ? 0 : oproc.level;
-            params.size         = oproc.size;
-            params.uvsize       = oproc.size / 2;
+            params.scale        = oproc.size / 2;
+            params.uvscale      = oproc.size;
             make_shape(shape.triangles, shape.quads, shape.positions,
                 shape.normals, shape.texcoords, params);
         } else {
@@ -2862,7 +2862,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 auto  params        = make_shape_params{};
                 params.type         = make_shape_type::uvsphere;
                 params.subdivisions = 5;
-                params.size         = 2 * sphere.radius;
+                params.scale        = sphere.radius;
                 make_shape(shape.triangles, shape.quads, shape.positions,
                     shape.normals, shape.texcoords, params);
             } break;
@@ -2871,7 +2871,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 auto  params        = make_shape_params{};
                 params.type         = make_shape_type::uvdisk;
                 params.subdivisions = 4;
-                params.size         = 2 * disk.radius;
+                params.scale        = disk.radius;
                 make_shape(shape.triangles, shape.quads, shape.positions,
                     shape.normals, shape.texcoords, params);
             } break;
@@ -3222,7 +3222,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 auto size   = distant_dist * sin(5 * pif / 180);
                 auto params = make_shape_params{};
                 params.type = make_shape_type::quad;
-                params.size = size;
+                params.scale = size / 2;
                 make_shape(shape.triangles, shape.quads, shape.positions,
                     shape.normals, shape.texcoords, params);
                 scene.materials.push_back({});
@@ -3245,10 +3245,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 scene.shapes.push_back({});
                 auto& shape         = scene.shapes.back();
                 shape.uri           = name;
-                auto size           = 0.01f;
+                auto size           = 0.005f;
                 auto params         = make_shape_params{};
                 params.type         = make_shape_type::sphere;
-                params.size         = size;
+                params.scale        = size;
                 params.subdivisions = 2;
                 make_shape(shape.triangles, shape.quads, shape.positions,
                     shape.normals, shape.texcoords, params);
@@ -3270,10 +3270,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 scene.shapes.push_back({});
                 auto& shape         = scene.shapes.back();
                 shape.uri           = name;
-                auto size           = 0.01f;
+                auto size           = 0.005f;
                 auto params         = make_shape_params{};
                 params.type         = make_shape_type::sphere;
-                params.size         = size;
+                params.scale        = size;
                 params.subdivisions = 2;
                 make_shape(shape.triangles, shape.quads, shape.positions,
                     shape.normals, shape.texcoords, params);
@@ -3295,10 +3295,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 scene.shapes.push_back({});
                 auto& shape         = scene.shapes.back();
                 shape.uri           = name;
-                auto size           = 0.01f;
+                auto size           = 0.005f;
                 auto params         = make_shape_params{};
                 params.type         = make_shape_type::sphere;
-                params.size         = size;
+                params.scale         = size;
                 params.subdivisions = 2;
                 make_shape(shape.triangles, shape.quads, shape.positions,
                     shape.normals, shape.texcoords, params);

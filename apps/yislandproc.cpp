@@ -157,9 +157,8 @@ void load_island_lights(
             shape.uri   = "shapes/lights/" + name + ".ply";
             auto params = make_shape_params{};
             params.type = make_shape_type::quad;
-            params.size =
-                (ljs.at("width").get<float>() + ljs.at("height").get<float>()) /
-                2;
+            params.scale =
+                (ljs.at("width").get<float>() + ljs.at("height").get<float>());
             make_shape(shape.triangles, shape.quads, shape.positions,
                 shape.normals, shape.texcoords, params);
             scene.shapes.push_back(shape);

@@ -464,8 +464,8 @@ enum make_shape_type {
 struct make_shape_params {
     make_shape_type type         = make_shape_type::quad;
     int             subdivisions = 0;
-    float           size         = 2;
-    float           uvsize       = 1;
+    float           scale        = 1;
+    float           uvscale      = 1;
     float           rounded      = 0;
     vec3f           aspect       = {1, 1, 1};  // for rect, box, cylinder
     frame3f         frame        = identity_frame3f;
