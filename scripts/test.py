@@ -132,10 +132,10 @@ def make_tests():
                 "uri": "::yocto::test-uvgrid::textures/test-uvgrid.png"
             },
             {
-                "uri": "::yocto::test-bump::textures/test-bump.png"
+                "uri": "::yocto::test-bumps::textures/test-bumps.png"
             },
             {
-                "uri": "::yocto::test-bump-normal::textures/test-bump-normal.png"
+                "uri": "::yocto::test-bumps-normal::textures/test-bumps-normal.png"
             },
             {
                 "uri": "::yocto::test-fbm-displacement::textures/test-fbm-displacement.png"
@@ -194,14 +194,14 @@ def make_tests():
                 "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "roughness": 0.01,
-                "normal_texture": "textures/test-bump-normal.png"
+                "normal_texture": "textures/test-bumps-normal.png"
             },
             {
                 "uri": "materials/test-metal-sharp-bumped.yaml",
                 "metallic": 1,
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "roughness": 0,
-                "normal_texture": "textures/test-bump-normal.png"
+                "normal_texture": "textures/test-bumps-normal.png"
             },
             {
                 "uri": "materials/test-plastic-rough-coated.yaml",
