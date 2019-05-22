@@ -1751,8 +1751,8 @@ extern const vector<vec4i> suzanne_quads;
 void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     const make_shape_params& params) {
-    auto subdivide_quads_pnt = [&](auto& qquads, auto& qpositions, auto& qnormals,
-                               auto& qtexcoords) {
+    auto subdivide_quads_pnt = [&](auto& qquads, auto& qpositions,
+                                   auto& qnormals, auto& qtexcoords) {
         struct vertex {
             vec3f position = zero3f;
             vec3f normal   = zero3f;
@@ -1791,7 +1791,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
         }
     };
     auto subdivide_quads_p = [&](auto& qquads, auto& qpositions) {
-        quads = qquads;
+        quads     = qquads;
         positions = qpositions;
         subdivide_quads_impl(quads, positions, params.subdivisions);
     };
@@ -1802,8 +1802,8 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     texcoords.clear();
     switch (params.type) {
         case make_shape_type::quad: {
-            subdivide_quads_pnt(quad_quads, quad_positions, quad_normals,
-                quad_texcoords);
+            subdivide_quads_pnt(
+                quad_quads, quad_positions, quad_normals, quad_texcoords);
             if (params.rounded) {
                 auto height = params.rounded;
                 auto radius = (1 + height * height) / (2 * height);
@@ -1816,8 +1816,8 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::floor: {
-            subdivide_quads_pnt(quady_quads, quady_positions, quady_normals,
-                quady_texcoords);
+            subdivide_quads_pnt(
+                quady_quads, quady_positions, quady_normals, quady_texcoords);
             if (params.rounded) {
                 auto radius = params.rounded;
                 auto start  = (1 - radius) / 2;
@@ -1841,8 +1841,8 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::cube: {
-            subdivide_quads_pnt(cube_quads, cube_positions, cube_normals,
-                cube_texcoords);
+            subdivide_quads_pnt(
+                cube_quads, cube_positions, cube_normals, cube_texcoords);
             auto steps  = vec3i{pow2(params.subdivisions)};
             auto uvsize = vec3f{1};
             auto size   = vec3f{2};
@@ -1884,14 +1884,14 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::sphere: {
-            subdivide_quads_pnt(cube_quads, cube_positions, cube_normals,
-                cube_texcoords);
-            for(auto& p : positions) p = normalize(p);
+            subdivide_quads_pnt(
+                cube_quads, cube_positions, cube_normals, cube_texcoords);
+            for (auto& p : positions) p = normalize(p);
             normals = positions;
         } break;
         case make_shape_type::uvsphere: {
-            subdivide_quads_pnt(quad_quads, quad_positions, quad_normals,
-                quad_texcoords);
+            subdivide_quads_pnt(
+                quad_quads, quad_positions, quad_normals, quad_texcoords);
             for (auto i = 0; i < positions.size(); i++) {
                 auto uv = texcoords[i];
                 auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
@@ -1917,8 +1917,8 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::disk: {
-            subdivide_quads_pnt(quad_quads, quad_positions, quad_normals,
-                quad_texcoords);
+            subdivide_quads_pnt(
+                quad_quads, quad_positions, quad_normals, quad_texcoords);
             for (auto i = 0; i < positions.size(); i++) {
                 // Analytical Methods for Squaring the Disc, by C. Fong
                 // https://arxiv.org/abs/1509.06344
@@ -1939,8 +1939,8 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::matball: {
-            subdivide_quads_pnt(cube_quads, cube_positions, cube_normals,
-                cube_texcoords);
+            subdivide_quads_pnt(
+                cube_quads, cube_positions, cube_normals, cube_texcoords);
             for (auto i = 0; i < positions.size(); i++) {
                 auto p       = positions[i];
                 positions[i] = normalize(p);
@@ -2024,8 +2024,8 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::uvdisk: {
-            subdivide_quads_pnt(quad_quads, quad_positions, quad_normals,
-                quad_texcoords);
+            subdivide_quads_pnt(
+                quad_quads, quad_positions, quad_normals, quad_texcoords);
             for (auto i = 0; i < positions.size(); i++) {
                 auto uv      = texcoords[i];
                 auto phi     = 2 * pif * uv.x;
@@ -2148,17 +2148,17 @@ void make_fvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     const make_shape_params& params) {
     auto subdivide_quads_p = [&](auto& qquads, auto& qpositions) {
         quads_positions = qquads;
-        positions = qpositions;
+        positions       = qpositions;
         subdivide_quads_impl(quads_positions, positions, params.subdivisions);
     };
     auto subdivide_quads_n = [&](auto& qquads, auto& qnormals) {
         quads_normals = qquads;
-        normals = qnormals;
+        normals       = qnormals;
         subdivide_quads_impl(quads_normals, normals, params.subdivisions);
     };
     auto subdivide_quads_t = [&](auto& qquads, auto& qtexcoords) {
         quads_texcoords = qquads;
-        texcoords = qtexcoords;
+        texcoords       = qtexcoords;
         subdivide_quads_impl(quads_texcoords, texcoords, params.subdivisions);
     };
     switch (params.type) {
@@ -2175,8 +2175,8 @@ void make_fvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
         case make_shape_type::sphere: {
             subdivide_quads_p(fvcube_quads, fvcube_positions);
             subdivide_quads_t(cube_quads, cube_texcoords);
-            for(auto& p : positions) p = normalize(p);
-            normals = positions;
+            for (auto& p : positions) p = normalize(p);
+            normals       = positions;
             quads_normals = quads_positions;
         } break;
         case make_shape_type::suzanne: {
@@ -2377,8 +2377,8 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     } else if (type == "default-floor-bent") {
         auto params         = make_shape_params{};
         params.type         = make_shape_type::floor;
-        params.scale         = 20;
-        params.uvscale       = 20;
+        params.scale        = 20;
+        params.uvscale      = 20;
         params.subdivisions = 5;
         params.rounded      = 0.5;
         make_shape(triangles, quads, positions, normals, texcoords, params);
@@ -2391,7 +2391,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto params         = make_shape_params{};
         params.type         = make_shape_type::sphere;
         params.subdivisions = 5;
-        params.scale         = 0.8f;
+        params.scale        = 0.8f;
         auto base_triangles = vector<vec3i>{};
         auto base_quads     = vector<vec4i>{};
         auto base_positions = vector<vec3f>{};
@@ -2412,7 +2412,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto params         = make_shape_params{};
         params.type         = make_shape_type::sphere;
         params.subdivisions = 5;
-        params.scale         = 0.8f;
+        params.scale        = 0.8f;
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-suzanne") {
         auto params = make_shape_params{};
@@ -2433,7 +2433,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto params         = make_shape_params{};
         params.type         = make_shape_type::cube;
         params.subdivisions = 5;
-        params.scale         = 0.075;
+        params.scale        = 0.075;
         params.rounded      = 0.3;
         params.frame        = frame3f{{0, 0.075, 0}};
         make_shape(triangles, quads, positions, normals, texcoords, params);
@@ -2441,14 +2441,14 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto params         = make_shape_params{};
         params.type         = make_shape_type::uvsphere;
         params.subdivisions = 5;
-        params.scale         = 0.075;
+        params.scale        = 0.075;
         params.frame        = frame3f{{0, 0.075, 0}};
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-uvsphere-flipcap") {
         auto params         = make_shape_params{};
         params.type         = make_shape_type::uvsphere;
         params.subdivisions = 5;
-        params.scale         = 0.075;
+        params.scale        = 0.075;
         params.rounded      = 0.3;
         params.frame        = frame3f{{0, 0.075, 0}};
         make_shape(triangles, quads, positions, normals, texcoords, params);
@@ -2456,28 +2456,28 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto params         = make_shape_params{};
         params.type         = make_shape_type::sphere;
         params.subdivisions = 5;
-        params.scale         = 0.075;
+        params.scale        = 0.075;
         params.frame        = frame3f{{0, 0.075, 0}};
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-sphere-displaced") {
         auto params         = make_shape_params{};
         params.type         = make_shape_type::sphere;
         params.subdivisions = 5;
-        params.scale         = 0.075;
+        params.scale        = 0.075;
         params.frame        = frame3f{{0, 0.075, 0}};
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-disk") {
         auto params         = make_shape_params{};
         params.type         = make_shape_type::disk;
         params.subdivisions = 5;
-        params.scale         = 0.075;
+        params.scale        = 0.075;
         params.frame        = frame3f{{0, 0.075, 0}};
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-uvcylinder") {
         auto params         = make_shape_params{};
         params.type         = make_shape_type::uvcylinder;
         params.subdivisions = 5;
-        params.scale         = 0.075;
+        params.scale        = 0.075;
         params.rounded      = 0.3;
         params.frame        = frame3f{{0, 0.075, 0}};
         make_shape(triangles, quads, positions, normals, texcoords, params);
@@ -2485,22 +2485,22 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto params         = make_shape_params{};
         params.type         = make_shape_type::floor;
         params.subdivisions = 0;
-        params.scale         = 2;
-        params.uvscale       = 20;
+        params.scale        = 2;
+        params.uvscale      = 20;
         params.frame        = identity_frame3f;
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-matball") {
         auto params         = make_shape_params{};
         params.type         = make_shape_type::matball;
         params.subdivisions = 5;
-        params.scale         = 0.075;
+        params.scale        = 0.075;
         params.frame        = frame3f{{0, 0.075, 0}};
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-hairball1") {
         auto params         = make_shape_params{};
         params.type         = make_shape_type::sphere;
         params.subdivisions = 5;
-        params.scale         = 0.075f * 0.8f;
+        params.scale        = 0.075f * 0.8f;
         params.frame        = frame3f{{0, 0.075, 0}};
         auto base_triangles = vector<vec3i>{};
         auto base_quads     = vector<vec4i>{};
@@ -2524,7 +2524,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto params         = make_shape_params{};
         params.type         = make_shape_type::sphere;
         params.subdivisions = 5;
-        params.scale         = 0.075f * 0.8f;
+        params.scale        = 0.075f * 0.8f;
         params.frame        = frame3f{{0, 0.075, 0}};
         auto base_triangles = vector<vec3i>{};
         auto base_quads     = vector<vec4i>{};
@@ -2546,7 +2546,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto params         = make_shape_params{};
         params.type         = make_shape_type::sphere;
         params.subdivisions = 5;
-        params.scale         = 0.075f * 0.8f;
+        params.scale        = 0.075f * 0.8f;
         params.frame        = frame3f{{0, 0.075, 0}};
         auto base_triangles = vector<vec3i>{};
         auto base_quads     = vector<vec4i>{};
@@ -2570,30 +2570,30 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         auto params         = make_shape_params{};
         params.type         = make_shape_type::sphere;
         params.subdivisions = 5;
-        params.scale         = 0.075f * 0.8f;
+        params.scale        = 0.075f * 0.8f;
         params.frame        = frame3f{{0, 0.075, 0}};
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-suzanne-subdiv") {
         auto params  = make_shape_params{};
         params.type  = make_shape_type::suzanne;
-        params.scale         = 0.075f * 0.8f;
+        params.scale = 0.075f * 0.8f;
         params.frame = frame3f{{0, 0.075, 0}};
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-cube-subdiv") {
         auto params  = make_shape_params{};
         params.type  = make_shape_type::cube;
-        params.scale         = 0.075;
+        params.scale = 0.075;
         params.frame = frame3f{{0, 0.075, 0}};
         make_fvshape(quads_positions, quads_normals, quads_texcoords, positions,
             normals, texcoords, params);
     } else if (type == "test-arealight1") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::quad;
+        auto params  = make_shape_params{};
+        params.type  = make_shape_type::quad;
         params.scale = 0.2;
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-arealight2") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::quad;
+        auto params  = make_shape_params{};
+        params.type  = make_shape_type::quad;
         params.scale = 0.2;
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else {
@@ -3465,28 +3465,28 @@ const vector<vec3f> quady_normals = vector<vec3f>{
     {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}};
 const vector<vec2f> quady_texcoords = vector<vec2f>{
     {0, 0}, {1, 0}, {1, 1}, {0, 1}};
-const vector<vec4i> quady_quads    = vector<vec4i>{{0, 1, 2, 3}};
-const vector<vec3f> cube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
+const vector<vec4i> quady_quads      = vector<vec4i>{{0, 1, 2, 3}};
+const vector<vec3f> cube_positions   = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
     {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
     {+1, +1, -1}, {+1, -1, +1}, {+1, -1, -1}, {+1, +1, -1}, {+1, +1, +1},
     {-1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {-1, +1, -1}, {-1, +1, +1},
     {+1, +1, +1}, {+1, +1, -1}, {-1, +1, -1}, {+1, -1, +1}, {-1, -1, +1},
     {-1, -1, -1}, {+1, -1, -1}};
-const vector<vec3f> cube_normals   = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
+const vector<vec3f> cube_normals     = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
     {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
     {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
     {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
     {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
-const vector<vec2f> cube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
+const vector<vec2f> cube_texcoords   = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
     {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
     {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
     {1, 1}, {1, 0}, {0, 0}};
-const vector<vec4i> cube_quads     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+const vector<vec4i> cube_quads       = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
     {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
 const vector<vec3f> fvcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
     {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
     {+1, +1, -1}};
-const vector<vec4i> fvcube_quads = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+const vector<vec4i> fvcube_quads     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
     {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
 
 const vector<vec3f> suzanne_positions = vector<vec3f>{

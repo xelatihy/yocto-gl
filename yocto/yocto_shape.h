@@ -323,10 +323,14 @@ void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<float>& radius, int level);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
-void subdivide_triangles(vector<vec3i>& triangles, vector<float>& vert, int level);
-void subdivide_triangles(vector<vec3i>& triangles, vector<vec2f>& vert, int level);
-void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& vert, int level);
-void subdivide_triangles(vector<vec3i>& triangles, vector<vec4f>& vert, int level);
+void subdivide_triangles(
+    vector<vec3i>& triangles, vector<float>& vert, int level);
+void subdivide_triangles(
+    vector<vec3i>& triangles, vector<vec2f>& vert, int level);
+void subdivide_triangles(
+    vector<vec3i>& triangles, vector<vec3f>& vert, int level);
+void subdivide_triangles(
+    vector<vec3i>& triangles, vector<vec4f>& vert, int level);
 void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, int level);
@@ -348,14 +352,14 @@ void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, int level);
 // Subdivide quads using Carmull-Clark subdivision rules.
-void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<float>& vert, int level, bool lock_boundary = false);
-void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec2f>& vert, int level, bool lock_boundary = false);
-void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec3f>& vert, int level, bool lock_boundary = false);
-void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec4f>& vert, int level, bool lock_boundary = false);
+void subdivide_catmullclark(vector<vec4i>& quads, vector<float>& vert,
+    int level, bool lock_boundary = false);
+void subdivide_catmullclark(vector<vec4i>& quads, vector<vec2f>& vert,
+    int level, bool lock_boundary = false);
+void subdivide_catmullclark(vector<vec4i>& quads, vector<vec3f>& vert,
+    int level, bool lock_boundary = false);
+void subdivide_catmullclark(vector<vec4i>& quads, vector<vec4f>& vert,
+    int level, bool lock_boundary = false);
 void subdivide_catmullclark(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, int level);
@@ -494,7 +498,8 @@ void make_points(vector<int>& points, vector<vec3f>& positions,
     int num, float uvsize, float point_radius);
 void make_random_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, const vec3f& size, float uvsize, float point_radius, uint64_t seed);
+    int num, const vec3f& size, float uvsize, float point_radius,
+    uint64_t seed);
 
 // Make fair params
 struct make_hair_params {

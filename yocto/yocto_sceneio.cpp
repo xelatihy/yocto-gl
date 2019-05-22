@@ -2927,11 +2927,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 auto rgb2 = checkerboard.tex1.texture == ""
                                 ? checkerboard.tex2.value
                                 : pbrt_spectrum3f{0.6f, 0.6f, 0.6f};
-                auto params = make_image_params{};
-                params.type = make_image_type::checker;
+                auto params   = make_image_params{};
+                params.type   = make_image_type::checker;
                 params.color0 = {rgb1.x, rgb1.y, rgb1.z, 1};
                 params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1};
-                params.scale = 2;
+                params.scale  = 2;
                 make_image(texture.hdr_image, params);
                 float_to_byte(texture.ldr_image, texture.hdr_image);
                 texture.hdr_image = {};
@@ -3221,12 +3221,12 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 auto& distant      = plight.distant;
                 auto  distant_dist = 100;
                 scene.shapes.push_back({});
-                auto& shape = scene.shapes.back();
-                shape.uri   = name;
-                auto dir    = normalize(distant.from - distant.to);
-                auto size   = distant_dist * sin(5 * pif / 180);
-                auto params = make_shape_params{};
-                params.type = make_shape_type::quad;
+                auto& shape  = scene.shapes.back();
+                shape.uri    = name;
+                auto dir     = normalize(distant.from - distant.to);
+                auto size    = distant_dist * sin(5 * pif / 180);
+                auto params  = make_shape_params{};
+                params.type  = make_shape_type::quad;
                 params.scale = size / 2;
                 make_shape(shape.triangles, shape.quads, shape.positions,
                     shape.normals, shape.texcoords, params);
@@ -3303,7 +3303,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 auto size           = 0.005f;
                 auto params         = make_shape_params{};
                 params.type         = make_shape_type::sphere;
-                params.scale         = size;
+                params.scale        = size;
                 params.subdivisions = 2;
                 make_shape(shape.triangles, shape.quads, shape.positions,
                     shape.normals, shape.texcoords, params);
