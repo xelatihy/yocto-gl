@@ -165,27 +165,52 @@ constexpr auto float_max = type_max<float>;
 constexpr auto float_min = type_min<float>;
 
 template <typename T>
-constexpr T min(T x, T y);
+constexpr T min(T x, T y) {
+    return (x < y) ? x : y;
+}
 template <typename T>
-constexpr T max(T x, T y);
+constexpr T max(T x, T y) {
+    return (x > y) ? x : y;
+}
 template <typename T>
-constexpr T clamp(T x, T min, T max);
+constexpr T clamp(T x, T min_, T max_) {
+    return min(max(x, min_), max_);
+}
 template <typename T>
-constexpr T clamp01(T x);
+constexpr T clamp01(T x) {
+    return min(max(x, (T)0), (T)1);
+}
 template <typename T, typename T1>
-constexpr T lerp(const T& a, const T& b, const T1& u);
+constexpr T lerp(const T& a, const T& b, const T1& u) {
+    return a * (1 - u) + b * u;
+}
 template <typename T, typename T1>
 constexpr T bilerp(const T& c00, const T& c10, const T& c11, const T& c01,
-    const T1& u, const T1& v);
+    const T1& u, const T1& v) {
+    return c00 * (1 - u) * (1 - v) + c10 * u * (1 - v) + c01 * (1 - u) * v +
+           c11 * u * v;
+}
 template <typename T, typename T1>
-constexpr T bias(const T& a, const T1& bias);
+constexpr T bias(const T& a, const T1& bias) {
+    return a / ((1 / bias - 2) * (1 - a) + 1);
+}
 template <typename T, typename T1>
-constexpr T   gain(const T& a, const T1& gain);
-constexpr int pow2(int x);
+constexpr T gain(const T& a, const T1& gain) {
+    if (a < (T)0.5) {
+        return bias(a * 2, gain) / 2;
+    } else {
+        return bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
+    }
+}
+constexpr int pow2(int x) { return 1 << x; }
 template <typename T>
-inline T radians(T x);
+inline T radians(T x) {
+    return x * (T)pi / 180;
+}
 template <typename T>
-inline T degrees(T x);
+inline T degrees(T x) {
+    return x * 180 / (T)pi;
+}
 
 }  // namespace yocto
 
@@ -281,918 +306,6 @@ constexpr auto zero1b = vec1b{0};
 constexpr auto zero2b = vec2b{0, 0};
 constexpr auto zero3b = vec3b{0, 0, 0};
 constexpr auto zero4b = vec4b{0, 0, 0, 0};
-
-// Vector comparison operations.
-template <typename T, int N>
-constexpr bool operator==(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr bool operator!=(const vec<T, N>& a, const vec<T, N>& b);
-
-// Element access
-template <typename T, int N>
-constexpr vec<T, 3>& xyz(vec<T, N>& a);
-template <typename T, int N>
-constexpr const vec<T, 3>& xyz(const vec<T, N>& a);
-
-// Vector operations.
-template <typename T, int N>
-constexpr vec<T, N> operator+(const vec<T, N>& a);
-template <typename T, int N>
-constexpr vec<T, N> operator-(const vec<T, N>& a);
-template <typename T, int N>
-constexpr vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N> operator+(const vec<T, N>& a, T1 b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N> operator+(T1 a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N> operator-(const vec<T, N>& a, T1 b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N> operator-(T1 a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N> operator*(const vec<T, N>& a, T1 b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N> operator*(T1 a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N> operator/(const vec<T, N>& a, T1 b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N> operator/(T1 a, const vec<T, N>& b);
-
-// Vector assignments
-template <typename T, int N>
-constexpr vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N>& operator+=(vec<T, N>& a, T1 b);
-template <typename T, int N>
-constexpr vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N>& operator-=(vec<T, N>& a, T1 b);
-template <typename T, int N>
-constexpr vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N>& operator*=(vec<T, N>& a, T1 b);
-template <typename T, int N>
-constexpr vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
-constexpr vec<T, N>& operator/=(vec<T, N>& a, T1 b);
-
-// Vector products and lengths.
-template <typename T, int N>
-constexpr T dot(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T>
-constexpr T cross(const vec<T, 2>& a, const vec<T, 2>& b);
-template <typename T>
-constexpr vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b);
-
-template <typename T, int N>
-constexpr T length(const vec<T, N>& a);
-template <typename T, int N>
-constexpr vec<T, N> normalize(const vec<T, N>& a);
-template <typename T, int N>
-constexpr T distance(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr T distance_squared(const vec<T, N>& a, const vec<T, N>& b);
-
-template <typename T>
-constexpr T angle(const vec<T, 3>& a, const vec<T, 3>& b);
-template <typename T, typename T1>
-constexpr vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u);
-
-// Orthogonal vectors.
-template <typename T>
-constexpr vec<T, 3> orthogonal(const vec<T, 3>& v);
-template <typename T>
-constexpr vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b);
-
-// Reflected and refracted vector.
-template <typename T>
-constexpr vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n);
-template <typename T, typename T1>
-constexpr vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T1 eta);
-
-// Max element and clamp.
-template <typename T, int N>
-constexpr vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1, typename T2>
-constexpr vec<T, N> clamp(const vec<T, N>& x, T1 min, T2 max);
-template <typename T, int N>
-constexpr vec<T, N> clamp01(const vec<T, N>& x);
-
-template <typename T, int N>
-constexpr T max(const vec<T, N>& a);
-template <typename T, int N>
-constexpr T min(const vec<T, N>& a);
-template <typename T, int N>
-constexpr T mean(const vec<T, N>& a);
-template <typename T, int N>
-constexpr T sum(const vec<T, N>& a);
-template <typename T, int N>
-constexpr int max_element(const vec<T, N>& a);
-template <typename T, int N>
-constexpr int min_element(const vec<T, N>& a);
-
-// Apply a unary function to all vector elements
-template <typename T, int N, typename Func>
-constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a);
-// Apply a binary function to all vector elements
-template <typename T, int N, typename Func>
-constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a, T b);
-
-// Functions applied to vector elements
-template <typename T, int N>
-constexpr vec<T, N> abs(const vec<T, N>& a);
-template <typename T, int N>
-constexpr vec<T, N> sqrt(const vec<T, N>& a);
-template <typename T, int N, typename T1>
-constexpr vec<T, N> pow(const vec<T, N>& a, const T1& b);
-template <typename T, int N>
-constexpr vec<T, N> exp(const vec<T, N>& a);
-template <typename T, int N>
-constexpr vec<T, N> log(const vec<T, N>& a);
-template <typename T, int N>
-constexpr vec<T, N> exp2(const vec<T, N>& a);
-template <typename T, int N>
-constexpr vec<T, N> log2(const vec<T, N>& a);
-template <typename T, int N, typename T1>
-constexpr vec<T, N> gain(const vec<T, N>& a, const T1& b);
-template <typename T, int N>
-constexpr bool isfinite(const vec<T, N>& a);
-
-// Quaternion operatons represented as xi + yj + zk + w
-// const auto identity_quat4f = vec<float, 4>{0, 0, 0, 1};
-template <typename T, typename T1>
-constexpr vec<T, 4> quat_mul(const vec<T, 4>& a, T1 b);
-template <typename T>
-constexpr vec<T, 4> quat_mul(const vec<T, 4>& a, const vec<T, 4>& b);
-template <typename T>
-constexpr vec<T, 4> quat_conjugate(const vec<T, 4>& a);
-template <typename T>
-constexpr vec<T, 4> quat_inverse(const vec<T, 4>& a);
-
-}  // namespace yocto
-
-namespace std {
-
-// Hash functor for vector for use with unordered_map
-template <typename T, int N>
-struct hash<yocto::vec<T, N>>;
-
-}  // namespace std
-
-// -----------------------------------------------------------------------------
-// MATRICES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T, int N, int M>
-struct mat;
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T, int N>
-struct mat<T, N, 1> {
-    vec<T, N> x;
-
-    constexpr mat() : x{} {}
-    constexpr mat(const vec<T, N>& x) : x{x} {}
-
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
-};
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T, int N>
-struct mat<T, N, 2> {
-    vec<T, N> x, y;
-
-    constexpr mat() : x{}, y{} {}
-    constexpr mat(const vec<T, N>& x, const vec<T, N>& y) : x{x}, y{y} {}
-
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
-};
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T, int N>
-struct mat<T, N, 3> {
-    vec<T, N> x, y, z;
-
-    constexpr mat() : x{}, y{}, z{} {}
-    constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z)
-        : x{x}, y{y}, z{z} {}
-
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
-};
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T, int N>
-struct mat<T, N, 4> {
-    vec<T, N> x, y, z, w;
-
-    constexpr mat() : x{}, y{}, z{}, w{} {}
-    constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z,
-        const vec<T, N>& w)
-        : x{x}, y{y}, z{z}, w{w} {}
-
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
-};
-
-// Typedefs
-using mat2f = mat<float, 2, 2>;
-using mat3f = mat<float, 3, 3>;
-using mat4f = mat<float, 4, 4>;
-using mat2d = mat<double, 2, 2>;
-using mat3d = mat<double, 3, 3>;
-using mat4d = mat<double, 4, 4>;
-
-// Identity matrix
-template <typename T, int N>
-constexpr mat<T, N, N> make_identity_mat();
-
-// Identity matrices constants.
-constexpr auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
-constexpr auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-constexpr auto identity_mat4f = mat4f{
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-
-// Matrix comparisons.
-template <typename T, int N, int M>
-constexpr bool operator==(const mat<T, N, M>& a, const mat<T, N, M>& b);
-template <typename T, int N, int M>
-constexpr bool operator!=(const mat<T, N, M>& a, const mat<T, N, M>& b);
-// Matrix operations.
-template <typename T, int N, int M>
-constexpr mat<T, N, M> operator+(const mat<T, N, M>& a, const mat<T, N, M>& b);
-template <typename T, int N, int M, typename T1>
-constexpr mat<T, N, M> operator*(const mat<T, N, M>& a, T1 b);
-template <typename T, int N, int M>
-constexpr vec<T, N> operator*(const mat<T, N, M>& a, const vec<T, M>& b);
-template <typename T, int N, int M>
-constexpr vec<T, M> operator*(const vec<T, N>& a, const mat<T, N, M>& b);
-template <typename T, int N, int M, int K>
-constexpr mat<T, N, M> operator*(const mat<T, N, K>& a, const mat<T, K, M>& b);
-
-// Matrix assignments.
-template <typename T, int N, int M>
-constexpr mat<T, N, M>& operator+=(mat<T, N, M>& a, const mat<T, N, M>& b);
-template <typename T, int N>
-constexpr mat<T, N, N>& operator*=(mat<T, N, N>& a, const mat<T, N, N>& b);
-template <typename T, int N, int M, typename T1>
-constexpr mat<T, N, M>& operator*=(mat<T, N, M>& a, T1 b);
-// Matrix diagonals and transposes.
-template <typename T, int N>
-constexpr vec<T, N> diagonal(const mat<T, N, N>& a);
-template <typename T, int N, int M>
-constexpr mat<T, M, N> transpose(const mat<T, N, M>& a);
-// Matrix adjoints, determinants and inverses.
-template <typename T>
-constexpr T determinant(const mat<T, 2, 2>& a);
-template <typename T>
-constexpr T determinant(const mat<T, 3, 3>& a);
-template <typename T>
-constexpr mat<T, 2, 2> adjoint(const mat<T, 2, 2>& a);
-template <typename T>
-constexpr mat<T, 3, 3> adjoint(const mat<T, 3, 3>& a);
-template <typename T>
-constexpr mat<T, 2, 2> inverse(const mat<T, 2, 2>& a);
-template <typename T>
-constexpr mat<T, 3, 3> inverse(const mat<T, 3, 3>& a);
-
-// Constructs a basis from a direction
-template <typename T>
-constexpr mat<T, 3, 3> make_basis_fromz(const vec<T, 3>& v);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// AFFINE TRANSFORMS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Affine transformations stored as a column-major matrix.
-// This code is very similar to frames, but it is ketp different to increase
-// type safety.
-template <typename T, int N>
-struct affine;
-
-// Affine transformations stored as a column-major matrix.
-template <typename T>
-struct affine<T, 2> {
-    vec<T, 2> x, y, o;
-
-    constexpr affine() : x{}, y{}, o{} {}
-    constexpr affine(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
-        : x{x}, y{y}, o{o} {}
-    constexpr affine(const mat<T, 2, 2>& m, const vec<T, 2>& t)
-        : x{m.x}, y{m.y}, o{t} {}
-    constexpr explicit affine(const mat<T, 3, 3>& m)
-        : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-    constexpr operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
-
-    constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
-
-    constexpr mat<T, 2, 2>&       m() { return *(mat<T, 2, 2>*)&x; }
-    constexpr const mat<T, 2, 2>& m() const { return *(mat<T, 2, 2>*)&x; }
-    constexpr vec<T, 2>&          t() { return o; }
-    constexpr const vec<T, 2>&    t() const { return o; }
-};
-
-// Affine transformations stored as a column-major matrix.
-template <typename T>
-struct affine<T, 3> {
-    vec<T, 3> x, y, z, o;
-
-    constexpr affine() : x{}, y{}, z{}, o{} {}
-    constexpr affine(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
-        const vec<T, 3>& o)
-        : x{x}, y{y}, z{z}, o{o} {}
-    constexpr affine(const mat<T, 3, 3>& m, const vec<T, 3>& t)
-        : x{m.x}, y{m.y}, z{m.z}, o{t} {}
-    constexpr explicit affine(const mat<T, 4, 4>& m)
-        : x{m.x.x, m.x.y, m.x.z}
-        , y{m.y.x, m.y.y, m.y.z}
-        , z{m.z.x, m.z.y, m.z.z}
-        , o{m.w.x, m.w.y, m.w.z} {}
-    constexpr operator mat<T, 4, 4>() const {
-        return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
-    }
-
-    constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
-
-    constexpr mat<T, 3, 3>&       m() { return *(mat<T, 3, 3>*)&x; }
-    constexpr const mat<T, 3, 3>& m() const { return *(mat<T, 3, 3>*)&x; }
-    constexpr vec<T, 3>&          t() { return o; }
-    constexpr const vec<T, 3>&    t() const { return o; }
-};
-
-// Typedefs
-using affine2f = affine<float, 2>;
-using affine3f = affine<float, 3>;
-
-// Indentity frames.
-constexpr auto identity_affine2f = affine2f{{1, 0}, {0, 1}, {0, 0}};
-constexpr auto identity_affine3f = affine3f{
-    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
-
-// Frame comparisons.
-template <typename T, int N>
-constexpr bool operator==(const affine<T, N>& a, const affine<T, N>& b);
-template <typename T, int N>
-constexpr bool operator!=(const affine<T, N>& a, const affine<T, N>& b);
-
-// Element access
-template <typename T, int N>
-constexpr mat<T, N, N>& linear_component(affine<T, N>& a);
-template <typename T, int N>
-constexpr const mat<T, N, N>& linear_component(const affine<T, N>& a);
-
-// Frame composition, equivalent to affine matrix product.
-template <typename T, int N>
-constexpr affine<T, N> operator*(const affine<T, N>& a, const affine<T, N>& b);
-template <typename T, int N>
-constexpr affine<T, N>& operator*=(affine<T, N>& a, const affine<T, N>& b);
-// Frame inverse, equivalent to rigid affine inverse.
-template <typename T, int N>
-constexpr affine<T, N> inverse(const affine<T, N>& a);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// RIGID BODY TRANSFORMS/FRAMES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Rigid frames stored as a column-major affine transform matrix.
-template <typename T, int N>
-struct frame;
-
-// Rigid frames stored as a column-major affine transform matrix.
-template <typename T>
-struct frame<T, 2> {
-    vec<T, 2> x, y, o;
-
-    constexpr frame() : x{}, y{}, o{} {}
-    constexpr frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
-        : x{x}, y{y}, o{o} {}
-    constexpr explicit frame(const vec<T, 2>& o) : x{1, 0}, y{0, 1}, o{o} {}
-    constexpr frame(const mat<T, 2, 2>& m, const vec<T, 2>& t)
-        : x{m.x}, y{m.y}, o{t} {}
-    constexpr explicit frame(const affine<T, 2>& m) : x{m.x}, y{m.y}, o{m.o} {}
-    constexpr operator affine<T, 2>() const { return {x, y, o}; }
-    constexpr explicit frame(const mat<T, 3, 3>& m)
-        : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-    constexpr operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
-
-    constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
-
-    constexpr mat<T, 2, 2>&       m() { return *(mat<T, 2, 2>*)&x; }
-    constexpr const mat<T, 2, 2>& m() const { return *(mat<T, 2, 2>*)&x; }
-    constexpr vec<T, 2>&          t() { return o; }
-    constexpr const vec<T, 2>&    t() const { return o; }
-};
-
-// Rigid frames stored as a column-major affine transform matrix.
-template <typename T>
-struct frame<T, 3> {
-    vec<T, 3> x, y, z, o;
-
-    constexpr frame() : x{}, y{}, z{}, o{} {}
-    constexpr frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
-        const vec<T, 3>& o)
-        : x{x}, y{y}, z{z}, o{o} {}
-    constexpr explicit frame(const vec<T, 3>& o)
-        : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
-    constexpr frame(const mat<T, 3, 3>& m, const vec<T, 3>& t)
-        : x{m.x}, y{m.y}, z{m.z}, o{t} {}
-    constexpr explicit frame(const affine<T, 3>& m)
-        : x{m.x}, y{m.y}, z{m.z}, o{m.o} {}
-    constexpr operator affine<T, 3>() const { return {x, y, z, o}; }
-    constexpr explicit frame(const mat<T, 4, 4>& m)
-        : x{m.x.x, m.x.y, m.x.z}
-        , y{m.y.x, m.y.y, m.y.z}
-        , z{m.z.x, m.z.y, m.z.z}
-        , o{m.w.x, m.w.y, m.w.z} {}
-    constexpr operator mat<T, 4, 4>() const {
-        return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
-    }
-
-    constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
-
-    constexpr mat<T, 3, 3>&       m() { return *(mat<T, 3, 3>*)&x; }
-    constexpr const mat<T, 3, 3>& m() const { return *(mat<T, 3, 3>*)&x; }
-    constexpr vec<T, 3>&          t() { return o; }
-    constexpr const vec<T, 3>&    t() const { return o; }
-};
-
-// Typedefs
-using frame2f = frame<float, 2>;
-using frame3f = frame<float, 3>;
-using frame2d = frame<double, 2>;
-using frame3d = frame<double, 3>;
-
-// Indentity frames.
-template <typename T, int N>
-constexpr frame<T, N> _identity_frame();
-template <typename T, int N>
-constexpr auto identity_frame   = _identity_frame<T, N>();
-constexpr auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-constexpr auto identity_frame3f = frame3f{
-    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
-
-// Frame construction from axis.
-template <typename T>
-constexpr frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v);
-template <typename T>
-constexpr frame<T, 3> make_frame_fromzx(
-    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_);
-
-// Element access
-template <typename T, int N>
-constexpr mat<T, N, N>& linear_component(frame<T, N>& a);
-template <typename T, int N>
-constexpr const mat<T, N, N>& linear_component(const frame<T, N>& a);
-
-// Frame comparisons.
-template <typename T, int N>
-constexpr bool operator==(const frame<T, N>& a, const frame<T, N>& b);
-template <typename T, int N>
-constexpr bool operator!=(const frame<T, N>& a, const frame<T, N>& b);
-
-// Frame composition, equivalent to affine matrix product.
-template <typename T, int N>
-constexpr frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b);
-template <typename T, int N>
-constexpr frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b);
-
-// Frame inverse, equivalent to rigid affine inverse.
-template <typename T, int N>
-constexpr frame<T, N> inverse(const frame<T, N>& a);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// QUATERNIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Quaternions to represent rotations
-struct quat4f {
-    float x, y, z, w;
-
-    // constructors
-    constexpr quat4f() : x{0}, y{0}, z{0}, w{1} {}
-    constexpr quat4f(float x, float y, float z, float w) : x{x}, y{y}, z{z}, w{w} {}
-};
-
-// Constants
-constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
-
-// Quaternion operatons
-inline quat4f operator+(const quat4f& a, const quat4f& b) {
-    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-inline quat4f operator*(const quat4f& a, float b) {
-    return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-inline quat4f operator/(const quat4f& a, float b) {
-    return {a.x / b, a.y / b, a.z / b, a.w / b};
-}
-inline quat4f operator*(const quat4f& a, const quat4f& b) {
-    return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
-        a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
-        a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
-        a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
-}
-
-// Quaterion operations
-inline float dot(const quat4f& a, const quat4f& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-}
-inline float length(const quat4f& a) {
-    return sqrt(dot(a, a));
-}
-inline quat4f normalize(const quat4f& a) {
-    auto l = length(a);
-    return (l != 0) ? a / l : a;
-}
-inline quat4f conjugate(const quat4f& a) {
-    return {-a.x, -a.y, -a.z, a.w};
-}
-inline quat4f inverse(const quat4f& a) {
-    return conjugate(a) / dot(a, a);
-}
-inline float uangle(const quat4f& a, const quat4f& b) {
-    auto d = dot(a, b);
-    return d > 1 ? 0 : std::acos(d < -1 ? -1 : d);
-}
-inline quat4f lerp(const quat4f& a, const quat4f& b, float t) {
-    return a * (1 - t) + b * t;
-}
-inline quat4f nlerp(const quat4f& a, const quat4f& b, float t) {
-    return normalize(lerp(a, b, t));
-}
-inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
-    auto th = uangle(a, b);
-    return th == 0 ? a
-                   : a * (sin(th * (1 - t)) / sin(th)) +
-                         b * (sin(th * t) / sin(th));
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// AXIS ALIGNED BOUNDING BOXES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T, int N>
-struct bbox {
-    vec<T, N> min, max;
-
-    constexpr bbox() : min{type_max<T>}, max{type_min<T>} {}
-    constexpr bbox(const vec<T, N>& min, const vec<T, N>& max)
-        : min{min}, max{max} {}
-
-    constexpr vec<T, N>&       operator[](int i) { return (&min)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&min)[i]; }
-};
-
-// Typedefs
-using bbox1f = bbox<float, 1>;
-using bbox2f = bbox<float, 2>;
-using bbox3f = bbox<float, 3>;
-using bbox4f = bbox<float, 4>;
-using bbox1i = bbox<int, 1>;
-using bbox2i = bbox<int, 2>;
-using bbox3i = bbox<int, 3>;
-using bbox4i = bbox<int, 4>;
-
-// Empty bbox constant.
-constexpr auto invalid_bbox1f = bbox1f{};
-constexpr auto invalid_bbox2f = bbox2f{};
-constexpr auto invalid_bbox3f = bbox3f{};
-constexpr auto invalid_bbox4f = bbox4f{};
-constexpr auto invalid_bbox1i = bbox1i{};
-constexpr auto invalid_bbox2i = bbox2i{};
-constexpr auto invalid_bbox3i = bbox3i{};
-constexpr auto invalid_bbox4i = bbox4i{};
-
-// Bounding box comparisons.
-template <typename T, int N>
-constexpr bool operator==(const bbox<T, N>& a, const bbox<T, N>& b);
-template <typename T, int N>
-constexpr bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b);
-
-// Bbox properties
-template <typename T, int N>
-constexpr vec<T, N> bbox_center(const bbox<T, N>& a) {
-    return (a.min + a.max) / 2;
-}
-template <typename T, int N>
-constexpr vec<T, N> bbox_size(const bbox<T, N>& a) {
-    return a.max - a.min;
-}
-
-// Bounding box expansions with points and other boxes.
-template <typename T, int N>
-constexpr bbox<T, N> operator+(const bbox<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr bbox<T, N> operator+(const bbox<T, N>& a, const bbox<T, N>& b);
-template <typename T, int N>
-constexpr bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b);
-
-// Primitive bounds.
-template <typename T, int N, typename T1>
-constexpr bbox<T, N> point_bounds(const vec<T, N>& p);
-template <typename T, int N, typename T1>
-constexpr bbox<T, N> line_bounds(const vec<T, N>& p0, const vec<T, N>& p1);
-template <typename T, int N>
-constexpr bbox<T, N> triangle_bounds(
-    const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2);
-template <typename T, int N>
-constexpr bbox<T, N> quad_bounds(const vec<T, N>& p0, const vec<T, N>& p1,
-    const vec<T, N>& p2, const vec<T, N>& p3);
-template <typename T, int N, typename T1>
-constexpr bbox<T, N> point_bounds(const vec<T, N>& p, T1 r);
-template <typename T, int N, typename T1>
-constexpr bbox<T, N> line_bounds(
-    const vec<T, N>& p0, const vec<T, N>& p1, T1 r0, T1 r1);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// RAYS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Rays with origin, direction and min/max t value.
-template <typename T, int N>
-struct ray;
-
-template <typename T>
-struct ray<T, 2> {
-    vec<T, 2> o, d;
-    T         tmin, tmax;
-
-    constexpr ray() : o{0, 0}, d{0, 1}, tmin{0}, tmax{type_max<T>} {}
-    constexpr ray(const vec<T, 2>& o, const vec<T, 2>& d, T tmin, T tmax)
-        : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
-};
-
-// Rays with origin, direction and min/max t value.
-template <typename T>
-struct ray<T, 3> {
-    vec<T, 3> o, d;
-    T         tmin, tmax;
-
-    constexpr ray() : o{0, 0, 0}, d{0, 0, 1}, tmin{0}, tmax{type_max<T>} {}
-    constexpr ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin, T tmax)
-        : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
-};
-
-// Ray esplison
-constexpr auto ray_eps = 1e-4f;
-
-// Typedefs
-using ray2f = ray<float, 2>;
-using ray3f = ray<float, 3>;
-
-// Construct a ray from direction or segments using a default epsilon.
-template <typename T, int N>
-constexpr ray<T, N> make_ray(
-    const vec<T, N>& o, const vec<T, N>& d, T eps = (T)ray_eps);
-template <typename T, int N>
-constexpr ray<T, N> make_segment(
-    const vec<T, N>& p1, const vec<T, N>& p2, T eps = (T)ray_eps);
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// TRANSFORMS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Transforms points, vectors and directions by matrices.
-template <typename T, int N>
-constexpr vec<T, N> transform_point(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_vector(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_direction(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_normal(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_vector(const mat<T, N, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_direction(
-    const mat<T, N, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_normal(const mat<T, N, N>& a, const vec<T, N>& b);
-
-// Transforms points, vectors and directions by frames.
-template <typename T, int N>
-constexpr vec<T, N> transform_point(const affine<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_vector(const affine<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_direction(
-    const affine<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_normal(const affine<T, N>& a, const vec<T, N>& b);
-
-// Transforms points, vectors and directions by frames.
-template <typename T, int N>
-constexpr vec<T, N> transform_point(const frame<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_direction(
-    const frame<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_normal(const frame<T, N>& a, const vec<T, N>& b);
-
-// Transforms rays and bounding boxes by matrices.
-template <typename T, int N>
-constexpr ray<T, N> transform_ray(
-    const mat<T, N + 1, N + 1>& a, const ray<T, N>& b);
-template <typename T, int N>
-constexpr ray<T, N> transform_ray(const affine<T, N>& a, const ray<T, N>& b);
-template <typename T, int N>
-constexpr ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b);
-template <typename T>
-constexpr bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a, const bbox<T, 3>& b);
-template <typename T>
-constexpr bbox<T, 3> transform_bbox(const affine<T, 3>& a, const bbox<T, 3>& b);
-template <typename T>
-constexpr bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b);
-
-// Inverse transforms by frames, assuming they are rigid transforms.
-template <typename T, int N>
-constexpr vec<T, N> transform_point_inverse(
-    const frame<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_vector_inverse(
-    const frame<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr vec<T, N> transform_direction_inverse(
-    const frame<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
-constexpr ray<T, N> transform_ray_inverse(
-    const frame<T, N>& a, const ray<T, N>& b);
-template <typename T, int N>
-constexpr bbox<T, N> transform_bbox_inverse(
-    const frame<T, N>& a, const bbox<T, N>& b);
-
-// Translation, scaling and rotations transforms.
-template <typename T>
-constexpr frame<T, 3> make_translation_frame(const vec<T, 3>& a);
-template <typename T>
-constexpr frame<T, 3> make_scaling_frame(const vec<T, 3>& a);
-template <typename T, typename T1>
-constexpr frame<T, 3> make_rotation_frame(const vec<T, 3>& axis, T1 angle);
-template <typename T>
-constexpr frame<T, 3> make_rotation_frame(const vec<T, 4>& quat);
-template <typename T>
-constexpr frame<T, 3> make_rotation_frame(const quat4f& quat);
-template <typename T>
-constexpr frame<T, 3> make_rotation_frame(const mat<T, 3, 3>& rot);
-
-// Lookat frame. Z-axis can be inverted with inv_xz.
-template <typename T>
-constexpr frame<T, 3> make_lookat_frame(const vec<T, 3>& eye,
-    const vec<T, 3>& center, const vec<T, 3>& up, bool inv_xz = false);
-
-// OpenGL frustum, ortho and perspecgive matrices.
-template <typename T>
-constexpr mat<T, 4, 4> make_frustum_mat(T l, T r, T b, T t, T n, T f);
-template <typename T>
-constexpr mat<T, 4, 4> make_ortho_mat(T l, T r, T b, T t, T n, T f);
-template <typename T>
-constexpr mat<T, 4, 4> make_ortho2d_mat(T left, T right, T bottom, T top);
-template <typename T>
-constexpr mat<T, 4, 4> make_ortho_mat(T xmag, T ymag, T near, T far);
-template <typename T>
-constexpr mat<T, 4, 4> make_perspective_mat(T fovy, T aspect, T near, T far);
-template <typename T>
-constexpr mat<T, 4, 4> make_perspective_mat(T fovy, T aspect, T near);
-
-// Rotation conversions.
-template <typename T>
-constexpr pair<vec<T, 3>, T> make_rotation_axisangle(const vec<T, 4>& quat);
-template <typename T, typename T1>
-constexpr vec<T, 4> make_rotation_quat(const vec<T, 3>& axis, T1 angle);
-template <typename T>
-constexpr vec<T, 4> make_rotation_quat(const vec<T, 4>& axisangle);
-
-// Turntable and FPS Camera navigation.
-template <typename T, typename T1>
-constexpr void update_camera_turntable(vec<T, 3>& from, vec<T, 3>& to,
-    vec<T, 3>& up, const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan);
-template <typename T, typename T1>
-constexpr void update_camera_turntable(frame<T, 3>& frame, T& focus,
-    const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan);
-template <typename T>
-constexpr void update_camera_fps(
-    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
-
-// Computes the image uv coordinates corresponding to the view parameters.
-// Returns negative coordinates if out of the image.
-template <typename T, typename T1>
-constexpr vec2i get_image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T1 scale, const vec2i& txt_size);
-
-// Center image and autofit.
-template <typename T>
-constexpr void update_image_view(vec<T, 2>& center, T& scale,
-    const vec2i& imsize, const vec2i& winsize, bool zoom_to_fit);
-
-}  // namespace yocto
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-//                             IMPLEMENTATION                                 //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF MATH CONSTANTS AND FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-constexpr T min(T x, T y) {
-    return (x < y) ? x : y;
-}
-template <typename T>
-constexpr T max(T x, T y) {
-    return (x > y) ? x : y;
-}
-template <typename T>
-constexpr T clamp(T x, T min_, T max_) {
-    return min(max(x, min_), max_);
-}
-template <typename T>
-constexpr T clamp01(T x) {
-    return min(max(x, (T)0), (T)1);
-}
-template <typename T, typename T1>
-constexpr T lerp(const T& a, const T& b, const T1& u) {
-    return a * (1 - u) + b * u;
-}
-template <typename T, typename T1>
-constexpr T bilerp(const T& c00, const T& c10, const T& c11, const T& c01,
-    const T1& u, const T1& v) {
-    return c00 * (1 - u) * (1 - v) + c10 * u * (1 - v) + c01 * (1 - u) * v +
-           c11 * u * v;
-}
-template <typename T, typename T1>
-constexpr T bias(const T& a, const T1& bias) {
-    return a / ((1 / bias - 2) * (1 - a) + 1);
-}
-template <typename T, typename T1>
-constexpr T gain(const T& a, const T1& gain) {
-    if (a < (T)0.5) {
-        return bias(a * 2, gain) / 2;
-    } else {
-        return bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
-    }
-}
-constexpr int pow2(int x) { return 1 << x; }
-template <typename T>
-inline T radians(T x) {
-    return x * (T)pi / 180;
-}
-template <typename T>
-inline T degrees(T x) {
-    return x * 180 / (T)pi;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF VECTORS
-// -----------------------------------------------------------------------------
-namespace yocto {
 
 // Vector comparison operations.
 template <typename T, int N>
@@ -1898,9 +1011,82 @@ struct hash<yocto::vec<T, N>> {
 }  // namespace std
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR MATRICES
+// MATRICES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Small Fixed-size matrices stored in column major format.
+template <typename T, int N, int M>
+struct mat;
+
+// Small Fixed-size matrices stored in column major format.
+template <typename T, int N>
+struct mat<T, N, 1> {
+    vec<T, N> x;
+
+    constexpr mat() : x{} {}
+    constexpr mat(const vec<T, N>& x) : x{x} {}
+
+    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+};
+
+// Small Fixed-size matrices stored in column major format.
+template <typename T, int N>
+struct mat<T, N, 2> {
+    vec<T, N> x, y;
+
+    constexpr mat() : x{}, y{} {}
+    constexpr mat(const vec<T, N>& x, const vec<T, N>& y) : x{x}, y{y} {}
+
+    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+};
+
+// Small Fixed-size matrices stored in column major format.
+template <typename T, int N>
+struct mat<T, N, 3> {
+    vec<T, N> x, y, z;
+
+    constexpr mat() : x{}, y{}, z{} {}
+    constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z)
+        : x{x}, y{y}, z{z} {}
+
+    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+};
+
+// Small Fixed-size matrices stored in column major format.
+template <typename T, int N>
+struct mat<T, N, 4> {
+    vec<T, N> x, y, z, w;
+
+    constexpr mat() : x{}, y{}, z{}, w{} {}
+    constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z,
+        const vec<T, N>& w)
+        : x{x}, y{y}, z{z}, w{w} {}
+
+    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+};
+
+// Typedefs
+using mat2f = mat<float, 2, 2>;
+using mat3f = mat<float, 3, 3>;
+using mat4f = mat<float, 4, 4>;
+using mat2d = mat<double, 2, 2>;
+using mat3d = mat<double, 3, 3>;
+using mat4d = mat<double, 4, 4>;
+
+// Identity matrix
+template <typename T, int N>
+constexpr mat<T, N, N> make_identity_mat();
+
+// Identity matrices constants.
+constexpr auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
+constexpr auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+constexpr auto identity_mat4f = mat4f{
+    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Identity matrix
 template <typename T, int N>
@@ -2124,9 +1310,76 @@ constexpr mat<T, 3, 3> make_basis_fromz(const vec<T, 3>& v) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF AFFINE TRANSFORMS
+// AFFINE TRANSFORMS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Affine transformations stored as a column-major matrix.
+// This code is very similar to frames, but it is ketp different to increase
+// type safety.
+template <typename T, int N>
+struct affine;
+
+// Affine transformations stored as a column-major matrix.
+template <typename T>
+struct affine<T, 2> {
+    vec<T, 2> x, y, o;
+
+    constexpr affine() : x{}, y{}, o{} {}
+    constexpr affine(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
+        : x{x}, y{y}, o{o} {}
+    constexpr affine(const mat<T, 2, 2>& m, const vec<T, 2>& t)
+        : x{m.x}, y{m.y}, o{t} {}
+    constexpr explicit affine(const mat<T, 3, 3>& m)
+        : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
+    constexpr operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
+
+    constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
+
+    constexpr mat<T, 2, 2>&       m() { return *(mat<T, 2, 2>*)&x; }
+    constexpr const mat<T, 2, 2>& m() const { return *(mat<T, 2, 2>*)&x; }
+    constexpr vec<T, 2>&          t() { return o; }
+    constexpr const vec<T, 2>&    t() const { return o; }
+};
+
+// Affine transformations stored as a column-major matrix.
+template <typename T>
+struct affine<T, 3> {
+    vec<T, 3> x, y, z, o;
+
+    constexpr affine() : x{}, y{}, z{}, o{} {}
+    constexpr affine(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
+        const vec<T, 3>& o)
+        : x{x}, y{y}, z{z}, o{o} {}
+    constexpr affine(const mat<T, 3, 3>& m, const vec<T, 3>& t)
+        : x{m.x}, y{m.y}, z{m.z}, o{t} {}
+    constexpr explicit affine(const mat<T, 4, 4>& m)
+        : x{m.x.x, m.x.y, m.x.z}
+        , y{m.y.x, m.y.y, m.y.z}
+        , z{m.z.x, m.z.y, m.z.z}
+        , o{m.w.x, m.w.y, m.w.z} {}
+    constexpr operator mat<T, 4, 4>() const {
+        return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
+    }
+
+    constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
+
+    constexpr mat<T, 3, 3>&       m() { return *(mat<T, 3, 3>*)&x; }
+    constexpr const mat<T, 3, 3>& m() const { return *(mat<T, 3, 3>*)&x; }
+    constexpr vec<T, 3>&          t() { return o; }
+    constexpr const vec<T, 3>&    t() const { return o; }
+};
+
+// Typedefs
+using affine2f = affine<float, 2>;
+using affine3f = affine<float, 3>;
+
+// Indentity frames.
+constexpr auto identity_affine2f = affine2f{{1, 0}, {0, 1}, {0, 0}};
+constexpr auto identity_affine3f = affine3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame comparisons.
 template <typename T, int N>
@@ -2176,9 +1429,84 @@ constexpr affine<T, N> inverse(const affine<T, N>& a) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF RIGID BODY TRANSFORMS/FRAMES
+// RIGID BODY TRANSFORMS/FRAMES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Rigid frames stored as a column-major affine transform matrix.
+template <typename T, int N>
+struct frame;
+
+// Rigid frames stored as a column-major affine transform matrix.
+template <typename T>
+struct frame<T, 2> {
+    vec<T, 2> x, y, o;
+
+    constexpr frame() : x{}, y{}, o{} {}
+    constexpr frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
+        : x{x}, y{y}, o{o} {}
+    constexpr explicit frame(const vec<T, 2>& o) : x{1, 0}, y{0, 1}, o{o} {}
+    constexpr frame(const mat<T, 2, 2>& m, const vec<T, 2>& t)
+        : x{m.x}, y{m.y}, o{t} {}
+    constexpr explicit frame(const affine<T, 2>& m) : x{m.x}, y{m.y}, o{m.o} {}
+    constexpr operator affine<T, 2>() const { return {x, y, o}; }
+    constexpr explicit frame(const mat<T, 3, 3>& m)
+        : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
+    constexpr operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
+
+    constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
+
+    constexpr mat<T, 2, 2>&       m() { return *(mat<T, 2, 2>*)&x; }
+    constexpr const mat<T, 2, 2>& m() const { return *(mat<T, 2, 2>*)&x; }
+    constexpr vec<T, 2>&          t() { return o; }
+    constexpr const vec<T, 2>&    t() const { return o; }
+};
+
+// Rigid frames stored as a column-major affine transform matrix.
+template <typename T>
+struct frame<T, 3> {
+    vec<T, 3> x, y, z, o;
+
+    constexpr frame() : x{}, y{}, z{}, o{} {}
+    constexpr frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
+        const vec<T, 3>& o)
+        : x{x}, y{y}, z{z}, o{o} {}
+    constexpr explicit frame(const vec<T, 3>& o)
+        : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
+    constexpr frame(const mat<T, 3, 3>& m, const vec<T, 3>& t)
+        : x{m.x}, y{m.y}, z{m.z}, o{t} {}
+    constexpr explicit frame(const affine<T, 3>& m)
+        : x{m.x}, y{m.y}, z{m.z}, o{m.o} {}
+    constexpr operator affine<T, 3>() const { return {x, y, z, o}; }
+    constexpr explicit frame(const mat<T, 4, 4>& m)
+        : x{m.x.x, m.x.y, m.x.z}
+        , y{m.y.x, m.y.y, m.y.z}
+        , z{m.z.x, m.z.y, m.z.z}
+        , o{m.w.x, m.w.y, m.w.z} {}
+    constexpr operator mat<T, 4, 4>() const {
+        return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
+    }
+
+    constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
+
+    constexpr mat<T, 3, 3>&       m() { return *(mat<T, 3, 3>*)&x; }
+    constexpr const mat<T, 3, 3>& m() const { return *(mat<T, 3, 3>*)&x; }
+    constexpr vec<T, 3>&          t() { return o; }
+    constexpr const vec<T, 3>&    t() const { return o; }
+};
+
+// Typedefs
+using frame2f = frame<float, 2>;
+using frame3f = frame<float, 3>;
+using frame2d = frame<double, 2>;
+using frame3d = frame<double, 3>;
+
+// Indentity frames.
+constexpr auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+constexpr auto identity_frame3f = frame3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Indentity frames.
 template <typename T, int N>
@@ -2190,6 +1518,8 @@ constexpr frame<T, N> _identity_frame() {
     } else {
     }
 }
+template <typename T, int N>
+constexpr auto identity_frame   = _identity_frame<T, N>();
 
 // Frame construction from axis.
 template <typename T>
@@ -2260,9 +1590,107 @@ constexpr frame<T, N> inverse(const frame<T, N>& a) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF AXIS ALIGNED BOUNDING BOXES
+// QUATERNIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Quaternions to represent rotations
+struct quat4f {
+    float x, y, z, w;
+
+    // constructors
+    constexpr quat4f() : x{0}, y{0}, z{0}, w{1} {}
+    constexpr quat4f(float x, float y, float z, float w)
+        : x{x}, y{y}, z{z}, w{w} {}
+};
+
+// Constants
+constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
+
+// Quaternion operatons
+inline quat4f operator+(const quat4f& a, const quat4f& b) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+}
+inline quat4f operator*(const quat4f& a, float b) {
+    return {a.x * b, a.y * b, a.z * b, a.w * b};
+}
+inline quat4f operator/(const quat4f& a, float b) {
+    return {a.x / b, a.y / b, a.z / b, a.w / b};
+}
+inline quat4f operator*(const quat4f& a, const quat4f& b) {
+    return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
+        a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
+        a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
+        a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
+}
+
+// Quaterion operations
+inline float dot(const quat4f& a, const quat4f& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+inline float  length(const quat4f& a) { return sqrt(dot(a, a)); }
+inline quat4f normalize(const quat4f& a) {
+    auto l = length(a);
+    return (l != 0) ? a / l : a;
+}
+inline quat4f conjugate(const quat4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
+inline quat4f inverse(const quat4f& a) { return conjugate(a) / dot(a, a); }
+inline float  uangle(const quat4f& a, const quat4f& b) {
+    auto d = dot(a, b);
+    return d > 1 ? 0 : std::acos(d < -1 ? -1 : d);
+}
+inline quat4f lerp(const quat4f& a, const quat4f& b, float t) {
+    return a * (1 - t) + b * t;
+}
+inline quat4f nlerp(const quat4f& a, const quat4f& b, float t) {
+    return normalize(lerp(a, b, t));
+}
+inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
+    auto th = uangle(a, b);
+    return th == 0 ? a
+                   : a * (sin(th * (1 - t)) / sin(th)) +
+                         b * (sin(th * t) / sin(th));
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// AXIS ALIGNED BOUNDING BOXES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Axis aligned bounding box represented as a min/max vector pairs.
+template <typename T, int N>
+struct bbox {
+    vec<T, N> min, max;
+
+    constexpr bbox() : min{type_max<T>}, max{type_min<T>} {}
+    constexpr bbox(const vec<T, N>& min, const vec<T, N>& max)
+        : min{min}, max{max} {}
+
+    constexpr vec<T, N>&       operator[](int i) { return (&min)[i]; }
+    constexpr const vec<T, N>& operator[](int i) const { return (&min)[i]; }
+};
+
+// Typedefs
+using bbox1f = bbox<float, 1>;
+using bbox2f = bbox<float, 2>;
+using bbox3f = bbox<float, 3>;
+using bbox4f = bbox<float, 4>;
+using bbox1i = bbox<int, 1>;
+using bbox2i = bbox<int, 2>;
+using bbox3i = bbox<int, 3>;
+using bbox4i = bbox<int, 4>;
+
+// Empty bbox constant.
+constexpr auto invalid_bbox1f = bbox1f{};
+constexpr auto invalid_bbox2f = bbox2f{};
+constexpr auto invalid_bbox3f = bbox3f{};
+constexpr auto invalid_bbox4f = bbox4f{};
+constexpr auto invalid_bbox1i = bbox1i{};
+constexpr auto invalid_bbox2i = bbox2i{};
+constexpr auto invalid_bbox3i = bbox3i{};
+constexpr auto invalid_bbox4i = bbox4i{};
 
 // Bounding box comparisons.
 template <typename T, int N>
@@ -2272,6 +1700,16 @@ constexpr bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
 template <typename T, int N>
 constexpr bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
     return a.min != b.min || a.max != b.max;
+}
+
+// Bbox properties
+template <typename T, int N>
+constexpr vec<T, N> bbox_center(const bbox<T, N>& a) {
+    return (a.min + a.max) / 2;
+}
+template <typename T, int N>
+constexpr vec<T, N> bbox_size(const bbox<T, N>& a) {
+    return a.max - a.min;
 }
 
 // Bounding box expansions with points and other boxes.
@@ -2346,25 +1784,46 @@ constexpr bbox<T, N> quad_bounds(const vec<T, N>& p0, const vec<T, N>& p1,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF RAYS
+// RAYS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Construct a ray from direction or segments using a default epsilon.
+// Ray esplison
+constexpr auto ray_eps = 1e-4f;
+
+// Rays with origin, direction and min/max t value.
 template <typename T, int N>
-constexpr ray<T, N> make_ray(const vec<T, N>& o, const vec<T, N>& d, T eps) {
-    return {o, d, eps, type_max<T>};
-}
-template <typename T, int N>
-constexpr ray<T, N> make_segment(
-    const vec<T, N>& p1, const vec<T, N>& p2, T eps) {
-    return {p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
-}
+struct ray;
+
+template <typename T>
+struct ray<T, 2> {
+    vec<T, 2> o = {0, 0}, d = {0, 1};
+    T         tmin = ray_eps, tmax = float_max;
+
+    constexpr ray() {}
+    constexpr ray(const vec<T, 2>& o, const vec<T, 2>& d, T tmin = ray_eps, T tmax = float_max)
+        : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
+};
+
+// Rays with origin, direction and min/max t value.
+template <typename T>
+struct ray<T, 3> {
+    vec<T, 3> o = {0, 0, 0}, d = {0, 0, 1};
+    T         tmin = ray_eps, tmax = float_max;
+
+    constexpr ray() : o{0, 0, 0}, d{0, 0, 1}, tmin{0}, tmax{type_max<T>} {}
+    constexpr ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin = ray_eps, T tmax = float_max)
+        : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
+};
+
+// Typedefs
+using ray2f = ray<float, 2>;
+using ray3f = ray<float, 3>;
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF TRANSFORMS
+// TRANSFORMS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -2645,7 +2104,7 @@ constexpr frame<T, 3> make_rotation_frame(const mat<T, 3, 3>& rot) {
 // Lookat frame. Z-axis can be inverted with inv_xz.
 template <typename T>
 constexpr frame<T, 3> make_lookat_frame(const vec<T, 3>& eye,
-    const vec<T, 3>& center, const vec<T, 3>& up, bool inv_xz) {
+    const vec<T, 3>& center, const vec<T, 3>& up, bool inv_xz = false) {
     auto w = normalize(eye - center);
     auto u = normalize(cross(up, w));
     auto v = normalize(cross(w, u));
@@ -2745,13 +2204,16 @@ constexpr void update_image_view(vec<T, 2>& center, T& scale,
     }
 }
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF UI UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
+// Turntable and FPS Camera navigation.
+template <typename T, typename T1>
+constexpr void update_camera_turntable(vec<T, 3>& from, vec<T, 3>& to,
+    vec<T, 3>& up, const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan);
+template <typename T, typename T1>
+constexpr void update_camera_turntable(frame<T, 3>& frame, T& focus,
+    const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan);
+template <typename T>
+constexpr void update_camera_fps(
+    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
 // Turntable for UI navigation.
 template <typename T, typename T1>
 constexpr void update_camera_turntable(vec<T, 3>& from, vec<T, 3>& to,

@@ -1184,8 +1184,8 @@ ray3f eval_perspective_camera(
         auto q1 = -q * distance1 / distance;
         auto d  = normalize(q1 - e);
         // auto q1 = - normalize(q) * camera.focus_distance / normalize(q).z;
-        auto ray = make_ray(transform_point(camera.frame, e),
-            transform_direction(camera.frame, d));
+        auto ray = ray3f{transform_point(camera.frame, e),
+            transform_direction(camera.frame, d)};
         return ray;
     } else {
         auto e   = zero3f;
@@ -1193,8 +1193,8 @@ ray3f eval_perspective_camera(
             camera.film_height * (image_uv.y - 0.5f), distance};
         auto q1  = -q;
         auto d   = normalize(q1 - e);
-        auto ray = make_ray(transform_point(camera.frame, e),
-            transform_direction(camera.frame, d));
+        auto ray = ray3f{transform_point(camera.frame, e),
+            transform_direction(camera.frame, d)};
         return ray;
     }
 }
@@ -1212,8 +1212,8 @@ ray3f eval_orthographic_camera(
                  vec3f{(lens_uv.x - 0.5f) * camera.lens_aperture,
                      (lens_uv.y - 0.5f) * camera.lens_aperture, 0};
         auto d   = normalize(q1 - e);
-        auto ray = make_ray(transform_point(camera.frame, e),
-            transform_direction(camera.frame, d));
+        auto ray = ray3f{transform_point(camera.frame, e),
+            transform_direction(camera.frame, d)};
         return ray;
     } else {
         auto scale = 1 / camera.focal_length;
@@ -1222,8 +1222,8 @@ ray3f eval_orthographic_camera(
         auto q1    = -q;
         auto e     = vec3f{-q.x, -q.y, 0};
         auto d     = normalize(q1 - e);
-        auto ray   = make_ray(transform_point(camera.frame, e),
-            transform_direction(camera.frame, d));
+        auto ray   = ray3f{transform_point(camera.frame, e),
+            transform_direction(camera.frame, d)};
         return ray;
     }
 }
