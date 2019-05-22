@@ -506,14 +506,19 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
 
 // Make fair params
 struct make_hair_params {
-    int   num          = 0;
-    int   subdivisions = 0;
-    vec2f length       = {1, 1};
-    vec2f radius       = {0.001, 0.001};
-    vec2f noise        = {0, 0};
-    vec2f clump        = {0, 0};
-    vec2f rotation     = {0, 0};
-    int   seed         = 7;
+    int   num               = 0;
+    int   subdivisions      = 0;
+    float length_min        = 0.1;
+    float length_max        = 0.1;
+    float radius_base       = 0.001;
+    float radius_tip        = 0.001;
+    float noise_strength    = 0;
+    float noise_scale       = 10;
+    float clump_strength    = 0;
+    int   clump_num         = 0;
+    float rotation_strength = 0;
+    float rotation_minchia  = 0;
+    int   seed              = 7;
 };
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
