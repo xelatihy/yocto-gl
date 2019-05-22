@@ -368,7 +368,7 @@ static inline bool is_type_compatible(const string& type) {
         return type == "rgb" || type == "pbrt_spectrum" || type == "blackbody";
     } else if constexpr (std::is_same<T, vec3i>::value) {
         return type == "integer";
-    } else if constexpr (std::is_same<T, bbox2i>::value) {
+    } else if constexpr (std::is_same<T, vec4i>::value) {
         return type == "integer";
     } else if constexpr (std::is_same<T, bbox2f>::value) {
         return type == "float";

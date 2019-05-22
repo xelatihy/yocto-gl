@@ -1091,25 +1091,20 @@ template <typename T>
 constexpr vec<T, 4> make_rotation_quat(const vec<T, 4>& axisangle);
 
 // Turntable and FPS Camera navigation.
-template <typename T, typename T1>
 constexpr void update_camera_turntable(vec<T, 3>& from, vec<T, 3>& to,
     vec<T, 3>& up, const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan);
-template <typename T, typename T1>
-constexpr void update_camera_turntable(frame<T, 3>& frame, T& focus,
-    const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan);
-template <typename T>
+constexpr void update_camera_turntable(frame3f& frame, float& focus,
+    const vec2f& rotate, T1 dolly, const vec2f& pan);
 constexpr void update_camera_fps(
-    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
+    frame3f& frame, const vec3f& transl, const vec2f& rotate);
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-template <typename T, typename T1>
-constexpr vec2i get_image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T1 scale, const vec2i& txt_size);
+constexpr vec2i get_image_coords(const vec2f& mouse_pos,
+    const vec2f& center, T1 scale, const vec2i& txt_size);
 
 // Center image and autofit.
-template <typename T>
-constexpr void update_image_view(vec<T, 2>& center, T& scale,
+constexpr void update_image_view(vec2f& center, float& scale,
     const vec2i& imsize, const vec2i& winsize, bool zoom_to_fit);
 
 }  // namespace yocto

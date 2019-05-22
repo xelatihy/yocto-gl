@@ -203,7 +203,7 @@ struct pbrt_integrator {
     struct path_t {
         enum struct lightsamplestrategy_t { uniform, power, spatial };
         int    maxdepth    = 5;
-        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+        vec4i pixelbounds = {0, 0, type_max<int>, type_max<int>};
         float  rrthreshold = 1;
         lightsamplestrategy_t lightsamplestrategy =
             lightsamplestrategy_t::spatial;
@@ -211,7 +211,7 @@ struct pbrt_integrator {
     struct volpath_t {
         enum struct lightsamplestrategy_t { uniform, power, spatial };
         int    maxdepth    = 5;
-        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+        vec4i pixelbounds = {0, 0, type_max<int>, type_max<int>};
         float  rrthreshold = 1;
         lightsamplestrategy_t lightsamplestrategy =
             lightsamplestrategy_t::spatial;
@@ -219,7 +219,7 @@ struct pbrt_integrator {
     struct bdpt_t {
         enum struct lightsamplestrategy_t { uniform, power, spatial };
         int    maxdepth    = 5;
-        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+        vec4i pixelbounds = {0, 0, type_max<int>, type_max<int>};
         lightsamplestrategy_t lightsamplestrategy =
             lightsamplestrategy_t::power;
         bool visualizestrategies = false;
@@ -229,11 +229,11 @@ struct pbrt_integrator {
         enum struct strategy_t { all, one };
         strategy_t strategy    = strategy_t::all;
         int        maxdepth    = 5;
-        bbox2i     pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+        vec4i pixelbounds = {0, 0, type_max<int>, type_max<int>};
     };
     struct mlt_t {
         int    maxdepth             = 5;
-        bbox2i pixelbounds          = {{0, 0}, {type_max<int>, type_max<int>}};
+        vec4i pixelbounds = {0, 0, type_max<int>, type_max<int>};
         int    bootstrapsamples     = 100000;
         int    chains               = 1000;
         int    mutationsperpixel    = 100;
@@ -242,7 +242,7 @@ struct pbrt_integrator {
     };
     struct sppm_t {
         int    maxdepth            = 5;
-        bbox2i pixelbounds         = {{0, 0}, {type_max<int>, type_max<int>}};
+        vec4i pixelbounds = {0, 0, type_max<int>, type_max<int>};
         int    iterations          = 64;
         int    photonsperiteration = -1;
         int    imagewritefrequency = pow2(31);
@@ -250,7 +250,7 @@ struct pbrt_integrator {
     };
     struct whitted_t {
         int    maxdepth    = 5;
-        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+        vec4i pixelbounds = {0, 0, type_max<int>, type_max<int>};
     };
     enum struct type_t {
         path,
