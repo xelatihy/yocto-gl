@@ -1763,7 +1763,7 @@ extern const vector<vec4i> suzanne_quads;
 void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     const make_shape_params& params) {
-    auto subdivide_quads = [&](auto& qquads, auto& qpositions, auto& qnormals,
+    auto subdivide_quads_pnt = [&](auto& qquads, auto& qpositions, auto& qnormals,
                                auto& qtexcoords, int level) {
         struct vertex {
             vec3f position = zero3f;
@@ -1802,6 +1802,11 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             texcoords[i] = vertices[i].texcoord;
         }
     };
+    auto subdivide_quads_p = [&](auto& qquads, auto& qpositions, int level) {
+        quads = qquads;
+        positions = qpositions;
+        subdivide_quads_impl(quads, positions, level);
+    };
     triangles.clear();
     quads.clear();
     positions.clear();
@@ -1809,7 +1814,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     texcoords.clear();
     switch (params.type) {
         case make_shape_type::quad: {
-            subdivide_quads(quad_quads, quad_positions, quad_normals,
+            subdivide_quads_pnt(quad_quads, quad_positions, quad_normals,
                 quad_texcoords, params.subdivisions);
             if (params.rounded) {
                 auto height = params.rounded;
@@ -1823,7 +1828,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::floor: {
-            subdivide_quads(quady_quads, quady_positions, quady_normals,
+            subdivide_quads_pnt(quady_quads, quady_positions, quady_normals,
                 quady_texcoords, params.subdivisions);
             if (params.rounded) {
                 auto radius = params.rounded;
@@ -1848,7 +1853,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::cube: {
-            subdivide_quads(cube_quads, cube_positions, cube_normals,
+            subdivide_quads_pnt(cube_quads, cube_positions, cube_normals,
                 cube_texcoords, params.subdivisions);
             auto steps  = vec3i{pow2(params.subdivisions)};
             auto uvsize = vec3f{1};
@@ -1891,7 +1896,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::sphere: {
-            subdivide_quads(cube_quads, cube_positions, cube_normals,
+            subdivide_quads_pnt(cube_quads, cube_positions, cube_normals,
                 cube_texcoords, params.subdivisions);
             for (auto i = 0; i < positions.size(); i++) {
                 auto p       = positions[i];
@@ -1900,7 +1905,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::uvsphere: {
-            subdivide_quads(quad_quads, quad_positions, quad_normals,
+            subdivide_quads_pnt(quad_quads, quad_positions, quad_normals,
                 quad_texcoords, params.subdivisions);
             for (auto i = 0; i < positions.size(); i++) {
                 auto uv = texcoords[i];
@@ -1927,7 +1932,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::disk: {
-            subdivide_quads(quad_quads, quad_positions, quad_normals,
+            subdivide_quads_pnt(quad_quads, quad_positions, quad_normals,
                 quad_texcoords, params.subdivisions);
             for (auto i = 0; i < positions.size(); i++) {
                 // Analytical Methods for Squaring the Disc, by C. Fong
@@ -1949,7 +1954,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::matball: {
-            subdivide_quads(cube_quads, cube_positions, cube_normals,
+            subdivide_quads_pnt(cube_quads, cube_positions, cube_normals,
                 cube_texcoords, params.subdivisions);
             for (auto i = 0; i < positions.size(); i++) {
                 auto p       = positions[i];
@@ -1958,9 +1963,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::suzanne: {
-            quads     = suzanne_quads;
-            positions = suzanne_positions;
-            yocto::subdivide_quads(quads, positions, params.subdivisions);
+            subdivide_quads_p(suzanne_quads, suzanne_positions, params.subdivisions);
         } break;
         case make_shape_type::box: {
             auto steps = vec3i{
@@ -2036,7 +2039,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::uvdisk: {
-            subdivide_quads(quad_quads, quad_positions, quad_normals,
+            subdivide_quads_pnt(quad_quads, quad_positions, quad_normals,
                 quad_texcoords, params.subdivisions);
             for (auto i = 0; i < positions.size(); i++) {
                 auto uv      = texcoords[i];
