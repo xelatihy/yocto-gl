@@ -1301,7 +1301,7 @@ inline vector<string> split(const string& str,
 inline void splitlines(string_view str, vector<string_view>& splits) {
     splits.clear();
     while (!str.empty()) {
-        auto pos = min(str.find("\n"), str.find("\r\n"));
+        auto pos = std::min(str.find("\n"), str.find("\r\n"));
         if (pos == string_view::npos) {
             splits.push_back(str);
             break;

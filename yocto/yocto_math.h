@@ -157,53 +157,32 @@ constexpr auto int_min   = type_min<int>;
 constexpr auto float_max = type_max<float>;
 constexpr auto float_min = type_min<float>;
 
-template <typename T>
-constexpr T min(T x, T y) {
-    return (x < y) ? x : y;
-}
-template <typename T>
-constexpr T max(T x, T y) {
-    return (x > y) ? x : y;
-}
-template <typename T>
-constexpr T clamp(T x, T min_, T max_) {
+constexpr float min(float x, float y) { return (x < y) ? x : y; }
+constexpr float max(float x, float y) { return (x > y) ? x : y; }
+constexpr float clamp(float x, float min_, float max_) {
     return min(max(x, min_), max_);
 }
-template <typename T>
-constexpr T clamp01(T x) {
-    return min(max(x, (T)0), (T)1);
-}
-template <typename T, typename T1>
-constexpr T lerp(const T& a, const T& b, const T1& u) {
-    return a * (1 - u) + b * u;
-}
-template <typename T, typename T1>
-constexpr T bilerp(const T& c00, const T& c10, const T& c11, const T& c01,
-    const T1& u, const T1& v) {
-    return c00 * (1 - u) * (1 - v) + c10 * u * (1 - v) + c01 * (1 - u) * v +
-           c11 * u * v;
-}
-template <typename T, typename T1>
-constexpr T bias(const T& a, const T1& bias) {
+constexpr float clamp01(float x) { return min(max(x, 0.0f), 1.0f); }
+constexpr float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
+constexpr float bias(float a, float bias) {
     return a / ((1 / bias - 2) * (1 - a) + 1);
 }
-template <typename T, typename T1>
-constexpr T gain(const T& a, const T1& gain) {
-    if (a < (T)0.5) {
+constexpr float gain(float a, float gain) {
+    if (a < 0.5f) {
         return bias(a * 2, gain) / 2;
     } else {
-        return bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
+        return bias(a * 2 - 1, 1 - gain) / 2 + 0.5f;
     }
 }
+inline float  radians(float x) { return x * pif / 180; }
+inline float  degrees(float x) { return x * 180 / pif; }
+
+constexpr int min(int x, int y) { return (x < y) ? x : y; }
+constexpr int max(int x, int y) { return (x > y) ? x : y; }
+constexpr int clamp(int x, int min_, int max_) {
+    return min(max(x, min_), max_);
+}
 constexpr int pow2(int x) { return 1 << x; }
-template <typename T>
-inline T radians(T x) {
-    return x * (T)pi / 180;
-}
-template <typename T>
-inline T degrees(T x) {
-    return x * 180 / (T)pi;
-}
 
 }  // namespace yocto
 
@@ -382,6 +361,8 @@ constexpr vec2f clamp(const vec2f& x, float min, float max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max)};
 }
 constexpr vec2f clamp01(const vec2f& x) { return {clamp01(x.x), clamp01(x.y)}; }
+inline vec2f lerp(const vec2f& a, const vec2f& b, float u) { return a * (1 - u) + b * u; }
+inline vec2f lerp(const vec2f& a, const vec2f& b, const vec2f& u) { return a * (1 - u) + b * u; }
 
 constexpr float max(const vec2f& a) { return max(a.x, a.y); }
 constexpr float min(const vec2f& a) { return min(a.x, a.y); }
@@ -540,6 +521,8 @@ constexpr vec3f clamp(const vec3f& x, float min, float max) {
 constexpr vec3f clamp01(const vec3f& x) {
     return {clamp01(x.x), clamp01(x.y), clamp01(x.z)};
 }
+inline vec3f lerp(const vec3f& a, const vec3f& b, float u) { return a * (1 - u) + b * u; }
+inline vec3f lerp(const vec3f& a, const vec3f& b, const vec3f& u) { return a * (1 - u) + b * u; }
 
 constexpr float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }
 constexpr float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
@@ -686,6 +669,8 @@ constexpr vec4f clamp(const vec4f& x, float min, float max) {
 constexpr vec4f clamp01(const vec4f& x) {
     return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
 }
+inline vec4f lerp(const vec4f& a, const vec4f& b, float u) { return a * (1 - u) + b * u; }
+inline vec4f lerp(const vec4f& a, const vec4f& b, const vec4f& u) { return a * (1 - u) + b * u; }
 
 constexpr float max(const vec4f& a) {
     return max(max(max(a.x, a.y), a.z), a.w);
@@ -711,12 +696,24 @@ constexpr int min_element(const vec4f& a) {
 }
 
 // Functions applied to vector elements
-inline vec4f abs(const vec4f& a) { return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)}; };
-inline vec4f sqrt(const vec4f& a) { return {sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w)}; };
-inline vec4f exp(const vec4f& a) { return {exp(a.x), exp(a.y), exp(a.z), exp(a.w)}; };
-inline vec4f log(const vec4f& a) { return {log(a.x), log(a.y), log(a.z), log(a.w)}; };
-inline vec4f exp2(const vec4f& a) { return {exp2(a.x), exp2(a.y), exp2(a.z), exp2(a.w)}; };
-inline vec4f log2(const vec4f& a) { return {log2(a.x), log2(a.y), log2(a.z), log2(a.w)}; };
+inline vec4f abs(const vec4f& a) {
+    return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
+};
+inline vec4f sqrt(const vec4f& a) {
+    return {sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w)};
+};
+inline vec4f exp(const vec4f& a) {
+    return {exp(a.x), exp(a.y), exp(a.z), exp(a.w)};
+};
+inline vec4f log(const vec4f& a) {
+    return {log(a.x), log(a.y), log(a.z), log(a.w)};
+};
+inline vec4f exp2(const vec4f& a) {
+    return {exp2(a.x), exp2(a.y), exp2(a.z), exp2(a.w)};
+};
+inline vec4f log2(const vec4f& a) {
+    return {log2(a.x), log2(a.y), log2(a.z), log2(a.w)};
+};
 inline vec4f pow(const vec4f& a, float b) {
     return {pow(a.x, b), pow(a.y, b), pow(a.z, b), pow(a.w, b)};
 };
@@ -780,39 +777,23 @@ constexpr vec2i operator-(const vec2i& a) { return {-a.x, -a.y}; }
 constexpr vec2i operator+(const vec2i& a, const vec2i& b) {
     return {a.x + b.x, a.y + b.y};
 }
-constexpr vec2i operator+(const vec2i& a, int b) {
-    return {a.x + b, a.y + b};
-}
-constexpr vec2i operator+(int a, const vec2i& b) {
-    return {a + b.x, a + b.y};
-}
+constexpr vec2i operator+(const vec2i& a, int b) { return {a.x + b, a.y + b}; }
+constexpr vec2i operator+(int a, const vec2i& b) { return {a + b.x, a + b.y}; }
 constexpr vec2i operator-(const vec2i& a, const vec2i& b) {
     return {a.x - b.x, a.y - b.y};
 }
-constexpr vec2i operator-(const vec2i& a, int b) {
-    return {a.x - b, a.y - b};
-}
-constexpr vec2i operator-(int a, const vec2i& b) {
-    return {a - b.x, a - b.y};
-}
+constexpr vec2i operator-(const vec2i& a, int b) { return {a.x - b, a.y - b}; }
+constexpr vec2i operator-(int a, const vec2i& b) { return {a - b.x, a - b.y}; }
 constexpr vec2i operator*(const vec2i& a, const vec2i& b) {
     return {a.x * b.x, a.y * b.y};
 }
-constexpr vec2i operator*(const vec2i& a, int b) {
-    return {a.x * b, a.y * b};
-}
-constexpr vec2i operator*(int a, const vec2i& b) {
-    return {a * b.x, a * b.y};
-}
+constexpr vec2i operator*(const vec2i& a, int b) { return {a.x * b, a.y * b}; }
+constexpr vec2i operator*(int a, const vec2i& b) { return {a * b.x, a * b.y}; }
 constexpr vec2i operator/(const vec2i& a, const vec2i& b) {
     return {a.x / b.x, a.y / b.y};
 }
-constexpr vec2i operator/(const vec2i& a, int b) {
-    return {a.x / b, a.y / b};
-}
-constexpr vec2i operator/(int a, const vec2i& b) {
-    return {a / b.x, a / b.y};
-}
+constexpr vec2i operator/(const vec2i& a, int b) { return {a.x / b, a.y / b}; }
+constexpr vec2i operator/(int a, const vec2i& b) { return {a / b.x, a / b.y}; }
 
 // Vector assignments
 constexpr vec2i& operator+=(vec2i& a, const vec2i& b) { return a = a + b; }
@@ -840,12 +821,11 @@ constexpr vec2i min(const vec2i& a, const vec2i& b) {
 constexpr vec2i clamp(const vec2i& x, int min, int max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max)};
 }
-constexpr vec2i clamp01(const vec2i& x) { return {clamp01(x.x), clamp01(x.y)}; }
 
 constexpr int max(const vec2i& a) { return max(a.x, a.y); }
 constexpr int min(const vec2i& a) { return min(a.x, a.y); }
 constexpr int sum(const vec2i& a) { return a.x + a.y; }
-constexpr int   max_element(const vec2i& a) {
+constexpr int max_element(const vec2i& a) {
     auto pos = 0;
     for (auto i = 1; i < 2; i++) {
         if (a[i] > a[pos]) pos = i;
@@ -937,14 +917,11 @@ constexpr vec3i min(const vec3i& a, const vec3i& b) {
 constexpr vec3i clamp(const vec3i& x, int min, int max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
 }
-constexpr vec3i clamp01(const vec3i& x) {
-    return {clamp01(x.x), clamp01(x.y), clamp01(x.z)};
-}
 
 constexpr int max(const vec3i& a) { return max(max(a.x, a.y), a.z); }
 constexpr int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
 constexpr int sum(const vec3i& a) { return a.x + a.y + a.z; }
-constexpr int   max_element(const vec3i& a) {
+constexpr int max_element(const vec3i& a) {
     auto pos = 0;
     for (auto i = 1; i < 3; i++) {
         if (a[i] > a[pos]) pos = i;
@@ -1037,18 +1014,11 @@ constexpr vec4i clamp(const vec4i& x, int min, int max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
         clamp(x.w, min, max)};
 }
-constexpr vec4i clamp01(const vec4i& x) {
-    return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
-}
 
-constexpr int max(const vec4i& a) {
-    return max(max(max(a.x, a.y), a.z), a.w);
-}
-constexpr int min(const vec4i& a) {
-    return min(min(min(a.x, a.y), a.z), a.w);
-}
+constexpr int max(const vec4i& a) { return max(max(max(a.x, a.y), a.z), a.w); }
+constexpr int min(const vec4i& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 constexpr int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
-constexpr int   max_element(const vec4i& a) {
+constexpr int max_element(const vec4i& a) {
     auto pos = 0;
     for (auto i = 1; i < 4; i++) {
         if (a[i] > a[pos]) pos = i;
@@ -1064,7 +1034,9 @@ constexpr int min_element(const vec4i& a) {
 }
 
 // Functions applied to vector elements
-inline vec4i abs(const vec4i& a) { return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)}; };
+inline vec4i abs(const vec4i& a) {
+    return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
+};
 
 }  // namespace yocto
 
