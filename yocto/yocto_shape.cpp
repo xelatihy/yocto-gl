@@ -2450,7 +2450,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
             normals, texcoords, params);
     } else if (type == "test-cube") {
         auto params         = make_shape_params{};
-        params.type         = make_shape_type::box;
+        params.type         = make_shape_type::cube;
         params.subdivisions = 5;
         params.size         = 0.15;
         params.rounded      = 0.3;
