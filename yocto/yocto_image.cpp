@@ -915,11 +915,16 @@ void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
 void make_image(image<vec4f>& img, const make_image_params& params) {
     auto make_img = [&](const auto& shader) {
         img.resize(params.size);
-        auto scale = params.scale / max(params.size);
+        auto scale = 1.0f / max(params.size);
         for (auto j = 0; j < img.size().y; j++) {
             for (auto i = 0; i < img.size().x; i++) {
                 auto uv     = vec2f{i * scale, j * scale};
-                img[{i, j}] = shader(uv);
+                img[{i, j}] = shader(uv * params.scale);
+                if (uv.x < params.borderw || uv.y < params.borderw ||
+                    uv.x > img.size().x * scale - params.borderw ||
+                    uv.y > img.size().y * scale - params.borderw) {
+                    img[{i, j}] = params.borderc;
+                }
             }
         }
     };
@@ -1021,7 +1026,7 @@ void make_image(image<vec4f>& img, const make_image_params& params) {
         } break;
         case make_image_type::noise: {
             make_img([&params](vec2f uv) {
-                uv *= 4;
+                uv *= 8;
                 auto v = perlin_noise({uv.x, uv.y, 0.5f});
                 v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
                 return lerp(params.color0, params.color1, v);
@@ -1029,7 +1034,7 @@ void make_image(image<vec4f>& img, const make_image_params& params) {
         } break;
         case make_image_type::turbulence: {
             make_img([&params](vec2f uv) {
-                uv *= 4;
+                uv *= 8;
                 auto v = perlin_turbulence_noise({uv.x, uv.y, 0.5f},
                     params.noise.x, params.noise.y, (int)params.noise.z);
                 v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
@@ -1038,7 +1043,7 @@ void make_image(image<vec4f>& img, const make_image_params& params) {
         } break;
         case make_image_type::fbm: {
             make_img([&params](vec2f uv) {
-                uv *= 4;
+                uv *= 8;
                 auto v = perlin_fbm_noise({uv.x, uv.y, 0.5f}, params.noise.x,
                     params.noise.y, (int)params.noise.z);
                 v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
@@ -1047,7 +1052,7 @@ void make_image(image<vec4f>& img, const make_image_params& params) {
         } break;
         case make_image_type::ridge: {
             make_img([&params](vec2f uv) {
-                uv *= 4;
+                uv *= 8;
                 auto v = perlin_ridge_noise({uv.x, uv.y, 0.5f}, params.noise.x,
                     params.noise.y, (int)params.noise.z, params.noise.w);
                 v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
@@ -1485,24 +1490,24 @@ void make_preset(image<vec4f>& img, const string& type) {
         params.color1 = vec4f{0.5, 0.5, 0.5, 1};
         make_image(img, params);
     } else if (type == "test-bumps") {
-        auto params   = make_image_params{};
-        params.type   = make_image_type::bumps;
+        auto params = make_image_params{};
+        params.type = make_image_type::bumps;
         make_image(img, params);
     } else if (type == "test-uvramp") {
-        auto params   = make_image_params{};
-        params.type   = make_image_type::uvramp;
+        auto params = make_image_params{};
+        params.type = make_image_type::uvramp;
         make_image(img, params);
     } else if (type == "test-gammaramp") {
-        auto params   = make_image_params{};
-        params.type   = make_image_type::gammaramp;
+        auto params = make_image_params{};
+        params.type = make_image_type::gammaramp;
         make_image(img, params);
     } else if (type == "test-blackbodyramp") {
-        auto params   = make_image_params{};
-        params.type   = make_image_type::blackbody;
+        auto params = make_image_params{};
+        params.type = make_image_type::blackbody;
         make_image(img, params);
     } else if (type == "test-uvgrid") {
-        auto params   = make_image_params{};
-        params.type   = make_image_type::uvgrid;
+        auto params = make_image_params{};
+        params.type = make_image_type::uvgrid;
         make_image(img, params);
     } else if (type == "test-sky") {
         make_sunsky(img, size, pif / 4, 3.0f, false, 1.0f, 0.0f,
@@ -1511,23 +1516,22 @@ void make_preset(image<vec4f>& img, const string& type) {
         make_sunsky(img, size, pif / 4, 3.0f, true, 1.0f, 0.0f,
             vec<float, 3>{0.7f, 0.7f, 0.7f});
     } else if (type == "test-noise") {
-        auto params   = make_image_params{};
-        params.type   = make_image_type::noise;
+        auto params = make_image_params{};
+        params.type = make_image_type::noise;
         make_image(img, params);
     } else if (type == "test-fbm") {
-        auto params   = make_image_params{};
-        params.type   = make_image_type::fbm;
+        auto params = make_image_params{};
+        params.type = make_image_type::fbm;
         make_image(img, params);
     } else if (type == "test-bumps-normal") {
-        auto params   = make_image_params{};
-        params.type   = make_image_type::bumps;
+        auto params = make_image_params{};
+        params.type = make_image_type::bumps;
         make_image(img, params);
         auto bump = img;
         bump_to_normal(img, bump, 0.05f);
     } else if (type == "test-fbm-displacement") {
-        auto params   = make_image_params{};
-        params.type   = make_image_type::fbm;
-        params.scale = 2;
+        auto params = make_image_params{};
+        params.type = make_image_type::fbm;
         make_image(img, params);
     } else {
         throw std::invalid_argument("unknown image preset " + type);
