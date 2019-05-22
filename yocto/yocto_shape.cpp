@@ -1076,15 +1076,55 @@ template <typename T, typename SubdivideFunc>
 void subdivide_elems_impl(vector<T>& elems, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const SubdivideFunc&& subdivied_func) {
+    struct vertex {
+        vec3f position = zero3f;
+        vec3f normal   = zero3f;
+        vec2f texcoord = zero2f;
+
+        vertex& operator+=(const vertex& a) { return *this = *this + a; };
+        vertex& operator/=(float s) { return *this = *this / s; };
+        vertex  operator+(const vertex& a) const {
+            return {position + a.position, normal + a.normal,
+                texcoord + a.texcoord};
+        };
+        vertex operator-(const vertex& a) const {
+            return {position - a.position, normal - a.normal,
+                texcoord - a.texcoord};
+        };
+        vertex operator*(float s) const {
+            return {position * s, normal * s, texcoord * s};
+        };
+        vertex operator/(float s) const { return operator*(1 / s); };
+    };
+    auto vertices = vector<vertex>(positions.size());
+    if (!positions.empty()) {
+        for (auto i = 0; i < vertices.size(); i++)
+            vertices[i].position = positions[i];
+    }
     if (!normals.empty()) {
-        auto elems_ = elems;
-        subdivied_func(elems_, normals);
+        for (auto i = 0; i < vertices.size(); i++)
+            vertices[i].normal = normals[i];
     }
     if (!texcoords.empty()) {
-        auto elems_ = elems;
-        subdivied_func(elems_, texcoords);
+        for (auto i = 0; i < vertices.size(); i++)
+            vertices[i].texcoord = texcoords[i];
     }
-    subdivied_func(elems, positions);
+    subdivied_func(elems, vertices);
+    if (!positions.empty()) {
+        positions.resize(vertices.size());
+        for (auto i = 0; i < vertices.size(); i++)
+            positions[i] = vertices[i].position;
+    }
+    if (!normals.empty()) {
+        normals.resize(vertices.size());
+        for (auto i = 0; i < vertices.size(); i++)
+            normals[i] = vertices[i].normal;
+    }
+    if (!texcoords.empty()) {
+        texcoords.resize(vertices.size());
+        for (auto i = 0; i < vertices.size(); i++)
+            texcoords[i] = vertices[i].texcoord;
+    }
 }
 
 void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& positions,
