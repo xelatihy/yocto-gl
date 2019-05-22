@@ -579,8 +579,7 @@ enum struct color_space {
 // Conversion between rgb color spaces
 vec3f        color_to_xyz(const vec3f& col, color_space from);
 vec3f        xyz_to_color(const vec3f& xyz, color_space to);
-inline vec3f convert_color(
-    const vec3f& col, color_space from, color_space to) {
+inline vec3f convert_color(const vec3f& col, color_space from, color_space to) {
     if (from == to) return col;
     return xyz_to_color(color_to_xyz(col, from), to);
 }

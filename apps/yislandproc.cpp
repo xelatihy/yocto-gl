@@ -153,12 +153,15 @@ void load_island_lights(
             material.emission = xyz(ljs.at("color").get<vec4f>()) *
                                 pow(2.0f, ljs.at("exposure").get<float>());
             scene.materials.push_back(material);
-            auto shape = yocto_shape{};
-            shape.uri  = "shapes/lights/" + name + ".ply";
-            make_rect(shape.quads, shape.positions, shape.normals,
-                shape.texcoords, {1, 1},
-                {ljs.at("width").get<float>(), ljs.at("height").get<float>()},
-                {1, 1}, identity_frame3f);
+            auto shape  = yocto_shape{};
+            shape.uri   = "shapes/lights/" + name + ".ply";
+            auto params = make_shape_params{};
+            params.type = make_shape_type::quad;
+            params.size =
+                (ljs.at("width").get<float>() + ljs.at("height").get<float>()) /
+                2;
+            make_shape(shape.triangles, shape.quads, shape.positions,
+                shape.normals, shape.texcoords, params);
             scene.shapes.push_back(shape);
             auto instance  = yocto_instance{};
             instance.uri   = "instances/lights/" + name + ".yaml";
@@ -338,7 +341,9 @@ struct load_island_shape_callbacks : obj_callbacks {
 
     void vert(const vec3f& v) override { opos.push_back(v); }
     void norm(const vec3f& v) override { onorm.push_back(v); }
-    void texcoord(const vec2f& v) override { throw io_error("texture coord not supported"); }
+    void texcoord(const vec2f& v) override {
+        throw io_error("texture coord not supported");
+    }
     void face(const vector<obj_vertex>& verts) override {
         split_shape();
         add_fvverts(verts);

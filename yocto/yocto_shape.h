@@ -489,84 +489,13 @@ void make_fvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const make_shape_params& params);
 
-// Make examples shapes that are not watertight (besides quads).
-// Return (triangles, quads, pos, norm, texcoord)
-void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize, const frame3f& frame);
-void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
-    const vec3f& size, const vec2f& uvsize, const frame3f& frame);
-void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize, const frame3f& frame);
-void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize, float radius, const frame3f& frame);
-void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize, const frame3f& frame);
-void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize, float rounded,
-    const frame3f& frame);
-void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
-    float uvsize, const frame3f& frame);
-void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    float size, const vec2f& uvsize, const frame3f& frame);
-void make_flipcap_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    float size, const vec2f& uvsize, const vec2f& zflip, const frame3f& frame);
-void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
-    float uvsize, const frame3f& frame);
-void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
-    float uvsize, float height, const frame3f& frame);
-void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
-    float uvsize, float height, const frame3f& frame);
-void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    float size, const vec2f& uvsize, const frame3f& frame);
-void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize, const frame3f& frame);
-void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize, float rounded,
-    const frame3f& frame);
-void make_geosphere(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, int tesselation, float size, const frame3f& frame);
-
-// Make examples shapes with are watertight (good for subdivs).
-void make_suzanne(vector<vec4i>& quads, vector<vec3f>& positions, float size,
-    const frame3f& frame);
-void make_box(vector<vec4i>& quads, vector<vec3f>& positions, const vec3f& size,
-    const frame3f& frame);
-
-// Make facevarying example shapes that are watertight (good for subdivs).
-void make_fvbox(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize, const frame3f& frame);
-void make_fvsphere(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
-    float uvsize, const frame3f& frame);
-
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize,
+    int num, int subdivisions, const vec2f& size, const vec2f& uvsize,
     const vec2f& line_radius, const frame3f& frame);
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-void make_point(vector<int>& points, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    float point_radius, const frame3f& frame);
 void make_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     int num, float uvsize, float point_radius, const frame3f& frame);
@@ -575,9 +504,17 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
     int num, const vec3f& size, float uvsize, float point_radius, uint64_t seed,
     const frame3f& frame);
 
-// Make a bezier circle. Returns bezier, pos.
-void make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& positions,
-    float size, const frame3f& frame);
+// Make fair params
+struct make_hair_params {
+    int   num          = 0;
+    int   subdivisions = 0;
+    vec2f length       = {1, 1};
+    vec2f radius       = {0.001, 0.001};
+    vec2f noise        = {0, 0};
+    vec2f clump        = {0, 0};
+    vec2f rotation     = {0, 0};
+    int   seed         = 7;
+};
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
@@ -587,13 +524,11 @@ void make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& positions,
 // rotation: rotation added to hair (angle/strength)
 void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    const vec2i& steps, const vector<vec3i>& striangles,
-    const vector<vec4i>& squads, const vector<vec3f>& spos,
-    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
-    const vec2f& length, const vec2f& rad, const vec2f& noise,
-    const vec2f& clump, const vec2f& rotation, int seed = 7);
+    const vector<vec3i>& striangles, const vector<vec4i>& squads,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const make_hair_params& params);
 
-// Thickens a shape by copy9ing the shape content, rescaling it and flipping its
+// Thickens a shape by copying the shape content, rescaling it and flipping its
 // normals. Note that this is very much not robust and only useful for trivial
 // cases.
 void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,

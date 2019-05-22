@@ -61,8 +61,8 @@
 #pragma GCC diagnostic pop
 #endif
 
-#include "ext/ArHosekSkyModel.h"
 #include "ext/ArHosekSkyModel.cpp"
+#include "ext/ArHosekSkyModel.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
@@ -478,7 +478,7 @@ inline vec3f xyz_to_color(const vec3f& xyz, color_space to) {
     return linear_to_display(space.xyz_to_rgb_mat * xyz, space);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE UTILITIES
@@ -533,20 +533,18 @@ void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl) {
 
 // Conversion between linear and gamma-encoded images.
 void srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb) {
-    return apply_image(
-        lin, srgb, [](const auto& a) { return srgb_to_rgb(a); });
+    return apply_image(lin, srgb, [](const auto& a) { return srgb_to_rgb(a); });
 }
 void rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin) {
-    return apply_image(
-        srgb, lin, [](const auto& a) { return rgb_to_srgb(a); });
+    return apply_image(srgb, lin, [](const auto& a) { return rgb_to_srgb(a); });
 }
 void srgb_to_rgb(image<vec4f>& lin, const image<vec4b>& srgb) {
-    return apply_image(lin, srgb,
-        [](const auto& a) { return srgb_to_rgb(byte_to_float(a)); });
+    return apply_image(
+        lin, srgb, [](const auto& a) { return srgb_to_rgb(byte_to_float(a)); });
 }
 void rgb_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin) {
-    return apply_image(srgb, lin,
-        [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
+    return apply_image(
+        srgb, lin, [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
 }
 
 // Filmic tonemapping

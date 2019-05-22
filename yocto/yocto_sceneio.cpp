@@ -1358,12 +1358,13 @@ struct load_obj_scene_cb : obj_callbacks {
         auto shape = yocto_shape();
         shape.uri  = oproc.name;
         if (oproc.type == "floor") {
-            make_floor(shape.quads, shape.positions, shape.normals,
-                shape.texcoords,
-                {oproc.level < 0 ? 1 : pow2(oproc.level),
-                    oproc.level < 0 ? 20 : pow2(oproc.level)},
-                {oproc.size, oproc.size}, {oproc.size / 2, oproc.size / 2},
-                identity_frame3f);
+            auto params         = make_shape_params{};
+            params.type         = make_shape_type::floor;
+            params.subdivisions = oproc.level < 0 ? 0 : oproc.level;
+            params.size         = oproc.size;
+            params.uvsize       = oproc.size / 2;
+            make_shape(shape.triangles, shape.quads, shape.positions,
+                shape.normals, shape.texcoords, params);
         } else {
             throw io_error("unknown obj procedural");
         }
@@ -2724,8 +2725,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         return (int)scene.materials.size() - 1;
     }
 
-    void get_scaled_texture3f(const pbrt_textured3f& textured,
-        float& factor, vec3f& color, int& texture) {
+    void get_scaled_texture3f(const pbrt_textured3f& textured, float& factor,
+        vec3f& color, int& texture) {
         if (textured.texture == "") {
             color  = {textured.value.x, textured.value.y, textured.value.z};
             factor = color == zero3f ? 0 : 1;
@@ -2743,8 +2744,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         }
     }
 
-    void get_scaled_texture3f(const pbrt_textured3f& textured,
-        vec3f& color, int& texture) {
+    void get_scaled_texture3f(
+        const pbrt_textured3f& textured, vec3f& color, int& texture) {
         if (textured.texture == "") {
             color   = {textured.value.x, textured.value.y, textured.value.z};
             texture = -1;
@@ -2857,16 +2858,22 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 }
             } break;
             case pbrt_shape::type_t::sphere: {
-                auto& sphere = pshape.sphere;
-                make_uvsphere(shape.quads, shape.positions, shape.normals,
-                    shape.texcoords, {64, 32}, 2 * sphere.radius, {1, 1},
-                    identity_frame3f);
+                auto& sphere        = pshape.sphere;
+                auto  params        = make_shape_params{};
+                params.type         = make_shape_type::uvsphere;
+                params.subdivisions = 5;
+                params.size         = 2 * sphere.radius;
+                make_shape(shape.triangles, shape.quads, shape.positions,
+                    shape.normals, shape.texcoords, params);
             } break;
             case pbrt_shape::type_t::disk: {
-                auto& disk = pshape.disk;
-                make_uvdisk(shape.quads, shape.positions, shape.normals,
-                    shape.texcoords, {32, 16}, 2 * disk.radius, {1, 1},
-                    identity_frame3f);
+                auto& disk          = pshape.disk;
+                auto  params        = make_shape_params{};
+                params.type         = make_shape_type::uvdisk;
+                params.subdivisions = 4;
+                params.size         = 2 * disk.radius;
+                make_shape(shape.triangles, shape.quads, shape.positions,
+                    shape.normals, shape.texcoords, params);
             } break;
             default: {
                 throw io_error(
@@ -3213,9 +3220,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 shape.uri   = name;
                 auto dir    = normalize(distant.from - distant.to);
                 auto size   = distant_dist * sin(5 * pif / 180);
-                make_rect(shape.quads, shape.positions, shape.normals,
-                    shape.texcoords, {1, 1}, {size, size}, {1, 1},
-                    identity_frame3f);
+                auto params = make_shape_params{};
+                params.type = make_shape_type::quad;
+                params.size = size;
+                make_shape(shape.triangles, shape.quads, shape.positions,
+                    shape.normals, shape.texcoords, params);
                 scene.materials.push_back({});
                 auto& material    = scene.materials.back();
                 material.uri      = shape.uri;
@@ -3234,11 +3243,15 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             case pbrt_light::type_t::point: {
                 auto& point = plight.point;
                 scene.shapes.push_back({});
-                auto& shape = scene.shapes.back();
-                shape.uri   = name;
-                auto size   = 0.01f;
-                make_sphere(shape.quads, shape.positions, shape.normals,
-                    shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
+                auto& shape         = scene.shapes.back();
+                shape.uri           = name;
+                auto size           = 0.01f;
+                auto params         = make_shape_params{};
+                params.type         = make_shape_type::sphere;
+                params.size         = size;
+                params.subdivisions = 2;
+                make_shape(shape.triangles, shape.quads, shape.positions,
+                    shape.normals, shape.texcoords, params);
                 scene.materials.push_back({});
                 auto& material    = scene.materials.back();
                 material.uri      = shape.uri;
@@ -3255,11 +3268,15 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             case pbrt_light::type_t::goniometric: {
                 auto& goniometric = plight.goniometric;
                 scene.shapes.push_back({});
-                auto& shape = scene.shapes.back();
-                shape.uri   = name;
-                auto size   = 0.01f;
-                make_sphere(shape.quads, shape.positions, shape.normals,
-                    shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
+                auto& shape         = scene.shapes.back();
+                shape.uri           = name;
+                auto size           = 0.01f;
+                auto params         = make_shape_params{};
+                params.type         = make_shape_type::sphere;
+                params.size         = size;
+                params.subdivisions = 2;
+                make_shape(shape.triangles, shape.quads, shape.positions,
+                    shape.normals, shape.texcoords, params);
                 scene.materials.push_back({});
                 auto& material    = scene.materials.back();
                 material.uri      = shape.uri;
@@ -3276,11 +3293,15 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             case pbrt_light::type_t::spot: {
                 auto& spot = plight.spot;
                 scene.shapes.push_back({});
-                auto& shape = scene.shapes.back();
-                shape.uri   = name;
-                auto size   = 0.01f;
-                make_sphere(shape.quads, shape.positions, shape.normals,
-                    shape.texcoords, 4.0f, size, 1.0f, identity_frame3f);
+                auto& shape         = scene.shapes.back();
+                shape.uri           = name;
+                auto size           = 0.01f;
+                auto params         = make_shape_params{};
+                params.type         = make_shape_type::sphere;
+                params.size         = size;
+                params.subdivisions = 2;
+                make_shape(shape.triangles, shape.quads, shape.positions,
+                    shape.normals, shape.texcoords, params);
                 scene.materials.push_back({});
                 auto& material    = scene.materials.back();
                 material.uri      = shape.uri;
@@ -3299,14 +3320,17 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             }
         }
     }
-    void begin_object(const pbrt_object& pobject, const pbrt_context& ctx) override {
+    void begin_object(
+        const pbrt_object& pobject, const pbrt_context& ctx) override {
         cur_object       = pobject.name;
         omap[cur_object] = {};
     }
-    void end_object(const pbrt_object& pobject, const pbrt_context& ctx) override {
+    void end_object(
+        const pbrt_object& pobject, const pbrt_context& ctx) override {
         cur_object = "";
     }
-    void object_instance(const pbrt_object& pobject, const pbrt_context& ctx) override {
+    void object_instance(
+        const pbrt_object& pobject, const pbrt_context& ctx) override {
         auto& pinstances = omap.at(pobject.name);
         for (auto& pinstance : pinstances) {
             auto instance     = yocto_instance();

@@ -178,7 +178,8 @@ static inline void parse_value(
     pbrt_stream& stream, pbrt_texture::checkerboard_t::aamode_type& value) {
     static auto value_names =
         unordered_map<string, pbrt_texture::checkerboard_t::aamode_type>{
-            {"closedform", pbrt_texture::checkerboard_t::aamode_type::closedform},
+            {"closedform",
+                pbrt_texture::checkerboard_t::aamode_type::closedform},
             {"none", pbrt_texture::checkerboard_t::aamode_type::none},
         };
     return parse_value(stream, value, value_names);
@@ -195,19 +196,21 @@ static inline void parse_value(
 }
 static inline void parse_value(
     pbrt_stream& stream, pbrt_shape::curve_t::basis_t& value) {
-    static auto value_names = unordered_map<string, pbrt_shape::curve_t::basis_t>{
-        {"bezier", pbrt_shape::curve_t::basis_t::bezier},
-        {"bspline", pbrt_shape::curve_t::basis_t::bspline},
-    };
+    static auto value_names =
+        unordered_map<string, pbrt_shape::curve_t::basis_t>{
+            {"bezier", pbrt_shape::curve_t::basis_t::bezier},
+            {"bspline", pbrt_shape::curve_t::basis_t::bspline},
+        };
     return parse_value(stream, value, value_names);
 }
 static inline void parse_value(
     pbrt_stream& stream, pbrt_shape::curve_t::type_t& value) {
-    static auto value_names = unordered_map<string, pbrt_shape::curve_t::type_t>{
-        {"flat", pbrt_shape::curve_t::type_t::flat},
-        {"cylinder", pbrt_shape::curve_t::type_t::cylinder},
-        {"ribbon", pbrt_shape::curve_t::type_t::ribbon},
-    };
+    static auto value_names =
+        unordered_map<string, pbrt_shape::curve_t::type_t>{
+            {"flat", pbrt_shape::curve_t::type_t::flat},
+            {"cylinder", pbrt_shape::curve_t::type_t::cylinder},
+            {"ribbon", pbrt_shape::curve_t::type_t::ribbon},
+        };
     return parse_value(stream, value, value_names);
 }
 static inline void parse_value(
@@ -221,23 +224,25 @@ static inline void parse_value(
         };
     return parse_value(stream, value, value_names);
 }
-static inline void parse_value(
-    pbrt_stream& stream, pbrt_integrator::path_t::lightsamplestrategy_t& value) {
+static inline void parse_value(pbrt_stream&         stream,
+    pbrt_integrator::path_t::lightsamplestrategy_t& value) {
     static auto value_names =
         unordered_map<string, pbrt_integrator::path_t::lightsamplestrategy_t>{
             {"power", pbrt_integrator::path_t::lightsamplestrategy_t::power},
-            {"spatial", pbrt_integrator::path_t::lightsamplestrategy_t::spatial},
-            {"uniform", pbrt_integrator::path_t::lightsamplestrategy_t::uniform},
+            {"spatial",
+                pbrt_integrator::path_t::lightsamplestrategy_t::spatial},
+            {"uniform",
+                pbrt_integrator::path_t::lightsamplestrategy_t::uniform},
         };
     return parse_value(stream, value, value_names);
 }
-static inline void parse_value(pbrt_stream&         stream,
+static inline void parse_value(pbrt_stream&            stream,
     pbrt_integrator::volpath_t::lightsamplestrategy_t& value) {
     return parse_value(
         stream, (pbrt_integrator::path_t::lightsamplestrategy_t&)value);
 }
-static inline void parse_value(
-    pbrt_stream& stream, pbrt_integrator::bdpt_t::lightsamplestrategy_t& value) {
+static inline void parse_value(pbrt_stream&         stream,
+    pbrt_integrator::bdpt_t::lightsamplestrategy_t& value) {
     return parse_value(
         stream, (pbrt_integrator::path_t::lightsamplestrategy_t&)value);
 }
@@ -1543,7 +1548,7 @@ static inline void parse_typeparam(pbrt_stream& stream, string& value) {
 
 // Parse param and resolve constant textures
 static inline void parse_texture(pbrt_stream& stream, const string& ptype,
-    pbrt_textured3f&               value,
+    pbrt_textured3f&                              value,
     const unordered_map<string, pbrt_spectrum3f>& constant_values) {
     parse_param(stream, ptype, value);
     if (value.texture == "") return;
@@ -1552,7 +1557,7 @@ static inline void parse_texture(pbrt_stream& stream, const string& ptype,
     value.texture = "";
 }
 static inline void parse_texture(pbrt_stream& stream, const string& ptype,
-    pbrt_textured1f&                         value,
+    pbrt_textured1f&                              value,
     const unordered_map<string, pbrt_spectrum3f>& constant_values) {
     parse_param(stream, ptype, value);
     if (value.texture == "") return;
@@ -2106,8 +2111,8 @@ static inline void parse_shape(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_shape::type_t::plymesh;
-        value.plymesh      = tvalue;
+        value.type    = pbrt_shape::type_t::plymesh;
+        value.plymesh = tvalue;
     } else if (type == "curve") {
         auto tvalue = pbrt_shape::curve_t{};
         while (is_param(stream)) {
@@ -2137,8 +2142,8 @@ static inline void parse_shape(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_shape::type_t::curve;
-        value.curve      = tvalue;
+        value.type  = pbrt_shape::type_t::curve;
+        value.curve = tvalue;
     } else if (type == "loopsubdiv") {
         auto tvalue = pbrt_shape::loopsubdiv_t{};
         while (is_param(stream)) {
@@ -2155,8 +2160,8 @@ static inline void parse_shape(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_shape::type_t::loopsubdiv;
-        value.loopsubdiv      = tvalue;
+        value.type       = pbrt_shape::type_t::loopsubdiv;
+        value.loopsubdiv = tvalue;
     } else if (type == "nurbs") {
         auto tvalue = pbrt_shape::nurbs_t{};
         while (is_param(stream)) {
@@ -2185,8 +2190,8 @@ static inline void parse_shape(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_shape::type_t::nurbs;
-        value.nurbs      = tvalue;
+        value.type  = pbrt_shape::type_t::nurbs;
+        value.nurbs = tvalue;
     } else if (type == "sphere") {
         auto tvalue = pbrt_shape::sphere_t{};
         while (is_param(stream)) {
@@ -2203,8 +2208,8 @@ static inline void parse_shape(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_shape::type_t::sphere;
-        value.sphere      = tvalue;
+        value.type   = pbrt_shape::type_t::sphere;
+        value.sphere = tvalue;
     } else if (type == "disk") {
         auto tvalue = pbrt_shape::disk_t{};
         while (is_param(stream)) {
@@ -2222,7 +2227,7 @@ static inline void parse_shape(
             }
         }
         value.type = pbrt_shape::type_t::disk;
-        value.disk      = tvalue;
+        value.disk = tvalue;
     } else if (type == "cone") {
         auto tvalue = pbrt_shape::cone_t{};
         while (is_param(stream)) {
@@ -2238,7 +2243,7 @@ static inline void parse_shape(
             }
         }
         value.type = pbrt_shape::type_t::cone;
-        value.cone      = tvalue;
+        value.cone = tvalue;
     } else if (type == "cylinder") {
         auto tvalue = pbrt_shape::cylinder_t{};
         while (is_param(stream)) {
@@ -2255,8 +2260,8 @@ static inline void parse_shape(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_shape::type_t::cylinder;
-        value.cylinder      = tvalue;
+        value.type     = pbrt_shape::type_t::cylinder;
+        value.cylinder = tvalue;
     } else if (type == "hyperboloid") {
         auto tvalue = pbrt_shape::hyperboloid_t{};
         while (is_param(stream)) {
@@ -2271,8 +2276,8 @@ static inline void parse_shape(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_shape::type_t::hyperboloid;
-        value.hyperboloid      = tvalue;
+        value.type        = pbrt_shape::type_t::hyperboloid;
+        value.hyperboloid = tvalue;
     } else if (type == "paraboloid") {
         auto tvalue = pbrt_shape::paraboloid_t{};
         while (is_param(stream)) {
@@ -2289,8 +2294,8 @@ static inline void parse_shape(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_shape::type_t::paraboloid;
-        value.paraboloid      = tvalue;
+        value.type       = pbrt_shape::type_t::paraboloid;
+        value.paraboloid = tvalue;
     } else if (type == "heightfield") {
         auto tvalue = pbrt_shape::heightfield_t{};
         while (is_param(stream)) {
@@ -2305,8 +2310,8 @@ static inline void parse_shape(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_shape::type_t::heightfield;
-        value.heightfield      = tvalue;
+        value.type        = pbrt_shape::type_t::heightfield;
+        value.heightfield = tvalue;
     } else {
         throw io_error("unknown Shape " + type);
     }
@@ -2361,8 +2366,8 @@ static inline void parse_light(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_light::type_t::distant;
-        value.distant      = tvalue;
+        value.type    = pbrt_light::type_t::distant;
+        value.distant = tvalue;
     } else if (type == "goniometric") {
         auto tvalue = pbrt_light::goniometric_t{};
         while (is_param(stream)) {
@@ -2377,8 +2382,8 @@ static inline void parse_light(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_light::type_t::goniometric;
-        value.goniometric      = tvalue;
+        value.type        = pbrt_light::type_t::goniometric;
+        value.goniometric = tvalue;
     } else if (type == "infinite") {
         auto tvalue = pbrt_light::infinite_t{};
         while (is_param(stream)) {
@@ -2397,8 +2402,8 @@ static inline void parse_light(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_light::type_t::infinite;
-        value.infinite     = tvalue;
+        value.type     = pbrt_light::type_t::infinite;
+        value.infinite = tvalue;
     } else if (type == "distant") {
         auto tvalue = pbrt_light::distant_t{};
         while (is_param(stream)) {
@@ -2413,8 +2418,8 @@ static inline void parse_light(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_light::type_t::distant;
-        value.distant      = tvalue;
+        value.type    = pbrt_light::type_t::distant;
+        value.distant = tvalue;
     } else if (type == "projection") {
         auto tvalue = pbrt_light::projection_t{};
         while (is_param(stream)) {
@@ -2431,8 +2436,8 @@ static inline void parse_light(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_light::type_t::projection;
-        value.projection      = tvalue;
+        value.type       = pbrt_light::type_t::projection;
+        value.projection = tvalue;
     } else if (type == "spot") {
         auto tvalue = pbrt_light::spot_t{};
         while (is_param(stream)) {
@@ -2454,7 +2459,7 @@ static inline void parse_light(
             }
         }
         value.type = pbrt_light::type_t::spot;
-        value.spot      = tvalue;
+        value.spot = tvalue;
     } else if (type == "point") {
         auto tvalue = pbrt_light::point_t{};
         while (is_param(stream)) {
@@ -2469,8 +2474,8 @@ static inline void parse_light(
                 throw io_error("unknown parameter " + pname);
             }
         }
-        value.type = pbrt_light::type_t::point;
-        value.point      = tvalue;
+        value.type  = pbrt_light::type_t::point;
+        value.point = tvalue;
     } else {
         throw io_error("unknown LightSource " + type);
     }

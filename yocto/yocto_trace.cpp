@@ -706,7 +706,7 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
 
 vec4f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
-    auto ndo = abs(dot(outgoing, normal));
+    auto ndo      = abs(dot(outgoing, normal));
     auto coat     = fresnel_schlick(material.coat, ndo);
     auto specular = fresnel_schlick(material.specular, ndo);
 
@@ -1049,8 +1049,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(
-            bvh, make_ray(origin, direction));
+        auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1190,8 +1189,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(
-            bvh, make_ray(origin, direction));
+        auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1264,8 +1262,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < max(params.max_bounces, 4); bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(
-            bvh, make_ray(origin, direction));
+        auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;

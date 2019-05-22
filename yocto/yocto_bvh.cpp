@@ -111,8 +111,8 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 }
 
 // Intersect a ray with a triangle
-bool intersect_triangle(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist) {
+bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, vec2f& uv, float& dist) {
     // compute triangle edges
     auto edge1 = p1 - p0;
     auto edge2 = p2 - p0;
@@ -232,8 +232,8 @@ inline bool intersect_bbox(
 namespace yocto {
 
 // TODO: documentation
-bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
-    float r, vec2f& uv, float& dist) {
+bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
+    vec2f& uv, float& dist) {
     auto d2 = dot(pos - p, pos - p);
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     uv   = {0, 0};
@@ -242,8 +242,7 @@ bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
 }
 
 // TODO: documentation
-float closestuv_line(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1) {
+float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1) {
     auto ab = p1 - p0;
     auto d  = dot(ab, ab);
     // Project c onto ab, computing parameterized position d(t) = a + t*(b –
@@ -422,8 +421,7 @@ static void embree_error(void* ctx, RTCError code, const char* str) {
 
 // Embree memory
 atomic<ssize_t> embree_memory = 0;
-static bool     embree_memory_monitor(
-        void* userPtr, ssize_t bytes, bool post) {
+static bool     embree_memory_monitor(void* userPtr, ssize_t bytes, bool post) {
     embree_memory += bytes;
     return true;
 }
@@ -441,8 +439,7 @@ static RTCDevice get_embree_device() {
 }
 
 // Initialize Embree BVH
-static void build_embree_bvh(
-    bvh_shape& shape, const bvh_params& params) {
+static void build_embree_bvh(bvh_shape& shape, const bvh_params& params) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     if (params.embree_compact) {
@@ -555,8 +552,7 @@ static void build_embree_bvh(
     shape.embree_flattened = false;
 }
 // Build a BVH using Embree.
-static void build_embree_bvh(
-    bvh_scene& scene, const bvh_params& params) {
+static void build_embree_bvh(bvh_scene& scene, const bvh_params& params) {
     // scene bvh
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
@@ -698,8 +694,8 @@ static void build_embree_flattened_bvh(
 static void refit_embree_bvh(bvh_shape& bvh) {
     throw runtime_error("not yet implemented");
 }
-static bool intersect_embree_bvh(const bvh_shape& shape,
-    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any) {
+static bool intersect_embree_bvh(const bvh_shape& shape, const ray3f& ray,
+    int& element, vec2f& uv, float& distance, bool find_any) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
     embree_ray.ray.org_y     = ray.o.y;
@@ -721,9 +717,8 @@ static bool intersect_embree_bvh(const bvh_shape& shape,
     distance = embree_ray.ray.tfar;
     return true;
 }
-static bool intersect_embree_bvh(const bvh_scene& scene,
-    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any) {
+static bool intersect_embree_bvh(const bvh_scene& scene, const ray3f& ray,
+    int& instance, int& element, vec2f& uv, float& distance, bool find_any) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
     embree_ray.ray.org_y     = ray.o.y;
@@ -757,8 +752,7 @@ struct bvh_prim {
 };
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static pair<int, int> split_sah(
-    vector<bvh_prim>& prims, int start, int end) {
+static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
     // initialize split axis and position
     auto split_axis = 0;
     auto mid        = (start + end) / 2;
@@ -897,8 +891,8 @@ static pair<int, int> split_middle(
 }
 
 // Build BVH nodes
-static void build_bvh_serial(vector<bvh_node>& nodes,
-    vector<bvh_prim>& prims, const bvh_params& params) {
+static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+    const bvh_params& params) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
@@ -955,8 +949,8 @@ static void build_bvh_serial(vector<bvh_node>& nodes,
 }
 
 // Build BVH nodes
-static void build_bvh_parallel(vector<bvh_node>& nodes,
-    vector<bvh_prim>& prims, const bvh_params& params) {
+static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+    const bvh_params& params) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
@@ -1216,8 +1210,8 @@ void refit_bvh(bvh_scene& scene, const vector<int>& updated_shapes,
 }
 
 // Intersect ray with a bvh.
-bool intersect_bvh(const bvh_shape& shape, const ray3f& ray_,
-    int& element, vec2f& uv, float& distance, bool find_any) {
+bool intersect_bvh(const bvh_shape& shape, const ray3f& ray_, int& element,
+    vec2f& uv, float& distance, bool find_any) {
 #if YOCTO_EMBREE
     // call Embree if needed
     if (shape.embree_bvh) {
@@ -1330,8 +1324,8 @@ bool intersect_bvh(const bvh_shape& shape, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh.
-bool intersect_bvh(const bvh_scene& scene, const ray3f& ray_,
-    int& instance, int& element, vec2f& uv, float& distance, bool find_any,
+bool intersect_bvh(const bvh_scene& scene, const ray3f& ray_, int& instance,
+    int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
 #if YOCTO_EMBREE
     // call Embree if needed
@@ -1405,8 +1399,8 @@ bool intersect_bvh(const bvh_scene& scene, const ray3f& ray_,
     return hit;
 }
 // Intersect ray with a bvh.
-bool intersect_bvh(const bvh_scene& scene, int instance,
-    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
+bool intersect_bvh(const bvh_scene& scene, int instance, const ray3f& ray,
+    int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
     auto& instance_ = scene.instances[instance];
     auto  inv_ray   = non_rigid_frames
@@ -1418,9 +1412,8 @@ bool intersect_bvh(const bvh_scene& scene, int instance,
 }
 
 // Intersect ray with a bvh.
-bool overlap_bvh(const bvh_shape& shape, const vec3f& pos,
-    float max_distance, int& element, vec2f& uv, float& distance,
-    bool find_any) {
+bool overlap_bvh(const bvh_shape& shape, const vec3f& pos, float max_distance,
+    int& element, vec2f& uv, float& distance, bool find_any) {
     // check if empty
     if (shape.nodes.empty()) return false;
 
@@ -1515,9 +1508,9 @@ bool overlap_bvh(const bvh_shape& shape, const vec3f& pos,
 }
 
 // Intersect ray with a bvh.
-bool overlap_bvh(const bvh_scene& scene, const vec3f& pos,
-    float max_distance, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any, bool non_rigid_frames) {
+bool overlap_bvh(const bvh_scene& scene, const vec3f& pos, float max_distance,
+    int& instance, int& element, vec2f& uv, float& distance, bool find_any,
+    bool non_rigid_frames) {
     // check if empty
     if (scene.nodes.empty()) return false;
 

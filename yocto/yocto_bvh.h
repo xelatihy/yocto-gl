@@ -243,11 +243,10 @@ bool intersect_bvh(const bvh_scene& bvh, int instance, const ray3f& ray,
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bool overlap_bvh(const bvh_shape& bvh, const vec3f& pos,
-    float max_distance, int& element, vec2f& uv, float& distance,
-    bool find_any = false);
-bool overlap_bvh(const bvh_scene& bvh, const vec3f& pos,
-    float max_distance, int& instance, int& element, vec2f& uv, float& distance,
+bool overlap_bvh(const bvh_shape& bvh, const vec3f& pos, float max_distance,
+    int& element, vec2f& uv, float& distance, bool find_any = false);
+bool overlap_bvh(const bvh_scene& bvh, const vec3f& pos, float max_distance,
+    int& instance, int& element, vec2f& uv, float& distance,
     bool find_any = false, bool non_rigid_frames = true);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
@@ -306,8 +305,8 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     float r0, float r1, vec2f& uv, float& dist);
 
 // Intersect a ray with a triangle.
-bool intersect_triangle(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist);
+bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, vec2f& uv, float& dist);
 
 // Intersect a ray with a quad represented as two triangles (0,1,3) and
 // (2,3,1), with the uv coordinates of the second triangle corrected by u =
@@ -333,8 +332,8 @@ bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
     const vec3i& ray_dsign, const bbox3f& bbox);
 
 // Check if a point overlaps a position within a max distance.
-bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p0,
-    float r0, vec2f& uv, float& dist);
+bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p0, float r0,
+    vec2f& uv, float& dist);
 
 // Find closest line point to a position.
 float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
