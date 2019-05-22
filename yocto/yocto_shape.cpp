@@ -2590,6 +2590,17 @@ void make_shape(vector<int>& points, vector<vec2i>& lines,
             make_geosphere(triangles, positions, normals, params.subdivision,
                 params.size, params.frame);
         } break;
+        case make_shape_type::matball: {
+            auto steps  = pow2(params.subdivision) * params.steps;
+            auto uvsize = params.uvsize * params.uvscale;
+            auto size   = params.size * params.scale;
+            make_sphere(quads, positions, normals, texcoords, steps.x, size.x,
+                uvsize.x, params.frame);
+        } break;
+        case make_shape_type::suzanne: {
+            auto size   = params.size * params.scale;
+            make_suzanne(quads, positions, size.x, params.frame);
+        } break;
     }
 }
 
@@ -2929,20 +2940,36 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
             vec2f{0.1, 0.1} * 0.15f, vec2f{0.001, 0.0005} * 0.15f, {0, 0},
             {0.5, 128}, {0, 0});
     } else if (type == "test-hairball-interior") {
-        make_sphere(quads, positions, normals, texcoords, 32, 0.15 * 0.8, 1,
-            frame3f{{0, 0.075, 0}});
+        auto params = make_shape_params{};
+        params.type = make_shape_type::sphere;
+        params.subdivision = 5;
+        params.size = (float)(0.15 * 0.8);
+        params.frame = frame3f{{0, 0.075, 0}};
+        make_shape(points, lines, triangles, quads, positions, normals,
+            texcoords, params);
     } else if (type == "test-suzanne-subdiv") {
-        make_suzanne(quads, positions, 0.15, frame3f{{0, 0.075, 0}});
+        auto params = make_shape_params{};
+        params.type = make_shape_type::suzanne;
+        params.size = 0.15 * 0.8;
+        params.frame = frame3f{{0, 0.075, 0}};
+        make_shape(points, lines, triangles, quads, positions, normals,
+            texcoords, params);
     } else if (type == "test-cube-subdiv") {
         make_fvbox(quads_positions, quads_normals, quads_texcoords, positions,
             normals, texcoords, {1, 1, 1}, {0.15, 0.15, 0.15}, {1, 1, 1},
             frame3f{{0, 0.075, 0}});
     } else if (type == "test-arealight1") {
-        make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4},
-            {1, 1}, identity_frame3f);
+        auto params = make_shape_params{};
+        params.type = make_shape_type::rect;
+        params.size = 0.4;
+        make_shape(points, lines, triangles, quads, positions, normals,
+            texcoords, params);
     } else if (type == "test-arealight2") {
-        make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4},
-            {1, 1}, identity_frame3f);
+        auto params = make_shape_params{};
+        params.type = make_shape_type::rect;
+        params.size = 0.4;
+        make_shape(points, lines, triangles, quads, positions, normals,
+            texcoords, params);
     } else {
         throw std::invalid_argument("unknown shape preset " + type);
     }
