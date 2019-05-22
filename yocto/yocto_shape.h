@@ -42,20 +42,13 @@
 //    `compute_tangent_spaces()`
 // 6. compute skinning with `compute_skinning()` and
 //    `compute_matrix_skinning()`
-// 6. create shapes with `make_box()`, `make_sphere()`,
-//    `make_rect()`,  `make_disk()`, `make_fvbox()`,
-//    `make_hair()`,  `make_suzanne()`, `make_lines()`,
-//    `make_points()`,  `make_uvsphere()`,
-//    `make_rounded_box()`,  `make_flipcap_uvsphere()`,
-//    `make_uvcylinder()`,  `make_rounded_uvcylinder()`,
-//    `make_uvdisk()`,  `make_disk()`
+// 6. create shapes with `make_shape()`, `make_hair()`, `make_points()`
 // 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 // 8. shape sampling with `sample_points()`, `sample_lines()`,
 //    `sample_triangles()`; initialize the sampling CDFs with
 //    `sample_points_cdf()`, `sample_lines_cdf()`,
 //    `sample_triangles_cdf()`
-// 9.  sample a could of point over a surface with
-// `sample_triangles()`
+// 9.  sample a could of point over a surface with `sample_triangles()`
 // 10. get edges and boundaries with `get_edges()`
 // 11. convert quads to triangles with `quads_to_triangles()`
 // 12. convert face varying to vertex shared representations with
