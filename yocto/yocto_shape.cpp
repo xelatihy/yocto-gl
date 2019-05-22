@@ -2741,45 +2741,25 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     vector<float>& radius, const string& type) {
     if (type == "default-quad") {
         auto params = make_shape_params{};
-        params.type = make_shape_type::rect;
+        params.type = make_shape_type::quad;
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-quady") {
         auto params = make_shape_params{};
-        params.type = make_shape_type::rect;
+        params.type = make_shape_type::quad;
         make_shape(triangles, quads, positions, normals, texcoords, params);
-    } else if (type == "default-quad-stack") {
+    } else if (type == "default-cube") {
         auto params = make_shape_params{};
-        params.type = make_shape_type::rect_stack;
+        params.type = make_shape_type::cube;
         make_shape(triangles, quads, positions, normals, texcoords, params);
-    } else if (type == "default-box") {
-        auto params = make_shape_params{};
-        params.type = make_shape_type::box;
-        make_shape(triangles, quads, positions, normals, texcoords, params);
-    } else if (type == "default-box-rounded") {
+    } else if (type == "default-cube-rounded") {
         auto params    = make_shape_params{};
-        params.type    = make_shape_type::rect;
+        params.type    = make_shape_type::cube;
         params.rounded = 0.15;
-        make_shape(triangles, quads, positions, normals, texcoords, params);
-    } else if (type == "default-uvsphere") {
-        auto params         = make_shape_params{};
-        params.type         = make_shape_type::uvsphere;
-        params.subdivisions = 5;
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-sphere") {
         auto params         = make_shape_params{};
         params.type         = make_shape_type::sphere;
         params.subdivisions = 5;
-        make_shape(triangles, quads, positions, normals, texcoords, params);
-    } else if (type == "default-uvsphere-flipcap") {
-        auto params         = make_shape_params{};
-        params.type         = make_shape_type::uvsphere;
-        params.subdivisions = 5;
-        params.rounded      = 0.75;
-        make_shape(triangles, quads, positions, normals, texcoords, params);
-    } else if (type == "default-uvdisk") {
-        auto params         = make_shape_params{};
-        params.type         = make_shape_type::uvdisk;
-        params.subdivisions = 4;
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-disk") {
         auto params         = make_shape_params{};
@@ -2798,13 +2778,32 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         params.subdivisions = 5;
         params.rounded      = 0.25;
         make_shape(triangles, quads, positions, normals, texcoords, params);
+    } else if (type == "default-uvsphere") {
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::uvsphere;
+        params.subdivisions = 5;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
+    } else if (type == "default-uvsphere-flipcap") {
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::uvsphere;
+        params.subdivisions = 5;
+        params.rounded      = 0.75;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
+    } else if (type == "default-uvdisk") {
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::uvdisk;
+        params.subdivisions = 4;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-uvcylinder") {
-        make_uvcylinder(quads, positions, normals, texcoords, {64, 32, 16},
-            {2, 2}, {1, 1, 1}, identity_frame3f);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::uvcylinder;
+        params.subdivisions = 5;
+        params.aspect       = {2, 1, 0.5f};
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-uvcylinder-rounded") {
         make_rounded_uvcylinder(quads, positions, normals, texcoords,
             {64, 32, 16}, {2, 2}, {1, 1, 1}, 0.075, identity_frame3f);
-    } else if (type == "default-sphere-geodesic") {
+    } else if (type == "default-geosphere") {
         auto params         = make_shape_params{};
         params.type         = make_shape_type::geosphere;
         params.subdivisions = 5;
@@ -2830,18 +2829,26 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         params.subdivisions = 5;
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-hairball") {
-        auto base_quads         = vector<vec4i>{};
-        auto base_positions     = vector<vec3f>{};
-        auto base_normals       = vector<vec3f>{};
-        auto base_texturecoords = vector<vec2f>{};
-        make_sphere(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, 2 * 0.8f, 1, identity_frame3f);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::sphere;
+        params.subdivisions = 5;
+        params.size         = 2 * 0.8f;
+        auto base_triangles = vector<vec3i>{};
+        auto base_quads     = vector<vec4i>{};
+        auto base_positions = vector<vec3f>{};
+        auto base_normals   = vector<vec3f>{};
+        auto base_texcoords = vector<vec2f>{};
+        make_shape(base_triangles, base_quads, base_positions, base_normals,
+            base_texcoords, params);
         make_hair(lines, positions, normals, texcoords, radius, {4, 65536}, {},
-            base_quads, base_positions, base_normals, base_texturecoords,
+            base_quads, base_positions, base_normals, base_texcoords,
             {0.2, 0.2}, {0.002, 0.001}, {0, 0}, {0, 0}, {0, 0});
     } else if (type == "default-hairball-interior") {
-        make_sphere(quads, positions, normals, texcoords, 32, 2 * 0.8f, 1,
-            identity_frame3f);
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::sphere;
+        params.subdivisions = 5;
+        params.size         = 2 * 0.8f;
+        make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "default-suzanne") {
         auto params = make_shape_params{};
         params.type = make_shape_type::suzanne;
@@ -2924,46 +2931,61 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
         make_sphere(quads, positions, normals, texcoords, 32, 0.15, 1,
             frame3f{{0, 0.075, 0}});
     } else if (type == "test-hairball1") {
-        auto base_triangles     = vector<vec2i>{};
-        auto base_quads         = vector<vec4i>{};
-        auto base_positions     = vector<vec3f>{};
-        auto base_normals       = vector<vec3f>{};
-        auto base_texturecoords = vector<vec2f>{};
-        make_sphere(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, 0.15 * 0.8, 1, frame3f{{0, 0.075, 0}});
-        make_hair(lines, positions, normals, texcoords, radius, {4, 65536}, {},
-            base_quads, base_positions, base_normals, base_texturecoords,
-            vec2f{0.1, 0.1} * 0.15f, vec2f{0.001, 0.0005} * 0.15f, {0.03, 100},
-            {0, 0}, {0, 0});
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::sphere;
+        params.subdivisions = 5;
+        params.size         = 0.15f * 0.8f;
+        params.frame        = frame3f{{0, 0.075, 0}};
+        auto base_triangles = vector<vec3i>{};
+        auto base_quads     = vector<vec4i>{};
+        auto base_positions = vector<vec3f>{};
+        auto base_normals   = vector<vec3f>{};
+        auto base_texcoords = vector<vec2f>{};
+        make_shape(base_triangles, base_quads, base_positions, base_normals,
+            base_texcoords, params);
+        make_hair(lines, positions, normals, texcoords, radius, {4, 65536},
+            base_triangles, base_quads, base_positions, base_normals,
+            base_texcoords, vec2f{0.1, 0.1} * 0.15f,
+            vec2f{0.001, 0.0005} * 0.15f, {0.03, 100}, {0, 0}, {0, 0});
     } else if (type == "test-hairball2") {
-        auto base_triangles     = vector<vec2i>{};
-        auto base_quads         = vector<vec4i>{};
-        auto base_positions     = vector<vec3f>{};
-        auto base_normals       = vector<vec3f>{};
-        auto base_texturecoords = vector<vec2f>{};
-        make_sphere(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, 0.15 * 0.8, 1, frame3f{{0, 0.075, 0}});
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::sphere;
+        params.subdivisions = 5;
+        params.size         = 0.15f * 0.8f;
+        params.frame        = frame3f{{0, 0.075, 0}};
+        auto base_triangles = vector<vec3i>{};
+        auto base_quads     = vector<vec4i>{};
+        auto base_positions = vector<vec3f>{};
+        auto base_normals   = vector<vec3f>{};
+        auto base_texcoords = vector<vec2f>{};
+        make_shape(base_triangles, base_quads, base_positions, base_normals,
+            base_texcoords, params);
         make_hair(lines, positions, normals, texcoords, radius, {4, 65536}, {},
-            base_quads, base_positions, base_normals, base_texturecoords,
+            base_quads, base_positions, base_normals, base_texcoords,
             vec2f{0.1, 0.1} * 0.15f, vec2f{0.001, 0.0005} * 0.15f, {0, 0},
             {0, 0}, {0, 0});
     } else if (type == "test-hairball3") {
-        auto base_triangles     = vector<vec2i>{};
-        auto base_quads         = vector<vec4i>{};
-        auto base_positions     = vector<vec3f>{};
-        auto base_normals       = vector<vec3f>{};
-        auto base_texturecoords = vector<vec2f>{};
-        make_sphere(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, 0.15 * 0.8, 1, frame3f{{0, 0.075, 0}});
+        auto params         = make_shape_params{};
+        params.type         = make_shape_type::sphere;
+        params.subdivisions = 5;
+        params.size         = 0.15f * 0.8f;
+        params.frame        = frame3f{{0, 0.075, 0}};
+        auto base_triangles = vector<vec3i>{};
+        auto base_quads     = vector<vec4i>{};
+        auto base_positions = vector<vec3f>{};
+        auto base_normals   = vector<vec3f>{};
+        auto base_texcoords = vector<vec2f>{};
+        make_shape(base_triangles, base_quads, base_positions, base_normals,
+            base_texcoords, params);
         make_hair(lines, positions, normals, texcoords, radius, {4, 65536}, {},
-            base_quads, base_positions, base_normals, base_texturecoords,
+            base_quads, base_positions, base_normals, base_texcoords,
             vec2f{0.1, 0.1} * 0.15f, vec2f{0.001, 0.0005} * 0.15f, {0, 0},
             {0.5, 128}, {0, 0});
     } else if (type == "test-hairball-interior") {
         auto params         = make_shape_params{};
         params.type         = make_shape_type::sphere;
         params.subdivisions = 5;
-        params.size         = (float)(0.15 * 0.8);
+        params.size         = 0.15f * 0.8f;
         params.frame        = frame3f{{0, 0.075, 0}};
         make_shape(triangles, quads, positions, normals, texcoords, params);
     } else if (type == "test-suzanne-subdiv") {
