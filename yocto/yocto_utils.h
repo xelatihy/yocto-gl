@@ -167,8 +167,12 @@ namespace fmt {
 // Formatter for math types
 template <typename T, int N>
 struct formatter<yocto::vec<T, N>>;
-template <typename T, int N, int M>
-struct formatter<yocto::mat<T, N, M>>;
+template <>
+struct formatter<yocto::mat2f>;
+template <>
+struct formatter<yocto::mat3f>;
+template <>
+struct formatter<yocto::mat4f>;
 template <>
 struct formatter<yocto::frame2f>;
 template <>
@@ -495,9 +499,15 @@ struct _formatter_base {
 // Formatter for math types
 template <typename T, int N>
 struct formatter<yocto::vec<T, N>> : _formatter_base<yocto::vec<T, N>, N> {};
-template <typename T, int N, int M>
-struct formatter<yocto::mat<T, N, M>>
-    : _formatter_base<yocto::mat<T, N, M>, M> {};
+template <>
+struct formatter<yocto::mat2f>
+    : _formatter_base<yocto::mat2f, 2> {};
+template <>
+struct formatter<yocto::mat3f>
+    : _formatter_base<yocto::mat3f, 3> {};
+template <>
+struct formatter<yocto::mat4f>
+    : _formatter_base<yocto::mat4f, 4> {};
 template <>
 struct formatter<yocto::frame2f>
     : _formatter_base<yocto::frame2f, 3> {};
@@ -1162,10 +1172,17 @@ inline void parse_value(
     string_view& str, frame3f& value, bool in_brackets = false) {
     parse_value(str, (array<float, 12>&)value, in_brackets);
 }
-template <typename T, int N, int M>
 inline void parse_value(
-    string_view& str, mat<T, N, M>& value, bool in_brackets = false) {
-    parse_value(str, (array<T, N * M>&)value, in_brackets);
+    string_view& str, mat2f& value, bool in_brackets = false) {
+    parse_value(str, (array<float, 4>&)value, in_brackets);
+}
+inline void parse_value(
+    string_view& str, mat3f& value, bool in_brackets = false) {
+    parse_value(str, (array<float, 9>&)value, in_brackets);
+}
+inline void parse_value(
+    string_view& str, mat4f& value, bool in_brackets = false) {
+    parse_value(str, (array<float, 16>&)value, in_brackets);
 }
 
 template <typename T>

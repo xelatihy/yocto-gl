@@ -11,9 +11,9 @@
 // in graphics. In particular, we support 1-4 dimensional vectors
 // coordinates (`vec<T, 1>`, `vec<T, 2>`, `vec<T, 3>`, `vec<T, 4>`).
 //
-// We support 2-4 dimensional matrices (`mat<T, 2, 2>`, `mat<T, 3, 3>`,
-// `mat<T, 4, 4>`) with matrix-matrix and matrix-vector products, transposes and
-// inverses. Matrices are stored in column-major order and are accessed and
+// We support 2-4 dimensional matrices (`mat2f`, `mat3f`, `mat4f`) with 
+// matrix-matrix and matrix-vector products, transposes and inverses. 
+// Matrices are stored in column-major order and are accessed and
 // constructed by column. The one dimensional version is for completeness only.
 //
 // To represent transformations, most of the library facilities prefer the use
@@ -1009,71 +1009,46 @@ struct hash<yocto::vec<T, N>> {
 namespace yocto {
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, int N, int M>
-struct mat;
+struct mat2f {
+    vec2f x = {0, 0};
+    vec2f y = {0, 0};
 
-// Small Fixed-size matrices stored in column major format.
-template <typename T, int N>
-struct mat<T, N, 1> {
-    vec<T, N> x;
+    constexpr mat2f() {}
+    constexpr mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
 
-    constexpr mat() : x{} {}
-    constexpr mat(const vec<T, N>& x) : x{x} {}
-
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec2f&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec2f& operator[](int i) const { return (&x)[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, int N>
-struct mat<T, N, 2> {
-    vec<T, N> x, y;
+struct mat3f {
+    vec3f x = {0, 0, 0};
+    vec3f y = {0, 0, 0};
+    vec3f z = {0, 0, 0};
 
-    constexpr mat() : x{}, y{} {}
-    constexpr mat(const vec<T, N>& x, const vec<T, N>& y) : x{x}, y{y} {}
-
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
-};
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T, int N>
-struct mat<T, N, 3> {
-    vec<T, N> x, y, z;
-
-    constexpr mat() : x{}, y{}, z{} {}
-    constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z)
+    constexpr mat3f() {}
+    constexpr mat3f(const vec3f& x, const vec3f& y, const vec3f& z)
         : x{x}, y{y}, z{z} {}
 
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec3f&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec3f& operator[](int i) const { return (&x)[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, int N>
-struct mat<T, N, 4> {
-    vec<T, N> x, y, z, w;
+struct mat4f {
+    vec4f x = {0, 0, 0, 0};
+    vec4f y = {0, 0, 0, 0};
+    vec4f z = {0, 0, 0, 0};
+    vec4f w = {0, 0, 0, 0};
 
-    constexpr mat() : x{}, y{}, z{}, w{} {}
-    constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z,
-        const vec<T, N>& w)
+    constexpr mat4f() {}
+    constexpr mat4f(const vec4f& x, const vec4f& y, const vec4f& z,
+        const vec4f& w)
         : x{x}, y{y}, z{z}, w{w} {}
 
-    constexpr vec<T, N>&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec4f&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec4f& operator[](int i) const { return (&x)[i]; }
 };
-
-// Typedefs
-using mat2f = mat<float, 2, 2>;
-using mat3f = mat<float, 3, 3>;
-using mat4f = mat<float, 4, 4>;
-using mat2d = mat<double, 2, 2>;
-using mat3d = mat<double, 3, 3>;
-using mat4d = mat<double, 4, 4>;
-
-// Identity matrix
-template <typename T, int N>
-constexpr mat<T, N, N> make_identity_mat();
 
 // Identity matrices constants.
 constexpr auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
@@ -1081,223 +1056,180 @@ constexpr auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 constexpr auto identity_mat4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
-// Identity matrix
-template <typename T, int N>
-constexpr mat<T, N, N> make_identity_mat() {
-    if constexpr (N == 1) {
-        return {{1}};
-    } else if constexpr (N == 2) {
-        return {{1, 0}, {0, 1}};
-    } else if constexpr (N == 3) {
-        return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-    } else if constexpr (N == 4) {
-        return {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-    } else {
-        auto m = mat<T, N, N>{};
-        for (auto i = 0; i < N; i++) m[i][i] = 1;
-        return m;
-    }
-}
-
 // Matrix comparisons.
-template <typename T, int N, int M>
-constexpr bool operator==(const mat<T, N, M>& a, const mat<T, N, M>& b) {
-    if constexpr (M == 1) {
-        return a.x == b.x;
-    } else if constexpr (M == 2) {
+constexpr bool operator==(const mat2f& a, const mat2f& b) {
         return a.x == b.x && a.y == b.y;
-    } else if constexpr (M == 3) {
-        return a.x == b.x && a.y == b.y && a.z == b.z;
-    } else if constexpr (M == 4) {
-        return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-    } else {
-        for (auto i = 0; i < M; i++)
-            if (a[i] != b[i]) return false;
-        return true;
-    }
 }
-template <typename T, int N, int M>
-constexpr bool operator!=(const mat<T, N, M>& a, const mat<T, N, M>& b) {
+constexpr bool operator!=(const mat2f& a, const mat2f& b) {
     return !(a == b);
 }
 
 // Matrix operations.
-template <typename T, int N, int M>
-constexpr mat<T, N, M> operator+(const mat<T, N, M>& a, const mat<T, N, M>& b) {
-    if constexpr (M == 1) {
-        return {a.x + b.x};
-    } else if constexpr (M == 2) {
+constexpr mat2f operator+(const mat2f& a, const mat2f& b) {
         return {a.x + b.x, a.y + b.y};
-    } else if constexpr (M == 3) {
-        return {a.x + b.x, a.y + b.y, a.z + b.z};
-    } else if constexpr (M == 4) {
-        return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-    } else {
-        auto c = mat<T, N, M>{};
-        for (auto i = 0; i < M; i++) c[i] = a[i] + b[i];
-        return c;
-    }
 }
-template <typename T, int N, int M, typename T1>
-constexpr mat<T, N, M> operator*(const mat<T, N, M>& a, T1 b) {
-    if constexpr (M == 1) {
-        return {a.x * b};
-    } else if constexpr (M == 2) {
+constexpr mat2f operator*(const mat2f& a, float b) {
         return {a.x * b, a.y * b};
-    } else if constexpr (M == 3) {
-        return {a.x * b, a.y * b, a.z * b};
-    } else if constexpr (M == 4) {
-        return {a.x * b, a.y * b, a.z * b, a.w * b};
-    } else {
-        auto c = mat<T, N, M>{};
-        for (auto i = 0; i < M; i++) c[i] = a[i] * b;
-        return c;
-    }
 }
-template <typename T, int N, int M>
-constexpr vec<T, N> operator*(const mat<T, N, M>& a, const vec<T, M>& b) {
-    if constexpr (M == 1) {
-        return a.x * b.x;
-    } else if constexpr (M == 2) {
+constexpr vec2f operator*(const mat2f& a, const vec2f& b) {
         return a.x * b.x + a.y * b.y;
-    } else if constexpr (M == 3) {
-        return a.x * b.x + a.y * b.y + a.z * b.z;
-    } else if constexpr (M == 4) {
-        return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-    } else {
-        auto c = vec<T, N>{};
-        for (auto i = 0; i < M; i++) c += a[i] + b[i];
-        return c;
-    }
 }
-template <typename T, int N, int M>
-constexpr vec<T, M> operator*(const vec<T, N>& a, const mat<T, N, M>& b) {
-    if constexpr (M == 1) {
-        return {dot(a, b.x)};
-    } else if constexpr (M == 2) {
+constexpr vec2f operator*(const vec2f& a, const mat2f& b) {
         return {dot(a, b.x), dot(a, b.y)};
-    } else if constexpr (M == 3) {
-        return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
-    } else if constexpr (M == 4) {
-        return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
-    } else {
-        auto c = vec<T, M>{};
-        for (auto i = 0; i < M; i++) c[i] = dot(a, b[i]);
-        return c;
-    }
 }
-template <typename T, int N, int M, int K>
-constexpr mat<T, N, M> operator*(const mat<T, N, K>& a, const mat<T, K, M>& b) {
-    if constexpr (M == 1) {
-        return {dot(a, b.x)};
-    } else if constexpr (M == 2) {
+constexpr mat2f operator*(const mat2f& a, const mat2f& b) {
         return {a * b.x, a * b.y};
-    } else if constexpr (M == 3) {
-        return {a * b.x, a * b.y, a * b.z};
-    } else if constexpr (M == 4) {
-        return {a * b.x, a * b.y, a * b.z, a * b.w};
-    } else {
-        auto c = mat<T, N, M>{};
-        for (auto i = 0; i < M; i++) c[i] = a * b[i];
-        return c;
-    }
 }
 
 // Matrix assignments.
-template <typename T, int N, int M>
-constexpr mat<T, N, M>& operator+=(mat<T, N, M>& a, const mat<T, N, M>& b) {
+constexpr mat2f& operator+=(mat2f& a, const mat2f& b) {
     return a = a + b;
 }
-template <typename T, int N>
-constexpr mat<T, N, N>& operator*=(mat<T, N, N>& a, const mat<T, N, N>& b) {
+constexpr mat2f& operator*=(mat2f& a, const mat2f& b) {
     return a = a * b;
 }
-template <typename T, int N, int M, typename T1>
-constexpr mat<T, N, M>& operator*=(mat<T, N, M>& a, T1 b) {
+constexpr mat2f& operator*=(mat2f& a, float b) {
     return a = a * b;
 }
 
 // Matrix diagonals and transposes.
-template <typename T, int N>
-constexpr vec<T, N> diagonal(const mat<T, N, N>& a) {
-    if constexpr (N == 1) {
-        return {a.x.x};
-    } else if constexpr (N == 2) {
+constexpr vec2f diagonal(const mat2f& a) {
         return {a.x.x, a.y.y};
-    } else if constexpr (N == 3) {
-        return {a.x.x, a.y.y, a.z.z};
-    } else if constexpr (N == 4) {
-        return {a.x.x, a.y.y, a.z.z, a.w.w};
-    } else {
-        auto c = vec<T, N>{};
-        for (auto i = 0; i < N; i++) c[i] += a[i][i];
-        return c;
-    }
 }
-template <typename T, int N, int M>
-constexpr mat<T, M, N> transpose(const mat<T, N, M>& a) {
-    if constexpr (N == 1 && M == 1) {
-        return a;
-    } else if constexpr (N == 2 && M == 2) {
+constexpr mat2f transpose(const mat2f& a) {
         return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
-    } else if constexpr (N == 3 && M == 3) {
+}
+
+// Matrix adjoints, determinants and inverses.
+constexpr float determinant(const mat2f& a) {
+    return cross(a.x, a.y);
+}
+constexpr mat2f adjoint(const mat2f& a) {
+    return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
+}
+constexpr mat2f inverse(const mat2f& a) {
+    return adjoint(a) * (1 / determinant(a));
+}
+
+// Matrix comparisons.
+constexpr bool operator==(const mat3f& a, const mat3f& b) {
+        return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+constexpr bool operator!=(const mat3f& a, const mat3f& b) {
+    return !(a == b);
+}
+
+// Matrix operations.
+constexpr mat3f operator+(const mat3f& a, const mat3f& b) {
+        return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
+constexpr mat3f operator*(const mat3f& a, float b) {
+        return {a.x * b, a.y * b, a.z * b};
+}
+constexpr vec3f operator*(const mat3f& a, const vec3f& b) {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+constexpr vec3f operator*(const vec3f& a, const mat3f& b) {
+        return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
+}
+constexpr mat3f operator*(const mat3f& a, const mat3f& b) {
+        return {a * b.x, a * b.y, a * b.z};
+}
+
+// Matrix assignments.
+constexpr mat3f& operator+=(mat3f& a, const mat3f& b) {
+    return a = a + b;
+}
+constexpr mat3f& operator*=(mat3f& a, const mat3f& b) {
+    return a = a * b;
+}
+constexpr mat3f& operator*=(mat3f& a, float b) {
+    return a = a * b;
+}
+
+// Matrix diagonals and transposes.
+constexpr vec3f diagonal(const mat3f& a) {
+        return {a.x.x, a.y.y, a.z.z};
+}
+constexpr mat3f transpose(const mat3f& a) {
         return {
             {a.x.x, a.y.x, a.z.x},
             {a.x.y, a.y.y, a.z.y},
             {a.x.z, a.y.z, a.z.z},
         };
-    } else if constexpr (N == 4 && M == 4) {
+}
+
+// Matrix adjoints, determinants and inverses.
+constexpr float determinant(const mat3f& a) {
+    return dot(a.x, cross(a.y, a.z));
+}
+constexpr mat3f adjoint(const mat3f& a) {
+    return transpose(
+        mat3f{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
+}
+constexpr mat3f inverse(const mat3f& a) {
+    return adjoint(a) * (1 / determinant(a));
+}
+
+// Constructs a basis from a direction
+inline mat3f make_basis_fromz(const vec3f& v) {
+    // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+    auto z    = normalize(v);
+    auto sign = copysignf(1.0f, z.z);
+    auto a    = -1.0f / (sign + z.z);
+    auto b    = z.x * z.y * a;
+    auto x    = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
+    auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
+    return {x, y, z};
+}
+
+// Matrix comparisons.
+constexpr bool operator==(const mat4f& a, const mat4f& b) {
+        return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+}
+constexpr bool operator!=(const mat4f& a, const mat4f& b) {
+    return !(a == b);
+}
+
+// Matrix operations.
+constexpr mat4f operator+(const mat4f& a, const mat4f& b) {
+        return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+}
+constexpr mat4f operator*(const mat4f& a, float b) {
+        return {a.x * b, a.y * b, a.z * b, a.w * b};
+}
+constexpr vec4f operator*(const mat4f& a, const vec4f& b) {
+        return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+constexpr vec4f operator*(const vec4f& a, const mat4f& b) {
+        return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
+}
+constexpr mat4f operator*(const mat4f& a, const mat4f& b) {
+        return {a * b.x, a * b.y, a * b.z, a * b.w};
+}
+
+// Matrix assignments.
+constexpr mat4f& operator+=(mat4f& a, const mat4f& b) {
+    return a = a + b;
+}
+constexpr mat4f& operator*=(mat4f& a, const mat4f& b) {
+    return a = a * b;
+}
+constexpr mat4f& operator*=(mat4f& a, float b) {
+    return a = a * b;
+}
+
+// Matrix diagonals and transposes.
+constexpr vec4f diagonal(const mat4f& a) {
+        return {a.x.x, a.y.y, a.z.z, a.w.w};
+}
+constexpr mat4f transpose(const mat4f& a) {
         return {
             {a.x.x, a.y.x, a.z.x, a.w.x},
             {a.x.y, a.y.y, a.z.y, a.w.y},
             {a.x.z, a.y.z, a.z.z, a.w.z},
             {a.x.w, a.y.w, a.z.w, a.w.w},
         };
-    } else {
-        auto c = mat<T, M, N>{};
-        for (auto i = 0; i < M; i++)
-            for (auto j = 0; j < N; j++) c[j][i] = a[i][j];
-    }
-}
-
-// Matrix adjoints, determinants and inverses.
-template <typename T>
-constexpr T determinant(const mat<T, 2, 2>& a) {
-    return cross(a.x, a.y);
-}
-template <typename T>
-constexpr T determinant(const mat<T, 3, 3>& a) {
-    return dot(a.x, cross(a.y, a.z));
-}
-template <typename T>
-constexpr mat<T, 2, 2> adjoint(const mat<T, 2, 2>& a) {
-    return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
-}
-template <typename T>
-constexpr mat<T, 3, 3> adjoint(const mat<T, 3, 3>& a) {
-    return transpose(
-        mat<T, 3, 3>{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
-}
-template <typename T>
-constexpr mat<T, 2, 2> inverse(const mat<T, 2, 2>& a) {
-    return adjoint(a) * (1 / determinant(a));
-}
-template <typename T>
-constexpr mat<T, 3, 3> inverse(const mat<T, 3, 3>& a) {
-    return adjoint(a) * (1 / determinant(a));
-}
-
-// Constructs a basis from a direction
-template <typename T>
-constexpr mat<T, 3, 3> make_basis_fromz(const vec<T, 3>& v) {
-    // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-    auto z    = normalize(v);
-    auto sign = copysignf(1.0f, z.z);
-    auto a    = -1.0f / (sign + z.z);
-    auto b    = z.x * z.y * a;
-    auto x    = vec<T, 3>{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
-    auto y    = vec<T, 3>{b, sign + z.y * z.y * a, -z.y};
-    return {x, y, z};
 }
 
 }  // namespace yocto

@@ -81,13 +81,11 @@ static inline void from_json(const json& js, vec<T, N>& val) {
     nlohmann::from_json(js, (std::array<T, N>&)val);
 }
 
-template <typename T, int N, int M>
-static inline void to_json(json& js, const mat<T, N, M>& val) {
-    nlohmann::to_json(js, (const std::array<T, N * M>&)val);
+static inline void to_json(json& js, const mat4f& val) {
+    nlohmann::to_json(js, (const std::array<float, 16>&)val);
 }
-template <typename T, int N, int M>
-static inline void from_json(const json& js, mat<T, N, M>& val) {
-    nlohmann::from_json(js, (std::array<T, N * M>&)val);
+static inline void from_json(const json& js, mat4f& val) {
+    nlohmann::from_json(js, (std::array<float, 16>&)val);
 }
 
 }  // namespace yocto
@@ -450,9 +448,14 @@ inline void get_yaml_value(string_view str, frame2f& value) {
 inline void get_yaml_value(string_view str, frame3f& value) {
     return get_yaml_value(str, (array<float, 12>&)value);
 }
-template <typename T, int N, int M>
-inline void get_yaml_value(string_view str, mat<T, N, M>& value) {
-    return get_yaml_value(str, (array<T, N * M>&)value);
+inline void get_yaml_value(string_view str, mat2f& value) {
+    return get_yaml_value(str, (array<float, 4>&)value);
+}
+inline void get_yaml_value(string_view str, mat3f& value) {
+    return get_yaml_value(str, (array<float, 9>&)value);
+}
+inline void get_yaml_value(string_view str, mat4f& value) {
+    return get_yaml_value(str, (array<float, 16>&)value);
 }
 
 struct load_yaml_options {};

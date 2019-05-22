@@ -81,13 +81,11 @@ inline void from_json(const json& js, vec<T, N>& val) {
     nlohmann::from_json(js, (std::array<T, N>&)val);
 }
 
-template <typename T, int N, int M>
-inline void to_json(json& js, const mat<T, N, M>& val) {
-    nlohmann::to_json(js, (const std::array<T, N * M>&)val);
+inline void to_json(json& js, const mat4f& val) {
+    nlohmann::to_json(js, (const std::array<float, 16>&)val);
 }
-template <typename T, int N, int M>
-inline void from_json(const json& js, mat<T, N, M>& val) {
-    nlohmann::from_json(js, (std::array<T, N * M>&)val);
+inline void from_json(const json& js, mat4f& val) {
+    nlohmann::from_json(js, (std::array<float, 16>&)val);
 }
 
 struct disney_material {
