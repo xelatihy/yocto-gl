@@ -99,13 +99,6 @@ inline void from_json(const json& js, mat<T, N, M>& val) {
     nlohmann::from_json(js, (std::array<T, N * M>&)val);
 }
 
-inline void to_json(json& js, const bbox3f& val) {
-    nlohmann::to_json(js, (const std::array<float, 6>&)val);
-}
-inline void from_json(const json& js, bbox3f& val) {
-    nlohmann::from_json(js, (std::array<float, 6>&)val);
-}
-
 struct disney_material {
     string name                = "";
     vec3f  color               = zero3f;
