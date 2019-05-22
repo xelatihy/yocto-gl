@@ -72,13 +72,46 @@ static inline void save_json(const string& filename, const json& js) {
     save_text(filename, js.dump(4));
 }
 
-template <typename T, int N>
-static inline void to_json(json& js, const vec<T, N>& val) {
-    nlohmann::to_json(js, (const std::array<T, N>&)val);
+static inline void to_json(json& js, const vec2f& val) {
+    nlohmann::to_json(js, (const std::array<float, 2>&)val);
 }
-template <typename T, int N>
-static inline void from_json(const json& js, vec<T, N>& val) {
-    nlohmann::from_json(js, (std::array<T, N>&)val);
+static inline void from_json(const json& js, vec2f& val) {
+    nlohmann::from_json(js, (std::array<float, 2>&)val);
+}
+
+static inline void to_json(json& js, const vec3f& val) {
+    nlohmann::to_json(js, (const std::array<float, 3>&)val);
+}
+static inline void from_json(const json& js, vec3f& val) {
+    nlohmann::from_json(js, (std::array<float, 3>&)val);
+}
+
+static inline void to_json(json& js, const vec4f& val) {
+    nlohmann::to_json(js, (const std::array<float, 4>&)val);
+}
+static inline void from_json(const json& js, vec4f& val) {
+    nlohmann::from_json(js, (std::array<float, 4>&)val);
+}
+
+static inline void to_json(json& js, const vec2i& val) {
+    nlohmann::to_json(js, (const std::array<int, 2>&)val);
+}
+static inline void from_json(const json& js, vec2i& val) {
+    nlohmann::from_json(js, (std::array<int, 2>&)val);
+}
+
+static inline void to_json(json& js, const vec3i& val) {
+    nlohmann::to_json(js, (const std::array<int, 3>&)val);
+}
+static inline void from_json(const json& js, vec3i& val) {
+    nlohmann::from_json(js, (std::array<int, 3>&)val);
+}
+
+static inline void to_json(json& js, const vec4i& val) {
+    nlohmann::to_json(js, (const std::array<int, 4>&)val);
+}
+static inline void from_json(const json& js, vec4i& val) {
+    nlohmann::from_json(js, (std::array<int, 4>&)val);
 }
 
 static inline void to_json(json& js, const mat4f& val) {
@@ -438,9 +471,23 @@ inline void get_yaml_value(string_view str, array<T, N>& value) {
     if (str.empty() || str.front() != ']') throw io_error("expected array");
     str.remove_prefix(1);
 }
-template <typename T, int N>
-inline void get_yaml_value(string_view str, vec<T, N>& value) {
-    return get_yaml_value(str, (array<T, N>&)value);
+inline void get_yaml_value(string_view str, vec2f& value) {
+    return get_yaml_value(str, (array<float, 2>&)value);
+}
+inline void get_yaml_value(string_view str, vec3f& value) {
+    return get_yaml_value(str, (array<float, 3>&)value);
+}
+inline void get_yaml_value(string_view str, vec4f& value) {
+    return get_yaml_value(str, (array<float, 4>&)value);
+}
+inline void get_yaml_value(string_view str, vec2i& value) {
+    return get_yaml_value(str, (array<int, 2>&)value);
+}
+inline void get_yaml_value(string_view str, vec3i& value) {
+    return get_yaml_value(str, (array<int, 3>&)value);
+}
+inline void get_yaml_value(string_view str, vec4i& value) {
+    return get_yaml_value(str, (array<int, 4>&)value);
 }
 inline void get_yaml_value(string_view str, frame2f& value) {
     return get_yaml_value(str, (array<float, 6>&)value);
@@ -852,14 +899,12 @@ static inline void print_yaml_keyvalue(
 static inline void print_yaml_keyvalue(FILE* fs, const char* name, bool value) {
     print(fs, "    {}: {}\n", name, value ? "true" : "false");
 }
-template <typename T>
 static inline void print_yaml_keyvalue(
-    FILE* fs, const char* name, const vec<T, 2>& value) {
+    FILE* fs, const char* name, const vec2f& value) {
     print(fs, "    {}: [ {}, {} ]\n", name, value.x, value.y);
 }
-template <typename T>
 static inline void print_yaml_keyvalue(
-    FILE* fs, const char* name, const vec<T, 3>& value) {
+    FILE* fs, const char* name, const vec3f& value) {
     print(fs, "    {}: [ {}, {}, {} ]\n", name, value.x, value.y, value.z);
 }
 static inline void print_yaml_keyvalue(

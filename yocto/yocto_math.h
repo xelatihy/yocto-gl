@@ -9,7 +9,7 @@
 //
 // We provide common operations for small vectors and matrices typically used
 // in graphics. In particular, we support 1-4 dimensional vectors
-// coordinates (`vec<T, 1>`, `vec<T, 2>`, `vec<T, 3>`, `vec<T, 4>`).
+// coordinates (`vec_<T, 1>`, `vec_<T, 2>`, `vec_<T, 3>`, `vec_<T, 4>`).
 //
 // We support 2-4 dimensional matrices (`mat2f`, `mat3f`, `mat4f`) with 
 // matrix-matrix and matrix-vector products, transposes and inverses. 
@@ -214,79 +214,79 @@ namespace yocto {
 
 // Small size vectors.
 template <typename T, int N>
-struct vec;
+struct vec_;
 
 template <typename T>
-struct vec<T, 1> {
+struct vec_<T, 1> {
     T x;
 
-    constexpr vec() : x{0} {}
-    constexpr vec(T x) : x{x} {}
+    constexpr vec_() : x{0} {}
+    constexpr vec_(T x) : x{x} {}
 
     constexpr T&       operator[](int i) { return (&x)[i]; }
     constexpr const T& operator[](int i) const { return (&x)[i]; }
 };
 
 template <typename T>
-struct vec<T, 2> {
+struct vec_<T, 2> {
     T x, y;
 
-    constexpr vec() : x{0}, y{0} {}
-    constexpr vec(T x, T y) : x{x}, y{y} {}
-    constexpr vec(const vec<T, 1>& v, T y) : x{v.x}, y{y} {}
-    constexpr explicit vec(T v) : x{v}, y{v} {}
+    constexpr vec_() : x{0}, y{0} {}
+    constexpr vec_(T x, T y) : x{x}, y{y} {}
+    constexpr vec_(const vec_<T, 1>& v, T y) : x{v.x}, y{y} {}
+    constexpr explicit vec_(T v) : x{v}, y{v} {}
 
     constexpr T&       operator[](int i) { return (&x)[i]; }
     constexpr const T& operator[](int i) const { return (&x)[i]; }
 };
 
 template <typename T>
-struct vec<T, 3> {
+struct vec_<T, 3> {
     T x, y, z;
 
-    constexpr vec() : x{0}, y{0}, z{0} {}
-    constexpr vec(T x, T y, T z) : x{x}, y{y}, z{z} {}
-    constexpr vec(const vec<T, 2>& v, T z) : x{v.x}, y{v.y}, z{z} {}
-    constexpr explicit vec(T v) : x{v}, y{v}, z{v} {}
+    constexpr vec_() : x{0}, y{0}, z{0} {}
+    constexpr vec_(T x, T y, T z) : x{x}, y{y}, z{z} {}
+    constexpr vec_(const vec_<T, 2>& v, T z) : x{v.x}, y{v.y}, z{z} {}
+    constexpr explicit vec_(T v) : x{v}, y{v}, z{v} {}
 
     constexpr T&       operator[](int i) { return (&x)[i]; }
     constexpr const T& operator[](int i) const { return (&x)[i]; }
 };
 
 template <typename T>
-struct vec<T, 4> {
+struct vec_<T, 4> {
     T x, y, z, w;
 
-    constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
-    constexpr vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
-    constexpr vec(const vec<T, 3>& v, T w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-    constexpr explicit vec(T v) : x{v}, y{v}, z{v}, w{v} {}
+    constexpr vec_() : x{0}, y{0}, z{0}, w{0} {}
+    constexpr vec_(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
+    constexpr vec_(const vec_<T, 3>& v, T w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
+    constexpr explicit vec_(T v) : x{v}, y{v}, z{v}, w{v} {}
 
     constexpr T&       operator[](int i) { return (&x)[i]; }
     constexpr const T& operator[](int i) const { return (&x)[i]; }
 };
 
 // Typedefs
-using vec1f = vec<float, 1>;
-using vec2f = vec<float, 2>;
-using vec3f = vec<float, 3>;
-using vec4f = vec<float, 4>;
-using vec1i = vec<int, 1>;
-using vec2i = vec<int, 2>;
-using vec3i = vec<int, 3>;
-using vec4i = vec<int, 4>;
-using vec1b = vec<byte, 1>;
-using vec2b = vec<byte, 2>;
-using vec3b = vec<byte, 3>;
-using vec4b = vec<byte, 4>;
-using vec1d = vec<double, 1>;
-using vec2d = vec<double, 2>;
-using vec3d = vec<double, 3>;
-using vec4d = vec<double, 4>;
+using vec1f = vec_<float, 1>;
+using vec2f = vec_<float, 2>;
+using vec3f = vec_<float, 3>;
+using vec4f = vec_<float, 4>;
+using vec1i = vec_<int, 1>;
+using vec2i = vec_<int, 2>;
+using vec3i = vec_<int, 3>;
+using vec4i = vec_<int, 4>;
+using vec1b = vec_<byte, 1>;
+using vec2b = vec_<byte, 2>;
+using vec3b = vec_<byte, 3>;
+using vec4b = vec_<byte, 4>;
+using vec1d = vec_<double, 1>;
+using vec2d = vec_<double, 2>;
+using vec3d = vec_<double, 3>;
+using vec4d = vec_<double, 4>;
 
 // Zero vector constants.
 template <typename T, int N>
-constexpr auto zero   = vec<T, N>{};
+constexpr auto zero   = vec_<T, N>{};
 constexpr auto zero1f = vec1f{0};
 constexpr auto zero2f = vec2f{0, 0};
 constexpr auto zero3f = vec3f{0, 0, 0};
@@ -302,7 +302,7 @@ constexpr auto zero4b = vec4b{0, 0, 0, 0};
 
 // Vector comparison operations.
 template <typename T, int N>
-constexpr bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr bool operator==(const vec_<T, N>& a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return a.x == b.x;
     } else if constexpr (N == 2) {
@@ -318,7 +318,7 @@ constexpr bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
     }
 }
 template <typename T, int N>
-constexpr bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr bool operator!=(const vec_<T, N>& a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return a.x != b.x;
     } else if constexpr (N == 2) {
@@ -334,21 +334,21 @@ constexpr bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
 
 // Element access
 template <typename T, int N>
-constexpr vec<T, 3>& xyz(vec<T, N>& a) {
+constexpr vec_<T, 3>& xyz(vec_<T, N>& a) {
     if constexpr (N == 3) {
         return a;
     } else if constexpr (N == 4) {
-        return (vec<T, 3>&)a;
+        return (vec_<T, 3>&)a;
     } else {
         throw runtime_error("operation not supported");
     }
 }
 template <typename T, int N>
-constexpr const vec<T, 3>& xyz(const vec<T, N>& a) {
+constexpr const vec_<T, 3>& xyz(const vec_<T, N>& a) {
     if constexpr (N == 3) {
         return a;
     } else if constexpr (N == 4) {
-        return (const vec<T, 3>&)a;
+        return (const vec_<T, 3>&)a;
     } else {
         throw runtime_error("operation not supported");
     }
@@ -356,11 +356,11 @@ constexpr const vec<T, 3>& xyz(const vec<T, N>& a) {
 
 // Vector operations.
 template <typename T, int N>
-constexpr vec<T, N> operator+(const vec<T, N>& a) {
+constexpr vec_<T, N> operator+(const vec_<T, N>& a) {
     return a;
 }
 template <typename T, int N>
-constexpr vec<T, N> operator-(const vec<T, N>& a) {
+constexpr vec_<T, N> operator-(const vec_<T, N>& a) {
     if constexpr (N == 1) {
         return {-a.x};
     } else if constexpr (N == 2) {
@@ -370,13 +370,13 @@ constexpr vec<T, N> operator-(const vec<T, N>& a) {
     } else if constexpr (N == 4) {
         return {-a.x, -a.y, -a.z, -a.w};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = -a[i];
         return c;
     }
 }
 template <typename T, int N>
-constexpr vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec_<T, N> operator+(const vec_<T, N>& a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return {a.x + b.x};
     } else if constexpr (N == 2) {
@@ -386,13 +386,13 @@ constexpr vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a[i] + b[i];
         return c;
     }
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N> operator+(const vec<T, N>& a, T1 b) {
+constexpr vec_<T, N> operator+(const vec_<T, N>& a, T1 b) {
     if constexpr (N == 1) {
         return {a.x + b};
     } else if constexpr (N == 2) {
@@ -402,13 +402,13 @@ constexpr vec<T, N> operator+(const vec<T, N>& a, T1 b) {
     } else if constexpr (N == 4) {
         return {a.x + b, a.y + b, a.z + b, a.w + b};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a[i] + b;
         return c;
     }
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N> operator+(T1 a, const vec<T, N>& b) {
+constexpr vec_<T, N> operator+(T1 a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return {a + b.x};
     } else if constexpr (N == 2) {
@@ -418,13 +418,13 @@ constexpr vec<T, N> operator+(T1 a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a + b.x, a + b.y, a + b.z, a + b.w};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a + b[i];
         return c;
     }
 }
 template <typename T, int N>
-constexpr vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec_<T, N> operator-(const vec_<T, N>& a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return {a.x - b.x};
     } else if constexpr (N == 2) {
@@ -434,13 +434,13 @@ constexpr vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a[i] - b[i];
         return c;
     }
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N> operator-(const vec<T, N>& a, T1 b) {
+constexpr vec_<T, N> operator-(const vec_<T, N>& a, T1 b) {
     if constexpr (N == 1) {
         return {a.x - b};
     } else if constexpr (N == 2) {
@@ -450,13 +450,13 @@ constexpr vec<T, N> operator-(const vec<T, N>& a, T1 b) {
     } else if constexpr (N == 4) {
         return {a.x - b, a.y - b, a.z - b, a.w - b};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a[i] - b;
         return c;
     }
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N> operator-(T1 a, const vec<T, N>& b) {
+constexpr vec_<T, N> operator-(T1 a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return {a - b.x};
     } else if constexpr (N == 2) {
@@ -466,13 +466,13 @@ constexpr vec<T, N> operator-(T1 a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a - b.x, a - b.y, a - b.z, a - b.w};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a - b[i];
         return c;
     }
 }
 template <typename T, int N>
-constexpr vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec_<T, N> operator*(const vec_<T, N>& a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return {a.x * b.x};
     } else if constexpr (N == 2) {
@@ -482,13 +482,13 @@ constexpr vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a[i] * b[i];
         return c;
     }
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N> operator*(const vec<T, N>& a, T1 b) {
+constexpr vec_<T, N> operator*(const vec_<T, N>& a, T1 b) {
     if constexpr (N == 1) {
         return {a.x * b};
     } else if constexpr (N == 2) {
@@ -498,13 +498,13 @@ constexpr vec<T, N> operator*(const vec<T, N>& a, T1 b) {
     } else if constexpr (N == 4) {
         return {a.x * b, a.y * b, a.z * b, a.w * b};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a[i] * b;
         return c;
     }
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N> operator*(T1 a, const vec<T, N>& b) {
+constexpr vec_<T, N> operator*(T1 a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return {a * b.x};
     } else if constexpr (N == 2) {
@@ -514,13 +514,13 @@ constexpr vec<T, N> operator*(T1 a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a * b.x, a * b.y, a * b.z, a * b.w};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a * b[i];
         return c;
     }
 }
 template <typename T, int N>
-constexpr vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec_<T, N> operator/(const vec_<T, N>& a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return {a.x / b.x};
     } else if constexpr (N == 2) {
@@ -530,13 +530,13 @@ constexpr vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a[i] / b[i];
         return c;
     }
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N> operator/(const vec<T, N>& a, T1 b) {
+constexpr vec_<T, N> operator/(const vec_<T, N>& a, T1 b) {
     if constexpr (N == 1) {
         return {a.x / b};
     } else if constexpr (N == 2) {
@@ -546,13 +546,13 @@ constexpr vec<T, N> operator/(const vec<T, N>& a, T1 b) {
     } else if constexpr (N == 4) {
         return {a.x / b, a.y / b, a.z / b, a.w / b};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a[i] / b;
         return c;
     }
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N> operator/(T1 a, const vec<T, N>& b) {
+constexpr vec_<T, N> operator/(T1 a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return {a / b.x};
     } else if constexpr (N == 2) {
@@ -562,7 +562,7 @@ constexpr vec<T, N> operator/(T1 a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a / b.x, a / b.y, a / b.z, a / b.w};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = a / b[i];
         return c;
     }
@@ -570,41 +570,41 @@ constexpr vec<T, N> operator/(T1 a, const vec<T, N>& b) {
 
 // Vector assignments
 template <typename T, int N>
-constexpr vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec_<T, N>& operator+=(vec_<T, N>& a, const vec_<T, N>& b) {
     return a = a + b;
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N>& operator+=(vec<T, N>& a, T1 b) {
+constexpr vec_<T, N>& operator+=(vec_<T, N>& a, T1 b) {
     return a = a + b;
 }
 template <typename T, int N>
-constexpr vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec_<T, N>& operator-=(vec_<T, N>& a, const vec_<T, N>& b) {
     return a = a - b;
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N>& operator-=(vec<T, N>& a, T1 b) {
+constexpr vec_<T, N>& operator-=(vec_<T, N>& a, T1 b) {
     return a = a - b;
 }
 template <typename T, int N>
-constexpr vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec_<T, N>& operator*=(vec_<T, N>& a, const vec_<T, N>& b) {
     return a = a * b;
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
+constexpr vec_<T, N>& operator*=(vec_<T, N>& a, T1 b) {
     return a = a * b;
 }
 template <typename T, int N>
-constexpr vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec_<T, N>& operator/=(vec_<T, N>& a, const vec_<T, N>& b) {
     return a = a / b;
 }
 template <typename T, int N, typename T1>
-constexpr vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
+constexpr vec_<T, N>& operator/=(vec_<T, N>& a, T1 b) {
     return a = a / b;
 }
 
 // Vector products and lengths.
 template <typename T, int N>
-constexpr T dot(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr T dot(const vec_<T, N>& a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return a.x * b.x;
     } else if constexpr (N == 2) {
@@ -620,39 +620,39 @@ constexpr T dot(const vec<T, N>& a, const vec<T, N>& b) {
     }
 }
 template <typename T>
-constexpr T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
+constexpr T cross(const vec_<T, 2>& a, const vec_<T, 2>& b) {
     return a.x * b.y - a.y * b.x;
 }
 template <typename T>
-constexpr vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
+constexpr vec_<T, 3> cross(const vec_<T, 3>& a, const vec_<T, 3>& b) {
     return {
         a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
 
 template <typename T, int N>
-constexpr T length(const vec<T, N>& a) {
+constexpr T length(const vec_<T, N>& a) {
     return sqrt(dot(a, a));
 }
 template <typename T, int N>
-constexpr vec<T, N> normalize(const vec<T, N>& a) {
+constexpr vec_<T, N> normalize(const vec_<T, N>& a) {
     auto l = length(a);
     return (l != 0) ? a / l : a;
 }
 template <typename T, int N>
-constexpr T distance(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr T distance(const vec_<T, N>& a, const vec_<T, N>& b) {
     return length(a - b);
 }
 template <typename T, int N>
-constexpr T distance_squared(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr T distance_squared(const vec_<T, N>& a, const vec_<T, N>& b) {
     return dot(a - b, a - b);
 }
 
 template <typename T>
-constexpr T angle(const vec<T, 3>& a, const vec<T, 3>& b) {
+constexpr T angle(const vec_<T, 3>& a, const vec_<T, 3>& b) {
     return acos(clamp(dot(normalize(a), normalize(b)), (T)-1, (T)1));
 }
 template <typename T, typename T1>
-constexpr vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u) {
+constexpr vec_<T, 4> slerp(const vec_<T, 4>& a, const vec_<T, 4>& b, T1 u) {
     // https://en.wikipedia.org/wiki/Slerp
     auto an = normalize(a), bn = normalize(b);
     auto d = dot(an, bn);
@@ -668,23 +668,23 @@ constexpr vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u) {
 
 // Orthogonal vectors.
 template <typename T>
-constexpr vec<T, 3> orthogonal(const vec<T, 3>& v) {
+constexpr vec_<T, 3> orthogonal(const vec_<T, 3>& v) {
     // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
-    return abs(v.x) > abs(v.z) ? vec<T, 3>{-v.y, v.x, 0}
-                               : vec<T, 3>{0, -v.z, v.y};
+    return abs(v.x) > abs(v.z) ? vec_<T, 3>{-v.y, v.x, 0}
+                               : vec_<T, 3>{0, -v.z, v.y};
 }
 template <typename T>
-constexpr vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
+constexpr vec_<T, 3> orthonormalize(const vec_<T, 3>& a, const vec_<T, 3>& b) {
     return normalize(a - b * dot(a, b));
 }
 
 // Reflected and refracted vector.
 template <typename T>
-constexpr vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n) {
+constexpr vec_<T, 3> reflect(const vec_<T, 3>& w, const vec_<T, 3>& n) {
     return -w + 2 * dot(n, w) * n;
 }
 template <typename T, typename T1>
-constexpr vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T1 eta) {
+constexpr vec_<T, 3> refract(const vec_<T, 3>& w, const vec_<T, 3>& n, T1 eta) {
     // auto k = 1.0 - eta * eta * (1.0 - dot(n, w) * dot(n, w));
     auto k = 1 - eta * eta * max((T)0, 1 - dot(n, w) * dot(n, w));
     if (k < 0) return {0, 0, 0};  // tir
@@ -693,7 +693,7 @@ constexpr vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T1 eta) {
 
 // Max element and clamp.
 template <typename T, int N>
-constexpr vec<T, N> max(const vec<T, N>& a, T b) {
+constexpr vec_<T, N> max(const vec_<T, N>& a, T b) {
     if constexpr (N == 1) {
         return {max(a.x, b)};
     } else if constexpr (N == 2) {
@@ -703,13 +703,13 @@ constexpr vec<T, N> max(const vec<T, N>& a, T b) {
     } else if constexpr (N == 4) {
         return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = max(a[i], b);
         return c;
     }
 }
 template <typename T, int N>
-constexpr vec<T, N> min(const vec<T, N>& a, T b) {
+constexpr vec_<T, N> min(const vec_<T, N>& a, T b) {
     if constexpr (N == 1) {
         return {min(a.x, b)};
     } else if constexpr (N == 2) {
@@ -719,13 +719,13 @@ constexpr vec<T, N> min(const vec<T, N>& a, T b) {
     } else if constexpr (N == 4) {
         return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = min(a[i], b);
         return c;
     }
 }
 template <typename T, int N>
-constexpr vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec_<T, N> max(const vec_<T, N>& a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return {max(a.x, b.x)};
     } else if constexpr (N == 2) {
@@ -735,13 +735,13 @@ constexpr vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = max(a[i], b[i]);
         return c;
     }
 }
 template <typename T, int N>
-constexpr vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec_<T, N> min(const vec_<T, N>& a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return {min(a.x, b.x)};
     } else if constexpr (N == 2) {
@@ -751,13 +751,13 @@ constexpr vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = min(a[i], b[i]);
         return c;
     }
 }
 template <typename T, int N, typename T1, typename T2>
-constexpr vec<T, N> clamp(const vec<T, N>& x, T1 min, T2 max) {
+constexpr vec_<T, N> clamp(const vec_<T, N>& x, T1 min, T2 max) {
     if constexpr (N == 1) {
         return {clamp(x.x, min, max)};
     } else if constexpr (N == 2) {
@@ -769,13 +769,13 @@ constexpr vec<T, N> clamp(const vec<T, N>& x, T1 min, T2 max) {
         return {clamp(x.x, min, max), clamp(x.y, min, max),
             clamp(x.z, min, max), clamp(x.w, min, max)};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = clamp(x[i], min, max);
         return c;
     }
 }
 template <typename T, int N>
-constexpr vec<T, N> clamp01(const vec<T, N>& x) {
+constexpr vec_<T, N> clamp01(const vec_<T, N>& x) {
     if constexpr (N == 1) {
         return {clamp01(x.x)};
     } else if constexpr (N == 2) {
@@ -785,14 +785,14 @@ constexpr vec<T, N> clamp01(const vec<T, N>& x) {
     } else if constexpr (N == 4) {
         return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = clamp01(x[i]);
         return c;
     }
 }
 
 template <typename T, int N>
-constexpr T max(const vec<T, N>& a) {
+constexpr T max(const vec_<T, N>& a) {
     if constexpr (N == 1) {
         return a.x;
     } else if constexpr (N == 2) {
@@ -808,7 +808,7 @@ constexpr T max(const vec<T, N>& a) {
     }
 }
 template <typename T, int N>
-constexpr T min(const vec<T, N>& a) {
+constexpr T min(const vec_<T, N>& a) {
     if constexpr (N == 1) {
         return a.x;
     } else if constexpr (N == 2) {
@@ -824,7 +824,7 @@ constexpr T min(const vec<T, N>& a) {
     }
 }
 template <typename T, int N>
-constexpr T sum(const vec<T, N>& a) {
+constexpr T sum(const vec_<T, N>& a) {
     if constexpr (N == 1) {
         return a.x;
     } else if constexpr (N == 2) {
@@ -840,11 +840,11 @@ constexpr T sum(const vec<T, N>& a) {
     }
 }
 template <typename T, int N>
-constexpr T mean(const vec<T, N>& a) {
+constexpr T mean(const vec_<T, N>& a) {
     return sum(a) / N;
 }
 template <typename T, int N>
-constexpr int max_element(const vec<T, N>& a) {
+constexpr int max_element(const vec_<T, N>& a) {
     auto pos = 0;
     for (auto i = 1; i < N; i++) {
         if (a[i] > a[pos]) pos = i;
@@ -852,7 +852,7 @@ constexpr int max_element(const vec<T, N>& a) {
     return pos;
 }
 template <typename T, int N>
-constexpr int min_element(const vec<T, N>& a) {
+constexpr int min_element(const vec_<T, N>& a) {
     auto pos = 0;
     for (auto i = 1; i < N; i++) {
         if (a[i] < a[pos]) pos = i;
@@ -862,7 +862,7 @@ constexpr int min_element(const vec<T, N>& a) {
 
 // Apply a unary function to all vector elements
 template <typename T, int N, typename Func>
-constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a) {
+constexpr vec_<T, N> apply(const Func& func, const vec_<T, N>& a) {
     if constexpr (N == 1) {
         return {func(a.x)};
     } else if constexpr (N == 2) {
@@ -872,14 +872,14 @@ constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a) {
     } else if constexpr (N == 4) {
         return {func(a.x), func(a.y), func(a.z), func(a.w)};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = func(a[i]);
         return c;
     }
 }
 // Apply a binary function to all vector elements
 template <typename T, int N, typename Func>
-constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a, T b) {
+constexpr vec_<T, N> apply(const Func& func, const vec_<T, N>& a, T b) {
     if constexpr (N == 1) {
         return {func(a.x, b)};
     } else if constexpr (N == 2) {
@@ -889,15 +889,15 @@ constexpr vec<T, N> apply(const Func& func, const vec<T, N>& a, T b) {
     } else if constexpr (N == 4) {
         return {func(a.x, b), func(a.y, b), func(a.z, b), func(a.w, b)};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = func(a[i], b);
         return c;
     }
 }
 // Apply a binary function to all vector elements
 template <typename T, int N, typename Func>
-constexpr vec<T, N> apply(
-    const Func& func, const vec<T, N>& a, const vec<T, N>& b) {
+constexpr vec_<T, N> apply(
+    const Func& func, const vec_<T, N>& a, const vec_<T, N>& b) {
     if constexpr (N == 1) {
         return {func(a.x, b.x)};
     } else if constexpr (N == 2) {
@@ -907,7 +907,7 @@ constexpr vec<T, N> apply(
     } else if constexpr (N == 4) {
         return {func(a.x, b.x), func(a.y, b.y), func(a.z, b.z), func(a.w, b.w)};
     } else {
-        auto c = vec<T, N>{};
+        auto c = vec_<T, N>{};
         for (auto i = 0; i < N; i++) c[i] = func(a[i], b);
         return c;
     }
@@ -915,40 +915,40 @@ constexpr vec<T, N> apply(
 
 // Functions applied to vector elements
 template <typename T, int N>
-constexpr vec<T, N> abs(const vec<T, N>& a) {
+constexpr vec_<T, N> abs(const vec_<T, N>& a) {
     return apply([](const T& a) { return abs(a); }, a);
 };
 template <typename T, int N>
-constexpr vec<T, N> sqrt(const vec<T, N>& a) {
+constexpr vec_<T, N> sqrt(const vec_<T, N>& a) {
     return apply([](const T& a) { return sqrt(a); }, a);
 };
 template <typename T, int N, typename T1>
-constexpr vec<T, N> pow(const vec<T, N>& a, const T1& b) {
+constexpr vec_<T, N> pow(const vec_<T, N>& a, const T1& b) {
     return apply([](const T& a, const T& b) { return pow(a, b); }, a, b);
 };
 template <typename T, int N>
-constexpr vec<T, N> exp(const vec<T, N>& a) {
+constexpr vec_<T, N> exp(const vec_<T, N>& a) {
     return apply([](const T& a) { return exp(a); }, a);
 };
 template <typename T, int N>
-constexpr vec<T, N> log(const vec<T, N>& a) {
+constexpr vec_<T, N> log(const vec_<T, N>& a) {
     return apply([](const T& a) { return log(a); }, a);
 };
 template <typename T, int N>
-constexpr vec<T, N> exp2(const vec<T, N>& a) {
+constexpr vec_<T, N> exp2(const vec_<T, N>& a) {
     return apply([](const T& a) { return exp2(a); }, a);
 };
 template <typename T, int N>
-constexpr vec<T, N> log2(const vec<T, N>& a) {
+constexpr vec_<T, N> log2(const vec_<T, N>& a) {
     return apply([](const T& a) { return log2(a); }, a);
 };
 template <typename T, int N, typename T1>
-constexpr vec<T, N> gain(const vec<T, N>& a, const T1& b) {
+constexpr vec_<T, N> gain(const vec_<T, N>& a, const T1& b) {
     return apply([](const T& a, const T& b) { return gain(a, b); }, a, b);
 };
 
 template <typename T, int N>
-constexpr bool isfinite(const vec<T, N>& a) {
+constexpr bool isfinite(const vec_<T, N>& a) {
     if constexpr (N == 1) {
         return isfinite(a.x);
     } else if constexpr (N == 2) {
@@ -963,24 +963,24 @@ constexpr bool isfinite(const vec<T, N>& a) {
 };
 
 // Quaternion operatons represented as xi + yj + zk + w
-// const auto identity_quat4f = vec<float, 4>{0, 0, 0, 1};
+// const auto identity_quat4f = vec_<float, 4>{0, 0, 0, 1};
 template <typename T, typename T1>
-constexpr vec<T, 4> quat_mul(const vec<T, 4>& a, T1 b) {
+constexpr vec_<T, 4> quat_mul(const vec_<T, 4>& a, T1 b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
 template <typename T>
-constexpr vec<T, 4> quat_mul(const vec<T, 4>& a, const vec<T, 4>& b) {
+constexpr vec_<T, 4> quat_mul(const vec_<T, 4>& a, const vec_<T, 4>& b) {
     return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
         a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
         a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
         a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
 }
 template <typename T>
-constexpr vec<T, 4> quat_conjugate(const vec<T, 4>& a) {
+constexpr vec_<T, 4> quat_conjugate(const vec_<T, 4>& a) {
     return {-a.x, -a.y, -a.z, a.w};
 }
 template <typename T>
-constexpr vec<T, 4> quat_inverse(const vec<T, 4>& a) {
+constexpr vec_<T, 4> quat_inverse(const vec_<T, 4>& a) {
     return quat_conjugate(a) / dot(a, a);
 }
 
@@ -990,10 +990,10 @@ namespace std {
 
 // Hash functor for vector for use with unordered_map
 template <typename T, int N>
-struct hash<yocto::vec<T, N>> {
+struct hash<yocto::vec_<T, N>> {
     static constexpr std::hash<T> hasher = std::hash<T>();
 
-    size_t operator()(const yocto::vec<T, N>& v) const {
+    size_t operator()(const yocto::vec_<T, N>& v) const {
         auto h = (size_t)0;
         for (auto i = 0; i < N; i++)
             h ^= hasher((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);

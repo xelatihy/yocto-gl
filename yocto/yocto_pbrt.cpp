@@ -257,9 +257,23 @@ static inline void parse_value(
 }
 
 // parse a vec type
-template <typename T, int N>
-static inline void parse_value(pbrt_stream& stream, vec<T, N>& value) {
-    for (auto i = 0; i < N; i++) parse_value(stream, value[i]);
+static inline void parse_value(pbrt_stream& stream, vec2f& value) {
+    for (auto i = 0; i < 2; i++) parse_value(stream, value[i]);
+}
+static inline void parse_value(pbrt_stream& stream, vec3f& value) {
+    for (auto i = 0; i < 3; i++) parse_value(stream, value[i]);
+}
+static inline void parse_value(pbrt_stream& stream, vec4f& value) {
+    for (auto i = 0; i < 4; i++) parse_value(stream, value[i]);
+}
+static inline void parse_value(pbrt_stream& stream, vec2i& value) {
+    for (auto i = 0; i < 2; i++) parse_value(stream, value[i]);
+}
+static inline void parse_value(pbrt_stream& stream, vec3i& value) {
+    for (auto i = 0; i < 3; i++) parse_value(stream, value[i]);
+}
+static inline void parse_value(pbrt_stream& stream, vec4i& value) {
+    for (auto i = 0; i < 4; i++) parse_value(stream, value[i]);
 }
 static inline void parse_value(pbrt_stream& stream, mat4f& value) {
     for (auto i = 0; i < 4; i++) parse_value(stream, value[i]);

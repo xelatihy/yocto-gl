@@ -1217,10 +1217,10 @@ void make_preset(image<vec4f>& img, const string& type) {
         make_image(img, params);
     } else if (type == "sky") {
         make_sunsky(img, size, pif / 4, 3.0f, false, 1.0f, 0.0f,
-            vec<float, 3>{0.7f, 0.7f, 0.7f});
+            vec3f{0.7f, 0.7f, 0.7f});
     } else if (type == "sunsky") {
         make_sunsky(img, size, pif / 4, 3.0f, true, 1.0f, 0.0f,
-            vec<float, 3>{0.7f, 0.7f, 0.7f});
+            vec3f{0.7f, 0.7f, 0.7f});
     } else if (type == "noise") {
         auto params = make_image_params{};
         params.type = make_image_type::noise;
@@ -1323,10 +1323,10 @@ void make_preset(image<vec4f>& img, const string& type) {
         make_image(img, params);
     } else if (type == "test-sky") {
         make_sunsky(img, size, pif / 4, 3.0f, false, 1.0f, 0.0f,
-            vec<float, 3>{0.7f, 0.7f, 0.7f});
+            vec3f{0.7f, 0.7f, 0.7f});
     } else if (type == "test-sunsky") {
         make_sunsky(img, size, pif / 4, 3.0f, true, 1.0f, 0.0f,
-            vec<float, 3>{0.7f, 0.7f, 0.7f});
+            vec3f{0.7f, 0.7f, 0.7f});
     } else if (type == "test-noise") {
         auto params = make_image_params{};
         params.type = make_image_type::noise;
