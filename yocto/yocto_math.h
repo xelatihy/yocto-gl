@@ -174,8 +174,8 @@ constexpr float gain(float a, float gain) {
         return bias(a * 2 - 1, 1 - gain) / 2 + 0.5f;
     }
 }
-inline float  radians(float x) { return x * pif / 180; }
-inline float  degrees(float x) { return x * 180 / pif; }
+inline float radians(float x) { return x * pif / 180; }
+inline float degrees(float x) { return x * 180 / pif; }
 
 constexpr int min(int x, int y) { return (x < y) ? x : y; }
 constexpr int max(int x, int y) { return (x > y) ? x : y; }
@@ -361,8 +361,12 @@ constexpr vec2f clamp(const vec2f& x, float min, float max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max)};
 }
 constexpr vec2f clamp01(const vec2f& x) { return {clamp01(x.x), clamp01(x.y)}; }
-inline vec2f lerp(const vec2f& a, const vec2f& b, float u) { return a * (1 - u) + b * u; }
-inline vec2f lerp(const vec2f& a, const vec2f& b, const vec2f& u) { return a * (1 - u) + b * u; }
+inline vec2f    lerp(const vec2f& a, const vec2f& b, float u) {
+    return a * (1 - u) + b * u;
+}
+inline vec2f lerp(const vec2f& a, const vec2f& b, const vec2f& u) {
+    return a * (1 - u) + b * u;
+}
 
 constexpr float max(const vec2f& a) { return max(a.x, a.y); }
 constexpr float min(const vec2f& a) { return min(a.x, a.y); }
@@ -521,8 +525,12 @@ constexpr vec3f clamp(const vec3f& x, float min, float max) {
 constexpr vec3f clamp01(const vec3f& x) {
     return {clamp01(x.x), clamp01(x.y), clamp01(x.z)};
 }
-inline vec3f lerp(const vec3f& a, const vec3f& b, float u) { return a * (1 - u) + b * u; }
-inline vec3f lerp(const vec3f& a, const vec3f& b, const vec3f& u) { return a * (1 - u) + b * u; }
+inline vec3f lerp(const vec3f& a, const vec3f& b, float u) {
+    return a * (1 - u) + b * u;
+}
+inline vec3f lerp(const vec3f& a, const vec3f& b, const vec3f& u) {
+    return a * (1 - u) + b * u;
+}
 
 constexpr float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }
 constexpr float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
@@ -669,8 +677,12 @@ constexpr vec4f clamp(const vec4f& x, float min, float max) {
 constexpr vec4f clamp01(const vec4f& x) {
     return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
 }
-inline vec4f lerp(const vec4f& a, const vec4f& b, float u) { return a * (1 - u) + b * u; }
-inline vec4f lerp(const vec4f& a, const vec4f& b, const vec4f& u) { return a * (1 - u) + b * u; }
+inline vec4f lerp(const vec4f& a, const vec4f& b, float u) {
+    return a * (1 - u) + b * u;
+}
+inline vec4f lerp(const vec4f& a, const vec4f& b, const vec4f& u) {
+    return a * (1 - u) + b * u;
+}
 
 constexpr float max(const vec4f& a) {
     return max(max(max(a.x, a.y), a.z), a.w);

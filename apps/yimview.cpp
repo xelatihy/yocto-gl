@@ -34,8 +34,8 @@ using namespace yocto;
 #include "ext/CLI11.hpp"
 
 struct image_stats {
-    vec4f         min    = zero4f;
-    vec4f         max    = zero4f;
+    vec4f         min       = zero4f;
+    vec4f         max       = zero4f;
     vec4f         average   = zero4f;
     vector<vec3f> histogram = {};
 };
@@ -105,8 +105,8 @@ struct app_state {
 void compute_image_stats(
     image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
     auto max_histo = linear_hdr ? 8 : 1;
-    stats.min   = vec4f{float_max};
-    stats.max   = vec4f{float_min};
+    stats.min      = vec4f{float_max};
+    stats.max      = vec4f{float_min};
     stats.average  = zero4f;
     stats.histogram.assign(256, zero3f);
     for (auto& p : img) {
@@ -273,10 +273,8 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_histogram_opengl_widget(win, "image histo", img_stats.histogram);
         auto display_stats = (img.load_done) ? img.display_stats
                                              : image_stats{};
-        draw_dragger_opengl_widget(
-            win, "display min", display_stats.min);
-        draw_dragger_opengl_widget(
-            win, "display max", display_stats.max);
+        draw_dragger_opengl_widget(win, "display min", display_stats.min);
+        draw_dragger_opengl_widget(win, "display max", display_stats.max);
         draw_dragger_opengl_widget(win, "display avg", display_stats.average);
         draw_histogram_opengl_widget(
             win, "display histo", display_stats.histogram);
