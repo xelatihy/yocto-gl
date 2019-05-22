@@ -1475,8 +1475,8 @@ void make_preset(image<vec4f>& img, const string& type) {
         params.type   = make_image_type::grid;
         params.color0 = vec4f{0.2, 0.2, 0.2, 1};
         params.color1 = vec4f{0.5, 0.5, 0.5, 1};
+        params.borderw = 0.0025;
         make_image(img, params);
-        add_border(img, 2, {0, 0, 0, 1});
     } else if (type == "test-grid") {
         auto params   = make_image_params{};
         params.type   = make_image_type::grid;
