@@ -1752,6 +1752,10 @@ extern const vector<vec3f> quady_positions;
 extern const vector<vec3f> quady_normals;
 extern const vector<vec2f> quady_texcoords;
 extern const vector<vec4i> quady_quads;
+extern const vector<vec3f> cube_positions;
+extern const vector<vec3f> cube_normals;
+extern const vector<vec2f> cube_texcoords;
+extern const vector<vec4i> cube_quads;
 extern const vector<vec3f> suzanne_positions;
 extern const vector<vec4i> suzanne_quads;
 
@@ -1844,6 +1848,9 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::cube: {
+            subdivide_quads(cube_quads, cube_positions, cube_normals,
+                cube_texcoords, params.subdivisions);
+            /*
             auto steps  = vec3i{pow2(params.subdivisions)};
             auto uvsize = vec3f{1};
             auto size   = vec3f{2};
@@ -1883,6 +1890,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
                     normals[i] *= ps;
                 }
             }
+            */
         } break;
         case make_shape_type::sphere: {
             make_box(quads, positions, normals, texcoords,
@@ -1924,9 +1932,8 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
             }
         } break;
         case make_shape_type::disk: {
-            make_rect(quads, positions, normals, texcoords,
-                vec2i{pow2(params.subdivisions)}, {2, 2},
-                {params.uvsize, params.uvsize});
+            subdivide_quads(quad_quads, quad_positions, quad_normals,
+                quad_texcoords, params.subdivisions);
             for (auto i = 0; i < positions.size(); i++) {
                 // Analytical Methods for Squaring the Disc, by C. Fong
                 // https://arxiv.org/abs/1509.06344
@@ -3472,11 +3479,11 @@ static void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
 namespace yocto {
 
 const vector<vec3f> quad_positions = vector<vec3f>{
-    {-1, -1, 0}, {-1, +1, 0}, {+1, +1, 0}, {+1, -1, 0}};
+    {-1, -1, 0}, {+1, -1, 0}, {+1, +1, 0}, {-1, +1, 0}};
 const vector<vec3f> quad_normals = vector<vec3f>{
     {0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
 const vector<vec2f> quad_texcoords = vector<vec2f>{
-    {0, 0}, {1, 0}, {1, 1}, {0, 1}};
+    {0, 1}, {1, 1}, {1, 0}, {0, 0}};
 const vector<vec4i> quad_quads      = vector<vec4i>{{0, 1, 2, 3}};
 const vector<vec3f> quady_positions = vector<vec3f>{
     {-1, 0, -1}, {-1, 0, +1}, {+1, 0, +1}, {+1, 0, -1}};
@@ -3484,7 +3491,38 @@ const vector<vec3f> quady_normals = vector<vec3f>{
     {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}};
 const vector<vec2f> quady_texcoords = vector<vec2f>{
     {0, 0}, {1, 0}, {1, 1}, {0, 1}};
-const vector<vec4i> quady_quads       = vector<vec4i>{{0, 1, 2, 3}};
+const vector<vec4i> quady_quads    = vector<vec4i>{{0, 1, 2, 3}};
+const vector<vec3f> cube_positions = vector<vec3f>{
+    {-1, -1, +1},
+    {+1, -1, +1},
+    {+1, +1, +1},
+    {-1, +1, +1},
+    {+1, -1, -1},
+    {-1, -1, -1},
+    {-1, +1, -1},
+    {+1, +1, -1},
+};
+const vector<vec3f> cube_normals = vector<vec3f>{
+    {0, 0, +1},
+    {0, 0, +1},
+    {0, 0, +1},
+    {0, 0, +1},
+    {0, 0, -1},
+    {0, 0, -1},
+    {0, 0, -1},
+    {0, 0, -1},
+};
+const vector<vec2f> cube_texcoords = vector<vec2f>{
+    {0, 1},
+    {1, 1},
+    {1, 0},
+    {0, 0},
+    {0, 1},
+    {1, 1},
+    {1, 0},
+    {0, 0},
+};
+const vector<vec4i> cube_quads = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7}};
 const vector<vec3f> fvcube_posistions = vector<vec3f>{{-1, -1, -1},
     {-1, +1, -1}, {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1},
     {+1, +1, +1}, {+1, -1, +1}};
