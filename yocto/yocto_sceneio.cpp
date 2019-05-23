@@ -36,7 +36,6 @@
 #include "ext/happly.h"
 #define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
-#include "ext/json.hpp"
 
 #include <array>
 #include <climits>
@@ -49,115 +48,7 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using nlohmann::json;
 using std::unique_ptr;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// JSON SUPPORT
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Load a JSON object
-// static inline void load_json(const string& filename, json& js) {
-//     auto text = ""s;
-//     load_text(filename, text);
-//     js = json::parse(text);
-// }
-
-// Save a JSON object
-static inline void save_json(const string& filename, const json& js) {
-    // we have to use streams here since the json library is faster with them
-    save_text(filename, js.dump(4));
-}
-
-static inline void to_json(json& js, const vec2f& val) {
-    nlohmann::to_json(js, (const std::array<float, 2>&)val);
-}
-static inline void from_json(const json& js, vec2f& val) {
-    nlohmann::from_json(js, (std::array<float, 2>&)val);
-}
-
-static inline void to_json(json& js, const vec3f& val) {
-    nlohmann::to_json(js, (const std::array<float, 3>&)val);
-}
-static inline void from_json(const json& js, vec3f& val) {
-    nlohmann::from_json(js, (std::array<float, 3>&)val);
-}
-
-static inline void to_json(json& js, const vec4f& val) {
-    nlohmann::to_json(js, (const std::array<float, 4>&)val);
-}
-static inline void from_json(const json& js, vec4f& val) {
-    nlohmann::from_json(js, (std::array<float, 4>&)val);
-}
-
-static inline void to_json(json& js, const vec2i& val) {
-    nlohmann::to_json(js, (const std::array<int, 2>&)val);
-}
-static inline void from_json(const json& js, vec2i& val) {
-    nlohmann::from_json(js, (std::array<int, 2>&)val);
-}
-
-static inline void to_json(json& js, const vec3i& val) {
-    nlohmann::to_json(js, (const std::array<int, 3>&)val);
-}
-static inline void from_json(const json& js, vec3i& val) {
-    nlohmann::from_json(js, (std::array<int, 3>&)val);
-}
-
-static inline void to_json(json& js, const vec4i& val) {
-    nlohmann::to_json(js, (const std::array<int, 4>&)val);
-}
-static inline void from_json(const json& js, vec4i& val) {
-    nlohmann::from_json(js, (std::array<int, 4>&)val);
-}
-
-static inline void to_json(json& js, const mat4f& val) {
-    nlohmann::to_json(js, (const std::array<float, 16>&)val);
-}
-static inline void from_json(const json& js, mat4f& val) {
-    nlohmann::from_json(js, (std::array<float, 16>&)val);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF CONVERSION TO/FROM JSON
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-static inline void to_json(json& js, const image<T>& value) {
-    js           = json::object();
-    js["width"]  = value.size().x;
-    js["height"] = value.size().y;
-    js["pixels"] = value._pixels;
-}
-template <typename T>
-static inline void from_json(const json& js, image<T>& value) {
-    auto width  = js.at("width").get<int>();
-    auto height = js.at("height").get<int>();
-    auto pixels = js.at("pixels").get<vector<T>>();
-    value       = image{{width, height}, (const T*)pixels.data()};
-}
-template <typename T>
-static inline void to_json(json& js, const volume<T>& value) {
-    js           = json::object();
-    js["width"]  = value.size().x;
-    js["height"] = value.size().y;
-    js["depth"]  = value.size().z;
-    js["voxels"] = value._voxels;
-}
-template <typename T>
-static inline void from_json(const json& js, volume<T>& value) {
-    auto width  = js.at("width").get<int>();
-    auto height = js.at("height").get<int>();
-    auto depth  = js.at("depth").get<int>();
-    auto voxels = js.at("voxels").get<vector<T>>();
-    value       = volume{{width, height, depth}, (const T*)voxels.data()};
-}
 
 }  // namespace yocto
 
@@ -2305,276 +2196,441 @@ static void load_gltf_scene(const string& filename, yocto_scene& scene,
     }
 }
 
+// begin/end objects and arrays
+struct write_json_state {
+    FILE*                   fs = nullptr;
+    vector<pair<bool, bool>> stack;
+};
+static inline void _write_json_next(
+    write_json_state& state, bool dedent = false) {
+    static const char* indents[7] = {
+        "", "  ", "    ", "      ", "        ", "          ", "            "};
+    if (state.stack.empty()) return;
+    write_text(state.fs, state.stack.back().second ? ",\n" : "\n");
+    write_text(
+        state.fs, indents[clamp((int)state.stack.size() + (dedent ? -1 : 0), 0, 6)]);
+    state.stack.back().second = true;
+}
+static inline void _write_json_value(write_json_state& state, int value) {
+    write_text(state.fs, to_string(value));
+}
+static inline void _write_json_value(write_json_state& state, size_t value) {
+    write_text(state.fs, to_string(value));
+}
+static inline void _write_json_value(write_json_state& state, float value) {
+    write_text(state.fs, to_string(value));
+}
+static inline void _write_json_value(write_json_state& state, bool value) {
+    write_text(state.fs, to_string(value, true));
+}
+static inline void _write_json_value(write_json_state& state, const string& value) {
+    write_text(state.fs, value);
+}
+static inline void _write_json_value(write_json_state& state, const char* value) {
+    write_text(state.fs, value);
+}
+static inline void _write_json_value(write_json_state& state, const vec2f& value) {
+    write_text(state.fs, to_string(value, true));
+}
+static inline void _write_json_value(write_json_state& state, const vec3f& value) {
+    write_text(state.fs, to_string(value, true));
+}
+static inline void _write_json_value(write_json_state& state, const vec4f& value) {
+    write_text(state.fs, to_string(value, true));
+}
+static inline void _write_json_value(write_json_state& state, const mat4f& value) {
+    write_text(state.fs, to_string(value, true));
+}
+static inline void _write_json_value(write_json_state& state, const vector<int>& value) {
+    write_text(state.fs, "[ ");
+    for(auto i = 0; i < value.size(); i ++) {
+        if(i) write_text(state.fs, ", ");
+        _write_json_value(state, value[i]);
+    }
+    write_text(state.fs, " ]");
+}
+static inline void write_json_object(write_json_state& state) {
+    _write_json_next(state);
+    write_text(state.fs, "{ ");
+    state.stack.push_back({true, false});
+}
+static inline void write_json_object(write_json_state& state, const char* key) {
+    _write_json_next(state);
+    _write_json_value(state, key);
+    write_text(state.fs, ": {");
+    state.stack.push_back({true, false});
+}
+static inline void write_json_array(write_json_state& state) {
+    _write_json_next(state);
+    write_text(state.fs, "[ ");
+    state.stack.push_back({false, false});
+}
+static inline void write_json_array(write_json_state& state, const char* key) {
+    _write_json_next(state);
+    _write_json_value(state, key);
+    write_text(state.fs, ": [");
+    state.stack.push_back({false, false});
+}
+static inline void write_json_pop(write_json_state& state) {
+    _write_json_next(state, true);
+    write_text(state.fs, state.stack.back().first ? "}" : "]");
+    state.stack.pop_back();
+}
+template <typename T>
+static inline void write_json_value(write_json_state& state, const T& value) {
+    _write_json_next(state);
+    _write_json_value(state, value);
+}
+template <typename T>
+static inline void write_json_value(
+    write_json_state& state, const char* key, const T& value) {
+    _write_json_next(state);
+    _write_json_value(state, key);
+    write_text(state.fs, ": ");
+    _write_json_value(state, value);
+}
+static inline void write_json_begin(write_json_state& state) {
+    state.stack.clear();
+    write_json_object(state);
+}
+static inline void write_json_end(write_json_state& state) {
+    write_json_pop(state);
+    if (state.stack.empty()) throw io_error("bad json stack");
+}
+
 // convert gltf scene to json
-static void scene_to_gltf(const yocto_scene& scene, json& js) {
-    // init to emprt object
-    js = json::object();
+static void save_gltf(const string& filename, const yocto_scene& scene) {
+    // shapes
+    struct gltf_shape {
+        string        uri       = "";
+        int           material  = -1;
+        int           mode      = 0;
+        vector<int>   indices   = {};
+        vector<vec3f> positions = {};
+        vector<vec3f> normals   = {};
+        vector<vec2f> texcoords = {};
+        vector<vec4f> colors    = {};
+        vector<float> radius    = {};
+        vector<vec4f> tangents  = {};
+    };
+
+    // json writer
+    auto fs_   = open_output_file(filename);
+    auto fs    = fs_.fs;
+    auto state = write_json_state{fs};
+
+    // begin writing
+    write_json_begin(state);
 
     // start creating json
-    js["asset"]["version"] = "2.0";
-
-    // prepare top level nodes
-    if (!scene.cameras.empty()) js["cameras"] = json::array();
-    if (!scene.textures.empty()) {
-        js["textures"] = json::array();
-        js["images"]   = json::array();
-    }
-    if (!scene.materials.empty()) js["materials"] = json::array();
-    if (!scene.shapes.empty()) {
-        js["meshes"]      = json::array();
-        js["buffers"]     = json::array();
-        js["bufferViews"] = json::array();
-        js["accessors"]   = json::array();
-    }
-    if (!scene.instances.empty()) js["nodes"] = json::array();
-    if (!scene.nodes.empty()) js["nodes"] = json::array();
+    write_json_object(state, "asset");
+    write_json_value(state, "version", "2.0");
+    write_json_value(
+        state, "generator", "Yocto/GL - https://github.com/xelatihy/yocto-gl");
+    write_json_pop(state);
 
     // convert cameras
+    write_json_array(state, "cameras");
     for (auto& camera : scene.cameras) {
-        auto cjs    = json();
-        cjs["name"] = camera.uri;
+        write_json_object(state);
+        write_json_value(state, "name", camera.uri);
         if (!camera.orthographic) {
-            cjs["type"]         = "perspective";
-            auto& pcjs          = cjs["perspective"];
-            pcjs["yfov"]        = camera_fovy(camera);
-            pcjs["aspectRatio"] = camera.film_width / camera.film_height;
-            pcjs["znear"]       = 0.01f;
+            write_json_value(state, "type", "perspective");
+            write_json_object(state, "perspective");
+            write_json_value(state, "yfov", camera_fovy(camera));
+            write_json_value(
+                state, "aspectRatio", camera.film_width / camera.film_height);
+            write_json_value(state, "znear", 0.01f);
+            write_json_pop(state);
         } else {
-            cjs["type"]   = "orthographic";
-            auto& ocjs    = cjs["orthographic"];
-            ocjs["xmag"]  = camera.film_width / 2;
-            ocjs["ymag"]  = camera.film_height / 2;
-            ocjs["znear"] = 0.01f;
+            write_json_value(state, "type", "orthographic");
+            write_json_object(state, "orthographic");
+            write_json_value(state, "xmag", camera.film_width / 2);
+            write_json_value(state, "ymag", camera.film_height / 2);
+            write_json_value(state, "znear", 0.01f);
+            write_json_pop(state);
         }
-        js["cameras"].push_back(cjs);
+        write_json_pop(state);
     }
+    write_json_pop(state);
 
     // textures
+    write_json_array(state, "images");
     for (auto& texture : scene.textures) {
-        auto tjs = json(), ijs = json();
-        tjs["source"] = (int)js["images"].size();
-        ijs["uri"]    = texture.uri;
-        js["images"].push_back(ijs);
-        js["textures"].push_back(tjs);
+        write_json_object(state);
+        write_json_value(state, "uri", texture.uri);
+        write_json_pop(state);
     }
+    write_json_pop(state);
+    auto tid = 0;
+    write_json_array(state, "textures");
+    for (auto& texture : scene.textures) {
+        write_json_object(state);
+        write_json_value(state, "source", tid++);
+        write_json_pop(state);
+    }
+    write_json_pop(state);
 
     // material
+    auto write_json_texture = [](write_json_state& state, const char* key,
+                                  int tid) {
+        write_json_object(state, key);
+        write_json_value(state, "index", tid);
+        write_json_pop(state);
+    };
+    write_json_array(state, "materials");
     for (auto& material : scene.materials) {
-        auto mjs    = json();
-        mjs["name"] = material.uri;
+        write_json_object(state);
+        write_json_value(state, "name", material.uri);
         if (material.emission != zero3f)
-            mjs["emissiveFactor"] = material.emission;
+            write_json_value(state, "emissiveFactor", material.emission);
         if (material.emission_texture >= 0)
-            mjs["emissiveTexture"]["index"] = material.emission_texture;
-        auto kd                 = vec4f{material.diffuse.x, material.diffuse.y,
+            write_json_texture(
+                state, "emissiveTexture", material.emission_texture);
+        auto kd = vec4f{material.diffuse.x, material.diffuse.y,
             material.diffuse.z, material.opacity};
-        auto mmjs               = json();
-        mmjs["baseColorFactor"] = kd;
-        mmjs["metallicFactor"]  = material.metallic;
-        mmjs["roughnessFactor"] = material.roughness;
-        if (material.diffuse_texture >= 0)
-            mmjs["baseColorTexture"]["index"] = material.diffuse_texture;
-        if (material.metallic_texture >= 0)
-            mmjs["metallicRoughnessTexture"]["index"] =
-                material.metallic_texture;
-        mjs["pbrMetallicRoughness"] = mmjs;
-        // auto mmjs                = json();
-        // mmjs["diffuseFactor"]    = kd;
-        // mmjs["specularFactor"]   = material.specular;
-        // mmjs["glossinessFactor"] = 1 - material.roughness;
-        // if (material.diffuse_texture >= 0)
-        //     mmjs["diffuseTexture"]["index"] = material.diffuse_texture;
-        // if (material.specular_texture >= 0)
-        //     mmjs["specularGlossinessTexture"]["index"] =
-        //         material.specular_texture;
-        // mjs["extensions"]["KHR_materials_pbrSpecularGlossiness"] = mmjs;
+        if (material.metallic || material.metallic_texture >= 0) {
+            write_json_object(state, "pbrMetallicRoughness");
+            write_json_value(state, "baseColorFactor", kd);
+            write_json_value(state, "metallicFactor", material.metallic);
+            write_json_value(state, "roughnessFactor", material.roughness);
+            if (material.diffuse_texture >= 0)
+                write_json_texture(
+                    state, "baseColorTexture", material.diffuse_texture);
+            if (material.metallic_texture >= 0)
+                write_json_texture(state, "metallicRoughnessTexture",
+                    material.metallic_texture);
+            write_json_pop(state);
+        } else {
+            write_json_object(state, "extensions");
+            write_json_object(state, "KHR_materials_pbrSpecularGlossiness");
+            write_json_value(state, "diffuseFactor", kd);
+            write_json_value(state, "specularFactor", material.specular);
+            write_json_value(state, "glossinessFactor", 1 - material.roughness);
+            if (material.diffuse_texture >= 0)
+                write_json_texture(
+                    state, "diffuseTexture", material.diffuse_texture);
+            if (material.specular_texture >= 0)
+                write_json_texture(state, "specularGlossinessTexture",
+                    material.specular_texture);
+            write_json_pop(state);
+            write_json_pop(state);
+        }
         if (material.normal_texture >= 0)
-            mjs["normalTexture"]["index"] = material.normal_texture;
-        js["materials"].push_back(mjs);
+            write_json_texture(state, "normalTexture", material.normal_texture);
+        write_json_pop(state);
     }
-    // shapes
-    auto smap = unordered_map<vec2i, int>{};
-    for (auto& instance : scene.instances) {
-        if (smap.find({instance.shape, instance.material}) != smap.end())
-            continue;
-        auto& shape = scene.shapes[instance.shape];
-        auto  mjs = json(), bjs = json(), pjs = json();
-        auto  bid         = js["buffers"].size();
-        mjs["name"]       = shape.uri;
-        mjs["primitives"] = json::array();
-        bjs["name"]       = shape.uri;
-        bjs["byteLength"] = 0;
-        bjs["uri"]        = get_noextension(shape.uri) + ".bin";
-        pjs["material"]   = instance.material;
-        auto add_accessor = [&js, &bjs, bid](
-                                int count, string type, bool indices = false) {
-            auto bytes = count * 4;
-            if (type == "VEC2") bytes *= 2;
-            if (type == "VEC3") bytes *= 3;
-            if (type == "VEC4") bytes *= 4;
-            auto ajs = json(), vjs = json();
-            vjs["buffer"]        = bid;
-            vjs["byteLength"]    = bytes;
-            vjs["byteOffset"]    = bjs["byteLength"].get<int>();
-            vjs["target"]        = (!indices) ? 34962 : 34963;
-            bjs["byteLength"]    = bjs["byteLength"].get<int>() + bytes;
-            ajs["bufferView"]    = (int)js["bufferViews"].size();
-            ajs["byteOffset"]    = 0;
-            ajs["componentType"] = (!indices) ? 5126 : 5125;
-            ajs["count"]         = count;
-            ajs["type"]          = type;
-            js["accessors"].push_back(ajs);
-            js["bufferViews"].push_back(vjs);
-            return (int)js["accessors"].size() - 1;
-        };
+    write_json_pop(state);
+
+    auto shapes = vector<gltf_shape>(scene.shapes.size());
+    auto sid    = 0;
+    for (auto& shape : scene.shapes) {
+        auto& split = shapes[sid++];
+        split.uri   = get_noextension(shape.uri) + ".bin";
+        split.mode  = 4;
+        if (!shape.points.empty()) split.mode = 1;
+        if (!shape.lines.empty()) split.mode = 1;
         if (shape.quads_positions.empty()) {
-            auto nverts = (int)shape.positions.size();
-            if (!shape.positions.empty())
-                pjs["attributes"]["POSITION"] = add_accessor(nverts, "VEC3");
-            if (!shape.normals.empty())
-                pjs["attributes"]["NORMAL"] = add_accessor(nverts, "VEC3");
-            if (!shape.texcoords.empty())
-                pjs["attributes"]["TEXCOORD_0"] = add_accessor(nverts, "VEC2");
-            if (!shape.colors.empty())
-                pjs["attributes"]["COLOR_0"] = add_accessor(nverts, "VEC4");
-            if (!shape.radius.empty())
-                pjs["attributes"]["RADIUS"] = add_accessor(nverts, "SCALAR");
-            if (!shape.points.empty()) {
-                pjs["indices"] = add_accessor(
-                    (int)shape.points.size(), "SCALAR", true);
-                pjs["mode"] = 1;
-            }
-            if (!shape.lines.empty()) {
-                pjs["indices"] = add_accessor(
-                    (int)shape.lines.size() * 2, "SCALAR", true);
-                pjs["mode"] = 1;
-            }
-            if (!shape.triangles.empty()) {
-                pjs["indices"] = add_accessor(
-                    (int)shape.triangles.size() * 3, "SCALAR", true);
-                pjs["mode"] = 4;
-            }
+            split.positions = shape.positions;
+            split.normals   = shape.normals;
+            split.texcoords = shape.texcoords;
+            split.colors    = shape.colors;
+            split.radius    = shape.radius;
+            split.indices.insert(split.indices.end(), shape.points.data(),
+                shape.points.data() + shape.points.size());
+            split.indices.insert(split.indices.end(), (int*)shape.lines.data(),
+                (int*)shape.lines.data() + shape.lines.size() * 2);
+            split.indices.insert(split.indices.end(),
+                (int*)shape.triangles.data(),
+                (int*)shape.triangles.data() + shape.triangles.size() * 3);
             if (!shape.quads.empty()) {
                 auto triangles = vector<vec3i>{};
                 quads_to_triangles(triangles, shape.quads);
-                pjs["indices"] = add_accessor(
-                    (int)triangles.size() * 3, "SCALAR", true);
-                pjs["mode"] = 4;
+                split.indices.insert(split.indices.end(),
+                    (int*)triangles.data(),
+                    (int*)triangles.data() + triangles.size() * 3);
             }
         } else {
-            auto positions = vector<vec3f>{};
-            auto normals   = vector<vec3f>{};
-            auto texcoords = vector<vec2f>{};
-            auto quads     = vector<vec4i>{};
-            auto triangles = vector<vec3i>{};
-            split_facevarying(quads, positions, normals, texcoords,
-                shape.quads_positions, shape.quads_normals,
+            auto quads = vector<vec4i>{};
+            split_facevarying(quads, split.positions, split.normals,
+                split.texcoords, shape.quads_positions, shape.quads_normals,
                 shape.quads_texcoords, shape.positions, shape.normals,
                 shape.texcoords);
+            auto triangles = vector<vec3i>{};
             quads_to_triangles(triangles, quads);
-            auto nverts = (int)positions.size();
-            if (!positions.empty())
-                pjs["attributes"]["POSITION"] = add_accessor(nverts, "VEC3");
-            if (!normals.empty())
-                pjs["attributes"]["NORMAL"] = add_accessor(nverts, "VEC3");
-            if (!texcoords.empty())
-                pjs["attributes"]["TEXCOORD_0"] = add_accessor(nverts, "VEC2");
-            if (!triangles.empty()) {
-                pjs["indices"] = add_accessor(
-                    (int)triangles.size() * 3, "SCALAR", true);
-                pjs["mode"] = 4;
-            }
+            split.indices.insert(split.indices.end(), (int*)triangles.data(),
+                (int*)triangles.data() + triangles.size() * 3);
         }
-        mjs["primitives"].push_back(pjs);
-        js["meshes"].push_back(mjs);
-        js["buffers"].push_back(bjs);
-        smap[{instance.shape, instance.material}] = (int)js["meshes"].size() -
-                                                    1;
+    }
+    for (auto& instance : scene.instances) {
+        shapes[instance.shape].material = instance.material;
     }
 
-    // nodes
-    for (auto& node : scene.nodes) {
-        auto njs           = json();
-        njs["name"]        = node.uri;
-        njs["matrix"]      = mat4f(node.local);
-        njs["translation"] = node.translation;
-        njs["rotation"]    = node.rotation;
-        njs["scale"]       = node.scale;
-        if (node.camera >= 0) njs["camera"] = node.camera;
-        if (node.instance >= 0) {
-            auto& instance = scene.instances[node.instance];
-            njs["mesh"]    = smap.at({instance.shape, instance.material});
-        }
-        if (!node.children.empty()) {
-            njs["children"] = json::array();
-            for (auto& c : node.children) njs["children"].push_back(c);
-        }
-        js["nodes"].push_back(njs);
+    // buffers
+    write_json_array(state, "buffers");
+    for (auto& shape : shapes) {
+        auto buffer_size = sizeof(int) * shape.indices.size() +
+                           sizeof(vec3f) * shape.positions.size() +
+                           sizeof(vec3f) * shape.normals.size() +
+                           sizeof(vec2f) * shape.texcoords.size() +
+                           sizeof(vec4f) * shape.colors.size() +
+                           sizeof(float) * shape.radius.size();
+        write_json_object(state);
+        write_json_value(state, "name", shape.uri);
+        write_json_value(state, "uri", shape.uri);
+        write_json_value(state, "byteLength", buffer_size);
+        write_json_pop(state);
     }
+    write_json_pop(state);
+
+    // buffer views
+    auto write_json_bufferview = [](write_json_state& state, auto& values,
+                                     size_t& offset, int bid, bool indices) {
+        if (values.empty()) return;
+        auto bytes = values.size() * sizeof(values[0]);
+        write_json_object(state);
+        write_json_value(state, "buffer", bid);
+        write_json_value(state, "byteLength", bytes);
+        write_json_value(state, "byteOffset", offset);
+        write_json_value(state, "target", (!indices) ? 34962 : 34963);
+        write_json_pop(state);
+        offset += bytes;
+    };
+    write_json_array(state, "bufferViews");
+    auto bid = 0;
+    for (auto& shape : shapes) {
+        auto offset = (size_t)0;
+        write_json_bufferview(state, shape.indices, offset, bid, true);
+        write_json_bufferview(state, shape.positions, offset, bid, false);
+        write_json_bufferview(state, shape.normals, offset, bid, false);
+        write_json_bufferview(state, shape.texcoords, offset, bid, false);
+        write_json_bufferview(state, shape.colors, offset, bid, false);
+        write_json_bufferview(state, shape.radius, offset, bid, false);
+        bid++;
+    }
+    write_json_pop(state);
+
+    // accessors
+    auto write_json_accessor = [](write_json_state& state, auto& values,
+                                   int& vid, bool indices) {
+        if (values.empty()) return;
+        auto count = values.size();
+        auto type  = "SCALAR";
+        if (!indices) {
+            if (sizeof(values[0]) / sizeof(float) == 2) type = "VEC2";
+            if (sizeof(values[0]) / sizeof(float) == 3) type = "VEC3";
+            if (sizeof(values[0]) / sizeof(float) == 4) type = "VEC4";
+        }
+        write_json_object(state);
+        write_json_value(state, "bufferView", vid++);
+        write_json_value(state, "byteOffset", 0);
+        write_json_value(state, "componentType", (!indices) ? 5126 : 5125);
+        write_json_value(state, "count", count);
+        write_json_value(state, "type", type);
+        write_json_pop(state);
+    };
+    auto vid = 0;
+    write_json_array(state, "accessors");
+    for (auto& shape : shapes) {
+        write_json_accessor(state, shape.indices, vid, true);
+        write_json_accessor(state, shape.positions, vid, false);
+        write_json_accessor(state, shape.normals, vid, false);
+        write_json_accessor(state, shape.texcoords, vid, false);
+        write_json_accessor(state, shape.colors, vid, false);
+        write_json_accessor(state, shape.radius, vid, false);
+    }
+    write_json_pop(state);
+
+    // meshes
+    auto aid = 0;
+    write_json_array(state, "meshes");
+    for (auto& shape : shapes) {
+        write_json_object(state);
+        write_json_value(state, "name", shape.uri);
+        write_json_array(state, "primitives");
+        write_json_value(state, "material", shape.material);
+        if (!shape.indices.empty()) write_json_value(state, "indices", aid++);
+        write_json_object(state, "attributes");
+        if (!shape.positions.empty())
+            write_json_value(state, "POSITION", aid++);
+        if (!shape.normals.empty()) write_json_value(state, "NORMAL", aid++);
+        if (!shape.texcoords.empty()) write_json_value(state, "indices", aid++);
+        if (!shape.colors.empty()) write_json_value(state, "TEXCOORD_0", aid++);
+        if (!shape.radius.empty()) write_json_value(state, "RADIUS", aid++);
+        write_json_accessor(state, shape.positions, vid, false);
+        write_json_accessor(state, shape.normals, vid, false);
+        write_json_accessor(state, shape.texcoords, vid, false);
+        write_json_accessor(state, shape.colors, vid, false);
+        write_json_accessor(state, shape.radius, vid, false);
+        write_json_pop(state);
+        write_json_pop(state);
+    }
+    write_json_pop(state);
+
+    // nodes
+    write_json_array(state, "nodes");
+    if (scene.nodes.empty()) {
+        auto camera_id = 0;
+        for (auto& camera : scene.cameras) {
+            write_json_object(state);
+            write_json_value(state, "name", camera.uri);
+            write_json_value(state, "camera", camera_id++);
+            write_json_value(state, "matrix", mat4f(camera.frame));
+            write_json_pop(state);
+        }
+        for (auto& instance : scene.instances) {
+            write_json_object(state);
+            write_json_value(state, "name", instance.uri);
+            write_json_value(state, "mesh", instance.shape);
+            write_json_value(state, "matrix", mat4f(instance.frame));
+            write_json_pop(state);
+        }
+    } else {
+        for (auto& node : scene.nodes) {
+            write_json_object(state);
+            write_json_value(state, "name", node.uri);
+            write_json_value(state, "matrix", mat4f(node.local));
+            write_json_value(state, "translation", node.translation);
+            write_json_value(state, "rotation", node.rotation);
+            write_json_value(state, "scale", node.scale);
+            if (node.camera >= 0)
+                write_json_value(state, "camera", node.camera);
+            if (node.instance >= 0) {
+                auto& instance = scene.instances[node.instance];
+                write_json_value(state, "mesh", instance.shape);
+            }
+            if (!node.children.empty()) {
+                write_json_value(state, "children", node.children);
+            }
+            write_json_pop(state);
+        }
+    }
+    write_json_pop(state);
 
     // animations not supported yet
     if (!scene.animations.empty())
         throw io_error("animation not supported yet");
 
-    // nodes from instances
-    if (scene.nodes.empty()) {
-        auto camera_id = 0;
-        for (auto& camera : scene.cameras) {
-            auto njs      = json();
-            njs["name"]   = camera.uri;
-            njs["camera"] = camera_id++;
-            njs["matrix"] = mat4f(camera.frame);
-            js["nodes"].push_back(njs);
-        }
-        for (auto& instance : scene.instances) {
-            auto njs      = json();
-            njs["name"]   = instance.uri;
-            njs["mesh"]   = smap.at({instance.shape, instance.material});
-            njs["matrix"] = mat4f(instance.frame);
-            js["nodes"].push_back(njs);
-        }
-    }
-}
+    // end writing
+    write_json_end(state);
 
-// save gltf mesh
-static void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
-    // open file
-    auto fs_ = open_output_file(filename);
-    auto fs  = fs_.fs;
-
+    // meshes
     auto write_values = [](FILE* fs, const auto& values) {
         if (values.empty()) return;
         if (fwrite(values.data(), sizeof(values.front()), values.size(), fs) !=
             values.size())
             throw io_error("cannot write to file");
     };
-
-    if (shape.quads_positions.empty()) {
+    auto dirname = get_dirname(filename);
+    for (auto& shape : shapes) {
+        auto fs_ = open_output_file(dirname + shape.uri);
+        auto fs  = fs_.fs;
+        write_values(fs, shape.indices);
         write_values(fs, shape.positions);
         write_values(fs, shape.normals);
         write_values(fs, shape.texcoords);
         write_values(fs, shape.colors);
         write_values(fs, shape.radius);
-        write_values(fs, shape.points);
-        write_values(fs, shape.lines);
-        write_values(fs, shape.triangles);
-        auto qtriangles = vector<vec3i>{};
-        quads_to_triangles(qtriangles, shape.quads);
-        write_values(fs, qtriangles);
-    } else {
-        auto positions = vector<vec3f>{};
-        auto normals   = vector<vec3f>{};
-        auto texcoords = vector<vec2f>{};
-        auto quads     = vector<vec4i>{};
-        auto triangles = vector<vec3i>{};
-        split_facevarying(quads, positions, normals, texcoords,
-            shape.quads_positions, shape.quads_normals, shape.quads_texcoords,
-            shape.positions, shape.normals, shape.texcoords);
-        quads_to_triangles(triangles, quads);
-        write_values(fs, positions);
-        write_values(fs, normals);
-        write_values(fs, texcoords);
-        write_values(fs, triangles);
     }
 }
 
@@ -2583,23 +2639,10 @@ static void save_gltf_scene(const string& filename, const yocto_scene& scene,
     const save_scene_params& params) {
     try {
         // save json
-        auto js               = json::object();
-        js["asset"]           = json::object();
-        js["asset"]["format"] = "Yocto/Scene";
-        js["asset"]["generator"] =
-            "Yocto/GL - https://github.com/xelatihy/yocto-gl";
-        scene_to_gltf(scene, js);
-        save_json(filename, js);
-
-        // meshes
-        auto dirname = get_dirname(filename);
-        for (auto& shape : scene.shapes) {
-            if (shape.uri == "") continue;
-            save_gltf_mesh(
-                get_noextension(dirname + shape.uri) + ".bin", shape);
-        }
+        save_gltf(filename, scene);
 
         // save textures
+        auto dirname = get_dirname(filename);
         save_textures(scene, dirname, params);
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
