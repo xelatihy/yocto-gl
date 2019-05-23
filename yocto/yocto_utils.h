@@ -133,15 +133,15 @@ namespace yocto {
 
 // String padding
 inline string pad_left(const string& str, int num, char pad = ' ') {
-    if(str.size() >= num) return str;
+    if (str.size() >= num) return str;
     auto pads = ""s;
-    for(auto i = 0; i < num - (int)str.size(); i ++) pads += pad;
+    for (auto i = 0; i < num - (int)str.size(); i++) pads += pad;
     return pads + str;
 }
 inline string pad_right(const string& str, int num, char pad = ' ') {
-    if(str.size() >= num) return str;
+    if (str.size() >= num) return str;
     auto pads = ""s;
-    for(auto i = 0; i < num - (int)str.size(); i ++) pads += pad;
+    for (auto i = 0; i < num - (int)str.size(); i++) pads += pad;
     return str + pads;
 }
 
@@ -571,14 +571,12 @@ template <typename T>
 struct concurrent_queue {
     // a simple concurrent queue that locks at every call
     concurrent_queue() {}
-    concurrent_queue(
-        const concurrent_queue<T>& other) {
+    concurrent_queue(const concurrent_queue<T>& other) {
         if (!other._queue.empty())
             throw std::invalid_argument("cannot copy full queue");
         clear();
     }
-    concurrent_queue<T>& operator=(
-        const concurrent_queue<T>& other) {
+    concurrent_queue<T>& operator=(const concurrent_queue<T>& other) {
         if (!other._queue.empty())
             throw std::invalid_argument("cannot copy full queue");
         clear();
@@ -651,16 +649,16 @@ inline void parallel_for(size_t begin, size_t end, const Func& func,
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
-inline void parallel_for(
-    size_t num, const Func& func, atomic<bool>* cancel = nullptr, bool serial = false) {
+inline void parallel_for(size_t num, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(0, num, func, cancel, serial);
 }
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline void parallel_foreach(
-    vector<T>& values, const Func& func, atomic<bool>* cancel = nullptr, bool serial = false) {
+inline void parallel_foreach(vector<T>& values, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(
         0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
         cancel, serial);

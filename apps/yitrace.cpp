@@ -520,8 +520,9 @@ void update(app_state& app) {
         }
         if (updated) {
             scn.render_sample = max(scn.render_sample, (int)task.current);
-            scn.name = get_filename(scn.filename) + "[" +
-                to_string(scn.render.size()) + " @ " + to_string(scn.render_sample) + "]";
+            scn.name          = get_filename(scn.filename) + "[" +
+                       to_string(scn.render.size()) + " @ " +
+                       to_string(scn.render_sample) + "]";
         }
     }
 
@@ -613,8 +614,8 @@ void update(app_state& app) {
                     scn.render.resize(scn.image_size);
                     scn.display.resize(scn.image_size);
                     scn.preview.resize(scn.image_size);
-                    scn.name = 
-                        get_filename(scn.filename) + " [" + to_string(scn.render.size()) + " @ 0]";
+                    scn.name = get_filename(scn.filename) + " [" +
+                               to_string(scn.render.size()) + " @ 0]";
                     log_info("done loading " + scn.filename);
                     init_opengl_texture(
                         scn.gl_txt, scn.display, false, false, false);
@@ -699,8 +700,9 @@ void update(app_state& app) {
                     scn.render_done = true;
                     log_info("done rendering " + scn.filename);
                     scn.render_sample = scn.trace_prms.num_samples;
-                    scn.name          = 
-                        get_filename(scn.filename) + " [" + to_string(scn.render.size()) + " @ " + to_string(scn.render_sample) +"]";
+                    scn.name          = get_filename(scn.filename) + " [" +
+                               to_string(scn.render.size()) + " @ " +
+                               to_string(scn.render_sample) + "]";
                 } catch (std::exception& e) {
                     log_error(e.what());
                     app.errors.push_back("cannot render " + scn.filename);
@@ -784,7 +786,9 @@ void update(app_state& app) {
                     scn.trace_prms.sampler_type = trace_sampler_type::eyelight;
                 }
                 scn.render_sample = 0;
-                scn.name = get_filename(scn.filename) + " [" + to_string(scn.render.size()) + " @ " + to_string(scn.render_sample) +"]";
+                scn.name          = get_filename(scn.filename) + " [" +
+                           to_string(scn.render.size()) + " @ " +
+                           to_string(scn.render_sample) + "]";
                 task.result = async([&scn, &task]() {
                     update_app_render(scn.filename, scn.render, scn.display,
                         scn.preview, scn.state, scn.scene, scn.lights, scn.bvh,

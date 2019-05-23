@@ -153,10 +153,10 @@ int main(int argc, char** argv) {
         for (auto& subdiv : scene.subdivs) {
             if (!subdiv.quads_positions.empty()) {
                 subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) +
-                            ".obj";
+                             ".obj";
             } else {
                 subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) +
-                            ".ply";
+                             ".ply";
             }
             sid++;
         }

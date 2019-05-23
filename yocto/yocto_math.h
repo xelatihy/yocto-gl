@@ -2014,18 +2014,18 @@ inline string to_string(double val) { return std::to_string(val); }
 inline string to_string(uint64_t val) { return std::to_string(val); }
 inline string to_string(size_t val) { return std::to_string(val); }
 
-inline string to_string(const float* vals, int num) { 
+inline string to_string(const float* vals, int num) {
     auto str = ""s;
-    for(auto i = 0; i < num; i ++) {
-        if(i) str += " ";
+    for (auto i = 0; i < num; i++) {
+        if (i) str += " ";
         str += to_string(vals[i]);
     }
     return str;
 }
-inline string to_string(const int* vals, int num) { 
+inline string to_string(const int* vals, int num) {
     auto str = ""s;
-    for(auto i = 0; i < num; i ++) {
-        if(i) str += " ";
+    for (auto i = 0; i < num; i++) {
+        if (i) str += " ";
         str += to_string(vals[i]);
     }
     return str;
@@ -2049,6 +2049,6 @@ inline string to_string(const frame3f& val) { return to_string(&val.x.x, 12); }
 inline string to_string(const bbox2f& val) { return to_string(&val.min.x, 4); }
 inline string to_string(const bbox3f& val) { return to_string(&val.min.x, 6); }
 
-}
+}  // namespace yocto
 
 #endif

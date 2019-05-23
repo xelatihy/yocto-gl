@@ -371,7 +371,8 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     img.load_done = true;
-                    img.name = get_filename(img.filename) + " [" + to_string(img.img.size()) + "]";
+                    img.name      = get_filename(img.filename) + " [" +
+                               to_string(img.img.size()) + "]";
                     img.display = img.img;
                     log_info("done loading " + img.filename);
                     init_opengl_texture(
@@ -466,7 +467,8 @@ void run_ui(app_state& app) {
     init_opengl_widgets(win);
 
     // setup logging
-    set_log_callback([&win](const string& str) { add_log_opengl_widget(win, str.c_str()); });
+    set_log_callback(
+        [&win](const string& str) { add_log_opengl_widget(win, str.c_str()); });
 
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;

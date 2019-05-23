@@ -202,24 +202,24 @@ struct pbrt_filter {
 struct pbrt_integrator {
     struct path_t {
         enum struct lightsamplestrategy_t { uniform, power, spatial };
-        int   maxdepth    = 5;
-        vec4i pixelbounds = {0, 0, int_max, int_max};
-        float rrthreshold = 1;
+        int                   maxdepth    = 5;
+        vec4i                 pixelbounds = {0, 0, int_max, int_max};
+        float                 rrthreshold = 1;
         lightsamplestrategy_t lightsamplestrategy =
             lightsamplestrategy_t::spatial;
     };
     struct volpath_t {
         enum struct lightsamplestrategy_t { uniform, power, spatial };
-        int   maxdepth    = 5;
-        vec4i pixelbounds = {0, 0, int_max, int_max};
-        float rrthreshold = 1;
+        int                   maxdepth    = 5;
+        vec4i                 pixelbounds = {0, 0, int_max, int_max};
+        float                 rrthreshold = 1;
         lightsamplestrategy_t lightsamplestrategy =
             lightsamplestrategy_t::spatial;
     };
     struct bdpt_t {
         enum struct lightsamplestrategy_t { uniform, power, spatial };
-        int   maxdepth    = 5;
-        vec4i pixelbounds = {0, 0, int_max, int_max};
+        int                   maxdepth    = 5;
+        vec4i                 pixelbounds = {0, 0, int_max, int_max};
         lightsamplestrategy_t lightsamplestrategy =
             lightsamplestrategy_t::power;
         bool visualizestrategies = false;
