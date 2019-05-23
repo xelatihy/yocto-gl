@@ -1462,25 +1462,6 @@ static void load_obj_scene(
     update_transforms(scene);
 }
 
-static inline void print_obj_keyvalue(FILE* fs, const char* name, int value) {
-    print(fs, "{} {}\n", name, value);
-}
-static inline void print_obj_keyvalue(FILE* fs, const char* name, float value) {
-    print(fs, "{} {}\n", name, value);
-}
-static inline void print_obj_keyvalue(
-    FILE* fs, const char* name, const vec2f& value) {
-    print(fs, "{} {} {}\n", name, value.x, value.y);
-}
-static inline void print_obj_keyvalue(
-    FILE* fs, const char* name, const vec3f& value) {
-    print(fs, "{} {} {} {}\n", name, value.x, value.y, value.z);
-}
-static inline void print_obj_keyvalue(
-    FILE* fs, const char* name, const string& value) {
-    print(fs, "{} {}\n", name, value);
-}
-
 template <typename T, typename... Ts>
 static inline void write_obj_line(
     FILE* fs, const T& value, const Ts... values) {
