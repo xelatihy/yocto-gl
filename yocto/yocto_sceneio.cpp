@@ -3458,7 +3458,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
             write_pbrt_line(fs,
                 "    AreaLightSource \"diffuse\" \"rgb L\" [", material.emission, "]");
         }
-        print(fs, "    Shape \"plymesh\" \"string filename\"",
+        write_pbrt_line(fs, "    Shape \"plymesh\" \"string filename\"",
             to_string(get_noextension(shape.uri) + ".ply", true));
         write_text(fs, "  TransformEnd\n");
         write_text(fs, "AttributeEnd\n");

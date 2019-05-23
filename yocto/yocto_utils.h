@@ -95,10 +95,6 @@
 #include <thread>
 #include <vector>
 
-#define FMT_HEADER_ONLY
-#include "ext/fmt/chrono.h"
-#include "ext/fmt/format.h"
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -118,8 +114,6 @@ using std::vector;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 using namespace std::chrono_literals;
-
-using fmt::print;
 
 }  // namespace yocto
 
@@ -213,39 +207,6 @@ struct log_timer {
 inline log_timer log_timed(const string& msg) { return log_timer(msg); }
 
 }  // namespace yocto
-
-// Formatter for math types
-namespace fmt {
-
-// Formatter for math types
-template <>
-struct formatter<yocto::vec2f>;
-template <>
-struct formatter<yocto::vec3f>;
-template <>
-struct formatter<yocto::vec4f>;
-template <>
-struct formatter<yocto::vec2i>;
-template <>
-struct formatter<yocto::vec3i>;
-template <>
-struct formatter<yocto::vec4i>;
-template <>
-struct formatter<yocto::mat2f>;
-template <>
-struct formatter<yocto::mat3f>;
-template <>
-struct formatter<yocto::mat4f>;
-template <>
-struct formatter<yocto::frame2f>;
-template <>
-struct formatter<yocto::frame3f>;
-template <>
-struct formatter<yocto::bbox2f>;
-template <>
-struct formatter<yocto::bbox3f>;
-
-}  // namespace fmt
 
 // -----------------------------------------------------------------------------
 // SPECIALIZED CONTAINERS
@@ -672,71 +633,6 @@ inline void parallel_foreach(const vector<T>& values, const Func& func,
 }
 
 }  // namespace yocto
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-//                             IMPLEMENTATION                                 //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PRINTING AND FORMATTING HELPERS
-// -----------------------------------------------------------------------------
-// Formatter for math types
-namespace fmt {
-// Formatter for math types
-template <typename T, int N>
-struct _formatter_base {
-    template <typename ParseContext>
-    constexpr auto parse(ParseContext& ctx) {
-        return ctx.begin();
-    }
-
-    template <typename FormatContext>
-    constexpr auto format(const T& p, FormatContext& ctx) {
-        if constexpr (N == 1) {
-            return format_to(ctx.begin(), "[{}]", p[0]);
-        } else if constexpr (N == 2) {
-            return format_to(ctx.begin(), "[{}, {}]", p[0], p[1]);
-        } else if constexpr (N == 3) {
-            return format_to(ctx.begin(), "[{}, {}, {}]", p[0], p[1], p[2]);
-        } else if constexpr (N == 4) {
-            return format_to(
-                ctx.begin(), "[{}, {}, {}, {}]", p[0], p[1], p[2], p[3]);
-        } else {
-            throw std::runtime_error("unsupported length");
-        }
-    }
-};
-// Formatter for math types
-template <>
-struct formatter<yocto::vec2f> : _formatter_base<yocto::vec2f, 2> {};
-template <>
-struct formatter<yocto::vec3f> : _formatter_base<yocto::vec3f, 3> {};
-template <>
-struct formatter<yocto::vec4f> : _formatter_base<yocto::vec4f, 4> {};
-template <>
-struct formatter<yocto::vec2i> : _formatter_base<yocto::vec2i, 2> {};
-template <>
-struct formatter<yocto::vec3i> : _formatter_base<yocto::vec3i, 3> {};
-template <>
-struct formatter<yocto::vec4i> : _formatter_base<yocto::vec4i, 4> {};
-template <>
-struct formatter<yocto::mat2f> : _formatter_base<yocto::mat2f, 2> {};
-template <>
-struct formatter<yocto::mat3f> : _formatter_base<yocto::mat3f, 3> {};
-template <>
-struct formatter<yocto::mat4f> : _formatter_base<yocto::mat4f, 4> {};
-template <>
-struct formatter<yocto::frame2f> : _formatter_base<yocto::frame2f, 3> {};
-template <>
-struct formatter<yocto::frame3f> : _formatter_base<yocto::frame3f, 4> {};
-template <>
-struct formatter<yocto::bbox2f> : _formatter_base<yocto::bbox2f, 2> {};
-template <>
-struct formatter<yocto::bbox3f> : _formatter_base<yocto::bbox3f, 2> {};
-
-}  // namespace fmt
 
 // -----------------------------------------------------------------------------
 // FILE UTILITIES
