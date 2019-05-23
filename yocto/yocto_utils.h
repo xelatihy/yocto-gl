@@ -133,9 +133,7 @@ namespace yocto {
 // make printing easier in console apps.
 
 // Helper to indicate info printing in console apps.
-inline void print_info(const string& msg) {
-    printf("%s\n", msg.c_str());
-}
+inline void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
 
 // Prints an error and exit.
 inline void print_fatal(const string& msg) {
@@ -173,9 +171,7 @@ struct print_timer {
     }
     int64_t start = 0;
 };
-inline print_timer print_timed(const string& msg) {
-    return print_timer(msg);
-}
+inline print_timer print_timed(const string& msg) { return print_timer(msg); }
 
 // Logging to a sync
 inline auto log_callback = function<void(const string& msg)>{};
@@ -183,26 +179,25 @@ inline void set_log_callback(function<void(const string& msg)> callback) {
     log_callback = callback;
 }
 inline void log_info(const string& msg) {
-    if (log_callback) log_callback(msg+"\n");
+    if (log_callback) log_callback(msg + "\n");
 }
 inline void log_error(const string& msg) {
-    if (log_callback) log_callback(msg+"\n");
+    if (log_callback) log_callback(msg + "\n");
 }
 struct log_timer {
     log_timer(const string& msg) : msg{msg}, start{get_time()} {
         if (log_callback) log_callback(msg);
     }
     ~log_timer() {
-        if (log_callback) log_callback(msg + "in " + format_duration(get_time() - start));
+        if (log_callback)
+            log_callback(msg + "in " + format_duration(get_time() - start));
     }
 
    private:
-    string     msg;
+    string  msg;
     int64_t start;
 };
-inline log_timer log_timed(const string& msg) {
-    return log_timer(msg);
-}
+inline log_timer log_timed(const string& msg) { return log_timer(msg); }
 
 }  // namespace yocto
 
@@ -248,34 +243,39 @@ namespace yocto {
 // std::vector.
 template <typename T, size_t N>
 struct short_vector {
-    constexpr short_vector();
-    constexpr short_vector(initializer_list<T> values);
+    constexpr short_vector() : count{0} {}
+    constexpr short_vector(initializer_list<T> values) : count{0} {
+        for (auto value : values) ptr[count++] = value;
+    }
 
-    constexpr size_t size() const;
-    constexpr bool   empty() const;
+    constexpr size_t size() const { return count; }
+    constexpr bool   empty() const { return count == 0; }
 
-    constexpr void push_back(const T& value);
-    constexpr void pop_back();
+    constexpr void push_back(const T& value) { ptr[count++] = value; }
+    constexpr void pop_back() { count--; }
     template <typename... Args>
-    constexpr T& emplace_back(Args&&... args);
+    constexpr T& emplace_back(Args&&... args) {
+        ptr[count++] = T(std::forward(args)...);
+        return ptr[count - 1];
+    }
 
-    constexpr T&       operator[](size_t idx);
-    constexpr const T& operator[](size_t idx) const;
-    constexpr T&       at(size_t idx);
-    constexpr const T& at(size_t idx) const;
+    constexpr T&       operator[](size_t idx) { return ptr[idx]; }
+    constexpr const T& operator[](size_t idx) const { return ptr[idx]; }
+    constexpr T&       at(size_t idx) { return ptr[idx]; }
+    constexpr const T& at(size_t idx) const { return ptr[idx]; }
 
-    constexpr T&       front();
-    constexpr const T& front() const;
-    constexpr T&       back();
-    constexpr const T& back() const;
+    constexpr T&       front() { return ptr[0]; }
+    constexpr const T& front() const { return ptr[0]; }
+    constexpr T&       back() { return ptr[count - 1]; }
+    constexpr const T& back() const { return ptr[count - 1]; }
 
-    constexpr T*       data();
-    constexpr const T* data() const;
+    constexpr T*       data() { return count ? ptr : nullptr; }
+    constexpr const T* data() const { return count ? ptr : nullptr; }
 
-    constexpr T*       begin();
-    constexpr const T* begin() const;
-    constexpr T*       end();
-    constexpr const T* end() const;
+    constexpr T*       begin() { return ptr; }
+    constexpr const T* begin() const { return ptr; }
+    constexpr T*       end() { return ptr + count; }
+    constexpr const T* end() const { return ptr + count; }
 
    private:
     T      ptr[N];
@@ -483,107 +483,6 @@ template <>
 struct formatter<yocto::bbox3f> : _formatter_base<yocto::bbox3f, 2> {};
 
 }  // namespace fmt
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR SPECIALIZED CONTAINERS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Finite-size vector with no heap allocation. The interface is a subset of
-// std::vector.
-template <typename T, size_t N>
-constexpr short_vector<T, N>::short_vector() : count{0} {}
-template <typename T, size_t N>
-constexpr short_vector<T, N>::short_vector(initializer_list<T> values)
-    : count{0} {
-    for (auto value : values) ptr[count++] = value;
-}
-
-template <typename T, size_t N>
-constexpr size_t short_vector<T, N>::size() const {
-    return count;
-}
-template <typename T, size_t N>
-constexpr bool short_vector<T, N>::empty() const {
-    return count == 0;
-}
-
-template <typename T, size_t N>
-constexpr void short_vector<T, N>::push_back(const T& value) {
-    ptr[count++] = value;
-}
-template <typename T, size_t N>
-constexpr void short_vector<T, N>::pop_back() {
-    count--;
-}
-template <typename T, size_t N>
-template <typename... Args>
-constexpr T& short_vector<T, N>::emplace_back(Args&&... args) {
-    ptr[count++] = T(std::forward(args)...);
-    return ptr[count - 1];
-}
-
-template <typename T, size_t N>
-constexpr T& short_vector<T, N>::operator[](size_t idx) {
-    return ptr[idx];
-}
-template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::operator[](size_t idx) const {
-    return ptr[idx];
-}
-template <typename T, size_t N>
-constexpr T& short_vector<T, N>::at(size_t idx) {
-    return ptr[idx];
-}
-template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::at(size_t idx) const {
-    return ptr[idx];
-}
-
-template <typename T, size_t N>
-constexpr T& short_vector<T, N>::front() {
-    return ptr[0];
-}
-template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::front() const {
-    return ptr[0];
-}
-template <typename T, size_t N>
-constexpr T& short_vector<T, N>::back() {
-    return ptr[count - 1];
-}
-template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::back() const {
-    return ptr[count - 1];
-}
-
-template <typename T, size_t N>
-constexpr T* short_vector<T, N>::data() {
-    return count ? ptr : nullptr;
-}
-template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::data() const {
-    return count ? ptr : nullptr;
-}
-
-template <typename T, size_t N>
-constexpr T* short_vector<T, N>::begin() {
-    return ptr;
-}
-template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::begin() const {
-    return ptr;
-}
-template <typename T, size_t N>
-constexpr T* short_vector<T, N>::end() {
-    return ptr + count;
-}
-template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::end() const {
-    return ptr + count;
-}
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PYTHON-LIKE ITERATORS
