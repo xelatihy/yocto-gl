@@ -1074,7 +1074,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
         write_yaml_line(fs, "  - uri:", instances_name);
     }
 
-    if (!scene.environments.empty()) print(fs, "\n\nenvironments:\n");
+    if (!scene.environments.empty()) write_text(fs, "\n\nenvironments:\n");
     for (auto& environment : scene.environments) {
         write_yaml_line(fs, "  - uri:", environment.uri);
         write_opt(fs, "frame", environment.frame, def_environment.frame);
@@ -1493,7 +1493,6 @@ static void save_mtl(
 
     // embed data
     write_text(fs, get_save_scene_message(scene, "#"));
-    write_text(fs, "\n\n");
 
     // for each material, dump all the values
     for (auto& material : scene.materials) {
@@ -1526,7 +1525,7 @@ static void save_mtl(
         if (material.normal_texture >= 0)
             write_obj_line(
                 fs, "  map_norm", scene.textures[material.normal_texture].uri);
-        print(fs, "\n");
+        write_text(fs, "\n");
     }
 }
 
@@ -1537,7 +1536,6 @@ static void save_objx(const string& filename, const yocto_scene& scene) {
 
     // embed data
     write_text(fs, get_save_scene_message(scene, "#"));
-    write_text(fs, "\n\n");
 
     // cameras
     for (auto& camera : scene.cameras) {
@@ -1579,7 +1577,6 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 
     // embed data
     write_text(fs, get_save_scene_message(scene, "#"));
-    write_text(fs, "\n\n");
 
     // material library
     if (!scene.materials.empty()) {
@@ -3372,6 +3369,18 @@ static void load_pbrt_scene(const string& filename, yocto_scene& scene,
     update_transforms(scene);
 }
 
+template <typename T, typename... Ts>
+static inline void write_pbrt_line(
+    FILE* fs, const T& value, const Ts... values) {
+    write_value(fs, value);
+    if constexpr (sizeof...(values) == 0) {
+        write_text(fs, "\n");
+    } else {
+        write_text(fs, " ");
+        write_obj_line(fs, values...);
+    }
+}
+
 // Convert a scene to pbrt format
 static void save_pbrt(const string& filename, const yocto_scene& scene) {
     // open file
@@ -3379,7 +3388,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
     auto fs  = fs_.fs;
 
     // embed data
-    print(fs, "{}\n\n", get_save_scene_message(scene, "#"));
+    write_text(fs, get_save_scene_message(scene, "#"));
 
     // convert camera and settings
     auto& camera     = scene.cameras.front();
@@ -3387,76 +3396,76 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
     auto  to         = camera.frame.o - camera.frame.z;
     auto  up         = camera.frame.y;
     auto  image_size = camera_image_size(camera, {0, 720});
-    print(fs, "LookAt {} {} {} {} {} {} {} {} {}\n", from.x, from.y, from.z,
-        to.x, to.y, to.z, up.x, up.y, up.z);
-    print(fs, "Camera \"perspective\" \"float fov\" {}\n",
+    write_pbrt_line(fs, "LookAt", from, to, up);
+    write_pbrt_line(fs, "Camera \"perspective\" \"float fov\"",
         camera_fovy(camera) * 180 / pif);
 
     // save renderer
-    print(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
-    print(fs, "Integrator \"path\"\n");
-    print(fs,
-        "Film \"image\" \"string filename\" \"{}\" \"integer xresolution\" {} \"integer yresolution\" {}\n",
-        get_noextension(filename) + ".exr", image_size.x, image_size.y);
+    write_text(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
+    write_text(fs, "Integrator \"path\"\n");
+    write_pbrt_line(fs, "Film \"image\" \"string filename\"",
+        to_string(get_noextension(filename) + ".exr", true),
+        "\"integer xresolution\"", image_size.x, "\"integer yresolution\"",
+        image_size.y);
 
     // convert textures
     for (auto& texture : scene.textures) {
-        print(fs,
-            "Texture \"{}\" \"spectrum\" \"imagemap\" \"string filename\" \"{}\"\n",
-            get_basename(texture.uri), texture.uri);
+        write_pbrt_line(fs, "Texture",
+            to_string(get_basename(texture.uri), true),
+            "\"spectrum\" \"imagemap\" \"string filename\"",
+            to_string(texture.uri, true));
     }
 
     // convert materials
     for (auto& material : scene.materials) {
-        print(fs, "MakeNamedMaterial \"{}\" \"string type\" \"uber\"\n",
+        write_pbrt_line(fs,
+            "MakeNamedMaterial \"{}\" \"string type\" \"uber\"\n",
             get_basename(material.uri));
         if (material.diffuse_texture >= 0) {
-            print(fs, "    \"texture Kd\" \"{}\"\n",
-                get_basename(scene.textures[material.diffuse_texture].uri));
+            write_pbrt_line(fs, "    \"texture Kd\"",
+                to_string(
+                    get_basename(scene.textures[material.diffuse_texture].uri),
+                    true));
         } else {
-            print(fs, "    \"rgb Kd\" [ {} {} {} ]\n", material.diffuse.x,
-                material.diffuse.y, material.diffuse.z);
+            write_pbrt_line(fs, "    \"rgb Kd\" [", material.diffuse, "]");
         }
         if (material.specular_texture >= 0) {
-            print(fs, "    \"texture Ks\" \"{}\"\n",
-                get_basename(scene.textures[material.specular_texture].uri));
+            write_pbrt_line(fs, "    \"texture Ks\"",
+                to_string(
+                    get_basename(scene.textures[material.specular_texture].uri),
+                    true));
         } else {
             auto specular = vec3f{1};
-            print(fs, "    \"rgb Ks\" [ {} {} {} ]\n", specular.x, specular.y,
-                specular.z);
+            write_pbrt_line(fs, "    \"rgb Ks\" [", specular, "]");
         }
-        print(fs, "    \"float roughness\" {}\n",
+        write_pbrt_line(fs, "    \"float roughness\" ",
             material.roughness * material.roughness);
     }
 
     // start world
-    print(fs, "WorldBegin\n");
+    write_text(fs, "WorldBegin\n");
 
     // convert instances
     for (auto& instance : scene.instances) {
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[instance.material];
-        print(fs, "AttributeBegin\n");
-        print(fs, "  TransformBegin\n");
-        print(fs,
-            "    Transform [{} {} {} 0 {} {} {} 0 {} {} {} 0 {} {} {} 1]\n",
-            instance.frame.x.x, instance.frame.x.y, instance.frame.x.z,
-            instance.frame.y.x, instance.frame.y.y, instance.frame.y.z,
-            instance.frame.z.x, instance.frame.z.y, instance.frame.z.z,
-            instance.frame.o.x, instance.frame.o.y, instance.frame.o.z);
-        print(fs, "    NamedMaterial \"{}\"\n", get_basename(material.uri));
+        write_text(fs, "AttributeBegin\n");
+        write_text(fs, "  TransformBegin\n");
+        write_pbrt_line(fs, "    Transform [", instance.frame, "]");
+        write_pbrt_line(
+            fs, "    NamedMaterial", to_string(get_basename(material.uri), true));
         if (material.emission != zero3f) {
-            print(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [{} {} {}]\n",
-                material.emission.x, material.emission.y, material.emission.z);
+            write_pbrt_line(fs,
+                "    AreaLightSource \"diffuse\" \"rgb L\" [", material.emission, "]");
         }
-        print(fs, "    Shape \"plymesh\" \"string filename\" \"{}\"\n",
-            get_noextension(shape.uri) + ".ply");
-        print(fs, "  TransformEnd\n");
-        print(fs, "AttributeEnd\n");
+        print(fs, "    Shape \"plymesh\" \"string filename\"",
+            to_string(get_noextension(shape.uri) + ".ply", true));
+        write_text(fs, "  TransformEnd\n");
+        write_text(fs, "AttributeEnd\n");
     }
 
     // end world
-    print(fs, "WorldEnd\n");
+    write_text(fs, "WorldEnd\n");
 }
 
 // Save a pbrt scene
