@@ -169,7 +169,7 @@ struct print_timer {
         fflush(stdout);
     }
     ~print_timer() {
-        printf(" %s\n", format_duration(get_time() - start).c_str());
+        printf(" in %s\n", format_duration(get_time() - start).c_str());
     }
     int64_t start = 0;
 };

@@ -200,7 +200,7 @@ int main(int argc, char* argv[]) {
             {
                 auto timer = print_timed(
                     "rendering cam" + to_string(trace_prms.camera_id) +
-                    "at " + to_string(sample) +
+                    " at " + to_string(sample) +
                     " " + to_string(trace_prms.num_samples));
                 trace_samples(
                     render, state, scene, bvh, lights, sample, trace_prms);
