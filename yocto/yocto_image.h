@@ -210,7 +210,7 @@ void srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb);
 void rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
 
 // Tone mapping params
-struct tonemap_params {
+struct tonemap_image_params {
     float exposure    = 0;
     vec3f tint        = {1, 1, 1};
     float contrast    = 0.5f;
@@ -221,23 +221,25 @@ struct tonemap_params {
 };
 
 // Equality operators
-inline bool operator==(const tonemap_params& a, const tonemap_params& b) {
+inline bool operator==(
+    const tonemap_image_params& a, const tonemap_image_params& b) {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
+inline bool operator!=(
+    const tonemap_image_params& a, const tonemap_image_params& b) {
     return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
 // Apply exposure and filmic tone mapping
-void tonemap(
-    image<vec4f>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
-void tonemap(
-    image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_params& params);
+    const tonemap_image_params& params);
+void tonemap(image<vec4b>& ldr, const image<vec4f>& hdr,
+    const tonemap_image_params& params);
+void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
+    const image_region& region, const tonemap_image_params& params);
 
 // minimal color grading
-struct colorgrade_params {
+struct colorgrade_image_params {
     float contrast         = 0.5;
     float shadows          = 0.5;
     float midtones         = 0.5;
@@ -248,16 +250,18 @@ struct colorgrade_params {
 };
 
 // Equality operators
-inline bool operator==(const colorgrade_params& a, const colorgrade_params& b) {
+inline bool operator==(
+    const colorgrade_image_params& a, const colorgrade_image_params& b) {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(const colorgrade_params& a, const colorgrade_params& b) {
+inline bool operator!=(
+    const colorgrade_image_params& a, const colorgrade_image_params& b) {
     return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
 // color grade an image region
 void colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
-    const image_region& region, const colorgrade_params& params);
+    const image_region& region, const colorgrade_image_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);
@@ -290,7 +294,7 @@ void save_image(
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params);
+    const tonemap_image_params& params);
 
 // Save with a logo embedded
 void save_image_with_logo(const string& filename, const image<vec4f>& img);
@@ -299,7 +303,7 @@ void save_image_with_logo(const string& filename, const image<vec4b>& img);
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params);
+    const tonemap_image_params& params);
 
 }  // namespace yocto
 

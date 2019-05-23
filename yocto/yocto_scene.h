@@ -361,9 +361,9 @@ void print_validation(const yocto_scene& scene, bool skip_textures = false);
 
 // Build/refit the bvh acceleration structure.
 void build_bvh(
-    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params);
+    bvh_scene& bvh, const yocto_scene& scene, const build_bvh_params& params);
 void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
-    const vector<int>& updated_shapes, const bvh_params& params);
+    const vector<int>& updated_shapes, const build_bvh_params& params);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f eval_position(

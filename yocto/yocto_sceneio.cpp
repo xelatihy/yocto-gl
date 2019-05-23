@@ -167,40 +167,40 @@ static inline void from_json(const json& js, volume<T>& value) {
 namespace yocto {
 
 // Load/save a scene in the builtin YAML format.
-static void load_yaml_scene(
-    const string& filename, yocto_scene& scene, const sceneio_params& params);
+static void load_yaml_scene(const string& filename, yocto_scene& scene,
+    const load_scene_params& params);
 static void save_yaml_scene(const string& filename, const yocto_scene& scene,
-    const sceneio_params& params);
+    const save_scene_params& params);
 
 // Load/save a scene from/to OBJ.
-static void load_obj_scene(
-    const string& filename, yocto_scene& scene, const sceneio_params& params);
+static void load_obj_scene(const string& filename, yocto_scene& scene,
+    const load_scene_params& params);
 static void save_obj_scene(const string& filename, const yocto_scene& scene,
-    const sceneio_params& params);
+    const save_scene_params& params);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static void load_ply_scene(
-    const string& filename, yocto_scene& scene, const sceneio_params& params);
+static void load_ply_scene(const string& filename, yocto_scene& scene,
+    const load_scene_params& params);
 static void save_ply_scene(const string& filename, const yocto_scene& scene,
-    const sceneio_params& params);
+    const save_scene_params& params);
 
 // Load/save a scene from/to glTF.
-static void load_gltf_scene(
-    const string& filename, yocto_scene& scene, const sceneio_params& params);
+static void load_gltf_scene(const string& filename, yocto_scene& scene,
+    const load_scene_params& params);
 static void save_gltf_scene(const string& filename, const yocto_scene& scene,
-    const sceneio_params& params);
+    const save_scene_params& params);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static void load_pbrt_scene(
-    const string& filename, yocto_scene& scene, const sceneio_params& params);
+static void load_pbrt_scene(const string& filename, yocto_scene& scene,
+    const load_scene_params& params);
 static void save_pbrt_scene(const string& filename, const yocto_scene& scene,
-    const sceneio_params& params);
+    const save_scene_params& params);
 
 // Load a scene
-void load_scene(
-    const string& filename, yocto_scene& scene, const sceneio_params& params) {
+void load_scene(const string& filename, yocto_scene& scene,
+    const load_scene_params& params) {
     auto ext = get_extension(filename);
     if (ext == "yaml" || ext == "YAML") {
         load_yaml_scene(filename, scene, params);
@@ -220,7 +220,7 @@ void load_scene(
 
 // Save a scene
 void save_scene(const string& filename, const yocto_scene& scene,
-    const sceneio_params& params) {
+    const save_scene_params& params) {
     auto ext = get_extension(filename);
     if (ext == "yaml" || ext == "YAML") {
         save_yaml_scene(filename, scene, params);
@@ -269,8 +269,8 @@ void load_voltexture(yocto_voltexture& texture, const string& dirname) {
     }
 }
 
-void load_textures(
-    yocto_scene& scene, const string& dirname, const sceneio_params& params) {
+void load_textures(yocto_scene& scene, const string& dirname,
+    const load_scene_params& params) {
     if (params.skip_textures) return;
 
     // load images
@@ -303,7 +303,7 @@ void save_voltexture(const yocto_voltexture& texture, const string& dirname) {
 
 // helper to save textures
 void save_textures(const yocto_scene& scene, const string& dirname,
-    const sceneio_params& params) {
+    const save_scene_params& params) {
     if (params.skip_textures) return;
 
     // save images
@@ -370,8 +370,8 @@ void save_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
 }
 
 // Load json meshes
-void load_shapes(
-    yocto_scene& scene, const string& dirname, const sceneio_params& params) {
+void load_shapes(yocto_scene& scene, const string& dirname,
+    const load_scene_params& params) {
     if (params.skip_meshes) return;
 
     // load shapes
@@ -389,7 +389,7 @@ void load_shapes(
 
 // Save json meshes
 void save_shapes(const yocto_scene& scene, const string& dirname,
-    const sceneio_params& params) {
+    const save_scene_params& params) {
     if (params.skip_meshes) return;
 
     // save shapes
@@ -505,10 +505,10 @@ inline void get_yaml_value(string_view str, mat4f& value) {
     return get_yaml_value(str, (array<float, 16>&)value);
 }
 
-struct load_yaml_options {};
+struct load_yaml_params {};
 
 inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
-    const load_yaml_options& params) {
+    const load_yaml_params& params) {
     // open file
     auto fs_ = open_input_file(filename);
     auto fs  = fs_.fs;
@@ -564,9 +564,9 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
 }
 
 struct load_yaml_scene_cb : yaml_callbacks {
-    yocto_scene&          scene;
-    const sceneio_params& params;
-    string                ply_instances = "";
+    yocto_scene&             scene;
+    const load_scene_params& params;
+    string                   ply_instances = "";
 
     enum struct parsing_type {
         none,
@@ -586,7 +586,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
     unordered_map<string, int> mmap = {{"", -1}};
     unordered_map<string, int> smap = {{"", -1}};
 
-    load_yaml_scene_cb(yocto_scene& scene, const sceneio_params& params)
+    load_yaml_scene_cb(yocto_scene& scene, const load_scene_params& params)
         : scene{scene}, params{params} {
         auto reserve_size = 1024 * 32;
         tmap.reserve(reserve_size);
@@ -852,13 +852,13 @@ struct load_yaml_scene_cb : yaml_callbacks {
 };
 
 // Save a scene in the builtin YAML format.
-static void load_yaml_scene(
-    const string& filename, yocto_scene& scene, const sceneio_params& params) {
+static void load_yaml_scene(const string& filename, yocto_scene& scene,
+    const load_scene_params& params) {
     scene = {};
 
     try {
         // Parse obj
-        auto yaml_options = load_yaml_options();
+        auto yaml_options = load_yaml_params();
         auto cb           = load_yaml_scene_cb{scene, params};
         load_yaml(filename, cb, yaml_options);
 
@@ -1081,7 +1081,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
 
 // Save a scene in the builtin YAML format.
 static void save_yaml_scene(const string& filename, const yocto_scene& scene,
-    const sceneio_params& params) {
+    const save_scene_params& params) {
     try {
         // save yaml file
         save_yaml(filename, scene);
@@ -1103,8 +1103,8 @@ static void save_yaml_scene(const string& filename, const yocto_scene& scene,
 namespace yocto {
 
 struct load_obj_scene_cb : obj_callbacks {
-    yocto_scene&          scene;
-    const sceneio_params& params;
+    yocto_scene&             scene;
+    const load_scene_params& params;
 
     // current parsing values
     string mname = ""s;
@@ -1131,7 +1131,7 @@ struct load_obj_scene_cb : obj_callbacks {
     // current parse state
     bool preserve_facevarying_now = false;
 
-    load_obj_scene_cb(yocto_scene& scene, const sceneio_params& params)
+    load_obj_scene_cb(yocto_scene& scene, const load_scene_params& params)
         : scene{scene}, params{params} {}
 
     // add object if needed
@@ -1418,16 +1418,16 @@ struct load_obj_scene_cb : obj_callbacks {
 };
 
 // Loads an OBJ
-static void load_obj_scene(
-    const string& filename, yocto_scene& scene, const sceneio_params& params) {
+static void load_obj_scene(const string& filename, yocto_scene& scene,
+    const load_scene_params& params) {
     scene = {};
 
     try {
         // Parse obj
-        auto obj_prms          = obj_params();
-        obj_prms.geometry_only = false;
-        auto cb                = load_obj_scene_cb{scene, params};
-        load_obj(filename, cb, obj_prms);
+        auto obj_params          = load_obj_params();
+        obj_params.geometry_only = false;
+        auto cb                  = load_obj_scene_cb{scene, params};
+        load_obj(filename, cb, obj_params);
 
         // cleanup empty
         for (auto idx = 0; idx < scene.shapes.size(); idx++) {
@@ -1696,7 +1696,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 }
 
 static void save_obj_scene(const string& filename, const yocto_scene& scene,
-    const sceneio_params& params) {
+    const save_scene_params& params) {
     try {
         save_obj(filename, scene, true);
         if (!scene.materials.empty()) {
@@ -1728,8 +1728,8 @@ void print_obj_camera(const yocto_camera& camera) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_ply_scene(
-    const string& filename, yocto_scene& scene, const sceneio_params& params) {
+static void load_ply_scene(const string& filename, yocto_scene& scene,
+    const load_scene_params& params) {
     scene = {};
 
     try {
@@ -1762,7 +1762,7 @@ static void load_ply_scene(
 }
 
 static void save_ply_scene(const string& filename, const yocto_scene& scene,
-    const sceneio_params& params) {
+    const save_scene_params& params) {
     if (scene.shapes.empty()) {
         throw io_error("cannot save empty scene " + filename);
     }
@@ -2267,8 +2267,8 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
 }
 
 // Load a scene
-static void load_gltf_scene(
-    const string& filename, yocto_scene& scene, const sceneio_params& params) {
+static void load_gltf_scene(const string& filename, yocto_scene& scene,
+    const load_scene_params& params) {
     // initialization
     scene = {};
 
@@ -2577,7 +2577,7 @@ static void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
 
 // Save gltf json
 static void save_gltf_scene(const string& filename, const yocto_scene& scene,
-    const sceneio_params& params) {
+    const save_scene_params& params) {
     try {
         // save json
         auto js               = json::object();
@@ -2667,11 +2667,11 @@ static vec3f pbrt_fresnel_metal(
 }
 
 struct load_pbrt_scene_cb : pbrt_callbacks {
-    yocto_scene&          scene;
-    const sceneio_params& params;
-    const string&         filename;
+    yocto_scene&             scene;
+    const load_scene_params& params;
+    const string&            filename;
 
-    load_pbrt_scene_cb(yocto_scene& scene, const sceneio_params& params,
+    load_pbrt_scene_cb(yocto_scene& scene, const load_scene_params& params,
         const string& filename)
         : scene{scene}, params{params}, filename{filename} {}
 
@@ -3339,13 +3339,13 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
 };  // namespace yocto
 
 // load pbrt scenes
-static void load_pbrt_scene(
-    const string& filename, yocto_scene& scene, const sceneio_params& params) {
+static void load_pbrt_scene(const string& filename, yocto_scene& scene,
+    const load_scene_params& params) {
     scene = yocto_scene{};
 
     try {
         // Parse pbrt
-        auto pbrt_options = pbrt_params();
+        auto pbrt_options = load_pbrt_params();
         auto cb           = load_pbrt_scene_cb{scene, params, filename};
         load_pbrt(filename, cb, pbrt_options);
 
@@ -3455,7 +3455,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
 
 // Save a pbrt scene
 void save_pbrt_scene(const string& filename, const yocto_scene& scene,
-    const sceneio_params& params) {
+    const save_scene_params& params) {
     try {
         // save json
         save_pbrt(filename, scene);

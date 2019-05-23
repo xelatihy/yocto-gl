@@ -3146,14 +3146,14 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     bool flip_texcoord) {
     try {
         // load obj
-        auto obj_prms          = obj_params();
-        obj_prms.exit_on_error = false;
-        obj_prms.geometry_only = true;
-        obj_prms.flip_texcoord = flip_texcoord;
+        auto obj_params          = load_obj_params();
+        obj_params.exit_on_error = false;
+        obj_params.geometry_only = true;
+        obj_params.flip_texcoord = flip_texcoord;
         auto cb = load_obj_shape_cb{points, lines, triangles, quads,
             quads_positions, quads_normals, quads_texcoords, positions, normals,
             texcoords, preserve_facevarying};
-        load_obj(filename, cb, obj_prms);
+        load_obj(filename, cb, obj_params);
 
         // merging quads and triangles
         if (!preserve_facevarying) {

@@ -428,13 +428,13 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
 
     try {
         // load obj
-        auto obj_prms          = obj_params();
-        obj_prms.exit_on_error = false;
-        obj_prms.geometry_only = true;
-        obj_prms.flip_texcoord = true;
-        auto cb                = load_island_shape_callbacks{
+        auto obj_params          = load_obj_params();
+        obj_params.exit_on_error = false;
+        obj_params.geometry_only = true;
+        obj_params.flip_texcoord = true;
+        auto cb                  = load_island_shape_callbacks{
             shapes, materials, smap, mmap, tmap, scene, filename, parent_name};
-        load_obj(dirname + filename, cb, obj_prms);
+        load_obj(dirname + filename, cb, obj_params);
 
         // check for PTEX errors
         for (auto id = 0; id < shapes.size(); id++) {
@@ -898,10 +898,10 @@ void load_island_elements(const string& filename, const string& dirname,
 }
 
 void load_textures(
-    yocto_scene& scene, const string& dirname, const sceneio_params& params);
+    yocto_scene& scene, const string& dirname, const load_scene_params& params);
 
 void load_island_scene(const std::string& filename, yocto_scene& scene,
-    const sceneio_params& params) {
+    const load_scene_params& params) {
     try {
         auto js = json{};
         load_json(filename, js);
@@ -1043,18 +1043,18 @@ int main(int argc, char** argv) {
     }
 
     // fix params
-    auto load_prms          = sceneio_params();
-    auto save_prms          = sceneio_params();
-    load_prms.skip_textures = skip_textures;
-    save_prms.skip_textures = skip_textures;
-    load_prms.skip_meshes   = skip_meshes;
-    save_prms.skip_meshes   = skip_meshes;
+    auto load_params          = load_scene_params();
+    auto save_params          = save_scene_params();
+    load_params.skip_textures = skip_textures;
+    save_params.skip_textures = skip_textures;
+    load_params.skip_meshes   = skip_meshes;
+    save_params.skip_meshes   = skip_meshes;
 
     // load scene
     auto scene = yocto_scene{};
     try {
         auto timer = print_timed("loading scene");
-        load_island_scene(filename, scene, load_prms);
+        load_island_scene(filename, scene, load_params);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }
@@ -1102,11 +1102,11 @@ int main(int argc, char** argv) {
 
     // save scene
     try {
-        auto timer              = print_timed("saving scene");
-        save_prms.skip_textures = false;
-        save_prms.run_serially  = false;
-        // save_prms.ply_instances = true;
-        save_scene(output, scene, save_prms);
+        auto timer                = print_timed("saving scene");
+        save_params.skip_textures = false;
+        save_params.run_serially  = false;
+        // save_params.ply_instances = true;
+        save_scene(output, scene, save_params);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }

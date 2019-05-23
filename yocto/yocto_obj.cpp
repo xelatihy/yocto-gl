@@ -84,7 +84,7 @@ static inline void parse_value(string_view& str, obj_texture_info& info) {
 
 // Load obj materials
 void load_mtl(
-    const string& filename, obj_callbacks& cb, const obj_params& params) {
+    const string& filename, obj_callbacks& cb, const load_obj_params& params) {
     // open file
     auto fs_ = open_input_file(filename);
     auto fs  = fs_.fs;
@@ -190,7 +190,7 @@ void load_mtl(
 
 // Load obj extensions
 void load_objx(
-    const string& filename, obj_callbacks& cb, const obj_params& params) {
+    const string& filename, obj_callbacks& cb, const load_obj_params& params) {
     // open file
     auto fs_ = open_input_file(filename);
     auto fs  = fs_.fs;
@@ -246,7 +246,7 @@ void load_objx(
 
 // Load obj scene
 void load_obj(
-    const string& filename, obj_callbacks& cb, const obj_params& params) {
+    const string& filename, obj_callbacks& cb, const load_obj_params& params) {
     // open file
     auto fs_ = open_input_file(filename);
     auto fs  = fs_.fs;

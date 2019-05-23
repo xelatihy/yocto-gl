@@ -846,12 +846,12 @@ inline void parse_value(string_view& str, int& value) {
     str.remove_prefix(end - str.data());
 }
 inline void parse_value(string_view& str, bool& value, bool alpha = false) {
-    if(alpha) {
+    if (alpha) {
         auto values = ""s;
         parse_value(str, value);
-        if(values == "false") {
+        if (values == "false") {
             value = false;
-        } else if(values == "true") {
+        } else if (values == "true") {
             value = true;
         } else {
             throw io_error("cannot parse value");

@@ -175,7 +175,7 @@ struct obj_callbacks {
 };
 
 // Load obj params
-struct obj_params {
+struct load_obj_params {
     bool exit_on_error = false;
     bool geometry_only = false;
     bool flip_texcoord = true;
@@ -183,8 +183,8 @@ struct obj_params {
 };
 
 // Load obj scene
-void load_obj(
-    const string& filename, obj_callbacks& cb, const obj_params& params = {});
+void load_obj(const string& filename, obj_callbacks& cb,
+    const load_obj_params& params = {});
 
 }  // namespace yocto
 

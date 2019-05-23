@@ -2008,18 +2008,18 @@ inline void update_camera_first_person(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline string to_string(const char* value, bool quoted = false) { 
+inline string to_string(const char* value, bool quoted = false) {
     return quoted ? "\""s + value + "\""s : value;
 }
 inline string to_string(const string& value, bool quoted = false) {
     return quoted ? "\"" + value + "\"" : value;
 }
 
-inline string to_string(bool value, bool alpha = false) { 
-    if(alpha) {
+inline string to_string(bool value, bool alpha = false) {
+    if (alpha) {
         return value ? "true" : "false";
     } else {
-        return value ? "1" : "0"; 
+        return value ? "1" : "0";
     }
 }
 
