@@ -291,206 +291,6 @@ namespace yocto {
 
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
 template <typename T>
-struct range_iterator;
-template <typename T>
-inline range_iterator<T> range(T max);
-template <typename T>
-inline range_iterator<T> range(T min, T max);
-
-// Python `enumerate()` equivalent. Construct an object that iteraterates over a
-// sequence of elements and numbers them.
-template <typename T>
-struct enumerate_iterator;
-template <typename T>
-inline enumerate_iterator<const T> enumerate(const vector<T>& vals);
-template <typename T>
-inline enumerate_iterator<T> enumerate(vector<T>& vals);
-
-// Vector append and concatenation
-template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const T& b);
-template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const vector<T>& b);
-template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const initializer_list<T>& b);
-template <typename T>
-inline vector<T> operator+(const vector<T>& a, const T& b);
-template <typename T>
-inline vector<T> operator+(const vector<T>& a, const vector<T>& b);
-template <typename T>
-inline vector<T> operator+(const vector<T>& a, const initializer_list<T>& b);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Normalize path delimiters.
-inline string normalize_path(const string& filename);
-// Get directory name (including '/').
-inline string get_dirname(const string& filename);
-// Get extension (not including '.').
-inline string get_extension(const string& filename);
-// Get filename without directory.
-inline string get_filename(const string& filename);
-// Get path without extension.
-inline string get_noextension(const string& filename);
-// Get filename without directory and extension.
-inline string get_basename(const string& filename);
-
-// Check if a file can be opened for reading.
-inline bool exists_file(const string& filename);
-
-// Return the preset type and the remaining filename
-inline bool is_preset_filename(const string& filename);
-// Return the preset type and the filename. Call only if this is a preset.
-inline pair<string, string> get_preset_type(const string& filename);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Load/save a text file
-inline void load_text(const string& filename, string& str);
-inline void save_text(const string& filename, const string& str);
-
-// Load/save a binary file
-inline void load_binary(const string& filename, vector<byte>& data);
-inline void save_binary(const string& filename, const vector<byte>& data);
-
-// Io error
-struct io_error : runtime_error {
-    explicit io_error(const char* msg) : runtime_error{msg} {}
-    explicit io_error(const std::string& msg) : runtime_error{msg} {}
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// CONCURRENCY UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// a simple concurrent queue that locks at every call
-template <typename T>
-struct concurrent_queue {
-    concurrent_queue();
-    concurrent_queue(const concurrent_queue& other);
-    concurrent_queue& operator=(const concurrent_queue& other);
-
-    bool empty();
-    void clear();
-    void push(const T& value);
-    bool try_pop(T& value);
-
-   private:
-    mutex    _mutex;
-    deque<T> _queue;
-};
-
-// Runs a rask as an asycnrhonous operation.
-template <typename Function>
-inline auto async(Function&& function);
-template <typename Function, typename... Args>
-inline auto async(Function&& function, Args&&... args);
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(size_t begin, size_t end, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false);
-template <typename Func>
-inline void parallel_for(size_t num, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false);
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes a reference to a `T`.
-template <typename T, typename Func>
-inline void parallel_foreach(vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false);
-template <typename T, typename Func>
-inline void parallel_foreach(const vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false);
-
-}  // namespace yocto
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-//                             IMPLEMENTATION                                 //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PRINTING AND FORMATTING HELPERS
-// -----------------------------------------------------------------------------
-// Formatter for math types
-namespace fmt {
-// Formatter for math types
-template <typename T, int N>
-struct _formatter_base {
-    template <typename ParseContext>
-    constexpr auto parse(ParseContext& ctx) {
-        return ctx.begin();
-    }
-
-    template <typename FormatContext>
-    constexpr auto format(const T& p, FormatContext& ctx) {
-        if constexpr (N == 1) {
-            return format_to(ctx.begin(), "[{}]", p[0]);
-        } else if constexpr (N == 2) {
-            return format_to(ctx.begin(), "[{}, {}]", p[0], p[1]);
-        } else if constexpr (N == 3) {
-            return format_to(ctx.begin(), "[{}, {}, {}]", p[0], p[1], p[2]);
-        } else if constexpr (N == 4) {
-            return format_to(
-                ctx.begin(), "[{}, {}, {}, {}]", p[0], p[1], p[2], p[3]);
-        } else {
-            throw std::runtime_error("unsupported length");
-        }
-    }
-};
-// Formatter for math types
-template <>
-struct formatter<yocto::vec2f> : _formatter_base<yocto::vec2f, 2> {};
-template <>
-struct formatter<yocto::vec3f> : _formatter_base<yocto::vec3f, 3> {};
-template <>
-struct formatter<yocto::vec4f> : _formatter_base<yocto::vec4f, 4> {};
-template <>
-struct formatter<yocto::vec2i> : _formatter_base<yocto::vec2i, 2> {};
-template <>
-struct formatter<yocto::vec3i> : _formatter_base<yocto::vec3i, 3> {};
-template <>
-struct formatter<yocto::vec4i> : _formatter_base<yocto::vec4i, 4> {};
-template <>
-struct formatter<yocto::mat2f> : _formatter_base<yocto::mat2f, 2> {};
-template <>
-struct formatter<yocto::mat3f> : _formatter_base<yocto::mat3f, 3> {};
-template <>
-struct formatter<yocto::mat4f> : _formatter_base<yocto::mat4f, 4> {};
-template <>
-struct formatter<yocto::frame2f> : _formatter_base<yocto::frame2f, 3> {};
-template <>
-struct formatter<yocto::frame3f> : _formatter_base<yocto::frame3f, 4> {};
-template <>
-struct formatter<yocto::bbox2f> : _formatter_base<yocto::bbox2f, 2> {};
-template <>
-struct formatter<yocto::bbox3f> : _formatter_base<yocto::bbox3f, 2> {};
-
-}  // namespace fmt
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PYTHON-LIKE ITERATORS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Range helpper (this should not be used directly)
-template <typename T>
 struct range_iterator {
     struct iterator {
         iterator& operator++() {
@@ -512,7 +312,6 @@ struct range_iterator {
    private:
     T first = 0, last = 0;
 };
-
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
 template <typename T>
 inline range_iterator<T> range(T max) {
@@ -596,7 +395,7 @@ inline vector<T> operator+(const vector<T>& a, const initializer_list<T>& b) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF PATH UTILITIES
+// PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -643,11 +442,6 @@ inline string get_filename(const string& filename_) {
     return filename.substr(pos + 1);
 }
 
-// Get filename without directory and extension.
-inline string get_basename(const string& filename) {
-    return get_noextension(get_filename(filename));
-}
-
 // Get extension.
 inline string get_noextension(const string& filename_) {
     auto filename = normalize_path(filename_);
@@ -656,8 +450,13 @@ inline string get_noextension(const string& filename_) {
     return filename.substr(0, pos);
 }
 
+// Get filename without directory and extension.
+inline string get_basename(const string& filename) {
+    return get_noextension(get_filename(filename));
+}
+
 // Check if a file can be opened for reading.
-bool exists_file(const string& filename) {
+inline bool exists_file(const string& filename) {
     auto f = fopen(filename.c_str(), "r");
     if (!f) return false;
     fclose(f);
@@ -683,9 +482,15 @@ inline pair<string, string> get_preset_type(const string& filename) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF FILE READING
+// FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Io error
+struct io_error : runtime_error {
+    explicit io_error(const char* msg) : runtime_error{msg} {}
+    explicit io_error(const std::string& msg) : runtime_error{msg} {}
+};
 
 // Load a text file
 inline void load_text(const string& filename, string& str) {
@@ -744,50 +549,52 @@ inline void save_binary(const string& filename, const vector<byte>& data) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR CONCURRENCY UTILITIES
+// CONCURRENCY UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // a simple concurrent queue that locks at every call
 template <typename T>
-inline concurrent_queue<T>::concurrent_queue() {}
-template <typename T>
-inline concurrent_queue<T>::concurrent_queue(const concurrent_queue<T>& other) {
-    if (!other._queue.empty())
-        throw std::invalid_argument("cannot copy full queue");
-    clear();
-}
-template <typename T>
-inline concurrent_queue<T>& concurrent_queue<T>::operator=(
-    const concurrent_queue<T>& other) {
-    if (!other._queue.empty())
-        throw std::invalid_argument("cannot copy full queue");
-    clear();
-}
+struct concurrent_queue {
+    // a simple concurrent queue that locks at every call
+    concurrent_queue() {}
+    concurrent_queue(
+        const concurrent_queue<T>& other) {
+        if (!other._queue.empty())
+            throw std::invalid_argument("cannot copy full queue");
+        clear();
+    }
+    concurrent_queue<T>& operator=(
+        const concurrent_queue<T>& other) {
+        if (!other._queue.empty())
+            throw std::invalid_argument("cannot copy full queue");
+        clear();
+    }
 
-template <typename T>
-inline bool concurrent_queue<T>::empty() {
-    lock_guard<mutex> lock(_mutex);
-    return _queue.empty();
-}
-template <typename T>
-inline void concurrent_queue<T>::clear() {
-    lock_guard<mutex> lock(_mutex);
-    _queue.clear();
-}
-template <typename T>
-inline void concurrent_queue<T>::push(const T& value) {
-    lock_guard<mutex> lock(_mutex);
-    _queue.push_back(value);
-}
-template <typename T>
-inline bool concurrent_queue<T>::try_pop(T& value) {
-    lock_guard<mutex> lock(_mutex);
-    if (_queue.empty()) return false;
-    value = _queue.front();
-    _queue.pop_front();
-    return true;
-}
+    bool empty() {
+        lock_guard<mutex> lock(_mutex);
+        return _queue.empty();
+    }
+    void clear() {
+        lock_guard<mutex> lock(_mutex);
+        _queue.clear();
+    }
+    void push(const T& value) {
+        lock_guard<mutex> lock(_mutex);
+        _queue.push_back(value);
+    }
+    bool try_pop(T& value) {
+        lock_guard<mutex> lock(_mutex);
+        if (_queue.empty()) return false;
+        value = _queue.front();
+        _queue.pop_front();
+        return true;
+    }
+
+   private:
+    mutex    _mutex;
+    deque<T> _queue;
+};
 
 // Runs a rask as an asycnrhonous operation.
 template <typename Function>
@@ -804,7 +611,7 @@ inline auto async(Function&& function, Args&&... args) {
 // parallel algorithms.
 template <typename Func>
 inline void parallel_for(size_t begin, size_t end, const Func& func,
-    atomic<bool>* cancel, bool serial) {
+    atomic<bool>* cancel = nullptr, bool serial = false) {
     if (serial) {
         for (auto idx = begin; idx < end; idx++) {
             if (cancel && *cancel) break;
@@ -832,7 +639,7 @@ inline void parallel_for(size_t begin, size_t end, const Func& func,
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(
-    size_t num, const Func& func, atomic<bool>* cancel, bool serial) {
+    size_t num, const Func& func, atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(0, num, func, cancel, serial);
 }
 
@@ -840,20 +647,85 @@ inline void parallel_for(
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
 inline void parallel_foreach(
-    vector<T>& values, const Func& func, atomic<bool>* cancel, bool serial) {
+    vector<T>& values, const Func& func, atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(
         0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
         cancel, serial);
 }
 template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, const Func& func,
-    atomic<bool>* cancel, bool serial) {
+    atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(
         0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
         cancel, serial);
 }
 
 }  // namespace yocto
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+//                             IMPLEMENTATION                                 //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR PRINTING AND FORMATTING HELPERS
+// -----------------------------------------------------------------------------
+// Formatter for math types
+namespace fmt {
+// Formatter for math types
+template <typename T, int N>
+struct _formatter_base {
+    template <typename ParseContext>
+    constexpr auto parse(ParseContext& ctx) {
+        return ctx.begin();
+    }
+
+    template <typename FormatContext>
+    constexpr auto format(const T& p, FormatContext& ctx) {
+        if constexpr (N == 1) {
+            return format_to(ctx.begin(), "[{}]", p[0]);
+        } else if constexpr (N == 2) {
+            return format_to(ctx.begin(), "[{}, {}]", p[0], p[1]);
+        } else if constexpr (N == 3) {
+            return format_to(ctx.begin(), "[{}, {}, {}]", p[0], p[1], p[2]);
+        } else if constexpr (N == 4) {
+            return format_to(
+                ctx.begin(), "[{}, {}, {}, {}]", p[0], p[1], p[2], p[3]);
+        } else {
+            throw std::runtime_error("unsupported length");
+        }
+    }
+};
+// Formatter for math types
+template <>
+struct formatter<yocto::vec2f> : _formatter_base<yocto::vec2f, 2> {};
+template <>
+struct formatter<yocto::vec3f> : _formatter_base<yocto::vec3f, 3> {};
+template <>
+struct formatter<yocto::vec4f> : _formatter_base<yocto::vec4f, 4> {};
+template <>
+struct formatter<yocto::vec2i> : _formatter_base<yocto::vec2i, 2> {};
+template <>
+struct formatter<yocto::vec3i> : _formatter_base<yocto::vec3i, 3> {};
+template <>
+struct formatter<yocto::vec4i> : _formatter_base<yocto::vec4i, 4> {};
+template <>
+struct formatter<yocto::mat2f> : _formatter_base<yocto::mat2f, 2> {};
+template <>
+struct formatter<yocto::mat3f> : _formatter_base<yocto::mat3f, 3> {};
+template <>
+struct formatter<yocto::mat4f> : _formatter_base<yocto::mat4f, 4> {};
+template <>
+struct formatter<yocto::frame2f> : _formatter_base<yocto::frame2f, 3> {};
+template <>
+struct formatter<yocto::frame3f> : _formatter_base<yocto::frame3f, 4> {};
+template <>
+struct formatter<yocto::bbox2f> : _formatter_base<yocto::bbox2f, 2> {};
+template <>
+struct formatter<yocto::bbox3f> : _formatter_base<yocto::bbox3f, 2> {};
+
+}  // namespace fmt
 
 // -----------------------------------------------------------------------------
 // FILE UTILITIES
