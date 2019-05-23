@@ -136,9 +136,11 @@ int main(int argc, char** argv) {
         auto sid = 0;
         for (auto& shape : scene.shapes) {
             if (!shape.quads_positions.empty()) {
-                shape.uri = format("{}shape_{}.obj", shape_directory, sid);
+                shape.uri = shape_directory + "shape_" + to_string(sid) +
+                            ".obj";
             } else {
-                shape.uri = format("{}shape_{}.ply", shape_directory, sid);
+                shape.uri = shape_directory + "shape_" + to_string(sid) +
+                            ".ply";
             }
             sid++;
         }
@@ -150,9 +152,11 @@ int main(int argc, char** argv) {
         auto sid = 0;
         for (auto& subdiv : scene.subdivs) {
             if (!subdiv.quads_positions.empty()) {
-                subdiv.uri = format("{}subdiv_{}.obj", subdiv_directory, sid);
+                subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) +
+                            ".obj";
             } else {
-                subdiv.uri = format("{}subdiv_{}.ply", subdiv_directory, sid);
+                subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) +
+                            ".ply";
             }
             sid++;
         }

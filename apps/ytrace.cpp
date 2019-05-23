@@ -199,16 +199,18 @@ int main(int argc, char* argv[]) {
                 trace_prms.samples_per_batch, trace_prms.num_samples - sample);
             {
                 auto timer = print_timed(
-                    "rendering cam" + to_string(trace_prms.camera_id) +
-                    " at " + to_string(sample) +
-                    " " + to_string(trace_prms.num_samples));
+                    "rendering cam" + to_string(trace_prms.camera_id) + " at " +
+                    pad_left(to_string(sample), 4) + " " +
+                    pad_left(to_string(trace_prms.num_samples), 4));
                 trace_samples(
                     render, state, scene, bvh, lights, sample, trace_prms);
             }
             if (save_batch) {
-                auto outfilename = format("{}.cam{}.s{:04}.{:04}",
-                    get_noextension(imfilename), trace_prms.camera_id,
-                    sample + nsamples, get_extension(imfilename));
+                auto outfilename =
+                    get_noextension(imfilename) + ".cam" +
+                    to_string(trace_prms.camera_id) + ".s" +
+                    pad_left(to_string(sample + nsamples), 4, '0') + "." +
+                    get_extension(imfilename);
                 try {
                     if (logo) {
                         save_tonemapped_with_logo(
@@ -226,8 +228,9 @@ int main(int argc, char* argv[]) {
         try {
             auto outfilename = imfilename;
             if (all_cameras) {
-                outfilename = format("{}.cam{}.{}", get_noextension(imfilename),
-                    trace_prms.camera_id, get_extension(imfilename));
+                outfilename = get_noextension(imfilename) + ".cam" +
+                              to_string(trace_prms.camera_id) + "." +
+                              get_extension(imfilename);
             }
             auto timer = print_timed("saving image");
             if (logo) {

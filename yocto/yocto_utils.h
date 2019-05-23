@@ -119,7 +119,6 @@ using namespace std::string_literals;
 using namespace std::string_view_literals;
 using namespace std::chrono_literals;
 
-using fmt::format;
 using fmt::print;
 
 }  // namespace yocto
@@ -131,6 +130,20 @@ namespace yocto {
 
 // We use the fmt library as a backend for printing. These are just helpers to
 // make printing easier in console apps.
+
+// String padding
+inline string pad_left(const string& str, int num, char pad = ' ') {
+    if(str.size() >= num) return str;
+    auto pads = ""s;
+    for(auto i = 0; i < num - (int)str.size(); i ++) pads += pad;
+    return pads + str;
+}
+inline string pad_right(const string& str, int num, char pad = ' ') {
+    if(str.size() >= num) return str;
+    auto pads = ""s;
+    for(auto i = 0; i < num - (int)str.size(); i ++) pads += pad;
+    return str + pads;
+}
 
 // Helper to indicate info printing in console apps.
 inline void print_info(const string& msg) { printf("%s\n", msg.c_str()); }

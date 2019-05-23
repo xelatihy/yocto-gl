@@ -447,12 +447,13 @@ void rename_instances(yocto_scene& scene) {
     for (auto& instance : scene.instances) shape_count[instance.shape].y += 1;
     for (auto& instance : scene.instances) {
         if (shape_count[instance.shape].y == 1) {
-            instance.uri = format(
-                "instances/{}.yaml", shape_names[instance.shape]);
+            instance.uri = "instances/" + shape_names[instance.shape] + ".yaml";
         } else {
-            instance.uri = format("instances/{}-{:{}}.yaml",
-                shape_names[instance.shape], shape_count[instance.shape].x++,
-                (int)ceil(log10(shape_count[instance.shape].y)));
+            instance.uri = "instances/" + shape_names[instance.shape] + "-" +
+                           pad_left(to_string(shape_count[instance.shape].x++),
+                               (int)ceil(log10(shape_count[instance.shape].y)),
+                               '0') +
+                           ".yaml";
         }
     }
 }
@@ -1472,7 +1473,8 @@ string format_stats(const yocto_scene& scene, bool verbose) {
     auto str = ""s;
     for (auto& [key, value] : stats) {
         if (value == 0) continue;
-        str += format("{:<15} {:>13n}\n", key + ":", value);
+        str += pad_right(key, 15) + ": " + pad_left(to_string(value), 13) +
+               "\n";
     }
 
     return str;

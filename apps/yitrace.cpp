@@ -520,8 +520,8 @@ void update(app_state& app) {
         }
         if (updated) {
             scn.render_sample = max(scn.render_sample, (int)task.current);
-            scn.name = format("{} [{}x{}@{}]", get_filename(scn.filename),
-                scn.render.size().x, scn.render.size().y, scn.render_sample);
+            scn.name = get_filename(scn.filename) + "[" +
+                to_string(scn.render.size()) + " @ " + to_string(scn.render_sample) + "]";
         }
     }
 
@@ -613,9 +613,8 @@ void update(app_state& app) {
                     scn.render.resize(scn.image_size);
                     scn.display.resize(scn.image_size);
                     scn.preview.resize(scn.image_size);
-                    scn.name = format("{} [{}x{}@0]",
-                        get_filename(scn.filename), scn.render.size().x,
-                        scn.render.size().y);
+                    scn.name = 
+                        get_filename(scn.filename) + " [" + to_string(scn.render.size()) + " @ 0]";
                     log_info("done loading " + scn.filename);
                     init_opengl_texture(
                         scn.gl_txt, scn.display, false, false, false);
@@ -624,7 +623,7 @@ void update(app_state& app) {
                     scn.task_queue.emplace_back(app_task_type::render_image);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [errpr]";
                     app.errors.push_back("cannot load " + scn.filename);
                 }
             } break;
@@ -635,7 +634,7 @@ void update(app_state& app) {
                     log_info("done loading element from " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [errpr]";
                     app.errors.push_back(
                         "cannot load element from " + scn.filename);
                 }
@@ -644,11 +643,11 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     scn.bvh_done = true;
-                    scn.name     = format("{}", get_filename(scn.filename));
+                    scn.name     = get_filename(scn.filename);
                     log_info("done building bvh " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [errpr]";
                     app.errors.push_back("cannot build bvh " + scn.filename);
                 }
             } break;
@@ -656,11 +655,11 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     scn.bvh_done = true;
-                    scn.name     = format("{}", get_filename(scn.filename));
+                    scn.name     = get_filename(scn.filename);
                     log_info("done refitting bvh " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [errpr]";
                     app.errors.push_back("cannot refit bvh " + scn.filename);
                 }
             } break;
@@ -668,11 +667,11 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     scn.lights_done = true;
-                    scn.name        = format("{}", get_filename(scn.filename));
+                    scn.name        = get_filename(scn.filename);
                     log_info("done building lights " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [errpr]";
                     app.errors.push_back("cannot build lights " + scn.filename);
                 }
             } break;
@@ -700,9 +699,8 @@ void update(app_state& app) {
                     scn.render_done = true;
                     log_info("done rendering " + scn.filename);
                     scn.render_sample = scn.trace_prms.num_samples;
-                    scn.name          = format("{} [{}x{}@{}]",
-                        get_filename(scn.filename), scn.render.size().x,
-                        scn.render.size().y, scn.render_sample);
+                    scn.name          = 
+                        get_filename(scn.filename) + " [" + to_string(scn.render.size()) + " @ " + to_string(scn.render_sample) +"]";
                 } catch (std::exception& e) {
                     log_error(e.what());
                     app.errors.push_back("cannot render " + scn.filename);
@@ -786,9 +784,7 @@ void update(app_state& app) {
                     scn.trace_prms.sampler_type = trace_sampler_type::eyelight;
                 }
                 scn.render_sample = 0;
-                scn.name = format("{} [{}x{}@{}]", get_filename(scn.filename),
-                    scn.render.size().x, scn.render.size().y,
-                    scn.render_sample);
+                scn.name = get_filename(scn.filename) + " [" + to_string(scn.render.size()) + " @ " + to_string(scn.render_sample) +"]";
                 task.result = async([&scn, &task]() {
                     update_app_render(scn.filename, scn.render, scn.display,
                         scn.preview, scn.state, scn.scene, scn.lights, scn.bvh,

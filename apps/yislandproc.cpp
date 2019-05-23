@@ -142,7 +142,7 @@ void load_island_cameras(
     camera.focal_length   = js.at("focalLength").get<float>() * 0.001f;
     camera.focus_distance = js.at("centerOfInterest").get<float>();
     // camera.lens_aperture  = js.at("lensRadius").get<float>();
-    camera.film_height = camera.film_width / js.at("ratio").get<float>();
+    camera.film_height    = camera.film_width / js.at("ratio").get<float>();
     auto from             = js.at("eye").get<vec3f>();
     auto to               = js.at("look").get<vec3f>();
     auto up               = js.at("up").get<vec3f>();
@@ -444,7 +444,8 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
                     (int)shapes[id].quads_positions.size());
                 auto is_multiple = shape_faces % ptex_faces == 0;
                 if (!is_multiple)
-                    print_info("PTEX ERROR:  " + to_string(ptex_faces) + " " + to_string(shape_faces));
+                    print_info("PTEX ERROR:  " + to_string(ptex_faces) + " " +
+                               to_string(shape_faces));
             }
         }
 
@@ -941,13 +942,15 @@ void load_island_scene(const std::string& filename, yocto_scene& scene,
         auto parent_name = get_dirname(scene.shapes[id].uri).substr(7);
         parent_name      = parent_name.substr(0, parent_name.size() - 1);
         if (parent_shape_map[parent_name].y == 1) {
-            scene.shapes[id].uri    = format("shapes/{}.ply", parent_name);
-            scene.materials[id].uri = format("materials/{}.yaml", parent_name);
+            scene.shapes[id].uri    = "shapes/" + parent_name + ".ply";
+            scene.materials[id].uri = "materials/" + parent_name + ".yaml";
         } else {
-            scene.shapes[id].uri    = format("shapes/{}{}.ply", parent_name,
-                parent_shape_map[parent_name].x);
-            scene.materials[id].uri = format("materials/{}{}.yaml", parent_name,
-                parent_shape_map[parent_name].x);
+            scene.shapes[id].uri = "shapes/" + parent_name +
+                                   to_string(parent_shape_map[parent_name].x) +
+                                   ".ply";
+            scene.materials[id].uri =
+                "materials/" + parent_name +
+                to_string(parent_shape_map[parent_name].x) + ".ply";
             parent_shape_map[parent_name].x += 1;
         }
     }
@@ -968,10 +971,11 @@ void load_island_scene(const std::string& filename, yocto_scene& scene,
         }
         parent_name = replace(parent_name, "/Color", "");
         if (parent_texture_map[parent_name].y == 1) {
-            scene.textures[id].uri = format("textures/{}.png", parent_name);
+            scene.textures[id].uri = "textures/" + parent_name + ".png";
         } else {
-            scene.textures[id].uri = format("textures/{}{}.png", parent_name,
-                parent_texture_map[parent_name].x);
+            scene.textures[id].uri =
+                "textures/" + parent_name +
+                to_string(parent_texture_map[parent_name].x) + ".png";
             parent_texture_map[parent_name].x += 1;
         }
     }

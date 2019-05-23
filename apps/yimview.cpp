@@ -371,8 +371,7 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     img.load_done = true;
-                    img.name = format("{} [{}x{}]", get_filename(img.filename),
-                        img.img.size().x, img.img.size().y);
+                    img.name = get_filename(img.filename) + " [" + to_string(img.img.size()) + "]";
                     img.display = img.img;
                     log_info("done loading " + img.filename);
                     init_opengl_texture(
@@ -380,7 +379,7 @@ void update(app_state& app) {
                     img.task_queue.emplace_back(app_task_type::display);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    img.name = format("{} [error]", get_filename(img.filename));
+                    img.name = get_filename(img.filename) + " [error]";
                     app.errors.push_back("cannot load " + img.filename);
                 }
             } break;

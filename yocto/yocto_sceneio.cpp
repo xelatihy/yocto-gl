@@ -1569,14 +1569,14 @@ static void save_objx(const string& filename, const yocto_scene& scene) {
 
 static inline string format_obj_vertex(const obj_vertex& value) {
     if (value.texturecoord && value.normal) {
-        return format(
-            "{}/{}/{}", value.position, value.texturecoord, value.normal);
+        return to_string(value.position) + "/" + to_string(value.texturecoord) +
+               "/" + to_string(value.normal);
     } else if (value.texturecoord && !value.normal) {
-        return format("{}/{}", value.position, value.texturecoord);
+        return to_string(value.position) + "/" + to_string(value.texturecoord);
     } else if (!value.texturecoord && value.normal) {
-        return format("{}//{}", value.position, value.normal);
+        return to_string(value.position) + "//" + to_string(value.normal);
     } else {
-        return format("{}", value.position);
+        return to_string(value.position);
     }
 }
 

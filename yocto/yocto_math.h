@@ -2012,6 +2012,7 @@ inline string to_string(int val) { return std::to_string(val); }
 inline string to_string(float val) { return std::to_string(val); }
 inline string to_string(double val) { return std::to_string(val); }
 inline string to_string(uint64_t val) { return std::to_string(val); }
+inline string to_string(size_t val) { return std::to_string(val); }
 
 inline string to_string(const float* vals, int num) { 
     auto str = ""s;

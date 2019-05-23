@@ -1090,7 +1090,7 @@ void update(app_state& app) {
                     log_info("done loading " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [error]";
                     app.errors.push_back("cannot load " + scn.filename);
                 }
             } break;
@@ -1114,7 +1114,7 @@ void update(app_state& app) {
                     }
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [error]";
                     app.errors.push_back(
                         "cannot load element from " + scn.filename);
                 }
