@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
     // scene loading
     auto scene = yocto_scene{};
     try {
-        auto timer = print_timed("loading {}", filename);
+        auto timer = print_timed("loading scene");
         load_scene(filename, scene, sceneio_prms);
     } catch (const std::exception& e) {
         print_fatal(e.what());
@@ -198,8 +198,10 @@ int main(int argc, char* argv[]) {
             auto nsamples = min(
                 trace_prms.samples_per_batch, trace_prms.num_samples - sample);
             {
-                auto timer = print_timed("rendering cam{} at {:4}/{:4}",
-                    trace_prms.camera_id, sample, trace_prms.num_samples);
+                auto timer = print_timed(
+                    "rendering cam" + to_string(trace_prms.camera_id) +
+                    "at " + to_string(sample) +
+                    " " + to_string(trace_prms.num_samples));
                 trace_samples(
                     render, state, scene, bvh, lights, sample, trace_prms);
             }
@@ -227,7 +229,7 @@ int main(int argc, char* argv[]) {
                 outfilename = format("{}.cam{}.{}", get_noextension(imfilename),
                     trace_prms.camera_id, get_extension(imfilename));
             }
-            auto timer = print_timed("saving {}", outfilename);
+            auto timer = print_timed("saving image");
             if (logo) {
                 save_tonemapped_with_logo(outfilename, render, tonemap_prms);
             } else {

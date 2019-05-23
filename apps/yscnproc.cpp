@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     }
 
     // print info
-    if (info) print_info("{}", format_stats(scene));
+    if (info) print_info(format_stats(scene));
 
     // change texture names
     if (uniform_txt) {

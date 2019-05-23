@@ -1660,12 +1660,12 @@ bvh_intersection overlap_bvh(const bvh_scene& scene, const vec3f& pos,
 namespace yocto {
 
 // Print bvh statistics.
-string print_stats(const bvh_shape& bvh) {
+string format_stats(const bvh_shape& bvh) {
     // TODO
     auto str = ""s;
     return str;
 }
-string print_stats(const bvh_scene& bvh) {
+string format_stats(const bvh_scene& bvh) {
 #if 0
     auto num_shapes    = (size_t)0;
     auto num_instances = (size_t)0;

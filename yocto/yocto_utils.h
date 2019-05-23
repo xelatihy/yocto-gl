@@ -133,31 +133,76 @@ namespace yocto {
 // make printing easier in console apps.
 
 // Helper to indicate info printing in console apps.
-template <typename... Args>
-inline void print_info(string_view format_str, const Args&... args);
-// Prints an error and exit.
-template <typename... Args>
-inline void print_fatal(string_view format_str, const Args&... args);
+inline void print_info(const string& msg) {
+    printf("%s\n", msg.c_str());
+}
 
-// get time from a high resolution clock
-using time_point = std::chrono::time_point<std::chrono::high_resolution_clock>;
-inline time_point get_time();
+// Prints an error and exit.
+inline void print_fatal(const string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
+
+// get time in nanoseconds
+inline int64_t get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+// Format duration string from nanoseconds
+inline string format_duration(int64_t duration) {
+    auto elapsed = duration / 1000000;  // milliseconds
+    auto hours   = (int)(elapsed / 3600000);
+    elapsed %= 3600000;
+    auto mins = (int)(elapsed / 60000);
+    elapsed %= 60000;
+    auto secs  = (int)(elapsed / 1000);
+    auto msecs = (int)(elapsed % 1000);
+    char buffer[256];
+    sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+    return buffer;
+}
 
 // print information and returns a timer that will print the time when
 // destroyed. Use with RIIA for scoped timing.
-struct print_timer;
-template <typename... Args>
-inline print_timer print_timed(string_view format_str, const Args&... args);
+struct print_timer {
+    print_timer(const string& msg) : start{get_time()} {
+        printf("%s", msg.c_str());
+        fflush(stdout);
+    }
+    ~print_timer() {
+        printf(" %s\n", format_duration(get_time() - start).c_str());
+    }
+    int64_t start = 0;
+};
+inline print_timer print_timed(const string& msg) {
+    return print_timer(msg);
+}
 
 // Logging to a sync
-inline void set_log_callback(function<void(const string&)> callback);
-template <typename... Args>
-inline void log_info(string_view format_str, const Args&... args);
-template <typename... Args>
-inline void log_error(string_view format_str, const Args&... args);
-struct log_timer;
-template <typename... Args>
-inline auto log_timed(string_view format_str, const Args&... args);
+inline auto log_callback = function<void(const string& msg)>{};
+inline void set_log_callback(function<void(const string& msg)> callback) {
+    log_callback = callback;
+}
+inline void log_info(const string& msg) {
+    if (log_callback) log_callback(msg+"\n");
+}
+inline void log_error(const string& msg) {
+    if (log_callback) log_callback(msg+"\n");
+}
+struct log_timer {
+    log_timer(const string& msg) : msg{msg}, start{get_time()} {
+        if (log_callback) log_callback(msg);
+    }
+    ~log_timer() {
+        if (log_callback) log_callback(msg + "in " + format_duration(get_time() - start));
+    }
+
+   private:
+    string     msg;
+    int64_t start;
+};
+inline log_timer log_timed(const string& msg) {
+    return log_timer(msg);
+}
 
 }  // namespace yocto
 
@@ -278,16 +323,6 @@ inline vector<T> operator+(const vector<T>& a, const initializer_list<T>& b);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// APPLICATION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -393,93 +428,6 @@ inline void parallel_foreach(const vector<T>& values, const Func& func,
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PRINTING AND FORMATTING HELPERS
 // -----------------------------------------------------------------------------
-namespace yocto {
-
-// Helper to indicate info printing in console apps.
-template <typename... Args>
-inline void print_info(string_view format_str, const Args&... args) {
-    print(format_str, args...);
-    print("\n");
-}
-
-// Prints an error and exit.
-template <typename... Args>
-inline void print_fatal(string_view format_str, const Args&... args) {
-    print(format_str, args...);
-    print("\n");
-    exit(1);
-}
-
-// get time from a high resolution clock
-inline time_point get_time() {
-    return std::chrono::high_resolution_clock::now();
-}
-
-// print information and returns a timer that will print the time when
-// destroyed. Use with RIIA for scoped timing.
-struct print_timer {
-    print_timer(const string& msg) : msg{msg} {
-        start = get_time();
-        print("{}", msg);
-        fflush(stdout);
-    }
-    ~print_timer() {
-        auto end = get_time();
-        print(" in {:%H:%M:%S}\n", end - start);
-    }
-
-   private:
-    string     msg;
-    time_point start;
-};
-template <typename... Args>
-inline print_timer print_timed(string_view format_str, const Args&... args) {
-    return print_timer(format(format_str, args...));
-}
-
-// Logging to a sync
-namespace impl {
-inline auto log_callback = function<void(const string&)>{};
-}
-
-inline void set_log_callback(function<void(const string&)> callback) {
-    impl::log_callback = callback;
-}
-template <typename... Args>
-inline void log_msg(string_view format_str, const Args&... args) {
-    if (impl::log_callback) impl::log_callback(format(format_str, args...));
-}
-template <typename... Args>
-inline void log_info(string_view format_str, const Args&... args) {
-    if (impl::log_callback)
-        impl::log_callback(format(format_str, args...) + "\n");
-}
-template <typename... Args>
-inline void log_error(string_view format_str, const Args&... args) {
-    if (impl::log_callback)
-        impl::log_callback(format(format_str, args...) + "\n");
-}
-struct log_timer {
-    log_timer(const string& msg) : msg{msg} {
-        start = get_time();
-        log_msg("{}", msg);
-    }
-    ~log_timer() {
-        auto end = get_time();
-        log_msg("in {:%H:%M:%S}", end - start);
-    }
-
-   private:
-    string     msg;
-    time_point start;
-};
-template <typename... Args>
-inline log_timer log_timed(string_view format_str, const Args&... args) {
-    if (impl::log_callback) return log_timer(format(format_str, args...));
-}
-
-}  // namespace yocto
-
 // Formatter for math types
 namespace fmt {
 // Formatter for math types
@@ -744,27 +692,6 @@ template <typename T>
 inline vector<T> operator+(const vector<T>& a, const initializer_list<T>& b) {
     auto c = a;
     return c += b;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF STRING FORMAT UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration) {
-    auto elapsed = duration / 1000000;  // milliseconds
-    auto hours   = (int)(elapsed / 3600000);
-    elapsed %= 3600000;
-    auto mins = (int)(elapsed / 60000);
-    elapsed %= 60000;
-    auto secs  = (int)(elapsed / 1000);
-    auto msecs = (int)(elapsed % 1000);
-    char buffer[256];
-    sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-    return buffer;
 }
 
 }  // namespace yocto

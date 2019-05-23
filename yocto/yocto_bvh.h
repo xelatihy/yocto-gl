@@ -282,8 +282,8 @@ bvh_intersection overlap_bvh(const bvh_scene& bvh, const vec3f& pos,
 namespace yocto {
 
 // Print bvh statistics.
-string print_stats(const bvh_shape& bvh);
-string print_stats(const bvh_scene& bvh);
+string format_stats(const bvh_shape& bvh);
+string format_stats(const bvh_scene& bvh);
 
 }  // namespace yocto
 

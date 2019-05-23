@@ -110,7 +110,6 @@ using std::sin;
 using std::sqrt;
 using std::swap;
 using std::tan;
-using std::to_string;
 
 using std::array;
 using std::exception;
@@ -2003,5 +2002,52 @@ inline void update_camera_first_person(
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CONVERSION TO STRING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+inline string to_string(int val) { return std::to_string(val); }
+inline string to_string(float val) { return std::to_string(val); }
+inline string to_string(double val) { return std::to_string(val); }
+inline string to_string(uint64_t val) { return std::to_string(val); }
+
+inline string to_string(const float* vals, int num) { 
+    auto str = ""s;
+    for(auto i = 0; i < num; i ++) {
+        if(i) str += " ";
+        str += to_string(vals[i]);
+    }
+    return str;
+}
+inline string to_string(const int* vals, int num) { 
+    auto str = ""s;
+    for(auto i = 0; i < num; i ++) {
+        if(i) str += " ";
+        str += to_string(vals[i]);
+    }
+    return str;
+}
+
+inline string to_string(const vec2f& val) { return to_string(&val.x, 2); }
+inline string to_string(const vec3f& val) { return to_string(&val.x, 3); }
+inline string to_string(const vec4f& val) { return to_string(&val.x, 4); }
+
+inline string to_string(const vec2i& val) { return to_string(&val.x, 2); }
+inline string to_string(const vec3i& val) { return to_string(&val.x, 3); }
+inline string to_string(const vec4i& val) { return to_string(&val.x, 4); }
+
+inline string to_string(const mat2f& val) { return to_string(&val.x.x, 4); }
+inline string to_string(const mat3f& val) { return to_string(&val.x.x, 9); }
+inline string to_string(const mat4f& val) { return to_string(&val.x.x, 16); }
+
+inline string to_string(const frame2f& val) { return to_string(&val.x.x, 6); }
+inline string to_string(const frame3f& val) { return to_string(&val.x.x, 12); }
+
+inline string to_string(const bbox2f& val) { return to_string(&val.min.x, 4); }
+inline string to_string(const bbox3f& val) { return to_string(&val.min.x, 6); }
+
+}
 
 #endif

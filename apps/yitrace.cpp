@@ -320,8 +320,8 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "print stats")) {
-            print_info("{}", format_stats(scn.scene).c_str());
-            print_info("{}", print_stats(scn.bvh).c_str());
+            print_info(format_stats(scn.scene));
+            print_info(format_stats(scn.bvh));
         }
         auto mouse_pos = get_opengl_mouse_pos(win);
         auto ij        = get_image_coords(
@@ -534,13 +534,13 @@ void update(app_state& app) {
                 if (next.type != app_task_type::render_image &&
                     next.type != app_task_type::apply_edit)
                     break;
-                log_info("cancel rendering {}", scn.filename);
+                log_info("cancel rendering " + scn.filename);
             } else if (task.type == app_task_type::apply_edit) {
                 if (next.type != app_task_type::apply_edit ||
                     task.edit.type != next.edit.type ||
                     task.edit.index != next.edit.index)
                     break;
-                log_info("cancel editing {}", scn.filename);
+                log_info("cancel editing " + scn.filename);
             } else {
                 break;
             }
@@ -560,7 +560,7 @@ void update(app_state& app) {
         while (!scn.task_queue.empty()) {
             auto& task = scn.task_queue.front();
             if (task.type != app_task_type::apply_edit) break;
-            log_info("start editing {}", scn.filename);
+            log_info("start editing " + scn.filename);
             try {
                 scn.render_done     = false;
                 auto reload_element = false, update_bvh = false,
@@ -568,7 +568,7 @@ void update(app_state& app) {
                 apply_edit(scn.filename, scn.scene, scn.trace_prms,
                     scn.tonemap_prms, reload_element, update_lights, update_bvh,
                     task.edit);
-                log_info("done editing {}", scn.filename);
+                log_info("done editing " + scn.filename);
                 if (reload_element) {
                     scn.load_done = false;
                     scn.task_queue.emplace_back(
@@ -616,7 +616,7 @@ void update(app_state& app) {
                     scn.name = format("{} [{}x{}@0]",
                         get_filename(scn.filename), scn.render.size().x,
                         scn.render.size().y);
-                    log_info("done loading {}", scn.filename);
+                    log_info("done loading " + scn.filename);
                     init_opengl_texture(
                         scn.gl_txt, scn.display, false, false, false);
                     scn.task_queue.emplace_back(app_task_type::build_bvh);
@@ -632,7 +632,7 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     scn.load_done = true;
-                    log_info("done loading element from {}", scn.filename);
+                    log_info("done loading element from " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     scn.name = format("{} [error]", get_filename(scn.filename));
@@ -645,7 +645,7 @@ void update(app_state& app) {
                     task.result.get();
                     scn.bvh_done = true;
                     scn.name     = format("{}", get_filename(scn.filename));
-                    log_info("done building bvh {}", scn.filename);
+                    log_info("done building bvh " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     scn.name = format("{} [error]", get_filename(scn.filename));
@@ -657,7 +657,7 @@ void update(app_state& app) {
                     task.result.get();
                     scn.bvh_done = true;
                     scn.name     = format("{}", get_filename(scn.filename));
-                    log_info("done refitting bvh {}", scn.filename);
+                    log_info("done refitting bvh " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     scn.name = format("{} [error]", get_filename(scn.filename));
@@ -669,7 +669,7 @@ void update(app_state& app) {
                     task.result.get();
                     scn.lights_done = true;
                     scn.name        = format("{}", get_filename(scn.filename));
-                    log_info("done building lights {}", scn.filename);
+                    log_info("done building lights " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     scn.name = format("{} [error]", get_filename(scn.filename));
@@ -679,7 +679,7 @@ void update(app_state& app) {
             case app_task_type::save_image: {
                 try {
                     task.result.get();
-                    log_info("done saving {}", scn.imagename);
+                    log_info("done saving " + scn.imagename);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     app.errors.push_back("cannot save " + scn.imagename);
@@ -688,7 +688,7 @@ void update(app_state& app) {
             case app_task_type::save_scene: {
                 try {
                     task.result.get();
-                    log_info("done saving {}", scn.outname);
+                    log_info("done saving " + scn.outname);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     app.errors.push_back("cannot save " + scn.outname);
@@ -698,7 +698,7 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     scn.render_done = true;
-                    log_info("done rendering {}", scn.filename);
+                    log_info("done rendering " + scn.filename);
                     scn.render_sample = scn.trace_prms.num_samples;
                     scn.name          = format("{} [{}x{}@{}]",
                         get_filename(scn.filename), scn.render.size().x,
@@ -722,7 +722,7 @@ void update(app_state& app) {
             case app_task_type::none: break;
             case app_task_type::close_scene: break;
             case app_task_type::load_scene: {
-                log_info("start loading {}", scn.filename);
+                log_info("start loading " + scn.filename);
                 scn.load_done   = false;
                 scn.bvh_done    = false;
                 scn.lights_done = false;
@@ -733,20 +733,20 @@ void update(app_state& app) {
                 });
             } break;
             case app_task_type::load_element: {
-                log_info("start loading element for {}", scn.filename);
+                log_info("start loading element for " + scn.filename);
                 scn.load_done = false;
                 task.result   = async([&scn, &task]() {
                     load_element(scn.filename, scn.scene, task.edit);
                 });
             } break;
             case app_task_type::build_bvh: {
-                log_info("start building bvh {}", scn.filename);
+                log_info("start building bvh " + scn.filename);
                 scn.bvh_done = false;
                 task.result  = async(
                     [&scn]() { build_bvh(scn.bvh, scn.scene, scn.bvh_prms); });
             } break;
             case app_task_type::refit_bvh: {
-                log_info("start refitting bvh {}", scn.filename);
+                log_info("start refitting bvh " + scn.filename);
                 scn.bvh_done = false;
                 task.result  = async([&scn, &task]() {
                     refit_bvh(scn.filename, scn.scene, scn.bvh, scn.bvh_prms,
@@ -754,26 +754,26 @@ void update(app_state& app) {
                 });
             } break;
             case app_task_type::init_lights: {
-                log_info("start building lights {}", scn.filename);
+                log_info("start building lights " + scn.filename);
                 scn.lights_done = false;
                 task.result     = async(
                     [&scn]() { init_trace_lights(scn.lights, scn.scene); });
             } break;
             case app_task_type::save_image: {
-                log_info("start saving {}", scn.imagename);
+                log_info("start saving " + scn.imagename);
                 task.result = async([&scn]() {
                     save_tonemapped(
                         scn.imagename, scn.render, scn.tonemap_prms);
                 });
             } break;
             case app_task_type::save_scene: {
-                log_info("start saving {}", scn.outname);
+                log_info("start saving " + scn.outname);
                 task.result = async([&scn]() {
                     save_scene(scn.outname, scn.scene, scn.sceneio_prms);
                 });
             } break;
             case app_task_type::render_image: {
-                log_info("start rendering {}", scn.filename);
+                log_info("start rendering " + scn.filename);
                 scn.render_done = false;
                 scn.image_size  = camera_image_size(
                     scn.scene.cameras[scn.trace_prms.camera_id],

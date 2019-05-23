@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
     print_validation(scene, true);
 
     // print info
-    if (info) print_info("{}", format_stats(scene));
+    if (info) print_info(format_stats(scene));
 
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
