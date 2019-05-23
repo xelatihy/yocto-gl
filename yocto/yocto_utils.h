@@ -884,71 +884,74 @@ inline void parse_value(string_view& str, string& value, bool quoted = false) {
         str.remove_prefix(pos + 1);
     }
 }
-template <typename T, size_t N>
+template <typename T>
 inline void parse_value(
-    string_view& str, array<T, N>& value, bool in_brackets = false) {
+    string_view& str, T* values, int num, bool in_brackets = false) {
     if (!in_brackets) {
-        for (auto i = 0; i < N; i++) parse_value(str, value[i]);
+        for (auto i = 0; i < num; i++) parse_value(str, values[i]);
     } else {
         skip_whitespace(str);
         if (str.empty() || str.front() != '[')
             throw io_error("cannot parse value");
-        for (auto i = 0; i < N; i++) {
+        for (auto i = 0; i < num; i++) {
             if (i) {
                 skip_whitespace(str);
                 if (str.empty() || str.front() != ',')
                     throw io_error("cannot parse value");
             }
-            parse_value(str, value[i]);
+            parse_value(str, values[i]);
         }
         skip_whitespace(str);
         if (str.empty() || str.front() != ']')
             throw io_error("cannot parse value");
     }
 }
+
 inline void parse_value(
     string_view& str, vec2f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 2>&)value, in_brackets);
+    parse_value(str, &value.x, 2, in_brackets);
 }
 inline void parse_value(
     string_view& str, vec3f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 3>&)value, in_brackets);
+    parse_value(str, &value.x, 3, in_brackets);
 }
 inline void parse_value(
     string_view& str, vec4f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 4>&)value, in_brackets);
+    parse_value(str, &value.x, 4, in_brackets);
 }
+
 inline void parse_value(
     string_view& str, vec2i& value, bool in_brackets = false) {
-    parse_value(str, (array<int, 2>&)value, in_brackets);
+    parse_value(str, &value.x, 2, in_brackets);
 }
 inline void parse_value(
     string_view& str, vec3i& value, bool in_brackets = false) {
-    parse_value(str, (array<int, 3>&)value, in_brackets);
+    parse_value(str, &value.x, 3, in_brackets);
 }
 inline void parse_value(
     string_view& str, vec4i& value, bool in_brackets = false) {
-    parse_value(str, (array<int, 4>&)value, in_brackets);
+    parse_value(str, &value.x, 4, in_brackets);
 }
+
 inline void parse_value(
     string_view& str, frame2f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 6>&)value, in_brackets);
+    parse_value(str, &value.x.x, 6, in_brackets);
 }
 inline void parse_value(
     string_view& str, frame3f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 12>&)value, in_brackets);
+    parse_value(str, &value.x.x, 12, in_brackets);
 }
 inline void parse_value(
     string_view& str, mat2f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 4>&)value, in_brackets);
+    parse_value(str, &value.x.x, 4, in_brackets);
 }
 inline void parse_value(
     string_view& str, mat3f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 9>&)value, in_brackets);
+    parse_value(str, &value.x.x, 9, in_brackets);
 }
 inline void parse_value(
     string_view& str, mat4f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 16>&)value, in_brackets);
+    parse_value(str, &value.x.x, 19, in_brackets);
 }
 
 template <typename T>

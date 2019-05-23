@@ -2017,15 +2017,8 @@ inline string to_string(double val) { return std::to_string(val); }
 inline string to_string(uint64_t val) { return std::to_string(val); }
 inline string to_string(size_t val) { return std::to_string(val); }
 
-inline string to_string(const float* vals, int num) {
-    auto str = ""s;
-    for (auto i = 0; i < num; i++) {
-        if (i) str += " ";
-        str += to_string(vals[i]);
-    }
-    return str;
-}
-inline string to_string(const int* vals, int num) {
+template<typename T>
+inline string to_string(const T* vals, int num) {
     auto str = ""s;
     for (auto i = 0; i < num; i++) {
         if (i) str += " ";
