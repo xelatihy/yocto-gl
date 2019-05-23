@@ -33,6 +33,9 @@ using namespace yocto;
 
 #include "ext/CLI11.hpp"
 
+#include <unordered_set>
+using std::unordered_set;
+
 bool mkdir(const string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
         return true;

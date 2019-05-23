@@ -165,16 +165,32 @@ inline auto log_timed(string_view format_str, const Args&... args);
 namespace fmt {
 
 // Formatter for math types
-template <typename T, int N>
-struct formatter<yocto::vec<T, N>>;
-template <typename T, int N, int M>
-struct formatter<yocto::mat<T, N, M>>;
-template <typename T, int N>
-struct formatter<yocto::affine<T, N>>;
-template <typename T, int N>
-struct formatter<yocto::frame<T, N>>;
-template <typename T, int N>
-struct formatter<yocto::bbox<T, N>>;
+template <>
+struct formatter<yocto::vec2f>;
+template <>
+struct formatter<yocto::vec3f>;
+template <>
+struct formatter<yocto::vec4f>;
+template <>
+struct formatter<yocto::vec2i>;
+template <>
+struct formatter<yocto::vec3i>;
+template <>
+struct formatter<yocto::vec4i>;
+template <>
+struct formatter<yocto::mat2f>;
+template <>
+struct formatter<yocto::mat3f>;
+template <>
+struct formatter<yocto::mat4f>;
+template <>
+struct formatter<yocto::frame2f>;
+template <>
+struct formatter<yocto::frame3f>;
+template <>
+struct formatter<yocto::bbox2f>;
+template <>
+struct formatter<yocto::bbox3f>;
 
 }  // namespace fmt
 
@@ -491,19 +507,32 @@ struct _formatter_base {
     }
 };
 // Formatter for math types
-template <typename T, int N>
-struct formatter<yocto::vec<T, N>> : _formatter_base<yocto::vec<T, N>, N> {};
-template <typename T, int N, int M>
-struct formatter<yocto::mat<T, N, M>>
-    : _formatter_base<yocto::mat<T, N, M>, M> {};
-template <typename T, int N>
-struct formatter<yocto::affine<T, N>>
-    : _formatter_base<yocto::affine<T, N>, N + 1> {};
-template <typename T, int N>
-struct formatter<yocto::frame<T, N>>
-    : _formatter_base<yocto::frame<T, N>, N + 1> {};
-template <typename T, int N>
-struct formatter<yocto::bbox<T, N>> : _formatter_base<yocto::bbox<T, N>, 2> {};
+template <>
+struct formatter<yocto::vec2f> : _formatter_base<yocto::vec2f, 2> {};
+template <>
+struct formatter<yocto::vec3f> : _formatter_base<yocto::vec3f, 3> {};
+template <>
+struct formatter<yocto::vec4f> : _formatter_base<yocto::vec4f, 4> {};
+template <>
+struct formatter<yocto::vec2i> : _formatter_base<yocto::vec2i, 2> {};
+template <>
+struct formatter<yocto::vec3i> : _formatter_base<yocto::vec3i, 3> {};
+template <>
+struct formatter<yocto::vec4i> : _formatter_base<yocto::vec4i, 4> {};
+template <>
+struct formatter<yocto::mat2f> : _formatter_base<yocto::mat2f, 2> {};
+template <>
+struct formatter<yocto::mat3f> : _formatter_base<yocto::mat3f, 3> {};
+template <>
+struct formatter<yocto::mat4f> : _formatter_base<yocto::mat4f, 4> {};
+template <>
+struct formatter<yocto::frame2f> : _formatter_base<yocto::frame2f, 3> {};
+template <>
+struct formatter<yocto::frame3f> : _formatter_base<yocto::frame3f, 4> {};
+template <>
+struct formatter<yocto::bbox2f> : _formatter_base<yocto::bbox2f, 2> {};
+template <>
+struct formatter<yocto::bbox3f> : _formatter_base<yocto::bbox3f, 2> {};
 
 }  // namespace fmt
 
@@ -1145,20 +1174,49 @@ inline void parse_value(
             throw io_error("cannot parse value");
     }
 }
-template <typename T, int N>
 inline void parse_value(
-    string_view& str, vec<T, N>& value, bool in_brackets = false) {
-    parse_value(str, (array<T, N>&)value, in_brackets);
+    string_view& str, vec2f& value, bool in_brackets = false) {
+    parse_value(str, (array<float, 2>&)value, in_brackets);
 }
-template <typename T, int N>
 inline void parse_value(
-    string_view& str, frame<T, N>& value, bool in_brackets = false) {
-    parse_value(str, (array<T, N*(N + 1)>&)value, in_brackets);
+    string_view& str, vec3f& value, bool in_brackets = false) {
+    parse_value(str, (array<float, 3>&)value, in_brackets);
 }
-template <typename T, int N, int M>
 inline void parse_value(
-    string_view& str, mat<T, N, M>& value, bool in_brackets = false) {
-    parse_value(str, (array<T, N * M>&)value, in_brackets);
+    string_view& str, vec4f& value, bool in_brackets = false) {
+    parse_value(str, (array<float, 4>&)value, in_brackets);
+}
+inline void parse_value(
+    string_view& str, vec2i& value, bool in_brackets = false) {
+    parse_value(str, (array<int, 2>&)value, in_brackets);
+}
+inline void parse_value(
+    string_view& str, vec3i& value, bool in_brackets = false) {
+    parse_value(str, (array<int, 3>&)value, in_brackets);
+}
+inline void parse_value(
+    string_view& str, vec4i& value, bool in_brackets = false) {
+    parse_value(str, (array<int, 4>&)value, in_brackets);
+}
+inline void parse_value(
+    string_view& str, frame2f& value, bool in_brackets = false) {
+    parse_value(str, (array<float, 6>&)value, in_brackets);
+}
+inline void parse_value(
+    string_view& str, frame3f& value, bool in_brackets = false) {
+    parse_value(str, (array<float, 12>&)value, in_brackets);
+}
+inline void parse_value(
+    string_view& str, mat2f& value, bool in_brackets = false) {
+    parse_value(str, (array<float, 4>&)value, in_brackets);
+}
+inline void parse_value(
+    string_view& str, mat3f& value, bool in_brackets = false) {
+    parse_value(str, (array<float, 9>&)value, in_brackets);
+}
+inline void parse_value(
+    string_view& str, mat4f& value, bool in_brackets = false) {
+    parse_value(str, (array<float, 16>&)value, in_brackets);
 }
 
 template <typename T>
@@ -1243,7 +1301,7 @@ inline vector<string> split(const string& str,
 inline void splitlines(string_view str, vector<string_view>& splits) {
     splits.clear();
     while (!str.empty()) {
-        auto pos = min(str.find("\n"), str.find("\r\n"));
+        auto pos = std::min(str.find("\n"), str.find("\r\n"));
         if (pos == string_view::npos) {
             splits.push_back(str);
             break;

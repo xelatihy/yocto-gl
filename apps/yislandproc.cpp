@@ -49,7 +49,6 @@ using namespace yocto;
 #include "ext/sajson.h"
 
 #include <unordered_set>
-
 using std::unordered_set;
 
 // -----------------------------------------------------------------------------
@@ -72,40 +71,53 @@ inline void save_json(const string& filename, const json& js) {
     save_text(filename, js.dump(4));
 }
 
-template <typename T, int N>
-inline void to_json(json& js, const vec<T, N>& val) {
-    nlohmann::to_json(js, (const std::array<T, N>&)val);
+inline void to_json(json& js, const vec2f& val) {
+    nlohmann::to_json(js, (const std::array<float, 2>&)val);
 }
-template <typename T, int N>
-inline void from_json(const json& js, vec<T, N>& val) {
-    nlohmann::from_json(js, (std::array<T, N>&)val);
+inline void from_json(const json& js, vec2f& val) {
+    nlohmann::from_json(js, (std::array<float, 2>&)val);
 }
 
-template <typename T, int N>
-inline void to_json(json& js, const frame<T, N>& val) {
-    nlohmann::to_json(js, (const std::array<T, N*(N + 1)>&)val);
+inline void to_json(json& js, const vec3f& val) {
+    nlohmann::to_json(js, (const std::array<float, 3>&)val);
 }
-template <typename T, int N>
-inline void from_json(const json& js, frame<T, N>& val) {
-    nlohmann::from_json(js, (std::array<T, N*(N + 1)>&)val);
+inline void from_json(const json& js, vec3f& val) {
+    nlohmann::from_json(js, (std::array<float, 3>&)val);
 }
 
-template <typename T, int N, int M>
-inline void to_json(json& js, const mat<T, N, M>& val) {
-    nlohmann::to_json(js, (const std::array<T, N * M>&)val);
+inline void to_json(json& js, const vec4f& val) {
+    nlohmann::to_json(js, (const std::array<float, 4>&)val);
 }
-template <typename T, int N, int M>
-inline void from_json(const json& js, mat<T, N, M>& val) {
-    nlohmann::from_json(js, (std::array<T, N * M>&)val);
+inline void from_json(const json& js, vec4f& val) {
+    nlohmann::from_json(js, (std::array<float, 4>&)val);
 }
 
-template <typename T, int N>
-inline void to_json(json& js, const bbox<T, N>& val) {
-    nlohmann::from_json(js, (std::array<T, N * 2>&)val);
+inline void to_json(json& js, const vec2i& val) {
+    nlohmann::to_json(js, (const std::array<int, 2>&)val);
 }
-template <typename T, int N>
-inline void from_json(const json& js, bbox<T, N>& val) {
-    nlohmann::to_json(js, (const std::array<T, N * 2>&)val);
+inline void from_json(const json& js, vec2i& val) {
+    nlohmann::from_json(js, (std::array<int, 2>&)val);
+}
+
+inline void to_json(json& js, const vec3i& val) {
+    nlohmann::to_json(js, (const std::array<int, 3>&)val);
+}
+inline void from_json(const json& js, vec3i& val) {
+    nlohmann::from_json(js, (std::array<int, 3>&)val);
+}
+
+inline void to_json(json& js, const vec4i& val) {
+    nlohmann::to_json(js, (const std::array<int, 4>&)val);
+}
+inline void from_json(const json& js, vec4i& val) {
+    nlohmann::from_json(js, (std::array<int, 4>&)val);
+}
+
+inline void to_json(json& js, const mat4f& val) {
+    nlohmann::to_json(js, (const std::array<float, 16>&)val);
+}
+inline void from_json(const json& js, mat4f& val) {
+    nlohmann::from_json(js, (std::array<float, 16>&)val);
 }
 
 struct disney_material {

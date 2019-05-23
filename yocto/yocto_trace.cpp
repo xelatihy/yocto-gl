@@ -877,8 +877,8 @@ vec3f eval_volscattering(const material_point& material, const vec3f& outgoing,
 vec3f sample_volscattering(const material_point& material,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (!has_volume(material)) return zero3f;
-    auto weights = vec1f{max(material.voldensity)};
-    if (weights == zero1f) return zero3f;
+    auto weights = vec2f{max(material.voldensity), 0};
+    if (weights == zero2f) return zero3f;
     weights /= sum(weights);
 
     // keep a weight sum to pick a lobe
@@ -895,8 +895,8 @@ vec3f sample_volscattering(const material_point& material,
 float sample_volscattering_pdf(const material_point& material,
     const vec3f& outgoing, const vec3f& incoming) {
     if (!has_volume(material)) return 0;
-    auto weights = vec1f{max(material.voldensity)};
-    if (weights == zero1f) return 0;
+    auto weights = vec2f{max(material.voldensity), 0};
+    if (weights == zero2f) return 0;
     weights /= sum(weights);
 
     // commpute pdf
@@ -972,8 +972,7 @@ float sample_light_pdf(const yocto_scene& scene, const trace_lights& lights,
     auto pdf           = 0.0f;
     auto next_position = position;
     for (auto bounce = 0; bounce < 100; bounce++) {
-        auto isec = intersect_bvh(
-            bvh, instance_id, make_ray(next_position, direction));
+        auto isec = intersect_bvh(bvh, instance_id, {next_position, direction});
         if (!isec.hit) break;
         // accumulate pdf
         auto& instance       = scene.instances[isec.instance];
@@ -1049,7 +1048,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
+        auto intersection = intersect_bvh(bvh, {origin, direction});
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1189,7 +1188,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < params.max_bounces; bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
+        auto intersection = intersect_bvh(bvh, {origin, direction});
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1262,7 +1261,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < max(params.max_bounces, 4); bounce++) {
         // intersect next point
         _trace_nrays += 1;
-        auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
+        auto intersection = intersect_bvh(bvh, {origin, direction});
         if (!intersection.hit) {
             radiance += weight * eval_environment(scene, direction);
             break;
@@ -1313,7 +1312,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& origin,
     const vec3f& direction, rng_state& rng, const trace_params& params) {
     // intersect next point
-    auto intersection = intersect_bvh(bvh, make_ray(origin, direction));
+    auto intersection = intersect_bvh(bvh, ray3f{origin, direction});
     if (!intersection.hit) {
         return {zero3f, false};
     }

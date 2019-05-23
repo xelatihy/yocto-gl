@@ -552,62 +552,60 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
 namespace yocto {
 
 // Line properties.
-constexpr vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
+inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
     return normalize(p1 - p0);
 }
-constexpr float line_length(const vec3f& p0, const vec3f& p1) {
+inline float line_length(const vec3f& p0, const vec3f& p1) {
     return length(p1 - p0);
 }
 
 // Triangle properties.
-constexpr vec3f triangle_normal(
+inline vec3f triangle_normal(
     const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     return normalize(cross(p1 - p0, p2 - p0));
 }
-constexpr float triangle_area(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     return length(cross(p1 - p0, p2 - p0)) / 2;
 }
 
 // Quad propeties.
-constexpr vec3f quad_normal(
+inline vec3f quad_normal(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
     return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
 }
-constexpr float quad_area(
+inline float quad_area(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
     return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
 }
 
 // Triangle tangent and bitangent from uv
-constexpr pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2);
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
 // to do it. If not interested in the split, just pass zero2f here.
-constexpr pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
-    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
-    const vec2f& current_uv);
+inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
-constexpr T interpolate_line(const T& p0, const T& p1, float u) {
+inline T interpolate_line(const T& p0, const T& p1, float u) {
     return p0 * (1 - u) + p1 * u;
 }
 // Interpolates values over a triangle parameterized by u and v along the
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
-constexpr T interpolate_triangle(
+inline T interpolate_triangle(
     const T& p0, const T& p1, const T& p2, const vec2f& uv) {
     return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
 template <typename T>
-constexpr T interpolate_quad(
+inline T interpolate_quad(
     const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
 #if YOCTO_QUADS_AS_TRIANGLES
     if (uv.x + uv.y <= 1) {
@@ -623,21 +621,21 @@ constexpr T interpolate_quad(
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
 template <typename T>
-constexpr T interpolate_bezier(
+inline T interpolate_bezier(
     const T& p0, const T& p1, const T& p2, const T& p3, float u) {
     return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
            p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
 }
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T>
-constexpr T interpolate_bezier_derivative(
+inline T interpolate_bezier_derivative(
     const T& p0, const T& p1, const T& p2, const T& p3, float u) {
     return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
            (p3 - p2) * 3 * u * u;
 }
 
 // Triangle tangent and bitangent from uv
-constexpr pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
@@ -663,10 +661,9 @@ constexpr pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 }
 
 // Quad tangent and bitangent from uv.
-constexpr pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
-    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
-    const vec2f& current_uv) {
+inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv) {
 #if YOCTO_QUADS_AS_TRIANGLES
     if (current_uv.x + current_uv.y <= 1) {
         return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);

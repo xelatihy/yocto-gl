@@ -257,20 +257,26 @@ static inline void parse_value(
 }
 
 // parse a vec type
-template <typename T, int N>
-static inline void parse_value(pbrt_stream& stream, vec<T, N>& value) {
-    for (auto i = 0; i < N; i++) parse_value(stream, value[i]);
+static inline void parse_value(pbrt_stream& stream, vec2f& value) {
+    for (auto i = 0; i < 2; i++) parse_value(stream, value[i]);
 }
-template <typename T, int N, int M>
-static inline void parse_value(pbrt_stream& stream, mat<T, N, M>& value) {
-    for (auto i = 0; i < M; i++) parse_value(stream, value[i]);
+static inline void parse_value(pbrt_stream& stream, vec3f& value) {
+    for (auto i = 0; i < 3; i++) parse_value(stream, value[i]);
 }
-template <typename T>
-static inline void parse_value(pbrt_stream& stream, bbox<T, 2>& value) {
-    parse_value(stream, value[0][0]);
-    parse_value(stream, value[1][0]);
-    parse_value(stream, value[0][1]);
-    parse_value(stream, value[1][1]);
+static inline void parse_value(pbrt_stream& stream, vec4f& value) {
+    for (auto i = 0; i < 4; i++) parse_value(stream, value[i]);
+}
+static inline void parse_value(pbrt_stream& stream, vec2i& value) {
+    for (auto i = 0; i < 2; i++) parse_value(stream, value[i]);
+}
+static inline void parse_value(pbrt_stream& stream, vec3i& value) {
+    for (auto i = 0; i < 3; i++) parse_value(stream, value[i]);
+}
+static inline void parse_value(pbrt_stream& stream, vec4i& value) {
+    for (auto i = 0; i < 4; i++) parse_value(stream, value[i]);
+}
+static inline void parse_value(pbrt_stream& stream, mat4f& value) {
+    for (auto i = 0; i < 4; i++) parse_value(stream, value[i]);
 }
 static inline void parse_value(pbrt_stream& stream, pbrt_spectrum3f& value) {
     for (auto i = 0; i < 3; i++) parse_value(stream, value[i]);
@@ -368,7 +374,7 @@ static inline bool is_type_compatible(const string& type) {
         return type == "rgb" || type == "pbrt_spectrum" || type == "blackbody";
     } else if constexpr (std::is_same<T, vec3i>::value) {
         return type == "integer";
-    } else if constexpr (std::is_same<T, bbox2i>::value) {
+    } else if constexpr (std::is_same<T, vec4i>::value) {
         return type == "integer";
     } else if constexpr (std::is_same<T, bbox2f>::value) {
         return type == "float";
@@ -2559,16 +2565,16 @@ void load_pbrt(
     // parsing stack
     auto stack    = vector<pbrt_context>{{}};
     auto object   = pbrt_object{};
-    auto coordsys = unordered_map<string, pair<affine3f, affine3f>>{};
+    auto coordsys = unordered_map<string, pair<frame3f, frame3f>>{};
 
     // helpders
     auto set_transform = [](pbrt_context& ctx, const mat4f& xform) {
-        if (ctx.active_transform_start) ctx.transform_start = (affine3f)xform;
-        if (ctx.active_transform_end) ctx.transform_end = (affine3f)xform;
+        if (ctx.active_transform_start) ctx.transform_start = (frame3f)xform;
+        if (ctx.active_transform_end) ctx.transform_end = (frame3f)xform;
     };
     auto concat_transform = [](pbrt_context& ctx, const mat4f& xform) {
-        if (ctx.active_transform_start) ctx.transform_start *= (affine3f)xform;
-        if (ctx.active_transform_end) ctx.transform_end *= (affine3f)xform;
+        if (ctx.active_transform_start) ctx.transform_start *= (frame3f)xform;
+        if (ctx.active_transform_end) ctx.transform_end *= (frame3f)xform;
     };
 
     // constant values

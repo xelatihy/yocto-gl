@@ -34,7 +34,8 @@ using namespace yocto;
 #include "ext/CLI11.hpp"
 
 struct image_stats {
-    bbox4f        bounds    = {zero4f, zero4f};
+    vec4f         min       = zero4f;
+    vec4f         max       = zero4f;
     vec4f         average   = zero4f;
     vector<vec3f> histogram = {};
 };
@@ -104,11 +105,13 @@ struct app_state {
 void compute_image_stats(
     image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
     auto max_histo = linear_hdr ? 8 : 1;
-    stats.bounds   = invalid_bbox4f;
+    stats.min      = vec4f{float_max};
+    stats.max      = vec4f{float_min};
     stats.average  = zero4f;
     stats.histogram.assign(256, zero3f);
     for (auto& p : img) {
-        stats.bounds += p;
+        stats.min = min(stats.min, p);
+        stats.max = max(stats.max, p);
         stats.average += p;
         stats.histogram[(int)(clamp(p.x / max_histo, 0.f, 1.f) * 255)].x += 1;
         stats.histogram[(int)(clamp(p.y / max_histo, 0.f, 1.f) * 255)].y += 1;
@@ -264,16 +267,14 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_coloredit_opengl_widget(win, "image", img_pixel);
         draw_dragger_opengl_widget(win, "display", display_pixel);
         auto img_stats = (img.load_done) ? img.image_stats : image_stats{};
-        draw_dragger_opengl_widget(win, "image min", img_stats.bounds.min);
-        draw_dragger_opengl_widget(win, "image max", img_stats.bounds.max);
+        draw_dragger_opengl_widget(win, "image min", img_stats.min);
+        draw_dragger_opengl_widget(win, "image max", img_stats.max);
         draw_dragger_opengl_widget(win, "image avg", img_stats.average);
         draw_histogram_opengl_widget(win, "image histo", img_stats.histogram);
         auto display_stats = (img.load_done) ? img.display_stats
                                              : image_stats{};
-        draw_dragger_opengl_widget(
-            win, "display min", display_stats.bounds.min);
-        draw_dragger_opengl_widget(
-            win, "display max", display_stats.bounds.max);
+        draw_dragger_opengl_widget(win, "display min", display_stats.min);
+        draw_dragger_opengl_widget(win, "display max", display_stats.max);
         draw_dragger_opengl_widget(win, "display avg", display_stats.average);
         draw_histogram_opengl_widget(
             win, "display histo", display_stats.histogram);

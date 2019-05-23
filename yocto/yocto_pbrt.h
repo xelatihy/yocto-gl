@@ -71,21 +71,21 @@ struct pbrt_spectrum3f {
 // pbrt cameras
 struct pbrt_camera {
     struct perspective_t {
-        float  fov              = 90;
-        float  frameaspectratio = -1;  // or computed from film
-        float  lensradius       = 0;
-        float  focaldistance    = 1e30;
-        bbox2f screenwindow     = {{-1, -1}, {1, 1}};
-        float  shutteropen      = 0;
-        float  shutterclose     = 1;
+        float fov              = 90;
+        float frameaspectratio = -1;  // or computed from film
+        float lensradius       = 0;
+        float focaldistance    = 1e30;
+        vec4f screenwindow     = {-1, 1, -1, 1};
+        float shutteropen      = 0;
+        float shutterclose     = 1;
     };
     struct orthographic_t {
-        float  frameaspectratio = -1;  // or computed from film
-        float  lensradius       = 0;
-        float  focaldistance    = 1e30;
-        bbox2f screenwindow     = {{-1, -1}, {1, 1}};
-        float  shutteropen      = 0;
-        float  shutterclose     = 1;
+        float frameaspectratio = -1;  // or computed from film
+        float lensradius       = 0;
+        float focaldistance    = 1e30;
+        vec4f screenwindow     = {-1, 1, -1, 1};
+        float shutteropen      = 0;
+        float shutterclose     = 1;
     };
     struct environment_t {
         float shutteropen  = 0;
@@ -152,7 +152,7 @@ struct pbrt_film {
     struct image_t {
         int    xresolution        = 640;
         int    yresolution        = 480;
-        bbox2f cropwindow         = {{0, 0}, {1, 1}};
+        vec4f  cropwindow         = {0, 1, 0, 1};
         float  scale              = 1;
         float  maxsampleluminance = float_max;
         float  diagonal           = 35;
@@ -202,24 +202,24 @@ struct pbrt_filter {
 struct pbrt_integrator {
     struct path_t {
         enum struct lightsamplestrategy_t { uniform, power, spatial };
-        int    maxdepth    = 5;
-        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
-        float  rrthreshold = 1;
+        int   maxdepth    = 5;
+        vec4i pixelbounds = {0, 0, type_max<int>, type_max<int>};
+        float rrthreshold = 1;
         lightsamplestrategy_t lightsamplestrategy =
             lightsamplestrategy_t::spatial;
     };
     struct volpath_t {
         enum struct lightsamplestrategy_t { uniform, power, spatial };
-        int    maxdepth    = 5;
-        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
-        float  rrthreshold = 1;
+        int   maxdepth    = 5;
+        vec4i pixelbounds = {0, 0, type_max<int>, type_max<int>};
+        float rrthreshold = 1;
         lightsamplestrategy_t lightsamplestrategy =
             lightsamplestrategy_t::spatial;
     };
     struct bdpt_t {
         enum struct lightsamplestrategy_t { uniform, power, spatial };
-        int    maxdepth    = 5;
-        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+        int   maxdepth    = 5;
+        vec4i pixelbounds = {0, 0, type_max<int>, type_max<int>};
         lightsamplestrategy_t lightsamplestrategy =
             lightsamplestrategy_t::power;
         bool visualizestrategies = false;
@@ -229,28 +229,28 @@ struct pbrt_integrator {
         enum struct strategy_t { all, one };
         strategy_t strategy    = strategy_t::all;
         int        maxdepth    = 5;
-        bbox2i     pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+        vec4i      pixelbounds = {0, 0, type_max<int>, type_max<int>};
     };
     struct mlt_t {
-        int    maxdepth             = 5;
-        bbox2i pixelbounds          = {{0, 0}, {type_max<int>, type_max<int>}};
-        int    bootstrapsamples     = 100000;
-        int    chains               = 1000;
-        int    mutationsperpixel    = 100;
-        float  largestepprobability = 0.3;
-        float  sigma                = 0.01;
+        int   maxdepth             = 5;
+        vec4i pixelbounds          = {0, 0, type_max<int>, type_max<int>};
+        int   bootstrapsamples     = 100000;
+        int   chains               = 1000;
+        int   mutationsperpixel    = 100;
+        float largestepprobability = 0.3;
+        float sigma                = 0.01;
     };
     struct sppm_t {
-        int    maxdepth            = 5;
-        bbox2i pixelbounds         = {{0, 0}, {type_max<int>, type_max<int>}};
-        int    iterations          = 64;
-        int    photonsperiteration = -1;
-        int    imagewritefrequency = pow2(31);
-        float  radius              = 5;
+        int   maxdepth            = 5;
+        vec4i pixelbounds         = {0, 0, type_max<int>, type_max<int>};
+        int   iterations          = 64;
+        int   photonsperiteration = -1;
+        int   imagewritefrequency = pow2(31);
+        float radius              = 5;
     };
     struct whitted_t {
-        int    maxdepth    = 5;
-        bbox2i pixelbounds = {{0, 0}, {type_max<int>, type_max<int>}};
+        int   maxdepth    = 5;
+        vec4i pixelbounds = {0, 0, type_max<int>, type_max<int>};
     };
     enum struct type_t {
         path,
@@ -826,16 +826,16 @@ struct pbrt_object {
 
 // pbrt stack ctm
 struct pbrt_context {
-    affine3f transform_start        = identity_affine3f;
-    affine3f transform_end          = identity_affine3f;
-    string   material               = "";
-    string   arealight              = "";
-    string   medium_interior        = "";
-    string   medium_exterior        = "";
-    bool     reverse                = false;
-    bool     active_transform_start = true;
-    bool     active_transform_end   = true;
-    float    last_lookat_distance   = 0;
+    frame3f transform_start        = identity_frame3f;
+    frame3f transform_end          = identity_frame3f;
+    string  material               = "";
+    string  arealight              = "";
+    string  medium_interior        = "";
+    string  medium_exterior        = "";
+    bool    reverse                = false;
+    bool    active_transform_start = true;
+    bool    active_transform_end   = true;
+    float   last_lookat_distance   = 0;
 };
 
 // pbrt callbacks

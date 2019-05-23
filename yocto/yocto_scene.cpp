@@ -876,9 +876,7 @@ vec3f eval_normal(const yocto_scene& scene, const yocto_instance& instance,
     int element_id, const vec2f& element_uv, bool non_rigid_frame) {
     auto normal = eval_normal(
         scene.shapes[instance.shape], element_id, element_uv);
-    return non_rigid_frame
-               ? transform_normal((const affine3f&)instance.frame, normal)
-               : transform_normal(instance.frame, normal);
+    return transform_normal(instance.frame, normal, non_rigid_frame);
 }
 vec3f eval_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
@@ -904,18 +902,14 @@ vec3f eval_shading_normal(const yocto_scene& scene,
         normalmap.y = -normalmap.y;  // flip vertical axis
         auto normal = eval_perturbed_normal(scene, scene.shapes[instance.shape],
             element_id, element_uv, normalmap);
-        return non_rigid_frame
-                   ? transform_normal((const affine3f&)instance.frame, normal)
-                   : transform_normal(instance.frame, normal);
+        return transform_normal(instance.frame, normal, non_rigid_frame);
     }
 }
 // Instance element values.
 vec3f eval_element_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, bool non_rigid_frame) {
     auto normal = eval_element_normal(scene.shapes[instance.shape], element_id);
-    return non_rigid_frame
-               ? transform_normal((const affine3f&)instance.frame, normal)
-               : transform_normal(instance.frame, normal);
+    return transform_normal(instance.frame, normal, non_rigid_frame);
 }
 // Instance material
 material_point eval_material(const yocto_scene& scene,
@@ -930,7 +924,7 @@ material_point eval_material(const yocto_scene& scene,
 // Environment texture coordinates from the direction.
 vec2f eval_texcoord(
     const yocto_environment& environment, const vec3f& direction) {
-    auto wl = transform_direction_inverse(environment.frame, direction);
+    auto wl = transform_direction(inverse(environment.frame), direction);
     auto environment_uv = vec2f{
         atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
     if (environment_uv.x < 0) environment_uv.x += 1;
@@ -1184,8 +1178,8 @@ ray3f eval_perspective_camera(
         auto q1 = -q * distance1 / distance;
         auto d  = normalize(q1 - e);
         // auto q1 = - normalize(q) * camera.focus_distance / normalize(q).z;
-        auto ray = make_ray(transform_point(camera.frame, e),
-            transform_direction(camera.frame, d));
+        auto ray = ray3f{transform_point(camera.frame, e),
+            transform_direction(camera.frame, d)};
         return ray;
     } else {
         auto e   = zero3f;
@@ -1193,8 +1187,8 @@ ray3f eval_perspective_camera(
             camera.film_height * (image_uv.y - 0.5f), distance};
         auto q1  = -q;
         auto d   = normalize(q1 - e);
-        auto ray = make_ray(transform_point(camera.frame, e),
-            transform_direction(camera.frame, d));
+        auto ray = ray3f{transform_point(camera.frame, e),
+            transform_direction(camera.frame, d)};
         return ray;
     }
 }
@@ -1212,8 +1206,8 @@ ray3f eval_orthographic_camera(
                  vec3f{(lens_uv.x - 0.5f) * camera.lens_aperture,
                      (lens_uv.y - 0.5f) * camera.lens_aperture, 0};
         auto d   = normalize(q1 - e);
-        auto ray = make_ray(transform_point(camera.frame, e),
-            transform_direction(camera.frame, d));
+        auto ray = ray3f{transform_point(camera.frame, e),
+            transform_direction(camera.frame, d)};
         return ray;
     } else {
         auto scale = 1 / camera.focal_length;
@@ -1222,8 +1216,8 @@ ray3f eval_orthographic_camera(
         auto q1    = -q;
         auto e     = vec3f{-q.x, -q.y, 0};
         auto d     = normalize(q1 - e);
-        auto ray   = make_ray(transform_point(camera.frame, e),
-            transform_direction(camera.frame, d));
+        auto ray   = ray3f{transform_point(camera.frame, e),
+            transform_direction(camera.frame, d)};
         return ray;
     }
 }
