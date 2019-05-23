@@ -745,7 +745,8 @@ namespace yocto {
 
 // A file holder that closes a file when destructed. Useful for RIIA
 struct file_holder {
-    FILE* fs = nullptr;
+    FILE*  fs       = nullptr;
+    string filename = "";
 
     file_holder(const file_holder&) = delete;
     file_holder& operator=(const file_holder&) = delete;
@@ -759,13 +760,35 @@ inline file_holder open_input_file(
     const string& filename, bool binary = false) {
     auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
     if (!fs) throw io_error("could not open file " + filename);
-    return {fs};
+    return {fs, filename};
 }
 inline file_holder open_output_file(
     const string& filename, bool binary = false) {
     auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
     if (!fs) throw io_error("could not open file " + filename);
-    return {fs};
+    return {fs, filename};
+}
+
+// Read a line
+inline bool read_line(file_holder& fs, char* buffer, size_t size) {
+    return fgets(buffer, size, fs.fs) != nullptr;
+}
+
+// Write text to file
+inline void write_text(FILE* fs, const char* value) {
+    if (fputs(value, fs) == 0) throw io_error("could not write to file");
+}
+inline void write_text(FILE* fs, const string& value) {
+    if (fputs(value.c_str(), fs) == 0)
+        throw io_error("could not write to file");
+}
+inline void write_value(FILE* fs, const char* value) { write_text(fs, value); }
+inline void write_value(FILE* fs, const string& value) {
+    write_text(fs, value);
+}
+template <typename T>
+inline void write_value(FILE* fs, const T& value) {
+    write_text(fs, to_string(value));
 }
 
 // Read a line

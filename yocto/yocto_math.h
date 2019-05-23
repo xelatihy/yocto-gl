@@ -2008,6 +2008,9 @@ inline void update_camera_first_person(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+inline string to_string(const char* val) { return val; }
+inline string to_string(const string& val) { return val; }
+
 inline string to_string(int val) { return std::to_string(val); }
 inline string to_string(float val) { return std::to_string(val); }
 inline string to_string(double val) { return std::to_string(val); }
