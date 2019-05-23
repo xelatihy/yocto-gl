@@ -885,35 +885,6 @@ static void load_yaml_scene(const string& filename, yocto_scene& scene,
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
-static inline void write_yaml_keyvalue(FILE* fs, const char* name, int value) {
-    print(fs, "    {}: {}\n", name, value);
-}
-static inline void write_yaml_keyvalue(
-    FILE* fs, const char* name, float value) {
-    print(fs, "    {}: {}\n", name, value);
-}
-static inline void write_yaml_keyvalue(
-    FILE* fs, const char* name, const string& value) {
-    print(fs, "    {}: {}\n", name, value);
-}
-static inline void write_yaml_keyvalue(FILE* fs, const char* name, bool value) {
-    print(fs, "    {}: {}\n", name, value ? "true" : "false");
-}
-static inline void write_yaml_keyvalue(
-    FILE* fs, const char* name, const vec2f& value) {
-    print(fs, "    {}: [ {}, {} ]\n", name, value.x, value.y);
-}
-static inline void write_yaml_keyvalue(
-    FILE* fs, const char* name, const vec3f& value) {
-    print(fs, "    {}: [ {}, {}, {} ]\n", name, value.x, value.y, value.z);
-}
-static inline void write_yaml_keyvalue(
-    FILE* fs, const char* name, const frame3f& value) {
-    print(fs, "    {}: [ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {} ]\n",
-        name, value.x.x, value.x.y, value.x.z, value.y.x, value.y.y, value.y.z,
-        value.z.x, value.z.y, value.z.z, value.o.x, value.o.y, value.o.z);
-}
-
 template <typename T, typename... Ts>
 static inline void write_yaml_line(
     FILE* fs, const T& value, const Ts... values) {
@@ -924,6 +895,41 @@ static inline void write_yaml_line(
         write_text(fs, " ");
         write_yaml_line(fs, values...);
     }
+}
+static inline void write_yaml_kvline(
+    FILE* fs, const char* name, const string& value) {
+    write_text(fs, "    ");
+    write_text(fs, name);
+    write_text(fs, ": ");
+    write_text(fs, value.c_str());
+    write_text(fs, "\n");
+}
+
+static inline void write_yaml_keyvalue(FILE* fs, const char* name, int value) {
+    write_yaml_kvline(fs, name, to_string(value));
+}
+static inline void write_yaml_keyvalue(
+    FILE* fs, const char* name, float value) {
+    write_yaml_kvline(fs, name, to_string(value));
+}
+static inline void write_yaml_keyvalue(
+    FILE* fs, const char* name, const string& value) {
+    write_yaml_kvline(fs, name, value);
+}
+static inline void write_yaml_keyvalue(FILE* fs, const char* name, bool value) {
+    write_yaml_kvline(fs, name, to_string(value, true));
+}
+static inline void write_yaml_keyvalue(
+    FILE* fs, const char* name, const vec2f& value) {
+    write_yaml_kvline(fs, name, to_string(value, true));
+}
+static inline void write_yaml_keyvalue(
+    FILE* fs, const char* name, const vec3f& value) {
+    write_yaml_kvline(fs, name, to_string(value, true));
+}
+static inline void write_yaml_keyvalue(
+    FILE* fs, const char* name, const frame3f& value) {
+    write_yaml_kvline(fs, name, to_string(value, true));
 }
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -954,7 +960,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     };
     auto write_ref = [](FILE* fs, const char* name, int value, auto& refs) {
         if (value < 0) return;
-        print(fs, "    {}: {}\n", name, refs[value].uri);
+        write_yaml_kvline(fs, name, refs[value].uri);
     };
 
     if (!scene.cameras.empty()) write_text(fs, "\n\ncameras:\n");
