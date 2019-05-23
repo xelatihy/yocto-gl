@@ -77,14 +77,12 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
-#include <limits>
 #include <memory>
 #include <numeric>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -120,7 +118,6 @@ using std::function;
 using std::invalid_argument;
 using std::make_shared;
 using std::make_unique;
-using std::numeric_limits;
 using std::out_of_range;
 using std::pair;
 using std::runtime_error;
@@ -130,7 +127,6 @@ using std::string_view;
 using std::tuple;
 using std::unique_ptr;
 using std::unordered_map;
-using std::unordered_set;
 using std::vector;
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
@@ -148,15 +144,10 @@ using uint = unsigned int;
 constexpr double pi  = 3.14159265358979323846;
 constexpr float  pif = (float)pi;
 
-template <typename T>
-constexpr T type_max = numeric_limits<T>::max();
-template <typename T>
-constexpr T type_min = numeric_limits<T>::lowest();
-
-constexpr auto int_max   = type_max<int>;
-constexpr auto int_min   = type_min<int>;
-constexpr auto float_max = type_max<float>;
-constexpr auto float_min = type_min<float>;
+constexpr auto int_max   = INT_MAX;
+constexpr auto int_min   = INT_MIN;
+constexpr auto float_max = FLT_MAX;
+constexpr auto float_min = -FLT_MAX;
 
 constexpr float min(float x, float y) { return (x < y) ? x : y; }
 constexpr float max(float x, float y) { return (x > y) ? x : y; }

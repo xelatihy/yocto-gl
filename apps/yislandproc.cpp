@@ -49,7 +49,6 @@ using namespace yocto;
 #include "ext/sajson.h"
 
 #include <unordered_set>
-
 using std::unordered_set;
 
 // -----------------------------------------------------------------------------
