@@ -1579,7 +1579,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
     auto offset = obj_vertex{0, 0, 0};
     for (auto& instance : scene.instances) {
         auto& shape = scene.shapes[instance.shape];
-        print_obj_keyvalue(fs, "o", instance.uri);
+        write_obj_line(fs, "o", instance.uri);
         if (instance.material >= 0)
             write_obj_line(fs, "usemtl",
                 get_basename(scene.materials[instance.material].uri));
