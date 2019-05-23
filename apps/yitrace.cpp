@@ -88,12 +88,13 @@ struct app_scene {
     string name      = "";
 
     // options
-    sceneio_params sceneio_prms  = {};
-    bvh_params     bvh_prms      = {};
-    trace_params   trace_prms    = {};
-    tonemap_params tonemap_prms  = {};
-    int            preview_ratio = 8;
-    vec2i          image_size    = {0, 0};
+    load_scene_params    load_params    = {};
+    save_scene_params    save_params    = {};
+    build_bvh_params     bvh_params     = {};
+    trace_image_params   trace_params   = {};
+    tonemap_image_params tonemap_params = {};
+    int                  preview_ratio  = 8;
+    vec2i                image_size     = {0, 0};
 
     // scene
     yocto_scene scene      = {};
@@ -130,25 +131,27 @@ struct app_state {
     deque<string>    errors;
 
     // default options
-    sceneio_params sceneio_prms = {};
-    bvh_params     bvh_prms     = {};
-    trace_params   trace_prms   = {};
-    tonemap_params tonemap_prms = {};
-    bool           add_skyenv   = false;
+    load_scene_params    load_params    = {};
+    save_scene_params    save_params    = {};
+    build_bvh_params     bvh_params     = {};
+    trace_image_params   trace_params   = {};
+    tonemap_image_params tonemap_params = {};
+    bool                 add_skyenv     = false;
 };
 
 void update_app_render(const string& filename, image<vec4f>& render,
     image<vec4f>& display, image<vec4f>& preview, trace_state& state,
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
-    const trace_params& trace_prms, const tonemap_params& tonemap_prms,
-    int preview_ratio, atomic<bool>& stop, atomic<int>& current_sample,
+    const trace_image_params&   trace_params,
+    const tonemap_image_params& tonemap_params, int preview_ratio,
+    atomic<bool>& stop, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue) {
-    auto preview_options = trace_prms;
+    auto preview_options = trace_params;
     preview_options.image_size /= preview_ratio;
     preview_options.num_samples = 1;
     auto small_preview   = trace_image(scene, bvh, lights, preview_options);
     auto display_preview = small_preview;
-    tonemap(display_preview, small_preview, tonemap_prms);
+    tonemap(display_preview, small_preview, tonemap_params);
     for (auto j = 0; j < preview.size().y; j++) {
         for (auto i = 0; i < preview.size().x; i++) {
             auto pi = clamp(i / preview_ratio, 0, display_preview.size().x - 1),
@@ -159,44 +162,46 @@ void update_app_render(const string& filename, image<vec4f>& render,
     queue.push({{0, 0}, {0, 0}});
     current_sample = 0;
 
-    auto& camera     = scene.cameras.at(trace_prms.camera_id);
-    auto  image_size = camera_image_size(camera, trace_prms.image_size);
+    auto& camera     = scene.cameras.at(trace_params.camera_id);
+    auto  image_size = camera_image_size(camera, trace_params.image_size);
     state            = trace_state{};
-    init_trace_state(state, image_size, trace_prms.random_seed);
+    init_trace_state(state, image_size, trace_params.random_seed);
     auto regions = vector<image_region>{};
-    make_regions(regions, render.size(), trace_prms.region_size, true);
+    make_regions(regions, render.size(), trace_params.region_size, true);
 
-    for (auto sample = 0; sample < trace_prms.num_samples;
-         sample += trace_prms.samples_per_batch) {
+    for (auto sample = 0; sample < trace_params.num_samples;
+         sample += trace_params.samples_per_batch) {
         if (stop) return;
         current_sample   = sample;
-        auto num_samples = min(trace_prms.samples_per_batch,
-            trace_prms.num_samples - current_sample);
+        auto num_samples = min(trace_params.samples_per_batch,
+            trace_params.num_samples - current_sample);
         parallel_foreach(
             regions,
-            [num_samples, &trace_prms, &tonemap_prms, &render, &display, &scene,
-                &lights, &bvh, &state, &queue](const image_region& region) {
+            [num_samples, &trace_params, &tonemap_params, &render, &display,
+                &scene, &lights, &bvh, &state,
+                &queue](const image_region& region) {
                 trace_region(render, state, scene, bvh, lights, region,
-                    num_samples, trace_prms);
-                tonemap(display, render, region, tonemap_prms);
+                    num_samples, trace_params);
+                tonemap(display, render, region, tonemap_params);
                 queue.push(region);
             },
             &stop);
     }
-    current_sample = trace_prms.num_samples;
+    current_sample = trace_params.num_samples;
 }
 
 void add_new_scene(app_state& app, const string& filename) {
-    auto& scn        = app.scenes.emplace_back();
-    scn.filename     = filename;
-    scn.imagename    = get_noextension(filename) + ".png";
-    scn.outname      = get_noextension(filename) + ".edited.yaml";
-    scn.name         = get_filename(scn.filename);
-    scn.sceneio_prms = app.sceneio_prms;
-    scn.trace_prms   = app.trace_prms;
-    scn.bvh_prms     = app.bvh_prms;
-    scn.tonemap_prms = app.tonemap_prms;
-    scn.add_skyenv   = app.add_skyenv;
+    auto& scn          = app.scenes.emplace_back();
+    scn.filename       = filename;
+    scn.imagename      = get_noextension(filename) + ".png";
+    scn.outname        = get_noextension(filename) + ".edited.yaml";
+    scn.name           = get_filename(scn.filename);
+    scn.load_params    = app.load_params;
+    scn.save_params    = app.save_params;
+    scn.trace_params   = app.trace_params;
+    scn.bvh_params     = app.bvh_params;
+    scn.tonemap_params = app.tonemap_params;
+    scn.add_skyenv     = app.add_skyenv;
     scn.task_queue.emplace_back(app_task_type::load_scene);
     app.selected = (int)app.scenes.size() - 1;
 }
@@ -265,40 +270,41 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (begin_header_opengl_widget(win, "trace")) {
         auto cam_names = vector<string>();
         for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
-        auto trace_prms = scn.trace_prms;
+        auto trace_params = scn.trace_params;
         if (scn.load_done) {
             if (draw_combobox_opengl_widget(
-                    win, "camera", trace_prms.camera_id, cam_names)) {
+                    win, "camera", trace_params.camera_id, cam_names)) {
             }
         }
         draw_slider_opengl_widget(
-            win, "width", trace_prms.image_size.x, 0, 4096);
+            win, "width", trace_params.image_size.x, 0, 4096);
         draw_slider_opengl_widget(
-            win, "height", trace_prms.image_size.y, 0, 4096);
+            win, "height", trace_params.image_size.y, 0, 4096);
         draw_slider_opengl_widget(
-            win, "nsamples", trace_prms.num_samples, 16, 4096);
-        draw_combobox_opengl_widget(
-            win, "tracer", (int&)trace_prms.sampler_type, trace_sampler_names);
+            win, "nsamples", trace_params.num_samples, 16, 4096);
+        draw_combobox_opengl_widget(win, "tracer",
+            (int&)trace_params.sampler_type, trace_sampler_names);
         draw_combobox_opengl_widget(win, "false color",
-            (int&)trace_prms.falsecolor_type, trace_falsecolor_names);
+            (int&)trace_params.falsecolor_type, trace_falsecolor_names);
         draw_slider_opengl_widget(
-            win, "nbounces", trace_prms.max_bounces, 1, 128);
+            win, "nbounces", trace_params.max_bounces, 1, 128);
         draw_slider_opengl_widget(
-            win, "seed", (int&)trace_prms.random_seed, 0, 1000000);
+            win, "seed", (int&)trace_params.random_seed, 0, 1000000);
         draw_slider_opengl_widget(win, "pratio", scn.preview_ratio, 1, 64);
-        auto tonemap_prms = scn.tonemap_prms;
+        auto tonemap_params = scn.tonemap_params;
         draw_slider_opengl_widget(
-            win, "exposure", tonemap_prms.exposure, -5, 5);
-        draw_checkbox_opengl_widget(win, "filmic", tonemap_prms.filmic);
+            win, "exposure", tonemap_params.exposure, -5, 5);
+        draw_checkbox_opengl_widget(win, "filmic", tonemap_params.filmic);
         continue_opengl_widget_line(win);
-        draw_checkbox_opengl_widget(win, "srgb", tonemap_prms.srgb);
-        if (trace_prms != scn.trace_prms) {
+        draw_checkbox_opengl_widget(win, "srgb", tonemap_params.srgb);
+        if (trace_params != scn.trace_params) {
             scn.task_queue.emplace_back(app_task_type::apply_edit,
-                app_edit{typeid(trace_params), -1, trace_prms, false});
+                app_edit{typeid(trace_image_params), -1, trace_params, false});
         }
-        if (tonemap_prms != scn.tonemap_prms) {
+        if (tonemap_params != scn.tonemap_params) {
             scn.task_queue.emplace_back(app_task_type::apply_edit,
-                app_edit{typeid(tonemap_params), -1, tonemap_prms, false});
+                app_edit{
+                    typeid(tonemap_image_params), -1, tonemap_params, false});
         }
         end_header_opengl_widget(win);
     }
@@ -320,8 +326,8 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         continue_opengl_widget_line(win);
         if (draw_button_opengl_widget(win, "print stats")) {
-            print_info("{}", format_stats(scn.scene).c_str());
-            print_info("{}", print_stats(scn.bvh).c_str());
+            print_info(format_stats(scn.scene));
+            print_info(format_stats(scn.bvh));
         }
         auto mouse_pos = get_opengl_mouse_pos(win);
         auto ij        = get_image_coords(
@@ -380,7 +386,7 @@ void draw(const opengl_window& win) {
 }
 
 void apply_edit(const string& filename, yocto_scene& scene,
-    trace_params& trace_prms, tonemap_params& tonemap_prms,
+    trace_image_params& trace_params, tonemap_image_params& tonemap_params,
     bool& reload_element, bool& updated_lights, bool& updated_bvh,
     const app_edit& edit) {
     auto& [type, index, data, reload] = edit;
@@ -424,10 +430,10 @@ void apply_edit(const string& filename, yocto_scene& scene,
         if (old_emission != scene.materials[index].emission) {
             updated_lights = true;
         }
-    } else if (type == typeid(trace_params)) {
-        trace_prms = any_cast<trace_params>(data);
-    } else if (type == typeid(tonemap_params)) {
-        tonemap_prms = any_cast<tonemap_params>(data);
+    } else if (type == typeid(trace_image_params)) {
+        trace_params = any_cast<trace_image_params>(data);
+    } else if (type == typeid(tonemap_image_params)) {
+        tonemap_params = any_cast<tonemap_image_params>(data);
     } else {
         throw runtime_error("unsupported type "s + type.name());
     }
@@ -467,7 +473,7 @@ void load_element(
 }
 
 void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
-    const bvh_params& bvh_prms, const app_edit& edit) {
+    const build_bvh_params& bvh_params, const app_edit& edit) {
     auto& [type, index, data, reload] = edit;
 
     auto updated_shapes    = vector<int>{};
@@ -483,7 +489,7 @@ void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
         throw runtime_error("unsupported type "s + type.name());
     }
 
-    refit_bvh(bvh, scene, updated_shapes, bvh_prms);
+    refit_bvh(bvh, scene, updated_shapes, bvh_params);
 }
 
 void update(app_state& app) {
@@ -520,8 +526,9 @@ void update(app_state& app) {
         }
         if (updated) {
             scn.render_sample = max(scn.render_sample, (int)task.current);
-            scn.name = format("{} [{}x{}@{}]", get_filename(scn.filename),
-                scn.render.size().x, scn.render.size().y, scn.render_sample);
+            scn.name          = get_filename(scn.filename) + "[" +
+                       to_string(scn.render.size()) + " @ " +
+                       to_string(scn.render_sample) + "]";
         }
     }
 
@@ -534,13 +541,13 @@ void update(app_state& app) {
                 if (next.type != app_task_type::render_image &&
                     next.type != app_task_type::apply_edit)
                     break;
-                log_info("cancel rendering {}", scn.filename);
+                log_info("cancel rendering " + scn.filename);
             } else if (task.type == app_task_type::apply_edit) {
                 if (next.type != app_task_type::apply_edit ||
                     task.edit.type != next.edit.type ||
                     task.edit.index != next.edit.index)
                     break;
-                log_info("cancel editing {}", scn.filename);
+                log_info("cancel editing " + scn.filename);
             } else {
                 break;
             }
@@ -560,15 +567,15 @@ void update(app_state& app) {
         while (!scn.task_queue.empty()) {
             auto& task = scn.task_queue.front();
             if (task.type != app_task_type::apply_edit) break;
-            log_info("start editing {}", scn.filename);
+            log_info("start editing " + scn.filename);
             try {
                 scn.render_done     = false;
                 auto reload_element = false, update_bvh = false,
                      update_lights = false;
-                apply_edit(scn.filename, scn.scene, scn.trace_prms,
-                    scn.tonemap_prms, reload_element, update_lights, update_bvh,
-                    task.edit);
-                log_info("done editing {}", scn.filename);
+                apply_edit(scn.filename, scn.scene, scn.trace_params,
+                    scn.tonemap_params, reload_element, update_lights,
+                    update_bvh, task.edit);
+                log_info("done editing " + scn.filename);
                 if (reload_element) {
                     scn.load_done = false;
                     scn.task_queue.emplace_back(
@@ -608,15 +615,14 @@ void update(app_state& app) {
                     task.result.get();
                     scn.load_done  = true;
                     scn.image_size = camera_image_size(
-                        scn.scene.cameras[scn.trace_prms.camera_id],
-                        scn.trace_prms.image_size);
+                        scn.scene.cameras[scn.trace_params.camera_id],
+                        scn.trace_params.image_size);
                     scn.render.resize(scn.image_size);
                     scn.display.resize(scn.image_size);
                     scn.preview.resize(scn.image_size);
-                    scn.name = format("{} [{}x{}@0]",
-                        get_filename(scn.filename), scn.render.size().x,
-                        scn.render.size().y);
-                    log_info("done loading {}", scn.filename);
+                    scn.name = get_filename(scn.filename) + " [" +
+                               to_string(scn.render.size()) + " @ 0]";
+                    log_info("done loading " + scn.filename);
                     init_opengl_texture(
                         scn.gl_txt, scn.display, false, false, false);
                     scn.task_queue.emplace_back(app_task_type::build_bvh);
@@ -624,7 +630,7 @@ void update(app_state& app) {
                     scn.task_queue.emplace_back(app_task_type::render_image);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [errpr]";
                     app.errors.push_back("cannot load " + scn.filename);
                 }
             } break;
@@ -632,10 +638,10 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     scn.load_done = true;
-                    log_info("done loading element from {}", scn.filename);
+                    log_info("done loading element from " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [errpr]";
                     app.errors.push_back(
                         "cannot load element from " + scn.filename);
                 }
@@ -644,11 +650,11 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     scn.bvh_done = true;
-                    scn.name     = format("{}", get_filename(scn.filename));
-                    log_info("done building bvh {}", scn.filename);
+                    scn.name     = get_filename(scn.filename);
+                    log_info("done building bvh " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [errpr]";
                     app.errors.push_back("cannot build bvh " + scn.filename);
                 }
             } break;
@@ -656,11 +662,11 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     scn.bvh_done = true;
-                    scn.name     = format("{}", get_filename(scn.filename));
-                    log_info("done refitting bvh {}", scn.filename);
+                    scn.name     = get_filename(scn.filename);
+                    log_info("done refitting bvh " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [errpr]";
                     app.errors.push_back("cannot refit bvh " + scn.filename);
                 }
             } break;
@@ -668,18 +674,18 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     scn.lights_done = true;
-                    scn.name        = format("{}", get_filename(scn.filename));
-                    log_info("done building lights {}", scn.filename);
+                    scn.name        = get_filename(scn.filename);
+                    log_info("done building lights " + scn.filename);
                 } catch (std::exception& e) {
                     log_error(e.what());
-                    scn.name = format("{} [error]", get_filename(scn.filename));
+                    scn.name = get_filename(scn.filename) + " [errpr]";
                     app.errors.push_back("cannot build lights " + scn.filename);
                 }
             } break;
             case app_task_type::save_image: {
                 try {
                     task.result.get();
-                    log_info("done saving {}", scn.imagename);
+                    log_info("done saving " + scn.imagename);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     app.errors.push_back("cannot save " + scn.imagename);
@@ -688,7 +694,7 @@ void update(app_state& app) {
             case app_task_type::save_scene: {
                 try {
                     task.result.get();
-                    log_info("done saving {}", scn.outname);
+                    log_info("done saving " + scn.outname);
                 } catch (std::exception& e) {
                     log_error(e.what());
                     app.errors.push_back("cannot save " + scn.outname);
@@ -698,11 +704,11 @@ void update(app_state& app) {
                 try {
                     task.result.get();
                     scn.render_done = true;
-                    log_info("done rendering {}", scn.filename);
-                    scn.render_sample = scn.trace_prms.num_samples;
-                    scn.name          = format("{} [{}x{}@{}]",
-                        get_filename(scn.filename), scn.render.size().x,
-                        scn.render.size().y, scn.render_sample);
+                    log_info("done rendering " + scn.filename);
+                    scn.render_sample = scn.trace_params.num_samples;
+                    scn.name          = get_filename(scn.filename) + " [" +
+                               to_string(scn.render.size()) + " @ " +
+                               to_string(scn.render_sample) + "]";
                 } catch (std::exception& e) {
                     log_error(e.what());
                     app.errors.push_back("cannot render " + scn.filename);
@@ -722,77 +728,79 @@ void update(app_state& app) {
             case app_task_type::none: break;
             case app_task_type::close_scene: break;
             case app_task_type::load_scene: {
-                log_info("start loading {}", scn.filename);
+                log_info("start loading " + scn.filename);
                 scn.load_done   = false;
                 scn.bvh_done    = false;
                 scn.lights_done = false;
                 task.result     = async([&scn]() {
-                    load_scene(scn.filename, scn.scene, scn.sceneio_prms);
+                    load_scene(scn.filename, scn.scene, scn.load_params);
                     tesselate_subdivs(scn.scene);
                     if (scn.add_skyenv) add_sky(scn.scene);
                 });
             } break;
             case app_task_type::load_element: {
-                log_info("start loading element for {}", scn.filename);
+                log_info("start loading element for " + scn.filename);
                 scn.load_done = false;
                 task.result   = async([&scn, &task]() {
                     load_element(scn.filename, scn.scene, task.edit);
                 });
             } break;
             case app_task_type::build_bvh: {
-                log_info("start building bvh {}", scn.filename);
+                log_info("start building bvh " + scn.filename);
                 scn.bvh_done = false;
-                task.result  = async(
-                    [&scn]() { build_bvh(scn.bvh, scn.scene, scn.bvh_prms); });
+                task.result  = async([&scn]() {
+                    build_bvh(scn.bvh, scn.scene, scn.bvh_params);
+                });
             } break;
             case app_task_type::refit_bvh: {
-                log_info("start refitting bvh {}", scn.filename);
+                log_info("start refitting bvh " + scn.filename);
                 scn.bvh_done = false;
                 task.result  = async([&scn, &task]() {
-                    refit_bvh(scn.filename, scn.scene, scn.bvh, scn.bvh_prms,
+                    refit_bvh(scn.filename, scn.scene, scn.bvh, scn.bvh_params,
                         task.edit);
                 });
             } break;
             case app_task_type::init_lights: {
-                log_info("start building lights {}", scn.filename);
+                log_info("start building lights " + scn.filename);
                 scn.lights_done = false;
                 task.result     = async(
                     [&scn]() { init_trace_lights(scn.lights, scn.scene); });
             } break;
             case app_task_type::save_image: {
-                log_info("start saving {}", scn.imagename);
+                log_info("start saving " + scn.imagename);
                 task.result = async([&scn]() {
                     save_tonemapped(
-                        scn.imagename, scn.render, scn.tonemap_prms);
+                        scn.imagename, scn.render, scn.tonemap_params);
                 });
             } break;
             case app_task_type::save_scene: {
-                log_info("start saving {}", scn.outname);
+                log_info("start saving " + scn.outname);
                 task.result = async([&scn]() {
-                    save_scene(scn.outname, scn.scene, scn.sceneio_prms);
+                    save_scene(scn.outname, scn.scene, scn.save_params);
                 });
             } break;
             case app_task_type::render_image: {
-                log_info("start rendering {}", scn.filename);
+                log_info("start rendering " + scn.filename);
                 scn.render_done = false;
                 scn.image_size  = camera_image_size(
-                    scn.scene.cameras[scn.trace_prms.camera_id],
-                    scn.trace_prms.image_size);
+                    scn.scene.cameras[scn.trace_params.camera_id],
+                    scn.trace_params.image_size);
                 if (scn.lights.instances.empty() &&
                     scn.lights.environments.empty() &&
-                    is_sampler_lit(scn.trace_prms)) {
+                    is_sampler_lit(scn.trace_params)) {
                     log_info(
                         "no lights presents, switching to eyelight shader");
-                    scn.trace_prms.sampler_type = trace_sampler_type::eyelight;
+                    scn.trace_params.sampler_type =
+                        trace_sampler_type::eyelight;
                 }
                 scn.render_sample = 0;
-                scn.name = format("{} [{}x{}@{}]", get_filename(scn.filename),
-                    scn.render.size().x, scn.render.size().y,
-                    scn.render_sample);
+                scn.name          = get_filename(scn.filename) + " [" +
+                           to_string(scn.render.size()) + " @ " +
+                           to_string(scn.render_sample) + "]";
                 task.result = async([&scn, &task]() {
                     update_app_render(scn.filename, scn.render, scn.display,
                         scn.preview, scn.state, scn.scene, scn.lights, scn.bvh,
-                        scn.trace_prms, scn.tonemap_prms, scn.preview_ratio,
+                        scn.trace_params, scn.tonemap_params, scn.preview_ratio,
                         task.stop, task.current, task.queue);
                 });
                 if (scn.render.size() != scn.image_size) {
@@ -846,8 +854,8 @@ void run_ui(app_state& app) {
         if (app.selected >= 0 && app.scenes[app.selected].load_done &&
             (mouse_left || mouse_right) && !alt_down && !widgets_active) {
             auto& scn        = app.scenes[app.selected];
-            auto& old_camera = scn.scene.cameras.at(scn.trace_prms.camera_id);
-            auto  camera     = scn.scene.cameras.at(scn.trace_prms.camera_id);
+            auto& old_camera = scn.scene.cameras.at(scn.trace_params.camera_id);
+            auto  camera     = scn.scene.cameras.at(scn.trace_params.camera_id);
             auto  dolly      = 0.0f;
             auto  pan        = zero2f;
             auto  rotate     = zero2f;
@@ -862,7 +870,7 @@ void run_ui(app_state& app) {
             if (camera.frame != old_camera.frame ||
                 camera.focus_distance != old_camera.focus_distance) {
                 scn.task_queue.emplace_back(app_task_type::apply_edit,
-                    app_edit{typeid(yocto_camera), scn.trace_prms.camera_id,
+                    app_edit{typeid(yocto_camera), scn.trace_params.camera_id,
                         camera, false});
             }
         }
@@ -875,7 +883,7 @@ void run_ui(app_state& app) {
                 scn.image_scale, scn.render.size());
             if (ij.x >= 0 && ij.x < scn.render.size().x && ij.y >= 0 &&
                 ij.y < scn.render.size().y) {
-                auto& camera = scn.scene.cameras.at(scn.trace_prms.camera_id);
+                auto& camera = scn.scene.cameras.at(scn.trace_params.camera_id);
                 auto  ray    = eval_camera(
                     camera, ij, scn.render.size(), {0.5f, 0.5f}, zero2f);
                 if (auto isec = intersect_bvh(scn.bvh, ray); isec.hit) {
@@ -901,9 +909,9 @@ void run_ui(app_state& app) {
 int main(int argc, char* argv[]) {
     // application
     app_state app{};
-    app.trace_prms.samples_per_batch = 1;
-    auto no_parallel                 = false;
-    auto filenames                   = vector<string>{};
+    app.trace_params.samples_per_batch = 1;
+    auto no_parallel                   = false;
+    auto filenames                     = vector<string>{};
 
     // names for enums
     auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
@@ -920,45 +928,46 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser = CLI::App{"progressive path tracing"};
-    parser.add_option("--camera", app.trace_prms.camera_id, "Camera index.");
-    parser.add_option("--hres,-R", app.trace_prms.image_size.x,
+    parser.add_option("--camera", app.trace_params.camera_id, "Camera index.");
+    parser.add_option("--hres,-R", app.trace_params.image_size.x,
         "Image horizontal resolution.");
+    parser.add_option("--vres,-r", app.trace_params.image_size.y,
+        "Image vertical resolution.");
     parser.add_option(
-        "--vres,-r", app.trace_prms.image_size.y, "Image vertical resolution.");
-    parser.add_option(
-        "--nsamples,-s", app.trace_prms.num_samples, "Number of samples.");
+        "--nsamples,-s", app.trace_params.num_samples, "Number of samples.");
     parser
-        .add_option("--tracer,-t", app.trace_prms.sampler_type, "Tracer type.")
+        .add_option(
+            "--tracer,-t", app.trace_params.sampler_type, "Tracer type.")
         ->transform(CLI::IsMember(trace_sampler_type_namemap));
     parser
-        .add_option("--falsecolor,-F", app.trace_prms.falsecolor_type,
+        .add_option("--falsecolor,-F", app.trace_params.falsecolor_type,
             "Tracer false color type.")
         ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
+    parser.add_option("--nbounces", app.trace_params.max_bounces,
+        "Maximum number of bounces.");
     parser.add_option(
-        "--nbounces", app.trace_prms.max_bounces, "Maximum number of bounces.");
-    parser.add_option(
-        "--pixel-clamp", app.trace_prms.pixel_clamp, "Final pixel clamping.");
-    parser.add_option("--seed", app.trace_prms.random_seed,
+        "--pixel-clamp", app.trace_params.pixel_clamp, "Final pixel clamping.");
+    parser.add_option("--seed", app.trace_params.random_seed,
         "Seed for the random number generators.");
     parser.add_flag("--env-hidden,!--no-env-hidden",
-        app.trace_prms.environments_hidden,
+        app.trace_params.environments_hidden,
         "Environments are hidden in renderer");
     parser.add_flag("--parallel,!--no-parallel", no_parallel,
         "Disable parallel execution.");
     parser.add_option(
-        "--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
+        "--exposure,-e", app.tonemap_params.exposure, "Hdr exposure");
     parser.add_flag(
-        "--filmic,!--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
-    parser.add_flag("--srgb,!--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");
+        "--filmic,!--no-filmic", app.tonemap_params.filmic, "Hdr filmic");
+    parser.add_flag("--srgb,!--no-srgb", app.tonemap_params.srgb, "Hdr srgb");
     parser.add_flag("--bvh-high-quality,!--no-bvh-high-quality",
-        app.bvh_prms.high_quality, "Use high quality bvh mode");
+        app.bvh_params.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-    parser.add_flag("--bvh-embree,!--no-bvh-embree", app.bvh_prms.use_embree,
+    parser.add_flag("--bvh-embree,!--no-bvh-embree", app.bvh_params.use_embree,
         "Use Embree ratracer");
     parser.add_flag("--bvh-embree-flatten,!--no-bvh-embree-flatten",
-        app.bvh_prms.embree_flatten, "Flatten embree scene");
+        app.bvh_params.embree_flatten, "Flatten embree scene");
     parser.add_flag("--bvh-embree-compact,!--no-bvh-embree-compact",
-        app.bvh_prms.embree_compact, "Embree runs in compact memory");
+        app.bvh_params.embree_compact, "Embree runs in compact memory");
 #endif
     parser.add_flag(
         "--add-skyenv,!--no-add-skyenv", app.add_skyenv, "Add sky envmap");
@@ -971,9 +980,10 @@ int main(int argc, char* argv[]) {
 
     // fix parallel code
     if (no_parallel) {
-        app.bvh_prms.run_serially     = true;
-        app.sceneio_prms.run_serially = true;
-        app.trace_prms.run_serially   = true;
+        app.bvh_params.run_serially   = true;
+        app.load_params.run_serially  = true;
+        app.save_params.run_serially  = true;
+        app.trace_params.run_serially = true;
     }
 
     // loading images

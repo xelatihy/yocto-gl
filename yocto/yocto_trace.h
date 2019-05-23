@@ -150,7 +150,7 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "highlight"};
 
 // Options for trace functions
-struct trace_params {
+struct trace_image_params {
     int                   camera_id           = 0;
     vec2i                 image_size          = {1280, 720};
     trace_sampler_type    sampler_type        = trace_sampler_type::path;
@@ -167,43 +167,46 @@ struct trace_params {
 };
 
 // Equality operators
-inline bool operator==(const trace_params& a, const trace_params& b) {
+inline bool operator==(
+    const trace_image_params& a, const trace_image_params& b) {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(const trace_params& a, const trace_params& b) {
+inline bool operator!=(
+    const trace_image_params& a, const trace_image_params& b) {
     return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_params& params);
+    const trace_lights& lights, const trace_image_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 int trace_samples(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    int current_sample, const trace_params& params);
+    int current_sample, const trace_image_params& params);
 
 // Progressively compute an image by calling trace_region multiple times.
 // Compared to `trace_samples` this always runs serially and is helpful
 // when building async applications.
 void trace_region(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const image_region& region, int num_samples, const trace_params& params);
+    const image_region& region, int num_samples,
+    const trace_image_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
 void trace_async_start(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     vector<future<void>>& futures, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue, const trace_params& params);
+    concurrent_queue<image_region>& queue, const trace_image_params& params);
 // Stop the asynchronous renderer.
 void trace_async_stop(vector<future<void>>& futures,
-    concurrent_queue<image_region>& queue, const trace_params& params);
+    concurrent_queue<image_region>& queue, const trace_image_params& params);
 
 // Check is a sampler requires lights
-bool is_sampler_lit(const trace_params& params);
+bool is_sampler_lit(const trace_image_params& params);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.

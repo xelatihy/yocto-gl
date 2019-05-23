@@ -447,12 +447,13 @@ void rename_instances(yocto_scene& scene) {
     for (auto& instance : scene.instances) shape_count[instance.shape].y += 1;
     for (auto& instance : scene.instances) {
         if (shape_count[instance.shape].y == 1) {
-            instance.uri = format(
-                "instances/{}.yaml", shape_names[instance.shape]);
+            instance.uri = "instances/" + shape_names[instance.shape] + ".yaml";
         } else {
-            instance.uri = format("instances/{}-{:{}}.yaml",
-                shape_names[instance.shape], shape_count[instance.shape].x++,
-                (int)ceil(log10(shape_count[instance.shape].y)));
+            instance.uri = "instances/" + shape_names[instance.shape] + "-" +
+                           pad_left(to_string(shape_count[instance.shape].x++),
+                               (int)ceil(log10(shape_count[instance.shape].y)),
+                               '0') +
+                           ".yaml";
         }
     }
 }
@@ -615,7 +616,7 @@ void print_validation(const yocto_scene& scene, bool skip_textures) {
 }
 
 void build_bvh(
-    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
+    bvh_scene& bvh, const yocto_scene& scene, const build_bvh_params& params) {
     bvh.shapes.resize(scene.shapes.size());
     for (auto idx = 0; idx < scene.shapes.size(); idx++) {
         auto& shape = scene.shapes[idx];
@@ -649,7 +650,7 @@ void build_bvh(
 }
 
 void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
-    const vector<int>& updated_shapes, const bvh_params& params) {
+    const vector<int>& updated_shapes, const build_bvh_params& params) {
     for (auto idx : updated_shapes) {
         auto& shape = scene.shapes[idx];
         auto& sbvh  = bvh.shapes[idx];
@@ -1472,7 +1473,8 @@ string format_stats(const yocto_scene& scene, bool verbose) {
     auto str = ""s;
     for (auto& [key, value] : stats) {
         if (value == 0) continue;
-        str += format("{:<15} {:>13n}\n", key + ":", value);
+        str += pad_right(key, 15) + ": " + pad_left(to_string(value), 13) +
+               "\n";
     }
 
     return str;

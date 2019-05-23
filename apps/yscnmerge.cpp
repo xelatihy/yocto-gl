@@ -81,17 +81,17 @@ int main(int argc, char** argv) {
     }
 
     // fix options
-    auto load_prms          = sceneio_params();
-    auto save_prms          = sceneio_params();
-    load_prms.skip_textures = skip_textures;
-    save_prms.skip_textures = skip_textures;
+    auto load_params          = load_scene_params();
+    auto save_params          = save_scene_params();
+    load_params.skip_textures = skip_textures;
+    save_params.skip_textures = skip_textures;
 
     // load scene
     auto scene = yocto_scene{};
     for (auto& filename : filenames) {
         auto to_merge = yocto_scene{};
         try {
-            load_scene(filename, to_merge, load_prms);
+            load_scene(filename, to_merge, load_params);
         } catch (const std::exception& e) {
             print_fatal(e.what());
         }
@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
     print_validation(scene, true);
 
     // print info
-    if (info) print_info("{}", format_stats(scene));
+    if (info) print_info(format_stats(scene));
 
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
@@ -155,7 +155,7 @@ int main(int argc, char** argv) {
 
     // save scene
     try {
-        save_scene(output, scene, save_prms);
+        save_scene(output, scene, save_params);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }

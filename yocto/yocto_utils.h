@@ -95,10 +95,6 @@
 #include <thread>
 #include <vector>
 
-#define FMT_HEADER_ONLY
-#include "ext/fmt/chrono.h"
-#include "ext/fmt/format.h"
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -119,9 +115,6 @@ using namespace std::string_literals;
 using namespace std::string_view_literals;
 using namespace std::chrono_literals;
 
-using fmt::format;
-using fmt::print;
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -132,67 +125,88 @@ namespace yocto {
 // We use the fmt library as a backend for printing. These are just helpers to
 // make printing easier in console apps.
 
-// Helper to indicate info printing in console apps.
-template <typename... Args>
-inline void print_info(string_view format_str, const Args&... args);
-// Prints an error and exit.
-template <typename... Args>
-inline void print_fatal(string_view format_str, const Args&... args);
+// String padding
+inline string pad_left(const string& str, int num, char pad = ' ') {
+    if (str.size() >= num) return str;
+    auto pads = ""s;
+    for (auto i = 0; i < num - (int)str.size(); i++) pads += pad;
+    return pads + str;
+}
+inline string pad_right(const string& str, int num, char pad = ' ') {
+    if (str.size() >= num) return str;
+    auto pads = ""s;
+    for (auto i = 0; i < num - (int)str.size(); i++) pads += pad;
+    return str + pads;
+}
 
-// get time from a high resolution clock
-using time_point = std::chrono::time_point<std::chrono::high_resolution_clock>;
-inline time_point get_time();
+// Helper to indicate info printing in console apps.
+inline void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
+
+// Prints an error and exit.
+inline void print_fatal(const string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
+
+// get time in nanoseconds
+inline int64_t get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+// Format duration string from nanoseconds
+inline string format_duration(int64_t duration) {
+    auto elapsed = duration / 1000000;  // milliseconds
+    auto hours   = (int)(elapsed / 3600000);
+    elapsed %= 3600000;
+    auto mins = (int)(elapsed / 60000);
+    elapsed %= 60000;
+    auto secs  = (int)(elapsed / 1000);
+    auto msecs = (int)(elapsed % 1000);
+    char buffer[256];
+    sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+    return buffer;
+}
 
 // print information and returns a timer that will print the time when
 // destroyed. Use with RIIA for scoped timing.
-struct print_timer;
-template <typename... Args>
-inline print_timer print_timed(string_view format_str, const Args&... args);
+struct print_timer {
+    print_timer(const string& msg) : start{get_time()} {
+        printf("%s", msg.c_str());
+        fflush(stdout);
+    }
+    ~print_timer() {
+        printf(" in %s\n", format_duration(get_time() - start).c_str());
+    }
+    int64_t start = 0;
+};
+inline print_timer print_timed(const string& msg) { return print_timer(msg); }
 
 // Logging to a sync
-inline void set_log_callback(function<void(const string&)> callback);
-template <typename... Args>
-inline void log_info(string_view format_str, const Args&... args);
-template <typename... Args>
-inline void log_error(string_view format_str, const Args&... args);
-struct log_timer;
-template <typename... Args>
-inline auto log_timed(string_view format_str, const Args&... args);
+inline auto log_callback = function<void(const string& msg)>{};
+inline void set_log_callback(function<void(const string& msg)> callback) {
+    log_callback = callback;
+}
+inline void log_info(const string& msg) {
+    if (log_callback) log_callback(msg + "\n");
+}
+inline void log_error(const string& msg) {
+    if (log_callback) log_callback(msg + "\n");
+}
+struct log_timer {
+    log_timer(const string& msg) : msg{msg}, start{get_time()} {
+        if (log_callback) log_callback(msg);
+    }
+    ~log_timer() {
+        if (log_callback)
+            log_callback(msg + "in " + format_duration(get_time() - start));
+    }
+
+   private:
+    string  msg;
+    int64_t start;
+};
+inline log_timer log_timed(const string& msg) { return log_timer(msg); }
 
 }  // namespace yocto
-
-// Formatter for math types
-namespace fmt {
-
-// Formatter for math types
-template <>
-struct formatter<yocto::vec2f>;
-template <>
-struct formatter<yocto::vec3f>;
-template <>
-struct formatter<yocto::vec4f>;
-template <>
-struct formatter<yocto::vec2i>;
-template <>
-struct formatter<yocto::vec3i>;
-template <>
-struct formatter<yocto::vec4i>;
-template <>
-struct formatter<yocto::mat2f>;
-template <>
-struct formatter<yocto::mat3f>;
-template <>
-struct formatter<yocto::mat4f>;
-template <>
-struct formatter<yocto::frame2f>;
-template <>
-struct formatter<yocto::frame3f>;
-template <>
-struct formatter<yocto::bbox2f>;
-template <>
-struct formatter<yocto::bbox3f>;
-
-}  // namespace fmt
 
 // -----------------------------------------------------------------------------
 // SPECIALIZED CONTAINERS
@@ -203,34 +217,39 @@ namespace yocto {
 // std::vector.
 template <typename T, size_t N>
 struct short_vector {
-    constexpr short_vector();
-    constexpr short_vector(initializer_list<T> values);
+    constexpr short_vector() : count{0} {}
+    constexpr short_vector(initializer_list<T> values) : count{0} {
+        for (auto value : values) ptr[count++] = value;
+    }
 
-    constexpr size_t size() const;
-    constexpr bool   empty() const;
+    constexpr size_t size() const { return count; }
+    constexpr bool   empty() const { return count == 0; }
 
-    constexpr void push_back(const T& value);
-    constexpr void pop_back();
+    constexpr void push_back(const T& value) { ptr[count++] = value; }
+    constexpr void pop_back() { count--; }
     template <typename... Args>
-    constexpr T& emplace_back(Args&&... args);
+    constexpr T& emplace_back(Args&&... args) {
+        ptr[count++] = T(std::forward(args)...);
+        return ptr[count - 1];
+    }
 
-    constexpr T&       operator[](size_t idx);
-    constexpr const T& operator[](size_t idx) const;
-    constexpr T&       at(size_t idx);
-    constexpr const T& at(size_t idx) const;
+    constexpr T&       operator[](size_t idx) { return ptr[idx]; }
+    constexpr const T& operator[](size_t idx) const { return ptr[idx]; }
+    constexpr T&       at(size_t idx) { return ptr[idx]; }
+    constexpr const T& at(size_t idx) const { return ptr[idx]; }
 
-    constexpr T&       front();
-    constexpr const T& front() const;
-    constexpr T&       back();
-    constexpr const T& back() const;
+    constexpr T&       front() { return ptr[0]; }
+    constexpr const T& front() const { return ptr[0]; }
+    constexpr T&       back() { return ptr[count - 1]; }
+    constexpr const T& back() const { return ptr[count - 1]; }
 
-    constexpr T*       data();
-    constexpr const T* data() const;
+    constexpr T*       data() { return count ? ptr : nullptr; }
+    constexpr const T* data() const { return count ? ptr : nullptr; }
 
-    constexpr T*       begin();
-    constexpr const T* begin() const;
-    constexpr T*       end();
-    constexpr const T* end() const;
+    constexpr T*       begin() { return ptr; }
+    constexpr const T* begin() const { return ptr; }
+    constexpr T*       end() { return ptr + count; }
+    constexpr const T* end() const { return ptr + count; }
 
    private:
     T      ptr[N];
@@ -245,404 +264,6 @@ struct short_vector {
 namespace yocto {
 
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
-template <typename T>
-struct range_iterator;
-template <typename T>
-inline range_iterator<T> range(T max);
-template <typename T>
-inline range_iterator<T> range(T min, T max);
-
-// Python `enumerate()` equivalent. Construct an object that iteraterates over a
-// sequence of elements and numbers them.
-template <typename T>
-struct enumerate_iterator;
-template <typename T>
-inline enumerate_iterator<const T> enumerate(const vector<T>& vals);
-template <typename T>
-inline enumerate_iterator<T> enumerate(vector<T>& vals);
-
-// Vector append and concatenation
-template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const T& b);
-template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const vector<T>& b);
-template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const initializer_list<T>& b);
-template <typename T>
-inline vector<T> operator+(const vector<T>& a, const T& b);
-template <typename T>
-inline vector<T> operator+(const vector<T>& a, const vector<T>& b);
-template <typename T>
-inline vector<T> operator+(const vector<T>& a, const initializer_list<T>& b);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// APPLICATION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Normalize path delimiters.
-inline string normalize_path(const string& filename);
-// Get directory name (including '/').
-inline string get_dirname(const string& filename);
-// Get extension (not including '.').
-inline string get_extension(const string& filename);
-// Get filename without directory.
-inline string get_filename(const string& filename);
-// Get path without extension.
-inline string get_noextension(const string& filename);
-// Get filename without directory and extension.
-inline string get_basename(const string& filename);
-
-// Check if a file can be opened for reading.
-inline bool exists_file(const string& filename);
-
-// Return the preset type and the remaining filename
-inline bool is_preset_filename(const string& filename);
-// Return the preset type and the filename. Call only if this is a preset.
-inline pair<string, string> get_preset_type(const string& filename);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Load/save a text file
-inline void load_text(const string& filename, string& str);
-inline void save_text(const string& filename, const string& str);
-
-// Load/save a binary file
-inline void load_binary(const string& filename, vector<byte>& data);
-inline void save_binary(const string& filename, const vector<byte>& data);
-
-// Io error
-struct io_error : runtime_error {
-    explicit io_error(const char* msg) : runtime_error{msg} {}
-    explicit io_error(const std::string& msg) : runtime_error{msg} {}
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// CONCURRENCY UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// a simple concurrent queue that locks at every call
-template <typename T>
-struct concurrent_queue {
-    concurrent_queue();
-    concurrent_queue(const concurrent_queue& other);
-    concurrent_queue& operator=(const concurrent_queue& other);
-
-    bool empty();
-    void clear();
-    void push(const T& value);
-    bool try_pop(T& value);
-
-   private:
-    mutex    _mutex;
-    deque<T> _queue;
-};
-
-// Runs a rask as an asycnrhonous operation.
-template <typename Function>
-inline auto async(Function&& function);
-template <typename Function, typename... Args>
-inline auto async(Function&& function, Args&&... args);
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(size_t begin, size_t end, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false);
-template <typename Func>
-inline void parallel_for(size_t num, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false);
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes a reference to a `T`.
-template <typename T, typename Func>
-inline void parallel_foreach(vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false);
-template <typename T, typename Func>
-inline void parallel_foreach(const vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false);
-
-}  // namespace yocto
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-//                             IMPLEMENTATION                                 //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PRINTING AND FORMATTING HELPERS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Helper to indicate info printing in console apps.
-template <typename... Args>
-inline void print_info(string_view format_str, const Args&... args) {
-    print(format_str, args...);
-    print("\n");
-}
-
-// Prints an error and exit.
-template <typename... Args>
-inline void print_fatal(string_view format_str, const Args&... args) {
-    print(format_str, args...);
-    print("\n");
-    exit(1);
-}
-
-// get time from a high resolution clock
-inline time_point get_time() {
-    return std::chrono::high_resolution_clock::now();
-}
-
-// print information and returns a timer that will print the time when
-// destroyed. Use with RIIA for scoped timing.
-struct print_timer {
-    print_timer(const string& msg) : msg{msg} {
-        start = get_time();
-        print("{}", msg);
-        fflush(stdout);
-    }
-    ~print_timer() {
-        auto end = get_time();
-        print(" in {:%H:%M:%S}\n", end - start);
-    }
-
-   private:
-    string     msg;
-    time_point start;
-};
-template <typename... Args>
-inline print_timer print_timed(string_view format_str, const Args&... args) {
-    return print_timer(format(format_str, args...));
-}
-
-// Logging to a sync
-namespace impl {
-inline auto log_callback = function<void(const string&)>{};
-}
-
-inline void set_log_callback(function<void(const string&)> callback) {
-    impl::log_callback = callback;
-}
-template <typename... Args>
-inline void log_msg(string_view format_str, const Args&... args) {
-    if (impl::log_callback) impl::log_callback(format(format_str, args...));
-}
-template <typename... Args>
-inline void log_info(string_view format_str, const Args&... args) {
-    if (impl::log_callback)
-        impl::log_callback(format(format_str, args...) + "\n");
-}
-template <typename... Args>
-inline void log_error(string_view format_str, const Args&... args) {
-    if (impl::log_callback)
-        impl::log_callback(format(format_str, args...) + "\n");
-}
-struct log_timer {
-    log_timer(const string& msg) : msg{msg} {
-        start = get_time();
-        log_msg("{}", msg);
-    }
-    ~log_timer() {
-        auto end = get_time();
-        log_msg("in {:%H:%M:%S}", end - start);
-    }
-
-   private:
-    string     msg;
-    time_point start;
-};
-template <typename... Args>
-inline log_timer log_timed(string_view format_str, const Args&... args) {
-    if (impl::log_callback) return log_timer(format(format_str, args...));
-}
-
-}  // namespace yocto
-
-// Formatter for math types
-namespace fmt {
-// Formatter for math types
-template <typename T, int N>
-struct _formatter_base {
-    template <typename ParseContext>
-    constexpr auto parse(ParseContext& ctx) {
-        return ctx.begin();
-    }
-
-    template <typename FormatContext>
-    constexpr auto format(const T& p, FormatContext& ctx) {
-        if constexpr (N == 1) {
-            return format_to(ctx.begin(), "[{}]", p[0]);
-        } else if constexpr (N == 2) {
-            return format_to(ctx.begin(), "[{}, {}]", p[0], p[1]);
-        } else if constexpr (N == 3) {
-            return format_to(ctx.begin(), "[{}, {}, {}]", p[0], p[1], p[2]);
-        } else if constexpr (N == 4) {
-            return format_to(
-                ctx.begin(), "[{}, {}, {}, {}]", p[0], p[1], p[2], p[3]);
-        } else {
-            throw std::runtime_error("unsupported length");
-        }
-    }
-};
-// Formatter for math types
-template <>
-struct formatter<yocto::vec2f> : _formatter_base<yocto::vec2f, 2> {};
-template <>
-struct formatter<yocto::vec3f> : _formatter_base<yocto::vec3f, 3> {};
-template <>
-struct formatter<yocto::vec4f> : _formatter_base<yocto::vec4f, 4> {};
-template <>
-struct formatter<yocto::vec2i> : _formatter_base<yocto::vec2i, 2> {};
-template <>
-struct formatter<yocto::vec3i> : _formatter_base<yocto::vec3i, 3> {};
-template <>
-struct formatter<yocto::vec4i> : _formatter_base<yocto::vec4i, 4> {};
-template <>
-struct formatter<yocto::mat2f> : _formatter_base<yocto::mat2f, 2> {};
-template <>
-struct formatter<yocto::mat3f> : _formatter_base<yocto::mat3f, 3> {};
-template <>
-struct formatter<yocto::mat4f> : _formatter_base<yocto::mat4f, 4> {};
-template <>
-struct formatter<yocto::frame2f> : _formatter_base<yocto::frame2f, 3> {};
-template <>
-struct formatter<yocto::frame3f> : _formatter_base<yocto::frame3f, 4> {};
-template <>
-struct formatter<yocto::bbox2f> : _formatter_base<yocto::bbox2f, 2> {};
-template <>
-struct formatter<yocto::bbox3f> : _formatter_base<yocto::bbox3f, 2> {};
-
-}  // namespace fmt
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR SPECIALIZED CONTAINERS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Finite-size vector with no heap allocation. The interface is a subset of
-// std::vector.
-template <typename T, size_t N>
-constexpr short_vector<T, N>::short_vector() : count{0} {}
-template <typename T, size_t N>
-constexpr short_vector<T, N>::short_vector(initializer_list<T> values)
-    : count{0} {
-    for (auto value : values) ptr[count++] = value;
-}
-
-template <typename T, size_t N>
-constexpr size_t short_vector<T, N>::size() const {
-    return count;
-}
-template <typename T, size_t N>
-constexpr bool short_vector<T, N>::empty() const {
-    return count == 0;
-}
-
-template <typename T, size_t N>
-constexpr void short_vector<T, N>::push_back(const T& value) {
-    ptr[count++] = value;
-}
-template <typename T, size_t N>
-constexpr void short_vector<T, N>::pop_back() {
-    count--;
-}
-template <typename T, size_t N>
-template <typename... Args>
-constexpr T& short_vector<T, N>::emplace_back(Args&&... args) {
-    ptr[count++] = T(std::forward(args)...);
-    return ptr[count - 1];
-}
-
-template <typename T, size_t N>
-constexpr T& short_vector<T, N>::operator[](size_t idx) {
-    return ptr[idx];
-}
-template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::operator[](size_t idx) const {
-    return ptr[idx];
-}
-template <typename T, size_t N>
-constexpr T& short_vector<T, N>::at(size_t idx) {
-    return ptr[idx];
-}
-template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::at(size_t idx) const {
-    return ptr[idx];
-}
-
-template <typename T, size_t N>
-constexpr T& short_vector<T, N>::front() {
-    return ptr[0];
-}
-template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::front() const {
-    return ptr[0];
-}
-template <typename T, size_t N>
-constexpr T& short_vector<T, N>::back() {
-    return ptr[count - 1];
-}
-template <typename T, size_t N>
-constexpr const T& short_vector<T, N>::back() const {
-    return ptr[count - 1];
-}
-
-template <typename T, size_t N>
-constexpr T* short_vector<T, N>::data() {
-    return count ? ptr : nullptr;
-}
-template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::data() const {
-    return count ? ptr : nullptr;
-}
-
-template <typename T, size_t N>
-constexpr T* short_vector<T, N>::begin() {
-    return ptr;
-}
-template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::begin() const {
-    return ptr;
-}
-template <typename T, size_t N>
-constexpr T* short_vector<T, N>::end() {
-    return ptr + count;
-}
-template <typename T, size_t N>
-constexpr const T* short_vector<T, N>::end() const {
-    return ptr + count;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PYTHON-LIKE ITERATORS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Range helpper (this should not be used directly)
 template <typename T>
 struct range_iterator {
     struct iterator {
@@ -665,7 +286,6 @@ struct range_iterator {
    private:
     T first = 0, last = 0;
 };
-
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
 template <typename T>
 inline range_iterator<T> range(T max) {
@@ -749,28 +369,7 @@ inline vector<T> operator+(const vector<T>& a, const initializer_list<T>& b) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF STRING FORMAT UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration) {
-    auto elapsed = duration / 1000000;  // milliseconds
-    auto hours   = (int)(elapsed / 3600000);
-    elapsed %= 3600000;
-    auto mins = (int)(elapsed / 60000);
-    elapsed %= 60000;
-    auto secs  = (int)(elapsed / 1000);
-    auto msecs = (int)(elapsed % 1000);
-    char buffer[256];
-    sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-    return buffer;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF PATH UTILITIES
+// PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -817,11 +416,6 @@ inline string get_filename(const string& filename_) {
     return filename.substr(pos + 1);
 }
 
-// Get filename without directory and extension.
-inline string get_basename(const string& filename) {
-    return get_noextension(get_filename(filename));
-}
-
 // Get extension.
 inline string get_noextension(const string& filename_) {
     auto filename = normalize_path(filename_);
@@ -830,8 +424,13 @@ inline string get_noextension(const string& filename_) {
     return filename.substr(0, pos);
 }
 
+// Get filename without directory and extension.
+inline string get_basename(const string& filename) {
+    return get_noextension(get_filename(filename));
+}
+
 // Check if a file can be opened for reading.
-bool exists_file(const string& filename) {
+inline bool exists_file(const string& filename) {
     auto f = fopen(filename.c_str(), "r");
     if (!f) return false;
     fclose(f);
@@ -857,9 +456,15 @@ inline pair<string, string> get_preset_type(const string& filename) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF FILE READING
+// FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Io error
+struct io_error : runtime_error {
+    explicit io_error(const char* msg) : runtime_error{msg} {}
+    explicit io_error(const std::string& msg) : runtime_error{msg} {}
+};
 
 // Load a text file
 inline void load_text(const string& filename, string& str) {
@@ -918,50 +523,50 @@ inline void save_binary(const string& filename, const vector<byte>& data) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR CONCURRENCY UTILITIES
+// CONCURRENCY UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // a simple concurrent queue that locks at every call
 template <typename T>
-inline concurrent_queue<T>::concurrent_queue() {}
-template <typename T>
-inline concurrent_queue<T>::concurrent_queue(const concurrent_queue<T>& other) {
-    if (!other._queue.empty())
-        throw std::invalid_argument("cannot copy full queue");
-    clear();
-}
-template <typename T>
-inline concurrent_queue<T>& concurrent_queue<T>::operator=(
-    const concurrent_queue<T>& other) {
-    if (!other._queue.empty())
-        throw std::invalid_argument("cannot copy full queue");
-    clear();
-}
+struct concurrent_queue {
+    // a simple concurrent queue that locks at every call
+    concurrent_queue() {}
+    concurrent_queue(const concurrent_queue<T>& other) {
+        if (!other._queue.empty())
+            throw std::invalid_argument("cannot copy full queue");
+        clear();
+    }
+    concurrent_queue<T>& operator=(const concurrent_queue<T>& other) {
+        if (!other._queue.empty())
+            throw std::invalid_argument("cannot copy full queue");
+        clear();
+    }
 
-template <typename T>
-inline bool concurrent_queue<T>::empty() {
-    lock_guard<mutex> lock(_mutex);
-    return _queue.empty();
-}
-template <typename T>
-inline void concurrent_queue<T>::clear() {
-    lock_guard<mutex> lock(_mutex);
-    _queue.clear();
-}
-template <typename T>
-inline void concurrent_queue<T>::push(const T& value) {
-    lock_guard<mutex> lock(_mutex);
-    _queue.push_back(value);
-}
-template <typename T>
-inline bool concurrent_queue<T>::try_pop(T& value) {
-    lock_guard<mutex> lock(_mutex);
-    if (_queue.empty()) return false;
-    value = _queue.front();
-    _queue.pop_front();
-    return true;
-}
+    bool empty() {
+        lock_guard<mutex> lock(_mutex);
+        return _queue.empty();
+    }
+    void clear() {
+        lock_guard<mutex> lock(_mutex);
+        _queue.clear();
+    }
+    void push(const T& value) {
+        lock_guard<mutex> lock(_mutex);
+        _queue.push_back(value);
+    }
+    bool try_pop(T& value) {
+        lock_guard<mutex> lock(_mutex);
+        if (_queue.empty()) return false;
+        value = _queue.front();
+        _queue.pop_front();
+        return true;
+    }
+
+   private:
+    mutex    _mutex;
+    deque<T> _queue;
+};
 
 // Runs a rask as an asycnrhonous operation.
 template <typename Function>
@@ -978,7 +583,7 @@ inline auto async(Function&& function, Args&&... args) {
 // parallel algorithms.
 template <typename Func>
 inline void parallel_for(size_t begin, size_t end, const Func& func,
-    atomic<bool>* cancel, bool serial) {
+    atomic<bool>* cancel = nullptr, bool serial = false) {
     if (serial) {
         for (auto idx = begin; idx < end; idx++) {
             if (cancel && *cancel) break;
@@ -1005,23 +610,23 @@ inline void parallel_for(size_t begin, size_t end, const Func& func,
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
-inline void parallel_for(
-    size_t num, const Func& func, atomic<bool>* cancel, bool serial) {
+inline void parallel_for(size_t num, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(0, num, func, cancel, serial);
 }
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline void parallel_foreach(
-    vector<T>& values, const Func& func, atomic<bool>* cancel, bool serial) {
+inline void parallel_foreach(vector<T>& values, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(
         0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
         cancel, serial);
 }
 template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, const Func& func,
-    atomic<bool>* cancel, bool serial) {
+    atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(
         0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
         cancel, serial);
@@ -1036,7 +641,8 @@ namespace yocto {
 
 // A file holder that closes a file when destructed. Useful for RIIA
 struct file_holder {
-    FILE* fs = nullptr;
+    FILE*  fs       = nullptr;
+    string filename = "";
 
     file_holder(const file_holder&) = delete;
     file_holder& operator=(const file_holder&) = delete;
@@ -1050,13 +656,35 @@ inline file_holder open_input_file(
     const string& filename, bool binary = false) {
     auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
     if (!fs) throw io_error("could not open file " + filename);
-    return {fs};
+    return {fs, filename};
 }
 inline file_holder open_output_file(
     const string& filename, bool binary = false) {
     auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
     if (!fs) throw io_error("could not open file " + filename);
-    return {fs};
+    return {fs, filename};
+}
+
+// Read a line
+inline bool read_line(file_holder& fs, char* buffer, size_t size) {
+    return fgets(buffer, size, fs.fs) != nullptr;
+}
+
+// Write text to file
+inline void write_text(FILE* fs, const char* value) {
+    if (fputs(value, fs) == 0) throw io_error("could not write to file");
+}
+inline void write_text(FILE* fs, const string& value) {
+    if (fputs(value.c_str(), fs) == 0)
+        throw io_error("could not write to file");
+}
+inline void write_value(FILE* fs, const char* value) { write_text(fs, value); }
+inline void write_value(FILE* fs, const string& value) {
+    write_text(fs, value);
+}
+template <typename T>
+inline void write_value(FILE* fs, const T& value) {
+    write_text(fs, to_string(value));
 }
 
 // Read a line
@@ -1113,10 +741,22 @@ inline void parse_value(string_view& str, int& value) {
     if (str == end) throw io_error("cannot parse value");
     str.remove_prefix(end - str.data());
 }
-inline void parse_value(string_view& str, bool& value) {
-    auto valuei = 0;
-    parse_value(str, valuei);
-    value = (bool)valuei;
+inline void parse_value(string_view& str, bool& value, bool alpha = false) {
+    if (alpha) {
+        auto values = ""s;
+        parse_value(str, value);
+        if (values == "false") {
+            value = false;
+        } else if (values == "true") {
+            value = true;
+        } else {
+            throw io_error("cannot parse value");
+        }
+    } else {
+        auto valuei = 0;
+        parse_value(str, valuei);
+        value = (bool)valuei;
+    }
 }
 inline void parse_value(string_view& str, float& value) {
     char* end = nullptr;
@@ -1152,71 +792,74 @@ inline void parse_value(string_view& str, string& value, bool quoted = false) {
         str.remove_prefix(pos + 1);
     }
 }
-template <typename T, size_t N>
+template <typename T>
 inline void parse_value(
-    string_view& str, array<T, N>& value, bool in_brackets = false) {
-    if (!in_brackets) {
-        for (auto i = 0; i < N; i++) parse_value(str, value[i]);
+    string_view& str, T* values, int num, bool bracketed = false) {
+    if (!bracketed) {
+        for (auto i = 0; i < num; i++) parse_value(str, values[i]);
     } else {
         skip_whitespace(str);
         if (str.empty() || str.front() != '[')
             throw io_error("cannot parse value");
-        for (auto i = 0; i < N; i++) {
+        for (auto i = 0; i < num; i++) {
             if (i) {
                 skip_whitespace(str);
                 if (str.empty() || str.front() != ',')
                     throw io_error("cannot parse value");
             }
-            parse_value(str, value[i]);
+            parse_value(str, values[i]);
         }
         skip_whitespace(str);
         if (str.empty() || str.front() != ']')
             throw io_error("cannot parse value");
     }
 }
+
 inline void parse_value(
-    string_view& str, vec2f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 2>&)value, in_brackets);
+    string_view& str, vec2f& value, bool bracketed = false) {
+    parse_value(str, &value.x, 2, bracketed);
 }
 inline void parse_value(
-    string_view& str, vec3f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 3>&)value, in_brackets);
+    string_view& str, vec3f& value, bool bracketed = false) {
+    parse_value(str, &value.x, 3, bracketed);
 }
 inline void parse_value(
-    string_view& str, vec4f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 4>&)value, in_brackets);
+    string_view& str, vec4f& value, bool bracketed = false) {
+    parse_value(str, &value.x, 4, bracketed);
+}
+
+inline void parse_value(
+    string_view& str, vec2i& value, bool bracketed = false) {
+    parse_value(str, &value.x, 2, bracketed);
 }
 inline void parse_value(
-    string_view& str, vec2i& value, bool in_brackets = false) {
-    parse_value(str, (array<int, 2>&)value, in_brackets);
+    string_view& str, vec3i& value, bool bracketed = false) {
+    parse_value(str, &value.x, 3, bracketed);
 }
 inline void parse_value(
-    string_view& str, vec3i& value, bool in_brackets = false) {
-    parse_value(str, (array<int, 3>&)value, in_brackets);
+    string_view& str, vec4i& value, bool bracketed = false) {
+    parse_value(str, &value.x, 4, bracketed);
+}
+
+inline void parse_value(
+    string_view& str, frame2f& value, bool bracketed = false) {
+    parse_value(str, &value.x.x, 6, bracketed);
 }
 inline void parse_value(
-    string_view& str, vec4i& value, bool in_brackets = false) {
-    parse_value(str, (array<int, 4>&)value, in_brackets);
+    string_view& str, frame3f& value, bool bracketed = false) {
+    parse_value(str, &value.x.x, 12, bracketed);
 }
 inline void parse_value(
-    string_view& str, frame2f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 6>&)value, in_brackets);
+    string_view& str, mat2f& value, bool bracketed = false) {
+    parse_value(str, &value.x.x, 4, bracketed);
 }
 inline void parse_value(
-    string_view& str, frame3f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 12>&)value, in_brackets);
+    string_view& str, mat3f& value, bool bracketed = false) {
+    parse_value(str, &value.x.x, 9, bracketed);
 }
 inline void parse_value(
-    string_view& str, mat2f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 4>&)value, in_brackets);
-}
-inline void parse_value(
-    string_view& str, mat3f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 9>&)value, in_brackets);
-}
-inline void parse_value(
-    string_view& str, mat4f& value, bool in_brackets = false) {
-    parse_value(str, (array<float, 16>&)value, in_brackets);
+    string_view& str, mat4f& value, bool bracketed = false) {
+    parse_value(str, &value.x.x, 19, bracketed);
 }
 
 template <typename T>

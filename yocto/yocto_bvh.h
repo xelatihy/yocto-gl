@@ -206,7 +206,7 @@ struct bvh_scene {
 };
 
 // bvh build params
-struct bvh_params {
+struct build_bvh_params {
     bool high_quality = false;
 #if YOCTO_EMBREE
     bool use_embree     = false;
@@ -218,13 +218,13 @@ struct bvh_params {
 };
 
 // Build the bvh acceleration structure.
-void build_bvh(bvh_shape& bvh, const bvh_params& params);
-void build_bvh(bvh_scene& bvh, const bvh_params& params);
+void build_bvh(bvh_shape& bvh, const build_bvh_params& params);
+void build_bvh(bvh_scene& bvh, const build_bvh_params& params);
 
 // Refit bvh data
-void refit_bvh(bvh_shape& bvh, const bvh_params& params);
+void refit_bvh(bvh_shape& bvh, const build_bvh_params& params);
 void refit_bvh(bvh_scene& bvh, const vector<int>& updated_shapes,
-    const bvh_params& params);
+    const build_bvh_params& params);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
@@ -282,8 +282,8 @@ bvh_intersection overlap_bvh(const bvh_scene& bvh, const vec3f& pos,
 namespace yocto {
 
 // Print bvh statistics.
-string print_stats(const bvh_shape& bvh);
-string print_stats(const bvh_scene& bvh);
+string format_stats(const bvh_shape& bvh);
+string format_stats(const bvh_scene& bvh);
 
 }  // namespace yocto
 

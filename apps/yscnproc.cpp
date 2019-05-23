@@ -86,18 +86,18 @@ int main(int argc, char** argv) {
     }
 
     // fix options
-    auto load_prms          = sceneio_params();
-    auto save_prms          = sceneio_params();
-    load_prms.skip_textures = skip_textures;
-    save_prms.skip_textures = skip_textures;
-    load_prms.skip_meshes   = skip_meshes;
-    save_prms.skip_meshes   = skip_meshes;
+    auto load_params          = load_scene_params();
+    auto save_params          = save_scene_params();
+    load_params.skip_textures = skip_textures;
+    save_params.skip_textures = skip_textures;
+    load_params.skip_meshes   = skip_meshes;
+    save_params.skip_meshes   = skip_meshes;
 
     // load scene
     auto scene = yocto_scene{};
     try {
         auto timer = print_timed("loading scene");
-        load_scene(filename, scene, load_prms);
+        load_scene(filename, scene, load_params);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     }
 
     // print info
-    if (info) print_info("{}", format_stats(scene));
+    if (info) print_info(format_stats(scene));
 
     // change texture names
     if (uniform_txt) {
@@ -136,9 +136,11 @@ int main(int argc, char** argv) {
         auto sid = 0;
         for (auto& shape : scene.shapes) {
             if (!shape.quads_positions.empty()) {
-                shape.uri = format("{}shape_{}.obj", shape_directory, sid);
+                shape.uri = shape_directory + "shape_" + to_string(sid) +
+                            ".obj";
             } else {
-                shape.uri = format("{}shape_{}.ply", shape_directory, sid);
+                shape.uri = shape_directory + "shape_" + to_string(sid) +
+                            ".ply";
             }
             sid++;
         }
@@ -150,9 +152,11 @@ int main(int argc, char** argv) {
         auto sid = 0;
         for (auto& subdiv : scene.subdivs) {
             if (!subdiv.quads_positions.empty()) {
-                subdiv.uri = format("{}subdiv_{}.obj", subdiv_directory, sid);
+                subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) +
+                             ".obj";
             } else {
-                subdiv.uri = format("{}subdiv_{}.ply", subdiv_directory, sid);
+                subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) +
+                             ".ply";
             }
             sid++;
         }
@@ -176,7 +180,7 @@ int main(int argc, char** argv) {
     // save scene
     try {
         auto timer = print_timed("saving scene");
-        save_scene(output, scene, save_prms);
+        save_scene(output, scene, save_params);
     } catch (const std::exception& e) {
         print_fatal(e.what());
     }

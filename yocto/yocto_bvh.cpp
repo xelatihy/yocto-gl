@@ -439,7 +439,7 @@ static RTCDevice get_embree_device() {
 }
 
 // Initialize Embree BVH
-static void build_embree_bvh(bvh_shape& shape, const bvh_params& params) {
+static void build_embree_bvh(bvh_shape& shape, const build_bvh_params& params) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     if (params.embree_compact) {
@@ -552,7 +552,7 @@ static void build_embree_bvh(bvh_shape& shape, const bvh_params& params) {
     shape.embree_flattened = false;
 }
 // Build a BVH using Embree.
-static void build_embree_bvh(bvh_scene& scene, const bvh_params& params) {
+static void build_embree_bvh(bvh_scene& scene, const build_bvh_params& params) {
     // scene bvh
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
@@ -587,7 +587,7 @@ static void build_embree_bvh(bvh_scene& scene, const bvh_params& params) {
 
 // Initialize Embree BVH
 static void build_embree_flattened_bvh(
-    bvh_scene& scene, const bvh_params& params) {
+    bvh_scene& scene, const build_bvh_params& params) {
     // scene bvh
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
@@ -892,7 +892,7 @@ static pair<int, int> split_middle(
 
 // Build BVH nodes
 static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
-    const bvh_params& params) {
+    const build_bvh_params& params) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
@@ -950,7 +950,7 @@ static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
 // Build BVH nodes
 static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
-    const bvh_params& params) {
+    const build_bvh_params& params) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
@@ -1037,7 +1037,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     nodes.shrink_to_fit();
 }
 
-void build_bvh(bvh_shape& shape, const bvh_params& params) {
+void build_bvh(bvh_shape& shape, const build_bvh_params& params) {
 #if YOCTO_EMBREE
     // call Embree if needed
     if (params.use_embree) {
@@ -1096,7 +1096,7 @@ void build_bvh(bvh_shape& shape, const bvh_params& params) {
         build_bvh_parallel(shape.nodes, prims, params);
     }
 }
-void build_bvh(bvh_scene& scene, const bvh_params& params) {
+void build_bvh(bvh_scene& scene, const build_bvh_params& params) {
     for (auto idx = 0; idx < scene.shapes.size(); idx++) {
         build_bvh(scene.shapes[idx], params);
     }
@@ -1131,7 +1131,7 @@ void build_bvh(bvh_scene& scene, const bvh_params& params) {
     }
 }
 
-void refit_bvh(bvh_shape& shape, const bvh_params& params) {
+void refit_bvh(bvh_shape& shape, const build_bvh_params& params) {
 #if YOCTO_EMBREE
     if (shape.embree_bvh) throw runtime_error("Embree reftting disabled");
 #endif
@@ -1180,7 +1180,7 @@ void refit_bvh(bvh_shape& shape, const bvh_params& params) {
 }
 
 void refit_bvh(bvh_scene& scene, const vector<int>& updated_shapes,
-    const bvh_params& params) {
+    const build_bvh_params& params) {
     // update shapes
     for (auto shape : updated_shapes) refit_bvh(scene.shapes[shape], params);
 
@@ -1660,12 +1660,12 @@ bvh_intersection overlap_bvh(const bvh_scene& scene, const vec3f& pos,
 namespace yocto {
 
 // Print bvh statistics.
-string print_stats(const bvh_shape& bvh) {
+string format_stats(const bvh_shape& bvh) {
     // TODO
     auto str = ""s;
     return str;
 }
-string print_stats(const bvh_scene& bvh) {
+string format_stats(const bvh_scene& bvh) {
 #if 0
     auto num_shapes    = (size_t)0;
     auto num_instances = (size_t)0;

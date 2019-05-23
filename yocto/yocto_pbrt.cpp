@@ -2555,8 +2555,8 @@ static inline void parse_pbrt_medium(
 }
 
 // Load pbrt scene
-void load_pbrt(
-    const string& filename, pbrt_callbacks& cb, const pbrt_params& params) {
+void load_pbrt(const string& filename, pbrt_callbacks& cb,
+    const load_pbrt_params& params) {
     // start laoding files
     auto streams = vector<pbrt_stream>{};
     init_stream(streams);

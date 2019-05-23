@@ -580,7 +580,7 @@ static vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
     }
 }
 
-vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
+vec3f tonemap(const vec3f& hdr, const tonemap_image_params& params) {
     auto rgb = hdr;
     if (params.exposure != 0) rgb *= exp2(params.exposure);
     if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
@@ -596,28 +596,29 @@ vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
 }
 
 // Apply exposure and filmic tone mapping
-void tonemap(
-    image<vec4f>& ldr, const image<vec4f>& hdr, const tonemap_params& params) {
+void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
+    const tonemap_image_params& params) {
     return apply_image(ldr, hdr,
         [scale = exp2(params.exposure) * params.tint, params](
             const vec4f& hdr) {
             return vec4f{tonemap(xyz(hdr), params), hdr.w};
         });
 }
-void tonemap(
-    image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params) {
+void tonemap(image<vec4b>& ldr, const image<vec4f>& hdr,
+    const tonemap_image_params& params) {
     return apply_image(ldr, hdr, [params](const vec4f& hdr) {
         return float_to_byte(vec4f{tonemap(xyz(hdr), params), hdr.w});
     });
 }
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_params& params) {
+    const image_region& region, const tonemap_image_params& params) {
     return apply_image(ldr, hdr, region, [params](const vec4f& hdr) {
         return vec4f{tonemap(xyz(hdr), params), hdr.w};
     });
 }
 
-static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
+static vec3f colorgrade(
+    const vec3f& ldr, const colorgrade_image_params& params) {
     auto rgb = ldr;
     if (params.contrast != 0.5f) {
         rgb = gain(ldr, 1 - params.contrast);
@@ -644,7 +645,7 @@ static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
 
 // Apply exposure and filmic tone mapping
 void colorgrade(image<vec4f>& corrected, const image<vec4f>& ldr,
-    const image_region& region, const colorgrade_params& params) {
+    const image_region& region, const colorgrade_image_params& params) {
     return apply_image(corrected, ldr, region, [&params](const vec4f& hdr) {
         return vec4f{colorgrade(xyz(hdr), params), hdr.w};
     });
@@ -1826,7 +1827,7 @@ void save_image(
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params) {
+    const tonemap_image_params& params) {
     if (is_hdr_filename(filename)) {
         save_image(filename, hdr);
     } else {
@@ -1857,7 +1858,7 @@ void save_image_with_logo(const string& filename, const image<vec4b>& img) {
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params) {
+    const tonemap_image_params& params) {
     if (is_hdr_filename(filename)) {
         save_image_with_logo(filename, hdr);
     } else {
