@@ -2008,42 +2008,80 @@ inline void update_camera_first_person(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline string to_string(const char* val) { return val; }
-inline string to_string(const string& val) { return val; }
+inline string to_string(const char* value, bool quoted = false) { 
+    return quoted ? "\""s + value + "\""s : value;
+}
+inline string to_string(const string& value, bool quoted = false) {
+    return quoted ? "\"" + value + "\"" : value;
+}
 
-inline string to_string(int val) { return std::to_string(val); }
-inline string to_string(float val) { return std::to_string(val); }
-inline string to_string(double val) { return std::to_string(val); }
-inline string to_string(uint64_t val) { return std::to_string(val); }
-inline string to_string(size_t val) { return std::to_string(val); }
+inline string to_string(bool value, bool alpha = false) { 
+    if(alpha) {
+        return value ? "true" : "false";
+    } else {
+        return value ? "1" : "0"; 
+    }
+}
 
-template<typename T>
-inline string to_string(const T* vals, int num) {
+inline string to_string(int value) { return std::to_string(value); }
+inline string to_string(float value) { return std::to_string(value); }
+inline string to_string(double value) { return std::to_string(value); }
+inline string to_string(uint64_t value) { return std::to_string(value); }
+inline string to_string(size_t value) { return std::to_string(value); }
+
+template <typename T>
+inline string to_string(const T* values, int num, bool bracketed = false) {
     auto str = ""s;
     for (auto i = 0; i < num; i++) {
         if (i) str += " ";
-        str += to_string(vals[i]);
+        str += to_string(values[i]);
     }
     return str;
 }
 
-inline string to_string(const vec2f& val) { return to_string(&val.x, 2); }
-inline string to_string(const vec3f& val) { return to_string(&val.x, 3); }
-inline string to_string(const vec4f& val) { return to_string(&val.x, 4); }
+inline string to_string(const vec2f& value, bool bracketed = false) {
+    return to_string(&value.x, 2, bracketed);
+}
+inline string to_string(const vec3f& value, bool bracketed = false) {
+    return to_string(&value.x, 3, bracketed);
+}
+inline string to_string(const vec4f& value, bool bracketed = false) {
+    return to_string(&value.x, 4, bracketed);
+}
 
-inline string to_string(const vec2i& val) { return to_string(&val.x, 2); }
-inline string to_string(const vec3i& val) { return to_string(&val.x, 3); }
-inline string to_string(const vec4i& val) { return to_string(&val.x, 4); }
+inline string to_string(const vec2i& value, bool bracketed = false) {
+    return to_string(&value.x, 2, bracketed);
+}
+inline string to_string(const vec3i& value, bool bracketed = false) {
+    return to_string(&value.x, 3, bracketed);
+}
+inline string to_string(const vec4i& value, bool bracketed = false) {
+    return to_string(&value.x, 4, bracketed);
+}
 
-inline string to_string(const mat2f& val) { return to_string(&val.x.x, 4); }
-inline string to_string(const mat3f& val) { return to_string(&val.x.x, 9); }
-inline string to_string(const mat4f& val) { return to_string(&val.x.x, 16); }
+inline string to_string(const mat2f& value, bool bracketed = false) {
+    return to_string(&value.x.x, 4, bracketed);
+}
+inline string to_string(const mat3f& value, bool bracketed = false) {
+    return to_string(&value.x.x, 9, bracketed);
+}
+inline string to_string(const mat4f& value, bool bracketed = false) {
+    return to_string(&value.x.x, 16, bracketed);
+}
 
-inline string to_string(const frame2f& val) { return to_string(&val.x.x, 6); }
-inline string to_string(const frame3f& val) { return to_string(&val.x.x, 12); }
+inline string to_string(const frame2f& value, bool bracketed = false) {
+    return to_string(&value.x.x, 6, bracketed);
+}
+inline string to_string(const frame3f& value, bool bracketed = false) {
+    return to_string(&value.x.x, 12, bracketed);
+}
 
-inline string to_string(const bbox2f& val) { return to_string(&val.min.x, 4); }
-inline string to_string(const bbox3f& val) { return to_string(&val.min.x, 6); }
+inline string to_string(const bbox2f& value, bool bracketed = false) {
+    return to_string(&value.min.x, 4, bracketed);
+}
+inline string to_string(const bbox3f& value, bool bracketed = false) {
+    return to_string(&value.min.x, 6, bracketed);
+}
 
 }  // namespace yocto
 
