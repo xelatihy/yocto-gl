@@ -9,7 +9,8 @@
 //
 // We provide common operations for small vectors and matrices typically used
 // in graphics. In particular, we support 1-4 dimensional vectors
-// coordinates (`vec_<T, 1>`, `vec_<T, 2>`, `vec_<T, 3>`, `vec_<T, 4>`).
+// coordinates in float and int coordinates (`vec1f`, `vec2f`, `vec3f`, `vec4f`,
+// `vec1i`, `vec2i`, `vec3i`, `vec4i`).
 //
 // We support 2-4 dimensional matrices (`mat2f`, `mat3f`, `mat4f`) with
 // matrix-matrix and matrix-vector products, transposes and inverses.
@@ -191,75 +192,49 @@ constexpr int pow2(int x) { return 1 << x; }
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Small size vectors.
-template <typename T, int N>
-struct vec_;
+struct vec2f {
+    float x = 0;
+    float y = 0;
 
-template <typename T>
-struct vec_<T, 1> {
-    T x;
+    constexpr vec2f() {}
+    constexpr vec2f(float x, float y) : x{x}, y{y} {}
+    constexpr explicit vec2f(float v) : x{v}, y{v} {}
 
-    constexpr vec_() : x{0} {}
-    constexpr vec_(T x) : x{x} {}
-
-    constexpr T&       operator[](int i) { return (&x)[i]; }
-    constexpr const T& operator[](int i) const { return (&x)[i]; }
+    constexpr float&       operator[](int i) { return (&x)[i]; }
+    constexpr const float& operator[](int i) const { return (&x)[i]; }
 };
 
-template <typename T>
-struct vec_<T, 2> {
-    T x, y;
+struct vec3f {
+    float x = 0;
+    float y = 0;
+    float z = 0;
 
-    constexpr vec_() : x{0}, y{0} {}
-    constexpr vec_(T x, T y) : x{x}, y{y} {}
-    constexpr vec_(const vec_<T, 1>& v, T y) : x{v.x}, y{y} {}
-    constexpr explicit vec_(T v) : x{v}, y{v} {}
+    constexpr vec3f() {}
+    constexpr vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
+    constexpr vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
+    constexpr explicit vec3f(float v) : x{v}, y{v}, z{v} {}
 
-    constexpr T&       operator[](int i) { return (&x)[i]; }
-    constexpr const T& operator[](int i) const { return (&x)[i]; }
+    constexpr float&       operator[](int i) { return (&x)[i]; }
+    constexpr const float& operator[](int i) const { return (&x)[i]; }
 };
 
-template <typename T>
-struct vec_<T, 3> {
-    T x, y, z;
+struct vec4f {
+    float x = 0;
+    float y = 0;
+    float z = 0;
+    float w = 0;
 
-    constexpr vec_() : x{0}, y{0}, z{0} {}
-    constexpr vec_(T x, T y, T z) : x{x}, y{y}, z{z} {}
-    constexpr vec_(const vec_<T, 2>& v, T z) : x{v.x}, y{v.y}, z{z} {}
-    constexpr explicit vec_(T v) : x{v}, y{v}, z{v} {}
+    constexpr vec4f() {}
+    constexpr vec4f(float x, float y, float z, float w)
+        : x{x}, y{y}, z{z}, w{w} {}
+    constexpr vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
+    constexpr explicit vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
 
-    constexpr T&       operator[](int i) { return (&x)[i]; }
-    constexpr const T& operator[](int i) const { return (&x)[i]; }
+    constexpr float&       operator[](int i) { return (&x)[i]; }
+    constexpr const float& operator[](int i) const { return (&x)[i]; }
 };
-
-template <typename T>
-struct vec_<T, 4> {
-    T x, y, z, w;
-
-    constexpr vec_() : x{0}, y{0}, z{0}, w{0} {}
-    constexpr vec_(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
-    constexpr vec_(const vec_<T, 3>& v, T w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-    constexpr explicit vec_(T v) : x{v}, y{v}, z{v}, w{v} {}
-
-    constexpr T&       operator[](int i) { return (&x)[i]; }
-    constexpr const T& operator[](int i) const { return (&x)[i]; }
-};
-
-// Typedefs
-using vec1f = vec_<float, 1>;
-using vec2f = vec_<float, 2>;
-using vec3f = vec_<float, 3>;
-using vec4f = vec_<float, 4>;
-using vec1i = vec_<int, 1>;
-using vec2i = vec_<int, 2>;
-using vec3i = vec_<int, 3>;
-using vec4i = vec_<int, 4>;
-using vec4b = vec_<byte, 4>;
 
 // Zero vector constants.
-template <typename T, int N>
-constexpr auto zero   = vec_<T, N>{};
-constexpr auto zero1f = vec1f{0};
 constexpr auto zero2f = vec2f{0, 0};
 constexpr auto zero3f = vec3f{0, 0, 0};
 constexpr auto zero4f = vec4f{0, 0, 0, 0};
@@ -764,8 +739,62 @@ constexpr vec4f quat_inverse(const vec4f& a) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+struct vec2i {
+    int x = 0;
+    int y = 0;
+
+    constexpr vec2i() {}
+    constexpr vec2i(int x, int y) : x{x}, y{y} {}
+    constexpr explicit vec2i(int v) : x{v}, y{v} {}
+
+    constexpr int&       operator[](int i) { return (&x)[i]; }
+    constexpr const int& operator[](int i) const { return (&x)[i]; }
+};
+
+struct vec3i {
+    int x = 0;
+    int y = 0;
+    int z = 0;
+
+    constexpr vec3i() {}
+    constexpr vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
+    constexpr vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
+    constexpr explicit vec3i(int v) : x{v}, y{v}, z{v} {}
+
+    constexpr int&       operator[](int i) { return (&x)[i]; }
+    constexpr const int& operator[](int i) const { return (&x)[i]; }
+};
+
+struct vec4i {
+    int x = 0;
+    int y = 0;
+    int z = 0;
+    int w = 0;
+
+    constexpr vec4i() {}
+    constexpr vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
+    constexpr vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
+    constexpr explicit vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
+
+    constexpr int&       operator[](int i) { return (&x)[i]; }
+    constexpr const int& operator[](int i) const { return (&x)[i]; }
+};
+
+struct vec4b {
+    byte x = 0;
+    byte y = 0;
+    byte z = 0;
+    byte w = 0;
+
+    constexpr vec4b() {}
+    constexpr vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
+    constexpr explicit vec4b(byte v) : x{v}, y{v}, z{v}, w{v} {}
+
+    constexpr byte&       operator[](int i) { return (&x)[i]; }
+    constexpr const byte& operator[](int i) const { return (&x)[i]; }
+};
+
 // Zero vector constants.
-constexpr auto zero1i = vec1i{0};
 constexpr auto zero2i = vec2i{0, 0};
 constexpr auto zero3i = vec3i{0, 0, 0};
 constexpr auto zero4i = vec4i{0, 0, 0, 0};
@@ -1055,15 +1084,32 @@ inline vec4i abs(const vec4i& a) {
 namespace std {
 
 // Hash functor for vector for use with unordered_map
-template <typename T, int N>
-struct hash<yocto::vec_<T, N>> {
+template <typename T, size_t N>
+struct hash<std::array<T, N>> {
     static constexpr std::hash<T> hasher = std::hash<T>();
-
-    size_t operator()(const yocto::vec_<T, N>& v) const {
+    size_t                        operator()(const std::array<T, N>& v) const {
         auto h = (size_t)0;
         for (auto i = 0; i < N; i++)
-            h ^= hasher((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+            h ^= hasher(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
+    }
+};
+template <>
+struct hash<yocto::vec2i> {
+    size_t operator()(const yocto::vec2i& v) const {
+        return hash<std::array<int, 2>>()((const std::array<int, 2>&)v);
+    }
+};
+template <>
+struct hash<yocto::vec3i> {
+    size_t operator()(const yocto::vec3i& v) const {
+        return hash<std::array<int, 3>>()((const std::array<int, 3>&)v);
+    }
+};
+template <>
+struct hash<yocto::vec4i> {
+    size_t operator()(const yocto::vec4i& v) const {
+        return hash<std::array<int, 4>>()((const std::array<int, 4>&)v);
     }
 };
 
