@@ -32,38 +32,6 @@ using namespace yocto;
 
 #include "ext/CLI11.hpp"
 
-#if 0
-template <typename Image>
-Image make_image_grid(const vector<Image>& imgs, int tilex) {
-    auto nimgs = (int)imgs.size();
-    auto width = imgs[0].size().x * tilex;
-    auto height = imgs[0].size().y * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
-    auto ret = init_image(width, height, (bool)imgs[0].hdr);
-    auto img_idx = 0;
-    for (auto& img : imgs) {
-        if (extents(img) != extents(imgs[0])) {
-            print_fatal("images of different sizes are not accepted");
-        }
-        auto ox = (img_idx % tilex) * img.size().x,
-             oy = (img_idx / tilex) * img.size().y;
-        if (ret.hdr) {
-            for (auto j = 0; j < img.size().y; j++) {
-                for (auto i = 0; i < img.size().x; i++) {
-                    ret.hdr[{i + ox, j + oy}] = img.hdr[{i,j}];
-                }
-            }
-        } else {
-            for (auto j = 0; j < img.size().y; j++) {
-                for (auto i = 0; i < img.size().x; i++) {
-                    ret.ldr[{i + ox, j + oy}] = img.ldr[{i,j}];
-                }
-            }
-        }
-    }
-    return ret;
-}
-#endif
-
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const vector<image<vec4f>>& features,
     const vector<float>& features_sigma) {

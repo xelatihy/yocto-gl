@@ -263,9 +263,9 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
 // Update node transforms
 void update_transforms(yocto_scene& scene, yocto_scene_node& node,
     const frame3f& parent = identity_frame3f) {
-  auto frame = parent * node.local * make_translation_frame(node.translation) *
-               make_rotation_frame(node.rotation) *
-               make_scaling_frame(node.scale);
+  auto frame = parent * node.local * translation_frame(node.translation) *
+               rotation_frame(node.rotation) *
+               scaling_frame(node.scale);
   if (node.instance >= 0) scene.instances[node.instance].frame = frame;
   if (node.camera >= 0) scene.cameras[node.camera].frame = frame;
   if (node.environment >= 0) scene.environments[node.environment].frame = frame;
@@ -524,7 +524,7 @@ void add_cameras(yocto_scene& scene) {
 void add_sky(yocto_scene& scene, float sun_angle) {
   auto texture = yocto_texture{};
   texture.uri  = "textures/sky.hdr";
-  make_sunsky(texture.hdr_image, {1024, 512}, sun_angle);
+  make_imsunsky(texture.hdr_image, {1024, 512}, sun_angle);
   scene.textures.push_back(texture);
   auto environment             = yocto_environment{};
   environment.uri              = "environments/default.yaml";
@@ -1135,7 +1135,7 @@ void set_view(yocto_camera& camera, const bbox3f& bbox,
   auto from             = camera_dir * (camera_dist * 1) + bbox_center;
   auto to               = bbox_center;
   auto up               = vec3f{0, 1, 0};
-  camera.frame          = make_lookat_frame(from, to, up);
+  camera.frame          = lookat_frame(from, to, up);
   camera.focus_distance = length(from - to);
   camera.lens_aperture  = 0;
 }

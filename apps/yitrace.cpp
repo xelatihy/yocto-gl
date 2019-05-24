@@ -167,7 +167,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
   state            = trace_state{};
   init_trace_state(state, image_size, trace_prms.random_seed);
   auto regions = vector<image_region>{};
-  make_regions(regions, render.size(), trace_prms.region_size, true);
+  make_imregions(regions, render.size(), trace_prms.region_size, true);
 
   for (auto sample = 0; sample < trace_prms.num_samples;
        sample += trace_prms.samples_per_batch) {

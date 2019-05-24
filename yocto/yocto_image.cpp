@@ -526,7 +526,7 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to) {
 namespace yocto {
 
 // Splits an image into an array of regions
-void make_regions(vector<image_region>& regions, const vec2i& size,
+void make_imregions(vector<image_region>& regions, const vec2i& size,
     int region_size, bool shuffled) {
   regions.clear();
   for (auto y = 0; y < size.y; y += region_size) {
@@ -761,7 +761,7 @@ void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
 }
 
 // Make an image
-void make_proc(image<vec4f>& img, const procimage_params& params) {
+void make_improc(image<vec4f>& img, const improc_params& params) {
   auto make_img = [&](const auto& shader) {
     img.resize(params.size);
     auto scale = 1.0f / max(params.size);
@@ -929,7 +929,7 @@ void add_border(
 #if 1
 
 // Implementation of sunsky modified heavily from pbrt
-void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
+void make_imsunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
     float turbidity, bool has_sun, float sun_intensity, float sun_temperature,
     const vec3f& ground_albedo) {
   // idea adapted from pbrt
@@ -993,7 +993,7 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
 #else
 
 // Implementation of sunsky modified heavily from pbrt
-image<vec4f> make_sunsky(int width, int height, float theta_sun,
+image<vec4f> make_imsunsky(int width, int height, float theta_sun,
     float turbidity, bool has_sun, float sun_angle_scale,
     float sun_emission_scale, const vec3f& ground_albedo,
     bool renormalize_sun) {
@@ -1087,7 +1087,7 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
   };
 
   // Make the sun sky image
-  auto img          = make_proc(width, height, vec4f{0, 0, 0, 1});
+  auto img          = make_improc(width, height, vec4f{0, 0, 0, 1});
   auto sky_integral = 0.0f, sun_integral = 0.0f;
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
@@ -1136,7 +1136,7 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
 #endif
 
 // Make an image of multiple lights.
-void make_lights(image<vec4f>& img, const vec2i& size, const vec3f& le,
+void make_imlights(image<vec4f>& img, const vec2i& size, const vec3f& le,
     int nlights, float langle, float lwidth, float lheight) {
   img.resize(size);
   for (auto j = 0; j < img.size().y / 2; j++) {
@@ -1155,7 +1155,7 @@ void make_lights(image<vec4f>& img, const vec2i& size, const vec3f& le,
   }
 }
 
-void make_logo(image<vec4b>& img, const string& type) {
+void make_imlogo(image<vec4b>& img, const string& type) {
   static const auto size = vec2i{144, 28};
   // clang-format off
     static const auto logo_render = vector<byte>{
@@ -1198,85 +1198,85 @@ void make_logo(image<vec4b>& img, const string& type) {
   }
 }
 
-void make_logo(image<vec4f>& img, const string& type) {
+void make_imlogo(image<vec4f>& img, const string& type) {
   auto img8 = image<vec4b>();
-  make_logo(img8, type);
+  make_imlogo(img8, type);
   img.resize(img8.size());
   srgb_to_rgb(img, img8);
 }
 
-void make_preset(image<vec4f>& img, const string& type) {
+void make_impreset(image<vec4f>& img, const string& type) {
   auto size = vec2i{1024, 1024};
   if (type.find("sky") != type.npos) size = {2048, 1024};
   if (type == "grid") {
-    auto params   = procimage_params{};
+    auto params   = improc_params{};
     params.type   = make_image_type::grid;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.7, 0.7, 0.7, 1};
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "checker") {
-    auto params   = procimage_params{};
+    auto params   = improc_params{};
     params.type   = make_image_type::checker;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.7, 0.7, 0.7, 1};
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "bumps") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::bumps;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "uvramp") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::uvramp;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "gammaramp") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::gammaramp;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "blackbodyramp") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::blackbody;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "uvgrid") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::uvgrid;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "sky") {
-    make_sunsky(
+    make_imsunsky(
         img, size, pif / 4, 3.0f, false, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
-    make_sunsky(
+    make_imsunsky(
         img, size, pif / 4, 3.0f, true, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::noise;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "fbm") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::fbm;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "ridge") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::ridge;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "turbulence") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::turbulence;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "bump-normal") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::bumps;
-    make_proc(img, params);
+    make_improc(img, params);
     auto bump = img;
     bump_to_normal(img, bump, 0.05f);
   } else if (type == "logo-render") {
-    make_logo(img, "logo-render");
+    make_imlogo(img, "logo-render");
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       sub_imgs.at(i).resize(img.size());
-      make_preset(sub_imgs.at(i), sub_types.at(i));
+      make_impreset(sub_imgs.at(i), sub_types.at(i));
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
@@ -1293,7 +1293,7 @@ void make_preset(image<vec4f>& img, const string& type) {
     auto sub_types = vector<string>{"sky", "sunsky"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      make_preset(sub_imgs.at(i), sub_types.at(i));
+      make_impreset(sub_imgs.at(i), sub_types.at(i));
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
@@ -1307,76 +1307,76 @@ void make_preset(image<vec4f>& img, const string& type) {
       pos += sub_img.size().x;
     }
   } else if (type == "test-floor") {
-    auto params    = procimage_params{};
+    auto params    = improc_params{};
     params.type    = make_image_type::grid;
     params.color0  = vec4f{0.2, 0.2, 0.2, 1};
     params.color1  = vec4f{0.5, 0.5, 0.5, 1};
     params.borderw = 0.0025;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "test-grid") {
-    auto params   = procimage_params{};
+    auto params   = improc_params{};
     params.type   = make_image_type::grid;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.5, 0.5, 0.5, 1};
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "test-checker") {
-    auto params   = procimage_params{};
+    auto params   = improc_params{};
     params.type   = make_image_type::checker;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.5, 0.5, 0.5, 1};
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "test-bumps") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::bumps;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "test-uvramp") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::uvramp;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "test-gammaramp") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::gammaramp;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "test-blackbodyramp") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::blackbody;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "test-uvgrid") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::uvgrid;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "test-sky") {
-    make_sunsky(
+    make_imsunsky(
         img, size, pif / 4, 3.0f, false, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
-    make_sunsky(
+    make_imsunsky(
         img, size, pif / 4, 3.0f, true, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::noise;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "test-fbm") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::fbm;
-    make_proc(img, params);
+    make_improc(img, params);
   } else if (type == "test-bumps-normal") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::bumps;
-    make_proc(img, params);
+    make_improc(img, params);
     auto bump = img;
     bump_to_normal(img, bump, 0.05f);
   } else if (type == "test-fbm-displacement") {
-    auto params = procimage_params{};
+    auto params = improc_params{};
     params.type = make_image_type::fbm;
-    make_proc(img, params);
+    make_improc(img, params);
   } else {
     throw std::invalid_argument("unknown image preset " + type);
   }
 }
 
-void make_preset(image<vec4b>& img, const string& type) {
+void make_impreset(image<vec4b>& img, const string& type) {
   auto imgf = image<vec4f>{};
-  make_preset(imgf, type);
+  make_impreset(imgf, type);
   if (type.find("-normal") == type.npos) {
     rgb_to_srgb(img, imgf);
   } else {
@@ -1384,11 +1384,11 @@ void make_preset(image<vec4b>& img, const string& type) {
   }
 }
 
-void make_preset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
+void make_impreset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
   if (type.find("sky") == type.npos) {
-    make_preset(ldr, type);
+    make_impreset(ldr, type);
   } else {
-    make_preset(hdr, type);
+    make_impreset(hdr, type);
   }
 }
 
@@ -1416,7 +1416,7 @@ void make_test(
   }
 }
 
-void make_preset(volume<float>& vol, const string& type) {
+void make_volpreset(volume<float>& vol, const string& type) {
   auto size = vec3i{256, 256, 256};
   if (type == "test-volume") {
     make_test(vol, size, 6, 10);
@@ -1730,7 +1730,7 @@ static inline void load_image_preset(
   auto [type, nfilename] = get_preset_type(filename);
   img.resize({1024, 1024});
   if (type == "images2") img.resize({2048, 1024});
-  make_preset(img, type);
+  make_impreset(img, type);
 }
 static inline void load_image_preset(
     const string& filename, image<vec4b>& img) {
@@ -1861,7 +1861,7 @@ void save_tonemapped(const string& filename, const image<vec4f>& hdr,
 // Save with a logo embedded
 void save_image_with_logo(const string& filename, const image<vec4f>& img) {
   auto logo = image<vec4f>{};
-  make_logo(logo, "logo-render");
+  make_imlogo(logo, "logo-render");
   auto img_copy = img;
   auto offset   = img.size() - logo.size() - 8;
   set_region(img_copy, logo, offset);
@@ -1869,7 +1869,7 @@ void save_image_with_logo(const string& filename, const image<vec4f>& img) {
 }
 void save_image_with_logo(const string& filename, const image<vec4b>& img) {
   auto logo = image<vec4b>{};
-  make_logo(logo, "logo-render");
+  make_imlogo(logo, "logo-render");
   auto img_copy = img;
   auto offset   = img.size() - logo.size() - 8;
   set_region(img_copy, logo, offset);

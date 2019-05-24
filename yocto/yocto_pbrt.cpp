@@ -2605,23 +2605,23 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb,
     } else if (cmd == "Scale") {
       auto v = zero3f;
       parse_param(stream, v);
-      concat_transform(stack.back(), (mat4f)make_scaling_frame(v));
+      concat_transform(stack.back(), (mat4f)scaling_frame(v));
     } else if (cmd == "Translate") {
       auto v = zero3f;
       parse_param(stream, v);
-      concat_transform(stack.back(), (mat4f)make_translation_frame(v));
+      concat_transform(stack.back(), (mat4f)translation_frame(v));
     } else if (cmd == "Rotate") {
       auto v = zero4f;
       parse_param(stream, v);
       concat_transform(stack.back(),
-          (mat4f)make_rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
+          (mat4f)rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
     } else if (cmd == "LookAt") {
       auto from = zero3f, to = zero3f, up = zero3f;
       parse_param(stream, from);
       parse_param(stream, to);
       parse_param(stream, up);
       // from pbrt parser
-      auto frame = make_lookat_frame(from, to, up, true);
+      auto frame = lookat_frame(from, to, up, true);
       // frame.z = normalize(to-from);
       // frame.x = normalize(cross(frame.z,up));
       // frame.y = cross(frame.x,frame.z);

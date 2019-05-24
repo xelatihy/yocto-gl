@@ -146,7 +146,7 @@ void load_island_cameras(
   auto from             = js.at("eye").get<vec3f>();
   auto to               = js.at("look").get<vec3f>();
   auto up               = js.at("up").get<vec3f>();
-  camera.frame          = make_lookat_frame(from, to, up);
+  camera.frame          = lookat_frame(from, to, up);
   camera.focus_distance = length(from - to);
   scene.cameras.push_back(camera);
 }
@@ -169,7 +169,7 @@ void load_island_lights(
       params.type = make_shape_type::quad;
       params.scale =
           (ljs.at("width").get<float>() + ljs.at("height").get<float>());
-      make_proc(shape.triangles, shape.quads, shape.positions, shape.normals,
+      make_improc(shape.triangles, shape.quads, shape.positions, shape.normals,
           shape.texcoords, params);
       scene.shapes.push_back(shape);
       auto instance     = yocto_instance{};
@@ -754,7 +754,7 @@ void load_island_curvetube(const string& filename, const string& dirname,
         auto p0 = bezier_positions[i], p1 = bezier_positions[i + 1];
         auto r0 = bezier_radius[i], r1 = bezier_radius[i + 1];
         auto h          = length(p1 - p0);
-        auto f          = make_frame_fromz(p0, p1 - p0);
+        auto f          = frame_fromz(p0, p1 - p0);
         auto qpositions = vector<vec3f>{{r0, 0, 0}, {0, r0, 0}, {-r0, 0, 0},
             {0, -r0, 0}, {r1, 0, h}, {0, r1, h}, {-r1, 0, h}, {0, -r1, h}};
         auto qnormals   = vector<vec3f>{{1, 0, 0}, {0, 1, 0}, {-1, 0, 0},

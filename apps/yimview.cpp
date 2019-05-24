@@ -128,7 +128,7 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     const colorgrade_params& colorgrade_prms, atomic<bool>& stop,
     concurrent_queue<image_region>& queue) {
   auto regions = vector<image_region>{};
-  make_regions(regions, img.size(), 128);
+  make_imregions(regions, img.size(), 128);
   parallel_foreach(
       regions,
       [&img, &display, &queue, tonemap_prms, colorgrade_prms,

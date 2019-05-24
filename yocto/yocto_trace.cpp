@@ -98,7 +98,7 @@ vec3f sample_microfacet(
   auto cosine            = 1 / sqrt(1 + tangent_square);
   auto radius            = sqrt(clamp01(1 - cosine_square));
   auto local_half_vector = vec3f{cos(phi) * radius, sin(phi) * radius, cosine};
-  return transform_direction(make_basis_fromz(normal), local_half_vector);
+  return transform_direction(basis_fromz(normal), local_half_vector);
 }
 float sample_microfacet_pdf(
     float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx) {
@@ -490,7 +490,7 @@ vec3f sample_delta_passthrough(const vec3f& normal, const vec3f& outgoing) {
 vec3f sample_volume_scattering(
     const vec3f& albedo, float phaseg, const vec3f& outgoing, const vec2f& rn) {
   auto direction = sample_phasefunction(phaseg, rn);
-  return make_basis_fromz(-outgoing) * direction;
+  return basis_fromz(-outgoing) * direction;
 }
 
 // Compute the weight for sampling the BRDF
@@ -1514,7 +1514,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
   auto state = trace_state{};
   init_trace_state(state, image_size, params.random_seed);
   auto regions = vector<image_region>{};
-  make_regions(regions, image.size(), params.region_size, true);
+  make_imregions(regions, image.size(), params.region_size, true);
 
   parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, &params](
                                 const image_region& region) {
@@ -1530,7 +1530,7 @@ int trace_samples(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_params& params) {
   auto regions = vector<image_region>{};
-  make_regions(regions, image.size(), params.region_size, true);
+  make_imregions(regions, image.size(), params.region_size, true);
   auto num_samples = min(
       params.samples_per_batch, params.num_samples - current_sample);
   parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, num_samples,
@@ -1551,7 +1551,7 @@ void trace_async_start(image<vec4f>& image, trace_state& state,
   state            = trace_state{};
   init_trace_state(state, image_size, params.random_seed);
   auto regions = vector<image_region>{};
-  make_regions(regions, image.size(), params.region_size, true);
+  make_imregions(regions, image.size(), params.region_size, true);
   if (params.cancel_flag) *params.cancel_flag = false;
 
   futures.clear();
@@ -1786,15 +1786,15 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
   if (brdf.diffuse != zero3f && rnl < prob.x) {
     auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
     auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-    auto fp = dot(normal, outgoing) >= 0 ? make_frame_fromz(zero3f, normal)
-                                         : make_frame_fromz(zero3f, -normal);
+    auto fp = dot(normal, outgoing) >= 0 ? frame_fromz(zero3f, normal)
+                                         : frame_fromz(zero3f, -normal);
     return transform_direction(fp, il);
   }
   // sample according to specular GGX
   else if (brdf.specular != zero3f && rnl < prob.x + prob.y) {
     auto hl = sample_ggx(brdf.roughness, rn);
-    auto fp = dot(normal, outgoing) >= 0 ? make_frame_fromz(zero3f, normal)
-                                         : make_frame_fromz(zero3f, -normal);
+    auto fp = dot(normal, outgoing) >= 0 ? frame_fromz(zero3f, normal)
+                                         : frame_fromz(zero3f, -normal);
     auto half_vector = transform_direction(fp, hl);
     return reflect(outgoing, half_vector);
   }
@@ -1802,8 +1802,8 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
   else if (brdf.transmission != zero3f && !brdf.refract &&
            rnl < prob.x + prob.y + prob.z) {
     auto hl = sample_ggx(brdf.roughness, rn);
-    auto fp = dot(normal, outgoing) >= 0 ? make_frame_fromz(zero3f, normal)
-                                         : make_frame_fromz(zero3f, -normal);
+    auto fp = dot(normal, outgoing) >= 0 ? frame_fromz(zero3f, normal)
+                                         : frame_fromz(zero3f, -normal);
     auto half_vector = transform_direction(fp, hl);
     auto ir          = reflect(outgoing, half_vector);
     return dot(normal, outgoing) >= 0 ? reflect(-ir, -normal)
@@ -1813,8 +1813,8 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
   else if (brdf.transmission != zero3f && brdf.refract &&
            rnl < prob.x + prob.y + prob.z) {
     auto hl = sample_ggx(brdf.roughness, rn);
-    auto fp = dot(normal, outgoing) >= 0 ? make_frame_fromz(zero3f, normal)
-                                         : make_frame_fromz(zero3f, -normal);
+    auto fp = dot(normal, outgoing) >= 0 ? frame_fromz(zero3f, normal)
+                                         : frame_fromz(zero3f, -normal);
     auto halfway = transform_direction(fp, hl);
 
     auto eta = specular_to_eta(brdf.specular);

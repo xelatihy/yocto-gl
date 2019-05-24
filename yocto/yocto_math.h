@@ -32,7 +32,7 @@
 // vectors and directions (`transform_point()`, `transform_vector()`,
 // `transform_direction()`). Transform matrices and frames can be
 // constructed from basic translation, rotation and scaling, e.g. with
-// `make_translation_mat()` or `make_translation_frame()` respectively, etc.
+// `make_translation_mat()` or `translation_frame()` respectively, etc.
 // For rotation we support axis-angle and quaternions, with slerp.
 //
 //
@@ -1129,7 +1129,7 @@ inline mat3f inverse(const mat3f& a) {
 }
 
 // Constructs a basis from a direction
-inline mat3f make_basis_fromz(const vec3f& v) {
+inline mat3f basis_fromz(const vec3f& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   auto z    = normalize(v);
   auto sign = copysignf(1.0f, z.z);
@@ -1299,7 +1299,7 @@ inline frame3f inverse(const frame3f& a, bool non_rigid = false) {
 }
 
 // Frame construction from axis.
-inline frame3f make_frame_fromz(const vec3f& o, const vec3f& v) {
+inline frame3f frame_fromz(const vec3f& o, const vec3f& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   auto z    = normalize(v);
   auto sign = copysignf(1.0f, z.z);
@@ -1309,7 +1309,7 @@ inline frame3f make_frame_fromz(const vec3f& o, const vec3f& v) {
   auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
   return {x, y, z, o};
 }
-inline frame3f make_frame_fromzx(
+inline frame3f frame_fromzx(
     const vec3f& o, const vec3f& z_, const vec3f& x_) {
   auto z = normalize(z_);
   auto x = orthonormalize(x_, z);
@@ -1656,13 +1656,13 @@ inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
 }
 
 // Translation, scaling and rotations transforms.
-inline frame3f make_translation_frame(const vec3f& a) {
+inline frame3f translation_frame(const vec3f& a) {
   return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
 }
-inline frame3f make_scaling_frame(const vec3f& a) {
+inline frame3f scaling_frame(const vec3f& a) {
   return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
 }
-inline frame3f make_rotation_frame(const vec3f& axis, float angle) {
+inline frame3f rotation_frame(const vec3f& axis, float angle) {
   auto s = sin(angle), c = cos(angle);
   auto vv = normalize(axis);
   return {{c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y + s * vv.z,
@@ -1673,7 +1673,7 @@ inline frame3f make_rotation_frame(const vec3f& axis, float angle) {
           c + (1 - c) * vv.z * vv.z},
       {0, 0, 0}};
 }
-inline frame3f make_rotation_frame(const vec4f& quat) {
+inline frame3f rotation_frame(const vec4f& quat) {
   auto v = quat;
   return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
               (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
@@ -1684,7 +1684,7 @@ inline frame3f make_rotation_frame(const vec4f& quat) {
           v.w * v.w - v.x * v.x - v.y * v.y + v.z * v.z},
       {0, 0, 0}};
 }
-inline frame3f make_rotation_frame(const quat4f& quat) {
+inline frame3f rotation_frame(const quat4f& quat) {
   auto v = quat;
   return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
               (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
@@ -1695,12 +1695,12 @@ inline frame3f make_rotation_frame(const quat4f& quat) {
           v.w * v.w - v.x * v.x - v.y * v.y + v.z * v.z},
       {0, 0, 0}};
 }
-inline frame3f make_rotation_frame(const mat3f& rot) {
+inline frame3f rotation_frame(const mat3f& rot) {
   return {rot.x, rot.y, rot.z, {0, 0, 0}};
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
-inline frame3f make_lookat_frame(const vec3f& eye, const vec3f& center,
+inline frame3f lookat_frame(const vec3f& eye, const vec3f& center,
     const vec3f& up, bool inv_xz = false) {
   auto w = normalize(eye - center);
   auto u = normalize(cross(up, w));
@@ -1713,13 +1713,13 @@ inline frame3f make_lookat_frame(const vec3f& eye, const vec3f& center,
 }
 
 // OpenGL frustum, ortho and perspecgive matrices.
-inline mat4f make_frustum_mat(
+inline mat4f frustum_mat(
     float l, float r, float b, float t, float n, float f) {
   return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
       {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
       {0, 0, -2 * f * n / (f - n), 0}};
 }
-inline mat4f make_ortho_mat(
+inline mat4f ortho_mat(
     float l, float r, float b, float t, float n, float f) {
   return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
       {0, 0, -2 / (f - n), 0},
@@ -1727,37 +1727,37 @@ inline mat4f make_ortho_mat(
 }
 inline mat4f make_ortho2d_mat(
     float left, float right, float bottom, float top) {
-  return make_ortho_mat(left, right, bottom, top, -1, 1);
+  return ortho_mat(left, right, bottom, top, -1, 1);
 }
-inline mat4f make_ortho_mat(float xmag, float ymag, float near, float far) {
+inline mat4f ortho_mat(float xmag, float ymag, float near, float far) {
   return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0}, {0, 0, 2 / (near - far), 0},
       {0, 0, (far + near) / (near - far), 1}};
 }
-inline mat4f make_perspective_mat(
+inline mat4f perspective_mat(
     float fovy, float aspect, float near, float far) {
   auto tg = tan(fovy / 2);
   return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
       {0, 0, (far + near) / (near - far), -1},
       {0, 0, 2 * far * near / (near - far), 0}};
 }
-inline mat4f make_perspective_mat(float fovy, float aspect, float near) {
+inline mat4f perspective_mat(float fovy, float aspect, float near) {
   auto tg = tan(fovy / 2);
   return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
       {0, 0, 2 * near, 0}};
 }
 
 // Rotation conversions.
-inline pair<vec3f, float> make_rotation_axisangle(const vec4f& quat) {
+inline pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
   return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
-inline vec4f make_rotation_quat(const vec3f& axis, float angle) {
+inline vec4f rotation_quat(const vec3f& axis, float angle) {
   auto len = length(axis);
   if (!len) return {0, 0, 0, 1};
   return vec4f{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
       sin(angle / 2) * axis.z / len, cos(angle / 2)};
 }
-inline vec4f make_rotation_quat(const vec4f& axisangle) {
-  return make_rotation_quat(
+inline vec4f rotation_quat(const vec4f& axisangle) {
+  return rotation_quat(
       vec3f{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
 
@@ -1829,7 +1829,7 @@ inline void update_camera_turntable(frame3f& frame, float& focus,
         sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
     auto new_center = frame.o - frame.z * focus;
     auto new_o      = new_center + new_z * focus;
-    frame           = make_lookat_frame(new_o, new_center, {0, 1, 0});
+    frame           = lookat_frame(new_o, new_center, {0, 1, 0});
     focus           = length(new_o - new_center);
   }
 
@@ -1854,9 +1854,9 @@ inline void update_camera_first_person(
   auto z = orthonormalize(frame.z, y);
   auto x = cross(y, z);
 
-  auto rot = make_rotation_frame(vec3f{1, 0, 0}, rotate.y) *
+  auto rot = rotation_frame(vec3f{1, 0, 0}, rotate.y) *
              yocto::frame3f{frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
-             make_rotation_frame(vec3f{0, 1, 0}, rotate.x);
+             rotation_frame(vec3f{0, 1, 0}, rotate.x);
   auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
   frame = {rot.x, rot.y, rot.z, pos};

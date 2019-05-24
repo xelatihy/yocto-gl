@@ -27,8 +27,8 @@
 // 3. resize images with `resize()`
 // 4. tonemap images with `tonemap()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
-// 5. make various image examples with the `make_proc()` functions
-// 6. create procedural sun-sky images with `make_sunsky()`
+// 5. make various image examples with the `make_improc()` functions
+// 6. create procedural sun-sky images with `make_imsunsky()`
 // 7. many color conversion functions are available in the code below
 //
 //
@@ -175,7 +175,7 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-void make_regions(vector<image_region>& regions, const vec2i& size,
+void make_imregions(vector<image_region>& regions, const vec2i& size,
     int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
@@ -311,7 +311,7 @@ void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Types for make_proc
+// Types for make_improc
 enum struct make_image_type {
   grid,
   checker,
@@ -327,8 +327,8 @@ enum struct make_image_type {
   ridge
 };
 
-// Parameters for make_proc
-struct procimage_params {
+// Parameters for make_improc
+struct improc_params {
   make_image_type type   = make_image_type::grid;
   vec2i           size   = {1024, 1024};
   float           scale  = 1;
@@ -340,18 +340,18 @@ struct procimage_params {
 };
 
 // Make an image
-void make_proc(image<vec4f>& img, const procimage_params& params);
+void make_improc(image<vec4f>& img, const improc_params& params);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
 // disabled with has_sun. The sun parameters can be slightly modified by
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
-void make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
+void make_imsunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
-void make_lights(image<vec4f>& img, const vec2i& size,
+void make_imlights(image<vec4f>& img, const vec2i& size,
     const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
     float lwidth = pif / 16, float lheight = pif / 16);
 
@@ -364,13 +364,13 @@ void add_border(image<vec4f>& img, const vec2i& size, int border_width,
     const vec4f& border_color);
 
 // Make logo images. Image is resized to proper size.
-void make_logo(image<vec4f>& img, const string& name);
-void make_logo(image<vec4b>& img, const string& name);
+void make_imlogo(image<vec4f>& img, const string& name);
+void make_imlogo(image<vec4b>& img, const string& name);
 
 // Make an image preset, useful for testing. See implementation for types.
-void make_preset(image<vec4f>& img, const string& type);
-void make_preset(image<vec4b>& img, const string& type);
-void make_preset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
+void make_impreset(image<vec4f>& img, const string& type);
+void make_impreset(image<vec4b>& img, const string& type);
+void make_impreset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
 
 }  // namespace yocto
 
@@ -446,7 +446,7 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b) {
 // make a simple example volume
 void make_test(volume<float>& vol, const vec3i& size, float scale = 10,
     float exponent = 6);
-void make_preset(volume<float>& vol, const string& type);
+void make_volpreset(volume<float>& vol, const string& type);
 
 }  // namespace yocto
 // -----------------------------------------------------------------------------
