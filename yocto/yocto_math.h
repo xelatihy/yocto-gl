@@ -170,9 +170,7 @@ inline float degrees(float x) { return x * 180 / pif; }
 
 inline int min(int x, int y) { return (x < y) ? x : y; }
 inline int max(int x, int y) { return (x > y) ? x : y; }
-inline int clamp(int x, int min_, int max_) {
-    return min(max(x, min_), max_);
-}
+inline int clamp(int x, int min_, int max_) { return min(max(x, min_), max_); }
 inline int pow2(int x) { return 1 << x; }
 
 }  // namespace yocto
@@ -186,12 +184,12 @@ struct vec2f {
     float x = 0;
     float y = 0;
 
-     vec2f() {}
-     vec2f(float x, float y) : x{x}, y{y} {}
-     explicit vec2f(float v) : x{v}, y{v} {}
+    vec2f() {}
+    vec2f(float x, float y) : x{x}, y{y} {}
+    explicit vec2f(float v) : x{v}, y{v} {}
 
-     float&       operator[](int i) { return (&x)[i]; }
-     const float& operator[](int i) const { return (&x)[i]; }
+    float&       operator[](int i) { return (&x)[i]; }
+    const float& operator[](int i) const { return (&x)[i]; }
 };
 
 struct vec3f {
@@ -199,13 +197,13 @@ struct vec3f {
     float y = 0;
     float z = 0;
 
-     vec3f() {}
-     vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
-     vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
-     explicit vec3f(float v) : x{v}, y{v}, z{v} {}
+    vec3f() {}
+    vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
+    vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
+    explicit vec3f(float v) : x{v}, y{v}, z{v} {}
 
-     float&       operator[](int i) { return (&x)[i]; }
-     const float& operator[](int i) const { return (&x)[i]; }
+    float&       operator[](int i) { return (&x)[i]; }
+    const float& operator[](int i) const { return (&x)[i]; }
 };
 
 struct vec4f {
@@ -214,14 +212,13 @@ struct vec4f {
     float z = 0;
     float w = 0;
 
-     vec4f() {}
-     vec4f(float x, float y, float z, float w)
-        : x{x}, y{y}, z{z}, w{w} {}
-     vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-     explicit vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
+    vec4f() {}
+    vec4f(float x, float y, float z, float w) : x{x}, y{y}, z{z}, w{w} {}
+    vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
+    explicit vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
 
-     float&       operator[](int i) { return (&x)[i]; }
-     const float& operator[](int i) const { return (&x)[i]; }
+    float&       operator[](int i) { return (&x)[i]; }
+    const float& operator[](int i) const { return (&x)[i]; }
 };
 
 // Zero vector constants.
@@ -247,39 +244,23 @@ inline vec2f operator-(const vec2f& a) { return {-a.x, -a.y}; }
 inline vec2f operator+(const vec2f& a, const vec2f& b) {
     return {a.x + b.x, a.y + b.y};
 }
-inline vec2f operator+(const vec2f& a, float b) {
-    return {a.x + b, a.y + b};
-}
-inline vec2f operator+(float a, const vec2f& b) {
-    return {a + b.x, a + b.y};
-}
+inline vec2f operator+(const vec2f& a, float b) { return {a.x + b, a.y + b}; }
+inline vec2f operator+(float a, const vec2f& b) { return {a + b.x, a + b.y}; }
 inline vec2f operator-(const vec2f& a, const vec2f& b) {
     return {a.x - b.x, a.y - b.y};
 }
-inline vec2f operator-(const vec2f& a, float b) {
-    return {a.x - b, a.y - b};
-}
-inline vec2f operator-(float a, const vec2f& b) {
-    return {a - b.x, a - b.y};
-}
+inline vec2f operator-(const vec2f& a, float b) { return {a.x - b, a.y - b}; }
+inline vec2f operator-(float a, const vec2f& b) { return {a - b.x, a - b.y}; }
 inline vec2f operator*(const vec2f& a, const vec2f& b) {
     return {a.x * b.x, a.y * b.y};
 }
-inline vec2f operator*(const vec2f& a, float b) {
-    return {a.x * b, a.y * b};
-}
-inline vec2f operator*(float a, const vec2f& b) {
-    return {a * b.x, a * b.y};
-}
+inline vec2f operator*(const vec2f& a, float b) { return {a.x * b, a.y * b}; }
+inline vec2f operator*(float a, const vec2f& b) { return {a * b.x, a * b.y}; }
 inline vec2f operator/(const vec2f& a, const vec2f& b) {
     return {a.x / b.x, a.y / b.y};
 }
-inline vec2f operator/(const vec2f& a, float b) {
-    return {a.x / b, a.y / b};
-}
-inline vec2f operator/(float a, const vec2f& b) {
-    return {a / b.x, a / b.y};
-}
+inline vec2f operator/(const vec2f& a, float b) { return {a.x / b, a.y / b}; }
+inline vec2f operator/(float a, const vec2f& b) { return {a / b.x, a / b.y}; }
 
 // Vector assignments
 inline vec2f& operator+=(vec2f& a, const vec2f& b) { return a = a + b; }
@@ -310,12 +291,8 @@ inline float distance_squared(const vec2f& a, const vec2f& b) {
 }
 
 // Max element and clamp.
-inline vec2f max(const vec2f& a, float b) {
-    return {max(a.x, b), max(a.y, b)};
-}
-inline vec2f min(const vec2f& a, float b) {
-    return {min(a.x, b), min(a.y, b)};
-}
+inline vec2f max(const vec2f& a, float b) { return {max(a.x, b), max(a.y, b)}; }
+inline vec2f min(const vec2f& a, float b) { return {min(a.x, b), min(a.y, b)}; }
 inline vec2f max(const vec2f& a, const vec2f& b) {
     return {max(a.x, b.x), max(a.y, b.y)};
 }
@@ -326,7 +303,7 @@ inline vec2f clamp(const vec2f& x, float min, float max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max)};
 }
 inline vec2f clamp01(const vec2f& x) { return {clamp01(x.x), clamp01(x.y)}; }
-inline vec2f    lerp(const vec2f& a, const vec2f& b, float u) {
+inline vec2f lerp(const vec2f& a, const vec2f& b, float u) {
     return a * (1 - u) + b * u;
 }
 inline vec2f lerp(const vec2f& a, const vec2f& b, const vec2f& u) {
@@ -500,7 +477,7 @@ inline vec3f lerp(const vec3f& a, const vec3f& b, const vec3f& u) {
 inline float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }
 inline float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
 inline float sum(const vec3f& a) { return a.x + a.y + a.z; }
-inline float    mean(const vec3f& a) { return sum(a) / 3; }
+inline float mean(const vec3f& a) { return sum(a) / 3; }
 inline int   max_element(const vec3f& a) {
     auto pos = 0;
     for (auto i = 1; i < 3; i++) {
@@ -649,12 +626,8 @@ inline vec4f lerp(const vec4f& a, const vec4f& b, const vec4f& u) {
     return a * (1 - u) + b * u;
 }
 
-inline float max(const vec4f& a) {
-    return max(max(max(a.x, a.y), a.z), a.w);
-}
-inline float min(const vec4f& a) {
-    return min(min(min(a.x, a.y), a.z), a.w);
-}
+inline float max(const vec4f& a) { return max(max(max(a.x, a.y), a.z), a.w); }
+inline float min(const vec4f& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 inline float sum(const vec4f& a) { return a.x + a.y + a.z + a.w; }
 inline float mean(const vec4f& a) { return sum(a) / 4; }
 inline int   max_element(const vec4f& a) {
@@ -715,9 +688,7 @@ inline vec4f quat_mul(const vec4f& a, const vec4f& b) {
         a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
         a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
 }
-inline vec4f quat_conjugate(const vec4f& a) {
-    return {-a.x, -a.y, -a.z, a.w};
-}
+inline vec4f quat_conjugate(const vec4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
 inline vec4f quat_inverse(const vec4f& a) {
     return quat_conjugate(a) / dot(a, a);
 }
@@ -733,12 +704,12 @@ struct vec2i {
     int x = 0;
     int y = 0;
 
-     vec2i() {}
-     vec2i(int x, int y) : x{x}, y{y} {}
-     explicit vec2i(int v) : x{v}, y{v} {}
+    vec2i() {}
+    vec2i(int x, int y) : x{x}, y{y} {}
+    explicit vec2i(int v) : x{v}, y{v} {}
 
-     int&       operator[](int i) { return (&x)[i]; }
-     const int& operator[](int i) const { return (&x)[i]; }
+    int&       operator[](int i) { return (&x)[i]; }
+    const int& operator[](int i) const { return (&x)[i]; }
 };
 
 struct vec3i {
@@ -746,13 +717,13 @@ struct vec3i {
     int y = 0;
     int z = 0;
 
-     vec3i() {}
-     vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
-     vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
-     explicit vec3i(int v) : x{v}, y{v}, z{v} {}
+    vec3i() {}
+    vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
+    vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
+    explicit vec3i(int v) : x{v}, y{v}, z{v} {}
 
-     int&       operator[](int i) { return (&x)[i]; }
-     const int& operator[](int i) const { return (&x)[i]; }
+    int&       operator[](int i) { return (&x)[i]; }
+    const int& operator[](int i) const { return (&x)[i]; }
 };
 
 struct vec4i {
@@ -761,13 +732,13 @@ struct vec4i {
     int z = 0;
     int w = 0;
 
-     vec4i() {}
-     vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
-     vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-     explicit vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
+    vec4i() {}
+    vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
+    vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
+    explicit vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
 
-     int&       operator[](int i) { return (&x)[i]; }
-     const int& operator[](int i) const { return (&x)[i]; }
+    int&       operator[](int i) { return (&x)[i]; }
+    const int& operator[](int i) const { return (&x)[i]; }
 };
 
 struct vec4b {
@@ -776,12 +747,12 @@ struct vec4b {
     byte z = 0;
     byte w = 0;
 
-     vec4b() {}
-     vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
-     explicit vec4b(byte v) : x{v}, y{v}, z{v}, w{v} {}
+    vec4b() {}
+    vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
+    explicit vec4b(byte v) : x{v}, y{v}, z{v}, w{v} {}
 
-     byte&       operator[](int i) { return (&x)[i]; }
-     const byte& operator[](int i) const { return (&x)[i]; }
+    byte&       operator[](int i) { return (&x)[i]; }
+    const byte& operator[](int i) const { return (&x)[i]; }
 };
 
 // Zero vector constants.
@@ -837,12 +808,8 @@ inline vec2i& operator/=(vec2i& a, const vec2i& b) { return a = a / b; }
 inline vec2i& operator/=(vec2i& a, int b) { return a = a / b; }
 
 // Max element and clamp.
-inline vec2i max(const vec2i& a, int b) {
-    return {max(a.x, b), max(a.y, b)};
-}
-inline vec2i min(const vec2i& a, int b) {
-    return {min(a.x, b), min(a.y, b)};
-}
+inline vec2i max(const vec2i& a, int b) { return {max(a.x, b), max(a.y, b)}; }
+inline vec2i min(const vec2i& a, int b) { return {min(a.x, b), min(a.y, b)}; }
 inline vec2i max(const vec2i& a, const vec2i& b) {
     return {max(a.x, b.x), max(a.y, b.y)};
 }
@@ -1078,7 +1045,7 @@ template <typename T, size_t N>
 struct hash<std::array<T, N>> {
     size_t operator()(const std::array<T, N>& v) const {
         static const std::hash<T> hasher = std::hash<T>();
-        auto h = (size_t)0;
+        auto                      h      = (size_t)0;
         for (auto i = 0; i < N; i++)
             h ^= hasher(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
@@ -1115,11 +1082,11 @@ struct mat2f {
     vec2f x = {0, 0};
     vec2f y = {0, 0};
 
-     mat2f() {}
-     mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
+    mat2f() {}
+    mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
 
-     vec2f&       operator[](int i) { return (&x)[i]; }
-     const vec2f& operator[](int i) const { return (&x)[i]; }
+    vec2f&       operator[](int i) { return (&x)[i]; }
+    const vec2f& operator[](int i) const { return (&x)[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -1128,12 +1095,11 @@ struct mat3f {
     vec3f y = {0, 0, 0};
     vec3f z = {0, 0, 0};
 
-     mat3f() {}
-     mat3f(const vec3f& x, const vec3f& y, const vec3f& z)
-        : x{x}, y{y}, z{z} {}
+    mat3f() {}
+    mat3f(const vec3f& x, const vec3f& y, const vec3f& z) : x{x}, y{y}, z{z} {}
 
-     vec3f&       operator[](int i) { return (&x)[i]; }
-     const vec3f& operator[](int i) const { return (&x)[i]; }
+    vec3f&       operator[](int i) { return (&x)[i]; }
+    const vec3f& operator[](int i) const { return (&x)[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -1143,13 +1109,12 @@ struct mat4f {
     vec4f z = {0, 0, 0, 0};
     vec4f w = {0, 0, 0, 0};
 
-     mat4f() {}
-     mat4f(
-        const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w)
+    mat4f() {}
+    mat4f(const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w)
         : x{x}, y{y}, z{z}, w{w} {}
 
-     vec4f&       operator[](int i) { return (&x)[i]; }
-     const vec4f& operator[](int i) const { return (&x)[i]; }
+    vec4f&       operator[](int i) { return (&x)[i]; }
+    const vec4f& operator[](int i) const { return (&x)[i]; }
 };
 
 // Identity matrices constants.
@@ -1168,9 +1133,7 @@ inline bool operator!=(const mat2f& a, const mat2f& b) { return !(a == b); }
 inline mat2f operator+(const mat2f& a, const mat2f& b) {
     return {a.x + b.x, a.y + b.y};
 }
-inline mat2f operator*(const mat2f& a, float b) {
-    return {a.x * b, a.y * b};
-}
+inline mat2f operator*(const mat2f& a, float b) { return {a.x * b, a.y * b}; }
 inline vec2f operator*(const mat2f& a, const vec2f& b) {
     return a.x * b.x + a.y * b.y;
 }
@@ -1240,9 +1203,7 @@ inline mat3f transpose(const mat3f& a) {
 }
 
 // Matrix adjoints, determinants and inverses.
-inline float determinant(const mat3f& a) {
-    return dot(a.x, cross(a.y, a.z));
-}
+inline float determinant(const mat3f& a) { return dot(a.x, cross(a.y, a.z)); }
 inline mat3f adjoint(const mat3f& a) {
     return transpose(mat3f{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
 }
@@ -1291,9 +1252,7 @@ inline mat4f& operator*=(mat4f& a, const mat4f& b) { return a = a * b; }
 inline mat4f& operator*=(mat4f& a, float b) { return a = a * b; }
 
 // Matrix diagonals and transposes.
-inline vec4f diagonal(const mat4f& a) {
-    return {a.x.x, a.y.y, a.z.z, a.w.w};
-}
+inline vec4f diagonal(const mat4f& a) { return {a.x.x, a.y.y, a.z.z, a.w.w}; }
 inline mat4f transpose(const mat4f& a) {
     return {
         {a.x.x, a.y.x, a.z.x, a.w.x},
@@ -1316,22 +1275,22 @@ struct frame2f {
     vec2f y = {0, 1};
     vec2f o = {0, 0};
 
-     frame2f() : x{}, y{}, o{} {}
-     frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
+    frame2f() : x{}, y{}, o{} {}
+    frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
         : x{x}, y{y}, o{o} {}
-     explicit frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
-     frame2f(const mat2f& m, const vec2f& t) : x{m.x}, y{m.y}, o{t} {}
-     explicit frame2f(const mat3f& m)
+    explicit frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
+    frame2f(const mat2f& m, const vec2f& t) : x{m.x}, y{m.y}, o{t} {}
+    explicit frame2f(const mat3f& m)
         : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-     operator mat3f() const { return {{x, 0}, {y, 0}, {o, 1}}; }
+    operator mat3f() const { return {{x, 0}, {y, 0}, {o, 1}}; }
 
-     vec2f&       operator[](int i) { return (&x)[i]; }
-     const vec2f& operator[](int i) const { return (&x)[i]; }
+    vec2f&       operator[](int i) { return (&x)[i]; }
+    const vec2f& operator[](int i) const { return (&x)[i]; }
 
-     mat2f&       m() { return *(mat2f*)&x; }
-     const mat2f& m() const { return *(mat2f*)&x; }
-     vec2f&       t() { return o; }
-     const vec2f& t() const { return o; }
+    mat2f&       m() { return *(mat2f*)&x; }
+    const mat2f& m() const { return *(mat2f*)&x; }
+    vec2f&       t() { return o; }
+    const vec2f& t() const { return o; }
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -1341,30 +1300,26 @@ struct frame3f {
     vec3f z = {0, 0, 1};
     vec3f o = {0, 0, 0};
 
-     frame3f() : x{}, y{}, z{}, o{} {}
-     frame3f(
-        const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
+    frame3f() : x{}, y{}, z{}, o{} {}
+    frame3f(const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
         : x{x}, y{y}, z{z}, o{o} {}
-     explicit frame3f(const vec3f& o)
+    explicit frame3f(const vec3f& o)
         : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
-     frame3f(const mat3f& m, const vec3f& t)
-        : x{m.x}, y{m.y}, z{m.z}, o{t} {}
-     explicit frame3f(const mat4f& m)
+    frame3f(const mat3f& m, const vec3f& t) : x{m.x}, y{m.y}, z{m.z}, o{t} {}
+    explicit frame3f(const mat4f& m)
         : x{m.x.x, m.x.y, m.x.z}
         , y{m.y.x, m.y.y, m.y.z}
         , z{m.z.x, m.z.y, m.z.z}
         , o{m.w.x, m.w.y, m.w.z} {}
-     operator mat4f() const {
-        return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
-    }
+    operator mat4f() const { return {{x, 0}, {y, 0}, {z, 0}, {o, 1}}; }
 
-     vec3f&       operator[](int i) { return (&x)[i]; }
-     const vec3f& operator[](int i) const { return (&x)[i]; }
+    vec3f&       operator[](int i) { return (&x)[i]; }
+    const vec3f& operator[](int i) const { return (&x)[i]; }
 
-     mat3f&       m() { return *(mat3f*)&x; }
-     const mat3f& m() const { return *(mat3f*)&x; }
-     vec3f&       t() { return o; }
-     const vec3f& t() const { return o; }
+    mat3f&       m() { return *(mat3f*)&x; }
+    const mat3f& m() const { return *(mat3f*)&x; }
+    vec3f&       t() { return o; }
+    const vec3f& t() const { return o; }
 };
 
 // Indentity frames.
@@ -1381,17 +1336,13 @@ inline const mat2f& linear_component(const frame2f& a) {
 inline bool operator==(const frame2f& a, const frame2f& b) {
     return a.x == b.x && a.y == b.y && a.o == b.o;
 }
-inline bool operator!=(const frame2f& a, const frame2f& b) {
-    return !(a == b);
-}
+inline bool operator!=(const frame2f& a, const frame2f& b) { return !(a == b); }
 
 // Frame composition, equivalent to affine matrix product.
 inline frame2f operator*(const frame2f& a, const frame2f& b) {
     return {a.m() * b.m(), a.m() * b.o + a.o};
 }
-inline frame2f& operator*=(frame2f& a, const frame2f& b) {
-    return a = a * b;
-}
+inline frame2f& operator*=(frame2f& a, const frame2f& b) { return a = a * b; }
 
 // Frame inverse, equivalent to rigid affine inverse.
 inline frame2f inverse(const frame2f& a, bool non_rigid = false) {
@@ -1413,17 +1364,13 @@ inline const mat3f& linear_component(const frame3f& a) {
 inline bool operator==(const frame3f& a, const frame3f& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
 }
-inline bool operator!=(const frame3f& a, const frame3f& b) {
-    return !(a == b);
-}
+inline bool operator!=(const frame3f& a, const frame3f& b) { return !(a == b); }
 
 // Frame composition, equivalent to affine matrix product.
 inline frame3f operator*(const frame3f& a, const frame3f& b) {
     return {a.m() * b.m(), a.m() * b.o + a.o};
 }
-inline frame3f& operator*=(frame3f& a, const frame3f& b) {
-    return a = a * b;
-}
+inline frame3f& operator*=(frame3f& a, const frame3f& b) { return a = a * b; }
 
 // Frame inverse, equivalent to rigid affine inverse.
 inline frame3f inverse(const frame3f& a, bool non_rigid = false) {
@@ -1467,9 +1414,8 @@ struct quat4f {
     float x, y, z, w;
 
     // constructors
-     quat4f() : x{0}, y{0}, z{0}, w{1} {}
-     quat4f(float x, float y, float z, float w)
-        : x{x}, y{y}, z{z}, w{w} {}
+    quat4f() : x{0}, y{0}, z{0}, w{1} {}
+    quat4f(float x, float y, float z, float w) : x{x}, y{y}, z{z}, w{w} {}
 };
 
 // Constants
@@ -1532,11 +1478,11 @@ struct bbox2f {
     vec2f min = {float_max, float_max};
     vec2f max = {float_min, float_min};
 
-     bbox2f() {}
-     bbox2f(const vec2f& min, const vec2f& max) : min{min}, max{max} {}
+    bbox2f() {}
+    bbox2f(const vec2f& min, const vec2f& max) : min{min}, max{max} {}
 
-     vec2f&       operator[](int i) { return (&min)[i]; }
-     const vec2f& operator[](int i) const { return (&min)[i]; }
+    vec2f&       operator[](int i) { return (&min)[i]; }
+    const vec2f& operator[](int i) const { return (&min)[i]; }
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
@@ -1544,11 +1490,11 @@ struct bbox3f {
     vec3f min = {float_max, float_max, float_max};
     vec3f max = {float_min, float_min, float_min};
 
-     bbox3f() {}
-     bbox3f(const vec3f& min, const vec3f& max) : min{min}, max{max} {}
+    bbox3f() {}
+    bbox3f(const vec3f& min, const vec3f& max) : min{min}, max{max} {}
 
-     vec3f&       operator[](int i) { return (&min)[i]; }
-     const vec3f& operator[](int i) const { return (&min)[i]; }
+    vec3f&       operator[](int i) { return (&min)[i]; }
+    const vec3f& operator[](int i) const { return (&min)[i]; }
 };
 
 // Empty bbox constant.
@@ -1660,8 +1606,8 @@ struct ray2f {
     float tmin = ray_eps;
     float tmax = float_max;
 
-     ray2f() {}
-     ray2f(const vec2f& o, const vec2f& d, float tmin = ray_eps,
+    ray2f() {}
+    ray2f(const vec2f& o, const vec2f& d, float tmin = ray_eps,
         float tmax = float_max)
         : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };
@@ -1673,8 +1619,8 @@ struct ray3f {
     float tmin = ray_eps;
     float tmax = float_max;
 
-     ray3f() {}
-     ray3f(const vec3f& o, const vec3f& d, float tmin = ray_eps,
+    ray3f() {}
+    ray3f(const vec3f& o, const vec3f& d, float tmin = ray_eps,
         float tmax = float_max)
         : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };

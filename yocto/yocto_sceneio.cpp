@@ -2198,7 +2198,7 @@ static void load_gltf_scene(const string& filename, yocto_scene& scene,
 
 // begin/end objects and arrays
 struct write_json_state {
-    FILE*                   fs = nullptr;
+    FILE*                    fs = nullptr;
     vector<pair<bool, bool>> stack;
 };
 static inline void _write_json_next(
@@ -2207,8 +2207,8 @@ static inline void _write_json_next(
         "", "  ", "    ", "      ", "        ", "          ", "            "};
     if (state.stack.empty()) return;
     write_text(state.fs, state.stack.back().second ? ",\n" : "\n");
-    write_text(
-        state.fs, indents[clamp((int)state.stack.size() + (dedent ? -1 : 0), 0, 6)]);
+    write_text(state.fs,
+        indents[clamp((int)state.stack.size() + (dedent ? -1 : 0), 0, 6)]);
     state.stack.back().second = true;
 }
 static inline void _write_json_value(write_json_state& state, int value) {
@@ -2223,28 +2223,35 @@ static inline void _write_json_value(write_json_state& state, float value) {
 static inline void _write_json_value(write_json_state& state, bool value) {
     write_text(state.fs, to_string(value, true));
 }
-static inline void _write_json_value(write_json_state& state, const string& value) {
+static inline void _write_json_value(
+    write_json_state& state, const string& value) {
     write_text(state.fs, value);
 }
-static inline void _write_json_value(write_json_state& state, const char* value) {
+static inline void _write_json_value(
+    write_json_state& state, const char* value) {
     write_text(state.fs, value);
 }
-static inline void _write_json_value(write_json_state& state, const vec2f& value) {
+static inline void _write_json_value(
+    write_json_state& state, const vec2f& value) {
     write_text(state.fs, to_string(value, true));
 }
-static inline void _write_json_value(write_json_state& state, const vec3f& value) {
+static inline void _write_json_value(
+    write_json_state& state, const vec3f& value) {
     write_text(state.fs, to_string(value, true));
 }
-static inline void _write_json_value(write_json_state& state, const vec4f& value) {
+static inline void _write_json_value(
+    write_json_state& state, const vec4f& value) {
     write_text(state.fs, to_string(value, true));
 }
-static inline void _write_json_value(write_json_state& state, const mat4f& value) {
+static inline void _write_json_value(
+    write_json_state& state, const mat4f& value) {
     write_text(state.fs, to_string(value, true));
 }
-static inline void _write_json_value(write_json_state& state, const vector<int>& value) {
+static inline void _write_json_value(
+    write_json_state& state, const vector<int>& value) {
     write_text(state.fs, "[ ");
-    for(auto i = 0; i < value.size(); i ++) {
-        if(i) write_text(state.fs, ", ");
+    for (auto i = 0; i < value.size(); i++) {
+        if (i) write_text(state.fs, ", ");
         _write_json_value(state, value[i]);
     }
     write_text(state.fs, " ]");
