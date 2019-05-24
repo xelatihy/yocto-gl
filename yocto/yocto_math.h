@@ -1399,8 +1399,8 @@ struct bbox3f {
 };
 
 // Empty bbox constant.
-inline const auto invalid_bbox2f = bbox2f{};
-inline const auto invalid_bbox3f = bbox3f{};
+inline const auto emptybox2f = bbox2f{};
+inline const auto emptybox3f = bbox3f{};
 
 // Bounding box properties
 inline vec2f bbox_center(const bbox2f& a) { return (a.min + a.max) / 2; }

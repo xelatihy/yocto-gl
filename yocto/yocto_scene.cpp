@@ -48,7 +48,7 @@ namespace yocto {
 
 // Computes a shape bounding box.
 bbox3f compute_bounds(const yocto_shape& shape) {
-  auto bbox = invalid_bbox3f;
+  auto bbox = emptybox3f;
   for (auto p : shape.positions) bbox += p;
   return bbox;
 }
@@ -58,7 +58,7 @@ bbox3f compute_bounds(const yocto_scene& scene) {
   auto shape_bbox = vector<bbox3f>(scene.shapes.size());
   for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++)
     shape_bbox[shape_id] = compute_bounds(scene.shapes[shape_id]);
-  auto bbox = invalid_bbox3f;
+  auto bbox = emptybox3f;
   for (auto& instance : scene.instances) {
     bbox += transform_bbox(instance.frame, shape_bbox[instance.shape]);
   }

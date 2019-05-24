@@ -733,7 +733,7 @@ static bool intersect_embree_bvh(const bvh_scene& scene, const ray3f& ray,
 
 // BVH primitive with its bbox, its center and the index to the primitive
 struct bvh_prim {
-  bbox3f bbox   = invalid_bbox3f;
+  bbox3f bbox   = emptybox3f;
   vec3f  center = zero3f;
   int    primid = 0;
 };
@@ -745,7 +745,7 @@ static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
   auto mid        = (start + end) / 2;
 
   // compute primintive bounds and size
-  auto cbbox = invalid_bbox3f;
+  auto cbbox = emptybox3f;
   for (auto i = start; i < end; i++) cbbox += prims[i].center;
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, split_axis};
@@ -762,7 +762,7 @@ static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
   for (auto saxis = 0; saxis < 3; saxis++) {
     for (auto b = 1; b < nbins; b++) {
       auto split     = cbbox.min[saxis] + b * csize[saxis] / nbins;
-      auto left_bbox = invalid_bbox3f, right_bbox = invalid_bbox3f;
+      auto left_bbox = emptybox3f, right_bbox = emptybox3f;
       auto left_nprims = 0, right_nprims = 0;
       for (auto i = start; i < end; i++) {
         if (prims[i].center[saxis] < split) {
@@ -807,7 +807,7 @@ static pair<int, int> split_balanced(
   auto mid  = (start + end) / 2;
 
   // compute primintive bounds and size
-  auto cbbox = invalid_bbox3f;
+  auto cbbox = emptybox3f;
   for (auto i = start; i < end; i++) cbbox += prims[i].center;
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, axis};
@@ -842,7 +842,7 @@ static pair<int, int> split_middle(
   auto mid  = (start + end) / 2;
 
   // compute primintive bounds and size
-  auto cbbox = invalid_bbox3f;
+  auto cbbox = emptybox3f;
   for (auto i = start; i < end; i++) cbbox += prims[i].center;
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, axis};
@@ -894,7 +894,7 @@ static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     auto& node = nodes[nodeid];
 
     // compute bounds
-    node.bbox = invalid_bbox3f;
+    node.bbox = emptybox3f;
     for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
 
     // split into two children
@@ -974,7 +974,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
             auto& node = nodes[nodeid];
 
             // compute bounds
-            node.bbox = invalid_bbox3f;
+            node.bbox = emptybox3f;
             for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
 
             // split into two children
@@ -1095,7 +1095,7 @@ void build_bvh(bvh_scene& scene, const bvh_params& params) {
     auto& instance = scene.instances[idx];
     auto& sbvh     = scene.shapes[instance.shape];
     auto  bbox     = sbvh.nodes.empty()
-                    ? invalid_bbox3f
+                    ? emptybox3f
                     : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
     prims[idx] = {bbox, bbox_center(bbox), idx};
   }
@@ -1116,7 +1116,7 @@ void refit_bvh(bvh_shape& shape, const bvh_params& params) {
   // refit
   for (auto nodeid = (int)shape.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = shape.nodes[nodeid];
-    node.bbox  = invalid_bbox3f;
+    node.bbox  = emptybox3f;
     if (node.internal) {
       for (auto i = 0; i < 2; i++) {
         node.bbox += shape.nodes[node.prims[i]].bbox;
@@ -1166,7 +1166,7 @@ void refit_bvh(bvh_scene& scene, const vector<int>& updated_shapes,
   // refit
   for (auto nodeid = (int)scene.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = scene.nodes[nodeid];
-    node.bbox  = invalid_bbox3f;
+    node.bbox  = emptybox3f;
     if (node.internal) {
       for (auto i = 0; i < 2; i++) {
         node.bbox += scene.nodes[node.prims[i]].bbox;
@@ -1176,7 +1176,7 @@ void refit_bvh(bvh_scene& scene, const vector<int>& updated_shapes,
         auto& instance = scene.instances[idx];
         auto& sbvh     = scene.shapes[instance.shape];
         auto  bbox     = sbvh.nodes.empty()
-                        ? invalid_bbox3f
+                        ? emptybox3f
                         : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
         node.bbox += bbox;
       }

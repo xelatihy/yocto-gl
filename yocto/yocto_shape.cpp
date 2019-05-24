@@ -162,7 +162,7 @@ void flip_quads_orientation(vector<vec4f>& quads) {
 
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
 void align_vertices(vector<vec3f>& positions, const vec3i& alignment) {
-  auto bounds = invalid_bbox3f;
+  auto bounds = emptybox3f;
   for (auto& p : positions) bounds += p;
   auto offset = vec3f{0, 0, 0};
   switch (alignment.x) {
@@ -2223,7 +2223,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
 // trivial cases.
 void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness) {
-  auto bbox = invalid_bbox3f;
+  auto bbox = emptybox3f;
   for (auto p : positions) bbox += p;
   auto center              = bbox_center(bbox);
   auto inner_quads         = quads;
