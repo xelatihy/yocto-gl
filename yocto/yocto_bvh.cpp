@@ -517,7 +517,7 @@ static void build_embree_bvh(bvh_shape& shape, const bvh_params& params) {
           shape.positions.size() * 12);
       memcpy(embree_quads, shape.quads.data(), shape.quads.size() * 16);
     }
-  } else if (!shape.quads_positions.empty()) {
+  } else if (!shape.quadspos.empty()) {
     embree_geom = rtcNewGeometry(get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
     rtcSetGeometryVertexAttributeCount(embree_geom, 1);
     if (params.embree_compact) {
@@ -525,19 +525,18 @@ static void build_embree_bvh(bvh_shape& shape, const bvh_params& params) {
           RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
           shape.positions.size());
       rtcSetSharedGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_INDEX, 0,
-          RTC_FORMAT_UINT4, shape.quads_positions.data(), 0, 4 * 4,
-          shape.quads_positions.size());
+          RTC_FORMAT_UINT4, shape.quadspos.data(), 0, 4 * 4,
+          shape.quadspos.size());
     } else {
       auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
           RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
           shape.positions.size());
       auto embree_quads     = rtcSetNewGeometryBuffer(embree_geom,
           RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
-          shape.quads_positions.size());
+          shape.quadspos.size());
       memcpy(embree_positions, shape.positions.data(),
           shape.positions.size() * 12);
-      memcpy(embree_quads, shape.quads_positions.data(),
-          shape.quads_positions.size() * 16);
+      memcpy(embree_quads, shape.quadspos.data(), shape.quadspos.size() * 16);
     }
   }
   rtcCommitGeometry(embree_geom);
@@ -656,7 +655,7 @@ static void build_embree_flattened_bvh(
       memcpy(embree_positions, transformed_positions.data(),
           transformed_positions.size() * 12);
       memcpy(embree_quads, shape.quads.data(), shape.quads.size() * 16);
-    } else if (!shape.quads_positions.empty()) {
+    } else if (!shape.quadspos.empty()) {
       embree_geom = rtcNewGeometry(get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
       rtcSetGeometryVertexAttributeCount(embree_geom, 1);
       auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
@@ -664,11 +663,10 @@ static void build_embree_flattened_bvh(
           transformed_positions.size());
       auto embree_quads     = rtcSetNewGeometryBuffer(embree_geom,
           RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
-          shape.quads_positions.size());
+          shape.quadspos.size());
       memcpy(embree_positions, transformed_positions.data(),
           transformed_positions.size() * 12);
-      memcpy(embree_quads, shape.quads_positions.data(),
-          shape.quads_positions.size() * 16);
+      memcpy(embree_quads, shape.quadspos.data(), shape.quadspos.size() * 16);
     } else {
       throw std::runtime_error("empty bvh");
     }
@@ -1064,10 +1062,10 @@ void build_bvh(bvh_shape& shape, const bvh_params& params) {
           shape.positions[q.z], shape.positions[q.w]);
       prims[idx] = {bbox, bbox_center(bbox), idx};
     }
-  } else if (!shape.quads_positions.empty()) {
-    prims = vector<bvh_prim>(shape.quads_positions.size());
+  } else if (!shape.quadspos.empty()) {
+    prims = vector<bvh_prim>(shape.quadspos.size());
     for (auto idx = 0; idx < prims.size(); idx++) {
-      auto& q    = shape.quads_positions[idx];
+      auto& q    = shape.quadspos[idx];
       auto  bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
       prims[idx] = {bbox, bbox_center(bbox), idx};
@@ -1153,9 +1151,9 @@ void refit_bvh(bvh_shape& shape, const bvh_params& params) {
         node.bbox += quad_bounds(shape.positions[q.x], shape.positions[q.y],
             shape.positions[q.z], shape.positions[q.w]);
       }
-    } else if (!shape.quads_positions.empty()) {
+    } else if (!shape.quadspos.empty()) {
       for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& q = shape.quads_positions[node.primitive_ids[idx]];
+        auto& q = shape.quadspos[node.primitive_ids[idx]];
         node.bbox += quad_bounds(shape.positions[q.x], shape.positions[q.y],
             shape.positions[q.z], shape.positions[q.w]);
       }
@@ -1283,9 +1281,9 @@ bool intersect_bvh(const bvh_shape& shape, const ray3f& ray_, int& element,
           ray.tmax = distance;
         }
       }
-    } else if (!shape.quads_positions.empty()) {
+    } else if (!shape.quadspos.empty()) {
       for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& q = shape.quads_positions[node.primitive_ids[idx]];
+        auto& q = shape.quadspos[node.primitive_ids[idx]];
         if (intersect_quad(ray, shape.positions[q.x], shape.positions[q.y],
                 shape.positions[q.z], shape.positions[q.w], uv, distance)) {
           hit      = true;
@@ -1456,9 +1454,9 @@ bool overlap_bvh(const bvh_shape& shape, const vec3f& pos, float max_distance,
           max_distance = distance;
         }
       }
-    } else if (!shape.quads_positions.empty()) {
+    } else if (!shape.quadspos.empty()) {
       for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& q = shape.quads_positions[node.primitive_ids[idx]];
+        auto& q = shape.quadspos[node.primitive_ids[idx]];
         if (overlap_quad(pos, max_distance, shape.positions[q.x],
                 shape.positions[q.y], shape.positions[q.z],
                 shape.positions[q.w], shape.radius[q.x], shape.radius[q.y],

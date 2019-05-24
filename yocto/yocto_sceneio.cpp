@@ -216,47 +216,46 @@ void load_shape(yocto_shape& shape, const string& dirname) {
   if (is_preset_filename(shape.uri)) {
     auto [type, nfilename] = get_preset_type(shape.uri);
     make_preset(shape.points, shape.lines, shape.triangles, shape.quads,
-        shape.quads_positions, shape.quads_normals, shape.quads_texcoords,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, type);
+        shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
+        shape.normals, shape.texcoords, shape.colors, shape.radius, type);
     shape.uri = nfilename;
   } else {
     load_shape(dirname + shape.uri, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.quads_positions, shape.quads_normals,
-        shape.quads_texcoords, shape.positions, shape.normals, shape.texcoords,
-        shape.colors, shape.radius, false);
+        shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, false);
   }
 }
 
 void save_shape(const yocto_shape& shape, const string& dirname) {
   save_shape(dirname + shape.uri, shape.points, shape.lines, shape.triangles,
-      shape.quads, shape.quads_positions, shape.quads_normals,
-      shape.quads_texcoords, shape.positions, shape.normals, shape.texcoords,
-      shape.colors, shape.radius);
+      shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, shape.colors,
+      shape.radius);
 }
 
 void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
   if (is_preset_filename(subdiv.uri)) {
     auto [type, nfilename] = get_preset_type(subdiv.uri);
     make_preset(subdiv.points, subdiv.lines, subdiv.triangles, subdiv.quads,
-        subdiv.quads_positions, subdiv.quads_normals, subdiv.quads_texcoords,
+        subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
         subdiv.positions, subdiv.normals, subdiv.texcoords, subdiv.colors,
         subdiv.radius, type);
     subdiv.uri = nfilename;
   } else {
     load_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines,
-        subdiv.triangles, subdiv.quads, subdiv.quads_positions,
-        subdiv.quads_normals, subdiv.quads_texcoords, subdiv.positions,
-        subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius,
+        subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
+        subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
+        subdiv.texcoords, subdiv.colors, subdiv.radius,
         subdiv.preserve_facevarying);
   }
 }
 
 void save_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
   save_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines,
-      subdiv.triangles, subdiv.quads, subdiv.quads_positions,
-      subdiv.quads_normals, subdiv.quads_texcoords, subdiv.positions,
-      subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+      subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
+      subdiv.quadstexcoord, subdiv.positions, subdiv.normals, subdiv.texcoords,
+      subdiv.colors, subdiv.radius);
 }
 
 // Load json meshes
@@ -561,16 +560,16 @@ struct load_yaml_scene_cb : yaml_callbacks {
           get_yaml_value(value, camera.frame);
         } else if (key == "orthographic") {
           get_yaml_value(value, camera.orthographic);
-        } else if (key == "film_width") {
-          get_yaml_value(value, camera.film_width);
-        } else if (key == "film_height") {
-          get_yaml_value(value, camera.film_height);
-        } else if (key == "focal_length") {
-          get_yaml_value(value, camera.focal_length);
-        } else if (key == "focus_distance") {
-          get_yaml_value(value, camera.focus_distance);
-        } else if (key == "lens_aperture") {
-          get_yaml_value(value, camera.lens_aperture);
+        } else if (key == "width") {
+          get_yaml_value(value, camera.width);
+        } else if (key == "height") {
+          get_yaml_value(value, camera.height);
+        } else if (key == "focal") {
+          get_yaml_value(value, camera.focal);
+        } else if (key == "focus") {
+          get_yaml_value(value, camera.focus);
+        } else if (key == "aperture") {
+          get_yaml_value(value, camera.aperture);
         } else {
           throw io_error("unknown property " + string(key));
         }
@@ -852,13 +851,11 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     write_yaml_line(fs, "  - uri:", camera.uri);
     write_opt(fs, "frame", camera.frame, def_camera.frame);
     write_opt(fs, "orthographic", camera.orthographic, def_camera.orthographic);
-    write_opt(fs, "film_width", camera.film_width, def_camera.film_width);
-    write_opt(fs, "film_height", camera.film_height, def_camera.film_height);
-    write_opt(fs, "focal_length", camera.focal_length, def_camera.focal_length);
-    write_opt(
-        fs, "focus_distance", camera.focus_distance, def_camera.focus_distance);
-    write_opt(
-        fs, "lens_aperture", camera.lens_aperture, def_camera.lens_aperture);
+    write_opt(fs, "width", camera.width, def_camera.width);
+    write_opt(fs, "height", camera.height, def_camera.height);
+    write_opt(fs, "focal", camera.focal, def_camera.focal);
+    write_opt(fs, "focus", camera.focus, def_camera.focus);
+    write_opt(fs, "aperture", camera.aperture, def_camera.aperture);
   }
 
   if (!scene.textures.empty()) write_text(fs, "\n\ntextures:\n");
@@ -1143,38 +1140,38 @@ struct load_obj_scene_cb : obj_callbacks {
       add_fvverts(verts, shape);
       if (verts.size() == 4) {
         if (verts[0].position) {
-          shape.quads_positions.push_back({pos_map.at(verts[0].position),
+          shape.quadspos.push_back({pos_map.at(verts[0].position),
               pos_map.at(verts[1].position), pos_map.at(verts[2].position),
               pos_map.at(verts[3].position)});
         }
         if (verts[0].texcoord) {
-          shape.quads_texcoords.push_back({texcoord_map.at(verts[0].texcoord),
+          shape.quadstexcoord.push_back({texcoord_map.at(verts[0].texcoord),
               texcoord_map.at(verts[1].texcoord),
               texcoord_map.at(verts[2].texcoord),
               texcoord_map.at(verts[3].texcoord)});
         }
         if (verts[0].normal) {
-          shape.quads_normals.push_back(
+          shape.quadsnorm.push_back(
               {norm_map.at(verts[0].normal), norm_map.at(verts[1].normal),
                   norm_map.at(verts[2].normal), norm_map.at(verts[3].normal)});
         }
       } else {
         if (verts[0].position) {
           for (auto i = 2; i < verts.size(); i++)
-            shape.quads_positions.push_back({pos_map.at(verts[0].position),
+            shape.quadspos.push_back({pos_map.at(verts[0].position),
                 pos_map.at(verts[i - 1].position),
                 pos_map.at(verts[i].position), pos_map.at(verts[i].position)});
         }
         if (verts[0].texcoord) {
           for (auto i = 2; i < verts.size(); i++)
-            shape.quads_texcoords.push_back({texcoord_map.at(verts[0].texcoord),
+            shape.quadstexcoord.push_back({texcoord_map.at(verts[0].texcoord),
                 texcoord_map.at(verts[i - 1].texcoord),
                 texcoord_map.at(verts[i].texcoord),
                 texcoord_map.at(verts[i].texcoord)});
         }
         if (verts[0].normal) {
           for (auto i = 2; i < verts.size(); i++)
-            shape.quads_normals.push_back({norm_map.at(verts[0].normal),
+            shape.quadsnorm.push_back({norm_map.at(verts[0].normal),
                 norm_map.at(verts[i - 1].normal), norm_map.at(verts[i].normal),
                 norm_map.at(verts[i].normal)});
         }
@@ -1240,15 +1237,15 @@ struct load_obj_scene_cb : obj_callbacks {
     mmap[material.uri] = (int)scene.materials.size() - 1;
   }
   void camera(const obj_camera& ocam) override {
-    auto camera           = yocto_camera();
-    camera.uri            = ocam.name;
-    camera.frame          = ocam.frame;
-    camera.orthographic   = ocam.ortho;
-    camera.film_width     = ocam.width;
-    camera.film_height    = ocam.height;
-    camera.focal_length   = ocam.focal;
-    camera.focus_distance = ocam.focus;
-    camera.lens_aperture  = ocam.aperture;
+    auto camera         = yocto_camera();
+    camera.uri          = ocam.name;
+    camera.frame        = ocam.frame;
+    camera.orthographic = ocam.ortho;
+    camera.width        = ocam.width;
+    camera.height       = ocam.height;
+    camera.focal        = ocam.focal;
+    camera.focus        = ocam.focus;
+    camera.aperture     = ocam.aperture;
     scene.cameras.push_back(camera);
   }
   void environmnet(const obj_environment& oenv) override {
@@ -1401,8 +1398,8 @@ static void save_objx(const string& filename, const yocto_scene& scene) {
   // cameras
   for (auto& camera : scene.cameras) {
     write_obj_line(fs, "c", get_basename(camera.uri), (int)camera.orthographic,
-        camera.film_width, camera.film_height, camera.focal_length,
-        camera.focus_distance, camera.lens_aperture, camera.frame);
+        camera.width, camera.height, camera.focal, camera.focus,
+        camera.aperture, camera.frame);
   }
 
   // environments
@@ -1489,14 +1486,14 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
       }
     }
-    for (auto i = 0; i < shape.quads_positions.size(); i++) {
+    for (auto i = 0; i < shape.quadspos.size(); i++) {
       if (!shape.texcoords.empty() && shape.normals.empty()) {
         auto vert = [offset](int ip, int it) {
           return obj_vertex{
               ip + offset.position + 1, it + offset.texcoord + 1, 0};
         };
-        auto qp = shape.quads_positions[i];
-        auto qt = shape.quads_texcoords[i];
+        auto qp = shape.quadspos[i];
+        auto qt = shape.quadstexcoord[i];
         if (qp.z == qp.w) {
           write_obj_line(
               fs, "f", vert(qp.x, qt.x), vert(qp.y, qt.y), vert(qp.z, qt.z));
@@ -1509,9 +1506,9 @@ static void save_obj(const string& filename, const yocto_scene& scene,
           return obj_vertex{ip + offset.position + 1, it + offset.texcoord + 1,
               in + offset.normal + 1};
         };
-        auto qp = shape.quads_positions[i];
-        auto qt = shape.quads_texcoords[i];
-        auto qn = shape.quads_normals[i];
+        auto qp = shape.quadspos[i];
+        auto qt = shape.quadstexcoord[i];
+        auto qn = shape.quadsnorm[i];
         if (qp.z == qp.w) {
           write_obj_line(fs, "f", vert(qp.x, qt.x, qn.x),
               vert(qp.y, qt.y, qn.y), vert(qp.z, qt.z, qn.z));
@@ -1525,8 +1522,8 @@ static void save_obj(const string& filename, const yocto_scene& scene,
           return obj_vertex{
               ip + offset.position + 1, 0, in + offset.normal + 1};
         };
-        auto qp = shape.quads_positions[i];
-        auto qn = shape.quads_normals[i];
+        auto qp = shape.quadspos[i];
+        auto qn = shape.quadsnorm[i];
         if (qp.z == qp.w) {
           write_obj_line(
               fs, "f", vert(qp.x, qn.x), vert(qp.y, qn.y), vert(qp.z, qn.z));
@@ -1538,7 +1535,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         auto vert = [offset](int ip) {
           return obj_vertex{ip + offset.position + 1, 0, 0};
         };
-        auto q = shape.quads_positions[i];
+        auto q = shape.quadspos[i];
         if (q.z == q.w) {
           write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
         } else {
@@ -1573,9 +1570,8 @@ static void save_obj_scene(const string& filename, const yocto_scene& scene,
 
 void print_obj_camera(const yocto_camera& camera) {
   write_obj_line(stdout, "c", get_basename(camera.uri),
-      (int)camera.orthographic, camera.film_width, camera.film_height,
-      camera.focal_length, camera.focus_distance, camera.lens_aperture,
-      camera.frame);
+      (int)camera.orthographic, camera.width, camera.height, camera.focal,
+      camera.focus, camera.aperture, camera.frame);
 }
 
 }  // namespace yocto
@@ -1594,9 +1590,9 @@ static void load_ply_scene(
     scene.shapes.push_back({});
     auto& shape = scene.shapes.back();
     load_shape(filename, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.quads_positions, shape.quads_normals,
-        shape.quads_texcoords, shape.positions, shape.normals, shape.texcoords,
-        shape.colors, shape.radius, false);
+        shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, false);
 
     // add instance
     auto instance  = yocto_instance{};
@@ -1626,9 +1622,9 @@ static void save_ply_scene(const string& filename, const yocto_scene& scene,
   try {
     auto& shape = scene.shapes.front();
     save_shape(filename, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.quads_positions, shape.quads_normals,
-        shape.quads_texcoords, shape.positions, shape.normals, shape.texcoords,
-        shape.colors, shape.radius);
+        shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius);
   } catch (const std::exception& e) {
     throw io_error("cannot save scene " + filename + "\n" + e.what());
   }
@@ -1910,14 +1906,14 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
     camera.orthographic = gcam->type == cgltf_camera_type_orthographic;
     if (camera.orthographic) {
       // throw io_error("orthographic not supported well");
-      auto ortho           = &gcam->orthographic;
-      camera.lens_aperture = 0;
-      camera.orthographic  = true;
-      camera.film_width    = ortho->xmag;
-      camera.film_height   = ortho->ymag;
+      auto ortho          = &gcam->orthographic;
+      camera.aperture     = 0;
+      camera.orthographic = true;
+      camera.width        = ortho->xmag;
+      camera.height       = ortho->ymag;
     } else {
-      auto persp           = &gcam->perspective;
-      camera.lens_aperture = 0;
+      auto persp      = &gcam->perspective;
+      camera.aperture = 0;
       set_perspectivey(camera, persp->yfov, persp->aspect_ratio, float_max);
     }
     scene.cameras.push_back(camera);
@@ -2129,7 +2125,7 @@ static void load_gltf_scene(
   for (auto& camera : scene.cameras) {
     auto center   = (bbox.min + bbox.max) / 2;
     auto distance = dot(-camera.frame.z, center - camera.frame.o);
-    if (distance > 0) camera.focus_distance = distance;
+    if (distance > 0) camera.focus = distance;
   }
 }
 
@@ -2282,15 +2278,14 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
       write_json_value(state, "type", "perspective");
       write_json_object(state, "perspective");
       write_json_value(state, "yfov", camera_fovy(camera));
-      write_json_value(
-          state, "aspectRatio", camera.film_width / camera.film_height);
+      write_json_value(state, "aspectRatio", camera.width / camera.height);
       write_json_value(state, "znear", 0.01f);
       write_json_pop(state);
     } else {
       write_json_value(state, "type", "orthographic");
       write_json_object(state, "orthographic");
-      write_json_value(state, "xmag", camera.film_width / 2);
-      write_json_value(state, "ymag", camera.film_height / 2);
+      write_json_value(state, "xmag", camera.width / 2);
+      write_json_value(state, "ymag", camera.height / 2);
       write_json_value(state, "znear", 0.01f);
       write_json_pop(state);
     }
@@ -2371,7 +2366,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
     split.mode  = 4;
     if (!shape.points.empty()) split.mode = 1;
     if (!shape.lines.empty()) split.mode = 1;
-    if (shape.quads_positions.empty()) {
+    if (shape.quadspos.empty()) {
       split.positions = shape.positions;
       split.normals   = shape.normals;
       split.texcoords = shape.texcoords;
@@ -2392,8 +2387,8 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
     } else {
       auto quads = vector<vec4i>{};
       split_facevarying(quads, split.positions, split.normals, split.texcoords,
-          shape.quads_positions, shape.quads_normals, shape.quads_texcoords,
-          shape.positions, shape.normals, shape.texcoords);
+          shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
+          shape.normals, shape.texcoords);
       auto triangles = vector<vec3i>{};
       quads_to_triangles(triangles, quads);
       split.indices.insert(split.indices.end(), (int*)triangles.data(),
@@ -2765,18 +2760,18 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         throw io_error("unsupported Camera type");
       } break;
       case pbrt_camera::type_t::realistic: {
-        auto& realistic     = pcamera.realistic;
-        camera.focal_length = max(realistic.approx_focallength, 35.0f) * 0.001f;
-        auto aspect         = 1.0f;
+        auto& realistic = pcamera.realistic;
+        camera.focal    = max(realistic.approx_focallength, 35.0f) * 0.001f;
+        auto aspect     = 1.0f;
         if (aspect < 0) aspect = last_film_aspect;
         if (aspect < 0) aspect = 1;
         if (aspect >= 1) {
-          camera.film_height = camera.film_width / aspect;
+          camera.height = camera.width / aspect;
         } else {
-          camera.film_width = camera.film_height * aspect;
+          camera.width = camera.height * aspect;
         }
-        camera.focus_distance = realistic.focusdistance;
-        camera.lens_aperture  = realistic.aperturediameter / 2;
+        camera.focus    = realistic.focusdistance;
+        camera.aperture = realistic.aperturediameter / 2;
       } break;
     }
     scene.cameras.push_back(camera);
@@ -2787,7 +2782,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto& image      = pfilm.image;
         last_film_aspect = (float)image.xresolution / (float)image.yresolution;
         for (auto& camera : scene.cameras) {
-          camera.film_width = camera.film_height * last_film_aspect;
+          camera.width = camera.height * last_film_aspect;
         }
       } break;
     }
@@ -2817,8 +2812,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         shape.uri  = mesh.filename;
         if (!params.skip_meshes) {
           load_shape(get_dirname(filename) + mesh.filename, shape.points,
-              shape.lines, shape.triangles, shape.quads, shape.quads_positions,
-              shape.quads_normals, shape.quads_texcoords, shape.positions,
+              shape.lines, shape.triangles, shape.quads, shape.quadspos,
+              shape.quadsnorm, shape.quadstexcoord, shape.positions,
               shape.normals, shape.texcoords, shape.colors, shape.radius,
               false);
         }
@@ -3428,9 +3423,9 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
     auto dirname = get_dirname(filename);
     for (auto& shape : scene.shapes) {
       save_shape(get_noextension(dirname + shape.uri) + ".ply", shape.points,
-          shape.lines, shape.triangles, shape.quads, shape.quads_positions,
-          shape.quads_normals, shape.quads_texcoords, shape.positions,
-          shape.normals, shape.texcoords, shape.colors, shape.radius);
+          shape.lines, shape.triangles, shape.quads, shape.quadspos,
+          shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+          shape.texcoords, shape.colors, shape.radius);
     }
 
     // skip textures
@@ -3452,10 +3447,10 @@ void make_cornellbox_scene(yocto_scene& scene) {
   auto& camera            = scene.cameras.emplace_back();
   camera.uri              = "cam";
   camera.frame            = frame3f{{0, 1, 3.9}};
-  camera.focal_length     = 0.035;
-  camera.lens_aperture    = 0.0;
-  camera.film_width       = 0.024;
-  camera.film_height      = 0.024;
+  camera.focal            = 0.035;
+  camera.aperture         = 0.0;
+  camera.width            = 0.024;
+  camera.height           = 0.024;
   auto& floor_mat         = scene.materials.emplace_back();
   floor_mat.uri           = "floor";
   floor_mat.diffuse       = {0.725, 0.71, 0.68};

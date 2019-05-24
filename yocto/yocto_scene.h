@@ -74,8 +74,8 @@ namespace yocto {
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
-// we specify fil size (35mm by default), the focal lengthm the focus
-// distance and the lens_aperture. All values are in meters.
+// we specify fil size (35mm by default), the focal length the focus
+// distance and the lens aperture. All values are in meters.
 // Here are some common aspect ratios used in video and still photography.
 // 3:2    on 35 mm:  0.036 x 0.024
 // 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
@@ -85,14 +85,14 @@ namespace yocto {
 // To compute good apertures, one can use the F-stop number from phostography
 // and set the aperture to focal_leangth/f_stop.
 struct yocto_camera {
-  string  uri            = "";
-  frame3f frame          = identity_frame3f;
-  bool    orthographic   = false;
-  float   film_width     = 0.036f;
-  float   film_height    = 0.024f;
-  float   focal_length   = 0.050f;
-  float   focus_distance = float_max;
-  float   lens_aperture  = 0;
+  string  uri          = "";
+  frame3f frame        = identity_frame3f;
+  bool    orthographic = false;
+  float   width        = 0.036f;
+  float   height       = 0.024f;
+  float   focal        = 0.050f;
+  float   focus        = float_max;
+  float   aperture     = 0;
 };
 
 // Texture containing either an LDR or HDR image. Textures are rendered
@@ -169,9 +169,9 @@ struct yocto_shape {
   vector<vec4i> quads     = {};
 
   // face-varying primitives
-  vector<vec4i> quads_positions = {};
-  vector<vec4i> quads_normals   = {};
-  vector<vec4i> quads_texcoords = {};
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
 
   // vertex data
   vector<vec3f> positions = {};
@@ -212,9 +212,9 @@ struct yocto_subdiv {
   vector<vec4i> quads     = {};
 
   // face-varying primitives
-  vector<vec4i> quads_positions = {};
-  vector<vec4i> quads_normals   = {};
-  vector<vec4i> quads_texcoords = {};
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
 
   // vertex data
   vector<vec3f> positions = {};

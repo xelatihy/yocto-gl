@@ -75,8 +75,8 @@ void compute_normals(const yocto_shape& shape, vector<vec3f>& normals) {
     compute_normals(normals, shape.triangles, shape.positions);
   } else if (!shape.quads.empty()) {
     compute_normals(normals, shape.quads, shape.positions);
-  } else if (!shape.quads_positions.empty()) {
-    compute_normals(normals, shape.quads_positions, shape.positions);
+  } else if (!shape.quadspos.empty()) {
+    compute_normals(normals, shape.quadspos, shape.positions);
   } else {
     throw std::runtime_error("unknown element type");
   }
@@ -100,22 +100,21 @@ void subdivide_shape(yocto_shape& shape, int subdivision_level,
   } else if (!shape.quads.empty() && catmull_clark) {
     subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
         shape.texcoords, shape.colors, shape.radius, subdivision_level);
-  } else if (!shape.quads_positions.empty() && !catmull_clark) {
-    subdivide_quads(shape.quads_positions, shape.positions, subdivision_level);
-    subdivide_quads(shape.quads_normals, shape.normals, subdivision_level);
-    subdivide_quads(shape.quads_texcoords, shape.texcoords, subdivision_level);
-  } else if (!shape.quads_positions.empty() && catmull_clark) {
+  } else if (!shape.quadspos.empty() && !catmull_clark) {
+    subdivide_quads(shape.quadspos, shape.positions, subdivision_level);
+    subdivide_quads(shape.quadsnorm, shape.normals, subdivision_level);
+    subdivide_quads(shape.quadstexcoord, shape.texcoords, subdivision_level);
+  } else if (!shape.quadspos.empty() && catmull_clark) {
+    subdivide_catmullclark(shape.quadspos, shape.positions, subdivision_level);
     subdivide_catmullclark(
-        shape.quads_positions, shape.positions, subdivision_level);
-    subdivide_catmullclark(
-        shape.quads_texcoords, shape.texcoords, subdivision_level, true);
+        shape.quadstexcoord, shape.texcoords, subdivision_level, true);
   } else {
     throw std::runtime_error("empty shape");
   }
 
   if (update_normals) {
-    if (!shape.quads_positions.empty()) {
-      shape.quads_normals = shape.quads_positions;
+    if (!shape.quadspos.empty()) {
+      shape.quadsnorm = shape.quadspos;
     }
     compute_normals(shape, shape.normals);
   }
@@ -129,7 +128,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
   }
 
   // simple case
-  if (shape.quads_positions.empty()) {
+  if (shape.quadspos.empty()) {
     auto normals = shape.normals;
     if (shape.normals.empty()) compute_normals(shape, normals);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
@@ -144,9 +143,9 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     // facevarying case
     auto offset = vector<float>(shape.positions.size(), 0);
     auto count  = vector<int>(shape.positions.size(), 0);
-    for (auto fid = 0; fid < shape.quads_positions.size(); fid++) {
-      auto qpos = shape.quads_positions[fid];
-      auto qtxt = shape.quads_texcoords[fid];
+    for (auto fid = 0; fid < shape.quadspos.size(); fid++) {
+      auto qpos = shape.quadspos[fid];
+      auto qtxt = shape.quadstexcoord[fid];
       for (auto i = 0; i < 4; i++) {
         offset[qpos[i]] += scale * mean(xyz(eval_texture(displacement,
                                        shape.texcoords[qtxt[i]])));
@@ -154,32 +153,32 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
       }
     }
     auto normals = vector<vec3f>{shape.positions.size()};
-    compute_normals(normals, shape.quads_positions, shape.positions);
+    compute_normals(normals, shape.quadspos, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       shape.positions[vid] += normals[vid] * offset[vid] / count[vid];
     }
     if (update_normals || !shape.normals.empty()) {
-      shape.quads_normals = shape.quads_positions;
+      shape.quadsnorm = shape.quadspos;
       compute_normals(shape, shape.normals);
     }
   }
 }
 
 void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv) {
-  auto& shape           = scene.shapes[subdiv.tesselated_shape];
-  shape.positions       = subdiv.positions;
-  shape.normals         = subdiv.normals;
-  shape.texcoords       = subdiv.texcoords;
-  shape.colors          = subdiv.colors;
-  shape.radius          = subdiv.radius;
-  shape.points          = subdiv.points;
-  shape.lines           = subdiv.lines;
-  shape.triangles       = subdiv.triangles;
-  shape.quads           = subdiv.quads;
-  shape.quads_positions = subdiv.quads_positions;
-  shape.quads_normals   = subdiv.quads_normals;
-  shape.quads_texcoords = subdiv.quads_texcoords;
-  shape.lines           = subdiv.lines;
+  auto& shape         = scene.shapes[subdiv.tesselated_shape];
+  shape.positions     = subdiv.positions;
+  shape.normals       = subdiv.normals;
+  shape.texcoords     = subdiv.texcoords;
+  shape.colors        = subdiv.colors;
+  shape.radius        = subdiv.radius;
+  shape.points        = subdiv.points;
+  shape.lines         = subdiv.lines;
+  shape.triangles     = subdiv.triangles;
+  shape.quads         = subdiv.quads;
+  shape.quadspos      = subdiv.quadspos;
+  shape.quadsnorm     = subdiv.quadsnorm;
+  shape.quadstexcoord = subdiv.quadstexcoord;
+  shape.lines         = subdiv.lines;
   if (subdiv.subdivision_level) {
     subdivide_shape(shape, subdiv.subdivision_level, subdiv.catmull_clark,
         subdiv.compute_normals);
@@ -311,8 +310,8 @@ void sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf) {
     sample_lines_cdf(cdf, shape.lines, shape.positions);
   } else if (!shape.points.empty()) {
     sample_points_cdf(cdf, shape.points.size());
-  } else if (!shape.quads_positions.empty()) {
-    sample_quads_cdf(cdf, shape.quads_positions, shape.positions);
+  } else if (!shape.quadspos.empty()) {
+    sample_quads_cdf(cdf, shape.quadspos, shape.positions);
   } else {
     throw std::runtime_error("empty shape");
   }
@@ -331,7 +330,7 @@ pair<int, vec2f> sample_shape(const yocto_shape& shape,
     return {sample_lines(elements_cdf, re, ruv.x).first, ruv};
   } else if (!shape.points.empty()) {
     return {sample_points(elements_cdf, re), ruv};
-  } else if (!shape.quads_positions.empty()) {
+  } else if (!shape.quadspos.empty()) {
     return sample_quads(elements_cdf, re, ruv);
   } else {
     return {0, zero2f};
@@ -539,9 +538,9 @@ void trim_memory(yocto_scene& scene) {
     shape.lines.shrink_to_fit();
     shape.triangles.shrink_to_fit();
     shape.quads.shrink_to_fit();
-    shape.quads_positions.shrink_to_fit();
-    shape.quads_normals.shrink_to_fit();
-    shape.quads_texcoords.shrink_to_fit();
+    shape.quadspos.shrink_to_fit();
+    shape.quadsnorm.shrink_to_fit();
+    shape.quadstexcoord.shrink_to_fit();
     shape.positions.shrink_to_fit();
     shape.normals.shrink_to_fit();
     shape.texcoords.shrink_to_fit();
@@ -622,13 +621,13 @@ void build_bvh(
       }
     }
 #endif
-    sbvh.points          = shape.points;
-    sbvh.lines           = shape.lines;
-    sbvh.triangles       = shape.triangles;
-    sbvh.quads           = shape.quads;
-    sbvh.quads_positions = shape.quads_positions;
-    sbvh.positions       = shape.positions;
-    sbvh.radius          = shape.radius;
+    sbvh.points    = shape.points;
+    sbvh.lines     = shape.lines;
+    sbvh.triangles = shape.triangles;
+    sbvh.quads     = shape.quads;
+    sbvh.quadspos  = shape.quadspos;
+    sbvh.positions = shape.positions;
+    sbvh.radius    = shape.radius;
   }
   if (!scene.instances.empty()) {
     bvh.instances = {&scene.instances[0].frame, (int)scene.instances.size(),
@@ -654,13 +653,13 @@ void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
       }
     }
 #endif
-    sbvh.points          = shape.points;
-    sbvh.lines           = shape.lines;
-    sbvh.triangles       = shape.triangles;
-    sbvh.quads           = shape.quads;
-    sbvh.quads_positions = shape.quads_positions;
-    sbvh.positions       = shape.positions;
-    sbvh.radius          = shape.radius;
+    sbvh.points    = shape.points;
+    sbvh.lines     = shape.lines;
+    sbvh.triangles = shape.triangles;
+    sbvh.quads     = shape.quads;
+    sbvh.quadspos  = shape.quadspos;
+    sbvh.positions = shape.positions;
+    sbvh.radius    = shape.radius;
   }
   if (!scene.instances.empty()) {
     bvh.instances = {&scene.instances[0].frame, (int)scene.instances.size(),
@@ -693,8 +692,8 @@ vec3f eval_element_normal(const yocto_shape& shape, int element_id) {
   } else if (!shape.lines.empty()) {
     auto l = shape.lines[element_id];
     norm   = line_tangent(shape.positions[l.x], shape.positions[l.y]);
-  } else if (!shape.quads_positions.empty()) {
-    auto q = shape.quads_positions[element_id];
+  } else if (!shape.quadspos.empty()) {
+    auto q = shape.quadspos[element_id];
     norm   = quad_normal(shape.positions[q.x], shape.positions[q.y],
         shape.positions[q.z], shape.positions[q.w]);
   } else {
@@ -743,8 +742,8 @@ pair<vec3f, bool> eval_element_tangents(
     tx     = orthonormalize(tx, norm);
     auto s = (dot(cross(norm, tx), ty) < 0) ? -1.0f : 1.0f;
     return {tx, s};
-  } else if (!shape.quads_positions.empty()) {
-    auto q    = shape.quads_positions[element_id];
+  } else if (!shape.quadspos.empty()) {
+    auto q    = shape.quadspos[element_id];
     auto norm = quad_normal(shape.positions[q.x], shape.positions[q.y],
         shape.positions[q.z], shape.positions[q.w]);
     auto txty = pair<vec3f, vec3f>();
@@ -753,7 +752,7 @@ pair<vec3f, bool> eval_element_tangents(
           shape.positions[q.z], shape.positions[q.w], {0, 0}, {1, 0}, {0, 1},
           {1, 1}, element_uv);
     } else {
-      auto qt = shape.quads_texcoords[element_id];
+      auto qt = shape.quadstexcoord[element_id];
       txty    = quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w], shape.texcoords[qt.x],
           shape.texcoords[qt.y], shape.texcoords[qt.z], shape.texcoords[qt.w],
@@ -788,7 +787,7 @@ T evaluate_shape_elem(const yocto_shape& shape,
     return interpolate_line(vals[l.x], vals[l.y], element_uv.x);
   } else if (!shape.points.empty()) {
     return vals[shape.points[element_id]];
-  } else if (!shape.quads_positions.empty()) {
+  } else if (!shape.quadspos.empty()) {
     auto q = facevarying_quads[element_id];
     if (q.w == q.z)
       return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], element_uv);
@@ -803,19 +802,19 @@ T evaluate_shape_elem(const yocto_shape& shape,
 vec3f eval_position(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
   return evaluate_shape_elem(
-      shape, shape.quads_positions, shape.positions, element_id, element_uv);
+      shape, shape.quadspos, shape.positions, element_id, element_uv);
 }
 vec3f eval_normal(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
   if (shape.normals.empty()) return eval_element_normal(shape, element_id);
   return normalize(evaluate_shape_elem(
-      shape, shape.quads_normals, shape.normals, element_id, element_uv));
+      shape, shape.quadsnorm, shape.normals, element_id, element_uv));
 }
 vec2f eval_texcoord(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
   if (shape.texcoords.empty()) return element_uv;
   return evaluate_shape_elem(
-      shape, shape.quads_texcoords, shape.texcoords, element_id, element_uv);
+      shape, shape.quadstexcoord, shape.texcoords, element_id, element_uv);
 }
 vec4f eval_color(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
@@ -1060,59 +1059,57 @@ float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float camera_fovx(const yocto_camera& camera) {
   assert(!camera.orthographic);
-  return 2 * atan(camera.film_width / (2 * camera.focal_length));
+  return 2 * atan(camera.width / (2 * camera.focal));
 }
 float camera_fovy(const yocto_camera& camera) {
   assert(!camera.orthographic);
-  return 2 * atan(camera.film_height / (2 * camera.focal_length));
+  return 2 * atan(camera.height / (2 * camera.focal));
 }
 float camera_aspect(const yocto_camera& camera) {
-  return camera.film_width / camera.film_height;
+  return camera.width / camera.height;
 }
 vec2i camera_image_size(const yocto_camera& camera, const vec2i& size_) {
   auto size = size_;
   if (size == zero2i) size = {1280, 720};
   if (size.x != 0 && size.y != 0) {
-    if (size.x * camera.film_height / camera.film_width > size.y) {
+    if (size.x * camera.height / camera.width > size.y) {
       size.x = 0;
     } else {
       size.y = 0;
     }
   }
   if (size.x == 0) {
-    size.x = (int)round(size.y * camera.film_width / camera.film_height);
+    size.x = (int)round(size.y * camera.width / camera.height);
   }
   if (size.y == 0) {
-    size.y = (int)round(size.x * camera.film_height / camera.film_width);
+    size.y = (int)round(size.x * camera.height / camera.width);
   }
   return size;
 }
 void set_perspectivey(
     yocto_camera& camera, float fovy, float aspect, float focus, float height) {
-  camera.orthographic   = false;
-  camera.film_width     = height * aspect;
-  camera.film_height    = height;
-  camera.focus_distance = focus;
-  auto distance         = camera.film_height / (2 * tan(fovy / 2));
+  camera.orthographic = false;
+  camera.width        = height * aspect;
+  camera.height       = height;
+  camera.focus        = focus;
+  auto distance       = camera.height / (2 * tan(fovy / 2));
   if (focus < float_max) {
-    camera.focal_length = camera.focus_distance * distance /
-                          (camera.focus_distance + distance);
+    camera.focal = camera.focus * distance / (camera.focus + distance);
   } else {
-    camera.focal_length = distance;
+    camera.focal = distance;
   }
 }
 void set_perspectivex(
     yocto_camera& camera, float fovx, float aspect, float focus, float width) {
-  camera.orthographic   = false;
-  camera.film_width     = width;
-  camera.film_height    = width / aspect;
-  camera.focus_distance = focus;
-  auto distance         = camera.film_width / (2 * tan(fovx / 2));
+  camera.orthographic = false;
+  camera.width        = width;
+  camera.height       = width / aspect;
+  camera.focus        = focus;
+  auto distance       = camera.width / (2 * tan(fovx / 2));
   if (focus < float_max) {
-    camera.focal_length = camera.focus_distance * distance /
-                          (camera.focus_distance + distance);
+    camera.focal = camera.focus * distance / (camera.focus + distance);
   } else {
-    camera.focal_length = distance;
+    camera.focal = distance;
   }
 }
 
@@ -1120,9 +1117,9 @@ void set_perspectivex(
 void set_view(yocto_camera& camera, const bbox3f& bbox,
     const vec3f& view_direction, float width, float height, float focal) {
   camera.orthographic = false;
-  if (width != 0) camera.film_width = width;
-  if (height != 0) camera.film_height = height;
-  if (focal != 0) camera.focal_length = focal;
+  if (width != 0) camera.width = width;
+  if (height != 0) camera.height = height;
+  if (focal != 0) camera.focal = focal;
   auto bbox_center = (bbox.max + bbox.min) / 2.0f;
   auto bbox_radius = length(bbox.max - bbox.min) / 2;
   auto camera_dir  = (view_direction == zero3f) ? camera.frame.o - bbox_center
@@ -1130,42 +1127,40 @@ void set_view(yocto_camera& camera, const bbox3f& bbox,
   if (camera_dir == zero3f) camera_dir = {0, 0, 1};
   auto camera_fov = min(camera_fovx(camera), camera_fovy(camera));
   if (camera_fov == 0) camera_fov = 45 * pif / 180;
-  auto camera_dist      = bbox_radius / sin(camera_fov / 2);
-  auto from             = camera_dir * (camera_dist * 1) + bbox_center;
-  auto to               = bbox_center;
-  auto up               = vec3f{0, 1, 0};
-  camera.frame          = lookat_frame(from, to, up);
-  camera.focus_distance = length(from - to);
-  camera.lens_aperture  = 0;
+  auto camera_dist = bbox_radius / sin(camera_fov / 2);
+  auto from        = camera_dir * (camera_dist * 1) + bbox_center;
+  auto to          = bbox_center;
+  auto up          = vec3f{0, 1, 0};
+  camera.frame     = lookat_frame(from, to, up);
+  camera.focus     = length(from - to);
+  camera.aperture  = 0;
 }
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 ray3f eval_perspective_camera(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
-  auto distance = camera.focal_length;
-  if (camera.focus_distance < float_max) {
-    distance = camera.focal_length * camera.focus_distance /
-               (camera.focus_distance - camera.focal_length);
+  auto distance = camera.focal;
+  if (camera.focus < float_max) {
+    distance = camera.focal * camera.focus / (camera.focus - camera.focal);
   }
-  if (camera.lens_aperture) {
-    auto e = vec3f{(lens_uv.x - 0.5f) * camera.lens_aperture,
-        (lens_uv.y - 0.5f) * camera.lens_aperture, 0};
-    auto q = vec3f{camera.film_width * (0.5f - image_uv.x),
-        camera.film_height * (image_uv.y - 0.5f), distance};
+  if (camera.aperture) {
+    auto e = vec3f{(lens_uv.x - 0.5f) * camera.aperture,
+        (lens_uv.y - 0.5f) * camera.aperture, 0};
+    auto q = vec3f{camera.width * (0.5f - image_uv.x),
+        camera.height * (image_uv.y - 0.5f), distance};
     // distance of the image of the point
-    auto distance1 = camera.focal_length * distance /
-                     (distance - camera.focal_length);
-    auto q1 = -q * distance1 / distance;
-    auto d  = normalize(q1 - e);
-    // auto q1 = - normalize(q) * camera.focus_distance / normalize(q).z;
+    auto distance1 = camera.focal * distance / (distance - camera.focal);
+    auto q1        = -q * distance1 / distance;
+    auto d         = normalize(q1 - e);
+    // auto q1 = - normalize(q) * camera.focus / normalize(q).z;
     auto ray = ray3f{
         transform_point(camera.frame, e), transform_direction(camera.frame, d)};
     return ray;
   } else {
     auto e   = zero3f;
-    auto q   = vec3f{camera.film_width * (0.5f - image_uv.x),
-        camera.film_height * (image_uv.y - 0.5f), distance};
+    auto q   = vec3f{camera.width * (0.5f - image_uv.x),
+        camera.height * (image_uv.y - 0.5f), distance};
     auto q1  = -q;
     auto d   = normalize(q1 - e);
     auto ray = ray3f{
@@ -1178,22 +1173,22 @@ ray3f eval_perspective_camera(
 // the lens coordinates luv.
 ray3f eval_orthographic_camera(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
-  if (camera.lens_aperture) {
-    auto scale = 1 / camera.focal_length;
-    auto q     = vec3f{camera.film_width * (0.5f - image_uv.x) * scale,
-        camera.film_height * (image_uv.y - 0.5f) * scale, scale};
-    auto q1    = vec3f{-q.x, -q.y, -camera.focus_distance};
-    auto e     = vec3f{-q.x, -q.y, 0} +
-             vec3f{(lens_uv.x - 0.5f) * camera.lens_aperture,
-                 (lens_uv.y - 0.5f) * camera.lens_aperture, 0};
-    auto d   = normalize(q1 - e);
+  if (camera.aperture) {
+    auto scale = 1 / camera.focal;
+    auto q     = vec3f{camera.width * (0.5f - image_uv.x) * scale,
+        camera.height * (image_uv.y - 0.5f) * scale, scale};
+    auto q1    = vec3f{-q.x, -q.y, -camera.focus};
+    auto e = vec3f{-q.x, -q.y, 0} + vec3f{(lens_uv.x - 0.5f) * camera.aperture,
+                                        (lens_uv.y - 0.5f) * camera.aperture,
+                                        0};
+    auto d = normalize(q1 - e);
     auto ray = ray3f{
         transform_point(camera.frame, e), transform_direction(camera.frame, d)};
     return ray;
   } else {
-    auto scale = 1 / camera.focal_length;
-    auto q     = vec3f{camera.film_width * (0.5f - image_uv.x) * scale,
-        camera.film_height * (image_uv.y - 0.5f) * scale, scale};
+    auto scale = 1 / camera.focal;
+    auto q     = vec3f{camera.width * (0.5f - image_uv.x) * scale,
+        camera.height * (image_uv.y - 0.5f) * scale, scale};
     auto q1    = -q;
     auto e     = vec3f{-q.x, -q.y, 0};
     auto d     = normalize(q1 - e);
@@ -1427,9 +1422,8 @@ string format_stats(const yocto_scene& scene, bool verbose) {
             })};
   stats += {"quads",
       accumulate(scene.shapes, [](auto& shape) { return shape.quads.size(); })};
-  stats += {"fvquads", accumulate(scene.shapes, [](auto& shape) {
-              return shape.quads_positions.size();
-            })};
+  stats += {"fvquads", accumulate(scene.shapes,
+                           [](auto& shape) { return shape.quadspos.size(); })};
 
   stats += {"texels4b", accumulate(scene.textures, [](auto& texture) {
               return (size_t)texture.ldr_image.size().x *

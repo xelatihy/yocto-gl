@@ -716,7 +716,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
   for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
     auto& shape = scene.shapes[shape_id];
     auto  vbos  = drawgl_shape();
-    if (shape.quads_positions.empty()) {
+    if (shape.quadspos.empty()) {
       if (!shape.positions.empty())
         init_glarraybuffer(vbos.positions_buffer, shape.positions, false);
       if (!shape.normals.empty())
@@ -743,9 +743,9 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
       auto positions = vector<vec3f>{};
       auto normals   = vector<vec3f>{};
       auto texcoords = vector<vec2f>{};
-      split_facevarying(quads, positions, normals, texcoords,
-          shape.quads_positions, shape.quads_normals, shape.quads_texcoords,
-          shape.positions, shape.normals, shape.texcoords);
+      split_facevarying(quads, positions, normals, texcoords, shape.quadspos,
+          shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+          shape.texcoords);
       if (!positions.empty())
         init_glarraybuffer(vbos.positions_buffer, positions, false);
       if (!normals.empty())
@@ -984,16 +984,16 @@ void load_element(
   } else if (type == typeid(yocto_shape)) {
     auto& shape = scene.shapes[index];
     load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,
-        shape.triangles, shape.quads, shape.quads_positions,
-        shape.quads_normals, shape.quads_texcoords, shape.positions,
-        shape.normals, shape.texcoords, shape.colors, shape.radius, false);
+        shape.triangles, shape.quads, shape.quadspos, shape.quadsnorm,
+        shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
+        shape.colors, shape.radius, false);
   } else if (type == typeid(yocto_subdiv)) {
     // TODO: this needs more fixing?
     auto& subdiv = scene.subdivs[index];
     load_shape(get_dirname(filename) + subdiv.uri, subdiv.points, subdiv.lines,
-        subdiv.triangles, subdiv.quads, subdiv.quads_positions,
-        subdiv.quads_normals, subdiv.quads_texcoords, subdiv.positions,
-        subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius,
+        subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
+        subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
+        subdiv.texcoords, subdiv.colors, subdiv.radius,
         subdiv.preserve_facevarying);
     tesselate_subdiv(scene, scene.subdivs[index]);
   } else {
@@ -1198,10 +1198,9 @@ void run_ui(app_state& app) {
       if (mouse_left && !shift_down) rotate = (mouse_pos - last_pos) / 100.0f;
       if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
       if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-      update_camera_turntable(
-          camera.frame, camera.focus_distance, rotate, dolly, pan);
+      update_camera_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       if (camera.frame != old_camera.frame ||
-          camera.focus_distance != old_camera.focus_distance) {
+          camera.focus != old_camera.focus) {
         scn.task_queue.emplace_back(app_task_type::apply_edit,
             app_edit{typeid(yocto_camera), scn.drawgl_prms.camera_id, camera,
                 false});

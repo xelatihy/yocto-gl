@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
   if (mesh_filenames) {
     auto sid = 0;
     for (auto& shape : scene.shapes) {
-      if (!shape.quads_positions.empty()) {
+      if (!shape.quadspos.empty()) {
         shape.uri = shape_directory + "shape_" + to_string(sid) + ".obj";
       } else {
         shape.uri = shape_directory + "shape_" + to_string(sid) + ".ply";
@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
   if (mesh_filenames) {
     auto sid = 0;
     for (auto& subdiv : scene.subdivs) {
-      if (!subdiv.quads_positions.empty()) {
+      if (!subdiv.quadspos.empty()) {
         subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) + ".obj";
       } else {
         subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) + ".ply";

@@ -138,11 +138,11 @@ struct bvh_array_view {
 // Applicxation data is not stored explicitly.
 struct bvh_shape {
   // elements
-  bvh_array_view<int>   points          = {};
-  bvh_array_view<vec2i> lines           = {};
-  bvh_array_view<vec3i> triangles       = {};
-  bvh_array_view<vec4i> quads           = {};
-  bvh_array_view<vec4i> quads_positions = {};
+  bvh_array_view<int>   points    = {};
+  bvh_array_view<vec2i> lines     = {};
+  bvh_array_view<vec3i> triangles = {};
+  bvh_array_view<vec4i> quads     = {};
+  bvh_array_view<vec4i> quadspos  = {};
 
   // vertices
   bvh_array_view<vec3f> positions = {};

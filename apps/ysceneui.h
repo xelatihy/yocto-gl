@@ -218,17 +218,13 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glslider(win, "frame.z", edited.frame.z, -1, 1)) updated = true;
   if (draw_glslider(win, "frame.o", edited.frame.o, -10, 10)) updated = true;
   if (draw_glcheckbox(win, "ortho", edited.orthographic)) updated = true;
-  if (draw_glslider(win, "width", edited.film_width, 0.01f, 1)) updated = true;
-  if (draw_glslider(win, "height", edited.film_height, 0.01f, 1))
-    updated = true;
-  if (draw_glslider(win, "focal", edited.focal_length, 0.01f, 1))
-    updated = true;
-  if (draw_glslider(win, "focus", edited.focus_distance, 0.01f, 1000))
-    updated = true;
-  if (draw_glslider(win, "aperture", edited.lens_aperture, 0, 5))
-    updated = true;
+  if (draw_glslider(win, "width", edited.width, 0.01f, 1)) updated = true;
+  if (draw_glslider(win, "height", edited.height, 0.01f, 1)) updated = true;
+  if (draw_glslider(win, "focal", edited.focal, 0.01f, 1)) updated = true;
+  if (draw_glslider(win, "focus", edited.focus, 0.01f, 1000)) updated = true;
+  if (draw_glslider(win, "aperture", edited.aperture, 0, 5)) updated = true;
   auto from = edited.frame.o,
-       to   = edited.frame.o - edited.focus_distance * edited.frame.z;
+       to   = edited.frame.o - edited.focus * edited.frame.z;
   draw_glslider(win, "!!from", from, -10, 10);
   draw_glslider(win, "!!to", to, -10, 10);
   if (updated) {
@@ -343,9 +339,9 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   draw_gllabel(win, "lines", "%ld", value.lines.size());
   draw_gllabel(win, "triangles", "%ld", value.triangles.size());
   draw_gllabel(win, "quads", "%ld", value.quads.size());
-  draw_gllabel(win, "quads pos", "%ld", value.quads_positions.size());
-  draw_gllabel(win, "quads norm", "%ld", value.quads_normals.size());
-  draw_gllabel(win, "quads texcoord", "%ld", value.quads_texcoords.size());
+  draw_gllabel(win, "quads pos", "%ld", value.quadspos.size());
+  draw_gllabel(win, "quads norm", "%ld", value.quadsnorm.size());
+  draw_gllabel(win, "quads texcoord", "%ld", value.quadstexcoord.size());
   draw_gllabel(win, "pos", "%ld", value.positions.size());
   draw_gllabel(win, "norm", "%ld", value.normals.size());
   draw_gllabel(win, "texcoord", "%ld", value.texcoords.size());
@@ -355,19 +351,19 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (updated) {
     auto reload = edited.uri != value.uri;
     if (!reload) {
-      edited.points          = value.points;
-      edited.lines           = value.lines;
-      edited.triangles       = value.triangles;
-      edited.quads           = value.quads;
-      edited.quads_positions = value.quads_positions;
-      edited.quads_normals   = value.quads_normals;
-      edited.quads_texcoords = value.quads_texcoords;
-      edited.positions       = value.positions;
-      edited.normals         = value.normals;
-      edited.texcoords       = value.texcoords;
-      edited.colors          = value.colors;
-      edited.radius          = value.radius;
-      edited.tangents        = value.tangents;
+      edited.points        = value.points;
+      edited.lines         = value.lines;
+      edited.triangles     = value.triangles;
+      edited.quads         = value.quads;
+      edited.quadspos      = value.quadspos;
+      edited.quadsnorm     = value.quadsnorm;
+      edited.quadstexcoord = value.quadstexcoord;
+      edited.positions     = value.positions;
+      edited.normals       = value.normals;
+      edited.texcoords     = value.texcoords;
+      edited.colors        = value.colors;
+      edited.radius        = value.radius;
+      edited.tangents      = value.tangents;
     }
     edit = {sel.type, sel.index, edited, reload};
   }
@@ -409,9 +405,9 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   draw_gllabel(win, "lines", "%ld", value.lines.size());
   draw_gllabel(win, "triangles", "%ld", value.triangles.size());
   draw_gllabel(win, "quads", "%ld", value.quads.size());
-  draw_gllabel(win, "quads pos", "%ld", value.quads_positions.size());
-  draw_gllabel(win, "quads norm", "%ld", value.quads_normals.size());
-  draw_gllabel(win, "quads texcoord", "%ld", value.quads_texcoords.size());
+  draw_gllabel(win, "quads pos", "%ld", value.quadspos.size());
+  draw_gllabel(win, "quads norm", "%ld", value.quadsnorm.size());
+  draw_gllabel(win, "quads texcoord", "%ld", value.quadstexcoord.size());
   draw_gllabel(win, "pos", "%ld", value.positions.size());
   draw_gllabel(win, "norm", "%ld", value.normals.size());
   draw_gllabel(win, "texcoord", "%ld", value.texcoords.size());
@@ -420,18 +416,18 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (updated) {
     auto reload = edited.uri != value.uri;
     if (!reload) {
-      edited.points          = value.points;
-      edited.lines           = value.lines;
-      edited.triangles       = value.triangles;
-      edited.quads           = value.quads;
-      edited.quads_positions = value.quads_positions;
-      edited.quads_normals   = value.quads_normals;
-      edited.quads_texcoords = value.quads_texcoords;
-      edited.positions       = value.positions;
-      edited.normals         = value.normals;
-      edited.texcoords       = value.texcoords;
-      edited.colors          = value.colors;
-      edited.radius          = value.radius;
+      edited.points        = value.points;
+      edited.lines         = value.lines;
+      edited.triangles     = value.triangles;
+      edited.quads         = value.quads;
+      edited.quadspos      = value.quadspos;
+      edited.quadsnorm     = value.quadsnorm;
+      edited.quadstexcoord = value.quadstexcoord;
+      edited.positions     = value.positions;
+      edited.normals       = value.normals;
+      edited.texcoords     = value.texcoords;
+      edited.colors        = value.colors;
+      edited.radius        = value.radius;
     }
     edit = {sel.type, sel.index, edited, reload};
   }

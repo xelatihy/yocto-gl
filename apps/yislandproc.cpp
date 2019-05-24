@@ -137,17 +137,17 @@ void load_island_cameras(
   print_info(filename);
   auto js = json{};
   load_json(dirname + filename, js);
-  auto camera           = yocto_camera{};
-  camera.uri            = "cameras/" + get_basename(filename) + ".yaml";
-  camera.focal_length   = js.at("focalLength").get<float>() * 0.001f;
-  camera.focus_distance = js.at("centerOfInterest").get<float>();
-  // camera.lens_aperture  = js.at("lensRadius").get<float>();
-  camera.film_height    = camera.film_width / js.at("ratio").get<float>();
-  auto from             = js.at("eye").get<vec3f>();
-  auto to               = js.at("look").get<vec3f>();
-  auto up               = js.at("up").get<vec3f>();
-  camera.frame          = lookat_frame(from, to, up);
-  camera.focus_distance = length(from - to);
+  auto camera  = yocto_camera{};
+  camera.uri   = "cameras/" + get_basename(filename) + ".yaml";
+  camera.focal = js.at("focalLength").get<float>() * 0.001f;
+  camera.focus = js.at("centerOfInterest").get<float>();
+  // camera.aperture  = js.at("lensRadius").get<float>();
+  camera.height = camera.width / js.at("ratio").get<float>();
+  auto from     = js.at("eye").get<vec3f>();
+  auto to       = js.at("look").get<vec3f>();
+  auto up       = js.at("up").get<vec3f>();
+  camera.frame  = lookat_frame(from, to, up);
+  camera.focus  = length(from - to);
   scene.cameras.push_back(camera);
 }
 
@@ -347,25 +347,25 @@ struct load_island_shape_callbacks : obj_callbacks {
     split_shape();
     add_fvverts(verts);
     if (verts.size() == 4) {
-      shapes.back().quads_positions.push_back(
+      shapes.back().quadspos.push_back(
           {pos_map.at(verts[0].position), pos_map.at(verts[1].position),
               pos_map.at(verts[2].position), pos_map.at(verts[3].position)});
-      shapes.back().quads_normals.push_back(
+      shapes.back().quadsnorm.push_back(
           {norm_map.at(verts[0].normal), norm_map.at(verts[1].normal),
               norm_map.at(verts[2].normal), norm_map.at(verts[3].normal)});
     } else {
       for (auto i = 2; i < verts.size(); i++)
-        shapes.back().quads_positions.push_back(
+        shapes.back().quadspos.push_back(
             {pos_map.at(verts[0].position), pos_map.at(verts[i - 1].position),
                 pos_map.at(verts[i].position), pos_map.at(verts[i].position)});
       for (auto i = 2; i < verts.size(); i++)
-        shapes.back().quads_normals.push_back(
+        shapes.back().quadsnorm.push_back(
             {norm_map.at(verts[0].normal), norm_map.at(verts[i - 1].normal),
                 norm_map.at(verts[i].normal), norm_map.at(verts[i].normal)});
     }
     if (dmaterials.back().color_ptex_faces) {
       auto offset = (int)shapes.back().texcoords.size();
-      auto face   = (int)shapes.back().quads_texcoords.size();
+      auto face   = (int)shapes.back().quadstexcoord.size();
       face %= dmaterials.back().color_ptex_faces;
       auto face_i = face % dmaterials.back().color_ptex_rowfaces;
       auto face_j = face / dmaterials.back().color_ptex_rowfaces;
@@ -382,7 +382,7 @@ struct load_island_shape_callbacks : obj_callbacks {
         shapes.back().texcoords.push_back({u1, v0});
         shapes.back().texcoords.push_back({u1, v1});
         shapes.back().texcoords.push_back({u0, v1});
-        shapes.back().quads_texcoords.push_back(
+        shapes.back().quadstexcoord.push_back(
             {offset + 0, offset + 1, offset + 2, offset + 3});
       } else {
         throw io_error("BAD PTEX TEXCOORDS");
@@ -425,8 +425,8 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
     for (auto id = 0; id < shapes.size(); id++) {
       if (cb.dmaterials[id].color_map != "") {
         auto ptex_faces  = cb.dmaterials[id].color_ptex_faces;
-        auto shape_faces = max((int)shapes[id].quads.size(),
-            (int)shapes[id].quads_positions.size());
+        auto shape_faces = max(
+            (int)shapes[id].quads.size(), (int)shapes[id].quadspos.size());
         auto is_multiple = shape_faces % ptex_faces == 0;
         if (!is_multiple)
           print_info("PTEX ERROR:  " + to_string(ptex_faces) + " " +
@@ -442,16 +442,16 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
         auto split_normals   = vector<vec3f>{};
         auto split_texcoords = vector<vec2f>{};
         split_facevarying(split_quads, split_positions, split_normals,
-            split_texcoords, shape.quads_positions, shape.quads_normals,
-            shape.quads_texcoords, shape.positions, shape.normals,
+            split_texcoords, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, shape.positions, shape.normals,
             shape.texcoords);
-        shape.quads           = split_quads;
-        shape.positions       = split_positions;
-        shape.normals         = split_normals;
-        shape.texcoords       = split_texcoords;
-        shape.quads_positions = {};
-        shape.quads_normals   = {};
-        shape.quads_texcoords = {};
+        shape.quads         = split_quads;
+        shape.positions     = split_positions;
+        shape.normals       = split_normals;
+        shape.texcoords     = split_texcoords;
+        shape.quadspos      = {};
+        shape.quadsnorm     = {};
+        shape.quadstexcoord = {};
         if (shape.texcoords.empty()) {
           auto all_triangles = true;
           for (auto& q : shape.quads) {

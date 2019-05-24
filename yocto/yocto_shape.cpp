@@ -386,19 +386,19 @@ void bezier_to_lines(vector<vec2i>& lines, const vector<vec4i>& beziers) {
 // and filled vectors for pos, norm and texcoord.
 void split_facevarying(vector<vec4i>& split_quads,
     vector<vec3f>& split_positions, vector<vec3f>& split_normals,
-    vector<vec2f>& split_texcoords, const vector<vec4i>& quads_positions,
-    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords,
+    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords) {
   // make faces unique
   unordered_map<vec3i, int> vert_map;
-  split_quads.resize(quads_positions.size());
-  for (auto fid = 0; fid < quads_positions.size(); fid++) {
+  split_quads.resize(quadspos.size());
+  for (auto fid = 0; fid < quadspos.size(); fid++) {
     for (auto c = 0; c < 4; c++) {
       auto v = vec3i{
-          (&quads_positions[fid].x)[c],
-          (!quads_normals.empty()) ? (&quads_normals[fid].x)[c] : -1,
-          (!quads_texcoords.empty()) ? (&quads_texcoords[fid].x)[c] : -1,
+          (&quadspos[fid].x)[c],
+          (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
+          (!quadstexcoord.empty()) ? (&quadstexcoord[fid].x)[c] : -1,
       };
       auto it = vert_map.find(v);
       if (it == vert_map.end()) {
@@ -2089,24 +2089,24 @@ void make_improc(vector<vec3i>& triangles, vector<vec4i>& quads,
 }
 
 // Make face-varying quads
-void make_fvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+void make_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const procshape_params& params) {
   auto subdivide_quads_p = [&](auto& qquads, auto& qpositions) {
-    quads_positions = qquads;
-    positions       = qpositions;
-    subdivide_quads_impl(quads_positions, positions, params.subdivisions);
+    quadspos  = qquads;
+    positions = qpositions;
+    subdivide_quads_impl(quadspos, positions, params.subdivisions);
   };
   auto subdivide_quads_n = [&](auto& qquads, auto& qnormals) {
-    quads_normals = qquads;
-    normals       = qnormals;
-    subdivide_quads_impl(quads_normals, normals, params.subdivisions);
+    quadsnorm = qquads;
+    normals   = qnormals;
+    subdivide_quads_impl(quadsnorm, normals, params.subdivisions);
   };
   auto subdivide_quads_t = [&](auto& qquads, auto& qtexcoords) {
-    quads_texcoords = qquads;
-    texcoords       = qtexcoords;
-    subdivide_quads_impl(quads_texcoords, texcoords, params.subdivisions);
+    quadstexcoord = qquads;
+    texcoords     = qtexcoords;
+    subdivide_quads_impl(quadstexcoord, texcoords, params.subdivisions);
   };
   switch (params.type) {
     case make_shape_type::quad: {
@@ -2123,8 +2123,8 @@ void make_fvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
       subdivide_quads_p(fvcube_quads, fvcube_positions);
       subdivide_quads_t(cube_quads, cube_texcoords);
       for (auto& p : positions) p = normalize(p);
-      normals       = positions;
-      quads_normals = quads_positions;
+      normals   = positions;
+      quadsnorm = quadspos;
     } break;
     case make_shape_type::suzanne: {
       subdivide_quads_p(suzanne_quads, suzanne_positions);
@@ -2238,11 +2238,10 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
 
 // Shape presets used ofr testing.
 void make_preset(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, const string& type) {
+    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
+    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<vec4f>& colors, vector<float>& radius, const string& type) {
   if (type == "default-quad") {
     auto params = procshape_params{};
     params.type = make_shape_type::quad;
@@ -2368,14 +2367,14 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "default-cube-facevarying") {
     auto params = procshape_params{};
     params.type = make_shape_type::cube;
-    make_fvshape(quads_positions, quads_normals, quads_texcoords, positions,
-        normals, texcoords, params);
+    make_fvshape(quadspos, quadsnorm, quadstexcoord, positions, normals,
+        texcoords, params);
   } else if (type == "default-sphere-facevarying") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::sphere;
     params.subdivisions = 5;
-    make_fvshape(quads_positions, quads_normals, quads_texcoords, positions,
-        normals, texcoords, params);
+    make_fvshape(quadspos, quadsnorm, quadstexcoord, positions, normals,
+        texcoords, params);
   } else if (type == "test-cube") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::cube;
@@ -2531,8 +2530,8 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     params.type  = make_shape_type::cube;
     params.scale = 0.075;
     params.frame = frame3f{{0, 0.075, 0}};
-    make_fvshape(quads_positions, quads_normals, quads_texcoords, positions,
-        normals, texcoords, params);
+    make_fvshape(quadspos, quadsnorm, quadstexcoord, positions, normals,
+        texcoords, params);
   } else if (type == "test-arealight1") {
     auto params  = procshape_params{};
     params.type  = make_shape_type::quad;
@@ -2563,14 +2562,14 @@ static void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
 // Load/Save a ply mesh
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& color,
     vector<float>& radius, bool flip_texcoord = true);
 static void save_ply_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<float>& radius, bool ascii = false, bool flip_texcoord = true);
@@ -2578,45 +2577,45 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
 // Load/Save an OBJ mesh
 static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, bool preserve_facevarying,
     bool flip_texcoord = true);
 static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, bool flip_texcoord = true);
 
 // Load ply mesh
 void load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, bool preserve_facevarrying) {
-  points          = {};
-  lines           = {};
-  triangles       = {};
-  quads           = {};
-  quads_positions = {};
-  quads_normals   = {};
-  quads_texcoords = {};
-  positions       = {};
-  normals         = {};
-  texcoords       = {};
-  colors          = {};
-  radius          = {};
+  points        = {};
+  lines         = {};
+  triangles     = {};
+  quads         = {};
+  quadspos      = {};
+  quadsnorm     = {};
+  quadstexcoord = {};
+  positions     = {};
+  normals       = {};
+  texcoords     = {};
+  colors        = {};
+  radius        = {};
 
   auto ext = get_extension(filename);
   if (ext == "ply" || ext == "PLY") {
-    load_ply_shape(filename, points, lines, triangles, quads, quads_positions,
-        quads_normals, quads_texcoords, positions, normals, texcoords, colors,
+    load_ply_shape(filename, points, lines, triangles, quads, quadspos,
+        quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
   } else if (ext == "obj" || ext == "OBJ") {
-    load_obj_shape(filename, points, lines, triangles, quads, quads_positions,
-        quads_normals, quads_texcoords, positions, normals, texcoords,
+    load_obj_shape(filename, points, lines, triangles, quads, quadspos,
+        quadsnorm, quadstexcoord, positions, normals, texcoords,
         preserve_facevarrying);
   } else if (ext == "hair" || ext == "HAIR") {
     load_cyhair_shape(
@@ -2629,20 +2628,19 @@ void load_shape(const string& filename, vector<int>& points,
 // Save ply mesh
 void save_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<float>& radius, bool ascii) {
   auto ext = get_extension(filename);
   if (ext == "ply" || ext == "PLY") {
-    return save_ply_shape(filename, points, lines, triangles, quads,
-        quads_positions, quads_normals, quads_texcoords, positions, normals,
-        texcoords, colors, radius, ascii);
+    return save_ply_shape(filename, points, lines, triangles, quads, quadspos,
+        quadsnorm, quadstexcoord, positions, normals, texcoords, colors, radius,
+        ascii);
   } else if (ext == "obj" || ext == "OBJ") {
-    return save_obj_shape(filename, points, lines, triangles, quads,
-        quads_positions, quads_normals, quads_texcoords, positions, normals,
-        texcoords);
+    return save_obj_shape(filename, points, lines, triangles, quads, quadspos,
+        quadsnorm, quadstexcoord, positions, normals, texcoords);
   } else {
     throw shapeio_error("unsupported mesh type " + ext);
   }
@@ -2650,8 +2648,8 @@ void save_shape(const string& filename, const vector<int>& points,
 
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, bool flip_texcoord) {
   try {
@@ -2775,19 +2773,19 @@ static void load_ply_shape(const string& filename, vector<int>& points,
 // Save ply mesh
 static void save_ply_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<float>& radius, bool ascii, bool flip_texcoord) {
-  if (!quads_positions.empty()) {
+  if (!quadspos.empty()) {
     auto split_quads         = vector<vec4i>{};
     auto split_positions     = vector<vec3f>{};
     auto split_normals       = vector<vec3f>{};
     auto split_texturecoords = vector<vec2f>{};
     split_facevarying(split_quads, split_positions, split_normals,
-        split_texturecoords, quads_positions, quads_normals, quads_texcoords,
-        positions, normals, texcoords);
+        split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords);
     return save_ply_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
         split_positions, split_normals, split_texturecoords, {}, {}, ascii,
         flip_texcoord);
@@ -2908,9 +2906,9 @@ struct load_obj_shape_cb : obj_callbacks {
   vector<vec2i>& lines;
   vector<vec3i>& triangles;
   vector<vec4i>& quads;
-  vector<vec4i>& quads_positions;
-  vector<vec4i>& quads_normals;
-  vector<vec4i>& quads_texcoords;
+  vector<vec4i>& quadspos;
+  vector<vec4i>& quadsnorm;
+  vector<vec4i>& quadstexcoord;
   vector<vec3f>& positions;
   vector<vec3f>& normals;
   vector<vec2f>& texcoords;
@@ -2932,17 +2930,17 @@ struct load_obj_shape_cb : obj_callbacks {
   unordered_map<int, int> norm_map     = unordered_map<int, int>();
 
   load_obj_shape_cb(vector<int>& points, vector<vec2i>& lines,
-      vector<vec3i>& triangles, vector<vec4i>& quads,
-      vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-      vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
-      vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying)
+      vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
+      vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+      vector<vec3f>& positions, vector<vec3f>& normals,
+      vector<vec2f>& texcoords, bool facevarying)
       : points{points}
       , lines{lines}
       , triangles{triangles}
       , quads{quads}
-      , quads_positions{quads_positions}
-      , quads_normals{quads_normals}
-      , quads_texcoords{quads_texcoords}
+      , quadspos{quadspos}
+      , quadsnorm{quadsnorm}
+      , quadstexcoord{quadstexcoord}
       , positions{positions}
       , normals{normals}
       , texcoords{texcoords}
@@ -3007,18 +3005,18 @@ struct load_obj_shape_cb : obj_callbacks {
       add_fvverts(verts);
       if (verts.size() == 4) {
         if (verts[0].position) {
-          quads_positions.push_back({pos_map.at(verts[0].position),
+          quadspos.push_back({pos_map.at(verts[0].position),
               pos_map.at(verts[1].position), pos_map.at(verts[2].position),
               pos_map.at(verts[3].position)});
         }
         if (verts[0].texcoord) {
-          quads_texcoords.push_back({texcoord_map.at(verts[0].texcoord),
+          quadstexcoord.push_back({texcoord_map.at(verts[0].texcoord),
               texcoord_map.at(verts[1].texcoord),
               texcoord_map.at(verts[2].texcoord),
               texcoord_map.at(verts[3].texcoord)});
         }
         if (verts[0].normal) {
-          quads_normals.push_back(
+          quadsnorm.push_back(
               {norm_map.at(verts[0].normal), norm_map.at(verts[1].normal),
                   norm_map.at(verts[2].normal), norm_map.at(verts[3].normal)});
         }
@@ -3026,20 +3024,20 @@ struct load_obj_shape_cb : obj_callbacks {
       } else {
         if (verts[0].position) {
           for (auto i = 2; i < verts.size(); i++)
-            quads_positions.push_back({pos_map.at(verts[0].position),
+            quadspos.push_back({pos_map.at(verts[0].position),
                 pos_map.at(verts[1].position), pos_map.at(verts[i].position),
                 pos_map.at(verts[i].position)});
         }
         if (verts[0].texcoord) {
           for (auto i = 2; i < verts.size(); i++)
-            quads_texcoords.push_back({texcoord_map.at(verts[0].texcoord),
+            quadstexcoord.push_back({texcoord_map.at(verts[0].texcoord),
                 texcoord_map.at(verts[1].texcoord),
                 texcoord_map.at(verts[i].texcoord),
                 texcoord_map.at(verts[i].texcoord)});
         }
         if (verts[0].normal) {
           for (auto i = 2; i < verts.size(); i++)
-            quads_normals.push_back({norm_map.at(verts[0].normal),
+            quadsnorm.push_back({norm_map.at(verts[0].normal),
                 norm_map.at(verts[1].normal), norm_map.at(verts[i].normal),
                 norm_map.at(verts[i].normal)});
         }
@@ -3076,8 +3074,8 @@ struct load_obj_shape_cb : obj_callbacks {
 // Load ply mesh
 static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, bool preserve_facevarying,
     bool flip_texcoord) {
   try {
@@ -3086,9 +3084,9 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     obj_params.exit_on_error = false;
     obj_params.geometry_only = true;
     obj_params.flip_texcoord = flip_texcoord;
-    auto cb = load_obj_shape_cb{points, lines, triangles, quads,
-        quads_positions, quads_normals, quads_texcoords, positions, normals,
-        texcoords, preserve_facevarying};
+    auto cb = load_obj_shape_cb{points, lines, triangles, quads, quadspos,
+        quadsnorm, quadstexcoord, positions, normals, texcoords,
+        preserve_facevarying};
     load_obj(filename, cb, obj_params);
 
     // merging quads and triangles
@@ -3128,8 +3126,8 @@ static inline void write_obj_line(
 // Load ply mesh
 static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, bool flip_texcoord) {
   // open file
@@ -3177,18 +3175,17 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   };
 
   // auto last_material_id = -1;
-  for (auto i = 0; i < quads_positions.size(); i++) {
+  for (auto i = 0; i < quadspos.size(); i++) {
     //        if (!quads_materials.empty() &&
     //            quads_materials[i] != last_material_id) {
     //            last_material_id = quads_materials[i];
     //            println_values(fs, "usemtl material_{}\n",
     //            last_material_id);
     //        }
-    auto qp = quads_positions.at(i);
-    auto qt = !quads_texcoords.empty() ? quads_texcoords.at(i)
-                                       : vec4i{-1, -1, -1, -1};
-    auto qn = !quads_normals.empty() ? quads_normals.at(i)
+    auto qp = quadspos.at(i);
+    auto qt = !quadstexcoord.empty() ? quadstexcoord.at(i)
                                      : vec4i{-1, -1, -1, -1};
+    auto qn = !quadsnorm.empty() ? quadsnorm.at(i) : vec4i{-1, -1, -1, -1};
     if (qp.z != qp.w) {
       write_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
           fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z),
