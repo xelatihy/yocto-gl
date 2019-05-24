@@ -428,7 +428,7 @@ void apply_edit(const string& filename, yocto_scene& scene,
   } else if (type == typeid(tonemap_params)) {
     tonemap_prms = any_cast<tonemap_params>(data);
   } else {
-    throw runtime_error("unsupported type "s + type.name());
+    throw std::runtime_error("unsupported type "s + type.name());
   }
 }
 
@@ -460,7 +460,7 @@ void load_element(
         subdiv.preserve_facevarying);
     tesselate_subdiv(scene, scene.subdivs[index]);
   } else {
-    throw runtime_error("unsupported type "s + type.name());
+    throw std::runtime_error("unsupported type "s + type.name());
   }
 }
 
@@ -478,7 +478,7 @@ void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
   } else if (type == typeid(yocto_instance)) {
     updated_instances.push_back(index);
   } else {
-    throw runtime_error("unsupported type "s + type.name());
+    throw std::runtime_error("unsupported type "s + type.name());
   }
 
   refit_bvh(bvh, scene, updated_shapes, bvh_prms);

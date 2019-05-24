@@ -340,15 +340,15 @@ inline void get_yaml_value(string_view str, bool& value) {
     throw io_error("expected bool");
   }
 }
-template <typename T, size_t N>
-inline void get_yaml_value(string_view str, array<T, N>& value) {
+template <typename T>
+inline void get_yaml_value(string_view str, T* values, int N) {
   skip_whitespace(str);
   if (str.empty() || str.front() != '[') throw io_error("expected array");
   str.remove_prefix(1);
   for (auto i = 0; i < N; i++) {
     skip_whitespace(str);
     if (str.empty()) throw io_error("expected array");
-    parse_value(str, value[i]);
+    parse_value(str, values[i]);
     skip_whitespace(str);
     if (i != N - 1) {
       if (str.empty() || str.front() != ',') throw io_error("expected array");
@@ -361,37 +361,37 @@ inline void get_yaml_value(string_view str, array<T, N>& value) {
   str.remove_prefix(1);
 }
 inline void get_yaml_value(string_view str, vec2f& value) {
-  return get_yaml_value(str, (array<float, 2>&)value);
+  return get_yaml_value(str, &value.x, 2);
 }
 inline void get_yaml_value(string_view str, vec3f& value) {
-  return get_yaml_value(str, (array<float, 3>&)value);
+  return get_yaml_value(str, &value.x, 3);
 }
 inline void get_yaml_value(string_view str, vec4f& value) {
-  return get_yaml_value(str, (array<float, 4>&)value);
+  return get_yaml_value(str, &value.x, 4);
 }
 inline void get_yaml_value(string_view str, vec2i& value) {
-  return get_yaml_value(str, (array<int, 2>&)value);
+  return get_yaml_value(str, &value.x, 2);
 }
 inline void get_yaml_value(string_view str, vec3i& value) {
-  return get_yaml_value(str, (array<int, 3>&)value);
+  return get_yaml_value(str, &value.x, 3);
 }
 inline void get_yaml_value(string_view str, vec4i& value) {
-  return get_yaml_value(str, (array<int, 4>&)value);
+  return get_yaml_value(str, &value.x, 4);
 }
 inline void get_yaml_value(string_view str, frame2f& value) {
-  return get_yaml_value(str, (array<float, 6>&)value);
+  return get_yaml_value(str, &value.x.x, 6);
 }
 inline void get_yaml_value(string_view str, frame3f& value) {
-  return get_yaml_value(str, (array<float, 12>&)value);
+  return get_yaml_value(str, &value.x.x, 12);
 }
 inline void get_yaml_value(string_view str, mat2f& value) {
-  return get_yaml_value(str, (array<float, 4>&)value);
+  return get_yaml_value(str, &value.x.x, 4);
 }
 inline void get_yaml_value(string_view str, mat3f& value) {
-  return get_yaml_value(str, (array<float, 9>&)value);
+  return get_yaml_value(str, &value.x.x, 9);
 }
 inline void get_yaml_value(string_view str, mat4f& value) {
-  return get_yaml_value(str, (array<float, 16>&)value);
+  return get_yaml_value(str, &value.x.x, 16);
 }
 
 struct load_yaml_params {};

@@ -32,7 +32,7 @@
 // vectors and directions (`transform_point()`, `transform_vector()`,
 // `transform_direction()`). Transform matrices and frames can be
 // constructed from basic translation, rotation and scaling, e.g. with
-// `make_translation_mat()` or `translation_frame()` respectively, etc.
+// `translation_mat()` or `translation_frame()` respectively, etc.
 // For rotation we support axis-angle and quaternions, with slerp.
 //
 //
@@ -70,18 +70,14 @@
 // -----------------------------------------------------------------------------
 
 #include <algorithm>
-#include <array>
 #include <cfloat>
 #include <climits>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <functional>
-#include <memory>
-#include <numeric>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -111,20 +107,11 @@ using std::sqrt;
 using std::swap;
 using std::tan;
 
-using std::array;
-using std::exception;
 using std::function;
-using std::invalid_argument;
-using std::make_shared;
-using std::make_unique;
-using std::out_of_range;
 using std::pair;
-using std::runtime_error;
 using std::shared_ptr;
 using std::string;
 using std::string_view;
-using std::tuple;
-using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
 using namespace std::literals::string_literals;
@@ -1725,7 +1712,7 @@ inline mat4f ortho_mat(
       {0, 0, -2 / (f - n), 0},
       {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
-inline mat4f make_ortho2d_mat(
+inline mat4f ortho2d_mat(
     float left, float right, float bottom, float top) {
   return ortho_mat(left, right, bottom, top, -1, 1);
 }

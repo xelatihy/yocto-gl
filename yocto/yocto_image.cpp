@@ -64,6 +64,8 @@
 #include "ext/ArHosekSkyModel.cpp"
 #include "ext/ArHosekSkyModel.h"
 
+#include <memory>
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
 // -----------------------------------------------------------------------------
@@ -1455,7 +1457,7 @@ static inline float* load_pfm(
     const char* filename, int* w, int* h, int* nc, int req) {
   auto fs = fopen(filename, "rb");
   if (!fs) return nullptr;
-  auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
+  auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
       fs, [](FILE* f) { fclose(f); }};
 
   // buffer
@@ -1487,7 +1489,7 @@ static inline float* load_pfm(
   auto npixels = (size_t)(*w) * (size_t)(*h);
   auto nvalues = npixels * (size_t)(*nc);
   auto nrow    = (size_t)(*w) * (size_t)(*nc);
-  auto pixels  = unique_ptr<float[]>(new float[nvalues]);
+  auto pixels  = std::unique_ptr<float[]>(new float[nvalues]);
   for (auto j = *h - 1; j >= 0; j--) {
     if (fread(pixels.get() + j * nrow, sizeof(float), nrow, fs) != nrow)
       return nullptr;
@@ -1515,7 +1517,7 @@ static inline float* load_pfm(
   if (req < 0 || req > 4) {
     return nullptr;
   }
-  auto cpixels = unique_ptr<float[]>(new float[req * npixels]);
+  auto cpixels = std::unique_ptr<float[]>(new float[req * npixels]);
   for (auto i = 0ull; i < npixels; i++) {
     auto vp = pixels.get() + i * (*nc);
     auto cp = cpixels.get() + i * req;
@@ -1567,7 +1569,7 @@ static inline bool save_pfm(
     const char* filename, int w, int h, int nc, const float* pixels) {
   auto fs = fopen(filename, "wb");
   if (!fs) return false;
-  auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
+  auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
       fs, [](FILE* f) { fclose(f); }};
 
   if (fprintf(fs, "%s\n", (nc == 1) ? "Pf" : "PF") < 0) return false;
@@ -1903,7 +1905,7 @@ static inline float* load_yvol(
     const char* filename, int* w, int* h, int* d, int* nc, int req) {
   auto fs = fopen(filename, "rb");
   if (!fs) return nullptr;
-  auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
+  auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
       fs, [](FILE* f) { fclose(f); }};
 
   // buffer
@@ -1926,7 +1928,7 @@ static inline float* load_yvol(
   // read data
   auto nvoxels = (size_t)(*w) * (size_t)(*h) * (size_t)(*d);
   auto nvalues = nvoxels * (size_t)(*nc);
-  auto voxels  = unique_ptr<float[]>(new float[nvalues]);
+  auto voxels  = std::unique_ptr<float[]>(new float[nvalues]);
   if (fread(voxels.get(), sizeof(float), nvalues, fs) != nvalues)
     return nullptr;
 
@@ -1937,7 +1939,7 @@ static inline float* load_yvol(
   if (req < 0 || req > 4) {
     return nullptr;
   }
-  auto cvoxels = unique_ptr<float[]>(new float[req * nvoxels]);
+  auto cvoxels = std::unique_ptr<float[]>(new float[req * nvoxels]);
   for (auto i = 0; i < nvoxels; i++) {
     auto vp = voxels.get() + i * (*nc);
     auto cp = cvoxels.get() + i * req;
@@ -2024,7 +2026,7 @@ static inline bool save_yvol(
     const char* filename, int w, int h, int d, int nc, const float* voxels) {
   auto fs = fopen(filename, "wb");
   if (!fs) return false;
-  auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
+  auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
       fs, [](FILE* f) { fclose(f); }};
 
   if (fprintf(fs, "YVOL\n") < 0) return false;

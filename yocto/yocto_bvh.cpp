@@ -397,24 +397,24 @@ bvh_scene::~bvh_scene() {
 static void embree_error(void* ctx, RTCError code, const char* str) {
   switch (code) {
     case RTC_ERROR_UNKNOWN:
-      throw runtime_error("RTC_ERROR_UNKNOWN: "s + str);
+      throw std::runtime_error("RTC_ERROR_UNKNOWN: "s + str);
       break;
     case RTC_ERROR_INVALID_ARGUMENT:
-      throw runtime_error("RTC_ERROR_INVALID_ARGUMENT: "s + str);
+      throw std::runtime_error("RTC_ERROR_INVALID_ARGUMENT: "s + str);
       break;
     case RTC_ERROR_INVALID_OPERATION:
-      throw runtime_error("RTC_ERROR_INVALID_OPERATION: "s + str);
+      throw std::runtime_error("RTC_ERROR_INVALID_OPERATION: "s + str);
       break;
     case RTC_ERROR_OUT_OF_MEMORY:
-      throw runtime_error("RTC_ERROR_OUT_OF_MEMORY: "s + str);
+      throw std::runtime_error("RTC_ERROR_OUT_OF_MEMORY: "s + str);
       break;
     case RTC_ERROR_UNSUPPORTED_CPU:
-      throw runtime_error("RTC_ERROR_UNSUPPORTED_CPU: "s + str);
+      throw std::runtime_error("RTC_ERROR_UNSUPPORTED_CPU: "s + str);
       break;
     case RTC_ERROR_CANCELLED:
-      throw runtime_error("RTC_ERROR_CANCELLED: "s + str);
+      throw std::runtime_error("RTC_ERROR_CANCELLED: "s + str);
       break;
-    default: throw runtime_error("invalid error code"); break;
+    default: throw std::runtime_error("invalid error code"); break;
   }
 }
 
@@ -449,7 +449,7 @@ static void build_embree_bvh(bvh_shape& shape, const bvh_params& params) {
   shape.embree_bvh = embree_scene;
   auto embree_geom = (RTCGeometry) nullptr;
   if (!shape.points.empty()) {
-    throw runtime_error("embree does not support points");
+    throw std::runtime_error("embree does not support points");
   } else if (!shape.lines.empty()) {
     auto elines     = vector<int>{};
     auto epositions = vector<vec4f>{};
@@ -564,9 +564,9 @@ static void build_embree_bvh(bvh_scene& scene, const bvh_params& params) {
   for (auto instance_id = 0; instance_id < scene.instances.size();
        instance_id++) {
     auto& instance = scene.instances[instance_id];
-    if (instance.shape < 0) throw runtime_error("empty instance");
+    if (instance.shape < 0) throw std::runtime_error("empty instance");
     auto& shape = scene.shapes[instance.shape];
-    if (!shape.embree_bvh) throw runtime_error("bvh not built");
+    if (!shape.embree_bvh) throw std::runtime_error("bvh not built");
     auto embree_geom = rtcNewGeometry(
         embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(embree_geom, (RTCScene)shape.embree_bvh);
@@ -604,7 +604,7 @@ static void build_embree_flattened_bvh(
         p = transform_point(instance.frame, p);
     }
     if (!shape.points.empty()) {
-      throw runtime_error("embree does not support points");
+      throw std::runtime_error("embree does not support points");
     } else if (!shape.lines.empty()) {
       auto elines     = vector<int>{};
       auto epositions = vector<vec4f>{};
@@ -670,7 +670,7 @@ static void build_embree_flattened_bvh(
       memcpy(embree_quads, shape.quads_positions.data(),
           shape.quads_positions.size() * 16);
     } else {
-      throw runtime_error("empty bvh");
+      throw std::runtime_error("empty bvh");
     }
     rtcCommitGeometry(embree_geom);
     rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
@@ -681,7 +681,7 @@ static void build_embree_flattened_bvh(
 // Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not
 // available.
 static void refit_embree_bvh(bvh_shape& bvh) {
-  throw runtime_error("not yet implemented");
+  throw std::runtime_error("not yet implemented");
 }
 static bool intersect_embree_bvh(const bvh_shape& shape, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any) {
@@ -792,7 +792,7 @@ static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw runtime_error("bad bvh split");
+    throw std::runtime_error("bad bvh split");
     split_axis = 0;
     mid        = (start + end) / 2;
   }
@@ -831,7 +831,7 @@ static pair<int, int> split_balanced(
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw runtime_error("bad bvh split");
+    throw std::runtime_error("bad bvh split");
     split_axis = 0;
     mid        = (start + end) / 2;
   }
@@ -870,7 +870,7 @@ static pair<int, int> split_middle(
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw runtime_error("bad bvh split");
+    throw std::runtime_error("bad bvh split");
     split_axis = 0;
     mid        = (start + end) / 2;
   }
@@ -1119,7 +1119,7 @@ void build_bvh(bvh_scene& scene, const bvh_params& params) {
 
 void refit_bvh(bvh_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
-  if (shape.embree_bvh) throw runtime_error("Embree reftting disabled");
+  if (shape.embree_bvh) throw std::runtime_error("Embree reftting disabled");
 #endif
 
   // refit
@@ -1169,7 +1169,7 @@ void refit_bvh(bvh_scene& scene, const vector<int>& updated_shapes,
   for (auto shape : updated_shapes) refit_bvh(scene.shapes[shape], params);
 
 #if YOCTO_EMBREE
-  if (scene.embree_bvh) throw runtime_error("Embree reftting disabled");
+  if (scene.embree_bvh) throw std::runtime_error("Embree reftting disabled");
 #endif
 
   // refit

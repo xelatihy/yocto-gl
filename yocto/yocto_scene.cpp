@@ -87,7 +87,7 @@ void subdivide_shape(yocto_shape& shape, int subdivision_level,
     bool catmull_clark, bool update_normals) {
   if (!subdivision_level) return;
   if (!shape.points.empty()) {
-    throw runtime_error("point subdivision not supported");
+    throw std::runtime_error("point subdivision not supported");
   } else if (!shape.lines.empty()) {
     subdivide_lines(shape.lines, shape.positions, shape.normals,
         shape.texcoords, shape.colors, shape.radius, subdivision_level);
@@ -110,7 +110,7 @@ void subdivide_shape(yocto_shape& shape, int subdivision_level,
     subdivide_catmullclark(
         shape.quads_texcoords, shape.texcoords, subdivision_level, true);
   } else {
-    throw runtime_error("empty shape");
+    throw std::runtime_error("empty shape");
   }
 
   if (update_normals) {
@@ -124,7 +124,7 @@ void subdivide_shape(yocto_shape& shape, int subdivision_level,
 void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     float scale, bool update_normals) {
   if (shape.texcoords.empty()) {
-    throw runtime_error("missing texture coordinates");
+    throw std::runtime_error("missing texture coordinates");
     return;
   }
 
@@ -215,7 +215,7 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
         value = keyframe_bezier(
             animation.keyframes_times, animation.translation_keyframes, time);
         break;
-      default: throw runtime_error("should not have been here");
+      default: throw std::runtime_error("should not have been here");
     }
     for (auto target : animation.node_targets)
       scene.nodes[target].translation = value;
@@ -315,7 +315,7 @@ void sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf) {
   } else if (!shape.quads_positions.empty()) {
     sample_quads_cdf(cdf, shape.quads_positions, shape.positions);
   } else {
-    throw runtime_error("empty shape");
+    throw std::runtime_error("empty shape");
   }
 }
 
@@ -365,7 +365,7 @@ void sample_environment_cdf(const yocto_scene& scene,
       if (i) texels_cdf[i] += texels_cdf[i - 1];
     }
   } else {
-    throw runtime_error("empty texture");
+    throw std::runtime_error("empty texture");
   }
 }
 
@@ -480,7 +480,7 @@ void add_tangent_spaces(yocto_scene& scene) {
       compute_tangent_spaces(shape.tangents, shape.triangles, shape.positions,
           shape.normals, shape.texcoords);
     } else {
-      throw runtime_error("type not supported");
+      throw std::runtime_error("type not supported");
     }
   }
 }
@@ -699,7 +699,7 @@ vec3f eval_element_normal(const yocto_shape& shape, int element_id) {
     norm   = quad_normal(shape.positions[q.x], shape.positions[q.y],
         shape.positions[q.z], shape.positions[q.w]);
   } else {
-    throw runtime_error("empty shape");
+    throw std::runtime_error("empty shape");
     norm = {0, 0, 1};
   }
   return norm;

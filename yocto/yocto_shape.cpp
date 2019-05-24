@@ -2130,7 +2130,7 @@ void make_fvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
       subdivide_quads_p(suzanne_quads, suzanne_positions);
     } break;
     default: {
-      throw runtime_error(
+      throw std::runtime_error(
           "shape type not supported " + std::to_string(params.type));
     } break;
   }

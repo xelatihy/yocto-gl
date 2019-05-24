@@ -617,7 +617,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
         check_opengl_error();
     }
 #endif
-  if (options.edges) throw runtime_error("edges are momentarily disabled");
+  if (options.edges) throw std::runtime_error("edges are momentarily disabled");
 
   // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
 }
@@ -714,7 +714,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
       init_opengl_texture(
           state.textures[texture_id], texture.ldr_image, true, true, true);
     } else {
-      throw runtime_error("bad texture");
+      throw std::runtime_error("bad texture");
     }
   }
   state.shapes.resize(scene.shapes.size());
@@ -973,7 +973,7 @@ void apply_edit(const string& filename, yocto_scene& scene,
   } else if (type == typeid(draw_scene_params)) {
     drawgl_prms = any_cast<draw_scene_params>(data);
   } else {
-    throw runtime_error("unsupported type "s + type.name());
+    throw std::runtime_error("unsupported type "s + type.name());
   }
   if (updated_hierarchy || time != last_time) {
     update_transforms(scene, time, anim_group);
@@ -1009,7 +1009,7 @@ void load_element(
         subdiv.preserve_facevarying);
     tesselate_subdiv(scene, scene.subdivs[index]);
   } else {
-    throw runtime_error("unsupported type "s + type.name());
+    throw std::runtime_error("unsupported type "s + type.name());
   }
 }
 
@@ -1090,7 +1090,7 @@ void update(app_state& app) {
             // not supported yet
             log_error("shape refresh is not supported yet");
           } else {
-            throw runtime_error("unsupported type");
+            throw std::runtime_error("unsupported type");
           }
         } catch (std::exception& e) {
           log_error(e.what());
@@ -1154,7 +1154,7 @@ void update(app_state& app) {
       case app_task_type::save_image: {
         log_info("start saving " + scn.imagename);
         task.result = async(
-            []() { throw runtime_error("not implemnted yet"); });
+            []() { throw std::runtime_error("not implemnted yet"); });
       } break;
       case app_task_type::save_scene: {
         log_info("start saving " + scn.outname);

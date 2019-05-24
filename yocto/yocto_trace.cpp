@@ -1394,7 +1394,7 @@ trace_sampler_func get_trace_sampler_func(const trace_params& params) {
     case trace_sampler_type::eyelight: return trace_eyelight;
     case trace_sampler_type::falsecolor: return trace_falsecolor;
     default: {
-      throw runtime_error("sampler unknown");
+      throw std::runtime_error("sampler unknown");
       return nullptr;
     }
   }
@@ -1408,7 +1408,7 @@ bool is_sampler_lit(const trace_params& params) {
     case trace_sampler_type::eyelight: return true;
     case trace_sampler_type::falsecolor: return true;
     default: {
-      throw runtime_error("sampler unknown");
+      throw std::runtime_error("sampler unknown");
       return false;
     }
   }

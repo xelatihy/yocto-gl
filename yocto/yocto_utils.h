@@ -442,7 +442,7 @@ inline pair<string, string> get_preset_type(const string& filename) {
   if (filename.find("::yocto::") == 0) {
     auto aux = filename.substr(string("::yocto::").size());
     auto pos = aux.find("::");
-    if (pos == aux.npos) throw runtime_error("bad preset name" + filename);
+    if (pos == aux.npos) throw std::runtime_error("bad preset name" + filename);
     return {aux.substr(0, pos), aux.substr(pos + 2)};
   } else {
     return {"", filename};
@@ -466,14 +466,14 @@ struct io_error : runtime_error {
 inline void load_text(const string& filename, string& str) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rt");
-  if (!fs) throw runtime_error("cannot open file " + filename);
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   str.resize(length);
   if (fread(str.data(), 1, length, fs) != length) {
     fclose(fs);
-    throw runtime_error("cannot read file " + filename);
+    throw std::runtime_error("cannot read file " + filename);
   }
   fclose(fs);
 }
@@ -481,10 +481,10 @@ inline void load_text(const string& filename, string& str) {
 // Save a text file
 inline void save_text(const string& filename, const string& str) {
   auto fs = fopen(filename.c_str(), "wt");
-  if (!fs) throw runtime_error("cannot open file " + filename);
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
   if (fprintf(fs, "%s", str.c_str()) < 0) {
     fclose(fs);
-    throw runtime_error("cannot write file " + filename);
+    throw std::runtime_error("cannot write file " + filename);
   }
   fclose(fs);
 }
@@ -493,14 +493,14 @@ inline void save_text(const string& filename, const string& str) {
 inline void load_binary(const string& filename, vector<byte>& data) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rb");
-  if (!fs) throw runtime_error("cannot open file " + filename);
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   data.resize(length);
   if (fread(data.data(), 1, length, fs) != length) {
     fclose(fs);
-    throw runtime_error("cannot read file " + filename);
+    throw std::runtime_error("cannot read file " + filename);
   }
   fclose(fs);
 }
@@ -508,10 +508,10 @@ inline void load_binary(const string& filename, vector<byte>& data) {
 // Save a binary file
 inline void save_binary(const string& filename, const vector<byte>& data) {
   auto fs = fopen(filename.c_str(), "wb");
-  if (!fs) throw runtime_error("cannot open file " + filename);
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
   if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
     fclose(fs);
-    throw runtime_error("cannot write file " + filename);
+    throw std::runtime_error("cannot write file " + filename);
   }
   fclose(fs);
 }
