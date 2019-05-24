@@ -883,7 +883,7 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
     case make_image_type::turbulence: {
       make_img([&params](vec2f uv) {
         uv *= 8;
-        auto v = perlin_turbulence_noise({uv.x, uv.y, 0.5f}, params.noise.x,
+        auto v = perlin_turbulence({uv.x, uv.y, 0.5f}, params.noise.x,
             params.noise.y, (int)params.noise.z);
         v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
         return lerp(params.color0, params.color1, v);
@@ -892,8 +892,8 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
     case make_image_type::fbm: {
       make_img([&params](vec2f uv) {
         uv *= 8;
-        auto v = perlin_fbm_noise({uv.x, uv.y, 0.5f}, params.noise.x,
-            params.noise.y, (int)params.noise.z);
+        auto v = perlin_fbm({uv.x, uv.y, 0.5f}, params.noise.x, params.noise.y,
+            (int)params.noise.z);
         v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
         return lerp(params.color0, params.color1, v);
       });
@@ -901,7 +901,7 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
     case make_image_type::ridge: {
       make_img([&params](vec2f uv) {
         uv *= 8;
-        auto v = perlin_ridge_noise({uv.x, uv.y, 0.5f}, params.noise.x,
+        auto v = perlin_ridge({uv.x, uv.y, 0.5f}, params.noise.x,
             params.noise.y, (int)params.noise.z, params.noise.w);
         v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
         return lerp(params.color0, params.color1, v);

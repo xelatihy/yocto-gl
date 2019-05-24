@@ -257,16 +257,13 @@ struct yocto_scene_node {
   vector<int> children = {};
 };
 
-// Keyframe type.
-enum struct yocto_interpolation_type { linear, step, bezier };
-
 // Keyframe data.
 struct yocto_animation {
-  string                   uri             = "";
-  string                   filename        = "";
-  string                   animation_group = "";
-  yocto_interpolation_type interpolation_type =
-      yocto_interpolation_type::linear;
+  enum struct type_t { linear, step, bezier };
+  string                uri          = "";
+  string                filename     = "";
+  string                group        = "";
+  type_t                type         = type_t::linear;
   vector<float>         times        = {};
   vector<vec3f>         translations = {};
   vector<vec4f>         rotations    = {};

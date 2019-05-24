@@ -354,7 +354,7 @@ void draw(const opengl_window& win) {
   if (!app.scenes.empty() && app.selected >= 0) {
     auto& scn = app.scenes.at(app.selected);
     if (scn.load_done && scn.gl_txt) {
-      update_image_view(scn.image_center, scn.image_scale, scn.display.size(),
+      update_imview(scn.image_center, scn.image_scale, scn.display.size(),
           win_size, scn.zoom_to_fit);
       draw_glimage_background(scn.gl_txt, win_size.x, win_size.y,
           scn.image_center, scn.image_scale);
@@ -828,7 +828,7 @@ void run_ui(app_state& app) {
       if (mouse_left && shift_down)
         pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
       pan.x = -pan.x;
-      update_camera_turntable(camera.frame, camera.focus, rotate, dolly, pan);
+      update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       if (camera.frame != old_camera.frame ||
           camera.focus != old_camera.focus) {
         scn.task_queue.emplace_back(app_task_type::apply_edit,

@@ -2225,7 +2225,7 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness) {
   auto bbox = invalidb3f;
   for (auto p : positions) bbox += p;
-  auto center              = bbox_center(bbox);
+  auto center              = yocto::center(bbox);
   auto inner_quads         = quads;
   auto inner_positions     = positions;
   auto inner_normals       = normals;
@@ -3080,14 +3080,14 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     bool flip_texcoord) {
   try {
     // load obj
-    auto obj_params          = load_obj_params();
-    obj_params.exit_on_error = false;
-    obj_params.geometry_only = true;
-    obj_params.flip_texcoord = flip_texcoord;
+    auto oparams          = obj_params();
+    oparams.exit_on_error = false;
+    oparams.geometry_only = true;
+    oparams.flip_texcoord = flip_texcoord;
     auto cb = load_obj_shape_cb{points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords,
         preserve_facevarying};
-    load_obj(filename, cb, obj_params);
+    load_obj(filename, cb, oparams);
 
     // merging quads and triangles
     if (!preserve_facevarying) {

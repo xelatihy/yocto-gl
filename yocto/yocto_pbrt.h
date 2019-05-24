@@ -863,14 +863,14 @@ struct pbrt_callbacks {
 };
 
 // Load pbrt params
-struct load_pbrt_params {
+struct pbrt_params {
   bool geometry_only = false;
   bool flip_texcoord = true;
 };
 
 // Load pbrt scene
-void load_pbrt(const string& filename, pbrt_callbacks& cb,
-    const load_pbrt_params& params = {});
+void load_pbrt(
+    const string& filename, pbrt_callbacks& cb, const pbrt_params& params = {});
 
 }  // namespace yocto
 

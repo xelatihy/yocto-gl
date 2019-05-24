@@ -126,33 +126,33 @@ struct obj_material {
 
 // Obj camera [extension].
 struct obj_camera {
-  string  name;                         // name
+  string  name;                     // name
   frame3f frame    = identity3x4f;  // transform
-  bool    ortho    = false;             // orthographic
-  float   width    = 0.036f;            // film size (default to 35mm)
-  float   height   = 0.024f;            // film size (default to 35mm)
-  float   focal    = 0.050f;            // focal length
-  float   aspect   = 16.0f / 9.0f;      // aspect ratio
-  float   aperture = 0;                 // lens aperture
-  float   focus    = float_max;         // focus distance
+  bool    ortho    = false;         // orthographic
+  float   width    = 0.036f;        // film size (default to 35mm)
+  float   height   = 0.024f;        // film size (default to 35mm)
+  float   focal    = 0.050f;        // focal length
+  float   aspect   = 16.0f / 9.0f;  // aspect ratio
+  float   aperture = 0;             // lens aperture
+  float   focus    = float_max;     // focus distance
 };
 
 // Obj environment [extension].
 struct obj_environment {
-  string           name;                      // name
+  string           name;                  // name
   frame3f          frame = identity3x4f;  // transform
-  vec3f            ke    = zero3f;            // emission color
-  obj_texture_info ke_txt;                    // emission texture
+  vec3f            ke    = zero3f;        // emission color
+  obj_texture_info ke_txt;                // emission texture
 };
 
 // Obj procedural object [extension].
 struct obj_procedural {
-  string  name;                      // name
+  string  name;                  // name
   frame3f frame = identity3x4f;  // transform
-  string  type;                      // type
-  string  material;                  // material
-  float   size  = 2;                 // size
-  int     level = -1;                // level of subdivision (-1 default)
+  string  type;                  // type
+  string  material;              // material
+  float   size  = 2;             // size
+  int     level = -1;            // level of subdivision (-1 default)
 };
 
 // Obj callbacks
@@ -175,7 +175,7 @@ struct obj_callbacks {
 };
 
 // Load obj params
-struct load_obj_params {
+struct obj_params {
   bool exit_on_error = false;
   bool geometry_only = false;
   bool flip_texcoord = true;
@@ -183,8 +183,8 @@ struct load_obj_params {
 };
 
 // Load obj scene
-void load_obj(const string& filename, obj_callbacks& cb,
-    const load_obj_params& params = {});
+void load_obj(
+    const string& filename, obj_callbacks& cb, const obj_params& params = {});
 
 }  // namespace yocto
 

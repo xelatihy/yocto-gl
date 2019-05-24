@@ -197,18 +197,18 @@ void tesselate_subdivs(yocto_scene& scene) {
 // Update animation transforms
 void update_transforms(yocto_scene& scene, yocto_animation& animation,
     float time, const string& anim_group) {
-  if (anim_group != "" && anim_group != animation.animation_group) return;
+  if (anim_group != "" && anim_group != animation.group) return;
 
   if (!animation.translations.empty()) {
     auto value = vec3f{0, 0, 0};
-    switch (animation.interpolation_type) {
-      case yocto_interpolation_type::step:
+    switch (animation.type) {
+      case yocto_animation::type_t::step:
         value = keyframe_step(animation.times, animation.translations, time);
         break;
-      case yocto_interpolation_type::linear:
+      case yocto_animation::type_t::linear:
         value = keyframe_linear(animation.times, animation.translations, time);
         break;
-      case yocto_interpolation_type::bezier:
+      case yocto_animation::type_t::bezier:
         value = keyframe_bezier(animation.times, animation.translations, time);
         break;
       default: throw std::runtime_error("should not have been here");
@@ -218,14 +218,14 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
   }
   if (!animation.rotations.empty()) {
     auto value = vec4f{0, 0, 0, 1};
-    switch (animation.interpolation_type) {
-      case yocto_interpolation_type::step:
+    switch (animation.type) {
+      case yocto_animation::type_t::step:
         value = keyframe_step(animation.times, animation.rotations, time);
         break;
-      case yocto_interpolation_type::linear:
+      case yocto_animation::type_t::linear:
         value = keyframe_linear(animation.times, animation.rotations, time);
         break;
-      case yocto_interpolation_type::bezier:
+      case yocto_animation::type_t::bezier:
         value = keyframe_bezier(animation.times, animation.rotations, time);
         break;
     }
@@ -233,14 +233,14 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
   }
   if (!animation.scales.empty()) {
     auto value = vec3f{1, 1, 1};
-    switch (animation.interpolation_type) {
-      case yocto_interpolation_type::step:
+    switch (animation.type) {
+      case yocto_animation::type_t::step:
         value = keyframe_step(animation.times, animation.scales, time);
         break;
-      case yocto_interpolation_type::linear:
+      case yocto_animation::type_t::linear:
         value = keyframe_linear(animation.times, animation.scales, time);
         break;
-      case yocto_interpolation_type::bezier:
+      case yocto_animation::type_t::bezier:
         value = keyframe_bezier(animation.times, animation.scales, time);
         break;
     }
@@ -280,7 +280,7 @@ vec2f compute_animation_range(
   if (scene.animations.empty()) return zero2f;
   auto range = vec2f{+float_max, -float_max};
   for (auto& animation : scene.animations) {
-    if (anim_group != "" && animation.animation_group != anim_group) continue;
+    if (anim_group != "" && animation.group != anim_group) continue;
     range.x = min(range.x, animation.times.front());
     range.y = max(range.y, animation.times.back());
   }
@@ -1108,16 +1108,16 @@ void set_view(yocto_camera& camera, const bbox3f& bbox,
   if (width != 0) camera.width = width;
   if (height != 0) camera.height = height;
   if (focal != 0) camera.focal = focal;
-  auto bbox_center = (bbox.max + bbox.min) / 2.0f;
+  auto center      = (bbox.max + bbox.min) / 2.0f;
   auto bbox_radius = length(bbox.max - bbox.min) / 2;
-  auto camera_dir  = (view_direction == zero3f) ? camera.frame.o - bbox_center
+  auto camera_dir  = (view_direction == zero3f) ? camera.frame.o - center
                                                : view_direction;
   if (camera_dir == zero3f) camera_dir = {0, 0, 1};
   auto camera_fov = min(camera_fovx(camera), camera_fovy(camera));
   if (camera_fov == 0) camera_fov = 45 * pif / 180;
   auto camera_dist = bbox_radius / sin(camera_fov / 2);
-  auto from        = camera_dir * (camera_dist * 1) + bbox_center;
-  auto to          = bbox_center;
+  auto from        = camera_dir * (camera_dist * 1) + center;
+  auto to          = center;
   auto up          = vec3f{0, 1, 0};
   camera.frame     = lookat_frame(from, to, up);
   camera.focus     = length(from - to);

@@ -56,9 +56,9 @@ struct app_edit {
 
 inline const unordered_map<int, string>& animation_type_names() {
   static auto names = unordered_map<int, string>{
-      {(int)yocto_interpolation_type::linear, "linear"},
-      {(int)yocto_interpolation_type::step, "step"},
-      {(int)yocto_interpolation_type::bezier, "bezier"},
+      {(int)yocto_animation::type_t::linear, "linear"},
+      {(int)yocto_animation::type_t::step, "step"},
+      {(int)yocto_animation::type_t::bezier, "bezier"},
   };
   return names;
 }
@@ -508,7 +508,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   auto updated = false;
   if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
   if (draw_gltextinput(win, "path", edited.filename)) updated = true;
-  if (draw_gltextinput(win, "group", edited.animation_group)) updated = true;
+  if (draw_gltextinput(win, "group", edited.group)) updated = true;
   // if(draw_glcombobox(win, "type", &value.type,
   // animation_type_names())) updated = false;
   draw_gllabel(win, "times", "%ld", edited.times.size());

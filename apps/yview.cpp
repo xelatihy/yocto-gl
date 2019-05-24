@@ -1195,7 +1195,7 @@ void run_ui(app_state& app) {
       if (mouse_left && !shift_down) rotate = (mouse_pos - last_pos) / 100.0f;
       if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
       if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-      update_camera_turntable(camera.frame, camera.focus, rotate, dolly, pan);
+      update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       if (camera.frame != old_camera.frame ||
           camera.focus != old_camera.focus) {
         scn.task_queue.emplace_back(app_task_type::apply_edit,

@@ -20,8 +20,8 @@
 //        `rand1f()`, `rand2f()`, `rand3f()`,
 //        `next_rand1d()`
 // 2. Perlin noise: `perlin_noise()` to generate Perlin noise with optional
-//    wrapping, with fractal variations `perlin_ridge_noise()`,
-//    `perlin_fbm_noise()`, `perlin_turbulence_noise()`
+//    wrapping, with fractal variations `perlin_ridge()`,
+//    `perlin_fbm()`, `perlin_turbulence()`
 // 3. Monte Carlo support: warp functions from [0,1)^k domains to domains
 //    commonly used in path tracing. In particular, use
 //    `sample_hemisphere()`, `sample_sphere()`,
@@ -313,12 +313,12 @@ namespace yocto {
 // output), gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
 inline float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
-inline float perlin_ridge_noise(const vec3f& p, float lacunarity = 2,
+inline float perlin_ridge(const vec3f& p, float lacunarity = 2,
     float gain = 0.5, int octaves = 6, float offset = 1,
     const vec3i& wrap = zero3i);
-inline float perlin_fbm_noise(const vec3f& p, float lacunarity = 2,
-    float gain = 0.5, int octaves = 6, const vec3i& wrap = zero3i);
-inline float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2,
+inline float perlin_fbm(const vec3f& p, float lacunarity = 2, float gain = 0.5,
+    int octaves = 6, const vec3i& wrap = zero3i);
+inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
     float gain = 0.5, int octaves = 6, const vec3i& wrap = zero3i);
 
 }  // namespace yocto
@@ -531,22 +531,22 @@ inline float perlin_noise(const vec3f& p, const vec3i& wrap) {
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_ridge_noise(const vec3f& p, float lacunarity, float gain,
+inline float perlin_ridge(const vec3f& p, float lacunarity, float gain,
     int octaves, float offset, const vec3i& wrap) {
   return _stb_perlin_ridge_noise3(
       p.x, p.y, p.z, lacunarity, gain, offset, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_fbm_noise(const vec3f& p, float lacunarity, float gain,
+inline float perlin_fbm(const vec3f& p, float lacunarity, float gain,
     int octaves, const vec3i& wrap) {
   return _stb_perlin_fbm_noise3(
       p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_turbulence_noise(const vec3f& p, float lacunarity,
-    float gain, int octaves, const vec3i& wrap) {
+inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
+    int octaves, const vec3i& wrap) {
   return _stb_perlin_turbulence_noise3(
       p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }

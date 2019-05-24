@@ -1389,8 +1389,8 @@ inline const auto invalidb2f = bbox2f{};
 inline const auto invalidb3f = bbox3f{};
 
 // Bounding box properties
-inline vec2f bbox_center(const bbox2f& a) { return (a.min + a.max) / 2; }
-inline vec2f bbox_size(const bbox2f& a) { return a.max - a.min; }
+inline vec2f center(const bbox2f& a) { return (a.min + a.max) / 2; }
+inline vec2f size(const bbox2f& a) { return a.max - a.min; }
 
 // Bounding box comparisons.
 inline bool operator==(const bbox2f& a, const bbox2f& b) {
@@ -1411,8 +1411,8 @@ inline bbox2f& operator+=(bbox2f& a, const vec2f& b) { return a = a + b; }
 inline bbox2f& operator+=(bbox2f& a, const bbox2f& b) { return a = a + b; }
 
 // Bounding box properties
-inline vec3f bbox_center(const bbox3f& a) { return (a.min + a.max) / 2; }
-inline vec3f bbox_size(const bbox3f& a) { return a.max - a.min; }
+inline vec3f center(const bbox3f& a) { return (a.min + a.max) / 2; }
+inline vec3f size(const bbox3f& a) { return a.max - a.min; }
 
 // Bounding box comparisons.
 inline bool operator==(const bbox3f& a, const bbox3f& b) {
@@ -1715,7 +1715,7 @@ inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
 }
 
 // Center image and autofit.
-inline void update_image_view(vec2f& center, float& scale, const vec2i& imsize,
+inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
     const vec2i& winsize, bool zoom_to_fit) {
   if (zoom_to_fit) {
     scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
@@ -1727,7 +1727,7 @@ inline void update_image_view(vec2f& center, float& scale, const vec2i& imsize,
 }
 
 // Turntable for UI navigation.
-inline void update_camera_turntable(vec3f& from, vec3f& to, vec3f& up,
+inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
     const vec2f& rotate, float dolly, const vec2f& pan) {
   // rotate if necessary
   if (rotate.x || rotate.y) {
@@ -1762,8 +1762,8 @@ inline void update_camera_turntable(vec3f& from, vec3f& to, vec3f& up,
 }
 
 // Turntable for UI navigation.
-inline void update_camera_turntable(frame3f& frame, float& focus,
-    const vec2f& rotate, float dolly, const vec2f& pan) {
+inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
+    float dolly, const vec2f& pan) {
   // rotate if necessary
   if (rotate != zero2f) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
@@ -1791,7 +1791,7 @@ inline void update_camera_turntable(frame3f& frame, float& focus,
 }
 
 // FPS camera for UI navigation for a frame parametrization.
-inline void update_camera_first_person(
+inline void update_fpscam(
     frame3f& frame, const vec3f& transl, const vec2f& rotate) {
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
   auto y = vec3f{0, 1, 0};

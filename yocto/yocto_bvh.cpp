@@ -1029,7 +1029,7 @@ void build_bvh(bvh_shape& shape, const bvh_params& params) {
     for (auto idx = 0; idx < prims.size(); idx++) {
       auto& p    = shape.points[idx];
       auto  bbox = point_bounds(shape.positions[p], shape.radius[p]);
-      prims[idx] = {bbox, bbox_center(bbox), idx};
+      prims[idx] = {bbox, center(bbox), idx};
     }
   } else if (!shape.lines.empty()) {
     prims = vector<bvh_prim>(shape.lines.size());
@@ -1037,7 +1037,7 @@ void build_bvh(bvh_shape& shape, const bvh_params& params) {
       auto& l    = shape.lines[idx];
       auto  bbox = line_bounds(shape.positions[l.x], shape.positions[l.y],
           shape.radius[l.x], shape.radius[l.y]);
-      prims[idx] = {bbox, bbox_center(bbox), idx};
+      prims[idx] = {bbox, center(bbox), idx};
     }
   } else if (!shape.triangles.empty()) {
     prims = vector<bvh_prim>(shape.triangles.size());
@@ -1045,7 +1045,7 @@ void build_bvh(bvh_shape& shape, const bvh_params& params) {
       auto& t    = shape.triangles[idx];
       auto  bbox = triangle_bounds(
           shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
-      prims[idx] = {bbox, bbox_center(bbox), idx};
+      prims[idx] = {bbox, center(bbox), idx};
     }
   } else if (!shape.quads.empty()) {
     prims = vector<bvh_prim>(shape.quads.size());
@@ -1053,7 +1053,7 @@ void build_bvh(bvh_shape& shape, const bvh_params& params) {
       auto& q    = shape.quads[idx];
       auto  bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
-      prims[idx] = {bbox, bbox_center(bbox), idx};
+      prims[idx] = {bbox, center(bbox), idx};
     }
   } else if (!shape.quadspos.empty()) {
     prims = vector<bvh_prim>(shape.quadspos.size());
@@ -1061,7 +1061,7 @@ void build_bvh(bvh_shape& shape, const bvh_params& params) {
       auto& q    = shape.quadspos[idx];
       auto  bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
-      prims[idx] = {bbox, bbox_center(bbox), idx};
+      prims[idx] = {bbox, center(bbox), idx};
     }
   } else {
   }
@@ -1097,7 +1097,7 @@ void build_bvh(bvh_scene& scene, const bvh_params& params) {
     auto  bbox     = sbvh.nodes.empty()
                     ? invalidb3f
                     : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
-    prims[idx] = {bbox, bbox_center(bbox), idx};
+    prims[idx] = {bbox, center(bbox), idx};
   }
 
   // build nodes

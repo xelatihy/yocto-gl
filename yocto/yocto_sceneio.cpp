@@ -1290,10 +1290,10 @@ static void load_obj_scene(
 
   try {
     // Parse obj
-    auto obj_params          = load_obj_params();
-    obj_params.geometry_only = false;
-    auto cb                  = load_obj_scene_cb{scene, params};
-    load_obj(filename, cb, obj_params);
+    auto oparams          = obj_params();
+    oparams.geometry_only = false;
+    auto cb               = load_obj_scene_cb{scene, params};
+    load_obj(filename, cb, oparams);
 
     // cleanup empty
     for (auto idx = 0; idx < scene.shapes.size(); idx++) {
@@ -2016,20 +2016,20 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
         auto gsampler  = gchannel->sampler;
         auto animation = yocto_animation{};
         animation.uri  = (ganm->name ? ganm->name : "anim") + to_string(aid++);
-        animation.animation_group = ganm->name ? ganm->name : "";
+        animation.group = ganm->name ? ganm->name : "";
         auto input_view           = accessor_values(gsampler->input);
         animation.times.resize(input_view.size());
         for (auto i = 0; i < input_view.size(); i++)
           animation.times[i] = input_view[i][0];
         switch (gsampler->interpolation) {
           case cgltf_interpolation_type_linear:
-            animation.interpolation_type = yocto_interpolation_type::linear;
+            animation.type = yocto_animation::type_t::linear;
             break;
           case cgltf_interpolation_type_step:
-            animation.interpolation_type = yocto_interpolation_type::step;
+            animation.type = yocto_animation::type_t::step;
             break;
           case cgltf_interpolation_type_cubic_spline:
-            animation.interpolation_type = yocto_interpolation_type::bezier;
+            animation.type = yocto_animation::type_t::bezier;
             break;
         }
         auto output_view = accessor_values(gsampler->output);
@@ -3295,7 +3295,7 @@ static void load_pbrt_scene(
 
   try {
     // Parse pbrt
-    auto pbrt_options = load_pbrt_params();
+    auto pbrt_options = pbrt_params();
     auto cb           = load_pbrt_scene_cb{scene, params, filename};
     load_pbrt(filename, cb, pbrt_options);
 
