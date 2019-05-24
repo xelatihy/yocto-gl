@@ -59,13 +59,13 @@ namespace yocto {
 struct pbrt_spectrum3f {
     float x, y, z;
 
-    constexpr pbrt_spectrum3f() : x{0}, y{0}, z{0} {}
-    constexpr pbrt_spectrum3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
-    constexpr explicit pbrt_spectrum3f(float v) : x{v}, y{v}, z{v} {}
-    constexpr explicit operator vec3f() const { return {x, y, z}; };
+     pbrt_spectrum3f() : x{0}, y{0}, z{0} {}
+     pbrt_spectrum3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
+     explicit pbrt_spectrum3f(float v) : x{v}, y{v}, z{v} {}
+     explicit operator vec3f() const { return {x, y, z}; };
 
-    constexpr float&       operator[](int i) { return (&x)[i]; }
-    constexpr const float& operator[](int i) const { return (&x)[i]; }
+     float&       operator[](int i) { return (&x)[i]; }
+     const float& operator[](int i) const { return (&x)[i]; }
 };
 
 // pbrt cameras

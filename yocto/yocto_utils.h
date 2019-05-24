@@ -217,39 +217,39 @@ namespace yocto {
 // std::vector.
 template <typename T, size_t N>
 struct short_vector {
-    constexpr short_vector() : count{0} {}
-    constexpr short_vector(initializer_list<T> values) : count{0} {
+    short_vector() : count{0} {}
+    short_vector(initializer_list<T> values) : count{0} {
         for (auto value : values) ptr[count++] = value;
     }
 
-    constexpr size_t size() const { return count; }
-    constexpr bool   empty() const { return count == 0; }
+    size_t size() const { return count; }
+    bool   empty() const { return count == 0; }
 
-    constexpr void push_back(const T& value) { ptr[count++] = value; }
-    constexpr void pop_back() { count--; }
+    void push_back(const T& value) { ptr[count++] = value; }
+    void pop_back() { count--; }
     template <typename... Args>
-    constexpr T& emplace_back(Args&&... args) {
+    T& emplace_back(Args&&... args) {
         ptr[count++] = T(std::forward(args)...);
         return ptr[count - 1];
     }
 
-    constexpr T&       operator[](size_t idx) { return ptr[idx]; }
-    constexpr const T& operator[](size_t idx) const { return ptr[idx]; }
-    constexpr T&       at(size_t idx) { return ptr[idx]; }
-    constexpr const T& at(size_t idx) const { return ptr[idx]; }
+    T&       operator[](size_t idx) { return ptr[idx]; }
+    const T& operator[](size_t idx) const { return ptr[idx]; }
+    T&       at(size_t idx) { return ptr[idx]; }
+    const T& at(size_t idx) const { return ptr[idx]; }
 
-    constexpr T&       front() { return ptr[0]; }
-    constexpr const T& front() const { return ptr[0]; }
-    constexpr T&       back() { return ptr[count - 1]; }
-    constexpr const T& back() const { return ptr[count - 1]; }
+    T&       front() { return ptr[0]; }
+    const T& front() const { return ptr[0]; }
+    T&       back() { return ptr[count - 1]; }
+    const T& back() const { return ptr[count - 1]; }
 
-    constexpr T*       data() { return count ? ptr : nullptr; }
-    constexpr const T* data() const { return count ? ptr : nullptr; }
+    T*       data() { return count ? ptr : nullptr; }
+    const T* data() const { return count ? ptr : nullptr; }
 
-    constexpr T*       begin() { return ptr; }
-    constexpr const T* begin() const { return ptr; }
-    constexpr T*       end() { return ptr + count; }
-    constexpr const T* end() const { return ptr + count; }
+    T*       begin() { return ptr; }
+    const T* begin() const { return ptr; }
+    T*       end() { return ptr + count; }
+    const T* end() const { return ptr + count; }
 
    private:
     T      ptr[N];

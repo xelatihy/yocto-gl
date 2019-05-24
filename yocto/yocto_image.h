@@ -528,13 +528,13 @@ inline vec3f apply_saturation(const vec3f& rgb, float saturation,
 // Convert between CIE XYZ and RGB
 inline vec3f rgb_to_xyz(const vec3f& rgb) {
     // https://en.wikipedia.org/wiki/SRGB
-    constexpr mat3f mat = {{0.4124, 0.2126, 0.0193}, {0.3576, 0.7152, 0.1192},
+    static const auto mat = mat3f{{0.4124, 0.2126, 0.0193}, {0.3576, 0.7152, 0.1192},
         {0.1805, 0.0722, 0.9504}};
     return mat * rgb;
 }
 inline vec3f xyz_to_rgb(const vec3f& xyz) {
     // https://en.wikipedia.org/wiki/SRGB
-    constexpr mat3f mat = {{+3.2406, -1.5372, -0.4986},
+    static const auto mat = mat3f{{+3.2406, -1.5372, -0.4986},
         {-0.9689, +1.8758, +0.0415}, {+0.0557, -0.2040, +1.0570}};
     return mat * xyz;
 }
@@ -559,22 +559,22 @@ vec3f rgb_to_hsv(const vec3f& rgb);
 
 // RGB color spaces
 enum struct color_space {
-    linear_srgb,   // default linear space (srgb linear)
-    srgb,          // srgb color space (non-linear)
-    adobe_rgb,     // Adobe rgb color space (non-linear)
-    prophoto_rgb,  // ProPhoto Kodak rgb color space (non-linear)
-    rec_709,       // hdtv color space (non-linear)
-    rec_2020,      // uhtv color space (non-linear)
-    rec_2100_pq,   // hdr color space with perceptual quantizer (non-linear)
-    rec_2100_hlg,  // hdr color space with hybrid log gamma (non-linear)
-    aces_2065,     // ACES storage format (linear)
-    aces_cg,       // ACES CG computation (linear)
-    aces_cc,       // ACES color correction (non-linear)
-    aces_cct,      // ACES color correction 2 (non-linear)
-    p3_dci,        // P3 DCI (non-linear)
-    p3_d60,        // P3 variation for D60 (non-linear)
-    p3_d65,        // P3 variation for D65 (non-linear)
-    p3_display,    // Apple display P3
+    rgb,         // default linear space (srgb linear)
+    srgb,        // srgb color space (non-linear)
+    adobe,       // Adobe rgb color space (non-linear)
+    prophoto,    // ProPhoto Kodak rgb color space (non-linear)
+    rec709,      // hdtv color space (non-linear)
+    rec2020,     // uhtv color space (non-linear)
+    rec2100pq,   // hdr color space with perceptual quantizer (non-linear)
+    rec2100hlg,  // hdr color space with hybrid log gamma (non-linear)
+    aces2065,    // ACES storage format (linear)
+    acescg,      // ACES CG computation (linear)
+    acescc,      // ACES color correction (non-linear)
+    acescct,     // ACES color correction 2 (non-linear)
+    p3dci,       // P3 DCI (non-linear)
+    p3d60,       // P3 variation for D60 (non-linear)
+    p3d65,       // P3 variation for D65 (non-linear)
+    p3display,   // Apple display P3
 };
 
 // Conversion between rgb color spaces

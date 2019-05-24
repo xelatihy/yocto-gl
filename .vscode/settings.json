@@ -80,7 +80,8 @@
         "variant": "cpp",
         "__node_handle": "cpp",
         "__errc": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "any": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "Disabled",
     "cmake.buildDirectory": "${workspaceRoot}/build/vscode",

@@ -140,25 +140,25 @@ namespace yocto {
 using byte = unsigned char;
 using uint = unsigned int;
 
-constexpr double pi  = 3.14159265358979323846;
-constexpr float  pif = (float)pi;
+inline const double pi  = 3.14159265358979323846;
+inline const float  pif = (float)pi;
 
-constexpr auto int_max   = INT_MAX;
-constexpr auto int_min   = INT_MIN;
-constexpr auto float_max = FLT_MAX;
-constexpr auto float_min = -FLT_MAX;
+inline const auto int_max   = INT_MAX;
+inline const auto int_min   = INT_MIN;
+inline const auto float_max = FLT_MAX;
+inline const auto float_min = -FLT_MAX;
 
-constexpr float min(float x, float y) { return (x < y) ? x : y; }
-constexpr float max(float x, float y) { return (x > y) ? x : y; }
-constexpr float clamp(float x, float min_, float max_) {
+inline float min(float x, float y) { return (x < y) ? x : y; }
+inline float max(float x, float y) { return (x > y) ? x : y; }
+inline float clamp(float x, float min_, float max_) {
     return min(max(x, min_), max_);
 }
-constexpr float clamp01(float x) { return min(max(x, 0.0f), 1.0f); }
-constexpr float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
-constexpr float bias(float a, float bias) {
+inline float clamp01(float x) { return min(max(x, 0.0f), 1.0f); }
+inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
+inline float bias(float a, float bias) {
     return a / ((1 / bias - 2) * (1 - a) + 1);
 }
-constexpr float gain(float a, float gain) {
+inline float gain(float a, float gain) {
     if (a < 0.5f) {
         return bias(a * 2, gain) / 2;
     } else {
@@ -168,12 +168,12 @@ constexpr float gain(float a, float gain) {
 inline float radians(float x) { return x * pif / 180; }
 inline float degrees(float x) { return x * 180 / pif; }
 
-constexpr int min(int x, int y) { return (x < y) ? x : y; }
-constexpr int max(int x, int y) { return (x > y) ? x : y; }
-constexpr int clamp(int x, int min_, int max_) {
+inline int min(int x, int y) { return (x < y) ? x : y; }
+inline int max(int x, int y) { return (x > y) ? x : y; }
+inline int clamp(int x, int min_, int max_) {
     return min(max(x, min_), max_);
 }
-constexpr int pow2(int x) { return 1 << x; }
+inline int pow2(int x) { return 1 << x; }
 
 }  // namespace yocto
 
@@ -186,12 +186,12 @@ struct vec2f {
     float x = 0;
     float y = 0;
 
-    constexpr vec2f() {}
-    constexpr vec2f(float x, float y) : x{x}, y{y} {}
-    constexpr explicit vec2f(float v) : x{v}, y{v} {}
+     vec2f() {}
+     vec2f(float x, float y) : x{x}, y{y} {}
+     explicit vec2f(float v) : x{v}, y{v} {}
 
-    constexpr float&       operator[](int i) { return (&x)[i]; }
-    constexpr const float& operator[](int i) const { return (&x)[i]; }
+     float&       operator[](int i) { return (&x)[i]; }
+     const float& operator[](int i) const { return (&x)[i]; }
 };
 
 struct vec3f {
@@ -199,13 +199,13 @@ struct vec3f {
     float y = 0;
     float z = 0;
 
-    constexpr vec3f() {}
-    constexpr vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
-    constexpr vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
-    constexpr explicit vec3f(float v) : x{v}, y{v}, z{v} {}
+     vec3f() {}
+     vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
+     vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
+     explicit vec3f(float v) : x{v}, y{v}, z{v} {}
 
-    constexpr float&       operator[](int i) { return (&x)[i]; }
-    constexpr const float& operator[](int i) const { return (&x)[i]; }
+     float&       operator[](int i) { return (&x)[i]; }
+     const float& operator[](int i) const { return (&x)[i]; }
 };
 
 struct vec4f {
@@ -214,88 +214,88 @@ struct vec4f {
     float z = 0;
     float w = 0;
 
-    constexpr vec4f() {}
-    constexpr vec4f(float x, float y, float z, float w)
+     vec4f() {}
+     vec4f(float x, float y, float z, float w)
         : x{x}, y{y}, z{z}, w{w} {}
-    constexpr vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-    constexpr explicit vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
+     vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
+     explicit vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
 
-    constexpr float&       operator[](int i) { return (&x)[i]; }
-    constexpr const float& operator[](int i) const { return (&x)[i]; }
+     float&       operator[](int i) { return (&x)[i]; }
+     const float& operator[](int i) const { return (&x)[i]; }
 };
 
 // Zero vector constants.
-constexpr auto zero2f = vec2f{0, 0};
-constexpr auto zero3f = vec3f{0, 0, 0};
-constexpr auto zero4f = vec4f{0, 0, 0, 0};
+inline const auto zero2f = vec2f{0, 0};
+inline const auto zero3f = vec3f{0, 0, 0};
+inline const auto zero4f = vec4f{0, 0, 0, 0};
 
 // Element access
 inline vec3f&       xyz(vec4f& a) { return (vec3f&)a; }
 inline const vec3f& xyz(const vec4f& a) { return (const vec3f&)a; }
 
 // Vector comparison operations.
-constexpr bool operator==(const vec2f& a, const vec2f& b) {
+inline bool operator==(const vec2f& a, const vec2f& b) {
     return a.x == b.x && a.y == b.y;
 }
-constexpr bool operator!=(const vec2f& a, const vec2f& b) {
+inline bool operator!=(const vec2f& a, const vec2f& b) {
     return a.x != b.x || a.y != b.y;
 }
 
 // Vector operations.
-constexpr vec2f operator+(const vec2f& a) { return a; }
-constexpr vec2f operator-(const vec2f& a) { return {-a.x, -a.y}; }
-constexpr vec2f operator+(const vec2f& a, const vec2f& b) {
+inline vec2f operator+(const vec2f& a) { return a; }
+inline vec2f operator-(const vec2f& a) { return {-a.x, -a.y}; }
+inline vec2f operator+(const vec2f& a, const vec2f& b) {
     return {a.x + b.x, a.y + b.y};
 }
-constexpr vec2f operator+(const vec2f& a, float b) {
+inline vec2f operator+(const vec2f& a, float b) {
     return {a.x + b, a.y + b};
 }
-constexpr vec2f operator+(float a, const vec2f& b) {
+inline vec2f operator+(float a, const vec2f& b) {
     return {a + b.x, a + b.y};
 }
-constexpr vec2f operator-(const vec2f& a, const vec2f& b) {
+inline vec2f operator-(const vec2f& a, const vec2f& b) {
     return {a.x - b.x, a.y - b.y};
 }
-constexpr vec2f operator-(const vec2f& a, float b) {
+inline vec2f operator-(const vec2f& a, float b) {
     return {a.x - b, a.y - b};
 }
-constexpr vec2f operator-(float a, const vec2f& b) {
+inline vec2f operator-(float a, const vec2f& b) {
     return {a - b.x, a - b.y};
 }
-constexpr vec2f operator*(const vec2f& a, const vec2f& b) {
+inline vec2f operator*(const vec2f& a, const vec2f& b) {
     return {a.x * b.x, a.y * b.y};
 }
-constexpr vec2f operator*(const vec2f& a, float b) {
+inline vec2f operator*(const vec2f& a, float b) {
     return {a.x * b, a.y * b};
 }
-constexpr vec2f operator*(float a, const vec2f& b) {
+inline vec2f operator*(float a, const vec2f& b) {
     return {a * b.x, a * b.y};
 }
-constexpr vec2f operator/(const vec2f& a, const vec2f& b) {
+inline vec2f operator/(const vec2f& a, const vec2f& b) {
     return {a.x / b.x, a.y / b.y};
 }
-constexpr vec2f operator/(const vec2f& a, float b) {
+inline vec2f operator/(const vec2f& a, float b) {
     return {a.x / b, a.y / b};
 }
-constexpr vec2f operator/(float a, const vec2f& b) {
+inline vec2f operator/(float a, const vec2f& b) {
     return {a / b.x, a / b.y};
 }
 
 // Vector assignments
-constexpr vec2f& operator+=(vec2f& a, const vec2f& b) { return a = a + b; }
-constexpr vec2f& operator+=(vec2f& a, float b) { return a = a + b; }
-constexpr vec2f& operator-=(vec2f& a, const vec2f& b) { return a = a - b; }
-constexpr vec2f& operator-=(vec2f& a, float b) { return a = a - b; }
-constexpr vec2f& operator*=(vec2f& a, const vec2f& b) { return a = a * b; }
-constexpr vec2f& operator*=(vec2f& a, float b) { return a = a * b; }
-constexpr vec2f& operator/=(vec2f& a, const vec2f& b) { return a = a / b; }
-constexpr vec2f& operator/=(vec2f& a, float b) { return a = a / b; }
+inline vec2f& operator+=(vec2f& a, const vec2f& b) { return a = a + b; }
+inline vec2f& operator+=(vec2f& a, float b) { return a = a + b; }
+inline vec2f& operator-=(vec2f& a, const vec2f& b) { return a = a - b; }
+inline vec2f& operator-=(vec2f& a, float b) { return a = a - b; }
+inline vec2f& operator*=(vec2f& a, const vec2f& b) { return a = a * b; }
+inline vec2f& operator*=(vec2f& a, float b) { return a = a * b; }
+inline vec2f& operator/=(vec2f& a, const vec2f& b) { return a = a / b; }
+inline vec2f& operator/=(vec2f& a, float b) { return a = a / b; }
 
 // Vector products and lengths.
-constexpr float dot(const vec2f& a, const vec2f& b) {
+inline float dot(const vec2f& a, const vec2f& b) {
     return a.x * b.x + a.y * b.y;
 }
-constexpr float cross(const vec2f& a, const vec2f& b) {
+inline float cross(const vec2f& a, const vec2f& b) {
     return a.x * b.y - a.y * b.x;
 }
 
@@ -310,22 +310,22 @@ inline float distance_squared(const vec2f& a, const vec2f& b) {
 }
 
 // Max element and clamp.
-constexpr vec2f max(const vec2f& a, float b) {
+inline vec2f max(const vec2f& a, float b) {
     return {max(a.x, b), max(a.y, b)};
 }
-constexpr vec2f min(const vec2f& a, float b) {
+inline vec2f min(const vec2f& a, float b) {
     return {min(a.x, b), min(a.y, b)};
 }
-constexpr vec2f max(const vec2f& a, const vec2f& b) {
+inline vec2f max(const vec2f& a, const vec2f& b) {
     return {max(a.x, b.x), max(a.y, b.y)};
 }
-constexpr vec2f min(const vec2f& a, const vec2f& b) {
+inline vec2f min(const vec2f& a, const vec2f& b) {
     return {min(a.x, b.x), min(a.y, b.y)};
 }
-constexpr vec2f clamp(const vec2f& x, float min, float max) {
+inline vec2f clamp(const vec2f& x, float min, float max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max)};
 }
-constexpr vec2f clamp01(const vec2f& x) { return {clamp01(x.x), clamp01(x.y)}; }
+inline vec2f clamp01(const vec2f& x) { return {clamp01(x.x), clamp01(x.y)}; }
 inline vec2f    lerp(const vec2f& a, const vec2f& b, float u) {
     return a * (1 - u) + b * u;
 }
@@ -333,18 +333,18 @@ inline vec2f lerp(const vec2f& a, const vec2f& b, const vec2f& u) {
     return a * (1 - u) + b * u;
 }
 
-constexpr float max(const vec2f& a) { return max(a.x, a.y); }
-constexpr float min(const vec2f& a) { return min(a.x, a.y); }
-constexpr float sum(const vec2f& a) { return a.x + a.y; }
-constexpr float mean(const vec2f& a) { return sum(a) / 2; }
-constexpr int   max_element(const vec2f& a) {
+inline float max(const vec2f& a) { return max(a.x, a.y); }
+inline float min(const vec2f& a) { return min(a.x, a.y); }
+inline float sum(const vec2f& a) { return a.x + a.y; }
+inline float mean(const vec2f& a) { return sum(a) / 2; }
+inline int   max_element(const vec2f& a) {
     auto pos = 0;
     for (auto i = 1; i < 2; i++) {
         if (a[i] > a[pos]) pos = i;
     }
     return pos;
 }
-constexpr int min_element(const vec2f& a) {
+inline int min_element(const vec2f& a) {
     auto pos = 0;
     for (auto i = 1; i < 2; i++) {
         if (a[i] < a[pos]) pos = i;
@@ -371,68 +371,68 @@ inline vec2f gain(const vec2f& a, float b) {
 };
 
 // Vector comparison operations.
-constexpr bool operator==(const vec3f& a, const vec3f& b) {
+inline bool operator==(const vec3f& a, const vec3f& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
 }
-constexpr bool operator!=(const vec3f& a, const vec3f& b) {
+inline bool operator!=(const vec3f& a, const vec3f& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z;
 }
 
 // Vector operations.
-constexpr vec3f operator+(const vec3f& a) { return a; }
-constexpr vec3f operator-(const vec3f& a) { return {-a.x, -a.y, -a.z}; }
-constexpr vec3f operator+(const vec3f& a, const vec3f& b) {
+inline vec3f operator+(const vec3f& a) { return a; }
+inline vec3f operator-(const vec3f& a) { return {-a.x, -a.y, -a.z}; }
+inline vec3f operator+(const vec3f& a, const vec3f& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z};
 }
-constexpr vec3f operator+(const vec3f& a, float b) {
+inline vec3f operator+(const vec3f& a, float b) {
     return {a.x + b, a.y + b, a.z + b};
 }
-constexpr vec3f operator+(float a, const vec3f& b) {
+inline vec3f operator+(float a, const vec3f& b) {
     return {a + b.x, a + b.y, a + b.z};
 }
-constexpr vec3f operator-(const vec3f& a, const vec3f& b) {
+inline vec3f operator-(const vec3f& a, const vec3f& b) {
     return {a.x - b.x, a.y - b.y, a.z - b.z};
 }
-constexpr vec3f operator-(const vec3f& a, float b) {
+inline vec3f operator-(const vec3f& a, float b) {
     return {a.x - b, a.y - b, a.z - b};
 }
-constexpr vec3f operator-(float a, const vec3f& b) {
+inline vec3f operator-(float a, const vec3f& b) {
     return {a - b.x, a - b.y, a - b.z};
 }
-constexpr vec3f operator*(const vec3f& a, const vec3f& b) {
+inline vec3f operator*(const vec3f& a, const vec3f& b) {
     return {a.x * b.x, a.y * b.y, a.z * b.z};
 }
-constexpr vec3f operator*(const vec3f& a, float b) {
+inline vec3f operator*(const vec3f& a, float b) {
     return {a.x * b, a.y * b, a.z * b};
 }
-constexpr vec3f operator*(float a, const vec3f& b) {
+inline vec3f operator*(float a, const vec3f& b) {
     return {a * b.x, a * b.y, a * b.z};
 }
-constexpr vec3f operator/(const vec3f& a, const vec3f& b) {
+inline vec3f operator/(const vec3f& a, const vec3f& b) {
     return {a.x / b.x, a.y / b.y, a.z / b.z};
 }
-constexpr vec3f operator/(const vec3f& a, float b) {
+inline vec3f operator/(const vec3f& a, float b) {
     return {a.x / b, a.y / b, a.z / b};
 }
-constexpr vec3f operator/(float a, const vec3f& b) {
+inline vec3f operator/(float a, const vec3f& b) {
     return {a / b.x, a / b.y, a / b.z};
 }
 
 // Vector assignments
-constexpr vec3f& operator+=(vec3f& a, const vec3f& b) { return a = a + b; }
-constexpr vec3f& operator+=(vec3f& a, float b) { return a = a + b; }
-constexpr vec3f& operator-=(vec3f& a, const vec3f& b) { return a = a - b; }
-constexpr vec3f& operator-=(vec3f& a, float b) { return a = a - b; }
-constexpr vec3f& operator*=(vec3f& a, const vec3f& b) { return a = a * b; }
-constexpr vec3f& operator*=(vec3f& a, float b) { return a = a * b; }
-constexpr vec3f& operator/=(vec3f& a, const vec3f& b) { return a = a / b; }
-constexpr vec3f& operator/=(vec3f& a, float b) { return a = a / b; }
+inline vec3f& operator+=(vec3f& a, const vec3f& b) { return a = a + b; }
+inline vec3f& operator+=(vec3f& a, float b) { return a = a + b; }
+inline vec3f& operator-=(vec3f& a, const vec3f& b) { return a = a - b; }
+inline vec3f& operator-=(vec3f& a, float b) { return a = a - b; }
+inline vec3f& operator*=(vec3f& a, const vec3f& b) { return a = a * b; }
+inline vec3f& operator*=(vec3f& a, float b) { return a = a * b; }
+inline vec3f& operator/=(vec3f& a, const vec3f& b) { return a = a / b; }
+inline vec3f& operator/=(vec3f& a, float b) { return a = a / b; }
 
 // Vector products and lengths.
-constexpr float dot(const vec3f& a, const vec3f& b) {
+inline float dot(const vec3f& a, const vec3f& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
-constexpr vec3f cross(const vec3f& a, const vec3f& b) {
+inline vec3f cross(const vec3f& a, const vec3f& b) {
     return {
         a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
@@ -472,22 +472,22 @@ inline vec3f refract(const vec3f& w, const vec3f& n, float eta) {
 }
 
 // Max element and clamp.
-constexpr vec3f max(const vec3f& a, float b) {
+inline vec3f max(const vec3f& a, float b) {
     return {max(a.x, b), max(a.y, b), max(a.z, b)};
 }
-constexpr vec3f min(const vec3f& a, float b) {
+inline vec3f min(const vec3f& a, float b) {
     return {min(a.x, b), min(a.y, b), min(a.z, b)};
 }
-constexpr vec3f max(const vec3f& a, const vec3f& b) {
+inline vec3f max(const vec3f& a, const vec3f& b) {
     return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
 }
-constexpr vec3f min(const vec3f& a, const vec3f& b) {
+inline vec3f min(const vec3f& a, const vec3f& b) {
     return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
 }
-constexpr vec3f clamp(const vec3f& x, float min, float max) {
+inline vec3f clamp(const vec3f& x, float min, float max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
 }
-constexpr vec3f clamp01(const vec3f& x) {
+inline vec3f clamp01(const vec3f& x) {
     return {clamp01(x.x), clamp01(x.y), clamp01(x.z)};
 }
 inline vec3f lerp(const vec3f& a, const vec3f& b, float u) {
@@ -497,18 +497,18 @@ inline vec3f lerp(const vec3f& a, const vec3f& b, const vec3f& u) {
     return a * (1 - u) + b * u;
 }
 
-constexpr float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }
-constexpr float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
-constexpr float sum(const vec3f& a) { return a.x + a.y + a.z; }
+inline float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }
+inline float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
+inline float sum(const vec3f& a) { return a.x + a.y + a.z; }
 inline float    mean(const vec3f& a) { return sum(a) / 3; }
-constexpr int   max_element(const vec3f& a) {
+inline int   max_element(const vec3f& a) {
     auto pos = 0;
     for (auto i = 1; i < 3; i++) {
         if (a[i] > a[pos]) pos = i;
     }
     return pos;
 }
-constexpr int min_element(const vec3f& a) {
+inline int min_element(const vec3f& a) {
     auto pos = 0;
     for (auto i = 1; i < 3; i++) {
         if (a[i] < a[pos]) pos = i;
@@ -537,65 +537,65 @@ inline bool isfinite(const vec3f& a) {
 };
 
 // Vector comparison operations.
-constexpr bool operator==(const vec4f& a, const vec4f& b) {
+inline bool operator==(const vec4f& a, const vec4f& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
-constexpr bool operator!=(const vec4f& a, const vec4f& b) {
+inline bool operator!=(const vec4f& a, const vec4f& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
 }
 
 // Vector operations.
-constexpr vec4f operator+(const vec4f& a) { return a; }
-constexpr vec4f operator-(const vec4f& a) { return {-a.x, -a.y, -a.z, -a.w}; }
-constexpr vec4f operator+(const vec4f& a, const vec4f& b) {
+inline vec4f operator+(const vec4f& a) { return a; }
+inline vec4f operator-(const vec4f& a) { return {-a.x, -a.y, -a.z, -a.w}; }
+inline vec4f operator+(const vec4f& a, const vec4f& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
-constexpr vec4f operator+(const vec4f& a, float b) {
+inline vec4f operator+(const vec4f& a, float b) {
     return {a.x + b, a.y + b, a.z + b, a.w + b};
 }
-constexpr vec4f operator+(float a, const vec4f& b) {
+inline vec4f operator+(float a, const vec4f& b) {
     return {a + b.x, a + b.y, a + b.z, a + b.w};
 }
-constexpr vec4f operator-(const vec4f& a, const vec4f& b) {
+inline vec4f operator-(const vec4f& a, const vec4f& b) {
     return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
 }
-constexpr vec4f operator-(const vec4f& a, float b) {
+inline vec4f operator-(const vec4f& a, float b) {
     return {a.x - b, a.y - b, a.z - b, a.w - b};
 }
-constexpr vec4f operator-(float a, const vec4f& b) {
+inline vec4f operator-(float a, const vec4f& b) {
     return {a - b.x, a - b.y, a - b.z, a - b.w};
 }
-constexpr vec4f operator*(const vec4f& a, const vec4f& b) {
+inline vec4f operator*(const vec4f& a, const vec4f& b) {
     return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
 }
-constexpr vec4f operator*(const vec4f& a, float b) {
+inline vec4f operator*(const vec4f& a, float b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
-constexpr vec4f operator*(float a, const vec4f& b) {
+inline vec4f operator*(float a, const vec4f& b) {
     return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
-constexpr vec4f operator/(const vec4f& a, const vec4f& b) {
+inline vec4f operator/(const vec4f& a, const vec4f& b) {
     return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
 }
-constexpr vec4f operator/(const vec4f& a, float b) {
+inline vec4f operator/(const vec4f& a, float b) {
     return {a.x / b, a.y / b, a.z / b, a.w / b};
 }
-constexpr vec4f operator/(float a, const vec4f& b) {
+inline vec4f operator/(float a, const vec4f& b) {
     return {a / b.x, a / b.y, a / b.z, a / b.w};
 }
 
 // Vector assignments
-constexpr vec4f& operator+=(vec4f& a, const vec4f& b) { return a = a + b; }
-constexpr vec4f& operator+=(vec4f& a, float b) { return a = a + b; }
-constexpr vec4f& operator-=(vec4f& a, const vec4f& b) { return a = a - b; }
-constexpr vec4f& operator-=(vec4f& a, float b) { return a = a - b; }
-constexpr vec4f& operator*=(vec4f& a, const vec4f& b) { return a = a * b; }
-constexpr vec4f& operator*=(vec4f& a, float b) { return a = a * b; }
-constexpr vec4f& operator/=(vec4f& a, const vec4f& b) { return a = a / b; }
-constexpr vec4f& operator/=(vec4f& a, float b) { return a = a / b; }
+inline vec4f& operator+=(vec4f& a, const vec4f& b) { return a = a + b; }
+inline vec4f& operator+=(vec4f& a, float b) { return a = a + b; }
+inline vec4f& operator-=(vec4f& a, const vec4f& b) { return a = a - b; }
+inline vec4f& operator-=(vec4f& a, float b) { return a = a - b; }
+inline vec4f& operator*=(vec4f& a, const vec4f& b) { return a = a * b; }
+inline vec4f& operator*=(vec4f& a, float b) { return a = a * b; }
+inline vec4f& operator/=(vec4f& a, const vec4f& b) { return a = a / b; }
+inline vec4f& operator/=(vec4f& a, float b) { return a = a / b; }
 
 // Vector products and lengths.
-constexpr float dot(const vec4f& a, const vec4f& b) {
+inline float dot(const vec4f& a, const vec4f& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 inline float length(const vec4f& a) { return sqrt(dot(a, a)); }
@@ -623,23 +623,23 @@ inline vec4f slerp(const vec4f& a, const vec4f& b, float u) {
 }
 
 // Max element and clamp.
-constexpr vec4f max(const vec4f& a, float b) {
+inline vec4f max(const vec4f& a, float b) {
     return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
 }
-constexpr vec4f min(const vec4f& a, float b) {
+inline vec4f min(const vec4f& a, float b) {
     return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
 }
-constexpr vec4f max(const vec4f& a, const vec4f& b) {
+inline vec4f max(const vec4f& a, const vec4f& b) {
     return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
 }
-constexpr vec4f min(const vec4f& a, const vec4f& b) {
+inline vec4f min(const vec4f& a, const vec4f& b) {
     return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
 }
-constexpr vec4f clamp(const vec4f& x, float min, float max) {
+inline vec4f clamp(const vec4f& x, float min, float max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
         clamp(x.w, min, max)};
 }
-constexpr vec4f clamp01(const vec4f& x) {
+inline vec4f clamp01(const vec4f& x) {
     return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
 }
 inline vec4f lerp(const vec4f& a, const vec4f& b, float u) {
@@ -649,22 +649,22 @@ inline vec4f lerp(const vec4f& a, const vec4f& b, const vec4f& u) {
     return a * (1 - u) + b * u;
 }
 
-constexpr float max(const vec4f& a) {
+inline float max(const vec4f& a) {
     return max(max(max(a.x, a.y), a.z), a.w);
 }
-constexpr float min(const vec4f& a) {
+inline float min(const vec4f& a) {
     return min(min(min(a.x, a.y), a.z), a.w);
 }
-constexpr float sum(const vec4f& a) { return a.x + a.y + a.z + a.w; }
-constexpr float mean(const vec4f& a) { return sum(a) / 4; }
-constexpr int   max_element(const vec4f& a) {
+inline float sum(const vec4f& a) { return a.x + a.y + a.z + a.w; }
+inline float mean(const vec4f& a) { return sum(a) / 4; }
+inline int   max_element(const vec4f& a) {
     auto pos = 0;
     for (auto i = 1; i < 4; i++) {
         if (a[i] > a[pos]) pos = i;
     }
     return pos;
 }
-constexpr int min_element(const vec4f& a) {
+inline int min_element(const vec4f& a) {
     auto pos = 0;
     for (auto i = 1; i < 4; i++) {
         if (a[i] < a[pos]) pos = i;
@@ -706,19 +706,19 @@ inline bool isfinite(const vec4f& a) {
 
 // Quaternion operatons represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
-constexpr vec4f quat_mul(const vec4f& a, float b) {
+inline vec4f quat_mul(const vec4f& a, float b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
-constexpr vec4f quat_mul(const vec4f& a, const vec4f& b) {
+inline vec4f quat_mul(const vec4f& a, const vec4f& b) {
     return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
         a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
         a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
         a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
 }
-constexpr vec4f quat_conjugate(const vec4f& a) {
+inline vec4f quat_conjugate(const vec4f& a) {
     return {-a.x, -a.y, -a.z, a.w};
 }
-constexpr vec4f quat_inverse(const vec4f& a) {
+inline vec4f quat_inverse(const vec4f& a) {
     return quat_conjugate(a) / dot(a, a);
 }
 
@@ -733,12 +733,12 @@ struct vec2i {
     int x = 0;
     int y = 0;
 
-    constexpr vec2i() {}
-    constexpr vec2i(int x, int y) : x{x}, y{y} {}
-    constexpr explicit vec2i(int v) : x{v}, y{v} {}
+     vec2i() {}
+     vec2i(int x, int y) : x{x}, y{y} {}
+     explicit vec2i(int v) : x{v}, y{v} {}
 
-    constexpr int&       operator[](int i) { return (&x)[i]; }
-    constexpr const int& operator[](int i) const { return (&x)[i]; }
+     int&       operator[](int i) { return (&x)[i]; }
+     const int& operator[](int i) const { return (&x)[i]; }
 };
 
 struct vec3i {
@@ -746,13 +746,13 @@ struct vec3i {
     int y = 0;
     int z = 0;
 
-    constexpr vec3i() {}
-    constexpr vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
-    constexpr vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
-    constexpr explicit vec3i(int v) : x{v}, y{v}, z{v} {}
+     vec3i() {}
+     vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
+     vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
+     explicit vec3i(int v) : x{v}, y{v}, z{v} {}
 
-    constexpr int&       operator[](int i) { return (&x)[i]; }
-    constexpr const int& operator[](int i) const { return (&x)[i]; }
+     int&       operator[](int i) { return (&x)[i]; }
+     const int& operator[](int i) const { return (&x)[i]; }
 };
 
 struct vec4i {
@@ -761,13 +761,13 @@ struct vec4i {
     int z = 0;
     int w = 0;
 
-    constexpr vec4i() {}
-    constexpr vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
-    constexpr vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-    constexpr explicit vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
+     vec4i() {}
+     vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
+     vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
+     explicit vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
 
-    constexpr int&       operator[](int i) { return (&x)[i]; }
-    constexpr const int& operator[](int i) const { return (&x)[i]; }
+     int&       operator[](int i) { return (&x)[i]; }
+     const int& operator[](int i) const { return (&x)[i]; }
 };
 
 struct vec4b {
@@ -776,94 +776,94 @@ struct vec4b {
     byte z = 0;
     byte w = 0;
 
-    constexpr vec4b() {}
-    constexpr vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
-    constexpr explicit vec4b(byte v) : x{v}, y{v}, z{v}, w{v} {}
+     vec4b() {}
+     vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
+     explicit vec4b(byte v) : x{v}, y{v}, z{v}, w{v} {}
 
-    constexpr byte&       operator[](int i) { return (&x)[i]; }
-    constexpr const byte& operator[](int i) const { return (&x)[i]; }
+     byte&       operator[](int i) { return (&x)[i]; }
+     const byte& operator[](int i) const { return (&x)[i]; }
 };
 
 // Zero vector constants.
-constexpr auto zero2i = vec2i{0, 0};
-constexpr auto zero3i = vec3i{0, 0, 0};
-constexpr auto zero4i = vec4i{0, 0, 0, 0};
-constexpr auto zero4b = vec4b{0, 0, 0, 0};
+inline const auto zero2i = vec2i{0, 0};
+inline const auto zero3i = vec3i{0, 0, 0};
+inline const auto zero4i = vec4i{0, 0, 0, 0};
+inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
 inline vec3i&       xyz(vec4i& a) { return (vec3i&)a; }
 inline const vec3i& xyz(const vec4i& a) { return (const vec3i&)a; }
 
 // Vector comparison operations.
-constexpr bool operator==(const vec2i& a, const vec2i& b) {
+inline bool operator==(const vec2i& a, const vec2i& b) {
     return a.x == b.x && a.y == b.y;
 }
-constexpr bool operator!=(const vec2i& a, const vec2i& b) {
+inline bool operator!=(const vec2i& a, const vec2i& b) {
     return a.x != b.x || a.y != b.y;
 }
 
 // Vector operations.
-constexpr vec2i operator+(const vec2i& a) { return a; }
-constexpr vec2i operator-(const vec2i& a) { return {-a.x, -a.y}; }
-constexpr vec2i operator+(const vec2i& a, const vec2i& b) {
+inline vec2i operator+(const vec2i& a) { return a; }
+inline vec2i operator-(const vec2i& a) { return {-a.x, -a.y}; }
+inline vec2i operator+(const vec2i& a, const vec2i& b) {
     return {a.x + b.x, a.y + b.y};
 }
-constexpr vec2i operator+(const vec2i& a, int b) { return {a.x + b, a.y + b}; }
-constexpr vec2i operator+(int a, const vec2i& b) { return {a + b.x, a + b.y}; }
-constexpr vec2i operator-(const vec2i& a, const vec2i& b) {
+inline vec2i operator+(const vec2i& a, int b) { return {a.x + b, a.y + b}; }
+inline vec2i operator+(int a, const vec2i& b) { return {a + b.x, a + b.y}; }
+inline vec2i operator-(const vec2i& a, const vec2i& b) {
     return {a.x - b.x, a.y - b.y};
 }
-constexpr vec2i operator-(const vec2i& a, int b) { return {a.x - b, a.y - b}; }
-constexpr vec2i operator-(int a, const vec2i& b) { return {a - b.x, a - b.y}; }
-constexpr vec2i operator*(const vec2i& a, const vec2i& b) {
+inline vec2i operator-(const vec2i& a, int b) { return {a.x - b, a.y - b}; }
+inline vec2i operator-(int a, const vec2i& b) { return {a - b.x, a - b.y}; }
+inline vec2i operator*(const vec2i& a, const vec2i& b) {
     return {a.x * b.x, a.y * b.y};
 }
-constexpr vec2i operator*(const vec2i& a, int b) { return {a.x * b, a.y * b}; }
-constexpr vec2i operator*(int a, const vec2i& b) { return {a * b.x, a * b.y}; }
-constexpr vec2i operator/(const vec2i& a, const vec2i& b) {
+inline vec2i operator*(const vec2i& a, int b) { return {a.x * b, a.y * b}; }
+inline vec2i operator*(int a, const vec2i& b) { return {a * b.x, a * b.y}; }
+inline vec2i operator/(const vec2i& a, const vec2i& b) {
     return {a.x / b.x, a.y / b.y};
 }
-constexpr vec2i operator/(const vec2i& a, int b) { return {a.x / b, a.y / b}; }
-constexpr vec2i operator/(int a, const vec2i& b) { return {a / b.x, a / b.y}; }
+inline vec2i operator/(const vec2i& a, int b) { return {a.x / b, a.y / b}; }
+inline vec2i operator/(int a, const vec2i& b) { return {a / b.x, a / b.y}; }
 
 // Vector assignments
-constexpr vec2i& operator+=(vec2i& a, const vec2i& b) { return a = a + b; }
-constexpr vec2i& operator+=(vec2i& a, int b) { return a = a + b; }
-constexpr vec2i& operator-=(vec2i& a, const vec2i& b) { return a = a - b; }
-constexpr vec2i& operator-=(vec2i& a, int b) { return a = a - b; }
-constexpr vec2i& operator*=(vec2i& a, const vec2i& b) { return a = a * b; }
-constexpr vec2i& operator*=(vec2i& a, int b) { return a = a * b; }
-constexpr vec2i& operator/=(vec2i& a, const vec2i& b) { return a = a / b; }
-constexpr vec2i& operator/=(vec2i& a, int b) { return a = a / b; }
+inline vec2i& operator+=(vec2i& a, const vec2i& b) { return a = a + b; }
+inline vec2i& operator+=(vec2i& a, int b) { return a = a + b; }
+inline vec2i& operator-=(vec2i& a, const vec2i& b) { return a = a - b; }
+inline vec2i& operator-=(vec2i& a, int b) { return a = a - b; }
+inline vec2i& operator*=(vec2i& a, const vec2i& b) { return a = a * b; }
+inline vec2i& operator*=(vec2i& a, int b) { return a = a * b; }
+inline vec2i& operator/=(vec2i& a, const vec2i& b) { return a = a / b; }
+inline vec2i& operator/=(vec2i& a, int b) { return a = a / b; }
 
 // Max element and clamp.
-constexpr vec2i max(const vec2i& a, int b) {
+inline vec2i max(const vec2i& a, int b) {
     return {max(a.x, b), max(a.y, b)};
 }
-constexpr vec2i min(const vec2i& a, int b) {
+inline vec2i min(const vec2i& a, int b) {
     return {min(a.x, b), min(a.y, b)};
 }
-constexpr vec2i max(const vec2i& a, const vec2i& b) {
+inline vec2i max(const vec2i& a, const vec2i& b) {
     return {max(a.x, b.x), max(a.y, b.y)};
 }
-constexpr vec2i min(const vec2i& a, const vec2i& b) {
+inline vec2i min(const vec2i& a, const vec2i& b) {
     return {min(a.x, b.x), min(a.y, b.y)};
 }
-constexpr vec2i clamp(const vec2i& x, int min, int max) {
+inline vec2i clamp(const vec2i& x, int min, int max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max)};
 }
 
-constexpr int max(const vec2i& a) { return max(a.x, a.y); }
-constexpr int min(const vec2i& a) { return min(a.x, a.y); }
-constexpr int sum(const vec2i& a) { return a.x + a.y; }
-constexpr int max_element(const vec2i& a) {
+inline int max(const vec2i& a) { return max(a.x, a.y); }
+inline int min(const vec2i& a) { return min(a.x, a.y); }
+inline int sum(const vec2i& a) { return a.x + a.y; }
+inline int max_element(const vec2i& a) {
     auto pos = 0;
     for (auto i = 1; i < 2; i++) {
         if (a[i] > a[pos]) pos = i;
     }
     return pos;
 }
-constexpr int min_element(const vec2i& a) {
+inline int min_element(const vec2i& a) {
     auto pos = 0;
     for (auto i = 1; i < 2; i++) {
         if (a[i] < a[pos]) pos = i;
@@ -875,91 +875,91 @@ constexpr int min_element(const vec2i& a) {
 inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
 
 // Vector comparison operations.
-constexpr bool operator==(const vec3i& a, const vec3i& b) {
+inline bool operator==(const vec3i& a, const vec3i& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
 }
-constexpr bool operator!=(const vec3i& a, const vec3i& b) {
+inline bool operator!=(const vec3i& a, const vec3i& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z;
 }
 
 // Vector operations.
-constexpr vec3i operator+(const vec3i& a) { return a; }
-constexpr vec3i operator-(const vec3i& a) { return {-a.x, -a.y, -a.z}; }
-constexpr vec3i operator+(const vec3i& a, const vec3i& b) {
+inline vec3i operator+(const vec3i& a) { return a; }
+inline vec3i operator-(const vec3i& a) { return {-a.x, -a.y, -a.z}; }
+inline vec3i operator+(const vec3i& a, const vec3i& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z};
 }
-constexpr vec3i operator+(const vec3i& a, int b) {
+inline vec3i operator+(const vec3i& a, int b) {
     return {a.x + b, a.y + b, a.z + b};
 }
-constexpr vec3i operator+(int a, const vec3i& b) {
+inline vec3i operator+(int a, const vec3i& b) {
     return {a + b.x, a + b.y, a + b.z};
 }
-constexpr vec3i operator-(const vec3i& a, const vec3i& b) {
+inline vec3i operator-(const vec3i& a, const vec3i& b) {
     return {a.x - b.x, a.y - b.y, a.z - b.z};
 }
-constexpr vec3i operator-(const vec3i& a, int b) {
+inline vec3i operator-(const vec3i& a, int b) {
     return {a.x - b, a.y - b, a.z - b};
 }
-constexpr vec3i operator-(int a, const vec3i& b) {
+inline vec3i operator-(int a, const vec3i& b) {
     return {a - b.x, a - b.y, a - b.z};
 }
-constexpr vec3i operator*(const vec3i& a, const vec3i& b) {
+inline vec3i operator*(const vec3i& a, const vec3i& b) {
     return {a.x * b.x, a.y * b.y, a.z * b.z};
 }
-constexpr vec3i operator*(const vec3i& a, int b) {
+inline vec3i operator*(const vec3i& a, int b) {
     return {a.x * b, a.y * b, a.z * b};
 }
-constexpr vec3i operator*(int a, const vec3i& b) {
+inline vec3i operator*(int a, const vec3i& b) {
     return {a * b.x, a * b.y, a * b.z};
 }
-constexpr vec3i operator/(const vec3i& a, const vec3i& b) {
+inline vec3i operator/(const vec3i& a, const vec3i& b) {
     return {a.x / b.x, a.y / b.y, a.z / b.z};
 }
-constexpr vec3i operator/(const vec3i& a, int b) {
+inline vec3i operator/(const vec3i& a, int b) {
     return {a.x / b, a.y / b, a.z / b};
 }
-constexpr vec3i operator/(int a, const vec3i& b) {
+inline vec3i operator/(int a, const vec3i& b) {
     return {a / b.x, a / b.y, a / b.z};
 }
 
 // Vector assignments
-constexpr vec3i& operator+=(vec3i& a, const vec3i& b) { return a = a + b; }
-constexpr vec3i& operator+=(vec3i& a, int b) { return a = a + b; }
-constexpr vec3i& operator-=(vec3i& a, const vec3i& b) { return a = a - b; }
-constexpr vec3i& operator-=(vec3i& a, int b) { return a = a - b; }
-constexpr vec3i& operator*=(vec3i& a, const vec3i& b) { return a = a * b; }
-constexpr vec3i& operator*=(vec3i& a, int b) { return a = a * b; }
-constexpr vec3i& operator/=(vec3i& a, const vec3i& b) { return a = a / b; }
-constexpr vec3i& operator/=(vec3i& a, int b) { return a = a / b; }
+inline vec3i& operator+=(vec3i& a, const vec3i& b) { return a = a + b; }
+inline vec3i& operator+=(vec3i& a, int b) { return a = a + b; }
+inline vec3i& operator-=(vec3i& a, const vec3i& b) { return a = a - b; }
+inline vec3i& operator-=(vec3i& a, int b) { return a = a - b; }
+inline vec3i& operator*=(vec3i& a, const vec3i& b) { return a = a * b; }
+inline vec3i& operator*=(vec3i& a, int b) { return a = a * b; }
+inline vec3i& operator/=(vec3i& a, const vec3i& b) { return a = a / b; }
+inline vec3i& operator/=(vec3i& a, int b) { return a = a / b; }
 
 // Max element and clamp.
-constexpr vec3i max(const vec3i& a, int b) {
+inline vec3i max(const vec3i& a, int b) {
     return {max(a.x, b), max(a.y, b), max(a.z, b)};
 }
-constexpr vec3i min(const vec3i& a, int b) {
+inline vec3i min(const vec3i& a, int b) {
     return {min(a.x, b), min(a.y, b), min(a.z, b)};
 }
-constexpr vec3i max(const vec3i& a, const vec3i& b) {
+inline vec3i max(const vec3i& a, const vec3i& b) {
     return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
 }
-constexpr vec3i min(const vec3i& a, const vec3i& b) {
+inline vec3i min(const vec3i& a, const vec3i& b) {
     return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
 }
-constexpr vec3i clamp(const vec3i& x, int min, int max) {
+inline vec3i clamp(const vec3i& x, int min, int max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
 }
 
-constexpr int max(const vec3i& a) { return max(max(a.x, a.y), a.z); }
-constexpr int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
-constexpr int sum(const vec3i& a) { return a.x + a.y + a.z; }
-constexpr int max_element(const vec3i& a) {
+inline int max(const vec3i& a) { return max(max(a.x, a.y), a.z); }
+inline int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
+inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
+inline int max_element(const vec3i& a) {
     auto pos = 0;
     for (auto i = 1; i < 3; i++) {
         if (a[i] > a[pos]) pos = i;
     }
     return pos;
 }
-constexpr int min_element(const vec3i& a) {
+inline int min_element(const vec3i& a) {
     auto pos = 0;
     for (auto i = 1; i < 3; i++) {
         if (a[i] < a[pos]) pos = i;
@@ -971,92 +971,92 @@ constexpr int min_element(const vec3i& a) {
 inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
 
 // Vector comparison operations.
-constexpr bool operator==(const vec4i& a, const vec4i& b) {
+inline bool operator==(const vec4i& a, const vec4i& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
-constexpr bool operator!=(const vec4i& a, const vec4i& b) {
+inline bool operator!=(const vec4i& a, const vec4i& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
 }
 
 // Vector operations.
-constexpr vec4i operator+(const vec4i& a) { return a; }
-constexpr vec4i operator-(const vec4i& a) { return {-a.x, -a.y, -a.z, -a.w}; }
-constexpr vec4i operator+(const vec4i& a, const vec4i& b) {
+inline vec4i operator+(const vec4i& a) { return a; }
+inline vec4i operator-(const vec4i& a) { return {-a.x, -a.y, -a.z, -a.w}; }
+inline vec4i operator+(const vec4i& a, const vec4i& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
-constexpr vec4i operator+(const vec4i& a, int b) {
+inline vec4i operator+(const vec4i& a, int b) {
     return {a.x + b, a.y + b, a.z + b, a.w + b};
 }
-constexpr vec4i operator+(int a, const vec4i& b) {
+inline vec4i operator+(int a, const vec4i& b) {
     return {a + b.x, a + b.y, a + b.z, a + b.w};
 }
-constexpr vec4i operator-(const vec4i& a, const vec4i& b) {
+inline vec4i operator-(const vec4i& a, const vec4i& b) {
     return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
 }
-constexpr vec4i operator-(const vec4i& a, int b) {
+inline vec4i operator-(const vec4i& a, int b) {
     return {a.x - b, a.y - b, a.z - b, a.w - b};
 }
-constexpr vec4i operator-(int a, const vec4i& b) {
+inline vec4i operator-(int a, const vec4i& b) {
     return {a - b.x, a - b.y, a - b.z, a - b.w};
 }
-constexpr vec4i operator*(const vec4i& a, const vec4i& b) {
+inline vec4i operator*(const vec4i& a, const vec4i& b) {
     return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
 }
-constexpr vec4i operator*(const vec4i& a, int b) {
+inline vec4i operator*(const vec4i& a, int b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
-constexpr vec4i operator*(int a, const vec4i& b) {
+inline vec4i operator*(int a, const vec4i& b) {
     return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
-constexpr vec4i operator/(const vec4i& a, const vec4i& b) {
+inline vec4i operator/(const vec4i& a, const vec4i& b) {
     return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
 }
-constexpr vec4i operator/(const vec4i& a, int b) {
+inline vec4i operator/(const vec4i& a, int b) {
     return {a.x / b, a.y / b, a.z / b, a.w / b};
 }
-constexpr vec4i operator/(int a, const vec4i& b) {
+inline vec4i operator/(int a, const vec4i& b) {
     return {a / b.x, a / b.y, a / b.z, a / b.w};
 }
 
 // Vector assignments
-constexpr vec4i& operator+=(vec4i& a, const vec4i& b) { return a = a + b; }
-constexpr vec4i& operator+=(vec4i& a, int b) { return a = a + b; }
-constexpr vec4i& operator-=(vec4i& a, const vec4i& b) { return a = a - b; }
-constexpr vec4i& operator-=(vec4i& a, int b) { return a = a - b; }
-constexpr vec4i& operator*=(vec4i& a, const vec4i& b) { return a = a * b; }
-constexpr vec4i& operator*=(vec4i& a, int b) { return a = a * b; }
-constexpr vec4i& operator/=(vec4i& a, const vec4i& b) { return a = a / b; }
-constexpr vec4i& operator/=(vec4i& a, int b) { return a = a / b; }
+inline vec4i& operator+=(vec4i& a, const vec4i& b) { return a = a + b; }
+inline vec4i& operator+=(vec4i& a, int b) { return a = a + b; }
+inline vec4i& operator-=(vec4i& a, const vec4i& b) { return a = a - b; }
+inline vec4i& operator-=(vec4i& a, int b) { return a = a - b; }
+inline vec4i& operator*=(vec4i& a, const vec4i& b) { return a = a * b; }
+inline vec4i& operator*=(vec4i& a, int b) { return a = a * b; }
+inline vec4i& operator/=(vec4i& a, const vec4i& b) { return a = a / b; }
+inline vec4i& operator/=(vec4i& a, int b) { return a = a / b; }
 
 // Max element and clamp.
-constexpr vec4i max(const vec4i& a, int b) {
+inline vec4i max(const vec4i& a, int b) {
     return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
 }
-constexpr vec4i min(const vec4i& a, int b) {
+inline vec4i min(const vec4i& a, int b) {
     return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
 }
-constexpr vec4i max(const vec4i& a, const vec4i& b) {
+inline vec4i max(const vec4i& a, const vec4i& b) {
     return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
 }
-constexpr vec4i min(const vec4i& a, const vec4i& b) {
+inline vec4i min(const vec4i& a, const vec4i& b) {
     return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
 }
-constexpr vec4i clamp(const vec4i& x, int min, int max) {
+inline vec4i clamp(const vec4i& x, int min, int max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
         clamp(x.w, min, max)};
 }
 
-constexpr int max(const vec4i& a) { return max(max(max(a.x, a.y), a.z), a.w); }
-constexpr int min(const vec4i& a) { return min(min(min(a.x, a.y), a.z), a.w); }
-constexpr int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
-constexpr int max_element(const vec4i& a) {
+inline int max(const vec4i& a) { return max(max(max(a.x, a.y), a.z), a.w); }
+inline int min(const vec4i& a) { return min(min(min(a.x, a.y), a.z), a.w); }
+inline int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
+inline int max_element(const vec4i& a) {
     auto pos = 0;
     for (auto i = 1; i < 4; i++) {
         if (a[i] > a[pos]) pos = i;
     }
     return pos;
 }
-constexpr int min_element(const vec4i& a) {
+inline int min_element(const vec4i& a) {
     auto pos = 0;
     for (auto i = 1; i < 4; i++) {
         if (a[i] < a[pos]) pos = i;
@@ -1076,8 +1076,8 @@ namespace std {
 // Hash functor for vector for use with unordered_map
 template <typename T, size_t N>
 struct hash<std::array<T, N>> {
-    static constexpr std::hash<T> hasher = std::hash<T>();
-    size_t                        operator()(const std::array<T, N>& v) const {
+    size_t operator()(const std::array<T, N>& v) const {
+        static const std::hash<T> hasher = std::hash<T>();
         auto h = (size_t)0;
         for (auto i = 0; i < N; i++)
             h ^= hasher(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -1115,11 +1115,11 @@ struct mat2f {
     vec2f x = {0, 0};
     vec2f y = {0, 0};
 
-    constexpr mat2f() {}
-    constexpr mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
+     mat2f() {}
+     mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
 
-    constexpr vec2f&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec2f& operator[](int i) const { return (&x)[i]; }
+     vec2f&       operator[](int i) { return (&x)[i]; }
+     const vec2f& operator[](int i) const { return (&x)[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -1128,12 +1128,12 @@ struct mat3f {
     vec3f y = {0, 0, 0};
     vec3f z = {0, 0, 0};
 
-    constexpr mat3f() {}
-    constexpr mat3f(const vec3f& x, const vec3f& y, const vec3f& z)
+     mat3f() {}
+     mat3f(const vec3f& x, const vec3f& y, const vec3f& z)
         : x{x}, y{y}, z{z} {}
 
-    constexpr vec3f&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec3f& operator[](int i) const { return (&x)[i]; }
+     vec3f&       operator[](int i) { return (&x)[i]; }
+     const vec3f& operator[](int i) const { return (&x)[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -1143,95 +1143,95 @@ struct mat4f {
     vec4f z = {0, 0, 0, 0};
     vec4f w = {0, 0, 0, 0};
 
-    constexpr mat4f() {}
-    constexpr mat4f(
+     mat4f() {}
+     mat4f(
         const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w)
         : x{x}, y{y}, z{z}, w{w} {}
 
-    constexpr vec4f&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec4f& operator[](int i) const { return (&x)[i]; }
+     vec4f&       operator[](int i) { return (&x)[i]; }
+     const vec4f& operator[](int i) const { return (&x)[i]; }
 };
 
 // Identity matrices constants.
-constexpr auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
-constexpr auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-constexpr auto identity_mat4f = mat4f{
+inline const auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
+inline const auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+inline const auto identity_mat4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
-constexpr bool operator==(const mat2f& a, const mat2f& b) {
+inline bool operator==(const mat2f& a, const mat2f& b) {
     return a.x == b.x && a.y == b.y;
 }
-constexpr bool operator!=(const mat2f& a, const mat2f& b) { return !(a == b); }
+inline bool operator!=(const mat2f& a, const mat2f& b) { return !(a == b); }
 
 // Matrix operations.
-constexpr mat2f operator+(const mat2f& a, const mat2f& b) {
+inline mat2f operator+(const mat2f& a, const mat2f& b) {
     return {a.x + b.x, a.y + b.y};
 }
-constexpr mat2f operator*(const mat2f& a, float b) {
+inline mat2f operator*(const mat2f& a, float b) {
     return {a.x * b, a.y * b};
 }
-constexpr vec2f operator*(const mat2f& a, const vec2f& b) {
+inline vec2f operator*(const mat2f& a, const vec2f& b) {
     return a.x * b.x + a.y * b.y;
 }
-constexpr vec2f operator*(const vec2f& a, const mat2f& b) {
+inline vec2f operator*(const vec2f& a, const mat2f& b) {
     return {dot(a, b.x), dot(a, b.y)};
 }
-constexpr mat2f operator*(const mat2f& a, const mat2f& b) {
+inline mat2f operator*(const mat2f& a, const mat2f& b) {
     return {a * b.x, a * b.y};
 }
 
 // Matrix assignments.
-constexpr mat2f& operator+=(mat2f& a, const mat2f& b) { return a = a + b; }
-constexpr mat2f& operator*=(mat2f& a, const mat2f& b) { return a = a * b; }
-constexpr mat2f& operator*=(mat2f& a, float b) { return a = a * b; }
+inline mat2f& operator+=(mat2f& a, const mat2f& b) { return a = a + b; }
+inline mat2f& operator*=(mat2f& a, const mat2f& b) { return a = a * b; }
+inline mat2f& operator*=(mat2f& a, float b) { return a = a * b; }
 
 // Matrix diagonals and transposes.
-constexpr vec2f diagonal(const mat2f& a) { return {a.x.x, a.y.y}; }
-constexpr mat2f transpose(const mat2f& a) {
+inline vec2f diagonal(const mat2f& a) { return {a.x.x, a.y.y}; }
+inline mat2f transpose(const mat2f& a) {
     return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
 }
 
 // Matrix adjoints, determinants and inverses.
-constexpr float determinant(const mat2f& a) { return cross(a.x, a.y); }
-constexpr mat2f adjoint(const mat2f& a) {
+inline float determinant(const mat2f& a) { return cross(a.x, a.y); }
+inline mat2f adjoint(const mat2f& a) {
     return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
 }
-constexpr mat2f inverse(const mat2f& a) {
+inline mat2f inverse(const mat2f& a) {
     return adjoint(a) * (1 / determinant(a));
 }
 
 // Matrix comparisons.
-constexpr bool operator==(const mat3f& a, const mat3f& b) {
+inline bool operator==(const mat3f& a, const mat3f& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
 }
-constexpr bool operator!=(const mat3f& a, const mat3f& b) { return !(a == b); }
+inline bool operator!=(const mat3f& a, const mat3f& b) { return !(a == b); }
 
 // Matrix operations.
-constexpr mat3f operator+(const mat3f& a, const mat3f& b) {
+inline mat3f operator+(const mat3f& a, const mat3f& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z};
 }
-constexpr mat3f operator*(const mat3f& a, float b) {
+inline mat3f operator*(const mat3f& a, float b) {
     return {a.x * b, a.y * b, a.z * b};
 }
-constexpr vec3f operator*(const mat3f& a, const vec3f& b) {
+inline vec3f operator*(const mat3f& a, const vec3f& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
-constexpr vec3f operator*(const vec3f& a, const mat3f& b) {
+inline vec3f operator*(const vec3f& a, const mat3f& b) {
     return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
 }
-constexpr mat3f operator*(const mat3f& a, const mat3f& b) {
+inline mat3f operator*(const mat3f& a, const mat3f& b) {
     return {a * b.x, a * b.y, a * b.z};
 }
 
 // Matrix assignments.
-constexpr mat3f& operator+=(mat3f& a, const mat3f& b) { return a = a + b; }
-constexpr mat3f& operator*=(mat3f& a, const mat3f& b) { return a = a * b; }
-constexpr mat3f& operator*=(mat3f& a, float b) { return a = a * b; }
+inline mat3f& operator+=(mat3f& a, const mat3f& b) { return a = a + b; }
+inline mat3f& operator*=(mat3f& a, const mat3f& b) { return a = a * b; }
+inline mat3f& operator*=(mat3f& a, float b) { return a = a * b; }
 
 // Matrix diagonals and transposes.
-constexpr vec3f diagonal(const mat3f& a) { return {a.x.x, a.y.y, a.z.z}; }
-constexpr mat3f transpose(const mat3f& a) {
+inline vec3f diagonal(const mat3f& a) { return {a.x.x, a.y.y, a.z.z}; }
+inline mat3f transpose(const mat3f& a) {
     return {
         {a.x.x, a.y.x, a.z.x},
         {a.x.y, a.y.y, a.z.y},
@@ -1240,13 +1240,13 @@ constexpr mat3f transpose(const mat3f& a) {
 }
 
 // Matrix adjoints, determinants and inverses.
-constexpr float determinant(const mat3f& a) {
+inline float determinant(const mat3f& a) {
     return dot(a.x, cross(a.y, a.z));
 }
-constexpr mat3f adjoint(const mat3f& a) {
+inline mat3f adjoint(const mat3f& a) {
     return transpose(mat3f{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
 }
-constexpr mat3f inverse(const mat3f& a) {
+inline mat3f inverse(const mat3f& a) {
     return adjoint(a) * (1 / determinant(a));
 }
 
@@ -1263,38 +1263,38 @@ inline mat3f make_basis_fromz(const vec3f& v) {
 }
 
 // Matrix comparisons.
-constexpr bool operator==(const mat4f& a, const mat4f& b) {
+inline bool operator==(const mat4f& a, const mat4f& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
-constexpr bool operator!=(const mat4f& a, const mat4f& b) { return !(a == b); }
+inline bool operator!=(const mat4f& a, const mat4f& b) { return !(a == b); }
 
 // Matrix operations.
-constexpr mat4f operator+(const mat4f& a, const mat4f& b) {
+inline mat4f operator+(const mat4f& a, const mat4f& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
-constexpr mat4f operator*(const mat4f& a, float b) {
+inline mat4f operator*(const mat4f& a, float b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
-constexpr vec4f operator*(const mat4f& a, const vec4f& b) {
+inline vec4f operator*(const mat4f& a, const vec4f& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
-constexpr vec4f operator*(const vec4f& a, const mat4f& b) {
+inline vec4f operator*(const vec4f& a, const mat4f& b) {
     return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
 }
-constexpr mat4f operator*(const mat4f& a, const mat4f& b) {
+inline mat4f operator*(const mat4f& a, const mat4f& b) {
     return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
 
 // Matrix assignments.
-constexpr mat4f& operator+=(mat4f& a, const mat4f& b) { return a = a + b; }
-constexpr mat4f& operator*=(mat4f& a, const mat4f& b) { return a = a * b; }
-constexpr mat4f& operator*=(mat4f& a, float b) { return a = a * b; }
+inline mat4f& operator+=(mat4f& a, const mat4f& b) { return a = a + b; }
+inline mat4f& operator*=(mat4f& a, const mat4f& b) { return a = a * b; }
+inline mat4f& operator*=(mat4f& a, float b) { return a = a * b; }
 
 // Matrix diagonals and transposes.
-constexpr vec4f diagonal(const mat4f& a) {
+inline vec4f diagonal(const mat4f& a) {
     return {a.x.x, a.y.y, a.z.z, a.w.w};
 }
-constexpr mat4f transpose(const mat4f& a) {
+inline mat4f transpose(const mat4f& a) {
     return {
         {a.x.x, a.y.x, a.z.x, a.w.x},
         {a.x.y, a.y.y, a.z.y, a.w.y},
@@ -1316,22 +1316,22 @@ struct frame2f {
     vec2f y = {0, 1};
     vec2f o = {0, 0};
 
-    constexpr frame2f() : x{}, y{}, o{} {}
-    constexpr frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
+     frame2f() : x{}, y{}, o{} {}
+     frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
         : x{x}, y{y}, o{o} {}
-    constexpr explicit frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
-    constexpr frame2f(const mat2f& m, const vec2f& t) : x{m.x}, y{m.y}, o{t} {}
-    constexpr explicit frame2f(const mat3f& m)
+     explicit frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
+     frame2f(const mat2f& m, const vec2f& t) : x{m.x}, y{m.y}, o{t} {}
+     explicit frame2f(const mat3f& m)
         : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-    constexpr operator mat3f() const { return {{x, 0}, {y, 0}, {o, 1}}; }
+     operator mat3f() const { return {{x, 0}, {y, 0}, {o, 1}}; }
 
-    constexpr vec2f&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec2f& operator[](int i) const { return (&x)[i]; }
+     vec2f&       operator[](int i) { return (&x)[i]; }
+     const vec2f& operator[](int i) const { return (&x)[i]; }
 
-    constexpr mat2f&       m() { return *(mat2f*)&x; }
-    constexpr const mat2f& m() const { return *(mat2f*)&x; }
-    constexpr vec2f&       t() { return o; }
-    constexpr const vec2f& t() const { return o; }
+     mat2f&       m() { return *(mat2f*)&x; }
+     const mat2f& m() const { return *(mat2f*)&x; }
+     vec2f&       t() { return o; }
+     const vec2f& t() const { return o; }
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -1341,35 +1341,35 @@ struct frame3f {
     vec3f z = {0, 0, 1};
     vec3f o = {0, 0, 0};
 
-    constexpr frame3f() : x{}, y{}, z{}, o{} {}
-    constexpr frame3f(
+     frame3f() : x{}, y{}, z{}, o{} {}
+     frame3f(
         const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
         : x{x}, y{y}, z{z}, o{o} {}
-    constexpr explicit frame3f(const vec3f& o)
+     explicit frame3f(const vec3f& o)
         : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
-    constexpr frame3f(const mat3f& m, const vec3f& t)
+     frame3f(const mat3f& m, const vec3f& t)
         : x{m.x}, y{m.y}, z{m.z}, o{t} {}
-    constexpr explicit frame3f(const mat4f& m)
+     explicit frame3f(const mat4f& m)
         : x{m.x.x, m.x.y, m.x.z}
         , y{m.y.x, m.y.y, m.y.z}
         , z{m.z.x, m.z.y, m.z.z}
         , o{m.w.x, m.w.y, m.w.z} {}
-    constexpr operator mat4f() const {
+     operator mat4f() const {
         return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
     }
 
-    constexpr vec3f&       operator[](int i) { return (&x)[i]; }
-    constexpr const vec3f& operator[](int i) const { return (&x)[i]; }
+     vec3f&       operator[](int i) { return (&x)[i]; }
+     const vec3f& operator[](int i) const { return (&x)[i]; }
 
-    constexpr mat3f&       m() { return *(mat3f*)&x; }
-    constexpr const mat3f& m() const { return *(mat3f*)&x; }
-    constexpr vec3f&       t() { return o; }
-    constexpr const vec3f& t() const { return o; }
+     mat3f&       m() { return *(mat3f*)&x; }
+     const mat3f& m() const { return *(mat3f*)&x; }
+     vec3f&       t() { return o; }
+     const vec3f& t() const { return o; }
 };
 
 // Indentity frames.
-constexpr auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-constexpr auto identity_frame3f = frame3f{
+inline const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+inline const auto identity_frame3f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
@@ -1378,23 +1378,23 @@ inline const mat2f& linear_component(const frame2f& a) {
 }
 
 // Frame comparisons.
-constexpr bool operator==(const frame2f& a, const frame2f& b) {
+inline bool operator==(const frame2f& a, const frame2f& b) {
     return a.x == b.x && a.y == b.y && a.o == b.o;
 }
-constexpr bool operator!=(const frame2f& a, const frame2f& b) {
+inline bool operator!=(const frame2f& a, const frame2f& b) {
     return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
-constexpr frame2f operator*(const frame2f& a, const frame2f& b) {
+inline frame2f operator*(const frame2f& a, const frame2f& b) {
     return {a.m() * b.m(), a.m() * b.o + a.o};
 }
-constexpr frame2f& operator*=(frame2f& a, const frame2f& b) {
+inline frame2f& operator*=(frame2f& a, const frame2f& b) {
     return a = a * b;
 }
 
 // Frame inverse, equivalent to rigid affine inverse.
-constexpr frame2f inverse(const frame2f& a, bool non_rigid = false) {
+inline frame2f inverse(const frame2f& a, bool non_rigid = false) {
     if (non_rigid) {
         auto minv = inverse(a.m());
         return {minv, -(minv * a.o)};
@@ -1410,23 +1410,23 @@ inline const mat3f& linear_component(const frame3f& a) {
 }
 
 // Frame comparisons.
-constexpr bool operator==(const frame3f& a, const frame3f& b) {
+inline bool operator==(const frame3f& a, const frame3f& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
 }
-constexpr bool operator!=(const frame3f& a, const frame3f& b) {
+inline bool operator!=(const frame3f& a, const frame3f& b) {
     return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
-constexpr frame3f operator*(const frame3f& a, const frame3f& b) {
+inline frame3f operator*(const frame3f& a, const frame3f& b) {
     return {a.m() * b.m(), a.m() * b.o + a.o};
 }
-constexpr frame3f& operator*=(frame3f& a, const frame3f& b) {
+inline frame3f& operator*=(frame3f& a, const frame3f& b) {
     return a = a * b;
 }
 
 // Frame inverse, equivalent to rigid affine inverse.
-constexpr frame3f inverse(const frame3f& a, bool non_rigid = false) {
+inline frame3f inverse(const frame3f& a, bool non_rigid = false) {
     if (non_rigid) {
         auto minv = inverse(a.m());
         return {minv, -(minv * a.o)};
@@ -1467,13 +1467,13 @@ struct quat4f {
     float x, y, z, w;
 
     // constructors
-    constexpr quat4f() : x{0}, y{0}, z{0}, w{1} {}
-    constexpr quat4f(float x, float y, float z, float w)
+     quat4f() : x{0}, y{0}, z{0}, w{1} {}
+     quat4f(float x, float y, float z, float w)
         : x{x}, y{y}, z{z}, w{w} {}
 };
 
 // Constants
-constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
+inline const auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 // Quaternion operatons
 inline quat4f operator+(const quat4f& a, const quat4f& b) {
@@ -1532,11 +1532,11 @@ struct bbox2f {
     vec2f min = {float_max, float_max};
     vec2f max = {float_min, float_min};
 
-    constexpr bbox2f() {}
-    constexpr bbox2f(const vec2f& min, const vec2f& max) : min{min}, max{max} {}
+     bbox2f() {}
+     bbox2f(const vec2f& min, const vec2f& max) : min{min}, max{max} {}
 
-    constexpr vec2f&       operator[](int i) { return (&min)[i]; }
-    constexpr const vec2f& operator[](int i) const { return (&min)[i]; }
+     vec2f&       operator[](int i) { return (&min)[i]; }
+     const vec2f& operator[](int i) const { return (&min)[i]; }
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
@@ -1544,80 +1544,80 @@ struct bbox3f {
     vec3f min = {float_max, float_max, float_max};
     vec3f max = {float_min, float_min, float_min};
 
-    constexpr bbox3f() {}
-    constexpr bbox3f(const vec3f& min, const vec3f& max) : min{min}, max{max} {}
+     bbox3f() {}
+     bbox3f(const vec3f& min, const vec3f& max) : min{min}, max{max} {}
 
-    constexpr vec3f&       operator[](int i) { return (&min)[i]; }
-    constexpr const vec3f& operator[](int i) const { return (&min)[i]; }
+     vec3f&       operator[](int i) { return (&min)[i]; }
+     const vec3f& operator[](int i) const { return (&min)[i]; }
 };
 
 // Empty bbox constant.
-constexpr auto invalid_bbox2f = bbox2f{};
-constexpr auto invalid_bbox3f = bbox3f{};
+inline const auto invalid_bbox2f = bbox2f{};
+inline const auto invalid_bbox3f = bbox3f{};
 
 // Bounding box properties
-constexpr vec2f bbox_center(const bbox2f& a) { return (a.min + a.max) / 2; }
-constexpr vec2f bbox_size(const bbox2f& a) { return a.max - a.min; }
+inline vec2f bbox_center(const bbox2f& a) { return (a.min + a.max) / 2; }
+inline vec2f bbox_size(const bbox2f& a) { return a.max - a.min; }
 
 // Bounding box comparisons.
-constexpr bool operator==(const bbox2f& a, const bbox2f& b) {
+inline bool operator==(const bbox2f& a, const bbox2f& b) {
     return a.min == b.min && a.max == b.max;
 }
-constexpr bool operator!=(const bbox2f& a, const bbox2f& b) {
+inline bool operator!=(const bbox2f& a, const bbox2f& b) {
     return a.min != b.min || a.max != b.max;
 }
 
 // Bounding box expansions with points and other boxes.
-constexpr bbox2f operator+(const bbox2f& a, const vec2f& b) {
+inline bbox2f operator+(const bbox2f& a, const vec2f& b) {
     return {min(a.min, b), max(a.max, b)};
 }
-constexpr bbox2f operator+(const bbox2f& a, const bbox2f& b) {
+inline bbox2f operator+(const bbox2f& a, const bbox2f& b) {
     return {min(a.min, b.min), max(a.max, b.max)};
 }
-constexpr bbox2f& operator+=(bbox2f& a, const vec2f& b) { return a = a + b; }
-constexpr bbox2f& operator+=(bbox2f& a, const bbox2f& b) { return a = a + b; }
+inline bbox2f& operator+=(bbox2f& a, const vec2f& b) { return a = a + b; }
+inline bbox2f& operator+=(bbox2f& a, const bbox2f& b) { return a = a + b; }
 
 // Bounding box properties
-constexpr vec3f bbox_center(const bbox3f& a) { return (a.min + a.max) / 2; }
-constexpr vec3f bbox_size(const bbox3f& a) { return a.max - a.min; }
+inline vec3f bbox_center(const bbox3f& a) { return (a.min + a.max) / 2; }
+inline vec3f bbox_size(const bbox3f& a) { return a.max - a.min; }
 
 // Bounding box comparisons.
-constexpr bool operator==(const bbox3f& a, const bbox3f& b) {
+inline bool operator==(const bbox3f& a, const bbox3f& b) {
     return a.min == b.min && a.max == b.max;
 }
-constexpr bool operator!=(const bbox3f& a, const bbox3f& b) {
+inline bool operator!=(const bbox3f& a, const bbox3f& b) {
     return a.min != b.min || a.max != b.max;
 }
 
 // Bounding box expansions with points and other boxes.
-constexpr bbox3f operator+(const bbox3f& a, const vec3f& b) {
+inline bbox3f operator+(const bbox3f& a, const vec3f& b) {
     return {min(a.min, b), max(a.max, b)};
 }
-constexpr bbox3f operator+(const bbox3f& a, const bbox3f& b) {
+inline bbox3f operator+(const bbox3f& a, const bbox3f& b) {
     return {min(a.min, b.min), max(a.max, b.max)};
 }
-constexpr bbox3f& operator+=(bbox3f& a, const vec3f& b) { return a = a + b; }
-constexpr bbox3f& operator+=(bbox3f& a, const bbox3f& b) { return a = a + b; }
+inline bbox3f& operator+=(bbox3f& a, const vec3f& b) { return a = a + b; }
+inline bbox3f& operator+=(bbox3f& a, const bbox3f& b) { return a = a + b; }
 
 // Primitive bounds.
-constexpr bbox3f point_bounds(const vec3f& p) {
+inline bbox3f point_bounds(const vec3f& p) {
     auto a = bbox3f{};
     a += p;
     return a;
 }
-constexpr bbox3f point_bounds(const vec3f& p, float r) {
+inline bbox3f point_bounds(const vec3f& p, float r) {
     auto a = bbox3f{};
     a += p - r;
     a += p + r;
     return a;
 }
-constexpr bbox3f line_bounds(const vec3f& p0, const vec3f& p1) {
+inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1) {
     auto a = bbox3f{};
     a += p0;
     a += p1;
     return a;
 }
-constexpr bbox3f line_bounds(
+inline bbox3f line_bounds(
     const vec3f& p0, const vec3f& p1, float r0, float r1) {
     auto a = bbox3f{};
     a += p0 - r0;
@@ -1626,7 +1626,7 @@ constexpr bbox3f line_bounds(
     a += p1 + r1;
     return a;
 }
-constexpr bbox3f triangle_bounds(
+inline bbox3f triangle_bounds(
     const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     auto a = bbox3f{};
     a += p0;
@@ -1634,7 +1634,7 @@ constexpr bbox3f triangle_bounds(
     a += p2;
     return a;
 }
-constexpr bbox3f quad_bounds(
+inline bbox3f quad_bounds(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
     auto a = bbox3f{};
     a += p0;
@@ -1652,7 +1652,7 @@ constexpr bbox3f quad_bounds(
 namespace yocto {
 
 // Ray esplison
-constexpr auto ray_eps = 1e-4f;
+inline const auto ray_eps = 1e-4f;
 
 struct ray2f {
     vec2f o    = {0, 0};
@@ -1660,8 +1660,8 @@ struct ray2f {
     float tmin = ray_eps;
     float tmax = float_max;
 
-    constexpr ray2f() {}
-    constexpr ray2f(const vec2f& o, const vec2f& d, float tmin = ray_eps,
+     ray2f() {}
+     ray2f(const vec2f& o, const vec2f& d, float tmin = ray_eps,
         float tmax = float_max)
         : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };
@@ -1673,8 +1673,8 @@ struct ray3f {
     float tmin = ray_eps;
     float tmax = float_max;
 
-    constexpr ray3f() {}
-    constexpr ray3f(const vec3f& o, const vec3f& d, float tmin = ray_eps,
+     ray3f() {}
+     ray3f(const vec3f& o, const vec3f& d, float tmin = ray_eps,
         float tmax = float_max)
         : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };

@@ -340,8 +340,10 @@ bool other_hemisphere(
     return dot(normal, outgoing) * dot(normal, incoming) < 0;
 }
 
+// Minimum roughness for GGX
+static const auto trace_min_roughness = 0.03f * 0.03f;
+
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-constexpr auto trace_min_roughness = 0.03f * 0.03f;
 vec3f          eval_diffuse_reflection(float roughness, const vec3f& normal,
              const vec3f& outgoing, const vec3f& incoming) {
     if (!same_hemisphere(normal, outgoing, incoming)) return zero3f;
@@ -575,10 +577,10 @@ float sample_volume_scattering_pdf(const vec3f& albedo, float phaseg,
 namespace yocto {
 
 // Set non-rigid frames as default
-constexpr bool trace_non_rigid_frames = true;
+static const bool trace_non_rigid_frames = true;
 
 // defaults
-constexpr auto coat_roughness = 0.03f * 0.03f;
+static const auto coat_roughness = 0.03f * 0.03f;
 
 bool has_brdf(const material_point& material) {
     return material.coat != zero3f || material.specular != zero3f ||
