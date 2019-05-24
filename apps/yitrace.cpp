@@ -88,13 +88,13 @@ struct app_scene {
   string name      = "";
 
   // options
-  load_params       load_prms     = {};
-  save_params save_prms     = {};
-  bvh_params        bvh_prms      = {};
-  trace_params      trace_prms    = {};
-  tonemap_params    tonemap_prms  = {};
-  int               preview_ratio = 8;
-  vec2i             image_size    = {0, 0};
+  load_params    load_prms     = {};
+  save_params    save_prms     = {};
+  bvh_params     bvh_prms      = {};
+  trace_params   trace_prms    = {};
+  tonemap_params tonemap_prms  = {};
+  int            preview_ratio = 8;
+  vec2i          image_size    = {0, 0};
 
   // scene
   yocto_scene scene      = {};
@@ -131,12 +131,12 @@ struct app_state {
   deque<string>    errors;
 
   // default options
-  load_params       load_prms    = {};
-  save_params save_prms    = {};
-  bvh_params        bvh_prms     = {};
-  trace_params      trace_prms   = {};
-  tonemap_params    tonemap_prms = {};
-  bool              add_skyenv   = false;
+  load_params    load_prms    = {};
+  save_params    save_prms    = {};
+  bvh_params     bvh_prms     = {};
+  trace_params   trace_prms   = {};
+  tonemap_params tonemap_prms = {};
+  bool           add_skyenv   = false;
 };
 
 void update_app_render(const string& filename, image<vec4f>& render,
@@ -431,8 +431,7 @@ void load_element(
 
   if (type == typeid(yocto_texture)) {
     auto& texture = scene.textures[index];
-    load_image(get_dirname(filename) + texture.uri, texture.hdr,
-        texture.ldr);
+    load_image(get_dirname(filename) + texture.uri, texture.hdr, texture.ldr);
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
     load_volume(get_dirname(filename) + texture.uri, texture.volume);

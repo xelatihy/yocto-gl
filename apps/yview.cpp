@@ -166,7 +166,7 @@ struct app_scene {
 
   // options
   load_params       load_prms   = {};
-  save_params save_prms   = {};
+  save_params       save_prms   = {};
   draw_scene_params drawgl_prms = {};
 
   // scene
@@ -198,7 +198,7 @@ struct app_state {
 
   // default options
   load_params       load_prms   = {};
-  save_params save_prms   = {};
+  save_params       save_prms   = {};
   draw_scene_params drawgl_prms = {};
 };
 
@@ -703,11 +703,9 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
   for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
     auto& texture = scene.textures[texture_id];
     if (!texture.hdr.empty()) {
-      init_gltexture(
-          state.textures[texture_id], texture.hdr, true, true, true);
+      init_gltexture(state.textures[texture_id], texture.hdr, true, true, true);
     } else if (!texture.ldr.empty()) {
-      init_gltexture(
-          state.textures[texture_id], texture.ldr, true, true, true);
+      init_gltexture(state.textures[texture_id], texture.ldr, true, true, true);
     } else {
       throw std::runtime_error("bad texture");
     }
@@ -976,8 +974,7 @@ void load_element(
 
   if (type == typeid(yocto_texture)) {
     auto& texture = scene.textures[index];
-    load_image(get_dirname(filename) + texture.uri, texture.hdr,
-        texture.ldr);
+    load_image(get_dirname(filename) + texture.uri, texture.hdr, texture.ldr);
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
     load_volume(get_dirname(filename) + texture.uri, texture.volume);

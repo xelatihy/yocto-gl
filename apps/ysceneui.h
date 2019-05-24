@@ -241,10 +241,8 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   edited.uri   = value.uri;
   auto updated = false;
   if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
-  draw_gllabel(win, "hdr", "%d x %d", value.hdr.size().x,
-      value.hdr.size().y);
-  draw_gllabel(win, "ldr", "%d x %d", value.ldr.size().x,
-      value.ldr.size().y);
+  draw_gllabel(win, "hdr", "%d x %d", value.hdr.size().x, value.hdr.size().y);
+  draw_gllabel(win, "ldr", "%d x %d", value.ldr.size().x, value.ldr.size().y);
   if (updated) {
     auto reload = edited.uri != value.uri;
     if (!reload) {

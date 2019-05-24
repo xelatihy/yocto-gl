@@ -804,7 +804,7 @@ static pair<int, int> split_balanced(
     vector<bvh_prim>& prims, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
-  auto mid        = (start + end) / 2;
+  auto mid  = (start + end) / 2;
 
   // compute primintive bounds and size
   auto cbbox = invalid_bbox3f;
@@ -819,17 +819,15 @@ static pair<int, int> split_balanced(
 
   // balanced tree split: find the largest axis of the
   // bounding box and split along this one right in the middle
-  mid        = (start + end) / 2;
+  mid = (start + end) / 2;
   std::nth_element(prims.data() + start, prims.data() + mid, prims.data() + end,
-      [axis](auto& a, auto& b) {
-        return a.center[axis] < b.center[axis];
-      });
+      [axis](auto& a, auto& b) { return a.center[axis] < b.center[axis]; });
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
     throw std::runtime_error("bad bvh split");
     axis = 0;
-    mid        = (start + end) / 2;
+    mid  = (start + end) / 2;
   }
 
   return {mid, axis};
@@ -841,7 +839,7 @@ static pair<int, int> split_middle(
     vector<bvh_prim>& prims, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
-  auto mid        = (start + end) / 2;
+  auto mid  = (start + end) / 2;
 
   // compute primintive bounds and size
   auto cbbox = invalid_bbox3f;
@@ -858,15 +856,14 @@ static pair<int, int> split_middle(
   auto cmiddle = (cbbox.max + cbbox.min) / 2;
   auto middle  = cmiddle[axis];
   mid          = (int)(std::partition(prims.data() + start, prims.data() + end,
-                  [axis, middle](
-                      auto& a) { return a.center[axis] < middle; }) -
+                  [axis, middle](auto& a) { return a.center[axis] < middle; }) -
               prims.data());
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
     throw std::runtime_error("bad bvh split");
     axis = 0;
-    mid        = (start + end) / 2;
+    mid  = (start + end) / 2;
   }
 
   return {mid, axis};
@@ -904,13 +901,13 @@ static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     if (end - start > bvh_max_prims) {
       // get split
       auto [mid, axis] = (params.high_quality)
-                                   ? split_sah(prims, start, end)
-                                   : split_balanced(prims, start, end);
+                             ? split_sah(prims, start, end)
+                             : split_balanced(prims, start, end);
 
       // make an internal node
-      node.internal      = true;
-      node.axis       = axis;
-      node.num   = 2;
+      node.internal = true;
+      node.axis     = axis;
+      node.num      = 2;
       node.prims[0] = (int)nodes.size() + 0;
       node.prims[1] = (int)nodes.size() + 1;
       nodes.emplace_back();
@@ -919,8 +916,8 @@ static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
       queue.push_back({node.prims[1], mid, end});
     } else {
       // Make a leaf node
-      node.internal    = false;
-      node.num = end - start;
+      node.internal = false;
+      node.num      = end - start;
       for (auto i = 0; i < node.num; i++)
         node.prims[i] = prims[start + i].primid;
     }
@@ -984,15 +981,15 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
             if (end - start > bvh_max_prims) {
               // get split
               auto [mid, axis] = (params.high_quality)
-                                           ? split_sah(prims, start, end)
-                                           : split_balanced(prims, start, end);
+                                     ? split_sah(prims, start, end)
+                                     : split_balanced(prims, start, end);
 
               // make an internal node
               {
                 lock_guard<mutex> lock{queue_mutex};
-                node.internal      = true;
-                node.axis       = axis;
-                node.num   = 2;
+                node.internal = true;
+                node.axis     = axis;
+                node.num      = 2;
                 node.prims[0] = (int)nodes.size() + 0;
                 node.prims[1] = (int)nodes.size() + 1;
                 nodes.emplace_back();
@@ -1002,8 +999,8 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
               }
             } else {
               // Make a leaf node
-              node.internal    = false;
-              node.num = end - start;
+              node.internal = false;
+              node.num      = end - start;
               for (auto i = 0; i < node.num; i++)
                 node.prims[i] = prims[start + i].primid;
               num_processed_prims += node.num;

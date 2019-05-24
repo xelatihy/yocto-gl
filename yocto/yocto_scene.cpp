@@ -203,16 +203,13 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
     auto value = vec3f{0, 0, 0};
     switch (animation.interpolation_type) {
       case yocto_interpolation_type::step:
-        value = keyframe_step(
-            animation.times, animation.translations, time);
+        value = keyframe_step(animation.times, animation.translations, time);
         break;
       case yocto_interpolation_type::linear:
-        value = keyframe_linear(
-            animation.times, animation.translations, time);
+        value = keyframe_linear(animation.times, animation.translations, time);
         break;
       case yocto_interpolation_type::bezier:
-        value = keyframe_bezier(
-            animation.times, animation.translations, time);
+        value = keyframe_bezier(animation.times, animation.translations, time);
         break;
       default: throw std::runtime_error("should not have been here");
     }
@@ -223,39 +220,31 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
     auto value = vec4f{0, 0, 0, 1};
     switch (animation.interpolation_type) {
       case yocto_interpolation_type::step:
-        value = keyframe_step(
-            animation.times, animation.rotations, time);
+        value = keyframe_step(animation.times, animation.rotations, time);
         break;
       case yocto_interpolation_type::linear:
-        value = keyframe_linear(
-            animation.times, animation.rotations, time);
+        value = keyframe_linear(animation.times, animation.rotations, time);
         break;
       case yocto_interpolation_type::bezier:
-        value = keyframe_bezier(
-            animation.times, animation.rotations, time);
+        value = keyframe_bezier(animation.times, animation.rotations, time);
         break;
     }
-    for (auto target : animation.targets)
-      scene.nodes[target].rotation = value;
+    for (auto target : animation.targets) scene.nodes[target].rotation = value;
   }
   if (!animation.scales.empty()) {
     auto value = vec3f{1, 1, 1};
     switch (animation.interpolation_type) {
       case yocto_interpolation_type::step:
-        value = keyframe_step(
-            animation.times, animation.scales, time);
+        value = keyframe_step(animation.times, animation.scales, time);
         break;
       case yocto_interpolation_type::linear:
-        value = keyframe_linear(
-            animation.times, animation.scales, time);
+        value = keyframe_linear(animation.times, animation.scales, time);
         break;
       case yocto_interpolation_type::bezier:
-        value = keyframe_bezier(
-            animation.times, animation.scales, time);
+        value = keyframe_bezier(animation.times, animation.scales, time);
         break;
     }
-    for (auto target : animation.targets)
-      scene.nodes[target].scale = value;
+    for (auto target : animation.targets) scene.nodes[target].scale = value;
   }
 }
 
@@ -965,8 +954,7 @@ vec4f lookup_texture(
 // Evaluate a texture
 vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (texture.hdr.empty() && texture.ldr.empty())
-    return {1, 1, 1, 1};
+  if (texture.hdr.empty() && texture.ldr.empty()) return {1, 1, 1, 1};
 
   // get image width/height
   auto size  = texture_size(texture);

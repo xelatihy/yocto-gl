@@ -2037,9 +2037,8 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
           case cgltf_animation_path_type_translation: {
             animation.translations.reserve(output_view.size());
             for (auto i = 0; i < output_view.size(); i++)
-              animation.translations.push_back(
-                  {(float)output_view[i][0], (float)output_view[i][1],
-                      (float)output_view[i][2]});
+              animation.translations.push_back({(float)output_view[i][0],
+                  (float)output_view[i][1], (float)output_view[i][2]});
           } break;
           case cgltf_animation_path_type_rotation: {
             animation.rotations.reserve(output_view.size());
