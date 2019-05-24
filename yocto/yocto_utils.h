@@ -180,32 +180,6 @@ struct print_timer {
 };
 inline print_timer print_timed(const string& msg) { return print_timer(msg); }
 
-// Logging to a sync
-inline auto log_callback = function<void(const string& msg)>{};
-inline void set_log_callback(function<void(const string& msg)> callback) {
-  log_callback = callback;
-}
-inline void log_info(const string& msg) {
-  if (log_callback) log_callback(msg + "\n");
-}
-inline void log_error(const string& msg) {
-  if (log_callback) log_callback(msg + "\n");
-}
-struct log_timer {
-  log_timer(const string& msg) : msg{msg}, start{get_time()} {
-    if (log_callback) log_callback(msg);
-  }
-  ~log_timer() {
-    if (log_callback)
-      log_callback(msg + "in " + format_duration(get_time() - start));
-  }
-
- private:
-  string  msg;
-  int64_t start;
-};
-inline log_timer log_timed(const string& msg) { return log_timer(msg); }
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

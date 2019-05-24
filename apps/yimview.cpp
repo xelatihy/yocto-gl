@@ -146,14 +146,14 @@ void update_app_display(const string& filename, const image<vec4f>& img,
 
 // add a new image
 void add_new_image(app_state& app, const string& filename) {
-  auto& img             = app.images.emplace_back();
-  img.filename          = filename;
-  img.outname           = get_noextension(filename) + ".display.png";
-  img.name              = get_filename(filename);
+  auto& img           = app.images.emplace_back();
+  img.filename        = filename;
+  img.outname         = get_noextension(filename) + ".display.png";
+  img.name            = get_filename(filename);
   img.tonemap_prms    = app.tonemap_prms;
   img.colorgrade_prms = app.colorgrade_prms;
-  img.load_done         = false;
-  img.display_done      = false;
+  img.load_done       = false;
+  img.display_done    = false;
   img.task_queue.emplace_back(app_task_type::load);
   app.selected = (int)app.images.size() - 1;
 }
@@ -274,7 +274,7 @@ void draw_opengl_widgets(const opengl_window& win) {
     end_header_opengl_widget(win);
   }
   if (begin_header_opengl_widget(win, "log")) {
-    draw_log_opengl_widget(win);
+    draw_gllog(win);
     end_header_opengl_widget(win);
   }
 }
@@ -304,7 +304,7 @@ void draw(const opengl_window& win) {
   swap_opengl_buffers(win);
 }
 
-void update(app_state& app) {
+void update(const opengl_window& win, app_state& app) {
   // close if needed
   while (!app.images.empty()) {
     auto pos = -1;
@@ -334,7 +334,7 @@ void update(app_state& app) {
       auto& next = img.task_queue.at(1);
       if (task.type == app_task_type::display) {
         if (next.type != app_task_type::display) break;
-        log_info("cancel rendering " + img.filename);
+        log_glinfo(win, "cancel rendering " + img.filename);
       } else {
         break;
       }
@@ -366,11 +366,11 @@ void update(app_state& app) {
           img.name      = get_filename(img.filename) + " [" +
                      to_string(img.img.size()) + "]";
           img.display = img.img;
-          log_info("done loading " + img.filename);
+          log_glinfo(win, "done loading " + img.filename);
           init_opengl_texture(img.gl_txt, img.display, false, false, false);
           img.task_queue.emplace_back(app_task_type::display);
         } catch (std::exception& e) {
-          log_error(e.what());
+          log_glerror(win, e.what());
           img.name = get_filename(img.filename) + " [error]";
           app.errors.push_back("cannot load " + img.filename);
         }
@@ -378,9 +378,9 @@ void update(app_state& app) {
       case app_task_type::save: {
         try {
           task.result.get();
-          log_info("done saving " + img.outname);
+          log_glinfo(win, "done saving " + img.outname);
         } catch (std::exception& e) {
-          log_error(e.what());
+          log_glerror(win, e.what());
           app.errors.push_back("cannot save " + img.outname);
         }
       } break;
@@ -388,9 +388,9 @@ void update(app_state& app) {
         try {
           task.result.get();
           img.display_done = true;
-          log_info("done rendering " + img.filename);
+          log_glinfo(win, "done rendering " + img.filename);
         } catch (std::exception& e) {
-          log_error(e.what());
+          log_glerror(win, e.what());
           app.errors.push_back("cannot render " + img.filename);
         }
       } break;
@@ -407,7 +407,7 @@ void update(app_state& app) {
       case app_task_type::none: break;
       case app_task_type::close: break;
       case app_task_type::load: {
-        log_info("start loading " + img.filename);
+        log_glinfo(win, "start loading " + img.filename);
         img.load_done = false;
         task.result   = async([&img]() {
           img.img = {};
@@ -417,7 +417,7 @@ void update(app_state& app) {
         });
       } break;
       case app_task_type::save: {
-        log_info("start saving " + img.outname);
+        log_glinfo(win, "start saving " + img.outname);
         task.result = async([&img]() {
           if (!is_hdr_filename(img.outname)) {
             auto ldr = image<vec4b>{};
@@ -431,7 +431,7 @@ void update(app_state& app) {
         });
       } break;
       case app_task_type::display: {
-        log_info("start rendering " + img.filename);
+        log_glinfo(win, "start rendering " + img.filename);
         img.display_done = false;
         task.result      = async([&img, &task]() {
           update_app_display(img.filename, img.img, img.display,
@@ -457,10 +457,6 @@ void run_ui(app_state& app) {
   // init widgets
   init_opengl_widgets(win);
 
-  // setup logging
-  set_log_callback(
-      [&win](const string& str) { add_log_opengl_widget(win, str.c_str()); });
-
   // window values
   auto mouse_pos = zero2f, last_pos = zero2f;
   while (!should_opengl_window_close(win)) {
@@ -481,7 +477,7 @@ void run_ui(app_state& app) {
     }
 
     // update
-    update(app);
+    update(win, app);
 
     // draw
     draw(win);

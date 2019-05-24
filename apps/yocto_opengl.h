@@ -402,15 +402,17 @@ void draw_histogram_opengl_widget(
 void draw_histogram_opengl_widget(
     const opengl_window& win, const char* lbl, const vector<vec4f>& values);
 
-void add_log_opengl_widget(const opengl_window& win, const char* msg);
-void add_log_opengl_widget(const opengl_window& win, const string& msg);
-void clear_logs_opengl_widget(const opengl_window& win);
-void draw_log_opengl_widget(const opengl_window& win);
+void log_glinfo(const opengl_window& win, const char* msg);
+void log_glinfo(const opengl_window& win, const string& msg);
+void log_glerror(const opengl_window& win, const char* msg);
+void log_glerror(const opengl_window& win, const string& msg);
+void clear_gllogs(const opengl_window& win);
+void draw_gllog(const opengl_window& win);
 
-void open_message_opengl_widget(
+void open_glmessage(
     const opengl_window& win, const char* title, const string& message);
-void draw_message_opengl_widget(const opengl_window& win, const char* title);
-bool is_message_open_opengl_widget(const opengl_window& win, const char* title);
+void draw_glmessage(const opengl_window& win, const char* title);
+bool is_glmessage_open(const opengl_window& win, const char* title);
 
 }  // namespace yocto
 

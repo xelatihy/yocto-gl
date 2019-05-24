@@ -165,8 +165,8 @@ struct app_scene {
   string name      = "";
 
   // options
-  load_params load_prms = {};
-  save_scene_params save_prms = {};
+  load_params       load_prms   = {};
+  save_scene_params save_prms   = {};
   draw_scene_params drawgl_prms = {};
 
   // scene
@@ -197,8 +197,8 @@ struct app_state {
   deque<string>    errors;
 
   // default options
-  load_params load_prms = {};
-  save_scene_params save_prms = {};
+  load_params       load_prms   = {};
+  save_scene_params save_prms   = {};
   draw_scene_params drawgl_prms = {};
 };
 
@@ -208,8 +208,8 @@ void add_new_scene(app_state& app, const string& filename) {
   scn.imagename   = get_noextension(filename) + ".png";
   scn.outname     = get_noextension(filename) + ".edited.yaml";
   scn.name        = get_filename(scn.filename);
-  scn.load_prms = app.load_prms;
-  scn.save_prms = app.save_prms;
+  scn.load_prms   = app.load_prms;
+  scn.save_prms   = app.save_prms;
   scn.drawgl_prms = app.drawgl_prms;
   scn.task_queue.emplace_back(app_task_type::load_scene);
   app.selected = (int)app.scenes.size() - 1;
@@ -916,7 +916,7 @@ void draw_opengl_widgets(const opengl_window& win) {
     end_header_opengl_widget(win);
   }
   if (begin_header_opengl_widget(win, "log")) {
-    draw_log_opengl_widget(win);
+    draw_gllog(win);
     end_header_opengl_widget(win);
   }
 }
@@ -1014,7 +1014,7 @@ void load_element(
 }
 
 // update
-void update(app_state& app) {
+void update(const opengl_window& win, app_state& app) {
   // close if needed
   while (!app.scenes.empty()) {
     auto pos = -1;
@@ -1033,18 +1033,18 @@ void update(app_state& app) {
     while (!scn.task_queue.empty()) {
       auto& task = scn.task_queue.front();
       if (task.type != app_task_type::apply_edit) break;
-      log_info("start editing " + scn.filename);
+      log_glinfo(win, "start editing " + scn.filename);
       try {
         auto reload_element = false;
         apply_edit(scn.filename, scn.scene, scn.lights, scn.drawgl_prms,
             scn.time, scn.anim_group, reload_element, task.edit);
-        log_info("done editing " + scn.filename);
+        log_glinfo(win, "done editing " + scn.filename);
         if (reload_element) {
           scn.load_done = false;
           scn.task_queue.emplace_back(app_task_type::load_element, task.edit);
         }
       } catch (std::exception& e) {
-        log_error(e.what());
+        log_glerror(win, e.what());
         app.errors.push_back("cannot edit " + scn.filename);
       }
       scn.task_queue.pop_front();
@@ -1067,9 +1067,9 @@ void update(app_state& app) {
           task.result.get();
           scn.load_done = true;
           init_drawgl_state(scn.state, scn.scene);
-          log_info("done loading " + scn.filename);
+          log_glinfo(win, "done loading " + scn.filename);
         } catch (std::exception& e) {
-          log_error(e.what());
+          log_glerror(win, e.what());
           scn.name = get_filename(scn.filename) + " [error]";
           app.errors.push_back("cannot load " + scn.filename);
         }
@@ -1078,22 +1078,22 @@ void update(app_state& app) {
         try {
           task.result.get();
           scn.load_done = true;
-          log_info("done loading element from " + scn.filename);
+          log_glinfo(win, "done loading element from " + scn.filename);
           if (task.edit.type == typeid(yocto_texture)) {
             // not supported yet
-            log_error("texture refresh is not supported yet");
+            log_glerror(win, "texture refresh is not supported yet");
           } else if (task.edit.type == typeid(yocto_voltexture)) {
           } else if (task.edit.type == typeid(yocto_shape)) {
             // not supported yet
-            log_error("shape refresh is not supported yet");
+            log_glerror(win, "shape refresh is not supported yet");
           } else if (task.edit.type == typeid(yocto_subdiv)) {
             // not supported yet
-            log_error("shape refresh is not supported yet");
+            log_glerror(win, "shape refresh is not supported yet");
           } else {
             throw std::runtime_error("unsupported type");
           }
         } catch (std::exception& e) {
-          log_error(e.what());
+          log_glerror(win, e.what());
           scn.name = get_filename(scn.filename) + " [error]";
           app.errors.push_back("cannot load element from " + scn.filename);
         }
@@ -1101,18 +1101,18 @@ void update(app_state& app) {
       case app_task_type::save_image: {
         try {
           task.result.get();
-          log_info("done saving " + scn.imagename);
+          log_glinfo(win, "done saving " + scn.imagename);
         } catch (std::exception& e) {
-          log_error(e.what());
+          log_glerror(win, e.what());
           app.errors.push_back("cannot save " + scn.imagename);
         }
       } break;
       case app_task_type::save_scene: {
         try {
           task.result.get();
-          log_info("done saving " + scn.outname);
+          log_glinfo(win, "done saving " + scn.outname);
         } catch (std::exception& e) {
-          log_error(e.what());
+          log_glerror(win, e.what());
           app.errors.push_back("cannot save " + scn.outname);
         }
       } break;
@@ -1130,7 +1130,7 @@ void update(app_state& app) {
       case app_task_type::none: break;
       case app_task_type::close_scene: break;
       case app_task_type::load_scene: {
-        log_info("start loading " + scn.filename);
+        log_glinfo(win, "start loading " + scn.filename);
         scn.load_done = false;
         task.result   = async([&scn]() {
           load_scene(scn.filename, scn.scene, scn.load_prms);
@@ -1145,19 +1145,19 @@ void update(app_state& app) {
         });
       } break;
       case app_task_type::load_element: {
-        log_info("start loading element for " + scn.filename);
+        log_glinfo(win, "start loading element for " + scn.filename);
         scn.load_done = false;
         task.result   = async([&scn, &task]() {
           load_element(scn.filename, scn.scene, task.edit);
         });
       } break;
       case app_task_type::save_image: {
-        log_info("start saving " + scn.imagename);
+        log_glinfo(win, "start saving " + scn.imagename);
         task.result = async(
             []() { throw std::runtime_error("not implemnted yet"); });
       } break;
       case app_task_type::save_scene: {
-        log_info("start saving " + scn.outname);
+        log_glinfo(win, "start saving " + scn.outname);
         task.result = async(
             [&scn]() { save_scene(scn.outname, scn.scene, scn.save_prms); });
       } break;
@@ -1179,10 +1179,6 @@ void run_ui(app_state& app) {
 
   // init widget
   init_opengl_widgets(win);
-
-  // setup logging
-  set_log_callback(
-      [&win](const string& msg) { add_log_opengl_widget(win, msg.c_str()); });
 
   // loop
   auto mouse_pos = zero2f, last_pos = zero2f;
@@ -1238,7 +1234,7 @@ void run_ui(app_state& app) {
     }
 
     // update
-    update(app);
+    update(win, app);
 
     // draw
     draw(win);

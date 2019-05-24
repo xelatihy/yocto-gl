@@ -1289,12 +1289,9 @@ struct ImGuiAppLog {
     LineOffsets.clear();
   }
 
-  void AddLog(const char* fmt, ...) {
+  void AddLog(const char* msg, const char* lbl) {
     int     old_size = Buf.size();
-    va_list args;
-    va_start(args, fmt);
-    Buf.appendfv(fmt, args);
-    va_end(args);
+    Buf.appendf("[%s] %s", lbl, msg);
     for (int new_size = Buf.size(); old_size < new_size; old_size++)
       if (Buf[old_size] == '\n') LineOffsets.push_back(old_size);
     ScrollToBottom = true;
@@ -1341,22 +1338,32 @@ struct ImGuiAppLog {
 
 std::mutex  _log_mutex;
 ImGuiAppLog _log_widget;
-void        add_log_opengl_widget(const opengl_window& win, const char* msg) {
+void        log_glinfo(const opengl_window& win, const char* msg) {
   _log_mutex.lock();
-  _log_widget.AddLog(msg);
+  _log_widget.AddLog(msg, "info");
   _log_mutex.unlock();
 }
-void add_log_opengl_widget(const opengl_window& win, const string& msg) {
+void log_glinfo(const opengl_window& win, const string& msg) {
   _log_mutex.lock();
-  _log_widget.AddLog(msg.c_str());
+  _log_widget.AddLog(msg.c_str(), "info");
   _log_mutex.unlock();
 }
-void clear_logs_opengl_widget(const opengl_window& win) {
+void        log_glerror(const opengl_window& win, const char* msg) {
+  _log_mutex.lock();
+  _log_widget.AddLog(msg, "errn");
+  _log_mutex.unlock();
+}
+void log_glerror(const opengl_window& win, const string& msg) {
+  _log_mutex.lock();
+  _log_widget.AddLog(msg.c_str(), "errn");
+  _log_mutex.unlock();
+}
+void clear_gllogs(const opengl_window& win) {
   _log_mutex.lock();
   _log_widget.Clear();
   _log_mutex.unlock();
 }
-void draw_log_opengl_widget(const opengl_window& win) {
+void draw_gllog(const opengl_window& win) {
   _log_mutex.lock();
   _log_widget.Draw();
   _log_mutex.unlock();
