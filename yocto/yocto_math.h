@@ -1022,9 +1022,9 @@ struct mat4f {
 };
 
 // Identity matrices constants.
-inline const auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
-inline const auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-inline const auto identity_mat4f = mat4f{
+inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
+inline const auto identity3x3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+inline const auto identity4x4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
@@ -1189,11 +1189,6 @@ struct frame2f {
 
   vec2f&       operator[](int i) { return (&x)[i]; }
   const vec2f& operator[](int i) const { return (&x)[i]; }
-
-  mat2f&       m() { return *(mat2f*)&x; }
-  const mat2f& m() const { return *(mat2f*)&x; }
-  vec2f&       t() { return o; }
-  const vec2f& t() const { return o; }
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -1217,22 +1212,15 @@ struct frame3f {
 
   vec3f&       operator[](int i) { return (&x)[i]; }
   const vec3f& operator[](int i) const { return (&x)[i]; }
-
-  mat3f&       m() { return *(mat3f*)&x; }
-  const mat3f& m() const { return *(mat3f*)&x; }
-  vec3f&       t() { return o; }
-  const vec3f& t() const { return o; }
 };
 
 // Indentity frames.
-inline const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-inline const auto identity_frame3f = frame3f{
+inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+inline const auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
-inline const mat2f& linear_component(const frame2f& a) {
-  return (const mat2f&)a;
-}
+inline const mat2f& rotation(const frame2f& a) { return (const mat2f&)a; }
 
 // Frame comparisons.
 inline bool operator==(const frame2f& a, const frame2f& b) {
@@ -1242,25 +1230,23 @@ inline bool operator!=(const frame2f& a, const frame2f& b) { return !(a == b); }
 
 // Frame composition, equivalent to affine matrix product.
 inline frame2f operator*(const frame2f& a, const frame2f& b) {
-  return {a.m() * b.m(), a.m() * b.o + a.o};
+  return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
 }
 inline frame2f& operator*=(frame2f& a, const frame2f& b) { return a = a * b; }
 
 // Frame inverse, equivalent to rigid affine inverse.
 inline frame2f inverse(const frame2f& a, bool non_rigid = false) {
   if (non_rigid) {
-    auto minv = inverse(a.m());
+    auto minv = inverse(rotation(a));
     return {minv, -(minv * a.o)};
   } else {
-    auto minv = transpose(a.m());
+    auto minv = transpose(rotation(a));
     return {minv, -(minv * a.o)};
   }
 }
 
 // Frame properties
-inline const mat3f& linear_component(const frame3f& a) {
-  return (const mat3f&)a;
-}
+inline const mat3f& rotation(const frame3f& a) { return (const mat3f&)a; }
 
 // Frame comparisons.
 inline bool operator==(const frame3f& a, const frame3f& b) {
@@ -1270,17 +1256,17 @@ inline bool operator!=(const frame3f& a, const frame3f& b) { return !(a == b); }
 
 // Frame composition, equivalent to affine matrix product.
 inline frame3f operator*(const frame3f& a, const frame3f& b) {
-  return {a.m() * b.m(), a.m() * b.o + a.o};
+  return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
 }
 inline frame3f& operator*=(frame3f& a, const frame3f& b) { return a = a * b; }
 
 // Frame inverse, equivalent to rigid affine inverse.
 inline frame3f inverse(const frame3f& a, bool non_rigid = false) {
   if (non_rigid) {
-    auto minv = inverse(a.m());
+    auto minv = inverse(rotation(a));
     return {minv, -(minv * a.o)};
   } else {
-    auto minv = transpose(a.m());
+    auto minv = transpose(rotation(a));
     return {minv, -(minv * a.o)};
   }
 }
@@ -1399,8 +1385,8 @@ struct bbox3f {
 };
 
 // Empty bbox constant.
-inline const auto emptybox2f = bbox2f{};
-inline const auto emptybox3f = bbox3f{};
+inline const auto invalidb2f = bbox2f{};
+inline const auto invalidb3f = bbox3f{};
 
 // Bounding box properties
 inline vec2f bbox_center(const bbox2f& a) { return (a.min + a.max) / 2; }
@@ -1447,48 +1433,24 @@ inline bbox3f& operator+=(bbox3f& a, const vec3f& b) { return a = a + b; }
 inline bbox3f& operator+=(bbox3f& a, const bbox3f& b) { return a = a + b; }
 
 // Primitive bounds.
-inline bbox3f point_bounds(const vec3f& p) {
-  auto a = bbox3f{};
-  a += p;
-  return a;
-}
+inline bbox3f point_bounds(const vec3f& p) { return {p, p}; }
 inline bbox3f point_bounds(const vec3f& p, float r) {
-  auto a = bbox3f{};
-  a += p - r;
-  a += p + r;
-  return a;
+  return {min(p - r, p + r), max(p - r, p + r)};
 }
 inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1) {
-  auto a = bbox3f{};
-  a += p0;
-  a += p1;
-  return a;
+  return {min(p0, p1), max(p0, p1)};
 }
 inline bbox3f line_bounds(
     const vec3f& p0, const vec3f& p1, float r0, float r1) {
-  auto a = bbox3f{};
-  a += p0 - r0;
-  a += p0 + r0;
-  a += p1 - r1;
-  a += p1 + r1;
-  return a;
+  return {min(p0 - r0, p1 - r1), max(p0 + r0, p1 + r1)};
 }
 inline bbox3f triangle_bounds(
     const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-  auto a = bbox3f{};
-  a += p0;
-  a += p1;
-  a += p2;
-  return a;
+  return {min(p0, min(p1, p2)), max(p0, max(p1, p2))};
 }
 inline bbox3f quad_bounds(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-  auto a = bbox3f{};
-  a += p0;
-  a += p1;
-  a += p2;
-  a += p3;
-  return a;
+  return {min(p0, min(p1, min(p2, p3))), max(p0, max(p1, max(p2, p3)))};
 }
 
 }  // namespace yocto
@@ -1588,7 +1550,7 @@ inline vec2f transform_direction(const frame2f& a, const vec2f& b) {
 inline vec2f transform_normal(
     const frame2f& a, const vec2f& b, bool non_rigid = false) {
   if (non_rigid) {
-    return transform_normal(a.m(), b);
+    return transform_normal(rotation(a), b);
   } else {
     return normalize(transform_vector(a, b));
   }
@@ -1607,7 +1569,7 @@ inline vec3f transform_direction(const frame3f& a, const vec3f& b) {
 inline vec3f transform_normal(
     const frame3f& a, const vec3f& b, bool non_rigid = false) {
   if (non_rigid) {
-    return transform_normal(a.m(), b);
+    return transform_normal(rotation(a), b);
   } else {
     return normalize(transform_vector(a, b));
   }

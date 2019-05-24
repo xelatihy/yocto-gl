@@ -162,7 +162,7 @@ void flip_quads_orientation(vector<vec4f>& quads) {
 
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
 void align_vertices(vector<vec3f>& positions, const vec3i& alignment) {
-  auto bounds = emptybox3f;
+  auto bounds = invalidb3f;
   for (auto& p : positions) bounds += p;
   auto offset = vec3f{0, 0, 0};
   switch (alignment.x) {
@@ -2083,7 +2083,7 @@ void make_improc(vector<vec3i>& triangles, vector<vec4i>& quads,
   if (params.uvscale != 1) {
     for (auto& uv : texcoords) uv *= params.uvscale;
   }
-  if (params.frame != identity_frame3f) {
+  if (params.frame != identity3x4f) {
     for (auto& p : positions) p = transform_point(params.frame, p);
   }
 }
@@ -2140,7 +2140,7 @@ void make_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
   if (params.uvscale != 1) {
     for (auto& uv : texcoords) uv *= params.uvscale;
   }
-  if (params.frame != identity_frame3f) {
+  if (params.frame != identity3x4f) {
     for (auto& p : positions) p = transform_point(params.frame, p);
   }
 }
@@ -2223,7 +2223,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
 // trivial cases.
 void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness) {
-  auto bbox = emptybox3f;
+  auto bbox = invalidb3f;
   for (auto p : positions) bbox += p;
   auto center              = bbox_center(bbox);
   auto inner_quads         = quads;
@@ -2433,7 +2433,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     params.subdivisions = 0;
     params.scale        = 2;
     params.uvscale      = 20;
-    params.frame        = identity_frame3f;
+    params.frame        = identity3x4f;
     make_improc(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-matball") {
     auto params         = procshape_params{};

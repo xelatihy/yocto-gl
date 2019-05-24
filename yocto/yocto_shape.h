@@ -472,7 +472,7 @@ struct procshape_params {
   float           uvscale      = 1;
   float           rounded      = 0;
   vec3f           aspect       = {1, 1, 1};  // for rect, box, cylinder
-  frame3f         frame        = identity_frame3f;
+  frame3f         frame        = identity3x4f;
 };
 
 // Make a procedural shape

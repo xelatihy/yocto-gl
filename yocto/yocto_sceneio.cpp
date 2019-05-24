@@ -1448,7 +1448,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
     if (instance.material >= 0)
       write_obj_line(
           fs, "usemtl", get_basename(scene.materials[instance.material].uri));
-    if (instance.frame == identity_frame3f) {
+    if (instance.frame == identity3x4f) {
       for (auto& p : shape.positions) write_obj_line(fs, "v", p);
       for (auto& n : shape.normals) write_obj_line(fs, "vn", n);
       for (auto& t : shape.texcoords)
@@ -3526,14 +3526,14 @@ void make_cornellbox_scene(yocto_scene& scene) {
   light_shp.positions     = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
       {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
   light_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
-  scene.instances.push_back({"floor", identity_frame3f, 0, 0});
-  scene.instances.push_back({"ceiling", identity_frame3f, 1, 1});
-  scene.instances.push_back({"backwall", identity_frame3f, 2, 2});
-  scene.instances.push_back({"rightwall", identity_frame3f, 3, 3});
-  scene.instances.push_back({"leftwall", identity_frame3f, 4, 4});
-  scene.instances.push_back({"shortbox", identity_frame3f, 5, 5});
-  scene.instances.push_back({"tallbox", identity_frame3f, 6, 6});
-  scene.instances.push_back({"light", identity_frame3f, 7, 7});
+  scene.instances.push_back({"floor", identity3x4f, 0, 0});
+  scene.instances.push_back({"ceiling", identity3x4f, 1, 1});
+  scene.instances.push_back({"backwall", identity3x4f, 2, 2});
+  scene.instances.push_back({"rightwall", identity3x4f, 3, 3});
+  scene.instances.push_back({"leftwall", identity3x4f, 4, 4});
+  scene.instances.push_back({"shortbox", identity3x4f, 5, 5});
+  scene.instances.push_back({"tallbox", identity3x4f, 6, 6});
+  scene.instances.push_back({"light", identity3x4f, 7, 7});
 }
 
 }  // namespace yocto

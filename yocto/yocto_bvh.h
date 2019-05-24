@@ -182,7 +182,7 @@ struct bvh_strided_view {
 
 // Instance for a scene BVH.
 struct bvh_instance {
-  frame3f frame = identity_frame3f;
+  frame3f frame = identity3x4f;
   int     shape = -1;
 };
 

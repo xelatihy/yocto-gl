@@ -2595,11 +2595,11 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb,
         throw io_error("bad active transform");
       }
     } else if (cmd == "Transform") {
-      auto xf = identity_mat4f;
+      auto xf = identity4x4f;
       parse_param(stream, xf);
       set_transform(stack.back(), xf);
     } else if (cmd == "ConcatTransform") {
-      auto xf = identity_mat4f;
+      auto xf = identity4x4f;
       parse_param(stream, xf);
       concat_transform(stack.back(), xf);
     } else if (cmd == "Scale") {

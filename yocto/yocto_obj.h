@@ -127,7 +127,7 @@ struct obj_material {
 // Obj camera [extension].
 struct obj_camera {
   string  name;                         // name
-  frame3f frame    = identity_frame3f;  // transform
+  frame3f frame    = identity3x4f;  // transform
   bool    ortho    = false;             // orthographic
   float   width    = 0.036f;            // film size (default to 35mm)
   float   height   = 0.024f;            // film size (default to 35mm)
@@ -140,7 +140,7 @@ struct obj_camera {
 // Obj environment [extension].
 struct obj_environment {
   string           name;                      // name
-  frame3f          frame = identity_frame3f;  // transform
+  frame3f          frame = identity3x4f;  // transform
   vec3f            ke    = zero3f;            // emission color
   obj_texture_info ke_txt;                    // emission texture
 };
@@ -148,7 +148,7 @@ struct obj_environment {
 // Obj procedural object [extension].
 struct obj_procedural {
   string  name;                      // name
-  frame3f frame = identity_frame3f;  // transform
+  frame3f frame = identity3x4f;  // transform
   string  type;                      // type
   string  material;                  // material
   float   size  = 2;                 // size

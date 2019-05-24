@@ -86,7 +86,7 @@ namespace yocto {
 // and set the aperture to focal_leangth/f_stop.
 struct yocto_camera {
   string  uri          = "";
-  frame3f frame        = identity_frame3f;
+  frame3f frame        = identity3x4f;
   bool    orthographic = false;
   float   width        = 0.036f;
   float   height       = 0.024f;
@@ -227,7 +227,7 @@ struct yocto_subdiv {
 // Instance of a visible shape in the scene.
 struct yocto_instance {
   string  uri      = "";
-  frame3f frame    = identity_frame3f;
+  frame3f frame    = identity3x4f;
   int     shape    = -1;
   int     material = -1;
 };
@@ -235,7 +235,7 @@ struct yocto_instance {
 // Environment map.
 struct yocto_environment {
   string  uri              = "";
-  frame3f frame            = identity_frame3f;
+  frame3f frame            = identity3x4f;
   vec3f   emission         = {0, 0, 0};
   int     emission_texture = -1;
 };
@@ -244,7 +244,7 @@ struct yocto_environment {
 struct yocto_scene_node {
   string        uri         = "";
   int           parent      = -1;
-  frame3f       local       = identity_frame3f;
+  frame3f       local       = identity3x4f;
   vec3f         translation = {0, 0, 0};
   vec4f         rotation    = {0, 0, 0, 1};
   vec3f         scale       = {1, 1, 1};

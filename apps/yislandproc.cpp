@@ -622,7 +622,7 @@ void load_island_element(const string& filename, const string& dirname,
     unordered_map<string, int>&             tmap) {
   unordered_map<string, vector<yocto_instance>> variants;
   load_island_variants("json/isBayCedarA1/isBayCedarA1.json", dirname, scene,
-      parent_name, identity_mat4f, variants, smap, mmap, tmap);
+      parent_name, identity4x4f, variants, smap, mmap, tmap);
 
   print_info(filename);
   auto buffer = ""s;
