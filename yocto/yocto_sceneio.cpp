@@ -59,25 +59,25 @@ namespace yocto {
 
 // Load/save a scene in the builtin YAML format.
 static void load_yaml_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params);
+    const load_params& params);
 static void save_yaml_scene(const string& filename, const yocto_scene& scene,
     const save_scene_params& params);
 
 // Load/save a scene from/to OBJ.
 static void load_obj_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params);
+    const load_params& params);
 static void save_obj_scene(const string& filename, const yocto_scene& scene,
     const save_scene_params& params);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 static void load_ply_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params);
+    const load_params& params);
 static void save_ply_scene(const string& filename, const yocto_scene& scene,
     const save_scene_params& params);
 
 // Load/save a scene from/to glTF.
 static void load_gltf_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params);
+    const load_params& params);
 static void save_gltf_scene(const string& filename, const yocto_scene& scene,
     const save_scene_params& params);
 
@@ -85,13 +85,13 @@ static void save_gltf_scene(const string& filename, const yocto_scene& scene,
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 static void load_pbrt_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params);
+    const load_params& params);
 static void save_pbrt_scene(const string& filename, const yocto_scene& scene,
     const save_scene_params& params);
 
 // Load a scene
 void load_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params) {
+    const load_params& params) {
   auto ext = get_extension(filename);
   if (ext == "yaml" || ext == "YAML") {
     load_yaml_scene(filename, scene, params);
@@ -161,7 +161,7 @@ void load_voltexture(yocto_voltexture& texture, const string& dirname) {
 }
 
 void load_textures(yocto_scene& scene, const string& dirname,
-    const load_scene_params& params) {
+    const load_params& params) {
   if (params.skip_textures) return;
 
   // load images
@@ -261,7 +261,7 @@ void save_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
 
 // Load json meshes
 void load_shapes(yocto_scene& scene, const string& dirname,
-    const load_scene_params& params) {
+    const load_params& params) {
   if (params.skip_meshes) return;
 
   // load shapes
@@ -453,7 +453,7 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
 
 struct load_yaml_scene_cb : yaml_callbacks {
   yocto_scene&             scene;
-  const load_scene_params& params;
+  const load_params& params;
   string                   ply_instances = "";
 
   enum struct parsing_type {
@@ -474,7 +474,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
   unordered_map<string, int> mmap = {{"", -1}};
   unordered_map<string, int> smap = {{"", -1}};
 
-  load_yaml_scene_cb(yocto_scene& scene, const load_scene_params& params)
+  load_yaml_scene_cb(yocto_scene& scene, const load_params& params)
       : scene{scene}, params{params} {
     auto reserve_size = 1024 * 32;
     tmap.reserve(reserve_size);
@@ -737,7 +737,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
 
 // Save a scene in the builtin YAML format.
 static void load_yaml_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params) {
+    const load_params& params) {
   scene = {};
 
   try {
@@ -985,7 +985,7 @@ namespace yocto {
 
 struct load_obj_scene_cb : obj_callbacks {
   yocto_scene&             scene;
-  const load_scene_params& params;
+  const load_params& params;
 
   // current parsing values
   string mname = ""s;
@@ -1011,7 +1011,7 @@ struct load_obj_scene_cb : obj_callbacks {
   // current parse state
   bool preserve_facevarying_now = false;
 
-  load_obj_scene_cb(yocto_scene& scene, const load_scene_params& params)
+  load_obj_scene_cb(yocto_scene& scene, const load_params& params)
       : scene{scene}, params{params} {}
 
   // add object if needed
@@ -1263,12 +1263,12 @@ struct load_obj_scene_cb : obj_callbacks {
     auto shape = yocto_shape();
     shape.uri  = oproc.name;
     if (oproc.type == "floor") {
-      auto params         = make_shape_params{};
+      auto params         = procshape_params{};
       params.type         = make_shape_type::floor;
       params.subdivisions = oproc.level < 0 ? 0 : oproc.level;
       params.scale        = oproc.size / 2;
       params.uvscale      = oproc.size;
-      make_shape(shape.triangles, shape.quads, shape.positions, shape.normals,
+      make_proc(shape.triangles, shape.quads, shape.positions, shape.normals,
           shape.texcoords, params);
     } else {
       throw io_error("unknown obj procedural");
@@ -1288,7 +1288,7 @@ struct load_obj_scene_cb : obj_callbacks {
 
 // Loads an OBJ
 static void load_obj_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params) {
+    const load_params& params) {
   scene = {};
 
   try {
@@ -1586,7 +1586,7 @@ void print_obj_camera(const yocto_camera& camera) {
 namespace yocto {
 
 static void load_ply_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params) {
+    const load_params& params) {
   scene = {};
 
   try {
@@ -2099,7 +2099,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
 
 // Load a scene
 static void load_gltf_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params) {
+    const load_params& params) {
   // initialization
   scene = {};
 
@@ -2648,10 +2648,10 @@ static vec3f pbrt_fresnel_metal(
 
 struct load_pbrt_scene_cb : pbrt_callbacks {
   yocto_scene&             scene;
-  const load_scene_params& params;
+  const load_params& params;
   const string&            filename;
 
-  load_pbrt_scene_cb(yocto_scene& scene, const load_scene_params& params,
+  load_pbrt_scene_cb(yocto_scene& scene, const load_params& params,
       const string& filename)
       : scene{scene}, params{params}, filename{filename} {}
 
@@ -2825,20 +2825,20 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       } break;
       case pbrt_shape::type_t::sphere: {
         auto& sphere        = pshape.sphere;
-        auto  params        = make_shape_params{};
+        auto  params        = procshape_params{};
         params.type         = make_shape_type::uvsphere;
         params.subdivisions = 5;
         params.scale        = sphere.radius;
-        make_shape(shape.triangles, shape.quads, shape.positions, shape.normals,
+        make_proc(shape.triangles, shape.quads, shape.positions, shape.normals,
             shape.texcoords, params);
       } break;
       case pbrt_shape::type_t::disk: {
         auto& disk          = pshape.disk;
-        auto  params        = make_shape_params{};
+        auto  params        = procshape_params{};
         params.type         = make_shape_type::uvdisk;
         params.subdivisions = 4;
         params.scale        = disk.radius;
-        make_shape(shape.triangles, shape.quads, shape.positions, shape.normals,
+        make_proc(shape.triangles, shape.quads, shape.positions, shape.normals,
             shape.texcoords, params);
       } break;
       default: {
@@ -2892,12 +2892,12 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto rgb2 = checkerboard.tex1.texture == ""
                         ? checkerboard.tex2.value
                         : pbrt_spectrum3f{0.6f, 0.6f, 0.6f};
-        auto params   = make_image_params{};
+        auto params   = procimage_params{};
         params.type   = make_image_type::checker;
         params.color0 = {rgb1.x, rgb1.y, rgb1.z, 1};
         params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1};
         params.scale  = 2;
-        make_image(texture.hdr_image, params);
+        make_proc(texture.hdr_image, params);
         float_to_byte(texture.ldr_image, texture.hdr_image);
         texture.hdr_image = {};
         if (verbose) printf("texture checkerboard not supported well");
@@ -2910,18 +2910,18 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       } break;
       case pbrt_texture::type_t::fbm: {
         // auto& fbm = ptexture.fbm;
-        auto params = make_image_params{};
+        auto params = procimage_params{};
         params.type = make_image_type::fbm;
-        make_image(texture.hdr_image, params);
+        make_proc(texture.hdr_image, params);
         float_to_byte(texture.ldr_image, texture.hdr_image);
         texture.hdr_image = {};
         if (verbose) printf("texture fbm not supported well");
       } break;
       case pbrt_texture::type_t::marble: {
         // auto& marble = ptexture.marble;
-        auto params = make_image_params{};
+        auto params = procimage_params{};
         params.type = make_image_type::fbm;
-        make_image(texture.hdr_image, params);
+        make_proc(texture.hdr_image, params);
         float_to_byte(texture.ldr_image, texture.hdr_image);
         texture.hdr_image = {};
         if (verbose) printf("texture marble not supported well");
@@ -3174,10 +3174,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         shape.uri    = name;
         auto dir     = normalize(distant.from - distant.to);
         auto size    = distant_dist * sin(5 * pif / 180);
-        auto params  = make_shape_params{};
+        auto params  = procshape_params{};
         params.type  = make_shape_type::quad;
         params.scale = size / 2;
-        make_shape(shape.triangles, shape.quads, shape.positions, shape.normals,
+        make_proc(shape.triangles, shape.quads, shape.positions, shape.normals,
             shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3199,11 +3199,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto& shape         = scene.shapes.back();
         shape.uri           = name;
         auto size           = 0.005f;
-        auto params         = make_shape_params{};
+        auto params         = procshape_params{};
         params.type         = make_shape_type::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_shape(shape.triangles, shape.quads, shape.positions, shape.normals,
+        make_proc(shape.triangles, shape.quads, shape.positions, shape.normals,
             shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3224,11 +3224,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto& shape         = scene.shapes.back();
         shape.uri           = name;
         auto size           = 0.005f;
-        auto params         = make_shape_params{};
+        auto params         = procshape_params{};
         params.type         = make_shape_type::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_shape(shape.triangles, shape.quads, shape.positions, shape.normals,
+        make_proc(shape.triangles, shape.quads, shape.positions, shape.normals,
             shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3248,11 +3248,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto& shape         = scene.shapes.back();
         shape.uri           = name;
         auto size           = 0.005f;
-        auto params         = make_shape_params{};
+        auto params         = procshape_params{};
         params.type         = make_shape_type::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_shape(shape.triangles, shape.quads, shape.positions, shape.normals,
+        make_proc(shape.triangles, shape.quads, shape.positions, shape.normals,
             shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3296,7 +3296,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
 
 // load pbrt scenes
 static void load_pbrt_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params) {
+    const load_params& params) {
   scene = yocto_scene{};
 
   try {

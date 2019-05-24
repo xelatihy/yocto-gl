@@ -609,7 +609,7 @@ void print_validation(const yocto_scene& scene, bool skip_textures) {
 }
 
 void build_bvh(
-    bvh_scene& bvh, const yocto_scene& scene, const build_bvh_params& params) {
+    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
   bvh.shapes.resize(scene.shapes.size());
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
     auto& shape = scene.shapes[idx];
@@ -642,7 +642,7 @@ void build_bvh(
 }
 
 void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
-    const vector<int>& updated_shapes, const build_bvh_params& params) {
+    const vector<int>& updated_shapes, const bvh_params& params) {
   for (auto idx : updated_shapes) {
     auto& shape = scene.shapes[idx];
     auto& sbvh  = bvh.shapes[idx];

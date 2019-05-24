@@ -38,10 +38,10 @@ using namespace yocto;
 
 int main(int argc, char* argv[]) {
   // options
-  auto load_params    = load_scene_params{};
-  auto bvh_params     = build_bvh_params{};
-  auto trace_params   = trace_image_params{};
-  auto tonemap_params = tonemap_image_params{};
+  auto load_prms    = load_params{};
+  auto bvh_prms     = bvh_params{};
+  auto trace_prms   = trace_params{};
+  auto tonemap_prms = tonemap_params{};
   auto all_cameras    = false;
   auto no_parallel    = false;
   auto save_batch     = false;
@@ -66,46 +66,46 @@ int main(int argc, char* argv[]) {
 
   // parse command line
   auto parser = CLI::App{"Offline path tracing"};
-  parser.add_option("--camera", trace_params.camera_id, "Camera index.");
+  parser.add_option("--camera", trace_prms.camera_id, "Camera index.");
   parser.add_flag(
       "--all-cameras,!--no-all-cameras", all_cameras, "Render all cameras.");
   parser.add_option(
-      "--hres,-R", trace_params.image_size.x, "Image horizontal resolution.");
+      "--hres,-R", trace_prms.image_size.x, "Image horizontal resolution.");
   parser.add_option(
-      "--vres,-r", trace_params.image_size.y, "Image vertical resolution.");
+      "--vres,-r", trace_prms.image_size.y, "Image vertical resolution.");
   parser.add_option(
-      "--nsamples,-s", trace_params.num_samples, "Number of samples.");
-  parser.add_option("--tracer,-t", trace_params.sampler_type, "Trace type.")
+      "--nsamples,-s", trace_prms.num_samples, "Number of samples.");
+  parser.add_option("--tracer,-t", trace_prms.sampler_type, "Trace type.")
       ->transform(CLI::IsMember(trace_sampler_type_namemap));
   parser
-      .add_option("--falsecolor,-F", trace_params.falsecolor_type,
+      .add_option("--falsecolor,-F", trace_prms.falsecolor_type,
           "Tracer false color type.")
       ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
   parser.add_option(
-      "--nbounces", trace_params.max_bounces, "Maximum number of bounces.");
+      "--nbounces", trace_prms.max_bounces, "Maximum number of bounces.");
   parser.add_option(
-      "--pixel-clamp", trace_params.pixel_clamp, "Final pixel clamping.");
+      "--pixel-clamp", trace_prms.pixel_clamp, "Final pixel clamping.");
   parser.add_flag(
       "--parallel,!--no-parallel", no_parallel, "Disable parallel execution.");
-  parser.add_option("--seed", trace_params.random_seed,
+  parser.add_option("--seed", trace_prms.random_seed,
       "Seed for the random number generators.");
   parser.add_option(
-      "--nbatch,-b", trace_params.samples_per_batch, "Samples per batch.");
+      "--nbatch,-b", trace_prms.samples_per_batch, "Samples per batch.");
   parser.add_flag("--env-hidden,!--no-env-hidden",
-      trace_params.environments_hidden, "Environments are hidden in renderer");
+      trace_prms.environments_hidden, "Environments are hidden in renderer");
   parser.add_option("--save-batch", save_batch, "Save images progressively");
-  parser.add_option("--exposure,-e", tonemap_params.exposure, "Hdr exposure");
-  parser.add_flag("--filmic,!--no-filmic", tonemap_params.filmic, "Hdr filmic");
-  parser.add_flag("--srgb,!--no-srgb", tonemap_params.srgb, "Hdr srgb");
+  parser.add_option("--exposure,-e", tonemap_prms.exposure, "Hdr exposure");
+  parser.add_flag("--filmic,!--no-filmic", tonemap_prms.filmic, "Hdr filmic");
+  parser.add_flag("--srgb,!--no-srgb", tonemap_prms.srgb, "Hdr srgb");
   parser.add_flag("--bvh-high-quality,!--no-bvh-high-quality",
-      bvh_params.high_quality, "Use high quality bvh mode");
+      bvh_prms.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-  parser.add_flag("--bvh-embree,!--no-bvh-embree", bvh_params.use_embree,
+  parser.add_flag("--bvh-embree,!--no-bvh-embree", bvh_prms.use_embree,
       "Use Embree ratracer");
   parser.add_flag("--bvh-embree-flatten,!--no-bvh-fembree-latten",
-      bvh_params.embree_flatten, "Flatten BVH scene");
+      bvh_prms.embree_flatten, "Flatten BVH scene");
   parser.add_flag("--bvh-embree-compact,!--no-bvh-embree-compact",
-      bvh_params.embree_compact, "Embree runs in compact memory");
+      bvh_prms.embree_compact, "Embree runs in compact memory");
 #endif
   parser.add_flag(
       "--add-skyenv,!--no-add-skyenv", add_skyenv, "Add sky envmap");
@@ -121,15 +121,15 @@ int main(int argc, char* argv[]) {
 
   // fix parallel code
   if (no_parallel) {
-    bvh_params.run_serially  = true;
-    load_params.run_serially = true;
+    bvh_prms.run_serially  = true;
+    load_prms.run_serially = true;
   }
 
   // scene loading
   auto scene = yocto_scene{};
   try {
     auto timer = print_timed("loading scene");
-    load_scene(filename, scene, load_params);
+    load_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
   auto bvh = bvh_scene{};
   {
     auto timer = print_timed("building bvh");
-    build_bvh(bvh, scene, bvh_params);
+    build_bvh(bvh, scene, bvh_prms);
   }
 
   // init renderer
@@ -165,9 +165,9 @@ int main(int argc, char* argv[]) {
 
   // fix renderer type if no lights
   if ((lights.instances.empty() && lights.environments.empty()) &&
-      is_sampler_lit(trace_params)) {
+      is_sampler_lit(trace_prms)) {
     print_info("no lights presents, switching to eyelight shader");
-    trace_params.sampler_type = trace_sampler_type::eyelight;
+    trace_prms.sampler_type = trace_sampler_type::eyelight;
   }
 
   // cameras to render from
@@ -177,43 +177,43 @@ int main(int argc, char* argv[]) {
       selected_cameras.push_back(i);
     }
   } else {
-    selected_cameras.push_back(trace_params.camera_id);
+    selected_cameras.push_back(trace_prms.camera_id);
   }
 
   // render all selected cameras
   for (auto camera_id : selected_cameras) {
     // set camera
-    trace_params.camera_id = camera_id;
+    trace_prms.camera_id = camera_id;
 
     // allocate buffers
     auto image_size = camera_image_size(
-        scene.cameras[trace_params.camera_id], trace_params.image_size);
+        scene.cameras[trace_prms.camera_id], trace_prms.image_size);
     auto render = image{image_size, zero4f};
     auto state  = trace_state{};
-    init_trace_state(state, image_size, trace_params.random_seed);
+    init_trace_state(state, image_size, trace_prms.random_seed);
 
     // render
-    for (auto sample = 0; sample < trace_params.num_samples;
-         sample += trace_params.samples_per_batch) {
+    for (auto sample = 0; sample < trace_prms.num_samples;
+         sample += trace_prms.samples_per_batch) {
       auto nsamples = min(
-          trace_params.samples_per_batch, trace_params.num_samples - sample);
+          trace_prms.samples_per_batch, trace_prms.num_samples - sample);
       {
         auto timer = print_timed(
-            "rendering cam" + to_string(trace_params.camera_id) + " at " +
+            "rendering cam" + to_string(trace_prms.camera_id) + " at " +
             pad_left(to_string(sample), 4) + " " +
-            pad_left(to_string(trace_params.num_samples), 4));
-        trace_samples(render, state, scene, bvh, lights, sample, trace_params);
+            pad_left(to_string(trace_prms.num_samples), 4));
+        trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
       }
       if (save_batch) {
         auto outfilename = get_noextension(imfilename) + ".cam" +
-                           to_string(trace_params.camera_id) + ".s" +
+                           to_string(trace_prms.camera_id) + ".s" +
                            pad_left(to_string(sample + nsamples), 4, '0') +
                            "." + get_extension(imfilename);
         try {
           if (logo) {
-            save_tonemapped_with_logo(outfilename, render, tonemap_params);
+            save_tonemapped_with_logo(outfilename, render, tonemap_prms);
           } else {
-            save_tonemapped(outfilename, render, tonemap_params);
+            save_tonemapped(outfilename, render, tonemap_prms);
           }
         } catch (const std::exception& e) {
           print_fatal(e.what());
@@ -226,14 +226,14 @@ int main(int argc, char* argv[]) {
       auto outfilename = imfilename;
       if (all_cameras) {
         outfilename = get_noextension(imfilename) + ".cam" +
-                      to_string(trace_params.camera_id) + "." +
+                      to_string(trace_prms.camera_id) + "." +
                       get_extension(imfilename);
       }
       auto timer = print_timed("saving image");
       if (logo) {
-        save_tonemapped_with_logo(outfilename, render, tonemap_params);
+        save_tonemapped_with_logo(outfilename, render, tonemap_prms);
       } else {
-        save_tonemapped(outfilename, render, tonemap_params);
+        save_tonemapped(outfilename, render, tonemap_prms);
       }
     } catch (const std::exception& e) {
       print_fatal(e.what());

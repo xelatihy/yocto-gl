@@ -27,7 +27,7 @@
 // 3. resize images with `resize()`
 // 4. tonemap images with `tonemap()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
-// 5. make various image examples with the `make_image()` functions
+// 5. make various image examples with the `make_proc()` functions
 // 6. create procedural sun-sky images with `make_sunsky()`
 // 7. many color conversion functions are available in the code below
 //
@@ -209,7 +209,7 @@ void srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb);
 void rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
 
 // Tone mapping params
-struct tonemap_image_params {
+struct tonemap_params {
   float exposure    = 0;
   vec3f tint        = {1, 1, 1};
   float contrast    = 0.5f;
@@ -221,24 +221,24 @@ struct tonemap_image_params {
 
 // Equality operators
 inline bool operator==(
-    const tonemap_image_params& a, const tonemap_image_params& b) {
+    const tonemap_params& a, const tonemap_params& b) {
   return memcmp(&a, &b, sizeof(a)) == 0;
 }
 inline bool operator!=(
-    const tonemap_image_params& a, const tonemap_image_params& b) {
+    const tonemap_params& a, const tonemap_params& b) {
   return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
 // Apply exposure and filmic tone mapping
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const tonemap_image_params& params);
+    const tonemap_params& params);
 void tonemap(image<vec4b>& ldr, const image<vec4f>& hdr,
-    const tonemap_image_params& params);
+    const tonemap_params& params);
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_image_params& params);
+    const image_region& region, const tonemap_params& params);
 
 // minimal color grading
-struct colorgrade_image_params {
+struct colorgrade_params {
   float contrast         = 0.5;
   float shadows          = 0.5;
   float midtones         = 0.5;
@@ -250,17 +250,17 @@ struct colorgrade_image_params {
 
 // Equality operators
 inline bool operator==(
-    const colorgrade_image_params& a, const colorgrade_image_params& b) {
+    const colorgrade_params& a, const colorgrade_params& b) {
   return memcmp(&a, &b, sizeof(a)) == 0;
 }
 inline bool operator!=(
-    const colorgrade_image_params& a, const colorgrade_image_params& b) {
+    const colorgrade_params& a, const colorgrade_params& b) {
   return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
 // color grade an image region
 void colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
-    const image_region& region, const colorgrade_image_params& params);
+    const image_region& region, const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);
@@ -293,7 +293,7 @@ void save_image(
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped(const string& filename, const image<vec4f>& hdr,
-    const tonemap_image_params& params);
+    const tonemap_params& params);
 
 // Save with a logo embedded
 void save_image_with_logo(const string& filename, const image<vec4f>& img);
@@ -302,7 +302,7 @@ void save_image_with_logo(const string& filename, const image<vec4b>& img);
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
-    const tonemap_image_params& params);
+    const tonemap_params& params);
 
 }  // namespace yocto
 
@@ -311,7 +311,7 @@ void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Types for make_image
+// Types for make_proc
 enum struct make_image_type {
   grid,
   checker,
@@ -327,8 +327,8 @@ enum struct make_image_type {
   ridge
 };
 
-// Parameters for make_image
-struct make_image_params {
+// Parameters for make_proc
+struct procimage_params {
   make_image_type type   = make_image_type::grid;
   vec2i           size   = {1024, 1024};
   float           scale  = 1;
@@ -340,7 +340,7 @@ struct make_image_params {
 };
 
 // Make an image
-void make_image(image<vec4f>& img, const make_image_params& params);
+void make_proc(image<vec4f>& img, const procimage_params& params);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or

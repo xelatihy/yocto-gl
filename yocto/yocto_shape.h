@@ -42,7 +42,7 @@
 //    `compute_tangent_spaces()`
 // 6. compute skinning with `compute_skinning()` and
 //    `compute_matrix_skinning()`
-// 6. create shapes with `make_shape()`, `make_hair()`, `make_points()`
+// 6. create shapes with `make_proc()`, `make_hair()`, `make_points()`
 // 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 // 8. shape sampling with `sample_points()`, `sample_lines()`,
 //    `sample_triangles()`; initialize the sampling CDFs with
@@ -465,7 +465,7 @@ enum make_shape_type {
 };
 
 // Parameters for make shape function
-struct make_shape_params {
+struct procshape_params {
   make_shape_type type         = make_shape_type::quad;
   int             subdivisions = 0;
   float           scale        = 1;
@@ -476,15 +476,15 @@ struct make_shape_params {
 };
 
 // Make a procedural shape
-void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
+void make_proc(vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const make_shape_params& params);
+    const procshape_params& params);
 // Make face-varying quads. For now supports only quad, cube, suzanne, sphere,
 // rect, box. Rounding not supported for now.
-void make_fvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+void make_procfvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const make_shape_params& params);
+    const procshape_params& params);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,

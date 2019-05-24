@@ -620,7 +620,7 @@ static vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
   }
 }
 
-vec3f tonemap(const vec3f& hdr, const tonemap_image_params& params) {
+vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   auto rgb = hdr;
   if (params.exposure != 0) rgb *= exp2(params.exposure);
   if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
@@ -636,27 +636,27 @@ vec3f tonemap(const vec3f& hdr, const tonemap_image_params& params) {
 
 // Apply exposure and filmic tone mapping
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const tonemap_image_params& params) {
+    const tonemap_params& params) {
   return apply_image(ldr, hdr,
       [scale = exp2(params.exposure) * params.tint, params](const vec4f& hdr) {
         return vec4f{tonemap(xyz(hdr), params), hdr.w};
       });
 }
 void tonemap(image<vec4b>& ldr, const image<vec4f>& hdr,
-    const tonemap_image_params& params) {
+    const tonemap_params& params) {
   return apply_image(ldr, hdr, [params](const vec4f& hdr) {
     return float_to_byte(vec4f{tonemap(xyz(hdr), params), hdr.w});
   });
 }
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_image_params& params) {
+    const image_region& region, const tonemap_params& params) {
   return apply_image(ldr, hdr, region, [params](const vec4f& hdr) {
     return vec4f{tonemap(xyz(hdr), params), hdr.w};
   });
 }
 
 static vec3f colorgrade(
-    const vec3f& ldr, const colorgrade_image_params& params) {
+    const vec3f& ldr, const colorgrade_params& params) {
   auto rgb = ldr;
   if (params.contrast != 0.5f) {
     rgb = gain(ldr, 1 - params.contrast);
@@ -683,7 +683,7 @@ static vec3f colorgrade(
 
 // Apply exposure and filmic tone mapping
 void colorgrade(image<vec4f>& corrected, const image<vec4f>& ldr,
-    const image_region& region, const colorgrade_image_params& params) {
+    const image_region& region, const colorgrade_params& params) {
   return apply_image(corrected, ldr, region, [&params](const vec4f& hdr) {
     return vec4f{colorgrade(xyz(hdr), params), hdr.w};
   });
@@ -761,7 +761,7 @@ void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
 }
 
 // Make an image
-void make_image(image<vec4f>& img, const make_image_params& params) {
+void make_proc(image<vec4f>& img, const procimage_params& params) {
   auto make_img = [&](const auto& shader) {
     img.resize(params.size);
     auto scale = 1.0f / max(params.size);
@@ -1087,7 +1087,7 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
   };
 
   // Make the sun sky image
-  auto img          = make_image(width, height, vec4f{0, 0, 0, 1});
+  auto img          = make_proc(width, height, vec4f{0, 0, 0, 1});
   auto sky_integral = 0.0f, sun_integral = 0.0f;
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
@@ -1209,37 +1209,37 @@ void make_preset(image<vec4f>& img, const string& type) {
   auto size = vec2i{1024, 1024};
   if (type.find("sky") != type.npos) size = {2048, 1024};
   if (type == "grid") {
-    auto params   = make_image_params{};
+    auto params   = procimage_params{};
     params.type   = make_image_type::grid;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.7, 0.7, 0.7, 1};
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "checker") {
-    auto params   = make_image_params{};
+    auto params   = procimage_params{};
     params.type   = make_image_type::checker;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.7, 0.7, 0.7, 1};
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "bumps") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::bumps;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "uvramp") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::uvramp;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "gammaramp") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::gammaramp;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "blackbodyramp") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::blackbody;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "uvgrid") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::uvgrid;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "sky") {
     make_sunsky(
         img, size, pif / 4, 3.0f, false, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
@@ -1247,25 +1247,25 @@ void make_preset(image<vec4f>& img, const string& type) {
     make_sunsky(
         img, size, pif / 4, 3.0f, true, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::noise;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "fbm") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::fbm;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "ridge") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::ridge;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "turbulence") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::turbulence;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "bump-normal") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::bumps;
-    make_image(img, params);
+    make_proc(img, params);
     auto bump = img;
     bump_to_normal(img, bump, 0.05f);
   } else if (type == "logo-render") {
@@ -1307,44 +1307,44 @@ void make_preset(image<vec4f>& img, const string& type) {
       pos += sub_img.size().x;
     }
   } else if (type == "test-floor") {
-    auto params    = make_image_params{};
+    auto params    = procimage_params{};
     params.type    = make_image_type::grid;
     params.color0  = vec4f{0.2, 0.2, 0.2, 1};
     params.color1  = vec4f{0.5, 0.5, 0.5, 1};
     params.borderw = 0.0025;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "test-grid") {
-    auto params   = make_image_params{};
+    auto params   = procimage_params{};
     params.type   = make_image_type::grid;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.5, 0.5, 0.5, 1};
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "test-checker") {
-    auto params   = make_image_params{};
+    auto params   = procimage_params{};
     params.type   = make_image_type::checker;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.5, 0.5, 0.5, 1};
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "test-bumps") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::bumps;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "test-uvramp") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::uvramp;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "test-gammaramp") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::gammaramp;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "test-blackbodyramp") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::blackbody;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "test-uvgrid") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::uvgrid;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "test-sky") {
     make_sunsky(
         img, size, pif / 4, 3.0f, false, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
@@ -1352,23 +1352,23 @@ void make_preset(image<vec4f>& img, const string& type) {
     make_sunsky(
         img, size, pif / 4, 3.0f, true, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::noise;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "test-fbm") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::fbm;
-    make_image(img, params);
+    make_proc(img, params);
   } else if (type == "test-bumps-normal") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::bumps;
-    make_image(img, params);
+    make_proc(img, params);
     auto bump = img;
     bump_to_normal(img, bump, 0.05f);
   } else if (type == "test-fbm-displacement") {
-    auto params = make_image_params{};
+    auto params = procimage_params{};
     params.type = make_image_type::fbm;
-    make_image(img, params);
+    make_proc(img, params);
   } else {
     throw std::invalid_argument("unknown image preset " + type);
   }
@@ -1848,7 +1848,7 @@ void save_image(
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped(const string& filename, const image<vec4f>& hdr,
-    const tonemap_image_params& params) {
+    const tonemap_params& params) {
   if (is_hdr_filename(filename)) {
     save_image(filename, hdr);
   } else {
@@ -1879,7 +1879,7 @@ void save_image_with_logo(const string& filename, const image<vec4b>& img) {
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
-    const tonemap_image_params& params) {
+    const tonemap_params& params) {
   if (is_hdr_filename(filename)) {
     save_image_with_logo(filename, hdr);
   } else {

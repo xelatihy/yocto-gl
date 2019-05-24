@@ -175,6 +175,7 @@ struct bvh_strided_view {
   }
 
  private:
+ 
   const void* ptr    = nullptr;
   int         count  = 0;
   int         stride = 0;
@@ -206,7 +207,7 @@ struct bvh_scene {
 };
 
 // bvh build params
-struct build_bvh_params {
+struct bvh_params {
   bool high_quality = false;
 #if YOCTO_EMBREE
   bool use_embree     = false;
@@ -218,13 +219,13 @@ struct build_bvh_params {
 };
 
 // Build the bvh acceleration structure.
-void build_bvh(bvh_shape& bvh, const build_bvh_params& params);
-void build_bvh(bvh_scene& bvh, const build_bvh_params& params);
+void build_bvh(bvh_shape& bvh, const bvh_params& params);
+void build_bvh(bvh_scene& bvh, const bvh_params& params);
 
 // Refit bvh data
-void refit_bvh(bvh_shape& bvh, const build_bvh_params& params);
+void refit_bvh(bvh_shape& bvh, const bvh_params& params);
 void refit_bvh(bvh_scene& bvh, const vector<int>& updated_shapes,
-    const build_bvh_params& params);
+    const bvh_params& params);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,

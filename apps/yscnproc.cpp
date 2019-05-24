@@ -86,18 +86,18 @@ int main(int argc, char** argv) {
   }
 
   // fix options
-  auto load_params          = load_scene_params();
-  auto save_params          = save_scene_params();
-  load_params.skip_textures = skip_textures;
-  save_params.skip_textures = skip_textures;
-  load_params.skip_meshes   = skip_meshes;
-  save_params.skip_meshes   = skip_meshes;
+  auto load_prms          = load_params();
+  auto save_prms          = save_scene_params();
+  load_prms.skip_textures = skip_textures;
+  save_prms.skip_textures = skip_textures;
+  load_prms.skip_meshes   = skip_meshes;
+  save_prms.skip_meshes   = skip_meshes;
 
   // load scene
   auto scene = yocto_scene{};
   try {
     auto timer = print_timed("loading scene");
-    load_scene(filename, scene, load_params);
+    load_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
   // save scene
   try {
     auto timer = print_timed("saving scene");
-    save_scene(output, scene, save_params);
+    save_scene(output, scene, save_prms);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }

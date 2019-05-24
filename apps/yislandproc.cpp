@@ -165,11 +165,11 @@ void load_island_lights(
       scene.materials.push_back(material);
       auto shape  = yocto_shape{};
       shape.uri   = "shapes/lights/" + name + ".ply";
-      auto params = make_shape_params{};
+      auto params = procshape_params{};
       params.type = make_shape_type::quad;
       params.scale =
           (ljs.at("width").get<float>() + ljs.at("height").get<float>());
-      make_shape(shape.triangles, shape.quads, shape.positions, shape.normals,
+      make_proc(shape.triangles, shape.quads, shape.positions, shape.normals,
           shape.texcoords, params);
       scene.shapes.push_back(shape);
       auto instance     = yocto_instance{};
@@ -873,10 +873,10 @@ void load_island_elements(const string& filename, const string& dirname,
 }
 
 void load_textures(
-    yocto_scene& scene, const string& dirname, const load_scene_params& params);
+    yocto_scene& scene, const string& dirname, const load_params& params);
 
 void load_island_scene(const std::string& filename, yocto_scene& scene,
-    const load_scene_params& params) {
+    const load_params& params) {
   try {
     auto js = json{};
     load_json(filename, js);
@@ -1018,18 +1018,18 @@ int main(int argc, char** argv) {
   }
 
   // fix params
-  auto load_params          = load_scene_params();
-  auto save_params          = save_scene_params();
-  load_params.skip_textures = skip_textures;
-  save_params.skip_textures = skip_textures;
-  load_params.skip_meshes   = skip_meshes;
-  save_params.skip_meshes   = skip_meshes;
+  auto load_prms          = load_params();
+  auto save_prms          = save_scene_params();
+  load_prms.skip_textures = skip_textures;
+  save_prms.skip_textures = skip_textures;
+  load_prms.skip_meshes   = skip_meshes;
+  save_prms.skip_meshes   = skip_meshes;
 
   // load scene
   auto scene = yocto_scene{};
   try {
     auto timer = print_timed("loading scene");
-    load_island_scene(filename, scene, load_params);
+    load_island_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
@@ -1077,10 +1077,10 @@ int main(int argc, char** argv) {
   // save scene
   try {
     auto timer                = print_timed("saving scene");
-    save_params.skip_textures = false;
-    save_params.run_serially  = false;
-    // save_params.ply_instances = true;
-    save_scene(output, scene, save_params);
+    save_prms.skip_textures = false;
+    save_prms.run_serially  = false;
+    // save_prms.ply_instances = true;
+    save_scene(output, scene, save_prms);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }

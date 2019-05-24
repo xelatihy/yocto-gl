@@ -55,7 +55,7 @@
 namespace yocto {
 
 // Scene load params
-struct load_scene_params {
+struct load_params {
   bool          skip_textures             = false;
   bool          skip_meshes               = false;
   bool          obj_split_shapes          = true;
@@ -76,7 +76,7 @@ struct save_scene_params {
 
 // Load/save a scene in the supported formats.
 void load_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params = {});
+    const load_params& params = {});
 void save_scene(const string& filename, const yocto_scene& scene,
     const save_scene_params& params = {});
 
@@ -86,7 +86,7 @@ void save_texture(const yocto_texture& texture, const string& dirname);
 void load_voltexture(yocto_voltexture& texture, const string& dirname);
 void save_voltexture(const yocto_voltexture& texture, const string& dirname);
 void load_textures(
-    yocto_scene& scene, const string& dirname, const load_scene_params& params);
+    yocto_scene& scene, const string& dirname, const load_params& params);
 void save_textures(const yocto_scene& scene, const string& dirname,
     const save_scene_params& params);
 
@@ -96,7 +96,7 @@ void save_shape(const yocto_shape& shape, const string& dirname);
 void load_subdiv(yocto_subdiv& subdiv, const string& dirname);
 void save_subdiv(const yocto_subdiv& subdiv, const string& dirname);
 void load_shapes(
-    yocto_scene& scene, const string& dirname, const load_scene_params& params);
+    yocto_scene& scene, const string& dirname, const load_params& params);
 void save_shapes(const yocto_scene& scene, const string& dirname,
     const save_scene_params& params);
 
