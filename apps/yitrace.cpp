@@ -205,93 +205,93 @@ void add_new_scene(app_state& app, const string& filename) {
   app.selected = (int)app.scenes.size() - 1;
 }
 
-void draw_opengl_widgets(const opengl_window& win) {
+void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         app = *(app_state*)get_opengl_user_pointer(win);
-  if (!begin_opengl_widgets_window(win, "yitrace")) return;
+  auto&         app = *(app_state*)get_gluser_pointer(win);
+  if (!begin_glwidgets_window(win, "yitrace")) return;
   if (!app.errors.empty() && error_message.empty()) {
     error_message = app.errors.front();
     app.errors.pop_front();
-    open_modal_opengl_widget(win, "error");
+    open_glmodal(win, "error");
   }
-  if (!draw_modal_message_opengl_window(win, "error", error_message)) {
+  if (!draw_glmessage(win, "error", error_message)) {
     error_message = "";
   }
-  if (draw_modal_fileialog_opengl_widgets(
+  if (draw_glfiledialog(
           win, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
     add_new_scene(app, load_path);
   }
-  if (draw_modal_fileialog_opengl_widgets(win, "save", save_path, true,
+  if (draw_glfiledialog(win, "save", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.yaml;*.obj;*.pbrt")) {
     app.scenes[app.selected].outname = save_path;
     app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_scene);
     save_path = "";
   }
-  if (draw_modal_fileialog_opengl_widgets(win, "save image", save_path, true,
+  if (draw_glfiledialog(win, "save image", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     app.scenes[app.selected].imagename = save_path;
     app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_image);
     save_path = "";
   }
-  if (draw_button_opengl_widget(win, "load")) {
-    open_modal_opengl_widget(win, "load");
+  if (draw_glbutton(win, "load")) {
+    open_glmodal(win, "load");
   }
-  continue_opengl_widget_line(win);
-  if (draw_button_opengl_widget(win, "save",
+  continue_glline(win);
+  if (draw_glbutton(win, "save",
           app.selected >= 0 && app.scenes[app.selected].task_queue.empty())) {
     save_path = app.scenes[app.selected].outname;
-    open_modal_opengl_widget(win, "save");
+    open_glmodal(win, "save");
   }
-  continue_opengl_widget_line(win);
-  if (draw_button_opengl_widget(win, "save image",
+  continue_glline(win);
+  if (draw_glbutton(win, "save image",
           app.selected >= 0 && app.scenes[app.selected].render_done)) {
     save_path = app.scenes[app.selected].imagename;
-    open_modal_opengl_widget(win, "save image");
+    open_glmodal(win, "save image");
   }
-  continue_opengl_widget_line(win);
-  if (draw_button_opengl_widget(win, "close", app.selected >= 0)) {
+  continue_glline(win);
+  if (draw_glbutton(win, "close", app.selected >= 0)) {
     app.scenes[app.selected].task_queue.emplace_back(
         app_task_type::close_scene);
   }
-  continue_opengl_widget_line(win);
-  if (draw_button_opengl_widget(win, "quit")) {
-    set_close_opengl_window(win, true);
+  continue_glline(win);
+  if (draw_glbutton(win, "quit")) {
+    set_glwindow_close(win, true);
   }
   if (app.scenes.empty()) return;
-  draw_combobox_opengl_widget(
+  draw_glcombobox(
       win, "scene", app.selected, (int)app.scenes.size(),
       [&app](int idx) { return app.scenes[idx].name.c_str(); }, false);
   auto& scn = app.scenes[app.selected];
-  if (begin_header_opengl_widget(win, "trace")) {
+  if (begin_glheader(win, "trace")) {
     auto cam_names = vector<string>();
     for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
     auto trace_prms = scn.trace_prms;
     if (scn.load_done) {
-      if (draw_combobox_opengl_widget(
+      if (draw_glcombobox(
               win, "camera", trace_prms.camera_id, cam_names)) {
       }
     }
-    draw_slider_opengl_widget(win, "width", trace_prms.image_size.x, 0, 4096);
-    draw_slider_opengl_widget(
+    draw_glslider(win, "width", trace_prms.image_size.x, 0, 4096);
+    draw_glslider(
         win, "height", trace_prms.image_size.y, 0, 4096);
-    draw_slider_opengl_widget(
+    draw_glslider(
         win, "nsamples", trace_prms.num_samples, 16, 4096);
-    draw_combobox_opengl_widget(
+    draw_glcombobox(
         win, "tracer", (int&)trace_prms.sampler_type, trace_sampler_names);
-    draw_combobox_opengl_widget(win, "false color",
+    draw_glcombobox(win, "false color",
         (int&)trace_prms.falsecolor_type, trace_falsecolor_names);
-    draw_slider_opengl_widget(
+    draw_glslider(
         win, "nbounces", trace_prms.max_bounces, 1, 128);
-    draw_slider_opengl_widget(
+    draw_glslider(
         win, "seed", (int&)trace_prms.random_seed, 0, 1000000);
-    draw_slider_opengl_widget(win, "pratio", scn.preview_ratio, 1, 64);
+    draw_glslider(win, "pratio", scn.preview_ratio, 1, 64);
     auto tonemap_prms = scn.tonemap_prms;
-    draw_slider_opengl_widget(win, "exposure", tonemap_prms.exposure, -5, 5);
-    draw_checkbox_opengl_widget(win, "filmic", tonemap_prms.filmic);
-    continue_opengl_widget_line(win);
-    draw_checkbox_opengl_widget(win, "srgb", tonemap_prms.srgb);
+    draw_glslider(win, "exposure", tonemap_prms.exposure, -5, 5);
+    draw_glcheckbox(win, "filmic", tonemap_prms.filmic);
+    continue_glline(win);
+    draw_glcheckbox(win, "srgb", tonemap_prms.srgb);
     if (trace_prms != scn.trace_prms) {
       scn.task_queue.emplace_back(app_task_type::apply_edit,
           app_edit{typeid(trace_params), -1, trace_prms, false});
@@ -300,82 +300,82 @@ void draw_opengl_widgets(const opengl_window& win) {
       scn.task_queue.emplace_back(app_task_type::apply_edit,
           app_edit{typeid(tonemap_params), -1, tonemap_prms, false});
     }
-    end_header_opengl_widget(win);
+    end_glheader(win);
   }
-  if (begin_header_opengl_widget(win, "inspect")) {
-    draw_label_opengl_widget(win, "scene", get_filename(scn.filename));
-    draw_label_opengl_widget(win, "filename", scn.filename);
-    draw_label_opengl_widget(win, "outname", scn.outname);
-    draw_label_opengl_widget(win, "imagename", scn.imagename);
-    draw_label_opengl_widget(win, "image", "%d x %d @ %d", scn.render.size().x,
+  if (begin_glheader(win, "inspect")) {
+    draw_gllabel(win, "scene", get_filename(scn.filename));
+    draw_gllabel(win, "filename", scn.filename);
+    draw_gllabel(win, "outname", scn.outname);
+    draw_gllabel(win, "imagename", scn.imagename);
+    draw_gllabel(win, "image", "%d x %d @ %d", scn.render.size().x,
         scn.render.size().y, scn.render_sample);
-    draw_slider_opengl_widget(win, "zoom", scn.image_scale, 0.1, 10);
-    draw_checkbox_opengl_widget(win, "zoom to fit", scn.zoom_to_fit);
-    continue_opengl_widget_line(win);
-    draw_checkbox_opengl_widget(win, "fps", scn.navigation_fps);
-    if (draw_button_opengl_widget(win, "print cams")) {
+    draw_glslider(win, "zoom", scn.image_scale, 0.1, 10);
+    draw_glcheckbox(win, "zoom to fit", scn.zoom_to_fit);
+    continue_glline(win);
+    draw_glcheckbox(win, "fps", scn.navigation_fps);
+    if (draw_glbutton(win, "print cams")) {
       for (auto& camera : scn.scene.cameras) {
         print_obj_camera(camera);
       }
     }
-    continue_opengl_widget_line(win);
-    if (draw_button_opengl_widget(win, "print stats")) {
+    continue_glline(win);
+    if (draw_glbutton(win, "print stats")) {
       print_info(format_stats(scn.scene));
       print_info(format_stats(scn.bvh));
     }
-    auto mouse_pos = get_opengl_mouse_pos(win);
+    auto mouse_pos = get_glmouse_pos(win);
     auto ij        = get_image_coords(
         mouse_pos, scn.image_center, scn.image_scale, scn.render.size());
-    draw_dragger_opengl_widget(win, "mouse", ij);
+    draw_gldragger(win, "mouse", ij);
     if (ij.x >= 0 && ij.x < scn.render.size().x && ij.y >= 0 &&
         ij.y < scn.render.size().y) {
-      draw_coloredit_opengl_widget(win, "pixel", scn.render[{ij.x, ij.y}]);
+      draw_glcoloredit(win, "pixel", scn.render[{ij.x, ij.y}]);
     } else {
       auto zero4f_ = zero4f;
-      draw_coloredit_opengl_widget(win, "pixel", zero4f_);
+      draw_glcoloredit(win, "pixel", zero4f_);
     }
-    end_header_opengl_widget(win);
+    end_glheader(win);
   }
-  if (scn.load_done && begin_header_opengl_widget(win, "scene tree")) {
-    draw_opengl_widgets_scene_tree(win, "", scn.scene, scn.selection, 200);
-    end_header_opengl_widget(win);
+  if (scn.load_done && begin_glheader(win, "scene tree")) {
+    draw_glwidgets_scene_tree(win, "", scn.scene, scn.selection, 200);
+    end_glheader(win);
   }
-  if (scn.load_done && begin_header_opengl_widget(win, "scene object")) {
+  if (scn.load_done && begin_glheader(win, "scene object")) {
     auto edit = app_edit{};
-    if (draw_opengl_widgets_scene_inspector(
+    if (draw_glwidgets_scene_inspector(
             win, "", scn.scene, scn.selection, edit, 200)) {
       scn.task_queue.emplace_back(app_task_type::apply_edit, edit);
     }
-    end_header_opengl_widget(win);
+    end_glheader(win);
   }
-  if (begin_header_opengl_widget(win, "log")) {
+  if (begin_glheader(win, "log")) {
     draw_gllog(win);
-    end_header_opengl_widget(win);
+    end_glheader(win);
   }
 }
 
 void draw(const opengl_window& win) {
-  auto& app      = *(app_state*)get_opengl_user_pointer(win);
-  auto  win_size = get_opengl_window_size(win);
-  set_opengl_viewport(get_opengl_framebuffer_viewport(win));
-  clear_opengl_framebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+  auto& app      = *(app_state*)get_gluser_pointer(win);
+  auto  win_size = get_glwindow_size(win);
+  set_glviewport(get_glframebuffer_viewport(win));
+  clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app.scenes.empty() && app.selected >= 0) {
     auto& scn = app.scenes.at(app.selected);
     if (scn.load_done && scn.gl_txt) {
       update_image_view(scn.image_center, scn.image_scale, scn.display.size(),
           win_size, scn.zoom_to_fit);
-      draw_opengl_image_background(scn.gl_txt, win_size.x, win_size.y,
+      draw_glimage_background(scn.gl_txt, win_size.x, win_size.y,
           scn.image_center, scn.image_scale);
-      set_opengl_blending(true);
-      draw_opengl_image(scn.gl_txt, win_size.x, win_size.y, scn.image_center,
+      set_glblending(true);
+      draw_glimage(scn.gl_txt, win_size.x, win_size.y, scn.image_center,
           scn.image_scale);
-      set_opengl_blending(false);
+      set_glblending(false);
     }
   }
-  begin_opengl_widgets_frame(win);
-  draw_opengl_widgets(win);
-  end_opengl_widgets_frame(win);
-  swap_opengl_buffers(win);
+  begin_glwidgets(win);
+  draw_glwidgets(win);
+  end_glwidgets(win);
+  swap_glbuffers(win);
 }
 
 void apply_edit(const string& filename, yocto_scene& scene,
@@ -508,10 +508,10 @@ void update(const opengl_window& win, app_state& app) {
     auto updated = false;
     while (scn.task_queue.front().queue.try_pop(region)) {
       if (region.size() == zero2i) {
-        update_opengl_texture_region(
+        update_gltexture_region(
             scn.gl_txt, scn.preview, {zero2i, scn.preview.size()}, false);
       } else {
-        update_opengl_texture_region(scn.gl_txt, scn.display, region, false);
+        update_gltexture_region(scn.gl_txt, scn.display, region, false);
       }
       updated = true;
     }
@@ -611,7 +611,7 @@ void update(const opengl_window& win, app_state& app) {
           scn.name = get_filename(scn.filename) + " [" +
                      to_string(scn.render.size()) + " @ 0]";
           log_glinfo(win, "done loading " + scn.filename);
-          init_opengl_texture(scn.gl_txt, scn.display, false, false, false);
+          init_gltexture(scn.gl_txt, scn.display, false, false, false);
           scn.task_queue.emplace_back(app_task_type::build_bvh);
           scn.task_queue.emplace_back(app_task_type::init_lights);
           scn.task_queue.emplace_back(app_task_type::render_image);
@@ -788,10 +788,10 @@ void update(const opengl_window& win, app_state& app) {
           scn.display.assign(scn.image_size);
           scn.preview.assign(scn.image_size);
           if (scn.gl_txt) {
-            delete_opengl_texture(scn.gl_txt);
+            delete_gltexture(scn.gl_txt);
             scn.gl_txt = {};
           }
-          init_opengl_texture(scn.gl_txt, scn.display, false, false, false);
+          init_gltexture(scn.gl_txt, scn.display, false, false, false);
         }
       } break;
       case app_task_type::apply_edit: break;
@@ -800,7 +800,7 @@ void update(const opengl_window& win, app_state& app) {
 }
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
-  auto& app = *(app_state*)get_opengl_user_pointer(win);
+  auto& app = *(app_state*)get_gluser_pointer(win);
   for (auto& path : paths) add_new_scene(app, path);
 }
 
@@ -808,22 +808,22 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
-  init_opengl_window(win, {1280 + 320, 720}, "yitrace", &app, draw);
-  set_drop_opengl_callback(win, drop_callback);
+  init_glwindow(win, {1280 + 320, 720}, "yitrace", &app, draw);
+  set_drop_glcallback(win, drop_callback);
 
   // init widgets
-  init_opengl_widgets(win);
+  init_glwidgets(win);
 
   // loop
   auto mouse_pos = zero2f, last_pos = zero2f;
-  while (!should_opengl_window_close(win)) {
+  while (!should_glwindow_close(win)) {
     last_pos            = mouse_pos;
-    mouse_pos           = get_opengl_mouse_pos(win);
-    auto mouse_left     = get_opengl_mouse_left(win);
-    auto mouse_right    = get_opengl_mouse_right(win);
-    auto alt_down       = get_opengl_alt_key(win);
-    auto shift_down     = get_opengl_shift_key(win);
-    auto widgets_active = get_opengl_widgets_active(win);
+    mouse_pos           = get_glmouse_pos(win);
+    auto mouse_left     = get_glmouse_left(win);
+    auto mouse_right    = get_glmouse_right(win);
+    auto alt_down       = get_glalt_key(win);
+    auto shift_down     = get_glshift_key(win);
+    auto widgets_active = get_glwidgets_active(win);
 
     // handle mouse and keyboard for navigation
     if (app.selected >= 0 && app.scenes[app.selected].load_done &&
@@ -873,11 +873,11 @@ void run_ui(app_state& app) {
     draw(win);
 
     // event hadling
-    process_opengl_events(win);
+    process_glevents(win);
   }
 
   // clear
-  delete_opengl_window(win);
+  delete_glwindow(win);
 }
 
 int main(int argc, char* argv[]) {

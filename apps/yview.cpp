@@ -41,11 +41,11 @@ void print_obj_camera(const yocto_camera& camera);
 };
 
 struct drawgl_shape {
-  opengl_array_buffer  positions_buffer     = {};
-  opengl_array_buffer  normals_buffer       = {};
-  opengl_array_buffer  texcoords_buffer     = {};
-  opengl_array_buffer  colors_buffer        = {};
-  opengl_array_buffer  tangentspaces_buffer = {};
+  opengl_arraybuffer  positions_buffer     = {};
+  opengl_arraybuffer  normals_buffer       = {};
+  opengl_arraybuffer  texcoords_buffer     = {};
+  opengl_arraybuffer  colors_buffer        = {};
+  opengl_arraybuffer  tangentspaces_buffer = {};
   opengl_elementbuffer points_buffer        = {};
   opengl_elementbuffer lines_buffer         = {};
   opengl_elementbuffer triangles_buffer     = {};
@@ -531,90 +531,90 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
   auto& vbos     = state.shapes.at(instance.shape);
   auto& material = scene.materials[instance.material];
 
-  set_opengl_uniform(state.program, "shape_xform", mat4f(instance.frame));
-  set_opengl_uniform(state.program, "shape_xform_invtranspose",
+  set_gluniform(state.program, "shape_xform", mat4f(instance.frame));
+  set_gluniform(state.program, "shape_xform_invtranspose",
       transpose(mat4f(inverse(instance.frame, options.non_rigid_frames))));
-  set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
-  set_opengl_uniform(
+  set_gluniform(state.program, "shape_normal_offset", 0.0f);
+  set_gluniform(
       state.program, "highlight", (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
 
   auto mtype = 2;
   if (material.gltf_textures) mtype = 3;
-  set_opengl_uniform(state.program, "mat_type", mtype);
-  set_opengl_uniform(state.program, "mat_ke", material.emission);
-  set_opengl_uniform(state.program, "mat_kd", material.diffuse);
-  set_opengl_uniform(state.program, "mat_ks", vec3f{material.metallic});
-  set_opengl_uniform(state.program, "mat_rs", material.roughness);
-  set_opengl_uniform(state.program, "mat_op", material.opacity);
-  set_opengl_uniform(
+  set_gluniform(state.program, "mat_type", mtype);
+  set_gluniform(state.program, "mat_ke", material.emission);
+  set_gluniform(state.program, "mat_kd", material.diffuse);
+  set_gluniform(state.program, "mat_ks", vec3f{material.metallic});
+  set_gluniform(state.program, "mat_rs", material.roughness);
+  set_gluniform(state.program, "mat_op", material.opacity);
+  set_gluniform(
       state.program, "mat_double_sided", (int)options.double_sided);
-  set_opengl_uniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
+  set_gluniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
       material.emission_texture >= 0
           ? state.textures.at(material.emission_texture)
           : opengl_texture{},
       0);
-  set_opengl_uniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
+  set_gluniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
       material.diffuse_texture >= 0
           ? state.textures.at(material.diffuse_texture)
           : opengl_texture{},
       1);
-  set_opengl_uniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
+  set_gluniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
       material.metallic_texture >= 0
           ? state.textures.at(material.metallic_texture)
           : opengl_texture{},
       2);
-  set_opengl_uniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
+  set_gluniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
       material.roughness_texture >= 0
           ? state.textures.at(material.roughness_texture)
           : opengl_texture{},
       3);
-  set_opengl_uniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
+  set_gluniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
       material.normal_texture >= 0 ? state.textures.at(material.normal_texture)
                                    : opengl_texture{},
       5);
 
-  set_opengl_uniform(state.program, "elem_faceted", (int)shape.normals.empty());
-  set_opengl_vertexattrib(
+  set_gluniform(state.program, "elem_faceted", (int)shape.normals.empty());
+  set_glvertexattrib(
       state.program, "vert_pos", vbos.positions_buffer, zero3f);
-  set_opengl_vertexattrib(
+  set_glvertexattrib(
       state.program, "vert_norm", vbos.normals_buffer, zero3f);
-  set_opengl_vertexattrib(
+  set_glvertexattrib(
       state.program, "vert_texcoord", vbos.texcoords_buffer, zero2f);
-  set_opengl_vertexattrib(
+  set_glvertexattrib(
       state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
-  set_opengl_vertexattrib(state.program, "vert_tangsp",
+  set_glvertexattrib(state.program, "vert_tangsp",
       vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
 
   if (vbos.points_buffer) {
-    set_opengl_uniform(state.program, "elem_type", 1);
-    draw_opengl_points(vbos.points_buffer, vbos.points_buffer.num);
+    set_gluniform(state.program, "elem_type", 1);
+    draw_glpoints(vbos.points_buffer, vbos.points_buffer.num);
   }
   if (vbos.lines_buffer) {
-    set_opengl_uniform(state.program, "elem_type", 2);
-    draw_opengl_lines(vbos.lines_buffer, vbos.lines_buffer.num);
+    set_gluniform(state.program, "elem_type", 2);
+    draw_gllines(vbos.lines_buffer, vbos.lines_buffer.num);
   }
   if (vbos.triangles_buffer) {
-    set_opengl_uniform(state.program, "elem_type", 3);
-    draw_opengl_triangles(vbos.triangles_buffer, vbos.triangles_buffer.num);
+    set_gluniform(state.program, "elem_type", 3);
+    draw_gltriangles(vbos.triangles_buffer, vbos.triangles_buffer.num);
   }
   if (vbos.quads_buffer) {
-    set_opengl_uniform(state.program, "elem_type", 3);
-    draw_opengl_triangles(vbos.quads_buffer, vbos.quads_buffer.num);
+    set_gluniform(state.program, "elem_type", 3);
+    draw_gltriangles(vbos.quads_buffer, vbos.quads_buffer.num);
   }
 
 #if 0
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
         enable_glculling(false);
-        check_opengl_error();
-        set_opengl_uniform(state.program, "mtype"), 0);
+        check_glerror();
+        set_gluniform(state.program, "mtype"), 0);
         glUniform3f(glGetUniformLocation(state.program, "ke"), 0, 0, 0);
-        set_opengl_uniform(state.program, "op"), material.op);
-        set_opengl_uniform(state.program, "shp_normal_offset"), 0.01f);
-        check_opengl_error();
+        set_gluniform(state.program, "op"), material.op);
+        set_gluniform(state.program, "shp_normal_offset"), 0.01f);
+        check_glerror();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
         glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        check_opengl_error();
+        check_glerror();
     }
 #endif
   if (options.edges) throw std::runtime_error("edges are momentarily disabled");
@@ -633,13 +633,13 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
       (float)viewport.z / (float)viewport.w, options.near_plane,
       options.far_plane);
 
-  bind_opengl_program(state.program);
-  set_opengl_uniform(state.program, "cam_pos", camera.frame.o);
-  set_opengl_uniform(state.program, "cam_xform_inv", camera_view);
-  set_opengl_uniform(state.program, "cam_proj", camera_proj);
-  set_opengl_uniform(state.program, "eyelight", (int)options.eyelight);
-  set_opengl_uniform(state.program, "exposure", options.exposure);
-  set_opengl_uniform(state.program, "gamma", options.gamma);
+  bind_glprogram(state.program);
+  set_gluniform(state.program, "cam_pos", camera.frame.o);
+  set_gluniform(state.program, "cam_xform_inv", camera_view);
+  set_gluniform(state.program, "cam_proj", camera_proj);
+  set_gluniform(state.program, "eyelight", (int)options.eyelight);
+  set_gluniform(state.program, "exposure", options.exposure);
+  set_gluniform(state.program, "gamma", options.gamma);
 
   if (!options.eyelight) {
     auto lights_pos  = vector<vec3f>();
@@ -673,20 +673,20 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
       lights_ke.push_back(ke);
       lights_type.push_back(0);
     }
-    set_opengl_uniform(state.program, "lamb", zero3f);
-    set_opengl_uniform(state.program, "lnum", (int)lights_pos.size());
+    set_gluniform(state.program, "lamb", zero3f);
+    set_gluniform(state.program, "lnum", (int)lights_pos.size());
     for (auto i = 0; i < lights_pos.size(); i++) {
       auto is = std::to_string(i);
-      set_opengl_uniform(
+      set_gluniform(
           state.program, ("lpos[" + is + "]").c_str(), lights_pos[i]);
-      set_opengl_uniform(
+      set_gluniform(
           state.program, ("lke[" + is + "]").c_str(), lights_ke[i]);
-      set_opengl_uniform(
+      set_gluniform(
           state.program, ("ltype[" + is + "]").c_str(), (int)lights_type[i]);
     }
   }
 
-  if (options.wireframe) set_opengl_wireframe(true);
+  if (options.wireframe) set_glwireframe(true);
   for (auto instance_id = 0; instance_id < scene.instances.size();
        instance_id++) {
     auto& instance = scene.instances[instance_id];
@@ -698,20 +698,20 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
   }
 
   unbind_opengl_program();
-  if (options.wireframe) set_opengl_wireframe(false);
+  if (options.wireframe) set_glwireframe(false);
 }
 
 void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
   // load textures and vbos
-  init_opengl_program(state.program, vertex, fragment);
+  init_glprogram(state.program, vertex, fragment);
   state.textures.resize(scene.textures.size());
   for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
     auto& texture = scene.textures[texture_id];
     if (!texture.hdr_image.empty()) {
-      init_opengl_texture(
+      init_gltexture(
           state.textures[texture_id], texture.hdr_image, true, true, true);
     } else if (!texture.ldr_image.empty()) {
-      init_opengl_texture(
+      init_gltexture(
           state.textures[texture_id], texture.ldr_image, true, true, true);
     } else {
       throw std::runtime_error("bad texture");
@@ -723,27 +723,27 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     auto  vbos  = drawgl_shape();
     if (shape.quads_positions.empty()) {
       if (!shape.positions.empty())
-        init_opengl_array_buffer(vbos.positions_buffer, shape.positions, false);
+        init_glarraybuffer(vbos.positions_buffer, shape.positions, false);
       if (!shape.normals.empty())
-        init_opengl_array_buffer(vbos.normals_buffer, shape.normals, false);
+        init_glarraybuffer(vbos.normals_buffer, shape.normals, false);
       if (!shape.texcoords.empty())
-        init_opengl_array_buffer(vbos.texcoords_buffer, shape.texcoords, false);
+        init_glarraybuffer(vbos.texcoords_buffer, shape.texcoords, false);
       if (!shape.colors.empty())
-        init_opengl_array_buffer(vbos.colors_buffer, shape.colors, false);
+        init_glarraybuffer(vbos.colors_buffer, shape.colors, false);
       if (!shape.tangents.empty())
-        init_opengl_array_buffer(
+        init_glarraybuffer(
             vbos.tangentspaces_buffer, shape.tangents, false);
       if (!shape.points.empty())
-        init_opengl_elementbuffer(vbos.points_buffer, shape.points, false);
+        init_glelementbuffer(vbos.points_buffer, shape.points, false);
       if (!shape.lines.empty())
-        init_opengl_elementbuffer(vbos.lines_buffer, shape.lines, false);
+        init_glelementbuffer(vbos.lines_buffer, shape.lines, false);
       if (!shape.triangles.empty())
-        init_opengl_elementbuffer(
+        init_glelementbuffer(
             vbos.triangles_buffer, shape.triangles, false);
       if (!shape.quads.empty()) {
         auto triangles = vector<vec3i>{};
         quads_to_triangles(triangles, shape.quads);
-        init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
+        init_glelementbuffer(vbos.quads_buffer, triangles, false);
       }
     } else {
       auto quads     = vector<vec4i>{};
@@ -754,15 +754,15 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
           shape.quads_positions, shape.quads_normals, shape.quads_texcoords,
           shape.positions, shape.normals, shape.texcoords);
       if (!positions.empty())
-        init_opengl_array_buffer(vbos.positions_buffer, positions, false);
+        init_glarraybuffer(vbos.positions_buffer, positions, false);
       if (!normals.empty())
-        init_opengl_array_buffer(vbos.normals_buffer, normals, false);
+        init_glarraybuffer(vbos.normals_buffer, normals, false);
       if (!texcoords.empty())
-        init_opengl_array_buffer(vbos.texcoords_buffer, texcoords, false);
+        init_glarraybuffer(vbos.texcoords_buffer, texcoords, false);
       if (!quads.empty()) {
         auto triangles = vector<vec3i>{};
         quads_to_triangles(triangles, quads);
-        init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
+        init_glelementbuffer(vbos.quads_buffer, triangles, false);
       }
     }
     state.shapes[shape_id] = vbos;
@@ -770,173 +770,173 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
 }
 
 void delete_drawgl_shape(drawgl_shape& glshape) {
-  delete_opengl_array_buffer(glshape.positions_buffer);
-  delete_opengl_array_buffer(glshape.normals_buffer);
-  delete_opengl_array_buffer(glshape.texcoords_buffer);
-  delete_opengl_array_buffer(glshape.colors_buffer);
-  delete_opengl_array_buffer(glshape.tangentspaces_buffer);
-  delete_opengl_elementbuffer(glshape.points_buffer);
-  delete_opengl_elementbuffer(glshape.lines_buffer);
-  delete_opengl_elementbuffer(glshape.triangles_buffer);
-  delete_opengl_elementbuffer(glshape.quads_buffer);
+  delete_glarraybuffer(glshape.positions_buffer);
+  delete_glarraybuffer(glshape.normals_buffer);
+  delete_glarraybuffer(glshape.texcoords_buffer);
+  delete_glarraybuffer(glshape.colors_buffer);
+  delete_glarraybuffer(glshape.tangentspaces_buffer);
+  delete_glelementbuffer(glshape.points_buffer);
+  delete_glelementbuffer(glshape.lines_buffer);
+  delete_glelementbuffer(glshape.triangles_buffer);
+  delete_glelementbuffer(glshape.quads_buffer);
 }
 
 // delete state
 void delete_drawgl_state(drawgl_state& state) {
   if (!state.program) return;
-  delete_opengl_program(state.program);
-  for (auto& texture : state.textures) delete_opengl_texture(texture);
+  delete_glprogram(state.program);
+  for (auto& texture : state.textures) delete_gltexture(texture);
   for (auto& shape : state.shapes) delete_drawgl_shape(shape);
   state.textures.clear();
   state.shapes.clear();
 }
 
 // draw with shading
-void draw_opengl_widgets(const opengl_window& win) {
+void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         app = *(app_state*)get_opengl_user_pointer(win);
-  if (!begin_opengl_widgets_window(win, "yview")) return;
+  auto&         app = *(app_state*)get_gluser_pointer(win);
+  if (!begin_glwidgets_window(win, "yview")) return;
   if (!app.errors.empty() && error_message.empty()) {
     error_message = app.errors.front();
     app.errors.pop_front();
-    open_modal_opengl_widget(win, "error");
+    open_glmodal(win, "error");
   }
-  if (!draw_modal_message_opengl_window(win, "error", error_message)) {
+  if (!draw_glmessage(win, "error", error_message)) {
     error_message = "";
   }
-  if (draw_modal_fileialog_opengl_widgets(
+  if (draw_glfiledialog(
           win, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
     add_new_scene(app, load_path);
   }
-  if (draw_modal_fileialog_opengl_widgets(win, "save", save_path, true,
+  if (draw_glfiledialog(win, "save", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.yaml;*.obj;*.pbrt")) {
     app.scenes[app.selected].outname = save_path;
     app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_scene);
     save_path = "";
   }
-  if (draw_modal_fileialog_opengl_widgets(win, "save image", save_path, true,
+  if (draw_glfiledialog(win, "save image", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     app.scenes[app.selected].imagename = save_path;
     app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_image);
     save_path = "";
   }
-  if (draw_button_opengl_widget(win, "load")) {
-    open_modal_opengl_widget(win, "load");
+  if (draw_glbutton(win, "load")) {
+    open_glmodal(win, "load");
   }
-  continue_opengl_widget_line(win);
-  if (draw_button_opengl_widget(win, "save",
+  continue_glline(win);
+  if (draw_glbutton(win, "save",
           app.selected >= 0 && app.scenes[app.selected].task_queue.empty())) {
     save_path = app.scenes[app.selected].outname;
-    open_modal_opengl_widget(win, "save");
+    open_glmodal(win, "save");
   }
-  continue_opengl_widget_line(win);
-  if (draw_button_opengl_widget(win, "save image", app.selected >= 0)) {
+  continue_glline(win);
+  if (draw_glbutton(win, "save image", app.selected >= 0)) {
     save_path = app.scenes[app.selected].imagename;
-    open_modal_opengl_widget(win, "save image");
+    open_glmodal(win, "save image");
   }
-  continue_opengl_widget_line(win);
-  if (draw_button_opengl_widget(win, "close", app.selected >= 0)) {
+  continue_glline(win);
+  if (draw_glbutton(win, "close", app.selected >= 0)) {
     app.scenes[app.selected].task_queue.emplace_back(
         app_task_type::close_scene);
   }
-  continue_opengl_widget_line(win);
-  if (draw_button_opengl_widget(win, "quit")) {
-    set_close_opengl_window(win, true);
+  continue_glline(win);
+  if (draw_glbutton(win, "quit")) {
+    set_glwindow_close(win, true);
   }
   if (app.scenes.empty()) return;
-  draw_combobox_opengl_widget(
+  draw_glcombobox(
       win, "scene", app.selected, (int)app.scenes.size(),
       [&app](int idx) { return app.scenes[idx].name.c_str(); }, false);
   auto& scn = app.scenes[app.selected];
-  if (begin_header_opengl_widget(win, "trace")) {
+  if (begin_glheader(win, "trace")) {
     auto cam_names = vector<string>();
     for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
     auto drawgl_prms = scn.drawgl_prms;
     if (scn.load_done) {
-      if (draw_combobox_opengl_widget(
+      if (draw_glcombobox(
               win, "camera", drawgl_prms.camera_id, cam_names)) {
       }
     }
-    draw_slider_opengl_widget(win, "width", drawgl_prms.image_width, 0, 4096);
-    draw_slider_opengl_widget(win, "height", drawgl_prms.image_height, 0, 4096);
-    draw_checkbox_opengl_widget(win, "eyelight", drawgl_prms.eyelight);
-    continue_opengl_widget_line(win);
-    draw_checkbox_opengl_widget(win, "wireframe", drawgl_prms.wireframe);
-    continue_opengl_widget_line(win);
-    draw_checkbox_opengl_widget(win, "edges", drawgl_prms.edges);
+    draw_glslider(win, "width", drawgl_prms.image_width, 0, 4096);
+    draw_glslider(win, "height", drawgl_prms.image_height, 0, 4096);
+    draw_glcheckbox(win, "eyelight", drawgl_prms.eyelight);
+    continue_glline(win);
+    draw_glcheckbox(win, "wireframe", drawgl_prms.wireframe);
+    continue_glline(win);
+    draw_glcheckbox(win, "edges", drawgl_prms.edges);
     if (scn.time_range != zero2f) {
-      draw_slider_opengl_widget(
+      draw_glslider(
           win, "time", scn.time, scn.time_range.x, scn.time_range.y);
-      draw_textinput_opengl_widget(win, "anim group", scn.anim_group);
-      draw_checkbox_opengl_widget(win, "animate", scn.animate);
+      draw_gltextinput(win, "anim group", scn.anim_group);
+      draw_glcheckbox(win, "animate", scn.animate);
     }
-    draw_slider_opengl_widget(win, "exposure", drawgl_prms.exposure, -10, 10);
-    draw_slider_opengl_widget(win, "gamma", drawgl_prms.gamma, 0.1f, 4);
-    draw_checkbox_opengl_widget(win, "double sided", drawgl_prms.double_sided);
-    draw_slider_opengl_widget(win, "near", drawgl_prms.near_plane, 0.01f, 1.0f);
-    draw_slider_opengl_widget(
+    draw_glslider(win, "exposure", drawgl_prms.exposure, -10, 10);
+    draw_glslider(win, "gamma", drawgl_prms.gamma, 0.1f, 4);
+    draw_glcheckbox(win, "double sided", drawgl_prms.double_sided);
+    draw_glslider(win, "near", drawgl_prms.near_plane, 0.01f, 1.0f);
+    draw_glslider(
         win, "far", drawgl_prms.far_plane, 1000.0f, 10000.0f);
 
     if (drawgl_prms != scn.drawgl_prms) {
       scn.task_queue.emplace_back(app_task_type::apply_edit,
           app_edit{typeid(draw_scene_params), -1, drawgl_prms, false});
     }
-    end_header_opengl_widget(win);
+    end_glheader(win);
   }
-  if (begin_header_opengl_widget(win, "inspect")) {
-    draw_label_opengl_widget(win, "scene", get_filename(scn.filename));
-    draw_label_opengl_widget(win, "filename", scn.filename);
-    draw_label_opengl_widget(win, "outname", scn.outname);
-    draw_label_opengl_widget(win, "imagename", scn.imagename);
-    continue_opengl_widget_line(win);
-    draw_checkbox_opengl_widget(win, "fps", scn.navigation_fps);
-    if (draw_button_opengl_widget(win, "print cams")) {
+  if (begin_glheader(win, "inspect")) {
+    draw_gllabel(win, "scene", get_filename(scn.filename));
+    draw_gllabel(win, "filename", scn.filename);
+    draw_gllabel(win, "outname", scn.outname);
+    draw_gllabel(win, "imagename", scn.imagename);
+    continue_glline(win);
+    draw_glcheckbox(win, "fps", scn.navigation_fps);
+    if (draw_glbutton(win, "print cams")) {
       for (auto& camera : scn.scene.cameras) {
         print_obj_camera(camera);
       }
     }
-    continue_opengl_widget_line(win);
-    if (draw_button_opengl_widget(win, "print stats")) {
+    continue_glline(win);
+    if (draw_glbutton(win, "print stats")) {
       print_info(format_stats(scn.scene));
     }
-    end_header_opengl_widget(win);
+    end_glheader(win);
   }
-  if (scn.load_done && begin_header_opengl_widget(win, "scene tree")) {
-    draw_opengl_widgets_scene_tree(win, "", scn.scene, scn.selection, 200);
-    end_header_opengl_widget(win);
+  if (scn.load_done && begin_glheader(win, "scene tree")) {
+    draw_glwidgets_scene_tree(win, "", scn.scene, scn.selection, 200);
+    end_glheader(win);
   }
-  if (scn.load_done && begin_header_opengl_widget(win, "scene object")) {
+  if (scn.load_done && begin_glheader(win, "scene object")) {
     auto edit = app_edit{};
-    if (draw_opengl_widgets_scene_inspector(
+    if (draw_glwidgets_scene_inspector(
             win, "", scn.scene, scn.selection, edit, 200)) {
       scn.task_queue.emplace_back(app_task_type::apply_edit, edit);
     }
-    end_header_opengl_widget(win);
+    end_glheader(win);
   }
-  if (begin_header_opengl_widget(win, "log")) {
+  if (begin_glheader(win, "log")) {
     draw_gllog(win);
-    end_header_opengl_widget(win);
+    end_glheader(win);
   }
 }
 
 // draw with shading
 void draw(const opengl_window& win) {
-  auto& app = *(app_state*)get_opengl_user_pointer(win);
+  auto& app = *(app_state*)get_gluser_pointer(win);
 
-  clear_opengl_framebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  set_opengl_viewport(get_opengl_framebuffer_viewport(win));
+  clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+  set_glviewport(get_glframebuffer_viewport(win));
   if (!app.scenes.empty() && app.selected >= 0 &&
       app.scenes[app.selected].load_done) {
     auto& scn = app.scenes[app.selected];
-    draw_glscene(scn.state, scn.scene, get_opengl_framebuffer_viewport(win),
+    draw_glscene(scn.state, scn.scene, get_glframebuffer_viewport(win),
         scn.selection, scn.drawgl_prms);
   }
-  begin_opengl_widgets_frame(win);
-  draw_opengl_widgets(win);
-  end_opengl_widgets_frame(win);
-  swap_opengl_buffers(win);
+  begin_glwidgets(win);
+  draw_glwidgets(win);
+  end_glwidgets(win);
+  swap_glbuffers(win);
 }
 
 void apply_edit(const string& filename, yocto_scene& scene,
@@ -1167,7 +1167,7 @@ void update(const opengl_window& win, app_state& app) {
 }
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
-  auto& app = *(app_state*)get_opengl_user_pointer(win);
+  auto& app = *(app_state*)get_gluser_pointer(win);
   for (auto& path : paths) add_new_scene(app, path);
 }
 
@@ -1175,22 +1175,22 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
-  init_opengl_window(win, {1280 + 320, 720}, "yview", &app, draw);
+  init_glwindow(win, {1280 + 320, 720}, "yview", &app, draw);
 
   // init widget
-  init_opengl_widgets(win);
+  init_glwidgets(win);
 
   // loop
   auto mouse_pos = zero2f, last_pos = zero2f;
   auto last_time = std::chrono::high_resolution_clock::now();
-  while (!should_opengl_window_close(win)) {
+  while (!should_glwindow_close(win)) {
     last_pos            = mouse_pos;
-    mouse_pos           = get_opengl_mouse_pos(win);
-    auto mouse_left     = get_opengl_mouse_left(win);
-    auto mouse_right    = get_opengl_mouse_right(win);
-    auto alt_down       = get_opengl_alt_key(win);
-    auto shift_down     = get_opengl_shift_key(win);
-    auto widgets_active = get_opengl_widgets_active(win);
+    mouse_pos           = get_glmouse_pos(win);
+    auto mouse_left     = get_glmouse_left(win);
+    auto mouse_right    = get_glmouse_right(win);
+    auto alt_down       = get_glalt_key(win);
+    auto shift_down     = get_glshift_key(win);
+    auto widgets_active = get_glwidgets_active(win);
 
     // update trasforms
     if (app.selected >= 0) {
@@ -1240,11 +1240,11 @@ void run_ui(app_state& app) {
     draw(win);
 
     // event hadling
-    process_opengl_events(win);
+    process_glevents(win);
   }
 
   // clear
-  delete_opengl_window(win);
+  delete_glwindow(win);
 }
 
 int main(int argc, char* argv[]) {
