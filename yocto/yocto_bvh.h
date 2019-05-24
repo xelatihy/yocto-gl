@@ -105,10 +105,10 @@ const int bvh_max_prims = 4;
 // nodes. See bvh_scene_data for more details.
 struct bvh_node {
   bbox3f bbox;
-  short  num_primitives;
-  bool   is_internal;
-  byte   split_axis;
-  int    primitive_ids[bvh_max_prims];
+  short  num;
+  bool   internal;
+  byte   axis;
+  int    prims[bvh_max_prims];
 };
 
 // BVH array view

@@ -267,12 +267,12 @@ struct yocto_animation {
   string                   animation_group = "";
   yocto_interpolation_type interpolation_type =
       yocto_interpolation_type::linear;
-  vector<float>         keyframes_times         = {};
-  vector<vec3f>         translation_keyframes   = {};
-  vector<vec4f>         rotation_keyframes      = {};
-  vector<vec3f>         scale_keyframes         = {};
-  vector<vector<float>> morph_weights_keyframes = {};
-  vector<int>           node_targets            = {};
+  vector<float>         times         = {};
+  vector<vec3f>         translations   = {};
+  vector<vec4f>         rotations      = {};
+  vector<vec3f>         scales         = {};
+  vector<vector<float>> morphs = {};
+  vector<int>           targets            = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.

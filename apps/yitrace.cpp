@@ -89,7 +89,7 @@ struct app_scene {
 
   // options
   load_params       load_prms     = {};
-  save_scene_params save_prms     = {};
+  save_params save_prms     = {};
   bvh_params        bvh_prms      = {};
   trace_params      trace_prms    = {};
   tonemap_params    tonemap_prms  = {};
@@ -132,7 +132,7 @@ struct app_state {
 
   // default options
   load_params       load_prms    = {};
-  save_scene_params save_prms    = {};
+  save_params save_prms    = {};
   bvh_params        bvh_prms     = {};
   trace_params      trace_prms   = {};
   tonemap_params    tonemap_prms = {};

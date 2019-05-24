@@ -128,7 +128,7 @@ inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
 inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
     yocto_scene& scene, const yocto_animation& value, app_selection& sel) {
   auto tid = 0;
-  for (auto tg : value.node_targets) {
+  for (auto tg : value.targets) {
     draw_glscenetree(
         win, "target" + std::to_string(tid++), scene, tg, scene.nodes, sel);
   }
@@ -513,12 +513,12 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_gltextinput(win, "group", edited.animation_group)) updated = true;
   // if(draw_glcombobox(win, "type", &value.type,
   // animation_type_names())) updated = false;
-  draw_gllabel(win, "times", "%ld", edited.keyframes_times.size());
-  draw_gllabel(win, "translation", "%ld", edited.translation_keyframes.size());
-  draw_gllabel(win, "rotation", "%ld", edited.rotation_keyframes.size());
-  draw_gllabel(win, "scale", "%ld", edited.scale_keyframes.size());
-  draw_gllabel(win, "weights", "%ld", value.morph_weights_keyframes.size());
-  draw_gllabel(win, "targets", "%ld", edited.node_targets.size());
+  draw_gllabel(win, "times", "%ld", edited.times.size());
+  draw_gllabel(win, "translation", "%ld", edited.translations.size());
+  draw_gllabel(win, "rotation", "%ld", edited.rotations.size());
+  draw_gllabel(win, "scale", "%ld", edited.scales.size());
+  draw_gllabel(win, "weights", "%ld", value.morphs.size());
+  draw_gllabel(win, "targets", "%ld", edited.targets.size());
   if (updated) {
     edit = {sel.type, sel.index, edited, false};
   }

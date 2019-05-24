@@ -166,7 +166,7 @@ struct app_scene {
 
   // options
   load_params       load_prms   = {};
-  save_scene_params save_prms   = {};
+  save_params save_prms   = {};
   draw_scene_params drawgl_prms = {};
 
   // scene
@@ -198,7 +198,7 @@ struct app_state {
 
   // default options
   load_params       load_prms   = {};
-  save_scene_params save_prms   = {};
+  save_params save_prms   = {};
   draw_scene_params drawgl_prms = {};
 };
 

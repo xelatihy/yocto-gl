@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
 
   // fix options
   auto load_prms          = load_params();
-  auto save_prms          = save_scene_params();
+  auto save_prms          = save_params();
   load_prms.skip_textures = skip_textures;
   save_prms.skip_textures = skip_textures;
 

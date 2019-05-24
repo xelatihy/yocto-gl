@@ -759,13 +759,13 @@ static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
     return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
            2 * size.y * size.z;
   };
-  for (auto axis = 0; axis < 3; axis++) {
+  for (auto saxis = 0; saxis < 3; saxis++) {
     for (auto b = 1; b < nbins; b++) {
-      auto split     = (&cbbox.min.x)[axis] + b * csize[axis] / nbins;
+      auto split     = cbbox.min[saxis] + b * csize[saxis] / nbins;
       auto left_bbox = invalid_bbox3f, right_bbox = invalid_bbox3f;
       auto left_nprims = 0, right_nprims = 0;
       for (auto i = start; i < end; i++) {
-        if ((&prims[i].center.x)[axis] < split) {
+        if (prims[i].center[saxis] < split) {
           left_bbox += prims[i].bbox;
           left_nprims += 1;
         } else {
@@ -778,7 +778,7 @@ static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
       if (cost < min_cost) {
         min_cost   = cost;
         middle     = split;
-        split_axis = axis;
+        split_axis = saxis;
       }
     }
   }
@@ -803,38 +803,36 @@ static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
 static pair<int, int> split_balanced(
     vector<bvh_prim>& prims, int start, int end) {
   // initialize split axis and position
-  auto split_axis = 0;
+  auto axis = 0;
   auto mid        = (start + end) / 2;
 
   // compute primintive bounds and size
   auto cbbox = invalid_bbox3f;
   for (auto i = start; i < end; i++) cbbox += prims[i].center;
   auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, split_axis};
+  if (csize == zero3f) return {mid, axis};
 
   // split along largest
-  auto largest_axis = 0;
-  if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
-  if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
-  if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
+  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
+  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
+  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
 
   // balanced tree split: find the largest axis of the
   // bounding box and split along this one right in the middle
-  split_axis = largest_axis;
   mid        = (start + end) / 2;
   std::nth_element(prims.data() + start, prims.data() + mid, prims.data() + end,
-      [split_axis](auto& a, auto& b) {
-        return a.center[split_axis] < b.center[split_axis];
+      [axis](auto& a, auto& b) {
+        return a.center[axis] < b.center[axis];
       });
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
     throw std::runtime_error("bad bvh split");
-    split_axis = 0;
+    axis = 0;
     mid        = (start + end) / 2;
   }
 
-  return {mid, split_axis};
+  return {mid, axis};
 }
 
 // Splits a BVH node using the middle heutirtic. Returns split position and
@@ -842,38 +840,36 @@ static pair<int, int> split_balanced(
 static pair<int, int> split_middle(
     vector<bvh_prim>& prims, int start, int end) {
   // initialize split axis and position
-  auto split_axis = 0;
+  auto axis = 0;
   auto mid        = (start + end) / 2;
 
   // compute primintive bounds and size
   auto cbbox = invalid_bbox3f;
   for (auto i = start; i < end; i++) cbbox += prims[i].center;
   auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, split_axis};
+  if (csize == zero3f) return {mid, axis};
 
   // split along largest
-  auto largest_axis = 0;
-  if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
-  if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
-  if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
+  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
+  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
+  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
 
   // split the space in the middle along the largest axis
-  split_axis   = largest_axis;
   auto cmiddle = (cbbox.max + cbbox.min) / 2;
-  auto middle  = cmiddle[largest_axis];
+  auto middle  = cmiddle[axis];
   mid          = (int)(std::partition(prims.data() + start, prims.data() + end,
-                  [split_axis, middle](
-                      auto& a) { return a.center[split_axis] < middle; }) -
+                  [axis, middle](
+                      auto& a) { return a.center[axis] < middle; }) -
               prims.data());
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
     throw std::runtime_error("bad bvh split");
-    split_axis = 0;
+    axis = 0;
     mid        = (start + end) / 2;
   }
 
-  return {mid, split_axis};
+  return {mid, axis};
 }
 
 // Build BVH nodes
@@ -907,26 +903,26 @@ static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, split_axis] = (params.high_quality)
+      auto [mid, axis] = (params.high_quality)
                                    ? split_sah(prims, start, end)
                                    : split_balanced(prims, start, end);
 
       // make an internal node
-      node.is_internal      = true;
-      node.split_axis       = split_axis;
-      node.num_primitives   = 2;
-      node.primitive_ids[0] = (int)nodes.size() + 0;
-      node.primitive_ids[1] = (int)nodes.size() + 1;
+      node.internal      = true;
+      node.axis       = axis;
+      node.num   = 2;
+      node.prims[0] = (int)nodes.size() + 0;
+      node.prims[1] = (int)nodes.size() + 1;
       nodes.emplace_back();
       nodes.emplace_back();
-      queue.push_back({node.primitive_ids[0], start, mid});
-      queue.push_back({node.primitive_ids[1], mid, end});
+      queue.push_back({node.prims[0], start, mid});
+      queue.push_back({node.prims[1], mid, end});
     } else {
       // Make a leaf node
-      node.is_internal    = false;
-      node.num_primitives = end - start;
-      for (auto i = 0; i < node.num_primitives; i++)
-        node.primitive_ids[i] = prims[start + i].primid;
+      node.internal    = false;
+      node.num = end - start;
+      for (auto i = 0; i < node.num; i++)
+        node.prims[i] = prims[start + i].primid;
     }
   }
 
@@ -987,30 +983,30 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
             // split into two children
             if (end - start > bvh_max_prims) {
               // get split
-              auto [mid, split_axis] = (params.high_quality)
+              auto [mid, axis] = (params.high_quality)
                                            ? split_sah(prims, start, end)
                                            : split_balanced(prims, start, end);
 
               // make an internal node
               {
                 lock_guard<mutex> lock{queue_mutex};
-                node.is_internal      = true;
-                node.split_axis       = split_axis;
-                node.num_primitives   = 2;
-                node.primitive_ids[0] = (int)nodes.size() + 0;
-                node.primitive_ids[1] = (int)nodes.size() + 1;
+                node.internal      = true;
+                node.axis       = axis;
+                node.num   = 2;
+                node.prims[0] = (int)nodes.size() + 0;
+                node.prims[1] = (int)nodes.size() + 1;
                 nodes.emplace_back();
                 nodes.emplace_back();
-                queue.push_back({node.primitive_ids[0], start, mid});
-                queue.push_back({node.primitive_ids[1], mid, end});
+                queue.push_back({node.prims[0], start, mid});
+                queue.push_back({node.prims[1], mid, end});
               }
             } else {
               // Make a leaf node
-              node.is_internal    = false;
-              node.num_primitives = end - start;
-              for (auto i = 0; i < node.num_primitives; i++)
-                node.primitive_ids[i] = prims[start + i].primid;
-              num_processed_prims += node.num_primitives;
+              node.internal    = false;
+              node.num = end - start;
+              for (auto i = 0; i < node.num; i++)
+                node.prims[i] = prims[start + i].primid;
+              num_processed_prims += node.num;
             }
           }
         }));
@@ -1124,36 +1120,36 @@ void refit_bvh(bvh_shape& shape, const bvh_params& params) {
   for (auto nodeid = (int)shape.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = shape.nodes[nodeid];
     node.bbox  = invalid_bbox3f;
-    if (node.is_internal) {
+    if (node.internal) {
       for (auto i = 0; i < 2; i++) {
-        node.bbox += shape.nodes[node.primitive_ids[i]].bbox;
+        node.bbox += shape.nodes[node.prims[i]].bbox;
       }
     } else if (!shape.points.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& p = shape.points[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& p = shape.points[node.prims[idx]];
         node.bbox += point_bounds(shape.positions[p], shape.radius[p]);
       }
     } else if (!shape.lines.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& l = shape.lines[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& l = shape.lines[node.prims[idx]];
         node.bbox += line_bounds(shape.positions[l.x], shape.positions[l.y],
             shape.radius[l.x], shape.radius[l.y]);
       }
     } else if (!shape.triangles.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& t = shape.triangles[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& t = shape.triangles[node.prims[idx]];
         node.bbox += triangle_bounds(
             shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
       }
     } else if (!shape.quads.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& q = shape.quads[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& q = shape.quads[node.prims[idx]];
         node.bbox += quad_bounds(shape.positions[q.x], shape.positions[q.y],
             shape.positions[q.z], shape.positions[q.w]);
       }
     } else if (!shape.quadspos.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& q = shape.quadspos[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& q = shape.quadspos[node.prims[idx]];
         node.bbox += quad_bounds(shape.positions[q.x], shape.positions[q.y],
             shape.positions[q.z], shape.positions[q.w]);
       }
@@ -1174,12 +1170,12 @@ void refit_bvh(bvh_scene& scene, const vector<int>& updated_shapes,
   for (auto nodeid = (int)scene.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = scene.nodes[nodeid];
     node.bbox  = invalid_bbox3f;
-    if (node.is_internal) {
+    if (node.internal) {
       for (auto i = 0; i < 2; i++) {
-        node.bbox += scene.nodes[node.primitive_ids[i]].bbox;
+        node.bbox += scene.nodes[node.prims[i]].bbox;
       }
     } else {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
+      for (auto idx = 0; idx < node.num; idx++) {
         auto& instance = scene.instances[idx];
         auto& sbvh     = scene.shapes[instance.shape];
         auto  bbox     = sbvh.nodes.empty()
@@ -1231,63 +1227,63 @@ bool intersect_bvh(const bvh_shape& shape, const ray3f& ray_, int& element,
 
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list
-    if (node.is_internal) {
+    if (node.internal) {
       // for internal nodes, attempts to proceed along the
       // split axis from smallest to largest nodes
-      if (ray_dsign[node.split_axis]) {
-        node_stack[node_cur++] = node.primitive_ids[0];
-        node_stack[node_cur++] = node.primitive_ids[1];
+      if (ray_dsign[node.axis]) {
+        node_stack[node_cur++] = node.prims[0];
+        node_stack[node_cur++] = node.prims[1];
       } else {
-        node_stack[node_cur++] = node.primitive_ids[1];
-        node_stack[node_cur++] = node.primitive_ids[0];
+        node_stack[node_cur++] = node.prims[1];
+        node_stack[node_cur++] = node.prims[0];
       }
     } else if (!shape.points.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& p = shape.points[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& p = shape.points[node.prims[idx]];
         if (intersect_point(
                 ray, shape.positions[p], shape.radius[p], uv, distance)) {
           hit      = true;
-          element  = node.primitive_ids[idx];
+          element  = node.prims[idx];
           ray.tmax = distance;
         }
       }
     } else if (!shape.lines.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& l = shape.lines[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& l = shape.lines[node.prims[idx]];
         if (intersect_line(ray, shape.positions[l.x], shape.positions[l.y],
                 shape.radius[l.x], shape.radius[l.y], uv, distance)) {
           hit      = true;
-          element  = node.primitive_ids[idx];
+          element  = node.prims[idx];
           ray.tmax = distance;
         }
       }
     } else if (!shape.triangles.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& t = shape.triangles[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& t = shape.triangles[node.prims[idx]];
         if (intersect_triangle(ray, shape.positions[t.x], shape.positions[t.y],
                 shape.positions[t.z], uv, distance)) {
           hit      = true;
-          element  = node.primitive_ids[idx];
+          element  = node.prims[idx];
           ray.tmax = distance;
         }
       }
     } else if (!shape.quads.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& q = shape.quads[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& q = shape.quads[node.prims[idx]];
         if (intersect_quad(ray, shape.positions[q.x], shape.positions[q.y],
                 shape.positions[q.z], shape.positions[q.w], uv, distance)) {
           hit      = true;
-          element  = node.primitive_ids[idx];
+          element  = node.prims[idx];
           ray.tmax = distance;
         }
       }
     } else if (!shape.quadspos.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& q = shape.quadspos[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& q = shape.quadspos[node.prims[idx]];
         if (intersect_quad(ray, shape.positions[q.x], shape.positions[q.y],
                 shape.positions[q.z], shape.positions[q.w], uv, distance)) {
           hit      = true;
-          element  = node.primitive_ids[idx];
+          element  = node.prims[idx];
           ray.tmax = distance;
         }
       }
@@ -1342,25 +1338,25 @@ bool intersect_bvh(const bvh_scene& scene, const ray3f& ray_, int& instance,
 
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list
-    if (node.is_internal) {
+    if (node.internal) {
       // for internal nodes, attempts to proceed along the
       // split axis from smallest to largest nodes
-      if (ray_dsign[node.split_axis]) {
-        node_stack[node_cur++] = node.primitive_ids[0];
-        node_stack[node_cur++] = node.primitive_ids[1];
+      if (ray_dsign[node.axis]) {
+        node_stack[node_cur++] = node.prims[0];
+        node_stack[node_cur++] = node.prims[1];
       } else {
-        node_stack[node_cur++] = node.primitive_ids[1];
-        node_stack[node_cur++] = node.primitive_ids[0];
+        node_stack[node_cur++] = node.prims[1];
+        node_stack[node_cur++] = node.prims[0];
       }
     } else {
-      for (auto i = 0; i < node.num_primitives; i++) {
-        auto& instance_ = scene.instances[node.primitive_ids[i]];
+      for (auto i = 0; i < node.num; i++) {
+        auto& instance_ = scene.instances[node.prims[i]];
         auto  inv_ray   = transform_ray(
             inverse(instance_.frame, non_rigid_frames), ray);
         if (intersect_bvh(scene.shapes[instance_.shape], inv_ray, element, uv,
                 distance, find_any)) {
           hit      = true;
-          instance = node.primitive_ids[i];
+          instance = node.prims[i];
           ray.tmax = distance;
         }
       }
@@ -1406,63 +1402,63 @@ bool overlap_bvh(const bvh_shape& shape, const vec3f& pos, float max_distance,
 
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list
-    if (node.is_internal) {
+    if (node.internal) {
       // internal node
-      node_stack[node_cur++] = node.primitive_ids[0];
-      node_stack[node_cur++] = node.primitive_ids[1];
+      node_stack[node_cur++] = node.prims[0];
+      node_stack[node_cur++] = node.prims[1];
     } else if (!shape.points.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& p = shape.points[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& p = shape.points[node.prims[idx]];
         if (overlap_point(pos, max_distance, shape.positions[p],
                 shape.radius[p], uv, distance)) {
           hit          = true;
-          element      = node.primitive_ids[idx];
+          element      = node.prims[idx];
           max_distance = distance;
         }
       }
     } else if (!shape.lines.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& l = shape.lines[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& l = shape.lines[node.prims[idx]];
         if (overlap_line(pos, max_distance, shape.positions[l.x],
                 shape.positions[l.y], shape.radius[l.x], shape.radius[l.y], uv,
                 distance)) {
           hit          = true;
-          element      = node.primitive_ids[idx];
+          element      = node.prims[idx];
           max_distance = distance;
         }
       }
     } else if (!shape.triangles.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& t = shape.triangles[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& t = shape.triangles[node.prims[idx]];
         if (overlap_triangle(pos, max_distance, shape.positions[t.x],
                 shape.positions[t.y], shape.positions[t.z], shape.radius[t.x],
                 shape.radius[t.y], shape.radius[t.z], uv, distance)) {
           hit          = true;
-          element      = node.primitive_ids[idx];
+          element      = node.prims[idx];
           max_distance = distance;
         }
       }
     } else if (!shape.quads.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& q = shape.quads[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& q = shape.quads[node.prims[idx]];
         if (overlap_quad(pos, max_distance, shape.positions[q.x],
                 shape.positions[q.y], shape.positions[q.z],
                 shape.positions[q.w], shape.radius[q.x], shape.radius[q.y],
                 shape.radius[q.z], shape.radius[q.w], uv, distance)) {
           hit          = true;
-          element      = node.primitive_ids[idx];
+          element      = node.prims[idx];
           max_distance = distance;
         }
       }
     } else if (!shape.quadspos.empty()) {
-      for (auto idx = 0; idx < node.num_primitives; idx++) {
-        auto& q = shape.quadspos[node.primitive_ids[idx]];
+      for (auto idx = 0; idx < node.num; idx++) {
+        auto& q = shape.quadspos[node.prims[idx]];
         if (overlap_quad(pos, max_distance, shape.positions[q.x],
                 shape.positions[q.y], shape.positions[q.z],
                 shape.positions[q.w], shape.radius[q.x], shape.radius[q.y],
                 shape.radius[q.z], shape.radius[q.w], uv, distance)) {
           hit          = true;
-          element      = node.primitive_ids[idx];
+          element      = node.prims[idx];
           max_distance = distance;
         }
       }
@@ -1500,19 +1496,19 @@ bool overlap_bvh(const bvh_scene& scene, const vec3f& pos, float max_distance,
 
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list
-    if (node.is_internal) {
+    if (node.internal) {
       // internal node
-      node_stack[node_cur++] = node.primitive_ids[0];
-      node_stack[node_cur++] = node.primitive_ids[1];
+      node_stack[node_cur++] = node.prims[0];
+      node_stack[node_cur++] = node.prims[1];
     } else {
-      for (auto i = 0; i < node.num_primitives; i++) {
-        auto instance_ = scene.instances[node.primitive_ids[i]];
+      for (auto i = 0; i < node.num; i++) {
+        auto instance_ = scene.instances[node.prims[i]];
         auto inv_pos   = transform_point(
             inverse(instance_.frame, non_rigid_frames), pos);
         if (overlap_bvh(scene.shapes[instance_.shape], inv_pos, max_distance,
                 element, uv, distance, find_any)) {
           hit          = true;
-          instance     = node.primitive_ids[i];
+          instance     = node.prims[i];
           max_distance = distance;
         }
       }

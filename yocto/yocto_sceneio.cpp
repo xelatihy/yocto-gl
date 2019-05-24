@@ -61,25 +61,25 @@ namespace yocto {
 static void load_yaml_scene(
     const string& filename, yocto_scene& scene, const load_params& params);
 static void save_yaml_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params);
+    const save_params& params);
 
 // Load/save a scene from/to OBJ.
 static void load_obj_scene(
     const string& filename, yocto_scene& scene, const load_params& params);
 static void save_obj_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params);
+    const save_params& params);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 static void load_ply_scene(
     const string& filename, yocto_scene& scene, const load_params& params);
 static void save_ply_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params);
+    const save_params& params);
 
 // Load/save a scene from/to glTF.
 static void load_gltf_scene(
     const string& filename, yocto_scene& scene, const load_params& params);
 static void save_gltf_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params);
+    const save_params& params);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
@@ -87,7 +87,7 @@ static void save_gltf_scene(const string& filename, const yocto_scene& scene,
 static void load_pbrt_scene(
     const string& filename, yocto_scene& scene, const load_params& params);
 static void save_pbrt_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params);
+    const save_params& params);
 
 // Load a scene
 void load_scene(
@@ -111,7 +111,7 @@ void load_scene(
 
 // Save a scene
 void save_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params) {
+    const save_params& params) {
   auto ext = get_extension(filename);
   if (ext == "yaml" || ext == "YAML") {
     save_yaml_scene(filename, scene, params);
@@ -193,7 +193,7 @@ void save_voltexture(const yocto_voltexture& texture, const string& dirname) {
 
 // helper to save textures
 void save_textures(const yocto_scene& scene, const string& dirname,
-    const save_scene_params& params) {
+    const save_params& params) {
   if (params.skip_textures) return;
 
   // save images
@@ -278,7 +278,7 @@ void load_shapes(
 
 // Save json meshes
 void save_shapes(const yocto_scene& scene, const string& dirname,
-    const save_scene_params& params) {
+    const save_params& params) {
   if (params.skip_meshes) return;
 
   // save shapes
@@ -959,7 +959,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
 
 // Save a scene in the builtin YAML format.
 static void save_yaml_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params) {
+    const save_params& params) {
   try {
     // save yaml file
     save_yaml(filename, scene);
@@ -1550,7 +1550,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 }
 
 static void save_obj_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params) {
+    const save_params& params) {
   try {
     save_obj(filename, scene, true);
     if (!scene.materials.empty()) {
@@ -1615,7 +1615,7 @@ static void load_ply_scene(
 }
 
 static void save_ply_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params) {
+    const save_params& params) {
   if (scene.shapes.empty()) {
     throw io_error("cannot save empty scene " + filename);
   }
@@ -2018,9 +2018,9 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
         animation.uri  = (ganm->name ? ganm->name : "anim") + to_string(aid++);
         animation.animation_group = ganm->name ? ganm->name : "";
         auto input_view           = accessor_values(gsampler->input);
-        animation.keyframes_times.resize(input_view.size());
+        animation.times.resize(input_view.size());
         for (auto i = 0; i < input_view.size(); i++)
-          animation.keyframes_times[i] = input_view[i][0];
+          animation.times[i] = input_view[i][0];
         switch (gsampler->interpolation) {
           case cgltf_interpolation_type_linear:
             animation.interpolation_type = yocto_interpolation_type::linear;
@@ -2035,23 +2035,23 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
         auto output_view = accessor_values(gsampler->output);
         switch (path) {
           case cgltf_animation_path_type_translation: {
-            animation.translation_keyframes.reserve(output_view.size());
+            animation.translations.reserve(output_view.size());
             for (auto i = 0; i < output_view.size(); i++)
-              animation.translation_keyframes.push_back(
+              animation.translations.push_back(
                   {(float)output_view[i][0], (float)output_view[i][1],
                       (float)output_view[i][2]});
           } break;
           case cgltf_animation_path_type_rotation: {
-            animation.rotation_keyframes.reserve(output_view.size());
+            animation.rotations.reserve(output_view.size());
             for (auto i = 0; i < output_view.size(); i++)
-              animation.rotation_keyframes.push_back(
+              animation.rotations.push_back(
                   {(float)output_view[i][0], (float)output_view[i][1],
                       (float)output_view[i][2], (float)output_view[i][3]});
           } break;
           case cgltf_animation_path_type_scale: {
-            animation.scale_keyframes.reserve(output_view.size());
+            animation.scales.reserve(output_view.size());
             for (auto i = 0; i < output_view.size(); i++)
-              animation.scale_keyframes.push_back({(float)output_view[i][0],
+              animation.scales.push_back({(float)output_view[i][0],
                   (float)output_view[i][1], (float)output_view[i][2]});
           } break;
           case cgltf_animation_path_type_weights: {
@@ -2088,7 +2088,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
         scene.animations.push_back(animation);
       }
       scene.animations[sampler_map.at({gchannel->sampler, path})]
-          .node_targets.push_back(nmap.at(gchannel->target_node));
+          .targets.push_back(nmap.at(gchannel->target_node));
     }
   }
 }
@@ -2566,7 +2566,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
 
 // Save gltf json
 static void save_gltf_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params) {
+    const save_params& params) {
   try {
     // save json
     save_gltf(filename, scene);
@@ -3414,7 +3414,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
 
 // Save a pbrt scene
 void save_pbrt_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params) {
+    const save_params& params) {
   try {
     // save json
     save_pbrt(filename, scene);

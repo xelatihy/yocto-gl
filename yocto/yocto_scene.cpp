@@ -199,62 +199,62 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
     float time, const string& anim_group) {
   if (anim_group != "" && anim_group != animation.animation_group) return;
 
-  if (!animation.translation_keyframes.empty()) {
+  if (!animation.translations.empty()) {
     auto value = vec3f{0, 0, 0};
     switch (animation.interpolation_type) {
       case yocto_interpolation_type::step:
         value = keyframe_step(
-            animation.keyframes_times, animation.translation_keyframes, time);
+            animation.times, animation.translations, time);
         break;
       case yocto_interpolation_type::linear:
         value = keyframe_linear(
-            animation.keyframes_times, animation.translation_keyframes, time);
+            animation.times, animation.translations, time);
         break;
       case yocto_interpolation_type::bezier:
         value = keyframe_bezier(
-            animation.keyframes_times, animation.translation_keyframes, time);
+            animation.times, animation.translations, time);
         break;
       default: throw std::runtime_error("should not have been here");
     }
-    for (auto target : animation.node_targets)
+    for (auto target : animation.targets)
       scene.nodes[target].translation = value;
   }
-  if (!animation.rotation_keyframes.empty()) {
+  if (!animation.rotations.empty()) {
     auto value = vec4f{0, 0, 0, 1};
     switch (animation.interpolation_type) {
       case yocto_interpolation_type::step:
         value = keyframe_step(
-            animation.keyframes_times, animation.rotation_keyframes, time);
+            animation.times, animation.rotations, time);
         break;
       case yocto_interpolation_type::linear:
         value = keyframe_linear(
-            animation.keyframes_times, animation.rotation_keyframes, time);
+            animation.times, animation.rotations, time);
         break;
       case yocto_interpolation_type::bezier:
         value = keyframe_bezier(
-            animation.keyframes_times, animation.rotation_keyframes, time);
+            animation.times, animation.rotations, time);
         break;
     }
-    for (auto target : animation.node_targets)
+    for (auto target : animation.targets)
       scene.nodes[target].rotation = value;
   }
-  if (!animation.scale_keyframes.empty()) {
+  if (!animation.scales.empty()) {
     auto value = vec3f{1, 1, 1};
     switch (animation.interpolation_type) {
       case yocto_interpolation_type::step:
         value = keyframe_step(
-            animation.keyframes_times, animation.scale_keyframes, time);
+            animation.times, animation.scales, time);
         break;
       case yocto_interpolation_type::linear:
         value = keyframe_linear(
-            animation.keyframes_times, animation.scale_keyframes, time);
+            animation.times, animation.scales, time);
         break;
       case yocto_interpolation_type::bezier:
         value = keyframe_bezier(
-            animation.keyframes_times, animation.scale_keyframes, time);
+            animation.times, animation.scales, time);
         break;
     }
-    for (auto target : animation.node_targets)
+    for (auto target : animation.targets)
       scene.nodes[target].scale = value;
   }
 }
@@ -292,8 +292,8 @@ vec2f compute_animation_range(
   auto range = vec2f{+float_max, -float_max};
   for (auto& animation : scene.animations) {
     if (anim_group != "" && animation.animation_group != anim_group) continue;
-    range.x = min(range.x, animation.keyframes_times.front());
-    range.y = max(range.y, animation.keyframes_times.back());
+    range.x = min(range.x, animation.times.front());
+    range.y = max(range.y, animation.times.back());
   }
   if (range.y < range.x) return zero2f;
   return range;
@@ -1389,7 +1389,7 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
   for (auto animation_id = offset_animations;
        animation_id < scene.animations.size(); animation_id++) {
     auto& animation = scene.animations[animation_id];
-    for (auto& target : animation.node_targets)
+    for (auto& target : animation.targets)
       if (target >= 0) target += offset_nodes;
   }
 }
