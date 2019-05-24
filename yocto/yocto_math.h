@@ -393,7 +393,8 @@ inline float dot(const vec3f& a, const vec3f& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 inline vec3f cross(const vec3f& a, const vec3f& b) {
-    return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
+    return {
+        a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
 
 inline float length(const vec3f& a) { return sqrt(dot(a, a)); }
@@ -1378,9 +1379,9 @@ inline quat4f nlerp(const quat4f& a, const quat4f& b, float t) {
 }
 inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
     auto th = uangle(a, b);
-    return th == 0
-               ? a
-               : a * (sin(th * (1 - t)) / sin(th)) + b * (sin(th * t) / sin(th));
+    return th == 0 ? a
+                   : a * (sin(th * (1 - t)) / sin(th)) +
+                         b * (sin(th * t) / sin(th));
 }
 
 }  // namespace yocto
@@ -1480,7 +1481,8 @@ inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1) {
     a += p1;
     return a;
 }
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1, float r0, float r1) {
+inline bbox3f line_bounds(
+    const vec3f& p0, const vec3f& p1, float r0, float r1) {
     auto a = bbox3f{};
     a += p0 - r0;
     a += p0 + r0;
@@ -1488,7 +1490,8 @@ inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1, float r0, float r1) 
     a += p1 + r1;
     return a;
 }
-inline bbox3f triangle_bounds(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+inline bbox3f triangle_bounds(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     auto a = bbox3f{};
     a += p0;
     a += p1;
@@ -1725,7 +1728,8 @@ inline mat4f make_ortho_mat(
         {0, 0, -2 / (f - n), 0},
         {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
-inline mat4f make_ortho2d_mat(float left, float right, float bottom, float top) {
+inline mat4f make_ortho2d_mat(
+    float left, float right, float bottom, float top) {
     return make_ortho_mat(left, right, bottom, top, -1, 1);
 }
 inline mat4f make_ortho_mat(float xmag, float ymag, float near, float far) {

@@ -92,7 +92,8 @@ int main(int argc, char* argv[]) {
     parser.add_option(
         "--nbatch,-b", trace_params.samples_per_batch, "Samples per batch.");
     parser.add_flag("--env-hidden,!--no-env-hidden",
-        trace_params.environments_hidden, "Environments are hidden in renderer");
+        trace_params.environments_hidden,
+        "Environments are hidden in renderer");
     parser.add_option("--save-batch", save_batch, "Save images progressively");
     parser.add_option("--exposure,-e", tonemap_params.exposure, "Hdr exposure");
     parser.add_flag(

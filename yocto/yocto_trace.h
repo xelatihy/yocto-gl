@@ -167,10 +167,12 @@ struct trace_image_params {
 };
 
 // Equality operators
-inline bool operator==(const trace_image_params& a, const trace_image_params& b) {
+inline bool operator==(
+    const trace_image_params& a, const trace_image_params& b) {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(const trace_image_params& a, const trace_image_params& b) {
+inline bool operator!=(
+    const trace_image_params& a, const trace_image_params& b) {
     return memcmp(&a, &b, sizeof(a)) != 0;
 }
 

@@ -178,7 +178,8 @@ static inline void parse_value(
     pbrt_stream& stream, pbrt_texture::checkerboard_t::aamode_type& value) {
     static auto value_names =
         unordered_map<string, pbrt_texture::checkerboard_t::aamode_type>{
-            {"closedform", pbrt_texture::checkerboard_t::aamode_type::closedform},
+            {"closedform",
+                pbrt_texture::checkerboard_t::aamode_type::closedform},
             {"none", pbrt_texture::checkerboard_t::aamode_type::none},
         };
     return parse_value(stream, value, value_names);
@@ -204,11 +205,12 @@ static inline void parse_value(
 }
 static inline void parse_value(
     pbrt_stream& stream, pbrt_shape::curve_t::type_t& value) {
-    static auto value_names = unordered_map<string, pbrt_shape::curve_t::type_t>{
-        {"flat", pbrt_shape::curve_t::type_t::flat},
-        {"cylinder", pbrt_shape::curve_t::type_t::cylinder},
-        {"ribbon", pbrt_shape::curve_t::type_t::ribbon},
-    };
+    static auto value_names =
+        unordered_map<string, pbrt_shape::curve_t::type_t>{
+            {"flat", pbrt_shape::curve_t::type_t::flat},
+            {"cylinder", pbrt_shape::curve_t::type_t::cylinder},
+            {"ribbon", pbrt_shape::curve_t::type_t::ribbon},
+        };
     return parse_value(stream, value, value_names);
 }
 static inline void parse_value(
@@ -227,8 +229,10 @@ static inline void parse_value(pbrt_stream&         stream,
     static auto value_names =
         unordered_map<string, pbrt_integrator::path_t::lightsamplestrategy_t>{
             {"power", pbrt_integrator::path_t::lightsamplestrategy_t::power},
-            {"spatial", pbrt_integrator::path_t::lightsamplestrategy_t::spatial},
-            {"uniform", pbrt_integrator::path_t::lightsamplestrategy_t::uniform},
+            {"spatial",
+                pbrt_integrator::path_t::lightsamplestrategy_t::spatial},
+            {"uniform",
+                pbrt_integrator::path_t::lightsamplestrategy_t::uniform},
         };
     return parse_value(stream, value, value_names);
 }
@@ -501,11 +505,13 @@ static inline void parse_param(
             if (filename == "SHPS") {
                 value = {1, 1, 1};
             } else if (get_extension(filename) == "eta") {
-                auto eta =
-                    get_pbrt_etak(filename.substr(0, filename.length() - 4)).first;
+                auto eta = get_pbrt_etak(
+                    filename.substr(0, filename.length() - 4))
+                               .first;
                 value = {eta.x, eta.y, eta.z};
             } else if (get_extension(filename) == "k") {
-                auto k = get_pbrt_etak(filename.substr(0, filename.length() - 2))
+                auto k = get_pbrt_etak(
+                    filename.substr(0, filename.length() - 2))
                              .second;
                 value = {k.x, k.y, k.z};
             } else {
@@ -1460,7 +1466,8 @@ static inline pair<vec3f, vec3f> parse_subsurface(const string& name) {
         // Dilution",
         // Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen
         // Proc SIGGRAPH 2006
-        {"Lowfat Milk", {{0.89187, 1.5136, 2.532}, {0.002875, 0.00575, 0.0115}}},
+        {"Lowfat Milk",
+            {{0.89187, 1.5136, 2.532}, {0.002875, 0.00575, 0.0115}}},
         {"Reduced Milk",
             {{2.4858, 3.1669, 4.5214}, {0.0025556, 0.0051111, 0.012778}}},
         {"Regular Milk",
@@ -1623,9 +1630,11 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_texture(stream, ptype, tvalue.uroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_texture(stream, ptype, tvalue.vroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
@@ -1656,9 +1665,11 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_texture(stream, ptype, tvalue.uroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_texture(stream, ptype, tvalue.vroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
@@ -1691,9 +1702,11 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_texture(stream, ptype, tvalue.uroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_texture(stream, ptype, tvalue.vroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
@@ -1726,9 +1739,11 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_texture(stream, ptype, tvalue.uroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_texture(stream, ptype, tvalue.vroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
@@ -1767,9 +1782,11 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_texture(stream, ptype, tvalue.uroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_texture(stream, ptype, tvalue.vroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
@@ -1810,9 +1827,11 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_texture(stream, ptype, tvalue.uroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_texture(stream, ptype, tvalue.vroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "scatterdistance") {
@@ -1899,9 +1918,11 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_texture(stream, ptype, tvalue.uroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_texture(stream, ptype, tvalue.vroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
@@ -1971,9 +1992,11 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_texture(stream, ptype, tvalue.uroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_texture(stream, ptype, tvalue.vroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {
@@ -2022,9 +2045,11 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
                 tvalue.uroughness = roughness;
                 tvalue.vroughness = roughness;
             } else if (pname == "uroughness") {
-                parse_texture(stream, ptype, tvalue.uroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.uroughness, constant_values);
             } else if (pname == "vroughness") {
-                parse_texture(stream, ptype, tvalue.vroughness, constant_values);
+                parse_texture(
+                    stream, ptype, tvalue.vroughness, constant_values);
             } else if (pname == "remaproughness") {
                 parse_param(stream, ptype, tvalue.remaproughness);
             } else if (pname == "bumpmap") {

@@ -82,7 +82,8 @@ float evaluate_microfacetG1(float roughness, const vec3f& normal,
 float eval_microfacetG(float roughness, const vec3f& normal,
     const vec3f& half_vector, const vec3f& outgoing, const vec3f& incoming,
     bool ggx) {
-    return evaluate_microfacetG1(roughness, normal, half_vector, outgoing, ggx) *
+    return evaluate_microfacetG1(
+               roughness, normal, half_vector, outgoing, ggx) *
            evaluate_microfacetG1(roughness, normal, half_vector, incoming, ggx);
 }
 vec3f sample_microfacet(
@@ -98,7 +99,8 @@ vec3f sample_microfacet(
     auto cosine_square     = 1 / (1 + tangent_square);
     auto cosine            = 1 / sqrt(1 + tangent_square);
     auto radius            = sqrt(clamp01(1 - cosine_square));
-    auto local_half_vector = vec3f{cos(phi) * radius, sin(phi) * radius, cosine};
+    auto local_half_vector = vec3f{
+        cos(phi) * radius, sin(phi) * radius, cosine};
     return transform_direction(make_basis_fromz(normal), local_half_vector);
 }
 float sample_microfacet_pdf(
@@ -363,7 +365,8 @@ vec3f eval_microfacet_reflection(float roughness, const vec3f& eta,
                  ? fresnel_dielectric(eta, abs(dot(halfway, outgoing)))
                  : fresnel_conductor(eta, etak, abs(dot(halfway, outgoing)));
     auto D = eval_microfacetD(roughness, up_normal, halfway);
-    auto G = eval_microfacetG(roughness, up_normal, halfway, outgoing, incoming);
+    auto G = eval_microfacetG(
+        roughness, up_normal, halfway, outgoing, incoming);
     return F * D * G / abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
 }
@@ -386,7 +389,8 @@ vec3f eval_microfacet_transmission(float roughness, const vec3f& eta,
     auto halfway = normalize(halfway_vector);
     auto F       = fresnel_dielectric(eta, abs(dot(halfway, outgoing)));
     auto D       = eval_microfacetD(roughness, up_normal, halfway);
-    auto G = eval_microfacetG(roughness, up_normal, halfway, outgoing, incoming);
+    auto G       = eval_microfacetG(
+        roughness, up_normal, halfway, outgoing, incoming);
 
     auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
                      (dot(outgoing, normal) * dot(incoming, normal));
@@ -395,7 +399,8 @@ vec3f eval_microfacet_transmission(float roughness, const vec3f& eta,
     auto denominator = dot(halfway_vector, halfway_vector);
 
     // [Walter 2007] equation 21
-    return abs(dot_terms) * numerator / denominator * abs(dot(normal, incoming));
+    return abs(dot_terms) * numerator / denominator *
+           abs(dot(normal, incoming));
 }
 vec3f eval_delta_transmission(const vec3f& eta, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
@@ -605,7 +610,8 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 
     auto brdfcos = zero3f;
 
-    if (material.coat != zero3f && same_hemisphere(normal, outgoing, incoming)) {
+    if (material.coat != zero3f &&
+        same_hemisphere(normal, outgoing, incoming)) {
         auto halfway = normalize(incoming + outgoing);
         auto fresnel = fresnel_schlick(
             material.coat, abs(dot(halfway, outgoing)));
@@ -680,7 +686,8 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
     if (!is_delta(material)) return zero3f;
     auto brdfcos = zero3f;
 
-    if (material.coat != zero3f && same_hemisphere(normal, outgoing, incoming)) {
+    if (material.coat != zero3f &&
+        same_hemisphere(normal, outgoing, incoming)) {
         brdfcos += fresnel_schlick(material.coat, abs(dot(normal, outgoing)));
     }
     if (material.specular != zero3f &&
@@ -832,7 +839,8 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
         // [Walter 2007] equation 17
         pdf += pdfs[3] *
                sample_microfacet_pdf(material.roughness, up_normal, halfway) *
-               abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
+               abs(dot(halfway, incoming)) /
+               dot(halfway_vector, halfway_vector);
     }
     if (pdfs[3] && other_hemisphere(normal, outgoing, incoming) &&
         material.thin) {
@@ -950,7 +958,8 @@ vec3f sample_light(const yocto_scene& scene, const trace_lights& lights,
     auto& shape                   = scene.shapes[instance.shape];
     auto& elements_cdf            = lights.shape_cdfs[instance.shape];
     auto [element_id, element_uv] = sample_shape(shape, elements_cdf, rel, ruv);
-    return normalize(eval_position(scene, instance, element_id, element_uv) - p);
+    return normalize(
+        eval_position(scene, instance, element_id, element_uv) - p);
 }
 
 // Sample pdf for a light point.
@@ -1100,9 +1109,11 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                               0.5f * sample_lights_pdf(scene, lights, bvh,
                                          position, incoming));
             } else {
-                incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+                incoming = sample_delta(
+                    material, normal, outgoing, rand1f(rng));
                 weight *= eval_delta(material, normal, outgoing, incoming) /
-                          sample_delta_pdf(material, normal, outgoing, incoming);
+                          sample_delta_pdf(
+                              material, normal, outgoing, incoming);
             }
 
             // update volume stack
@@ -1731,8 +1742,9 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
                                       : brdf.specular;
         auto D = evaluate_ggx_distribution(brdf.roughness, normal, half_vector);
         auto G = evaluate_ggx_shadowing(brdf.roughness, normal, outgoing, ir);
-        brdf_cosine += brdf.transmission * (1 - fresnel) * D * G /
-                       (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, ir)));
+        brdf_cosine +=
+            brdf.transmission * (1 - fresnel) * D * G /
+            (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, ir)));
     }
 
     // refraction through rough surface
@@ -1873,7 +1885,8 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
     else if (brdf.transmission != zero3f && brdf.refract &&
              rnl < prob.x + prob.y + prob.z) {
         if (dot(normal, outgoing) >= 0) {
-            return refract(outgoing, normal, 1 / specular_to_eta(brdf.specular));
+            return refract(
+                outgoing, normal, 1 / specular_to_eta(brdf.specular));
         } else {
             return refract(outgoing, -normal, specular_to_eta(brdf.specular));
         }

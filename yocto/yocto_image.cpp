@@ -640,7 +640,8 @@ vec3f tonemap(const vec3f& hdr, const tonemap_image_params& params) {
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     const tonemap_image_params& params) {
     return apply_image(ldr, hdr,
-        [scale = exp2(params.exposure) * params.tint, params](const vec4f& hdr) {
+        [scale = exp2(params.exposure) * params.tint, params](
+            const vec4f& hdr) {
             return vec4f{tonemap(xyz(hdr), params), hdr.w};
         });
 }
@@ -657,7 +658,8 @@ void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     });
 }
 
-static vec3f colorgrade(const vec3f& ldr, const colorgrade_image_params& params) {
+static vec3f colorgrade(
+    const vec3f& ldr, const colorgrade_image_params& params) {
     auto rgb = ldr;
     if (params.contrast != 0.5f) {
         rgb = gain(ldr, 1 - params.contrast);
@@ -698,7 +700,8 @@ vec3f compute_white_balance(const image<vec4f>& img) {
     return rgb / max(rgb);
 }
 
-void resize(image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
+void resize(
+    image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
     auto size = size_;
     if (size == zero2i) {
         throw std::invalid_argument("bad image size in resize");
@@ -715,7 +718,8 @@ void resize(image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) 
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
         nullptr);
 }
-void resize(image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
+void resize(
+    image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
     auto size = size_;
     if (size == zero2i) {
         throw std::invalid_argument("bad image size in resize");
@@ -913,7 +917,8 @@ void make_image(image<vec4f>& img, const make_image_params& params) {
 }
 
 // Add a border to an image
-void add_border(image<vec4f>& img, int border_width, const vec4f& border_color) {
+void add_border(
+    image<vec4f>& img, int border_width, const vec4f& border_color) {
     for (auto j = 0; j < img.size().y; j++) {
         for (auto b = 0; b < border_width; b++) {
             img[{b, j}]                    = border_color;
@@ -967,7 +972,8 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
             auto phi       = (i + 0.5f) * 2 * pif / img.size().x;
             auto direction = vec3f{
                 cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-            auto gamma = acos(clamp(dot(direction, sun_direction), -1.0f, 1.0f));
+            auto gamma = acos(
+                clamp(dot(direction, sun_direction), -1.0f, 1.0f));
             for (int c = 0; c < 9; ++c) {
                 auto val =
                     (has_sun)
@@ -1000,7 +1006,8 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
 // Implementation of sunsky modified heavily from pbrt
 image<vec4f> make_sunsky(int width, int height, float theta_sun,
     float turbidity, bool has_sun, float sun_angle_scale,
-    float sun_emission_scale, const vec3f& ground_albedo, bool renormalize_sun) {
+    float sun_emission_scale, const vec3f& ground_albedo,
+    bool renormalize_sun) {
     auto zenith_xyY = vec3f{
         (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
             0.00208f * theta_sun + 0) *
@@ -1019,7 +1026,8 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
             (+0.15346f * pow(theta_sun, 3.f) - 0.26756f * pow(theta_sun, 2.f) +
                 0.06669f * theta_sun + 0.26688f),
         1000 * (4.0453f * turbidity - 4.9710f) *
-                tan((4.0f / 9.0f - turbidity / 120.0f) * (pif - 2 * theta_sun)) -
+                tan((4.0f / 9.0f - turbidity / 120.0f) *
+                    (pif - 2 * theta_sun)) -
             .2155f * turbidity + 2.4192f};
 
     auto perez_A_xyY = vec3f{-0.01925f * turbidity - 0.25922f,
@@ -1035,8 +1043,9 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
 
     auto perez_f = [](vec3f A, vec3f B, vec3f C, vec3f D, vec3f E, float theta,
                        float gamma, float theta_sun, vec3f zenith) -> vec3f {
-        auto den = ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
-                                           E * cos(theta_sun) * cos(theta_sun)));
+        auto den =
+            ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
+                                    E * cos(theta_sun) * cos(theta_sun)));
         auto num = ((1 + A * exp(B / cos(theta))) *
                     (1 + C * exp(D * gamma) + E * cos(gamma) * cos(gamma)));
         return zenith * num / den;
@@ -1087,7 +1096,8 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
         // return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f
         // :
         //                                                zero3f;
-        return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 : zero3f;
+        return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000
+                                                       : zero3f;
     };
 
     // Make the sun sky image
@@ -1278,8 +1288,9 @@ void make_preset(image<vec4f>& img, const string& type) {
     } else if (type == "logo-render") {
         make_logo(img, "logo-render");
     } else if (type == "images1") {
-        auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
-            "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
+        auto sub_types = vector<string>{"grid", "uvgrid", "checker",
+            "gammaramp", "bumps", "bump-normal", "noise", "fbm",
+            "blackbodyramp"};
         auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
         for (auto i = 0; i < sub_imgs.size(); i++) {
             sub_imgs.at(i).resize(img.size());
@@ -1637,7 +1648,8 @@ static inline const char* get_tinyexr_error(int error) {
 static inline void load_exr(const string& filename, image<vec4f>& img) {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (auto error = LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr);
+    if (auto error = LoadEXR(
+            &pixels, &width, &height, filename.c_str(), nullptr);
         error < 0) {
         throw io_error("error loading image " + filename + "("s +
                        get_tinyexr_error(error) + ")"s);
@@ -1733,13 +1745,15 @@ static inline void load_stb_image_from_memory(
 }
 #endif
 
-static inline void load_image_preset(const string& filename, image<vec4f>& img) {
+static inline void load_image_preset(
+    const string& filename, image<vec4f>& img) {
     auto [type, nfilename] = get_preset_type(filename);
     img.resize({1024, 1024});
     if (type == "images2") img.resize({2048, 1024});
     make_preset(img, type);
 }
-static inline void load_image_preset(const string& filename, image<vec4b>& img) {
+static inline void load_image_preset(
+    const string& filename, image<vec4b>& img) {
     auto imgf = image<vec4f>{};
     load_image_preset(filename, imgf);
     img.resize(imgf.size());

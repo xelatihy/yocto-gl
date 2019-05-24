@@ -331,7 +331,8 @@ bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
     float r2, float r3, vec2f& uv, float& dist) {
     if (p2 == p3) {
-        return overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2, uv, dist);
+        return overlap_triangle(
+            pos, dist_max, p0, p1, p3, r0, r1, r2, uv, dist);
     }
     auto hit = false;
     if (overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2, uv, dist)) {
@@ -852,7 +853,8 @@ static pair<int, int> split_balanced(
 
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
-static pair<int, int> split_middle(vector<bvh_prim>& prims, int start, int end) {
+static pair<int, int> split_middle(
+    vector<bvh_prim>& prims, int start, int end) {
     // initialize split axis and position
     auto split_axis = 0;
     auto mid        = (start + end) / 2;
@@ -965,8 +967,9 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
     // create nodes until the queue is empty
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-        futures.emplace_back(async([&nodes, &prims, &params, &num_processed_prims,
-                                       &queue_mutex, &queue] {
+        futures.emplace_back(async([&nodes, &prims, &params,
+                                       &num_processed_prims, &queue_mutex,
+                                       &queue] {
             while (true) {
                 // exit if needed
                 if (num_processed_prims >= prims.size()) return;

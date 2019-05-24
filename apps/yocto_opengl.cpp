@@ -302,7 +302,8 @@ void bind_opengl_program(opengl_program& program) {
 }
 void unbind_opengl_program() { glUseProgram(0); }
 
-int get_opengl_uniform_location(const opengl_program& program, const char* name) {
+int get_opengl_uniform_location(
+    const opengl_program& program, const char* name) {
     return glGetUniformLocation(program.program_id, name);
 }
 
@@ -637,12 +638,14 @@ void delete_opengl_window(opengl_window& win) {
 
 void* get_opengl_user_pointer(const opengl_window& win) { return win.user_ptr; }
 
-void set_drop_opengl_callback(opengl_window& win, drop_opengl_callback drop_cb) {
+void set_drop_opengl_callback(
+    opengl_window& win, drop_opengl_callback drop_cb) {
     win.drop_cb = drop_cb;
     glfwSetDropCallback(win.win, _glfw_drop_callback);
 }
 
-vec2i get_opengl_framebuffer_size(const opengl_window& win, bool ignore_widgets) {
+vec2i get_opengl_framebuffer_size(
+    const opengl_window& win, bool ignore_widgets) {
     auto size = zero2i;
     glfwGetFramebufferSize(win.win, &size.x, &size.y);
     if (ignore_widgets && win.widgets_width) {
@@ -974,7 +977,8 @@ bool draw_button_opengl_widget(
         return ImGui::Button(lbl);
     } else {
         ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        ImGui::PushStyleVar(
+            ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
         auto ok = ImGui::Button(lbl);
         ImGui::PopItemFlag();
         ImGui::PopStyleVar();

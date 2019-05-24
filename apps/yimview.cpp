@@ -209,7 +209,8 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_slider_opengl_widget(win, "exposure", options.exposure, -5, 5);
         draw_coloredit_opengl_widget(win, "tint", options.tint);
         draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
-        draw_slider_opengl_widget(win, "logcontrast", options.logcontrast, 0, 1);
+        draw_slider_opengl_widget(
+            win, "logcontrast", options.logcontrast, 0, 1);
         draw_slider_opengl_widget(win, "saturation", options.saturation, 0, 1);
         draw_checkbox_opengl_widget(win, "filmic", options.filmic);
         continue_opengl_widget_line(win);
@@ -270,7 +271,8 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_dragger_opengl_widget(win, "image max", img_stats.max);
         draw_dragger_opengl_widget(win, "image avg", img_stats.average);
         draw_histogram_opengl_widget(win, "image histo", img_stats.histogram);
-        auto display_stats = (img.load_done) ? img.display_stats : image_stats{};
+        auto display_stats = (img.load_done) ? img.display_stats
+                                             : image_stats{};
         draw_dragger_opengl_widget(win, "display min", display_stats.min);
         draw_dragger_opengl_widget(win, "display max", display_stats.max);
         draw_dragger_opengl_widget(win, "display avg", display_stats.average);
@@ -329,7 +331,8 @@ void update(app_state& app) {
         if (task.type != app_task_type::display || task.queue.empty()) continue;
         auto region = image_region{};
         while (img.task_queue.front().queue.try_pop(region)) {
-            update_opengl_texture_region(img.gl_txt, img.display, region, false);
+            update_opengl_texture_region(
+                img.gl_txt, img.display, region, false);
         }
     }
     // remove unneeded tasks

@@ -569,8 +569,9 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             : opengl_texture{},
         3);
     set_opengl_uniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
-        material.normal_texture >= 0 ? state.textures.at(material.normal_texture)
-                                     : opengl_texture{},
+        material.normal_texture >= 0
+            ? state.textures.at(material.normal_texture)
+            : opengl_texture{},
         5);
 
     set_opengl_uniform(
@@ -661,8 +662,9 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
                         shape.positions[t.y], shape.positions[t.z]);
             } else if (!shape.quads.empty()) {
                 for (auto q : shape.quads)
-                    area += quad_area(shape.positions[q.x], shape.positions[q.y],
-                        shape.positions[q.z], shape.positions[q.w]);
+                    area += quad_area(shape.positions[q.x],
+                        shape.positions[q.y], shape.positions[q.z],
+                        shape.positions[q.w]);
             } else if (!shape.lines.empty()) {
                 for (auto l : shape.lines)
                     area += line_length(
@@ -707,7 +709,8 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     // load textures and vbos
     init_opengl_program(state.program, vertex, fragment);
     state.textures.resize(scene.textures.size());
-    for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
+    for (auto texture_id = 0; texture_id < scene.textures.size();
+         texture_id++) {
         auto& texture = scene.textures[texture_id];
         if (!texture.hdr_image.empty()) {
             init_opengl_texture(state.textures[texture_id], texture.hdr_image,
@@ -743,7 +746,8 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
                 init_opengl_elementbuffer(
                     vbos.points_buffer, shape.points, false);
             if (!shape.lines.empty())
-                init_opengl_elementbuffer(vbos.lines_buffer, shape.lines, false);
+                init_opengl_elementbuffer(
+                    vbos.lines_buffer, shape.lines, false);
             if (!shape.triangles.empty())
                 init_opengl_elementbuffer(
                     vbos.triangles_buffer, shape.triangles, false);
@@ -1020,9 +1024,10 @@ void load_element(
         // TODO: this needs more fixing?
         auto& subdiv = scene.subdivs[index];
         load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
-            subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.quads_positions,
-            subdiv.quads_normals, subdiv.quads_texcoords, subdiv.positions,
-            subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius,
+            subdiv.lines, subdiv.triangles, subdiv.quads,
+            subdiv.quads_positions, subdiv.quads_normals,
+            subdiv.quads_texcoords, subdiv.positions, subdiv.normals,
+            subdiv.texcoords, subdiv.colors, subdiv.radius,
             subdiv.preserve_facevarying);
         tesselate_subdiv(scene, scene.subdivs[index]);
     } else {

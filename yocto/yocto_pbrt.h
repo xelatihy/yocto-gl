@@ -218,11 +218,12 @@ struct pbrt_integrator {
     };
     struct bdpt_t {
         enum struct lightsamplestrategy_t { uniform, power, spatial };
-        int                   maxdepth            = 5;
-        vec4i                 pixelbounds         = {0, 0, int_max, int_max};
-        lightsamplestrategy_t lightsamplestrategy = lightsamplestrategy_t::power;
-        bool                  visualizestrategies = false;
-        bool                  visualizeweights    = false;
+        int                   maxdepth    = 5;
+        vec4i                 pixelbounds = {0, 0, int_max, int_max};
+        lightsamplestrategy_t lightsamplestrategy =
+            lightsamplestrategy_t::power;
+        bool visualizestrategies = false;
+        bool visualizeweights    = false;
     };
     struct directlighting_t {
         enum struct strategy_t { all, one };

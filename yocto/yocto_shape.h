@@ -275,7 +275,8 @@ void weld_vertices(
     vector<vec3f>& positions, vector<int>& indices, float threshold);
 void weld_triangles(
     vector<vec3i>& triangles, vector<vec3f>& positions, float threshold);
-void weld_quads(vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
+void weld_quads(
+    vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
 
 // Merge shape elements
 void merge_lines(
@@ -288,7 +289,8 @@ void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& tangents, vector<vec2f>& texcoords, vector<float>& radius,
     const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_tangents,
-    const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius);
+    const vector<vec2f>& merge_texturecoords,
+    const vector<float>& merge_radius);
 void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
@@ -496,7 +498,8 @@ void make_points(vector<int>& points, vector<vec3f>& positions,
     int num, float uvsize, float point_radius);
 void make_random_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, const vec3f& size, float uvsize, float point_radius, uint64_t seed);
+    int num, const vec3f& size, float uvsize, float point_radius,
+    uint64_t seed);
 
 // Make fair params
 struct make_hair_params {
@@ -557,7 +560,8 @@ inline float line_length(const vec3f& p0, const vec3f& p1) {
 }
 
 // Triangle properties.
-inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+inline vec3f triangle_normal(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     return normalize(cross(p1 - p0, p2 - p0));
 }
 inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {

@@ -777,7 +777,8 @@ static void load_yaml_scene(const string& filename, yocto_scene& scene,
 #endif
 
 template <typename T, typename... Ts>
-static inline void write_yaml_line(FILE* fs, const T& value, const Ts... values) {
+static inline void write_yaml_line(
+    FILE* fs, const T& value, const Ts... values) {
     write_value(fs, value);
     if constexpr (sizeof...(values) == 0) {
         write_text(fs, "\n");
@@ -798,7 +799,8 @@ static inline void write_yaml_kvline(
 static inline void write_yaml_keyvalue(FILE* fs, const char* name, int value) {
     write_yaml_kvline(fs, name, to_string(value));
 }
-static inline void write_yaml_keyvalue(FILE* fs, const char* name, float value) {
+static inline void write_yaml_keyvalue(
+    FILE* fs, const char* name, float value) {
     write_yaml_kvline(fs, name, to_string(value));
 }
 static inline void write_yaml_keyvalue(
@@ -859,7 +861,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
         write_opt(
             fs, "orthographic", camera.orthographic, def_camera.orthographic);
         write_opt(fs, "film_width", camera.film_width, def_camera.film_width);
-        write_opt(fs, "film_height", camera.film_height, def_camera.film_height);
+        write_opt(
+            fs, "film_height", camera.film_height, def_camera.film_height);
         write_opt(
             fs, "focal_length", camera.focal_length, def_camera.focal_length);
         write_opt(fs, "focus_distance", camera.focus_distance,
@@ -917,7 +920,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
         write_ref(fs, "coat_texture", material.coat_texture, scene.textures);
         write_ref(
             fs, "opacity_texture", material.opacity_texture, scene.textures);
-        write_ref(fs, "normal_texture", material.normal_texture, scene.textures);
+        write_ref(
+            fs, "normal_texture", material.normal_texture, scene.textures);
         write_opt(fs, "gltf_textures", material.gltf_textures,
             def_material.gltf_textures);
         write_ref(fs, "volume_density_texture", material.volume_density_texture,
@@ -932,7 +936,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     if (!scene.subdivs.empty()) write_text(fs, "\n\nsubdivs:\n");
     for (auto& subdiv : scene.subdivs) {
         write_yaml_line(fs, "  - uri:", subdiv.uri);
-        write_ref(fs, "tesselated_shape", subdiv.tesselated_shape, scene.shapes);
+        write_ref(
+            fs, "tesselated_shape", subdiv.tesselated_shape, scene.shapes);
         write_opt(fs, "subdivision_level", subdiv.subdivision_level,
             def_subdiv.subdivision_level);
         write_opt(fs, "catmull_clark", subdiv.catmull_clark,
@@ -1014,10 +1019,11 @@ struct load_obj_scene_cb : obj_callbacks {
     unordered_map<string, int> mmap = unordered_map<string, int>{{"", -1}};
 
     // vertex maps
-    unordered_map<obj_vertex, int> vertex_map = unordered_map<obj_vertex, int>();
-    unordered_map<int, int>        pos_map    = unordered_map<int, int>();
-    unordered_map<int, int>        norm_map   = unordered_map<int, int>();
-    unordered_map<int, int>        texcoord_map = unordered_map<int, int>();
+    unordered_map<obj_vertex, int> vertex_map =
+        unordered_map<obj_vertex, int>();
+    unordered_map<int, int> pos_map      = unordered_map<int, int>();
+    unordered_map<int, int> norm_map     = unordered_map<int, int>();
+    unordered_map<int, int> texcoord_map = unordered_map<int, int>();
 
     // current parse state
     bool preserve_facevarying_now = false;
@@ -1359,7 +1365,8 @@ static void load_obj_scene(const string& filename, yocto_scene& scene,
 }
 
 template <typename T, typename... Ts>
-static inline void write_obj_line(FILE* fs, const T& value, const Ts... values) {
+static inline void write_obj_line(
+    FILE* fs, const T& value, const Ts... values) {
     write_value(fs, value);
     if constexpr (sizeof...(values) == 0) {
         write_text(fs, "\n");
@@ -1731,10 +1738,11 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
                 gsg->specular_glossiness_texture, false);
             material.roughness_texture = material.specular_texture;
         } else if (gmat->has_pbr_metallic_roughness) {
-            material.gltf_textures = true;
-            auto gmr               = &gmat->pbr_metallic_roughness;
-            auto kb = vec4f{gmr->base_color_factor[0], gmr->base_color_factor[1],
-                gmr->base_color_factor[2], gmr->base_color_factor[3]};
+            material.gltf_textures   = true;
+            auto gmr                 = &gmat->pbr_metallic_roughness;
+            auto kb                  = vec4f{gmr->base_color_factor[0],
+                gmr->base_color_factor[1], gmr->base_color_factor[2],
+                gmr->base_color_factor[3]};
             material.diffuse         = {kb.x, kb.y, kb.z};
             material.opacity         = kb.w;
             material.specular        = {0.04, 0.04, 0.04};
@@ -1777,7 +1785,8 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
             compSize = 4;
         }
         if (!stride) stride = compSize * ncomp;
-        auto vals = vector<std::array<double, 4>>(count, {{0.0, 0.0, 0.0, 1.0}});
+        auto vals = vector<std::array<double, 4>>(
+            count, {{0.0, 0.0, 0.0, 1.0}});
         for (auto i = 0; i < count; i++) {
             auto d = data + offset + i * stride;
             for (auto c = 0; c < ncomp; c++) {
@@ -1798,7 +1807,8 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
                            cgltf_component_type_r_32u) {  // unsigned int
                     vals[i][c] = (double)(*(unsigned int*)d);
                     if (normalize) vals[i][c] /= UINT_MAX;
-                } else if (compTypeNum == cgltf_component_type_r_32f) {  // float
+                } else if (compTypeNum ==
+                           cgltf_component_type_r_32f) {  // float
                     vals[i][c] = (*(float*)d);
                 }
                 d += compSize;
@@ -2048,11 +2058,11 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
 
     // convert animations
     for (auto gid = 0; gid < gltf->animations_count; gid++) {
-        auto ganm = &gltf->animations[gid];
-        auto aid  = 0;
-        auto sampler_map =
-            unordered_map<pair<cgltf_animation_sampler*, cgltf_animation_path_type>,
-                int, sampler_map_hash>();
+        auto ganm        = &gltf->animations[gid];
+        auto aid         = 0;
+        auto sampler_map = unordered_map<
+            pair<cgltf_animation_sampler*, cgltf_animation_path_type>, int,
+            sampler_map_hash>();
         for (auto cid = 0; cid < ganm->channels_count; cid++) {
             auto gchannel = &ganm->channels[cid];
             auto path     = gchannel->target_path;
@@ -2093,7 +2103,8 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
                                     (float)output_view[i][2]});
                     } break;
                     case cgltf_animation_path_type_rotation: {
-                        animation.rotation_keyframes.reserve(output_view.size());
+                        animation.rotation_keyframes.reserve(
+                            output_view.size());
                         for (auto i = 0; i < output_view.size(); i++)
                             animation.rotation_keyframes.push_back(
                                 {(float)output_view[i][0],
@@ -2216,7 +2227,8 @@ static inline void _write_json_value(
     write_json_state& state, const string& value) {
     write_text(state.fs, value);
 }
-static inline void _write_json_value(write_json_state& state, const char* value) {
+static inline void _write_json_value(
+    write_json_state& state, const char* value) {
     write_text(state.fs, value);
 }
 static inline void _write_json_value(
@@ -2441,7 +2453,8 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
             if (!shape.quads.empty()) {
                 auto triangles = vector<vec3i>{};
                 quads_to_triangles(triangles, shape.quads);
-                split.indices.insert(split.indices.end(), (int*)triangles.data(),
+                split.indices.insert(split.indices.end(),
+                    (int*)triangles.data(),
                     (int*)triangles.data() + triangles.size() * 3);
             }
         } else {
@@ -2678,7 +2691,8 @@ static vec3f pbrt_fresnel_dielectric(float cosw, const vec3f& eta_) {
 
 // Compute the fresnel term for metals. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-static vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
+static vec3f pbrt_fresnel_metal(
+    float cosw, const vec3f& eta, const vec3f& etak) {
     if (etak == zero3f) return pbrt_fresnel_dielectric(cosw, eta);
 
     cosw       = clamp(cosw, (float)-1, (float)1);
@@ -2725,7 +2739,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
     unordered_map<string, int>   tmap  = unordered_map<string, int>{{"", -1}};
     unordered_map<string, vec3f> ctmap = unordered_map<string, vec3f>{
         {"", zero3f}};
-    unordered_map<string, bool> timap = unordered_map<string, bool>{{"", false}};
+    unordered_map<string, bool> timap = unordered_map<string, bool>{
+        {"", false}};
     unordered_map<string, vector<yocto_instance>> omap =
         unordered_map<string, vector<yocto_instance>>{};
     string cur_object = ""s;
@@ -2872,7 +2887,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 shape.positions = mesh.P;
                 shape.triangles = mesh.indices;
                 shape.normals.resize(shape.positions.size());
-                compute_normals(shape.normals, shape.triangles, shape.positions);
+                compute_normals(
+                    shape.normals, shape.triangles, shape.positions);
             } break;
             case pbrt_shape::type_t::plymesh: {
                 auto& mesh = pshape.plymesh;
@@ -3069,8 +3085,9 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
                 get_scaled_texture3f(
                     plastic.Ks, material.specular, material.specular_texture);
                 material.specular *= 0.04f;
-                material.roughness = get_pbrt_roughness(plastic.uroughness.value,
-                    plastic.vroughness.value, plastic.remaproughness);
+                material.roughness = get_pbrt_roughness(
+                    plastic.uroughness.value, plastic.vroughness.value,
+                    plastic.remaproughness);
             } break;
             case pbrt_material::type_t::translucent: {
                 auto& translucent = pmaterial.translucent;
@@ -3403,7 +3420,8 @@ static void load_pbrt_scene(const string& filename, yocto_scene& scene,
 }
 
 template <typename T, typename... Ts>
-static inline void write_pbrt_line(FILE* fs, const T& value, const Ts... values) {
+static inline void write_pbrt_line(
+    FILE* fs, const T& value, const Ts... values) {
     write_value(fs, value);
     if constexpr (sizeof...(values) == 0) {
         write_text(fs, "\n");

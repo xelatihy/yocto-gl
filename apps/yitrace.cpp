@@ -335,7 +335,8 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_dragger_opengl_widget(win, "mouse", ij);
         if (ij.x >= 0 && ij.x < scn.render.size().x && ij.y >= 0 &&
             ij.y < scn.render.size().y) {
-            draw_coloredit_opengl_widget(win, "pixel", scn.render[{ij.x, ij.y}]);
+            draw_coloredit_opengl_widget(
+                win, "pixel", scn.render[{ij.x, ij.y}]);
         } else {
             auto zero4f_ = zero4f;
             draw_coloredit_opengl_widget(win, "pixel", zero4f_);
@@ -460,9 +461,10 @@ void load_element(
         // TODO: this needs more fixing?
         auto& subdiv = scene.subdivs[index];
         load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
-            subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.quads_positions,
-            subdiv.quads_normals, subdiv.quads_texcoords, subdiv.positions,
-            subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius,
+            subdiv.lines, subdiv.triangles, subdiv.quads,
+            subdiv.quads_positions, subdiv.quads_normals,
+            subdiv.quads_texcoords, subdiv.positions, subdiv.normals,
+            subdiv.texcoords, subdiv.colors, subdiv.radius,
             subdiv.preserve_facevarying);
         tesselate_subdiv(scene, scene.subdivs[index]);
     } else {
@@ -786,8 +788,10 @@ void update(app_state& app) {
                 if (scn.lights.instances.empty() &&
                     scn.lights.environments.empty() &&
                     is_sampler_lit(scn.trace_params)) {
-                    log_info("no lights presents, switching to eyelight shader");
-                    scn.trace_params.sampler_type = trace_sampler_type::eyelight;
+                    log_info(
+                        "no lights presents, switching to eyelight shader");
+                    scn.trace_params.sampler_type =
+                        trace_sampler_type::eyelight;
                 }
                 scn.render_sample = 0;
                 scn.name          = get_filename(scn.filename) + " [" +
@@ -932,7 +936,8 @@ int main(int argc, char* argv[]) {
     parser.add_option(
         "--nsamples,-s", app.trace_params.num_samples, "Number of samples.");
     parser
-        .add_option("--tracer,-t", app.trace_params.sampler_type, "Tracer type.")
+        .add_option(
+            "--tracer,-t", app.trace_params.sampler_type, "Tracer type.")
         ->transform(CLI::IsMember(trace_sampler_type_namemap));
     parser
         .add_option("--falsecolor,-F", app.trace_params.falsecolor_type,
