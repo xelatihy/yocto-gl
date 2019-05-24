@@ -481,9 +481,9 @@ void make_improc(vector<vec3i>& triangles, vector<vec4i>& quads,
     const procshape_params& params);
 // Make face-varying quads. For now supports only quad, cube, suzanne, sphere,
 // rect, box. Rounding not supported for now.
-void make_improcfvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
+void make_improcfvshape(vector<vec4i>& quads_positions,
+    vector<vec4i>& quads_normals, vector<vec4i>& quads_texcoords,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     const procshape_params& params);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.

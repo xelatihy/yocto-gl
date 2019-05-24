@@ -220,20 +220,18 @@ struct tonemap_params {
 };
 
 // Equality operators
-inline bool operator==(
-    const tonemap_params& a, const tonemap_params& b) {
+inline bool operator==(const tonemap_params& a, const tonemap_params& b) {
   return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(
-    const tonemap_params& a, const tonemap_params& b) {
+inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
   return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
 // Apply exposure and filmic tone mapping
-void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const tonemap_params& params);
-void tonemap(image<vec4b>& ldr, const image<vec4f>& hdr,
-    const tonemap_params& params);
+void tonemap(
+    image<vec4f>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
+void tonemap(
+    image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     const image_region& region, const tonemap_params& params);
 
@@ -249,12 +247,10 @@ struct colorgrade_params {
 };
 
 // Equality operators
-inline bool operator==(
-    const colorgrade_params& a, const colorgrade_params& b) {
+inline bool operator==(const colorgrade_params& a, const colorgrade_params& b) {
   return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(
-    const colorgrade_params& a, const colorgrade_params& b) {
+inline bool operator!=(const colorgrade_params& a, const colorgrade_params& b) {
   return memcmp(&a, &b, sizeof(a)) != 0;
 }
 

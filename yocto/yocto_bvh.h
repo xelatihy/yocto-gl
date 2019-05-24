@@ -175,7 +175,6 @@ struct bvh_strided_view {
   }
 
  private:
- 
   const void* ptr    = nullptr;
   int         count  = 0;
   int         stride = 0;

@@ -42,14 +42,14 @@ int main(int argc, char* argv[]) {
   auto bvh_prms     = bvh_params{};
   auto trace_prms   = trace_params{};
   auto tonemap_prms = tonemap_params{};
-  auto all_cameras    = false;
-  auto no_parallel    = false;
-  auto save_batch     = false;
-  auto add_skyenv     = false;
-  auto validate       = false;
-  auto logo           = true;
-  auto imfilename     = "out.hdr"s;
-  auto filename       = "scene.json"s;
+  auto all_cameras  = false;
+  auto no_parallel  = false;
+  auto save_batch   = false;
+  auto add_skyenv   = false;
+  auto validate     = false;
+  auto logo         = true;
+  auto imfilename   = "out.hdr"s;
+  auto filename     = "scene.json"s;
 
   // names for enums
   auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};

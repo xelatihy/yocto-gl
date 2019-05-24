@@ -1296,8 +1296,7 @@ inline frame3f frame_fromz(const vec3f& o, const vec3f& v) {
   auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
   return {x, y, z, o};
 }
-inline frame3f frame_fromzx(
-    const vec3f& o, const vec3f& z_, const vec3f& x_) {
+inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_) {
   auto z = normalize(z_);
   auto x = orthonormalize(x_, z);
   auto y = normalize(cross(z, x));
@@ -1700,28 +1699,24 @@ inline frame3f lookat_frame(const vec3f& eye, const vec3f& center,
 }
 
 // OpenGL frustum, ortho and perspecgive matrices.
-inline mat4f frustum_mat(
-    float l, float r, float b, float t, float n, float f) {
+inline mat4f frustum_mat(float l, float r, float b, float t, float n, float f) {
   return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
       {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
       {0, 0, -2 * f * n / (f - n), 0}};
 }
-inline mat4f ortho_mat(
-    float l, float r, float b, float t, float n, float f) {
+inline mat4f ortho_mat(float l, float r, float b, float t, float n, float f) {
   return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
       {0, 0, -2 / (f - n), 0},
       {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
-inline mat4f ortho2d_mat(
-    float left, float right, float bottom, float top) {
+inline mat4f ortho2d_mat(float left, float right, float bottom, float top) {
   return ortho_mat(left, right, bottom, top, -1, 1);
 }
 inline mat4f ortho_mat(float xmag, float ymag, float near, float far) {
   return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0}, {0, 0, 2 / (near - far), 0},
       {0, 0, (far + near) / (near - far), 1}};
 }
-inline mat4f perspective_mat(
-    float fovy, float aspect, float near, float far) {
+inline mat4f perspective_mat(float fovy, float aspect, float near, float far) {
   auto tg = tan(fovy / 2);
   return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
       {0, 0, (far + near) / (near - far), -1},

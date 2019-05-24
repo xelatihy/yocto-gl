@@ -41,11 +41,11 @@ void print_obj_camera(const yocto_camera& camera);
 };
 
 struct drawgl_shape {
-  opengl_arraybuffer  positions_buffer     = {};
-  opengl_arraybuffer  normals_buffer       = {};
-  opengl_arraybuffer  texcoords_buffer     = {};
-  opengl_arraybuffer  colors_buffer        = {};
-  opengl_arraybuffer  tangentspaces_buffer = {};
+  opengl_arraybuffer   positions_buffer     = {};
+  opengl_arraybuffer   normals_buffer       = {};
+  opengl_arraybuffer   texcoords_buffer     = {};
+  opengl_arraybuffer   colors_buffer        = {};
+  opengl_arraybuffer   tangentspaces_buffer = {};
   opengl_elementbuffer points_buffer        = {};
   opengl_elementbuffer lines_buffer         = {};
   opengl_elementbuffer triangles_buffer     = {};
@@ -546,8 +546,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
   set_gluniform(state.program, "mat_ks", vec3f{material.metallic});
   set_gluniform(state.program, "mat_rs", material.roughness);
   set_gluniform(state.program, "mat_op", material.opacity);
-  set_gluniform(
-      state.program, "mat_double_sided", (int)options.double_sided);
+  set_gluniform(state.program, "mat_double_sided", (int)options.double_sided);
   set_gluniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
       material.emission_texture >= 0
           ? state.textures.at(material.emission_texture)
@@ -574,16 +573,14 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
       5);
 
   set_gluniform(state.program, "elem_faceted", (int)shape.normals.empty());
-  set_glvertexattrib(
-      state.program, "vert_pos", vbos.positions_buffer, zero3f);
-  set_glvertexattrib(
-      state.program, "vert_norm", vbos.normals_buffer, zero3f);
+  set_glvertexattrib(state.program, "vert_pos", vbos.positions_buffer, zero3f);
+  set_glvertexattrib(state.program, "vert_norm", vbos.normals_buffer, zero3f);
   set_glvertexattrib(
       state.program, "vert_texcoord", vbos.texcoords_buffer, zero2f);
   set_glvertexattrib(
       state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
-  set_glvertexattrib(state.program, "vert_tangsp",
-      vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
+  set_glvertexattrib(state.program, "vert_tangsp", vbos.tangentspaces_buffer,
+      vec4f{0, 0, 1, 1});
 
   if (vbos.points_buffer) {
     set_gluniform(state.program, "elem_type", 1);
@@ -677,10 +674,8 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     set_gluniform(state.program, "lnum", (int)lights_pos.size());
     for (auto i = 0; i < lights_pos.size(); i++) {
       auto is = std::to_string(i);
-      set_gluniform(
-          state.program, ("lpos[" + is + "]").c_str(), lights_pos[i]);
-      set_gluniform(
-          state.program, ("lke[" + is + "]").c_str(), lights_ke[i]);
+      set_gluniform(state.program, ("lpos[" + is + "]").c_str(), lights_pos[i]);
+      set_gluniform(state.program, ("lke[" + is + "]").c_str(), lights_ke[i]);
       set_gluniform(
           state.program, ("ltype[" + is + "]").c_str(), (int)lights_type[i]);
     }
@@ -731,15 +726,13 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
       if (!shape.colors.empty())
         init_glarraybuffer(vbos.colors_buffer, shape.colors, false);
       if (!shape.tangents.empty())
-        init_glarraybuffer(
-            vbos.tangentspaces_buffer, shape.tangents, false);
+        init_glarraybuffer(vbos.tangentspaces_buffer, shape.tangents, false);
       if (!shape.points.empty())
         init_glelementbuffer(vbos.points_buffer, shape.points, false);
       if (!shape.lines.empty())
         init_glelementbuffer(vbos.lines_buffer, shape.lines, false);
       if (!shape.triangles.empty())
-        init_glelementbuffer(
-            vbos.triangles_buffer, shape.triangles, false);
+        init_glelementbuffer(vbos.triangles_buffer, shape.triangles, false);
       if (!shape.quads.empty()) {
         auto triangles = vector<vec3i>{};
         quads_to_triangles(triangles, shape.quads);
@@ -808,9 +801,8 @@ void draw_glwidgets(const opengl_window& win) {
           win, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
     add_new_scene(app, load_path);
   }
-  if (draw_glfiledialog(win, "save", save_path, true,
-          get_dirname(save_path), get_filename(save_path),
-          "*.yaml;*.obj;*.pbrt")) {
+  if (draw_glfiledialog(win, "save", save_path, true, get_dirname(save_path),
+          get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
     app.scenes[app.selected].outname = save_path;
     app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_scene);
     save_path = "";
@@ -855,8 +847,7 @@ void draw_glwidgets(const opengl_window& win) {
     for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
     auto drawgl_prms = scn.drawgl_prms;
     if (scn.load_done) {
-      if (draw_glcombobox(
-              win, "camera", drawgl_prms.camera_id, cam_names)) {
+      if (draw_glcombobox(win, "camera", drawgl_prms.camera_id, cam_names)) {
       }
     }
     draw_glslider(win, "width", drawgl_prms.image_width, 0, 4096);
@@ -867,8 +858,7 @@ void draw_glwidgets(const opengl_window& win) {
     continue_glline(win);
     draw_glcheckbox(win, "edges", drawgl_prms.edges);
     if (scn.time_range != zero2f) {
-      draw_glslider(
-          win, "time", scn.time, scn.time_range.x, scn.time_range.y);
+      draw_glslider(win, "time", scn.time, scn.time_range.x, scn.time_range.y);
       draw_gltextinput(win, "anim group", scn.anim_group);
       draw_glcheckbox(win, "animate", scn.animate);
     }
@@ -876,8 +866,7 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glslider(win, "gamma", drawgl_prms.gamma, 0.1f, 4);
     draw_glcheckbox(win, "double sided", drawgl_prms.double_sided);
     draw_glslider(win, "near", drawgl_prms.near_plane, 0.01f, 1.0f);
-    draw_glslider(
-        win, "far", drawgl_prms.far_plane, 1000.0f, 10000.0f);
+    draw_glslider(win, "far", drawgl_prms.far_plane, 1000.0f, 10000.0f);
 
     if (drawgl_prms != scn.drawgl_prms) {
       scn.task_queue.emplace_back(app_task_type::apply_edit,
@@ -904,13 +893,12 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (scn.load_done && begin_glheader(win, "scene tree")) {
-    draw_glwidgets_scene_tree(win, "", scn.scene, scn.selection, 200);
+    draw_glscenetree(win, "", scn.scene, scn.selection, 200);
     end_glheader(win);
   }
   if (scn.load_done && begin_glheader(win, "scene object")) {
     auto edit = app_edit{};
-    if (draw_glwidgets_scene_inspector(
-            win, "", scn.scene, scn.selection, edit, 200)) {
+    if (draw_glsceneinspector(win, "", scn.scene, scn.selection, edit, 200)) {
       scn.task_queue.emplace_back(app_task_type::apply_edit, edit);
     }
     end_glheader(win);

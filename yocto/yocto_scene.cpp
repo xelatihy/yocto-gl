@@ -264,8 +264,7 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
 void update_transforms(yocto_scene& scene, yocto_scene_node& node,
     const frame3f& parent = identity_frame3f) {
   auto frame = parent * node.local * translation_frame(node.translation) *
-               rotation_frame(node.rotation) *
-               scaling_frame(node.scale);
+               rotation_frame(node.rotation) * scaling_frame(node.scale);
   if (node.instance >= 0) scene.instances[node.instance].frame = frame;
   if (node.camera >= 0) scene.cameras[node.camera].frame = frame;
   if (node.environment >= 0) scene.environments[node.environment].frame = frame;

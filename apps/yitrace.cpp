@@ -88,13 +88,13 @@ struct app_scene {
   string name      = "";
 
   // options
-  load_params    load_prms    = {};
-  save_scene_params    save_prms    = {};
-  bvh_params     bvh_prms     = {};
-  trace_params   trace_prms   = {};
-  tonemap_params tonemap_prms = {};
-  int                  preview_ratio  = 8;
-  vec2i                image_size     = {0, 0};
+  load_params       load_prms     = {};
+  save_scene_params save_prms     = {};
+  bvh_params        bvh_prms      = {};
+  trace_params      trace_prms    = {};
+  tonemap_params    tonemap_prms  = {};
+  int               preview_ratio = 8;
+  vec2i             image_size    = {0, 0};
 
   // scene
   yocto_scene scene      = {};
@@ -131,20 +131,19 @@ struct app_state {
   deque<string>    errors;
 
   // default options
-  load_params    load_prms    = {};
-  save_scene_params    save_prms    = {};
-  bvh_params     bvh_prms     = {};
-  trace_params   trace_prms   = {};
-  tonemap_params tonemap_prms = {};
-  bool                 add_skyenv     = false;
+  load_params       load_prms    = {};
+  save_scene_params save_prms    = {};
+  bvh_params        bvh_prms     = {};
+  trace_params      trace_prms   = {};
+  tonemap_params    tonemap_prms = {};
+  bool              add_skyenv   = false;
 };
 
 void update_app_render(const string& filename, image<vec4f>& render,
     image<vec4f>& display, image<vec4f>& preview, trace_state& state,
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
-    const trace_params&   trace_prms,
-    const tonemap_params& tonemap_prms, int preview_ratio,
-    atomic<bool>& stop, atomic<int>& current_sample,
+    const trace_params& trace_prms, const tonemap_params& tonemap_prms,
+    int preview_ratio, atomic<bool>& stop, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue) {
   auto preview_options = trace_prms;
   preview_options.image_size /= preview_ratio;
@@ -173,8 +172,8 @@ void update_app_render(const string& filename, image<vec4f>& render,
        sample += trace_prms.samples_per_batch) {
     if (stop) return;
     current_sample   = sample;
-    auto num_samples = min(trace_prms.samples_per_batch,
-        trace_prms.num_samples - current_sample);
+    auto num_samples = min(
+        trace_prms.samples_per_batch, trace_prms.num_samples - current_sample);
     parallel_foreach(
         regions,
         [num_samples, &trace_prms, &tonemap_prms, &render, &display, &scene,
@@ -190,17 +189,17 @@ void update_app_render(const string& filename, image<vec4f>& render,
 }
 
 void add_new_scene(app_state& app, const string& filename) {
-  auto& scn          = app.scenes.emplace_back();
-  scn.filename       = filename;
-  scn.imagename      = get_noextension(filename) + ".png";
-  scn.outname        = get_noextension(filename) + ".edited.yaml";
-  scn.name           = get_filename(scn.filename);
+  auto& scn        = app.scenes.emplace_back();
+  scn.filename     = filename;
+  scn.imagename    = get_noextension(filename) + ".png";
+  scn.outname      = get_noextension(filename) + ".edited.yaml";
+  scn.name         = get_filename(scn.filename);
   scn.load_prms    = app.load_prms;
   scn.save_prms    = app.save_prms;
   scn.trace_prms   = app.trace_prms;
   scn.bvh_prms     = app.bvh_prms;
   scn.tonemap_prms = app.tonemap_prms;
-  scn.add_skyenv     = app.add_skyenv;
+  scn.add_skyenv   = app.add_skyenv;
   scn.task_queue.emplace_back(app_task_type::load_scene);
   app.selected = (int)app.scenes.size() - 1;
 }
@@ -221,9 +220,8 @@ void draw_glwidgets(const opengl_window& win) {
           win, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
     add_new_scene(app, load_path);
   }
-  if (draw_glfiledialog(win, "save", save_path, true,
-          get_dirname(save_path), get_filename(save_path),
-          "*.yaml;*.obj;*.pbrt")) {
+  if (draw_glfiledialog(win, "save", save_path, true, get_dirname(save_path),
+          get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
     app.scenes[app.selected].outname = save_path;
     app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_scene);
     save_path = "";
@@ -269,23 +267,18 @@ void draw_glwidgets(const opengl_window& win) {
     for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
     auto trace_prms = scn.trace_prms;
     if (scn.load_done) {
-      if (draw_glcombobox(
-              win, "camera", trace_prms.camera_id, cam_names)) {
+      if (draw_glcombobox(win, "camera", trace_prms.camera_id, cam_names)) {
       }
     }
     draw_glslider(win, "width", trace_prms.image_size.x, 0, 4096);
-    draw_glslider(
-        win, "height", trace_prms.image_size.y, 0, 4096);
-    draw_glslider(
-        win, "nsamples", trace_prms.num_samples, 16, 4096);
+    draw_glslider(win, "height", trace_prms.image_size.y, 0, 4096);
+    draw_glslider(win, "nsamples", trace_prms.num_samples, 16, 4096);
     draw_glcombobox(
         win, "tracer", (int&)trace_prms.sampler_type, trace_sampler_names);
-    draw_glcombobox(win, "false color",
-        (int&)trace_prms.falsecolor_type, trace_falsecolor_names);
-    draw_glslider(
-        win, "nbounces", trace_prms.max_bounces, 1, 128);
-    draw_glslider(
-        win, "seed", (int&)trace_prms.random_seed, 0, 1000000);
+    draw_glcombobox(win, "false color", (int&)trace_prms.falsecolor_type,
+        trace_falsecolor_names);
+    draw_glslider(win, "nbounces", trace_prms.max_bounces, 1, 128);
+    draw_glslider(win, "seed", (int&)trace_prms.random_seed, 0, 1000000);
     draw_glslider(win, "pratio", scn.preview_ratio, 1, 64);
     auto tonemap_prms = scn.tonemap_prms;
     draw_glslider(win, "exposure", tonemap_prms.exposure, -5, 5);
@@ -337,13 +330,12 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (scn.load_done && begin_glheader(win, "scene tree")) {
-    draw_glwidgets_scene_tree(win, "", scn.scene, scn.selection, 200);
+    draw_glscenetree(win, "", scn.scene, scn.selection, 200);
     end_glheader(win);
   }
   if (scn.load_done && begin_glheader(win, "scene object")) {
     auto edit = app_edit{};
-    if (draw_glwidgets_scene_inspector(
-            win, "", scn.scene, scn.selection, edit, 200)) {
+    if (draw_glsceneinspector(win, "", scn.scene, scn.selection, edit, 200)) {
       scn.task_queue.emplace_back(app_task_type::apply_edit, edit);
     }
     end_glheader(win);
@@ -562,9 +554,8 @@ void update(const opengl_window& win, app_state& app) {
       try {
         scn.render_done     = false;
         auto reload_element = false, update_bvh = false, update_lights = false;
-        apply_edit(scn.filename, scn.scene, scn.trace_prms,
-            scn.tonemap_prms, reload_element, update_lights, update_bvh,
-            task.edit);
+        apply_edit(scn.filename, scn.scene, scn.trace_prms, scn.tonemap_prms,
+            reload_element, update_lights, update_bvh, task.edit);
         log_glinfo(win, "done editing " + scn.filename);
         if (reload_element) {
           scn.load_done = false;
@@ -741,8 +732,7 @@ void update(const opengl_window& win, app_state& app) {
         log_glinfo(win, "start refitting bvh " + scn.filename);
         scn.bvh_done = false;
         task.result  = async([&scn, &task]() {
-          refit_bvh(
-              scn.filename, scn.scene, scn.bvh, scn.bvh_prms, task.edit);
+          refit_bvh(scn.filename, scn.scene, scn.bvh, scn.bvh_prms, task.edit);
         });
       } break;
       case app_task_type::init_lights: {
@@ -844,8 +834,8 @@ void run_ui(app_state& app) {
       if (camera.frame != old_camera.frame ||
           camera.focus_distance != old_camera.focus_distance) {
         scn.task_queue.emplace_back(app_task_type::apply_edit,
-            app_edit{typeid(yocto_camera), scn.trace_prms.camera_id, camera,
-                false});
+            app_edit{
+                typeid(yocto_camera), scn.trace_prms.camera_id, camera, false});
       }
     }
 
@@ -884,8 +874,8 @@ int main(int argc, char* argv[]) {
   // application
   app_state app{};
   app.trace_prms.samples_per_batch = 1;
-  auto no_parallel                   = false;
-  auto filenames                     = vector<string>{};
+  auto no_parallel                 = false;
+  auto filenames                   = vector<string>{};
 
   // names for enums
   auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
@@ -903,14 +893,13 @@ int main(int argc, char* argv[]) {
   // parse command line
   auto parser = CLI::App{"progressive path tracing"};
   parser.add_option("--camera", app.trace_prms.camera_id, "Camera index.");
-  parser.add_option("--hres,-R", app.trace_prms.image_size.x,
-      "Image horizontal resolution.");
+  parser.add_option(
+      "--hres,-R", app.trace_prms.image_size.x, "Image horizontal resolution.");
   parser.add_option(
       "--vres,-r", app.trace_prms.image_size.y, "Image vertical resolution.");
   parser.add_option(
       "--nsamples,-s", app.trace_prms.num_samples, "Number of samples.");
-  parser
-      .add_option("--tracer,-t", app.trace_prms.sampler_type, "Tracer type.")
+  parser.add_option("--tracer,-t", app.trace_prms.sampler_type, "Tracer type.")
       ->transform(CLI::IsMember(trace_sampler_type_namemap));
   parser
       .add_option("--falsecolor,-F", app.trace_prms.falsecolor_type,
@@ -927,8 +916,7 @@ int main(int argc, char* argv[]) {
       "Environments are hidden in renderer");
   parser.add_flag(
       "--parallel,!--no-parallel", no_parallel, "Disable parallel execution.");
-  parser.add_option(
-      "--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
+  parser.add_option("--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
   parser.add_flag(
       "--filmic,!--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
   parser.add_flag("--srgb,!--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");

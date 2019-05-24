@@ -75,8 +75,8 @@ struct save_scene_params {
 };
 
 // Load/save a scene in the supported formats.
-void load_scene(const string& filename, yocto_scene& scene,
-    const load_params& params = {});
+void load_scene(
+    const string& filename, yocto_scene& scene, const load_params& params = {});
 void save_scene(const string& filename, const yocto_scene& scene,
     const save_scene_params& params = {});
 

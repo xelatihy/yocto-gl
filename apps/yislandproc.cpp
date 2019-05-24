@@ -1076,7 +1076,7 @@ int main(int argc, char** argv) {
 
   // save scene
   try {
-    auto timer                = print_timed("saving scene");
+    auto timer              = print_timed("saving scene");
     save_prms.skip_textures = false;
     save_prms.run_serially  = false;
     // save_prms.ply_instances = true;

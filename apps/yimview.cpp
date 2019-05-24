@@ -170,8 +170,8 @@ void draw_glwidgets(const opengl_window& win) {
   if (!draw_glmessage(win, "error", error_message)) {
     error_message = "";
   }
-  if (draw_glfiledialog(win, "load image", load_path, false,
-          "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
+  if (draw_glfiledialog(win, "load image", load_path, false, "./", "",
+          "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     add_new_image(app, load_path);
   }
   if (draw_glfiledialog(win, "save image", save_path, true,
@@ -233,8 +233,7 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glslider(win, "highlights", options.highlights, 0, 1);
     draw_glcoloredit(win, "shadows color", options.shadows_color);
     draw_glcoloredit(win, "midtones color", options.midtones_color);
-    draw_glcoloredit(
-        win, "highlights color", options.highlights_color);
+    draw_glcoloredit(win, "highlights color", options.highlights_color);
     if (options != img.colorgrade_prms) {
       img.colorgrade_prms = options;
       if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
@@ -245,8 +244,7 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "image", get_filename(img.filename));
     draw_gllabel(win, "filename", img.filename);
     draw_gllabel(win, "outname", img.outname);
-    draw_gllabel(
-        win, "image", "%d x %d", img.img.size().x, img.img.size().y);
+    draw_gllabel(win, "image", "%d x %d", img.img.size().x, img.img.size().y);
     draw_glslider(win, "zoom", img.image_scale, 0.1, 10);
     draw_glcheckbox(win, "zoom to fit", img.zoom_to_fit);
     auto mouse_pos = get_glmouse_pos(win);
