@@ -302,8 +302,7 @@ void bind_opengl_program(opengl_program& program) {
 }
 void unbind_opengl_program() { glUseProgram(0); }
 
-int get_opengl_uniform_location(
-    const opengl_program& program, const char* name) {
+int get_opengl_uniform_location(const opengl_program& program, const char* name) {
     return glGetUniformLocation(program.program_id, name);
 }
 
@@ -643,8 +642,7 @@ void set_drop_opengl_callback(opengl_window& win, drop_opengl_callback drop_cb) 
     glfwSetDropCallback(win.win, _glfw_drop_callback);
 }
 
-vec2i get_opengl_framebuffer_size(
-    const opengl_window& win, bool ignore_widgets) {
+vec2i get_opengl_framebuffer_size(const opengl_window& win, bool ignore_widgets) {
     auto size = zero2i;
     glfwGetFramebufferSize(win.win, &size.x, &size.y);
     if (ignore_widgets && win.widgets_width) {

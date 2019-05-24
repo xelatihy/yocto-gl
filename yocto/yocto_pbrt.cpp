@@ -178,8 +178,7 @@ static inline void parse_value(
     pbrt_stream& stream, pbrt_texture::checkerboard_t::aamode_type& value) {
     static auto value_names =
         unordered_map<string, pbrt_texture::checkerboard_t::aamode_type>{
-            {"closedform",
-                pbrt_texture::checkerboard_t::aamode_type::closedform},
+            {"closedform", pbrt_texture::checkerboard_t::aamode_type::closedform},
             {"none", pbrt_texture::checkerboard_t::aamode_type::none},
         };
     return parse_value(stream, value, value_names);
@@ -502,9 +501,8 @@ static inline void parse_param(
             if (filename == "SHPS") {
                 value = {1, 1, 1};
             } else if (get_extension(filename) == "eta") {
-                auto eta = get_pbrt_etak(
-                    filename.substr(0, filename.length() - 4))
-                               .first;
+                auto eta =
+                    get_pbrt_etak(filename.substr(0, filename.length() - 4)).first;
                 value = {eta.x, eta.y, eta.z};
             } else if (get_extension(filename) == "k") {
                 auto k = get_pbrt_etak(filename.substr(0, filename.length() - 2))

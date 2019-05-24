@@ -220,12 +220,10 @@ void load_island_materials(const string& filename, const string& dirname,
                                          jass.get<string>() + ".ptx";
                 ass_material.color_ptex_faces =
                     tjs.at(ass_material.color_map).at("numFaces").get<int>();
-                ass_material.color_ptex_rowfaces = tjs.at(ass_material.color_map)
-                                                       .at("basedRowLength")
-                                                       .get<int>();
-                ass_material.color_ptex_colfaces = tjs.at(ass_material.color_map)
-                                                       .at("basedColLength")
-                                                       .get<int>();
+                ass_material.color_ptex_rowfaces =
+                    tjs.at(ass_material.color_map).at("basedRowLength").get<int>();
+                ass_material.color_ptex_colfaces =
+                    tjs.at(ass_material.color_map).at("basedColLength").get<int>();
                 ass_material.color_ptex_tilesize =
                     tjs.at(ass_material.color_map).at("basedTileSize").get<int>();
                 ass_material.color_map_baked = tjs.at(ass_material.color_map)
@@ -521,8 +519,7 @@ void add_island_instance(yocto_scene& scene, const string& parent_name,
 }
 
 void add_island_variant_instance(vector<yocto_instance>& instances,
-    const string& parent_name, const mat4f& xform,
-    const vector<vec2i>& shapes) {
+    const string& parent_name, const mat4f& xform, const vector<vec2i>& shapes) {
     for (auto shape_material : shapes) {
         auto instance     = yocto_instance{};
         instance.frame    = frame3f(xform);

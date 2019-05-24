@@ -270,8 +270,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_dragger_opengl_widget(win, "image max", img_stats.max);
         draw_dragger_opengl_widget(win, "image avg", img_stats.average);
         draw_histogram_opengl_widget(win, "image histo", img_stats.histogram);
-        auto display_stats = (img.load_done) ? img.display_stats
-                                             : image_stats{};
+        auto display_stats = (img.load_done) ? img.display_stats : image_stats{};
         draw_dragger_opengl_widget(win, "display min", display_stats.min);
         draw_dragger_opengl_widget(win, "display max", display_stats.max);
         draw_dragger_opengl_widget(win, "display avg", display_stats.average);

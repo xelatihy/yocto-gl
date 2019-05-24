@@ -657,8 +657,7 @@ void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     });
 }
 
-static vec3f colorgrade(
-    const vec3f& ldr, const colorgrade_image_params& params) {
+static vec3f colorgrade(const vec3f& ldr, const colorgrade_image_params& params) {
     auto rgb = ldr;
     if (params.contrast != 0.5f) {
         rgb = gain(ldr, 1 - params.contrast);
@@ -1001,8 +1000,7 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
 // Implementation of sunsky modified heavily from pbrt
 image<vec4f> make_sunsky(int width, int height, float theta_sun,
     float turbidity, bool has_sun, float sun_angle_scale,
-    float sun_emission_scale, const vec3f& ground_albedo,
-    bool renormalize_sun) {
+    float sun_emission_scale, const vec3f& ground_albedo, bool renormalize_sun) {
     auto zenith_xyY = vec3f{
         (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
             0.00208f * theta_sun + 0) *
@@ -1089,8 +1087,7 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
         // return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f
         // :
         //                                                zero3f;
-        return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000
-                                                       : zero3f;
+        return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 : zero3f;
     };
 
     // Make the sun sky image
@@ -1281,9 +1278,8 @@ void make_preset(image<vec4f>& img, const string& type) {
     } else if (type == "logo-render") {
         make_logo(img, "logo-render");
     } else if (type == "images1") {
-        auto sub_types = vector<string>{"grid", "uvgrid", "checker",
-            "gammaramp", "bumps", "bump-normal", "noise", "fbm",
-            "blackbodyramp"};
+        auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
+            "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
         auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
         for (auto i = 0; i < sub_imgs.size(); i++) {
             sub_imgs.at(i).resize(img.size());
@@ -1641,8 +1637,7 @@ static inline const char* get_tinyexr_error(int error) {
 static inline void load_exr(const string& filename, image<vec4f>& img) {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (auto error = LoadEXR(
-            &pixels, &width, &height, filename.c_str(), nullptr);
+    if (auto error = LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr);
         error < 0) {
         throw io_error("error loading image " + filename + "("s +
                        get_tinyexr_error(error) + ")"s);

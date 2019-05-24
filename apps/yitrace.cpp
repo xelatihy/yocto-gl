@@ -460,10 +460,9 @@ void load_element(
         // TODO: this needs more fixing?
         auto& subdiv = scene.subdivs[index];
         load_shape(get_dirname(filename) + subdiv.uri, subdiv.points,
-            subdiv.lines, subdiv.triangles, subdiv.quads,
-            subdiv.quads_positions, subdiv.quads_normals,
-            subdiv.quads_texcoords, subdiv.positions, subdiv.normals,
-            subdiv.texcoords, subdiv.colors, subdiv.radius,
+            subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.quads_positions,
+            subdiv.quads_normals, subdiv.quads_texcoords, subdiv.positions,
+            subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius,
             subdiv.preserve_facevarying);
         tesselate_subdiv(scene, scene.subdivs[index]);
     } else {

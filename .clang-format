@@ -18,4 +18,4 @@ BreakStringLiterals: false
 
 PenaltyBreakAssignment: 20
 PenaltyBreakBeforeFirstCallParameter: 19
-PenaltyExcessCharacter: 50
+PenaltyExcessCharacter: 25

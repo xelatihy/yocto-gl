@@ -395,8 +395,7 @@ vec3f eval_microfacet_transmission(float roughness, const vec3f& eta,
     auto denominator = dot(halfway_vector, halfway_vector);
 
     // [Walter 2007] equation 21
-    return abs(dot_terms) * numerator / denominator *
-           abs(dot(normal, incoming));
+    return abs(dot_terms) * numerator / denominator * abs(dot(normal, incoming));
 }
 vec3f eval_delta_transmission(const vec3f& eta, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
@@ -833,8 +832,7 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
         // [Walter 2007] equation 17
         pdf += pdfs[3] *
                sample_microfacet_pdf(material.roughness, up_normal, halfway) *
-               abs(dot(halfway, incoming)) /
-               dot(halfway_vector, halfway_vector);
+               abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
     }
     if (pdfs[3] && other_hemisphere(normal, outgoing, incoming) &&
         material.thin) {

@@ -277,8 +277,7 @@ void update_transforms(yocto_scene& scene, yocto_scene_node& node,
 }
 
 // Update node transforms
-void update_transforms(
-    yocto_scene& scene, float time, const string& anim_group) {
+void update_transforms(yocto_scene& scene, float time, const string& anim_group) {
     for (auto& agr : scene.animations)
         update_transforms(scene, agr, time, anim_group);
     for (auto& node : scene.nodes) node.children.clear();
@@ -345,8 +344,7 @@ pair<int, vec2f> sample_shape(const yocto_shape& shape,
 }
 
 float sample_shape_pdf(const yocto_shape& shape,
-    const vector<float>& elements_cdf, int element_id,
-    const vec2f& element_uv) {
+    const vector<float>& elements_cdf, int element_id, const vec2f& element_uv) {
     // prob triangle * area triangle = area triangle mesh
     return 1 / elements_cdf.back();
 }
@@ -727,9 +725,8 @@ pair<vec3f, bool> eval_element_tangents(
                 {0, 1});
         } else {
             txty = triangle_tangents_fromuv(shape.positions[t.x],
-                shape.positions[t.y], shape.positions[t.z],
-                shape.texcoords[t.x], shape.texcoords[t.y],
-                shape.texcoords[t.z]);
+                shape.positions[t.y], shape.positions[t.z], shape.texcoords[t.x],
+                shape.texcoords[t.y], shape.texcoords[t.z]);
         }
         auto tx = txty.first, ty = txty.second;
         tx     = orthonormalize(tx, norm);
@@ -742,15 +739,13 @@ pair<vec3f, bool> eval_element_tangents(
         auto txty = pair<vec3f, vec3f>();
         if (shape.texcoords.empty()) {
             txty = quad_tangents_fromuv(shape.positions[q.x],
-                shape.positions[q.y], shape.positions[q.z],
-                shape.positions[q.w], {0, 0}, {1, 0}, {0, 1}, {1, 1},
-                element_uv);
+                shape.positions[q.y], shape.positions[q.z], shape.positions[q.w],
+                {0, 0}, {1, 0}, {0, 1}, {1, 1}, element_uv);
         } else {
             txty = quad_tangents_fromuv(shape.positions[q.x],
                 shape.positions[q.y], shape.positions[q.z],
-                shape.positions[q.w], shape.texcoords[q.x],
-                shape.texcoords[q.y], shape.texcoords[q.z],
-                shape.texcoords[q.w], element_uv);
+                shape.positions[q.w], shape.texcoords[q.x], shape.texcoords[q.y],
+                shape.texcoords[q.z], shape.texcoords[q.w], element_uv);
         }
         auto tx = txty.first, ty = txty.second;
         tx     = orthonormalize(tx, norm);
@@ -763,16 +758,14 @@ pair<vec3f, bool> eval_element_tangents(
         auto txty = pair<vec3f, vec3f>();
         if (shape.texcoords.empty()) {
             txty = quad_tangents_fromuv(shape.positions[q.x],
-                shape.positions[q.y], shape.positions[q.z],
-                shape.positions[q.w], {0, 0}, {1, 0}, {0, 1}, {1, 1},
-                element_uv);
+                shape.positions[q.y], shape.positions[q.z], shape.positions[q.w],
+                {0, 0}, {1, 0}, {0, 1}, {1, 1}, element_uv);
         } else {
             auto qt = shape.quads_texcoords[element_id];
             txty    = quad_tangents_fromuv(shape.positions[q.x],
-                shape.positions[q.y], shape.positions[q.z],
-                shape.positions[q.w], shape.texcoords[qt.x],
-                shape.texcoords[qt.y], shape.texcoords[qt.z],
-                shape.texcoords[qt.w], element_uv);
+                shape.positions[q.y], shape.positions[q.z], shape.positions[q.w],
+                shape.texcoords[qt.x], shape.texcoords[qt.y],
+                shape.texcoords[qt.z], shape.texcoords[qt.w], element_uv);
         }
         auto tx = txty.first, ty = txty.second;
         tx     = orthonormalize(tx, norm);
@@ -1471,8 +1464,7 @@ string format_stats(const yocto_scene& scene, bool verbose) {
     auto str = ""s;
     for (auto& [key, value] : stats) {
         if (value == 0) continue;
-        str += pad_right(key, 15) + ": " + pad_left(to_string(value), 13) +
-               "\n";
+        str += pad_right(key, 15) + ": " + pad_left(to_string(value), 13) + "\n";
     }
 
     return str;

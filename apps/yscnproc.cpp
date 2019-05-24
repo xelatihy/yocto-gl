@@ -136,11 +136,9 @@ int main(int argc, char** argv) {
         auto sid = 0;
         for (auto& shape : scene.shapes) {
             if (!shape.quads_positions.empty()) {
-                shape.uri = shape_directory + "shape_" + to_string(sid) +
-                            ".obj";
+                shape.uri = shape_directory + "shape_" + to_string(sid) + ".obj";
             } else {
-                shape.uri = shape_directory + "shape_" + to_string(sid) +
-                            ".ply";
+                shape.uri = shape_directory + "shape_" + to_string(sid) + ".ply";
             }
             sid++;
         }

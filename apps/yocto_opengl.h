@@ -229,8 +229,7 @@ struct opengl_window {
 };
 
 void init_opengl_window(opengl_window& win, const vec2i& size,
-    const string& title, void* user_pointer,
-    refresh_opengl_callback refresh_cb);
+    const string& title, void* user_pointer, refresh_opengl_callback refresh_cb);
 void delete_opengl_window(opengl_window& win);
 
 void set_drop_opengl_callback(opengl_window& win, drop_opengl_callback drop_cb);

@@ -469,8 +469,7 @@ namespace yocto {
 // Conversion between flots and bytes
 inline vec4b float_to_byte(const vec4f& a) {
     return {(byte)clamp(int(a.x * 256), 0, 255),
-        (byte)clamp(int(a.y * 256), 0, 255),
-        (byte)clamp(int(a.z * 256), 0, 255),
+        (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255),
         (byte)clamp(int(a.w * 256), 0, 255)};
 }
 inline vec4f byte_to_float(const vec4b& a) {

@@ -965,9 +965,8 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
     // create nodes until the queue is empty
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-        futures.emplace_back(async([&nodes, &prims, &params,
-                                       &num_processed_prims, &queue_mutex,
-                                       &queue] {
+        futures.emplace_back(async([&nodes, &prims, &params, &num_processed_prims,
+                                       &queue_mutex, &queue] {
             while (true) {
                 // exit if needed
                 if (num_processed_prims >= prims.size()) return;

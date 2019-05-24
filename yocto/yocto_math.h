@@ -1378,9 +1378,9 @@ inline quat4f nlerp(const quat4f& a, const quat4f& b, float t) {
 }
 inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
     auto th = uangle(a, b);
-    return th == 0 ? a
-                   : a * (sin(th * (1 - t)) / sin(th)) +
-                         b * (sin(th * t) / sin(th));
+    return th == 0
+               ? a
+               : a * (sin(th * (1 - t)) / sin(th)) + b * (sin(th * t) / sin(th));
 }
 
 }  // namespace yocto
@@ -1488,8 +1488,7 @@ inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1, float r0, float r1) 
     a += p1 + r1;
     return a;
 }
-inline bbox3f triangle_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+inline bbox3f triangle_bounds(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     auto a = bbox3f{};
     a += p0;
     a += p1;

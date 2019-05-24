@@ -777,8 +777,7 @@ static void load_yaml_scene(const string& filename, yocto_scene& scene,
 #endif
 
 template <typename T, typename... Ts>
-static inline void write_yaml_line(
-    FILE* fs, const T& value, const Ts... values) {
+static inline void write_yaml_line(FILE* fs, const T& value, const Ts... values) {
     write_value(fs, value);
     if constexpr (sizeof...(values) == 0) {
         write_text(fs, "\n");
@@ -1732,11 +1731,10 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
                 gsg->specular_glossiness_texture, false);
             material.roughness_texture = material.specular_texture;
         } else if (gmat->has_pbr_metallic_roughness) {
-            material.gltf_textures   = true;
-            auto gmr                 = &gmat->pbr_metallic_roughness;
-            auto kb                  = vec4f{gmr->base_color_factor[0],
-                gmr->base_color_factor[1], gmr->base_color_factor[2],
-                gmr->base_color_factor[3]};
+            material.gltf_textures = true;
+            auto gmr               = &gmat->pbr_metallic_roughness;
+            auto kb = vec4f{gmr->base_color_factor[0], gmr->base_color_factor[1],
+                gmr->base_color_factor[2], gmr->base_color_factor[3]};
             material.diffuse         = {kb.x, kb.y, kb.z};
             material.opacity         = kb.w;
             material.specular        = {0.04, 0.04, 0.04};
@@ -2050,11 +2048,11 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
 
     // convert animations
     for (auto gid = 0; gid < gltf->animations_count; gid++) {
-        auto ganm        = &gltf->animations[gid];
-        auto aid         = 0;
-        auto sampler_map = unordered_map<
-            pair<cgltf_animation_sampler*, cgltf_animation_path_type>, int,
-            sampler_map_hash>();
+        auto ganm = &gltf->animations[gid];
+        auto aid  = 0;
+        auto sampler_map =
+            unordered_map<pair<cgltf_animation_sampler*, cgltf_animation_path_type>,
+                int, sampler_map_hash>();
         for (auto cid = 0; cid < ganm->channels_count; cid++) {
             auto gchannel = &ganm->channels[cid];
             auto path     = gchannel->target_path;
@@ -2218,8 +2216,7 @@ static inline void _write_json_value(
     write_json_state& state, const string& value) {
     write_text(state.fs, value);
 }
-static inline void _write_json_value(
-    write_json_state& state, const char* value) {
+static inline void _write_json_value(write_json_state& state, const char* value) {
     write_text(state.fs, value);
 }
 static inline void _write_json_value(
@@ -2444,8 +2441,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
             if (!shape.quads.empty()) {
                 auto triangles = vector<vec3i>{};
                 quads_to_triangles(triangles, shape.quads);
-                split.indices.insert(split.indices.end(),
-                    (int*)triangles.data(),
+                split.indices.insert(split.indices.end(), (int*)triangles.data(),
                     (int*)triangles.data() + triangles.size() * 3);
             }
         } else {
@@ -2682,8 +2678,7 @@ static vec3f pbrt_fresnel_dielectric(float cosw, const vec3f& eta_) {
 
 // Compute the fresnel term for metals. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-static vec3f pbrt_fresnel_metal(
-    float cosw, const vec3f& eta, const vec3f& etak) {
+static vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
     if (etak == zero3f) return pbrt_fresnel_dielectric(cosw, eta);
 
     cosw       = clamp(cosw, (float)-1, (float)1);
@@ -3408,8 +3403,7 @@ static void load_pbrt_scene(const string& filename, yocto_scene& scene,
 }
 
 template <typename T, typename... Ts>
-static inline void write_pbrt_line(
-    FILE* fs, const T& value, const Ts... values) {
+static inline void write_pbrt_line(FILE* fs, const T& value, const Ts... values) {
     write_value(fs, value);
     if constexpr (sizeof...(values) == 0) {
         write_text(fs, "\n");

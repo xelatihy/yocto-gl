@@ -657,8 +657,7 @@ inline file_holder open_input_file(const string& filename, bool binary = false) 
     if (!fs) throw io_error("could not open file " + filename);
     return {fs, filename};
 }
-inline file_holder open_output_file(
-    const string& filename, bool binary = false) {
+inline file_holder open_output_file(const string& filename, bool binary = false) {
     auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
     if (!fs) throw io_error("could not open file " + filename);
     return {fs, filename};
