@@ -46,7 +46,7 @@ static inline void parse_value(string_view& str, obj_vertex& value) {
             str.remove_prefix(1);
             parse_value(str, value.normal);
         } else {
-            parse_value(str, value.texturecoord);
+            parse_value(str, value.texcoord);
             if (!str.empty() && str.front() == '/') {
                 str.remove_prefix(1);
                 parse_value(str, value.normal);
@@ -285,7 +285,7 @@ void load_obj(
             parse_value(line, vert);
             if (params.flip_texcoord) vert.y = 1 - vert.y;
             cb.texcoord(vert);
-            vert_size.texturecoord += 1;
+            vert_size.texcoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             verts.clear();
             skip_whitespace(line);
@@ -295,9 +295,9 @@ void load_obj(
                 if (!vert.position) break;
                 if (vert.position < 0)
                     vert.position = vert_size.position + vert.position + 1;
-                if (vert.texturecoord < 0)
-                    vert.texturecoord = vert_size.texturecoord +
-                                        vert.texturecoord + 1;
+                if (vert.texcoord < 0)
+                    vert.texcoord = vert_size.texcoord +
+                                        vert.texcoord + 1;
                 if (vert.normal < 0)
                     vert.normal = vert_size.normal + vert.normal + 1;
                 verts.push_back(vert);

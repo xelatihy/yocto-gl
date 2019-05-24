@@ -1092,8 +1092,8 @@ struct load_obj_scene_cb : obj_callbacks {
             vertex_map.insert(it, {vert, nverts});
             if (vert.position)
                 shape.positions.push_back(opos.at(vert.position - 1));
-            if (vert.texturecoord)
-                shape.texcoords.push_back(otexcoord.at(vert.texturecoord - 1));
+            if (vert.texcoord)
+                shape.texcoords.push_back(otexcoord.at(vert.texcoord - 1));
             if (vert.normal) shape.normals.push_back(onorm.at(vert.normal - 1));
             if (shape.normals.size() != 0 &&
                 shape.normals.size() != shape.positions.size()) {
@@ -1118,12 +1118,12 @@ struct load_obj_scene_cb : obj_callbacks {
             shape.positions.push_back(opos.at(vert.position - 1));
         }
         for (auto& vert : verts) {
-            if (!vert.texturecoord) continue;
-            auto texcoord_it = texcoord_map.find(vert.texturecoord);
+            if (!vert.texcoord) continue;
+            auto texcoord_it = texcoord_map.find(vert.texcoord);
             if (texcoord_it != texcoord_map.end()) continue;
             auto nverts = (int)shape.texcoords.size();
-            texcoord_map.insert(texcoord_it, {vert.texturecoord, nverts});
-            shape.texcoords.push_back(otexcoord.at(vert.texturecoord - 1));
+            texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
+            shape.texcoords.push_back(otexcoord.at(vert.texcoord - 1));
         }
         for (auto& vert : verts) {
             if (!vert.normal) continue;
@@ -1168,12 +1168,12 @@ struct load_obj_scene_cb : obj_callbacks {
                             pos_map.at(verts[2].position),
                             pos_map.at(verts[3].position)});
                 }
-                if (verts[0].texturecoord) {
+                if (verts[0].texcoord) {
                     shape.quads_texcoords.push_back(
-                        {texcoord_map.at(verts[0].texturecoord),
-                            texcoord_map.at(verts[1].texturecoord),
-                            texcoord_map.at(verts[2].texturecoord),
-                            texcoord_map.at(verts[3].texturecoord)});
+                        {texcoord_map.at(verts[0].texcoord),
+                            texcoord_map.at(verts[1].texcoord),
+                            texcoord_map.at(verts[2].texcoord),
+                            texcoord_map.at(verts[3].texcoord)});
                 }
                 if (verts[0].normal) {
                     shape.quads_normals.push_back({norm_map.at(verts[0].normal),
@@ -1190,13 +1190,13 @@ struct load_obj_scene_cb : obj_callbacks {
                                 pos_map.at(verts[i].position),
                                 pos_map.at(verts[i].position)});
                 }
-                if (verts[0].texturecoord) {
+                if (verts[0].texcoord) {
                     for (auto i = 2; i < verts.size(); i++)
                         shape.quads_texcoords.push_back(
-                            {texcoord_map.at(verts[0].texturecoord),
-                                texcoord_map.at(verts[i - 1].texturecoord),
-                                texcoord_map.at(verts[i].texturecoord),
-                                texcoord_map.at(verts[i].texturecoord)});
+                            {texcoord_map.at(verts[0].texcoord),
+                                texcoord_map.at(verts[i - 1].texcoord),
+                                texcoord_map.at(verts[i].texcoord),
+                                texcoord_map.at(verts[i].texcoord)});
                 }
                 if (verts[0].normal) {
                     for (auto i = 2; i < verts.size(); i++)
@@ -1448,12 +1448,12 @@ static void save_objx(const string& filename, const yocto_scene& scene) {
 }
 
 static inline string to_string(const obj_vertex& value) {
-    if (value.texturecoord && value.normal) {
-        return to_string(value.position) + "/" + to_string(value.texturecoord) +
+    if (value.texcoord && value.normal) {
+        return to_string(value.position) + "/" + to_string(value.texcoord) +
                "/" + to_string(value.normal);
-    } else if (value.texturecoord && !value.normal) {
-        return to_string(value.position) + "/" + to_string(value.texturecoord);
-    } else if (!value.texturecoord && value.normal) {
+    } else if (value.texcoord && !value.normal) {
+        return to_string(value.position) + "/" + to_string(value.texcoord);
+    } else if (!value.texcoord && value.normal) {
         return to_string(value.position) + "//" + to_string(value.normal);
     } else {
         return to_string(value.position);
@@ -1505,7 +1505,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
             1, shape.texcoords.empty() ? 0 : 1, shape.normals.empty() ? 0 : 1};
         auto vert = [mask, offset](int i) {
             return obj_vertex{(i + offset.position + 1) * mask.position,
-                (i + offset.texturecoord + 1) * mask.texturecoord,
+                (i + offset.texcoord + 1) * mask.texcoord,
                 (i + offset.normal + 1) * mask.normal};
         };
         for (auto& p : shape.points) {
@@ -1529,7 +1529,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
             if (!shape.texcoords.empty() && shape.normals.empty()) {
                 auto vert = [offset](int ip, int it) {
                     return obj_vertex{ip + offset.position + 1,
-                        it + offset.texturecoord + 1, 0};
+                        it + offset.texcoord + 1, 0};
                 };
                 auto qp = shape.quads_positions[i];
                 auto qt = shape.quads_texcoords[i];
@@ -1543,7 +1543,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
             } else if (!shape.texcoords.empty() && !shape.normals.empty()) {
                 auto vert = [offset](int ip, int it, int in) {
                     return obj_vertex{ip + offset.position + 1,
-                        it + offset.texturecoord + 1, in + offset.normal + 1};
+                        it + offset.texcoord + 1, in + offset.normal + 1};
                 };
                 auto qp = shape.quads_positions[i];
                 auto qt = shape.quads_texcoords[i];
@@ -1584,7 +1584,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
             }
         }
         offset.position += shape.positions.size();
-        offset.texturecoord += shape.texcoords.size();
+        offset.texcoord += shape.texcoords.size();
         offset.normal += shape.normals.size();
     }
 }

@@ -3010,8 +3010,8 @@ struct load_obj_shape_cb : obj_callbacks {
             auto nverts = (int)positions.size();
             vertex_map.insert(it, {vert, nverts});
             if (vert.position) positions.push_back(opos.at(vert.position - 1));
-            if (vert.texturecoord)
-                texcoords.push_back(otexcoord.at(vert.texturecoord - 1));
+            if (vert.texcoord)
+                texcoords.push_back(otexcoord.at(vert.texcoord - 1));
             if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
         }
     }
@@ -3027,12 +3027,12 @@ struct load_obj_shape_cb : obj_callbacks {
             positions.push_back(opos.at(vert.position - 1));
         }
         for (auto& vert : verts) {
-            if (!vert.texturecoord) continue;
-            auto texcoord_it = texcoord_map.find(vert.texturecoord);
+            if (!vert.texcoord) continue;
+            auto texcoord_it = texcoord_map.find(vert.texcoord);
             if (texcoord_it != texcoord_map.end()) continue;
             auto nverts = (int)texcoords.size();
-            texcoord_map.insert(texcoord_it, {vert.texturecoord, nverts});
-            texcoords.push_back(otexcoord.at(vert.texturecoord - 1));
+            texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
+            texcoords.push_back(otexcoord.at(vert.texcoord - 1));
         }
         for (auto& vert : verts) {
             if (!vert.normal) continue;
@@ -3068,12 +3068,12 @@ struct load_obj_shape_cb : obj_callbacks {
                         pos_map.at(verts[2].position),
                         pos_map.at(verts[3].position)});
                 }
-                if (verts[0].texturecoord) {
+                if (verts[0].texcoord) {
                     quads_texcoords.push_back(
-                        {texcoord_map.at(verts[0].texturecoord),
-                            texcoord_map.at(verts[1].texturecoord),
-                            texcoord_map.at(verts[2].texturecoord),
-                            texcoord_map.at(verts[3].texturecoord)});
+                        {texcoord_map.at(verts[0].texcoord),
+                            texcoord_map.at(verts[1].texcoord),
+                            texcoord_map.at(verts[2].texcoord),
+                            texcoord_map.at(verts[3].texcoord)});
                 }
                 if (verts[0].normal) {
                     quads_normals.push_back({norm_map.at(verts[0].normal),
@@ -3091,13 +3091,13 @@ struct load_obj_shape_cb : obj_callbacks {
                                 pos_map.at(verts[i].position),
                                 pos_map.at(verts[i].position)});
                 }
-                if (verts[0].texturecoord) {
+                if (verts[0].texcoord) {
                     for (auto i = 2; i < verts.size(); i++)
                         quads_texcoords.push_back(
-                            {texcoord_map.at(verts[0].texturecoord),
-                                texcoord_map.at(verts[1].texturecoord),
-                                texcoord_map.at(verts[i].texturecoord),
-                                texcoord_map.at(verts[i].texturecoord)});
+                            {texcoord_map.at(verts[0].texcoord),
+                                texcoord_map.at(verts[1].texcoord),
+                                texcoord_map.at(verts[i].texcoord),
+                                texcoord_map.at(verts[i].texcoord)});
                 }
                 if (verts[0].normal) {
                     for (auto i = 2; i < verts.size(); i++)
@@ -3166,12 +3166,12 @@ static void load_obj_shape(const string& filename, vector<int>& points,
 }
 
 static string to_string(const obj_vertex& value) {
-    if (value.texturecoord && value.normal) {
-        return to_string(value.position) + "/" + to_string(value.texturecoord) +
+    if (value.texcoord && value.normal) {
+        return to_string(value.position) + "/" + to_string(value.texcoord) +
                "/" + to_string(value.normal);
-    } else if (value.texturecoord && !value.normal) {
-        return to_string(value.position) + "/" + to_string(value.texturecoord);
-    } else if (!value.texturecoord && value.normal) {
+    } else if (value.texcoord && !value.normal) {
+        return to_string(value.position) + "/" + to_string(value.texcoord);
+    } else if (!value.texcoord && value.normal) {
         return to_string(value.position) + "//" + to_string(value.normal);
     } else {
         return to_string(value.position);
@@ -3213,7 +3213,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     auto mask = obj_vertex{
         1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
     auto vert = [mask](int i) {
-        return obj_vertex{(i + 1) * mask.position, (i + 1) * mask.texturecoord,
+        return obj_vertex{(i + 1) * mask.position, (i + 1) * mask.texcoord,
             (i + 1) * mask.normal};
     };
 
@@ -3238,7 +3238,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
         1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
     auto fvvert = [fvmask](int pi, int ti, int ni) {
         return obj_vertex{(pi + 1) * fvmask.position,
-            (ti + 1) * fvmask.texturecoord, (ni + 1) * fvmask.normal};
+            (ti + 1) * fvmask.texcoord, (ni + 1) * fvmask.normal};
     };
 
     // auto last_material_id = -1;

@@ -57,13 +57,13 @@ namespace yocto {
 
 // OBJ vertex
 struct obj_vertex {
-    int position     = 0;
-    int texturecoord = 0;
-    int normal       = 0;
+    int position = 0;
+    int texcoord = 0;
+    int normal   = 0;
 };
 
 inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
-    return a.position == b.position && a.texturecoord == b.texturecoord &&
+    return a.position == b.position && a.texcoord == b.texcoord &&
            a.normal == b.normal;
 }
 
@@ -199,8 +199,9 @@ struct hash<yocto::obj_vertex> {
     size_t operator()(const yocto::obj_vertex& v) const {
         static const std::hash<int> hasher = std::hash<int>();
         auto                        h      = (size_t)0;
-        for (auto i = 0; i < 3; i++)
-            h ^= hasher((&v.position)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= hasher(v.position) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= hasher(v.normal) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= hasher(v.texcoord) + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
     }
 };

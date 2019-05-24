@@ -155,18 +155,15 @@ inline float clamp(float x, float min_, float max_) {
 }
 inline float clamp01(float x) { return min(max(x, 0.0f), 1.0f); }
 inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
+inline float radians(float x) { return x * pif / 180; }
+inline float degrees(float x) { return x * 180 / pif; }
 inline float bias(float a, float bias) {
     return a / ((1 / bias - 2) * (1 - a) + 1);
 }
 inline float gain(float a, float gain) {
-    if (a < 0.5f) {
-        return bias(a * 2, gain) / 2;
-    } else {
-        return bias(a * 2 - 1, 1 - gain) / 2 + 0.5f;
-    }
+    return (a < 0.5f) ? bias(a * 2, gain) / 2
+                      : bias(a * 2 - 1, 1 - gain) / 2 + 0.5f;
 }
-inline float radians(float x) { return x * pif / 180; }
-inline float degrees(float x) { return x * 180 / pif; }
 
 inline int min(int x, int y) { return (x < y) ? x : y; }
 inline int max(int x, int y) { return (x > y) ? x : y; }
@@ -314,20 +311,6 @@ inline float max(const vec2f& a) { return max(a.x, a.y); }
 inline float min(const vec2f& a) { return min(a.x, a.y); }
 inline float sum(const vec2f& a) { return a.x + a.y; }
 inline float mean(const vec2f& a) { return sum(a) / 2; }
-inline int   max_element(const vec2f& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 2; i++) {
-        if (a[i] > a[pos]) pos = i;
-    }
-    return pos;
-}
-inline int min_element(const vec2f& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 2; i++) {
-        if (a[i] < a[pos]) pos = i;
-    }
-    return pos;
-}
 
 // Functions applied to vector elements
 inline vec2f abs(const vec2f& a) { return {abs(a.x), abs(a.y)}; };
@@ -478,20 +461,6 @@ inline float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }
 inline float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
 inline float sum(const vec3f& a) { return a.x + a.y + a.z; }
 inline float mean(const vec3f& a) { return sum(a) / 3; }
-inline int   max_element(const vec3f& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 3; i++) {
-        if (a[i] > a[pos]) pos = i;
-    }
-    return pos;
-}
-inline int min_element(const vec3f& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 3; i++) {
-        if (a[i] < a[pos]) pos = i;
-    }
-    return pos;
-}
 
 // Functions applied to vector elements
 inline vec3f abs(const vec3f& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
@@ -630,20 +599,6 @@ inline float max(const vec4f& a) { return max(max(max(a.x, a.y), a.z), a.w); }
 inline float min(const vec4f& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 inline float sum(const vec4f& a) { return a.x + a.y + a.z + a.w; }
 inline float mean(const vec4f& a) { return sum(a) / 4; }
-inline int   max_element(const vec4f& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 4; i++) {
-        if (a[i] > a[pos]) pos = i;
-    }
-    return pos;
-}
-inline int min_element(const vec4f& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 4; i++) {
-        if (a[i] < a[pos]) pos = i;
-    }
-    return pos;
-}
 
 // Functions applied to vector elements
 inline vec4f abs(const vec4f& a) {
@@ -823,20 +778,6 @@ inline vec2i clamp(const vec2i& x, int min, int max) {
 inline int max(const vec2i& a) { return max(a.x, a.y); }
 inline int min(const vec2i& a) { return min(a.x, a.y); }
 inline int sum(const vec2i& a) { return a.x + a.y; }
-inline int max_element(const vec2i& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 2; i++) {
-        if (a[i] > a[pos]) pos = i;
-    }
-    return pos;
-}
-inline int min_element(const vec2i& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 2; i++) {
-        if (a[i] < a[pos]) pos = i;
-    }
-    return pos;
-}
 
 // Functions applied to vector elements
 inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
@@ -919,20 +860,6 @@ inline vec3i clamp(const vec3i& x, int min, int max) {
 inline int max(const vec3i& a) { return max(max(a.x, a.y), a.z); }
 inline int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
 inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
-inline int max_element(const vec3i& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 3; i++) {
-        if (a[i] > a[pos]) pos = i;
-    }
-    return pos;
-}
-inline int min_element(const vec3i& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 3; i++) {
-        if (a[i] < a[pos]) pos = i;
-    }
-    return pos;
-}
 
 // Functions applied to vector elements
 inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
@@ -1016,20 +943,6 @@ inline vec4i clamp(const vec4i& x, int min, int max) {
 inline int max(const vec4i& a) { return max(max(max(a.x, a.y), a.z), a.w); }
 inline int min(const vec4i& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 inline int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
-inline int max_element(const vec4i& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 4; i++) {
-        if (a[i] > a[pos]) pos = i;
-    }
-    return pos;
-}
-inline int min_element(const vec4i& a) {
-    auto pos = 0;
-    for (auto i = 1; i < 4; i++) {
-        if (a[i] < a[pos]) pos = i;
-    }
-    return pos;
-}
 
 // Functions applied to vector elements
 inline vec4i abs(const vec4i& a) {
@@ -1041,32 +954,37 @@ inline vec4i abs(const vec4i& a) {
 namespace std {
 
 // Hash functor for vector for use with unordered_map
-template <typename T, size_t N>
-struct hash<std::array<T, N>> {
-    size_t operator()(const std::array<T, N>& v) const {
-        static const std::hash<T> hasher = std::hash<T>();
-        auto                      h      = (size_t)0;
-        for (auto i = 0; i < N; i++)
-            h ^= hasher(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
-        return h;
-    }
-};
 template <>
 struct hash<yocto::vec2i> {
     size_t operator()(const yocto::vec2i& v) const {
-        return hash<std::array<int, 2>>()((const std::array<int, 2>&)v);
+        static const auto hasher = std::hash<int>();
+        auto              h      = (size_t)0;
+        h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
     }
 };
 template <>
 struct hash<yocto::vec3i> {
     size_t operator()(const yocto::vec3i& v) const {
-        return hash<std::array<int, 3>>()((const std::array<int, 3>&)v);
+        static const auto hasher = std::hash<int>();
+        auto              h      = (size_t)0;
+        h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
     }
 };
 template <>
 struct hash<yocto::vec4i> {
     size_t operator()(const yocto::vec4i& v) const {
-        return hash<std::array<int, 4>>()((const std::array<int, 4>&)v);
+        static const auto hasher = std::hash<int>();
+        auto              h      = (size_t)0;
+        h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= hasher(v.w) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
     }
 };
 
