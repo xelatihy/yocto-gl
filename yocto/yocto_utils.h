@@ -652,8 +652,7 @@ struct file_holder {
 };
 
 // Opens a file returing a handle with RIIA
-inline file_holder open_input_file(
-    const string& filename, bool binary = false) {
+inline file_holder open_input_file(const string& filename, bool binary = false) {
     auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
     if (!fs) throw io_error("could not open file " + filename);
     return {fs, filename};
@@ -815,29 +814,23 @@ inline void parse_value(
     }
 }
 
-inline void parse_value(
-    string_view& str, vec2f& value, bool bracketed = false) {
+inline void parse_value(string_view& str, vec2f& value, bool bracketed = false) {
     parse_value(str, &value.x, 2, bracketed);
 }
-inline void parse_value(
-    string_view& str, vec3f& value, bool bracketed = false) {
+inline void parse_value(string_view& str, vec3f& value, bool bracketed = false) {
     parse_value(str, &value.x, 3, bracketed);
 }
-inline void parse_value(
-    string_view& str, vec4f& value, bool bracketed = false) {
+inline void parse_value(string_view& str, vec4f& value, bool bracketed = false) {
     parse_value(str, &value.x, 4, bracketed);
 }
 
-inline void parse_value(
-    string_view& str, vec2i& value, bool bracketed = false) {
+inline void parse_value(string_view& str, vec2i& value, bool bracketed = false) {
     parse_value(str, &value.x, 2, bracketed);
 }
-inline void parse_value(
-    string_view& str, vec3i& value, bool bracketed = false) {
+inline void parse_value(string_view& str, vec3i& value, bool bracketed = false) {
     parse_value(str, &value.x, 3, bracketed);
 }
-inline void parse_value(
-    string_view& str, vec4i& value, bool bracketed = false) {
+inline void parse_value(string_view& str, vec4i& value, bool bracketed = false) {
     parse_value(str, &value.x, 4, bracketed);
 }
 
@@ -849,16 +842,13 @@ inline void parse_value(
     string_view& str, frame3f& value, bool bracketed = false) {
     parse_value(str, &value.x.x, 12, bracketed);
 }
-inline void parse_value(
-    string_view& str, mat2f& value, bool bracketed = false) {
+inline void parse_value(string_view& str, mat2f& value, bool bracketed = false) {
     parse_value(str, &value.x.x, 4, bracketed);
 }
-inline void parse_value(
-    string_view& str, mat3f& value, bool bracketed = false) {
+inline void parse_value(string_view& str, mat3f& value, bool bracketed = false) {
     parse_value(str, &value.x.x, 9, bracketed);
 }
-inline void parse_value(
-    string_view& str, mat4f& value, bool bracketed = false) {
+inline void parse_value(string_view& str, mat4f& value, bool bracketed = false) {
     parse_value(str, &value.x.x, 19, bracketed);
 }
 

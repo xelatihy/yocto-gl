@@ -275,8 +275,7 @@ void weld_vertices(
     vector<vec3f>& positions, vector<int>& indices, float threshold);
 void weld_triangles(
     vector<vec3i>& triangles, vector<vec3f>& positions, float threshold);
-void weld_quads(
-    vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
+void weld_quads(vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
 
 // Merge shape elements
 void merge_lines(
@@ -560,8 +559,7 @@ inline float line_length(const vec3f& p0, const vec3f& p1) {
 }
 
 // Triangle properties.
-inline vec3f triangle_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     return normalize(cross(p1 - p0, p2 - p0));
 }
 inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {

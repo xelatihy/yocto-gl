@@ -480,8 +480,7 @@ void add_tangent_spaces(yocto_scene& scene) {
         if (!shape.triangles.empty()) {
             if (shape.normals.empty()) {
                 shape.normals.resize(shape.positions.size());
-                compute_normals(
-                    shape.normals, shape.triangles, shape.positions);
+                compute_normals(shape.normals, shape.triangles, shape.positions);
             }
             shape.tangents.resize(shape.positions.size());
             compute_tangent_spaces(shape.tangents, shape.triangles,
@@ -792,8 +791,7 @@ T evaluate_shape_elem(const yocto_shape& shape,
     if (vals.empty()) return {};
     if (!shape.triangles.empty()) {
         auto t = shape.triangles[element_id];
-        return interpolate_triangle(
-            vals[t.x], vals[t.y], vals[t.z], element_uv);
+        return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], element_uv);
     } else if (!shape.quads.empty()) {
         auto q = shape.quads[element_id];
         if (q.w == q.z)

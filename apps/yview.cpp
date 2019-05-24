@@ -709,8 +709,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     // load textures and vbos
     init_opengl_program(state.program, vertex, fragment);
     state.textures.resize(scene.textures.size());
-    for (auto texture_id = 0; texture_id < scene.textures.size();
-         texture_id++) {
+    for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
         auto& texture = scene.textures[texture_id];
         if (!texture.hdr_image.empty()) {
             init_opengl_texture(state.textures[texture_id], texture.hdr_image,
@@ -746,8 +745,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
                 init_opengl_elementbuffer(
                     vbos.points_buffer, shape.points, false);
             if (!shape.lines.empty())
-                init_opengl_elementbuffer(
-                    vbos.lines_buffer, shape.lines, false);
+                init_opengl_elementbuffer(vbos.lines_buffer, shape.lines, false);
             if (!shape.triangles.empty())
                 init_opengl_elementbuffer(
                     vbos.triangles_buffer, shape.triangles, false);

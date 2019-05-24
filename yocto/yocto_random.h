@@ -198,8 +198,7 @@ inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv) {
     auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
     return transform_direction(make_basis_fromz(normal), local_direction);
 }
-inline float sample_hemisphere_pdf(
-    const vec3f& normal, const vec3f& direction) {
+inline float sample_hemisphere_pdf(const vec3f& normal, const vec3f& direction) {
     return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * pif);
 }
 

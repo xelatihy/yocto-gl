@@ -296,8 +296,7 @@ void load_obj(
                 if (vert.position < 0)
                     vert.position = vert_size.position + vert.position + 1;
                 if (vert.texcoord < 0)
-                    vert.texcoord = vert_size.texcoord +
-                                        vert.texcoord + 1;
+                    vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
                 if (vert.normal < 0)
                     vert.normal = vert_size.normal + vert.normal + 1;
                 verts.push_back(vert);

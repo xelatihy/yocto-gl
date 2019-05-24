@@ -117,14 +117,10 @@ void compute_skinning(vector<vec3f>& skinned_positions,
     }
     for (auto i = 0; i < normals.size(); i++) {
         skinned_normals[i] = normalize(
-            transform_direction(xforms[joints[i].x], normals[i]) *
-                weights[i].x +
-            transform_direction(xforms[joints[i].y], normals[i]) *
-                weights[i].y +
-            transform_direction(xforms[joints[i].z], normals[i]) *
-                weights[i].z +
-            transform_direction(xforms[joints[i].w], normals[i]) *
-                weights[i].w);
+            transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
+            transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
+            transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
+            transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
     }
 }
 
@@ -525,8 +521,7 @@ void merge_lines(
 void merge_triangles(vector<vec3i>& triangles,
     const vector<vec3i>& merge_triangles, int num_verts) {
     for (auto& t : merge_triangles)
-        triangles.push_back(
-            {t.x + num_verts, t.y + num_verts, t.z + num_verts});
+        triangles.push_back({t.x + num_verts, t.y + num_verts, t.z + num_verts});
 }
 void merge_quads(
     vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts) {
@@ -752,8 +747,7 @@ void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert, int level) {
 
 // Subdivide beziers.
 template <typename T>
-void subdivide_beziers_impl(
-    vector<vec4i>& beziers, vector<T>& vert, int level) {
+void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert, int level) {
     // early exit
     if (beziers.empty() || vert.empty()) return;
     // loop over levels
@@ -2000,8 +1994,7 @@ void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
                 (int)round(pow2(params.subdivisions) * params.aspect.y)};
             auto uvsize = vec2f{params.aspect.x, params.aspect.y};
             auto size   = 2 * vec2f{params.aspect.x, params.aspect.y};
-            make_rect(
-                quads, positions, normals, texcoords, steps, size, uvsize);
+            make_rect(quads, positions, normals, texcoords, steps, size, uvsize);
         } break;
         case make_shape_type::rect_stack: {
             auto steps = vec3i{
@@ -2977,8 +2970,7 @@ struct load_obj_shape_cb : obj_callbacks {
     std::deque<vec2f> otexcoord = std::deque<vec2f>();
 
     // vertex maps
-    unordered_map<obj_vertex, int> vertex_map =
-        unordered_map<obj_vertex, int>();
+    unordered_map<obj_vertex, int> vertex_map = unordered_map<obj_vertex, int>();
 
     // vertex maps
     unordered_map<int, int> pos_map      = unordered_map<int, int>();
@@ -3085,11 +3077,10 @@ struct load_obj_shape_cb : obj_callbacks {
             } else {
                 if (verts[0].position) {
                     for (auto i = 2; i < verts.size(); i++)
-                        quads_positions.push_back(
-                            {pos_map.at(verts[0].position),
-                                pos_map.at(verts[1].position),
-                                pos_map.at(verts[i].position),
-                                pos_map.at(verts[i].position)});
+                        quads_positions.push_back({pos_map.at(verts[0].position),
+                            pos_map.at(verts[1].position),
+                            pos_map.at(verts[i].position),
+                            pos_map.at(verts[i].position)});
                 }
                 if (verts[0].texcoord) {
                     for (auto i = 2; i < verts.size(); i++)
@@ -3179,8 +3170,7 @@ static string to_string(const obj_vertex& value) {
 }
 
 template <typename T, typename... Ts>
-static inline void write_obj_line(
-    FILE* fs, const T& value, const Ts... values) {
+static inline void write_obj_line(FILE* fs, const T& value, const Ts... values) {
     write_value(fs, value);
     if constexpr (sizeof...(values) == 0) {
         write_text(fs, "\n");

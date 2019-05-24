@@ -157,8 +157,7 @@ void init_opengl_elementbuffer(opengl_elementbuffer& buffer,
 
 void delete_opengl_elementbuffer(opengl_elementbuffer& buffer);
 
-int get_opengl_uniform_location(
-    const opengl_program& program, const char* name);
+int get_opengl_uniform_location(const opengl_program& program, const char* name);
 
 void set_opengl_uniform(int locatiom, int value);
 void set_opengl_uniform(int locatiom, const vec2i& value);
@@ -248,12 +247,11 @@ vec4i get_opengl_framebuffer_viewport(
 bool should_opengl_window_close(const opengl_window& win);
 void set_close_opengl_window(const opengl_window& win, bool close);
 
-vec2f get_opengl_mouse_pos(
-    const opengl_window& win, bool ignore_widgets = true);
-bool get_opengl_mouse_left(const opengl_window& win);
-bool get_opengl_mouse_right(const opengl_window& win);
-bool get_opengl_alt_key(const opengl_window& win);
-bool get_opengl_shift_key(const opengl_window& win);
+vec2f get_opengl_mouse_pos(const opengl_window& win, bool ignore_widgets = true);
+bool  get_opengl_mouse_left(const opengl_window& win);
+bool  get_opengl_mouse_right(const opengl_window& win);
+bool  get_opengl_alt_key(const opengl_window& win);
+bool  get_opengl_shift_key(const opengl_window& win);
 
 void process_opengl_events(const opengl_window& win, bool wait = false);
 void swap_opengl_buffers(const opengl_window& win);

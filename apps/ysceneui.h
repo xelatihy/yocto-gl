@@ -189,8 +189,7 @@ inline void draw_opengl_widgets_scene_tree(
     }
     if (!empty(scene.shapes) && begin_treenode_opengl_widget(win, "shapes")) {
         for (auto v = 0; v < scene.shapes.size(); v++)
-            draw_opengl_widgets_scene_tree(
-                win, "", scene, v, scene.shapes, sel);
+            draw_opengl_widgets_scene_tree(win, "", scene, v, scene.shapes, sel);
         end_treenode_opengl_widget(win);
     }
     if (!empty(scene.instances) &&
@@ -244,16 +243,13 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(
-            win, "frame.x", edited_value.frame.x, -1, 1)) {
+    if (draw_slider_opengl_widget(win, "frame.x", edited_value.frame.x, -1, 1)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(
-            win, "frame.y", edited_value.frame.y, -1, 1)) {
+    if (draw_slider_opengl_widget(win, "frame.y", edited_value.frame.y, -1, 1)) {
         edited = true;
     }
-    if (draw_slider_opengl_widget(
-            win, "frame.z", edited_value.frame.z, -1, 1)) {
+    if (draw_slider_opengl_widget(win, "frame.z", edited_value.frame.z, -1, 1)) {
         edited = true;
     }
     if (draw_slider_opengl_widget(

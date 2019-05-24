@@ -638,8 +638,7 @@ void delete_opengl_window(opengl_window& win) {
 
 void* get_opengl_user_pointer(const opengl_window& win) { return win.user_ptr; }
 
-void set_drop_opengl_callback(
-    opengl_window& win, drop_opengl_callback drop_cb) {
+void set_drop_opengl_callback(opengl_window& win, drop_opengl_callback drop_cb) {
     win.drop_cb = drop_cb;
     glfwSetDropCallback(win.win, _glfw_drop_callback);
 }
@@ -977,8 +976,7 @@ bool draw_button_opengl_widget(
         return ImGui::Button(lbl);
     } else {
         ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-        ImGui::PushStyleVar(
-            ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
         auto ok = ImGui::Button(lbl);
         ImGui::PopItemFlag();
         ImGui::PopStyleVar();

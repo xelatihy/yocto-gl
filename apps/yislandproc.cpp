@@ -220,18 +220,14 @@ void load_island_materials(const string& filename, const string& dirname,
                                          jass.get<string>() + ".ptx";
                 ass_material.color_ptex_faces =
                     tjs.at(ass_material.color_map).at("numFaces").get<int>();
-                ass_material.color_ptex_rowfaces =
-                    tjs.at(ass_material.color_map)
-                        .at("basedRowLength")
-                        .get<int>();
-                ass_material.color_ptex_colfaces =
-                    tjs.at(ass_material.color_map)
-                        .at("basedColLength")
-                        .get<int>();
+                ass_material.color_ptex_rowfaces = tjs.at(ass_material.color_map)
+                                                       .at("basedRowLength")
+                                                       .get<int>();
+                ass_material.color_ptex_colfaces = tjs.at(ass_material.color_map)
+                                                       .at("basedColLength")
+                                                       .get<int>();
                 ass_material.color_ptex_tilesize =
-                    tjs.at(ass_material.color_map)
-                        .at("basedTileSize")
-                        .get<int>();
+                    tjs.at(ass_material.color_map).at("basedTileSize").get<int>();
                 ass_material.color_map_baked = tjs.at(ass_material.color_map)
                                                    .at("bakedFilename")
                                                    .get<string>();
@@ -556,8 +552,7 @@ void load_island_archive(const string& filename, const string& dirname,
             auto xform_ = xforms.get_object_value(i);
             auto xform  = mat4f{};
             for (auto c = 0; c < 16; c++) {
-                (&xform.x.x)[c] =
-                    xform_.get_array_element(c).get_number_value();
+                (&xform.x.x)[c] = xform_.get_array_element(c).get_number_value();
             }
             xform = parent_xform * xform;
             add_island_instance(
@@ -588,8 +583,7 @@ void load_island_variant_archive(const string& filename, const string& dirname,
             auto xform_ = xforms.get_object_value(i);
             auto xform  = mat4f{};
             for (auto c = 0; c < 16; c++) {
-                (&xform.x.x)[c] =
-                    xform_.get_array_element(c).get_number_value();
+                (&xform.x.x)[c] = xform_.get_array_element(c).get_number_value();
             }
             xform = parent_xform * xform;
             add_island_variant_instance(
@@ -658,8 +652,7 @@ void load_island_element(const string& filename, const string& dirname,
             auto xform_ = xforms.get_object_value(i);
             auto xform  = mat4f{};
             for (auto c = 0; c < 16; c++) {
-                (&xform.x.x)[c] =
-                    xform_.get_array_element(c).get_number_value();
+                (&xform.x.x)[c] = xform_.get_array_element(c).get_number_value();
             }
             xform = parent_xform * xform;
             for (auto& instance : variant) {

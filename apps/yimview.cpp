@@ -209,8 +209,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         draw_slider_opengl_widget(win, "exposure", options.exposure, -5, 5);
         draw_coloredit_opengl_widget(win, "tint", options.tint);
         draw_slider_opengl_widget(win, "contrast", options.contrast, 0, 1);
-        draw_slider_opengl_widget(
-            win, "logcontrast", options.logcontrast, 0, 1);
+        draw_slider_opengl_widget(win, "logcontrast", options.logcontrast, 0, 1);
         draw_slider_opengl_widget(win, "saturation", options.saturation, 0, 1);
         draw_checkbox_opengl_widget(win, "filmic", options.filmic);
         continue_opengl_widget_line(win);
@@ -331,8 +330,7 @@ void update(app_state& app) {
         if (task.type != app_task_type::display || task.queue.empty()) continue;
         auto region = image_region{};
         while (img.task_queue.front().queue.try_pop(region)) {
-            update_opengl_texture_region(
-                img.gl_txt, img.display, region, false);
+            update_opengl_texture_region(img.gl_txt, img.display, region, false);
         }
     }
     // remove unneeded tasks

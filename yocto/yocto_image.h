@@ -510,8 +510,7 @@ inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey) {
     return max(zero3f, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_logcontrast(
-    const vec3f& rgb, float logcontrast, float grey) {
+inline vec3f apply_logcontrast(const vec3f& rgb, float logcontrast, float grey) {
     auto epsilon  = (float)0.0001;
     auto log_grey = log2(grey);
     auto log_ldr  = log2(rgb + epsilon);
