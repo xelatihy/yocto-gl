@@ -57,8 +57,8 @@ struct GLFWwindow;
 namespace yocto {
 
 struct gl_error : runtime_error {
-    explicit gl_error(const char* msg) : runtime_error{msg} {}
-    explicit gl_error(const string& msg) : runtime_error{msg} {}
+  explicit gl_error(const char* msg) : runtime_error{msg} {}
+  explicit gl_error(const string& msg) : runtime_error{msg} {}
 };
 
 void clear_opengl_framebuffer(const vec4f& color, bool clear_depth = true);
@@ -69,12 +69,12 @@ void set_opengl_wireframe(bool enabled);
 void set_opengl_blending(bool enabled);
 
 struct opengl_program {
-    uint program_id             = 0;
-    uint vertex_shader_id       = 0;
-    uint fragment_shader_id     = 0;
-    uint vertex_array_object_id = 0;
+  uint program_id             = 0;
+  uint vertex_shader_id       = 0;
+  uint fragment_shader_id     = 0;
+  uint vertex_array_object_id = 0;
 
-    operator bool() const { return (bool)program_id; }
+  operator bool() const { return (bool)program_id; }
 };
 
 void init_opengl_program(
@@ -86,10 +86,10 @@ void bind_opengl_program(opengl_program& program);
 void unbind_opengl_program();
 
 struct opengl_texture {
-    uint  texture_id = 0;
-    vec2i size       = {0, 0};
+  uint  texture_id = 0;
+  vec2i size       = {0, 0};
 
-    operator bool() const { return (bool)texture_id; }
+  operator bool() const { return (bool)texture_id; }
 };
 
 void init_opengl_texture(opengl_texture& texture, const vec2i& size,
@@ -102,8 +102,8 @@ void update_opengl_texture_region(opengl_texture& texture,
 
 inline void init_opengl_texture(opengl_texture& texture,
     const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
-    init_opengl_texture(texture, img.size(), as_float, false, linear, mipmap);
-    update_opengl_texture(texture, img, mipmap);
+  init_opengl_texture(texture, img.size(), as_float, false, linear, mipmap);
+  update_opengl_texture(texture, img, mipmap);
 }
 
 void init_opengl_texture(opengl_texture& texture, const image<vec4b>& img,
@@ -115,26 +115,26 @@ void update_opengl_texture_region(opengl_texture& texture,
 
 inline void init_opengl_texture(opengl_texture& texture,
     const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
-    init_opengl_texture(texture, img.size(), false, as_srgb, linear, mipmap);
-    update_opengl_texture(texture, img, mipmap);
+  init_opengl_texture(texture, img.size(), false, as_srgb, linear, mipmap);
+  update_opengl_texture(texture, img, mipmap);
 }
 
 void delete_opengl_texture(opengl_texture& texture);
 
 struct opengl_array_buffer {
-    uint buffer_id = 0;
-    int  num       = 0;
-    int  elem_size = 0;
+  uint buffer_id = 0;
+  int  num       = 0;
+  int  elem_size = 0;
 
-    operator bool() const { return (bool)buffer_id; }
+  operator bool() const { return (bool)buffer_id; }
 };
 
 struct opengl_elementbuffer {
-    uint buffer_id = 0;
-    int  num       = 0;
-    int  elem_size = 0;
+  uint buffer_id = 0;
+  int  num       = 0;
+  int  elem_size = 0;
 
-    operator bool() const { return (bool)buffer_id; }
+  operator bool() const { return (bool)buffer_id; }
 };
 
 void init_opengl_array_buffer(opengl_array_buffer& buffer,
@@ -174,7 +174,7 @@ void set_opengl_uniform(int locatiom, const frame3f& value);
 template <typename T>
 inline void set_opengl_uniform(
     const opengl_program& program, const char* name, const T& value) {
-    set_opengl_uniform(get_opengl_uniform_location(program, name), value);
+  set_opengl_uniform(get_opengl_uniform_location(program, name), value);
 }
 
 void set_opengl_uniform_texture(
@@ -201,8 +201,8 @@ void set_opengl_vertexattrib(
 template <typename T>
 inline void set_opengl_vertexattrib(const opengl_program& program,
     const char* name, const opengl_array_buffer& buffer, const T& value) {
-    set_opengl_vertexattrib(
-        get_opengl_vertexattrib_location(program, name), buffer, value);
+  set_opengl_vertexattrib(
+      get_opengl_vertexattrib_location(program, name), buffer, value);
 }
 
 void draw_opengl_points(const opengl_elementbuffer& buffer, int num);
@@ -221,12 +221,12 @@ using drop_opengl_callback =
     function<void(const opengl_window&, const vector<string>&)>;
 
 struct opengl_window {
-    GLFWwindow*             win           = nullptr;
-    void*                   user_ptr      = nullptr;
-    refresh_opengl_callback refresh_cb    = {};
-    drop_opengl_callback    drop_cb       = {};
-    int                     widgets_width = 0;
-    bool                    widgets_left  = true;
+  GLFWwindow*             win           = nullptr;
+  void*                   user_ptr      = nullptr;
+  refresh_opengl_callback refresh_cb    = {};
+  drop_opengl_callback    drop_cb       = {};
+  int                     widgets_width = 0;
+  bool                    widgets_left  = true;
 };
 
 void init_opengl_window(opengl_window& win, const vec2i& size,
@@ -374,17 +374,17 @@ template <typename T>
 inline bool draw_combobox_opengl_widget(const opengl_window& win,
     const char* lbl, int& idx, const vector<T*>& vals,
     bool include_null = false) {
-    return draw_combobox_opengl_widget(
-        win, lbl, idx, (int)vals.size(),
-        [&](int idx) { return vals[idx]->uri.c_str(); }, include_null);
+  return draw_combobox_opengl_widget(
+      win, lbl, idx, (int)vals.size(),
+      [&](int idx) { return vals[idx]->uri.c_str(); }, include_null);
 }
 template <typename T>
 inline bool draw_combobox_opengl_widget(const opengl_window& win,
     const char* lbl, int& idx, const vector<T>& vals,
     bool include_null = false) {
-    return draw_combobox_opengl_widget(
-        win, lbl, idx, (int)vals.size(),
-        [&](int idx) { return vals[idx].uri.c_str(); }, include_null);
+  return draw_combobox_opengl_widget(
+      win, lbl, idx, (int)vals.size(),
+      [&](int idx) { return vals[idx].uri.c_str(); }, include_null);
 }
 
 void begin_child_opengl_widget(

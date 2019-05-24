@@ -87,12 +87,12 @@ const auto trace_default_seed = 961748941ull;
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<int>           instances        = {};
-    vector<int>           environments     = {};
-    vector<vector<float>> shape_cdfs       = {};
-    vector<vector<float>> environment_cdfs = {};
+  vector<int>           instances        = {};
+  vector<int>           environments     = {};
+  vector<vector<float>> shape_cdfs       = {};
+  vector<vector<float>> environment_cdfs = {};
 
-    bool empty() const { return instances.empty() && environments.empty(); }
+  bool empty() const { return instances.empty() && environments.empty(); }
 };
 
 // Initialize lights.
@@ -100,14 +100,14 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene);
 
 // State of a pixel during tracing
 struct trace_pixel {
-    vec3f     radiance = zero3f;
-    int       hits     = 0;
-    int       samples  = 0;
-    rng_state rng      = {};
+  vec3f     radiance = zero3f;
+  int       hits     = 0;
+  int       samples  = 0;
+  rng_state rng      = {};
 };
 struct trace_state {
-    vec2i               image_size = {0, 0};
-    vector<trace_pixel> pixels     = {};
+  vec2i               image_size = {0, 0};
+  vector<trace_pixel> pixels     = {};
 };
 
 // Initialize state of the renderer.
@@ -116,10 +116,10 @@ void init_trace_state(trace_state& state, const vec2i& image_size,
 
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {
-    path,        // path tracing
-    naive,       // naive path tracing
-    eyelight,    // eyelight rendering
-    falsecolor,  // false color rendering
+  path,        // path tracing
+  naive,       // naive path tracing
+  eyelight,    // eyelight rendering
+  falsecolor,  // false color rendering
 };
 
 const auto trace_sampler_names = vector<string>{
@@ -127,21 +127,21 @@ const auto trace_sampler_names = vector<string>{
 
 // Type of tracing algorithm to use
 enum struct trace_falsecolor_type {
-    normal,        // normal
-    frontfacing,   // faceforward
-    gnormal,       // geometric normal
-    gfrontfacing,  // geometric faceforward
-    texcoord,      // texcoord
-    color,         // color
-    emission,      // emission
-    diffuse,       // diffuse
-    specular,      // specular
-    transmission,  // transmission
-    roughness,     // roughness
-    material,      // material
-    shape,         // shape
-    instance,      // instance
-    highlight,     // highlight
+  normal,        // normal
+  frontfacing,   // faceforward
+  gnormal,       // geometric normal
+  gfrontfacing,  // geometric faceforward
+  texcoord,      // texcoord
+  color,         // color
+  emission,      // emission
+  diffuse,       // diffuse
+  specular,      // specular
+  transmission,  // transmission
+  roughness,     // roughness
+  material,      // material
+  shape,         // shape
+  instance,      // instance
+  highlight,     // highlight
 };
 
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
@@ -151,29 +151,29 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
 
 // Options for trace functions
 struct trace_image_params {
-    int                   camera_id           = 0;
-    vec2i                 image_size          = {1280, 720};
-    trace_sampler_type    sampler_type        = trace_sampler_type::path;
-    trace_falsecolor_type falsecolor_type     = trace_falsecolor_type::diffuse;
-    int                   num_samples         = 512;
-    int                   max_bounces         = 64;
-    int                   samples_per_batch   = 16;
-    int                   region_size         = 16;
-    float                 pixel_clamp         = 10;
-    bool                  environments_hidden = false;
-    uint64_t              random_seed         = trace_default_seed;
-    std::atomic<bool>*    cancel_flag         = nullptr;
-    bool                  run_serially        = false;
+  int                   camera_id           = 0;
+  vec2i                 image_size          = {1280, 720};
+  trace_sampler_type    sampler_type        = trace_sampler_type::path;
+  trace_falsecolor_type falsecolor_type     = trace_falsecolor_type::diffuse;
+  int                   num_samples         = 512;
+  int                   max_bounces         = 64;
+  int                   samples_per_batch   = 16;
+  int                   region_size         = 16;
+  float                 pixel_clamp         = 10;
+  bool                  environments_hidden = false;
+  uint64_t              random_seed         = trace_default_seed;
+  std::atomic<bool>*    cancel_flag         = nullptr;
+  bool                  run_serially        = false;
 };
 
 // Equality operators
 inline bool operator==(
     const trace_image_params& a, const trace_image_params& b) {
-    return memcmp(&a, &b, sizeof(a)) == 0;
+  return memcmp(&a, &b, sizeof(a)) == 0;
 }
 inline bool operator!=(
     const trace_image_params& a, const trace_image_params& b) {
-    return memcmp(&a, &b, sizeof(a)) != 0;
+  return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
