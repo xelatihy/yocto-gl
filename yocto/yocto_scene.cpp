@@ -522,7 +522,7 @@ void add_cameras(yocto_scene& scene) {
 void add_sky(yocto_scene& scene, float sun_angle) {
   auto texture = yocto_texture{};
   texture.uri  = "textures/sky.hdr";
-  make_imsunsky(texture.hdr_image, {1024, 512}, sun_angle);
+  make_imsunsky(texture.hdr, {1024, 512}, sun_angle);
   scene.textures.push_back(texture);
   auto environment             = yocto_environment{};
   environment.uri              = "environments/default.yaml";
@@ -549,8 +549,8 @@ void trim_memory(yocto_scene& scene) {
     shape.tangents.shrink_to_fit();
   }
   for (auto& texture : scene.textures) {
-    texture.ldr_image.shrink_to_fit();
-    texture.hdr_image.shrink_to_fit();
+    texture.ldr.shrink_to_fit();
+    texture.hdr.shrink_to_fit();
   }
   scene.cameras.shrink_to_fit();
   scene.shapes.shrink_to_fit();
@@ -580,7 +580,7 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
   };
   auto check_empty_textures = [&errs](const vector<yocto_texture>& vals) {
     for (auto& value : vals) {
-      if (value.hdr_image.empty() && value.ldr_image.empty()) {
+      if (value.hdr.empty() && value.ldr.empty()) {
         errs.push_back("empty texture " + value.uri);
       }
     }
@@ -939,10 +939,10 @@ vec3f eval_environment(const yocto_scene& scene, const vec3f& direction) {
 
 // Check texture size
 vec2i texture_size(const yocto_texture& texture) {
-  if (!texture.hdr_image.empty()) {
-    return texture.hdr_image.size();
-  } else if (!texture.ldr_image.empty()) {
-    return texture.ldr_image.size();
+  if (!texture.hdr.empty()) {
+    return texture.hdr.size();
+  } else if (!texture.ldr.empty()) {
+    return texture.ldr.size();
   } else {
     return zero2i;
   }
@@ -951,12 +951,12 @@ vec2i texture_size(const yocto_texture& texture) {
 // Lookup a texture value
 vec4f lookup_texture(
     const yocto_texture& texture, int i, int j, bool ldr_as_linear) {
-  if (!texture.hdr_image.empty()) {
-    return texture.hdr_image[{i, j}];
-  } else if (!texture.ldr_image.empty() && !ldr_as_linear) {
-    return srgb_to_rgb(byte_to_float(texture.ldr_image[{i, j}]));
-  } else if (!texture.ldr_image.empty() && ldr_as_linear) {
-    return byte_to_float(texture.ldr_image[{i, j}]);
+  if (!texture.hdr.empty()) {
+    return texture.hdr[{i, j}];
+  } else if (!texture.ldr.empty() && !ldr_as_linear) {
+    return srgb_to_rgb(byte_to_float(texture.ldr[{i, j}]));
+  } else if (!texture.ldr.empty() && ldr_as_linear) {
+    return byte_to_float(texture.ldr[{i, j}]);
   } else {
     return zero4f;
   }
@@ -965,7 +965,7 @@ vec4f lookup_texture(
 // Evaluate a texture
 vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (texture.hdr_image.empty() && texture.ldr_image.empty())
+  if (texture.hdr.empty() && texture.ldr.empty())
     return {1, 1, 1, 1};
 
   // get image width/height
@@ -1001,8 +1001,8 @@ vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
 // Lookup a texture value
 float lookup_voltexture(
     const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear) {
-  if (!texture.volume_data.empty()) {
-    return texture.volume_data[{i, j, k}];
+  if (!texture.volume.empty()) {
+    return texture.volume[{i, j, k}];
   } else {
     return 0;
   }
@@ -1011,12 +1011,12 @@ float lookup_voltexture(
 // Evaluate a volume texture
 float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (texture.volume_data.empty()) return 1;
+  if (texture.volume.empty()) return 1;
 
   // get image width/height
-  auto width  = texture.volume_data.size().x;
-  auto height = texture.volume_data.size().y;
-  auto depth  = texture.volume_data.size().z;
+  auto width  = texture.volume.size().x;
+  auto height = texture.volume.size().y;
+  auto depth  = texture.volume.size().z;
 
   // get coordinates normalized for tiling
   auto s = clamp((texcoord.x + 1.0f) * 0.5f, 0.0f, 1.0f) * width;
@@ -1426,17 +1426,17 @@ string format_stats(const yocto_scene& scene, bool verbose) {
                            [](auto& shape) { return shape.quadspos.size(); })};
 
   stats += {"texels4b", accumulate(scene.textures, [](auto& texture) {
-              return (size_t)texture.ldr_image.size().x *
-                     (size_t)texture.ldr_image.size().x;
+              return (size_t)texture.ldr.size().x *
+                     (size_t)texture.ldr.size().x;
             })};
   stats += {"texels4f", accumulate(scene.textures, [](auto& texture) {
-              return (size_t)texture.hdr_image.size().x *
-                     (size_t)texture.hdr_image.size().y;
+              return (size_t)texture.hdr.size().x *
+                     (size_t)texture.hdr.size().y;
             })};
-  stats += {"voltexels", accumulate(scene.voltextures, [](auto& texture) {
-              return (size_t)texture.volume_data.size().x *
-                     (size_t)texture.volume_data.size().y *
-                     (size_t)texture.volume_data.size().z;
+  stats += {"volxels1f", accumulate(scene.voltextures, [](auto& texture) {
+              return (size_t)texture.volume.size().x *
+                     (size_t)texture.volume.size().y *
+                     (size_t)texture.volume.size().z;
             })};
 
   auto str = ""s;

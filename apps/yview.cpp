@@ -702,12 +702,12 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
   state.textures.resize(scene.textures.size());
   for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
     auto& texture = scene.textures[texture_id];
-    if (!texture.hdr_image.empty()) {
+    if (!texture.hdr.empty()) {
       init_gltexture(
-          state.textures[texture_id], texture.hdr_image, true, true, true);
-    } else if (!texture.ldr_image.empty()) {
+          state.textures[texture_id], texture.hdr, true, true, true);
+    } else if (!texture.ldr.empty()) {
       init_gltexture(
-          state.textures[texture_id], texture.ldr_image, true, true, true);
+          state.textures[texture_id], texture.ldr, true, true, true);
     } else {
       throw std::runtime_error("bad texture");
     }
@@ -976,11 +976,11 @@ void load_element(
 
   if (type == typeid(yocto_texture)) {
     auto& texture = scene.textures[index];
-    load_image(get_dirname(filename) + texture.uri, texture.hdr_image,
-        texture.ldr_image);
+    load_image(get_dirname(filename) + texture.uri, texture.hdr,
+        texture.ldr);
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
-    load_volume(get_dirname(filename) + texture.uri, texture.volume_data);
+    load_volume(get_dirname(filename) + texture.uri, texture.volume);
   } else if (type == typeid(yocto_shape)) {
     auto& shape = scene.shapes[index];
     load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,

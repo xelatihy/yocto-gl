@@ -60,7 +60,7 @@ struct load_params {
   bool          skip_meshes               = false;
   bool          obj_split_shapes          = true;
   bool          obj_preserve_face_varying = false;
-  atomic<bool>* cancel_flag               = nullptr;
+  atomic<bool>* cancel_token               = nullptr;
   bool          run_serially              = false;
 };
 
@@ -70,7 +70,7 @@ struct save_params {
   bool          skip_meshes               = false;
   bool          obj_split_shapes          = true;
   bool          obj_preserve_face_varying = false;
-  atomic<bool>* cancel_flag               = nullptr;
+  atomic<bool>* cancel_token               = nullptr;
   bool          run_serially              = false;
 };
 

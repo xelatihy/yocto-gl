@@ -162,7 +162,7 @@ struct trace_params {
   float                 pixel_clamp         = 10;
   bool                  environments_hidden = false;
   uint64_t              random_seed         = trace_default_seed;
-  std::atomic<bool>*    cancel_flag         = nullptr;
+  std::atomic<bool>*    cancel_token         = nullptr;
   bool                  run_serially        = false;
 };
 

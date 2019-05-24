@@ -102,16 +102,16 @@ struct yocto_camera {
 // conversion can be disabled with `ldr_as_linear` for example to render
 // normal maps.
 struct yocto_texture {
-  string       uri       = "";
-  image<vec4f> hdr_image = {};
-  image<vec4b> ldr_image = {};
+  string       uri = "";
+  image<vec4f> hdr = {};
+  image<vec4b> ldr = {};
 };
 
 // Volumetric texture containing a float only volume data. See texture
 // above for other propoerties.
 struct yocto_voltexture {
-  string        uri         = "";
-  volume<float> volume_data = {};
+  string        uri    = "";
+  volume<float> volume = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -267,12 +267,12 @@ struct yocto_animation {
   string                   animation_group = "";
   yocto_interpolation_type interpolation_type =
       yocto_interpolation_type::linear;
-  vector<float>         times         = {};
-  vector<vec3f>         translations   = {};
-  vector<vec4f>         rotations      = {};
-  vector<vec3f>         scales         = {};
-  vector<vector<float>> morphs = {};
-  vector<int>           targets            = {};
+  vector<float>         times        = {};
+  vector<vec3f>         translations = {};
+  vector<vec4f>         rotations    = {};
+  vector<vec3f>         scales       = {};
+  vector<vector<float>> morphs       = {};
+  vector<int>           targets      = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.

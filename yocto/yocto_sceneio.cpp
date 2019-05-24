@@ -144,19 +144,19 @@ static string get_save_scene_message(
 void load_texture(yocto_texture& texture, const string& dirname) {
   if (is_preset_filename(texture.uri)) {
     auto [type, nfilename] = get_preset_type(texture.uri);
-    make_impreset(texture.hdr_image, texture.ldr_image, type);
+    make_impreset(texture.hdr, texture.ldr, type);
     texture.uri = nfilename;
   } else {
-    load_image(dirname + texture.uri, texture.hdr_image, texture.ldr_image);
+    load_image(dirname + texture.uri, texture.hdr, texture.ldr);
   }
 }
 
 void load_voltexture(yocto_voltexture& texture, const string& dirname) {
   if (is_preset_filename(texture.uri)) {
-    make_volpreset(texture.volume_data, get_basename(texture.uri));
+    make_volpreset(texture.volume, get_basename(texture.uri));
     texture.uri = get_noextension(texture.uri) + ".yvol";
   } else {
-    load_volume(dirname + texture.uri, texture.volume_data);
+    load_volume(dirname + texture.uri, texture.volume);
   }
 }
 
@@ -168,27 +168,27 @@ void load_textures(
   parallel_foreach(
       scene.textures,
       [&dirname](yocto_texture& texture) {
-        if (!texture.hdr_image.empty() || !texture.ldr_image.empty()) return;
+        if (!texture.hdr.empty() || !texture.ldr.empty()) return;
         load_texture(texture, dirname);
       },
-      params.cancel_flag, params.run_serially);
+      params.cancel_token, params.run_serially);
 
   // load volumes
   parallel_foreach(
       scene.voltextures,
       [&dirname](yocto_voltexture& texture) {
-        if (!texture.volume_data.empty()) return;
+        if (!texture.volume.empty()) return;
         load_voltexture(texture, dirname);
       },
-      params.cancel_flag, params.run_serially);
+      params.cancel_token, params.run_serially);
 }
 
 void save_texture(const yocto_texture& texture, const string& dirname) {
-  save_image(dirname + texture.uri, texture.hdr_image, texture.ldr_image);
+  save_image(dirname + texture.uri, texture.hdr, texture.ldr);
 }
 
 void save_voltexture(const yocto_voltexture& texture, const string& dirname) {
-  save_volume(dirname + texture.uri, texture.volume_data);
+  save_volume(dirname + texture.uri, texture.volume);
 }
 
 // helper to save textures
@@ -201,7 +201,7 @@ void save_textures(const yocto_scene& scene, const string& dirname,
       scene.textures,
       [&dirname](
           const yocto_texture& texture) { save_texture(texture, dirname); },
-      params.cancel_flag, params.run_serially);
+      params.cancel_token, params.run_serially);
 
   // save volumes
   parallel_foreach(
@@ -209,7 +209,7 @@ void save_textures(const yocto_scene& scene, const string& dirname,
       [&dirname](const yocto_voltexture& texture) {
         save_voltexture(texture, dirname);
       },
-      params.cancel_flag, params.run_serially);
+      params.cancel_token, params.run_serially);
 }
 
 void load_shape(yocto_shape& shape, const string& dirname) {
@@ -267,13 +267,13 @@ void load_shapes(
   parallel_foreach(
       scene.shapes,
       [&dirname](yocto_shape& shape) { load_shape(shape, dirname); },
-      params.cancel_flag, params.run_serially);
+      params.cancel_token, params.run_serially);
 
   // load subdivs
   parallel_foreach(
       scene.subdivs,
       [&dirname](yocto_subdiv& subdiv) { load_subdiv(subdiv, dirname); },
-      params.cancel_flag, params.run_serially);
+      params.cancel_token, params.run_serially);
 }
 
 // Save json meshes
@@ -285,13 +285,13 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
   parallel_foreach(
       scene.shapes,
       [&dirname](const yocto_shape& shape) { save_shape(shape, dirname); },
-      params.cancel_flag, params.run_serially);
+      params.cancel_token, params.run_serially);
   // save subdivs
   parallel_foreach(
       scene.subdivs,
       [&dirname](
           const yocto_subdiv& subdivs) { save_subdiv(subdivs, dirname); },
-      params.cancel_flag, params.run_serially);
+      params.cancel_token, params.run_serially);
 }
 
 }  // namespace yocto
@@ -2869,14 +2869,14 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       } break;
       case pbrt_texture::type_t::constant: {
         auto& constant = ptexture.constant;
-        texture.ldr_image.resize({1, 1});
-        texture.ldr_image[{0, 0}] = float_to_byte(
+        texture.ldr.resize({1, 1});
+        texture.ldr[{0, 0}] = float_to_byte(
             vec4f{(vec3f)constant.value.value, 1});
       } break;
       case pbrt_texture::type_t::bilerp: {
         // auto& bilerp   = get<pbrt_texture::bilerp_t>(ptexture);
-        texture.ldr_image.resize({1, 1});
-        texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+        texture.ldr.resize({1, 1});
+        texture.ldr[{0, 0}] = {255, 0, 0, 255};
         if (verbose) printf("texture bilerp not supported well");
       } break;
       case pbrt_texture::type_t::checkerboard: {
@@ -2892,33 +2892,33 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         params.color0 = {rgb1.x, rgb1.y, rgb1.z, 1};
         params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1};
         params.scale  = 2;
-        make_improc(texture.hdr_image, params);
-        float_to_byte(texture.ldr_image, texture.hdr_image);
-        texture.hdr_image = {};
+        make_improc(texture.hdr, params);
+        float_to_byte(texture.ldr, texture.hdr);
+        texture.hdr = {};
         if (verbose) printf("texture checkerboard not supported well");
       } break;
       case pbrt_texture::type_t::dots: {
         // auto& dots   = get<pbrt_texture::dots_t>(ptexture);
-        texture.ldr_image.resize({1, 1});
-        texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+        texture.ldr.resize({1, 1});
+        texture.ldr[{0, 0}] = {255, 0, 0, 255};
         if (verbose) printf("texture dots not supported well");
       } break;
       case pbrt_texture::type_t::fbm: {
         // auto& fbm = ptexture.fbm;
         auto params = improc_params{};
         params.type = make_image_type::fbm;
-        make_improc(texture.hdr_image, params);
-        float_to_byte(texture.ldr_image, texture.hdr_image);
-        texture.hdr_image = {};
+        make_improc(texture.hdr, params);
+        float_to_byte(texture.ldr, texture.hdr);
+        texture.hdr = {};
         if (verbose) printf("texture fbm not supported well");
       } break;
       case pbrt_texture::type_t::marble: {
         // auto& marble = ptexture.marble;
         auto params = improc_params{};
         params.type = make_image_type::fbm;
-        make_improc(texture.hdr_image, params);
-        float_to_byte(texture.ldr_image, texture.hdr_image);
-        texture.hdr_image = {};
+        make_improc(texture.hdr, params);
+        float_to_byte(texture.ldr, texture.hdr);
+        texture.hdr = {};
         if (verbose) printf("texture marble not supported well");
       } break;
       case pbrt_texture::type_t::mix: {
@@ -2928,8 +2928,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         } else if (timap.at(mix.tex2.texture)) {
           texture.uri = scene.textures.at(tmap.at(mix.tex2.texture)).uri;
         } else {
-          texture.ldr_image.resize({1, 1});
-          texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+          texture.ldr.resize({1, 1});
+          texture.ldr[{0, 0}] = {255, 0, 0, 255};
         }
         if (verbose) printf("texture mix not supported well");
       } break;
@@ -2940,27 +2940,27 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         } else if (timap.at(scale.tex2.texture)) {
           texture.uri = scene.textures.at(tmap.at(scale.tex2.texture)).uri;
         } else {
-          texture.ldr_image.resize({1, 1});
-          texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+          texture.ldr.resize({1, 1});
+          texture.ldr[{0, 0}] = {255, 0, 0, 255};
         }
         if (verbose) printf("texture scale not supported well");
       } break;
       case pbrt_texture::type_t::uv: {
         // auto& uv   = get<pbrt_texture::uv_t>(ptexture);
-        texture.ldr_image.resize({1, 1});
-        texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+        texture.ldr.resize({1, 1});
+        texture.ldr[{0, 0}] = {255, 0, 0, 255};
         if (verbose) printf("texture uv not supported well");
       } break;
       case pbrt_texture::type_t::windy: {
         // auto& uv   = get<pbrt_texture::uv_t>(ptexture);
-        texture.ldr_image.resize({1, 1});
-        texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+        texture.ldr.resize({1, 1});
+        texture.ldr[{0, 0}] = {255, 0, 0, 255};
         if (verbose) printf("texture windy not supported well");
       } break;
       case pbrt_texture::type_t::wrinkled: {
         // auto& uv   = get<pbrt_texture::wrinkled_t>(ptexture);
-        texture.ldr_image.resize({1, 1});
-        texture.ldr_image[{0, 0}] = {255, 0, 0, 255};
+        texture.ldr.resize({1, 1});
+        texture.ldr[{0, 0}] = {255, 0, 0, 255};
         if (verbose) printf("texture wrinkled not supported well");
       } break;
     }

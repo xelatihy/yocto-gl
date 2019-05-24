@@ -886,7 +886,7 @@ static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
   // create nodes until the queue is empty
   while (!queue.empty()) {
     // exit if needed
-    if (params.cancel_flag && *params.cancel_flag) return;
+    if (params.cancel_token && *params.cancel_token) return;
 
     // grab node to work on
     auto next = queue.front();
@@ -954,7 +954,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
           while (true) {
             // exit if needed
             if (num_processed_prims >= prims.size()) return;
-            if (params.cancel_flag && *params.cancel_flag) return;
+            if (params.cancel_token && *params.cancel_token) return;
 
             // grab node to work on
             auto next = zero3i;

@@ -431,11 +431,11 @@ void load_element(
 
   if (type == typeid(yocto_texture)) {
     auto& texture = scene.textures[index];
-    load_image(get_dirname(filename) + texture.uri, texture.hdr_image,
-        texture.ldr_image);
+    load_image(get_dirname(filename) + texture.uri, texture.hdr,
+        texture.ldr);
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
-    load_volume(get_dirname(filename) + texture.uri, texture.volume_data);
+    load_volume(get_dirname(filename) + texture.uri, texture.volume);
   } else if (type == typeid(yocto_shape)) {
     auto& shape = scene.shapes[index];
     load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,

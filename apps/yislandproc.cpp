@@ -181,7 +181,7 @@ void load_island_lights(
     } else if (ljs.at("type") == "dome") {
       auto texture = yocto_texture{};
       texture.uri  = ljs.at("map");
-      load_image(dirname + texture.uri, texture.hdr_image);
+      load_image(dirname + texture.uri, texture.hdr);
       scene.textures.push_back(texture);
       auto environment     = yocto_environment{};
       environment.uri      = "environments/lights/" + name + ".yaml";

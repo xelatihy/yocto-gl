@@ -241,15 +241,15 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   edited.uri   = value.uri;
   auto updated = false;
   if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
-  draw_gllabel(win, "hdr_image", "%d x %d", value.hdr_image.size().x,
-      value.hdr_image.size().y);
-  draw_gllabel(win, "ldr_image", "%d x %d", value.ldr_image.size().x,
-      value.ldr_image.size().y);
+  draw_gllabel(win, "hdr", "%d x %d", value.hdr.size().x,
+      value.hdr.size().y);
+  draw_gllabel(win, "ldr", "%d x %d", value.ldr.size().x,
+      value.ldr.size().y);
   if (updated) {
     auto reload = edited.uri != value.uri;
     if (!reload) {
-      edited.hdr_image = value.hdr_image;
-      edited.ldr_image = value.ldr_image;
+      edited.hdr = value.hdr;
+      edited.ldr = value.ldr;
     }
     edit = {sel.type, sel.index, edited, reload};
   }
@@ -263,12 +263,12 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   edited.uri   = value.uri;
   auto updated = false;
   if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
-  draw_gllabel(win, "voxel_data", "%d x %d x %d", value.volume_data.size().x,
-      value.volume_data.size().y, value.volume_data.size().z);
+  draw_gllabel(win, "voxel_data", "%d x %d x %d", value.volume.size().x,
+      value.volume.size().y, value.volume.size().z);
   if (updated) {
     auto reload = edited.uri != value.uri;
     if (!reload) {
-      edited.volume_data = value.volume_data;
+      edited.volume = value.volume;
     }
     edit = {sel.type, sel.index, edited, reload};
   }
