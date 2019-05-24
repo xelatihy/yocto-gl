@@ -56,20 +56,15 @@ namespace yocto {
 
 // Scene load params
 struct load_params {
-  bool          skip_textures             = false;
-  bool          skip_meshes               = false;
-  bool          obj_split_shapes          = true;
-  bool          obj_preserve_face_varying = false;
+  bool          notextures             = false;
+  bool          facevarying = false;
   atomic<bool>* cancel_token              = nullptr;
   bool          run_serially              = false;
 };
 
 // Scene save params
 struct save_params {
-  bool          skip_textures             = false;
-  bool          skip_meshes               = false;
-  bool          obj_split_shapes          = true;
-  bool          obj_preserve_face_varying = false;
+  bool          notextures             = false;
   atomic<bool>* cancel_token              = nullptr;
   bool          run_serially              = false;
 };

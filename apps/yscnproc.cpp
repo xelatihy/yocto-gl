@@ -50,8 +50,7 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
   // command line parameters
-  auto skip_textures    = false;
-  auto skip_meshes      = false;
+  auto notextures       = false;
   auto mesh_filenames   = false;
   auto shape_directory  = "shapes/"s;
   auto subdiv_directory = "subdivs/"s;
@@ -63,10 +62,7 @@ int main(int argc, char** argv) {
 
   // parse command line
   auto parser = CLI::App{"Process scene"};
-  parser.add_flag("--skip-textures,!--no-skip-textures", skip_textures,
-      "Disable textures.");
-  parser.add_flag(
-      "--skip-meshes,!--no-skip-meshes", skip_meshes, "Disable meshes.");
+  parser.add_flag("--notextures", notextures, "Disable textures.");
   parser.add_flag("--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
       "Add mesh filenames.");
   parser.add_option("--shape-directory", shape_directory,
@@ -86,12 +82,10 @@ int main(int argc, char** argv) {
   }
 
   // fix options
-  auto load_prms          = load_params();
-  auto save_prms          = save_params();
-  load_prms.skip_textures = skip_textures;
-  save_prms.skip_textures = skip_textures;
-  load_prms.skip_meshes   = skip_meshes;
-  save_prms.skip_meshes   = skip_meshes;
+  auto load_prms       = load_params();
+  auto save_prms       = save_params();
+  load_prms.notextures = notextures;
+  save_prms.notextures = notextures;
 
   // load scene
   auto scene = yocto_scene{};

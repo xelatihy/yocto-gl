@@ -48,7 +48,7 @@ bool mkdir(const string& dir) {
 int main(int argc, char** argv) {
   // command line parameters
   auto scene_postfix     = false;
-  auto skip_textures     = false;
+  auto notextures        = false;
   auto mesh_filenames    = true;
   auto mesh_directory    = "models/"s;
   auto texture_filenames = true;
@@ -61,8 +61,7 @@ int main(int argc, char** argv) {
   auto parser = CLI::App{"Merge scenes"};
   parser.add_flag("--scene-postfix,!--no-scene-postfix", scene_postfix,
       "Append unique scene postfix to each name");
-  parser.add_flag("--skip-textures,!--no-skip-textures", skip_textures,
-      "Disable textures.");
+  parser.add_flag("--notextures", notextures, "Disable textures.");
   parser.add_flag("--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
       "Add mesh filenames.");
   parser.add_option(
@@ -81,10 +80,10 @@ int main(int argc, char** argv) {
   }
 
   // fix options
-  auto load_prms          = load_params();
-  auto save_prms          = save_params();
-  load_prms.skip_textures = skip_textures;
-  save_prms.skip_textures = skip_textures;
+  auto load_prms       = load_params();
+  auto save_prms       = save_params();
+  load_prms.notextures = notextures;
+  save_prms.notextures = notextures;
 
   // load scene
   auto scene = yocto_scene{};
