@@ -93,16 +93,16 @@ struct obj_material {
   float op  = 1;          // opacity
 
   // textures
-  obj_texture_info ke_txt;    // emission texture
-  obj_texture_info ka_txt;    // ambient texture
-  obj_texture_info kd_txt;    // diffuse texture
-  obj_texture_info ks_txt;    // specular texture
-  obj_texture_info kr_txt;    // reflection texture
-  obj_texture_info kt_txt;    // transmission texture
-  obj_texture_info ns_txt;    // Phong exponent texture
-  obj_texture_info op_txt;    // opacity texture
-  obj_texture_info ior_txt;   // ior texture
-  obj_texture_info bump_txt;  // bump map
+  obj_texture_info ke_map;    // emission texture
+  obj_texture_info ka_map;    // ambient texture
+  obj_texture_info kd_map;    // diffuse texture
+  obj_texture_info ks_map;    // specular texture
+  obj_texture_info kr_map;    // reflection texture
+  obj_texture_info kt_map;    // transmission texture
+  obj_texture_info ns_map;    // Phong exponent texture
+  obj_texture_info op_map;    // opacity texture
+  obj_texture_info ior_map;   // ior texture
+  obj_texture_info bump_map;  // bump map
 
   // pbr values
   bool  has_pbr = false;  // whether pbr values are defined
@@ -113,12 +113,12 @@ struct obj_material {
   float pcr     = 0;      // coat roughness
 
   // textures
-  obj_texture_info pr_txt;    // roughness texture
-  obj_texture_info pm_txt;    // metallic texture
-  obj_texture_info ps_txt;    // sheen texture
-  obj_texture_info norm_txt;  // normal map
-  obj_texture_info disp_txt;  // displacement map
-  obj_texture_info occ_txt;   // occlusion map
+  obj_texture_info pr_map;    // roughness texture
+  obj_texture_info pm_map;    // metallic texture
+  obj_texture_info ps_map;    // sheen texture
+  obj_texture_info norm_map;  // normal map
+  obj_texture_info disp_map;  // displacement map
+  obj_texture_info occ_map;   // occlusion map
 
   // Properties not explicitly handled.
   unordered_map<string, vector<string>> props;

@@ -1221,14 +1221,14 @@ struct load_obj_scene_cb : obj_callbacks {
     material.transmission         = omat.kt;
     material.roughness            = omat.pr;
     material.opacity              = omat.op;
-    material.emission_texture     = add_texture(omat.ke_txt, false);
-    material.diffuse_texture      = add_texture(omat.kd_txt, false);
-    material.metallic_texture     = add_texture(omat.pm_txt, false);
-    material.specular_texture     = add_texture(omat.ks_txt, false);
-    material.transmission_texture = add_texture(omat.kt_txt, false);
-    material.roughness_texture    = add_texture(omat.pr_txt, true);
-    material.opacity_texture      = add_texture(omat.op_txt, true);
-    material.normal_texture       = add_texture(omat.norm_txt, true);
+    material.emission_texture     = add_texture(omat.ke_map, false);
+    material.diffuse_texture      = add_texture(omat.kd_map, false);
+    material.metallic_texture     = add_texture(omat.pm_map, false);
+    material.specular_texture     = add_texture(omat.ks_map, false);
+    material.transmission_texture = add_texture(omat.kt_map, false);
+    material.roughness_texture    = add_texture(omat.pr_map, true);
+    material.opacity_texture      = add_texture(omat.op_map, true);
+    material.normal_texture       = add_texture(omat.norm_map, true);
     scene.materials.push_back(material);
     mmap[material.uri] = (int)scene.materials.size() - 1;
   }

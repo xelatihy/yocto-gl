@@ -140,17 +140,17 @@ void load_mtl(
     } else if (cmd == "d") {
       parse_value(line, material.op);
     } else if (cmd == "map_Ke") {
-      parse_value(line, material.ke_txt);
+      parse_value(line, material.ke_map);
     } else if (cmd == "map_Kd") {
-      parse_value(line, material.kd_txt);
+      parse_value(line, material.kd_map);
     } else if (cmd == "map_Ks") {
-      parse_value(line, material.ks_txt);
+      parse_value(line, material.ks_map);
     } else if (cmd == "map_Tr") {
-      parse_value(line, material.kt_txt);
+      parse_value(line, material.kt_map);
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      parse_value(line, material.op_txt);
+      parse_value(line, material.op_map);
     } else if (cmd == "map_bump" || cmd == "bump") {
-      parse_value(line, material.bump_txt);
+      parse_value(line, material.bump_map);
     } else if (cmd == "Pm") {
       material.has_pbr = true;
       parse_value(line, material.pm);
@@ -168,19 +168,19 @@ void load_mtl(
       parse_value(line, material.pcr);
     } else if (cmd == "map_Pm") {
       material.has_pbr = true;
-      parse_value(line, material.pm_txt);
+      parse_value(line, material.pm_map);
     } else if (cmd == "map_Pr") {
       material.has_pbr = true;
-      parse_value(line, material.pr_txt);
+      parse_value(line, material.pr_map);
     } else if (cmd == "map_Ps") {
       material.has_pbr = true;
-      parse_value(line, material.ps_txt);
+      parse_value(line, material.ps_map);
     } else if (cmd == "map_occ" || cmd == "occ") {
-      parse_value(line, material.occ_txt);
+      parse_value(line, material.occ_map);
     } else if (cmd == "map_disp" || cmd == "disp") {
-      parse_value(line, material.disp_txt);
+      parse_value(line, material.disp_map);
     } else if (cmd == "map_norm" || cmd == "norm") {
-      parse_value(line, material.norm_txt);
+      parse_value(line, material.norm_map);
     }
   }
 
