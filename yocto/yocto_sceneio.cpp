@@ -261,8 +261,6 @@ void save_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
 // Load json meshes
 void load_shapes(
     yocto_scene& scene, const string& dirname, const load_params& params) {
-  if (params.skip_meshes) return;
-
   // load shapes
   parallel_foreach(
       scene.shapes,
@@ -279,8 +277,6 @@ void load_shapes(
 // Save json meshes
 void save_shapes(const yocto_scene& scene, const string& dirname,
     const save_params& params) {
-  if (params.skip_meshes) return;
-
   // save shapes
   parallel_foreach(
       scene.shapes,
@@ -1015,7 +1011,7 @@ struct load_obj_scene_cb : obj_callbacks {
   void add_shape() {
     auto shape               = yocto_shape{};
     shape.uri                = oname + gname;
-    preserve_facevarying_now = params.obj_preserve_face_varying ||
+    preserve_facevarying_now = params.preserve_facevarying ||
                                shape.uri.find("[yocto::facevarying]") !=
                                    string::npos;
     scene.shapes.push_back(shape);
@@ -2809,13 +2805,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       case pbrt_shape::type_t::plymesh: {
         auto& mesh = pshape.plymesh;
         shape.uri  = mesh.filename;
-        if (!params.skip_meshes) {
-          load_shape(get_dirname(filename) + mesh.filename, shape.points,
-              shape.lines, shape.triangles, shape.quads, shape.quadspos,
-              shape.quadsnorm, shape.quadstexcoord, shape.positions,
-              shape.normals, shape.texcoords, shape.colors, shape.radius,
-              false);
-        }
+        load_shape(get_dirname(filename) + mesh.filename, shape.points,
+            shape.lines, shape.triangles, shape.quads, shape.quadspos,
+            shape.quadsnorm, shape.quadstexcoord, shape.positions,
+            shape.normals, shape.texcoords, shape.colors, shape.radius,
+            false);
       } break;
       case pbrt_shape::type_t::sphere: {
         auto& sphere        = pshape.sphere;
