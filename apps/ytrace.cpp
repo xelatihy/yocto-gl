@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
   auto trace_prms   = trace_params{};
   auto tonemap_prms = tonemap_params{};
   auto all_cameras  = false;
-  auto no_parallel  = false;
+  auto noparallel   = false;
   auto save_batch   = false;
   auto add_skyenv   = false;
   auto validate     = false;
@@ -67,14 +67,13 @@ int main(int argc, char* argv[]) {
   // parse command line
   auto parser = CLI::App{"Offline path tracing"};
   parser.add_option("--camera", trace_prms.camera_id, "Camera index.");
-  parser.add_flag(
-      "--all-cameras,!--no-all-cameras", all_cameras, "Render all cameras.");
+  parser.add_flag("--all-cameras", all_cameras, "Render all cameras.");
   parser.add_option(
       "--hres,-R", trace_prms.image_size.x, "Image horizontal resolution.");
   parser.add_option(
       "--vres,-r", trace_prms.image_size.y, "Image vertical resolution.");
   parser.add_option(
-      "--nsamples,-s", trace_prms.num_samples, "Number of samples.");
+      "--samples,-s", trace_prms.num_samples, "Number of samples.");
   parser.add_option("--tracer,-t", trace_prms.sampler_type, "Trace type.")
       ->transform(CLI::IsMember(trace_sampler_type_namemap));
   parser
@@ -82,15 +81,13 @@ int main(int argc, char* argv[]) {
           "Tracer false color type.")
       ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
   parser.add_option(
-      "--nbounces", trace_prms.max_bounces, "Maximum number of bounces.");
-  parser.add_option(
-      "--pixel-clamp", trace_prms.pixel_clamp, "Final pixel clamping.");
-  parser.add_flag(
-      "--parallel,!--no-parallel", no_parallel, "Disable parallel execution.");
+      "--bounces", trace_prms.max_bounces, "Maximum number of bounces.");
+  parser.add_option("--clamp", trace_prms.pixel_clamp, "Final pixel clamping.");
+  parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");
   parser.add_option("--seed", trace_prms.random_seed,
       "Seed for the random number generators.");
   parser.add_option(
-      "--nbatch,-b", trace_prms.samples_per_batch, "Samples per batch.");
+      "--batch,-b", trace_prms.samples_per_batch, "Samples per batch.");
   parser.add_flag("--env-hidden,!--no-env-hidden",
       trace_prms.environments_hidden, "Environments are hidden in renderer");
   parser.add_option("--save-batch", save_batch, "Save images progressively");
@@ -107,10 +104,9 @@ int main(int argc, char* argv[]) {
   parser.add_flag("--bvh-embree-compact,!--no-bvh-embree-compact",
       bvh_prms.embree_compact, "Embree runs in compact memory");
 #endif
-  parser.add_flag(
-      "--add-skyenv,!--no-add-skyenv", add_skyenv, "Add sky envmap");
+  parser.add_flag("--add-skyenv", add_skyenv, "Add sky envmap");
   parser.add_option("--output-image,-o", imfilename, "Image filename");
-  parser.add_flag("--validate,!--no-validate", validate, "Validate scene");
+  parser.add_flag("--validate", validate, "Validate scene");
   parser.add_flag("--logo,!--no-logo", logo, "Whether to append a logo");
   parser.add_option("scene", filename, "Scene filename", true);
   try {
@@ -120,9 +116,9 @@ int main(int argc, char* argv[]) {
   }
 
   // fix parallel code
-  if (no_parallel) {
-    bvh_prms.run_serially  = true;
-    load_prms.run_serially = true;
+  if (noparallel) {
+    bvh_prms.noparallel  = true;
+    load_prms.noparallel = true;
   }
 
   // scene loading

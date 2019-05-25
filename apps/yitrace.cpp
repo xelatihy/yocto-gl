@@ -448,7 +448,7 @@ void load_element(
         subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
         subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
         subdiv.texcoords, subdiv.colors, subdiv.radius,
-        subdiv.preserve_facevarying);
+        subdiv.facevarying);
     tesselate_subdiv(scene, scene.subdivs[index]);
   } else {
     throw runtime_error("unsupported type "s + type.name());
@@ -896,7 +896,7 @@ int main(int argc, char* argv[]) {
   parser.add_option(
       "--vres,-r", app.trace_prms.image_size.y, "Image vertical resolution.");
   parser.add_option(
-      "--nsamples,-s", app.trace_prms.num_samples, "Number of samples.");
+      "--samples,-s", app.trace_prms.num_samples, "Number of samples.");
   parser.add_option("--tracer,-t", app.trace_prms.sampler_type, "Tracer type.")
       ->transform(CLI::IsMember(trace_sampler_type_namemap));
   parser
@@ -904,9 +904,9 @@ int main(int argc, char* argv[]) {
           "Tracer false color type.")
       ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
   parser.add_option(
-      "--nbounces", app.trace_prms.max_bounces, "Maximum number of bounces.");
+      "--bounces", app.trace_prms.max_bounces, "Maximum number of bounces.");
   parser.add_option(
-      "--pixel-clamp", app.trace_prms.pixel_clamp, "Final pixel clamping.");
+      "--clamp", app.trace_prms.pixel_clamp, "Final pixel clamping.");
   parser.add_option("--seed", app.trace_prms.random_seed,
       "Seed for the random number generators.");
   parser.add_flag("--env-hidden,!--no-env-hidden",
@@ -928,8 +928,7 @@ int main(int argc, char* argv[]) {
   parser.add_flag("--bvh-embree-compact,!--no-bvh-embree-compact",
       app.bvh_prms.embree_compact, "Embree runs in compact memory");
 #endif
-  parser.add_flag(
-      "--add-skyenv,!--no-add-skyenv", app.add_skyenv, "Add sky envmap");
+  parser.add_flag("--add-skyenv", app.add_skyenv, "Add sky envmap");
   parser.add_option("scenes", filenames, "Scene filenames")->required(true);
   try {
     parser.parse(argc, argv);
@@ -939,10 +938,10 @@ int main(int argc, char* argv[]) {
 
   // fix parallel code
   if (no_parallel) {
-    app.bvh_prms.run_serially   = true;
-    app.load_prms.run_serially  = true;
-    app.save_prms.run_serially  = true;
-    app.trace_prms.run_serially = true;
+    app.bvh_prms.noparallel   = true;
+    app.load_prms.noparallel  = true;
+    app.save_prms.noparallel  = true;
+    app.trace_prms.noparallel = true;
   }
 
   // loading images

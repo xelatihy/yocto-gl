@@ -985,7 +985,7 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
   // command line parameters
-  auto skip_textures  = false;
+  auto notextures  = false;
   auto mesh_filenames = true;
   auto mesh_directory = "shapes/"s;
   auto uniform_txt    = false;
@@ -996,15 +996,14 @@ int main(int argc, char** argv) {
 
   // parse command line
   auto parser = CLI::App{"Process scene"};
-  parser.add_flag("--skip-textures,!--no-skip-textures", skip_textures,
-      "Disable textures.");
+  parser.add_flag("--notextures", notextures, "Disable textures.");
   parser.add_flag("--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
       "Add mesh filenames.");
   parser.add_option(
       "--mesh-directory", mesh_directory, "Mesh directory when adding names.");
   parser.add_flag("--uniform-textures,!--no-uniform-textures", uniform_txt,
       "uniform texture formats");
-  parser.add_flag("--print-info,-i", info, "print scene info");
+  parser.add_flag("--info,-i", info, "print scene info");
   parser.add_flag("--validate,!--no-validate", validate, "Validate scene");
   parser.add_option("--output,-o", output, "output scene")->required(true);
   parser.add_option("scene", filename, "input scene")->required(true);
@@ -1017,8 +1016,8 @@ int main(int argc, char** argv) {
   // fix params
   auto load_prms          = load_params();
   auto save_prms          = save_params();
-  load_prms.skip_textures = skip_textures;
-  save_prms.skip_textures = skip_textures;
+  load_prms.notextures = notextures;
+  save_prms.notextures = notextures;
 
   // load scene
   auto scene = yocto_scene{};
@@ -1046,7 +1045,7 @@ int main(int argc, char** argv) {
         for (auto& shape : scene.shapes) {
             shape.name = "";
             if (shape.positions.size() <= 16) continue;
-            if (shape.preserve_facevarying) {
+            if (shape.facevarying) {
                 shape.filename = mesh_directory + shape.name + ".obj";
             } else {
                 shape.filename = mesh_directory + shape.name + ".ply";
@@ -1072,8 +1071,8 @@ int main(int argc, char** argv) {
   // save scene
   try {
     auto timer              = print_timed("saving scene");
-    save_prms.skip_textures = false;
-    save_prms.run_serially  = false;
+    save_prms.notextures = false;
+    save_prms.noparallel  = false;
     // save_prms.ply_instances = true;
     save_scene(output, scene, save_prms);
   } catch (const std::exception& e) {

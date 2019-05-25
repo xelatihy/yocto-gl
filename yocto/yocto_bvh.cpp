@@ -883,7 +883,7 @@ static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
   // create nodes until the queue is empty
   while (!queue.empty()) {
     // exit if needed
-    if (params.cancel_token && *params.cancel_token) return;
+    if (params.cancel && *params.cancel) return;
 
     // grab node to work on
     auto next = queue.front();
@@ -951,7 +951,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
           while (true) {
             // exit if needed
             if (num_processed_prims >= prims.size()) return;
-            if (params.cancel_token && *params.cancel_token) return;
+            if (params.cancel && *params.cancel) return;
 
             // grab node to work on
             auto next = zero3i;
@@ -1067,7 +1067,7 @@ void build_bvh(bvh_shape& shape, const bvh_params& params) {
   }
 
   // build nodes
-  if (params.run_serially) {
+  if (params.noparallel) {
     build_bvh_serial(shape.nodes, prims, params);
   } else {
     build_bvh_parallel(shape.nodes, prims, params);
@@ -1101,7 +1101,7 @@ void build_bvh(bvh_scene& scene, const bvh_params& params) {
   }
 
   // build nodes
-  if (params.run_serially) {
+  if (params.noparallel) {
     build_bvh_serial(scene.nodes, prims, params);
   } else {
     build_bvh_parallel(scene.nodes, prims, params);

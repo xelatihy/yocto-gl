@@ -1429,7 +1429,7 @@ void trace_region(image<vec4f>& image, trace_state& state,
     for (auto i = region.min.x; i < region.max.x; i++) {
       auto& pixel = get_trace_pixel(state, i, j);
       for (auto s = 0; s < num_samples; s++) {
-        if (params.cancel_token && *params.cancel_token) return;
+        if (params.cancel && *params.cancel) return;
         _trace_npaths += 1;
         auto ray = sample_camera(
             camera, {i, j}, image.size(), rand2f(pixel.rng), rand2f(pixel.rng));
@@ -1551,14 +1551,14 @@ void trace_async_start(image<vec4f>& image, trace_state& state,
   init_trace_state(state, image_size, params.random_seed);
   auto regions = vector<image_region>{};
   make_imregions(regions, image.size(), params.region_size, true);
-  if (params.cancel_token) *params.cancel_token = false;
+  if (params.cancel) *params.cancel = false;
 
   futures.clear();
   futures.emplace_back(async([params, regions, &current_sample, &image, &scene,
                                  &lights, &bvh, &state, &queue]() {
     for (auto sample = 0; sample < params.num_samples;
          sample += params.samples_per_batch) {
-      if (params.cancel_token && *params.cancel_token) return;
+      if (params.cancel && *params.cancel) return;
       current_sample   = sample;
       auto num_samples = min(
           params.samples_per_batch, params.num_samples - current_sample);
@@ -1570,7 +1570,7 @@ void trace_async_start(image<vec4f>& image, trace_state& state,
                 image, state, scene, bvh, lights, region, num_samples, params);
             queue.push(region);
           },
-          params.cancel_token, params.run_serially);
+          params.cancel, params.noparallel);
     }
     current_sample = params.num_samples;
   }));
@@ -1579,7 +1579,7 @@ void trace_async_start(image<vec4f>& image, trace_state& state,
 // Stop the asynchronous renderer.
 void trace_async_stop(vector<future<void>>& futures,
     concurrent_queue<image_region>& queue, const trace_params& params) {
-  if (params.cancel_token) *params.cancel_token = true;
+  if (params.cancel) *params.cancel = true;
   for (auto& f : futures) f.get();
   futures.clear();
   queue.clear();

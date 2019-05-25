@@ -162,7 +162,7 @@ void load_voltexture(yocto_voltexture& texture, const string& dirname) {
 
 void load_textures(
     yocto_scene& scene, const string& dirname, const load_params& params) {
-  if (params.skip_textures) return;
+  if (params.notextures) return;
 
   // load images
   parallel_foreach(
@@ -171,7 +171,7 @@ void load_textures(
         if (!texture.hdr.empty() || !texture.ldr.empty()) return;
         load_texture(texture, dirname);
       },
-      params.cancel_token, params.run_serially);
+      params.cancel, params.noparallel);
 
   // load volumes
   parallel_foreach(
@@ -180,7 +180,7 @@ void load_textures(
         if (!texture.volume.empty()) return;
         load_voltexture(texture, dirname);
       },
-      params.cancel_token, params.run_serially);
+      params.cancel, params.noparallel);
 }
 
 void save_texture(const yocto_texture& texture, const string& dirname) {
@@ -194,14 +194,14 @@ void save_voltexture(const yocto_voltexture& texture, const string& dirname) {
 // helper to save textures
 void save_textures(const yocto_scene& scene, const string& dirname,
     const save_params& params) {
-  if (params.skip_textures) return;
+  if (params.notextures) return;
 
   // save images
   parallel_foreach(
       scene.textures,
       [&dirname](
           const yocto_texture& texture) { save_texture(texture, dirname); },
-      params.cancel_token, params.run_serially);
+      params.cancel, params.noparallel);
 
   // save volumes
   parallel_foreach(
@@ -209,7 +209,7 @@ void save_textures(const yocto_scene& scene, const string& dirname,
       [&dirname](const yocto_voltexture& texture) {
         save_voltexture(texture, dirname);
       },
-      params.cancel_token, params.run_serially);
+      params.cancel, params.noparallel);
 }
 
 void load_shape(yocto_shape& shape, const string& dirname) {
@@ -247,7 +247,7 @@ void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
         subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
         subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
         subdiv.texcoords, subdiv.colors, subdiv.radius,
-        subdiv.preserve_facevarying);
+        subdiv.facevarying);
   }
 }
 
@@ -265,13 +265,13 @@ void load_shapes(
   parallel_foreach(
       scene.shapes,
       [&dirname](yocto_shape& shape) { load_shape(shape, dirname); },
-      params.cancel_token, params.run_serially);
+      params.cancel, params.noparallel);
 
   // load subdivs
   parallel_foreach(
       scene.subdivs,
       [&dirname](yocto_subdiv& subdiv) { load_subdiv(subdiv, dirname); },
-      params.cancel_token, params.run_serially);
+      params.cancel, params.noparallel);
 }
 
 // Save json meshes
@@ -281,13 +281,13 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
   parallel_foreach(
       scene.shapes,
       [&dirname](const yocto_shape& shape) { save_shape(shape, dirname); },
-      params.cancel_token, params.run_serially);
+      params.cancel, params.noparallel);
   // save subdivs
   parallel_foreach(
       scene.subdivs,
       [&dirname](
           const yocto_subdiv& subdivs) { save_subdiv(subdivs, dirname); },
-      params.cancel_token, params.run_serially);
+      params.cancel, params.noparallel);
 }
 
 }  // namespace yocto
@@ -687,8 +687,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
           get_yaml_value(value, subdiv.catmull_clark);
         } else if (key == "compute_normals") {
           get_yaml_value(value, subdiv.compute_normals);
-        } else if (key == "preserve_facevarying") {
-          get_yaml_value(value, subdiv.preserve_facevarying);
+        } else if (key == "facevarying") {
+          get_yaml_value(value, subdiv.facevarying);
         } else if (key == "displacement_texture") {
           get_yaml_ref(value, subdiv.displacement_texture, tmap);
         } else if (key == "displacement_scale") {
@@ -922,8 +922,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
         fs, "catmull_clark", subdiv.catmull_clark, def_subdiv.catmull_clark);
     write_opt(fs, "compute_normals", subdiv.compute_normals,
         def_subdiv.compute_normals);
-    write_opt(fs, "preserve_facevarying", subdiv.preserve_facevarying,
-        def_subdiv.preserve_facevarying);
+    write_opt(fs, "facevarying", subdiv.facevarying,
+        def_subdiv.facevarying);
     write_ref(fs, "displacement_texture", subdiv.displacement_texture,
         scene.textures);
     write_opt(fs, "displacement_scale", subdiv.displacement_scale,
@@ -1002,7 +1002,7 @@ struct load_obj_scene_cb : obj_callbacks {
   unordered_map<int, int>        texcoord_map = unordered_map<int, int>();
 
   // current parse state
-  bool preserve_facevarying_now = false;
+  bool facevarying_now = false;
 
   load_obj_scene_cb(yocto_scene& scene, const load_params& params)
       : scene{scene}, params{params} {}
@@ -1011,7 +1011,7 @@ struct load_obj_scene_cb : obj_callbacks {
   void add_shape() {
     auto shape               = yocto_shape{};
     shape.uri                = oname + gname;
-    preserve_facevarying_now = params.preserve_facevarying ||
+    facevarying_now = params.facevarying ||
                                shape.uri.find("[yocto::facevarying]") !=
                                    string::npos;
     scene.shapes.push_back(shape);
@@ -1122,7 +1122,7 @@ struct load_obj_scene_cb : obj_callbacks {
       add_shape();
     }
     auto& shape = scene.shapes.back();
-    if (!preserve_facevarying_now) {
+    if (!facevarying_now) {
       add_verts(verts, shape);
       if (verts.size() == 4) {
         shape.quads.push_back({vertex_map.at(verts[0]), vertex_map.at(verts[1]),

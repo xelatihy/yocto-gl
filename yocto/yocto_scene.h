@@ -199,7 +199,7 @@ struct yocto_subdiv {
   int  subdivision_level    = 0;
   bool catmull_clark        = false;
   bool compute_normals      = false;
-  bool preserve_facevarying = false;
+  bool facevarying = false;
 
   // displacement information
   int   displacement_texture = -1;
@@ -354,7 +354,7 @@ void add_sky(yocto_scene& scene, float sun_angle = pif / 4);
 void trim_memory(yocto_scene& scene);
 
 // Checks for validity of the scene.
-void print_validation(const yocto_scene& scene, bool skip_textures = false);
+void print_validation(const yocto_scene& scene, bool notextures = false);
 
 // Build/refit the bvh acceleration structure.
 void build_bvh(

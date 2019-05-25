@@ -50,7 +50,7 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
   // command line parameters
-  auto skip_textures    = false;
+  auto notextures       = false;
   auto mesh_filenames   = false;
   auto shape_directory  = "shapes/"s;
   auto subdiv_directory = "subdivs/"s;
@@ -62,18 +62,15 @@ int main(int argc, char** argv) {
 
   // parse command line
   auto parser = CLI::App{"Process scene"};
-  parser.add_flag("--skip-textures,!--no-skip-textures", skip_textures,
-      "Disable textures.");
-  parser.add_flag("--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
-      "Add mesh filenames.");
+  parser.add_flag("--notextures", notextures, "Disable textures.");
+  parser.add_flag("--mesh-filenames", mesh_filenames, "Add mesh filenames.");
   parser.add_option("--shape-directory", shape_directory,
       "Shape directory when adding names.");
   parser.add_option("--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
-  parser.add_flag("--uniform-textures,!--no-uniform-textures", uniform_txt,
-      "uniform texture formats");
-  parser.add_flag("--print-info,-i", info, "print scene info");
-  parser.add_flag("--validate,!--no-validate", validate, "Validate scene");
+  parser.add_flag("--uniform-textures", uniform_txt, "uniform texture formats");
+  parser.add_flag("--info,-i", info, "print scene info");
+  parser.add_flag("--validate", validate, "Validate scene");
   parser.add_option("--output,-o", output, "output scene")->required(true);
   parser.add_option("scene", filename, "input scene")->required(true);
   try {
@@ -83,10 +80,10 @@ int main(int argc, char** argv) {
   }
 
   // fix options
-  auto load_prms          = load_params();
-  auto save_prms          = save_params();
-  load_prms.skip_textures = skip_textures;
-  save_prms.skip_textures = skip_textures;
+  auto load_prms       = load_params();
+  auto save_prms       = save_params();
+  load_prms.notextures = notextures;
+  save_prms.notextures = notextures;
 
   // load scene
   auto scene = yocto_scene{};

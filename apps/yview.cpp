@@ -991,7 +991,7 @@ void load_element(
         subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
         subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
         subdiv.texcoords, subdiv.colors, subdiv.radius,
-        subdiv.preserve_facevarying);
+        subdiv.facevarying);
     tesselate_subdiv(scene, scene.subdivs[index]);
   } else {
     throw std::runtime_error("unsupported type "s + type.name());
@@ -1235,7 +1235,7 @@ int main(int argc, char* argv[]) {
   // initialize app
   app_state app{};
   auto      filenames   = vector<string>{};
-  auto      no_parallel = false;
+  auto      noparallel = false;
 
   // parse command line
   auto parser = CLI::App{"views scenes inteactively"};
@@ -1247,7 +1247,7 @@ int main(int argc, char* argv[]) {
   parser.add_flag("--eyelight,!--no-eyelight,-c", app.drawgl_prms.eyelight,
       "Eyelight rendering.");
   parser.add_flag(
-      "--parallel,!--no-parallel", no_parallel, "Disable parallel execution.");
+      "--noparallel", noparallel, "Disable parallel execution.");
   parser.add_option("scenes", filenames, "Scene filenames")->required(true);
   try {
     parser.parse(argc, argv);
@@ -1256,9 +1256,9 @@ int main(int argc, char* argv[]) {
   }
 
   // fix parallel code
-  if (no_parallel) {
-    app.load_prms.run_serially = true;
-    app.save_prms.run_serially = true;
+  if (noparallel) {
+    app.load_prms.noparallel = true;
+    app.save_prms.noparallel = true;
   }
 
   // loading images

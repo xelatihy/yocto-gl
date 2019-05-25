@@ -553,7 +553,7 @@ void trim_memory(yocto_scene& scene) {
 }
 
 // Checks for validity of the scene.
-vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
+vector<string> validate_scene(const yocto_scene& scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = unordered_map<string, int>();
@@ -584,14 +584,14 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
   check_names(scene.environments, "environment");
   check_names(scene.nodes, "node");
   check_names(scene.animations, "animation");
-  if (!skip_textures) check_empty_textures(scene.textures);
+  if (!notextures) check_empty_textures(scene.textures);
 
   return errs;
 }
 
 // Logs validations errors
-void print_validation(const yocto_scene& scene, bool skip_textures) {
-  for (auto err : validate_scene(scene, skip_textures))
+void print_validation(const yocto_scene& scene, bool notextures) {
+  for (auto err : validate_scene(scene, notextures))
     printf("%s [validation]\n", err.c_str());
 }
 

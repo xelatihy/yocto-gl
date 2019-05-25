@@ -56,17 +56,17 @@ namespace yocto {
 
 // Scene load params
 struct load_params {
-  bool          skip_textures             = false;
-  bool          preserve_facevarying = false;
-  atomic<bool>* cancel_token              = nullptr;
-  bool          run_serially              = false;
+  bool          notextures             = false;
+  bool          facevarying = false;
+  atomic<bool>* cancel              = nullptr;
+  bool          noparallel              = false;
 };
 
 // Scene save params
 struct save_params {
-  bool          skip_textures             = false;
-  atomic<bool>* cancel_token              = nullptr;
-  bool          run_serially              = false;
+  bool          notextures             = false;
+  atomic<bool>* cancel              = nullptr;
+  bool          noparallel              = false;
 };
 
 // Load/save a scene in the supported formats.

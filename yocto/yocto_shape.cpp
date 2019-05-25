@@ -2579,7 +2579,7 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, bool preserve_facevarying,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
     bool flip_texcoord = true);
 static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -3076,7 +3076,7 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, bool preserve_facevarying,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
     bool flip_texcoord) {
   try {
     // load obj
@@ -3086,11 +3086,11 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     oparams.flip_texcoord = flip_texcoord;
     auto cb = load_obj_shape_cb{points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords,
-        preserve_facevarying};
+        facevarying};
     load_obj(filename, cb, oparams);
 
     // merging quads and triangles
-    if (!preserve_facevarying) {
+    if (!facevarying) {
       merge_triangles_and_quads(triangles, quads, false);
     }
 
