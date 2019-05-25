@@ -162,7 +162,7 @@ void load_voltexture(yocto_voltexture& texture, const string& dirname) {
 
 void load_textures(
     yocto_scene& scene, const string& dirname, const load_params& params) {
-  if (params.notextures) return;
+  if (params.skip_textures) return;
 
   // load images
   parallel_foreach(
@@ -194,7 +194,7 @@ void save_voltexture(const yocto_voltexture& texture, const string& dirname) {
 // helper to save textures
 void save_textures(const yocto_scene& scene, const string& dirname,
     const save_params& params) {
-  if (params.notextures) return;
+  if (params.skip_textures) return;
 
   // save images
   parallel_foreach(
@@ -261,6 +261,8 @@ void save_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
 // Load json meshes
 void load_shapes(
     yocto_scene& scene, const string& dirname, const load_params& params) {
+  if (params.skip_meshes) return;
+
   // load shapes
   parallel_foreach(
       scene.shapes,
@@ -277,6 +279,8 @@ void load_shapes(
 // Save json meshes
 void save_shapes(const yocto_scene& scene, const string& dirname,
     const save_params& params) {
+  if (params.skip_meshes) return;
+
   // save shapes
   parallel_foreach(
       scene.shapes,
@@ -1002,7 +1006,7 @@ struct load_obj_scene_cb : obj_callbacks {
   unordered_map<int, int>        texcoord_map = unordered_map<int, int>();
 
   // current parse state
-  bool facevarying_now = false;
+  bool preserve_facevarying_now = false;
 
   load_obj_scene_cb(yocto_scene& scene, const load_params& params)
       : scene{scene}, params{params} {}
@@ -1011,7 +1015,7 @@ struct load_obj_scene_cb : obj_callbacks {
   void add_shape() {
     auto shape               = yocto_shape{};
     shape.uri                = oname + gname;
-    facevarying_now = params.facevarying ||
+    preserve_facevarying_now = params.obj_preserve_face_varying ||
                                shape.uri.find("[yocto::facevarying]") !=
                                    string::npos;
     scene.shapes.push_back(shape);
@@ -1122,7 +1126,7 @@ struct load_obj_scene_cb : obj_callbacks {
       add_shape();
     }
     auto& shape = scene.shapes.back();
-    if (!facevarying_now) {
+    if (!preserve_facevarying_now) {
       add_verts(verts, shape);
       if (verts.size() == 4) {
         shape.quads.push_back({vertex_map.at(verts[0]), vertex_map.at(verts[1]),
@@ -2805,11 +2809,13 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       case pbrt_shape::type_t::plymesh: {
         auto& mesh = pshape.plymesh;
         shape.uri  = mesh.filename;
-        load_shape(get_dirname(filename) + mesh.filename, shape.points,
-            shape.lines, shape.triangles, shape.quads, shape.quadspos,
-            shape.quadsnorm, shape.quadstexcoord, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.radius,
-            false);
+        if (!params.skip_meshes) {
+          load_shape(get_dirname(filename) + mesh.filename, shape.points,
+              shape.lines, shape.triangles, shape.quads, shape.quadspos,
+              shape.quadsnorm, shape.quadstexcoord, shape.positions,
+              shape.normals, shape.texcoords, shape.colors, shape.radius,
+              false);
+        }
       } break;
       case pbrt_shape::type_t::sphere: {
         auto& sphere        = pshape.sphere;
