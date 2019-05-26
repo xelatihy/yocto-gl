@@ -14,4 +14,4 @@ BreakConstructorInitializersBeforeComma: true
 BreakStringLiterals: false
 
 PenaltyBreakAssignment: 20
-PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakBeforeFirstCallParameter: 50
