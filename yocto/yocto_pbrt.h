@@ -864,8 +864,7 @@ struct pbrt_callbacks {
 
 // Load pbrt params
 struct pbrt_params {
-  bool geometry_only = false;
-  bool flip_texcoord = true;
+  bool fliptexcoord = true;
 };
 
 // Load pbrt scene
