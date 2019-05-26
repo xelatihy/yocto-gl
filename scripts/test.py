@@ -151,14 +151,14 @@ def make_tests():
             {
                 "uri": "materials/test-floor.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
-                "diffuse_texture": "textures/test-floor.png"
+                "diffuse_tex": "textures/test-floor.png"
             },
             {
                 "uri": "materials/test-uvgrid.yaml",
                 "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 1, 1, 1 ],
                 "roughness": 0.1,
-                "diffuse_texture": "textures/test-uvgrid.png"
+                "diffuse_tex": "textures/test-uvgrid.png"
             },
             {
                 "uri": "materials/test-matte.yaml",
@@ -194,14 +194,14 @@ def make_tests():
                 "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "roughness": 0.01,
-                "normal_texture": "textures/test-bumps-normal.png"
+                "normal_tex": "textures/test-bumps-normal.png"
             },
             {
                 "uri": "materials/test-metal-sharp-bumped.yaml",
                 "metallic": 1,
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "roughness": 0,
-                "normal_texture": "textures/test-bumps-normal.png"
+                "normal_tex": "textures/test-bumps-normal.png"
             },
             {
                 "uri": "materials/test-plastic-rough-coated.yaml",
@@ -357,24 +357,24 @@ def make_tests():
         "subdivs": [
             {
                 "uri": "::yocto::test-sphere-displaced::subdivs/test-sphere-displaced.obj",
-                "tesselated_shape": "shapes/test-sphere-displaced.obj",
-                "preserve_facevarying": True,
-                "displacement_texture": "textures/test-fbm-displacement.png",
-                "displacement_scale": 0.025
+                "shape": "shapes/test-sphere-displaced.obj",
+                "facevarying": True,
+                "displacement": 0.025,
+                "displacement_tex": "textures/test-fbm-displacement.png"
             },
             {
                 "uri": "::yocto::test-cube-subdiv::subdivs/test-cube-subdiv.obj",
                 "tesselated_shape": "shapes/test-cube-subdiv.obj",
-                "subdivision_level": 4,
-                "catmull_clark": True,
-                "compute_normals": True,
-                "preserve_facevarying": True
+                "subdivisions": 4,
+                "catmullclark": True,
+                "smooth": True,
+                "facevarying": True
             },
             {
                 "uri": "::yocto::test-suzanne-subdiv::subdivs/test-suzanne-subdiv.obj",
                 "tesselated_shape": "shapes/test-suzanne-subdiv.obj",
-                "subdivision_level": 2,
-                "catmull_clark": True,
+                "subdivisions": 2,
+                "catmullclark": True,
                 "compute_normals": True
             },
         ],
@@ -494,11 +494,11 @@ def make_tests():
                 used = False
                 for material in scene['materials']:
                     if 'emission_texture' in material and material['emission_texture'] == remove_preset(texture['uri']): used = True
-                    if 'diffuse_texture' in material and material['diffuse_texture'] == remove_preset(texture['uri']): used = True
-                    if 'normal_texture' in material and material['normal_texture'] == remove_preset(texture['uri']): used = True
-                    if 'displacement_texture' in material and material['displacement_texture'] == remove_preset(texture['uri']): used = True
+                    if 'diffuse_tex' in material and material['diffuse_tex'] == remove_preset(texture['uri']): used = True
+                    if 'normal_tex' in material and material['normal_tex'] == remove_preset(texture['uri']): used = True
+                    if 'displacement_tex' in material and material['displacement_tex'] == remove_preset(texture['uri']): used = True
                 for subdiv in scene['subdivs']:
-                    if 'displacement_texture' in subdiv and subdiv['displacement_texture'] == remove_preset(texture['uri']): used = True
+                    if 'displacement_tex' in subdiv and subdiv['displacement_tex'] == remove_preset(texture['uri']): used = True
                 for environment in scene['environments']:
                     if environment['emission_texture'] == remove_preset(texture['uri']): used = True
                 if used: scene['textures'] += [texture] 

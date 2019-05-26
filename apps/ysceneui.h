@@ -95,8 +95,8 @@ inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
 inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
     yocto_scene& scene, const yocto_subdiv& value, app_selection& sel) {
   draw_glscenetree(
-      win, "shapes", scene, value.tesselated_shape, scene.shapes, sel);
-  draw_glscenetree(win, "displament", scene, value.displacement_texture,
+      win, "shapes", scene, value.shape, scene.shapes, sel);
+  draw_glscenetree(win, "displament", scene, value.displacement_tex,
       scene.textures, sel);
 }
 
@@ -374,29 +374,29 @@ inline bool draw_glsceneinspector(const opengl_window& win,
     yocto_scene& scene) {
   auto edited                 = yocto_subdiv{};
   edited.uri                  = value.uri;
-  edited.subdivision_level    = value.subdivision_level;
-  edited.catmull_clark        = value.catmull_clark;
-  edited.compute_normals      = value.compute_normals;
+  edited.subdivisions    = value.subdivisions;
+  edited.catmullclark        = value.catmullclark;
+  edited.smooth      = value.smooth;
   edited.facevarying          = value.facevarying;
-  edited.tesselated_shape     = value.tesselated_shape;
-  edited.displacement_texture = value.displacement_texture;
-  edited.displacement_scale   = value.displacement_scale;
+  edited.shape     = value.shape;
+  edited.displacement_tex = value.displacement_tex;
+  edited.displacement   = value.displacement;
   auto updated                = false;
   if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
-  if (draw_glslider(win, "subdivision_level", edited.subdivision_level, 0, 10))
+  if (draw_glslider(win, "subdivisions", edited.subdivisions, 0, 10))
     updated = true;
-  if (draw_glcheckbox(win, "catmull_clark", edited.catmull_clark))
+  if (draw_glcheckbox(win, "catmullclark", edited.catmullclark))
     updated = true;
-  if (draw_glcheckbox(win, "compute_normals", edited.compute_normals))
+  if (draw_glcheckbox(win, "smooth", edited.smooth))
     updated = true;
   if (draw_glcheckbox(win, "facevarying", edited.facevarying)) updated = true;
-  if (draw_glcombobox(win, "tesselated_shape", edited.tesselated_shape,
+  if (draw_glcombobox(win, "shape", edited.shape,
           scene.textures, true))
     updated = true;
-  if (draw_glcombobox(win, "displacement_texture", edited.displacement_texture,
+  if (draw_glcombobox(win, "displacement_tex", edited.displacement_tex,
           scene.textures, true))
     updated = true;
-  if (draw_glslider(win, "displacement_scale", edited.displacement_scale, 0, 1))
+  if (draw_glslider(win, "displacement", edited.displacement, 0, 1))
     updated = true;
   draw_gllabel(win, "points", "%ld", value.points.size());
   draw_gllabel(win, "lines", "%ld", value.lines.size());

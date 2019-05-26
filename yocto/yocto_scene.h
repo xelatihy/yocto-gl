@@ -193,17 +193,17 @@ struct yocto_subdiv {
   string uri = "";
 
   // tesselated shape
-  int tesselated_shape = -1;
+  int shape = -1;
 
   // subdision properties
-  int  subdivision_level = 0;
-  bool catmull_clark     = false;
-  bool compute_normals   = false;
+  int  subdivisions = 0;
+  bool catmullclark     = false;
+  bool smooth   = false;
   bool facevarying       = false;
 
   // displacement information
-  int   displacement_texture = -1;
-  float displacement_scale   = 1;
+  float displacement   = 0;
+  int   displacement_tex = -1;
 
   // primitives
   vector<int>   points    = {};
@@ -329,8 +329,8 @@ bbox3f compute_bounds(const yocto_scene& scene);
 void compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape& shape, int subdivision_level,
-    bool catmull_clark, bool compute_normals);
+void subdivide_shape(yocto_shape& shape, int subdivisions,
+    bool catmullclark, bool compute_normals);
 void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     float scale, bool compute_normals);
 void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv);

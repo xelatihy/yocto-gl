@@ -83,31 +83,31 @@ void compute_normals(const yocto_shape& shape, vector<vec3f>& normals) {
 }
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape& shape, int subdivision_level,
-    bool catmull_clark, bool update_normals) {
-  if (!subdivision_level) return;
+void subdivide_shape(yocto_shape& shape, int subdivisions,
+    bool catmullclark, bool update_normals) {
+  if (!subdivisions) return;
   if (!shape.points.empty()) {
     throw std::runtime_error("point subdivision not supported");
   } else if (!shape.lines.empty()) {
     subdivide_lines(shape.lines, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivision_level);
+        shape.texcoords, shape.colors, shape.radius, subdivisions);
   } else if (!shape.triangles.empty()) {
     subdivide_triangles(shape.triangles, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivision_level);
-  } else if (!shape.quads.empty() && !catmull_clark) {
+        shape.texcoords, shape.colors, shape.radius, subdivisions);
+  } else if (!shape.quads.empty() && !catmullclark) {
     subdivide_quads(shape.quads, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivision_level);
-  } else if (!shape.quads.empty() && catmull_clark) {
+        shape.texcoords, shape.colors, shape.radius, subdivisions);
+  } else if (!shape.quads.empty() && catmullclark) {
     subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivision_level);
-  } else if (!shape.quadspos.empty() && !catmull_clark) {
-    subdivide_quads(shape.quadspos, shape.positions, subdivision_level);
-    subdivide_quads(shape.quadsnorm, shape.normals, subdivision_level);
-    subdivide_quads(shape.quadstexcoord, shape.texcoords, subdivision_level);
-  } else if (!shape.quadspos.empty() && catmull_clark) {
-    subdivide_catmullclark(shape.quadspos, shape.positions, subdivision_level);
+        shape.texcoords, shape.colors, shape.radius, subdivisions);
+  } else if (!shape.quadspos.empty() && !catmullclark) {
+    subdivide_quads(shape.quadspos, shape.positions, subdivisions);
+    subdivide_quads(shape.quadsnorm, shape.normals, subdivisions);
+    subdivide_quads(shape.quadstexcoord, shape.texcoords, subdivisions);
+  } else if (!shape.quadspos.empty() && catmullclark) {
+    subdivide_catmullclark(shape.quadspos, shape.positions, subdivisions);
     subdivide_catmullclark(
-        shape.quadstexcoord, shape.texcoords, subdivision_level, true);
+        shape.quadstexcoord, shape.texcoords, subdivisions, true);
   } else {
     throw std::runtime_error("empty shape");
   }
@@ -165,7 +165,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
 }
 
 void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv) {
-  auto& shape         = scene.shapes[subdiv.tesselated_shape];
+  auto& shape         = scene.shapes[subdiv.shape];
   shape.positions     = subdiv.positions;
   shape.normals       = subdiv.normals;
   shape.texcoords     = subdiv.texcoords;
@@ -179,13 +179,13 @@ void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv) {
   shape.quadsnorm     = subdiv.quadsnorm;
   shape.quadstexcoord = subdiv.quadstexcoord;
   shape.lines         = subdiv.lines;
-  if (subdiv.subdivision_level) {
-    subdivide_shape(shape, subdiv.subdivision_level, subdiv.catmull_clark,
-        subdiv.compute_normals);
+  if (subdiv.subdivisions) {
+    subdivide_shape(shape, subdiv.subdivisions, subdiv.catmullclark,
+        subdiv.smooth);
   }
-  if (subdiv.displacement_texture >= 0) {
-    displace_shape(shape, scene.textures[subdiv.displacement_texture],
-        subdiv.displacement_scale, subdiv.compute_normals);
+  if (subdiv.displacement_tex >= 0) {
+    displace_shape(shape, scene.textures[subdiv.displacement_tex],
+        subdiv.displacement, subdiv.smooth);
   }
 }
 
@@ -1351,9 +1351,9 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
   for (auto subdiv_id = offset_subdivs; subdiv_id < scene.subdivs.size();
        subdiv_id++) {
     auto& subdiv = scene.subdivs[subdiv_id];
-    if (subdiv.tesselated_shape >= 0) subdiv.tesselated_shape += offset_shapes;
-    if (subdiv.displacement_texture >= 0)
-      subdiv.displacement_texture += offset_textures;
+    if (subdiv.shape >= 0) subdiv.shape += offset_shapes;
+    if (subdiv.displacement_tex >= 0)
+      subdiv.displacement_tex += offset_textures;
   }
   for (auto instance_id = offset_instances;
        instance_id < scene.instances.size(); instance_id++) {

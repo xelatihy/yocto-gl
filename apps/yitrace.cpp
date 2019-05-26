@@ -464,7 +464,7 @@ void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
     updated_shapes.push_back(index);
   } else if (type == typeid(yocto_subdiv)) {
     auto& subdiv = scene.subdivs[index];
-    updated_shapes.push_back(subdiv.tesselated_shape);
+    updated_shapes.push_back(subdiv.shape);
   } else if (type == typeid(yocto_instance)) {
     updated_instances.push_back(index);
   } else {
