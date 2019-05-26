@@ -83,8 +83,8 @@ void compute_normals(const yocto_shape& shape, vector<vec3f>& normals) {
 }
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape& shape, int subdivisions,
-    bool catmullclark, bool update_normals) {
+void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
+    bool update_normals) {
   if (!subdivisions) return;
   if (!shape.points.empty()) {
     throw std::runtime_error("point subdivision not supported");
@@ -180,8 +180,8 @@ void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv) {
   shape.quadstexcoord = subdiv.quadstexcoord;
   shape.lines         = subdiv.lines;
   if (subdiv.subdivisions) {
-    subdivide_shape(shape, subdiv.subdivisions, subdiv.catmullclark,
-        subdiv.smooth);
+    subdivide_shape(
+        shape, subdiv.subdivisions, subdiv.catmullclark, subdiv.smooth);
   }
   if (subdiv.displacement_tex >= 0) {
     displace_shape(shape, scene.textures[subdiv.displacement_tex],
@@ -513,9 +513,9 @@ void add_sky(yocto_scene& scene, float sun_angle) {
   texture.uri  = "textures/sky.hdr";
   make_imsunsky(texture.hdr, {1024, 512}, sun_angle);
   scene.textures.push_back(texture);
-  auto environment             = yocto_environment{};
-  environment.uri              = "environments/default.yaml";
-  environment.emission         = {1, 1, 1};
+  auto environment         = yocto_environment{};
+  environment.uri          = "environments/default.yaml";
+  environment.emission     = {1, 1, 1};
   environment.emission_tex = (int)scene.textures.size() - 1;
   scene.environments.push_back(environment);
 }
@@ -864,7 +864,7 @@ vec3f eval_shading_normal(const yocto_scene& scene,
         scene, instance, element_id, element_uv, non_rigid_frame);
   } else {
     auto& normal_tex = scene.textures[material.normal_tex];
-    auto  normalmap      = xyz(eval_texture(normal_tex,
+    auto  normalmap  = xyz(eval_texture(normal_tex,
                          eval_texcoord(shape, element_id, element_uv), true)) *
                          2 -
                      1;
@@ -1241,13 +1241,13 @@ material_point eval_material(const yocto_scene& scene,
   }
   if (material.diffuse_tex >= 0) {
     auto& diffuse_tex = scene.textures[material.diffuse_tex];
-    auto  base_txt        = eval_texture(diffuse_tex, texturecoord);
+    auto  base_txt    = eval_texture(diffuse_tex, texturecoord);
     point.diffuse *= xyz(base_txt);
     point.opacity *= base_txt.w;
   }
   if (material.metallic_tex >= 0) {
     auto& metallic_tex = scene.textures[material.metallic_tex];
-    auto  metallic_txt     = eval_texture(metallic_tex, texturecoord);
+    auto  metallic_txt = eval_texture(metallic_tex, texturecoord);
     metallic *= metallic_txt.z;
     if (material.gltf_textures) {
       point.roughness *= metallic_txt.x;
@@ -1255,7 +1255,7 @@ material_point eval_material(const yocto_scene& scene,
   }
   if (material.specular_tex >= 0) {
     auto& specular_tex = scene.textures[material.specular_tex];
-    auto  specular_txt     = eval_texture(specular_tex, texturecoord);
+    auto  specular_txt = eval_texture(specular_tex, texturecoord);
     point.specular *= xyz(specular_txt);
     if (material.gltf_textures) {
       auto glossiness = 1 - point.roughness;
@@ -1331,20 +1331,14 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
   for (auto material_id = offset_materials;
        material_id < scene.materials.size(); material_id++) {
     auto& material = scene.materials[material_id];
-    if (material.emission_tex >= 0)
-      material.emission_tex += offset_textures;
-    if (material.diffuse_tex >= 0)
-      material.diffuse_tex += offset_textures;
-    if (material.metallic_tex >= 0)
-      material.metallic_tex += offset_textures;
-    if (material.specular_tex >= 0)
-      material.specular_tex += offset_textures;
+    if (material.emission_tex >= 0) material.emission_tex += offset_textures;
+    if (material.diffuse_tex >= 0) material.diffuse_tex += offset_textures;
+    if (material.metallic_tex >= 0) material.metallic_tex += offset_textures;
+    if (material.specular_tex >= 0) material.specular_tex += offset_textures;
     if (material.transmission_tex >= 0)
       material.transmission_tex += offset_textures;
-    if (material.roughness_tex >= 0)
-      material.roughness_tex += offset_textures;
-    if (material.normal_tex >= 0)
-      material.normal_tex += offset_textures;
+    if (material.roughness_tex >= 0) material.roughness_tex += offset_textures;
+    if (material.normal_tex >= 0) material.normal_tex += offset_textures;
     if (material.voldensity_tex >= 0)
       material.voldensity_tex += offset_voltextures;
   }

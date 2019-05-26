@@ -319,7 +319,7 @@ struct load_island_shape_callbacks : obj_callbacks {
     materials.push_back({});
     materials.back().uri = dmaterial.name;
     if (dmaterial.color_map != "") {
-      materials.back().diffuse         = {1, 1, 1};
+      materials.back().diffuse     = {1, 1, 1};
       materials.back().diffuse_tex = add_texture(dmaterial.color_map_baked);
     } else if (dmaterial.refractive == 0) {
       materials.back().diffuse = dmaterial.color;
@@ -413,9 +413,9 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
 
   try {
     // load obj
-    auto oparams          = obj_params();
+    auto oparams        = obj_params();
     oparams.nomaterials = true;
-    auto cb               = load_island_shape_callbacks{
+    auto cb             = load_island_shape_callbacks{
         shapes, materials, smap, mmap, tmap, scene, filename, parent_name};
     load_obj(dirname + filename, cb, oparams);
 

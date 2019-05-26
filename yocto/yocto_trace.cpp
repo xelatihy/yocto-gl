@@ -905,11 +905,11 @@ float sample_environment_pdf(const yocto_scene& scene,
   if (environment.emission_tex >= 0) {
     auto& elements_cdf = lights.environment_cdfs[environment.emission_tex];
     auto& emission_tex = scene.textures[environment.emission_tex];
-    auto  size             = texture_size(emission_tex);
-    auto  texcoord         = eval_texcoord(environment, incoming);
-    auto  i                = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
-    auto  j                = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
-    auto  prob             = sample_discrete_pdf(elements_cdf, j * size.x + i) /
+    auto  size         = texture_size(emission_tex);
+    auto  texcoord     = eval_texcoord(environment, incoming);
+    auto  i            = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
+    auto  j            = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
+    auto  prob         = sample_discrete_pdf(elements_cdf, j * size.x + i) /
                 elements_cdf.back();
     auto angle = (2 * pif / size.x) * (pif / size.y) *
                  sin(pif * (j + 0.5f) / size.y);
@@ -926,10 +926,10 @@ vec3f sample_environment(const yocto_scene& scene, const trace_lights& lights,
   if (environment.emission_tex >= 0) {
     auto& elements_cdf = lights.environment_cdfs[environment.emission_tex];
     auto& emission_tex = scene.textures[environment.emission_tex];
-    auto  idx              = sample_discrete(elements_cdf, rel);
-    auto  size             = texture_size(emission_tex);
-    auto  u                = (idx % size.x + 0.5f) / size.x;
-    auto  v                = (idx / size.x + 0.5f) / size.y;
+    auto  idx          = sample_discrete(elements_cdf, rel);
+    auto  size         = texture_size(emission_tex);
+    auto  u            = (idx % size.x + 0.5f) / size.x;
+    auto  v            = (idx / size.x + 0.5f) / size.y;
     return eval_direction(environment, {u, v});
   } else {
     return sample_sphere(ruv);

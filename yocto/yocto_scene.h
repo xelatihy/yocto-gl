@@ -148,7 +148,7 @@ struct yocto_material {
   int  coat_tex         = -1;
   int  opacity_tex      = -1;
   int  normal_tex       = -1;
-  bool gltf_textures        = false;  // glTF packed textures
+  bool gltf_textures    = false;  // glTF packed textures
 
   // volume textures
   int voldensity_tex = -1;
@@ -197,12 +197,12 @@ struct yocto_subdiv {
 
   // subdision properties
   int  subdivisions = 0;
-  bool catmullclark     = false;
-  bool smooth   = false;
-  bool facevarying       = false;
+  bool catmullclark = false;
+  bool smooth       = false;
+  bool facevarying  = false;
 
   // displacement information
-  float displacement   = 0;
+  float displacement     = 0;
   int   displacement_tex = -1;
 
   // primitives
@@ -234,9 +234,9 @@ struct yocto_instance {
 
 // Environment map.
 struct yocto_environment {
-  string  uri              = "";
-  frame3f frame            = identity3x4f;
-  vec3f   emission         = {0, 0, 0};
+  string  uri          = "";
+  frame3f frame        = identity3x4f;
+  vec3f   emission     = {0, 0, 0};
   int     emission_tex = -1;
 };
 
@@ -329,8 +329,8 @@ bbox3f compute_bounds(const yocto_scene& scene);
 void compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape& shape, int subdivisions,
-    bool catmullclark, bool compute_normals);
+void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
+    bool compute_normals);
 void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     float scale, bool compute_normals);
 void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv);

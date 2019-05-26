@@ -1271,7 +1271,7 @@ static void load_obj_scene(
 
   try {
     // Parse obj
-    auto cb               = load_obj_scene_cb{scene, params};
+    auto cb = load_obj_scene_cb{scene, params};
     load_obj(filename, cb, {});
 
     // cleanup empty

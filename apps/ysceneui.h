@@ -87,17 +87,15 @@ inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
       win, "metallic", scene, value.metallic_tex, scene.textures, sel);
   draw_glscenetree(
       win, "specular", scene, value.specular_tex, scene.textures, sel);
-  draw_glscenetree(
-      win, "normal", scene, value.normal_tex, scene.textures, sel);
+  draw_glscenetree(win, "normal", scene, value.normal_tex, scene.textures, sel);
 }
 inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
     yocto_scene& scene, const yocto_shape& value, app_selection& sel) {}
 inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
     yocto_scene& scene, const yocto_subdiv& value, app_selection& sel) {
+  draw_glscenetree(win, "shapes", scene, value.shape, scene.shapes, sel);
   draw_glscenetree(
-      win, "shapes", scene, value.shape, scene.shapes, sel);
-  draw_glscenetree(win, "displament", scene, value.displacement_tex,
-      scene.textures, sel);
+      win, "displament", scene, value.displacement_tex, scene.textures, sel);
 }
 
 inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
@@ -297,23 +295,23 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glslider(win, "opacity", edited.opacity, 0, 1)) updated = true;
   if (draw_glcheckbox(win, "thin", edited.thin)) updated = true;
 
-  if (draw_glcombobox(win, "emission_tex", edited.emission_tex,
-          scene.textures, true))
+  if (draw_glcombobox(
+          win, "emission_tex", edited.emission_tex, scene.textures, true))
     updated = true;
   if (draw_glcombobox(
           win, "diffuse_tex", edited.diffuse_tex, scene.textures, true))
     updated = true;
-  if (draw_glcombobox(win, "metallic_tex", edited.metallic_tex,
-          scene.textures, true))
+  if (draw_glcombobox(
+          win, "metallic_tex", edited.metallic_tex, scene.textures, true))
     updated = true;
-  if (draw_glcombobox(win, "specular_tex", edited.specular_tex,
-          scene.textures, true))
+  if (draw_glcombobox(
+          win, "specular_tex", edited.specular_tex, scene.textures, true))
     updated = true;
   if (draw_glcombobox(win, "transmission_tex", edited.transmission_tex,
           scene.textures, true))
     updated = true;
-  if (draw_glcombobox(win, "roughness_tex", edited.roughness_tex,
-          scene.textures, true))
+  if (draw_glcombobox(
+          win, "roughness_tex", edited.roughness_tex, scene.textures, true))
     updated = true;
   if (draw_glcombobox(
           win, "normal_tex", edited.normal_tex, scene.textures, true))
@@ -372,26 +370,23 @@ inline bool draw_glsceneinspector(const opengl_window& win,
 inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_subdiv& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-  auto edited                 = yocto_subdiv{};
-  edited.uri                  = value.uri;
-  edited.subdivisions    = value.subdivisions;
-  edited.catmullclark        = value.catmullclark;
-  edited.smooth      = value.smooth;
-  edited.facevarying          = value.facevarying;
-  edited.shape     = value.shape;
+  auto edited             = yocto_subdiv{};
+  edited.uri              = value.uri;
+  edited.subdivisions     = value.subdivisions;
+  edited.catmullclark     = value.catmullclark;
+  edited.smooth           = value.smooth;
+  edited.facevarying      = value.facevarying;
+  edited.shape            = value.shape;
   edited.displacement_tex = value.displacement_tex;
-  edited.displacement   = value.displacement;
-  auto updated                = false;
+  edited.displacement     = value.displacement;
+  auto updated            = false;
   if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
   if (draw_glslider(win, "subdivisions", edited.subdivisions, 0, 10))
     updated = true;
-  if (draw_glcheckbox(win, "catmullclark", edited.catmullclark))
-    updated = true;
-  if (draw_glcheckbox(win, "smooth", edited.smooth))
-    updated = true;
+  if (draw_glcheckbox(win, "catmullclark", edited.catmullclark)) updated = true;
+  if (draw_glcheckbox(win, "smooth", edited.smooth)) updated = true;
   if (draw_glcheckbox(win, "facevarying", edited.facevarying)) updated = true;
-  if (draw_glcombobox(win, "shape", edited.shape,
-          scene.textures, true))
+  if (draw_glcombobox(win, "shape", edited.shape, scene.textures, true))
     updated = true;
   if (draw_glcombobox(win, "displacement_tex", edited.displacement_tex,
           scene.textures, true))
@@ -462,8 +457,8 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glslider(win, "frame[2]", edited.frame.z, -1, 1)) updated = true;
   if (draw_glslider(win, "frame.o", edited.frame.o, -10, 10)) updated = true;
   if (draw_glhdrcoloredit(win, "emission", edited.emission)) updated = true;
-  if (draw_glcombobox(win, "emission texture", edited.emission_tex,
-          scene.textures, true))
+  if (draw_glcombobox(
+          win, "emission texture", edited.emission_tex, scene.textures, true))
     updated = true;
   if (updated) {
     edit = {sel.type, sel.index, edited, false};

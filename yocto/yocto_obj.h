@@ -176,7 +176,7 @@ struct obj_callbacks {
 
 // Load obj params
 struct obj_params {
-  bool nomaterials = false;
+  bool nomaterials  = false;
   bool fliptexcoord = true;
   bool fliptr       = true;
 };
