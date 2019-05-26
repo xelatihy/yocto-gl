@@ -336,11 +336,11 @@ float sample_shape_pdf(const yocto_shape& shape,
 // Update environment CDF for sampling.
 void sample_environment_cdf(const yocto_scene& scene,
     const yocto_environment& environment, vector<float>& texels_cdf) {
-  if (environment.emission_texture < 0) {
+  if (environment.emission_tex < 0) {
     texels_cdf.clear();
     return;
   }
-  auto& texture = scene.textures[environment.emission_texture];
+  auto& texture = scene.textures[environment.emission_tex];
   auto  size    = texture_size(texture);
   texels_cdf.resize(size.x * size.y);
   if (size != zero2i) {
@@ -360,8 +360,8 @@ void sample_environment_cdf(const yocto_scene& scene,
 vec3f sample_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     float re, const vec2f& ruv) {
-  if (!texels_cdf.empty() && environment.emission_texture >= 0) {
-    auto& texture = scene.textures[environment.emission_texture];
+  if (!texels_cdf.empty() && environment.emission_tex >= 0) {
+    auto& texture = scene.textures[environment.emission_tex];
     auto  idx     = sample_discrete(texels_cdf, re);
     auto  size    = texture_size(texture);
     auto  u       = (idx % size.x + 0.5f) / size.x;
@@ -376,8 +376,8 @@ vec3f sample_environment(const yocto_scene& scene,
 float sample_environment_pdf(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     const vec3f& direction) {
-  if (!texels_cdf.empty() && environment.emission_texture >= 0) {
-    auto& texture  = scene.textures[environment.emission_texture];
+  if (!texels_cdf.empty() && environment.emission_tex >= 0) {
+    auto& texture  = scene.textures[environment.emission_tex];
     auto  size     = texture_size(texture);
     auto  texcoord = eval_texcoord(environment, direction);
     auto  i        = (int)(texcoord.x * size.x);
@@ -455,7 +455,7 @@ void normalize_scaled_color(float& scale, vec3f& color) {
 void add_tangent_spaces(yocto_scene& scene) {
   for (auto& instance : scene.instances) {
     auto& material = scene.materials[instance.material];
-    if (material.normal_texture < 0) continue;
+    if (material.normal_tex < 0) continue;
     auto& shape = scene.shapes[instance.shape];
     if (!shape.tangents.empty() || shape.texcoords.empty()) continue;
     if (!shape.triangles.empty()) {
@@ -516,7 +516,7 @@ void add_sky(yocto_scene& scene, float sun_angle) {
   auto environment             = yocto_environment{};
   environment.uri              = "environments/default.yaml";
   environment.emission         = {1, 1, 1};
-  environment.emission_texture = (int)scene.textures.size() - 1;
+  environment.emission_tex = (int)scene.textures.size() - 1;
   scene.environments.push_back(environment);
 }
 
@@ -859,12 +859,12 @@ vec3f eval_shading_normal(const yocto_scene& scene,
     auto normal = eval_normal(
         scene, instance, element_id, element_uv, non_rigid_frame);
     return orthonormalize(-direction, normal);
-  } else if (material.normal_texture < 0) {
+  } else if (material.normal_tex < 0) {
     return eval_normal(
         scene, instance, element_id, element_uv, non_rigid_frame);
   } else {
-    auto& normal_texture = scene.textures[material.normal_texture];
-    auto  normalmap      = xyz(eval_texture(normal_texture,
+    auto& normal_tex = scene.textures[material.normal_tex];
+    auto  normalmap      = xyz(eval_texture(normal_tex,
                          eval_texcoord(shape, element_id, element_uv), true)) *
                          2 -
                      1;
@@ -911,10 +911,10 @@ vec3f eval_direction(
 vec3f eval_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vec3f& direction) {
   auto emission = environment.emission;
-  if (environment.emission_texture >= 0) {
-    auto& emission_texture = scene.textures[environment.emission_texture];
+  if (environment.emission_tex >= 0) {
+    auto& emission_tex = scene.textures[environment.emission_tex];
     emission *= xyz(
-        eval_texture(emission_texture, eval_texcoord(environment, direction)));
+        eval_texture(emission_tex, eval_texcoord(environment, direction)));
   }
   return emission;
 }
@@ -1235,27 +1235,27 @@ material_point eval_material(const yocto_scene& scene,
   point.thin           = material.thin;
 
   // textures
-  if (material.emission_texture >= 0) {
-    auto& emission_texture = scene.textures[material.emission_texture];
-    point.emission *= xyz(eval_texture(emission_texture, texturecoord));
+  if (material.emission_tex >= 0) {
+    auto& emission_tex = scene.textures[material.emission_tex];
+    point.emission *= xyz(eval_texture(emission_tex, texturecoord));
   }
-  if (material.diffuse_texture >= 0) {
-    auto& diffuse_texture = scene.textures[material.diffuse_texture];
-    auto  base_txt        = eval_texture(diffuse_texture, texturecoord);
+  if (material.diffuse_tex >= 0) {
+    auto& diffuse_tex = scene.textures[material.diffuse_tex];
+    auto  base_txt        = eval_texture(diffuse_tex, texturecoord);
     point.diffuse *= xyz(base_txt);
     point.opacity *= base_txt.w;
   }
-  if (material.metallic_texture >= 0) {
-    auto& metallic_texture = scene.textures[material.metallic_texture];
-    auto  metallic_txt     = eval_texture(metallic_texture, texturecoord);
+  if (material.metallic_tex >= 0) {
+    auto& metallic_tex = scene.textures[material.metallic_tex];
+    auto  metallic_txt     = eval_texture(metallic_tex, texturecoord);
     metallic *= metallic_txt.z;
     if (material.gltf_textures) {
       point.roughness *= metallic_txt.x;
     }
   }
-  if (material.specular_texture >= 0) {
-    auto& specular_texture = scene.textures[material.specular_texture];
-    auto  specular_txt     = eval_texture(specular_texture, texturecoord);
+  if (material.specular_tex >= 0) {
+    auto& specular_tex = scene.textures[material.specular_tex];
+    auto  specular_txt     = eval_texture(specular_tex, texturecoord);
     point.specular *= xyz(specular_txt);
     if (material.gltf_textures) {
       auto glossiness = 1 - point.roughness;
@@ -1263,25 +1263,25 @@ material_point eval_material(const yocto_scene& scene,
       point.roughness = 1 - glossiness;
     }
   }
-  if (material.roughness_texture >= 0) {
-    auto& roughness_texture = scene.textures[material.roughness_texture];
-    point.roughness *= eval_texture(roughness_texture, texturecoord).x;
+  if (material.roughness_tex >= 0) {
+    auto& roughness_tex = scene.textures[material.roughness_tex];
+    point.roughness *= eval_texture(roughness_tex, texturecoord).x;
   }
-  if (material.transmission_texture >= 0) {
-    auto& transmission_texture = scene.textures[material.transmission_texture];
-    point.transmission *= xyz(eval_texture(transmission_texture, texturecoord));
+  if (material.transmission_tex >= 0) {
+    auto& transmission_tex = scene.textures[material.transmission_tex];
+    point.transmission *= xyz(eval_texture(transmission_tex, texturecoord));
   }
-  if (material.subsurface_texture >= 0) {
-    auto& subsurface_texture = scene.textures[material.subsurface_texture];
-    point.volscatter *= xyz(eval_texture(subsurface_texture, texturecoord));
+  if (material.subsurface_tex >= 0) {
+    auto& subsurface_tex = scene.textures[material.subsurface_tex];
+    point.volscatter *= xyz(eval_texture(subsurface_tex, texturecoord));
   }
-  if (material.opacity_texture >= 0) {
-    auto& opacity_texture = scene.textures[material.opacity_texture];
-    point.opacity *= mean(xyz(eval_texture(opacity_texture, texturecoord)));
+  if (material.opacity_tex >= 0) {
+    auto& opacity_tex = scene.textures[material.opacity_tex];
+    point.opacity *= mean(xyz(eval_texture(opacity_tex, texturecoord)));
   }
-  if (material.coat_texture >= 0) {
-    auto& coat_texture = scene.textures[material.coat_texture];
-    point.coat *= xyz(eval_texture(coat_texture, texturecoord));
+  if (material.coat_tex >= 0) {
+    auto& coat_tex = scene.textures[material.coat_tex];
+    point.coat *= xyz(eval_texture(coat_tex, texturecoord));
   }
   if (metallic) {
     point.specular = point.specular * (1 - metallic) + metallic * point.diffuse;
@@ -1331,22 +1331,22 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
   for (auto material_id = offset_materials;
        material_id < scene.materials.size(); material_id++) {
     auto& material = scene.materials[material_id];
-    if (material.emission_texture >= 0)
-      material.emission_texture += offset_textures;
-    if (material.diffuse_texture >= 0)
-      material.diffuse_texture += offset_textures;
-    if (material.metallic_texture >= 0)
-      material.metallic_texture += offset_textures;
-    if (material.specular_texture >= 0)
-      material.specular_texture += offset_textures;
-    if (material.transmission_texture >= 0)
-      material.transmission_texture += offset_textures;
-    if (material.roughness_texture >= 0)
-      material.roughness_texture += offset_textures;
-    if (material.normal_texture >= 0)
-      material.normal_texture += offset_textures;
-    if (material.volume_density_texture >= 0)
-      material.volume_density_texture += offset_voltextures;
+    if (material.emission_tex >= 0)
+      material.emission_tex += offset_textures;
+    if (material.diffuse_tex >= 0)
+      material.diffuse_tex += offset_textures;
+    if (material.metallic_tex >= 0)
+      material.metallic_tex += offset_textures;
+    if (material.specular_tex >= 0)
+      material.specular_tex += offset_textures;
+    if (material.transmission_tex >= 0)
+      material.transmission_tex += offset_textures;
+    if (material.roughness_tex >= 0)
+      material.roughness_tex += offset_textures;
+    if (material.normal_tex >= 0)
+      material.normal_tex += offset_textures;
+    if (material.voldensity_tex >= 0)
+      material.voldensity_tex += offset_voltextures;
   }
   for (auto subdiv_id = offset_subdivs; subdiv_id < scene.subdivs.size();
        subdiv_id++) {
@@ -1364,8 +1364,8 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
   for (auto environment_id = offset_environments;
        environment_id < scene.environments.size(); environment_id++) {
     auto& environment = scene.environments[environment_id];
-    if (environment.emission_texture >= 0)
-      environment.emission_texture += offset_textures;
+    if (environment.emission_tex >= 0)
+      environment.emission_tex += offset_textures;
   }
   for (auto node_id = offset_nodes; node_id < scene.nodes.size(); node_id++) {
     auto& node = scene.nodes[node_id];

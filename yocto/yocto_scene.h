@@ -138,20 +138,20 @@ struct yocto_material {
   bool  thin            = false;
 
   // textures
-  int  emission_texture     = -1;
-  int  diffuse_texture      = -1;
-  int  specular_texture     = -1;
-  int  metallic_texture     = -1;
-  int  roughness_texture    = -1;
-  int  transmission_texture = -1;
-  int  subsurface_texture   = -1;
-  int  coat_texture         = -1;
-  int  opacity_texture      = -1;
-  int  normal_texture       = -1;
+  int  emission_tex     = -1;
+  int  diffuse_tex      = -1;
+  int  specular_tex     = -1;
+  int  metallic_tex     = -1;
+  int  roughness_tex    = -1;
+  int  transmission_tex = -1;
+  int  subsurface_tex   = -1;
+  int  coat_tex         = -1;
+  int  opacity_tex      = -1;
+  int  normal_tex       = -1;
   bool gltf_textures        = false;  // glTF packed textures
 
   // volume textures
-  int volume_density_texture = -1;
+  int voldensity_tex = -1;
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -237,7 +237,7 @@ struct yocto_environment {
   string  uri              = "";
   frame3f frame            = identity3x4f;
   vec3f   emission         = {0, 0, 0};
-  int     emission_texture = -1;
+  int     emission_tex = -1;
 };
 
 // Node in a transform hierarchy.

@@ -902,10 +902,10 @@ float sample_volscattering_pdf(const material_point& material,
 float sample_environment_pdf(const yocto_scene& scene,
     const trace_lights& lights, int environment_id, const vec3f& incoming) {
   auto& environment = scene.environments[environment_id];
-  if (environment.emission_texture >= 0) {
-    auto& elements_cdf = lights.environment_cdfs[environment.emission_texture];
-    auto& emission_texture = scene.textures[environment.emission_texture];
-    auto  size             = texture_size(emission_texture);
+  if (environment.emission_tex >= 0) {
+    auto& elements_cdf = lights.environment_cdfs[environment.emission_tex];
+    auto& emission_tex = scene.textures[environment.emission_tex];
+    auto  size             = texture_size(emission_tex);
     auto  texcoord         = eval_texcoord(environment, incoming);
     auto  i                = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
     auto  j                = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
@@ -923,11 +923,11 @@ float sample_environment_pdf(const yocto_scene& scene,
 vec3f sample_environment(const yocto_scene& scene, const trace_lights& lights,
     int environment_id, float rel, const vec2f& ruv) {
   auto& environment = scene.environments[environment_id];
-  if (environment.emission_texture >= 0) {
-    auto& elements_cdf = lights.environment_cdfs[environment.emission_texture];
-    auto& emission_texture = scene.textures[environment.emission_texture];
+  if (environment.emission_tex >= 0) {
+    auto& elements_cdf = lights.environment_cdfs[environment.emission_tex];
+    auto& emission_tex = scene.textures[environment.emission_tex];
     auto  idx              = sample_discrete(elements_cdf, rel);
-    auto  size             = texture_size(emission_texture);
+    auto  size             = texture_size(emission_tex);
     auto  u                = (idx % size.x + 0.5f) / size.x;
     auto  v                = (idx / size.x + 0.5f) / size.y;
     return eval_direction(environment, {u, v});
@@ -1497,9 +1497,9 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
     auto& environment = scene.environments[environment_id];
     if (environment.emission == zero3f) continue;
     lights.environments.push_back(environment_id);
-    if (environment.emission_texture >= 0) {
+    if (environment.emission_tex >= 0) {
       sample_environment_cdf(scene, environment,
-          lights.environment_cdfs[environment.emission_texture]);
+          lights.environment_cdfs[environment.emission_tex]);
     }
   }
 }

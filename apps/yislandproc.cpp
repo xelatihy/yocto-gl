@@ -187,7 +187,7 @@ void load_island_lights(
       environment.uri      = "environments/lights/" + name + ".yaml";
       environment.emission = xyz(ljs.at("color").get<vec4f>()) *
                              pow(2.0f, ljs.at("exposure").get<float>());
-      environment.emission_texture = (int)scene.textures.size() - 1;
+      environment.emission_tex = (int)scene.textures.size() - 1;
       environment.frame = frame3f(ljs.at("translationMatrix").get<mat4f>());
       scene.environments.push_back(environment);
     } else {
@@ -320,7 +320,7 @@ struct load_island_shape_callbacks : obj_callbacks {
     materials.back().uri = dmaterial.name;
     if (dmaterial.color_map != "") {
       materials.back().diffuse         = {1, 1, 1};
-      materials.back().diffuse_texture = add_texture(dmaterial.color_map_baked);
+      materials.back().diffuse_tex = add_texture(dmaterial.color_map_baked);
     } else if (dmaterial.refractive == 0) {
       materials.back().diffuse = dmaterial.color;
     } else {

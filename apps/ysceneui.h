@@ -80,15 +80,15 @@ inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
 inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
     yocto_scene& scene, const yocto_material& value, app_selection& sel) {
   draw_glscenetree(
-      win, "emission", scene, value.emission_texture, scene.textures, sel);
+      win, "emission", scene, value.emission_tex, scene.textures, sel);
   draw_glscenetree(
-      win, "diffuse", scene, value.diffuse_texture, scene.textures, sel);
+      win, "diffuse", scene, value.diffuse_tex, scene.textures, sel);
   draw_glscenetree(
-      win, "metallic", scene, value.metallic_texture, scene.textures, sel);
+      win, "metallic", scene, value.metallic_tex, scene.textures, sel);
   draw_glscenetree(
-      win, "specular", scene, value.specular_texture, scene.textures, sel);
+      win, "specular", scene, value.specular_tex, scene.textures, sel);
   draw_glscenetree(
-      win, "normal", scene, value.normal_texture, scene.textures, sel);
+      win, "normal", scene, value.normal_tex, scene.textures, sel);
 }
 inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
     yocto_scene& scene, const yocto_shape& value, app_selection& sel) {}
@@ -109,7 +109,7 @@ inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
 inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
     yocto_scene& scene, const yocto_environment& value, app_selection& sel) {
   draw_glscenetree(
-      win, "emission", scene, value.emission_texture, scene.textures, sel);
+      win, "emission", scene, value.emission_tex, scene.textures, sel);
 }
 inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
     yocto_scene& scene, const yocto_scene_node& value, app_selection& sel) {
@@ -297,26 +297,26 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glslider(win, "opacity", edited.opacity, 0, 1)) updated = true;
   if (draw_glcheckbox(win, "thin", edited.thin)) updated = true;
 
-  if (draw_glcombobox(win, "emission_texture", edited.emission_texture,
+  if (draw_glcombobox(win, "emission_tex", edited.emission_tex,
           scene.textures, true))
     updated = true;
   if (draw_glcombobox(
-          win, "diffuse_texture", edited.diffuse_texture, scene.textures, true))
+          win, "diffuse_tex", edited.diffuse_tex, scene.textures, true))
     updated = true;
-  if (draw_glcombobox(win, "metallic_texture", edited.metallic_texture,
+  if (draw_glcombobox(win, "metallic_tex", edited.metallic_tex,
           scene.textures, true))
     updated = true;
-  if (draw_glcombobox(win, "specular_texture", edited.specular_texture,
+  if (draw_glcombobox(win, "specular_tex", edited.specular_tex,
           scene.textures, true))
     updated = true;
-  if (draw_glcombobox(win, "transmission_texture", edited.transmission_texture,
+  if (draw_glcombobox(win, "transmission_tex", edited.transmission_tex,
           scene.textures, true))
     updated = true;
-  if (draw_glcombobox(win, "roughness_texture", edited.roughness_texture,
+  if (draw_glcombobox(win, "roughness_tex", edited.roughness_tex,
           scene.textures, true))
     updated = true;
   if (draw_glcombobox(
-          win, "normal_texture", edited.normal_texture, scene.textures, true))
+          win, "normal_tex", edited.normal_tex, scene.textures, true))
     updated = true;
   if (draw_glcheckbox(win, "glTF textures", edited.gltf_textures))
     updated = true;
@@ -462,7 +462,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glslider(win, "frame[2]", edited.frame.z, -1, 1)) updated = true;
   if (draw_glslider(win, "frame.o", edited.frame.o, -10, 10)) updated = true;
   if (draw_glhdrcoloredit(win, "emission", edited.emission)) updated = true;
-  if (draw_glcombobox(win, "emission texture", edited.emission_texture,
+  if (draw_glcombobox(win, "emission texture", edited.emission_tex,
           scene.textures, true))
     updated = true;
   if (updated) {

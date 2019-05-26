@@ -548,27 +548,27 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
   set_gluniform(state.program, "mat_op", material.opacity);
   set_gluniform(state.program, "mat_double_sided", (int)options.double_sided);
   set_gluniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
-      material.emission_texture >= 0
-          ? state.textures.at(material.emission_texture)
+      material.emission_tex >= 0
+          ? state.textures.at(material.emission_tex)
           : opengl_texture{},
       0);
   set_gluniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
-      material.diffuse_texture >= 0
-          ? state.textures.at(material.diffuse_texture)
+      material.diffuse_tex >= 0
+          ? state.textures.at(material.diffuse_tex)
           : opengl_texture{},
       1);
   set_gluniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
-      material.metallic_texture >= 0
-          ? state.textures.at(material.metallic_texture)
+      material.metallic_tex >= 0
+          ? state.textures.at(material.metallic_tex)
           : opengl_texture{},
       2);
   set_gluniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
-      material.roughness_texture >= 0
-          ? state.textures.at(material.roughness_texture)
+      material.roughness_tex >= 0
+          ? state.textures.at(material.roughness_tex)
           : opengl_texture{},
       3);
   set_gluniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
-      material.normal_texture >= 0 ? state.textures.at(material.normal_texture)
+      material.normal_tex >= 0 ? state.textures.at(material.normal_tex)
                                    : opengl_texture{},
       5);
 
