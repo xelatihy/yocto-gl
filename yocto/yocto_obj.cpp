@@ -283,7 +283,7 @@ void load_obj(
     } else if (cmd == "vt") {
       auto vert = zero2f;
       parse_value(line, vert);
-      if (params.fliptexcoord) vert.y = 1 - vert.y;
+      if (params.flipv) vert.y = 1 - vert.y;
       cb.texcoord(vert);
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
