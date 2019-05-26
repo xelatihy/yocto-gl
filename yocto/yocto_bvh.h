@@ -214,7 +214,7 @@ struct bvh_params {
   bool embree_compact = false;
 #endif
   bool          noparallel = false;
-  atomic<bool>* cancel = nullptr;
+  atomic<bool>* cancel     = nullptr;
 };
 
 // Build the bvh acceleration structure.

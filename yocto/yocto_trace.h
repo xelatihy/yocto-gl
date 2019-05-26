@@ -151,19 +151,19 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
 
 // Options for trace functions
 struct trace_params {
-  int                   camera_id           = 0;
-  vec2i                 image_size          = {1280, 720};
-  trace_sampler_type    sampler_type        = trace_sampler_type::path;
-  trace_falsecolor_type falsecolor_type     = trace_falsecolor_type::diffuse;
-  int                   num_samples         = 512;
-  int                   max_bounces         = 64;
-  int                   samples_per_batch   = 16;
-  int                   region_size         = 16;
-  float                 pixel_clamp         = 10;
-  bool                  environments_hidden = false;
-  uint64_t              random_seed         = trace_default_seed;
-  std::atomic<bool>*    cancel        = nullptr;
-  bool                  noparallel        = false;
+  int                   camera     = 0;
+  vec2i                 resolution = {1280, 720};
+  trace_sampler_type    sampler    = trace_sampler_type::path;
+  trace_falsecolor_type falsecolor = trace_falsecolor_type::diffuse;
+  int                   samples    = 512;
+  int                   bounces    = 64;
+  int                   batch      = 16;
+  int                   region     = 16;
+  float                 clamp      = 10;
+  bool                  envhidden  = false;
+  uint64_t              seed       = trace_default_seed;
+  std::atomic<bool>*    cancel     = nullptr;
+  bool                  noparallel = false;
 };
 
 // Equality operators

@@ -3085,8 +3085,7 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     oparams.geometry_only = true;
     oparams.flip_texcoord = flip_texcoord;
     auto cb = load_obj_shape_cb{points, lines, triangles, quads, quadspos,
-        quadsnorm, quadstexcoord, positions, normals, texcoords,
-        facevarying};
+        quadsnorm, quadstexcoord, positions, normals, texcoords, facevarying};
     load_obj(filename, cb, oparams);
 
     // merging quads and triangles

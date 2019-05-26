@@ -66,30 +66,28 @@ int main(int argc, char* argv[]) {
 
   // parse command line
   auto parser = CLI::App{"Offline path tracing"};
-  parser.add_option("--camera", trace_prms.camera_id, "Camera index.");
+  parser.add_option("--camera", trace_prms.camera, "Camera index.");
   parser.add_flag("--all-cameras", all_cameras, "Render all cameras.");
   parser.add_option(
-      "--hres,-R", trace_prms.image_size.x, "Image horizontal resolution.");
+      "--hres,-R", trace_prms.resolution.x, "Image horizontal resolution.");
   parser.add_option(
-      "--vres,-r", trace_prms.image_size.y, "Image vertical resolution.");
-  parser.add_option(
-      "--samples,-s", trace_prms.num_samples, "Number of samples.");
-  parser.add_option("--tracer,-t", trace_prms.sampler_type, "Trace type.")
+      "--vres,-r", trace_prms.resolution.y, "Image vertical resolution.");
+  parser.add_option("--samples,-s", trace_prms.samples, "Number of samples.");
+  parser.add_option("--tracer,-t", trace_prms.sampler, "Trace type.")
       ->transform(CLI::IsMember(trace_sampler_type_namemap));
   parser
-      .add_option("--falsecolor,-F", trace_prms.falsecolor_type,
-          "Tracer false color type.")
+      .add_option(
+          "--falsecolor,-F", trace_prms.falsecolor, "Tracer false color type.")
       ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
   parser.add_option(
-      "--bounces", trace_prms.max_bounces, "Maximum number of bounces.");
-  parser.add_option("--clamp", trace_prms.pixel_clamp, "Final pixel clamping.");
+      "--bounces", trace_prms.bounces, "Maximum number of bounces.");
+  parser.add_option("--clamp", trace_prms.clamp, "Final pixel clamping.");
   parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");
-  parser.add_option("--seed", trace_prms.random_seed,
-      "Seed for the random number generators.");
   parser.add_option(
-      "--batch,-b", trace_prms.samples_per_batch, "Samples per batch.");
-  parser.add_flag("--env-hidden,!--no-env-hidden",
-      trace_prms.environments_hidden, "Environments are hidden in renderer");
+      "--seed", trace_prms.seed, "Seed for the random number generators.");
+  parser.add_option("--batch,-b", trace_prms.batch, "Samples per batch.");
+  parser.add_flag("--env-hidden,!--no-env-hidden", trace_prms.envhidden,
+      "Environments are hidden in renderer");
   parser.add_option("--save-batch", save_batch, "Save images progressively");
   parser.add_option("--exposure,-e", tonemap_prms.exposure, "Hdr exposure");
   parser.add_flag("--filmic,!--no-filmic", tonemap_prms.filmic, "Hdr filmic");
@@ -163,7 +161,7 @@ int main(int argc, char* argv[]) {
   if ((lights.instances.empty() && lights.environments.empty()) &&
       is_sampler_lit(trace_prms)) {
     print_info("no lights presents, switching to eyelight shader");
-    trace_prms.sampler_type = trace_sampler_type::eyelight;
+    trace_prms.sampler = trace_sampler_type::eyelight;
   }
 
   // cameras to render from
@@ -173,36 +171,35 @@ int main(int argc, char* argv[]) {
       selected_cameras.push_back(i);
     }
   } else {
-    selected_cameras.push_back(trace_prms.camera_id);
+    selected_cameras.push_back(trace_prms.camera);
   }
 
   // render all selected cameras
   for (auto camera_id : selected_cameras) {
     // set camera
-    trace_prms.camera_id = camera_id;
+    trace_prms.camera = camera_id;
 
     // allocate buffers
     auto image_size = camera_image_size(
-        scene.cameras[trace_prms.camera_id], trace_prms.image_size);
+        scene.cameras[trace_prms.camera], trace_prms.resolution);
     auto render = image{image_size, zero4f};
     auto state  = trace_state{};
-    init_trace_state(state, image_size, trace_prms.random_seed);
+    init_trace_state(state, image_size, trace_prms.seed);
 
     // render
-    for (auto sample = 0; sample < trace_prms.num_samples;
-         sample += trace_prms.samples_per_batch) {
-      auto nsamples = min(
-          trace_prms.samples_per_batch, trace_prms.num_samples - sample);
+    for (auto sample = 0; sample < trace_prms.samples;
+         sample += trace_prms.batch) {
+      auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
       {
-        auto timer = print_timed(
-            "rendering cam" + to_string(trace_prms.camera_id) + " at " +
-            pad_left(to_string(sample), 4) + " " +
-            pad_left(to_string(trace_prms.num_samples), 4));
+        auto timer = print_timed("rendering cam" +
+                                 to_string(trace_prms.camera) + " at " +
+                                 pad_left(to_string(sample), 4) + " " +
+                                 pad_left(to_string(trace_prms.samples), 4));
         trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
       }
       if (save_batch) {
         auto outfilename = get_noextension(imfilename) + ".cam" +
-                           to_string(trace_prms.camera_id) + ".s" +
+                           to_string(trace_prms.camera) + ".s" +
                            pad_left(to_string(sample + nsamples), 4, '0') +
                            "." + get_extension(imfilename);
         try {
@@ -222,7 +219,7 @@ int main(int argc, char* argv[]) {
       auto outfilename = imfilename;
       if (all_cameras) {
         outfilename = get_noextension(imfilename) + ".cam" +
-                      to_string(trace_prms.camera_id) + "." +
+                      to_string(trace_prms.camera) + "." +
                       get_extension(imfilename);
       }
       auto timer = print_timed("saving image");

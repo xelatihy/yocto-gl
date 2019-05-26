@@ -146,10 +146,10 @@ void update_app_render(const string& filename, image<vec4f>& render,
     int preview_ratio, atomic<bool>& stop, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue) {
   auto preview_options = trace_prms;
-  preview_options.image_size /= preview_ratio;
-  preview_options.num_samples = 1;
-  auto small_preview   = trace_image(scene, bvh, lights, preview_options);
-  auto display_preview = small_preview;
+  preview_options.resolution /= preview_ratio;
+  preview_options.samples = 1;
+  auto small_preview      = trace_image(scene, bvh, lights, preview_options);
+  auto display_preview    = small_preview;
   tonemap(display_preview, small_preview, tonemap_prms);
   for (auto j = 0; j < preview.size().y; j++) {
     for (auto i = 0; i < preview.size().x; i++) {
@@ -161,19 +161,19 @@ void update_app_render(const string& filename, image<vec4f>& render,
   queue.push({{0, 0}, {0, 0}});
   current_sample = 0;
 
-  auto& camera     = scene.cameras.at(trace_prms.camera_id);
-  auto  image_size = camera_image_size(camera, trace_prms.image_size);
+  auto& camera     = scene.cameras.at(trace_prms.camera);
+  auto  image_size = camera_image_size(camera, trace_prms.resolution);
   state            = trace_state{};
-  init_trace_state(state, image_size, trace_prms.random_seed);
+  init_trace_state(state, image_size, trace_prms.seed);
   auto regions = vector<image_region>{};
-  make_imregions(regions, render.size(), trace_prms.region_size, true);
+  make_imregions(regions, render.size(), trace_prms.region, true);
 
-  for (auto sample = 0; sample < trace_prms.num_samples;
-       sample += trace_prms.samples_per_batch) {
+  for (auto sample = 0; sample < trace_prms.samples;
+       sample += trace_prms.batch) {
     if (stop) return;
     current_sample   = sample;
     auto num_samples = min(
-        trace_prms.samples_per_batch, trace_prms.num_samples - current_sample);
+        trace_prms.batch, trace_prms.samples - current_sample);
     parallel_foreach(
         regions,
         [num_samples, &trace_prms, &tonemap_prms, &render, &display, &scene,
@@ -185,7 +185,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
         },
         &stop);
   }
-  current_sample = trace_prms.num_samples;
+  current_sample = trace_prms.samples;
 }
 
 void add_new_scene(app_state& app, const string& filename) {
@@ -267,18 +267,18 @@ void draw_glwidgets(const opengl_window& win) {
     for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
     auto trace_prms = scn.trace_prms;
     if (scn.load_done) {
-      if (draw_glcombobox(win, "camera", trace_prms.camera_id, cam_names)) {
+      if (draw_glcombobox(win, "camera", trace_prms.camera, cam_names)) {
       }
     }
-    draw_glslider(win, "width", trace_prms.image_size.x, 0, 4096);
-    draw_glslider(win, "height", trace_prms.image_size.y, 0, 4096);
-    draw_glslider(win, "nsamples", trace_prms.num_samples, 16, 4096);
+    draw_glslider(win, "width", trace_prms.resolution.x, 0, 4096);
+    draw_glslider(win, "height", trace_prms.resolution.y, 0, 4096);
+    draw_glslider(win, "nsamples", trace_prms.samples, 16, 4096);
     draw_glcombobox(
-        win, "tracer", (int&)trace_prms.sampler_type, trace_sampler_names);
-    draw_glcombobox(win, "false color", (int&)trace_prms.falsecolor_type,
+        win, "tracer", (int&)trace_prms.sampler, trace_sampler_names);
+    draw_glcombobox(win, "false color", (int&)trace_prms.falsecolor,
         trace_falsecolor_names);
-    draw_glslider(win, "nbounces", trace_prms.max_bounces, 1, 128);
-    draw_glslider(win, "seed", (int&)trace_prms.random_seed, 0, 1000000);
+    draw_glslider(win, "nbounces", trace_prms.bounces, 1, 128);
+    draw_glslider(win, "seed", (int&)trace_prms.seed, 0, 1000000);
     draw_glslider(win, "pratio", scn.preview_ratio, 1, 64);
     auto tonemap_prms = scn.tonemap_prms;
     draw_glslider(win, "exposure", tonemap_prms.exposure, -5, 5);
@@ -447,8 +447,7 @@ void load_element(
     load_shape(get_dirname(filename) + subdiv.uri, subdiv.points, subdiv.lines,
         subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
         subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius,
-        subdiv.facevarying);
+        subdiv.texcoords, subdiv.colors, subdiv.radius, subdiv.facevarying);
     tesselate_subdiv(scene, scene.subdivs[index]);
   } else {
     throw runtime_error("unsupported type "s + type.name());
@@ -593,8 +592,8 @@ void update(const opengl_window& win, app_state& app) {
           task.result.get();
           scn.load_done  = true;
           scn.image_size = camera_image_size(
-              scn.scene.cameras[scn.trace_prms.camera_id],
-              scn.trace_prms.image_size);
+              scn.scene.cameras[scn.trace_prms.camera],
+              scn.trace_prms.resolution);
           scn.render.resize(scn.image_size);
           scn.display.resize(scn.image_size);
           scn.preview.resize(scn.image_size);
@@ -681,7 +680,7 @@ void update(const opengl_window& win, app_state& app) {
           task.result.get();
           scn.render_done = true;
           log_glinfo(win, "done rendering " + scn.filename);
-          scn.render_sample = scn.trace_prms.num_samples;
+          scn.render_sample = scn.trace_prms.samples;
           scn.name          = get_filename(scn.filename) + " [" +
                      to_string(scn.render.size()) + " @ " +
                      to_string(scn.render_sample) + "]";
@@ -755,12 +754,12 @@ void update(const opengl_window& win, app_state& app) {
         log_glinfo(win, "start rendering " + scn.filename);
         scn.render_done = false;
         scn.image_size  = camera_image_size(
-            scn.scene.cameras[scn.trace_prms.camera_id],
-            scn.trace_prms.image_size);
+            scn.scene.cameras[scn.trace_prms.camera],
+            scn.trace_prms.resolution);
         if (scn.lights.instances.empty() && scn.lights.environments.empty() &&
             is_sampler_lit(scn.trace_prms)) {
           log_glinfo(win, "no lights presents, switching to eyelight shader");
-          scn.trace_prms.sampler_type = trace_sampler_type::eyelight;
+          scn.trace_prms.sampler = trace_sampler_type::eyelight;
         }
         scn.render_sample = 0;
         scn.name          = get_filename(scn.filename) + " [" +
@@ -818,8 +817,8 @@ void run_ui(app_state& app) {
     if (app.selected >= 0 && app.scenes[app.selected].load_done &&
         (mouse_left || mouse_right) && !alt_down && !widgets_active) {
       auto& scn        = app.scenes[app.selected];
-      auto& old_camera = scn.scene.cameras.at(scn.trace_prms.camera_id);
-      auto  camera     = scn.scene.cameras.at(scn.trace_prms.camera_id);
+      auto& old_camera = scn.scene.cameras.at(scn.trace_prms.camera);
+      auto  camera     = scn.scene.cameras.at(scn.trace_prms.camera);
       auto  dolly      = 0.0f;
       auto  pan        = zero2f;
       auto  rotate     = zero2f;
@@ -833,7 +832,7 @@ void run_ui(app_state& app) {
           camera.focus != old_camera.focus) {
         scn.task_queue.emplace_back(app_task_type::apply_edit,
             app_edit{
-                typeid(yocto_camera), scn.trace_prms.camera_id, camera, false});
+                typeid(yocto_camera), scn.trace_prms.camera, camera, false});
       }
     }
 
@@ -845,7 +844,7 @@ void run_ui(app_state& app) {
           mouse_pos, scn.image_center, scn.image_scale, scn.render.size());
       if (ij.x >= 0 && ij.x < scn.render.size().x && ij.y >= 0 &&
           ij.y < scn.render.size().y) {
-        auto& camera = scn.scene.cameras.at(scn.trace_prms.camera_id);
+        auto& camera = scn.scene.cameras.at(scn.trace_prms.camera);
         auto  ray    = eval_camera(
             camera, ij, scn.render.size(), {0.5f, 0.5f}, zero2f);
         if (auto isec = intersect_bvh(scn.bvh, ray); isec.hit) {
@@ -871,9 +870,9 @@ void run_ui(app_state& app) {
 int main(int argc, char* argv[]) {
   // application
   app_state app{};
-  app.trace_prms.samples_per_batch = 1;
-  auto no_parallel                 = false;
-  auto filenames                   = vector<string>{};
+  app.trace_prms.batch = 1;
+  auto no_parallel     = false;
+  auto filenames       = vector<string>{};
 
   // names for enums
   auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
@@ -890,27 +889,25 @@ int main(int argc, char* argv[]) {
 
   // parse command line
   auto parser = CLI::App{"progressive path tracing"};
-  parser.add_option("--camera", app.trace_prms.camera_id, "Camera index.");
+  parser.add_option("--camera", app.trace_prms.camera, "Camera index.");
   parser.add_option(
-      "--hres,-R", app.trace_prms.image_size.x, "Image horizontal resolution.");
+      "--hres,-R", app.trace_prms.resolution.x, "Image horizontal resolution.");
   parser.add_option(
-      "--vres,-r", app.trace_prms.image_size.y, "Image vertical resolution.");
+      "--vres,-r", app.trace_prms.resolution.y, "Image vertical resolution.");
   parser.add_option(
-      "--samples,-s", app.trace_prms.num_samples, "Number of samples.");
-  parser.add_option("--tracer,-t", app.trace_prms.sampler_type, "Tracer type.")
+      "--samples,-s", app.trace_prms.samples, "Number of samples.");
+  parser.add_option("--tracer,-t", app.trace_prms.sampler, "Tracer type.")
       ->transform(CLI::IsMember(trace_sampler_type_namemap));
   parser
-      .add_option("--falsecolor,-F", app.trace_prms.falsecolor_type,
+      .add_option("--falsecolor,-F", app.trace_prms.falsecolor,
           "Tracer false color type.")
       ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
   parser.add_option(
-      "--bounces", app.trace_prms.max_bounces, "Maximum number of bounces.");
+      "--bounces", app.trace_prms.bounces, "Maximum number of bounces.");
+  parser.add_option("--clamp", app.trace_prms.clamp, "Final pixel clamping.");
   parser.add_option(
-      "--clamp", app.trace_prms.pixel_clamp, "Final pixel clamping.");
-  parser.add_option("--seed", app.trace_prms.random_seed,
-      "Seed for the random number generators.");
-  parser.add_flag("--env-hidden,!--no-env-hidden",
-      app.trace_prms.environments_hidden,
+      "--seed", app.trace_prms.seed, "Seed for the random number generators.");
+  parser.add_flag("--env-hidden,!--no-env-hidden", app.trace_prms.envhidden,
       "Environments are hidden in renderer");
   parser.add_flag(
       "--parallel,!--no-parallel", no_parallel, "Disable parallel execution.");

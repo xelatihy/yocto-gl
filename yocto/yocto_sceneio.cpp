@@ -246,8 +246,7 @@ void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
     load_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines,
         subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
         subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius,
-        subdiv.facevarying);
+        subdiv.texcoords, subdiv.colors, subdiv.radius, subdiv.facevarying);
   }
 }
 
@@ -922,8 +921,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
         fs, "catmull_clark", subdiv.catmull_clark, def_subdiv.catmull_clark);
     write_opt(fs, "compute_normals", subdiv.compute_normals,
         def_subdiv.compute_normals);
-    write_opt(fs, "facevarying", subdiv.facevarying,
-        def_subdiv.facevarying);
+    write_opt(fs, "facevarying", subdiv.facevarying, def_subdiv.facevarying);
     write_ref(fs, "displacement_texture", subdiv.displacement_texture,
         scene.textures);
     write_opt(fs, "displacement_scale", subdiv.displacement_scale,
@@ -1009,11 +1007,10 @@ struct load_obj_scene_cb : obj_callbacks {
 
   // add object if needed
   void add_shape() {
-    auto shape               = yocto_shape{};
-    shape.uri                = oname + gname;
+    auto shape      = yocto_shape{};
+    shape.uri       = oname + gname;
     facevarying_now = params.facevarying ||
-                               shape.uri.find("[yocto::facevarying]") !=
-                                   string::npos;
+                      shape.uri.find("[yocto::facevarying]") != string::npos;
     scene.shapes.push_back(shape);
     auto instance     = yocto_instance{};
     instance.uri      = shape.uri;
@@ -2009,11 +2006,11 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
       auto gchannel = &ganm->channels[cid];
       auto path     = gchannel->target_path;
       if (sampler_map.find({gchannel->sampler, path}) == sampler_map.end()) {
-        auto gsampler  = gchannel->sampler;
-        auto animation = yocto_animation{};
-        animation.uri  = (ganm->name ? ganm->name : "anim") + to_string(aid++);
+        auto gsampler   = gchannel->sampler;
+        auto animation  = yocto_animation{};
+        animation.uri   = (ganm->name ? ganm->name : "anim") + to_string(aid++);
         animation.group = ganm->name ? ganm->name : "";
-        auto input_view           = accessor_values(gsampler->input);
+        auto input_view = accessor_values(gsampler->input);
         animation.times.resize(input_view.size());
         for (auto i = 0; i < input_view.size(); i++)
           animation.times[i] = input_view[i][0];
@@ -2808,8 +2805,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         load_shape(get_dirname(filename) + mesh.filename, shape.points,
             shape.lines, shape.triangles, shape.quads, shape.quadspos,
             shape.quadsnorm, shape.quadstexcoord, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.radius,
-            false);
+            shape.normals, shape.texcoords, shape.colors, shape.radius, false);
       } break;
       case pbrt_shape::type_t::sphere: {
         auto& sphere        = pshape.sphere;

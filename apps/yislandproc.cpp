@@ -985,7 +985,7 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
   // command line parameters
-  auto notextures  = false;
+  auto notextures     = false;
   auto mesh_filenames = true;
   auto mesh_directory = "shapes/"s;
   auto uniform_txt    = false;
@@ -1014,8 +1014,8 @@ int main(int argc, char** argv) {
   }
 
   // fix params
-  auto load_prms          = load_params();
-  auto save_prms          = save_params();
+  auto load_prms       = load_params();
+  auto save_prms       = save_params();
   load_prms.notextures = notextures;
   save_prms.notextures = notextures;
 
@@ -1070,9 +1070,9 @@ int main(int argc, char** argv) {
 
   // save scene
   try {
-    auto timer              = print_timed("saving scene");
+    auto timer           = print_timed("saving scene");
     save_prms.notextures = false;
-    save_prms.noparallel  = false;
+    save_prms.noparallel = false;
     // save_prms.ply_instances = true;
     save_scene(output, scene, save_prms);
   } catch (const std::exception& e) {

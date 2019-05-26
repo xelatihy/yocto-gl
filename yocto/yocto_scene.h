@@ -196,10 +196,10 @@ struct yocto_subdiv {
   int tesselated_shape = -1;
 
   // subdision properties
-  int  subdivision_level    = 0;
-  bool catmull_clark        = false;
-  bool compute_normals      = false;
-  bool facevarying = false;
+  int  subdivision_level = 0;
+  bool catmull_clark     = false;
+  bool compute_normals   = false;
+  bool facevarying       = false;
 
   // displacement information
   int   displacement_texture = -1;

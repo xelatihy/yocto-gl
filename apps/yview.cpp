@@ -990,8 +990,7 @@ void load_element(
     load_shape(get_dirname(filename) + subdiv.uri, subdiv.points, subdiv.lines,
         subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
         subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius,
-        subdiv.facevarying);
+        subdiv.texcoords, subdiv.colors, subdiv.radius, subdiv.facevarying);
     tesselate_subdiv(scene, scene.subdivs[index]);
   } else {
     throw std::runtime_error("unsupported type "s + type.name());
@@ -1234,7 +1233,7 @@ void run_ui(app_state& app) {
 int main(int argc, char* argv[]) {
   // initialize app
   app_state app{};
-  auto      filenames   = vector<string>{};
+  auto      filenames  = vector<string>{};
   auto      noparallel = false;
 
   // parse command line
@@ -1246,8 +1245,7 @@ int main(int argc, char* argv[]) {
       "--vres,-r", app.drawgl_prms.image_height, "Image vertical resolution.");
   parser.add_flag("--eyelight,!--no-eyelight,-c", app.drawgl_prms.eyelight,
       "Eyelight rendering.");
-  parser.add_flag(
-      "--noparallel", noparallel, "Disable parallel execution.");
+  parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");
   parser.add_option("scenes", filenames, "Scene filenames")->required(true);
   try {
     parser.parse(argc, argv);

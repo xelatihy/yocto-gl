@@ -377,7 +377,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   edited.subdivision_level    = value.subdivision_level;
   edited.catmull_clark        = value.catmull_clark;
   edited.compute_normals      = value.compute_normals;
-  edited.facevarying = value.facevarying;
+  edited.facevarying          = value.facevarying;
   edited.tesselated_shape     = value.tesselated_shape;
   edited.displacement_texture = value.displacement_texture;
   edited.displacement_scale   = value.displacement_scale;
@@ -389,8 +389,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
     updated = true;
   if (draw_glcheckbox(win, "compute_normals", edited.compute_normals))
     updated = true;
-  if (draw_glcheckbox(win, "facevarying", edited.facevarying))
-    updated = true;
+  if (draw_glcheckbox(win, "facevarying", edited.facevarying)) updated = true;
   if (draw_glcombobox(win, "tesselated_shape", edited.tesselated_shape,
           scene.textures, true))
     updated = true;
