@@ -176,10 +176,9 @@ struct obj_callbacks {
 
 // Load obj params
 struct obj_params {
-  bool exit_on_error = false;
-  bool geometry_only = false;
-  bool flip_texcoord = true;
-  bool flip_tr       = true;
+  bool nomaterials = false;
+  bool fliptexcoord = true;
+  bool fliptr       = true;
 };
 
 // Load obj scene

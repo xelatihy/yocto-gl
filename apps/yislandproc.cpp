@@ -414,9 +414,7 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
   try {
     // load obj
     auto oparams          = obj_params();
-    oparams.exit_on_error = false;
-    oparams.geometry_only = true;
-    oparams.flip_texcoord = true;
+    oparams.nomaterials = true;
     auto cb               = load_island_shape_callbacks{
         shapes, materials, smap, mmap, tmap, scene, filename, parent_name};
     load_obj(dirname + filename, cb, oparams);

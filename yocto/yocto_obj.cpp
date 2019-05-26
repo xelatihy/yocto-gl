@@ -128,10 +128,10 @@ void load_mtl(
       parse_value(line, material.kt);
       if (material.kt.y < 0)
         material.kt = {material.kt.x, material.kt.x, material.kt.x};
-      if (params.flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
+      if (params.fliptr) material.kt = vec3f{1, 1, 1} - material.kt;
     } else if (cmd == "Tr") {
       parse_value(line, material.op);
-      if (params.flip_tr) material.op = 1 - material.op;
+      if (params.fliptr) material.op = 1 - material.op;
     } else if (cmd == "Ns") {
       parse_value(line, material.ns);
       material.pr = pow(2 / (material.ns + 2), 1 / 4.0f);
@@ -283,7 +283,7 @@ void load_obj(
     } else if (cmd == "vt") {
       auto vert = zero2f;
       parse_value(line, vert);
-      if (params.flip_texcoord) vert.y = 1 - vert.y;
+      if (params.fliptexcoord) vert.y = 1 - vert.y;
       cb.texcoord(vert);
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
@@ -321,7 +321,7 @@ void load_obj(
       parse_value_or_empty(line, name);
       cb.smoothing(name);
     } else if (cmd == "mtllib") {
-      if (params.geometry_only) continue;
+      if (params.nomaterials) continue;
       auto mtlname = ""s;
       parse_value(line, mtlname);
       cb.mtllib(mtlname);
@@ -333,7 +333,7 @@ void load_obj(
   }
 
   // parse extensions if presents
-  if (!params.geometry_only) {
+  if (!params.nomaterials) {
     auto extname    = get_noextension(filename) + ".objx";
     auto ext_exists = exists_file(extname);
     if (ext_exists) {

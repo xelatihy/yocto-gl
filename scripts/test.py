@@ -364,7 +364,7 @@ def make_tests():
             },
             {
                 "uri": "::yocto::test-cube-subdiv::subdivs/test-cube-subdiv.obj",
-                "tesselated_shape": "shapes/test-cube-subdiv.obj",
+                "shape": "shapes/test-cube-subdiv.obj",
                 "subdivisions": 4,
                 "catmullclark": True,
                 "smooth": True,
@@ -372,10 +372,10 @@ def make_tests():
             },
             {
                 "uri": "::yocto::test-suzanne-subdiv::subdivs/test-suzanne-subdiv.obj",
-                "tesselated_shape": "shapes/test-suzanne-subdiv.obj",
+                "shape": "shapes/test-suzanne-subdiv.obj",
                 "subdivisions": 2,
                 "catmullclark": True,
-                "compute_normals": True
+                "smooth": True
             },
         ],
         "instances": [
@@ -423,7 +423,7 @@ def make_tests():
             {
                 "uri": 'environments/test-sky.yaml',
                 "emission": [2, 2, 2],
-                "emission_texture": "textures/test-sky.hdr"
+                "emission_tex": "textures/test-sky.hdr"
             }
         ]
     }
@@ -433,7 +433,7 @@ def make_tests():
             {
                 "uri": 'environments/test-sunsky.yaml',
                 "emission": [2, 2, 2],
-                "emission_texture": "textures/test-sunsky.hdr"
+                "emission_tex": "textures/test-sunsky.hdr"
             }
         ]
     }
@@ -486,21 +486,21 @@ def make_tests():
                 for instance in scene['instances']:
                     if instance['shape'] == remove_preset(shape['uri']): used = True
                 for subdiv in scene['subdivs']:
-                    if subdiv['tesselated_shape'] == remove_preset(shape['uri']): used = True
+                    if subdiv['shape'] == remove_preset(shape['uri']): used = True
                 if used: scene['shapes'] += [shape] 
             old_textures = scene['textures']
             scene['textures'] = []
             for texture in old_textures:
                 used = False
                 for material in scene['materials']:
-                    if 'emission_texture' in material and material['emission_texture'] == remove_preset(texture['uri']): used = True
+                    if 'emission_tex' in material and material['emission_tex'] == remove_preset(texture['uri']): used = True
                     if 'diffuse_tex' in material and material['diffuse_tex'] == remove_preset(texture['uri']): used = True
                     if 'normal_tex' in material and material['normal_tex'] == remove_preset(texture['uri']): used = True
                     if 'displacement_tex' in material and material['displacement_tex'] == remove_preset(texture['uri']): used = True
                 for subdiv in scene['subdivs']:
                     if 'displacement_tex' in subdiv and subdiv['displacement_tex'] == remove_preset(texture['uri']): used = True
                 for environment in scene['environments']:
-                    if environment['emission_texture'] == remove_preset(texture['uri']): used = True
+                    if environment['emission_tex'] == remove_preset(texture['uri']): used = True
                 if used: scene['textures'] += [texture] 
         # with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
         def write_yaml_objects(f, name):

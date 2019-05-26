@@ -1271,10 +1271,8 @@ static void load_obj_scene(
 
   try {
     // Parse obj
-    auto oparams          = obj_params();
-    oparams.geometry_only = false;
     auto cb               = load_obj_scene_cb{scene, params};
-    load_obj(filename, cb, oparams);
+    load_obj(filename, cb, {});
 
     // cleanup empty
     for (auto idx = 0; idx < scene.shapes.size(); idx++) {
