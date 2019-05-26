@@ -99,10 +99,9 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
 }
 
 // Draw options
-struct draw_scene_params {
-  int   camera_id        = 0;
-  int   image_width      = 1280;
-  int   image_height     = 720;
+struct drawgl_params {
+  int   camera        = 0;
+  vec2i resolution = {1280, 720};
   bool  wireframe        = false;
   bool  edges            = false;
   float edge_offset      = 0.01f;
@@ -112,15 +111,15 @@ struct draw_scene_params {
   vec3f ambient          = {0, 0, 0};
   bool  double_sided     = true;
   bool  non_rigid_frames = true;
-  float near_plane       = 0.01f;
-  float far_plane        = 10000.0f;
+  float near       = 0.01f;
+  float far        = 10000.0f;
 };
 
 // Equality operators
-inline bool operator==(const draw_scene_params& a, const draw_scene_params& b) {
+inline bool operator==(const drawgl_params& a, const drawgl_params& b) {
   return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(const draw_scene_params& a, const draw_scene_params& b) {
+inline bool operator!=(const drawgl_params& a, const drawgl_params& b) {
   return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
@@ -167,7 +166,7 @@ struct app_scene {
   // options
   load_params       load_prms   = {};
   save_params       save_prms   = {};
-  draw_scene_params drawgl_prms = {};
+  drawgl_params drawgl_prms = {};
 
   // scene
   yocto_scene scene = {};
@@ -199,7 +198,7 @@ struct app_state {
   // default options
   load_params       load_prms   = {};
   save_params       save_prms   = {};
-  draw_scene_params drawgl_prms = {};
+  drawgl_params drawgl_prms = {};
 };
 
 void add_new_scene(app_state& app, const string& filename) {
@@ -526,7 +525,7 @@ static const char* fragment =
 // Draw a shape
 void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     const yocto_instance& instance, bool highlighted,
-    const draw_scene_params& options) {
+    const drawgl_params& options) {
   auto& shape    = scene.shapes[instance.shape];
   auto& vbos     = state.shapes.at(instance.shape);
   auto& material = scene.materials[instance.material];
@@ -618,13 +617,13 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 // Display a scene
 void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     const vec4i& viewport, const app_selection& highlighted,
-    const draw_scene_params& options) {
-  auto& camera      = scene.cameras.at(options.camera_id);
+    const drawgl_params& options) {
+  auto& camera      = scene.cameras.at(options.camera);
   auto  camera_view = mat4f(inverse(camera.frame));
   auto  camera_proj = perspective_mat(
       camera_fovx(camera) * (float)viewport.w / (float)viewport.z,
-      (float)viewport.z / (float)viewport.w, options.near_plane,
-      options.far_plane);
+      (float)viewport.z / (float)viewport.w, options.near,
+      options.far);
 
   bind_glprogram(state.program);
   set_gluniform(state.program, "cam_pos", camera.frame.o);
@@ -841,11 +840,10 @@ void draw_glwidgets(const opengl_window& win) {
     for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
     auto drawgl_prms = scn.drawgl_prms;
     if (scn.load_done) {
-      if (draw_glcombobox(win, "camera", drawgl_prms.camera_id, cam_names)) {
+      if (draw_glcombobox(win, "camera", drawgl_prms.camera, cam_names)) {
       }
     }
-    draw_glslider(win, "width", drawgl_prms.image_width, 0, 4096);
-    draw_glslider(win, "height", drawgl_prms.image_height, 0, 4096);
+    draw_glslider(win, "resolution", drawgl_prms.resolution, 0, 4096);
     draw_glcheckbox(win, "eyelight", drawgl_prms.eyelight);
     continue_glline(win);
     draw_glcheckbox(win, "wireframe", drawgl_prms.wireframe);
@@ -859,12 +857,12 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glslider(win, "exposure", drawgl_prms.exposure, -10, 10);
     draw_glslider(win, "gamma", drawgl_prms.gamma, 0.1f, 4);
     draw_glcheckbox(win, "double sided", drawgl_prms.double_sided);
-    draw_glslider(win, "near", drawgl_prms.near_plane, 0.01f, 1.0f);
-    draw_glslider(win, "far", drawgl_prms.far_plane, 1000.0f, 10000.0f);
+    draw_glslider(win, "near", drawgl_prms.near, 0.01f, 1.0f);
+    draw_glslider(win, "far", drawgl_prms.far, 1000.0f, 10000.0f);
 
     if (drawgl_prms != scn.drawgl_prms) {
       scn.task_queue.emplace_back(app_task_type::apply_edit,
-          app_edit{typeid(draw_scene_params), -1, drawgl_prms, false});
+          app_edit{typeid(drawgl_params), -1, drawgl_prms, false});
     }
     end_glheader(win);
   }
@@ -922,7 +920,7 @@ void draw(const opengl_window& win) {
 }
 
 void apply_edit(const string& filename, yocto_scene& scene,
-    drawgl_lights& lights, draw_scene_params& drawgl_prms, float time,
+    drawgl_lights& lights, drawgl_params& drawgl_prms, float time,
     const string& anim_group, bool& reload_element, const app_edit& edit) {
   static auto last_time             = 0.0f;
   bool        updated_hierarchy     = false;
@@ -952,8 +950,8 @@ void apply_edit(const string& filename, yocto_scene& scene,
   } else if (type == typeid(yocto_scene_node)) {
     scene.nodes[index] = any_cast<yocto_scene_node>(data);
     updated_hierarchy  = true;
-  } else if (type == typeid(draw_scene_params)) {
-    drawgl_prms = any_cast<draw_scene_params>(data);
+  } else if (type == typeid(drawgl_params)) {
+    drawgl_prms = any_cast<drawgl_params>(data);
   } else {
     throw std::runtime_error("unsupported type "s + type.name());
   }
@@ -1182,8 +1180,8 @@ void run_ui(app_state& app) {
     if (app.selected >= 0 && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
       auto& scn        = app.scenes[app.selected];
-      auto& old_camera = scn.scene.cameras.at(scn.drawgl_prms.camera_id);
-      auto  camera     = scn.scene.cameras.at(scn.drawgl_prms.camera_id);
+      auto& old_camera = scn.scene.cameras.at(scn.drawgl_prms.camera);
+      auto  camera     = scn.scene.cameras.at(scn.drawgl_prms.camera);
       auto  dolly      = 0.0f;
       auto  pan        = zero2f;
       auto  rotate     = zero2f;
@@ -1194,7 +1192,7 @@ void run_ui(app_state& app) {
       if (camera.frame != old_camera.frame ||
           camera.focus != old_camera.focus) {
         scn.task_queue.emplace_back(app_task_type::apply_edit,
-            app_edit{typeid(yocto_camera), scn.drawgl_prms.camera_id, camera,
+            app_edit{typeid(yocto_camera), scn.drawgl_prms.camera, camera,
                 false});
       }
     }
@@ -1234,11 +1232,11 @@ int main(int argc, char* argv[]) {
 
   // parse command line
   auto parser = CLI::App{"views scenes inteactively"};
-  parser.add_option("--camera", app.drawgl_prms.camera_id, "Camera index.");
+  parser.add_option("--camera", app.drawgl_prms.camera, "Camera index.");
   parser.add_option(
-      "--hres,-R", app.drawgl_prms.image_width, "Image horizontal resolution.");
+      "--hres,-R", app.drawgl_prms.resolution.x, "Image horizontal resolution.");
   parser.add_option(
-      "--vres,-r", app.drawgl_prms.image_height, "Image vertical resolution.");
+      "--vres,-r", app.drawgl_prms.resolution.y, "Image vertical resolution.");
   parser.add_flag("--eyelight,!--no-eyelight,-c", app.drawgl_prms.eyelight,
       "Eyelight rendering.");
   parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");
