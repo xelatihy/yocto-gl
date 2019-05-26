@@ -100,8 +100,8 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
 
 // Draw options
 struct drawgl_params {
-  int   camera        = 0;
-  vec2i resolution = {1280, 720};
+  int   camera           = 0;
+  vec2i resolution       = {1280, 720};
   bool  wireframe        = false;
   bool  edges            = false;
   float edge_offset      = 0.01f;
@@ -111,8 +111,8 @@ struct drawgl_params {
   vec3f ambient          = {0, 0, 0};
   bool  double_sided     = true;
   bool  non_rigid_frames = true;
-  float near       = 0.01f;
-  float far        = 10000.0f;
+  float near             = 0.01f;
+  float far              = 10000.0f;
 };
 
 // Equality operators
@@ -164,8 +164,8 @@ struct app_scene {
   string name      = "";
 
   // options
-  load_params       load_prms   = {};
-  save_params       save_prms   = {};
+  load_params   load_prms   = {};
+  save_params   save_prms   = {};
   drawgl_params drawgl_prms = {};
 
   // scene
@@ -196,8 +196,8 @@ struct app_state {
   deque<string>    errors;
 
   // default options
-  load_params       load_prms   = {};
-  save_params       save_prms   = {};
+  load_params   load_prms   = {};
+  save_params   save_prms   = {};
   drawgl_params drawgl_prms = {};
 };
 
@@ -622,8 +622,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
   auto  camera_view = mat4f(inverse(camera.frame));
   auto  camera_proj = perspective_mat(
       camera_fovx(camera) * (float)viewport.w / (float)viewport.z,
-      (float)viewport.z / (float)viewport.w, options.near,
-      options.far);
+      (float)viewport.z / (float)viewport.w, options.near, options.far);
 
   bind_glprogram(state.program);
   set_gluniform(state.program, "cam_pos", camera.frame.o);
@@ -1192,8 +1191,8 @@ void run_ui(app_state& app) {
       if (camera.frame != old_camera.frame ||
           camera.focus != old_camera.focus) {
         scn.task_queue.emplace_back(app_task_type::apply_edit,
-            app_edit{typeid(yocto_camera), scn.drawgl_prms.camera, camera,
-                false});
+            app_edit{
+                typeid(yocto_camera), scn.drawgl_prms.camera, camera, false});
       }
     }
 
@@ -1233,8 +1232,8 @@ int main(int argc, char* argv[]) {
   // parse command line
   auto parser = CLI::App{"views scenes inteactively"};
   parser.add_option("--camera", app.drawgl_prms.camera, "Camera index.");
-  parser.add_option(
-      "--hres,-R", app.drawgl_prms.resolution.x, "Image horizontal resolution.");
+  parser.add_option("--hres,-R", app.drawgl_prms.resolution.x,
+      "Image horizontal resolution.");
   parser.add_option(
       "--vres,-r", app.drawgl_prms.resolution.y, "Image vertical resolution.");
   parser.add_flag("--eyelight,!--no-eyelight,-c", app.drawgl_prms.eyelight,

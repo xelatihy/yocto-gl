@@ -176,9 +176,9 @@ struct obj_callbacks {
 
 // Load obj params
 struct obj_params {
-  bool nomaterials  = false;
-  bool flipv = true;
-  bool fliptr       = true;
+  bool nomaterials = false;
+  bool flipv       = true;
+  bool fliptr      = true;
 };
 
 // Load obj scene
