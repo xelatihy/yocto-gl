@@ -326,9 +326,8 @@ pair<int, vec2f> sample_shape(const yocto_shape& shape,
   }
 }
 
-float sample_shape_pdf(const yocto_shape& shape,
-    const vector<float>& cdf, int element,
-    const vec2f& uv) {
+float sample_shape_pdf(const yocto_shape& shape, const vector<float>& cdf,
+    int element, const vec2f& uv) {
   // prob triangle * area triangle = area triangle mesh
   return 1 / cdf.back();
 }
@@ -724,8 +723,7 @@ pair<vec3f, bool> eval_element_tangents(
     } else {
       txty = quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w], shape.texcoords[q.x],
-          shape.texcoords[q.y], shape.texcoords[q.z], shape.texcoords[q.w],
-          uv);
+          shape.texcoords[q.y], shape.texcoords[q.z], shape.texcoords[q.w], uv);
     }
     auto tx = txty.first, ty = txty.second;
     tx     = orthonormalize(tx, norm);
@@ -759,8 +757,8 @@ pair<vec3f, bool> eval_element_tangents(
 // Shape value interpolated using barycentric coordinates
 template <typename T>
 T evaluate_shape_elem(const yocto_shape& shape,
-    const vector<vec4i>& facevarying_quads, const vector<T>& vals,
-    int element, const vec2f& uv) {
+    const vector<vec4i>& facevarying_quads, const vector<T>& vals, int element,
+    const vec2f& uv) {
   if (vals.empty()) return {};
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
@@ -769,8 +767,7 @@ T evaluate_shape_elem(const yocto_shape& shape,
     auto q = shape.quads[element];
     if (q.w == q.z)
       return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
-    return interpolate_quad(
-        vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
+    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
   } else if (!shape.lines.empty()) {
     auto l = shape.lines[element];
     return interpolate_line(vals[l.x], vals[l.y], uv.x);
@@ -780,47 +777,39 @@ T evaluate_shape_elem(const yocto_shape& shape,
     auto q = facevarying_quads[element];
     if (q.w == q.z)
       return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
-    return interpolate_quad(
-        vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
+    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
   } else {
     return {};
   }
 }
 
 // Shape values interpolated using barycentric coordinates
-vec3f eval_position(
-    const yocto_shape& shape, int element, const vec2f& uv) {
+vec3f eval_position(const yocto_shape& shape, int element, const vec2f& uv) {
   return evaluate_shape_elem(
       shape, shape.quadspos, shape.positions, element, uv);
 }
-vec3f eval_normal(
-    const yocto_shape& shape, int element, const vec2f& uv) {
+vec3f eval_normal(const yocto_shape& shape, int element, const vec2f& uv) {
   if (shape.normals.empty()) return eval_element_normal(shape, element);
-  return normalize(evaluate_shape_elem(
-      shape, shape.quadsnorm, shape.normals, element, uv));
+  return normalize(
+      evaluate_shape_elem(shape, shape.quadsnorm, shape.normals, element, uv));
 }
-vec2f eval_texcoord(
-    const yocto_shape& shape, int element, const vec2f& uv) {
+vec2f eval_texcoord(const yocto_shape& shape, int element, const vec2f& uv) {
   if (shape.texcoords.empty()) return uv;
   return evaluate_shape_elem(
       shape, shape.quadstexcoord, shape.texcoords, element, uv);
 }
-vec4f eval_color(
-    const yocto_shape& shape, int element, const vec2f& uv) {
+vec4f eval_color(const yocto_shape& shape, int element, const vec2f& uv) {
   if (shape.colors.empty()) return {1, 1, 1, 1};
   return evaluate_shape_elem(shape, {}, shape.colors, element, uv);
 }
-float eval_radius(
-    const yocto_shape& shape, int element, const vec2f& uv) {
+float eval_radius(const yocto_shape& shape, int element, const vec2f& uv) {
   if (shape.radius.empty()) return 0.001f;
   return evaluate_shape_elem(shape, {}, shape.radius, element, uv);
 }
 pair<vec3f, bool> eval_tangsp(
     const yocto_shape& shape, int element, const vec2f& uv) {
-  if (shape.tangents.empty())
-    return eval_element_tangents(shape, element, uv);
-  auto tangsp = evaluate_shape_elem(
-      shape, {}, shape.tangents, element, uv);
+  if (shape.tangents.empty()) return eval_element_tangents(shape, element, uv);
+  auto tangsp = evaluate_shape_elem(shape, {}, shape.tangents, element, uv);
   return {xyz(tangsp), tangsp.w < 0};
 }
 // Shading normals including material perturbations.
@@ -839,13 +828,12 @@ vec3f eval_perturbed_normal(const yocto_scene& scene, const yocto_shape& shape,
 // Instance values interpolated using barycentric coordinates.
 vec3f eval_position(const yocto_scene& scene, const yocto_instance& instance,
     int element, const vec2f& uv) {
-  return transform_point(instance.frame,
-      eval_position(scene.shapes[instance.shape], element, uv));
+  return transform_point(
+      instance.frame, eval_position(scene.shapes[instance.shape], element, uv));
 }
 vec3f eval_normal(const yocto_scene& scene, const yocto_instance& instance,
     int element, const vec2f& uv, bool non_rigid_frame) {
-  auto normal = eval_normal(
-      scene.shapes[instance.shape], element, uv);
+  auto normal = eval_normal(scene.shapes[instance.shape], element, uv);
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
 vec3f eval_shading_normal(const yocto_scene& scene,
@@ -856,18 +844,16 @@ vec3f eval_shading_normal(const yocto_scene& scene,
   if (!shape.points.empty()) {
     return -direction;
   } else if (!shape.lines.empty()) {
-    auto normal = eval_normal(
-        scene, instance, element, uv, non_rigid_frame);
+    auto normal = eval_normal(scene, instance, element, uv, non_rigid_frame);
     return orthonormalize(-direction, normal);
   } else if (material.normal_tex < 0) {
-    return eval_normal(
-        scene, instance, element, uv, non_rigid_frame);
+    return eval_normal(scene, instance, element, uv, non_rigid_frame);
   } else {
     auto& normal_tex = scene.textures[material.normal_tex];
-    auto  normalmap  = xyz(eval_texture(normal_tex,
-                         eval_texcoord(shape, element, uv), true)) *
-                         2 -
-                     1;
+    auto  normalmap =
+        xyz(eval_texture(normal_tex, eval_texcoord(shape, element, uv), true)) *
+            2 -
+        1;
     normalmap.y = -normalmap.y;  // flip vertical axis
     auto normal = eval_perturbed_normal(
         scene, scene.shapes[instance.shape], element, uv, normalmap);
@@ -1045,18 +1031,19 @@ float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float camera_fovx(const yocto_camera& camera) {
+vec2f camera_fov(const yocto_camera& camera) {
   assert(!camera.orthographic);
-  return 2 * atan(camera.width / (2 * camera.lens));
+  return {2 * atan(camera.width / (2 * camera.lens)),
+      2 * atan(camera.height / (2 * camera.lens))};
 }
-float camera_fovy(const yocto_camera& camera) {
+float camera_yfov(const yocto_camera& camera) {
   assert(!camera.orthographic);
   return 2 * atan(camera.height / (2 * camera.lens));
 }
 float camera_aspect(const yocto_camera& camera) {
   return camera.width / camera.height;
 }
-vec2i camera_image_size(const yocto_camera& camera, const vec2i& size_) {
+vec2i camera_resolution(const yocto_camera& camera, const vec2i& size_) {
   auto size = size_;
   if (size == zero2i) size = {1280, 720};
   if (size.x != 0 && size.y != 0) {
@@ -1074,48 +1061,57 @@ vec2i camera_image_size(const yocto_camera& camera, const vec2i& size_) {
   }
   return size;
 }
-void set_perspectivey(
-    yocto_camera& camera, float fovy, float aspect, float focus, float height) {
+void set_yperspective(
+    yocto_camera& camera, float fov, float aspect, float focus, float film) {
   camera.orthographic = false;
-  camera.width        = height * aspect;
-  camera.height       = height;
+  camera.width        = film;
+  camera.height       = film / aspect;
   camera.focus        = focus;
-  auto distance       = camera.height / (2 * tan(fovy / 2));
+  auto distance       = camera.height / (2 * tan(fov / 2));
   if (focus < float_max) {
     camera.lens = camera.focus * distance / (camera.focus + distance);
   } else {
     camera.lens = distance;
   }
 }
-void set_perspectivex(
-    yocto_camera& camera, float fovx, float aspect, float focus, float width) {
+void set_perspective(
+    yocto_camera& camera, float fov, float aspect, float focus, float film) {
   camera.orthographic = false;
-  camera.width        = width;
-  camera.height       = width / aspect;
-  camera.focus        = focus;
-  auto distance       = camera.width / (2 * tan(fovx / 2));
-  if (focus < float_max) {
-    camera.lens = camera.focus * distance / (camera.focus + distance);
+  if (aspect >= 1) {
+    camera.width  = film;
+    camera.height = film / aspect;
+    camera.focus  = focus;
+    auto distance = camera.width / (2 * tan(fov / 2));
+    if (focus < float_max) {
+      camera.lens = camera.focus * distance / (camera.focus + distance);
+    } else {
+      camera.lens = distance;
+    }
   } else {
-    camera.lens = distance;
+    camera.width  = film * aspect;
+    camera.height = film;
+    camera.focus  = focus;
+    auto distance = camera.height / (2 * tan(fov / 2));
+    if (focus < float_max) {
+      camera.lens = camera.focus * distance / (camera.focus + distance);
+    } else {
+      camera.lens = distance;
+    }
   }
 }
 
 // add missing camera
-void set_view(yocto_camera& camera, const bbox3f& bbox,
-    const vec3f& view_direction, float width, float height, float lens) {
+void set_view(
+    yocto_camera& camera, const bbox3f& bbox, const vec3f& view_direction) {
   camera.orthographic = false;
-  if (width != 0) camera.width = width;
-  if (height != 0) camera.height = height;
-  if (lens != 0) camera.lens = lens;
-  auto center      = (bbox.max + bbox.min) / 2.0f;
-  auto bbox_radius = length(bbox.max - bbox.min) / 2;
-  auto camera_dir  = (view_direction == zero3f) ? camera.frame.o - center
+  auto center         = (bbox.max + bbox.min) / 2;
+  auto bbox_radius    = length(bbox.max - bbox.min) / 2;
+  auto camera_dir     = (view_direction == zero3f) ? camera.frame.o - center
                                                : view_direction;
   if (camera_dir == zero3f) camera_dir = {0, 0, 1};
-  auto camera_fov = min(camera_fovx(camera), camera_fovy(camera));
-  if (camera_fov == 0) camera_fov = 45 * pif / 180;
-  auto camera_dist = bbox_radius / sin(camera_fov / 2);
+  auto fov = min(camera_fov(camera));
+  if (fov == 0) fov = 45 * pif / 180;
+  auto camera_dist = bbox_radius / sin(fov / 2);
   auto from        = camera_dir * (camera_dist * 1) + center;
   auto to          = center;
   auto up          = vec3f{0, 1, 0};

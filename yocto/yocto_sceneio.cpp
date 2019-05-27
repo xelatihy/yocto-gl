@@ -1889,7 +1889,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
     } else {
       auto persp      = &gcam->perspective;
       camera.aperture = 0;
-      set_perspectivey(camera, persp->yfov, persp->aspect_ratio, float_max);
+      set_yperspective(camera, persp->yfov, persp->aspect_ratio, float_max);
     }
     scene.cameras.push_back(camera);
     cmap[gcam] = (int)scene.cameras.size() - 1;
@@ -2251,7 +2251,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
     if (!camera.orthographic) {
       write_json_value(state, "type", "perspective");
       write_json_object(state, "perspective");
-      write_json_value(state, "yfov", camera_fovy(camera));
+      write_json_value(state, "yfov", camera_yfov(camera));
       write_json_value(state, "aspectRatio", camera.width / camera.height);
       write_json_value(state, "znear", 0.01f);
       write_json_pop(state);
@@ -2719,13 +2719,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto  aspect      = perspective.frameaspectratio;
         if (aspect < 0) aspect = last_film_aspect;
         if (aspect < 0) aspect = 1;
-        if (aspect >= 1) {
-          set_perspectivey(camera, radians(perspective.fov), aspect,
+        set_perspective(camera, radians(perspective.fov), aspect,
               clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
-        } else {
-          set_perspectivex(camera, radians(perspective.fov), aspect,
-              clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
-        }
       } break;
       case pbrt_camera::type_t::orthographic: {
         throw io_error("unsupported Camera type");
@@ -3311,10 +3306,10 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   auto  from       = camera.frame.o;
   auto  to         = camera.frame.o - camera.frame.z;
   auto  up         = camera.frame.y;
-  auto  image_size = camera_image_size(camera, {0, 720});
+  auto  image_size = camera_resolution(camera, {0, 720});
   write_pbrt_line(fs, "LookAt", from, to, up);
   write_pbrt_line(fs, "Camera \"perspective\" \"float fov\"",
-      camera_fovy(camera) * 180 / pif);
+      camera_fov(camera).x * 180 / pif);
 
   // save renderer
   write_text(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");

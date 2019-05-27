@@ -399,19 +399,18 @@ float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
     bool clamp_to_edge = false);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float camera_fovx(const yocto_camera& camera);
-float camera_fovy(const yocto_camera& camera);
+vec2f camera_fov(const yocto_camera& camera);
+float camera_yfov(const yocto_camera& camera);
 float camera_aspect(const yocto_camera& camera);
-vec2i camera_image_size(const yocto_camera& camera, const vec2i& size);
-void  set_perspectivey(yocto_camera& camera, float fovy, float aspect,
-     float focus, float height = 0.024f);
-void  set_perspectivex(yocto_camera& camera, float fovx, float aspect,
-     float focus, float width = 0.036f);
+vec2i camera_resolution(const yocto_camera& camera, const vec2i& size);
+void  set_yperspective(yocto_camera& camera, float fov, float aspect,
+     float focus, float film = 0.036f);
+void  set_perspective(yocto_camera& camera, float fov, float aspect,
+     float focus, float film = 0.036f);
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_view(yocto_camera& camera, const bbox3f& bbox,
-    const vec3f& view_direction = zero3f, float width = 0, float height = 0,
-    float lens = 0);
+    const vec3f& view_direction = zero3f);
 
 // Generates a ray from a camera image coordinate and lens coordinates.
 ray3f eval_camera(

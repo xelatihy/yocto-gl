@@ -1507,7 +1507,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_params& params) {
-  auto image_size = camera_image_size(
+  auto image_size = camera_resolution(
       scene.cameras.at(params.camera), params.resolution);
   auto image = yocto::image{image_size, zero4f};
   auto state = trace_state{};
@@ -1544,7 +1544,7 @@ void trace_async_start(image<vec4f>& image, trace_state& state,
     vector<future<void>>& futures, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue, const trace_params& params) {
   auto& camera     = scene.cameras.at(params.camera);
-  auto  image_size = camera_image_size(camera, params.resolution);
+  auto  image_size = camera_resolution(camera, params.resolution);
   image            = {image_size, zero4f};
   state            = trace_state{};
   init_trace_state(state, image_size, params.seed);

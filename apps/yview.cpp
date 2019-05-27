@@ -621,7 +621,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
   auto& camera      = scene.cameras.at(options.camera);
   auto  camera_view = mat4f(inverse(camera.frame));
   auto  camera_proj = perspective_mat(
-      camera_fovx(camera) * (float)viewport.w / (float)viewport.z,
+      camera_fov(camera).x * (float)viewport.w / (float)viewport.z,
       (float)viewport.z / (float)viewport.w, options.near, options.far);
 
   bind_glprogram(state.program);

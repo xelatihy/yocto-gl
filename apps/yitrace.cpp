@@ -162,7 +162,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
   current_sample = 0;
 
   auto& camera     = scene.cameras.at(trace_prms.camera);
-  auto  image_size = camera_image_size(camera, trace_prms.resolution);
+  auto  image_size = camera_resolution(camera, trace_prms.resolution);
   state            = trace_state{};
   init_trace_state(state, image_size, trace_prms.seed);
   auto regions = vector<image_region>{};
@@ -591,7 +591,7 @@ void update(const opengl_window& win, app_state& app) {
         try {
           task.result.get();
           scn.load_done  = true;
-          scn.image_size = camera_image_size(
+          scn.image_size = camera_resolution(
               scn.scene.cameras[scn.trace_prms.camera],
               scn.trace_prms.resolution);
           scn.render.resize(scn.image_size);
@@ -753,7 +753,7 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::render_image: {
         log_glinfo(win, "start rendering " + scn.filename);
         scn.render_done = false;
-        scn.image_size  = camera_image_size(
+        scn.image_size  = camera_resolution(
             scn.scene.cameras[scn.trace_prms.camera],
             scn.trace_prms.resolution);
         if (scn.lights.instances.empty() && scn.lights.environments.empty() &&
