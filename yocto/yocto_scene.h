@@ -448,9 +448,8 @@ vec3f eval_normal(const yocto_scene& scene, const yocto_instance& instance,
 vec3f eval_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element, const vec2f& uv,
     const vec3f& direction, bool non_rigid_frame = false);
-// Instance element values.
-vec3f          eval_element_normal(const yocto_scene& scene,
-             const yocto_instance& instance, int element, bool non_rigid_frame = false);
+vec3f eval_element_normal(const yocto_scene& scene,
+    const yocto_instance& instance, int element, bool non_rigid_frame = false);
 material_point eval_material(const yocto_scene& scene,
     const yocto_instance& instance, int element, const vec2f& uv);
 
