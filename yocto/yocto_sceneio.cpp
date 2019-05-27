@@ -302,7 +302,7 @@ struct yaml_callbacks {
   virtual void key_value(string_view key, string_view value) {}
 };
 
-inline void get_yaml_value(string_view str, string& value) {
+inline void parse_yvalue(string_view str, string& value) {
   skip_whitespace(str);
   if (str.empty()) throw io_error("expected string");
   if (str.front() == '"') {
@@ -311,21 +311,21 @@ inline void get_yaml_value(string_view str, string& value) {
     parse_value(str, value, false);
   }
 }
-inline void get_yaml_value(string_view str, int& value) {
+inline void parse_yvalue(string_view str, int& value) {
   skip_whitespace(str);
   parse_value(str, value);
 }
-inline void get_yaml_value(string_view str, float& value) {
+inline void parse_yvalue(string_view str, float& value) {
   skip_whitespace(str);
   parse_value(str, value);
 }
-inline void get_yaml_value(string_view str, double& value) {
+inline void parse_yvalue(string_view str, double& value) {
   skip_whitespace(str);
   parse_value(str, value);
 }
-inline void get_yaml_value(string_view str, bool& value) {
+inline void parse_yvalue(string_view str, bool& value) {
   auto values = ""s;
-  get_yaml_value(str, values);
+  parse_yvalue(str, values);
   if (values == "true" || values == "True") {
     value = true;
   } else if (values == "false" || values == "False") {
@@ -335,7 +335,7 @@ inline void get_yaml_value(string_view str, bool& value) {
   }
 }
 template <typename T>
-inline void get_yaml_value(string_view str, T* values, int N) {
+inline void parse_yvalue(string_view str, T* values, int N) {
   skip_whitespace(str);
   if (str.empty() || str.front() != '[') throw io_error("expected array");
   str.remove_prefix(1);
@@ -354,38 +354,38 @@ inline void get_yaml_value(string_view str, T* values, int N) {
   if (str.empty() || str.front() != ']') throw io_error("expected array");
   str.remove_prefix(1);
 }
-inline void get_yaml_value(string_view str, vec2f& value) {
-  return get_yaml_value(str, &value.x, 2);
+inline void parse_yvalue(string_view str, vec2f& value) {
+  return parse_yvalue(str, &value.x, 2);
 }
-inline void get_yaml_value(string_view str, vec3f& value) {
-  return get_yaml_value(str, &value.x, 3);
+inline void parse_yvalue(string_view str, vec3f& value) {
+  return parse_yvalue(str, &value.x, 3);
 }
-inline void get_yaml_value(string_view str, vec4f& value) {
-  return get_yaml_value(str, &value.x, 4);
+inline void parse_yvalue(string_view str, vec4f& value) {
+  return parse_yvalue(str, &value.x, 4);
 }
-inline void get_yaml_value(string_view str, vec2i& value) {
-  return get_yaml_value(str, &value.x, 2);
+inline void parse_yvalue(string_view str, vec2i& value) {
+  return parse_yvalue(str, &value.x, 2);
 }
-inline void get_yaml_value(string_view str, vec3i& value) {
-  return get_yaml_value(str, &value.x, 3);
+inline void parse_yvalue(string_view str, vec3i& value) {
+  return parse_yvalue(str, &value.x, 3);
 }
-inline void get_yaml_value(string_view str, vec4i& value) {
-  return get_yaml_value(str, &value.x, 4);
+inline void parse_yvalue(string_view str, vec4i& value) {
+  return parse_yvalue(str, &value.x, 4);
 }
-inline void get_yaml_value(string_view str, frame2f& value) {
-  return get_yaml_value(str, &value.x.x, 6);
+inline void parse_yvalue(string_view str, frame2f& value) {
+  return parse_yvalue(str, &value.x.x, 6);
 }
-inline void get_yaml_value(string_view str, frame3f& value) {
-  return get_yaml_value(str, &value.x.x, 12);
+inline void parse_yvalue(string_view str, frame3f& value) {
+  return parse_yvalue(str, &value.x.x, 12);
 }
-inline void get_yaml_value(string_view str, mat2f& value) {
-  return get_yaml_value(str, &value.x.x, 4);
+inline void parse_yvalue(string_view str, mat2f& value) {
+  return parse_yvalue(str, &value.x.x, 4);
 }
-inline void get_yaml_value(string_view str, mat3f& value) {
-  return get_yaml_value(str, &value.x.x, 9);
+inline void parse_yvalue(string_view str, mat3f& value) {
+  return parse_yvalue(str, &value.x.x, 9);
 }
-inline void get_yaml_value(string_view str, mat4f& value) {
-  return get_yaml_value(str, &value.x.x, 16);
+inline void parse_yvalue(string_view str, mat4f& value) {
+  return parse_yvalue(str, &value.x.x, 16);
 }
 
 struct load_yaml_params {};
@@ -483,7 +483,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
   void get_yaml_ref(
       string_view yml, int& value, unordered_map<string, int>& refs) {
     auto name = ""s;
-    get_yaml_value(yml, name);
+    parse_yvalue(yml, name);
     if (name == "") return;
     try {
       value = refs.at(name);
@@ -493,7 +493,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
   }
 
   void get_yaml_ref(string_view yml, int& value, size_t nrefs) {
-    get_yaml_value(yml, value);
+    parse_yvalue(yml, value);
     if (value < 0) return;
     if (value >= nrefs) {
       throw io_error("reference not found " + to_string(value));
@@ -550,21 +550,21 @@ struct load_yaml_scene_cb : yaml_callbacks {
       case parsing_type::camera: {
         auto& camera = scene.cameras.back();
         if (key == "uri") {
-          get_yaml_value(value, camera.uri);
+          parse_yvalue(value, camera.uri);
         } else if (key == "frame") {
-          get_yaml_value(value, camera.frame);
+          parse_yvalue(value, camera.frame);
         } else if (key == "orthographic") {
-          get_yaml_value(value, camera.orthographic);
+          parse_yvalue(value, camera.orthographic);
         } else if (key == "width") {
-          get_yaml_value(value, camera.width);
+          parse_yvalue(value, camera.width);
         } else if (key == "height") {
-          get_yaml_value(value, camera.height);
+          parse_yvalue(value, camera.height);
         } else if (key == "lens") {
-          get_yaml_value(value, camera.lens);
+          parse_yvalue(value, camera.lens);
         } else if (key == "focus") {
-          get_yaml_value(value, camera.focus);
+          parse_yvalue(value, camera.focus);
         } else if (key == "aperture") {
-          get_yaml_value(value, camera.aperture);
+          parse_yvalue(value, camera.aperture);
         } else {
           throw io_error("unknown property " + string(key));
         }
@@ -572,7 +572,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
       case parsing_type::texture: {
         auto& texture = scene.textures.back();
         if (key == "uri") {
-          get_yaml_value(value, texture.uri);
+          parse_yvalue(value, texture.uri);
           auto refname = texture.uri;
           if (is_preset_filename(refname)) {
             auto [_, nname] = get_preset_type(refname);
@@ -580,7 +580,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
           }
           tmap[refname] = (int)scene.textures.size() - 1;
         } else if (key == "filename") {
-          get_yaml_value(value, texture.uri);
+          parse_yvalue(value, texture.uri);
         } else {
           throw io_error("unknown property " + string(key));
         }
@@ -588,7 +588,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
       case parsing_type::voltexture: {
         auto& texture = scene.voltextures.back();
         if (key == "uri") {
-          get_yaml_value(value, texture.uri);
+          parse_yvalue(value, texture.uri);
           auto refname = texture.uri;
           if (is_preset_filename(refname)) {
             auto [_, nname] = get_preset_type(refname);
@@ -602,38 +602,38 @@ struct load_yaml_scene_cb : yaml_callbacks {
       case parsing_type::material: {
         auto& material = scene.materials.back();
         if (key == "uri") {
-          get_yaml_value(value, material.uri);
+          parse_yvalue(value, material.uri);
           mmap[material.uri] = (int)scene.materials.size() - 1;
         } else if (key == "emission") {
-          get_yaml_value(value, material.emission);
+          parse_yvalue(value, material.emission);
         } else if (key == "diffuse") {
-          get_yaml_value(value, material.diffuse);
+          parse_yvalue(value, material.diffuse);
         } else if (key == "metallic") {
-          get_yaml_value(value, material.metallic);
+          parse_yvalue(value, material.metallic);
         } else if (key == "specular") {
-          get_yaml_value(value, material.specular);
+          parse_yvalue(value, material.specular);
         } else if (key == "roughness") {
-          get_yaml_value(value, material.roughness);
+          parse_yvalue(value, material.roughness);
         } else if (key == "coat") {
-          get_yaml_value(value, material.coat);
+          parse_yvalue(value, material.coat);
         } else if (key == "transmission") {
-          get_yaml_value(value, material.transmission);
+          parse_yvalue(value, material.transmission);
         } else if (key == "voltransmission") {
-          get_yaml_value(value, material.voltransmission);
+          parse_yvalue(value, material.voltransmission);
         } else if (key == "volscatter") {
-          get_yaml_value(value, material.volscatter);
+          parse_yvalue(value, material.volscatter);
         } else if (key == "volemission") {
-          get_yaml_value(value, material.volemission);
+          parse_yvalue(value, material.volemission);
         } else if (key == "volanisotropy") {
-          get_yaml_value(value, material.volanisotropy);
+          parse_yvalue(value, material.volanisotropy);
         } else if (key == "volscale") {
-          get_yaml_value(value, material.volscale);
+          parse_yvalue(value, material.volscale);
         } else if (key == "opacity") {
-          get_yaml_value(value, material.opacity);
+          parse_yvalue(value, material.opacity);
         } else if (key == "coat") {
-          get_yaml_value(value, material.coat);
+          parse_yvalue(value, material.coat);
         } else if (key == "thin") {
-          get_yaml_value(value, material.thin);
+          parse_yvalue(value, material.thin);
         } else if (key == "emission_tex") {
           get_yaml_ref(value, material.emission_tex, tmap);
         } else if (key == "diffuse_tex") {
@@ -655,7 +655,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
         } else if (key == "voldensity_tex") {
           get_yaml_ref(value, material.voldensity_tex, vmap);
         } else if (key == "gltf_textures") {
-          get_yaml_value(value, material.gltf_textures);
+          parse_yvalue(value, material.gltf_textures);
         } else {
           throw io_error("unknown property " + string(key));
         }
@@ -663,7 +663,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
       case parsing_type::shape: {
         auto& shape = scene.shapes.back();
         if (key == "uri") {
-          get_yaml_value(value, shape.uri);
+          parse_yvalue(value, shape.uri);
           auto refname = shape.uri;
           if (is_preset_filename(refname)) {
             auto [_, nname] = get_preset_type(refname);
@@ -677,21 +677,21 @@ struct load_yaml_scene_cb : yaml_callbacks {
       case parsing_type::subdiv: {
         auto& subdiv = scene.subdivs.back();
         if (key == "uri") {
-          get_yaml_value(value, subdiv.uri);
+          parse_yvalue(value, subdiv.uri);
         } else if (key == "shape") {
           get_yaml_ref(value, subdiv.shape, smap);
         } else if (key == "subdivisions") {
-          get_yaml_value(value, subdiv.subdivisions);
+          parse_yvalue(value, subdiv.subdivisions);
         } else if (key == "catmullclark") {
-          get_yaml_value(value, subdiv.catmullclark);
+          parse_yvalue(value, subdiv.catmullclark);
         } else if (key == "smooth") {
-          get_yaml_value(value, subdiv.smooth);
+          parse_yvalue(value, subdiv.smooth);
         } else if (key == "facevarying") {
-          get_yaml_value(value, subdiv.facevarying);
+          parse_yvalue(value, subdiv.facevarying);
         } else if (key == "displacement_tex") {
           get_yaml_ref(value, subdiv.displacement_tex, tmap);
         } else if (key == "displacement") {
-          get_yaml_value(value, subdiv.displacement);
+          parse_yvalue(value, subdiv.displacement);
         } else {
           throw io_error("unknown property " + string(key));
         }
@@ -699,9 +699,9 @@ struct load_yaml_scene_cb : yaml_callbacks {
       case parsing_type::instance: {
         auto& instance = scene.instances.back();
         if (key == "uri") {
-          get_yaml_value(value, instance.uri);
+          parse_yvalue(value, instance.uri);
         } else if (key == "frame") {
-          get_yaml_value(value, instance.frame);
+          parse_yvalue(value, instance.frame);
         } else if (key == "shape") {
           get_yaml_ref(value, instance.shape, smap);
         } else if (key == "material") {
@@ -713,11 +713,11 @@ struct load_yaml_scene_cb : yaml_callbacks {
       case parsing_type::environment: {
         auto& environment = scene.environments.back();
         if (key == "uri") {
-          get_yaml_value(value, environment.uri);
+          parse_yvalue(value, environment.uri);
         } else if (key == "frame") {
-          get_yaml_value(value, environment.frame);
+          parse_yvalue(value, environment.frame);
         } else if (key == "emission") {
-          get_yaml_value(value, environment.emission);
+          parse_yvalue(value, environment.emission);
         } else if (key == "emission_tex") {
           get_yaml_ref(value, environment.emission_tex, tmap);
         } else {
