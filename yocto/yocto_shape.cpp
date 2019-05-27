@@ -1143,11 +1143,11 @@ pair<int, vec2f> sample_quads(
 }
 pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv) {
-  auto element_id = sample_discrete(cdf, re);
-  if (quads[element_id].z == quads[element_id].w) {
-    return {element_id, sample_triangle(ruv)};
+  auto element = sample_discrete(cdf, re);
+  if (quads[element].z == quads[element].w) {
+    return {element, sample_triangle(ruv)};
   } else {
-    return {element_id, ruv};
+    return {element, ruv};
   }
 }
 
