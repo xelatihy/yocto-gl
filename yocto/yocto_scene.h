@@ -74,8 +74,8 @@ namespace yocto {
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
-// we specify fil size (35mm by default), the focal lengthm the focus
-// distance and the lens_aperture. All values are in meters.
+// we specify fil size (35mm by default), the lens' focal length, the focus
+// distance and the lens aperture. All values are in meters.
 // Here are some common aspect ratios used in video and still photography.
 // 3:2    on 35 mm:  0.036 x 0.024
 // 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
@@ -85,14 +85,14 @@ namespace yocto {
 // To compute good apertures, one can use the F-stop number from phostography
 // and set the aperture to focal_leangth/f_stop.
 struct yocto_camera {
-    string  uri            = "";
-    frame3f frame          = identity_frame3f;
-    bool    orthographic   = false;
-    float   film_width     = 0.036f;
-    float   film_height    = 0.024f;
-    float   focal_length   = 0.050f;
-    float   focus_distance = float_max;
-    float   lens_aperture  = 0;
+  string  uri          = "";
+  frame3f frame        = identity3x4f;
+  bool    orthographic = false;
+  float   width        = 0.036f;
+  float   height       = 0.024f;
+  float   lens         = 0.050f;
+  float   focus        = float_max;
+  float   aperture     = 0;
 };
 
 // Texture containing either an LDR or HDR image. Textures are rendered
@@ -102,16 +102,16 @@ struct yocto_camera {
 // conversion can be disabled with `ldr_as_linear` for example to render
 // normal maps.
 struct yocto_texture {
-    string       uri       = "";
-    image<vec4f> hdr_image = {};
-    image<vec4b> ldr_image = {};
+  string       uri = "";
+  image<vec4f> hdr = {};
+  image<vec4b> ldr = {};
 };
 
 // Volumetric texture containing a float only volume data. See texture
 // above for other propoerties.
 struct yocto_voltexture {
-    string        uri         = "";
-    volume<float> volume_data = {};
+  string        uri    = "";
+  volume<float> volume = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -119,39 +119,39 @@ struct yocto_voltexture {
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct yocto_material {
-    string uri = "";
+  string uri = "";
 
-    // lobes
-    vec3f emission        = {0, 0, 0};
-    vec3f diffuse         = {0, 0, 0};
-    vec3f specular        = {0, 0, 0};
-    float roughness       = 0;
-    float metallic        = 0;
-    vec3f coat            = {0, 0, 0};
-    vec3f transmission    = {0, 0, 0};
-    vec3f voltransmission = {0, 0, 0};
-    vec3f volemission     = {0, 0, 0};
-    vec3f volscatter      = {0, 0, 0};
-    float volanisotropy   = 0;
-    float volscale        = 0.01;
-    float opacity         = 1;
-    bool  thin            = false;
+  // lobes
+  vec3f emission        = {0, 0, 0};
+  vec3f diffuse         = {0, 0, 0};
+  vec3f specular        = {0, 0, 0};
+  float roughness       = 0;
+  float metallic        = 0;
+  vec3f coat            = {0, 0, 0};
+  vec3f transmission    = {0, 0, 0};
+  vec3f voltransmission = {0, 0, 0};
+  vec3f volemission     = {0, 0, 0};
+  vec3f volscatter      = {0, 0, 0};
+  float volanisotropy   = 0;
+  float volscale        = 0.01;
+  float opacity         = 1;
+  bool  thin            = false;
 
-    // textures
-    int  emission_texture     = -1;
-    int  diffuse_texture      = -1;
-    int  specular_texture     = -1;
-    int  metallic_texture     = -1;
-    int  roughness_texture    = -1;
-    int  transmission_texture = -1;
-    int  subsurface_texture   = -1;
-    int  coat_texture         = -1;
-    int  opacity_texture      = -1;
-    int  normal_texture       = -1;
-    bool gltf_textures        = false;  // glTF packed textures
+  // textures
+  int  emission_tex     = -1;
+  int  diffuse_tex      = -1;
+  int  specular_tex     = -1;
+  int  metallic_tex     = -1;
+  int  roughness_tex    = -1;
+  int  transmission_tex = -1;
+  int  subsurface_tex   = -1;
+  int  coat_tex         = -1;
+  int  opacity_tex      = -1;
+  int  normal_tex       = -1;
+  bool gltf_textures    = false;  // glTF packed textures
 
-    // volume textures
-    int volume_density_texture = -1;
+  // volume textures
+  int voldensity_tex = -1;
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -159,27 +159,27 @@ struct yocto_material {
 // Additionally, we support faceavarying primitives where each verftex data
 // has its own topology.
 struct yocto_shape {
-    // shape data
-    string uri = "";
+  // shape data
+  string uri = "";
 
-    // primitives
-    vector<int>   points    = {};
-    vector<vec2i> lines     = {};
-    vector<vec3i> triangles = {};
-    vector<vec4i> quads     = {};
+  // primitives
+  vector<int>   points    = {};
+  vector<vec2i> lines     = {};
+  vector<vec3i> triangles = {};
+  vector<vec4i> quads     = {};
 
-    // face-varying primitives
-    vector<vec4i> quads_positions = {};
-    vector<vec4i> quads_normals   = {};
-    vector<vec4i> quads_texcoords = {};
+  // face-varying primitives
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
 
-    // vertex data
-    vector<vec3f> positions = {};
-    vector<vec3f> normals   = {};
-    vector<vec2f> texcoords = {};
-    vector<vec4f> colors    = {};
-    vector<float> radius    = {};
-    vector<vec4f> tangents  = {};
+  // vertex data
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -189,90 +189,87 @@ struct yocto_shape {
 // subdivision surfaces, we store here all data that we possibly may want to
 // subdivide, for later use.
 struct yocto_subdiv {
-    // shape data
-    string uri = "";
+  // shape data
+  string uri = "";
 
-    // tesselated shape
-    int tesselated_shape = -1;
+  // tesselated shape
+  int shape = -1;
 
-    // subdision properties
-    int  subdivision_level    = 0;
-    bool catmull_clark        = false;
-    bool compute_normals      = false;
-    bool preserve_facevarying = false;
+  // subdision properties
+  int  subdivisions = 0;
+  bool catmullclark = false;
+  bool smooth       = false;
+  bool facevarying  = false;
 
-    // displacement information
-    int   displacement_texture = -1;
-    float displacement_scale   = 1;
+  // displacement information
+  float displacement     = 0;
+  int   displacement_tex = -1;
 
-    // primitives
-    vector<int>   points    = {};
-    vector<vec2i> lines     = {};
-    vector<vec3i> triangles = {};
-    vector<vec4i> quads     = {};
+  // primitives
+  vector<int>   points    = {};
+  vector<vec2i> lines     = {};
+  vector<vec3i> triangles = {};
+  vector<vec4i> quads     = {};
 
-    // face-varying primitives
-    vector<vec4i> quads_positions = {};
-    vector<vec4i> quads_normals   = {};
-    vector<vec4i> quads_texcoords = {};
+  // face-varying primitives
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
 
-    // vertex data
-    vector<vec3f> positions = {};
-    vector<vec3f> normals   = {};
-    vector<vec2f> texcoords = {};
-    vector<vec4f> colors    = {};
-    vector<float> radius    = {};
+  // vertex data
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+  vector<float> radius    = {};
 };
 
 // Instance of a visible shape in the scene.
 struct yocto_instance {
-    string  uri      = "";
-    frame3f frame    = identity_frame3f;
-    int     shape    = -1;
-    int     material = -1;
+  string  uri      = "";
+  frame3f frame    = identity3x4f;
+  int     shape    = -1;
+  int     material = -1;
 };
 
 // Environment map.
 struct yocto_environment {
-    string  uri              = "";
-    frame3f frame            = identity_frame3f;
-    vec3f   emission         = {0, 0, 0};
-    int     emission_texture = -1;
+  string  uri          = "";
+  frame3f frame        = identity3x4f;
+  vec3f   emission     = {0, 0, 0};
+  int     emission_tex = -1;
 };
 
 // Node in a transform hierarchy.
 struct yocto_scene_node {
-    string        uri         = "";
-    int           parent      = -1;
-    frame3f       local       = identity_frame3f;
-    vec3f         translation = {0, 0, 0};
-    vec4f         rotation    = {0, 0, 0, 1};
-    vec3f         scale       = {1, 1, 1};
-    vector<float> weights     = {};
-    int           camera      = -1;
-    int           instance    = -1;
-    int           environment = -1;
+  string        uri         = "";
+  int           parent      = -1;
+  frame3f       local       = identity3x4f;
+  vec3f         translation = {0, 0, 0};
+  vec4f         rotation    = {0, 0, 0, 1};
+  vec3f         scale       = {1, 1, 1};
+  vector<float> weights     = {};
+  int           camera      = -1;
+  int           instance    = -1;
+  int           environment = -1;
 
-    // compute properties
-    vector<int> children = {};
+  // compute properties
+  vector<int> children = {};
 };
-
-// Keyframe type.
-enum struct yocto_interpolation_type { linear, step, bezier };
 
 // Keyframe data.
 struct yocto_animation {
-    string                   uri             = "";
-    string                   filename        = "";
-    string                   animation_group = "";
-    yocto_interpolation_type interpolation_type =
-        yocto_interpolation_type::linear;
-    vector<float>         keyframes_times         = {};
-    vector<vec3f>         translation_keyframes   = {};
-    vector<vec4f>         rotation_keyframes      = {};
-    vector<vec3f>         scale_keyframes         = {};
-    vector<vector<float>> morph_weights_keyframes = {};
-    vector<int>           node_targets            = {};
+  enum struct type_t { linear, step, bezier };
+  string                uri          = "";
+  string                filename     = "";
+  string                group        = "";
+  type_t                type         = type_t::linear;
+  vector<float>         times        = {};
+  vector<vec3f>         translations = {};
+  vector<vec4f>         rotations    = {};
+  vector<vec3f>         scales       = {};
+  vector<vector<float>> morphs       = {};
+  vector<int>           targets      = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -283,17 +280,17 @@ struct yocto_animation {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct yocto_scene {
-    string                    uri          = "";
-    vector<yocto_camera>      cameras      = {};
-    vector<yocto_shape>       shapes       = {};
-    vector<yocto_instance>    instances    = {};
-    vector<yocto_material>    materials    = {};
-    vector<yocto_texture>     textures     = {};
-    vector<yocto_environment> environments = {};
-    vector<yocto_subdiv>      subdivs      = {};
-    vector<yocto_voltexture>  voltextures  = {};
-    vector<yocto_scene_node>  nodes        = {};
-    vector<yocto_animation>   animations   = {};
+  string                    uri          = "";
+  vector<yocto_camera>      cameras      = {};
+  vector<yocto_shape>       shapes       = {};
+  vector<yocto_instance>    instances    = {};
+  vector<yocto_material>    materials    = {};
+  vector<yocto_texture>     textures     = {};
+  vector<yocto_environment> environments = {};
+  vector<yocto_subdiv>      subdivs      = {};
+  vector<yocto_voltexture>  voltextures  = {};
+  vector<yocto_scene_node>  nodes        = {};
+  vector<yocto_animation>   animations   = {};
 };
 
 }  // namespace yocto
@@ -332,8 +329,8 @@ bbox3f compute_bounds(const yocto_scene& scene);
 void compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape& shape, int subdivision_level,
-    bool catmull_clark, bool compute_normals);
+void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
+    bool compute_normals);
 void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     float scale, bool compute_normals);
 void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv);
@@ -357,15 +354,16 @@ void add_sky(yocto_scene& scene, float sun_angle = pif / 4);
 void trim_memory(yocto_scene& scene);
 
 // Checks for validity of the scene.
-void print_validation(const yocto_scene& scene, bool skip_textures = false);
+void print_validation(const yocto_scene& scene, bool notextures = false);
 
 // Build/refit the bvh acceleration structure.
 void build_bvh(
-    bvh_scene& bvh, const yocto_scene& scene, const build_bvh_params& params);
+    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params);
 void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
-    const vector<int>& updated_shapes, const build_bvh_params& params);
+    const vector<int>& updated_shapes, const bvh_params& params);
 
-// Shape values interpolated using barycentric coordinates.
+// Shape values interpolated by interpoalting vertex values of the `eid` element
+// with its barycentric coordinates `euv`.
 vec3f eval_position(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
 vec3f eval_normal(
@@ -388,8 +386,8 @@ pair<vec3f, bool> eval_element_tangents(
 // Sample a shape element based on area/length.
 void             sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf);
 pair<int, vec2f> sample_shape(const yocto_shape& shape,
-    const vector<float>& elem_cdf, float re, const vec2f& ruv);
-float sample_shape_pdf(const yocto_shape& shape, const vector<float>& elem_cdf,
+    const vector<float>& cdf, float re, const vec2f& ruv);
+float sample_shape_pdf(const yocto_shape& shape, const vector<float>& cdf,
     int element_id, const vec2f& element_uv);
 
 // Evaluate a texture.
@@ -418,7 +416,7 @@ void  set_perspectivex(yocto_camera& camera, float fovx, float aspect,
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_view(yocto_camera& camera, const bbox3f& bbox,
     const vec3f& view_direction = zero3f, float width = 0, float height = 0,
-    float focal = 0);
+    float lens = 0);
 
 // Generates a ray from a camera image coordinate and lens coordinates.
 ray3f eval_camera(
@@ -435,18 +433,18 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Material values packed into a convenience structure.
 struct material_point {
-    vec3f emission      = {0, 0, 0};
-    vec3f diffuse       = {0, 0, 0};
-    vec3f specular      = {0, 0, 0};
-    vec3f coat          = {0, 0, 0};
-    vec3f transmission  = {0, 0, 0};
-    float roughness     = 0;
-    vec3f voldensity    = {0, 0, 0};
-    vec3f volemission   = {0, 0, 0};
-    vec3f volscatter    = {0, 0, 0};
-    float volanisotropy = 0;
-    float opacity       = 1;
-    bool  thin          = false;
+  vec3f emission      = {0, 0, 0};
+  vec3f diffuse       = {0, 0, 0};
+  vec3f specular      = {0, 0, 0};
+  vec3f coat          = {0, 0, 0};
+  vec3f transmission  = {0, 0, 0};
+  float roughness     = 0;
+  vec3f voldensity    = {0, 0, 0};
+  vec3f volemission   = {0, 0, 0};
+  vec3f volscatter    = {0, 0, 0};
+  float volanisotropy = 0;
+  float opacity       = 1;
+  bool  thin          = false;
 };
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord,
@@ -529,57 +527,57 @@ namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
 inline int keyframe_index(const vector<float>& times, const float& time) {
-    for (auto i = 0; i < times.size(); i++)
-        if (times[i] > time) return i;
-    return (int)times.size();
+  for (auto i = 0; i < times.size(); i++)
+    if (times[i] > time) return i;
+  return (int)times.size();
 }
 
 // Evaluates a keyframed value using step interpolation.
 template <typename T>
 inline T keyframe_step(
     const vector<float>& times, const vector<T>& vals, float time) {
-    if (time <= times.front()) return vals.front();
-    if (time >= times.back()) return vals.back();
-    time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = keyframe_index(times, time);
-    return vals.at(idx - 1);
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  return vals.at(idx - 1);
 }
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
 inline vec4f keyframe_slerp(
     const vector<float>& times, const vector<vec4f>& vals, float time) {
-    if (time <= times.front()) return vals.front();
-    if (time >= times.back()) return vals.back();
-    time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = keyframe_index(times, time);
-    auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-    return slerp(vals.at(idx - 1), vals.at(idx), t);
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+  return slerp(vals.at(idx - 1), vals.at(idx), t);
 }
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
 inline T keyframe_linear(
     const vector<float>& times, const vector<T>& vals, float time) {
-    if (time <= times.front()) return vals.front();
-    if (time >= times.back()) return vals.back();
-    time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = keyframe_index(times, time);
-    auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-    return vals.at(idx - 1) * (1 - t) + vals.at(idx) * t;
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+  return vals.at(idx - 1) * (1 - t) + vals.at(idx) * t;
 }
 
 // Evaluates a keyframed value using Bezier interpolation.
 template <typename T>
 inline T keyframe_bezier(
     const vector<float>& times, const vector<T>& vals, float time) {
-    if (time <= times.front()) return vals.front();
-    if (time >= times.back()) return vals.back();
-    time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = keyframe_index(times, time);
-    auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-    return interpolate_bezier(
-        vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+  return interpolate_bezier(
+      vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
 }  // namespace yocto

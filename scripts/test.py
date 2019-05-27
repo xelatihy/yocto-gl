@@ -60,67 +60,67 @@ def make_tests():
         "cameras": [
             {
                 "uri": "cameras/default.yaml",
-                "focal_length": 0.05,
-                "lens_aperture": 0.0,
-                "film_width": 0.036,
-                "film_height": 0.015,
-                "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
+                "lens": 0.05,
+                "aperture": 0.0,
+                "width": 0.036,
+                "height": 0.015,
+                "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
                 "uri": "cameras/front.yaml",
-                "focal_length": 0.05,
-                "lens_aperture": 0.0,
-                "film_width": 0.036,
-                "film_height": 0.012,
-                "focus_distance": distance([0, 0.575, 0.14], [0, 0.05, 0]),
+                "lens": 0.05,
+                "aperture": 0.0,
+                "width": 0.036,
+                "height": 0.012,
+                "focus": distance([0, 0.575, 0.14], [0, 0.05, 0]),
                 "frame": lookat([0, 0.575, 1.4], [0, 0.05, 0], [0,1,0])
             },
             {
                 "uri": "cameras/back.yaml",
-                "focal_length": 0.05,
-                "lens_aperture": 0.0,
-                "film_width": 0.036,
-                "film_height": 0.012,
-                "focus_distance": distance([0, 0.575, -0.14], [0, 0.05, 0]),
+                "lens": 0.05,
+                "aperture": 0.0,
+                "width": 0.036,
+                "height": 0.012,
+                "focus": distance([0, 0.575, -0.14], [0, 0.05, 0]),
                 "frame": lookat([0, 0.575, -1.4], [0, 0.05, 0], [0,1,0])
             },
             {
                 "uri": "cameras/perspective-sharp.yaml",
-                "focal_length": 0.05,
-                "lens_aperture": 0.0,
-                "film_width": 0.036,
-                "film_height": 0.015,
-                "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
+                "lens": 0.05,
+                "aperture": 0.0,
+                "width": 0.036,
+                "height": 0.015,
+                "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
                 "uri": "cameras/perspective-dof.yaml",
-                "focal_length": 0.05,
-                "lens_aperture": 0.025,
-                "film_width": 0.036,
-                "film_height": 0.015,
-                "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
+                "lens": 0.05,
+                "aperture": 0.025,
+                "width": 0.036,
+                "height": 0.015,
+                "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
                 "uri": "cameras/orthographic-sharp.yaml",
-                "focal_length": 0.05,
-                "lens_aperture": 0.0,
-                "film_width": 0.036,
-                "film_height": 0.015,
+                "lens": 0.05,
+                "aperture": 0.0,
+                "width": 0.036,
+                "height": 0.015,
                 "orthographic": True,
-                "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
+                "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
             {
                 "uri": "cameras/orthographic-dof.yaml",
-                "focal_length": 0.05,
-                "lens_aperture": 0.02,
-                "film_width": 0.036,
-                "film_height": 0.015,
+                "lens": 0.05,
+                "aperture": 0.02,
+                "width": 0.036,
+                "height": 0.015,
                 "orthographic": True,
-                "focus_distance": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
+                "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
         ],
@@ -151,14 +151,14 @@ def make_tests():
             {
                 "uri": "materials/test-floor.yaml",
                 "diffuse": [ 0.7, 0.7, 0.7 ],
-                "diffuse_texture": "textures/test-floor.png"
+                "diffuse_tex": "textures/test-floor.png"
             },
             {
                 "uri": "materials/test-uvgrid.yaml",
                 "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 1, 1, 1 ],
                 "roughness": 0.1,
-                "diffuse_texture": "textures/test-uvgrid.png"
+                "diffuse_tex": "textures/test-uvgrid.png"
             },
             {
                 "uri": "materials/test-matte.yaml",
@@ -194,14 +194,14 @@ def make_tests():
                 "specular": [0.04, 0.04, 0.04],
                 "diffuse": [ 0.5, 0.5, 0.7 ],
                 "roughness": 0.01,
-                "normal_texture": "textures/test-bumps-normal.png"
+                "normal_tex": "textures/test-bumps-normal.png"
             },
             {
                 "uri": "materials/test-metal-sharp-bumped.yaml",
                 "metallic": 1,
                 "diffuse": [ 0.7, 0.7, 0.7 ],
                 "roughness": 0,
-                "normal_texture": "textures/test-bumps-normal.png"
+                "normal_tex": "textures/test-bumps-normal.png"
             },
             {
                 "uri": "materials/test-plastic-rough-coated.yaml",
@@ -357,25 +357,25 @@ def make_tests():
         "subdivs": [
             {
                 "uri": "::yocto::test-sphere-displaced::subdivs/test-sphere-displaced.obj",
-                "tesselated_shape": "shapes/test-sphere-displaced.obj",
-                "preserve_facevarying": True,
-                "displacement_texture": "textures/test-fbm-displacement.png",
-                "displacement_scale": 0.025
+                "shape": "shapes/test-sphere-displaced.obj",
+                "facevarying": True,
+                "displacement": 0.025,
+                "displacement_tex": "textures/test-fbm-displacement.png"
             },
             {
                 "uri": "::yocto::test-cube-subdiv::subdivs/test-cube-subdiv.obj",
-                "tesselated_shape": "shapes/test-cube-subdiv.obj",
-                "subdivision_level": 4,
-                "catmull_clark": True,
-                "compute_normals": True,
-                "preserve_facevarying": True
+                "shape": "shapes/test-cube-subdiv.obj",
+                "subdivisions": 4,
+                "catmullclark": True,
+                "smooth": True,
+                "facevarying": True
             },
             {
                 "uri": "::yocto::test-suzanne-subdiv::subdivs/test-suzanne-subdiv.obj",
-                "tesselated_shape": "shapes/test-suzanne-subdiv.obj",
-                "subdivision_level": 2,
-                "catmull_clark": True,
-                "compute_normals": True
+                "shape": "shapes/test-suzanne-subdiv.obj",
+                "subdivisions": 2,
+                "catmullclark": True,
+                "smooth": True
             },
         ],
         "instances": [
@@ -423,7 +423,7 @@ def make_tests():
             {
                 "uri": 'environments/test-sky.yaml',
                 "emission": [2, 2, 2],
-                "emission_texture": "textures/test-sky.hdr"
+                "emission_tex": "textures/test-sky.hdr"
             }
         ]
     }
@@ -433,7 +433,7 @@ def make_tests():
             {
                 "uri": 'environments/test-sunsky.yaml',
                 "emission": [2, 2, 2],
-                "emission_texture": "textures/test-sunsky.hdr"
+                "emission_tex": "textures/test-sunsky.hdr"
             }
         ]
     }
@@ -486,21 +486,21 @@ def make_tests():
                 for instance in scene['instances']:
                     if instance['shape'] == remove_preset(shape['uri']): used = True
                 for subdiv in scene['subdivs']:
-                    if subdiv['tesselated_shape'] == remove_preset(shape['uri']): used = True
+                    if subdiv['shape'] == remove_preset(shape['uri']): used = True
                 if used: scene['shapes'] += [shape] 
             old_textures = scene['textures']
             scene['textures'] = []
             for texture in old_textures:
                 used = False
                 for material in scene['materials']:
-                    if 'emission_texture' in material and material['emission_texture'] == remove_preset(texture['uri']): used = True
-                    if 'diffuse_texture' in material and material['diffuse_texture'] == remove_preset(texture['uri']): used = True
-                    if 'normal_texture' in material and material['normal_texture'] == remove_preset(texture['uri']): used = True
-                    if 'displacement_texture' in material and material['displacement_texture'] == remove_preset(texture['uri']): used = True
+                    if 'emission_tex' in material and material['emission_tex'] == remove_preset(texture['uri']): used = True
+                    if 'diffuse_tex' in material and material['diffuse_tex'] == remove_preset(texture['uri']): used = True
+                    if 'normal_tex' in material and material['normal_tex'] == remove_preset(texture['uri']): used = True
+                    if 'displacement_tex' in material and material['displacement_tex'] == remove_preset(texture['uri']): used = True
                 for subdiv in scene['subdivs']:
-                    if 'displacement_texture' in subdiv and subdiv['displacement_texture'] == remove_preset(texture['uri']): used = True
+                    if 'displacement_tex' in subdiv and subdiv['displacement_tex'] == remove_preset(texture['uri']): used = True
                 for environment in scene['environments']:
-                    if environment['emission_texture'] == remove_preset(texture['uri']): used = True
+                    if environment['emission_tex'] == remove_preset(texture['uri']): used = True
                 if used: scene['textures'] += [texture] 
         # with open(f'tests/{name}.json', 'wt') as f: json.dump(scene, f, indent=4)
         def write_yaml_objects(f, name):

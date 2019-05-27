@@ -104,32 +104,32 @@ const int bvh_max_prims = 4;
 // indices refer to primitives for leaf nodes or other nodes for internal
 // nodes. See bvh_scene_data for more details.
 struct bvh_node {
-    bbox3f bbox;
-    short  num_primitives;
-    bool   is_internal;
-    byte   split_axis;
-    int    primitive_ids[bvh_max_prims];
+  bbox3f bbox;
+  short  num;
+  bool   internal;
+  byte   axis;
+  int    prims[bvh_max_prims];
 };
 
 // BVH array view
 template <typename T>
 struct bvh_array_view {
-    bvh_array_view() : ptr{nullptr}, count{0} {}
-    bvh_array_view(const T* ptr, int count) : ptr{ptr}, count{count} {}
-    bvh_array_view(const vector<T>& vec)
-        : ptr{vec.data()}, count{(int)vec.size()} {}
+  bvh_array_view() : ptr{nullptr}, count{0} {}
+  bvh_array_view(const T* ptr, int count) : ptr{ptr}, count{count} {}
+  bvh_array_view(const vector<T>& vec)
+      : ptr{vec.data()}, count{(int)vec.size()} {}
 
-    bool empty() const { return count == 0; }
-    int  size() const { return count; }
+  bool empty() const { return count == 0; }
+  int  size() const { return count; }
 
-    const T& operator[](int idx) const { return ptr[idx]; }
-    const T* data() const { return ptr; }
-    const T* begin() const { return ptr; }
-    const T* end() const { return ptr + count; }
+  const T& operator[](int idx) const { return ptr[idx]; }
+  const T* data() const { return ptr; }
+  const T* begin() const { return ptr; }
+  const T* end() const { return ptr + count; }
 
-   private:
-    const T* ptr   = nullptr;
-    int      count = 0;
+ private:
+  const T* ptr   = nullptr;
+  int      count = 0;
 };
 
 // BVH tree stored as a node array with the tree structure is encoded using
@@ -137,94 +137,94 @@ struct bvh_array_view {
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Applicxation data is not stored explicitly.
 struct bvh_shape {
-    // elements
-    bvh_array_view<int>   points          = {};
-    bvh_array_view<vec2i> lines           = {};
-    bvh_array_view<vec3i> triangles       = {};
-    bvh_array_view<vec4i> quads           = {};
-    bvh_array_view<vec4i> quads_positions = {};
+  // elements
+  bvh_array_view<int>   points    = {};
+  bvh_array_view<vec2i> lines     = {};
+  bvh_array_view<vec3i> triangles = {};
+  bvh_array_view<vec4i> quads     = {};
+  bvh_array_view<vec4i> quadspos  = {};
 
-    // vertices
-    bvh_array_view<vec3f> positions = {};
-    bvh_array_view<float> radius    = {};
+  // vertices
+  bvh_array_view<vec3f> positions = {};
+  bvh_array_view<float> radius    = {};
 
-    // nodes
-    vector<bvh_node> nodes;
+  // nodes
+  vector<bvh_node> nodes;
 
 #if YOCTO_EMBREE
-    // Embree opaque data
-    void* embree_bvh       = nullptr;
-    bool  embree_flattened = false;
-    // Cleanup for embree data
-    ~bvh_shape();
+  // Embree opaque data
+  void* embree_bvh       = nullptr;
+  bool  embree_flattened = false;
+  // Cleanup for embree data
+  ~bvh_shape();
 #endif
 };
 
 // BVH array view
 template <typename T>
 struct bvh_strided_view {
-    bvh_strided_view() : ptr{nullptr}, count{0}, stride{0} {}
-    bvh_strided_view(const void* ptr, int count, int stride)
-        : ptr{ptr}, count{count}, stride{stride} {}
+  bvh_strided_view() : ptr{nullptr}, count{0}, stride{0} {}
+  bvh_strided_view(const void* ptr, int count, int stride)
+      : ptr{ptr}, count{count}, stride{stride} {}
 
-    bool empty() const { return count == 0; }
-    int  size() const { return count; }
+  bool empty() const { return count == 0; }
+  int  size() const { return count; }
 
-    const T& operator[](int idx) const {
-        return *(const T*)((const char*)ptr + (size_t)idx * (size_t)stride);
-    }
+  const T& operator[](int idx) const {
+    return *(const T*)((const char*)ptr + (size_t)idx * (size_t)stride);
+  }
 
-   private:
-    const void* ptr    = nullptr;
-    int         count  = 0;
-    int         stride = 0;
+ private:
+  const void* ptr    = nullptr;
+  int         count  = 0;
+  int         stride = 0;
 };
 
 // Instance for a scene BVH.
 struct bvh_instance {
-    frame3f frame = identity_frame3f;
-    int     shape = -1;
+  frame3f frame = identity3x4f;
+  int     shape = -1;
 };
 
 struct bvh_scene {
-    // instances
-    bvh_strided_view<bvh_instance> instances = {};
+  // instances
+  bvh_strided_view<bvh_instance> instances = {};
 
-    // shape
-    vector<bvh_shape> shapes = {};
+  // shape
+  vector<bvh_shape> shapes = {};
 
-    // nodes
-    vector<bvh_node> nodes = {};
+  // nodes
+  vector<bvh_node> nodes = {};
 
 #if YOCTO_EMBREE
-    // Embree opaque data
-    void* embree_bvh       = nullptr;
-    bool  embree_flattened = false;
-    // Cleanup for embree data
-    ~bvh_scene();
+  // Embree opaque data
+  void* embree_bvh       = nullptr;
+  bool  embree_flattened = false;
+  // Cleanup for embree data
+  ~bvh_scene();
 #endif
 };
 
 // bvh build params
-struct build_bvh_params {
-    bool high_quality = false;
+struct bvh_params {
+  bool high_quality = false;
 #if YOCTO_EMBREE
-    bool use_embree     = false;
-    bool embree_flatten = false;
-    bool embree_compact = false;
+  bool use_embree     = false;
+  bool embree_flatten = false;
+  bool embree_compact = false;
 #endif
-    bool          run_serially = false;
-    atomic<bool>* cancel_flag  = nullptr;
+  bool          noparallel = false;
+  atomic<bool>* cancel     = nullptr;
 };
 
 // Build the bvh acceleration structure.
-void build_bvh(bvh_shape& bvh, const build_bvh_params& params);
-void build_bvh(bvh_scene& bvh, const build_bvh_params& params);
+void build_bvh(bvh_shape& bvh, const bvh_params& params);
+void build_bvh(bvh_scene& bvh, const bvh_params& params);
 
 // Refit bvh data
-void refit_bvh(bvh_shape& bvh, const build_bvh_params& params);
+void refit_bvh(bvh_shape& bvh, const bvh_params& params);
 void refit_bvh(bvh_scene& bvh, const vector<int>& updated_shapes,
-    const build_bvh_params& params);
+    const bvh_params& params);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
@@ -255,11 +255,11 @@ bool overlap_bvh(const bvh_scene& bvh, const vec3f& pos, float max_distance,
 // set the instance id and element intersections do not set shape element id
 // and the instance id. Results values are set only if hit is true.
 struct bvh_intersection {
-    int   instance = -1;
-    int   element  = -1;
-    vec2f uv       = {0, 0};
-    float distance = 0;
-    bool  hit      = false;
+  int   instance = -1;
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
 };
 
 bvh_intersection intersect_bvh(

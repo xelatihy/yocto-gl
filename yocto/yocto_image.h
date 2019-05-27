@@ -27,8 +27,8 @@
 // 3. resize images with `resize()`
 // 4. tonemap images with `tonemap()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
-// 5. make various image examples with the `make_image()` functions
-// 6. create procedural sun-sky images with `make_sunsky()`
+// 5. make various image examples with the `make_improc()` functions
+// 6. create procedural sun-sky images with `make_imsunsky()`
 // 7. many color conversion functions are available in the code below
 //
 //
@@ -101,64 +101,63 @@ namespace yocto {
 // Image container.
 template <typename T>
 struct image {
-    // constructors
-    image() : extent{0, 0}, pixels{} {}
-    image(const vec2i& size, const T& value = {})
-        : extent{size}, pixels((size_t)size.x * (size_t)size.y, value) {}
-    image(const vec2i& size, const T* value)
-        : extent{size}
-        , pixels(value, value + (size_t)size.x * (size_t)size.y) {}
+  // constructors
+  image() : extent{0, 0}, pixels{} {}
+  image(const vec2i& size, const T& value = {})
+      : extent{size}, pixels((size_t)size.x * (size_t)size.y, value) {}
+  image(const vec2i& size, const T* value)
+      : extent{size}, pixels(value, value + (size_t)size.x * (size_t)size.y) {}
 
-    // size
-    bool   empty() const { return pixels.empty(); }
-    vec2i  size() const { return extent; }
-    size_t count() const { return pixels.size(); }
-    bool   contains(const vec2i& ij) const {
-        return ij.x > 0 && ij.x < extent.x && ij.y > 0 && ij.y < extent.y;
-    }
-    void resize(const vec2i& size) {
-        if (size == extent) return;
-        extent = size;
-        pixels.resize((size_t)size.x * (size_t)size.y);
-    }
-    void assign(const vec2i& size, const T& value = {}) {
-        extent = size;
-        pixels.assign((size_t)size.x * (size_t)size.y, value);
-    }
-    void shrink_to_fit() { pixels.shrink_to_fit(); }
+  // size
+  bool   empty() const { return pixels.empty(); }
+  vec2i  size() const { return extent; }
+  size_t count() const { return pixels.size(); }
+  bool   contains(const vec2i& ij) const {
+    return ij.x > 0 && ij.x < extent.x && ij.y > 0 && ij.y < extent.y;
+  }
+  void resize(const vec2i& size) {
+    if (size == extent) return;
+    extent = size;
+    pixels.resize((size_t)size.x * (size_t)size.y);
+  }
+  void assign(const vec2i& size, const T& value = {}) {
+    extent = size;
+    pixels.assign((size_t)size.x * (size_t)size.y, value);
+  }
+  void shrink_to_fit() { pixels.shrink_to_fit(); }
 
-    // element access
-    T&       operator[](int i) { return pixels[i]; }
-    const T& operator[](int i) const { return pixels[i]; }
-    T& operator[](const vec2i& ij) { return pixels[ij.y * extent.x + ij.x]; }
-    const T& operator[](const vec2i& ij) const {
-        return pixels[ij.y * extent.x + ij.x];
-    }
+  // element access
+  T&       operator[](int i) { return pixels[i]; }
+  const T& operator[](int i) const { return pixels[i]; }
+  T& operator[](const vec2i& ij) { return pixels[ij.y * extent.x + ij.x]; }
+  const T& operator[](const vec2i& ij) const {
+    return pixels[ij.y * extent.x + ij.x];
+  }
 
-    // data access
-    T*       data() { return pixels.data(); }
-    const T* data() const { return pixels.data(); }
+  // data access
+  T*       data() { return pixels.data(); }
+  const T* data() const { return pixels.data(); }
 
-    // iteration
-    T*       begin() { return pixels.data(); }
-    T*       end() { return pixels.data() + pixels.size(); }
-    const T* begin() const { return pixels.data(); }
-    const T* end() const { return pixels.data() + pixels.size(); }
+  // iteration
+  T*       begin() { return pixels.data(); }
+  T*       end() { return pixels.data() + pixels.size(); }
+  const T* begin() const { return pixels.data(); }
+  const T* end() const { return pixels.data() + pixels.size(); }
 
-   private:
-    // data
-    vec2i     extent = zero2i;
-    vector<T> pixels = {};
+ private:
+  // data
+  vec2i     extent = zero2i;
+  vector<T> pixels = {};
 };
 
 // equality
 template <typename T>
 inline bool operator==(const image<T>& a, const image<T>& b) {
-    return a.size() == b.size() && a.pixels == b.pixels;
+  return a.size() == b.size() && a.pixels == b.pixels;
 }
 template <typename T>
 inline bool operator!=(const image<T>& a, const image<T>& b) {
-    return a.size() != b.size() || a.pixels != b.pixels;
+  return a.size() != b.size() || a.pixels != b.pixels;
 }
 
 }  // namespace yocto
@@ -170,35 +169,35 @@ namespace yocto {
 
 // Image region
 struct image_region {
-    vec2i min = zero2i;
-    vec2i max = zero2i;
-    vec2i size() const { return max - min; }
+  vec2i min = zero2i;
+  vec2i max = zero2i;
+  vec2i size() const { return max - min; }
 };
 
 // Splits an image into an array of regions
-void make_regions(vector<image_region>& regions, const vec2i& size,
+void make_imregions(vector<image_region>& regions, const vec2i& size,
     int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
 template <typename T>
 inline void get_region(
     image<T>& clipped, const image<T>& img, const image_region& region) {
-    clipped.resize(region.size());
-    for (auto j = 0; j < region.size().y; j++) {
-        for (auto i = 0; i < region.size().x; i++) {
-            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-        }
+  clipped.resize(region.size());
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
     }
+  }
 }
 template <typename T>
 inline void set_region(
     image<T>& img, const image<T>& region, const vec2i& offset) {
-    for (auto j = 0; j < region.size().y; j++) {
-        for (auto i = 0; i < region.size().x; i++) {
-            if (!img.contains({i, j})) continue;
-            img[vec2i{i, j} + offset] = region[{i, j}];
-        }
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      if (!img.contains({i, j})) continue;
+      img[vec2i{i, j} + offset] = region[{i, j}];
     }
+  }
 }
 
 // Conversion from/to floats.
@@ -210,58 +209,54 @@ void srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb);
 void rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
 
 // Tone mapping params
-struct tonemap_image_params {
-    float exposure    = 0;
-    vec3f tint        = {1, 1, 1};
-    float contrast    = 0.5f;
-    float logcontrast = 0.5f;
-    float saturation  = 0.5f;
-    bool  filmic      = false;
-    bool  srgb        = true;
+struct tonemap_params {
+  float exposure    = 0;
+  vec3f tint        = {1, 1, 1};
+  float contrast    = 0.5f;
+  float logcontrast = 0.5f;
+  float saturation  = 0.5f;
+  bool  filmic      = false;
+  bool  srgb        = true;
 };
 
 // Equality operators
-inline bool operator==(
-    const tonemap_image_params& a, const tonemap_image_params& b) {
-    return memcmp(&a, &b, sizeof(a)) == 0;
+inline bool operator==(const tonemap_params& a, const tonemap_params& b) {
+  return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(
-    const tonemap_image_params& a, const tonemap_image_params& b) {
-    return memcmp(&a, &b, sizeof(a)) != 0;
+inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
+  return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
 // Apply exposure and filmic tone mapping
+void tonemap(
+    image<vec4f>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
+void tonemap(
+    image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const tonemap_image_params& params);
-void tonemap(image<vec4b>& ldr, const image<vec4f>& hdr,
-    const tonemap_image_params& params);
-void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_image_params& params);
+    const image_region& region, const tonemap_params& params);
 
 // minimal color grading
-struct colorgrade_image_params {
-    float contrast         = 0.5;
-    float shadows          = 0.5;
-    float midtones         = 0.5;
-    float highlights       = 0.5;
-    vec3f shadows_color    = {1, 1, 1};
-    vec3f midtones_color   = {1, 1, 1};
-    vec3f highlights_color = {1, 1, 1};
+struct colorgrade_params {
+  float contrast         = 0.5;
+  float shadows          = 0.5;
+  float midtones         = 0.5;
+  float highlights       = 0.5;
+  vec3f shadows_color    = {1, 1, 1};
+  vec3f midtones_color   = {1, 1, 1};
+  vec3f highlights_color = {1, 1, 1};
 };
 
 // Equality operators
-inline bool operator==(
-    const colorgrade_image_params& a, const colorgrade_image_params& b) {
-    return memcmp(&a, &b, sizeof(a)) == 0;
+inline bool operator==(const colorgrade_params& a, const colorgrade_params& b) {
+  return memcmp(&a, &b, sizeof(a)) == 0;
 }
-inline bool operator!=(
-    const colorgrade_image_params& a, const colorgrade_image_params& b) {
-    return memcmp(&a, &b, sizeof(a)) != 0;
+inline bool operator!=(const colorgrade_params& a, const colorgrade_params& b) {
+  return memcmp(&a, &b, sizeof(a)) != 0;
 }
 
 // color grade an image region
 void colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
-    const image_region& region, const colorgrade_image_params& params);
+    const image_region& region, const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);
@@ -294,7 +289,7 @@ void save_image(
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped(const string& filename, const image<vec4f>& hdr,
-    const tonemap_image_params& params);
+    const tonemap_params& params);
 
 // Save with a logo embedded
 void save_image_with_logo(const string& filename, const image<vec4f>& img);
@@ -303,7 +298,7 @@ void save_image_with_logo(const string& filename, const image<vec4b>& img);
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
-    const tonemap_image_params& params);
+    const tonemap_params& params);
 
 }  // namespace yocto
 
@@ -312,47 +307,47 @@ void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Types for make_image
+// Types for make_improc
 enum struct make_image_type {
-    grid,
-    checker,
-    bumps,
-    ramp,
-    gammaramp,
-    uvramp,
-    uvgrid,
-    blackbody,
-    noise,
-    turbulence,
-    fbm,
-    ridge
+  grid,
+  checker,
+  bumps,
+  ramp,
+  gammaramp,
+  uvramp,
+  uvgrid,
+  blackbody,
+  noise,
+  turbulence,
+  fbm,
+  ridge
 };
 
-// Parameters for make_image
-struct make_image_params {
-    make_image_type type   = make_image_type::grid;
-    vec2i           size   = {1024, 1024};
-    float           scale  = 1;
-    vec4f           color0 = {0, 0, 0, 1};
-    vec4f           color1 = {1, 1, 1, 1};
-    vec4f noise   = {2, 0.5, 8, 1};  // lacunarity, gain, octaves, offset
-    float borderw = 0;
-    vec4f borderc = {0, 0, 0, 1};
+// Parameters for make_improc
+struct improc_params {
+  make_image_type type   = make_image_type::grid;
+  vec2i           size   = {1024, 1024};
+  float           scale  = 1;
+  vec4f           color0 = {0, 0, 0, 1};
+  vec4f           color1 = {1, 1, 1, 1};
+  vec4f           noise  = {2, 0.5, 8, 1};  // lacunarity, gain, octaves, offset
+  float           borderw = 0;
+  vec4f           borderc = {0, 0, 0, 1};
 };
 
 // Make an image
-void make_image(image<vec4f>& img, const make_image_params& params);
+void make_improc(image<vec4f>& img, const improc_params& params);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
 // disabled with has_sun. The sun parameters can be slightly modified by
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
-void make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
+void make_imsunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
-void make_lights(image<vec4f>& img, const vec2i& size,
+void make_imlights(image<vec4f>& img, const vec2i& size,
     const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
     float lwidth = pif / 16, float lheight = pif / 16);
 
@@ -365,13 +360,13 @@ void add_border(image<vec4f>& img, const vec2i& size, int border_width,
     const vec4f& border_color);
 
 // Make logo images. Image is resized to proper size.
-void make_logo(image<vec4f>& img, const string& name);
-void make_logo(image<vec4b>& img, const string& name);
+void make_imlogo(image<vec4f>& img, const string& name);
+void make_imlogo(image<vec4b>& img, const string& name);
 
 // Make an image preset, useful for testing. See implementation for types.
-void make_preset(image<vec4f>& img, const string& type);
-void make_preset(image<vec4b>& img, const string& type);
-void make_preset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
+void make_impreset(image<vec4f>& img, const string& type);
+void make_impreset(image<vec4b>& img, const string& type);
+void make_impreset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
 
 }  // namespace yocto
 
@@ -383,71 +378,71 @@ namespace yocto {
 // Volume container.
 template <typename T>
 struct volume {
-    // constructors
-    volume() : extent{0, 0, 0}, voxels{} {}
-    volume(const vec3i& size, const T& value)
-        : extent{size}
-        , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
-    volume(const vec3i& size, const T* value)
-        : extent{size}
-        , voxels(value,
-              value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
+  // constructors
+  volume() : extent{0, 0, 0}, voxels{} {}
+  volume(const vec3i& size, const T& value)
+      : extent{size}
+      , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
+  volume(const vec3i& size, const T* value)
+      : extent{size}
+      , voxels(
+            value, value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
 
-    // size
-    bool   empty() const { return voxels.empty(); }
-    vec3i  size() const { return extent; }
-    size_t count() const { return voxels.size(); }
-    void   resize(const vec3i& size) {
-        if (size == extent) return;
-        extent = size;
-        voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
-    }
-    void assign(const vec3i& size, const T& value) {
-        extent = size;
-        voxels.assign((size_t)size.x * (size_t)size.y * (size_t)size.z, value);
-    }
-    void shrink_to_fit() { voxels.shrink_to_fit(); }
+  // size
+  bool   empty() const { return voxels.empty(); }
+  vec3i  size() const { return extent; }
+  size_t count() const { return voxels.size(); }
+  void   resize(const vec3i& size) {
+    if (size == extent) return;
+    extent = size;
+    voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
+  }
+  void assign(const vec3i& size, const T& value) {
+    extent = size;
+    voxels.assign((size_t)size.x * (size_t)size.y * (size_t)size.z, value);
+  }
+  void shrink_to_fit() { voxels.shrink_to_fit(); }
 
-    // element access
-    T&       operator[](size_t i) { return voxels[i]; }
-    const T& operator[](size_t i) const { return voxels[i]; }
-    T&       operator[](const vec3i& ijk) {
-        return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
-    }
-    const T& operator[](const vec3i& ijk) const {
-        return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
-    }
+  // element access
+  T&       operator[](size_t i) { return voxels[i]; }
+  const T& operator[](size_t i) const { return voxels[i]; }
+  T&       operator[](const vec3i& ijk) {
+    return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
+  }
+  const T& operator[](const vec3i& ijk) const {
+    return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
+  }
 
-    // data access
-    T*       data() { return voxels.data(); }
-    const T* data() const { return voxels.data(); }
+  // data access
+  T*       data() { return voxels.data(); }
+  const T* data() const { return voxels.data(); }
 
-    // iteration
-    T*       begin() { return voxels.data(); }
-    T*       end() { return voxels.data() + voxels.size(); }
-    const T* begin() const { return voxels.data(); }
-    const T* end() const { return voxels.data() + voxels.size(); }
+  // iteration
+  T*       begin() { return voxels.data(); }
+  T*       end() { return voxels.data() + voxels.size(); }
+  const T* begin() const { return voxels.data(); }
+  const T* end() const { return voxels.data() + voxels.size(); }
 
-   private:
-    // data
-    vec3i         extent = zero3i;
-    vector<float> voxels = {};
+ private:
+  // data
+  vec3i         extent = zero3i;
+  vector<float> voxels = {};
 };
 
 // equality
 template <typename T>
 inline bool operator==(const volume<T>& a, const volume<T>& b) {
-    return a.size() == b.size() && a.voxels == b.voxels;
+  return a.size() == b.size() && a.voxels == b.voxels;
 }
 template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b) {
-    return a.size() != b.size() || a.voxels != b.voxels;
+  return a.size() != b.size() || a.voxels != b.voxels;
 }
 
 // make a simple example volume
 void make_test(volume<float>& vol, const vec3i& size, float scale = 10,
     float exponent = 6);
-void make_preset(volume<float>& vol, const string& type);
+void make_volpreset(volume<float>& vol, const string& type);
 
 }  // namespace yocto
 // -----------------------------------------------------------------------------
@@ -468,86 +463,85 @@ namespace yocto {
 
 // Conversion between flots and bytes
 inline vec4b float_to_byte(const vec4f& a) {
-    return {(byte)clamp(int(a.x * 256), 0, 255),
-        (byte)clamp(int(a.y * 256), 0, 255),
-        (byte)clamp(int(a.z * 256), 0, 255),
-        (byte)clamp(int(a.w * 256), 0, 255)};
+  return {(byte)clamp(int(a.x * 256), 0, 255),
+      (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255),
+      (byte)clamp(int(a.w * 256), 0, 255)};
 }
 inline vec4f byte_to_float(const vec4b& a) {
-    return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
+  return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
 }
 
 // Luminance
 inline float luminance(const vec3f& a) {
-    return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
+  return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
 }
 
 // sRGB non-linear curve
 inline float srgb_to_rgb(float srgb) {
-    return (srgb <= 0.04045) ? srgb / 12.92f
-                             : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
+  return (srgb <= 0.04045) ? srgb / 12.92f
+                           : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
 }
 inline float rgb_to_srgb(float lin) {
-    return (lin <= 0.0031308f) ? 12.92f * lin
-                               : (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
+  return (lin <= 0.0031308f) ? 12.92f * lin
+                             : (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
 }
 inline vec3f srgb_to_rgb(const vec3f& srgb) {
-    return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
+  return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
 }
 inline vec4f srgb_to_rgb(const vec4f& srgb) {
-    return {
-        srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
+  return {
+      srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
 }
 inline vec3f rgb_to_srgb(const vec3f& lin) {
-    return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z)};
+  return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z)};
 }
 inline vec4f rgb_to_srgb(const vec4f& lin) {
-    return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z), lin.w};
+  return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z), lin.w};
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey) {
-    return max(zero3f, grey + (rgb - grey) * (contrast * 2));
+  return max(zero3f, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f apply_logcontrast(
     const vec3f& rgb, float logcontrast, float grey) {
-    auto epsilon  = (float)0.0001;
-    auto log_grey = log2(grey);
-    auto log_ldr  = log2(rgb + epsilon);
-    auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
-    return max(zero3f, exp2(adjusted) - epsilon);
+  auto epsilon  = (float)0.0001;
+  auto log_grey = log2(grey);
+  auto log_ldr  = log2(rgb + epsilon);
+  auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
+  return max(zero3f, exp2(adjusted) - epsilon);
 }
 // Apply saturation.
 inline vec3f apply_saturation(const vec3f& rgb, float saturation,
     const vec3f& weights = vec3f{0.333333f}) {
-    auto grey = dot(weights, rgb);
-    return max(zero3f, grey + (rgb - grey) * (saturation * 2));
+  auto grey = dot(weights, rgb);
+  return max(zero3f, grey + (rgb - grey) * (saturation * 2));
 }
 
 // Convert between CIE XYZ and RGB
 inline vec3f rgb_to_xyz(const vec3f& rgb) {
-    // https://en.wikipedia.org/wiki/SRGB
-    constexpr mat3f mat = {{0.4124, 0.2126, 0.0193}, {0.3576, 0.7152, 0.1192},
-        {0.1805, 0.0722, 0.9504}};
-    return mat * rgb;
+  // https://en.wikipedia.org/wiki/SRGB
+  static const auto mat = mat3f{{0.4124, 0.2126, 0.0193},
+      {0.3576, 0.7152, 0.1192}, {0.1805, 0.0722, 0.9504}};
+  return mat * rgb;
 }
 inline vec3f xyz_to_rgb(const vec3f& xyz) {
-    // https://en.wikipedia.org/wiki/SRGB
-    constexpr mat3f mat = {{+3.2406, -1.5372, -0.4986},
-        {-0.9689, +1.8758, +0.0415}, {+0.0557, -0.2040, +1.0570}};
-    return mat * xyz;
+  // https://en.wikipedia.org/wiki/SRGB
+  static const auto mat = mat3f{{+3.2406, -1.5372, -0.4986},
+      {-0.9689, +1.8758, +0.0415}, {+0.0557, -0.2040, +1.0570}};
+  return mat * xyz;
 }
 
 // Convert between CIE XYZ and xyY
 inline vec3f xyz_to_xyY(const vec3f& xyz) {
-    if (xyz == zero3f) return zero3f;
-    return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
-        xyz.y};
+  if (xyz == zero3f) return zero3f;
+  return {
+      xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
 inline vec3f xyY_to_xyz(const vec3f& xyY) {
-    if (xyY.y == 0) return zero3f;
-    return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
+  if (xyY.y == 0) return zero3f;
+  return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 
 // Approximate color of blackbody radiation from wavelength in nm.
@@ -559,30 +553,30 @@ vec3f rgb_to_hsv(const vec3f& rgb);
 
 // RGB color spaces
 enum struct color_space {
-    linear_srgb,   // default linear space (srgb linear)
-    srgb,          // srgb color space (non-linear)
-    adobe_rgb,     // Adobe rgb color space (non-linear)
-    prophoto_rgb,  // ProPhoto Kodak rgb color space (non-linear)
-    rec_709,       // hdtv color space (non-linear)
-    rec_2020,      // uhtv color space (non-linear)
-    rec_2100_pq,   // hdr color space with perceptual quantizer (non-linear)
-    rec_2100_hlg,  // hdr color space with hybrid log gamma (non-linear)
-    aces_2065,     // ACES storage format (linear)
-    aces_cg,       // ACES CG computation (linear)
-    aces_cc,       // ACES color correction (non-linear)
-    aces_cct,      // ACES color correction 2 (non-linear)
-    p3_dci,        // P3 DCI (non-linear)
-    p3_d60,        // P3 variation for D60 (non-linear)
-    p3_d65,        // P3 variation for D65 (non-linear)
-    p3_display,    // Apple display P3
+  rgb,         // default linear space (srgb linear)
+  srgb,        // srgb color space (non-linear)
+  adobe,       // Adobe rgb color space (non-linear)
+  prophoto,    // ProPhoto Kodak rgb color space (non-linear)
+  rec709,      // hdtv color space (non-linear)
+  rec2020,     // uhtv color space (non-linear)
+  rec2100pq,   // hdr color space with perceptual quantizer (non-linear)
+  rec2100hlg,  // hdr color space with hybrid log gamma (non-linear)
+  aces2065,    // ACES storage format (linear)
+  acescg,      // ACES CG computation (linear)
+  acescc,      // ACES color correction (non-linear)
+  acescct,     // ACES color correction 2 (non-linear)
+  p3dci,       // P3 DCI (non-linear)
+  p3d60,       // P3 variation for D60 (non-linear)
+  p3d65,       // P3 variation for D65 (non-linear)
+  p3display,   // Apple display P3
 };
 
 // Conversion between rgb color spaces
 vec3f        color_to_xyz(const vec3f& col, color_space from);
 vec3f        xyz_to_color(const vec3f& xyz, color_space to);
 inline vec3f convert_color(const vec3f& col, color_space from, color_space to) {
-    if (from == to) return col;
-    return xyz_to_color(color_to_xyz(col, from), to);
+  if (from == to) return col;
+  return xyz_to_color(color_to_xyz(col, from), to);
 }
 
 }  // namespace yocto

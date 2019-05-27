@@ -1,54 +1,54 @@
 cameras:
   - uri: cameras/default.yaml
-    focal_length: 0.05
-    lens_aperture: 0.0
-    film_width: 0.036
-    film_height: 0.015
-    focus_distance: 1.216809352363796
+    lens: 0.05
+    aperture: 0.0
+    width: 0.036
+    height: 0.015
+    focus: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
   - uri: cameras/front.yaml
-    focal_length: 0.05
-    lens_aperture: 0.0
-    film_width: 0.036
-    film_height: 0.012
-    focus_distance: 0.5433461143691007
+    lens: 0.05
+    aperture: 0.0
+    width: 0.036
+    height: 0.012
+    focus: 0.5433461143691007
     frame: [1.0, 0.0, 0.0, 0.0, 0.9363291775690445, -0.3511234415883917, 0.0, 0.35112344158839165, 0.9363291775690444, 0, 0.575, 1.4]
   - uri: cameras/back.yaml
-    focal_length: 0.05
-    lens_aperture: 0.0
-    film_width: 0.036
-    film_height: 0.012
-    focus_distance: 0.5433461143691007
+    lens: 0.05
+    aperture: 0.0
+    width: 0.036
+    height: 0.012
+    focus: 0.5433461143691007
     frame: [-1.0, 0.0, 0.0, 0.0, 0.9363291775690445, 0.3511234415883917, 0.0, 0.35112344158839165, -0.9363291775690444, 0, 0.575, -1.4]
   - uri: cameras/perspective-sharp.yaml
-    focal_length: 0.05
-    lens_aperture: 0.0
-    film_width: 0.036
-    film_height: 0.015
-    focus_distance: 1.216809352363796
+    lens: 0.05
+    aperture: 0.0
+    width: 0.036
+    height: 0.015
+    focus: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
   - uri: cameras/perspective-dof.yaml
-    focal_length: 0.05
-    lens_aperture: 0.025
-    film_width: 0.036
-    film_height: 0.015
-    focus_distance: 1.216809352363796
+    lens: 0.05
+    aperture: 0.025
+    width: 0.036
+    height: 0.015
+    focus: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
   - uri: cameras/orthographic-sharp.yaml
-    focal_length: 0.05
-    lens_aperture: 0.0
-    film_width: 0.036
-    film_height: 0.015
+    lens: 0.05
+    aperture: 0.0
+    width: 0.036
+    height: 0.015
     orthographic: true
-    focus_distance: 1.216809352363796
+    focus: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
   - uri: cameras/orthographic-dof.yaml
-    focal_length: 0.05
-    lens_aperture: 0.02
-    film_width: 0.036
-    film_height: 0.015
+    lens: 0.05
+    aperture: 0.02
+    width: 0.036
+    height: 0.015
     orthographic: true
-    focus_distance: 1.216809352363796
+    focus: 1.216809352363796
     frame: [0.8151804082662738, -0.0, 0.5792071321891945, 0.16660169144197134, 0.9577393531836079, -0.23447645462203376, -0.5547294641422116, 0.2876374999255912, 0.7807303569408904, -0.75, 0.4, 0.9]
 textures:
   - uri: ::yocto::test-floor::textures/test-floor.png
@@ -56,12 +56,12 @@ textures:
 materials:
   - uri: materials/test-floor.yaml
     diffuse: [0.7, 0.7, 0.7]
-    diffuse_texture: textures/test-floor.png
+    diffuse_tex: textures/test-floor.png
   - uri: materials/test-uvgrid.yaml
     specular: [0.04, 0.04, 0.04]
     diffuse: [1, 1, 1]
     roughness: 0.1
-    diffuse_texture: textures/test-uvgrid.png
+    diffuse_tex: textures/test-uvgrid.png
   - uri: materials/test-plastic-sharp.yaml
     specular: [0.04, 0.04, 0.04]
     diffuse: [0.5, 0.5, 0.7]

@@ -3,9 +3,6 @@ BasedOnStyle: Google
 # Language:        Cpp
 Standard:        Cpp11
 
-IndentWidth:     4
-ColumnLimit:     80
-
 AlignAfterOpenBracket: DontAlign
 AlignConsecutiveAssignments: true
 AlignConsecutiveDeclarations: true
@@ -17,4 +14,4 @@ BreakConstructorInitializersBeforeComma: true
 BreakStringLiterals: false
 
 PenaltyBreakAssignment: 20
-PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakBeforeFirstCallParameter: 50

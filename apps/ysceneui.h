@@ -43,751 +43,531 @@ using std::type_index;
 using std::unordered_map;
 
 struct app_selection {
-    type_index type  = typeid(void);
-    int        index = -1;
+  type_index type  = typeid(void);
+  int        index = -1;
 };
 
 struct app_edit {
-    type_index type   = typeid(void);
-    int        index  = -1;
-    any        data   = {};
-    bool       reload = false;
+  type_index type   = typeid(void);
+  int        index  = -1;
+  any        data   = {};
+  bool       reload = false;
 };
 
 inline const unordered_map<int, string>& animation_type_names() {
-    static auto names = unordered_map<int, string>{
-        {(int)yocto_interpolation_type::linear, "linear"},
-        {(int)yocto_interpolation_type::step, "step"},
-        {(int)yocto_interpolation_type::bezier, "bezier"},
-    };
-    return names;
+  static auto names = unordered_map<int, string>{
+      {(int)yocto_animation::type_t::linear, "linear"},
+      {(int)yocto_animation::type_t::step, "step"},
+      {(int)yocto_animation::type_t::bezier, "bezier"},
+  };
+  return names;
 }
 
 template <typename T>
-inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, int index, const vector<T>& vals,
-    app_selection& sel);
+inline void draw_glscenetree(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, int index, const vector<T>& vals, app_selection& sel);
 
 template <typename T>
-inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, int index, const vector<T*>& vals,
-    app_selection& sel);
+inline void draw_glscenetree(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, int index, const vector<T*>& vals, app_selection& sel);
 
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, const yocto_camera& value,
-    app_selection& sel) {}
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, const yocto_texture& value,
-    app_selection& sel) {}
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, const yocto_voltexture& value,
-    app_selection& sel) {}
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, const yocto_material& value,
-    app_selection& sel) {
-    draw_opengl_widgets_scene_tree(
-        win, "emission", scene, value.emission_texture, scene.textures, sel);
-    draw_opengl_widgets_scene_tree(
-        win, "diffuse", scene, value.diffuse_texture, scene.textures, sel);
-    draw_opengl_widgets_scene_tree(
-        win, "metallic", scene, value.metallic_texture, scene.textures, sel);
-    draw_opengl_widgets_scene_tree(
-        win, "specular", scene, value.specular_texture, scene.textures, sel);
-    draw_opengl_widgets_scene_tree(
-        win, "normal", scene, value.normal_texture, scene.textures, sel);
+inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, const yocto_camera& value, app_selection& sel) {}
+inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, const yocto_texture& value, app_selection& sel) {}
+inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, const yocto_voltexture& value, app_selection& sel) {}
+inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, const yocto_material& value, app_selection& sel) {
+  draw_glscenetree(
+      win, "emission", scene, value.emission_tex, scene.textures, sel);
+  draw_glscenetree(
+      win, "diffuse", scene, value.diffuse_tex, scene.textures, sel);
+  draw_glscenetree(
+      win, "metallic", scene, value.metallic_tex, scene.textures, sel);
+  draw_glscenetree(
+      win, "specular", scene, value.specular_tex, scene.textures, sel);
+  draw_glscenetree(win, "normal", scene, value.normal_tex, scene.textures, sel);
 }
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, const yocto_shape& value,
-    app_selection& sel) {}
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, const yocto_subdiv& value,
-    app_selection& sel) {
-    draw_opengl_widgets_scene_tree(
-        win, "shapes", scene, value.tesselated_shape, scene.shapes, sel);
-    draw_opengl_widgets_scene_tree(win, "displament", scene,
-        value.displacement_texture, scene.textures, sel);
+inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, const yocto_shape& value, app_selection& sel) {}
+inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, const yocto_subdiv& value, app_selection& sel) {
+  draw_glscenetree(win, "shapes", scene, value.shape, scene.shapes, sel);
+  draw_glscenetree(
+      win, "displament", scene, value.displacement_tex, scene.textures, sel);
 }
 
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, const yocto_instance& value,
-    app_selection& sel) {
-    draw_opengl_widgets_scene_tree(
-        win, "shape", scene, value.shape, scene.shapes, sel);
-    draw_opengl_widgets_scene_tree(
-        win, "material", scene, value.material, scene.materials, sel);
+inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, const yocto_instance& value, app_selection& sel) {
+  draw_glscenetree(win, "shape", scene, value.shape, scene.shapes, sel);
+  draw_glscenetree(
+      win, "material", scene, value.material, scene.materials, sel);
 }
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, const yocto_environment& value,
-    app_selection& sel) {
-    draw_opengl_widgets_scene_tree(
-        win, "emission", scene, value.emission_texture, scene.textures, sel);
+inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, const yocto_environment& value, app_selection& sel) {
+  draw_glscenetree(
+      win, "emission", scene, value.emission_tex, scene.textures, sel);
 }
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, const yocto_scene_node& value,
-    app_selection& sel) {
-    draw_opengl_widgets_scene_tree(
-        win, "instance", scene, value.instance, scene.instances, sel);
-    draw_opengl_widgets_scene_tree(
-        win, "camera", scene, value.camera, scene.cameras, sel);
-    draw_opengl_widgets_scene_tree(
-        win, "environment", scene, value.environment, scene.environments, sel);
-    draw_opengl_widgets_scene_tree(
-        win, "parent", scene, value.parent, scene.nodes, sel);
-    auto cid = 0;
-    for (auto ch : value.children) {
-        draw_opengl_widgets_scene_tree(
-            win, "child" + std::to_string(cid++), scene, ch, scene.nodes, sel);
-    }
+inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, const yocto_scene_node& value, app_selection& sel) {
+  draw_glscenetree(
+      win, "instance", scene, value.instance, scene.instances, sel);
+  draw_glscenetree(win, "camera", scene, value.camera, scene.cameras, sel);
+  draw_glscenetree(
+      win, "environment", scene, value.environment, scene.environments, sel);
+  draw_glscenetree(win, "parent", scene, value.parent, scene.nodes, sel);
+  auto cid = 0;
+  for (auto ch : value.children) {
+    draw_glscenetree(
+        win, "child" + std::to_string(cid++), scene, ch, scene.nodes, sel);
+  }
 }
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, const yocto_animation& value,
-    app_selection& sel) {
-    auto tid = 0;
-    for (auto tg : value.node_targets) {
-        draw_opengl_widgets_scene_tree(
-            win, "target" + std::to_string(tid++), scene, tg, scene.nodes, sel);
-    }
+inline void draw_glscenetree_rec(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, const yocto_animation& value, app_selection& sel) {
+  auto tid = 0;
+  for (auto tg : value.targets) {
+    draw_glscenetree(
+        win, "target" + std::to_string(tid++), scene, tg, scene.nodes, sel);
+  }
 }
 
 template <typename T>
-inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, int index, const vector<T>& vals,
-    app_selection& sel) {
-    if (index < 0) return;
-    auto lbl = vals[index].uri;
-    if (!empty(lbl_)) lbl = lbl_ + ": " + vals[index].uri;
-    auto selected = sel.type == type_index(typeid(T)) && sel.index == index;
-    if (begin_selectabletreenode_opengl_widget(win, lbl.c_str(), selected)) {
-        draw_scene_tree_opengl_widgets_rec(win, lbl_, scene, vals[index], sel);
-        end_treenode_opengl_widget(win);
-    }
-    if (selected) sel = {type_index(typeid(T)), index};
+inline void draw_glscenetree(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, int index, const vector<T>& vals, app_selection& sel) {
+  if (index < 0) return;
+  auto lbl = vals[index].uri;
+  if (!empty(lbl_)) lbl = lbl_ + ": " + vals[index].uri;
+  auto selected = sel.type == type_index(typeid(T)) && sel.index == index;
+  if (begin_glselectabletreenode(win, lbl.c_str(), selected)) {
+    draw_glscenetree_rec(win, lbl_, scene, vals[index], sel);
+    end_gltreenode(win);
+  }
+  if (selected) sel = {type_index(typeid(T)), index};
 }
 
 template <typename T>
-inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
-    const string& lbl_, yocto_scene& scene, int index, const vector<T*>& vals,
-    app_selection& sel) {
-    if (index < 0) return;
-    auto lbl = vals[index]->name;
-    if (!empty(lbl_)) lbl = lbl_ + ": " + vals[index]->name;
-    auto selected = sel.type == type_index(typeid(T)) && sel.index == index;
-    if (begin_selectabletreenode_opengl_widget(win, lbl.c_str(), selected)) {
-        draw_scene_tree_opengl_widgets_rec(win, lbl_, scene, vals[index], sel);
-        end_treenode_opengl_widget(win);
-    }
-    if (selected) sel = {type_index(typeid(T)), index};
+inline void draw_glscenetree(const opengl_window& win, const string& lbl_,
+    yocto_scene& scene, int index, const vector<T*>& vals, app_selection& sel) {
+  if (index < 0) return;
+  auto lbl = vals[index]->name;
+  if (!empty(lbl_)) lbl = lbl_ + ": " + vals[index]->name;
+  auto selected = sel.type == type_index(typeid(T)) && sel.index == index;
+  if (begin_glselectabletreenode(win, lbl.c_str(), selected)) {
+    draw_glscenetree_rec(win, lbl_, scene, vals[index], sel);
+    end_gltreenode(win);
+  }
+  if (selected) sel = {type_index(typeid(T)), index};
 }
 
-inline void draw_opengl_widgets_scene_tree(
+inline void draw_glscenetree(
     const opengl_window& win, yocto_scene& scene, app_selection& sel) {
-    if (!empty(scene.cameras) && begin_treenode_opengl_widget(win, "cameras")) {
-        for (auto v = 0; v < scene.cameras.size(); v++)
-            draw_opengl_widgets_scene_tree(
-                win, "", scene, v, scene.cameras, sel);
-        end_treenode_opengl_widget(win);
-    }
-    if (!empty(scene.shapes) && begin_treenode_opengl_widget(win, "shapes")) {
-        for (auto v = 0; v < scene.shapes.size(); v++)
-            draw_opengl_widgets_scene_tree(
-                win, "", scene, v, scene.shapes, sel);
-        end_treenode_opengl_widget(win);
-    }
-    if (!empty(scene.instances) &&
-        begin_treenode_opengl_widget(win, "instances")) {
-        for (auto v = 0; v < scene.instances.size(); v++)
-            draw_opengl_widgets_scene_tree(
-                win, "", scene, v, scene.instances, sel);
-        end_treenode_opengl_widget(win);
-    }
-    if (!empty(scene.materials) &&
-        begin_treenode_opengl_widget(win, "materials")) {
-        for (auto v = 0; v < scene.materials.size(); v++)
-            draw_opengl_widgets_scene_tree(
-                win, "", scene, v, scene.materials, sel);
-        end_treenode_opengl_widget(win);
-    }
-    if (!empty(scene.textures) &&
-        begin_treenode_opengl_widget(win, "textures")) {
-        for (auto v = 0; v < scene.textures.size(); v++)
-            draw_opengl_widgets_scene_tree(
-                win, "", scene, v, scene.textures, sel);
-        end_treenode_opengl_widget(win);
-    }
-    if (!empty(scene.environments) &&
-        begin_treenode_opengl_widget(win, "environments")) {
-        for (auto v = 0; v < scene.environments.size(); v++)
-            draw_opengl_widgets_scene_tree(
-                win, "", scene, v, scene.environments, sel);
-        end_treenode_opengl_widget(win);
-    }
-    if (!empty(scene.nodes) && begin_treenode_opengl_widget(win, "nodes")) {
-        for (auto v = 0; v < scene.nodes.size(); v++)
-            draw_opengl_widgets_scene_tree(win, "", scene, v, scene.nodes, sel);
-        end_treenode_opengl_widget(win);
-    }
-    if (!empty(scene.animations) &&
-        begin_treenode_opengl_widget(win, "animations")) {
-        for (auto v = 0; v < scene.animations.size(); v++)
-            draw_opengl_widgets_scene_tree(
-                win, "", scene, v, scene.animations, sel);
-        end_treenode_opengl_widget(win);
-    }
+  if (!empty(scene.cameras) && begin_gltreenode(win, "cameras")) {
+    for (auto v = 0; v < scene.cameras.size(); v++)
+      draw_glscenetree(win, "", scene, v, scene.cameras, sel);
+    end_gltreenode(win);
+  }
+  if (!empty(scene.shapes) && begin_gltreenode(win, "shapes")) {
+    for (auto v = 0; v < scene.shapes.size(); v++)
+      draw_glscenetree(win, "", scene, v, scene.shapes, sel);
+    end_gltreenode(win);
+  }
+  if (!empty(scene.instances) && begin_gltreenode(win, "instances")) {
+    for (auto v = 0; v < scene.instances.size(); v++)
+      draw_glscenetree(win, "", scene, v, scene.instances, sel);
+    end_gltreenode(win);
+  }
+  if (!empty(scene.materials) && begin_gltreenode(win, "materials")) {
+    for (auto v = 0; v < scene.materials.size(); v++)
+      draw_glscenetree(win, "", scene, v, scene.materials, sel);
+    end_gltreenode(win);
+  }
+  if (!empty(scene.textures) && begin_gltreenode(win, "textures")) {
+    for (auto v = 0; v < scene.textures.size(); v++)
+      draw_glscenetree(win, "", scene, v, scene.textures, sel);
+    end_gltreenode(win);
+  }
+  if (!empty(scene.environments) && begin_gltreenode(win, "environments")) {
+    for (auto v = 0; v < scene.environments.size(); v++)
+      draw_glscenetree(win, "", scene, v, scene.environments, sel);
+    end_gltreenode(win);
+  }
+  if (!empty(scene.nodes) && begin_gltreenode(win, "nodes")) {
+    for (auto v = 0; v < scene.nodes.size(); v++)
+      draw_glscenetree(win, "", scene, v, scene.nodes, sel);
+    end_gltreenode(win);
+  }
+  if (!empty(scene.animations) && begin_gltreenode(win, "animations")) {
+    for (auto v = 0; v < scene.animations.size(); v++)
+      draw_glscenetree(win, "", scene, v, scene.animations, sel);
+    end_gltreenode(win);
+  }
 }
 
 /// Visit struct elements.
-inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
+inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_camera& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-    auto edited_value = value;
-    auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame.x", edited_value.frame.x, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame.y", edited_value.frame.y, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame.z", edited_value.frame.z, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame.o", edited_value.frame.o, -10, 10)) {
-        edited = true;
-    }
-    if (draw_checkbox_opengl_widget(win, "ortho", edited_value.orthographic)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "film width", edited_value.film_width, 0.01f, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "film height", edited_value.film_height, 0.01f, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "focal length", edited_value.focal_length, 0.01f, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "focus distance", edited_value.focus_distance, 0.01f, 1000)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "lens aperture", edited_value.lens_aperture, 0, 5)) {
-        edited = true;
-    }
-    auto from = edited_value.frame.o,
-         to   = edited_value.frame.o -
-              edited_value.focus_distance * edited_value.frame.z;
-    draw_slider_opengl_widget(win, "!!from", from, -10, 10);
-    draw_slider_opengl_widget(win, "!!to", to, -10, 10);
-    if (edited) {
-        edit = {sel.type, sel.index, edited_value, false};
-    }
-    return edited;
+  auto edited  = value;
+  auto updated = false;
+  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_glslider(win, "frame.x", edited.frame.x, -1, 1)) updated = true;
+  if (draw_glslider(win, "frame.y", edited.frame.y, -1, 1)) updated = true;
+  if (draw_glslider(win, "frame.z", edited.frame.z, -1, 1)) updated = true;
+  if (draw_glslider(win, "frame.o", edited.frame.o, -10, 10)) updated = true;
+  if (draw_glcheckbox(win, "ortho", edited.orthographic)) updated = true;
+  if (draw_glslider(win, "width", edited.width, 0.01f, 1)) updated = true;
+  if (draw_glslider(win, "height", edited.height, 0.01f, 1)) updated = true;
+  if (draw_glslider(win, "lens", edited.lens, 0.01f, 1)) updated = true;
+  if (draw_glslider(win, "focus", edited.focus, 0.01f, 1000)) updated = true;
+  if (draw_glslider(win, "aperture", edited.aperture, 0, 5)) updated = true;
+  auto from = edited.frame.o,
+       to   = edited.frame.o - edited.focus * edited.frame.z;
+  draw_glslider(win, "!!from", from, -10, 10);
+  draw_glslider(win, "!!to", to, -10, 10);
+  if (updated) {
+    edit = {sel.type, sel.index, edited, false};
+  }
+  return updated;
 }
 
 /// Visit struct elements.
-inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
+inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_texture& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-    auto edited_value = yocto_texture{};
-    edited_value.uri  = value.uri;
-    auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
-        edited = true;
+  auto edited  = yocto_texture{};
+  edited.uri   = value.uri;
+  auto updated = false;
+  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  draw_gllabel(win, "hdr", "%d x %d", value.hdr.size().x, value.hdr.size().y);
+  draw_gllabel(win, "ldr", "%d x %d", value.ldr.size().x, value.ldr.size().y);
+  if (updated) {
+    auto reload = edited.uri != value.uri;
+    if (!reload) {
+      edited.hdr = value.hdr;
+      edited.ldr = value.ldr;
     }
-    draw_label_opengl_widget(win, "hdr_image", "%d x %d",
-        value.hdr_image.size().x, value.hdr_image.size().y);
-    draw_label_opengl_widget(win, "ldr_image", "%d x %d",
-        value.ldr_image.size().x, value.ldr_image.size().y);
-    if (edited) {
-        auto reload = edited_value.uri != value.uri;
-        if (!reload) {
-            edited_value.hdr_image = value.hdr_image;
-            edited_value.ldr_image = value.ldr_image;
-        }
-        edit = {sel.type, sel.index, edited_value, reload};
-    }
-    return edited;
+    edit = {sel.type, sel.index, edited, reload};
+  }
+  return updated;
 }
 
-inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
+inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_voltexture& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-    auto edited_value = yocto_voltexture{};
-    edited_value.uri  = value.uri;
-    auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
-        edited = true;
+  auto edited  = yocto_voltexture{};
+  edited.uri   = value.uri;
+  auto updated = false;
+  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  draw_gllabel(win, "voxel_data", "%d x %d x %d", value.volume.size().x,
+      value.volume.size().y, value.volume.size().z);
+  if (updated) {
+    auto reload = edited.uri != value.uri;
+    if (!reload) {
+      edited.volume = value.volume;
     }
-    draw_label_opengl_widget(win, "voxel_data", "%d x %d x %d",
-        value.volume_data.size().x, value.volume_data.size().y,
-        value.volume_data.size().z);
-    if (edited) {
-        auto reload = edited_value.uri != value.uri;
-        if (!reload) {
-            edited_value.volume_data = value.volume_data;
-        }
-        edit = {sel.type, sel.index, edited_value, reload};
-    }
-    return edited;
+    edit = {sel.type, sel.index, edited, reload};
+  }
+  return updated;
 }
 
-inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
+inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_material& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-    auto edited_value = value;
-    auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
-        edited = true;
-    }
-    if (draw_hdr_coloredit_opengl_widget(
-            win, "emission", edited_value.emission)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(win, "diffuse", edited_value.diffuse)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(win, "specular", edited_value.specular)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "metallic", edited_value.metallic, 0, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "roughness", edited_value.roughness, 0, 1)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(win, "coat", edited_value.coat)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(
-            win, "transmission", edited_value.transmission)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(
-            win, "vol transmission", edited_value.voltransmission)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(
-            win, "vol scatter", edited_value.volscatter)) {
-        edited = true;
-    }
-    if (draw_coloredit_opengl_widget(
-            win, "vol emission", edited_value.volemission)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "vol scale", edited_value.volscale, 0, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "vol anisotropy", edited_value.volanisotropy, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(win, "opacity", edited_value.opacity, 0, 1)) {
-        edited = true;
-    }
-    if (draw_checkbox_opengl_widget(win, "thin", edited_value.thin)) {
-        edited = true;
-    }
+  auto edited  = value;
+  auto updated = false;
+  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_glhdrcoloredit(win, "emission", edited.emission)) updated = true;
+  if (draw_glcoloredit(win, "diffuse", edited.diffuse)) updated = true;
+  if (draw_glcoloredit(win, "specular", edited.specular)) updated = true;
+  if (draw_glslider(win, "metallic", edited.metallic, 0, 1)) updated = true;
+  if (draw_glslider(win, "roughness", edited.roughness, 0, 1)) updated = true;
+  if (draw_glcoloredit(win, "coat", edited.coat)) updated = true;
+  if (draw_glcoloredit(win, "transmission", edited.transmission))
+    updated = true;
+  if (draw_glcoloredit(win, "vol transmission", edited.voltransmission))
+    updated = true;
+  if (draw_glcoloredit(win, "vol scatter", edited.volscatter)) updated = true;
+  if (draw_glcoloredit(win, "vol emission", edited.volemission)) updated = true;
+  if (draw_glslider(win, "vol scale", edited.volscale, 0, 1)) updated = true;
+  if (draw_glslider(win, "vol anisotropy", edited.volanisotropy, -1, 1))
+    updated = true;
+  if (draw_glslider(win, "opacity", edited.opacity, 0, 1)) updated = true;
+  if (draw_glcheckbox(win, "thin", edited.thin)) updated = true;
 
-    if (draw_combobox_opengl_widget(win, "emission_texture",
-            edited_value.emission_texture, scene.textures, true)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(win, "diffuse_texture",
-            edited_value.diffuse_texture, scene.textures, true)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(win, "metallic_texture",
-            edited_value.metallic_texture, scene.textures, true)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(win, "specular_texture",
-            edited_value.specular_texture, scene.textures, true)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(win, "transmission_texture",
-            edited_value.transmission_texture, scene.textures, true)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(win, "roughness_texture",
-            edited_value.roughness_texture, scene.textures, true)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(win, "normal_texture",
-            edited_value.normal_texture, scene.textures, true)) {
-        edited = true;
-    }
-    if (draw_checkbox_opengl_widget(
-            win, "glTF textures", edited_value.gltf_textures)) {
-        edited = true;
-    }
-    if (edited) {
-        edit = {sel.type, sel.index, edited_value, false};
-    }
-    return edited;
+  if (draw_glcombobox(
+          win, "emission_tex", edited.emission_tex, scene.textures, true))
+    updated = true;
+  if (draw_glcombobox(
+          win, "diffuse_tex", edited.diffuse_tex, scene.textures, true))
+    updated = true;
+  if (draw_glcombobox(
+          win, "metallic_tex", edited.metallic_tex, scene.textures, true))
+    updated = true;
+  if (draw_glcombobox(
+          win, "specular_tex", edited.specular_tex, scene.textures, true))
+    updated = true;
+  if (draw_glcombobox(win, "transmission_tex", edited.transmission_tex,
+          scene.textures, true))
+    updated = true;
+  if (draw_glcombobox(
+          win, "roughness_tex", edited.roughness_tex, scene.textures, true))
+    updated = true;
+  if (draw_glcombobox(
+          win, "normal_tex", edited.normal_tex, scene.textures, true))
+    updated = true;
+  if (draw_glcheckbox(win, "glTF textures", edited.gltf_textures))
+    updated = true;
+  if (updated) {
+    edit = {sel.type, sel.index, edited, false};
+  }
+  return updated;
 }
 
-inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
+inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_shape& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-    auto edited_value = yocto_shape{};
-    edited_value.uri  = value.uri;
-    auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
-        edited = true;
+  auto edited  = yocto_shape{};
+  edited.uri   = value.uri;
+  auto updated = false;
+  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  draw_gllabel(win, "points", "%ld", value.points.size());
+  draw_gllabel(win, "lines", "%ld", value.lines.size());
+  draw_gllabel(win, "triangles", "%ld", value.triangles.size());
+  draw_gllabel(win, "quads", "%ld", value.quads.size());
+  draw_gllabel(win, "quads pos", "%ld", value.quadspos.size());
+  draw_gllabel(win, "quads norm", "%ld", value.quadsnorm.size());
+  draw_gllabel(win, "quads texcoord", "%ld", value.quadstexcoord.size());
+  draw_gllabel(win, "pos", "%ld", value.positions.size());
+  draw_gllabel(win, "norm", "%ld", value.normals.size());
+  draw_gllabel(win, "texcoord", "%ld", value.texcoords.size());
+  draw_gllabel(win, "color", "%ld", value.colors.size());
+  draw_gllabel(win, "radius", "%ld", value.radius.size());
+  draw_gllabel(win, "tangsp", "%ld", value.tangents.size());
+  if (updated) {
+    auto reload = edited.uri != value.uri;
+    if (!reload) {
+      edited.points        = value.points;
+      edited.lines         = value.lines;
+      edited.triangles     = value.triangles;
+      edited.quads         = value.quads;
+      edited.quadspos      = value.quadspos;
+      edited.quadsnorm     = value.quadsnorm;
+      edited.quadstexcoord = value.quadstexcoord;
+      edited.positions     = value.positions;
+      edited.normals       = value.normals;
+      edited.texcoords     = value.texcoords;
+      edited.colors        = value.colors;
+      edited.radius        = value.radius;
+      edited.tangents      = value.tangents;
     }
-    draw_label_opengl_widget(win, "points", "%ld", value.points.size());
-    draw_label_opengl_widget(win, "lines", "%ld", value.lines.size());
-    draw_label_opengl_widget(win, "triangles", "%ld", value.triangles.size());
-    draw_label_opengl_widget(win, "quads", "%ld", value.quads.size());
-    draw_label_opengl_widget(
-        win, "quads pos", "%ld", value.quads_positions.size());
-    draw_label_opengl_widget(
-        win, "quads norm", "%ld", value.quads_normals.size());
-    draw_label_opengl_widget(
-        win, "quads texcoord", "%ld", value.quads_texcoords.size());
-    draw_label_opengl_widget(win, "pos", "%ld", value.positions.size());
-    draw_label_opengl_widget(win, "norm", "%ld", value.normals.size());
-    draw_label_opengl_widget(win, "texcoord", "%ld", value.texcoords.size());
-    draw_label_opengl_widget(win, "color", "%ld", value.colors.size());
-    draw_label_opengl_widget(win, "radius", "%ld", value.radius.size());
-    draw_label_opengl_widget(win, "tangsp", "%ld", value.tangents.size());
-    if (edited) {
-        auto reload = edited_value.uri != value.uri;
-        if (!reload) {
-            edited_value.points          = value.points;
-            edited_value.lines           = value.lines;
-            edited_value.triangles       = value.triangles;
-            edited_value.quads           = value.quads;
-            edited_value.quads_positions = value.quads_positions;
-            edited_value.quads_normals   = value.quads_normals;
-            edited_value.quads_texcoords = value.quads_texcoords;
-            edited_value.positions       = value.positions;
-            edited_value.normals         = value.normals;
-            edited_value.texcoords       = value.texcoords;
-            edited_value.colors          = value.colors;
-            edited_value.radius          = value.radius;
-            edited_value.tangents        = value.tangents;
-        }
-        edit = {sel.type, sel.index, edited_value, reload};
-    }
-    return edited;
-    return edited;
+    edit = {sel.type, sel.index, edited, reload};
+  }
+  return updated;
+  return updated;
 }
 
-inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
+inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_subdiv& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-    auto edited_value                 = yocto_subdiv{};
-    edited_value.uri                  = value.uri;
-    edited_value.subdivision_level    = value.subdivision_level;
-    edited_value.catmull_clark        = value.catmull_clark;
-    edited_value.compute_normals      = value.compute_normals;
-    edited_value.preserve_facevarying = value.preserve_facevarying;
-    edited_value.tesselated_shape     = value.tesselated_shape;
-    edited_value.displacement_texture = value.displacement_texture;
-    edited_value.displacement_scale   = value.displacement_scale;
-    auto edited                       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
-        edited = true;
+  auto edited             = yocto_subdiv{};
+  edited.uri              = value.uri;
+  edited.subdivisions     = value.subdivisions;
+  edited.catmullclark     = value.catmullclark;
+  edited.smooth           = value.smooth;
+  edited.facevarying      = value.facevarying;
+  edited.shape            = value.shape;
+  edited.displacement_tex = value.displacement_tex;
+  edited.displacement     = value.displacement;
+  auto updated            = false;
+  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_glslider(win, "subdivisions", edited.subdivisions, 0, 10))
+    updated = true;
+  if (draw_glcheckbox(win, "catmullclark", edited.catmullclark)) updated = true;
+  if (draw_glcheckbox(win, "smooth", edited.smooth)) updated = true;
+  if (draw_glcheckbox(win, "facevarying", edited.facevarying)) updated = true;
+  if (draw_glcombobox(win, "shape", edited.shape, scene.textures, true))
+    updated = true;
+  if (draw_glcombobox(win, "displacement_tex", edited.displacement_tex,
+          scene.textures, true))
+    updated = true;
+  if (draw_glslider(win, "displacement", edited.displacement, 0, 1))
+    updated = true;
+  draw_gllabel(win, "points", "%ld", value.points.size());
+  draw_gllabel(win, "lines", "%ld", value.lines.size());
+  draw_gllabel(win, "triangles", "%ld", value.triangles.size());
+  draw_gllabel(win, "quads", "%ld", value.quads.size());
+  draw_gllabel(win, "quads pos", "%ld", value.quadspos.size());
+  draw_gllabel(win, "quads norm", "%ld", value.quadsnorm.size());
+  draw_gllabel(win, "quads texcoord", "%ld", value.quadstexcoord.size());
+  draw_gllabel(win, "pos", "%ld", value.positions.size());
+  draw_gllabel(win, "norm", "%ld", value.normals.size());
+  draw_gllabel(win, "texcoord", "%ld", value.texcoords.size());
+  draw_gllabel(win, "color", "%ld", value.colors.size());
+  draw_gllabel(win, "radius", "%ld", value.radius.size());
+  if (updated) {
+    auto reload = edited.uri != value.uri;
+    if (!reload) {
+      edited.points        = value.points;
+      edited.lines         = value.lines;
+      edited.triangles     = value.triangles;
+      edited.quads         = value.quads;
+      edited.quadspos      = value.quadspos;
+      edited.quadsnorm     = value.quadsnorm;
+      edited.quadstexcoord = value.quadstexcoord;
+      edited.positions     = value.positions;
+      edited.normals       = value.normals;
+      edited.texcoords     = value.texcoords;
+      edited.colors        = value.colors;
+      edited.radius        = value.radius;
     }
-    if (draw_slider_opengl_widget(
-            win, "subdivision_level", edited_value.subdivision_level, 0, 10)) {
-        edited = true;
-    }
-    if (draw_checkbox_opengl_widget(
-            win, "catmull_clark", edited_value.catmull_clark)) {
-        edited = true;
-    }
-    if (draw_checkbox_opengl_widget(
-            win, "compute_normals", edited_value.compute_normals)) {
-        edited = true;
-    }
-    if (draw_checkbox_opengl_widget(
-            win, "preserve_facevarying", edited_value.preserve_facevarying)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(win, "tesselated_shape",
-            edited_value.tesselated_shape, scene.textures, true)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(win, "displacement_texture",
-            edited_value.displacement_texture, scene.textures, true)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "displacement_scale", edited_value.displacement_scale, 0, 1)) {
-        edited = true;
-    }
-    draw_label_opengl_widget(win, "points", "%ld", value.points.size());
-    draw_label_opengl_widget(win, "lines", "%ld", value.lines.size());
-    draw_label_opengl_widget(win, "triangles", "%ld", value.triangles.size());
-    draw_label_opengl_widget(win, "quads", "%ld", value.quads.size());
-    draw_label_opengl_widget(
-        win, "quads pos", "%ld", value.quads_positions.size());
-    draw_label_opengl_widget(
-        win, "quads norm", "%ld", value.quads_normals.size());
-    draw_label_opengl_widget(
-        win, "quads texcoord", "%ld", value.quads_texcoords.size());
-    draw_label_opengl_widget(win, "pos", "%ld", value.positions.size());
-    draw_label_opengl_widget(win, "norm", "%ld", value.normals.size());
-    draw_label_opengl_widget(win, "texcoord", "%ld", value.texcoords.size());
-    draw_label_opengl_widget(win, "color", "%ld", value.colors.size());
-    draw_label_opengl_widget(win, "radius", "%ld", value.radius.size());
-    if (edited) {
-        auto reload = edited_value.uri != value.uri;
-        if (!reload) {
-            edited_value.points          = value.points;
-            edited_value.lines           = value.lines;
-            edited_value.triangles       = value.triangles;
-            edited_value.quads           = value.quads;
-            edited_value.quads_positions = value.quads_positions;
-            edited_value.quads_normals   = value.quads_normals;
-            edited_value.quads_texcoords = value.quads_texcoords;
-            edited_value.positions       = value.positions;
-            edited_value.normals         = value.normals;
-            edited_value.texcoords       = value.texcoords;
-            edited_value.colors          = value.colors;
-            edited_value.radius          = value.radius;
-        }
-        edit = {sel.type, sel.index, edited_value, reload};
-    }
-    return edited;
+    edit = {sel.type, sel.index, edited, reload};
+  }
+  return updated;
 }
 
-inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
+inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_instance& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-    auto edited_value = value;
-    auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame[0]", edited_value.frame.x, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame[1]", edited_value.frame.y, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame[2]", edited_value.frame.z, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame.o", edited_value.frame.o, -10, 10)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(
-            win, "shape", edited_value.shape, scene.shapes, true)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(
-            win, "material", edited_value.material, scene.materials, true)) {
-        edited = true;
-    }
-    if (edited) {
-        edit = {sel.type, sel.index, edited_value, false};
-    }
-    return edited;
+  auto edited  = value;
+  auto updated = false;
+  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_glslider(win, "frame[0]", edited.frame.x, -1, 1)) updated = true;
+  if (draw_glslider(win, "frame[1]", edited.frame.y, -1, 1)) updated = true;
+  if (draw_glslider(win, "frame[2]", edited.frame.z, -1, 1)) updated = true;
+  if (draw_glslider(win, "frame.o", edited.frame.o, -10, 10)) updated = true;
+  if (draw_glcombobox(win, "shape", edited.shape, scene.shapes, true))
+    updated = true;
+  if (draw_glcombobox(win, "material", edited.material, scene.materials, true))
+    updated = true;
+  if (updated) {
+    edit = {sel.type, sel.index, edited, false};
+  }
+  return updated;
 }
 
-inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
+inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_environment& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-    auto edited_value = value;
-    auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame[0]", edited_value.frame.x, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame[1]", edited_value.frame.y, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame[2]", edited_value.frame.z, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "frame.o", edited_value.frame.o, -10, 10)) {
-        edited = true;
-    }
-    if (draw_hdr_coloredit_opengl_widget(
-            win, "emission", edited_value.emission)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(win, "emission texture",
-            edited_value.emission_texture, scene.textures, true)) {
-        edited = true;
-    }
-    if (edited) {
-        edit = {sel.type, sel.index, edited_value, false};
-    }
-    return edited;
+  auto edited  = value;
+  auto updated = false;
+  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_glslider(win, "frame[0]", edited.frame.x, -1, 1)) updated = true;
+  if (draw_glslider(win, "frame[1]", edited.frame.y, -1, 1)) updated = true;
+  if (draw_glslider(win, "frame[2]", edited.frame.z, -1, 1)) updated = true;
+  if (draw_glslider(win, "frame.o", edited.frame.o, -10, 10)) updated = true;
+  if (draw_glhdrcoloredit(win, "emission", edited.emission)) updated = true;
+  if (draw_glcombobox(
+          win, "emission texture", edited.emission_tex, scene.textures, true))
+    updated = true;
+  if (updated) {
+    edit = {sel.type, sel.index, edited, false};
+  }
+  return updated;
 }
 
-inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
+inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_scene_node& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-    auto edited_value = value;
-    auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(
-            win, "parent", edited_value.parent, scene.nodes, true)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "local[0]", edited_value.local.x, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "local[1]", edited_value.local.y, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "local[2]", edited_value.local.z, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "local.o", edited_value.local.o, -10, 10)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "translation", edited_value.translation, -10, 10)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(
-            win, "rotation", edited_value.rotation, -1, 1)) {
-        edited = true;
-    }
-    if (draw_slider_opengl_widget(win, "scale", edited_value.scale, 0, 10)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(
-            win, "camera", edited_value.camera, scene.cameras, true)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(
-            win, "instance", edited_value.instance, scene.instances, true)) {
-        edited = true;
-    }
-    if (draw_combobox_opengl_widget(win, "environment",
-            edited_value.environment, scene.environments, true)) {
-        edited = true;
-    }
-    if (edited) {
-        edit = {sel.type, sel.index, edited_value, false};
-    }
-    return edited;
+  auto edited  = value;
+  auto updated = false;
+  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_glcombobox(win, "parent", edited.parent, scene.nodes, true))
+    updated = true;
+  if (draw_glslider(win, "local[0]", edited.local.x, -1, 1)) updated = true;
+  if (draw_glslider(win, "local[1]", edited.local.y, -1, 1)) updated = true;
+  if (draw_glslider(win, "local[2]", edited.local.z, -1, 1)) updated = true;
+  if (draw_glslider(win, "local.o", edited.local.o, -10, 10)) updated = true;
+  if (draw_glslider(win, "translation", edited.translation, -10, 10))
+    updated = true;
+  if (draw_glslider(win, "rotation", edited.rotation, -1, 1)) updated = true;
+  if (draw_glslider(win, "scale", edited.scale, 0, 10)) updated = true;
+  if (draw_glcombobox(win, "camera", edited.camera, scene.cameras, true))
+    updated = true;
+  if (draw_glcombobox(win, "instance", edited.instance, scene.instances, true))
+    updated = true;
+  if (draw_glcombobox(
+          win, "environment", edited.environment, scene.environments, true))
+    updated = true;
+  if (updated) {
+    edit = {sel.type, sel.index, edited, false};
+  }
+  return updated;
 }
 
-inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
+inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_animation& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-    auto edited_value = value;
-    auto edited       = false;
-    if (draw_textinput_opengl_widget(win, "uri", edited_value.uri)) {
-        edited = true;
-    }
-    if (draw_textinput_opengl_widget(win, "path", edited_value.filename)) {
-        edited = true;
-    }
-    if (draw_textinput_opengl_widget(
-            win, "group", edited_value.animation_group)) {
-        edited = true;
-    }
-    // if(draw_combobox_opengl_widget(win, "type", &value.type,
-    // animation_type_names())) edited = false;
-    draw_label_opengl_widget(
-        win, "times", "%ld", edited_value.keyframes_times.size());
-    draw_label_opengl_widget(
-        win, "translation", "%ld", edited_value.translation_keyframes.size());
-    draw_label_opengl_widget(
-        win, "rotation", "%ld", edited_value.rotation_keyframes.size());
-    draw_label_opengl_widget(
-        win, "scale", "%ld", edited_value.scale_keyframes.size());
-    draw_label_opengl_widget(
-        win, "weights", "%ld", value.morph_weights_keyframes.size());
-    draw_label_opengl_widget(
-        win, "targets", "%ld", edited_value.node_targets.size());
-    if (edited) {
-        edit = {sel.type, sel.index, edited_value, false};
-    }
-    return edited;
+  auto edited  = value;
+  auto updated = false;
+  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_gltextinput(win, "path", edited.filename)) updated = true;
+  if (draw_gltextinput(win, "group", edited.group)) updated = true;
+  // if(draw_glcombobox(win, "type", &value.type,
+  // animation_type_names())) updated = false;
+  draw_gllabel(win, "times", "%ld", edited.times.size());
+  draw_gllabel(win, "translation", "%ld", edited.translations.size());
+  draw_gllabel(win, "rotation", "%ld", edited.rotations.size());
+  draw_gllabel(win, "scale", "%ld", edited.scales.size());
+  draw_gllabel(win, "weights", "%ld", value.morphs.size());
+  draw_gllabel(win, "targets", "%ld", edited.targets.size());
+  if (updated) {
+    edit = {sel.type, sel.index, edited, false};
+  }
+  return updated;
 }
 
-inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
-    const string& lbl, yocto_scene& scene, app_selection& sel, int height) {
-    draw_opengl_widgets_scene_tree(win, scene, sel);
+inline void draw_glscenetree(const opengl_window& win, const string& lbl,
+    yocto_scene& scene, app_selection& sel, int height) {
+  draw_glscenetree(win, scene, sel);
 }
 
-inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
-    const string& lbl, yocto_scene& scene, app_selection& sel, app_edit& edit,
-    int height) {
-    if (sel.type == typeid(void)) return false;
+inline bool draw_glsceneinspector(const opengl_window& win, const string& lbl,
+    yocto_scene& scene, app_selection& sel, app_edit& edit, int height) {
+  if (sel.type == typeid(void)) return false;
 
-    edit = app_edit{};
-    if (sel.type == typeid(yocto_camera)) {
-        return draw_opengl_widgets_scene_inspector(
-            win, scene.cameras[sel.index], sel, edit, scene);
-    }
-    if (sel.type == typeid(yocto_shape)) {
-        return draw_opengl_widgets_scene_inspector(
-            win, scene.shapes[sel.index], sel, edit, scene);
-    }
-    if (sel.type == typeid(yocto_subdiv)) {
-        return draw_opengl_widgets_scene_inspector(
-            win, scene.subdivs[sel.index], sel, edit, scene);
-    }
-    if (sel.type == typeid(yocto_texture)) {
-        return draw_opengl_widgets_scene_inspector(
-            win, scene.textures[sel.index], sel, edit, scene);
-    }
-    if (sel.type == typeid(yocto_voltexture)) {
-        return draw_opengl_widgets_scene_inspector(
-            win, scene.voltextures[sel.index], sel, edit, scene);
-    }
-    if (sel.type == typeid(yocto_material)) {
-        return draw_opengl_widgets_scene_inspector(
-            win, scene.materials[sel.index], sel, edit, scene);
-    }
-    if (sel.type == typeid(yocto_environment)) {
-        return draw_opengl_widgets_scene_inspector(
-            win, scene.environments[sel.index], sel, edit, scene);
-    }
-    if (sel.type == typeid(yocto_instance)) {
-        return draw_opengl_widgets_scene_inspector(
-            win, scene.instances[sel.index], sel, edit, scene);
-    }
-    if (sel.type == typeid(yocto_scene_node)) {
-        return draw_opengl_widgets_scene_inspector(
-            win, scene.nodes[sel.index], sel, edit, scene);
-    }
-    if (sel.type == typeid(yocto_animation)) {
-        return draw_opengl_widgets_scene_inspector(
-            win, scene.animations[sel.index], sel, edit, scene);
-    }
+  edit = app_edit{};
+  if (sel.type == typeid(yocto_camera)) {
+    return draw_glsceneinspector(
+        win, scene.cameras[sel.index], sel, edit, scene);
+  }
+  if (sel.type == typeid(yocto_shape)) {
+    return draw_glsceneinspector(
+        win, scene.shapes[sel.index], sel, edit, scene);
+  }
+  if (sel.type == typeid(yocto_subdiv)) {
+    return draw_glsceneinspector(
+        win, scene.subdivs[sel.index], sel, edit, scene);
+  }
+  if (sel.type == typeid(yocto_texture)) {
+    return draw_glsceneinspector(
+        win, scene.textures[sel.index], sel, edit, scene);
+  }
+  if (sel.type == typeid(yocto_voltexture)) {
+    return draw_glsceneinspector(
+        win, scene.voltextures[sel.index], sel, edit, scene);
+  }
+  if (sel.type == typeid(yocto_material)) {
+    return draw_glsceneinspector(
+        win, scene.materials[sel.index], sel, edit, scene);
+  }
+  if (sel.type == typeid(yocto_environment)) {
+    return draw_glsceneinspector(
+        win, scene.environments[sel.index], sel, edit, scene);
+  }
+  if (sel.type == typeid(yocto_instance)) {
+    return draw_glsceneinspector(
+        win, scene.instances[sel.index], sel, edit, scene);
+  }
+  if (sel.type == typeid(yocto_scene_node)) {
+    return draw_glsceneinspector(win, scene.nodes[sel.index], sel, edit, scene);
+  }
+  if (sel.type == typeid(yocto_animation)) {
+    return draw_glsceneinspector(
+        win, scene.animations[sel.index], sel, edit, scene);
+  }
 
-    return false;
+  return false;
 }
 
 #endif

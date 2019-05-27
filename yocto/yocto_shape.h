@@ -42,7 +42,7 @@
 //    `compute_tangent_spaces()`
 // 6. compute skinning with `compute_skinning()` and
 //    `compute_matrix_skinning()`
-// 6. create shapes with `make_shape()`, `make_hair()`, `make_points()`
+// 6. create shapes with `make_improc()`, `make_hair()`, `make_points()`
 // 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 // 8. shape sampling with `sample_points()`, `sample_lines()`,
 //    `sample_triangles()`; initialize the sampling CDFs with
@@ -114,22 +114,22 @@ namespace yocto {
 // Load/Save a shape
 void load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, bool preserve_facevarying);
+    vector<float>& radius, bool facevarying);
 void save_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<float>& radius, bool ascii = false);
 
 // shapeio error
 struct shapeio_error : runtime_error {
-    explicit shapeio_error(const char* msg) : runtime_error{msg} {}
-    explicit shapeio_error(const std::string& msg) : runtime_error{msg} {}
+  explicit shapeio_error(const char* msg) : runtime_error{msg} {}
+  explicit shapeio_error(const std::string& msg) : runtime_error{msg} {}
 };
 
 }  // namespace yocto
@@ -194,9 +194,9 @@ namespace yocto {
 // only bidirectional edges to keep the dictionary small. Use the functions
 // below to access this data.
 struct edge_map {
-    unordered_map<vec2i, int> edge_index = {};
-    vector<vec2i>             edges      = {};
-    vector<int>               num_faces  = {};
+  unordered_map<vec2i, int> edge_index = {};
+  vector<vec2i>             edges      = {};
+  vector<int>               num_faces  = {};
 };
 
 // Initialize an edge map with elements.
@@ -216,10 +216,10 @@ void get_edges(const vector<vec4i>& quads, vector<vec2i>& edges);
 // A sparse grid of cells, containing list of points. Cells are stored in
 // a dictionary to get sparsing. Helpful for nearest neighboor lookups.
 struct hash_grid {
-    float                             cell_size     = 0;
-    float                             cell_inv_size = 0;
-    vector<vec3f>                     positions     = {};
-    unordered_map<vec3i, vector<int>> cells         = {};
+  float                             cell_size     = 0;
+  float                             cell_inv_size = 0;
+  vector<vec3f>                     positions     = {};
+  unordered_map<vec3i, vector<int>> cells         = {};
 };
 
 // Create a hash_grid
@@ -257,8 +257,8 @@ void bezier_to_lines(vector<vec2i>& lines, const vector<vec4i>& beziers);
 // and face ids and filled vectors for pos, norm, texcoord and colors.
 void split_facevarying(vector<vec4i>& split_quads,
     vector<vec3f>& split_positions, vector<vec3f>& split_normals,
-    vector<vec2f>& split_texcoords, const vector<vec4i>& quads_positions,
-    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords,
+    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords);
 
@@ -417,18 +417,18 @@ namespace yocto {
 
 // Data structure used for geodesic computation
 struct geodesic_solver {
-    struct arc_ {
-        int   node   = 0;
-        float length = 0;
-    };
-    struct index_ {
-        int node  = 0;
-        int index = 0;
-    };
-    vector<vector<arc_>>   graph      = {};
-    vector<vector<index_>> edge_index = {};
-    vector<vec3f>          positions  = {};
-    vector<vec2i>          edges      = {};
+  struct arc_ {
+    int   node   = 0;
+    float length = 0;
+  };
+  struct index_ {
+    int node  = 0;
+    int index = 0;
+  };
+  vector<vector<arc_>>   graph      = {};
+  vector<vector<index_>> edge_index = {};
+  vector<vec3f>          positions  = {};
+  vector<vec2i>          edges      = {};
 };
 
 // Construct an edge graph
@@ -448,43 +448,43 @@ namespace yocto {
 
 // Type of procedural shape
 enum make_shape_type {
-    quad,
-    floor,
-    cube,
-    sphere,
-    disk,
-    matball,
-    suzanne,
-    box,
-    rect,
-    rect_stack,
-    uvsphere,
-    uvdisk,
-    uvcylinder,
-    geosphere,
+  quad,
+  floor,
+  cube,
+  sphere,
+  disk,
+  matball,
+  suzanne,
+  box,
+  rect,
+  rect_stack,
+  uvsphere,
+  uvdisk,
+  uvcylinder,
+  geosphere,
 };
 
 // Parameters for make shape function
-struct make_shape_params {
-    make_shape_type type         = make_shape_type::quad;
-    int             subdivisions = 0;
-    float           scale        = 1;
-    float           uvscale      = 1;
-    float           rounded      = 0;
-    vec3f           aspect       = {1, 1, 1};  // for rect, box, cylinder
-    frame3f         frame        = identity_frame3f;
+struct procshape_params {
+  make_shape_type type         = make_shape_type::quad;
+  int             subdivisions = 0;
+  float           scale        = 1;
+  float           uvscale      = 1;
+  float           rounded      = 0;
+  vec3f           aspect       = {1, 1, 1};  // for rect, box, cylinder
+  frame3f         frame        = identity3x4f;
 };
 
 // Make a procedural shape
-void make_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
+void make_improc(vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const make_shape_params& params);
+    const procshape_params& params);
 // Make face-varying quads. For now supports only quad, cube, suzanne, sphere,
 // rect, box. Rounding not supported for now.
-void make_fvshape(vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
+void make_improcfvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const make_shape_params& params);
+    const procshape_params& params);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
@@ -503,19 +503,19 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
 
 // Make fair params
 struct make_hair_params {
-    int   num               = 0;
-    int   subdivisions      = 0;
-    float length_min        = 0.1;
-    float length_max        = 0.1;
-    float radius_base       = 0.001;
-    float radius_tip        = 0.001;
-    float noise_strength    = 0;
-    float noise_scale       = 10;
-    float clump_strength    = 0;
-    int   clump_num         = 0;
-    float rotation_strength = 0;
-    float rotation_minchia  = 0;
-    int   seed              = 7;
+  int   num               = 0;
+  int   subdivisions      = 0;
+  float length_min        = 0.1;
+  float length_max        = 0.1;
+  float radius_base       = 0.001;
+  float radius_tip        = 0.001;
+  float noise_strength    = 0;
+  float noise_scale       = 10;
+  float clump_strength    = 0;
+  int   clump_num         = 0;
+  float rotation_strength = 0;
+  float rotation_minchia  = 0;
+  int   seed              = 7;
 };
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
@@ -538,11 +538,10 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
 
 // Shape presets used ofr testing.
 void make_preset(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texcoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, const string& type);
+    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
+    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<vec4f>& colors, vector<float>& radius, const string& type);
 
 }  // namespace yocto
 
@@ -553,29 +552,29 @@ namespace yocto {
 
 // Line properties.
 inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
-    return normalize(p1 - p0);
+  return normalize(p1 - p0);
 }
 inline float line_length(const vec3f& p0, const vec3f& p1) {
-    return length(p1 - p0);
+  return length(p1 - p0);
 }
 
 // Triangle properties.
 inline vec3f triangle_normal(
     const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-    return normalize(cross(p1 - p0, p2 - p0));
+  return normalize(cross(p1 - p0, p2 - p0));
 }
 inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-    return length(cross(p1 - p0, p2 - p0)) / 2;
+  return length(cross(p1 - p0, p2 - p0)) / 2;
 }
 
 // Quad propeties.
 inline vec3f quad_normal(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-    return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
+  return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
 }
 inline float quad_area(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-    return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
+  return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
 }
 
 // Triangle tangent and bitangent from uv
@@ -593,14 +592,14 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
 inline T interpolate_line(const T& p0, const T& p1, float u) {
-    return p0 * (1 - u) + p1 * u;
+  return p0 * (1 - u) + p1 * u;
 }
 // Interpolates values over a triangle parameterized by u and v along the
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
 inline T interpolate_triangle(
     const T& p0, const T& p1, const T& p2, const vec2f& uv) {
-    return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
@@ -608,14 +607,14 @@ template <typename T>
 inline T interpolate_quad(
     const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
 #if YOCTO_QUADS_AS_TRIANGLES
-    if (uv.x + uv.y <= 1) {
-        return interpolate_triangle(p0, p1, p3, uv);
-    } else {
-        return interpolate_triangle(p2, p3, p1, 1 - uv);
-    }
+  if (uv.x + uv.y <= 1) {
+    return interpolate_triangle(p0, p1, p3, uv);
+  } else {
+    return interpolate_triangle(p2, p3, p1, 1 - uv);
+  }
 #else
-    return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
-           p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
+  return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
+         p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
 #endif
 }
 
@@ -623,41 +622,41 @@ inline T interpolate_quad(
 template <typename T>
 inline T interpolate_bezier(
     const T& p0, const T& p1, const T& p2, const T& p3, float u) {
-    return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
-           p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
+  return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
+         p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
 }
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier_derivative(
     const T& p0, const T& p1, const T& p2, const T& p3, float u) {
-    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
-           (p3 - p2) * 3 * u * u;
+  return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
+         (p3 - p2) * 3 * u * u;
 }
 
 // Triangle tangent and bitangent from uv
 inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
-    // Follows the definition in http://www.terathon.com/code/tangent.html and
-    // https://gist.github.com/aras-p/2843984
-    // normal points up from texture space
-    auto p   = p1 - p0;
-    auto q   = p2 - p0;
-    auto s   = vec2f{uv1.x - uv0.x, uv2.x - uv0.x};
-    auto t   = vec2f{uv1.y - uv0.y, uv2.y - uv0.y};
-    auto div = s.x * t.y - s.y * t.x;
+  // Follows the definition in http://www.terathon.com/code/tangent.html and
+  // https://gist.github.com/aras-p/2843984
+  // normal points up from texture space
+  auto p   = p1 - p0;
+  auto q   = p2 - p0;
+  auto s   = vec2f{uv1.x - uv0.x, uv2.x - uv0.x};
+  auto t   = vec2f{uv1.y - uv0.y, uv2.y - uv0.y};
+  auto div = s.x * t.y - s.y * t.x;
 
-    if (div != 0) {
-        auto tu = vec3f{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
-                      t.y * p.z - t.x * q.z} /
-                  div;
-        auto tv = vec3f{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
-                      s.x * q.z - s.y * p.z} /
-                  div;
-        return {tu, tv};
-    } else {
-        return {{1, 0, 0}, {0, 1, 0}};
-    }
+  if (div != 0) {
+    auto tu = vec3f{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
+                  t.y * p.z - t.x * q.z} /
+              div;
+    auto tv = vec3f{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
+                  s.x * q.z - s.y * p.z} /
+              div;
+    return {tu, tv};
+  } else {
+    return {{1, 0, 0}, {0, 1, 0}};
+  }
 }
 
 // Quad tangent and bitangent from uv.
@@ -665,13 +664,13 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
     const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv) {
 #if YOCTO_QUADS_AS_TRIANGLES
-    if (current_uv.x + current_uv.y <= 1) {
-        return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
-    } else {
-        return triangle_tangents_fromuv(p2, p3, p1, uv2, uv3, uv1);
-    }
-#else
+  if (current_uv.x + current_uv.y <= 1) {
     return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
+  } else {
+    return triangle_tangents_fromuv(p2, p3, p1, uv2, uv3, uv1);
+  }
+#else
+  return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
 #endif
 }
 

@@ -35,57 +35,56 @@ using namespace yocto;
 #include "ext/CLI11.hpp"
 
 int main(int argc, char** argv) {
-    // command line parameters
-    auto geodesic_source = -1;
-    auto facevarying     = false;
-    auto output          = "out.ply"s;
-    auto filename        = "mesh.ply"s;
+  // command line parameters
+  auto geodesic_source = -1;
+  auto facevarying     = false;
+  auto output          = "out.ply"s;
+  auto filename        = "mesh.ply"s;
 
-    // parse command line
-    auto parser = CLI::App{"Applies operations on a triangle mesh"};
-    parser.add_option(
-        "--geodesic-source,-g", geodesic_source, "Geodesic source");
-    parser.add_flag(
-        "--facevarying,!-facevarying", facevarying, "Preserve facevarying");
-    parser.add_option("--output,-o", output, "output mesh")->required(true);
-    parser.add_option("mesh", filename, "input mesh")->required(true);
-    try {
-        parser.parse(argc, argv);
-    } catch (const CLI::ParseError& e) {
-        return parser.exit(e);
-    }
+  // parse command line
+  auto parser = CLI::App{"Applies operations on a triangle mesh"};
+  parser.add_option("--geodesic-source,-g", geodesic_source, "Geodesic source");
+  parser.add_flag(
+      "--facevarying,!-facevarying", facevarying, "Preserve facevarying");
+  parser.add_option("--output,-o", output, "output mesh")->required(true);
+  parser.add_option("mesh", filename, "input mesh")->required(true);
+  try {
+    parser.parse(argc, argv);
+  } catch (const CLI::ParseError& e) {
+    return parser.exit(e);
+  }
 
-    // load mesh
-    auto shape = yocto_shape{};
-    try {
-        load_shape(filename, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.quads_positions, shape.quads_normals,
-            shape.quads_texcoords, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius, facevarying);
-    } catch (const std::exception& e) {
-        print_fatal(e.what());
-    }
+  // load mesh
+  auto shape = yocto_shape{};
+  try {
+    load_shape(filename, shape.points, shape.lines, shape.triangles,
+        shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, facevarying);
+  } catch (const std::exception& e) {
+    print_fatal(e.what());
+  }
 
-    // compute geodesics and store them as colors
-    if (geodesic_source >= 0) {
-        auto solver = geodesic_solver{};
-        init_geodesic_solver(solver, shape.triangles, shape.positions);
-        auto distances = vector<float>{};
-        compute_geodesic_distances(solver, distances, {geodesic_source});
-        shape.colors = vector<vec4f>{};
-        convert_distance_to_color(shape.colors, distances);
-    }
+  // compute geodesics and store them as colors
+  if (geodesic_source >= 0) {
+    auto solver = geodesic_solver{};
+    init_geodesic_solver(solver, shape.triangles, shape.positions);
+    auto distances = vector<float>{};
+    compute_geodesic_distances(solver, distances, {geodesic_source});
+    shape.colors = vector<vec4f>{};
+    convert_distance_to_color(shape.colors, distances);
+  }
 
-    // save mesh
-    try {
-        save_shape(filename, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.quads_positions, shape.quads_normals,
-            shape.quads_texcoords, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
-    } catch (const std::exception& e) {
-        print_fatal(e.what());
-    }
+  // save mesh
+  try {
+    save_shape(filename, shape.points, shape.lines, shape.triangles,
+        shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius);
+  } catch (const std::exception& e) {
+    print_fatal(e.what());
+  }
 
-    // done
-    return 0;
+  // done
+  return 0;
 }
