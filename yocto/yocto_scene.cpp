@@ -1047,11 +1047,11 @@ float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float camera_fovx(const yocto_camera& camera) {
   assert(!camera.orthographic);
-  return 2 * atan(camera.width / (2 * camera.focal));
+  return 2 * atan(camera.width / (2 * camera.lens));
 }
 float camera_fovy(const yocto_camera& camera) {
   assert(!camera.orthographic);
-  return 2 * atan(camera.height / (2 * camera.focal));
+  return 2 * atan(camera.height / (2 * camera.lens));
 }
 float camera_aspect(const yocto_camera& camera) {
   return camera.width / camera.height;
@@ -1082,9 +1082,9 @@ void set_perspectivey(
   camera.focus        = focus;
   auto distance       = camera.height / (2 * tan(fovy / 2));
   if (focus < float_max) {
-    camera.focal = camera.focus * distance / (camera.focus + distance);
+    camera.lens = camera.focus * distance / (camera.focus + distance);
   } else {
-    camera.focal = distance;
+    camera.lens = distance;
   }
 }
 void set_perspectivex(
@@ -1095,19 +1095,19 @@ void set_perspectivex(
   camera.focus        = focus;
   auto distance       = camera.width / (2 * tan(fovx / 2));
   if (focus < float_max) {
-    camera.focal = camera.focus * distance / (camera.focus + distance);
+    camera.lens = camera.focus * distance / (camera.focus + distance);
   } else {
-    camera.focal = distance;
+    camera.lens = distance;
   }
 }
 
 // add missing camera
 void set_view(yocto_camera& camera, const bbox3f& bbox,
-    const vec3f& view_direction, float width, float height, float focal) {
+    const vec3f& view_direction, float width, float height, float lens) {
   camera.orthographic = false;
   if (width != 0) camera.width = width;
   if (height != 0) camera.height = height;
-  if (focal != 0) camera.focal = focal;
+  if (lens != 0) camera.lens = lens;
   auto center      = (bbox.max + bbox.min) / 2.0f;
   auto bbox_radius = length(bbox.max - bbox.min) / 2;
   auto camera_dir  = (view_direction == zero3f) ? camera.frame.o - center
@@ -1128,9 +1128,9 @@ void set_view(yocto_camera& camera, const bbox3f& bbox,
 // the lens coordinates luv.
 ray3f eval_perspective_camera(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
-  auto distance = camera.focal;
+  auto distance = camera.lens;
   if (camera.focus < float_max) {
-    distance = camera.focal * camera.focus / (camera.focus - camera.focal);
+    distance = camera.lens * camera.focus / (camera.focus - camera.lens);
   }
   if (camera.aperture) {
     auto e = vec3f{(lens_uv.x - 0.5f) * camera.aperture,
@@ -1138,7 +1138,7 @@ ray3f eval_perspective_camera(
     auto q = vec3f{camera.width * (0.5f - image_uv.x),
         camera.height * (image_uv.y - 0.5f), distance};
     // distance of the image of the point
-    auto distance1 = camera.focal * distance / (distance - camera.focal);
+    auto distance1 = camera.lens * distance / (distance - camera.lens);
     auto q1        = -q * distance1 / distance;
     auto d         = normalize(q1 - e);
     // auto q1 = - normalize(q) * camera.focus / normalize(q).z;
@@ -1162,7 +1162,7 @@ ray3f eval_perspective_camera(
 ray3f eval_orthographic_camera(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
   if (camera.aperture) {
-    auto scale = 1 / camera.focal;
+    auto scale = 1 / camera.lens;
     auto q     = vec3f{camera.width * (0.5f - image_uv.x) * scale,
         camera.height * (image_uv.y - 0.5f) * scale, scale};
     auto q1    = vec3f{-q.x, -q.y, -camera.focus};
@@ -1174,7 +1174,7 @@ ray3f eval_orthographic_camera(
         transform_point(camera.frame, e), transform_direction(camera.frame, d)};
     return ray;
   } else {
-    auto scale = 1 / camera.focal;
+    auto scale = 1 / camera.lens;
     auto q     = vec3f{camera.width * (0.5f - image_uv.x) * scale,
         camera.height * (image_uv.y - 0.5f) * scale, scale};
     auto q1    = -q;

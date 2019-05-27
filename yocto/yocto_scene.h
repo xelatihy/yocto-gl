@@ -74,7 +74,7 @@ namespace yocto {
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
-// we specify fil size (35mm by default), the focal length the focus
+// we specify fil size (35mm by default), the lens' focal length, the focus
 // distance and the lens aperture. All values are in meters.
 // Here are some common aspect ratios used in video and still photography.
 // 3:2    on 35 mm:  0.036 x 0.024
@@ -90,7 +90,7 @@ struct yocto_camera {
   bool    orthographic = false;
   float   width        = 0.036f;
   float   height       = 0.024f;
-  float   focal        = 0.050f;
+  float   lens         = 0.050f;
   float   focus        = float_max;
   float   aperture     = 0;
 };
@@ -362,7 +362,8 @@ void build_bvh(
 void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
     const vector<int>& updated_shapes, const bvh_params& params);
 
-// Shape values interpolated using barycentric coordinates.
+// Shape values interpolated by interpoalting vertex values of the `eid` element
+// with its barycentric coordinates `euv`.
 vec3f eval_position(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
 vec3f eval_normal(
@@ -385,8 +386,8 @@ pair<vec3f, bool> eval_element_tangents(
 // Sample a shape element based on area/length.
 void             sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf);
 pair<int, vec2f> sample_shape(const yocto_shape& shape,
-    const vector<float>& elem_cdf, float re, const vec2f& ruv);
-float sample_shape_pdf(const yocto_shape& shape, const vector<float>& elem_cdf,
+    const vector<float>& cdf, float re, const vec2f& ruv);
+float sample_shape_pdf(const yocto_shape& shape, const vector<float>& cdf,
     int element_id, const vec2f& element_uv);
 
 // Evaluate a texture.
@@ -415,7 +416,7 @@ void  set_perspectivex(yocto_camera& camera, float fovx, float aspect,
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_view(yocto_camera& camera, const bbox3f& bbox,
     const vec3f& view_direction = zero3f, float width = 0, float height = 0,
-    float focal = 0);
+    float lens = 0);
 
 // Generates a ray from a camera image coordinate and lens coordinates.
 ray3f eval_camera(

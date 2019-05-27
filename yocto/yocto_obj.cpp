@@ -216,7 +216,7 @@ void load_objx(
       parse_value(line, camera.ortho);
       parse_value(line, camera.width);
       parse_value(line, camera.height);
-      parse_value(line, camera.focal);
+      parse_value(line, camera.lens);
       parse_value(line, camera.focus);
       parse_value(line, camera.aperture);
       parse_value(line, camera.frame);

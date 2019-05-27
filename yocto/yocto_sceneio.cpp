@@ -559,8 +559,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
           get_yaml_value(value, camera.width);
         } else if (key == "height") {
           get_yaml_value(value, camera.height);
-        } else if (key == "focal") {
-          get_yaml_value(value, camera.focal);
+        } else if (key == "lens") {
+          get_yaml_value(value, camera.lens);
         } else if (key == "focus") {
           get_yaml_value(value, camera.focus);
         } else if (key == "aperture") {
@@ -848,7 +848,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     write_opt(fs, "orthographic", camera.orthographic, def_camera.orthographic);
     write_opt(fs, "width", camera.width, def_camera.width);
     write_opt(fs, "height", camera.height, def_camera.height);
-    write_opt(fs, "focal", camera.focal, def_camera.focal);
+    write_opt(fs, "lens", camera.lens, def_camera.lens);
     write_opt(fs, "focus", camera.focus, def_camera.focus);
     write_opt(fs, "aperture", camera.aperture, def_camera.aperture);
   }
@@ -1224,7 +1224,7 @@ struct load_obj_scene_cb : obj_callbacks {
     camera.orthographic = ocam.ortho;
     camera.width        = ocam.width;
     camera.height       = ocam.height;
-    camera.focal        = ocam.focal;
+    camera.lens         = ocam.lens;
     camera.focus        = ocam.focus;
     camera.aperture     = ocam.aperture;
     scene.cameras.push_back(camera);
@@ -1373,7 +1373,7 @@ static void save_objx(const string& filename, const yocto_scene& scene) {
   // cameras
   for (auto& camera : scene.cameras) {
     write_obj_line(fs, "c", get_basename(camera.uri), (int)camera.orthographic,
-        camera.width, camera.height, camera.focal, camera.focus,
+        camera.width, camera.height, camera.lens, camera.focus,
         camera.aperture, camera.frame);
   }
 
@@ -1545,7 +1545,7 @@ static void save_obj_scene(const string& filename, const yocto_scene& scene,
 
 void print_obj_camera(const yocto_camera& camera) {
   write_obj_line(stdout, "c", get_basename(camera.uri),
-      (int)camera.orthographic, camera.width, camera.height, camera.focal,
+      (int)camera.orthographic, camera.width, camera.height, camera.lens,
       camera.focus, camera.aperture, camera.frame);
 }
 
@@ -2735,7 +2735,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       } break;
       case pbrt_camera::type_t::realistic: {
         auto& realistic = pcamera.realistic;
-        camera.focal    = max(realistic.approx_focallength, 35.0f) * 0.001f;
+        camera.lens    = max(realistic.approx_focallength, 35.0f) * 0.001f;
         auto aspect     = 1.0f;
         if (aspect < 0) aspect = last_film_aspect;
         if (aspect < 0) aspect = 1;
@@ -3415,7 +3415,7 @@ void make_cornellbox_scene(yocto_scene& scene) {
   auto& camera            = scene.cameras.emplace_back();
   camera.uri              = "cam";
   camera.frame            = frame3f{{0, 1, 3.9}};
-  camera.focal            = 0.035;
+  camera.lens             = 0.035;
   camera.aperture         = 0.0;
   camera.width            = 0.024;
   camera.height           = 0.024;
