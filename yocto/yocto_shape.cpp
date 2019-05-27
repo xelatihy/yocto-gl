@@ -3097,27 +3097,30 @@ static void load_obj_shape(const string& filename, vector<int>& points,
   }
 }
 
-static string to_string(const obj_vertex& value) {
-  if (value.texcoord && value.normal) {
-    return to_string(value.position) + "/" + to_string(value.texcoord) + "/" +
-           to_string(value.normal);
-  } else if (value.texcoord && !value.normal) {
-    return to_string(value.position) + "/" + to_string(value.texcoord);
-  } else if (!value.texcoord && value.normal) {
-    return to_string(value.position) + "//" + to_string(value.normal);
-  } else {
-    return to_string(value.position);
+static void print_value(FILE* fs, const obj_vertex& value) {
+  if (fprintf(fs, "%d", value.position) < 0)
+    throw io_error("cannot write value");
+  if (value.texcoord) {
+    if (fprintf(fs, "/%d", value.texcoord) < 0)
+      throw io_error("cannot write value");
+    if (value.normal) {
+      if (fprintf(fs, "/%d", value.normal) < 0)
+        throw io_error("cannot write value");
+    }
+  } else if (value.normal) {
+    if (fprintf(fs, "//%d", value.normal) < 0)
+      throw io_error("cannot write value");
   }
 }
 
 template <typename T, typename... Ts>
-static inline void write_obj_line(
+static inline void print_obj_line(
     FILE* fs, const T& value, const Ts... values) {
-  write_value(fs, value);
+  print_value(fs, value);
   if constexpr (sizeof...(values) == 0) {
     write_text(fs, "\n");
   } else {
-    write_obj_line(fs, values...);
+    print_obj_line(fs, values...);
   }
 }
 
@@ -3137,10 +3140,10 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   write_text(fs, "# https://github.com/xelatihy/yocto-gl\n");
   write_text(fs, "#\n");
 
-  for (auto& p : positions) write_obj_line(fs, "v", p.x, p.y, p.z);
-  for (auto& n : normals) write_obj_line(fs, "vn", n.x, n.y, n.z);
+  for (auto& p : positions) print_obj_line(fs, "v", p.x, p.y, p.z);
+  for (auto& n : normals) print_obj_line(fs, "vn", n.x, n.y, n.z);
   for (auto& t : texcoords)
-    write_obj_line(fs, "vt", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+    print_obj_line(fs, "vt", t.x, (flip_texcoord) ? 1 - t.y : t.y);
 
   auto mask = obj_vertex{1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
   auto vert = [mask](int i) {
@@ -3149,19 +3152,19 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   };
 
   for (auto& p : points) {
-    write_obj_line(fs, "p", vert(p));
+    print_obj_line(fs, "p", vert(p));
   }
   for (auto& l : lines) {
-    write_obj_line(fs, "l", vert(l.x), vert(l.y));
+    print_obj_line(fs, "l", vert(l.x), vert(l.y));
   }
   for (auto& t : triangles) {
-    write_obj_line(fs, "f", vert(t.x), vert(t.y), vert(t.z));
+    print_obj_line(fs, "f", vert(t.x), vert(t.y), vert(t.z));
   }
   for (auto& q : quads) {
     if (q.z == q.w) {
-      write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+      print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
     } else {
-      write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+      print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
     }
   }
 
@@ -3185,11 +3188,11 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
                                      : vec4i{-1, -1, -1, -1};
     auto qn = !quadsnorm.empty() ? quadsnorm.at(i) : vec4i{-1, -1, -1, -1};
     if (qp.z != qp.w) {
-      write_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
+      print_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
           fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z),
           fvvert(qp.w, qt.w, qn.w));
     } else {
-      write_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
+      print_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
           fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z));
     }
   }
