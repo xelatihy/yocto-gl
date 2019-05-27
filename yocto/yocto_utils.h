@@ -658,13 +658,13 @@ inline bool read_line(FILE* fs, char* buffer, size_t size) {
 }
 
 // Print a value to a FILE
-inline void print_value(FILE* fs, int value) {
+inline void format_value(FILE* fs, int value) {
   if (fprintf(fs, "%d", value) < 0) throw io_error("cannot print value");
 }
-inline void print_value(FILE* fs, float value) {
+inline void format_value(FILE* fs, float value) {
   if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
 }
-inline void print_value(FILE* fs, bool value, bool alpha = false) {
+inline void format_value(FILE* fs, bool value, bool alpha = false) {
   if (alpha) {
     if (fprintf(fs, "%s", value ? "true" : "false") < 0)
       throw io_error("cannot print value");
@@ -673,65 +673,65 @@ inline void print_value(FILE* fs, bool value, bool alpha = false) {
       throw io_error("cannot print value");
   }
 }
-inline void print_value(FILE* fs, const char* value, bool quoted = false) {
+inline void format_value(FILE* fs, const char* value, bool quoted = false) {
   if (fprintf(fs, quoted ? "\"%s\"" : "%s", value) < 0)
     throw io_error("cannot print value");
 }
-inline void print_value(FILE* fs, const string& value, bool quoted = false) {
+inline void format_value(FILE* fs, const string& value, bool quoted = false) {
   if (fprintf(fs, quoted ? "\"%s\"" : "%s", value.c_str()) < 0)
     throw io_error("cannot print value");
 }
 
 template <typename T>
-inline void print_values(FILE* fs, const T* values,
+inline void format_values(FILE* fs, const T* values,
     int num, bool bracketed = false) {
   if(bracketed) write_text(fs, "[");
   for (auto i = 0; i < num; i++) {
     if(i) write_text(fs, bracketed ? "," : " ");
-    print_value(fs, values[i]);
+    format_value(fs, values[i]);
   }
   if(bracketed) write_text(fs, "]");
 }
 
-inline void print_value(FILE* fs, const vec2f& value, bool bracketed = false) {
-  print_values(fs, &value.x, 2, bracketed);
+inline void format_value(FILE* fs, const vec2f& value, bool bracketed = false) {
+  format_values(fs, &value.x, 2, bracketed);
 }
-inline void print_value(FILE* fs, const vec3f& value, bool bracketed = false) {
-  print_values(fs, &value.x, 3, bracketed);
+inline void format_value(FILE* fs, const vec3f& value, bool bracketed = false) {
+  format_values(fs, &value.x, 3, bracketed);
 }
-inline void print_value(FILE* fs, const vec4f& value, bool bracketed = false) {
-  print_values(fs, &value.x, 4, bracketed);
-}
-
-inline void print_value(FILE* fs, const vec2i& value, bool bracketed = false) {
-  print_values(fs, &value.x, 2, bracketed);
-}
-inline void print_value(FILE* fs, const vec3i& value, bool bracketed = false) {
-  print_values(fs, &value.x, 3, bracketed);
-}
-inline void print_value(FILE* fs, const vec4i& value, bool bracketed = false) {
-  print_values(fs, &value.x, 4, bracketed);
+inline void format_value(FILE* fs, const vec4f& value, bool bracketed = false) {
+  format_values(fs, &value.x, 4, bracketed);
 }
 
-inline void print_value(FILE* fs, const mat2f& value, bool bracketed = false) {
-  print_values(fs, &value.x.x, 4, bracketed);
+inline void format_value(FILE* fs, const vec2i& value, bool bracketed = false) {
+  format_values(fs, &value.x, 2, bracketed);
 }
-inline void print_value(FILE* fs, const mat3f& value, bool bracketed = false) {
-  print_values(fs, &value.x.x, 9, bracketed);
+inline void format_value(FILE* fs, const vec3i& value, bool bracketed = false) {
+  format_values(fs, &value.x, 3, bracketed);
 }
-inline void print_value(FILE* fs, const mat4f& value, bool bracketed = false) {
-  print_values(fs, &value.x.x, 16, bracketed);
+inline void format_value(FILE* fs, const vec4i& value, bool bracketed = false) {
+  format_values(fs, &value.x, 4, bracketed);
 }
 
-inline void print_value(FILE* fs, const frame2f& value, bool bracketed = false) {
-  print_values(fs, &value.x.x, 6, bracketed);
+inline void format_value(FILE* fs, const mat2f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 4, bracketed);
 }
-inline void print_value(FILE* fs, const frame3f& value, bool bracketed = false) {
-  print_values(fs, &value.x.x, 12, bracketed);
+inline void format_value(FILE* fs, const mat3f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 9, bracketed);
+}
+inline void format_value(FILE* fs, const mat4f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 16, bracketed);
+}
+
+inline void format_value(FILE* fs, const frame2f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 6, bracketed);
+}
+inline void format_value(FILE* fs, const frame3f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 12, bracketed);
 }
 
 template<typename T, typename ... Ts>
-inline void print_values(FILE* fs, const T& arg, const Ts& ... args) {
+inline void format_values(FILE* fs, const T& arg, const Ts& ... args) {
   write_value(fs, arg);
   if constexpr(sizeof...(Ts) != 0) {
     write_text(fs, " ");
@@ -739,11 +739,11 @@ inline void print_values(FILE* fs, const T& arg, const Ts& ... args) {
   }
 }
 template<typename T, typename ... Ts>
-inline void print_line(FILE* fs, const T& arg, const Ts& ... args) {
-  print_value(fs, arg);
+inline void format_line(FILE* fs, const T& arg, const Ts& ... args) {
+  format_value(fs, arg);
   if constexpr(sizeof...(Ts) != 0) {
     write_text(fs, " ");
-    print_line(fs, args...);
+    format_line(fs, args...);
   } else {
     write_text(fs, "\n");
   }

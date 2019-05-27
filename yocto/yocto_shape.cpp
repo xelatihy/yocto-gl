@@ -3097,7 +3097,7 @@ static void load_obj_shape(const string& filename, vector<int>& points,
   }
 }
 
-static void print_value(FILE* fs, const obj_vertex& value) {
+static void format_value(FILE* fs, const obj_vertex& value) {
   if (fprintf(fs, "%d", value.position) < 0)
     throw io_error("cannot write value");
   if (value.texcoord) {
@@ -3116,7 +3116,7 @@ static void print_value(FILE* fs, const obj_vertex& value) {
 template <typename T, typename... Ts>
 static inline void print_obj_line(
     FILE* fs, const T& value, const Ts... values) {
-  print_value(fs, value);
+  format_value(fs, value);
   if constexpr (sizeof...(values) == 0) {
     write_text(fs, "\n");
   } else {
