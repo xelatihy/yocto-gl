@@ -139,7 +139,7 @@ void load_island_cameras(
   load_json(dirname + filename, js);
   auto camera  = yocto_camera{};
   camera.uri   = "cameras/" + get_basename(filename) + ".yaml";
-  camera.lens = js.at("focalLength").get<float>() * 0.001f;
+  camera.lens  = js.at("focalLength").get<float>() * 0.001f;
   camera.focus = js.at("centerOfInterest").get<float>();
   // camera.aperture  = js.at("lensRadius").get<float>();
   camera.height = camera.width / js.at("ratio").get<float>();

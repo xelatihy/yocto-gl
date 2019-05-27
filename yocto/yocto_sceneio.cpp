@@ -1373,8 +1373,8 @@ static void save_objx(const string& filename, const yocto_scene& scene) {
   // cameras
   for (auto& camera : scene.cameras) {
     write_obj_line(fs, "c", get_basename(camera.uri), (int)camera.orthographic,
-        camera.width, camera.height, camera.lens, camera.focus,
-        camera.aperture, camera.frame);
+        camera.width, camera.height, camera.lens, camera.focus, camera.aperture,
+        camera.frame);
   }
 
   // environments
@@ -2735,7 +2735,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       } break;
       case pbrt_camera::type_t::realistic: {
         auto& realistic = pcamera.realistic;
-        camera.lens    = max(realistic.approx_focallength, 35.0f) * 0.001f;
+        camera.lens     = max(realistic.approx_focallength, 35.0f) * 0.001f;
         auto aspect     = 1.0f;
         if (aspect < 0) aspect = last_film_aspect;
         if (aspect < 0) aspect = 1;
