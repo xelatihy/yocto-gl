@@ -2705,8 +2705,14 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto  aspect      = perspective.frameaspectratio;
         if (aspect < 0) aspect = last_film_aspect;
         if (aspect < 0) aspect = 1;
-        set_perspective(camera, radians(perspective.fov), aspect,
-            clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+        if (aspect >= 1) {
+          set_yperspective(camera, radians(perspective.fov), aspect,
+              clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+        } else {
+          auto yfov = 2 * atan(tan(radians(perspective.fov) / 2) / aspect);
+          set_yperspective(camera, yfov, aspect,
+              clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+        }
       } break;
       case pbrt_camera::type_t::orthographic: {
         throw io_error("unsupported Camera type");

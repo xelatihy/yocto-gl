@@ -1074,31 +1074,6 @@ void set_yperspective(
     camera.lens = distance;
   }
 }
-void set_perspective(
-    yocto_camera& camera, float fov, float aspect, float focus, float film) {
-  camera.orthographic = false;
-  if (aspect >= 1) {
-    camera.width  = film;
-    camera.height = film / aspect;
-    camera.focus  = focus;
-    auto distance = camera.width / (2 * tan(fov / 2));
-    if (focus < float_max) {
-      camera.lens = camera.focus * distance / (camera.focus + distance);
-    } else {
-      camera.lens = distance;
-    }
-  } else {
-    camera.width  = film * aspect;
-    camera.height = film;
-    camera.focus  = focus;
-    auto distance = camera.height / (2 * tan(fov / 2));
-    if (focus < float_max) {
-      camera.lens = camera.focus * distance / (camera.focus + distance);
-    } else {
-      camera.lens = distance;
-    }
-  }
-}
 
 // add missing camera
 void set_view(

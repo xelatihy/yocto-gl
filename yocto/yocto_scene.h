@@ -403,10 +403,8 @@ vec2f camera_fov(const yocto_camera& camera);
 float camera_yfov(const yocto_camera& camera);
 float camera_aspect(const yocto_camera& camera);
 vec2i camera_resolution(const yocto_camera& camera, const vec2i& size);
-void  set_yperspective(yocto_camera& camera, float fov, float aspect,
+void  set_yperspective(yocto_camera& camera, float yfov, float aspect,
      float focus, float film = 0.036f);
-void set_perspective(yocto_camera& camera, float fov, float aspect, float focus,
-    float film = 0.036f);
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_view(yocto_camera& camera, const bbox3f& bbox,
