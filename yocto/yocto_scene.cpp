@@ -1185,11 +1185,11 @@ ray3f eval_orthographic_camera(
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 ray3f eval_camera(
-    const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+    const yocto_camera& camera, const vec2f& uv, const vec2f& luv) {
   if (camera.orthographic)
-    return eval_orthographic_camera(camera, image_uv, lens_uv);
+    return eval_orthographic_camera(camera, uv, luv);
   else
-    return eval_perspective_camera(camera, image_uv, lens_uv);
+    return eval_perspective_camera(camera, uv, luv);
 }
 
 // Generates a ray from a camera.
@@ -1211,7 +1211,7 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 
 // Evaluates the microfacet_brdf at a location.
 material_point eval_material(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
+    const yocto_material& material, const vec2f& texcoord,
     const vec4f& shape_color) {
   auto point = material_point{};
   // factors
@@ -1233,17 +1233,17 @@ material_point eval_material(const yocto_scene& scene,
   // textures
   if (material.emission_tex >= 0) {
     auto& emission_tex = scene.textures[material.emission_tex];
-    point.emission *= xyz(eval_texture(emission_tex, texturecoord));
+    point.emission *= xyz(eval_texture(emission_tex, texcoord));
   }
   if (material.diffuse_tex >= 0) {
     auto& diffuse_tex = scene.textures[material.diffuse_tex];
-    auto  base_txt    = eval_texture(diffuse_tex, texturecoord);
+    auto  base_txt    = eval_texture(diffuse_tex, texcoord);
     point.diffuse *= xyz(base_txt);
     point.opacity *= base_txt.w;
   }
   if (material.metallic_tex >= 0) {
     auto& metallic_tex = scene.textures[material.metallic_tex];
-    auto  metallic_txt = eval_texture(metallic_tex, texturecoord);
+    auto  metallic_txt = eval_texture(metallic_tex, texcoord);
     metallic *= metallic_txt.z;
     if (material.gltf_textures) {
       point.roughness *= metallic_txt.x;
@@ -1251,7 +1251,7 @@ material_point eval_material(const yocto_scene& scene,
   }
   if (material.specular_tex >= 0) {
     auto& specular_tex = scene.textures[material.specular_tex];
-    auto  specular_txt = eval_texture(specular_tex, texturecoord);
+    auto  specular_txt = eval_texture(specular_tex, texcoord);
     point.specular *= xyz(specular_txt);
     if (material.gltf_textures) {
       auto glossiness = 1 - point.roughness;
@@ -1261,23 +1261,23 @@ material_point eval_material(const yocto_scene& scene,
   }
   if (material.roughness_tex >= 0) {
     auto& roughness_tex = scene.textures[material.roughness_tex];
-    point.roughness *= eval_texture(roughness_tex, texturecoord).x;
+    point.roughness *= eval_texture(roughness_tex, texcoord).x;
   }
   if (material.transmission_tex >= 0) {
     auto& transmission_tex = scene.textures[material.transmission_tex];
-    point.transmission *= xyz(eval_texture(transmission_tex, texturecoord));
+    point.transmission *= xyz(eval_texture(transmission_tex, texcoord));
   }
   if (material.subsurface_tex >= 0) {
     auto& subsurface_tex = scene.textures[material.subsurface_tex];
-    point.volscatter *= xyz(eval_texture(subsurface_tex, texturecoord));
+    point.volscatter *= xyz(eval_texture(subsurface_tex, texcoord));
   }
   if (material.opacity_tex >= 0) {
     auto& opacity_tex = scene.textures[material.opacity_tex];
-    point.opacity *= mean(xyz(eval_texture(opacity_tex, texturecoord)));
+    point.opacity *= mean(xyz(eval_texture(opacity_tex, texcoord)));
   }
   if (material.coat_tex >= 0) {
     auto& coat_tex = scene.textures[material.coat_tex];
-    point.coat *= xyz(eval_texture(coat_tex, texturecoord));
+    point.coat *= xyz(eval_texture(coat_tex, texcoord));
   }
   if (metallic) {
     point.specular = point.specular * (1 - metallic) + metallic * point.diffuse;

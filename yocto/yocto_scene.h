@@ -405,25 +405,21 @@ float camera_aspect(const yocto_camera& camera);
 vec2i camera_resolution(const yocto_camera& camera, const vec2i& size);
 void  set_yperspective(yocto_camera& camera, float fov, float aspect,
      float focus, float film = 0.036f);
-void  set_perspective(yocto_camera& camera, float fov, float aspect,
-     float focus, float film = 0.036f);
+void set_perspective(yocto_camera& camera, float fov, float aspect, float focus,
+    float film = 0.036f);
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_view(yocto_camera& camera, const bbox3f& bbox,
     const vec3f& view_direction = zero3f);
 
-// Generates a ray from a camera image coordinate and lens coordinates.
+// Generates a ray from a camera image coordinates `uv` and lens coordinates
+// `luv`.
 ray3f eval_camera(
-    const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv);
-// Generates a ray from a camera for pixel `image_ij`, the image size,
-// the sub-pixel coordinates `pixel_uv` and the lens coordinates `lens_uv`
-// and the image resolution `image_size`.
-ray3f eval_camera(const yocto_camera& camera, const vec2i& image_ij,
-    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
-// Generates a ray from a camera for pixel index `idx`, the image size,
-// the sub-pixel coordinates `pixel_uv` and the lens coordinates `lens_uv`.
-ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
-    const vec2f& pixel_uv, const vec2f& lens_uv);
+    const yocto_camera& camera, const vec2f& uv, const vec2f& luv);
+// Generates a ray from a camera for pixel `ij`, the image size `resolution`,
+// the sub-pixel coordinates `puv` and the lens coordinates `luv`.
+ray3f eval_camera(const yocto_camera& camera, const vec2i& ij,
+    const vec2i& resolution, const vec2f& puv, const vec2f& luv);
 
 // Material values packed into a convenience structure.
 struct material_point {
@@ -441,7 +437,7 @@ struct material_point {
   bool  thin          = false;
 };
 material_point eval_material(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
+    const yocto_material& material, const vec2f& texcoord,
     const vec4f& shape_color);
 
 // Instance values interpolated using barycentric coordinates.

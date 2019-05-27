@@ -1333,9 +1333,9 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
       return {frontfacing, 1};
     }
     case trace_falsecolor_type::texcoord: {
-      auto texturecoord = eval_texcoord(
+      auto texcoord = eval_texcoord(
           shape, intersection.element, intersection.uv);
-      return {{texturecoord.x, texturecoord.y, 0}, 1};
+      return {{texcoord.x, texcoord.y, 0}, 1};
     }
     case trace_falsecolor_type::color: {
       auto color = eval_color(shape, intersection.element, intersection.uv);
