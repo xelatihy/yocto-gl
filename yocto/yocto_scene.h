@@ -412,8 +412,7 @@ void set_perspective(yocto_camera& camera, float fov, float aspect, float focus,
 void set_view(yocto_camera& camera, const bbox3f& bbox,
     const vec3f& view_direction = zero3f);
 
-// Generates a ray from a camera image coordinates `uv` and lens coordinates
-// `luv`.
+// Generates a ray from the image coordinates `uv` and lens coordinates `luv`.
 ray3f eval_camera(
     const yocto_camera& camera, const vec2f& uv, const vec2f& luv);
 // Generates a ray from a camera for pixel `ij`, the image size `resolution`,
