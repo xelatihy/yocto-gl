@@ -60,7 +60,7 @@ def make_tests():
         "cameras": [
             {
                 "uri": "cameras/default.yaml",
-                "focal": 0.05,
+                "lens": 0.05,
                 "aperture": 0.0,
                 "width": 0.036,
                 "height": 0.015,
@@ -69,7 +69,7 @@ def make_tests():
             },
             {
                 "uri": "cameras/front.yaml",
-                "focal": 0.05,
+                "lens": 0.05,
                 "aperture": 0.0,
                 "width": 0.036,
                 "height": 0.012,
@@ -78,7 +78,7 @@ def make_tests():
             },
             {
                 "uri": "cameras/back.yaml",
-                "focal": 0.05,
+                "lens": 0.05,
                 "aperture": 0.0,
                 "width": 0.036,
                 "height": 0.012,
@@ -87,7 +87,7 @@ def make_tests():
             },
             {
                 "uri": "cameras/perspective-sharp.yaml",
-                "focal": 0.05,
+                "lens": 0.05,
                 "aperture": 0.0,
                 "width": 0.036,
                 "height": 0.015,
@@ -96,7 +96,7 @@ def make_tests():
             },
             {
                 "uri": "cameras/perspective-dof.yaml",
-                "focal": 0.05,
+                "lens": 0.05,
                 "aperture": 0.025,
                 "width": 0.036,
                 "height": 0.015,
@@ -105,7 +105,7 @@ def make_tests():
             },
             {
                 "uri": "cameras/orthographic-sharp.yaml",
-                "focal": 0.05,
+                "lens": 0.05,
                 "aperture": 0.0,
                 "width": 0.036,
                 "height": 0.015,
@@ -115,7 +115,7 @@ def make_tests():
             },
             {
                 "uri": "cameras/orthographic-dof.yaml",
-                "focal": 0.05,
+                "lens": 0.05,
                 "aperture": 0.02,
                 "width": 0.036,
                 "height": 0.015,
