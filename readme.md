@@ -24,7 +24,7 @@ Features include:
 - simple image data structure and a few image operations
 - simple scene format
 - generation of image examples
-- generation of shape **examples**
+- generation of shape examples
 - procedural sun and sky HDR
 - procedural Perlin noise
 - BVH for intersection and closest point query
