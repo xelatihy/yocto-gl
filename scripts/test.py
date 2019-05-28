@@ -62,8 +62,7 @@ def make_tests():
                 "uri": "cameras/default.yaml",
                 "lens": 0.05,
                 "aperture": 0.0,
-                "width": 0.036,
-                "height": 0.015,
+                "film": [0.036, 0.015],
                 "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
@@ -71,8 +70,7 @@ def make_tests():
                 "uri": "cameras/front.yaml",
                 "lens": 0.05,
                 "aperture": 0.0,
-                "width": 0.036,
-                "height": 0.012,
+                "film": [0.036, 0.012],
                 "focus": distance([0, 0.575, 0.14], [0, 0.05, 0]),
                 "frame": lookat([0, 0.575, 1.4], [0, 0.05, 0], [0,1,0])
             },
@@ -80,8 +78,7 @@ def make_tests():
                 "uri": "cameras/back.yaml",
                 "lens": 0.05,
                 "aperture": 0.0,
-                "width": 0.036,
-                "height": 0.012,
+                "film": [0.036, 0.012],
                 "focus": distance([0, 0.575, -0.14], [0, 0.05, 0]),
                 "frame": lookat([0, 0.575, -1.4], [0, 0.05, 0], [0,1,0])
             },
@@ -89,8 +86,7 @@ def make_tests():
                 "uri": "cameras/perspective-sharp.yaml",
                 "lens": 0.05,
                 "aperture": 0.0,
-                "width": 0.036,
-                "height": 0.015,
+                "film": [0.036, 0.015],
                 "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
@@ -98,8 +94,7 @@ def make_tests():
                 "uri": "cameras/perspective-dof.yaml",
                 "lens": 0.05,
                 "aperture": 0.025,
-                "width": 0.036,
-                "height": 0.015,
+                "film": [0.036, 0.015],
                 "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
             },
@@ -107,8 +102,7 @@ def make_tests():
                 "uri": "cameras/orthographic-sharp.yaml",
                 "lens": 0.05,
                 "aperture": 0.0,
-                "width": 0.036,
-                "height": 0.015,
+                "film": [0.036, 0.015],
                 "orthographic": True,
                 "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
@@ -117,8 +111,7 @@ def make_tests():
                 "uri": "cameras/orthographic-dof.yaml",
                 "lens": 0.05,
                 "aperture": 0.02,
-                "width": 0.036,
-                "height": 0.015,
+                "film": [0.036, 0.015],
                 "orthographic": True,
                 "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
                 "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])

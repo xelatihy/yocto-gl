@@ -216,9 +216,8 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glslider(win, "frame.z", edited.frame.z, -1, 1)) updated = true;
   if (draw_glslider(win, "frame.o", edited.frame.o, -10, 10)) updated = true;
   if (draw_glcheckbox(win, "ortho", edited.orthographic)) updated = true;
-  if (draw_glslider(win, "width", edited.width, 0.01f, 1)) updated = true;
-  if (draw_glslider(win, "height", edited.height, 0.01f, 1)) updated = true;
   if (draw_glslider(win, "lens", edited.lens, 0.01f, 1)) updated = true;
+  if (draw_glslider(win, "film", edited.film, 0.01f, 0.1f)) updated = true;
   if (draw_glslider(win, "focus", edited.focus, 0.01f, 1000)) updated = true;
   if (draw_glslider(win, "aperture", edited.aperture, 0, 5)) updated = true;
   auto from = edited.frame.o,
