@@ -109,7 +109,6 @@ using std::tan;
 
 using std::function;
 using std::pair;
-using std::shared_ptr;
 using std::string;
 using std::string_view;
 using std::unordered_map;
@@ -1831,7 +1830,6 @@ inline string to_string(bool value, bool alpha = false) {
 inline string to_string(int value) { return std::to_string(value); }
 inline string to_string(float value) { return std::to_string(value); }
 inline string to_string(double value) { return std::to_string(value); }
-inline string to_string(uint64_t value) { return std::to_string(value); }
 inline string to_string(size_t value) { return std::to_string(value); }
 
 template <typename T>

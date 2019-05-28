@@ -447,7 +447,7 @@ void convert_distance_to_color(
 namespace yocto {
 
 // Type of procedural shape
-enum make_shape_type {
+enum struct make_shape_type {
   quad,
   floor,
   cube,

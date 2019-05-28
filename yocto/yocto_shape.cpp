@@ -2130,7 +2130,7 @@ void make_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     } break;
     default: {
       throw std::runtime_error(
-          "shape type not supported " + std::to_string(params.type));
+          "shape type not supported " + std::to_string((int)params.type));
     } break;
   }
   if (params.scale != 1) {
