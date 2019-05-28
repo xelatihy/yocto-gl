@@ -89,7 +89,7 @@ struct yocto_camera {
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
   float   lens         = 0.050;
-  vec2f   film         = { 0.036, 0.024 };
+  vec2f   film         = {0.036, 0.024};
   float   focus        = float_max;
   float   aperture     = 0;
 };

@@ -1064,7 +1064,7 @@ vec2i camera_resolution(const yocto_camera& camera, const vec2i& size_) {
 void set_yperspective(
     yocto_camera& camera, float fov, float aspect, float focus, float film) {
   camera.orthographic = false;
-  camera.film        = {film, film / aspect};
+  camera.film         = {film, film / aspect};
   camera.focus        = focus;
   auto distance       = camera.film.y / (2 * tan(fov / 2));
   if (focus < float_max) {
