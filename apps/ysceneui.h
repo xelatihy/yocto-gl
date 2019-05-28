@@ -259,12 +259,12 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   edited.uri   = value.uri;
   auto updated = false;
   if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
-  draw_gllabel(win, "voxel_data", "%d x %d x %d", value.volume.size().x,
-      value.volume.size().y, value.volume.size().z);
+  draw_gllabel(win, "voxel_data", "%d x %d x %d", value.vol.size().x,
+      value.vol.size().y, value.vol.size().z);
   if (updated) {
     auto reload = edited.uri != value.uri;
     if (!reload) {
-      edited.volume = value.volume;
+      edited.vol = value.vol;
     }
     edit = {sel.type, sel.index, edited, reload};
   }

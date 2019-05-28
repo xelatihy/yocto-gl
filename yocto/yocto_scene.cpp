@@ -975,8 +975,8 @@ vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
 // Lookup a texture value
 float lookup_voltexture(
     const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear) {
-  if (!texture.volume.empty()) {
-    return texture.volume[{i, j, k}];
+  if (!texture.vol.empty()) {
+    return texture.vol[{i, j, k}];
   } else {
     return 0;
   }
@@ -985,12 +985,12 @@ float lookup_voltexture(
 // Evaluate a volume texture
 float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (texture.volume.empty()) return 1;
+  if (texture.vol.empty()) return 1;
 
   // get image width/height
-  auto width  = texture.volume.size().x;
-  auto height = texture.volume.size().y;
-  auto depth  = texture.volume.size().z;
+  auto width  = texture.vol.size().x;
+  auto height = texture.vol.size().y;
+  auto depth  = texture.vol.size().z;
 
   // get coordinates normalized for tiling
   auto s = clamp((texcoord.x + 1.0f) * 0.5f, 0.0f, 1.0f) * width;
@@ -1387,9 +1387,9 @@ string format_stats(const yocto_scene& scene, bool verbose) {
                      (size_t)texture.hdr.size().y;
             })};
   stats += {"volxels1f", accumulate(scene.voltextures, [](auto& texture) {
-              return (size_t)texture.volume.size().x *
-                     (size_t)texture.volume.size().y *
-                     (size_t)texture.volume.size().z;
+              return (size_t)texture.vol.size().x *
+                     (size_t)texture.vol.size().y *
+                     (size_t)texture.vol.size().z;
             })};
 
   auto str = ""s;

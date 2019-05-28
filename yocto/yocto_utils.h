@@ -683,14 +683,14 @@ inline void format_value(FILE* fs, const string& value, bool quoted = false) {
 }
 
 template <typename T>
-inline void format_values(FILE* fs, const T* values,
-    int num, bool bracketed = false) {
-  if(bracketed) write_text(fs, "[");
+inline void format_values(
+    FILE* fs, const T* values, int num, bool bracketed = false) {
+  if (bracketed) write_text(fs, "[");
   for (auto i = 0; i < num; i++) {
-    if(i) write_text(fs, bracketed ? "," : " ");
+    if (i) write_text(fs, bracketed ? "," : " ");
     format_value(fs, values[i]);
   }
-  if(bracketed) write_text(fs, "]");
+  if (bracketed) write_text(fs, "]");
 }
 
 inline void format_value(FILE* fs, const vec2f& value, bool bracketed = false) {
@@ -723,25 +723,27 @@ inline void format_value(FILE* fs, const mat4f& value, bool bracketed = false) {
   format_values(fs, &value.x.x, 16, bracketed);
 }
 
-inline void format_value(FILE* fs, const frame2f& value, bool bracketed = false) {
+inline void format_value(
+    FILE* fs, const frame2f& value, bool bracketed = false) {
   format_values(fs, &value.x.x, 6, bracketed);
 }
-inline void format_value(FILE* fs, const frame3f& value, bool bracketed = false) {
+inline void format_value(
+    FILE* fs, const frame3f& value, bool bracketed = false) {
   format_values(fs, &value.x.x, 12, bracketed);
 }
 
-template<typename T, typename ... Ts>
-inline void format_values(FILE* fs, const T& arg, const Ts& ... args) {
+template <typename T, typename... Ts>
+inline void format_values(FILE* fs, const T& arg, const Ts&... args) {
   write_value(fs, arg);
-  if constexpr(sizeof...(Ts) != 0) {
+  if constexpr (sizeof...(Ts) != 0) {
     write_text(fs, " ");
     write_values(fs, args...);
   }
 }
-template<typename T, typename ... Ts>
-inline void format_line(FILE* fs, const T& arg, const Ts& ... args) {
+template <typename T, typename... Ts>
+inline void format_line(FILE* fs, const T& arg, const Ts&... args) {
   format_value(fs, arg);
-  if constexpr(sizeof...(Ts) != 0) {
+  if constexpr (sizeof...(Ts) != 0) {
     write_text(fs, " ");
     format_line(fs, args...);
   } else {

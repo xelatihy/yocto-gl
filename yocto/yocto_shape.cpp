@@ -1200,11 +1200,11 @@ void sample_quads(vector<vec3f>& sampled_positions,
   sample_quads_cdf(cdf, quads, positions);
   auto rng = make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
-    auto sample = sample_quads(cdf, rand1f(rng), rand2f(rng));
-    auto& q                  = quads[sample.first];
-    auto uv = sample.second;
-    sampled_positions[i]    = interpolate_quad(positions[q.x], positions[q.y],
-        positions[q.z], positions[q.w], uv);
+    auto  sample         = sample_quads(cdf, rand1f(rng), rand2f(rng));
+    auto& q              = quads[sample.first];
+    auto  uv             = sample.second;
+    sampled_positions[i] = interpolate_quad(
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w], uv);
     if (!sampled_normals.empty()) {
       sampled_normals[i] = normalize(interpolate_quad(
           normals[q.x], normals[q.y], normals[q.z], normals[q.w], uv));
@@ -1213,8 +1213,8 @@ void sample_quads(vector<vec3f>& sampled_positions,
           positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     }
     if (!sampled_texturecoords.empty()) {
-      sampled_texturecoords[i] = interpolate_quad(texcoords[q.x],
-          texcoords[q.y], texcoords[q.z], texcoords[q.w], uv);
+      sampled_texturecoords[i] = interpolate_quad(
+          texcoords[q.x], texcoords[q.y], texcoords[q.z], texcoords[q.w], uv);
     } else {
       sampled_texturecoords[i] = zero2f;
     }

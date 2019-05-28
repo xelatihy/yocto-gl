@@ -434,7 +434,7 @@ void load_element(
     load_image(get_dirname(filename) + texture.uri, texture.hdr, texture.ldr);
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
-    load_volume(get_dirname(filename) + texture.uri, texture.volume);
+    load_volume(get_dirname(filename) + texture.uri, texture.vol);
   } else if (type == typeid(yocto_shape)) {
     auto& shape = scene.shapes[index];
     load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,

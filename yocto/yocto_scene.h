@@ -110,8 +110,8 @@ struct yocto_texture {
 // Volumetric texture containing a float only volume data. See texture
 // above for other propoerties.
 struct yocto_voltexture {
-  string        uri    = "";
-  volume<float> volume = {};
+  string        uri = "";
+  volume<float> vol = {};
 };
 
 // Material for surfaces, lines and triangles.

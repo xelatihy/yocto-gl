@@ -153,10 +153,10 @@ void load_texture(yocto_texture& texture, const string& dirname) {
 
 void load_voltexture(yocto_voltexture& texture, const string& dirname) {
   if (is_preset_filename(texture.uri)) {
-    make_volpreset(texture.volume, get_basename(texture.uri));
+    make_volpreset(texture.vol, get_basename(texture.uri));
     texture.uri = get_noextension(texture.uri) + ".yvol";
   } else {
-    load_volume(dirname + texture.uri, texture.volume);
+    load_volume(dirname + texture.uri, texture.vol);
   }
 }
 
@@ -177,7 +177,7 @@ void load_textures(
   parallel_foreach(
       scene.voltextures,
       [&dirname](yocto_voltexture& texture) {
-        if (!texture.volume.empty()) return;
+        if (!texture.vol.empty()) return;
         load_voltexture(texture, dirname);
       },
       params.cancel, params.noparallel);
@@ -188,7 +188,7 @@ void save_texture(const yocto_texture& texture, const string& dirname) {
 }
 
 void save_voltexture(const yocto_voltexture& texture, const string& dirname) {
-  save_volume(dirname + texture.uri, texture.volume);
+  save_volume(dirname + texture.uri, texture.vol);
 }
 
 // helper to save textures
@@ -575,7 +575,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
           parse_yvalue(value, texture.uri);
           auto refname = texture.uri;
           if (is_preset_filename(refname)) {
-            refname         = get_preset_type(refname).second;
+            refname = get_preset_type(refname).second;
           }
           tmap[refname] = (int)scene.textures.size() - 1;
         } else if (key == "filename") {
@@ -590,7 +590,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
           parse_yvalue(value, texture.uri);
           auto refname = texture.uri;
           if (is_preset_filename(refname)) {
-            refname         = get_preset_type(refname).second;
+            refname = get_preset_type(refname).second;
           }
           vmap[refname] = (int)scene.voltextures.size() - 1;
         } else {
@@ -664,7 +664,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
           parse_yvalue(value, shape.uri);
           auto refname = shape.uri;
           if (is_preset_filename(refname)) {
-            refname         = get_preset_type(refname).second;
+            refname = get_preset_type(refname).second;
           }
           smap[refname] = (int)scene.shapes.size() - 1;
         } else {
@@ -825,7 +825,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   for (auto& camera : scene.cameras) {
     format_line(fs, "  - uri:", camera.uri);
     format_opt(fs, "frame", camera.frame, def_camera.frame);
-    format_opt(fs, "orthographic", camera.orthographic, def_camera.orthographic);
+    format_opt(
+        fs, "orthographic", camera.orthographic, def_camera.orthographic);
     format_opt(fs, "width", camera.width, def_camera.width);
     format_opt(fs, "height", camera.height, def_camera.height);
     format_opt(fs, "lens", camera.lens, def_camera.lens);
@@ -877,7 +878,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     format_ref(fs, "normal_tex", material.normal_tex, scene.textures);
     format_opt(fs, "gltf_textures", material.gltf_textures,
         def_material.gltf_textures);
-    format_ref(fs, "voldensity_tex", material.voldensity_tex, scene.voltextures);
+    format_ref(
+        fs, "voldensity_tex", material.voldensity_tex, scene.voltextures);
   }
 
   if (!scene.shapes.empty()) write_text(fs, "\n\nshapes:\n");
@@ -889,12 +891,15 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   for (auto& subdiv : scene.subdivs) {
     format_line(fs, "  - uri:", subdiv.uri);
     format_ref(fs, "shape", subdiv.shape, scene.shapes);
-    format_opt(fs, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
-    format_opt(fs, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
+    format_opt(
+        fs, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
+    format_opt(
+        fs, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
     format_opt(fs, "smooth", subdiv.smooth, def_subdiv.smooth);
     format_opt(fs, "facevarying", subdiv.facevarying, def_subdiv.facevarying);
     format_ref(fs, "displacement_tex", subdiv.displacement_tex, scene.textures);
-    format_opt(fs, "displacement", subdiv.displacement, def_subdiv.displacement);
+    format_opt(
+        fs, "displacement", subdiv.displacement, def_subdiv.displacement);
   }
 
   if (!ply_instances) {
