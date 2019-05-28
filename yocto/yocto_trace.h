@@ -156,7 +156,7 @@ struct trace_params {
   trace_sampler_type    sampler    = trace_sampler_type::path;
   trace_falsecolor_type falsecolor = trace_falsecolor_type::diffuse;
   int                   samples    = 512;
-  int                   bounces    = 64;
+  int                   bounces    = 8;
   int                   batch      = 16;
   int                   region     = 16;
   float                 clamp      = 10;

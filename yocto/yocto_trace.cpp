@@ -1067,7 +1067,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
         origin = position + direction * ray_eps * 10;
-        bounce -= 1;
+        if(material.opacity == 0) bounce -= 1;
         continue;
       }
       hit = true;
@@ -1189,7 +1189,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
       origin = position + direction * ray_eps * 10;
-      bounce -= 1;
+      if(material.opacity == 0) bounce -= 1;
       continue;
     }
     hit = true;
