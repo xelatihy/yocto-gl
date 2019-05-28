@@ -229,6 +229,13 @@ void load_objx(
       parse_value(line, environment.frame);
       if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
       cb.environmnet(environment);
+    } else if (cmd == "i") {
+      auto instance = obj_instance();
+      parse_value(line, instance.name);
+      parse_value(line, instance.object);
+      parse_value(line, instance.material);
+      parse_value(line, instance.frame);
+      cb.instance(instance);
     } else if (cmd == "po") {
       auto procedural = obj_procedural();
       parse_value(line, procedural.name);
