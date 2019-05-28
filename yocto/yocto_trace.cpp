@@ -903,15 +903,14 @@ float sample_environment_pdf(const yocto_scene& scene,
     const trace_lights& lights, int environment_id, const vec3f& incoming) {
   auto& environment = scene.environments[environment_id];
   if (environment.emission_tex >= 0) {
-    auto& cdf = lights.environment_cdfs[environment.emission_tex];
+    auto& cdf          = lights.environment_cdfs[environment.emission_tex];
     auto& emission_tex = scene.textures[environment.emission_tex];
     auto  size         = texture_size(emission_tex);
     auto  texcoord     = eval_texcoord(environment, incoming);
     auto  i            = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
     auto  j            = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
-    auto  prob         = sample_discrete_pdf(cdf, j * size.x + i) /
-                cdf.back();
-    auto angle = (2 * pif / size.x) * (pif / size.y) *
+    auto  prob         = sample_discrete_pdf(cdf, j * size.x + i) / cdf.back();
+    auto  angle        = (2 * pif / size.x) * (pif / size.y) *
                  sin(pif * (j + 0.5f) / size.y);
     return prob / angle;
   } else {
@@ -924,7 +923,7 @@ vec3f sample_environment(const yocto_scene& scene, const trace_lights& lights,
     int environment_id, float rel, const vec2f& ruv) {
   auto& environment = scene.environments[environment_id];
   if (environment.emission_tex >= 0) {
-    auto& cdf = lights.environment_cdfs[environment.emission_tex];
+    auto& cdf          = lights.environment_cdfs[environment.emission_tex];
     auto& emission_tex = scene.textures[environment.emission_tex];
     auto  idx          = sample_discrete(cdf, rel);
     auto  size         = texture_size(emission_tex);
@@ -939,10 +938,12 @@ vec3f sample_environment(const yocto_scene& scene, const trace_lights& lights,
 // Picks a point on a light.
 vec3f sample_light(const yocto_scene& scene, const trace_lights& lights,
     int instance_id, const vec3f& p, float rel, const vec2f& ruv) {
-  auto& instance                = scene.instances[instance_id];
-  auto& shape                   = scene.shapes[instance.shape];
-  auto& cdf            = lights.shape_cdfs[instance.shape];
-  auto [element, uv] = sample_shape(shape, cdf, rel, ruv);
+  auto& instance = scene.instances[instance_id];
+  auto& shape    = scene.shapes[instance.shape];
+  auto& cdf      = lights.shape_cdfs[instance.shape];
+  auto  sample   = sample_shape(shape, cdf, rel, ruv);
+  auto  element  = sample.first;
+  auto  uv       = sample.second;
   return normalize(eval_position(scene, instance, element, uv) - p);
 }
 

@@ -575,8 +575,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
           parse_yvalue(value, texture.uri);
           auto refname = texture.uri;
           if (is_preset_filename(refname)) {
-            auto [_, nname] = get_preset_type(refname);
-            refname         = nname;
+            refname         = get_preset_type(refname).second;
           }
           tmap[refname] = (int)scene.textures.size() - 1;
         } else if (key == "filename") {
@@ -591,8 +590,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
           parse_yvalue(value, texture.uri);
           auto refname = texture.uri;
           if (is_preset_filename(refname)) {
-            auto [_, nname] = get_preset_type(refname);
-            refname         = nname;
+            refname         = get_preset_type(refname).second;
           }
           vmap[refname] = (int)scene.voltextures.size() - 1;
         } else {
@@ -666,8 +664,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
           parse_yvalue(value, shape.uri);
           auto refname = shape.uri;
           if (is_preset_filename(refname)) {
-            auto [_, nname] = get_preset_type(refname);
-            refname         = nname;
+            refname         = get_preset_type(refname).second;
           }
           smap[refname] = (int)scene.shapes.size() - 1;
         } else {

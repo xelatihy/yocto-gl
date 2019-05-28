@@ -1410,9 +1410,8 @@ void approximate_fourier_material(pbrt_material::fourier_t& fourier) {
     fourier.approx_type = pbrt_material::fourier_t::approx_type_t::metal;
     auto& metal         = fourier.approx_metal;
     auto  etak          = get_pbrt_etak("Cu");
-    auto [eta, k]       = etak;
-    metal.eta           = {eta.x, eta.y, eta.z};
-    metal.k             = {k.x, k.y, k.z};
+    metal.eta           = {etak.first.x, etak.first.y, etak.first.z};
+    metal.k             = {etak.second.x, etak.second.y, etak.second.z};
     metal.uroughness    = 0.01f;
     metal.vroughness    = 0.01f;
   } else if (get_filename(fourier.bsdffile) == "roughglass_alpha_0.2.bsdf") {
@@ -1426,9 +1425,8 @@ void approximate_fourier_material(pbrt_material::fourier_t& fourier) {
     fourier.approx_type = pbrt_material::fourier_t::approx_type_t::metal;
     auto& metal         = fourier.approx_metal;
     auto  etak          = get_pbrt_etak("Au");
-    auto [eta, k]       = etak;
-    metal.eta           = {eta.x, eta.y, eta.z};
-    metal.k             = {k.x, k.y, k.z};
+    metal.eta           = {etak.first.x, etak.first.y, etak.first.z};
+    metal.k             = {etak.second.x, etak.second.y, etak.second.z};
     metal.uroughness    = 0.2f;
     metal.vroughness    = 0.2f;
   } else {

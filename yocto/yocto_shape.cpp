@@ -80,12 +80,10 @@ void compute_tangent_spaces(vector<vec4f>& tangent_spaces,
   auto tangu = vector<vec3f>(positions.size(), zero3f);
   auto tangv = vector<vec3f>(positions.size(), zero3f);
   for (auto t : triangles) {
-    auto [tu, tv] = triangle_tangents_fromuv(positions[t.x], positions[t.y],
+    auto tutv = triangle_tangents_fromuv(positions[t.x], positions[t.y],
         positions[t.z], texcoords[t.x], texcoords[t.y], texcoords[t.z]);
-    tu            = normalize(tu);
-    tv            = normalize(tv);
-    for (auto vid : {t.x, t.y, t.z}) tangu[vid] += tu;
-    for (auto vid : {t.x, t.y, t.z}) tangv[vid] += tv;
+    for (auto vid : {t.x, t.y, t.z}) tangu[vid] += normalize(tutv.first);
+    for (auto vid : {t.x, t.y, t.z}) tangv[vid] += normalize(tutv.second);
   }
   for (auto& t : tangu) t = normalize(t);
   for (auto& t : tangv) t = normalize(t);
@@ -1166,21 +1164,21 @@ void sample_triangles(vector<vec3f>& sampled_positions,
   sample_triangles_cdf(cdf, triangles, positions);
   auto rng = make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
-    auto [triangle_id, triangle_uv] = sample_triangles(
-        cdf, rand1f(rng), rand2f(rng));
-    auto t               = triangles[triangle_id];
+    auto  sample         = sample_triangles(cdf, rand1f(rng), rand2f(rng));
+    auto& t              = triangles[sample.first];
+    auto  uv             = sample.second;
     sampled_positions[i] = interpolate_triangle(
-        positions[t.x], positions[t.y], positions[t.z], triangle_uv);
+        positions[t.x], positions[t.y], positions[t.z], uv);
     if (!sampled_normals.empty()) {
-      sampled_normals[i] = normalize(interpolate_triangle(
-          normals[t.x], normals[t.y], normals[t.z], triangle_uv));
+      sampled_normals[i] = normalize(
+          interpolate_triangle(normals[t.x], normals[t.y], normals[t.z], uv));
     } else {
       sampled_normals[i] = triangle_normal(
           positions[t.x], positions[t.y], positions[t.z]);
     }
     if (!sampled_texturecoords.empty()) {
       sampled_texturecoords[i] = interpolate_triangle(
-          texcoords[t.x], texcoords[t.y], texcoords[t.z], triangle_uv);
+          texcoords[t.x], texcoords[t.y], texcoords[t.z], uv);
     } else {
       sampled_texturecoords[i] = zero2f;
     }
@@ -1202,20 +1200,21 @@ void sample_quads(vector<vec3f>& sampled_positions,
   sample_quads_cdf(cdf, quads, positions);
   auto rng = make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
-    auto [quad_id, quad_uv] = sample_quads(cdf, rand1f(rng), rand2f(rng));
-    auto q                  = quads[quad_id];
+    auto sample = sample_quads(cdf, rand1f(rng), rand2f(rng));
+    auto& q                  = quads[sample.first];
+    auto uv = sample.second;
     sampled_positions[i]    = interpolate_quad(positions[q.x], positions[q.y],
-        positions[q.z], positions[q.w], quad_uv);
+        positions[q.z], positions[q.w], uv);
     if (!sampled_normals.empty()) {
       sampled_normals[i] = normalize(interpolate_quad(
-          normals[q.x], normals[q.y], normals[q.z], normals[q.w], quad_uv));
+          normals[q.x], normals[q.y], normals[q.z], normals[q.w], uv));
     } else {
       sampled_normals[i] = quad_normal(
           positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     }
     if (!sampled_texturecoords.empty()) {
       sampled_texturecoords[i] = interpolate_quad(texcoords[q.x],
-          texcoords[q.y], texcoords[q.z], texcoords[q.w], quad_uv);
+          texcoords[q.y], texcoords[q.z], texcoords[q.w], uv);
     } else {
       sampled_texturecoords[i] = zero2f;
     }
