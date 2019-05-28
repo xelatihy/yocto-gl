@@ -1273,7 +1273,7 @@ struct ImGuiAppLog {
 
   void AddLog(const char* msg, const char* lbl) {
     int old_size = Buf.size();
-    Buf.appendf("[%s] %s", lbl, msg);
+    Buf.appendf("[%s] %s\n", lbl, msg);
     for (int new_size = Buf.size(); old_size < new_size; old_size++)
       if (Buf[old_size] == '\n') LineOffsets.push_back(old_size);
     ScrollToBottom = true;

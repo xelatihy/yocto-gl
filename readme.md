@@ -9,9 +9,9 @@ development and use.
 
 Features include:
 - convenience math functions for graphics
-- static length vectors for 2, 3, 4 length of arbitrary type
-- static length matrices for 2x2, 3x3, 4x4 of arbitrary type
-- static length rigid transforms (frames), specialized for 2d and 3d space
+- static length vectors for 2, 3, 4 size
+- static length matrices for 2x2, 3x3, 4x4 size
+- static length rigid transforms (frames) in 2D and 3D
 - linear algebra operations and transforms
 - axis aligned bounding boxes
 - rays and ray-primitive intersection
@@ -24,15 +24,14 @@ Features include:
 - simple image data structure and a few image operations
 - simple scene format
 - generation of image examples
-- generation of scene examples
+- generation of shape examples
 - procedural sun and sky HDR
 - procedural Perlin noise
 - BVH for intersection and closest point query
 - Python-like path operations
-- immediate mode command line parser
 - path tracer supporting surfaces and hairs, GGX and MIS
-- support for loading and saving Wavefront OBJ and Khronos glTF
-- fast, hackable, proprietary JSON format
+- support for loading and saving Wavefront OBJ, glTF and pbrt
+- fast, hackable, YAML format
 
 Yocto/GL is written in C++17 and compiles on OSX (clang from Xcode 10+),
 Linux (gcc 6+, clang 6+) and Windows (MSVC 2015, MSVC 2017). For compilation
@@ -64,9 +63,9 @@ See each header file for documentation.
    bounding boxes, transforms
 - `yocto/yocto_random.{h}`: random number generation, Perlin noise, Monte Carlo
    utilities
-- `yocto/yocto_shape.{h}`: geometry utilities, shape manipulation, 
+- `yocto/yocto_shape.{h,cpp}`: geometry utilities, shape manipulation, 
    procedural shapes
-- `yocto/yocto_bvh.{h}`: ray intersection and closest point queries 
+- `yocto/yocto_bvh.{h,cpp}`: ray intersection and closest point queries 
    using a two-level bounding volume hierarchy
 - `yocto/yocto_image.{h,cpp}`: color utilities, image manipulation, 
    procedural images, procedural sun-sky, image input/output
@@ -103,8 +102,7 @@ This library requires a C++17 compiler and is know to compiled on
 OsX (Xcode >= 10), Windows (MSVC 2017) and Linux (gcc >= 7, clang >= 4).
 
 For image loading and saving, Yocto/GL depends on `stb_image.h`,
-`stb_image_write.h`, `stb_image_resize.h` and `tinyexr.h`.
-To support Khronos glTF, Yocto/GL depends on `json.hpp`. 
+`stb_image_write.h`, `stb_image_resize.h`, `tinyexr.h`, `cgltf.h`.
 All dependencies are included in the distribution.
 
 OpenGL utilities include the OpenGL libraries, use GLEW on Windows/Linux,

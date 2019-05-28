@@ -647,18 +647,106 @@ inline void write_text(FILE* fs, const char* value) {
 inline void write_text(FILE* fs, const string& value) {
   if (fputs(value.c_str(), fs) == 0) throw io_error("could not write to file");
 }
-inline void write_value(FILE* fs, const char* value) { write_text(fs, value); }
-inline void write_value(FILE* fs, const string& value) {
-  write_text(fs, value);
-}
-template <typename T>
-inline void write_value(FILE* fs, const T& value) {
-  write_text(fs, to_string(value));
-}
+// template <typename T>
+// inline void write_value(FILE* fs, const T& value) {
+//   write_text(fs, to_string(value));
+// }
 
 // Read a line
 inline bool read_line(FILE* fs, char* buffer, size_t size) {
   return fgets(buffer, size, fs) != nullptr;
+}
+
+// Print a value to a FILE
+inline void format_value(FILE* fs, int value) {
+  if (fprintf(fs, "%d", value) < 0) throw io_error("cannot print value");
+}
+inline void format_value(FILE* fs, float value) {
+  if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
+}
+inline void format_value(FILE* fs, bool value, bool alpha = false) {
+  if (alpha) {
+    if (fprintf(fs, "%s", value ? "true" : "false") < 0)
+      throw io_error("cannot print value");
+  } else {
+    if (fprintf(fs, "%s", value ? "1" : "0") < 0)
+      throw io_error("cannot print value");
+  }
+}
+inline void format_value(FILE* fs, const char* value, bool quoted = false) {
+  if (fprintf(fs, quoted ? "\"%s\"" : "%s", value) < 0)
+    throw io_error("cannot print value");
+}
+inline void format_value(FILE* fs, const string& value, bool quoted = false) {
+  if (fprintf(fs, quoted ? "\"%s\"" : "%s", value.c_str()) < 0)
+    throw io_error("cannot print value");
+}
+
+template <typename T>
+inline void format_values(FILE* fs, const T* values,
+    int num, bool bracketed = false) {
+  if(bracketed) write_text(fs, "[");
+  for (auto i = 0; i < num; i++) {
+    if(i) write_text(fs, bracketed ? "," : " ");
+    format_value(fs, values[i]);
+  }
+  if(bracketed) write_text(fs, "]");
+}
+
+inline void format_value(FILE* fs, const vec2f& value, bool bracketed = false) {
+  format_values(fs, &value.x, 2, bracketed);
+}
+inline void format_value(FILE* fs, const vec3f& value, bool bracketed = false) {
+  format_values(fs, &value.x, 3, bracketed);
+}
+inline void format_value(FILE* fs, const vec4f& value, bool bracketed = false) {
+  format_values(fs, &value.x, 4, bracketed);
+}
+
+inline void format_value(FILE* fs, const vec2i& value, bool bracketed = false) {
+  format_values(fs, &value.x, 2, bracketed);
+}
+inline void format_value(FILE* fs, const vec3i& value, bool bracketed = false) {
+  format_values(fs, &value.x, 3, bracketed);
+}
+inline void format_value(FILE* fs, const vec4i& value, bool bracketed = false) {
+  format_values(fs, &value.x, 4, bracketed);
+}
+
+inline void format_value(FILE* fs, const mat2f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 4, bracketed);
+}
+inline void format_value(FILE* fs, const mat3f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 9, bracketed);
+}
+inline void format_value(FILE* fs, const mat4f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 16, bracketed);
+}
+
+inline void format_value(FILE* fs, const frame2f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 6, bracketed);
+}
+inline void format_value(FILE* fs, const frame3f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 12, bracketed);
+}
+
+template<typename T, typename ... Ts>
+inline void format_values(FILE* fs, const T& arg, const Ts& ... args) {
+  write_value(fs, arg);
+  if constexpr(sizeof...(Ts) != 0) {
+    write_text(fs, " ");
+    write_values(fs, args...);
+  }
+}
+template<typename T, typename ... Ts>
+inline void format_line(FILE* fs, const T& arg, const Ts& ... args) {
+  format_value(fs, arg);
+  if constexpr(sizeof...(Ts) != 0) {
+    write_text(fs, " ");
+    format_line(fs, args...);
+  } else {
+    write_text(fs, "\n");
+  }
 }
 
 }  // namespace yocto

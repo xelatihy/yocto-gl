@@ -80,12 +80,10 @@ void compute_tangent_spaces(vector<vec4f>& tangent_spaces,
   auto tangu = vector<vec3f>(positions.size(), zero3f);
   auto tangv = vector<vec3f>(positions.size(), zero3f);
   for (auto t : triangles) {
-    auto [tu, tv] = triangle_tangents_fromuv(positions[t.x], positions[t.y],
+    auto tutv = triangle_tangents_fromuv(positions[t.x], positions[t.y],
         positions[t.z], texcoords[t.x], texcoords[t.y], texcoords[t.z]);
-    tu            = normalize(tu);
-    tv            = normalize(tv);
-    for (auto vid : {t.x, t.y, t.z}) tangu[vid] += tu;
-    for (auto vid : {t.x, t.y, t.z}) tangv[vid] += tv;
+    for (auto vid : {t.x, t.y, t.z}) tangu[vid] += normalize(tutv.first);
+    for (auto vid : {t.x, t.y, t.z}) tangv[vid] += normalize(tutv.second);
   }
   for (auto& t : tangu) t = normalize(t);
   for (auto& t : tangv) t = normalize(t);
@@ -1143,11 +1141,11 @@ pair<int, vec2f> sample_quads(
 }
 pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv) {
-  auto element_id = sample_discrete(cdf, re);
-  if (quads[element_id].z == quads[element_id].w) {
-    return {element_id, sample_triangle(ruv)};
+  auto element = sample_discrete(cdf, re);
+  if (quads[element].z == quads[element].w) {
+    return {element, sample_triangle(ruv)};
   } else {
-    return {element_id, ruv};
+    return {element, ruv};
   }
 }
 
@@ -1166,21 +1164,21 @@ void sample_triangles(vector<vec3f>& sampled_positions,
   sample_triangles_cdf(cdf, triangles, positions);
   auto rng = make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
-    auto [triangle_id, triangle_uv] = sample_triangles(
-        cdf, rand1f(rng), rand2f(rng));
-    auto t               = triangles[triangle_id];
+    auto  sample         = sample_triangles(cdf, rand1f(rng), rand2f(rng));
+    auto& t              = triangles[sample.first];
+    auto  uv             = sample.second;
     sampled_positions[i] = interpolate_triangle(
-        positions[t.x], positions[t.y], positions[t.z], triangle_uv);
+        positions[t.x], positions[t.y], positions[t.z], uv);
     if (!sampled_normals.empty()) {
-      sampled_normals[i] = normalize(interpolate_triangle(
-          normals[t.x], normals[t.y], normals[t.z], triangle_uv));
+      sampled_normals[i] = normalize(
+          interpolate_triangle(normals[t.x], normals[t.y], normals[t.z], uv));
     } else {
       sampled_normals[i] = triangle_normal(
           positions[t.x], positions[t.y], positions[t.z]);
     }
     if (!sampled_texturecoords.empty()) {
       sampled_texturecoords[i] = interpolate_triangle(
-          texcoords[t.x], texcoords[t.y], texcoords[t.z], triangle_uv);
+          texcoords[t.x], texcoords[t.y], texcoords[t.z], uv);
     } else {
       sampled_texturecoords[i] = zero2f;
     }
@@ -1202,20 +1200,21 @@ void sample_quads(vector<vec3f>& sampled_positions,
   sample_quads_cdf(cdf, quads, positions);
   auto rng = make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
-    auto [quad_id, quad_uv] = sample_quads(cdf, rand1f(rng), rand2f(rng));
-    auto q                  = quads[quad_id];
+    auto sample = sample_quads(cdf, rand1f(rng), rand2f(rng));
+    auto& q                  = quads[sample.first];
+    auto uv = sample.second;
     sampled_positions[i]    = interpolate_quad(positions[q.x], positions[q.y],
-        positions[q.z], positions[q.w], quad_uv);
+        positions[q.z], positions[q.w], uv);
     if (!sampled_normals.empty()) {
       sampled_normals[i] = normalize(interpolate_quad(
-          normals[q.x], normals[q.y], normals[q.z], normals[q.w], quad_uv));
+          normals[q.x], normals[q.y], normals[q.z], normals[q.w], uv));
     } else {
       sampled_normals[i] = quad_normal(
           positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     }
     if (!sampled_texturecoords.empty()) {
       sampled_texturecoords[i] = interpolate_quad(texcoords[q.x],
-          texcoords[q.y], texcoords[q.z], texcoords[q.w], quad_uv);
+          texcoords[q.y], texcoords[q.z], texcoords[q.w], uv);
     } else {
       sampled_texturecoords[i] = zero2f;
     }
@@ -3097,27 +3096,30 @@ static void load_obj_shape(const string& filename, vector<int>& points,
   }
 }
 
-static string to_string(const obj_vertex& value) {
-  if (value.texcoord && value.normal) {
-    return to_string(value.position) + "/" + to_string(value.texcoord) + "/" +
-           to_string(value.normal);
-  } else if (value.texcoord && !value.normal) {
-    return to_string(value.position) + "/" + to_string(value.texcoord);
-  } else if (!value.texcoord && value.normal) {
-    return to_string(value.position) + "//" + to_string(value.normal);
-  } else {
-    return to_string(value.position);
+static void format_value(FILE* fs, const obj_vertex& value) {
+  if (fprintf(fs, "%d", value.position) < 0)
+    throw io_error("cannot write value");
+  if (value.texcoord) {
+    if (fprintf(fs, "/%d", value.texcoord) < 0)
+      throw io_error("cannot write value");
+    if (value.normal) {
+      if (fprintf(fs, "/%d", value.normal) < 0)
+        throw io_error("cannot write value");
+    }
+  } else if (value.normal) {
+    if (fprintf(fs, "//%d", value.normal) < 0)
+      throw io_error("cannot write value");
   }
 }
 
 template <typename T, typename... Ts>
-static inline void write_obj_line(
+static inline void print_obj_line(
     FILE* fs, const T& value, const Ts... values) {
-  write_value(fs, value);
+  format_value(fs, value);
   if constexpr (sizeof...(values) == 0) {
     write_text(fs, "\n");
   } else {
-    write_obj_line(fs, values...);
+    print_obj_line(fs, values...);
   }
 }
 
@@ -3137,10 +3139,10 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   write_text(fs, "# https://github.com/xelatihy/yocto-gl\n");
   write_text(fs, "#\n");
 
-  for (auto& p : positions) write_obj_line(fs, "v", p.x, p.y, p.z);
-  for (auto& n : normals) write_obj_line(fs, "vn", n.x, n.y, n.z);
+  for (auto& p : positions) print_obj_line(fs, "v", p.x, p.y, p.z);
+  for (auto& n : normals) print_obj_line(fs, "vn", n.x, n.y, n.z);
   for (auto& t : texcoords)
-    write_obj_line(fs, "vt", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+    print_obj_line(fs, "vt", t.x, (flip_texcoord) ? 1 - t.y : t.y);
 
   auto mask = obj_vertex{1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
   auto vert = [mask](int i) {
@@ -3149,19 +3151,19 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   };
 
   for (auto& p : points) {
-    write_obj_line(fs, "p", vert(p));
+    print_obj_line(fs, "p", vert(p));
   }
   for (auto& l : lines) {
-    write_obj_line(fs, "l", vert(l.x), vert(l.y));
+    print_obj_line(fs, "l", vert(l.x), vert(l.y));
   }
   for (auto& t : triangles) {
-    write_obj_line(fs, "f", vert(t.x), vert(t.y), vert(t.z));
+    print_obj_line(fs, "f", vert(t.x), vert(t.y), vert(t.z));
   }
   for (auto& q : quads) {
     if (q.z == q.w) {
-      write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+      print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
     } else {
-      write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+      print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
     }
   }
 
@@ -3185,11 +3187,11 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
                                      : vec4i{-1, -1, -1, -1};
     auto qn = !quadsnorm.empty() ? quadsnorm.at(i) : vec4i{-1, -1, -1, -1};
     if (qp.z != qp.w) {
-      write_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
+      print_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
           fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z),
           fvvert(qp.w, qt.w, qn.w));
     } else {
-      write_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
+      print_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
           fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z));
     }
   }

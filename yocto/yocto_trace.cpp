@@ -903,15 +903,14 @@ float sample_environment_pdf(const yocto_scene& scene,
     const trace_lights& lights, int environment_id, const vec3f& incoming) {
   auto& environment = scene.environments[environment_id];
   if (environment.emission_tex >= 0) {
-    auto& elements_cdf = lights.environment_cdfs[environment.emission_tex];
+    auto& cdf          = lights.environment_cdfs[environment.emission_tex];
     auto& emission_tex = scene.textures[environment.emission_tex];
     auto  size         = texture_size(emission_tex);
     auto  texcoord     = eval_texcoord(environment, incoming);
     auto  i            = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
     auto  j            = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
-    auto  prob         = sample_discrete_pdf(elements_cdf, j * size.x + i) /
-                elements_cdf.back();
-    auto angle = (2 * pif / size.x) * (pif / size.y) *
+    auto  prob         = sample_discrete_pdf(cdf, j * size.x + i) / cdf.back();
+    auto  angle        = (2 * pif / size.x) * (pif / size.y) *
                  sin(pif * (j + 0.5f) / size.y);
     return prob / angle;
   } else {
@@ -924,9 +923,9 @@ vec3f sample_environment(const yocto_scene& scene, const trace_lights& lights,
     int environment_id, float rel, const vec2f& ruv) {
   auto& environment = scene.environments[environment_id];
   if (environment.emission_tex >= 0) {
-    auto& elements_cdf = lights.environment_cdfs[environment.emission_tex];
+    auto& cdf          = lights.environment_cdfs[environment.emission_tex];
     auto& emission_tex = scene.textures[environment.emission_tex];
-    auto  idx          = sample_discrete(elements_cdf, rel);
+    auto  idx          = sample_discrete(cdf, rel);
     auto  size         = texture_size(emission_tex);
     auto  u            = (idx % size.x + 0.5f) / size.x;
     auto  v            = (idx / size.x + 0.5f) / size.y;
@@ -939,11 +938,13 @@ vec3f sample_environment(const yocto_scene& scene, const trace_lights& lights,
 // Picks a point on a light.
 vec3f sample_light(const yocto_scene& scene, const trace_lights& lights,
     int instance_id, const vec3f& p, float rel, const vec2f& ruv) {
-  auto& instance                = scene.instances[instance_id];
-  auto& shape                   = scene.shapes[instance.shape];
-  auto& elements_cdf            = lights.shape_cdfs[instance.shape];
-  auto [element_id, element_uv] = sample_shape(shape, elements_cdf, rel, ruv);
-  return normalize(eval_position(scene, instance, element_id, element_uv) - p);
+  auto& instance = scene.instances[instance_id];
+  auto& shape    = scene.shapes[instance.shape];
+  auto& cdf      = lights.shape_cdfs[instance.shape];
+  auto  sample   = sample_shape(shape, cdf, rel, ruv);
+  auto  element  = sample.first;
+  auto  uv       = sample.second;
+  return normalize(eval_position(scene, instance, element, uv) - p);
 }
 
 // Sample pdf for a light point.
@@ -953,7 +954,7 @@ float sample_light_pdf(const yocto_scene& scene, const trace_lights& lights,
   auto& instance = scene.instances[instance_id];
   auto& material = scene.materials[instance.material];
   if (material.emission == zero3f) return 0;
-  auto& elements_cdf = lights.shape_cdfs[instance.shape];
+  auto& cdf = lights.shape_cdfs[instance.shape];
   // check all intersection
   auto pdf           = 0.0f;
   auto next_position = position;
@@ -966,7 +967,7 @@ float sample_light_pdf(const yocto_scene& scene, const trace_lights& lights,
     auto light_normal   = eval_normal(
         scene, instance, isec.element, isec.uv, trace_non_rigid_frames);
     // prob triangle * area triangle = area triangle mesh
-    auto area = elements_cdf.back();
+    auto area = cdf.back();
     pdf += distance_squared(light_position, position) /
            (abs(dot(light_normal, direction)) * area);
     // continue
@@ -1065,7 +1066,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
-        origin = position;
+        origin = position + direction * ray_eps * 10;
         bounce -= 1;
         continue;
       }
@@ -1187,7 +1188,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
-      origin = position;
+      origin = position + direction * ray_eps * 10;
       bounce -= 1;
       continue;
     }
@@ -1259,7 +1260,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
-      origin = position;
+      origin = position + direction * ray_eps * 10;
       bounce -= 1;
       continue;
     }
@@ -1333,9 +1334,9 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
       return {frontfacing, 1};
     }
     case trace_falsecolor_type::texcoord: {
-      auto texturecoord = eval_texcoord(
+      auto texcoord = eval_texcoord(
           shape, intersection.element, intersection.uv);
-      return {{texturecoord.x, texturecoord.y, 0}, 1};
+      return {{texcoord.x, texcoord.y, 0}, 1};
     }
     case trace_falsecolor_type::color: {
       auto color = eval_color(shape, intersection.element, intersection.uv);
@@ -1507,7 +1508,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_params& params) {
-  auto image_size = camera_image_size(
+  auto image_size = camera_resolution(
       scene.cameras.at(params.camera), params.resolution);
   auto image = yocto::image{image_size, zero4f};
   auto state = trace_state{};
@@ -1544,7 +1545,7 @@ void trace_async_start(image<vec4f>& image, trace_state& state,
     vector<future<void>>& futures, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue, const trace_params& params) {
   auto& camera     = scene.cameras.at(params.camera);
-  auto  image_size = camera_image_size(camera, params.resolution);
+  auto  image_size = camera_resolution(camera, params.resolution);
   image            = {image_size, zero4f};
   state            = trace_state{};
   init_trace_state(state, image_size, params.seed);

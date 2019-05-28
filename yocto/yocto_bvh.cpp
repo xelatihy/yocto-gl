@@ -751,10 +751,10 @@ static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
   if (csize == zero3f) return {mid, split_axis};
 
   // consider N bins, compute their cost and keep the minimum
-  const int nbins     = 16;
-  auto      middle    = 0.0f;
-  auto      min_cost  = float_max;
-  auto      bbox_area = [](auto& b) {
+  const int nbins    = 16;
+  auto      middle   = 0.0f;
+  auto      min_cost = float_max;
+  auto      area     = [](auto& b) {
     auto size = b.max - b.min;
     return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
            2 * size.y * size.z;
@@ -773,8 +773,8 @@ static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
           right_nprims += 1;
         }
       }
-      auto cost = 1 + left_nprims * bbox_area(left_bbox) / bbox_area(cbbox) +
-                  right_nprims * bbox_area(right_bbox) / bbox_area(cbbox);
+      auto cost = 1 + left_nprims * area(left_bbox) / area(cbbox) +
+                  right_nprims * area(right_bbox) / area(cbbox);
       if (cost < min_cost) {
         min_cost   = cost;
         middle     = split;
