@@ -1033,41 +1033,40 @@ float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
 // Set and evaluate camera parameters. Setters take zeros as default values.
 vec2f camera_fov(const yocto_camera& camera) {
   assert(!camera.orthographic);
-  return {2 * atan(camera.width / (2 * camera.lens)),
-      2 * atan(camera.height / (2 * camera.lens))};
+  return {2 * atan(camera.film.x / (2 * camera.lens)),
+      2 * atan(camera.film.y / (2 * camera.lens))};
 }
 float camera_yfov(const yocto_camera& camera) {
   assert(!camera.orthographic);
-  return 2 * atan(camera.height / (2 * camera.lens));
+  return 2 * atan(camera.film.y / (2 * camera.lens));
 }
 float camera_aspect(const yocto_camera& camera) {
-  return camera.width / camera.height;
+  return camera.film.x / camera.film.y;
 }
 vec2i camera_resolution(const yocto_camera& camera, const vec2i& size_) {
   auto size = size_;
   if (size == zero2i) size = {1280, 720};
   if (size.x != 0 && size.y != 0) {
-    if (size.x * camera.height / camera.width > size.y) {
+    if (size.x * camera.film.y / camera.film.x > size.y) {
       size.x = 0;
     } else {
       size.y = 0;
     }
   }
   if (size.x == 0) {
-    size.x = (int)round(size.y * camera.width / camera.height);
+    size.x = (int)round(size.y * camera.film.x / camera.film.y);
   }
   if (size.y == 0) {
-    size.y = (int)round(size.x * camera.height / camera.width);
+    size.y = (int)round(size.x * camera.film.y / camera.film.x);
   }
   return size;
 }
 void set_yperspective(
     yocto_camera& camera, float fov, float aspect, float focus, float film) {
   camera.orthographic = false;
-  camera.width        = film;
-  camera.height       = film / aspect;
+  camera.film         = {film, film / aspect};
   camera.focus        = focus;
-  auto distance       = camera.height / (2 * tan(fov / 2));
+  auto distance       = camera.film.y / (2 * tan(fov / 2));
   if (focus < float_max) {
     camera.lens = camera.focus * distance / (camera.focus + distance);
   } else {
@@ -1106,8 +1105,8 @@ ray3f eval_perspective_camera(
   if (camera.aperture) {
     auto e = vec3f{(lens_uv.x - 0.5f) * camera.aperture,
         (lens_uv.y - 0.5f) * camera.aperture, 0};
-    auto q = vec3f{camera.width * (0.5f - image_uv.x),
-        camera.height * (image_uv.y - 0.5f), distance};
+    auto q = vec3f{camera.film.x * (0.5f - image_uv.x),
+        camera.film.y * (image_uv.y - 0.5f), distance};
     // distance of the image of the point
     auto distance1 = camera.lens * distance / (distance - camera.lens);
     auto q1        = -q * distance1 / distance;
@@ -1118,8 +1117,8 @@ ray3f eval_perspective_camera(
     return ray;
   } else {
     auto e   = zero3f;
-    auto q   = vec3f{camera.width * (0.5f - image_uv.x),
-        camera.height * (image_uv.y - 0.5f), distance};
+    auto q   = vec3f{camera.film.x * (0.5f - image_uv.x),
+        camera.film.y * (image_uv.y - 0.5f), distance};
     auto q1  = -q;
     auto d   = normalize(q1 - e);
     auto ray = ray3f{
@@ -1134,8 +1133,8 @@ ray3f eval_orthographic_camera(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
   if (camera.aperture) {
     auto scale = 1 / camera.lens;
-    auto q     = vec3f{camera.width * (0.5f - image_uv.x) * scale,
-        camera.height * (image_uv.y - 0.5f) * scale, scale};
+    auto q     = vec3f{camera.film.x * (0.5f - image_uv.x) * scale,
+        camera.film.y * (image_uv.y - 0.5f) * scale, scale};
     auto q1    = vec3f{-q.x, -q.y, -camera.focus};
     auto e = vec3f{-q.x, -q.y, 0} + vec3f{(lens_uv.x - 0.5f) * camera.aperture,
                                         (lens_uv.y - 0.5f) * camera.aperture,
@@ -1146,8 +1145,8 @@ ray3f eval_orthographic_camera(
     return ray;
   } else {
     auto scale = 1 / camera.lens;
-    auto q     = vec3f{camera.width * (0.5f - image_uv.x) * scale,
-        camera.height * (image_uv.y - 0.5f) * scale, scale};
+    auto q     = vec3f{camera.film.x * (0.5f - image_uv.x) * scale,
+        camera.film.y * (image_uv.y - 0.5f) * scale, scale};
     auto q1    = -q;
     auto e     = vec3f{-q.x, -q.y, 0};
     auto d     = normalize(q1 - e);

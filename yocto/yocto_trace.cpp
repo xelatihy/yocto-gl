@@ -1067,7 +1067,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
         origin = position + direction * ray_eps * 10;
-        bounce -= 1;
+        if (material.opacity == 0) bounce -= 1;
         continue;
       }
       hit = true;
@@ -1189,7 +1189,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
       origin = position + direction * ray_eps * 10;
-      bounce -= 1;
+      if (material.opacity == 0) bounce -= 1;
       continue;
     }
     hit = true;
@@ -1199,14 +1199,14 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 
     // next direction
     if (!is_delta(material)) {
-      incoming = sample_delta(material, normal, outgoing, rand1f(rng));
-      weight *= eval_delta(material, normal, outgoing, incoming) /
-                sample_delta_pdf(material, normal, outgoing, incoming);
-    } else {
       incoming = sample_brdf(
           material, normal, outgoing, rand1f(rng), rand2f(rng));
       weight *= eval_brdfcos(material, normal, outgoing, incoming) /
                 sample_brdf_pdf(material, normal, outgoing, incoming);
+    } else {
+      incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+      weight *= eval_delta(material, normal, outgoing, incoming) /
+                sample_delta_pdf(material, normal, outgoing, incoming);
     }
 
     // check weight

@@ -88,9 +88,8 @@ struct yocto_camera {
   string  uri          = "";
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
-  float   width        = 0.036f;
-  float   height       = 0.024f;
-  float   lens         = 0.050f;
+  float   lens         = 0.050;
+  vec2f   film         = {0.036, 0.024};
   float   focus        = float_max;
   float   aperture     = 0;
 };
