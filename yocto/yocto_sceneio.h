@@ -64,9 +64,10 @@ struct load_params {
 
 // Scene save params
 struct save_params {
-  bool          notextures = false;
-  atomic<bool>* cancel     = nullptr;
-  bool          noparallel = false;
+  bool          notextures   = false;
+  bool          objinstances = false;
+  atomic<bool>* cancel       = nullptr;
+  bool          noparallel   = false;
 };
 
 // Load/save a scene in the supported formats.

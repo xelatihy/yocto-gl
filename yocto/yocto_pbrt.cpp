@@ -365,6 +365,8 @@ static inline bool is_type_compatible(const string& type) {
     return type == "point3" || type == "vector3" || type == "normal3" ||
            type == "point" || type == "vector" || type == "normal" ||
            type == "float";
+  } else if constexpr (std::is_same<T, vec4f>::value) {
+    return type == "float";
   } else if constexpr (std::is_same<T, pbrt_spectrum3f>::value) {
     return type == "rgb" || type == "pbrt_spectrum" || type == "blackbody";
   } else if constexpr (std::is_same<T, vec3i>::value) {

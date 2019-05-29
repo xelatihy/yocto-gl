@@ -154,6 +154,14 @@ struct obj_procedural {
   int     level = -1;            // level of subdivision (-1 default)
 };
 
+// Obj instance [extension]
+struct obj_instance {
+  string  name;                  // name
+  frame3f frame = identity3x4f;  // transform
+  string  object;                // object name
+  string  material;              // material name
+};
+
 // Obj callbacks
 struct obj_callbacks {
   virtual void vert(const vec3f&) {}
@@ -170,6 +178,7 @@ struct obj_callbacks {
   virtual void material(const obj_material&) {}
   virtual void camera(const obj_camera&) {}
   virtual void environmnet(const obj_environment&) {}
+  virtual void instance(const obj_instance&) {}
   virtual void procedural(const obj_procedural&) {}
 };
 

@@ -127,9 +127,11 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='pa
     for dirname in sorted(glob.glob(f'{directory}/source/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
-        if 'ecosys' in dirname and outformat == 'obj': continue
-        if 'landscape' in dirname and outformat == 'obj': continue
-        if 'fractal' in dirname and outformat == 'obj': continue
+        obj_options = ''
+        if 'bunny2' in dirname and outformat == 'obj': obj_options = '--obj-instances'
+        if 'ecosys' in dirname and outformat == 'obj': obj_options = '--obj-instances'
+        if 'landscape' in dirname and outformat == 'obj': obj_options = '--obj-instances'
+        if 'fractal' in dirname and outformat == 'obj': obj_options = '--obj-instances'
         if 'pavilion' in dirname and outformat == 'obj': continue
         if 'sanmiguel' in dirname and outformat == 'obj': continue
         outdirname = dirname.replace(f'/source/',f'/{outformat}/')
@@ -141,11 +143,11 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='pa
                     if 'WorldBegin' not in f.read(): continue
             outname = filename.replace(f'/source/',f'/{outformat}/').replace(f'.{format}',f'.{outformat}')
             if format != 'dijson':
-                cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {filename}'
+                cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {obj_options} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
             else:
-                cmd = f'../yocto-gl/bin/yislandproc -o {outname} {options} {filename}'
+                cmd = f'../yocto-gl/bin/yislandproc -o {outname} {options} {obj_options} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
 

@@ -969,6 +969,10 @@ struct load_obj_scene_cb : obj_callbacks {
   unordered_map<int, int>        norm_map   = unordered_map<int, int>();
   unordered_map<int, int>        texcoord_map = unordered_map<int, int>();
 
+  // parsed geometry and materials
+  unordered_map<string, vector<int>> object_shapes  = {};
+  bool                               first_instance = true;
+
   // current parse state
   bool facevarying_now = false;
 
@@ -987,6 +991,7 @@ struct load_obj_scene_cb : obj_callbacks {
     instance.shape    = (int)scene.shapes.size() - 1;
     instance.material = mmap.at(mname);
     scene.instances.push_back(instance);
+    object_shapes[oname].push_back((int)scene.shapes.size() - 1);
     vertex_map.clear();
     pos_map.clear();
     norm_map.clear();
@@ -1196,6 +1201,7 @@ struct load_obj_scene_cb : obj_callbacks {
     material.roughness_tex    = add_texture(omat.pr_map, true);
     material.opacity_tex      = add_texture(omat.op_map, true);
     material.normal_tex       = add_texture(omat.norm_map, true);
+    if (material.transmission != zero3f) material.thin = true;
     scene.materials.push_back(material);
     mmap[material.uri] = (int)scene.materials.size() - 1;
   }
@@ -1217,6 +1223,20 @@ struct load_obj_scene_cb : obj_callbacks {
     environment.emission     = oenv.ke;
     environment.emission_tex = add_texture(oenv.ke_txt, true);
     scene.environments.push_back(environment);
+  }
+  void instance(const obj_instance& oist) override {
+    if (first_instance) {
+      scene.instances.clear();
+      first_instance = false;
+    }
+    for (auto& shape : object_shapes[oist.object]) {
+      auto instance     = yocto_instance{};
+      instance.uri      = oist.name;
+      instance.frame    = oist.frame;
+      instance.shape    = shape;
+      instance.material = mmap.at(oist.material);
+      scene.instances.push_back(instance);
+    }
   }
   void procedural(const obj_procedural& oproc) override {
     auto shape = yocto_shape();
@@ -1256,12 +1276,20 @@ static void load_obj_scene(
     load_obj(filename, cb, {});
 
     // cleanup empty
-    for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-      scene.instances[idx].shape = idx;
-      if (!scene.shapes[idx].positions.empty()) continue;
-      scene.shapes.erase(scene.shapes.begin() + idx);
-      scene.instances.erase(scene.instances.begin() + idx);
-      idx--;
+    for (auto shape = 0; shape < scene.shapes.size(); shape++) {
+      if (!scene.shapes[shape].positions.empty()) continue;
+      for (auto instance = 0; instance < scene.instances.size(); instance++) {
+        if (scene.instances[instance].shape < shape) {
+          continue;
+        } else if (scene.instances[instance].shape > shape) {
+          scene.instances[instance].shape -= 1;
+        } else {
+          scene.instances.erase(scene.instances.begin() + instance);
+          instance--;
+        }
+      }
+      scene.shapes.erase(scene.shapes.begin() + shape);
+      shape--;
     }
 
     // check if any empty shape is left
@@ -1343,7 +1371,8 @@ static void save_mtl(
   }
 }
 
-static void save_objx(const string& filename, const yocto_scene& scene) {
+static void save_objx(
+    const string& filename, const yocto_scene& scene, bool preserve_instances) {
   // open file
   auto fs_ = open_output_file(filename);
   auto fs  = fs_.fs;
@@ -1366,6 +1395,15 @@ static void save_objx(const string& filename, const yocto_scene& scene) {
             : "\"\" "s,
         environment.frame);
   }
+
+  // instances
+  if (preserve_instances) {
+    for (auto& instance : scene.instances) {
+      print_obj_line(fs, "i", get_basename(instance.uri),
+          get_basename(scene.shapes[instance.shape].uri),
+          get_basename(scene.materials[instance.material].uri), instance.frame);
+    }
+  }
 }
 
 static void format_value(FILE* fs, const obj_vertex& value) {
@@ -1385,7 +1423,7 @@ static void format_value(FILE* fs, const obj_vertex& value) {
 }
 
 static void save_obj(const string& filename, const yocto_scene& scene,
-    bool flip_texcoord = true) {
+    bool preserve_instances, bool flip_texcoord = true) {
   // open file
   auto fs_ = open_output_file(filename);
   auto fs  = fs_.fs;
@@ -1400,10 +1438,17 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   }
 
   // shapes
-  auto offset = obj_vertex{0, 0, 0};
-  for (auto& instance : scene.instances) {
+  auto offset    = obj_vertex{0, 0, 0};
+  auto instances = vector<yocto_instance>{};
+  if (preserve_instances) {
+    instances.reserve(scene.shapes.size());
+    for (auto shape = 0; shape < scene.shapes.size(); shape++) {
+      instances.push_back({scene.shapes[shape].uri, identity3x4f, shape, -1});
+    }
+  }
+  for (auto& instance : preserve_instances ? instances : scene.instances) {
     auto& shape = scene.shapes[instance.shape];
-    print_obj_line(fs, "o", instance.uri);
+    print_obj_line(fs, "o", get_basename(instance.uri));
     if (instance.material >= 0)
       print_obj_line(
           fs, "usemtl", get_basename(scene.materials[instance.material].uri));
@@ -1511,12 +1556,14 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 static void save_obj_scene(const string& filename, const yocto_scene& scene,
     const save_params& params) {
   try {
-    save_obj(filename, scene, true);
+    save_obj(filename, scene, params.objinstances, true);
     if (!scene.materials.empty()) {
       save_mtl(get_noextension(filename) + ".mtl", scene, true);
     }
-    if (!scene.cameras.empty() || !scene.environments.empty()) {
-      save_objx(get_noextension(filename) + ".objx", scene);
+    if (!scene.cameras.empty() || !scene.environments.empty() ||
+        params.objinstances) {
+      save_objx(
+          get_noextension(filename) + ".objx", scene, params.objinstances);
     }
 
     // skip textures if needed

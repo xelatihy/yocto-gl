@@ -55,6 +55,7 @@ int main(int argc, char** argv) {
   auto shape_directory  = "shapes/"s;
   auto subdiv_directory = "subdivs/"s;
   auto uniform_txt      = false;
+  auto obj_instances    = false;
   auto validate         = false;
   auto info             = false;
   auto output           = "out.json"s;
@@ -69,6 +70,8 @@ int main(int argc, char** argv) {
   parser.add_option("--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
   parser.add_flag("--uniform-textures", uniform_txt, "uniform texture formats");
+  parser.add_flag(
+      "--obj-instances", obj_instances, "preserve instances in obj");
   parser.add_flag("--info,-i", info, "print scene info");
   parser.add_flag("--validate", validate, "Validate scene");
   parser.add_option("--output,-o", output, "output scene")->required(true);
@@ -80,10 +83,11 @@ int main(int argc, char** argv) {
   }
 
   // fix options
-  auto load_prms       = load_params();
-  auto save_prms       = save_params();
-  load_prms.notextures = notextures;
-  save_prms.notextures = notextures;
+  auto load_prms         = load_params();
+  auto save_prms         = save_params();
+  load_prms.notextures   = notextures;
+  save_prms.notextures   = notextures;
+  save_prms.objinstances = obj_instances;
 
   // load scene
   auto scene = yocto_scene{};
