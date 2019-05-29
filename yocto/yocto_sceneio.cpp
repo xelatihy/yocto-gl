@@ -1201,7 +1201,7 @@ struct load_obj_scene_cb : obj_callbacks {
     material.roughness_tex    = add_texture(omat.pr_map, true);
     material.opacity_tex      = add_texture(omat.op_map, true);
     material.normal_tex       = add_texture(omat.norm_map, true);
-    if(material.transmission != zero3f) material.thin = true;
+    if (material.transmission != zero3f) material.thin = true;
     scene.materials.push_back(material);
     mmap[material.uri] = (int)scene.materials.size() - 1;
   }
@@ -1278,14 +1278,14 @@ static void load_obj_scene(
     // cleanup empty
     for (auto shape = 0; shape < scene.shapes.size(); shape++) {
       if (!scene.shapes[shape].positions.empty()) continue;
-      for(auto instance = 0; instance < scene.instances.size(); instance++) {
-        if(scene.instances[instance].shape < shape) {
-            continue;
-        } else if(scene.instances[instance].shape > shape) {
-            scene.instances[instance].shape -= 1;
+      for (auto instance = 0; instance < scene.instances.size(); instance++) {
+        if (scene.instances[instance].shape < shape) {
+          continue;
+        } else if (scene.instances[instance].shape > shape) {
+          scene.instances[instance].shape -= 1;
         } else {
-            scene.instances.erase(scene.instances.begin() + instance);
-            instance--;
+          scene.instances.erase(scene.instances.begin() + instance);
+          instance--;
         }
       }
       scene.shapes.erase(scene.shapes.begin() + shape);
