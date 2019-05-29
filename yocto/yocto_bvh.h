@@ -111,6 +111,15 @@ struct bvh_node {
   int    prims[bvh_max_prims];
 };
 
+// Compressed nodes
+struct bvh_cnode {
+  bbox3f bbox;
+  int    start;
+  short  num;
+  bool   internal;
+  byte   axis;
+};
+
 // BVH array view
 template <typename T>
 struct bvh_array_view {
@@ -150,6 +159,10 @@ struct bvh_shape {
 
   // nodes
   vector<bvh_node> nodes;
+
+  // compressed nodes
+  vector<bvh_cnode> cnodes;
+  vector<int>       cprims;
 
 #if YOCTO_EMBREE
   // Embree opaque data

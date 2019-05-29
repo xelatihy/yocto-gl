@@ -969,7 +969,7 @@ struct load_obj_scene_cb : obj_callbacks {
   unordered_map<int, int>        norm_map   = unordered_map<int, int>();
   unordered_map<int, int>        texcoord_map = unordered_map<int, int>();
 
-  // object groups for instancing
+  // parsed geometry and materials
   unordered_map<string, vector<int>> object_shapes  = {};
   bool                               first_instance = true;
 
@@ -1275,12 +1275,20 @@ static void load_obj_scene(
     load_obj(filename, cb, {});
 
     // cleanup empty
-    for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-      scene.instances[idx].shape = idx;
-      if (!scene.shapes[idx].positions.empty()) continue;
-      scene.shapes.erase(scene.shapes.begin() + idx);
-      scene.instances.erase(scene.instances.begin() + idx);
-      idx--;
+    for (auto shape = 0; shape < scene.shapes.size(); shape++) {
+      if (!scene.shapes[shape].positions.empty()) continue;
+      for(auto instance = 0; instance < scene.instances.size(); instance++) {
+        if(scene.instances[instance].shape < shape) {
+            continue;
+        } else if(scene.instances[instance].shape > shape) {
+            scene.instances[instance].shape -= 1;
+        } else {
+            scene.instances.erase(scene.instances.begin() + instance);
+            instance--;
+        }
+      }
+      scene.shapes.erase(scene.shapes.begin() + shape);
+      shape--;
     }
 
     // check if any empty shape is left
