@@ -166,17 +166,6 @@ bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
   return hit;
 }
 
-// Min/max used in BVH traversal. Copied here since the traversal code
-// relies on the specific behaviour wrt NaNs.
-static inline const float& _safemin(const float& a, const float& b) {
-  return (a < b) ? a : b;
-}
-// Min/max used in BVH traversal. Copied here since the traversal code
-// relies on the specific behaviour wrt NaNs.
-static inline const float& _safemax(const float& a, const float& b) {
-  return (a > b) ? a : b;
-}
-
 // Intersect a ray with a axis-aligned bounding box
 inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
   // determine intersection ranges
@@ -187,24 +176,8 @@ inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
   if (invd.x < 0.0f) swap(t0.x, t1.x);
   if (invd.y < 0.0f) swap(t0.y, t1.y);
   if (invd.z < 0.0f) swap(t0.z, t1.z);
-  auto tmin = _safemax(t0.z, _safemax(t0.y, _safemax(t0.x, ray.tmin)));
-  auto tmax = _safemin(t1.z, _safemin(t1.y, _safemin(t1.x, ray.tmax)));
-  tmax *= 1.00000024f;  // for double: 1.0000000000000004
-  return tmin <= tmax;
-}
-
-// Intersect a ray with a axis-aligned bounding box
-inline bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox_) {
-  auto bbox  = &bbox_.min;
-  auto txmin = (bbox[ray_dsign.x].x - ray.o.x) * ray_dinv.x;
-  auto txmax = (bbox[1 - ray_dsign.x].x - ray.o.x) * ray_dinv.x;
-  auto tymin = (bbox[ray_dsign.y].y - ray.o.y) * ray_dinv.y;
-  auto tymax = (bbox[1 - ray_dsign.y].y - ray.o.y) * ray_dinv.y;
-  auto tzmin = (bbox[ray_dsign.z].z - ray.o.z) * ray_dinv.z;
-  auto tzmax = (bbox[1 - ray_dsign.z].z - ray.o.z) * ray_dinv.z;
-  auto tmin  = _safemax(tzmin, _safemax(tymin, _safemax(txmin, ray.tmin)));
-  auto tmax  = _safemin(tzmax, _safemin(tymax, _safemin(txmax, ray.tmax)));
+  auto tmin = max(t0.z, max(t0.y, max(t0.x, ray.tmin)));
+  auto tmax = min(t1.z, min(t1.y, min(t1.x, ray.tmax)));
   tmax *= 1.00000024f;  // for double: 1.0000000000000004
   return tmin <= tmax;
 }
@@ -214,12 +187,10 @@ inline bool intersect_bbox(
     const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox) {
   auto it_min = (bbox.min - ray.o) * ray_dinv;
   auto it_max = (bbox.max - ray.o) * ray_dinv;
-  auto tmin = vec3f{_safemin(it_min.x, it_max.x), _safemin(it_min.y, it_max.y),
-      _safemin(it_min.z, it_max.z)};
-  auto tmax = vec3f{_safemax(it_min.x, it_max.x), _safemax(it_min.y, it_max.y),
-      _safemax(it_min.z, it_max.z)};
-  auto t0   = _safemax(tmin.x, _safemax(tmin.y, _safemax(tmin.z, ray.tmin)));
-  auto t1   = _safemin(tmax.x, _safemin(tmax.y, _safemin(tmax.z, ray.tmax)));
+  auto tmin = min(it_min, it_max);
+  auto tmax = max(it_min, it_max);
+  auto t0   = max(max(tmin), ray.tmin);
+  auto t1   = min(min(tmax), ray.tmax);
   t1 *= 1.00000024f;  // for double: 1.0000000000000004
   return t0 <= t1;
 }
