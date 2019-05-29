@@ -127,9 +127,9 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='pa
     for dirname in sorted(glob.glob(f'{directory}/source/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
-        if 'ecosys' in dirname and outformat == 'obj': continue
-        if 'landscape' in dirname and outformat == 'obj': continue
-        if 'fractal' in dirname and outformat == 'obj': continue
+        if 'ecosys' in dirname and outformat == 'obj': options = options + ' --obj-instances'
+        if 'landscape' in dirname and outformat == 'obj': options = options + ' --obj-instances'
+        if 'fractal' in dirname and outformat == 'obj': options = options + ' --obj-instances'
         if 'pavilion' in dirname and outformat == 'obj': continue
         if 'sanmiguel' in dirname and outformat == 'obj': continue
         outdirname = dirname.replace(f'/source/',f'/{outformat}/')
