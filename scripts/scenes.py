@@ -128,6 +128,7 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='pa
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         obj_options = ''
+        if 'bunny2' in dirname and outformat == 'obj': obj_options = '--obj-instances'
         if 'ecosys' in dirname and outformat == 'obj': obj_options = '--obj-instances'
         if 'landscape' in dirname and outformat == 'obj': obj_options = '--obj-instances'
         if 'fractal' in dirname and outformat == 'obj': obj_options = '--obj-instances'

@@ -991,7 +991,7 @@ struct load_obj_scene_cb : obj_callbacks {
     instance.shape    = (int)scene.shapes.size() - 1;
     instance.material = mmap.at(mname);
     scene.instances.push_back(instance);
-    object_shapes[oname].push_back((int)scene.shapes.size());
+    object_shapes[oname].push_back((int)scene.shapes.size() - 1);
     vertex_map.clear();
     pos_map.clear();
     norm_map.clear();
@@ -1201,6 +1201,7 @@ struct load_obj_scene_cb : obj_callbacks {
     material.roughness_tex    = add_texture(omat.pr_map, true);
     material.opacity_tex      = add_texture(omat.op_map, true);
     material.normal_tex       = add_texture(omat.norm_map, true);
+    if(material.transmission != zero3f) material.thin = true;
     scene.materials.push_back(material);
     mmap[material.uri] = (int)scene.materials.size() - 1;
   }
