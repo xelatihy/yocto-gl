@@ -261,6 +261,9 @@ void load_obj(
   // track vertex size
   auto vert_size = obj_vertex();
   auto verts     = vector<obj_vertex>();  // buffer to avoid reallocation
+  
+  // material libraries read already
+  auto mlibs = vector<string>{};
 
   // read the file line by line
   char buffer[4096];
@@ -332,6 +335,8 @@ void load_obj(
       auto mtlname = ""s;
       parse_value(line, mtlname);
       cb.mtllib(mtlname);
+      if(find(mlibs.begin(), mlibs.end(), mtlname) != mlibs.end()) continue;
+      mlibs.push_back(mtlname);
       auto mtlpath = get_dirname(filename) + mtlname;
       load_mtl(mtlpath, cb, params);
     } else {
