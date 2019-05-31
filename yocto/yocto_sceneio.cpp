@@ -297,7 +297,7 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
 namespace yocto {
 
 struct yaml_callbacks {
-  virtual void object_group(const string& key) {}
+  virtual void object_group(string_view key) {}
   virtual void object_begin() {}
   virtual void key_value(string_view key, string_view value) {}
 };
@@ -510,7 +510,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
     }
   }
 
-  void object_group(const string& key) override {
+  void object_group(string_view key) override {
     if (key == "cameras") {
       type = parsing_type::camera;
     } else if (key == "textures") {
@@ -529,7 +529,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
       type = parsing_type::environment;
     } else {
       type = parsing_type::none;
-      throw io_error("unknown object type " + key);
+      throw io_error("unknown object type " + string(key));
     }
   }
   void object_begin() override {

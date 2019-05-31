@@ -794,6 +794,50 @@ inline void remove_comment_and_newline(
 }
 
 // Parse values from a string
+inline void parse_value(string_view& str, string& value, bool quoted = false) {
+  skip_whitespace(str);
+  if (str.empty()) throw io_error("cannot parse value");
+  if (!quoted) {
+    auto pos = str.find_first_of(" \t\r\n");
+    if (pos == str.npos) {
+      value = str;
+      str.remove_prefix(str.length());
+    } else {
+      value = str.substr(0, pos);
+      str.remove_prefix(pos);
+    }
+  } else {
+    if (str.front() != '"') throw io_error("cannot parse value");
+    str.remove_prefix(1);
+    if (str.empty()) throw io_error("cannot parse value");
+    auto pos = str.find('"');
+    if (pos == str.npos) throw io_error("cannot parse value");
+    value = str.substr(0, pos);
+    str.remove_prefix(pos + 1);
+  }
+}
+inline void parse_value(string_view& str, string_view& value, bool quoted = false) {
+  skip_whitespace(str);
+  if (str.empty()) throw io_error("cannot parse value");
+  if (!quoted) {
+    auto pos = str.find_first_of(" \t\r\n");
+    if (pos == str.npos) {
+      value = str;
+      str.remove_prefix(str.length());
+    } else {
+      value = str.substr(0, pos);
+      str.remove_prefix(pos);
+    }
+  } else {
+    if (str.front() != '"') throw io_error("cannot parse value");
+    str.remove_prefix(1);
+    if (str.empty()) throw io_error("cannot parse value");
+    auto pos = str.find('"');
+    if (pos == str.npos) throw io_error("cannot parse value");
+    value = str.substr(0, pos);
+    str.remove_prefix(pos + 1);
+  }
+}
 inline void parse_value(string_view& str, int& value) {
   char* end = nullptr;
   value     = (int)strtol(str.data(), &end, 10);
@@ -803,7 +847,7 @@ inline void parse_value(string_view& str, int& value) {
 inline void parse_value(string_view& str, bool& value, bool alpha = false) {
   if (alpha) {
     auto values = ""s;
-    parse_value(str, value);
+    parse_value(str, values);
     if (values == "false") {
       value = false;
     } else if (values == "true") {
@@ -828,28 +872,6 @@ inline void parse_value(string_view& str, double& value) {
   value     = strtod(str.data(), &end);
   if (str == end) throw io_error("cannot parse value");
   str.remove_prefix(end - str.data());
-}
-inline void parse_value(string_view& str, string& value, bool quoted = false) {
-  skip_whitespace(str);
-  if (str.empty()) throw io_error("cannot parse value");
-  if (!quoted) {
-    auto pos = str.find_first_of(" \t\r\n");
-    if (pos == str.npos) {
-      value = str;
-      str.remove_prefix(str.length());
-    } else {
-      value = str.substr(0, pos);
-      str.remove_prefix(pos);
-    }
-  } else {
-    if (str.front() != '"') throw io_error("cannot parse value");
-    str.remove_prefix(1);
-    if (str.empty()) throw io_error("cannot parse value");
-    auto pos = str.find('"');
-    if (pos == str.npos) throw io_error("cannot parse value");
-    value = str.substr(0, pos);
-    str.remove_prefix(pos + 1);
-  }
 }
 template <typename T>
 inline void parse_value(
