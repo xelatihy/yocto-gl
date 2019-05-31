@@ -758,85 +758,62 @@ inline void format_line(FILE* fs, const T& arg, const Ts&... args) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+inline bool is_space(char c) {
+  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+inline bool is_newline(char c) {
+  return c == '\r' || c == '\n';
+}
+inline bool is_alpha(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
+inline bool is_whitespace(const string_view& str) {
+  return str.find_first_not_of(" \t\r\n") == str.npos;
+}
+
 inline void skip_whitespace(string_view& str) {
-  auto pos = str.find_first_not_of(" \t\r\n");
-  if (pos == str.npos) {
-    str.remove_prefix(str.size());
-  } else {
-    str.remove_prefix(pos);
-  }
+  while(!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 inline void trim_whitespace(string_view& str) {
-  auto front = str.find_first_not_of(" \t\r\n");
-  if (front == str.npos) {
-    str.remove_prefix(str.size());
-  } else {
-    str.remove_prefix(front);
-  }
-  auto back = str.find_last_not_of(" \t\r\n");
-  if (back == str.npos) {
-    str.remove_suffix(str.size());
-  } else {
-    str.remove_suffix(str.size() - back - 1);
-  }
-}
-inline void remove_comment_(string_view& str, char comment_char = '#') {
-  auto pos = str.find(comment_char);
-  if (pos == str.npos) return;
-  str.remove_suffix(str.length() - pos);
+  while(!str.empty() && is_space(str.front())) str.remove_prefix(1);
+  while(!str.empty() && is_space(str.back())) str.remove_suffix(1);
 }
 inline void remove_comment_and_newline(
     string_view& str, char comment_char = '#') {
-  str.remove_suffix(1);
-  auto pos = str.find(comment_char);
-  if (pos == str.npos) return;
-  str.remove_suffix(str.length() - pos);
+  while(!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+  auto cpy = str;
+  while(!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  str.remove_suffix(cpy.size());
 }
 
 // Parse values from a string
-inline void parse_value(string_view& str, string& value, bool quoted = false) {
-  skip_whitespace(str);
-  if (str.empty()) throw io_error("cannot parse value");
-  if (!quoted) {
-    auto pos = str.find_first_of(" \t\r\n");
-    if (pos == str.npos) {
-      value = str;
-      str.remove_prefix(str.length());
-    } else {
-      value = str.substr(0, pos);
-      str.remove_prefix(pos);
-    }
-  } else {
-    if (str.front() != '"') throw io_error("cannot parse value");
-    str.remove_prefix(1);
-    if (str.empty()) throw io_error("cannot parse value");
-    auto pos = str.find('"');
-    if (pos == str.npos) throw io_error("cannot parse value");
-    value = str.substr(0, pos);
-    str.remove_prefix(pos + 1);
-  }
-}
 inline void parse_value(string_view& str, string_view& value, bool quoted = false) {
   skip_whitespace(str);
   if (str.empty()) throw io_error("cannot parse value");
   if (!quoted) {
-    auto pos = str.find_first_of(" \t\r\n");
-    if (pos == str.npos) {
-      value = str;
-      str.remove_prefix(str.length());
-    } else {
-      value = str.substr(0, pos);
-      str.remove_prefix(pos);
-    }
+    auto cpy = str;
+    while(!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
   } else {
     if (str.front() != '"') throw io_error("cannot parse value");
     str.remove_prefix(1);
     if (str.empty()) throw io_error("cannot parse value");
-    auto pos = str.find('"');
-    if (pos == str.npos) throw io_error("cannot parse value");
-    value = str.substr(0, pos);
-    str.remove_prefix(pos + 1);
+    auto cpy = str;
+    while(!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
+    if (cpy.empty()) throw io_error("cannot parse value");
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+    str.remove_prefix(1);
   }
+}
+inline void parse_value(string_view& str, string& value, bool quoted = false) {
+  auto valuev = ""sv;
+  parse_value(str, valuev, quoted);
+  value = string{valuev};
 }
 inline void parse_value(string_view& str, int& value) {
   char* end = nullptr;
@@ -846,7 +823,7 @@ inline void parse_value(string_view& str, int& value) {
 }
 inline void parse_value(string_view& str, bool& value, bool alpha = false) {
   if (alpha) {
-    auto values = ""s;
+    auto values = ""sv;
     parse_value(str, values);
     if (values == "false") {
       value = false;
@@ -950,17 +927,6 @@ inline void parse_value_or_empty(string_view& str, T& value) {
     parse_value(str, value);
   }
 }
-
-inline bool is_whitespace(const string_view& str) {
-  return str.find_first_not_of(" \t\r\n") == str.npos;
-}
-inline bool is_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-inline bool is_alpha(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
 
 inline void parse_varname(string_view& str, string& value) {
   skip_whitespace(str);
