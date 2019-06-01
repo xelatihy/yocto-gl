@@ -53,6 +53,73 @@ using std::unique_ptr;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Io error
+struct io_error : runtime_error {
+  explicit io_error(const char* msg) : runtime_error{msg} {}
+  explicit io_error(const std::string& msg) : runtime_error{msg} {}
+};
+
+// Load a text file
+inline void load_text(const string& filename, string& str) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  str.resize(length);
+  if (fread(str.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw std::runtime_error("cannot read file " + filename);
+  }
+  fclose(fs);
+}
+
+// Save a text file
+inline void save_text(const string& filename, const string& str) {
+  auto fs = fopen(filename.c_str(), "wt");
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  if (fprintf(fs, "%s", str.c_str()) < 0) {
+    fclose(fs);
+    throw std::runtime_error("cannot write file " + filename);
+  }
+  fclose(fs);
+}
+
+// Load a binary file
+inline void load_binary(const string& filename, vector<byte>& data) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen(filename.c_str(), "rb");
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data.resize(length);
+  if (fread(data.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw std::runtime_error("cannot read file " + filename);
+  }
+  fclose(fs);
+}
+
+// Save a binary file
+inline void save_binary(const string& filename, const vector<byte>& data) {
+  auto fs = fopen(filename.c_str(), "wb");
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    fclose(fs);
+    throw std::runtime_error("cannot write file " + filename);
+  }
+  fclose(fs);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // FILE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -73,22 +140,22 @@ struct file_holder {
 static inline file_holder open_input_file(
     const string& filename, bool binary = false) {
   auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
-  if (!fs) throw io_error("could not open file " + filename);
+  if (!fs) throw std::runtime_error("could not open file " + filename);
   return {fs, filename};
 }
 static inline file_holder open_output_file(
     const string& filename, bool binary = false) {
   auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
-  if (!fs) throw io_error("could not open file " + filename);
+  if (!fs) throw std::runtime_error("could not open file " + filename);
   return {fs, filename};
 }
 
 // Write text to file
 static inline void write_text(FILE* fs, const char* value) {
-  if (fputs(value, fs) == 0) throw io_error("could not write to file");
+  if (fputs(value, fs) == 0) throw std::runtime_error("could not write to file");
 }
 static inline void write_text(FILE* fs, const string& value) {
-  if (fputs(value.c_str(), fs) == 0) throw io_error("could not write to file");
+  if (fputs(value.c_str(), fs) == 0) throw std::runtime_error("could not write to file");
 }
 
 // Read a line
@@ -181,7 +248,7 @@ void load_scene(
     load_ply_scene(filename, scene, params);
   } else {
     scene = {};
-    throw io_error("unsupported scene format " + ext);
+    throw std::runtime_error("unsupported scene format " + ext);
   }
 }
 
@@ -200,7 +267,7 @@ void save_scene(const string& filename, const yocto_scene& scene,
   } else if (ext == "ply" || ext == "PLY") {
     save_ply_scene(filename, scene, params);
   } else {
-    throw io_error("unsupported scene format " + ext);
+    throw std::runtime_error("unsupported scene format " + ext);
   }
 }
 
@@ -410,8 +477,8 @@ static inline void remove_yaml_comment(
 
 static inline void parse_yaml_varname(string_view& str, string_view& value) {
   skip_yaml_whitespace(str);
-  if (str.empty()) throw io_error("cannot parse value");
-  if (!is_yaml_alpha(str.front())) throw io_error("cannot parse value");
+  if (str.empty()) throw std::runtime_error("cannot parse value");
+  if (!is_yaml_alpha(str.front())) throw std::runtime_error("cannot parse value");
   auto pos = 0;
   while (
       is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
@@ -424,7 +491,7 @@ static inline void parse_yaml_varname(string_view& str, string_view& value) {
 
 inline void parse_yaml_value(string_view& str, string_view& value) {
   skip_yaml_whitespace(str);
-  if (str.empty()) throw io_error("cannot parse value");
+  if (str.empty()) throw std::runtime_error("cannot parse value");
   if (str.front() != '"') {
     auto cpy = str;
     while (!cpy.empty() && !is_yaml_space(cpy.front())) cpy.remove_prefix(1);
@@ -432,12 +499,12 @@ inline void parse_yaml_value(string_view& str, string_view& value) {
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
   } else {
-    if (str.front() != '"') throw io_error("cannot parse value");
+    if (str.front() != '"') throw std::runtime_error("cannot parse value");
     str.remove_prefix(1);
-    if (str.empty()) throw io_error("cannot parse value");
+    if (str.empty()) throw std::runtime_error("cannot parse value");
     auto cpy = str;
     while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
-    if (cpy.empty()) throw io_error("cannot parse value");
+    if (cpy.empty()) throw std::runtime_error("cannot parse value");
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -453,14 +520,14 @@ inline void parse_yaml_value(string_view& str, int& value) {
   skip_yaml_whitespace(str);
   char* end = nullptr;
   value     = (int)strtol(str.data(), &end, 10);
-  if (str == end) throw io_error("cannot parse value");
+  if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
 inline void parse_yaml_value(string_view& str, float& value) {
   skip_yaml_whitespace(str);
   char* end = nullptr;
   value     = strtof(str.data(), &end);
-  if (str == end) throw io_error("cannot parse value");
+  if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
 inline void parse_yaml_value(string_view& str, bool& value) {
@@ -471,27 +538,27 @@ inline void parse_yaml_value(string_view& str, bool& value) {
   } else if (values == "false" || values == "False") {
     value = false;
   } else {
-    throw io_error("expected bool");
+    throw std::runtime_error("expected bool");
   }
 }
 template <typename T>
 inline void parse_yaml_value(string_view& str, T* values, int N) {
   skip_yaml_whitespace(str);
-  if (str.empty() || str.front() != '[') throw io_error("expected array");
+  if (str.empty() || str.front() != '[') throw std::runtime_error("expected array");
   str.remove_prefix(1);
   for (auto i = 0; i < N; i++) {
     skip_yaml_whitespace(str);
-    if (str.empty()) throw io_error("expected array");
+    if (str.empty()) throw std::runtime_error("expected array");
     parse_yaml_value(str, values[i]);
     skip_yaml_whitespace(str);
     if (i != N - 1) {
-      if (str.empty() || str.front() != ',') throw io_error("expected array");
+      if (str.empty() || str.front() != ',') throw std::runtime_error("expected array");
       str.remove_prefix(1);
       skip_yaml_whitespace(str);
     }
   }
   skip_yaml_whitespace(str);
-  if (str.empty() || str.front() != ']') throw io_error("expected array");
+  if (str.empty() || str.front() != ']') throw std::runtime_error("expected array");
   str.remove_prefix(1);
 }
 inline void parse_yaml_value(string_view& str, vec2f& value) {
@@ -551,10 +618,10 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
 
     // peek commands
     if (is_yaml_space(line.front())) {
-      if (!in_objects) throw io_error("bad yaml");
+      if (!in_objects) throw std::runtime_error("bad yaml");
       // indented property
       skip_yaml_whitespace(line);
-      if (line.empty()) throw io_error("bad yaml");
+      if (line.empty()) throw std::runtime_error("bad yaml");
       if (line.front() == '-') {
         callbacks.object_begin();
         line.remove_prefix(1);
@@ -564,7 +631,7 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
       auto key = ""sv;
       parse_yaml_varname(line, key);
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':') throw io_error("bad yaml");
+      if (line.empty() || line.front() != ':') throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       trim_yaml_whitespace(line);
       callbacks.key_value(key, line);
@@ -573,15 +640,15 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
       auto key = ""sv;
       parse_yaml_varname(line, key);
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':') throw io_error("bad yaml");
+      if (line.empty() || line.front() != ':') throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       if (!line.empty() && !is_yaml_whitespace(line))
-        throw io_error("bad yaml");
+        throw std::runtime_error("bad yaml");
       callbacks.object_group(key);
       in_objects = true;
       in_object  = false;
     } else {
-      throw io_error("bad yaml");
+      throw std::runtime_error("bad yaml");
     }
   }
 }
@@ -629,7 +696,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
     try {
       value = refs.at(name);
     } catch (...) {
-      throw io_error("reference not found " + name);
+      throw std::runtime_error("reference not found " + name);
     }
   }
 
@@ -637,7 +704,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
     parse_yaml_value(yml, value);
     if (value < 0) return;
     if (value >= nrefs) {
-      throw io_error("reference not found " + to_string(value));
+      throw std::runtime_error("reference not found " + to_string(value));
     }
   }
 
@@ -670,7 +737,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
       type = parsing_type::environment;
     } else {
       type = parsing_type::none;
-      throw io_error("unknown object type " + string(key));
+      throw std::runtime_error("unknown object type " + string(key));
     }
   }
   void object_begin() override {
@@ -683,7 +750,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
       case parsing_type::subdiv: scene.subdivs.push_back({}); break;
       case parsing_type::instance: scene.instances.push_back({}); break;
       case parsing_type::environment: scene.environments.push_back({}); break;
-      default: throw io_error("unknown object type");
+      default: throw std::runtime_error("unknown object type");
     }
   }
   void key_value(string_view key, string_view value) override {
@@ -705,7 +772,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
         } else if (key == "aperture") {
           parse_yaml_value(value, camera.aperture);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::texture: {
@@ -720,7 +787,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
         } else if (key == "filename") {
           parse_yaml_value(value, texture.uri);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::voltexture: {
@@ -733,7 +800,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
           }
           vmap[refname] = (int)scene.voltextures.size() - 1;
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::material: {
@@ -794,7 +861,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
         } else if (key == "gltf_textures") {
           parse_yaml_value(value, material.gltf_textures);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::shape: {
@@ -807,7 +874,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
           }
           smap[refname] = (int)scene.shapes.size() - 1;
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::subdiv: {
@@ -829,7 +896,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
         } else if (key == "displacement") {
           parse_yaml_value(value, subdiv.displacement);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::instance: {
@@ -843,7 +910,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
         } else if (key == "material") {
           get_yaml_ref(value, instance.material, mmap);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::environment: {
@@ -857,10 +924,10 @@ struct load_yaml_scene_cb : yaml_callbacks {
         } else if (key == "emission_tex") {
           get_yaml_ref(value, environment.emission_tex, tmap);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
-      default: throw io_error("unknown object type");
+      default: throw std::runtime_error("unknown object type");
     }
   }
 };
@@ -881,7 +948,7 @@ static void load_yaml_scene(
     load_shapes(scene, dirname, params);
     load_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot load scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
@@ -901,39 +968,39 @@ static void load_yaml_scene(
 
 // Write text to file
 static inline void write_yaml_value(FILE* fs, int value) {
-  if (fprintf(fs, "%d", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%d", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%g", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_value(FILE* fs, bool value) {
   if (fprintf(fs, "%s", value ? "true" : "false") < 0)
-    throw io_error("cannot print value");
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_value(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_value(FILE* fs, const string& value) {
   if (fprintf(fs, "%s", value.c_str()) < 0)
-    throw io_error("cannot print value");
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_value(FILE* fs, const vec2f& value) {
   if (fprintf(fs, "[%g,%g]", value.x, value.y) < 0)
-    throw io_error("cannot print value");
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_value(FILE* fs, const vec3f& value) {
   if (fprintf(fs, "[%g,%g,%g]", value.x, value.y, value.z) < 0)
-    throw io_error("cannot print value");
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_value(FILE* fs, const frame3f& value) {
-  if (fprintf(fs, "[") < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "[") < 0) throw std::runtime_error("cannot print value");
   for (auto i = 0; i < 12; i++)
     if (fprintf(fs, i ? ",%g" : "%g", (&value.x.x)[i]) < 0)
-      throw io_error("cannot print value");
-  if (fprintf(fs, "]") < 0) throw io_error("cannot print value");
+      throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "]") < 0) throw std::runtime_error("cannot print value");
 }
 
 template <typename T, typename... Ts>
@@ -1104,7 +1171,7 @@ static void save_yaml_scene(const string& filename, const yocto_scene& scene,
     save_shapes(scene, dirname, params);
     save_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot save scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
   }
 }
 
@@ -1421,14 +1488,14 @@ struct load_obj_scene_cb : obj_callbacks {
       make_improc(shape.triangles, shape.quads, shape.positions, shape.normals,
           shape.texcoords, params);
     } else {
-      throw io_error("unknown obj procedural");
+      throw std::runtime_error("unknown obj procedural");
     }
     scene.shapes.push_back(shape);
     auto instance  = yocto_instance{};
     instance.uri   = shape.uri;
     instance.shape = (int)scene.shapes.size() - 1;
     if (mmap.find(oproc.material) == mmap.end()) {
-      throw io_error("missing material " + oproc.material);
+      throw std::runtime_error("missing material " + oproc.material);
     } else {
       instance.material = mmap.find(oproc.material)->second;
     }
@@ -1465,7 +1532,7 @@ static void load_obj_scene(
 
     // check if any empty shape is left
     for (auto& shape : scene.shapes) {
-      if (shape.positions.empty()) throw io_error("empty shapes not supported");
+      if (shape.positions.empty()) throw std::runtime_error("empty shapes not supported");
     }
 
     // merging quads and triangles
@@ -1478,7 +1545,7 @@ static void load_obj_scene(
     auto dirname = get_dirname(filename);
     load_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot load scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
@@ -1493,47 +1560,47 @@ static void load_obj_scene(
 
 // Write text to file
 static inline void write_obj_value(FILE* fs, int value) {
-  if (fprintf(fs, "%d", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%d", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%g", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, const string& value) {
   if (fprintf(fs, "%s", value.c_str()) < 0)
-    throw io_error("cannot print value");
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, const vec2f& value) {
   if (fprintf(fs, "%g %g", value.x, value.y) < 0)
-    throw io_error("cannot print value");
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, const vec3f& value) {
   if (fprintf(fs, "%g %g %g", value.x, value.y, value.z) < 0)
-    throw io_error("cannot print value");
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, const frame3f& value) {
   for (auto i = 0; i < 12; i++)
     if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
-      throw io_error("cannot print value");
+      throw std::runtime_error("cannot print value");
 }
 static void write_obj_value(FILE* fs, const obj_vertex& value) {
   if (fprintf(fs, "%d", value.position) < 0)
-    throw io_error("cannot write value");
+    throw std::runtime_error("cannot write value");
   if (value.texcoord) {
     if (fprintf(fs, "/%d", value.texcoord) < 0)
-      throw io_error("cannot write value");
+      throw std::runtime_error("cannot write value");
     if (value.normal) {
       if (fprintf(fs, "/%d", value.normal) < 0)
-        throw io_error("cannot write value");
+        throw std::runtime_error("cannot write value");
     }
   } else if (value.normal) {
     if (fprintf(fs, "//%d", value.normal) < 0)
-      throw io_error("cannot write value");
+      throw std::runtime_error("cannot write value");
   }
 }
 
@@ -1771,7 +1838,7 @@ static void save_obj_scene(const string& filename, const yocto_scene& scene,
     auto dirname = get_dirname(filename);
     save_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot save scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
   }
 }
 
@@ -1808,7 +1875,7 @@ static void load_ply_scene(
     scene.instances.push_back(instance);
 
   } catch (const std::exception& e) {
-    throw io_error("cannot load scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
@@ -1824,7 +1891,7 @@ static void load_ply_scene(
 static void save_ply_scene(const string& filename, const yocto_scene& scene,
     const save_params& params) {
   if (scene.shapes.empty()) {
-    throw io_error("cannot save empty scene " + filename);
+    throw std::runtime_error("cannot save empty scene " + filename);
   }
   try {
     auto& shape = scene.shapes.front();
@@ -1833,7 +1900,7 @@ static void save_ply_scene(const string& filename, const yocto_scene& scene,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
         shape.radius);
   } catch (const std::exception& e) {
-    throw io_error("cannot save scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
   }
 }
 
@@ -1852,12 +1919,12 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
   auto data   = (cgltf_data*)nullptr;
   auto result = cgltf_parse_file(&params, filename.c_str(), &data);
   if (result != cgltf_result_success) {
-    throw io_error("could not load gltf " + filename);
+    throw std::runtime_error("could not load gltf " + filename);
   }
   auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{data, cgltf_free};
   if (cgltf_load_buffers(&params, data, get_dirname(filename).c_str()) !=
       cgltf_result_success) {
-    throw io_error("could not load gltf buffers " + filename);
+    throw std::runtime_error("could not load gltf buffers " + filename);
   }
 
   // convert textures
@@ -2060,9 +2127,9 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
             shape.lines.push_back({i - 1, i});
         } else if (gprim->type == cgltf_primitive_type_points) {
           // points
-          throw io_error("points not supported");
+          throw std::runtime_error("points not supported");
         } else {
-          throw io_error("unknown primitive type");
+          throw std::runtime_error("unknown primitive type");
         }
       } else {
         auto indices = accessor_values(gprim->indices);
@@ -2097,9 +2164,9 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
           for (auto i = 1; i < indices.size(); i++)
             shape.lines.push_back({(int)indices[i - 1][0], (int)indices[i][0]});
         } else if (gprim->type == cgltf_primitive_type_points) {
-          throw io_error("points not supported");
+          throw std::runtime_error("points not supported");
         } else {
-          throw io_error("unknown primitive type");
+          throw std::runtime_error("unknown primitive type");
         }
       }
       scene.shapes.push_back(shape);
@@ -2116,7 +2183,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
     camera.uri          = gcam->name ? gcam->name : "";
     camera.orthographic = gcam->type == cgltf_camera_type_orthographic;
     if (camera.orthographic) {
-      // throw io_error("orthographic not supported well");
+      // throw std::runtime_error("orthographic not supported well");
       auto ortho          = &gcam->orthographic;
       camera.aperture     = 0;
       camera.orthographic = true;
@@ -2264,7 +2331,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
                   (float)output_view[i][1], (float)output_view[i][2]});
           } break;
           case cgltf_animation_path_type_weights: {
-            throw io_error("weights not supported for now");
+            throw std::runtime_error("weights not supported for now");
 #if 0
                     // get a node that it refers to
                     auto ncomp = 0;
@@ -2290,7 +2357,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
 #endif
           } break;
           default: {
-            throw io_error("bad gltf animation");
+            throw std::runtime_error("bad gltf animation");
           }
         }
         sampler_map[{gchannel->sampler, path}] = (int)scene.animations.size();
@@ -2317,7 +2384,7 @@ static void load_gltf_scene(
     load_textures(scene, dirname, params);
 
   } catch (const std::exception& e) {
-    throw io_error("cannot load scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
@@ -2444,7 +2511,7 @@ static inline void write_json_begin(write_json_state& state) {
 }
 static inline void write_json_end(write_json_state& state) {
   write_json_pop(state);
-  if (state.stack.empty()) throw io_error("bad json stack");
+  if (state.stack.empty()) throw std::runtime_error("bad json stack");
 }
 
 // convert gltf scene to json
@@ -2748,7 +2815,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
   write_json_pop(state);
 
   // animations not supported yet
-  if (!scene.animations.empty()) throw io_error("animation not supported yet");
+  if (!scene.animations.empty()) throw std::runtime_error("animation not supported yet");
 
   // end writing
   write_json_end(state);
@@ -2758,7 +2825,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
     if (values.empty()) return;
     if (fwrite(values.data(), sizeof(values.front()), values.size(), fs) !=
         values.size())
-      throw io_error("cannot write to file");
+      throw std::runtime_error("cannot write to file");
   };
   auto dirname = get_dirname(filename);
   for (auto& shape : shapes) {
@@ -2784,7 +2851,7 @@ static void save_gltf_scene(const string& filename, const yocto_scene& scene,
     auto dirname = get_dirname(filename);
     save_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot save scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
   }
 }
 
@@ -2964,10 +3031,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         }
       } break;
       case pbrt_camera::type_t::orthographic: {
-        throw io_error("unsupported Camera type");
+        throw std::runtime_error("unsupported Camera type");
       } break;
       case pbrt_camera::type_t::environment: {
-        throw io_error("unsupported Camera type");
+        throw std::runtime_error("unsupported Camera type");
       } break;
       case pbrt_camera::type_t::realistic: {
         auto& realistic = pcamera.realistic;
@@ -3044,7 +3111,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             shape.normals, shape.texcoords, params);
       } break;
       default: {
-        throw io_error("unsupported shape type " + to_string((int)pshape.type));
+        throw std::runtime_error("unsupported shape type " + to_string((int)pshape.type));
       }
     }
     scene.shapes.push_back(shape);
@@ -3338,7 +3405,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
       } break;
       case pbrt_arealight::type_t::none: {
-        throw io_error("should not have gotten here");
+        throw std::runtime_error("should not have gotten here");
       } break;
     }
     amap[name] = emission;
@@ -3466,7 +3533,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         scene.instances.push_back(instance);
       } break;
       default: {
-        throw io_error(
+        throw std::runtime_error(
             "light type not supported " + to_string((int)plight.type));
       }
     }
@@ -3508,7 +3575,7 @@ static void load_pbrt_scene(
     auto dirname = get_dirname(filename);
     load_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot load scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
@@ -3523,33 +3590,33 @@ static void load_pbrt_scene(
 
 // Write text to file
 static inline void write_pbrt_value(FILE* fs, int value) {
-  if (fprintf(fs, "%d", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%d", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%g", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_text(FILE* fs, const string& value) {
   if (fprintf(fs, "%s", value.c_str()) < 0)
-    throw io_error("cannot print value");
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_value(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_value(FILE* fs, const string& value) {
   if (fprintf(fs, "%s", value.c_str()) < 0)
-    throw io_error("cannot print value");
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_value(FILE* fs, const vec3f& value) {
   if (fprintf(fs, "%g %g %g", value.x, value.y, value.z) < 0)
-    throw io_error("cannot print value");
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_value(FILE* fs, const frame3f& value) {
   for (auto i = 0; i < 12; i++)
     if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
-      throw io_error("cannot print value");
+      throw std::runtime_error("cannot print value");
 }
 
 template <typename T, typename... Ts>
@@ -3667,7 +3734,7 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
     save_textures(scene, dirname, params);
 
   } catch (const std::exception& e) {
-    throw io_error("cannot save scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
   }
 }
 

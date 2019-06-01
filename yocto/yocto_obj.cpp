@@ -53,7 +53,7 @@ struct file_holder {
 static inline file_holder open_input_file(
     const string& filename, bool binary = false) {
   auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
-  if (!fs) throw io_error("could not open file " + filename);
+  if (!fs) throw std::runtime_error("could not open file " + filename);
   return {fs, filename};
 }
 
@@ -81,7 +81,7 @@ static inline void remove_obj_comment(
 // Parse values from a string
 static inline void parse_obj_value(string_view& str, string_view& value) {
   skip_obj_whitespace(str);
-  if (str.empty()) throw io_error("cannot parse value");
+  if (str.empty()) throw std::runtime_error("cannot parse value");
   if (str.front() != '"') {
     auto cpy = str;
     while (!cpy.empty() && !is_obj_space(cpy.front())) cpy.remove_prefix(1);
@@ -89,12 +89,12 @@ static inline void parse_obj_value(string_view& str, string_view& value) {
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
   } else {
-    if (str.front() != '"') throw io_error("cannot parse value");
+    if (str.front() != '"') throw std::runtime_error("cannot parse value");
     str.remove_prefix(1);
-    if (str.empty()) throw io_error("cannot parse value");
+    if (str.empty()) throw std::runtime_error("cannot parse value");
     auto cpy = str;
     while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
-    if (cpy.empty()) throw io_error("cannot parse value");
+    if (cpy.empty()) throw std::runtime_error("cannot parse value");
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -109,7 +109,7 @@ static inline void parse_obj_value(string_view& str, string& value) {
 static inline void parse_obj_value(string_view& str, int& value) {
   char* end = nullptr;
   value     = (int)strtol(str.data(), &end, 10);
-  if (str == end) throw io_error("cannot parse value");
+  if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
 static inline void parse_obj_value(string_view& str, bool& value) {
@@ -120,7 +120,7 @@ static inline void parse_obj_value(string_view& str, bool& value) {
 static inline void parse_obj_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
-  if (str == end) throw io_error("cannot parse value");
+  if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
 template <typename T>
@@ -180,7 +180,7 @@ static inline void parse_obj_value(string_view& str, obj_texture_info& info) {
     tokens.push_back(token);
     skip_obj_whitespace(str);
   }
-  if (tokens.empty()) throw io_error("cannot parse value");
+  if (tokens.empty()) throw std::runtime_error("cannot parse value");
 
   // texture name
   info.path = normalize_path(tokens.back());

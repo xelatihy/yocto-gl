@@ -3112,39 +3112,39 @@ struct file_holder {
 static inline file_holder open_input_file(
     const string& filename, bool binary = false) {
   auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
-  if (!fs) throw io_error("could not open file " + filename);
+  if (!fs) throw std::runtime_error("could not open file " + filename);
   return {fs, filename};
 }
 static inline file_holder open_output_file(
     const string& filename, bool binary = false) {
   auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
-  if (!fs) throw io_error("could not open file " + filename);
+  if (!fs) throw std::runtime_error("could not open file " + filename);
   return {fs, filename};
 }
 
 // Write text to file
 static inline void write_obj_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%g", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
 }
 static void write_obj_value(FILE* fs, const obj_vertex& value) {
   if (fprintf(fs, "%d", value.position) < 0)
-    throw io_error("cannot write value");
+    throw std::runtime_error("cannot write value");
   if (value.texcoord) {
     if (fprintf(fs, "/%d", value.texcoord) < 0)
-      throw io_error("cannot write value");
+      throw std::runtime_error("cannot write value");
     if (value.normal) {
       if (fprintf(fs, "/%d", value.normal) < 0)
-        throw io_error("cannot write value");
+        throw std::runtime_error("cannot write value");
     }
   } else if (value.normal) {
     if (fprintf(fs, "//%d", value.normal) < 0)
-      throw io_error("cannot write value");
+      throw std::runtime_error("cannot write value");
   }
 }
 
@@ -3283,14 +3283,14 @@ static void load_cyhair(const string& filename, cyhair_data& hair) {
 
   auto read_value = [](FILE* fs, auto& value) {
     if (fread(&value, sizeof(value), 1, fs) != 1) {
-      throw io_error("cannot read from file");
+      throw std::runtime_error("cannot read from file");
     }
   };
   auto read_values = [](FILE* fs, auto& values) {
     if (values.empty()) return;
     if (fread(values.data(), sizeof(values[0]), values.size(), fs) !=
         values.size()) {
-      throw io_error("cannot read from file");
+      throw std::runtime_error("cannot read from file");
     }
   };
 

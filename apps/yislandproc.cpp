@@ -73,6 +73,33 @@ inline string replace(string_view str, string_view from, string_view to) {
   return replaced;
 }
 
+// Load a text file
+static inline void load_text(const string& filename, string& str) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  str.resize(length);
+  if (fread(str.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw std::runtime_error("cannot read file " + filename);
+  }
+  fclose(fs);
+}
+
+// Save a text file
+inline void save_text(const string& filename, const string& str) {
+  auto fs = fopen(filename.c_str(), "wt");
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  if (fprintf(fs, "%s", str.c_str()) < 0) {
+    fclose(fs);
+    throw std::runtime_error("cannot write file " + filename);
+  }
+  fclose(fs);
+}
+
 using json = nlohmann::json;
 
 // Load a JSON object
@@ -208,7 +235,7 @@ void load_island_lights(
       environment.frame = frame3f(ljs.at("translationMatrix").get<mat4f>());
       scene.environments.push_back(environment);
     } else {
-      throw io_error("unknown light type");
+      throw std::runtime_error("unknown light type");
     }
   }
 }
@@ -358,7 +385,7 @@ struct load_island_shape_callbacks : obj_callbacks {
   void vert(const vec3f& v) override { opos.push_back(v); }
   void norm(const vec3f& v) override { onorm.push_back(v); }
   void texcoord(const vec2f& v) override {
-    throw io_error("texture coord not supported");
+    throw std::runtime_error("texture coord not supported");
   }
   void face(const vector<obj_vertex>& verts) override {
     split_shape();
@@ -402,7 +429,7 @@ struct load_island_shape_callbacks : obj_callbacks {
         shapes.back().quadstexcoord.push_back(
             {offset + 0, offset + 1, offset + 2, offset + 3});
       } else {
-        throw io_error("BAD PTEX TEXCOORDS");
+        throw std::runtime_error("BAD PTEX TEXCOORDS");
       }
     }
   }
@@ -493,13 +520,13 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
             for (auto& shape : shapes) {
                 merge_triangles_and_quads(shape.triangles, shape.quads, false);
                 if (shape.triangles.empty() && shape.quads.empty())
-                    throw io_error("empty shape");
+                    throw std::runtime_error("empty shape");
             }
         }
 #endif
 
   } catch (const std::exception& e) {
-    throw io_error("cannot load mesh " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load mesh " + filename + "\n" + e.what());
   }
 
   for (auto shape_id = 0; shape_id < shapes.size(); shape_id++) {
@@ -624,7 +651,7 @@ void load_island_variants(const string& filename, const string& dirname,
         load_island_variant_archive(filename, dirname, scene, vname,
             vjs.at("transformMatrix"), instances[vname], smap, mmap, tmap);
       } else {
-        throw io_error("unknown instance type");
+        throw std::runtime_error("unknown instance type");
       }
     }
   }
@@ -845,7 +872,7 @@ void load_island_elements(const string& filename, const string& dirname,
     } else if (ijs.at("type") == "skip") {
       print_info("skipping " + filename);
     } else {
-      throw io_error("unknown instance type");
+      throw std::runtime_error("unknown instance type");
     }
   }
 
@@ -878,7 +905,7 @@ void load_island_elements(const string& filename, const string& dirname,
         } else if (ijs.at("type") == "skip") {
           print_info("skipping" + filename);
         } else {
-          throw io_error("unknown instance type");
+          throw std::runtime_error("unknown instance type");
         }
       }
     }
@@ -912,7 +939,7 @@ void load_island_scene(const std::string& filename, yocto_scene& scene,
     // load meshes and textures
     load_textures(scene, dirname, params);
   } catch (std::exception& e) {
-    throw io_error("error loading scene "s + e.what());
+    throw std::runtime_error("error loading scene "s + e.what());
   }
 
   // fix texture names
