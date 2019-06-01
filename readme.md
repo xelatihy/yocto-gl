@@ -72,8 +72,7 @@ See each header file for documentation.
 - `yocto/yocto_scene.{h,cpp}`: simple scene storage, evaluation of scene 
    properties
 - `yocto/yocto_trace.{h,cpp}`: path tracing
-- `yocto/yocto_utils.{h}`: printing and parsing values, path utlities, file io,
-   command line parsing
+- `yocto/yocto_utils.{h}`: path utlities, concurrency utilities, timer
 - `yocto/yocto_obj.{h,cpp}`: OBJ parser based on callbacks (SAX-like)
 - `yocto/yocto_pbrt.{h,cpp}`: pbrt parser based on callbacks (SAX-like)
 - `yocto/yocto_imageio.{h,cpp}`: image loading and saving

@@ -3,24 +3,9 @@
 //
 //
 // Yocto/Utils is a collection of utilities used in writing other Yocto/GL
-// libraries and example applications. We support printing builtin and
-// Yocto/Math values, simple path manipulation, file lading/saving and basic
-// concurrency utilities. These utilities are likely to change often and are to
-// be considered internal to Yocto.
-//
-//
-// ## Python-like iterators and collection helpers
-//
-// This library includes a set of functions to help use C++ collections with
-// more ease, inspired by Python. All functions and operators are defined in
-// the yocto namespace so they will not affect the code outside. But within
-// the Yocto/GL collection they are the best way to do this.
-//
-// 1. use `range()` to iterato over an integer sequence
-// 2. use `enumerate()` to iteratare over a vector and number its elements
-// 3. use opeartors + to either concatenate two vectors or a vector and an
-//    element
-// 4. use operators += to append an element or a vector to a given vector
+// libraries and example applications. We support simple path manipulation, 
+// and concurrency utilities. These utilities are likely to change often and 
+// are to be considered internal to Yocto.
 //
 //
 // ## Path manipulation
@@ -32,12 +17,6 @@
 //   `get_extension()`
 // 2. Remove parts of a path with get_noextension() and `get_basename()`
 // 3. check if a file exists with `exists_file()`
-//
-//
-// ## File IO
-//
-// 1. load and save text files with `load_text()` and `save_text()`
-// 2. load and save binary files with `load_binary()` and `save_binary()`
 //
 //
 // ## Concurrency utilities
