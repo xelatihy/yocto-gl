@@ -112,6 +112,7 @@ int main(int argc, char* argv[]) {
   } catch (const CLI::ParseError& e) {
     return parser.exit(e);
   }
+  setbuf(stdout, nullptr);
 
   // fix parallel code
   if (noparallel) {
@@ -121,24 +122,28 @@ int main(int argc, char* argv[]) {
 
   // scene loading
   auto scene = yocto_scene{};
+  printf("loading scene");
+  auto load_timer = timer();
   try {
-    auto timer = print_timer("loading scene");
     load_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
     printf("%s\n", e.what());
     exit(1);
   }
+  printf(" in %s\n", load_timer.elapsedf().c_str());
 
   // tesselate
-  {
-    auto timer = print_timer("tesselating");
-    tesselate_subdivs(scene);
-  }
+  printf("tesselating");
+  auto tesselate_timer = timer();
+  tesselate_subdivs(scene);
+  printf(" in %s\n", tesselate_timer.elapsedf().c_str());
 
   // add components
   if (validate) {
-    auto timer = print_timer("validating");
+    printf("validating");
+    auto validate_timer = timer();
     print_validation(scene);
+    printf(" in %s\n", validate_timer.elapsedf().c_str());
   }
 
   // add sky
@@ -146,17 +151,17 @@ int main(int argc, char* argv[]) {
 
   // build bvh
   auto bvh = bvh_scene{};
-  {
-    auto timer = print_timer("building bvh");
-    build_bvh(bvh, scene, bvh_prms);
-  }
+  printf("building bvh");
+  auto bvh_timer = timer();
+  build_bvh(bvh, scene, bvh_prms);
+  printf(" in %s\n", bvh_timer.elapsedf().c_str());
 
   // init renderer
   auto lights = trace_lights{};
-  {
-    auto timer = print_timer("building lights");
-    init_trace_lights(lights, scene);
-  }
+  printf("building lights");
+  auto lights_timer = timer();
+  init_trace_lights(lights, scene);
+  printf(" in %s\n", lights_timer.elapsedf().c_str());
 
   // fix renderer type if no lights
   if ((lights.instances.empty() && lights.environments.empty()) &&
@@ -191,11 +196,11 @@ int main(int argc, char* argv[]) {
     for (auto sample = 0; sample < trace_prms.samples;
          sample += trace_prms.batch) {
       auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
-      {
-        auto timer = print_timer("rendering cam%d at %4d/%4d", trace_prms.camera,
-            sample, trace_prms.samples);
-        trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
-      }
+      printf("rendering cam%d at %4d/%4d", trace_prms.camera, sample,
+          trace_prms.samples);
+      auto batch_timer = timer();
+      trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
+      printf(" in %s\n", batch_timer.elapsedf().c_str());
       if (save_batch) {
         auto outfilename = get_noextension(imfilename) + ".cam" +
                            std::to_string(trace_prms.camera) + ".s" +
@@ -215,6 +220,8 @@ int main(int argc, char* argv[]) {
     }
 
     // save image
+    printf("saving image");
+    auto save_timer = timer();
     try {
       auto outfilename = imfilename;
       if (all_cameras) {
@@ -222,7 +229,6 @@ int main(int argc, char* argv[]) {
                       std::to_string(trace_prms.camera) + "." +
                       get_extension(imfilename);
       }
-      auto timer = print_timer("saving image");
       if (logo) {
         save_tonemapped_with_logo(outfilename, render, tonemap_prms);
       } else {
@@ -232,6 +238,7 @@ int main(int argc, char* argv[]) {
       printf("%s\n", e.what());
       exit(1);
     }
+    printf(" in %s\n", save_timer.elapsedf().c_str());
   }
 
   // done
