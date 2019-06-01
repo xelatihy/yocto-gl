@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
   // load scene
   auto scene = yocto_scene{};
   try {
-    auto timer = print_timed("loading scene");
+    auto timer = print_timer("loading scene");
     load_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
     printf("%s\n", e.what());
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
 
   // validate scene
   if (validate) {
-    auto timer = print_timed("validating scene");
+    auto timer = print_timer("validating scene");
     print_validation(scene);
   }
 
@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
 
   // tesselating scene
   {
-    auto timer = print_timed("tesselating scene");
+    auto timer = print_timer("tesselating scene");
     tesselate_subdivs(scene);
   }
 
@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
 
   // save scene
   try {
-    auto timer = print_timed("saving scene");
+    auto timer = print_timer("saving scene");
     save_scene(output, scene, save_prms);
   } catch (const std::exception& e) {
     printf("%s\n", e.what());

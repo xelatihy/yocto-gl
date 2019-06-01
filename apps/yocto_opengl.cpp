@@ -910,6 +910,12 @@ struct filedialog_state {
   }
 
   string get_path() const { return dirname + filename; }
+  bool   exists_file(const string& filename) {
+    auto f = fopen(filename.c_str(), "r");
+    if (!f) return false;
+    fclose(f);
+    return true;
+  }
 };
 bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,

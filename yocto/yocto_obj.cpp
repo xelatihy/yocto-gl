@@ -37,6 +37,14 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Check if a file can be opened for reading.
+static inline bool exists_file(const string& filename) {
+  auto f = fopen(filename.c_str(), "r");
+  if (!f) return false;
+  fclose(f);
+  return true;
+}
+
 // A file holder that closes a file when destructed. Useful for RIIA
 struct file_holder {
   FILE*  fs       = nullptr;

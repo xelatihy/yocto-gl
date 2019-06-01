@@ -152,7 +152,6 @@ struct print_timer {
   }
   int64_t start = 0;
 };
-inline print_timer print_timed(const string& msg) { return print_timer(msg); }
 
 }  // namespace yocto
 
@@ -202,80 +201,6 @@ struct short_vector {
  private:
   T      ptr[N];
   size_t count = 0;
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PYTHON-LIKE ITERATORS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Python `range()` equivalent. Construct an object to iterate over a sequence.
-template <typename T>
-struct range_iterator {
-  struct iterator {
-    iterator& operator++() {
-      pos++;
-      return *this;
-    }
-    bool operator!=(const iterator& other) const { return pos != other.pos; }
-    int  operator*() const { return pos; }
-
-   private:
-    T pos = 0;
-  };
-  range_iterator(T start, T end) : first{first}, last{last} {}
-  iterator begin() const { return {first}; }
-  iterator end() const { return {last}; }
-
- private:
-  T first = 0, last = 0;
-};
-// Python `range()` equivalent. Construct an object to iterate over a sequence.
-template <typename T>
-inline range_iterator<T> range(T max) {
-  return range_iterator<T>{0, max};
-}
-template <typename T>
-inline range_iterator<T> range(T min, T max) {
-  return range_iterator<T>{min, max};
-}
-
-// Enumerate helper (this should not be used directly)
-template <typename T>
-struct enumerate_iterator {
-  struct iterator {
-    iterator(T* data, int pos) : data{data}, pos{pos} {}
-    iterator& operator++() {
-      pos++;
-      return *this;
-    }
-    bool operator!=(const iterator& other) const { return pos != other.pos; }
-    pair<int&, T&> operator*() const { return {pos, *(data + pos)}; }
-
-   private:
-    T*  data = nullptr;
-    int pos  = 0;
-  };
-  enumerate_iterator(T* data, int size) : data{data}, size{size} {}
-  iterator begin() const { return {data, 0}; }
-  iterator end() const { return {data, size}; }
-
- private:
-  T*  data = nullptr;
-  int size = 0;
-};
-
-// Python `enumerate()` equivalent. Construct an object that iteraterates over a
-// sequence of elements and numbers them.
-template <typename T>
-inline enumerate_iterator<const T> enumerate(const vector<T>& vals) {
-  return enumerate_iterator<const T>{vals.data(), vals.size()};
-};
-template <typename T>
-inline enumerate_iterator<T> enumerate(vector<T>& vals) {
-  return enumerate_iterator<T>{vals.data(), vals.size()};
 };
 
 }  // namespace yocto
@@ -339,14 +264,6 @@ inline string get_noextension(const string& filename_) {
 // Get filename without directory and extension.
 inline string get_basename(const string& filename) {
   return get_noextension(get_filename(filename));
-}
-
-// Check if a file can be opened for reading.
-inline bool exists_file(const string& filename) {
-  auto f = fopen(filename.c_str(), "r");
-  if (!f) return false;
-  fclose(f);
-  return true;
 }
 
 // Return the preset type and the remaining filename
