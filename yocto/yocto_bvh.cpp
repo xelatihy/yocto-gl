@@ -911,7 +911,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
   // synchronization
   atomic<int>          num_processed_prims(0);
-  mutex                queue_mutex;
+  std::mutex                queue_mutex;
   vector<future<void>> futures;
   auto                 nthreads = thread::hardware_concurrency();
 
@@ -927,7 +927,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
             // grab node to work on
             auto next = zero3i;
             {
-              lock_guard<mutex> lock{queue_mutex};
+              std::lock_guard<std::mutex> lock{queue_mutex};
               if (!queue.empty()) {
                 next = queue.front();
                 queue.pop_front();
@@ -936,7 +936,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
             // wait a bit if needed
             if (next == zero3i) {
-              std::this_thread::sleep_for(10us);
+              std::this_thread::sleep_for(std::chrono::microseconds(10));
               continue;
             }
 
@@ -957,7 +957,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
               // make an internal node
               {
-                lock_guard<mutex> lock{queue_mutex};
+                std::lock_guard<std::mutex> lock{queue_mutex};
                 node.internal = true;
                 node.axis     = axis;
                 node.num      = 2;

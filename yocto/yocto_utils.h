@@ -88,7 +88,6 @@
 #include <cstdio>
 #include <deque>
 #include <future>
-#include <initializer_list>
 #include <mutex>
 #include <string>
 #include <string_view>
@@ -103,9 +102,6 @@ namespace yocto {
 using std::atomic;
 using std::deque;
 using std::future;
-using std::initializer_list;
-using std::lock_guard;
-using std::mutex;
 using std::runtime_error;
 using std::string;
 using std::string_view;
@@ -113,7 +109,6 @@ using std::thread;
 using std::vector;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
-using namespace std::chrono_literals;
 
 }  // namespace yocto
 
@@ -251,19 +246,19 @@ struct concurrent_queue {
   }
 
   bool empty() {
-    lock_guard<mutex> lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     return _queue.empty();
   }
   void clear() {
-    lock_guard<mutex> lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     _queue.clear();
   }
   void push(const T& value) {
-    lock_guard<mutex> lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     _queue.push_back(value);
   }
   bool try_pop(T& value) {
-    lock_guard<mutex> lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     if (_queue.empty()) return false;
     value = _queue.front();
     _queue.pop_front();
@@ -271,7 +266,7 @@ struct concurrent_queue {
   }
 
  private:
-  mutex    _mutex;
+  std::mutex    _mutex;
   deque<T> _queue;
 };
 
