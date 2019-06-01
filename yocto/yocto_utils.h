@@ -122,16 +122,6 @@ using namespace std::chrono_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Create a string from a printf like string
-inline string strprintf(const char* format, ...) {
-  char    buffer[4096];
-  va_list args;
-  va_start(args, format);
-  vsnprintf(buffer, sizeof(buffer), format, args);
-  va_end(args);
-  return buffer;
-}
-
 // print information and returns a timer that will print the time when
 // destroyed. Use with RIIA for scoped timing.
 struct timer {
