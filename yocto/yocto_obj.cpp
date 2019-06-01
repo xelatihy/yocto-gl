@@ -37,6 +37,31 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// A file holder that closes a file when destructed. Useful for RIIA
+struct file_holder {
+  FILE*  fs       = nullptr;
+  string filename = "";
+
+  file_holder(const file_holder&) = delete;
+  file_holder& operator=(const file_holder&) = delete;
+  ~file_holder() {
+    if (fs) fclose(fs);
+  }
+};
+
+// Opens a file returing a handle with RIIA
+static inline file_holder open_input_file(
+    const string& filename, bool binary = false) {
+  auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
+  if (!fs) throw io_error("could not open file " + filename);
+  return {fs, filename};
+}
+
+// Read a line
+static inline bool read_line(FILE* fs, char* buffer, size_t size) {
+  return fgets(buffer, size, fs) != nullptr;
+}
+
 static inline bool is_obj_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }

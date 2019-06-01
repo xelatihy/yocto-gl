@@ -53,6 +53,155 @@ using std::unique_ptr;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// FILE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// A file holder that closes a file when destructed. Useful for RIIA
+struct file_holder {
+  FILE*  fs       = nullptr;
+  string filename = "";
+
+  file_holder(const file_holder&) = delete;
+  file_holder& operator=(const file_holder&) = delete;
+  ~file_holder() {
+    if (fs) fclose(fs);
+  }
+};
+
+// Opens a file returing a handle with RIIA
+static inline file_holder open_input_file(
+    const string& filename, bool binary = false) {
+  auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
+  if (!fs) throw io_error("could not open file " + filename);
+  return {fs, filename};
+}
+static inline file_holder open_output_file(
+    const string& filename, bool binary = false) {
+  auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
+  if (!fs) throw io_error("could not open file " + filename);
+  return {fs, filename};
+}
+
+// Write text to file
+static inline void write_text(FILE* fs, const char* value) {
+  if (fputs(value, fs) == 0) throw io_error("could not write to file");
+}
+static inline void write_text(FILE* fs, const string& value) {
+  if (fputs(value.c_str(), fs) == 0) throw io_error("could not write to file");
+}
+
+// Read a line
+static inline bool read_line(FILE* fs, char* buffer, size_t size) {
+  return fgets(buffer, size, fs) != nullptr;
+}
+
+// Print a value to a FILE
+static inline void format_value(FILE* fs, int value) {
+  if (fprintf(fs, "%d", value) < 0) throw io_error("cannot print value");
+}
+static inline void format_value(FILE* fs, float value) {
+  if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
+}
+static inline void format_value(FILE* fs, bool value, bool alpha = false) {
+  if (alpha) {
+    if (fprintf(fs, "%s", value ? "true" : "false") < 0)
+      throw io_error("cannot print value");
+  } else {
+    if (fprintf(fs, "%s", value ? "1" : "0") < 0)
+      throw io_error("cannot print value");
+  }
+}
+static inline void format_value(
+    FILE* fs, const char* value, bool quoted = false) {
+  if (fprintf(fs, quoted ? "\"%s\"" : "%s", value) < 0)
+    throw io_error("cannot print value");
+}
+static inline void format_value(
+    FILE* fs, const string& value, bool quoted = false) {
+  if (fprintf(fs, quoted ? "\"%s\"" : "%s", value.c_str()) < 0)
+    throw io_error("cannot print value");
+}
+
+template <typename T>
+static inline void format_values(
+    FILE* fs, const T* values, int num, bool bracketed = false) {
+  if (bracketed) write_text(fs, "[");
+  for (auto i = 0; i < num; i++) {
+    if (i) write_text(fs, bracketed ? "," : " ");
+    format_value(fs, values[i]);
+  }
+  if (bracketed) write_text(fs, "]");
+}
+
+static inline void format_value(
+    FILE* fs, const vec2f& value, bool bracketed = false) {
+  format_values(fs, &value.x, 2, bracketed);
+}
+static inline void format_value(
+    FILE* fs, const vec3f& value, bool bracketed = false) {
+  format_values(fs, &value.x, 3, bracketed);
+}
+static inline void format_value(
+    FILE* fs, const vec4f& value, bool bracketed = false) {
+  format_values(fs, &value.x, 4, bracketed);
+}
+static inline void format_value(
+    FILE* fs, const vec2i& value, bool bracketed = false) {
+  format_values(fs, &value.x, 2, bracketed);
+}
+static inline void format_value(
+    FILE* fs, const vec3i& value, bool bracketed = false) {
+  format_values(fs, &value.x, 3, bracketed);
+}
+static inline void format_value(
+    FILE* fs, const vec4i& value, bool bracketed = false) {
+  format_values(fs, &value.x, 4, bracketed);
+}
+static inline void format_value(
+    FILE* fs, const mat2f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 4, bracketed);
+}
+static inline void format_value(
+    FILE* fs, const mat3f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 9, bracketed);
+}
+static inline void format_value(
+    FILE* fs, const mat4f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 16, bracketed);
+}
+
+static inline void format_value(
+    FILE* fs, const frame2f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 6, bracketed);
+}
+static inline void format_value(
+    FILE* fs, const frame3f& value, bool bracketed = false) {
+  format_values(fs, &value.x.x, 12, bracketed);
+}
+
+template <typename T, typename... Ts>
+static inline void format_values(FILE* fs, const T& arg, const Ts&... args) {
+  write_value(fs, arg);
+  if constexpr (sizeof...(Ts) != 0) {
+    write_text(fs, " ");
+    write_values(fs, args...);
+  }
+}
+template <typename T, typename... Ts>
+static inline void format_line(FILE* fs, const T& arg, const Ts&... args) {
+  format_value(fs, arg);
+  if constexpr (sizeof...(Ts) != 0) {
+    write_text(fs, " ");
+    format_line(fs, args...);
+  } else {
+    write_text(fs, "\n");
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -337,7 +486,8 @@ static inline void parse_yaml_varname(string_view& str, string_view& value) {
   if (str.empty()) throw io_error("cannot parse value");
   if (!is_yaml_alpha(str.front())) throw io_error("cannot parse value");
   auto pos = 0;
-  while (is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
+  while (
+      is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
     pos += 1;
     if (pos >= str.size()) break;
   }
@@ -498,7 +648,8 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
       skip_yaml_whitespace(line);
       if (line.empty() || line.front() != ':') throw io_error("bad yaml");
       line.remove_prefix(1);
-      if (!line.empty() && !is_yaml_whitespace(line)) throw io_error("bad yaml");
+      if (!line.empty() && !is_yaml_whitespace(line))
+        throw io_error("bad yaml");
       callbacks.object_group(key);
       in_objects = true;
       in_object  = false;
@@ -1383,93 +1534,41 @@ static void load_obj_scene(
   update_transforms(scene);
 }
 
-template <typename T, typename... Ts>
-static inline void print_obj_line(
-    FILE* fs, const T& value, const Ts... values) {
-  format_value(fs, value);
-  if constexpr (sizeof...(values) == 0) {
-    write_text(fs, "\n");
-  } else {
-    write_text(fs, " ");
-    print_obj_line(fs, values...);
-  }
+// Write text to file
+static inline void write_obj_value(FILE* fs, int value) {
+  if (fprintf(fs, "%d", value) < 0) throw io_error("cannot print value");
 }
-
-static void save_mtl(
-    const string& filename, const yocto_scene& scene, bool flip_tr = true) {
-  // open file
-  auto fs_ = open_output_file(filename);
-  auto fs  = fs_.fs;
-
-  // embed data
-  write_text(fs, get_save_scene_message(scene, "#"));
-
-  // for each material, dump all the values
-  for (auto& material : scene.materials) {
-    print_obj_line(fs, "newmtl", get_basename(material.uri));
-    print_obj_line(fs, "  illum", 2);
-    print_obj_line(fs, "  Ke", material.emission);
-    print_obj_line(fs, "  Kd", material.diffuse * (1 - material.metallic));
-    print_obj_line(fs, "  Ks",
-        material.specular * (1 - material.metallic) +
-            material.metallic * material.diffuse);
-    print_obj_line(fs, "  Kt", material.transmission);
-    print_obj_line(fs, "  Ns",
-        (int)clamp(
-            2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2,
-            0.0f, 1.0e9f));
-    print_obj_line(fs, "  d", material.opacity);
-    if (material.emission_tex >= 0)
-      print_obj_line(fs, "  map_Ke", scene.textures[material.emission_tex].uri);
-    if (material.diffuse_tex >= 0)
-      print_obj_line(fs, "  map_Kd", scene.textures[material.diffuse_tex].uri);
-    if (material.specular_tex >= 0)
-      print_obj_line(fs, "  map_Ks", scene.textures[material.specular_tex].uri);
-    if (material.transmission_tex >= 0)
-      print_obj_line(
-          fs, "  map_Kt", scene.textures[material.transmission_tex].uri);
-    if (material.normal_tex >= 0)
-      print_obj_line(fs, "  map_norm", scene.textures[material.normal_tex].uri);
-    write_text(fs, "\n");
-  }
+static inline void write_obj_value(FILE* fs, float value) {
+  if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
 }
-
-static void save_objx(
-    const string& filename, const yocto_scene& scene, bool preserve_instances) {
-  // open file
-  auto fs_ = open_output_file(filename);
-  auto fs  = fs_.fs;
-
-  // embed data
-  write_text(fs, get_save_scene_message(scene, "#"));
-
-  // cameras
-  for (auto& camera : scene.cameras) {
-    print_obj_line(fs, "c", get_basename(camera.uri), (int)camera.orthographic,
-        camera.film.x, camera.film.y, camera.lens, camera.focus,
-        camera.aperture, camera.frame);
-  }
-
-  // environments
-  for (auto& environment : scene.environments) {
-    print_obj_line(fs, "e", get_basename(environment.uri), environment.emission,
-        environment.emission_tex >= 0
-            ? scene.textures[environment.emission_tex].uri
-            : "\"\" "s,
-        environment.frame);
-  }
-
-  // instances
-  if (preserve_instances) {
-    for (auto& instance : scene.instances) {
-      print_obj_line(fs, "i", get_basename(instance.uri),
-          get_basename(scene.shapes[instance.shape].uri),
-          get_basename(scene.materials[instance.material].uri), instance.frame);
-    }
-  }
+static inline void write_obj_value(FILE* fs, bool value) {
+  if (fprintf(fs, "%s", value ? "1" : "0") < 0)
+    throw io_error("cannot print value");
 }
-
-static void format_value(FILE* fs, const obj_vertex& value) {
+static inline void write_obj_text(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, const string& value) {
+  if (fprintf(fs, "%s", value.c_str()) < 0)
+    throw io_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, const vec2f& value) {
+  if (fprintf(fs, "%g %g", value.x, value.y) < 0)
+    throw io_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, const vec3f& value) {
+  if (fprintf(fs, "%g %g %g", value.x, value.y, value.z) < 0)
+    throw io_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, const frame3f& value) {
+  for (auto i = 0; i < 12; i++)
+    if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
+      throw io_error("cannot print value");
+}
+static void write_obj_value(FILE* fs, const obj_vertex& value) {
   if (fprintf(fs, "%d", value.position) < 0)
     throw io_error("cannot write value");
   if (value.texcoord) {
@@ -1485,6 +1584,92 @@ static void format_value(FILE* fs, const obj_vertex& value) {
   }
 }
 
+template <typename T, typename... Ts>
+static inline void write_obj_line(
+    FILE* fs, const T& value, const Ts... values) {
+  write_obj_value(fs, value);
+  if constexpr (sizeof...(values) == 0) {
+    write_obj_text(fs, "\n");
+  } else {
+    write_obj_text(fs, " ");
+    write_obj_line(fs, values...);
+  }
+}
+
+static void save_mtl(
+    const string& filename, const yocto_scene& scene, bool flip_tr = true) {
+  // open file
+  auto fs_ = open_output_file(filename);
+  auto fs  = fs_.fs;
+
+  // embed data
+  write_text(fs, get_save_scene_message(scene, "#"));
+
+  // for each material, dump all the values
+  for (auto& material : scene.materials) {
+    write_obj_line(fs, "newmtl", get_basename(material.uri));
+    write_obj_line(fs, "  illum", 2);
+    write_obj_line(fs, "  Ke", material.emission);
+    write_obj_line(fs, "  Kd", material.diffuse * (1 - material.metallic));
+    write_obj_line(fs, "  Ks",
+        material.specular * (1 - material.metallic) +
+            material.metallic * material.diffuse);
+    write_obj_line(fs, "  Kt", material.transmission);
+    write_obj_line(fs, "  Ns",
+        (int)clamp(
+            2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2,
+            0.0f, 1.0e9f));
+    write_obj_line(fs, "  d", material.opacity);
+    if (material.emission_tex >= 0)
+      write_obj_line(fs, "  map_Ke", scene.textures[material.emission_tex].uri);
+    if (material.diffuse_tex >= 0)
+      write_obj_line(fs, "  map_Kd", scene.textures[material.diffuse_tex].uri);
+    if (material.specular_tex >= 0)
+      write_obj_line(fs, "  map_Ks", scene.textures[material.specular_tex].uri);
+    if (material.transmission_tex >= 0)
+      write_obj_line(
+          fs, "  map_Kt", scene.textures[material.transmission_tex].uri);
+    if (material.normal_tex >= 0)
+      write_obj_line(fs, "  map_norm", scene.textures[material.normal_tex].uri);
+    write_text(fs, "\n");
+  }
+}
+
+static void save_objx(
+    const string& filename, const yocto_scene& scene, bool preserve_instances) {
+  // open file
+  auto fs_ = open_output_file(filename);
+  auto fs  = fs_.fs;
+
+  // embed data
+  write_text(fs, get_save_scene_message(scene, "#"));
+
+  // cameras
+  for (auto& camera : scene.cameras) {
+    write_obj_line(fs, "c", get_basename(camera.uri), (int)camera.orthographic,
+        camera.film.x, camera.film.y, camera.lens, camera.focus,
+        camera.aperture, camera.frame);
+  }
+
+  // environments
+  for (auto& environment : scene.environments) {
+    write_obj_line(fs, "e", get_basename(environment.uri), environment.emission,
+        environment.emission_tex >= 0
+            ? scene.textures[environment.emission_tex].uri
+            : "\"\" "s,
+        environment.frame);
+  }
+
+  // instances
+  if (preserve_instances) {
+    for (auto& instance : scene.instances) {
+      write_obj_line(fs, "i", get_basename(instance.uri),
+          get_basename(scene.shapes[instance.shape].uri),
+          get_basename(scene.materials[instance.material].uri), instance.frame);
+    }
+  }
+}
+
 static void save_obj(const string& filename, const yocto_scene& scene,
     bool preserve_instances, bool flip_texcoord = true) {
   // open file
@@ -1497,7 +1682,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   // material library
   if (!scene.materials.empty()) {
     auto mtlname = get_noextension(get_filename(filename)) + ".mtl";
-    print_obj_line(fs, "mtllib", mtlname);
+    write_obj_line(fs, "mtllib", mtlname);
   }
 
   // shapes
@@ -1511,24 +1696,24 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   }
   for (auto& instance : preserve_instances ? instances : scene.instances) {
     auto& shape = scene.shapes[instance.shape];
-    print_obj_line(fs, "o", get_basename(instance.uri));
+    write_obj_line(fs, "o", get_basename(instance.uri));
     if (instance.material >= 0)
-      print_obj_line(
+      write_obj_line(
           fs, "usemtl", get_basename(scene.materials[instance.material].uri));
     if (instance.frame == identity3x4f) {
-      for (auto& p : shape.positions) print_obj_line(fs, "v", p);
-      for (auto& n : shape.normals) print_obj_line(fs, "vn", n);
+      for (auto& p : shape.positions) write_obj_line(fs, "v", p);
+      for (auto& n : shape.normals) write_obj_line(fs, "vn", n);
       for (auto& t : shape.texcoords)
-        print_obj_line(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+        write_obj_line(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
     } else {
       for (auto& pp : shape.positions) {
-        print_obj_line(fs, "v", transform_point(instance.frame, pp));
+        write_obj_line(fs, "v", transform_point(instance.frame, pp));
       }
       for (auto& nn : shape.normals) {
-        print_obj_line(fs, "vn", transform_direction(instance.frame, nn));
+        write_obj_line(fs, "vn", transform_direction(instance.frame, nn));
       }
       for (auto& t : shape.texcoords)
-        print_obj_line(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+        write_obj_line(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
     }
     auto mask = obj_vertex{
         1, shape.texcoords.empty() ? 0 : 1, shape.normals.empty() ? 0 : 1};
@@ -1538,19 +1723,19 @@ static void save_obj(const string& filename, const yocto_scene& scene,
           (i + offset.normal + 1) * mask.normal};
     };
     for (auto& p : shape.points) {
-      print_obj_line(fs, "p", vert(p));
+      write_obj_line(fs, "p", vert(p));
     }
     for (auto& l : shape.lines) {
-      print_obj_line(fs, "l", vert(l.x), vert(l.y));
+      write_obj_line(fs, "l", vert(l.x), vert(l.y));
     }
     for (auto& t : shape.triangles) {
-      print_obj_line(fs, "f", vert(t.x), vert(t.y), vert(t.z));
+      write_obj_line(fs, "f", vert(t.x), vert(t.y), vert(t.z));
     }
     for (auto& q : shape.quads) {
       if (q.z == q.w) {
-        print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+        write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
       } else {
-        print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+        write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
       }
     }
     for (auto i = 0; i < shape.quadspos.size(); i++) {
@@ -1562,10 +1747,10 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         auto qp = shape.quadspos[i];
         auto qt = shape.quadstexcoord[i];
         if (qp.z == qp.w) {
-          print_obj_line(
+          write_obj_line(
               fs, "f", vert(qp.x, qt.x), vert(qp.y, qt.y), vert(qp.z, qt.z));
         } else {
-          print_obj_line(fs, "f", vert(qp.x, qt.x), vert(qp.y, qt.y),
+          write_obj_line(fs, "f", vert(qp.x, qt.x), vert(qp.y, qt.y),
               vert(qp.z, qt.z), vert(qp.w, qt.w));
         }
       } else if (!shape.texcoords.empty() && !shape.normals.empty()) {
@@ -1577,10 +1762,10 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         auto qt = shape.quadstexcoord[i];
         auto qn = shape.quadsnorm[i];
         if (qp.z == qp.w) {
-          print_obj_line(fs, "f", vert(qp.x, qt.x, qn.x),
+          write_obj_line(fs, "f", vert(qp.x, qt.x, qn.x),
               vert(qp.y, qt.y, qn.y), vert(qp.z, qt.z, qn.z));
         } else {
-          print_obj_line(fs, "f", vert(qp.x, qt.x, qn.x),
+          write_obj_line(fs, "f", vert(qp.x, qt.x, qn.x),
               vert(qp.y, qt.y, qn.y), vert(qp.z, qt.z, qn.z),
               vert(qp.w, qt.w, qn.w));
         }
@@ -1592,10 +1777,10 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         auto qp = shape.quadspos[i];
         auto qn = shape.quadsnorm[i];
         if (qp.z == qp.w) {
-          print_obj_line(
+          write_obj_line(
               fs, "f", vert(qp.x, qn.x), vert(qp.y, qn.y), vert(qp.z, qn.z));
         } else {
-          print_obj_line(fs, "f", vert(qp.x, qn.x), vert(qp.y, qn.y),
+          write_obj_line(fs, "f", vert(qp.x, qn.x), vert(qp.y, qn.y),
               vert(qp.z, qn.z), vert(qp.w, qn.w));
         }
       } else {
@@ -1604,9 +1789,9 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         };
         auto q = shape.quadspos[i];
         if (q.z == q.w) {
-          print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+          write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
         } else {
-          print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+          write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
         }
       }
     }
@@ -1638,7 +1823,7 @@ static void save_obj_scene(const string& filename, const yocto_scene& scene,
 }
 
 void print_obj_camera(const yocto_camera& camera) {
-  print_obj_line(stdout, "c", get_basename(camera.uri),
+  write_obj_line(stdout, "c", get_basename(camera.uri),
       (int)camera.orthographic, camera.film.x, camera.film.y, camera.lens,
       camera.focus, camera.aperture, camera.frame);
 }
@@ -1724,7 +1909,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
 
   // convert textures
   auto _startswith = [](string_view str, string_view substr) {
-    if(str.size() < substr.size()) return false;
+    if (str.size() < substr.size()) return false;
     return str.substr(0, substr.size()) == substr;
   };
   auto imap = unordered_map<cgltf_image*, int>{};
