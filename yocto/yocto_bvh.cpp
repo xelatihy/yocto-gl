@@ -724,7 +724,7 @@ static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
   // consider N bins, compute their cost and keep the minimum
   const int nbins    = 16;
   auto      middle   = 0.0f;
-  auto      min_cost = float_max;
+  auto      min_cost = flt_max;
   auto      area     = [](auto& b) {
     auto size = b.max - b.min;
     return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
@@ -911,9 +911,9 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
   // synchronization
   atomic<int>          num_processed_prims(0);
-  std::mutex                queue_mutex;
+  std::mutex           queue_mutex;
   vector<future<void>> futures;
-  auto                 nthreads = thread::hardware_concurrency();
+  auto                 nthreads = std::thread::hardware_concurrency();
 
   // create nodes until the queue is empty
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {

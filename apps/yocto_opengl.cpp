@@ -28,7 +28,7 @@
 //
 
 #include "yocto_opengl.h"
-#include <cstdarg>
+#include <stdarg.h>
 
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
@@ -1235,43 +1235,34 @@ void draw_glhistogram(
 void draw_glhistogram(
     const opengl_window& win, const char* lbl, const vector<float>& values) {
   ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
-      float_max, float_max, {0, 0}, 4);
+      flt_max, flt_max, {0, 0}, 4);
 }
 void draw_glhistogram(
     const opengl_window& win, const char* lbl, const vector<vec2f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-      (int)values.size(), 0, nullptr, float_max, float_max, {0, 0},
-      sizeof(vec2f));
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-      (int)values.size(), 0, nullptr, float_max, float_max, {0, 0},
-      sizeof(vec2f));
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
 }
 void draw_glhistogram(
     const opengl_window& win, const char* lbl, const vector<vec3f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-      (int)values.size(), 0, nullptr, float_max, float_max, {0, 0},
-      sizeof(vec3f));
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-      (int)values.size(), 0, nullptr, float_max, float_max, {0, 0},
-      sizeof(vec3f));
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
   ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
-      (int)values.size(), 0, nullptr, float_max, float_max, {0, 0},
-      sizeof(vec3f));
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
 }
 void draw_glhistogram(
     const opengl_window& win, const char* lbl, const vector<vec4f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-      (int)values.size(), 0, nullptr, float_max, float_max, {0, 0},
-      sizeof(vec4f));
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-      (int)values.size(), 0, nullptr, float_max, float_max, {0, 0},
-      sizeof(vec4f));
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
   ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
-      (int)values.size(), 0, nullptr, float_max, float_max, {0, 0},
-      sizeof(vec4f));
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
   ImGui::PlotHistogram((lbl + " w"s).c_str(), (const float*)values.data() + 3,
-      (int)values.size(), 0, nullptr, float_max, float_max, {0, 0},
-      sizeof(vec4f));
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
 }
 
 // https://github.com/ocornut/imgui/issues/300

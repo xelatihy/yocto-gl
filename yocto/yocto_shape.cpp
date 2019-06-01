@@ -1390,7 +1390,7 @@ void log_geodesic_solver_stats(const geodesic_solver& solver) {
   // stats
   auto num_edges     = 0;
   auto min_adjacents = int_max, max_adjacents = int_min;
-  auto min_length = float_max, max_length = float_min;
+  auto min_length = flt_max, max_length = flt_min;
   auto avg_adjacents = 0.0, avg_length = 0.0;
   for (auto& adj : solver.graph) {
     num_edges += (int)adj.size();
@@ -1425,7 +1425,7 @@ void compute_geodesic_distances(geodesic_solver& graph,
     vector<float>& distances, const vector<int>& sources) {
   // preallocated
   distances.resize(graph.positions.size());
-  for (auto& d : distances) d = float_max;
+  for (auto& d : distances) d = flt_max;
 
   // Small Label Fisrt + Large Label Last
   // https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
@@ -2171,7 +2171,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
   if (params.clump_strength > 0) {
     for (auto bidx = 0; bidx < bpos.size(); bidx++) {
       cidx.push_back(0);
-      auto cdist = float_max;
+      auto cdist = flt_max;
       for (auto c = 0; c < params.clump_num; c++) {
         auto d = length(bpos[bidx] - bpos[c]);
         if (d < cdist) {
@@ -3079,12 +3079,9 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     bool flip_texcoord) {
   try {
     // load obj
-    auto oparams        = obj_params();
-    oparams.nomaterials = true;
-    oparams.flipv       = flip_texcoord;
     auto cb = load_obj_shape_cb{points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, facevarying};
-    load_obj(filename, cb, oparams);
+    load_obj(filename, cb, true, flip_texcoord);
 
     // merging quads and triangles
     if (!facevarying) {

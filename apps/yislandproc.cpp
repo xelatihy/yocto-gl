@@ -457,11 +457,9 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
 
   try {
     // load obj
-    auto oparams        = obj_params();
-    oparams.nomaterials = true;
-    auto cb             = load_island_shape_callbacks{
+    auto cb = load_island_shape_callbacks{
         shapes, materials, smap, mmap, tmap, scene, filename, parent_name};
-    load_obj(dirname + filename, cb, oparams);
+    load_obj(dirname + filename, cb, true);
 
     // check for PTEX errors
     for (auto id = 0; id < shapes.size(); id++) {
@@ -645,7 +643,7 @@ void load_island_variants(const string& filename, const string& dirname,
 
     // instanced archives
     for (auto& [iiname, ijs] : vjs.at("instancedPrimitiveJsonFiles").items()) {
-      auto filename = ijs.at("jsonFile").get<std::string>();
+      auto filename = ijs.at("jsonFile").get<string>();
       if (ijs.at("type") == "archive") {
         load_island_variant_archive(filename, dirname, scene, vname,
             vjs.at("transformMatrix"), instances[vname], smap, mmap, tmap);
@@ -857,7 +855,7 @@ void load_island_elements(const string& filename, const string& dirname,
 
   // instanced archives
   for (auto& [iiname, ijs] : js.at("instancedPrimitiveJsonFiles").items()) {
-    auto filename = ijs.at("jsonFile").get<std::string>();
+    auto filename = ijs.at("jsonFile").get<string>();
     if (ijs.at("type") == "archive") {
       load_island_archive(filename, dirname, scene, name,
           js.at("transformMatrix"), smap, mmap, tmap);
@@ -892,7 +890,7 @@ void load_island_elements(const string& filename, const string& dirname,
           cjs.count("instancedPrimitiveJsonFiles")
               ? cjs.at("instancedPrimitiveJsonFiles").items()
               : js.at("instancedPrimitiveJsonFiles").items()) {
-        auto filename = ijs.at("jsonFile").get<std::string>();
+        auto filename = ijs.at("jsonFile").get<string>();
         if (ijs.at("type") == "archive") {
           load_island_archive(filename, dirname, scene, name,
               cjs.at("transformMatrix"), smap, mmap, tmap);
@@ -916,8 +914,8 @@ void load_island_elements(const string& filename, const string& dirname,
 void load_textures(
     yocto_scene& scene, const string& dirname, const load_params& params);
 
-void load_island_scene(const std::string& filename, yocto_scene& scene,
-    const load_params& params) {
+void load_island_scene(
+    const string& filename, yocto_scene& scene, const load_params& params) {
   try {
     auto js = json{};
     load_json(filename, js);
@@ -926,8 +924,8 @@ void load_island_scene(const std::string& filename, yocto_scene& scene,
     for (auto filename : js.at("cameras").get<vector<string>>()) {
       load_island_cameras(filename, dirname, scene);
     }
-    auto smap = std::unordered_map<std::string, vector<vec2i>>{};
-    auto tmap = std::unordered_map<std::string, int>{};
+    auto smap = std::unordered_map<string, vector<vec2i>>{};
+    auto tmap = std::unordered_map<string, int>{};
     for (auto filename : js.at("elements").get<vector<string>>()) {
       load_island_elements(filename, dirname, scene, smap, tmap);
     }

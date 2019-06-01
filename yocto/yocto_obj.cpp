@@ -202,8 +202,7 @@ static inline void parse_obj_value(string_view& str, obj_texture_info& info) {
 }
 
 // Load obj materials
-void load_mtl(
-    const string& filename, obj_callbacks& cb, const obj_params& params) {
+void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
   // open file
   auto fs_ = open_input_file(filename);
   auto fs  = fs_.fs;
@@ -247,10 +246,10 @@ void load_mtl(
       parse_obj_value(line, material.kt);
       if (material.kt.y < 0)
         material.kt = {material.kt.x, material.kt.x, material.kt.x};
-      if (params.fliptr) material.kt = vec3f{1, 1, 1} - material.kt;
+      if (fliptr) material.kt = vec3f{1, 1, 1} - material.kt;
     } else if (cmd == "Tr") {
       parse_obj_value(line, material.op);
-      if (params.fliptr) material.op = 1 - material.op;
+      if (fliptr) material.op = 1 - material.op;
     } else if (cmd == "Ns") {
       parse_obj_value(line, material.ns);
       material.pr = pow(2 / (material.ns + 2), 1 / 4.0f);
@@ -308,8 +307,7 @@ void load_mtl(
 }
 
 // Load obj extensions
-void load_objx(
-    const string& filename, obj_callbacks& cb, const obj_params& params) {
+void load_objx(const string& filename, obj_callbacks& cb) {
   // open file
   auto fs_ = open_input_file(filename);
   auto fs  = fs_.fs;
@@ -371,8 +369,8 @@ void load_objx(
 }
 
 // Load obj scene
-void load_obj(
-    const string& filename, obj_callbacks& cb, const obj_params& params) {
+void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
+    bool flipv, bool fliptr) {
   // open file
   auto fs_ = open_input_file(filename);
   auto fs  = fs_.fs;
@@ -412,7 +410,7 @@ void load_obj(
     } else if (cmd == "vt") {
       auto vert = zero2f;
       parse_obj_value(line, vert);
-      if (params.flipv) vert.y = 1 - vert.y;
+      if (flipv) vert.y = 1 - vert.y;
       cb.texcoord(vert);
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
@@ -450,25 +448,25 @@ void load_obj(
       parse_obj_value_or_empty(line, name);
       cb.smoothing(name);
     } else if (cmd == "mtllib") {
-      if (params.nomaterials) continue;
+      if (nomaterials) continue;
       auto mtlname = ""s;
       parse_obj_value(line, mtlname);
       cb.mtllib(mtlname);
       if (find(mlibs.begin(), mlibs.end(), mtlname) != mlibs.end()) continue;
       mlibs.push_back(mtlname);
       auto mtlpath = get_dirname(filename) + mtlname;
-      load_mtl(mtlpath, cb, params);
+      load_mtl(mtlpath, cb, fliptr);
     } else {
       // unused
     }
   }
 
   // parse extensions if presents
-  if (!params.nomaterials) {
+  if (!nomaterials) {
     auto extname    = get_noextension(filename) + ".objx";
     auto ext_exists = exists_file(extname);
     if (ext_exists) {
-      load_objx(extname, cb, params);
+      load_objx(extname, cb);
     }
   }
 }

@@ -83,9 +83,10 @@
 
 #include "yocto_math.h"
 
-#include <cctype>
+#include <ctype.h>
+#include <stdio.h>
+
 #include <chrono>
-#include <cstdio>
 #include <deque>
 #include <future>
 #include <mutex>
@@ -105,7 +106,6 @@ using std::future;
 using std::runtime_error;
 using std::string;
 using std::string_view;
-using std::thread;
 using std::vector;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
@@ -266,8 +266,8 @@ struct concurrent_queue {
   }
 
  private:
-  std::mutex    _mutex;
-  deque<T> _queue;
+  std::mutex _mutex;
+  deque<T>   _queue;
 };
 
 // Runs a rask as an asycnrhonous operation.
@@ -293,7 +293,7 @@ inline void parallel_for(size_t begin, size_t end, const Func& func,
     }
   } else {
     auto           futures  = vector<future<void>>{};
-    auto           nthreads = thread::hardware_concurrency();
+    auto           nthreads = std::thread::hardware_concurrency();
     atomic<size_t> next_idx(begin);
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
       futures.emplace_back(async([&func, &next_idx, cancel, end]() {

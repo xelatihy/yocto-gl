@@ -179,8 +179,7 @@ int main(int argc, char* argv[]) {
   for (auto sample = 0; sample < trace_prms.samples;
        sample += trace_prms.batch) {
     auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
-    printf("rendering samples %4d/%4d", sample,
-        trace_prms.samples);
+    printf("rendering samples %4d/%4d", sample, trace_prms.samples);
     auto batch_timer = timer();
     trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
     printf(" in %s\n", batch_timer.elapsedf().c_str());

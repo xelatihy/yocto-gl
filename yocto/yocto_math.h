@@ -69,12 +69,15 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <float.h>
+#include <limits.h>
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <algorithm>
-#include <cfloat>
-#include <climits>
-#include <cmath>
-#include <cstdint>
-#include <cstring>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -86,28 +89,6 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::abs;
-using std::acos;
-using std::asin;
-using std::atan;
-using std::atan2;
-using std::cos;
-using std::exp;
-using std::exp2;
-using std::fabs;
-using std::floor;
-using std::fmod;
-using std::isfinite;
-using std::log;
-using std::log2;
-using std::pow;
-using std::round;
-using std::sin;
-using std::sqrt;
-using std::swap;
-using std::tan;
-
-using std::function;
 using std::pair;
 using std::string;
 using std::string_view;
@@ -129,20 +110,21 @@ using uint = unsigned int;
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
 
-inline const auto int_max   = INT_MAX;
-inline const auto int_min   = INT_MIN;
-inline const auto float_max = FLT_MAX;
-inline const auto float_min = -FLT_MAX;
+inline const auto int_max = INT_MAX;
+inline const auto int_min = INT_MIN;
+inline const auto flt_max = FLT_MAX;
+inline const auto flt_min = -FLT_MAX;
 
-inline float min(float x, float y) { return (x < y) ? x : y; }
-inline float max(float x, float y) { return (x > y) ? x : y; }
-inline float clamp(float x, float min_, float max_) {
-  return min(max(x, min_), max_);
+inline float abs(float a) { return a < 0 ? -a : a; }
+inline float min(float a, float b) { return (a < b) ? a : b; }
+inline float max(float a, float b) { return (a > b) ? a : b; }
+inline float clamp(float a, float min_, float max_) {
+  return min(max(a, min_), max_);
 }
-inline float clamp01(float x) { return min(max(x, 0.0f), 1.0f); }
+inline float clamp01(float a) { return min(max(a, 0.0f), 1.0f); }
 inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
-inline float radians(float x) { return x * pif / 180; }
-inline float degrees(float x) { return x * 180 / pif; }
+inline float radians(float a) { return a * pif / 180; }
+inline float degrees(float a) { return a * 180 / pif; }
 inline float bias(float a, float bias) {
   return a / ((1 / bias - 2) * (1 - a) + 1);
 }
@@ -150,11 +132,27 @@ inline float gain(float a, float gain) {
   return (a < 0.5f) ? bias(a * 2, gain) / 2
                     : bias(a * 2 - 1, 1 - gain) / 2 + 0.5f;
 }
+inline float sqrt(float a) { return sqrtf(a); }
+inline float sin(float a) { return sinf(a); }
+inline float cos(float a) { return cosf(a); }
+inline float tan(float a) { return tanf(a); }
+inline float asin(float a) { return asinf(a); }
+inline float acos(float a) { return acosf(a); }
+inline float atan(float a) { return atanf(a); }
+inline float log(float a) { return logf(a); }
+inline float exp(float a) { return expf(a); }
+inline float log2(float a) { return log2f(a); }
+inline float exp2(float a) { return exp2f(a); }
+inline float pow(float a, float b) { return powf(a, b); }
+inline float isfinite(float a) { return ::isfinite(a); }
+inline void  swap(float& a, float& b) { std::swap(a, b); }
 
-inline int min(int x, int y) { return (x < y) ? x : y; }
-inline int max(int x, int y) { return (x > y) ? x : y; }
-inline int clamp(int x, int min_, int max_) { return min(max(x, min_), max_); }
-inline int pow2(int x) { return 1 << x; }
+inline int  abs(int a) { return a < 0 ? -a : a; }
+inline int  min(int a, int b) { return (a < b) ? a : b; }
+inline int  max(int a, int b) { return (a > b) ? a : b; }
+inline int  clamp(int a, int min_, int max_) { return min(max(a, min_), max_); }
+inline int  pow2(int a) { return 1 << a; }
+inline void swap(int& a, int& b) { std::swap(a, b); }
 
 }  // namespace yocto
 
@@ -315,6 +313,7 @@ inline vec2f pow(const vec2f& a, const vec2f& b) {
 inline vec2f gain(const vec2f& a, float b) {
   return {gain(a.x, b), gain(a.y, b)};
 };
+inline void swap(vec2f& a, vec2f& b) { std::swap(a, b); }
 
 // Vector comparison operations.
 inline bool operator==(const vec3f& a, const vec3f& b) {
@@ -466,6 +465,7 @@ inline vec3f gain(const vec3f& a, float b) {
 inline bool isfinite(const vec3f& a) {
   return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
 };
+inline void swap(vec3f& a, vec3f& b) { std::swap(a, b); }
 
 // Vector comparison operations.
 inline bool operator==(const vec4f& a, const vec4f& b) {
@@ -616,6 +616,7 @@ inline vec4f gain(const vec4f& a, float b) {
 inline bool isfinite(const vec4f& a) {
   return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
 };
+inline void swap(vec4f& a, vec4f& b) { std::swap(a, b); }
 
 // Quaternion operatons represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
@@ -766,6 +767,7 @@ inline int sum(const vec2i& a) { return a.x + a.y; }
 
 // Functions applied to vector elements
 inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
+inline void  swap(vec2i& a, vec2i& b) { std::swap(a, b); }
 
 // Vector comparison operations.
 inline bool operator==(const vec3i& a, const vec3i& b) {
@@ -848,6 +850,7 @@ inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
 
 // Functions applied to vector elements
 inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
+inline void  swap(vec3i& a, vec3i& b) { std::swap(a, b); }
 
 // Vector comparison operations.
 inline bool operator==(const vec4i& a, const vec4i& b) {
@@ -933,6 +936,7 @@ inline int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
 inline vec4i abs(const vec4i& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
 };
+inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 
 }  // namespace yocto
 
@@ -1361,8 +1365,8 @@ namespace yocto {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 struct bbox2f {
-  vec2f min = {float_max, float_max};
-  vec2f max = {float_min, float_min};
+  vec2f min = {flt_max, flt_max};
+  vec2f max = {flt_min, flt_min};
 
   bbox2f() {}
   bbox2f(const vec2f& min, const vec2f& max) : min{min}, max{max} {}
@@ -1373,8 +1377,8 @@ struct bbox2f {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 struct bbox3f {
-  vec3f min = {float_max, float_max, float_max};
-  vec3f max = {float_min, float_min, float_min};
+  vec3f min = {flt_max, flt_max, flt_max};
+  vec3f max = {flt_min, flt_min, flt_min};
 
   bbox3f() {}
   bbox3f(const vec3f& min, const vec3f& max) : min{min}, max{max} {}
@@ -1466,11 +1470,11 @@ struct ray2f {
   vec2f o    = {0, 0};
   vec2f d    = {0, 1};
   float tmin = ray_eps;
-  float tmax = float_max;
+  float tmax = flt_max;
 
   ray2f() {}
   ray2f(const vec2f& o, const vec2f& d, float tmin = ray_eps,
-      float tmax = float_max)
+      float tmax = flt_max)
       : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };
 
@@ -1479,11 +1483,11 @@ struct ray3f {
   vec3f o    = {0, 0, 0};
   vec3f d    = {0, 0, 1};
   float tmin = ray_eps;
-  float tmax = float_max;
+  float tmax = flt_max;
 
   ray3f() {}
   ray3f(const vec3f& o, const vec3f& d, float tmin = ray_eps,
-      float tmax = float_max)
+      float tmax = flt_max)
       : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };
 

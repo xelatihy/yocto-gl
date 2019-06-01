@@ -31,7 +31,7 @@
 #include "yocto_shape.h"
 #include "yocto_utils.h"
 
-#include <cassert>
+#include <assert.h>
 #include <unordered_map>
 
 // -----------------------------------------------------------------------------
@@ -278,7 +278,7 @@ void update_transforms(
 vec2f compute_animation_range(
     const yocto_scene& scene, const string& anim_group) {
   if (scene.animations.empty()) return zero2f;
-  auto range = vec2f{+float_max, -float_max};
+  auto range = vec2f{+flt_max, -flt_max};
   for (auto& animation : scene.animations) {
     if (anim_group != "" && animation.group != anim_group) continue;
     range.x = min(range.x, animation.times.front());
@@ -1068,7 +1068,7 @@ void set_yperspective(
   camera.film         = {film, film / aspect};
   camera.focus        = focus;
   auto distance       = camera.film.y / (2 * tan(fov / 2));
-  if (focus < float_max) {
+  if (focus < flt_max) {
     camera.lens = camera.focus * distance / (camera.focus + distance);
   } else {
     camera.lens = distance;
@@ -1100,7 +1100,7 @@ void set_view(
 ray3f eval_perspective_camera(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
   auto distance = camera.lens;
-  if (camera.focus < float_max) {
+  if (camera.focus < flt_max) {
     distance = camera.lens * camera.focus / (camera.focus - camera.lens);
   }
   if (camera.aperture) {

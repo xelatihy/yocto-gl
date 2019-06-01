@@ -37,9 +37,9 @@
 #define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
 
+#include <limits.h>
+#include <stdlib.h>
 #include <array>
-#include <climits>
-#include <cstdlib>
 #include <memory>
 #include <regex>
 
@@ -2175,7 +2175,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
     } else {
       auto persp      = &gcam->perspective;
       camera.aperture = 0;
-      set_yperspective(camera, persp->yfov, persp->aspect_ratio, float_max);
+      set_yperspective(camera, persp->yfov, persp->aspect_ratio, flt_max);
     }
     scene.cameras.push_back(camera);
     cmap[gcam] = (int)scene.cameras.size() - 1;
@@ -3580,9 +3580,8 @@ static void load_pbrt_scene(
 
   try {
     // Parse pbrt
-    auto pbrt_options = pbrt_params();
-    auto cb           = load_pbrt_scene_cb{scene, params, filename};
-    load_pbrt(filename, cb, pbrt_options);
+    auto cb = load_pbrt_scene_cb{scene, params, filename};
+    load_pbrt(filename, cb);
 
     // load textures
     auto dirname = get_dirname(filename);

@@ -133,7 +133,7 @@ struct obj_camera {
   float   height   = 0.024f;        // film size (default to 35mm)
   float   lens     = 0.050f;        // focal length
   float   aperture = 0;             // lens aperture
-  float   focus    = float_max;     // focus distance
+  float   focus    = flt_max;       // focus distance
 };
 
 // Obj environment [extension].
@@ -182,16 +182,9 @@ struct obj_callbacks {
   virtual void procedural(const obj_procedural&) {}
 };
 
-// Load obj params
-struct obj_params {
-  bool nomaterials = false;
-  bool flipv       = true;
-  bool fliptr      = true;
-};
-
 // Load obj scene
-void load_obj(
-    const string& filename, obj_callbacks& cb, const obj_params& params = {});
+void load_obj(const string& filename, obj_callbacks& cb,
+    bool nomaterials = false, bool flipv = true, bool fliptr = true);
 
 }  // namespace yocto
 

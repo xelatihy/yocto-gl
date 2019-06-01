@@ -154,7 +154,7 @@ struct pbrt_film {
     int    yresolution        = 480;
     vec4f  cropwindow         = {0, 1, 0, 1};
     float  scale              = 1;
-    float  maxsampleluminance = float_max;
+    float  maxsampleluminance = flt_max;
     float  diagonal           = 35;
     string filename           = "pbrt.exr";
   };
@@ -862,14 +862,8 @@ struct pbrt_callbacks {
   virtual void end_object(const pbrt_object& value, const pbrt_context& ctx) {}
 };
 
-// Load pbrt params
-struct pbrt_params {
-  bool flipv = true;
-};
-
 // Load pbrt scene
-void load_pbrt(
-    const string& filename, pbrt_callbacks& cb, const pbrt_params& params = {});
+void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv = true);
 
 }  // namespace yocto
 

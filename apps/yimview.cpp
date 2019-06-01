@@ -105,8 +105,8 @@ struct app_state {
 void compute_image_stats(
     image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
   auto max_histo = linear_hdr ? 8 : 1;
-  stats.min      = vec4f{float_max};
-  stats.max      = vec4f{float_min};
+  stats.min      = vec4f{flt_max};
+  stats.max      = vec4f{flt_min};
   stats.average  = zero4f;
   stats.histogram.assign(256, zero3f);
   for (auto& p : img) {
