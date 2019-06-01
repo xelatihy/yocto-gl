@@ -191,17 +191,16 @@ int main(int argc, char* argv[]) {
          sample += trace_prms.batch) {
       auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
       {
-        auto timer = print_timed("rendering cam" +
-                                 to_string(trace_prms.camera) + " at " +
-                                 pad_left(to_string(sample), 4) + " " +
-                                 pad_left(to_string(trace_prms.samples), 4));
+        auto timer = print_timed(
+            "rendering cam" + to_string(trace_prms.camera) + " at " +
+            to_string(sample) + "/" + to_string(trace_prms.samples));
         trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
       }
       if (save_batch) {
         auto outfilename = get_noextension(imfilename) + ".cam" +
                            to_string(trace_prms.camera) + ".s" +
-                           pad_left(to_string(sample + nsamples), 4, '0') +
-                           "." + get_extension(imfilename);
+                           to_string(sample + nsamples) + "." +
+                           get_extension(imfilename);
         try {
           if (logo) {
             save_tonemapped_with_logo(outfilename, render, tonemap_prms);

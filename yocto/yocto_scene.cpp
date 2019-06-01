@@ -430,9 +430,10 @@ void rename_instances(yocto_scene& scene) {
     if (shape_count[instance.shape].y == 1) {
       instance.uri = "instances/" + shape_names[instance.shape] + ".yaml";
     } else {
-      instance.uri = "instances/" + shape_names[instance.shape] + "-" +
-                     pad_left(to_string(shape_count[instance.shape].x++),
-                         (int)ceil(log10(shape_count[instance.shape].y)), '0') +
+      auto num = to_string(shape_count[instance.shape].x++);
+      while (num.size() < (int)ceil(log10(shape_count[instance.shape].y)))
+        num = '0' + num;
+      instance.uri = "instances/" + shape_names[instance.shape] + "-" + num +
                      ".yaml";
     }
   }
@@ -1348,58 +1349,72 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
 
 string format_stats(
     const yocto_scene& scene, const string& prefix, bool verbose) {
-  auto stats = vector<pair<string, size_t>>{};
-  stats += {"cameras", scene.cameras.size()};
-  stats += {"shapes", scene.shapes.size()};
-  stats += {"subdivs", scene.subdivs.size()};
-  stats += {"instances", scene.instances.size()};
-  stats += {"environments", scene.environments.size()};
-  stats += {"textures", scene.textures.size()};
-  stats += {"voltextures", scene.voltextures.size()};
-  stats += {"materials", scene.materials.size()};
-  stats += {"nodes", scene.nodes.size()};
-  stats += {"animations", scene.animations.size()};
-
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
     for (auto& value : values) sum += func(value);
     return sum;
   };
+  auto format = [](auto num) {
+    auto str = std::to_string(num);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
 
-  stats += {"points", accumulate(scene.shapes,
-                          [](auto& shape) { return shape.points.size(); })};
-  stats += {"lines",
-      accumulate(scene.shapes, [](auto& shape) { return shape.lines.size(); })};
-  stats += {"triangles", accumulate(scene.shapes, [](auto& shape) {
-              return shape.triangles.size();
-            })};
-  stats += {"quads",
-      accumulate(scene.shapes, [](auto& shape) { return shape.quads.size(); })};
-  stats += {"fvquads", accumulate(scene.shapes,
-                           [](auto& shape) { return shape.quadspos.size(); })};
-
-  stats += {"texels4b", accumulate(scene.textures, [](auto& texture) {
-              return (size_t)texture.ldr.size().x *
-                     (size_t)texture.ldr.size().x;
-            })};
-  stats += {"texels4f", accumulate(scene.textures, [](auto& texture) {
-              return (size_t)texture.hdr.size().x *
-                     (size_t)texture.hdr.size().y;
-            })};
-  stats += {"volxels1f", accumulate(scene.voltextures, [](auto& texture) {
-              return (size_t)texture.vol.size().x *
-                     (size_t)texture.vol.size().y *
-                     (size_t)texture.vol.size().z;
-            })};
-
-  auto str = ""s;
-  for (auto& [key, value] : stats) {
-    if (value == 0) continue;
-    str += prefix + pad_right(key, 15) + ": " + pad_left(to_string(value), 13) +
+  auto stats = ""s;
+  stats += prefix + "cameras:      " + format(scene.cameras.size()) + "\n";
+  stats += prefix + "shapes:       " + format(scene.shapes.size()) + "\n";
+  stats += prefix + "subdivs:      " + format(scene.subdivs.size()) + "\n";
+  stats += prefix + "instances:    " + format(scene.instances.size()) + "\n";
+  stats += prefix + "environments: " + format(scene.environments.size()) + "\n";
+  stats += prefix + "textures:     " + format(scene.textures.size()) + "\n";
+  stats += prefix + "voltextures:  " + format(scene.voltextures.size()) + "\n";
+  stats += prefix + "materials:    " + format(scene.materials.size()) + "\n";
+  stats += prefix + "nodes:        " + format(scene.nodes.size()) + "\n";
+  stats += prefix + "animations:   " + format(scene.animations.size()) + "\n";
+  stats += prefix + "points:       " +
+           format(accumulate(
+               scene.shapes, [](auto& shape) { return shape.points.size(); })) +
            "\n";
-  }
+  stats += prefix + "lines:        " +
+           format(accumulate(
+               scene.shapes, [](auto& shape) { return shape.lines.size(); })) +
+           "\n";
+  stats += prefix + "triangles:    " +
+           format(accumulate(scene.shapes,
+               [](auto& shape) { return shape.triangles.size(); })) +
+           "\n";
+  stats += prefix + "quads:        " +
+           format(accumulate(
+               scene.shapes, [](auto& shape) { return shape.quads.size(); })) +
+           "\n";
+  stats += prefix + "fvquads:      " +
+           format(accumulate(scene.shapes,
+               [](auto& shape) { return shape.quadspos.size(); })) +
+           "\n";
+  stats += prefix + "texels4b:     " +
+           format(accumulate(scene.textures,
+               [](auto& texture) {
+                 return (size_t)texture.ldr.size().x *
+                        (size_t)texture.ldr.size().x;
+               })) +
+           "\n";
+  stats += prefix + "texels4f:     " +
+           format(accumulate(scene.textures,
+               [](auto& texture) {
+                 return (size_t)texture.hdr.size().x *
+                        (size_t)texture.hdr.size().y;
+               })) +
+           "\n";
+  stats += prefix + "volxels1f:    " +
+           format(accumulate(scene.voltextures,
+               [](auto& texture) {
+                 return (size_t)texture.vol.size().x *
+                        (size_t)texture.vol.size().y *
+                        (size_t)texture.vol.size().z;
+               })) +
+           "\n";
 
-  return str;
+  return stats;
 }
 
 }  // namespace yocto
