@@ -135,15 +135,14 @@ enum struct app_task_type {
 };
 
 struct app_task {
-  app_task_type                  type;
-  future<void>                   result;
-  atomic<bool>                   stop;
-  atomic<int>                    current;
-  concurrent_queue<image_region> queue;
-  app_edit                       edit;
+  app_task_type type;
+  future<void>  result;
+  atomic<bool>  stop;
+  atomic<int>   current;
+  app_edit      edit;
 
   app_task(app_task_type type, const app_edit& edit = {})
-      : type{type}, result{}, stop{false}, current{-1}, queue{}, edit{edit} {}
+      : type{type}, result{}, stop{false}, current{-1}, edit{edit} {}
   ~app_task() {
     stop = true;
     if (result.valid()) {
@@ -1032,9 +1031,8 @@ void update(const opengl_window& win, app_state& app) {
   for (auto& scn : app.scenes) {
     if (scn.task_queue.empty()) continue;
     auto& task = scn.task_queue.front();
-    if (!task.result.valid() || !task.queue.empty() ||
-        task.result.wait_for(std::chrono::nanoseconds(10)) !=
-            std::future_status::ready)
+    if (!task.result.valid() || task.result.wait_for(std::chrono::nanoseconds(
+                                    10)) != std::future_status::ready)
       continue;
     switch (task.type) {
       case app_task_type::none: break;
