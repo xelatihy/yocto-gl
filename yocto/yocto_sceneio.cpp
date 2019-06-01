@@ -3532,7 +3532,8 @@ static inline void write_pbrt_text(FILE* fs, const char* value) {
   if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
 }
 static inline void write_pbrt_text(FILE* fs, const string& value) {
-  if (fprintf(fs, "%s", value.c_str()) < 0) throw io_error("cannot print value");
+  if (fprintf(fs, "%s", value.c_str()) < 0)
+    throw io_error("cannot print value");
 }
 static inline void write_pbrt_value(FILE* fs, const char* value) {
   if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");

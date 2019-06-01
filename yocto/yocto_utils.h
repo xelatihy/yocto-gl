@@ -201,7 +201,7 @@ inline string replace(string_view str, string_view from, string_view to) {
   return replaced;
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SPECIALIZED CONTAINERS

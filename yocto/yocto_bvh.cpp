@@ -187,10 +187,10 @@ inline bool intersect_bbox(
     const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox) {
   auto it_min = (bbox.min - ray.o) * ray_dinv;
   auto it_max = (bbox.max - ray.o) * ray_dinv;
-  auto tmin = min(it_min, it_max);
-  auto tmax = max(it_min, it_max);
-  auto t0   = max(max(tmin), ray.tmin);
-  auto t1   = min(min(tmax), ray.tmax);
+  auto tmin   = min(it_min, it_max);
+  auto tmax   = max(it_min, it_max);
+  auto t0     = max(max(tmin), ray.tmin);
+  auto t1     = min(min(tmax), ray.tmax);
   t1 *= 1.00000024f;  // for double: 1.0000000000000004
   return t0 <= t1;
 }
