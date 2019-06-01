@@ -152,10 +152,12 @@ static inline file_holder open_output_file(
 
 // Write text to file
 static inline void write_text(FILE* fs, const char* value) {
-  if (fputs(value, fs) == 0) throw std::runtime_error("could not write to file");
+  if (fputs(value, fs) == 0)
+    throw std::runtime_error("could not write to file");
 }
 static inline void write_text(FILE* fs, const string& value) {
-  if (fputs(value.c_str(), fs) == 0) throw std::runtime_error("could not write to file");
+  if (fputs(value.c_str(), fs) == 0)
+    throw std::runtime_error("could not write to file");
 }
 
 // Read a line
@@ -478,7 +480,8 @@ static inline void remove_yaml_comment(
 static inline void parse_yaml_varname(string_view& str, string_view& value) {
   skip_yaml_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
-  if (!is_yaml_alpha(str.front())) throw std::runtime_error("cannot parse value");
+  if (!is_yaml_alpha(str.front()))
+    throw std::runtime_error("cannot parse value");
   auto pos = 0;
   while (
       is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
@@ -544,7 +547,8 @@ inline void parse_yaml_value(string_view& str, bool& value) {
 template <typename T>
 inline void parse_yaml_value(string_view& str, T* values, int N) {
   skip_yaml_whitespace(str);
-  if (str.empty() || str.front() != '[') throw std::runtime_error("expected array");
+  if (str.empty() || str.front() != '[')
+    throw std::runtime_error("expected array");
   str.remove_prefix(1);
   for (auto i = 0; i < N; i++) {
     skip_yaml_whitespace(str);
@@ -552,13 +556,15 @@ inline void parse_yaml_value(string_view& str, T* values, int N) {
     parse_yaml_value(str, values[i]);
     skip_yaml_whitespace(str);
     if (i != N - 1) {
-      if (str.empty() || str.front() != ',') throw std::runtime_error("expected array");
+      if (str.empty() || str.front() != ',')
+        throw std::runtime_error("expected array");
       str.remove_prefix(1);
       skip_yaml_whitespace(str);
     }
   }
   skip_yaml_whitespace(str);
-  if (str.empty() || str.front() != ']') throw std::runtime_error("expected array");
+  if (str.empty() || str.front() != ']')
+    throw std::runtime_error("expected array");
   str.remove_prefix(1);
 }
 inline void parse_yaml_value(string_view& str, vec2f& value) {
@@ -631,7 +637,8 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
       auto key = ""sv;
       parse_yaml_varname(line, key);
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':') throw std::runtime_error("bad yaml");
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       trim_yaml_whitespace(line);
       callbacks.key_value(key, line);
@@ -640,7 +647,8 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
       auto key = ""sv;
       parse_yaml_varname(line, key);
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':') throw std::runtime_error("bad yaml");
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       if (!line.empty() && !is_yaml_whitespace(line))
         throw std::runtime_error("bad yaml");
@@ -968,20 +976,24 @@ static void load_yaml_scene(
 
 // Write text to file
 static inline void write_yaml_value(FILE* fs, int value) {
-  if (fprintf(fs, "%d", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%d", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%g", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_value(FILE* fs, bool value) {
   if (fprintf(fs, "%s", value ? "true" : "false") < 0)
     throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_value(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_yaml_value(FILE* fs, const string& value) {
   if (fprintf(fs, "%s", value.c_str()) < 0)
@@ -1532,7 +1544,8 @@ static void load_obj_scene(
 
     // check if any empty shape is left
     for (auto& shape : scene.shapes) {
-      if (shape.positions.empty()) throw std::runtime_error("empty shapes not supported");
+      if (shape.positions.empty())
+        throw std::runtime_error("empty shapes not supported");
     }
 
     // merging quads and triangles
@@ -1560,16 +1573,20 @@ static void load_obj_scene(
 
 // Write text to file
 static inline void write_obj_value(FILE* fs, int value) {
-  if (fprintf(fs, "%d", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%d", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%g", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, const string& value) {
   if (fprintf(fs, "%s", value.c_str()) < 0)
@@ -2815,7 +2832,8 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
   write_json_pop(state);
 
   // animations not supported yet
-  if (!scene.animations.empty()) throw std::runtime_error("animation not supported yet");
+  if (!scene.animations.empty())
+    throw std::runtime_error("animation not supported yet");
 
   // end writing
   write_json_end(state);
@@ -3111,7 +3129,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             shape.normals, shape.texcoords, params);
       } break;
       default: {
-        throw std::runtime_error("unsupported shape type " + to_string((int)pshape.type));
+        throw std::runtime_error(
+            "unsupported shape type " + to_string((int)pshape.type));
       }
     }
     scene.shapes.push_back(shape);
@@ -3590,20 +3609,24 @@ static void load_pbrt_scene(
 
 // Write text to file
 static inline void write_pbrt_value(FILE* fs, int value) {
-  if (fprintf(fs, "%d", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%d", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%g", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_text(FILE* fs, const string& value) {
   if (fprintf(fs, "%s", value.c_str()) < 0)
     throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_value(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_value(FILE* fs, const string& value) {
   if (fprintf(fs, "%s", value.c_str()) < 0)

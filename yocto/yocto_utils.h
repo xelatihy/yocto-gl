@@ -122,15 +122,6 @@ using namespace std::chrono_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Helper to indicate info printing in console apps.
-inline void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
-
-// Prints an error and exit.
-inline void print_fatal(const string& msg) {
-  printf("%s\n", msg.c_str());
-  exit(1);
-}
-
 // get time in nanoseconds
 inline int64_t get_time() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();

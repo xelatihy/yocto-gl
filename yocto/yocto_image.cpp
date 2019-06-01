@@ -1633,7 +1633,7 @@ static inline void load_exr(const string& filename, image<vec4f>& img) {
   if (auto error = LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr);
       error < 0) {
     throw std::runtime_error("error loading image " + filename + "("s +
-                   get_tinyexr_error(error) + ")"s);
+                             get_tinyexr_error(error) + ")"s);
   }
   if (!pixels) {
     throw std::runtime_error("error loading image " + filename);

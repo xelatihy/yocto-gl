@@ -3124,13 +3124,16 @@ static inline file_holder open_output_file(
 
 // Write text to file
 static inline void write_obj_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%g", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0) throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
 static void write_obj_value(FILE* fs, const obj_vertex& value) {
   if (fprintf(fs, "%d", value.position) < 0)

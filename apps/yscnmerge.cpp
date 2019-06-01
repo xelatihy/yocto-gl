@@ -92,7 +92,8 @@ int main(int argc, char** argv) {
     try {
       load_scene(filename, to_merge, load_prms);
     } catch (const std::exception& e) {
-      print_fatal(e.what());
+      printf("%s\n", e.what());
+      exit(1);
     }
     print_validation(to_merge, true);
     if (scene_postfix) {
@@ -114,7 +115,7 @@ int main(int argc, char** argv) {
   print_validation(scene, true);
 
   // print info
-  if (info) print_info(format_stats(scene));
+  if (info) printf("%s\n", format_stats(scene).c_str());
 
   // add missing mesh names if necessary
   if (!mesh_directory.empty() && mesh_directory.back() != '/')
@@ -149,14 +150,16 @@ int main(int argc, char** argv) {
 
   // make a directory if needed
   if (!mkdir(get_dirname(output))) {
-    print_fatal("cannot create directory " + get_dirname(output));
+    printf("cannot create directory %s\n", get_dirname(output).c_str());
+    exit(1);
   }
 
   // save scene
   try {
     save_scene(output, scene, save_prms);
   } catch (const std::exception& e) {
-    print_fatal(e.what());
+    printf("%s\n", e.what());
+    exit(1);
   }
 
   // done

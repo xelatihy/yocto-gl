@@ -879,7 +879,7 @@ void draw_glwidgets(const opengl_window& win) {
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      print_info(format_stats(scn.scene));
+      printf("%s\n", format_stats(scn.scene).c_str());
     }
     end_glheader(win);
   }
@@ -1114,7 +1114,7 @@ void update(const opengl_window& win, app_state& app) {
           tesselate_subdivs(scn.scene);
           init_drawgl_lights(scn.lights, scn.scene);
           if (scn.lights.empty() && !scn.drawgl_prms.eyelight) {
-            print_info("no lights presents, switching to eyelight shader");
+            printf("no lights presents, switching to eyelight shader\n");
             scn.drawgl_prms.eyelight = true;
           }
           scn.time_range = compute_animation_range(scn.scene);

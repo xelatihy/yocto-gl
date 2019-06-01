@@ -313,8 +313,8 @@ void draw_glwidgets(const opengl_window& win) {
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      print_info(format_stats(scn.scene));
-      print_info(format_stats(scn.bvh));
+      printf("%s\n", format_stats(scn.scene).c_str());
+      printf("%s\n", format_stats(scn.bvh).c_str());
     }
     auto mouse_pos = get_glmouse_pos(win);
     auto ij        = get_image_coords(

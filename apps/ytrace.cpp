@@ -125,7 +125,8 @@ int main(int argc, char* argv[]) {
     auto timer = print_timed("loading scene");
     load_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
-    print_fatal(e.what());
+    printf("%s\n", e.what());
+    exit(1);
   }
 
   // tesselate
@@ -160,7 +161,7 @@ int main(int argc, char* argv[]) {
   // fix renderer type if no lights
   if ((lights.instances.empty() && lights.environments.empty()) &&
       is_sampler_lit(trace_prms)) {
-    print_info("no lights presents, switching to eyelight shader");
+    printf("no lights presents, switching to eyelight shader\n");
     trace_prms.sampler = trace_sampler_type::eyelight;
   }
 
@@ -208,7 +209,8 @@ int main(int argc, char* argv[]) {
             save_tonemapped(outfilename, render, tonemap_prms);
           }
         } catch (const std::exception& e) {
-          print_fatal(e.what());
+          printf("%s\n", e.what());
+          exit(1);
         }
       }
     }
@@ -228,7 +230,8 @@ int main(int argc, char* argv[]) {
         save_tonemapped(outfilename, render, tonemap_prms);
       }
     } catch (const std::exception& e) {
-      print_fatal(e.what());
+      printf("%s\n", e.what());
+      exit(1);
     }
   }
 

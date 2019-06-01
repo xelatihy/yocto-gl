@@ -95,7 +95,8 @@ int main(int argc, char** argv) {
     auto timer = print_timed("loading scene");
     load_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
-    print_fatal(e.what());
+    printf("%s\n", e.what());
+    exit(1);
   }
 
   // validate scene
@@ -105,7 +106,7 @@ int main(int argc, char** argv) {
   }
 
   // print info
-  if (info) print_info(format_stats(scene));
+  if (info) printf("%s\n", format_stats(scene).c_str());
 
   // change texture names
   if (uniform_txt) {
@@ -165,7 +166,7 @@ int main(int argc, char** argv) {
     dirnames.insert(dirname + get_dirname(texture.uri));
   for (auto& dir : dirnames) {
     if (!mkdir(get_dirname(dir))) {
-      print_fatal("cannot create directory " + get_dirname(output));
+      printf("cannot create directory %s\n", get_dirname(output).c_str());
     }
   }
 
@@ -174,7 +175,8 @@ int main(int argc, char** argv) {
     auto timer = print_timed("saving scene");
     save_scene(output, scene, save_prms);
   } catch (const std::exception& e) {
-    print_fatal(e.what());
+    printf("%s\n", e.what());
+    exit(1);
   }
 
   // done

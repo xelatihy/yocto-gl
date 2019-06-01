@@ -178,7 +178,7 @@ struct disney_material {
 
 void load_island_cameras(
     const string& filename, const string& dirname, yocto_scene& scene) {
-  print_info(filename);
+  printf("%s\n", filename.c_str());
   auto js = json{};
   load_json(dirname + filename, js);
   auto camera  = yocto_camera{};
@@ -197,7 +197,7 @@ void load_island_cameras(
 
 void load_island_lights(
     const string& filename, const string& dirname, yocto_scene& scene) {
-  print_info(filename);
+  printf("%s\n", filename.c_str());
   auto js = json{};
   load_json(dirname + filename, js);
   for (auto& [name, ljs] : js.items()) {
@@ -449,7 +449,7 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
   if (smap.find(filename) != smap.end()) return;
-  print_info(filename);
+  printf("%s\n", filename.c_str());
 
   auto shapes      = vector<yocto_shape>{};
   auto materials   = vector<yocto_material>{};
@@ -471,8 +471,7 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
             (int)shapes[id].quads.size(), (int)shapes[id].quadspos.size());
         auto is_multiple = shape_faces % ptex_faces == 0;
         if (!is_multiple)
-          print_info("PTEX ERROR:  " + to_string(ptex_faces) + " " +
-                     to_string(shape_faces));
+          printf("PTEX ERROR:  %d %d\n", ptex_faces, shape_faces);
       }
     }
 
@@ -568,7 +567,7 @@ void load_island_archive(const string& filename, const string& dirname,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
-  print_info(filename);
+  printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
   auto view = sajson::mutable_string_view(buffer.size(), buffer.data());
@@ -598,7 +597,7 @@ void load_island_variant_archive(const string& filename, const string& dirname,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
   // elements
-  print_info(filename);
+  printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
   auto view = sajson::mutable_string_view(buffer.size(), buffer.data());
@@ -628,7 +627,7 @@ void load_island_variants(const string& filename, const string& dirname,
     unordered_map<string, vector<vec2i>>&          smap,
     unordered_map<string, disney_material>&        mmap,
     unordered_map<string, int>&                    tmap) {
-  print_info(filename);
+  printf("%s\n", filename.c_str());
   auto js_ = json{};
   load_json(dirname + filename, js_);
 
@@ -666,7 +665,7 @@ void load_island_element(const string& filename, const string& dirname,
   load_island_variants("json/isBayCedarA1/isBayCedarA1.json", dirname, scene,
       parent_name, identity4x4f, variants, smap, mmap, tmap);
 
-  print_info(filename);
+  printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
   auto view = sajson::mutable_string_view(buffer.size(), buffer.data());
@@ -697,7 +696,7 @@ void load_island_curve(const string& filename, const string& dirname,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
-  print_info(filename);
+  printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
   auto view    = sajson::mutable_string_view(buffer.size(), buffer.data());
@@ -738,7 +737,7 @@ void load_island_curvetube(const string& filename, const string& dirname,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
-  print_info(filename);
+  printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
   auto view    = sajson::mutable_string_view(buffer.size(), buffer.data());
@@ -833,7 +832,7 @@ void load_island_elements(const string& filename, const string& dirname,
   // - variants: what are they?
   // - materials: material names are not absolute; prepend element name
 
-  print_info(filename);
+  printf("%s\n", filename.c_str());
   auto js = json{};
   load_json(dirname + filename, js);
 
@@ -870,7 +869,7 @@ void load_island_elements(const string& filename, const string& dirname,
       load_island_element(filename, dirname, scene, name,
           js.at("transformMatrix"), smap, mmap, tmap);
     } else if (ijs.at("type") == "skip") {
-      print_info("skipping " + filename);
+      printf("skipping %s\n", filename.c_str());
     } else {
       throw std::runtime_error("unknown instance type");
     }
@@ -903,7 +902,7 @@ void load_island_elements(const string& filename, const string& dirname,
               ijs.at("widthTip"), ijs.at("material"), smap, mmap, tmap);
         } else if (ijs.at("type") == "element") {
         } else if (ijs.at("type") == "skip") {
-          print_info("skipping" + filename);
+          printf("skipping %s\n", filename.c_str());
         } else {
           throw std::runtime_error("unknown instance type");
         }
@@ -1008,7 +1007,7 @@ void load_island_scene(const std::string& filename, yocto_scene& scene,
   update_transforms(scene);
 
   // print stats
-  print_info(format_stats(scene));
+  printf("%s\n", format_stats(scene).c_str());
 }
 
 }  // namespace yocto
@@ -1067,7 +1066,8 @@ int main(int argc, char** argv) {
     auto timer = print_timed("loading scene");
     load_island_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
-    print_fatal(e.what());
+    printf("%s\n", e.what());
+    exit(1);
   }
 
   // validate scene
@@ -1077,7 +1077,7 @@ int main(int argc, char** argv) {
   }
 
   // print info
-  if (info) print_info(format_stats(scene));
+  if (info) printf("%s\n", format_stats(scene).c_str());
 
 // add missing mesh names if necessary
 #if 0
@@ -1106,7 +1106,8 @@ int main(int argc, char** argv) {
   if (get_extension(output) == "yaml") dirnames.insert(dirname + "instances/");
   for (auto& dir : dirnames) {
     if (!mkdir(get_dirname(dir))) {
-      print_fatal("cannot create directory " + get_dirname(output));
+      printf("cannot create directory %s\n", get_dirname(output).c_str());
+      exit(1);
     }
   }
 
@@ -1118,7 +1119,8 @@ int main(int argc, char** argv) {
     // save_prms.ply_instances = true;
     save_scene(output, scene, save_prms);
   } catch (const std::exception& e) {
-    print_fatal(e.what());
+    printf("%s\n", e.what());
+    exit(1);
   }
 
   // done
