@@ -914,8 +914,8 @@ void load_island_elements(const string& filename, const string& dirname,
 void load_textures(
     yocto_scene& scene, const string& dirname, const load_params& params);
 
-void load_island_scene(const string& filename, yocto_scene& scene,
-    const load_params& params) {
+void load_island_scene(
+    const string& filename, yocto_scene& scene, const load_params& params) {
   try {
     auto js = json{};
     load_json(filename, js);

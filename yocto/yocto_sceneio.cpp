@@ -37,9 +37,9 @@
 #define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
 
-#include <array>
 #include <limits.h>
 #include <stdlib.h>
+#include <array>
 #include <memory>
 #include <regex>
 

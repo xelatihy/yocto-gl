@@ -133,7 +133,7 @@ struct obj_camera {
   float   height   = 0.024f;        // film size (default to 35mm)
   float   lens     = 0.050f;        // focal length
   float   aperture = 0;             // lens aperture
-  float   focus    = flt_max;     // focus distance
+  float   focus    = flt_max;       // focus distance
 };
 
 // Obj environment [extension].

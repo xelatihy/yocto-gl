@@ -110,8 +110,8 @@ using uint = unsigned int;
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
 
-inline const auto int_max   = INT_MAX;
-inline const auto int_min   = INT_MIN;
+inline const auto int_max = INT_MAX;
+inline const auto int_min = INT_MIN;
 inline const auto flt_max = FLT_MAX;
 inline const auto flt_min = -FLT_MAX;
 
