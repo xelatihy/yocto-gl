@@ -932,7 +932,7 @@ inline void parse_value_or_empty(string_view& str, T& value) {
   }
 }
 
-inline void parse_varname(string_view& str, string& value) {
+inline void parse_varname(string_view& str, string_view& value) {
   skip_whitespace(str);
   if (str.empty()) throw io_error("cannot parse value");
   if (!is_alpha(str.front())) throw io_error("cannot parse value");
@@ -943,6 +943,11 @@ inline void parse_varname(string_view& str, string& value) {
   }
   value = str.substr(0, pos);
   str.remove_prefix(pos);
+}
+inline void parse_varname(string_view& str, string& value) {
+  auto valuev = string_view{};
+  parse_varname(str, valuev);
+  value = valuev;
 }
 
 }  // namespace yocto

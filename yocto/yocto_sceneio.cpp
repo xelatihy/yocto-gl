@@ -421,7 +421,7 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
         skip_whitespace(line);
         in_object = true;
       }
-      auto key = ""s;
+      auto key = ""sv;
       parse_varname(line, key);
       skip_whitespace(line);
       if (line.empty() || line.front() != ':') throw io_error("bad yaml");
@@ -430,7 +430,7 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
       callbacks.key_value(key, line);
     } else if (is_alpha(line.front())) {
       // new group
-      auto key = ""s;
+      auto key = ""sv;
       parse_varname(line, key);
       skip_whitespace(line);
       if (line.empty() || line.front() != ':') throw io_error("bad yaml");
