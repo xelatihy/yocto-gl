@@ -3123,25 +3123,14 @@ static inline file_holder open_output_file(
 }
 
 // Write text to file
-static inline void write_obj_value(FILE* fs, int value) {
-  if (fprintf(fs, "%d", value) < 0) throw io_error("cannot print value");
-}
 static inline void write_obj_value(FILE* fs, float value) {
   if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
-}
-static inline void write_obj_value(FILE* fs, bool value) {
-  if (fprintf(fs, "%s", value ? "1" : "0") < 0)
-    throw io_error("cannot print value");
 }
 static inline void write_obj_text(FILE* fs, const char* value) {
   if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
 }
 static inline void write_obj_value(FILE* fs, const char* value) {
   if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
-}
-static inline void write_obj_value(FILE* fs, const string& value) {
-  if (fprintf(fs, "%s", value.c_str()) < 0)
-    throw io_error("cannot print value");
 }
 static void write_obj_value(FILE* fs, const obj_vertex& value) {
   if (fprintf(fs, "%d", value.position) < 0)

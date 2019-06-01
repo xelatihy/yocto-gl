@@ -134,32 +134,8 @@ static inline void parse_obj_value(string_view& str, vec2f& value) {
 static inline void parse_obj_value(string_view& str, vec3f& value) {
   parse_obj_value(str, &value.x, 3);
 }
-static inline void parse_obj_value(string_view& str, vec4f& value) {
-  parse_obj_value(str, &value.x, 4);
-}
-static inline void parse_obj_value(string_view& str, vec2i& value) {
-  parse_obj_value(str, &value.x, 2);
-}
-static inline void parse_obj_value(string_view& str, vec3i& value) {
-  parse_obj_value(str, &value.x, 3);
-}
-static inline void parse_obj_value(string_view& str, vec4i& value) {
-  parse_obj_value(str, &value.x, 4);
-}
-static inline void parse_obj_value(string_view& str, frame2f& value) {
-  parse_obj_value(str, &value.x.x, 6);
-}
 static inline void parse_obj_value(string_view& str, frame3f& value) {
   parse_obj_value(str, &value.x.x, 12);
-}
-static inline void parse_obj_value(string_view& str, mat2f& value) {
-  parse_obj_value(str, &value.x.x, 4);
-}
-static inline void parse_obj_value(string_view& str, mat3f& value) {
-  parse_obj_value(str, &value.x.x, 9);
-}
-static inline void parse_obj_value(string_view& str, mat4f& value) {
-  parse_obj_value(str, &value.x.x, 19);
 }
 
 template <typename T>

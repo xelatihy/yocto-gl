@@ -96,33 +96,6 @@ static inline bool read_line(FILE* fs, char* buffer, size_t size) {
   return fgets(buffer, size, fs) != nullptr;
 }
 
-// Print a value to a FILE
-static inline void format_value(FILE* fs, int value) {
-  if (fprintf(fs, "%d", value) < 0) throw io_error("cannot print value");
-}
-static inline void format_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
-}
-static inline void format_value(FILE* fs, bool value, bool alpha = false) {
-  if (alpha) {
-    if (fprintf(fs, "%s", value ? "true" : "false") < 0)
-      throw io_error("cannot print value");
-  } else {
-    if (fprintf(fs, "%s", value ? "1" : "0") < 0)
-      throw io_error("cannot print value");
-  }
-}
-static inline void format_value(
-    FILE* fs, const char* value, bool quoted = false) {
-  if (fprintf(fs, quoted ? "\"%s\"" : "%s", value) < 0)
-    throw io_error("cannot print value");
-}
-static inline void format_value(
-    FILE* fs, const string& value, bool quoted = false) {
-  if (fprintf(fs, quoted ? "\"%s\"" : "%s", value.c_str()) < 0)
-    throw io_error("cannot print value");
-}
-
 template <typename T>
 static inline void format_values(
     FILE* fs, const T* values, int num, bool bracketed = false) {
@@ -132,52 +105,6 @@ static inline void format_values(
     format_value(fs, values[i]);
   }
   if (bracketed) write_text(fs, "]");
-}
-
-static inline void format_value(
-    FILE* fs, const vec2f& value, bool bracketed = false) {
-  format_values(fs, &value.x, 2, bracketed);
-}
-static inline void format_value(
-    FILE* fs, const vec3f& value, bool bracketed = false) {
-  format_values(fs, &value.x, 3, bracketed);
-}
-static inline void format_value(
-    FILE* fs, const vec4f& value, bool bracketed = false) {
-  format_values(fs, &value.x, 4, bracketed);
-}
-static inline void format_value(
-    FILE* fs, const vec2i& value, bool bracketed = false) {
-  format_values(fs, &value.x, 2, bracketed);
-}
-static inline void format_value(
-    FILE* fs, const vec3i& value, bool bracketed = false) {
-  format_values(fs, &value.x, 3, bracketed);
-}
-static inline void format_value(
-    FILE* fs, const vec4i& value, bool bracketed = false) {
-  format_values(fs, &value.x, 4, bracketed);
-}
-static inline void format_value(
-    FILE* fs, const mat2f& value, bool bracketed = false) {
-  format_values(fs, &value.x.x, 4, bracketed);
-}
-static inline void format_value(
-    FILE* fs, const mat3f& value, bool bracketed = false) {
-  format_values(fs, &value.x.x, 9, bracketed);
-}
-static inline void format_value(
-    FILE* fs, const mat4f& value, bool bracketed = false) {
-  format_values(fs, &value.x.x, 16, bracketed);
-}
-
-static inline void format_value(
-    FILE* fs, const frame2f& value, bool bracketed = false) {
-  format_values(fs, &value.x.x, 6, bracketed);
-}
-static inline void format_value(
-    FILE* fs, const frame3f& value, bool bracketed = false) {
-  format_values(fs, &value.x.x, 12, bracketed);
 }
 
 template <typename T, typename... Ts>
@@ -972,26 +899,52 @@ static void load_yaml_scene(
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
-static inline void format_yvalue(FILE* fs, int value) {
-  return format_value(fs, value);
+// Write text to file
+static inline void write_yaml_value(FILE* fs, int value) {
+  if (fprintf(fs, "%d", value) < 0) throw io_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, float value) {
-  return format_value(fs, value);
+static inline void write_yaml_value(FILE* fs, float value) {
+  if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, const string& value) {
-  return format_value(fs, value);
+static inline void write_yaml_value(FILE* fs, bool value) {
+  if (fprintf(fs, "%s", value ? "true" : "false") < 0)
+    throw io_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, bool value) {
-  return format_value(fs, value, true);
+static inline void write_yaml_value(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, const vec2f& value) {
-  return format_value(fs, value, true);
+static inline void write_yaml_text(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, const vec3f& value) {
-  return format_value(fs, value, true);
+static inline void write_yaml_value(FILE* fs, const string& value) {
+  if (fprintf(fs, "%s", value.c_str()) < 0)
+    throw io_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, const frame3f& value) {
-  return format_value(fs, value, true);
+static inline void write_yaml_value(FILE* fs, const vec2f& value) {
+  if (fprintf(fs, "[%g,%g]", value.x, value.y) < 0)
+    throw io_error("cannot print value");
+}
+static inline void write_yaml_value(FILE* fs, const vec3f& value) {
+  if (fprintf(fs, "[%g,%g,%g]", value.x, value.y, value.z) < 0)
+    throw io_error("cannot print value");
+}
+static inline void write_yaml_value(FILE* fs, const frame3f& value) {
+  if (fprintf(fs, "[") < 0) throw io_error("cannot print value");
+  for (auto i = 0; i < 12; i++)
+    if (fprintf(fs, i ? ",%g" : "%g", (&value.x.x)[i]) < 0)
+      throw io_error("cannot print value");
+  if (fprintf(fs, "]") < 0) throw io_error("cannot print value");
+}
+
+template <typename T, typename... Ts>
+static inline void write_yaml_line(FILE* fs, const T& arg, const Ts&... args) {
+  write_yaml_value(fs, arg);
+  if constexpr (sizeof...(Ts) != 0) {
+    write_yaml_text(fs, " ");
+    write_yaml_line(fs, args...);
+  } else {
+    write_yaml_value(fs, "\n");
+  }
 }
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -1016,122 +969,126 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   static const auto def_instance    = yocto_instance{};
   static const auto def_environment = yocto_environment{};
 
-  auto format_opt = [](FILE* fs, const char* name, auto& value, auto& def) {
+  auto write_yaml_opt = [](FILE* fs, const char* name, auto& value, auto& def) {
     if (value == def) return;
-    write_text(fs, "    ");
-    write_text(fs, name);
-    write_text(fs, ": ");
-    format_yvalue(fs, value);
-    write_text(fs, "\n");
+    write_yaml_text(fs, "    ");
+    write_yaml_text(fs, name);
+    write_yaml_text(fs, ": ");
+    write_yaml_line(fs, value);
   };
-  auto format_ref = [](FILE* fs, const char* name, int value, auto& refs) {
+  auto write_yaml_ref = [](FILE* fs, const char* name, int value, auto& refs) {
     if (value < 0) return;
-    write_text(fs, "    ");
-    write_text(fs, name);
-    write_text(fs, ": ");
-    write_text(fs, refs[value].uri);
-    write_text(fs, "\n");
+    write_yaml_text(fs, "    ");
+    write_yaml_text(fs, name);
+    write_yaml_text(fs, ": ");
+    write_yaml_line(fs, refs[value].uri);
   };
 
-  if (!scene.cameras.empty()) write_text(fs, "\n\ncameras:\n");
+  if (!scene.cameras.empty()) write_yaml_text(fs, "\n\ncameras:\n");
   for (auto& camera : scene.cameras) {
-    format_line(fs, "  - uri:", camera.uri);
-    format_opt(fs, "frame", camera.frame, def_camera.frame);
-    format_opt(
+    write_yaml_line(fs, "  - uri:", camera.uri);
+    write_yaml_opt(fs, "frame", camera.frame, def_camera.frame);
+    write_yaml_opt(
         fs, "orthographic", camera.orthographic, def_camera.orthographic);
-    format_opt(fs, "lens", camera.lens, def_camera.lens);
-    format_opt(fs, "film", camera.film, def_camera.film);
-    format_opt(fs, "focus", camera.focus, def_camera.focus);
-    format_opt(fs, "aperture", camera.aperture, def_camera.aperture);
+    write_yaml_opt(fs, "lens", camera.lens, def_camera.lens);
+    write_yaml_opt(fs, "film", camera.film, def_camera.film);
+    write_yaml_opt(fs, "focus", camera.focus, def_camera.focus);
+    write_yaml_opt(fs, "aperture", camera.aperture, def_camera.aperture);
   }
 
-  if (!scene.textures.empty()) write_text(fs, "\n\ntextures:\n");
+  if (!scene.textures.empty()) write_yaml_text(fs, "\n\ntextures:\n");
   for (auto& texture : scene.textures) {
-    format_line(fs, "  - uri:", texture.uri);
+    write_yaml_line(fs, "  - uri:", texture.uri);
   }
 
-  if (!scene.voltextures.empty()) write_text(fs, "\n\nvoltextures:\n");
+  if (!scene.voltextures.empty()) write_yaml_text(fs, "\n\nvoltextures:\n");
   for (auto& texture : scene.voltextures) {
-    format_line(fs, "  - uri:", texture.uri);
+    write_yaml_line(fs, "  - uri:", texture.uri);
   }
 
-  if (!scene.materials.empty()) write_text(fs, "\n\nmaterials:\n");
+  if (!scene.materials.empty()) write_yaml_text(fs, "\n\nmaterials:\n");
   for (auto& material : scene.materials) {
-    format_line(fs, "  - uri:", material.uri);
-    format_opt(fs, "emission", material.emission, def_material.emission);
-    format_opt(fs, "diffuse", material.diffuse, def_material.diffuse);
-    format_opt(fs, "specular", material.specular, def_material.specular);
-    format_opt(fs, "metallic", material.metallic, def_material.metallic);
-    format_opt(
+    write_yaml_line(fs, "  - uri:", material.uri);
+    write_yaml_opt(fs, "emission", material.emission, def_material.emission);
+    write_yaml_opt(fs, "diffuse", material.diffuse, def_material.diffuse);
+    write_yaml_opt(fs, "specular", material.specular, def_material.specular);
+    write_yaml_opt(fs, "metallic", material.metallic, def_material.metallic);
+    write_yaml_opt(
         fs, "transmission", material.transmission, def_material.transmission);
-    format_opt(fs, "roughness", material.roughness, def_material.roughness);
-    format_opt(fs, "voltransmission", material.voltransmission,
+    write_yaml_opt(fs, "roughness", material.roughness, def_material.roughness);
+    write_yaml_opt(fs, "voltransmission", material.voltransmission,
         def_material.voltransmission);
-    format_opt(fs, "volscatter", material.volscatter, def_material.volscatter);
-    format_opt(
+    write_yaml_opt(
+        fs, "volscatter", material.volscatter, def_material.volscatter);
+    write_yaml_opt(
         fs, "volemission", material.volemission, def_material.volemission);
-    format_opt(fs, "volanisotropy", material.volanisotropy,
+    write_yaml_opt(fs, "volanisotropy", material.volanisotropy,
         def_material.volanisotropy);
-    format_opt(fs, "volscale", material.volscale, def_material.volscale);
-    format_opt(fs, "coat", material.coat, def_material.coat);
-    format_opt(fs, "opacity", material.opacity, def_material.opacity);
-    format_opt(fs, "thin", material.thin, def_material.thin);
-    format_ref(fs, "emission_tex", material.emission_tex, scene.textures);
-    format_ref(fs, "diffuse_tex", material.diffuse_tex, scene.textures);
-    format_ref(fs, "metallic_tex", material.metallic_tex, scene.textures);
-    format_ref(fs, "specular_tex", material.specular_tex, scene.textures);
-    format_ref(fs, "roughness_tex", material.roughness_tex, scene.textures);
-    format_ref(
+    write_yaml_opt(fs, "volscale", material.volscale, def_material.volscale);
+    write_yaml_opt(fs, "coat", material.coat, def_material.coat);
+    write_yaml_opt(fs, "opacity", material.opacity, def_material.opacity);
+    write_yaml_opt(fs, "thin", material.thin, def_material.thin);
+    write_yaml_ref(fs, "emission_tex", material.emission_tex, scene.textures);
+    write_yaml_ref(fs, "diffuse_tex", material.diffuse_tex, scene.textures);
+    write_yaml_ref(fs, "metallic_tex", material.metallic_tex, scene.textures);
+    write_yaml_ref(fs, "specular_tex", material.specular_tex, scene.textures);
+    write_yaml_ref(fs, "roughness_tex", material.roughness_tex, scene.textures);
+    write_yaml_ref(
         fs, "transmission_tex", material.transmission_tex, scene.textures);
-    format_ref(fs, "subsurface_tex", material.subsurface_tex, scene.textures);
-    format_ref(fs, "coat_tex", material.coat_tex, scene.textures);
-    format_ref(fs, "opacity_tex", material.opacity_tex, scene.textures);
-    format_ref(fs, "normal_tex", material.normal_tex, scene.textures);
-    format_opt(fs, "gltf_textures", material.gltf_textures,
+    write_yaml_ref(
+        fs, "subsurface_tex", material.subsurface_tex, scene.textures);
+    write_yaml_ref(fs, "coat_tex", material.coat_tex, scene.textures);
+    write_yaml_ref(fs, "opacity_tex", material.opacity_tex, scene.textures);
+    write_yaml_ref(fs, "normal_tex", material.normal_tex, scene.textures);
+    write_yaml_opt(fs, "gltf_textures", material.gltf_textures,
         def_material.gltf_textures);
-    format_ref(
+    write_yaml_ref(
         fs, "voldensity_tex", material.voldensity_tex, scene.voltextures);
   }
 
   if (!scene.shapes.empty()) write_text(fs, "\n\nshapes:\n");
   for (auto& shape : scene.shapes) {
-    format_line(fs, "  - uri:", shape.uri);
+    write_yaml_line(fs, "  - uri:", shape.uri);
   }
 
   if (!scene.subdivs.empty()) write_text(fs, "\n\nsubdivs:\n");
   for (auto& subdiv : scene.subdivs) {
-    format_line(fs, "  - uri:", subdiv.uri);
-    format_ref(fs, "shape", subdiv.shape, scene.shapes);
-    format_opt(
+    write_yaml_line(fs, "  - uri:", subdiv.uri);
+    write_yaml_ref(fs, "shape", subdiv.shape, scene.shapes);
+    write_yaml_opt(
         fs, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
-    format_opt(
+    write_yaml_opt(
         fs, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
-    format_opt(fs, "smooth", subdiv.smooth, def_subdiv.smooth);
-    format_opt(fs, "facevarying", subdiv.facevarying, def_subdiv.facevarying);
-    format_ref(fs, "displacement_tex", subdiv.displacement_tex, scene.textures);
-    format_opt(
+    write_yaml_opt(fs, "smooth", subdiv.smooth, def_subdiv.smooth);
+    write_yaml_opt(
+        fs, "facevarying", subdiv.facevarying, def_subdiv.facevarying);
+    write_yaml_ref(
+        fs, "displacement_tex", subdiv.displacement_tex, scene.textures);
+    write_yaml_opt(
         fs, "displacement", subdiv.displacement, def_subdiv.displacement);
   }
 
   if (!ply_instances) {
     if (!scene.instances.empty()) write_text(fs, "\n\ninstances:\n");
     for (auto& instance : scene.instances) {
-      format_line(fs, "  - uri:", instance.uri);
-      format_opt(fs, "frame", instance.frame, def_instance.frame);
-      format_ref(fs, "shape", instance.shape, scene.shapes);
-      format_ref(fs, "material", instance.material, scene.materials);
+      write_yaml_line(fs, "  - uri:", instance.uri);
+      write_yaml_opt(fs, "frame", instance.frame, def_instance.frame);
+      write_yaml_ref(fs, "shape", instance.shape, scene.shapes);
+      write_yaml_ref(fs, "material", instance.material, scene.materials);
     }
   } else {
     if (!scene.instances.empty()) write_text(fs, "\n\nply_instances:\n");
-    format_line(fs, "  - uri:", instances_name);
+    write_yaml_line(fs, "  - uri:", instances_name);
   }
 
   if (!scene.environments.empty()) write_text(fs, "\n\nenvironments:\n");
   for (auto& environment : scene.environments) {
-    format_line(fs, "  - uri:", environment.uri);
-    format_opt(fs, "frame", environment.frame, def_environment.frame);
-    format_opt(fs, "emission", environment.emission, def_environment.emission);
-    format_ref(fs, "emission_tex", environment.emission_tex, scene.textures);
+    write_yaml_line(fs, "  - uri:", environment.uri);
+    write_yaml_opt(fs, "frame", environment.frame, def_environment.frame);
+    write_yaml_opt(
+        fs, "emission", environment.emission, def_environment.emission);
+    write_yaml_ref(
+        fs, "emission_tex", environment.emission_tex, scene.textures);
   }
 }
 
@@ -1540,10 +1497,6 @@ static inline void write_obj_value(FILE* fs, int value) {
 }
 static inline void write_obj_value(FILE* fs, float value) {
   if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
-}
-static inline void write_obj_value(FILE* fs, bool value) {
-  if (fprintf(fs, "%s", value ? "1" : "0") < 0)
-    throw io_error("cannot print value");
 }
 static inline void write_obj_text(FILE* fs, const char* value) {
   if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
@@ -3568,6 +3521,48 @@ static void load_pbrt_scene(
   update_transforms(scene);
 }
 
+// Write text to file
+static inline void write_pbrt_value(FILE* fs, int value) {
+  if (fprintf(fs, "%d", value) < 0) throw io_error("cannot print value");
+}
+static inline void write_pbrt_value(FILE* fs, float value) {
+  if (fprintf(fs, "%g", value) < 0) throw io_error("cannot print value");
+}
+static inline void write_pbrt_text(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+}
+static inline void write_pbrt_text(FILE* fs, const string& value) {
+  if (fprintf(fs, "%s", value.c_str()) < 0) throw io_error("cannot print value");
+}
+static inline void write_pbrt_value(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0) throw io_error("cannot print value");
+}
+static inline void write_pbrt_value(FILE* fs, const string& value) {
+  if (fprintf(fs, "%s", value.c_str()) < 0)
+    throw io_error("cannot print value");
+}
+static inline void write_pbrt_value(FILE* fs, const vec3f& value) {
+  if (fprintf(fs, "%g %g %g", value.x, value.y, value.z) < 0)
+    throw io_error("cannot print value");
+}
+static inline void write_pbrt_value(FILE* fs, const frame3f& value) {
+  for (auto i = 0; i < 12; i++)
+    if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
+      throw io_error("cannot print value");
+}
+
+template <typename T, typename... Ts>
+static inline void write_pbrt_line(
+    FILE* fs, const T& value, const Ts... values) {
+  write_pbrt_value(fs, value);
+  if constexpr (sizeof...(values) == 0) {
+    write_pbrt_text(fs, "\n");
+  } else {
+    write_pbrt_text(fs, " ");
+    write_pbrt_line(fs, values...);
+  }
+}
+
 // Convert a scene to pbrt format
 static void save_pbrt(const string& filename, const yocto_scene& scene) {
   // open file
@@ -3575,7 +3570,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   auto fs  = fs_.fs;
 
   // embed data
-  write_text(fs, get_save_scene_message(scene, "#"));
+  write_pbrt_text(fs, get_save_scene_message(scene, "#"));
 
   // convert camera and settings
   auto& camera     = scene.cameras.front();
@@ -3583,72 +3578,72 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   auto  to         = camera.frame.o - camera.frame.z;
   auto  up         = camera.frame.y;
   auto  image_size = camera_resolution(camera, {0, 720});
-  format_line(fs, "LookAt", from, to, up);
-  format_line(fs, "Camera \"perspective\" \"float fov\"",
+  write_pbrt_line(fs, "LookAt", from, to, up);
+  write_pbrt_line(fs, "Camera \"perspective\" \"float fov\"",
       camera_fov(camera).x * 180 / pif);
 
   // save renderer
-  write_text(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
-  write_text(fs, "Integrator \"path\"\n");
-  format_line(fs, "Film \"image\" \"string filename\"",
+  write_pbrt_text(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
+  write_pbrt_text(fs, "Integrator \"path\"\n");
+  write_pbrt_line(fs, "Film \"image\" \"string filename\"",
       to_string(get_noextension(filename) + ".exr", true),
       "\"integer xresolution\"", image_size.x, "\"integer yresolution\"",
       image_size.y);
 
   // convert textures
   for (auto& texture : scene.textures) {
-    format_line(fs, "Texture", to_string(get_basename(texture.uri), true),
+    write_pbrt_line(fs, "Texture", to_string(get_basename(texture.uri), true),
         "\"spectrum\" \"imagemap\" \"string filename\"",
         to_string(texture.uri, true));
   }
 
   // convert materials
   for (auto& material : scene.materials) {
-    format_line(fs, "MakeNamedMaterial \"{}\" \"string type\" \"uber\"\n",
+    write_pbrt_line(fs, "MakeNamedMaterial \"{}\" \"string type\" \"uber\"\n",
         get_basename(material.uri));
     if (material.diffuse_tex >= 0) {
-      format_line(fs, "    \"texture Kd\"",
+      write_pbrt_line(fs, "    \"texture Kd\"",
           to_string(
               get_basename(scene.textures[material.diffuse_tex].uri), true));
     } else {
-      format_line(fs, "    \"rgb Kd\" [", material.diffuse, "]");
+      write_pbrt_line(fs, "    \"rgb Kd\" [", material.diffuse, "]");
     }
     if (material.specular_tex >= 0) {
-      format_line(fs, "    \"texture Ks\"",
+      write_pbrt_line(fs, "    \"texture Ks\"",
           to_string(
               get_basename(scene.textures[material.specular_tex].uri), true));
     } else {
       auto specular = vec3f{1};
-      format_line(fs, "    \"rgb Ks\" [", specular, "]");
+      write_pbrt_line(fs, "    \"rgb Ks\" [", specular, "]");
     }
-    format_line(fs, "    \"float roughness\" ",
+    write_pbrt_line(fs, "    \"float roughness\" ",
         material.roughness * material.roughness);
   }
 
   // start world
-  write_text(fs, "WorldBegin\n");
+  write_pbrt_text(fs, "WorldBegin\n");
 
   // convert instances
   for (auto& instance : scene.instances) {
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
-    write_text(fs, "AttributeBegin\n");
-    write_text(fs, "  TransformBegin\n");
-    format_line(fs, "    Transform [", instance.frame, "]");
-    format_line(
+    write_pbrt_text(fs, "AttributeBegin\n");
+    write_pbrt_text(fs, "  TransformBegin\n");
+    write_pbrt_line(fs, "    Transform [", instance.frame, "]");
+    write_pbrt_line(
         fs, "    NamedMaterial", to_string(get_basename(material.uri), true));
     if (material.emission != zero3f) {
-      format_line(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [",
+      write_pbrt_line(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [",
           material.emission, "]");
     }
-    format_line(fs, "    Shape \"plymesh\" \"string filename\"",
+    write_pbrt_line(fs, "    Shape \"plymesh\" \"string filename\"",
         to_string(get_noextension(shape.uri) + ".ply", true));
-    write_text(fs, "  TransformEnd\n");
-    write_text(fs, "AttributeEnd\n");
+    write_pbrt_text(fs, "  TransformEnd\n");
+    write_pbrt_text(fs, "AttributeEnd\n");
   }
 
   // end world
-  write_text(fs, "WorldEnd\n");
+  write_pbrt_text(fs, "WorldEnd\n");
 }
 
 // Save a pbrt scene
