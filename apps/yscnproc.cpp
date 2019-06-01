@@ -81,6 +81,7 @@ int main(int argc, char** argv) {
   } catch (const CLI::ParseError& e) {
     return parser.exit(e);
   }
+  setbuf(stdout, nullptr);
 
   // fix options
   auto load_prms         = load_params();
@@ -91,21 +92,26 @@ int main(int argc, char** argv) {
 
   // load scene
   auto scene = yocto_scene{};
+  printf("loading scene");
+  auto load_timer = timer();
   try {
-    auto timer = print_timed("loading scene");
     load_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
-    print_fatal(e.what());
+    printf("%s\n", e.what());
+    exit(1);
   }
+  printf(" in %s\n", load_timer.elapsedf().c_str());
 
   // validate scene
   if (validate) {
-    auto timer = print_timed("validating scene");
+    printf("validating scene");
+    auto validate_timer = timer();
     print_validation(scene);
+    printf(" in %s\n", validate_timer.elapsedf().c_str());
   }
 
   // print info
-  if (info) print_info(format_stats(scene));
+  if (info) printf("%s\n", format_stats(scene).c_str());
 
   // change texture names
   if (uniform_txt) {
@@ -120,10 +126,10 @@ int main(int argc, char** argv) {
   }
 
   // tesselating scene
-  {
-    auto timer = print_timed("tesselating scene");
-    tesselate_subdivs(scene);
-  }
+  printf("tesselating scene");
+  auto tesselate_timer = timer();
+  tesselate_subdivs(scene);
+  printf(" in %s\n", tesselate_timer.elapsedf().c_str());
 
   // add missing mesh names if necessary
   if (!shape_directory.empty() && shape_directory.back() != '/')
@@ -132,9 +138,9 @@ int main(int argc, char** argv) {
     auto sid = 0;
     for (auto& shape : scene.shapes) {
       if (!shape.quadspos.empty()) {
-        shape.uri = shape_directory + "shape_" + to_string(sid) + ".obj";
+        shape.uri = shape_directory + "shape_" + std::to_string(sid) + ".obj";
       } else {
-        shape.uri = shape_directory + "shape_" + to_string(sid) + ".ply";
+        shape.uri = shape_directory + "shape_" + std::to_string(sid) + ".ply";
       }
       sid++;
     }
@@ -146,9 +152,11 @@ int main(int argc, char** argv) {
     auto sid = 0;
     for (auto& subdiv : scene.subdivs) {
       if (!subdiv.quadspos.empty()) {
-        subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) + ".obj";
+        subdiv.uri = subdiv_directory + "subdiv_" + std::to_string(sid) +
+                     ".obj";
       } else {
-        subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) + ".ply";
+        subdiv.uri = subdiv_directory + "subdiv_" + std::to_string(sid) +
+                     ".ply";
       }
       sid++;
     }
@@ -165,17 +173,20 @@ int main(int argc, char** argv) {
     dirnames.insert(dirname + get_dirname(texture.uri));
   for (auto& dir : dirnames) {
     if (!mkdir(get_dirname(dir))) {
-      print_fatal("cannot create directory " + get_dirname(output));
+      printf("cannot create directory %s\n", get_dirname(output).c_str());
     }
   }
 
   // save scene
+  printf("saving scene");
+  auto save_timer = timer();
   try {
-    auto timer = print_timed("saving scene");
     save_scene(output, scene, save_prms);
   } catch (const std::exception& e) {
-    print_fatal(e.what());
+    printf("%s\n", e.what());
+    exit(1);
   }
+  printf(" in %s\n", save_timer.elapsedf().c_str());
 
   // done
   return 0;

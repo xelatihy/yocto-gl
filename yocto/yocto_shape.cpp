@@ -3096,30 +3096,70 @@ static void load_obj_shape(const string& filename, vector<int>& points,
   }
 }
 
-static void format_value(FILE* fs, const obj_vertex& value) {
+// A file holder that closes a file when destructed. Useful for RIIA
+struct file_holder {
+  FILE*  fs       = nullptr;
+  string filename = "";
+
+  file_holder(const file_holder&) = delete;
+  file_holder& operator=(const file_holder&) = delete;
+  ~file_holder() {
+    if (fs) fclose(fs);
+  }
+};
+
+// Opens a file returing a handle with RIIA
+static inline file_holder open_input_file(
+    const string& filename, bool binary = false) {
+  auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
+  if (!fs) throw std::runtime_error("could not open file " + filename);
+  return {fs, filename};
+}
+static inline file_holder open_output_file(
+    const string& filename, bool binary = false) {
+  auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
+  if (!fs) throw std::runtime_error("could not open file " + filename);
+  return {fs, filename};
+}
+
+// Write text to file
+static inline void write_obj_value(FILE* fs, float value) {
+  if (fprintf(fs, "%g", value) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_obj_text(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static void write_obj_value(FILE* fs, const obj_vertex& value) {
   if (fprintf(fs, "%d", value.position) < 0)
-    throw io_error("cannot write value");
+    throw std::runtime_error("cannot write value");
   if (value.texcoord) {
     if (fprintf(fs, "/%d", value.texcoord) < 0)
-      throw io_error("cannot write value");
+      throw std::runtime_error("cannot write value");
     if (value.normal) {
       if (fprintf(fs, "/%d", value.normal) < 0)
-        throw io_error("cannot write value");
+        throw std::runtime_error("cannot write value");
     }
   } else if (value.normal) {
     if (fprintf(fs, "//%d", value.normal) < 0)
-      throw io_error("cannot write value");
+      throw std::runtime_error("cannot write value");
   }
 }
 
 template <typename T, typename... Ts>
-static inline void print_obj_line(
+static inline void write_obj_line(
     FILE* fs, const T& value, const Ts... values) {
-  format_value(fs, value);
+  write_obj_value(fs, value);
   if constexpr (sizeof...(values) == 0) {
-    write_text(fs, "\n");
+    write_obj_text(fs, "\n");
   } else {
-    print_obj_line(fs, values...);
+    write_obj_text(fs, " ");
+    write_obj_line(fs, values...);
   }
 }
 
@@ -3134,15 +3174,15 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   auto fs_ = open_output_file(filename);
   auto fs  = fs_.fs;
 
-  write_text(fs, "#\n");
-  write_text(fs, "# Written by Yocto/GL\n");
-  write_text(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  write_text(fs, "#\n");
+  write_obj_text(fs, "#\n");
+  write_obj_text(fs, "# Written by Yocto/GL\n");
+  write_obj_text(fs, "# https://github.com/xelatihy/yocto-gl\n");
+  write_obj_text(fs, "#\n");
 
-  for (auto& p : positions) print_obj_line(fs, "v", p.x, p.y, p.z);
-  for (auto& n : normals) print_obj_line(fs, "vn", n.x, n.y, n.z);
+  for (auto& p : positions) write_obj_line(fs, "v", p.x, p.y, p.z);
+  for (auto& n : normals) write_obj_line(fs, "vn", n.x, n.y, n.z);
   for (auto& t : texcoords)
-    print_obj_line(fs, "vt", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+    write_obj_line(fs, "vt", t.x, (flip_texcoord) ? 1 - t.y : t.y);
 
   auto mask = obj_vertex{1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
   auto vert = [mask](int i) {
@@ -3151,19 +3191,19 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   };
 
   for (auto& p : points) {
-    print_obj_line(fs, "p", vert(p));
+    write_obj_line(fs, "p", vert(p));
   }
   for (auto& l : lines) {
-    print_obj_line(fs, "l", vert(l.x), vert(l.y));
+    write_obj_line(fs, "l", vert(l.x), vert(l.y));
   }
   for (auto& t : triangles) {
-    print_obj_line(fs, "f", vert(t.x), vert(t.y), vert(t.z));
+    write_obj_line(fs, "f", vert(t.x), vert(t.y), vert(t.z));
   }
   for (auto& q : quads) {
     if (q.z == q.w) {
-      print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+      write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
     } else {
-      print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+      write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
     }
   }
 
@@ -3187,11 +3227,11 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
                                      : vec4i{-1, -1, -1, -1};
     auto qn = !quadsnorm.empty() ? quadsnorm.at(i) : vec4i{-1, -1, -1, -1};
     if (qp.z != qp.w) {
-      print_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
+      write_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
           fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z),
           fvvert(qp.w, qt.w, qn.w));
     } else {
-      print_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
+      write_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
           fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z));
     }
   }
@@ -3246,14 +3286,14 @@ static void load_cyhair(const string& filename, cyhair_data& hair) {
 
   auto read_value = [](FILE* fs, auto& value) {
     if (fread(&value, sizeof(value), 1, fs) != 1) {
-      throw io_error("cannot read from file");
+      throw std::runtime_error("cannot read from file");
     }
   };
   auto read_values = [](FILE* fs, auto& values) {
     if (values.empty()) return;
     if (fread(values.data(), sizeof(values[0]), values.size(), fs) !=
         values.size()) {
-      throw io_error("cannot read from file");
+      throw std::runtime_error("cannot read from file");
     }
   };
 

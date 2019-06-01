@@ -1195,7 +1195,7 @@ void make_imlogo(image<vec4b>& img, const string& type) {
     for (auto i = 0; i < img.count(); i++)
       img[i] = vec4b{logo_render[i], logo_render[i], logo_render[i], (byte)255};
   } else {
-    throw io_error("unknown builtin image " + type);
+    throw std::runtime_error("unknown builtin image " + type);
   }
 }
 
@@ -1599,7 +1599,7 @@ static inline void load_pfm(const string& filename, image<vec4f>& img) {
   auto width = 0, height = 0, ncomp = 0;
   auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
   if (!pixels) {
-    throw io_error("error loading image " + filename);
+    throw std::runtime_error("error loading image " + filename);
   }
   img = image{{width, height}, (const vec4f*)pixels};
   delete[] pixels;
@@ -1607,7 +1607,7 @@ static inline void load_pfm(const string& filename, image<vec4f>& img) {
 static inline void save_pfm(const string& filename, const image<vec4f>& img) {
   if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
           (float*)img.data())) {
-    throw io_error("error saving image " + filename);
+    throw std::runtime_error("error saving image " + filename);
   }
 }
 
@@ -1623,7 +1623,7 @@ static inline const char* get_tinyexr_error(int error) {
     case TINYEXR_ERROR_CANT_OPEN_FILE: return "CANT_OPEN_FILE";
     case TINYEXR_ERROR_UNSUPPORTED_FORMAT: return "UNSUPPORTED_FORMAT";
     case TINYEXR_ERROR_INVALID_HEADER: return "INVALID_HEADER";
-    default: throw io_error("unknown tinyexr error");
+    default: throw std::runtime_error("unknown tinyexr error");
   }
 }
 
@@ -1632,11 +1632,11 @@ static inline void load_exr(const string& filename, image<vec4f>& img) {
   auto pixels = (float*)nullptr;
   if (auto error = LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr);
       error < 0) {
-    throw io_error("error loading image " + filename + "("s +
-                   get_tinyexr_error(error) + ")"s);
+    throw std::runtime_error("error loading image " + filename + "("s +
+                             get_tinyexr_error(error) + ")"s);
   }
   if (!pixels) {
-    throw io_error("error loading image " + filename);
+    throw std::runtime_error("error loading image " + filename);
   }
   img = image{{width, height}, (const vec4f*)pixels};
   free(pixels);
@@ -1644,7 +1644,7 @@ static inline void load_exr(const string& filename, image<vec4f>& img) {
 static inline void save_exr(const string& filename, const image<vec4f>& img) {
   if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
           filename.c_str())) {
-    throw io_error("error saving image " + filename);
+    throw std::runtime_error("error saving image " + filename);
   }
 }
 
@@ -1653,7 +1653,7 @@ static inline void load_stb(const string& filename, image<vec4b>& img) {
   auto width = 0, height = 0, ncomp = 0;
   auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
   if (!pixels) {
-    throw io_error("error loading image " + filename);
+    throw std::runtime_error("error loading image " + filename);
   }
   img = image{{width, height}, (const vec4b*)pixels};
   free(pixels);
@@ -1662,7 +1662,7 @@ static inline void load_stb(const string& filename, image<vec4f>& img) {
   auto width = 0, height = 0, ncomp = 0;
   auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
   if (!pixels) {
-    throw io_error("error loading image " + filename);
+    throw std::runtime_error("error loading image " + filename);
   }
   img = image{{width, height}, (const vec4f*)pixels};
   free(pixels);
@@ -1672,31 +1672,31 @@ static inline void load_stb(const string& filename, image<vec4f>& img) {
 static inline void save_png(const string& filename, const image<vec4b>& img) {
   if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
           img.data(), img.size().x * 4)) {
-    throw io_error("error saving image " + filename);
+    throw std::runtime_error("error saving image " + filename);
   }
 }
 static inline void save_jpg(const string& filename, const image<vec4b>& img) {
   if (!stbi_write_jpg(
           filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
-    throw io_error("error saving image " + filename);
+    throw std::runtime_error("error saving image " + filename);
   }
 }
 static inline void save_tga(const string& filename, const image<vec4b>& img) {
   if (!stbi_write_tga(
           filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-    throw io_error("error saving image " + filename);
+    throw std::runtime_error("error saving image " + filename);
   }
 }
 static inline void save_bmp(const string& filename, const image<vec4b>& img) {
   if (!stbi_write_bmp(
           filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-    throw io_error("error saving image " + filename);
+    throw std::runtime_error("error saving image " + filename);
   }
 }
 static inline void save_hdr(const string& filename, const image<vec4f>& img) {
   if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
           (float*)img.data())) {
-    throw io_error("error saving image " + filename);
+    throw std::runtime_error("error saving image " + filename);
   }
 }
 
@@ -1708,7 +1708,7 @@ static inline void load_stb_image_from_memory(
     auto pixels = stbi_load_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
-        throw io_error("error loading in-memory image");
+        throw std::runtime_error("error loading in-memory image");
     }
     img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
@@ -1719,7 +1719,7 @@ static inline void load_stb_image_from_memory(
     auto pixels = stbi_loadf_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
-        throw io_error("error loading in-memory image {}");
+        throw std::runtime_error("error loading in-memory image {}");
     }
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
@@ -1764,7 +1764,7 @@ void load_image(const string& filename, image<vec4f>& img) {
     load_image(filename, img8);
     srgb_to_rgb(img, img8);
   } else {
-    throw io_error("unsupported image format " + ext);
+    throw std::runtime_error("unsupported image format " + ext);
   }
 }
 
@@ -1782,7 +1782,7 @@ void save_image(const string& filename, const image<vec4f>& img) {
     rgb_to_srgb(img8, img);
     save_image(filename, img8);
   } else {
-    throw io_error("unsupported image format " + ext);
+    throw std::runtime_error("unsupported image format " + ext);
   }
 }
 
@@ -1805,7 +1805,7 @@ void load_image(const string& filename, image<vec4b>& img) {
     load_image(filename, imgf);
     rgb_to_srgb(img, imgf);
   } else {
-    throw io_error("unsupported image format " + ext);
+    throw std::runtime_error("unsupported image format " + ext);
   }
 }
 
@@ -1825,7 +1825,7 @@ void save_image(const string& filename, const image<vec4b>& img) {
     srgb_to_rgb(imgf, img);
     save_image(filename, imgf);
   } else {
-    throw io_error("unsupported image format " + ext);
+    throw std::runtime_error("unsupported image format " + ext);
   }
 }
 
@@ -2041,7 +2041,7 @@ void load_volume(const string& filename, volume<float>& vol) {
   auto width = 0, height = 0, depth = 0, ncomp = 0;
   auto voxels = load_yvol(filename.c_str(), &width, &height, &depth, &ncomp, 1);
   if (!voxels) {
-    throw io_error("error loading volume " + filename);
+    throw std::runtime_error("error loading volume " + filename);
   }
   vol = volume{{width, height, depth}, (const float*)voxels};
   delete[] voxels;
@@ -2051,7 +2051,7 @@ void load_volume(const string& filename, volume<float>& vol) {
 void save_volume(const string& filename, const volume<float>& vol) {
   if (!save_yvol(filename.c_str(), vol.size().x, vol.size().y, vol.size().z, 1,
           vol.data())) {
-    throw io_error("error saving volume " + filename);
+    throw std::runtime_error("error saving volume " + filename);
   }
 }
 

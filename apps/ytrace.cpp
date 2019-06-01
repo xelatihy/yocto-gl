@@ -42,7 +42,6 @@ int main(int argc, char* argv[]) {
   auto bvh_prms     = bvh_params{};
   auto trace_prms   = trace_params{};
   auto tonemap_prms = tonemap_params{};
-  auto all_cameras  = false;
   auto noparallel   = false;
   auto save_batch   = false;
   auto add_skyenv   = false;
@@ -67,7 +66,6 @@ int main(int argc, char* argv[]) {
   // parse command line
   auto parser = CLI::App{"Offline path tracing"};
   parser.add_option("--camera", trace_prms.camera, "Camera index.");
-  parser.add_flag("--all-cameras", all_cameras, "Render all cameras.");
   parser.add_option(
       "--hres,-R", trace_prms.resolution.x, "Image horizontal resolution.");
   parser.add_option(
@@ -112,6 +110,7 @@ int main(int argc, char* argv[]) {
   } catch (const CLI::ParseError& e) {
     return parser.exit(e);
   }
+  setbuf(stdout, nullptr);
 
   // fix parallel code
   if (noparallel) {
@@ -121,23 +120,28 @@ int main(int argc, char* argv[]) {
 
   // scene loading
   auto scene = yocto_scene{};
+  printf("loading scene");
+  auto load_timer = timer();
   try {
-    auto timer = print_timed("loading scene");
     load_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
-    print_fatal(e.what());
+    printf("%s\n", e.what());
+    exit(1);
   }
+  printf(" in %s\n", load_timer.elapsedf().c_str());
 
   // tesselate
-  {
-    auto timer = print_timed("tesselating");
-    tesselate_subdivs(scene);
-  }
+  printf("tesselating");
+  auto tesselate_timer = timer();
+  tesselate_subdivs(scene);
+  printf(" in %s\n", tesselate_timer.elapsedf().c_str());
 
   // add components
   if (validate) {
-    auto timer = print_timed("validating");
+    printf("validating");
+    auto validate_timer = timer();
     print_validation(scene);
+    printf(" in %s\n", validate_timer.elapsedf().c_str());
   }
 
   // add sky
@@ -145,93 +149,72 @@ int main(int argc, char* argv[]) {
 
   // build bvh
   auto bvh = bvh_scene{};
-  {
-    auto timer = print_timed("building bvh");
-    build_bvh(bvh, scene, bvh_prms);
-  }
+  printf("building bvh");
+  auto bvh_timer = timer();
+  build_bvh(bvh, scene, bvh_prms);
+  printf(" in %s\n", bvh_timer.elapsedf().c_str());
 
   // init renderer
   auto lights = trace_lights{};
-  {
-    auto timer = print_timed("building lights");
-    init_trace_lights(lights, scene);
-  }
+  printf("building lights");
+  auto lights_timer = timer();
+  init_trace_lights(lights, scene);
+  printf(" in %s\n", lights_timer.elapsedf().c_str());
 
   // fix renderer type if no lights
   if ((lights.instances.empty() && lights.environments.empty()) &&
       is_sampler_lit(trace_prms)) {
-    print_info("no lights presents, switching to eyelight shader");
+    printf("no lights presents, switching to eyelight shader\n");
     trace_prms.sampler = trace_sampler_type::eyelight;
   }
 
-  // cameras to render from
-  auto selected_cameras = vector<int>{};
-  if (all_cameras) {
-    for (auto i = 0; i < scene.cameras.size(); i++) {
-      selected_cameras.push_back(i);
-    }
-  } else {
-    selected_cameras.push_back(trace_prms.camera);
-  }
+  // allocate buffers
+  auto image_size = camera_resolution(
+      scene.cameras[trace_prms.camera], trace_prms.resolution);
+  auto render = image{image_size, zero4f};
+  auto state  = trace_state{};
+  init_trace_state(state, image_size, trace_prms.seed);
 
-  // render all selected cameras
-  for (auto camera_id : selected_cameras) {
-    // set camera
-    trace_prms.camera = camera_id;
-
-    // allocate buffers
-    auto image_size = camera_resolution(
-        scene.cameras[trace_prms.camera], trace_prms.resolution);
-    auto render = image{image_size, zero4f};
-    auto state  = trace_state{};
-    init_trace_state(state, image_size, trace_prms.seed);
-
-    // render
-    for (auto sample = 0; sample < trace_prms.samples;
-         sample += trace_prms.batch) {
-      auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
-      {
-        auto timer = print_timed("rendering cam" +
-                                 to_string(trace_prms.camera) + " at " +
-                                 pad_left(to_string(sample), 4) + " " +
-                                 pad_left(to_string(trace_prms.samples), 4));
-        trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
-      }
-      if (save_batch) {
-        auto outfilename = get_noextension(imfilename) + ".cam" +
-                           to_string(trace_prms.camera) + ".s" +
-                           pad_left(to_string(sample + nsamples), 4, '0') +
-                           "." + get_extension(imfilename);
-        try {
-          if (logo) {
-            save_tonemapped_with_logo(outfilename, render, tonemap_prms);
-          } else {
-            save_tonemapped(outfilename, render, tonemap_prms);
-          }
-        } catch (const std::exception& e) {
-          print_fatal(e.what());
+  // render
+  for (auto sample = 0; sample < trace_prms.samples;
+       sample += trace_prms.batch) {
+    auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
+    printf("rendering samples %4d/%4d", sample,
+        trace_prms.samples);
+    auto batch_timer = timer();
+    trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
+    printf(" in %s\n", batch_timer.elapsedf().c_str());
+    if (save_batch) {
+      auto outfilename = get_noextension(imfilename) + "-s" +
+                         std::to_string(sample + nsamples) + "." +
+                         get_extension(imfilename);
+      try {
+        if (logo) {
+          save_tonemapped_with_logo(outfilename, render, tonemap_prms);
+        } else {
+          save_tonemapped(outfilename, render, tonemap_prms);
         }
+      } catch (const std::exception& e) {
+        printf("%s\n", e.what());
+        exit(1);
       }
-    }
-
-    // save image
-    try {
-      auto outfilename = imfilename;
-      if (all_cameras) {
-        outfilename = get_noextension(imfilename) + ".cam" +
-                      to_string(trace_prms.camera) + "." +
-                      get_extension(imfilename);
-      }
-      auto timer = print_timed("saving image");
-      if (logo) {
-        save_tonemapped_with_logo(outfilename, render, tonemap_prms);
-      } else {
-        save_tonemapped(outfilename, render, tonemap_prms);
-      }
-    } catch (const std::exception& e) {
-      print_fatal(e.what());
     }
   }
+
+  // save image
+  printf("saving image");
+  auto save_timer = timer();
+  try {
+    if (logo) {
+      save_tonemapped_with_logo(imfilename, render, tonemap_prms);
+    } else {
+      save_tonemapped(imfilename, render, tonemap_prms);
+    }
+  } catch (const std::exception& e) {
+    printf("%s\n", e.what());
+    exit(1);
+  }
+  printf(" in %s\n", save_timer.elapsedf().c_str());
 
   // done
   return 0;

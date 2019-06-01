@@ -53,6 +53,111 @@ using std::unique_ptr;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Io error
+struct io_error : runtime_error {
+  explicit io_error(const char* msg) : runtime_error{msg} {}
+  explicit io_error(const std::string& msg) : runtime_error{msg} {}
+};
+
+// Load a text file
+inline void load_text(const string& filename, string& str) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  str.resize(length);
+  if (fread(str.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw std::runtime_error("cannot read file " + filename);
+  }
+  fclose(fs);
+}
+
+// Save a text file
+inline void save_text(const string& filename, const string& str) {
+  auto fs = fopen(filename.c_str(), "wt");
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  if (fprintf(fs, "%s", str.c_str()) < 0) {
+    fclose(fs);
+    throw std::runtime_error("cannot write file " + filename);
+  }
+  fclose(fs);
+}
+
+// Load a binary file
+inline void load_binary(const string& filename, vector<byte>& data) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen(filename.c_str(), "rb");
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data.resize(length);
+  if (fread(data.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw std::runtime_error("cannot read file " + filename);
+  }
+  fclose(fs);
+}
+
+// Save a binary file
+inline void save_binary(const string& filename, const vector<byte>& data) {
+  auto fs = fopen(filename.c_str(), "wb");
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    fclose(fs);
+    throw std::runtime_error("cannot write file " + filename);
+  }
+  fclose(fs);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// A file holder that closes a file when destructed. Useful for RIIA
+struct file_holder {
+  FILE*  fs       = nullptr;
+  string filename = "";
+
+  file_holder(const file_holder&) = delete;
+  file_holder& operator=(const file_holder&) = delete;
+  ~file_holder() {
+    if (fs) fclose(fs);
+  }
+};
+
+// Opens a file returing a handle with RIIA
+static inline file_holder open_input_file(
+    const string& filename, bool binary = false) {
+  auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
+  if (!fs) throw std::runtime_error("could not open file " + filename);
+  return {fs, filename};
+}
+static inline file_holder open_output_file(
+    const string& filename, bool binary = false) {
+  auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
+  if (!fs) throw std::runtime_error("could not open file " + filename);
+  return {fs, filename};
+}
+
+// Read a line
+static inline bool read_line(FILE* fs, char* buffer, size_t size) {
+  return fgets(buffer, size, fs) != nullptr;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -105,7 +210,7 @@ void load_scene(
     load_ply_scene(filename, scene, params);
   } else {
     scene = {};
-    throw io_error("unsupported scene format " + ext);
+    throw std::runtime_error("unsupported scene format " + ext);
   }
 }
 
@@ -124,20 +229,18 @@ void save_scene(const string& filename, const yocto_scene& scene,
   } else if (ext == "ply" || ext == "PLY") {
     save_ply_scene(filename, scene, params);
   } else {
-    throw io_error("unsupported scene format " + ext);
+    throw std::runtime_error("unsupported scene format " + ext);
   }
 }
 
-static string get_save_scene_message(
-    const yocto_scene& scene, const string& line_prefix) {
+static string get_save_scene_message(const yocto_scene& scene) {
   auto str = ""s;
-  str += line_prefix + " \n";
-  str += line_prefix + " Written by Yocto/GL\n";
-  str += line_prefix + " https://github.com/xelatihy/yocto-gl\n";
-  str += line_prefix + "\n";
-  auto lines = splitlines(format_stats(scene));
-  for (auto line : lines) str += line_prefix + " " + line + "\n";
-  str += line_prefix + "\n";
+  str += "# \n";
+  str += "# Written by Yocto/GL\n";
+  str += "# https://github.com/xelatihy/yocto-gl\n";
+  str += "# \n";
+  str += format_stats(scene, "# ");
+  str += "# \n";
   return str;
 }
 
@@ -302,90 +405,159 @@ struct yaml_callbacks {
   virtual void key_value(string_view key, string_view value) {}
 };
 
-inline void parse_yvalue(string_view str, string& value) {
-  skip_whitespace(str);
-  if (str.empty()) throw io_error("expected string");
-  if (str.front() == '"') {
-    parse_value(str, value, true);
+static inline bool is_yaml_space(char c) {
+  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+static inline bool is_yaml_newline(char c) { return c == '\r' || c == '\n'; }
+static inline bool is_yaml_alpha(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+static inline bool is_yaml_digit(char c) { return c >= '0' && c <= '9'; }
+static inline bool is_yaml_whitespace(string_view str) {
+  while (!str.empty()) {
+    if (!is_yaml_space(str.front())) return false;
+    str.remove_prefix(1);
+  }
+  return true;
+}
+
+static inline void skip_yaml_whitespace(string_view& str) {
+  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
+}
+static inline void trim_yaml_whitespace(string_view& str) {
+  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
+  while (!str.empty() && is_yaml_space(str.back())) str.remove_suffix(1);
+}
+static inline void remove_yaml_comment(
+    string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_yaml_newline(str.back())) str.remove_suffix(1);
+  auto cpy = str;
+  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  str.remove_suffix(cpy.size());
+}
+
+static inline void parse_yaml_varname(string_view& str, string_view& value) {
+  skip_yaml_whitespace(str);
+  if (str.empty()) throw std::runtime_error("cannot parse value");
+  if (!is_yaml_alpha(str.front()))
+    throw std::runtime_error("cannot parse value");
+  auto pos = 0;
+  while (
+      is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
+    pos += 1;
+    if (pos >= str.size()) break;
+  }
+  value = str.substr(0, pos);
+  str.remove_prefix(pos);
+}
+
+inline void parse_yaml_value(string_view& str, string_view& value) {
+  skip_yaml_whitespace(str);
+  if (str.empty()) throw std::runtime_error("cannot parse value");
+  if (str.front() != '"') {
+    auto cpy = str;
+    while (!cpy.empty() && !is_yaml_space(cpy.front())) cpy.remove_prefix(1);
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
   } else {
-    parse_value(str, value, false);
+    if (str.front() != '"') throw std::runtime_error("cannot parse value");
+    str.remove_prefix(1);
+    if (str.empty()) throw std::runtime_error("cannot parse value");
+    auto cpy = str;
+    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
+    if (cpy.empty()) throw std::runtime_error("cannot parse value");
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+    str.remove_prefix(1);
   }
 }
-inline void parse_yvalue(string_view str, int& value) {
-  skip_whitespace(str);
-  parse_value(str, value);
+inline void parse_yaml_value(string_view& str, string& value) {
+  auto valuev = ""sv;
+  parse_yaml_value(str, valuev);
+  value = string{valuev};
 }
-inline void parse_yvalue(string_view str, float& value) {
-  skip_whitespace(str);
-  parse_value(str, value);
+inline void parse_yaml_value(string_view& str, int& value) {
+  skip_yaml_whitespace(str);
+  char* end = nullptr;
+  value     = (int)strtol(str.data(), &end, 10);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
 }
-inline void parse_yvalue(string_view str, double& value) {
-  skip_whitespace(str);
-  parse_value(str, value);
+inline void parse_yaml_value(string_view& str, float& value) {
+  skip_yaml_whitespace(str);
+  char* end = nullptr;
+  value     = strtof(str.data(), &end);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
 }
-inline void parse_yvalue(string_view str, bool& value) {
-  auto values = ""s;
-  parse_yvalue(str, values);
+inline void parse_yaml_value(string_view& str, bool& value) {
+  auto values = ""sv;
+  parse_yaml_value(str, values);
   if (values == "true" || values == "True") {
     value = true;
   } else if (values == "false" || values == "False") {
     value = false;
   } else {
-    throw io_error("expected bool");
+    throw std::runtime_error("expected bool");
   }
 }
 template <typename T>
-inline void parse_yvalue(string_view str, T* values, int N) {
-  skip_whitespace(str);
-  if (str.empty() || str.front() != '[') throw io_error("expected array");
+inline void parse_yaml_value(string_view& str, T* values, int N) {
+  skip_yaml_whitespace(str);
+  if (str.empty() || str.front() != '[')
+    throw std::runtime_error("expected array");
   str.remove_prefix(1);
   for (auto i = 0; i < N; i++) {
-    skip_whitespace(str);
-    if (str.empty()) throw io_error("expected array");
-    parse_value(str, values[i]);
-    skip_whitespace(str);
+    skip_yaml_whitespace(str);
+    if (str.empty()) throw std::runtime_error("expected array");
+    parse_yaml_value(str, values[i]);
+    skip_yaml_whitespace(str);
     if (i != N - 1) {
-      if (str.empty() || str.front() != ',') throw io_error("expected array");
+      if (str.empty() || str.front() != ',')
+        throw std::runtime_error("expected array");
       str.remove_prefix(1);
-      skip_whitespace(str);
+      skip_yaml_whitespace(str);
     }
   }
-  skip_whitespace(str);
-  if (str.empty() || str.front() != ']') throw io_error("expected array");
+  skip_yaml_whitespace(str);
+  if (str.empty() || str.front() != ']')
+    throw std::runtime_error("expected array");
   str.remove_prefix(1);
 }
-inline void parse_yvalue(string_view str, vec2f& value) {
-  return parse_yvalue(str, &value.x, 2);
+inline void parse_yaml_value(string_view& str, vec2f& value) {
+  return parse_yaml_value(str, &value.x, 2);
 }
-inline void parse_yvalue(string_view str, vec3f& value) {
-  return parse_yvalue(str, &value.x, 3);
+inline void parse_yaml_value(string_view& str, vec3f& value) {
+  return parse_yaml_value(str, &value.x, 3);
 }
-inline void parse_yvalue(string_view str, vec4f& value) {
-  return parse_yvalue(str, &value.x, 4);
+inline void parse_yaml_value(string_view& str, vec4f& value) {
+  return parse_yaml_value(str, &value.x, 4);
 }
-inline void parse_yvalue(string_view str, vec2i& value) {
-  return parse_yvalue(str, &value.x, 2);
+inline void parse_yaml_value(string_view& str, vec2i& value) {
+  return parse_yaml_value(str, &value.x, 2);
 }
-inline void parse_yvalue(string_view str, vec3i& value) {
-  return parse_yvalue(str, &value.x, 3);
+inline void parse_yaml_value(string_view str, vec3i& value) {
+  return parse_yaml_value(str, &value.x, 3);
 }
-inline void parse_yvalue(string_view str, vec4i& value) {
-  return parse_yvalue(str, &value.x, 4);
+inline void parse_yaml_value(string_view& str, vec4i& value) {
+  return parse_yaml_value(str, &value.x, 4);
 }
-inline void parse_yvalue(string_view str, frame2f& value) {
-  return parse_yvalue(str, &value.x.x, 6);
+inline void parse_yaml_value(string_view& str, frame2f& value) {
+  return parse_yaml_value(str, &value.x.x, 6);
 }
-inline void parse_yvalue(string_view str, frame3f& value) {
-  return parse_yvalue(str, &value.x.x, 12);
+inline void parse_yaml_value(string_view& str, frame3f& value) {
+  return parse_yaml_value(str, &value.x.x, 12);
 }
-inline void parse_yvalue(string_view str, mat2f& value) {
-  return parse_yvalue(str, &value.x.x, 4);
+inline void parse_yaml_value(string_view& str, mat2f& value) {
+  return parse_yaml_value(str, &value.x.x, 4);
 }
-inline void parse_yvalue(string_view str, mat3f& value) {
-  return parse_yvalue(str, &value.x.x, 9);
+inline void parse_yaml_value(string_view& str, mat3f& value) {
+  return parse_yaml_value(str, &value.x.x, 9);
 }
-inline void parse_yvalue(string_view str, mat4f& value) {
-  return parse_yvalue(str, &value.x.x, 16);
+inline void parse_yaml_value(string_view& str, mat4f& value) {
+  return parse_yaml_value(str, &value.x.x, 16);
 }
 
 struct load_yaml_params {};
@@ -405,42 +577,45 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
-    remove_comment_and_newline(line);
+    remove_yaml_comment(line);
     if (line.empty()) continue;
-    if (is_whitespace(line)) continue;
+    if (is_yaml_whitespace(line)) continue;
 
     // peek commands
-    if (is_space(line.front())) {
-      if (!in_objects) throw io_error("bad yaml");
+    if (is_yaml_space(line.front())) {
+      if (!in_objects) throw std::runtime_error("bad yaml");
       // indented property
-      skip_whitespace(line);
-      if (line.empty()) throw io_error("bad yaml");
+      skip_yaml_whitespace(line);
+      if (line.empty()) throw std::runtime_error("bad yaml");
       if (line.front() == '-') {
         callbacks.object_begin();
         line.remove_prefix(1);
-        skip_whitespace(line);
+        skip_yaml_whitespace(line);
         in_object = true;
       }
-      auto key = ""s;
-      parse_varname(line, key);
-      skip_whitespace(line);
-      if (line.empty() || line.front() != ':') throw io_error("bad yaml");
+      auto key = ""sv;
+      parse_yaml_varname(line, key);
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
-      trim_whitespace(line);
+      trim_yaml_whitespace(line);
       callbacks.key_value(key, line);
-    } else if (is_alpha(line.front())) {
+    } else if (is_yaml_alpha(line.front())) {
       // new group
-      auto key = ""s;
-      parse_varname(line, key);
-      skip_whitespace(line);
-      if (line.empty() || line.front() != ':') throw io_error("bad yaml");
+      auto key = ""sv;
+      parse_yaml_varname(line, key);
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
-      if (!line.empty() && !is_whitespace(line)) throw io_error("bad yaml");
+      if (!line.empty() && !is_yaml_whitespace(line))
+        throw std::runtime_error("bad yaml");
       callbacks.object_group(key);
       in_objects = true;
       in_object  = false;
     } else {
-      throw io_error("bad yaml");
+      throw std::runtime_error("bad yaml");
     }
   }
 }
@@ -483,20 +658,20 @@ struct load_yaml_scene_cb : yaml_callbacks {
   void get_yaml_ref(
       string_view yml, int& value, unordered_map<string, int>& refs) {
     auto name = ""s;
-    parse_yvalue(yml, name);
+    parse_yaml_value(yml, name);
     if (name == "") return;
     try {
       value = refs.at(name);
     } catch (...) {
-      throw io_error("reference not found " + name);
+      throw std::runtime_error("reference not found " + name);
     }
   }
 
   void get_yaml_ref(string_view yml, int& value, size_t nrefs) {
-    parse_yvalue(yml, value);
+    parse_yaml_value(yml, value);
     if (value < 0) return;
     if (value >= nrefs) {
-      throw io_error("reference not found " + to_string(value));
+      throw std::runtime_error("reference not found " + std::to_string(value));
     }
   }
 
@@ -529,7 +704,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
       type = parsing_type::environment;
     } else {
       type = parsing_type::none;
-      throw io_error("unknown object type " + string(key));
+      throw std::runtime_error("unknown object type " + string(key));
     }
   }
   void object_begin() override {
@@ -542,7 +717,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
       case parsing_type::subdiv: scene.subdivs.push_back({}); break;
       case parsing_type::instance: scene.instances.push_back({}); break;
       case parsing_type::environment: scene.environments.push_back({}); break;
-      default: throw io_error("unknown object type");
+      default: throw std::runtime_error("unknown object type");
     }
   }
   void key_value(string_view key, string_view value) override {
@@ -550,86 +725,86 @@ struct load_yaml_scene_cb : yaml_callbacks {
       case parsing_type::camera: {
         auto& camera = scene.cameras.back();
         if (key == "uri") {
-          parse_yvalue(value, camera.uri);
+          parse_yaml_value(value, camera.uri);
         } else if (key == "frame") {
-          parse_yvalue(value, camera.frame);
+          parse_yaml_value(value, camera.frame);
         } else if (key == "orthographic") {
-          parse_yvalue(value, camera.orthographic);
+          parse_yaml_value(value, camera.orthographic);
         } else if (key == "lens") {
-          parse_yvalue(value, camera.lens);
+          parse_yaml_value(value, camera.lens);
         } else if (key == "film") {
-          parse_yvalue(value, camera.film);
+          parse_yaml_value(value, camera.film);
         } else if (key == "focus") {
-          parse_yvalue(value, camera.focus);
+          parse_yaml_value(value, camera.focus);
         } else if (key == "aperture") {
-          parse_yvalue(value, camera.aperture);
+          parse_yaml_value(value, camera.aperture);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::texture: {
         auto& texture = scene.textures.back();
         if (key == "uri") {
-          parse_yvalue(value, texture.uri);
+          parse_yaml_value(value, texture.uri);
           auto refname = texture.uri;
           if (is_preset_filename(refname)) {
             refname = get_preset_type(refname).second;
           }
           tmap[refname] = (int)scene.textures.size() - 1;
         } else if (key == "filename") {
-          parse_yvalue(value, texture.uri);
+          parse_yaml_value(value, texture.uri);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::voltexture: {
         auto& texture = scene.voltextures.back();
         if (key == "uri") {
-          parse_yvalue(value, texture.uri);
+          parse_yaml_value(value, texture.uri);
           auto refname = texture.uri;
           if (is_preset_filename(refname)) {
             refname = get_preset_type(refname).second;
           }
           vmap[refname] = (int)scene.voltextures.size() - 1;
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::material: {
         auto& material = scene.materials.back();
         if (key == "uri") {
-          parse_yvalue(value, material.uri);
+          parse_yaml_value(value, material.uri);
           mmap[material.uri] = (int)scene.materials.size() - 1;
         } else if (key == "emission") {
-          parse_yvalue(value, material.emission);
+          parse_yaml_value(value, material.emission);
         } else if (key == "diffuse") {
-          parse_yvalue(value, material.diffuse);
+          parse_yaml_value(value, material.diffuse);
         } else if (key == "metallic") {
-          parse_yvalue(value, material.metallic);
+          parse_yaml_value(value, material.metallic);
         } else if (key == "specular") {
-          parse_yvalue(value, material.specular);
+          parse_yaml_value(value, material.specular);
         } else if (key == "roughness") {
-          parse_yvalue(value, material.roughness);
+          parse_yaml_value(value, material.roughness);
         } else if (key == "coat") {
-          parse_yvalue(value, material.coat);
+          parse_yaml_value(value, material.coat);
         } else if (key == "transmission") {
-          parse_yvalue(value, material.transmission);
+          parse_yaml_value(value, material.transmission);
         } else if (key == "voltransmission") {
-          parse_yvalue(value, material.voltransmission);
+          parse_yaml_value(value, material.voltransmission);
         } else if (key == "volscatter") {
-          parse_yvalue(value, material.volscatter);
+          parse_yaml_value(value, material.volscatter);
         } else if (key == "volemission") {
-          parse_yvalue(value, material.volemission);
+          parse_yaml_value(value, material.volemission);
         } else if (key == "volanisotropy") {
-          parse_yvalue(value, material.volanisotropy);
+          parse_yaml_value(value, material.volanisotropy);
         } else if (key == "volscale") {
-          parse_yvalue(value, material.volscale);
+          parse_yaml_value(value, material.volscale);
         } else if (key == "opacity") {
-          parse_yvalue(value, material.opacity);
+          parse_yaml_value(value, material.opacity);
         } else if (key == "coat") {
-          parse_yvalue(value, material.coat);
+          parse_yaml_value(value, material.coat);
         } else if (key == "thin") {
-          parse_yvalue(value, material.thin);
+          parse_yaml_value(value, material.thin);
         } else if (key == "emission_tex") {
           get_yaml_ref(value, material.emission_tex, tmap);
         } else if (key == "diffuse_tex") {
@@ -651,75 +826,75 @@ struct load_yaml_scene_cb : yaml_callbacks {
         } else if (key == "voldensity_tex") {
           get_yaml_ref(value, material.voldensity_tex, vmap);
         } else if (key == "gltf_textures") {
-          parse_yvalue(value, material.gltf_textures);
+          parse_yaml_value(value, material.gltf_textures);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::shape: {
         auto& shape = scene.shapes.back();
         if (key == "uri") {
-          parse_yvalue(value, shape.uri);
+          parse_yaml_value(value, shape.uri);
           auto refname = shape.uri;
           if (is_preset_filename(refname)) {
             refname = get_preset_type(refname).second;
           }
           smap[refname] = (int)scene.shapes.size() - 1;
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::subdiv: {
         auto& subdiv = scene.subdivs.back();
         if (key == "uri") {
-          parse_yvalue(value, subdiv.uri);
+          parse_yaml_value(value, subdiv.uri);
         } else if (key == "shape") {
           get_yaml_ref(value, subdiv.shape, smap);
         } else if (key == "subdivisions") {
-          parse_yvalue(value, subdiv.subdivisions);
+          parse_yaml_value(value, subdiv.subdivisions);
         } else if (key == "catmullclark") {
-          parse_yvalue(value, subdiv.catmullclark);
+          parse_yaml_value(value, subdiv.catmullclark);
         } else if (key == "smooth") {
-          parse_yvalue(value, subdiv.smooth);
+          parse_yaml_value(value, subdiv.smooth);
         } else if (key == "facevarying") {
-          parse_yvalue(value, subdiv.facevarying);
+          parse_yaml_value(value, subdiv.facevarying);
         } else if (key == "displacement_tex") {
           get_yaml_ref(value, subdiv.displacement_tex, tmap);
         } else if (key == "displacement") {
-          parse_yvalue(value, subdiv.displacement);
+          parse_yaml_value(value, subdiv.displacement);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::instance: {
         auto& instance = scene.instances.back();
         if (key == "uri") {
-          parse_yvalue(value, instance.uri);
+          parse_yaml_value(value, instance.uri);
         } else if (key == "frame") {
-          parse_yvalue(value, instance.frame);
+          parse_yaml_value(value, instance.frame);
         } else if (key == "shape") {
           get_yaml_ref(value, instance.shape, smap);
         } else if (key == "material") {
           get_yaml_ref(value, instance.material, mmap);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
       case parsing_type::environment: {
         auto& environment = scene.environments.back();
         if (key == "uri") {
-          parse_yvalue(value, environment.uri);
+          parse_yaml_value(value, environment.uri);
         } else if (key == "frame") {
-          parse_yvalue(value, environment.frame);
+          parse_yaml_value(value, environment.frame);
         } else if (key == "emission") {
-          parse_yvalue(value, environment.emission);
+          parse_yaml_value(value, environment.emission);
         } else if (key == "emission_tex") {
           get_yaml_ref(value, environment.emission_tex, tmap);
         } else {
-          throw io_error("unknown property " + string(key));
+          throw std::runtime_error("unknown property " + string(key));
         }
       } break;
-      default: throw io_error("unknown object type");
+      default: throw std::runtime_error("unknown object type");
     }
   }
 };
@@ -740,7 +915,7 @@ static void load_yaml_scene(
     load_shapes(scene, dirname, params);
     load_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot load scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
@@ -758,26 +933,60 @@ static void load_yaml_scene(
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
-static inline void format_yvalue(FILE* fs, int value) {
-  return format_value(fs, value);
+// Write text to file
+static inline void write_yaml_value(FILE* fs, int value) {
+  if (fprintf(fs, "%d", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, float value) {
-  return format_value(fs, value);
+static inline void write_yaml_value(FILE* fs, float value) {
+  if (fprintf(fs, "%g", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, const string& value) {
-  return format_value(fs, value);
+static inline void write_yaml_value(FILE* fs, bool value) {
+  if (fprintf(fs, "%s", value ? "true" : "false") < 0)
+    throw std::runtime_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, bool value) {
-  return format_value(fs, value, true);
+static inline void write_yaml_value(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, const vec2f& value) {
-  return format_value(fs, value, true);
+static inline void write_yaml_text(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, const vec3f& value) {
-  return format_value(fs, value, true);
+static inline void write_yaml_text(FILE* fs, const string& value) {
+  if (fprintf(fs, "%s", value.c_str()) < 0)
+    throw std::runtime_error("cannot print value");
 }
-static inline void format_yvalue(FILE* fs, const frame3f& value) {
-  return format_value(fs, value, true);
+static inline void write_yaml_value(FILE* fs, const string& value) {
+  if (fprintf(fs, "%s", value.c_str()) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_yaml_value(FILE* fs, const vec2f& value) {
+  if (fprintf(fs, "[%g,%g]", value.x, value.y) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_yaml_value(FILE* fs, const vec3f& value) {
+  if (fprintf(fs, "[%g,%g,%g]", value.x, value.y, value.z) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_yaml_value(FILE* fs, const frame3f& value) {
+  if (fprintf(fs, "[") < 0) throw std::runtime_error("cannot print value");
+  for (auto i = 0; i < 12; i++)
+    if (fprintf(fs, i ? ",%g" : "%g", (&value.x.x)[i]) < 0)
+      throw std::runtime_error("cannot print value");
+  if (fprintf(fs, "]") < 0) throw std::runtime_error("cannot print value");
+}
+
+template <typename T, typename... Ts>
+static inline void write_yaml_line(FILE* fs, const T& arg, const Ts&... args) {
+  write_yaml_value(fs, arg);
+  if constexpr (sizeof...(Ts) != 0) {
+    write_yaml_text(fs, " ");
+    write_yaml_line(fs, args...);
+  } else {
+    write_yaml_value(fs, "\n");
+  }
 }
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -791,7 +1000,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   auto fs_ = open_output_file(filename);
   auto fs  = fs_.fs;
 
-  write_text(fs, get_save_scene_message(scene, "#"));
+  write_yaml_text(fs, get_save_scene_message(scene));
 
   static const auto def_camera      = yocto_camera{};
   static const auto def_texture     = yocto_texture{};
@@ -802,122 +1011,126 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   static const auto def_instance    = yocto_instance{};
   static const auto def_environment = yocto_environment{};
 
-  auto format_opt = [](FILE* fs, const char* name, auto& value, auto& def) {
+  auto write_yaml_opt = [](FILE* fs, const char* name, auto& value, auto& def) {
     if (value == def) return;
-    write_text(fs, "    ");
-    write_text(fs, name);
-    write_text(fs, ": ");
-    format_yvalue(fs, value);
-    write_text(fs, "\n");
+    write_yaml_text(fs, "    ");
+    write_yaml_text(fs, name);
+    write_yaml_text(fs, ": ");
+    write_yaml_line(fs, value);
   };
-  auto format_ref = [](FILE* fs, const char* name, int value, auto& refs) {
+  auto write_yaml_ref = [](FILE* fs, const char* name, int value, auto& refs) {
     if (value < 0) return;
-    write_text(fs, "    ");
-    write_text(fs, name);
-    write_text(fs, ": ");
-    write_text(fs, refs[value].uri);
-    write_text(fs, "\n");
+    write_yaml_text(fs, "    ");
+    write_yaml_text(fs, name);
+    write_yaml_text(fs, ": ");
+    write_yaml_line(fs, refs[value].uri);
   };
 
-  if (!scene.cameras.empty()) write_text(fs, "\n\ncameras:\n");
+  if (!scene.cameras.empty()) write_yaml_text(fs, "\n\ncameras:\n");
   for (auto& camera : scene.cameras) {
-    format_line(fs, "  - uri:", camera.uri);
-    format_opt(fs, "frame", camera.frame, def_camera.frame);
-    format_opt(
+    write_yaml_line(fs, "  - uri:", camera.uri);
+    write_yaml_opt(fs, "frame", camera.frame, def_camera.frame);
+    write_yaml_opt(
         fs, "orthographic", camera.orthographic, def_camera.orthographic);
-    format_opt(fs, "lens", camera.lens, def_camera.lens);
-    format_opt(fs, "film", camera.film, def_camera.film);
-    format_opt(fs, "focus", camera.focus, def_camera.focus);
-    format_opt(fs, "aperture", camera.aperture, def_camera.aperture);
+    write_yaml_opt(fs, "lens", camera.lens, def_camera.lens);
+    write_yaml_opt(fs, "film", camera.film, def_camera.film);
+    write_yaml_opt(fs, "focus", camera.focus, def_camera.focus);
+    write_yaml_opt(fs, "aperture", camera.aperture, def_camera.aperture);
   }
 
-  if (!scene.textures.empty()) write_text(fs, "\n\ntextures:\n");
+  if (!scene.textures.empty()) write_yaml_text(fs, "\n\ntextures:\n");
   for (auto& texture : scene.textures) {
-    format_line(fs, "  - uri:", texture.uri);
+    write_yaml_line(fs, "  - uri:", texture.uri);
   }
 
-  if (!scene.voltextures.empty()) write_text(fs, "\n\nvoltextures:\n");
+  if (!scene.voltextures.empty()) write_yaml_text(fs, "\n\nvoltextures:\n");
   for (auto& texture : scene.voltextures) {
-    format_line(fs, "  - uri:", texture.uri);
+    write_yaml_line(fs, "  - uri:", texture.uri);
   }
 
-  if (!scene.materials.empty()) write_text(fs, "\n\nmaterials:\n");
+  if (!scene.materials.empty()) write_yaml_text(fs, "\n\nmaterials:\n");
   for (auto& material : scene.materials) {
-    format_line(fs, "  - uri:", material.uri);
-    format_opt(fs, "emission", material.emission, def_material.emission);
-    format_opt(fs, "diffuse", material.diffuse, def_material.diffuse);
-    format_opt(fs, "specular", material.specular, def_material.specular);
-    format_opt(fs, "metallic", material.metallic, def_material.metallic);
-    format_opt(
+    write_yaml_line(fs, "  - uri:", material.uri);
+    write_yaml_opt(fs, "emission", material.emission, def_material.emission);
+    write_yaml_opt(fs, "diffuse", material.diffuse, def_material.diffuse);
+    write_yaml_opt(fs, "specular", material.specular, def_material.specular);
+    write_yaml_opt(fs, "metallic", material.metallic, def_material.metallic);
+    write_yaml_opt(
         fs, "transmission", material.transmission, def_material.transmission);
-    format_opt(fs, "roughness", material.roughness, def_material.roughness);
-    format_opt(fs, "voltransmission", material.voltransmission,
+    write_yaml_opt(fs, "roughness", material.roughness, def_material.roughness);
+    write_yaml_opt(fs, "voltransmission", material.voltransmission,
         def_material.voltransmission);
-    format_opt(fs, "volscatter", material.volscatter, def_material.volscatter);
-    format_opt(
+    write_yaml_opt(
+        fs, "volscatter", material.volscatter, def_material.volscatter);
+    write_yaml_opt(
         fs, "volemission", material.volemission, def_material.volemission);
-    format_opt(fs, "volanisotropy", material.volanisotropy,
+    write_yaml_opt(fs, "volanisotropy", material.volanisotropy,
         def_material.volanisotropy);
-    format_opt(fs, "volscale", material.volscale, def_material.volscale);
-    format_opt(fs, "coat", material.coat, def_material.coat);
-    format_opt(fs, "opacity", material.opacity, def_material.opacity);
-    format_opt(fs, "thin", material.thin, def_material.thin);
-    format_ref(fs, "emission_tex", material.emission_tex, scene.textures);
-    format_ref(fs, "diffuse_tex", material.diffuse_tex, scene.textures);
-    format_ref(fs, "metallic_tex", material.metallic_tex, scene.textures);
-    format_ref(fs, "specular_tex", material.specular_tex, scene.textures);
-    format_ref(fs, "roughness_tex", material.roughness_tex, scene.textures);
-    format_ref(
+    write_yaml_opt(fs, "volscale", material.volscale, def_material.volscale);
+    write_yaml_opt(fs, "coat", material.coat, def_material.coat);
+    write_yaml_opt(fs, "opacity", material.opacity, def_material.opacity);
+    write_yaml_opt(fs, "thin", material.thin, def_material.thin);
+    write_yaml_ref(fs, "emission_tex", material.emission_tex, scene.textures);
+    write_yaml_ref(fs, "diffuse_tex", material.diffuse_tex, scene.textures);
+    write_yaml_ref(fs, "metallic_tex", material.metallic_tex, scene.textures);
+    write_yaml_ref(fs, "specular_tex", material.specular_tex, scene.textures);
+    write_yaml_ref(fs, "roughness_tex", material.roughness_tex, scene.textures);
+    write_yaml_ref(
         fs, "transmission_tex", material.transmission_tex, scene.textures);
-    format_ref(fs, "subsurface_tex", material.subsurface_tex, scene.textures);
-    format_ref(fs, "coat_tex", material.coat_tex, scene.textures);
-    format_ref(fs, "opacity_tex", material.opacity_tex, scene.textures);
-    format_ref(fs, "normal_tex", material.normal_tex, scene.textures);
-    format_opt(fs, "gltf_textures", material.gltf_textures,
+    write_yaml_ref(
+        fs, "subsurface_tex", material.subsurface_tex, scene.textures);
+    write_yaml_ref(fs, "coat_tex", material.coat_tex, scene.textures);
+    write_yaml_ref(fs, "opacity_tex", material.opacity_tex, scene.textures);
+    write_yaml_ref(fs, "normal_tex", material.normal_tex, scene.textures);
+    write_yaml_opt(fs, "gltf_textures", material.gltf_textures,
         def_material.gltf_textures);
-    format_ref(
+    write_yaml_ref(
         fs, "voldensity_tex", material.voldensity_tex, scene.voltextures);
   }
 
-  if (!scene.shapes.empty()) write_text(fs, "\n\nshapes:\n");
+  if (!scene.shapes.empty()) write_yaml_text(fs, "\n\nshapes:\n");
   for (auto& shape : scene.shapes) {
-    format_line(fs, "  - uri:", shape.uri);
+    write_yaml_line(fs, "  - uri:", shape.uri);
   }
 
-  if (!scene.subdivs.empty()) write_text(fs, "\n\nsubdivs:\n");
+  if (!scene.subdivs.empty()) write_yaml_text(fs, "\n\nsubdivs:\n");
   for (auto& subdiv : scene.subdivs) {
-    format_line(fs, "  - uri:", subdiv.uri);
-    format_ref(fs, "shape", subdiv.shape, scene.shapes);
-    format_opt(
+    write_yaml_line(fs, "  - uri:", subdiv.uri);
+    write_yaml_ref(fs, "shape", subdiv.shape, scene.shapes);
+    write_yaml_opt(
         fs, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
-    format_opt(
+    write_yaml_opt(
         fs, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
-    format_opt(fs, "smooth", subdiv.smooth, def_subdiv.smooth);
-    format_opt(fs, "facevarying", subdiv.facevarying, def_subdiv.facevarying);
-    format_ref(fs, "displacement_tex", subdiv.displacement_tex, scene.textures);
-    format_opt(
+    write_yaml_opt(fs, "smooth", subdiv.smooth, def_subdiv.smooth);
+    write_yaml_opt(
+        fs, "facevarying", subdiv.facevarying, def_subdiv.facevarying);
+    write_yaml_ref(
+        fs, "displacement_tex", subdiv.displacement_tex, scene.textures);
+    write_yaml_opt(
         fs, "displacement", subdiv.displacement, def_subdiv.displacement);
   }
 
   if (!ply_instances) {
-    if (!scene.instances.empty()) write_text(fs, "\n\ninstances:\n");
+    if (!scene.instances.empty()) write_yaml_text(fs, "\n\ninstances:\n");
     for (auto& instance : scene.instances) {
-      format_line(fs, "  - uri:", instance.uri);
-      format_opt(fs, "frame", instance.frame, def_instance.frame);
-      format_ref(fs, "shape", instance.shape, scene.shapes);
-      format_ref(fs, "material", instance.material, scene.materials);
+      write_yaml_line(fs, "  - uri:", instance.uri);
+      write_yaml_opt(fs, "frame", instance.frame, def_instance.frame);
+      write_yaml_ref(fs, "shape", instance.shape, scene.shapes);
+      write_yaml_ref(fs, "material", instance.material, scene.materials);
     }
   } else {
-    if (!scene.instances.empty()) write_text(fs, "\n\nply_instances:\n");
-    format_line(fs, "  - uri:", instances_name);
+    if (!scene.instances.empty()) write_yaml_text(fs, "\n\nply_instances:\n");
+    write_yaml_line(fs, "  - uri:", instances_name);
   }
 
-  if (!scene.environments.empty()) write_text(fs, "\n\nenvironments:\n");
+  if (!scene.environments.empty()) write_yaml_text(fs, "\n\nenvironments:\n");
   for (auto& environment : scene.environments) {
-    format_line(fs, "  - uri:", environment.uri);
-    format_opt(fs, "frame", environment.frame, def_environment.frame);
-    format_opt(fs, "emission", environment.emission, def_environment.emission);
-    format_ref(fs, "emission_tex", environment.emission_tex, scene.textures);
+    write_yaml_line(fs, "  - uri:", environment.uri);
+    write_yaml_opt(fs, "frame", environment.frame, def_environment.frame);
+    write_yaml_opt(
+        fs, "emission", environment.emission, def_environment.emission);
+    write_yaml_ref(
+        fs, "emission_tex", environment.emission_tex, scene.textures);
   }
 }
 
@@ -933,7 +1146,7 @@ static void save_yaml_scene(const string& filename, const yocto_scene& scene,
     save_shapes(scene, dirname, params);
     save_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot save scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
   }
 }
 
@@ -1250,14 +1463,14 @@ struct load_obj_scene_cb : obj_callbacks {
       make_improc(shape.triangles, shape.quads, shape.positions, shape.normals,
           shape.texcoords, params);
     } else {
-      throw io_error("unknown obj procedural");
+      throw std::runtime_error("unknown obj procedural");
     }
     scene.shapes.push_back(shape);
     auto instance  = yocto_instance{};
     instance.uri   = shape.uri;
     instance.shape = (int)scene.shapes.size() - 1;
     if (mmap.find(oproc.material) == mmap.end()) {
-      throw io_error("missing material " + oproc.material);
+      throw std::runtime_error("missing material " + oproc.material);
     } else {
       instance.material = mmap.find(oproc.material)->second;
     }
@@ -1294,7 +1507,8 @@ static void load_obj_scene(
 
     // check if any empty shape is left
     for (auto& shape : scene.shapes) {
-      if (shape.positions.empty()) throw io_error("empty shapes not supported");
+      if (shape.positions.empty())
+        throw std::runtime_error("empty shapes not supported");
     }
 
     // merging quads and triangles
@@ -1307,7 +1521,7 @@ static void load_obj_scene(
     auto dirname = get_dirname(filename);
     load_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot load scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
@@ -1320,15 +1534,69 @@ static void load_obj_scene(
   update_transforms(scene);
 }
 
+// Write text to file
+static inline void write_obj_value(FILE* fs, int value) {
+  if (fprintf(fs, "%d", value) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, float value) {
+  if (fprintf(fs, "%g", value) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_obj_text(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_obj_text(FILE* fs, const string& value) {
+  if (fprintf(fs, "%s", value.c_str()) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, const string& value) {
+  if (fprintf(fs, "%s", value.c_str()) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, const vec2f& value) {
+  if (fprintf(fs, "%g %g", value.x, value.y) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, const vec3f& value) {
+  if (fprintf(fs, "%g %g %g", value.x, value.y, value.z) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_obj_value(FILE* fs, const frame3f& value) {
+  for (auto i = 0; i < 12; i++)
+    if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
+      throw std::runtime_error("cannot print value");
+}
+static void write_obj_value(FILE* fs, const obj_vertex& value) {
+  if (fprintf(fs, "%d", value.position) < 0)
+    throw std::runtime_error("cannot write value");
+  if (value.texcoord) {
+    if (fprintf(fs, "/%d", value.texcoord) < 0)
+      throw std::runtime_error("cannot write value");
+    if (value.normal) {
+      if (fprintf(fs, "/%d", value.normal) < 0)
+        throw std::runtime_error("cannot write value");
+    }
+  } else if (value.normal) {
+    if (fprintf(fs, "//%d", value.normal) < 0)
+      throw std::runtime_error("cannot write value");
+  }
+}
+
 template <typename T, typename... Ts>
-static inline void print_obj_line(
+static inline void write_obj_line(
     FILE* fs, const T& value, const Ts... values) {
-  format_value(fs, value);
+  write_obj_value(fs, value);
   if constexpr (sizeof...(values) == 0) {
-    write_text(fs, "\n");
+    write_obj_text(fs, "\n");
   } else {
-    write_text(fs, " ");
-    print_obj_line(fs, values...);
+    write_obj_text(fs, " ");
+    write_obj_line(fs, values...);
   }
 }
 
@@ -1339,35 +1607,35 @@ static void save_mtl(
   auto fs  = fs_.fs;
 
   // embed data
-  write_text(fs, get_save_scene_message(scene, "#"));
+  write_obj_text(fs, get_save_scene_message(scene));
 
   // for each material, dump all the values
   for (auto& material : scene.materials) {
-    print_obj_line(fs, "newmtl", get_basename(material.uri));
-    print_obj_line(fs, "  illum", 2);
-    print_obj_line(fs, "  Ke", material.emission);
-    print_obj_line(fs, "  Kd", material.diffuse * (1 - material.metallic));
-    print_obj_line(fs, "  Ks",
+    write_obj_line(fs, "newmtl", get_basename(material.uri));
+    write_obj_line(fs, "  illum", 2);
+    write_obj_line(fs, "  Ke", material.emission);
+    write_obj_line(fs, "  Kd", material.diffuse * (1 - material.metallic));
+    write_obj_line(fs, "  Ks",
         material.specular * (1 - material.metallic) +
             material.metallic * material.diffuse);
-    print_obj_line(fs, "  Kt", material.transmission);
-    print_obj_line(fs, "  Ns",
+    write_obj_line(fs, "  Kt", material.transmission);
+    write_obj_line(fs, "  Ns",
         (int)clamp(
             2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2,
             0.0f, 1.0e9f));
-    print_obj_line(fs, "  d", material.opacity);
+    write_obj_line(fs, "  d", material.opacity);
     if (material.emission_tex >= 0)
-      print_obj_line(fs, "  map_Ke", scene.textures[material.emission_tex].uri);
+      write_obj_line(fs, "  map_Ke", scene.textures[material.emission_tex].uri);
     if (material.diffuse_tex >= 0)
-      print_obj_line(fs, "  map_Kd", scene.textures[material.diffuse_tex].uri);
+      write_obj_line(fs, "  map_Kd", scene.textures[material.diffuse_tex].uri);
     if (material.specular_tex >= 0)
-      print_obj_line(fs, "  map_Ks", scene.textures[material.specular_tex].uri);
+      write_obj_line(fs, "  map_Ks", scene.textures[material.specular_tex].uri);
     if (material.transmission_tex >= 0)
-      print_obj_line(
+      write_obj_line(
           fs, "  map_Kt", scene.textures[material.transmission_tex].uri);
     if (material.normal_tex >= 0)
-      print_obj_line(fs, "  map_norm", scene.textures[material.normal_tex].uri);
-    write_text(fs, "\n");
+      write_obj_line(fs, "  map_norm", scene.textures[material.normal_tex].uri);
+    write_obj_text(fs, "\n");
   }
 }
 
@@ -1378,18 +1646,18 @@ static void save_objx(
   auto fs  = fs_.fs;
 
   // embed data
-  write_text(fs, get_save_scene_message(scene, "#"));
+  write_obj_text(fs, get_save_scene_message(scene));
 
   // cameras
   for (auto& camera : scene.cameras) {
-    print_obj_line(fs, "c", get_basename(camera.uri), (int)camera.orthographic,
+    write_obj_line(fs, "c", get_basename(camera.uri), (int)camera.orthographic,
         camera.film.x, camera.film.y, camera.lens, camera.focus,
         camera.aperture, camera.frame);
   }
 
   // environments
   for (auto& environment : scene.environments) {
-    print_obj_line(fs, "e", get_basename(environment.uri), environment.emission,
+    write_obj_line(fs, "e", get_basename(environment.uri), environment.emission,
         environment.emission_tex >= 0
             ? scene.textures[environment.emission_tex].uri
             : "\"\" "s,
@@ -1399,26 +1667,10 @@ static void save_objx(
   // instances
   if (preserve_instances) {
     for (auto& instance : scene.instances) {
-      print_obj_line(fs, "i", get_basename(instance.uri),
+      write_obj_line(fs, "i", get_basename(instance.uri),
           get_basename(scene.shapes[instance.shape].uri),
           get_basename(scene.materials[instance.material].uri), instance.frame);
     }
-  }
-}
-
-static void format_value(FILE* fs, const obj_vertex& value) {
-  if (fprintf(fs, "%d", value.position) < 0)
-    throw io_error("cannot write value");
-  if (value.texcoord) {
-    if (fprintf(fs, "/%d", value.texcoord) < 0)
-      throw io_error("cannot write value");
-    if (value.normal) {
-      if (fprintf(fs, "/%d", value.normal) < 0)
-        throw io_error("cannot write value");
-    }
-  } else if (value.normal) {
-    if (fprintf(fs, "//%d", value.normal) < 0)
-      throw io_error("cannot write value");
   }
 }
 
@@ -1429,12 +1681,12 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   auto fs  = fs_.fs;
 
   // embed data
-  write_text(fs, get_save_scene_message(scene, "#"));
+  write_obj_text(fs, get_save_scene_message(scene));
 
   // material library
   if (!scene.materials.empty()) {
     auto mtlname = get_noextension(get_filename(filename)) + ".mtl";
-    print_obj_line(fs, "mtllib", mtlname);
+    write_obj_line(fs, "mtllib", mtlname);
   }
 
   // shapes
@@ -1448,24 +1700,24 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   }
   for (auto& instance : preserve_instances ? instances : scene.instances) {
     auto& shape = scene.shapes[instance.shape];
-    print_obj_line(fs, "o", get_basename(instance.uri));
+    write_obj_line(fs, "o", get_basename(instance.uri));
     if (instance.material >= 0)
-      print_obj_line(
+      write_obj_line(
           fs, "usemtl", get_basename(scene.materials[instance.material].uri));
     if (instance.frame == identity3x4f) {
-      for (auto& p : shape.positions) print_obj_line(fs, "v", p);
-      for (auto& n : shape.normals) print_obj_line(fs, "vn", n);
+      for (auto& p : shape.positions) write_obj_line(fs, "v", p);
+      for (auto& n : shape.normals) write_obj_line(fs, "vn", n);
       for (auto& t : shape.texcoords)
-        print_obj_line(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+        write_obj_line(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
     } else {
       for (auto& pp : shape.positions) {
-        print_obj_line(fs, "v", transform_point(instance.frame, pp));
+        write_obj_line(fs, "v", transform_point(instance.frame, pp));
       }
       for (auto& nn : shape.normals) {
-        print_obj_line(fs, "vn", transform_direction(instance.frame, nn));
+        write_obj_line(fs, "vn", transform_direction(instance.frame, nn));
       }
       for (auto& t : shape.texcoords)
-        print_obj_line(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+        write_obj_line(fs, "vt", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
     }
     auto mask = obj_vertex{
         1, shape.texcoords.empty() ? 0 : 1, shape.normals.empty() ? 0 : 1};
@@ -1475,19 +1727,19 @@ static void save_obj(const string& filename, const yocto_scene& scene,
           (i + offset.normal + 1) * mask.normal};
     };
     for (auto& p : shape.points) {
-      print_obj_line(fs, "p", vert(p));
+      write_obj_line(fs, "p", vert(p));
     }
     for (auto& l : shape.lines) {
-      print_obj_line(fs, "l", vert(l.x), vert(l.y));
+      write_obj_line(fs, "l", vert(l.x), vert(l.y));
     }
     for (auto& t : shape.triangles) {
-      print_obj_line(fs, "f", vert(t.x), vert(t.y), vert(t.z));
+      write_obj_line(fs, "f", vert(t.x), vert(t.y), vert(t.z));
     }
     for (auto& q : shape.quads) {
       if (q.z == q.w) {
-        print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+        write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
       } else {
-        print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+        write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
       }
     }
     for (auto i = 0; i < shape.quadspos.size(); i++) {
@@ -1499,10 +1751,10 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         auto qp = shape.quadspos[i];
         auto qt = shape.quadstexcoord[i];
         if (qp.z == qp.w) {
-          print_obj_line(
+          write_obj_line(
               fs, "f", vert(qp.x, qt.x), vert(qp.y, qt.y), vert(qp.z, qt.z));
         } else {
-          print_obj_line(fs, "f", vert(qp.x, qt.x), vert(qp.y, qt.y),
+          write_obj_line(fs, "f", vert(qp.x, qt.x), vert(qp.y, qt.y),
               vert(qp.z, qt.z), vert(qp.w, qt.w));
         }
       } else if (!shape.texcoords.empty() && !shape.normals.empty()) {
@@ -1514,10 +1766,10 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         auto qt = shape.quadstexcoord[i];
         auto qn = shape.quadsnorm[i];
         if (qp.z == qp.w) {
-          print_obj_line(fs, "f", vert(qp.x, qt.x, qn.x),
+          write_obj_line(fs, "f", vert(qp.x, qt.x, qn.x),
               vert(qp.y, qt.y, qn.y), vert(qp.z, qt.z, qn.z));
         } else {
-          print_obj_line(fs, "f", vert(qp.x, qt.x, qn.x),
+          write_obj_line(fs, "f", vert(qp.x, qt.x, qn.x),
               vert(qp.y, qt.y, qn.y), vert(qp.z, qt.z, qn.z),
               vert(qp.w, qt.w, qn.w));
         }
@@ -1529,10 +1781,10 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         auto qp = shape.quadspos[i];
         auto qn = shape.quadsnorm[i];
         if (qp.z == qp.w) {
-          print_obj_line(
+          write_obj_line(
               fs, "f", vert(qp.x, qn.x), vert(qp.y, qn.y), vert(qp.z, qn.z));
         } else {
-          print_obj_line(fs, "f", vert(qp.x, qn.x), vert(qp.y, qn.y),
+          write_obj_line(fs, "f", vert(qp.x, qn.x), vert(qp.y, qn.y),
               vert(qp.z, qn.z), vert(qp.w, qn.w));
         }
       } else {
@@ -1541,9 +1793,9 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         };
         auto q = shape.quadspos[i];
         if (q.z == q.w) {
-          print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+          write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
         } else {
-          print_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+          write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
         }
       }
     }
@@ -1570,12 +1822,12 @@ static void save_obj_scene(const string& filename, const yocto_scene& scene,
     auto dirname = get_dirname(filename);
     save_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot save scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
   }
 }
 
 void print_obj_camera(const yocto_camera& camera) {
-  print_obj_line(stdout, "c", get_basename(camera.uri),
+  write_obj_line(stdout, "c", get_basename(camera.uri),
       (int)camera.orthographic, camera.film.x, camera.film.y, camera.lens,
       camera.focus, camera.aperture, camera.frame);
 }
@@ -1607,7 +1859,7 @@ static void load_ply_scene(
     scene.instances.push_back(instance);
 
   } catch (const std::exception& e) {
-    throw io_error("cannot load scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
@@ -1623,7 +1875,7 @@ static void load_ply_scene(
 static void save_ply_scene(const string& filename, const yocto_scene& scene,
     const save_params& params) {
   if (scene.shapes.empty()) {
-    throw io_error("cannot save empty scene " + filename);
+    throw std::runtime_error("cannot save empty scene " + filename);
   }
   try {
     auto& shape = scene.shapes.front();
@@ -1632,7 +1884,7 @@ static void save_ply_scene(const string& filename, const yocto_scene& scene,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
         shape.radius);
   } catch (const std::exception& e) {
-    throw io_error("cannot save scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
   }
 }
 
@@ -1651,20 +1903,24 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
   auto data   = (cgltf_data*)nullptr;
   auto result = cgltf_parse_file(&params, filename.c_str(), &data);
   if (result != cgltf_result_success) {
-    throw io_error("could not load gltf " + filename);
+    throw std::runtime_error("could not load gltf " + filename);
   }
   auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{data, cgltf_free};
   if (cgltf_load_buffers(&params, data, get_dirname(filename).c_str()) !=
       cgltf_result_success) {
-    throw io_error("could not load gltf buffers " + filename);
+    throw std::runtime_error("could not load gltf buffers " + filename);
   }
 
   // convert textures
+  auto _startswith = [](string_view str, string_view substr) {
+    if (str.size() < substr.size()) return false;
+    return str.substr(0, substr.size()) == substr;
+  };
   auto imap = unordered_map<cgltf_image*, int>{};
   for (auto tid = 0; tid < gltf->images_count; tid++) {
     auto gimg    = &gltf->images[tid];
     auto texture = yocto_texture{};
-    texture.uri  = (startswith(gimg->uri, "data:"))
+    texture.uri  = (_startswith(gimg->uri, "data:"))
                       ? string("[glTF-static inline].png")
                       : gimg->uri;
     scene.textures.push_back(texture);
@@ -1787,7 +2043,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
       if (!gprim->attributes_count) continue;
       auto shape = yocto_shape();
       shape.uri  = (gmesh->name ? gmesh->name : "") +
-                  ((sid) ? to_string(sid) : string());
+                  ((sid) ? std::to_string(sid) : string());
       for (auto aid = 0; aid < gprim->attributes_count; aid++) {
         auto gattr    = &gprim->attributes[aid];
         auto semantic = string(gattr->name ? gattr->name : "");
@@ -1855,9 +2111,9 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
             shape.lines.push_back({i - 1, i});
         } else if (gprim->type == cgltf_primitive_type_points) {
           // points
-          throw io_error("points not supported");
+          throw std::runtime_error("points not supported");
         } else {
-          throw io_error("unknown primitive type");
+          throw std::runtime_error("unknown primitive type");
         }
       } else {
         auto indices = accessor_values(gprim->indices);
@@ -1892,9 +2148,9 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
           for (auto i = 1; i < indices.size(); i++)
             shape.lines.push_back({(int)indices[i - 1][0], (int)indices[i][0]});
         } else if (gprim->type == cgltf_primitive_type_points) {
-          throw io_error("points not supported");
+          throw std::runtime_error("points not supported");
         } else {
-          throw io_error("unknown primitive type");
+          throw std::runtime_error("unknown primitive type");
         }
       }
       scene.shapes.push_back(shape);
@@ -1911,7 +2167,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
     camera.uri          = gcam->name ? gcam->name : "";
     camera.orthographic = gcam->type == cgltf_camera_type_orthographic;
     if (camera.orthographic) {
-      // throw io_error("orthographic not supported well");
+      // throw std::runtime_error("orthographic not supported well");
       auto ortho          = &gcam->orthographic;
       camera.aperture     = 0;
       camera.orthographic = true;
@@ -2018,9 +2274,10 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
       auto gchannel = &ganm->channels[cid];
       auto path     = gchannel->target_path;
       if (sampler_map.find({gchannel->sampler, path}) == sampler_map.end()) {
-        auto gsampler   = gchannel->sampler;
-        auto animation  = yocto_animation{};
-        animation.uri   = (ganm->name ? ganm->name : "anim") + to_string(aid++);
+        auto gsampler  = gchannel->sampler;
+        auto animation = yocto_animation{};
+        animation.uri  = (ganm->name ? ganm->name : "anim") +
+                        std::to_string(aid++);
         animation.group = ganm->name ? ganm->name : "";
         auto input_view = accessor_values(gsampler->input);
         animation.times.resize(input_view.size());
@@ -2059,7 +2316,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
                   (float)output_view[i][1], (float)output_view[i][2]});
           } break;
           case cgltf_animation_path_type_weights: {
-            throw io_error("weights not supported for now");
+            throw std::runtime_error("weights not supported for now");
 #if 0
                     // get a node that it refers to
                     auto ncomp = 0;
@@ -2085,7 +2342,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
 #endif
           } break;
           default: {
-            throw io_error("bad gltf animation");
+            throw std::runtime_error("bad gltf animation");
           }
         }
         sampler_map[{gchannel->sampler, path}] = (int)scene.animations.size();
@@ -2112,7 +2369,7 @@ static void load_gltf_scene(
     load_textures(scene, dirname, params);
 
   } catch (const std::exception& e) {
-    throw io_error("cannot load scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
@@ -2138,86 +2395,112 @@ struct write_json_state {
   FILE*                    fs = nullptr;
   vector<pair<bool, bool>> stack;
 };
+static inline void write_json_text(write_json_state& state, const char* text) {
+  if (fprintf(state.fs, "%s", text) < 0)
+    throw std::runtime_error("cannot write json");
+}
+static inline void write_json_text(
+    write_json_state& state, const string& text) {
+  if (fprintf(state.fs, "%s", text.c_str()) < 0)
+    throw std::runtime_error("cannot write json");
+}
 static inline void _write_json_next(
     write_json_state& state, bool dedent = false) {
   static const char* indents[7] = {
       "", "  ", "    ", "      ", "        ", "          ", "            "};
   if (state.stack.empty()) return;
-  write_text(state.fs, state.stack.back().second ? ",\n" : "\n");
-  write_text(state.fs,
-      indents[clamp((int)state.stack.size() + (dedent ? -1 : 0), 0, 6)]);
+  write_json_text(state, state.stack.back().second ? ",\n" : "\n");
+  write_json_text(
+      state, indents[clamp((int)state.stack.size() + (dedent ? -1 : 0), 0, 6)]);
   state.stack.back().second = true;
 }
 static inline void _write_json_value(write_json_state& state, int value) {
-  write_text(state.fs, to_string(value));
+  if (fprintf(state.fs, "%d", value) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(write_json_state& state, size_t value) {
-  write_text(state.fs, to_string(value));
+  if (fprintf(state.fs, "%llu", (unsigned long long)value) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(write_json_state& state, float value) {
-  write_text(state.fs, to_string(value));
+  if (fprintf(state.fs, "%g", value) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(write_json_state& state, bool value) {
-  write_text(state.fs, to_string(value, true));
+  if (fprintf(state.fs, "%s", value ? "true" : "false") < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const string& value) {
-  write_text(state.fs, value);
+  if (fprintf(state.fs, "\"%s\"", value.c_str()) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const char* value) {
-  write_text(state.fs, value);
+  if (fprintf(state.fs, "\"%s\"", value) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const vec2f& value) {
-  write_text(state.fs, to_string(value, true));
+  if (fprintf(state.fs, "[%g, %g]", value.x, value.y) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const vec3f& value) {
-  write_text(state.fs, to_string(value, true));
+  if (fprintf(state.fs, "[%g, %g, %g]", value.x, value.y, value.z) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const vec4f& value) {
-  write_text(state.fs, to_string(value, true));
+  if (fprintf(
+          state.fs, "[%g, %g, %g, %g]", value.x, value.y, value.z, value.w) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const mat4f& value) {
-  write_text(state.fs, to_string(value, true));
+  if (fprintf(state.fs, "[ ") < 0)
+    throw std::runtime_error("cannot write json");
+  for (auto i = 0; i < 16; i++) {
+    if (fprintf(state.fs, i ? ", %g" : "%g", (&value.x.x)[i]) < 0)
+      throw std::runtime_error("cannot write json");
+  }
+  if (fprintf(state.fs, " ]") < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const vector<int>& value) {
-  write_text(state.fs, "[ ");
+  write_json_text(state, "[ ");
   for (auto i = 0; i < value.size(); i++) {
-    if (i) write_text(state.fs, ", ");
+    if (i) write_json_text(state, ", ");
     _write_json_value(state, value[i]);
   }
-  write_text(state.fs, " ]");
+  write_json_text(state, " ]");
 }
 static inline void write_json_object(write_json_state& state) {
   _write_json_next(state);
-  write_text(state.fs, "{ ");
+  write_json_text(state, "{ ");
   state.stack.push_back({true, false});
 }
 static inline void write_json_object(write_json_state& state, const char* key) {
   _write_json_next(state);
   _write_json_value(state, key);
-  write_text(state.fs, ": {");
+  write_json_text(state, ": {");
   state.stack.push_back({true, false});
 }
 static inline void write_json_array(write_json_state& state) {
   _write_json_next(state);
-  write_text(state.fs, "[ ");
+  write_json_text(state, "[ ");
   state.stack.push_back({false, false});
 }
 static inline void write_json_array(write_json_state& state, const char* key) {
   _write_json_next(state);
   _write_json_value(state, key);
-  write_text(state.fs, ": [");
+  write_json_text(state, ": [");
   state.stack.push_back({false, false});
 }
 static inline void write_json_pop(write_json_state& state) {
   _write_json_next(state, true);
-  write_text(state.fs, state.stack.back().first ? "}" : "]");
+  write_json_text(state, state.stack.back().first ? "}" : "]");
   state.stack.pop_back();
 }
 template <typename T>
@@ -2230,7 +2513,7 @@ static inline void write_json_value(
     write_json_state& state, const char* key, const T& value) {
   _write_json_next(state);
   _write_json_value(state, key);
-  write_text(state.fs, ": ");
+  write_json_text(state, ": ");
   _write_json_value(state, value);
 }
 static inline void write_json_begin(write_json_state& state) {
@@ -2239,7 +2522,7 @@ static inline void write_json_begin(write_json_state& state) {
 }
 static inline void write_json_end(write_json_state& state) {
   write_json_pop(state);
-  if (state.stack.empty()) throw io_error("bad json stack");
+  if (state.stack.empty()) throw std::runtime_error("bad json stack");
 }
 
 // convert gltf scene to json
@@ -2543,7 +2826,8 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
   write_json_pop(state);
 
   // animations not supported yet
-  if (!scene.animations.empty()) throw io_error("animation not supported yet");
+  if (!scene.animations.empty())
+    throw std::runtime_error("animation not supported yet");
 
   // end writing
   write_json_end(state);
@@ -2553,7 +2837,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
     if (values.empty()) return;
     if (fwrite(values.data(), sizeof(values.front()), values.size(), fs) !=
         values.size())
-      throw io_error("cannot write to file");
+      throw std::runtime_error("cannot write to file");
   };
   auto dirname = get_dirname(filename);
   for (auto& shape : shapes) {
@@ -2579,7 +2863,7 @@ static void save_gltf_scene(const string& filename, const yocto_scene& scene,
     auto dirname = get_dirname(filename);
     save_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot save scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
   }
 }
 
@@ -2686,7 +2970,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
     auto material = mmap.at(ctx.material);
     if (amap.at(ctx.arealight) != zero3f) {
       material.emission = amap.at(ctx.arealight);
-      material.uri += "_arealight_" + to_string(light_id++);
+      material.uri += "_arealight_" + std::to_string(light_id++);
     }
     scene.materials.push_back(material);
     ammap[lookup_name] = (int)scene.materials.size() - 1;
@@ -2759,10 +3043,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         }
       } break;
       case pbrt_camera::type_t::orthographic: {
-        throw io_error("unsupported Camera type");
+        throw std::runtime_error("unsupported Camera type");
       } break;
       case pbrt_camera::type_t::environment: {
-        throw io_error("unsupported Camera type");
+        throw std::runtime_error("unsupported Camera type");
       } break;
       case pbrt_camera::type_t::realistic: {
         auto& realistic = pcamera.realistic;
@@ -2795,7 +3079,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
   void shape(const pbrt_shape& pshape, const pbrt_context& ctx) override {
     static auto shape_id = 0;
     auto        shape    = yocto_shape{};
-    shape.uri            = "shapes/shape__" + to_string(shape_id++) + ".ply";
+    shape.uri = "shapes/shape__" + std::to_string(shape_id++) + ".ply";
     switch (pshape.type) {
       case pbrt_shape::type_t::trianglemesh: {
         auto& mesh      = pshape.trianglemesh;
@@ -2839,7 +3123,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             shape.normals, shape.texcoords, params);
       } break;
       default: {
-        throw io_error("unsupported shape type " + to_string((int)pshape.type));
+        throw std::runtime_error(
+            "unsupported shape type " + std::to_string((int)pshape.type));
       }
     }
     scene.shapes.push_back(shape);
@@ -3133,14 +3418,14 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
       } break;
       case pbrt_arealight::type_t::none: {
-        throw io_error("should not have gotten here");
+        throw std::runtime_error("should not have gotten here");
       } break;
     }
     amap[name] = emission;
   }
   void light(const pbrt_light& plight, const pbrt_context& ctx) override {
     static auto light_id = 0;
-    auto        name     = "light_" + to_string(light_id++);
+    auto        name     = "light_" + std::to_string(light_id++);
     switch (plight.type) {
       case pbrt_light::type_t::infinite: {
         auto& infinite    = plight.infinite;
@@ -3261,8 +3546,8 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         scene.instances.push_back(instance);
       } break;
       default: {
-        throw io_error(
-            "light type not supported " + to_string((int)plight.type));
+        throw std::runtime_error(
+            "light type not supported " + std::to_string((int)plight.type));
       }
     }
   }
@@ -3303,7 +3588,7 @@ static void load_pbrt_scene(
     auto dirname = get_dirname(filename);
     load_textures(scene, dirname, params);
   } catch (const std::exception& e) {
-    throw io_error("cannot load scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
@@ -3316,6 +3601,53 @@ static void load_pbrt_scene(
   update_transforms(scene);
 }
 
+// Write text to file
+static inline void write_pbrt_value(FILE* fs, int value) {
+  if (fprintf(fs, "%d", value) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_pbrt_value(FILE* fs, float value) {
+  if (fprintf(fs, "%g", value) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_pbrt_text(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_pbrt_text(FILE* fs, const string& value) {
+  if (fprintf(fs, "\"%s\"", value.c_str()) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_pbrt_value(FILE* fs, const char* value) {
+  if (fprintf(fs, "%s", value) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_pbrt_value(FILE* fs, const string& value) {
+  if (fprintf(fs, "%s", value.c_str()) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_pbrt_value(FILE* fs, const vec3f& value) {
+  if (fprintf(fs, "%g %g %g", value.x, value.y, value.z) < 0)
+    throw std::runtime_error("cannot print value");
+}
+static inline void write_pbrt_value(FILE* fs, const frame3f& value) {
+  for (auto i = 0; i < 12; i++)
+    if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
+      throw std::runtime_error("cannot print value");
+}
+
+template <typename T, typename... Ts>
+static inline void write_pbrt_line(
+    FILE* fs, const T& value, const Ts... values) {
+  write_pbrt_value(fs, value);
+  if constexpr (sizeof...(values) == 0) {
+    write_pbrt_text(fs, "\n");
+  } else {
+    write_pbrt_text(fs, " ");
+    write_pbrt_line(fs, values...);
+  }
+}
+
 // Convert a scene to pbrt format
 static void save_pbrt(const string& filename, const yocto_scene& scene) {
   // open file
@@ -3323,7 +3655,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   auto fs  = fs_.fs;
 
   // embed data
-  write_text(fs, get_save_scene_message(scene, "#"));
+  write_pbrt_text(fs, get_save_scene_message(scene));
 
   // convert camera and settings
   auto& camera     = scene.cameras.front();
@@ -3331,72 +3663,67 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   auto  to         = camera.frame.o - camera.frame.z;
   auto  up         = camera.frame.y;
   auto  image_size = camera_resolution(camera, {0, 720});
-  format_line(fs, "LookAt", from, to, up);
-  format_line(fs, "Camera \"perspective\" \"float fov\"",
+  write_pbrt_line(fs, "LookAt", from, to, up);
+  write_pbrt_line(fs, "Camera \"perspective\" \"float fov\"",
       camera_fov(camera).x * 180 / pif);
 
   // save renderer
-  write_text(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
-  write_text(fs, "Integrator \"path\"\n");
-  format_line(fs, "Film \"image\" \"string filename\"",
-      to_string(get_noextension(filename) + ".exr", true),
-      "\"integer xresolution\"", image_size.x, "\"integer yresolution\"",
-      image_size.y);
+  write_pbrt_text(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
+  write_pbrt_text(fs, "Integrator \"path\"\n");
+  write_pbrt_line(fs, "Film \"image\" \"string filename\"",
+      get_noextension(filename) + ".exr", "\"integer xresolution\"",
+      image_size.x, "\"integer yresolution\"", image_size.y);
 
   // convert textures
   for (auto& texture : scene.textures) {
-    format_line(fs, "Texture", to_string(get_basename(texture.uri), true),
-        "\"spectrum\" \"imagemap\" \"string filename\"",
-        to_string(texture.uri, true));
+    write_pbrt_line(fs, "Texture", get_basename(texture.uri),
+        "\"spectrum\" \"imagemap\" \"string filename\"", texture.uri);
   }
 
   // convert materials
   for (auto& material : scene.materials) {
-    format_line(fs, "MakeNamedMaterial \"{}\" \"string type\" \"uber\"\n",
+    write_pbrt_line(fs, "MakeNamedMaterial \"{}\" \"string type\" \"uber\"\n",
         get_basename(material.uri));
     if (material.diffuse_tex >= 0) {
-      format_line(fs, "    \"texture Kd\"",
-          to_string(
-              get_basename(scene.textures[material.diffuse_tex].uri), true));
+      write_pbrt_line(fs, "    \"texture Kd\"",
+          get_basename(scene.textures[material.diffuse_tex].uri));
     } else {
-      format_line(fs, "    \"rgb Kd\" [", material.diffuse, "]");
+      write_pbrt_line(fs, "    \"rgb Kd\" [", material.diffuse, "]");
     }
     if (material.specular_tex >= 0) {
-      format_line(fs, "    \"texture Ks\"",
-          to_string(
-              get_basename(scene.textures[material.specular_tex].uri), true));
+      write_pbrt_line(fs, "    \"texture Ks\"",
+          get_basename(scene.textures[material.specular_tex].uri));
     } else {
       auto specular = vec3f{1};
-      format_line(fs, "    \"rgb Ks\" [", specular, "]");
+      write_pbrt_line(fs, "    \"rgb Ks\" [", specular, "]");
     }
-    format_line(fs, "    \"float roughness\" ",
+    write_pbrt_line(fs, "    \"float roughness\" ",
         material.roughness * material.roughness);
   }
 
   // start world
-  write_text(fs, "WorldBegin\n");
+  write_pbrt_text(fs, "WorldBegin\n");
 
   // convert instances
   for (auto& instance : scene.instances) {
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
-    write_text(fs, "AttributeBegin\n");
-    write_text(fs, "  TransformBegin\n");
-    format_line(fs, "    Transform [", instance.frame, "]");
-    format_line(
-        fs, "    NamedMaterial", to_string(get_basename(material.uri), true));
+    write_pbrt_text(fs, "AttributeBegin\n");
+    write_pbrt_text(fs, "  TransformBegin\n");
+    write_pbrt_line(fs, "    Transform [", instance.frame, "]");
+    write_pbrt_line(fs, "    NamedMaterial", get_basename(material.uri));
     if (material.emission != zero3f) {
-      format_line(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [",
+      write_pbrt_line(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [",
           material.emission, "]");
     }
-    format_line(fs, "    Shape \"plymesh\" \"string filename\"",
-        to_string(get_noextension(shape.uri) + ".ply", true));
-    write_text(fs, "  TransformEnd\n");
-    write_text(fs, "AttributeEnd\n");
+    write_pbrt_line(fs, "    Shape \"plymesh\" \"string filename\"",
+        get_noextension(shape.uri) + ".ply");
+    write_pbrt_text(fs, "  TransformEnd\n");
+    write_pbrt_text(fs, "AttributeEnd\n");
   }
 
   // end world
-  write_text(fs, "WorldEnd\n");
+  write_pbrt_text(fs, "WorldEnd\n");
 }
 
 // Save a pbrt scene
@@ -3419,7 +3746,7 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
     save_textures(scene, dirname, params);
 
   } catch (const std::exception& e) {
-    throw io_error("cannot save scene " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
   }
 }
 

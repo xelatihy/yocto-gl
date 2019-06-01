@@ -74,12 +74,12 @@ static inline void parse_value(pbrt_stream& stream, string& value) {
   skip_whitespace_or_comment(stream);
   auto& str = stream.str;
   if (str.front() != '"') {
-    throw io_error("bad string");
+    throw std::runtime_error("bad string");
   }
   str.remove_prefix(1);
   auto pos = str.find('"');
   if (pos == string_view::npos) {
-    throw io_error("bad string");
+    throw std::runtime_error("bad string");
   }
   value.assign(str.substr(0, pos));
   str.remove_prefix(pos + 1);
@@ -90,7 +90,7 @@ static inline void parse_command(pbrt_stream& stream, string& value) {
   skip_whitespace_or_comment(stream);
   auto& str = stream.str;
   if (!std::isalpha((int)str.front())) {
-    throw io_error("bad command");
+    throw std::runtime_error("bad command");
   }
   auto pos = str.find_first_not_of(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
@@ -107,10 +107,10 @@ static inline void parse_command(pbrt_stream& stream, string& value) {
 static inline void parse_value(pbrt_stream& stream, float& value) {
   skip_whitespace_or_comment(stream);
   auto& str = stream.str;
-  if (str.empty()) throw io_error("number expected");
+  if (str.empty()) throw std::runtime_error("number expected");
   auto next = (char*)nullptr;
   value     = strtof(str.data(), &next);
-  if (str.data() == next) throw io_error("number expected");
+  if (str.data() == next) throw std::runtime_error("number expected");
   str.remove_prefix(next - str.data());
 }
 
@@ -118,10 +118,10 @@ static inline void parse_value(pbrt_stream& stream, float& value) {
 static inline void parse_value(pbrt_stream& stream, int& value) {
   skip_whitespace_or_comment(stream);
   auto& str = stream.str;
-  if (str.empty()) throw io_error("number expected");
+  if (str.empty()) throw std::runtime_error("number expected");
   auto next = (char*)nullptr;
   value     = strtol(str.data(), &next, 10);
-  if (str.data() == next) throw io_error("number expected");
+  if (str.data() == next) throw std::runtime_error("number expected");
   str.remove_prefix(next - str.data());
 }
 static inline void parse_value(pbrt_stream& stream, bool& value) {
@@ -132,7 +132,7 @@ static inline void parse_value(pbrt_stream& stream, bool& value) {
   } else if (value_name == "false") {
     value = false;
   } else {
-    throw io_error("expected boolean");
+    throw std::runtime_error("expected boolean");
   }
 }
 template <typename T>
@@ -143,7 +143,7 @@ static inline void parse_value(
   try {
     value = value_names.at(value_name);
   } catch (std::out_of_range&) {
-    throw io_error("expected enum value");
+    throw std::runtime_error("expected enum value");
   }
 }
 static inline void parse_value(
@@ -261,9 +261,6 @@ static inline void parse_value(pbrt_stream& stream, vec3f& value) {
 static inline void parse_value(pbrt_stream& stream, vec4f& value) {
   for (auto i = 0; i < 4; i++) parse_value(stream, value[i]);
 }
-static inline void parse_value(pbrt_stream& stream, vec2i& value) {
-  for (auto i = 0; i < 2; i++) parse_value(stream, value[i]);
-}
 static inline void parse_value(pbrt_stream& stream, vec3i& value) {
   for (auto i = 0; i < 3; i++) parse_value(stream, value[i]);
 }
@@ -307,25 +304,25 @@ static inline void parse_nametype(
   auto str  = string_view{value};
   auto pos1 = str.find(' ');
   if (pos1 == string_view::npos) {
-    throw io_error("bad type " + value);
+    throw std::runtime_error("bad type " + value);
   }
   type = string(str.substr(0, pos1));
   str.remove_prefix(pos1);
   auto pos2 = str.find_first_not_of(' ');
   if (pos2 == string_view::npos) {
-    throw io_error("bad type " + value);
+    throw std::runtime_error("bad type " + value);
   }
   str.remove_prefix(pos2);
   name = string(str);
 }
 
 static inline void skip_open_bracket(pbrt_stream& stream) {
-  if (!is_open_bracket(stream)) throw io_error("expected bracket");
+  if (!is_open_bracket(stream)) throw std::runtime_error("expected bracket");
   stream.str.remove_prefix(1);
   skip_whitespace_or_comment(stream);
 }
 static inline void skip_close_bracket(pbrt_stream& stream) {
-  if (!is_close_bracket(stream)) throw io_error("expected bracket");
+  if (!is_close_bracket(stream)) throw std::runtime_error("expected bracket");
   stream.str.remove_prefix(1);
   skip_whitespace_or_comment(stream);
 }
@@ -386,7 +383,7 @@ template <typename T>
 static inline void parse_param(
     pbrt_stream& stream, const string& type, T& value) {
   if (!is_type_compatible<T>(type)) {
-    throw io_error("incompatible type " + type);
+    throw std::runtime_error("incompatible type " + type);
   }
   parse_param(stream, value);
 }
@@ -510,10 +507,10 @@ static inline void parse_param(
             get_pbrt_etak(filename.substr(0, filename.length() - 2)).second;
         value = {k.x, k.y, k.z};
       } else {
-        throw io_error("unknown spectrum file " + filename);
+        throw std::runtime_error("unknown spectrum file " + filename);
       }
     } else {
-      throw io_error("unsupported spectrum format");
+      throw std::runtime_error("unsupported spectrum format");
       // value = {1, 0, 0};
     }
   } else if (type == "spectrum" && !is_string(stream)) {
@@ -522,7 +519,7 @@ static inline void parse_param(
     parse_param(stream, values);
     value = {1, 0, 0};
   } else {
-    throw io_error("unsupported spectrum type");
+    throw std::runtime_error("unsupported spectrum type");
   }
 }
 
@@ -530,7 +527,7 @@ template <typename T>
 static inline void parse_param(
     pbrt_stream& stream, const string& type, vector<T>& value) {
   if (!is_type_compatible<T>(type)) {
-    throw io_error("incompatible type " + type);
+    throw std::runtime_error("incompatible type " + type);
   }
   parse_param(stream, value);
 }
@@ -579,6 +576,22 @@ static inline void save_stream_position(pbrt_stream& stream) {
 }
 static inline void restore_stream_position(pbrt_stream& stream) {
   stream.str = stream.saved;
+}
+
+// Load a text file
+static inline void load_text(const string& filename, string& str) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  str.resize(length);
+  if (fread(str.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw std::runtime_error("cannot read file " + filename);
+  }
+  fclose(fs);
 }
 
 // Load a token stream
@@ -631,7 +644,7 @@ static inline void parse_accelerator(
       } else if (pname == "splitmethod") {
         parse_param(stream, ptype, tvalue.splitmethod);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_accelerator::type_t::bvh;
@@ -651,13 +664,13 @@ static inline void parse_accelerator(
       } else if (pname == "maxdepth") {
         parse_param(stream, ptype, tvalue.maxdepth);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type   = pbrt_accelerator::type_t::kdtree;
     value.kdtree = tvalue;
   } else {
-    throw io_error("unknown Accelerator " + type);
+    throw std::runtime_error("unknown Accelerator " + type);
   }
 }
 
@@ -678,7 +691,7 @@ static inline void parse_integrator(
       } else if (pname == "lightsamplestrategy") {
         parse_param(stream, ptype, tvalue.lightsamplestrategy);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
       // parse_optional_param(stream, "lightsamplestrategy",
       // tvalue.lightsamplestrategy); // TODO: enums
@@ -698,7 +711,7 @@ static inline void parse_integrator(
       } else if (pname == "lightsamplestrategy") {
         parse_param(stream, ptype, tvalue.lightsamplestrategy);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type    = pbrt_integrator::type_t::volpath;
@@ -714,7 +727,7 @@ static inline void parse_integrator(
       } else if (pname == "strategy") {
         parse_param(stream, ptype, tvalue.strategy);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type           = pbrt_integrator::type_t::directlighting;
@@ -734,7 +747,7 @@ static inline void parse_integrator(
       } else if (pname == "visualizeweights") {
         parse_param(stream, ptype, tvalue.visualizeweights);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_integrator::type_t::bdpt;
@@ -758,7 +771,7 @@ static inline void parse_integrator(
       } else if (pname == "sigma") {
         parse_param(stream, ptype, tvalue.sigma);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_integrator::type_t::mlt;
@@ -782,7 +795,7 @@ static inline void parse_integrator(
       } else if (pname == "radius") {
         parse_param(stream, ptype, tvalue.radius);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_integrator::type_t::sppm;
@@ -796,13 +809,13 @@ static inline void parse_integrator(
       } else if (pname == "pixelbounds") {
         parse_param(stream, ptype, tvalue.pixelbounds);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type    = pbrt_integrator::type_t::whitted;
     value.whitted = tvalue;
   } else {
-    throw io_error("unknown Integrator " + type);
+    throw std::runtime_error("unknown Integrator " + type);
   }
 }
 
@@ -817,7 +830,7 @@ static inline void parse_sampler(
       if (pname == "pixelsamples") {
         parse_param(stream, ptype, tvalue.pixelsamples);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type   = pbrt_sampler::type_t::random;
@@ -829,7 +842,7 @@ static inline void parse_sampler(
       if (pname == "pixelsamples") {
         parse_param(stream, ptype, tvalue.pixelsamples);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type   = pbrt_sampler::type_t::halton;
@@ -841,7 +854,7 @@ static inline void parse_sampler(
       if (pname == "pixelsamples") {
         parse_param(stream, ptype, tvalue.pixelsamples);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type  = pbrt_sampler::type_t::sobol;
@@ -853,7 +866,7 @@ static inline void parse_sampler(
       if (pname == "pixelsamples") {
         parse_param(stream, ptype, tvalue.pixelsamples);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type            = pbrt_sampler::type_t::zerotwosequence;
@@ -865,7 +878,7 @@ static inline void parse_sampler(
       if (pname == "pixelsamples") {
         parse_param(stream, ptype, tvalue.pixelsamples);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type            = pbrt_sampler::type_t::zerotwosequence;
@@ -877,7 +890,7 @@ static inline void parse_sampler(
       if (pname == "pixelsamples") {
         parse_param(stream, ptype, tvalue.pixelsamples);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type       = pbrt_sampler::type_t::maxmindist;
@@ -893,13 +906,13 @@ static inline void parse_sampler(
       } else if (pname == "jitter") {
         parse_param(stream, ptype, tvalue.jitter);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type       = pbrt_sampler::type_t::stratified;
     value.stratified = tvalue;
   } else {
-    throw io_error("unknown Sampler " + type);
+    throw std::runtime_error("unknown Sampler " + type);
   }
 }
 
@@ -916,7 +929,7 @@ static inline void parse_filter(
       } else if (pname == "ywidth") {
         parse_param(stream, ptype, tvalue.ywidth);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_filter::type_t::box;
@@ -932,7 +945,7 @@ static inline void parse_filter(
       } else if (pname == "alpha") {
         parse_param(stream, ptype, tvalue.alpha);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type     = pbrt_filter::type_t::gaussian;
@@ -950,7 +963,7 @@ static inline void parse_filter(
       } else if (pname == "C") {
         parse_param(stream, ptype, tvalue.C);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type     = pbrt_filter::type_t::mitchell;
@@ -966,7 +979,7 @@ static inline void parse_filter(
       } else if (pname == "tau") {
         parse_param(stream, ptype, tvalue.tau);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_filter::type_t::sinc;
@@ -980,13 +993,13 @@ static inline void parse_filter(
       } else if (pname == "ywidth") {
         parse_param(stream, ptype, tvalue.ywidth);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type     = pbrt_filter::type_t::triangle;
     value.triangle = tvalue;
   } else {
-    throw io_error("unknown PixelFilter " + type);
+    throw std::runtime_error("unknown PixelFilter " + type);
   }
 }
 
@@ -1015,13 +1028,13 @@ static inline void parse_film(
       } else if (pname == "filename") {
         parse_param(stream, ptype, tvalue.filename);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type  = pbrt_film::type_t::image;
     value.image = tvalue;
   } else {
-    throw io_error("unknown Film " + type);
+    throw std::runtime_error("unknown Film " + type);
   }
 }
 
@@ -1048,7 +1061,7 @@ static inline void parse_camera(
       } else if (pname == "shutterclose") {
         parse_param(stream, ptype, tvalue.shutterclose);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type        = pbrt_camera::type_t::perspective;
@@ -1070,7 +1083,7 @@ static inline void parse_camera(
       } else if (pname == "shutterclose") {
         parse_param(stream, ptype, tvalue.shutterclose);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type         = pbrt_camera::type_t::orthographic;
@@ -1084,7 +1097,7 @@ static inline void parse_camera(
       } else if (pname == "shutterclose") {
         parse_param(stream, ptype, tvalue.shutterclose);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type        = pbrt_camera::type_t::environment;
@@ -1112,13 +1125,13 @@ static inline void parse_camera(
       } else if (pname == "shutterclose") {
         parse_param(stream, ptype, tvalue.shutterclose);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type      = pbrt_camera::type_t::realistic;
     value.realistic = tvalue;
   } else {
-    throw io_error("unknown Film " + type);
+    throw std::runtime_error("unknown Film " + type);
   }
 }
 
@@ -1133,7 +1146,7 @@ static inline void parse_texture(
       if (pname == "value") {
         parse_param(stream, ptype, tvalue.value);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type     = pbrt_texture::type_t::constant;
@@ -1165,7 +1178,7 @@ static inline void parse_texture(
       } else if (pname == "v2") {
         parse_param(stream, ptype, tvalue.v2);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type   = pbrt_texture::type_t::bilerp;
@@ -1197,7 +1210,7 @@ static inline void parse_texture(
       } else if (pname == "v2") {
         parse_param(stream, ptype, tvalue.v2);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type         = pbrt_texture::type_t::checkerboard;
@@ -1225,7 +1238,7 @@ static inline void parse_texture(
       } else if (pname == "v2") {
         parse_param(stream, ptype, tvalue.v2);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_texture::type_t::dots;
@@ -1261,7 +1274,7 @@ static inline void parse_texture(
       } else if (pname == "v2") {
         parse_param(stream, ptype, tvalue.v2);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type     = pbrt_texture::type_t::imagemap;
@@ -1277,7 +1290,7 @@ static inline void parse_texture(
       } else if (pname == "amount") {
         parse_param(stream, ptype, tvalue.amount);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_texture::type_t::mix;
@@ -1291,7 +1304,7 @@ static inline void parse_texture(
       } else if (pname == "tex2") {
         parse_param(stream, ptype, tvalue.tex2);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type  = pbrt_texture::type_t::scale;
@@ -1305,7 +1318,7 @@ static inline void parse_texture(
       } else if (pname == "roughness") {
         parse_param(stream, ptype, tvalue.roughness);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_texture::type_t::fbm;
@@ -1319,7 +1332,7 @@ static inline void parse_texture(
       } else if (pname == "roughness") {
         parse_param(stream, ptype, tvalue.roughness);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type     = pbrt_texture::type_t::wrinkled;
@@ -1331,7 +1344,7 @@ static inline void parse_texture(
       if (pname == "") {
         // TODO: missing params
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type  = pbrt_texture::type_t::windy;
@@ -1349,7 +1362,7 @@ static inline void parse_texture(
       } else if (pname == "variation") {
         parse_param(stream, ptype, tvalue.variation);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type   = pbrt_texture::type_t::marble;
@@ -1373,13 +1386,13 @@ static inline void parse_texture(
       } else if (pname == "v2") {
         parse_param(stream, ptype, tvalue.v2);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_texture::type_t::uv;
     value.uv   = tvalue;
   } else {
-    throw io_error("unknown Texture " + type);
+    throw std::runtime_error("unknown Texture " + type);
   }
 }
 
@@ -1432,7 +1445,7 @@ void approximate_fourier_material(pbrt_material::fourier_t& fourier) {
     metal.uroughness    = 0.2f;
     metal.vroughness    = 0.2f;
   } else {
-    throw io_error("unknown pbrt bsdf filename " + fourier.bsdffile);
+    throw std::runtime_error("unknown pbrt bsdf filename " + fourier.bsdffile);
   }
 }
 
@@ -1540,7 +1553,7 @@ static inline void parse_typeparam(pbrt_stream& stream, string& value) {
       skip_param(stream);
     }
   }
-  if (value == "") throw io_error("type not found");
+  if (value == "") throw std::runtime_error("type not found");
   restore_stream_position(stream);
 }
 
@@ -1583,9 +1596,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type  = pbrt_material::type_t::matte;
@@ -1601,9 +1614,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type   = pbrt_material::type_t::mirror;
@@ -1632,9 +1645,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type    = pbrt_material::type_t::plastic;
@@ -1665,9 +1678,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type  = pbrt_material::type_t::metal;
@@ -1700,9 +1713,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type  = pbrt_material::type_t::glass;
@@ -1735,9 +1748,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type        = pbrt_material::type_t::translucent;
@@ -1776,9 +1789,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_material::type_t::uber;
@@ -1831,9 +1844,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type   = pbrt_material::type_t::disney;
@@ -1865,9 +1878,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_material::type_t::hair;
@@ -1904,9 +1917,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type         = pbrt_material::type_t::kdsubsurface;
@@ -1926,9 +1939,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_material::type_t::mix;
@@ -1945,9 +1958,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type    = pbrt_material::type_t::fourier;
@@ -1978,9 +1991,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type      = pbrt_material::type_t::substrate;
@@ -2025,15 +2038,15 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type       = pbrt_material::type_t::subsurface;
     value.subsurface = tvalue;
   } else {
-    throw io_error("unknown Material " + type);
+    throw std::runtime_error("unknown Material " + type);
   }
 }
 
@@ -2062,7 +2075,7 @@ static inline void parse_shape(
       } else if (pname == "shadowalpha") {
         parse_param(stream, ptype, tvalue.shadowalpha);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type         = pbrt_shape::type_t::trianglemesh;
@@ -2082,7 +2095,7 @@ static inline void parse_shape(
         auto value = false;
         parse_param(stream, ptype, value);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type    = pbrt_shape::type_t::plymesh;
@@ -2113,7 +2126,7 @@ static inline void parse_shape(
       } else if (pname == "splitdepth") {
         parse_param(stream, ptype, tvalue.splitdepth);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type  = pbrt_shape::type_t::curve;
@@ -2131,7 +2144,7 @@ static inline void parse_shape(
       } else if (pname == "nlevels") {
         parse_param(stream, ptype, tvalue.levels);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type       = pbrt_shape::type_t::loopsubdiv;
@@ -2161,7 +2174,7 @@ static inline void parse_shape(
       } else if (pname == "Pw") {
         parse_param(stream, ptype, tvalue.Pw);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type  = pbrt_shape::type_t::nurbs;
@@ -2179,7 +2192,7 @@ static inline void parse_shape(
       } else if (pname == "phimax") {
         parse_param(stream, ptype, tvalue.phimax);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type   = pbrt_shape::type_t::sphere;
@@ -2197,7 +2210,7 @@ static inline void parse_shape(
       } else if (pname == "phimax") {
         parse_param(stream, ptype, tvalue.phimax);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_shape::type_t::disk;
@@ -2213,7 +2226,7 @@ static inline void parse_shape(
       } else if (pname == "phimax") {
         parse_param(stream, ptype, tvalue.phimax);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_shape::type_t::cone;
@@ -2231,7 +2244,7 @@ static inline void parse_shape(
       } else if (pname == "phimax") {
         parse_param(stream, ptype, tvalue.phimax);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type     = pbrt_shape::type_t::cylinder;
@@ -2247,7 +2260,7 @@ static inline void parse_shape(
       } else if (pname == "phimax") {
         parse_param(stream, ptype, tvalue.phimax);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type        = pbrt_shape::type_t::hyperboloid;
@@ -2265,7 +2278,7 @@ static inline void parse_shape(
       } else if (pname == "phimax") {
         parse_param(stream, ptype, tvalue.phimax);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type       = pbrt_shape::type_t::paraboloid;
@@ -2281,13 +2294,13 @@ static inline void parse_shape(
       } else if (pname == "Pz") {
         parse_param(stream, ptype, tvalue.Pz);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type        = pbrt_shape::type_t::heightfield;
     value.heightfield = tvalue;
   } else {
-    throw io_error("unknown Shape " + type);
+    throw std::runtime_error("unknown Shape " + type);
   }
 }
 
@@ -2310,13 +2323,13 @@ static inline void parse_arealight(
       } else if (pname == "nsamples") {
         parse_param(stream, ptype, tvalue.samples);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type    = pbrt_arealight::type_t::diffuse;
     value.diffuse = tvalue;
   } else {
-    throw io_error("unknown Film " + type);
+    throw std::runtime_error("unknown Film " + type);
   }
 }
 
@@ -2337,7 +2350,7 @@ static inline void parse_light(
       } else if (pname == "to") {
         parse_param(stream, ptype, tvalue.to);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type    = pbrt_light::type_t::distant;
@@ -2353,7 +2366,7 @@ static inline void parse_light(
       } else if (pname == "mapname") {
         parse_param(stream, ptype, tvalue.mapname);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type        = pbrt_light::type_t::goniometric;
@@ -2373,7 +2386,7 @@ static inline void parse_light(
       } else if (pname == "mapname") {
         parse_param(stream, ptype, tvalue.mapname);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type     = pbrt_light::type_t::infinite;
@@ -2389,7 +2402,7 @@ static inline void parse_light(
       } else if (pname == "from") {
         parse_param(stream, ptype, tvalue.from);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type    = pbrt_light::type_t::distant;
@@ -2407,7 +2420,7 @@ static inline void parse_light(
       } else if (pname == "mapname") {
         parse_param(stream, ptype, tvalue.mapname);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type       = pbrt_light::type_t::projection;
@@ -2429,7 +2442,7 @@ static inline void parse_light(
       } else if (pname == "conedeltaangle") {
         parse_param(stream, ptype, tvalue.conedeltaangle);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type = pbrt_light::type_t::spot;
@@ -2445,13 +2458,13 @@ static inline void parse_light(
       } else if (pname == "from") {
         parse_param(stream, ptype, tvalue.from);
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type  = pbrt_light::type_t::point;
     value.point = tvalue;
   } else {
-    throw io_error("unknown LightSource " + type);
+    throw std::runtime_error("unknown LightSource " + type);
   }
 }
 
@@ -2476,9 +2489,9 @@ static inline void parse_pbrt_medium(
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type        = pbrt_medium::type_t::homogeneous;
@@ -2510,15 +2523,15 @@ static inline void parse_pbrt_medium(
       } else if (pname == "type") {
         auto ttype = ""s;
         parse_param(stream, ptype, ttype);
-        if (ttype != type) throw io_error("inconsistent types");
+        if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
-        throw io_error("unknown parameter " + pname);
+        throw std::runtime_error("unknown parameter " + pname);
       }
     }
     value.type          = pbrt_medium::type_t::heterogeneous;
     value.heterogeneous = tvalue;
   } else {
-    throw io_error("unknown Medium " + type);
+    throw std::runtime_error("unknown Medium " + type);
   }
 }
 
@@ -2558,7 +2571,7 @@ void load_pbrt(
       stack.push_back({});
     } else if (cmd == "WorldEnd") {
       stack.pop_back();
-      if (stack.size() != 1) throw io_error("bad stack");
+      if (stack.size() != 1) throw std::runtime_error("bad stack");
     } else if (cmd == "AttributeBegin") {
       stack.push_back(stack.back());
     } else if (cmd == "AttributeEnd") {
@@ -2592,7 +2605,7 @@ void load_pbrt(
         stack.back().active_transform_start = true;
         stack.back().active_transform_end   = true;
       } else {
-        throw io_error("bad active transform");
+        throw std::runtime_error("bad active transform");
       }
     } else if (cmd == "Transform") {
       auto xf = identity4x4f;
@@ -2698,7 +2711,7 @@ void load_pbrt(
         stack.back().material = "";
       } else {
         auto value = pbrt_material{};
-        auto name  = "unnamed_material_" + to_string(material_id++);
+        auto name  = "unnamed_material_" + std::to_string(material_id++);
         parse_material(stream, type, value, constant_values);
         stack.back().material = name;
         cb.material(value, name, stack.back());
@@ -2724,8 +2737,8 @@ void load_pbrt(
       auto type = ""s;
       parse_value(stream, type);
       static auto material_id = 0;
-      auto        name        = "unnamed_arealight_" + to_string(material_id++);
-      auto        value       = pbrt_arealight{};
+      auto        name  = "unnamed_arealight_" + std::to_string(material_id++);
+      auto        value = pbrt_arealight{};
       parse_arealight(stream, type, value);
       stack.back().arealight = name;
       cb.arealight(value, name, stack.back());
@@ -2753,7 +2766,7 @@ void load_pbrt(
       parse_value(stream, inputname);
       load_stream(get_dirname(filename) + inputname, streams);
     } else {
-      throw io_error("unknown command " + cmd);
+      throw std::runtime_error("unknown command " + cmd);
     }
     // go to next file if needed
     skip_whitespace_or_comment_to_next_file(streams);

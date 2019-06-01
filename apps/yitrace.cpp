@@ -313,8 +313,8 @@ void draw_glwidgets(const opengl_window& win) {
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      print_info(format_stats(scn.scene));
-      print_info(format_stats(scn.bvh));
+      printf("%s\n", format_stats(scn.scene).c_str());
+      printf("%s\n", format_stats(scn.bvh).c_str());
     }
     auto mouse_pos = get_glmouse_pos(win);
     auto ij        = get_image_coords(
@@ -508,8 +508,9 @@ void update(const opengl_window& win, app_state& app) {
     if (updated) {
       scn.render_sample = max(scn.render_sample, (int)task.current);
       scn.name          = get_filename(scn.filename) + "[" +
-                 to_string(scn.render.size()) + " @ " +
-                 to_string(scn.render_sample) + "]";
+                 std::to_string(scn.render.size().x) + "x" +
+                 std::to_string(scn.render.size().y) + " @ " +
+                 std::to_string(scn.render_sample) + "]";
     }
   }
 
@@ -598,7 +599,8 @@ void update(const opengl_window& win, app_state& app) {
           scn.display.resize(scn.image_size);
           scn.preview.resize(scn.image_size);
           scn.name = get_filename(scn.filename) + " [" +
-                     to_string(scn.render.size()) + " @ 0]";
+                     std::to_string(scn.render.size().x) + "x" +
+                     std::to_string(scn.render.size().y) + " @ 0]";
           log_glinfo(win, "done loading " + scn.filename);
           init_gltexture(scn.gl_txt, scn.display, false, false, false);
           scn.task_queue.emplace_back(app_task_type::build_bvh);
@@ -682,8 +684,9 @@ void update(const opengl_window& win, app_state& app) {
           log_glinfo(win, "done rendering " + scn.filename);
           scn.render_sample = scn.trace_prms.samples;
           scn.name          = get_filename(scn.filename) + " [" +
-                     to_string(scn.render.size()) + " @ " +
-                     to_string(scn.render_sample) + "]";
+                     std::to_string(scn.render.size().x) + "x" +
+                     std::to_string(scn.render.size().y) + " @ " +
+                     std::to_string(scn.render_sample) + "]";
         } catch (std::exception& e) {
           log_glerror(win, e.what());
           app.errors.push_back("cannot render " + scn.filename);
@@ -763,8 +766,9 @@ void update(const opengl_window& win, app_state& app) {
         }
         scn.render_sample = 0;
         scn.name          = get_filename(scn.filename) + " [" +
-                   to_string(scn.render.size()) + " @ " +
-                   to_string(scn.render_sample) + "]";
+                   std::to_string(scn.render.size().x) + "x" +
+                   std::to_string(scn.render.size().y) + " @ " +
+                   std::to_string(scn.render_sample) + "]";
         task.result = async([&scn, &task]() {
           update_app_render(scn.filename, scn.render, scn.display, scn.preview,
               scn.state, scn.scene, scn.lights, scn.bvh, scn.trace_prms,

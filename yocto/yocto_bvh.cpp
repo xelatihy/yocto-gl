@@ -187,10 +187,10 @@ inline bool intersect_bbox(
     const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox) {
   auto it_min = (bbox.min - ray.o) * ray_dinv;
   auto it_max = (bbox.max - ray.o) * ray_dinv;
-  auto tmin = min(it_min, it_max);
-  auto tmax = max(it_min, it_max);
-  auto t0   = max(max(tmin), ray.tmin);
-  auto t1   = min(min(tmax), ray.tmax);
+  auto tmin   = min(it_min, it_max);
+  auto tmax   = max(it_min, it_max);
+  auto t0     = max(max(tmin), ray.tmin);
+  auto t1     = min(min(tmax), ray.tmax);
   t1 *= 1.00000024f;  // for double: 1.0000000000000004
   return t0 <= t1;
 }
@@ -911,7 +911,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
   // synchronization
   atomic<int>          num_processed_prims(0);
-  mutex                queue_mutex;
+  std::mutex                queue_mutex;
   vector<future<void>> futures;
   auto                 nthreads = thread::hardware_concurrency();
 
@@ -927,7 +927,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
             // grab node to work on
             auto next = zero3i;
             {
-              lock_guard<mutex> lock{queue_mutex};
+              std::lock_guard<std::mutex> lock{queue_mutex};
               if (!queue.empty()) {
                 next = queue.front();
                 queue.pop_front();
@@ -936,7 +936,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
             // wait a bit if needed
             if (next == zero3i) {
-              std::this_thread::sleep_for(10us);
+              std::this_thread::sleep_for(std::chrono::microseconds(10));
               continue;
             }
 
@@ -957,7 +957,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
               // make an internal node
               {
-                lock_guard<mutex> lock{queue_mutex};
+                std::lock_guard<std::mutex> lock{queue_mutex};
                 node.internal = true;
                 node.axis     = axis;
                 node.num      = 2;
@@ -1656,27 +1656,27 @@ string format_stats(const bvh_scene& bvh) {
 
     auto str = ""s;
 
-    str += "num_shapes: " + to_string(num_shapes) + "\n";
-    str += "num_instances: " + to_string(num_instances) + "\n";
+    str += "num_shapes: " + std::to_string(num_shapes) + "\n";
+    str += "num_instances: " + std::to_string(num_instances) + "\n";
 
-    str += "elem_points: " + to_string(elem_points) + "\n";
-    str += "elem_lines: " + to_string(elem_lines) + "\n";
-    str += "elem_triangles: " + to_string(elem_triangles) + "\n";
-    str += "elem_quads: " + to_string(elem_quads) + "\n";
-    str += "vert_pos: " + to_string(vert_pos) + "\n";
-    str += "vert_radius: " + to_string(vert_radius) + "\n";
+    str += "elem_points: " + std::to_string(elem_points) + "\n";
+    str += "elem_lines: " + std::to_string(elem_lines) + "\n";
+    str += "elem_triangles: " + std::to_string(elem_triangles) + "\n";
+    str += "elem_quads: " + std::to_string(elem_quads) + "\n";
+    str += "vert_pos: " + std::to_string(vert_pos) + "\n";
+    str += "vert_radius: " + std::to_string(vert_radius) + "\n";
 
-    str += "shape_nodes: " + to_string(shape_nodes) + "\n";
-    str += "scene_nodes: " + to_string(scene_nodes) + "\n";
+    str += "shape_nodes: " + std::to_string(shape_nodes) + "\n";
+    str += "scene_nodes: " + std::to_string(scene_nodes) + "\n";
 
-    str += "memory_elems: " + to_string(memory_elems) + "\n";
-    str += "memory_verts: " + to_string(memory_verts) + "\n";
-    str += "memory_ists: " + to_string(memory_ists) + "\n";
-    str += "memory_shape_nodes: " + to_string(memory_shape_nodes) + "\n";
-    str += "memory_scene_nodes: " + to_string(memory_scene_nodes) + "\n";
+    str += "memory_elems: " + std::to_string(memory_elems) + "\n";
+    str += "memory_verts: " + std::to_string(memory_verts) + "\n";
+    str += "memory_ists: " + std::to_string(memory_ists) + "\n";
+    str += "memory_shape_nodes: " + std::to_string(memory_shape_nodes) + "\n";
+    str += "memory_scene_nodes: " + std::to_string(memory_scene_nodes) + "\n";
 
 #if YOCTO_EMBREE
-    str += "memory_embree: " + to_string(embree_memory) + "\n";
+    str += "memory_embree: " + std::to_string(embree_memory) + "\n";
 #endif
 #endif
   // TODO

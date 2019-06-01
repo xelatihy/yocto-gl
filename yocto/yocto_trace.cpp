@@ -1026,7 +1026,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
   auto weight       = vec3f{1, 1, 1};
   auto origin       = origin_;
   auto direction    = direction_;
-  auto volume_stack = short_vector<pair<material_point, int>, 8>{};
+  auto volume_stack = vector<pair<material_point, int>>{};
   auto hit          = false;
 
   // trace  path

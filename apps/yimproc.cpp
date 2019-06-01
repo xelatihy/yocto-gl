@@ -142,7 +142,8 @@ int main(int argc, char* argv[]) {
   try {
     load_image(filename, img);
   } catch (const std::exception& e) {
-    print_fatal(e.what());
+    printf("%s\n", e.what());
+    exit(1);
   }
 
   // set alpha
@@ -151,10 +152,11 @@ int main(int argc, char* argv[]) {
     try {
       load_image(alpha_filename, alpha);
     } catch (const std::exception& e) {
-      print_fatal(e.what());
+      printf("%s\n", e.what());
+      exit(1);
     }
     if (img.size() != alpha.size()) {
-      print_fatal("bad image size");
+      printf("bad image size\n");
       exit(1);
     }
     for (auto j = 0; j < img.size().y; j++)
@@ -167,10 +169,11 @@ int main(int argc, char* argv[]) {
     try {
       load_image(coloralpha_filename, alpha);
     } catch (const std::exception& e) {
-      print_fatal(e.what());
+      printf("%s\n", e.what());
+      exit(1);
     }
     if (img.size() != alpha.size()) {
-      print_fatal("bad image size");
+      printf("bad image size\n");
       exit(1);
     }
     for (auto j = 0; j < img.size().y; j++)
@@ -207,7 +210,8 @@ int main(int argc, char* argv[]) {
       save_image(output, img);
     }
   } catch (const std::exception& e) {
-    print_fatal(e.what());
+    printf("%s\n", e.what());
+    exit(1);
   }
 
   // done

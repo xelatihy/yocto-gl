@@ -48,7 +48,7 @@
 namespace yocto {
 
 void check_glerror() {
-  if (glGetError() != GL_NO_ERROR) print_info("gl error");
+  if (glGetError() != GL_NO_ERROR) printf("gl error\n");
 }
 
 void clear_glframebuffer(const vec4f& color, bool clear_depth) {
@@ -847,9 +847,18 @@ struct filedialog_state {
     check_filename();
   }
   void set_filter(const string& flt) {
+    auto globs = vector<string>{""};
+    for (auto i = 0; i < flt.size(); i++) {
+      if (flt[i] == ';') {
+        globs.push_back("");
+      } else {
+        globs.back() += flt[i];
+      }
+    }
     filter = "";
     extensions.clear();
-    for (auto pattern : split(flt, ";")) {
+    for (auto pattern : globs) {
+      if (pattern == "") continue;
       auto ext = get_extension(pattern);
       if (ext != "") {
         extensions.push_back(ext);
@@ -901,6 +910,12 @@ struct filedialog_state {
   }
 
   string get_path() const { return dirname + filename; }
+  bool   exists_file(const string& filename) {
+    auto f = fopen(filename.c_str(), "r");
+    if (!f) return false;
+    fclose(f);
+    return true;
+  }
 };
 bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
