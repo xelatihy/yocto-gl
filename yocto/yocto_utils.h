@@ -166,44 +166,6 @@ inline print_timer print_timed(const string& msg) { return print_timer(msg); }
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// STRING UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// String padding
-inline string pad_left(const string& str, int num, char pad = ' ') {
-  if (str.size() >= num) return str;
-  auto pads = ""s;
-  for (auto i = 0; i < num - (int)str.size(); i++) pads += pad;
-  return pads + str;
-}
-inline string pad_right(const string& str, int num, char pad = ' ') {
-  if (str.size() >= num) return str;
-  auto pads = ""s;
-  for (auto i = 0; i < num - (int)str.size(); i++) pads += pad;
-  return str + pads;
-}
-
-inline string replace(string_view str, string_view from, string_view to) {
-  // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
-  auto replaced = ""s;
-  while (!str.empty()) {
-    auto pos = str.find(from);
-    if (pos == string_view::npos) {
-      replaced += str;
-      break;
-    } else {
-      replaced += str.substr(0, pos);
-      replaced += to;
-      str.remove_prefix(pos + from.size());
-    }
-  }
-  return replaced;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // SPECIALIZED CONTAINERS
 // -----------------------------------------------------------------------------
 namespace yocto {

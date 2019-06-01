@@ -56,6 +56,23 @@ using std::unordered_set;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+inline string replace(string_view str, string_view from, string_view to) {
+  // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
+  auto replaced = ""s;
+  while (!str.empty()) {
+    auto pos = str.find(from);
+    if (pos == string_view::npos) {
+      replaced += str;
+      break;
+    } else {
+      replaced += str.substr(0, pos);
+      replaced += to;
+      str.remove_prefix(pos + from.size());
+    }
+  }
+  return replaced;
+}
+
 using json = nlohmann::json;
 
 // Load a JSON object
