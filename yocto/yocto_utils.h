@@ -161,56 +161,6 @@ struct timer {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SPECIALIZED CONTAINERS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Finite-size vector with no heap allocation. The interface is a subset of
-// std::vector.
-template <typename T, size_t N>
-struct short_vector {
-  short_vector() : count{0} {}
-  short_vector(initializer_list<T> values) : count{0} {
-    for (auto value : values) ptr[count++] = value;
-  }
-
-  size_t size() const { return count; }
-  bool   empty() const { return count == 0; }
-
-  void push_back(const T& value) { ptr[count++] = value; }
-  void pop_back() { count--; }
-  template <typename... Args>
-  T& emplace_back(Args&&... args) {
-    ptr[count++] = T(std::forward(args)...);
-    return ptr[count - 1];
-  }
-
-  T&       operator[](size_t idx) { return ptr[idx]; }
-  const T& operator[](size_t idx) const { return ptr[idx]; }
-  T&       at(size_t idx) { return ptr[idx]; }
-  const T& at(size_t idx) const { return ptr[idx]; }
-
-  T&       front() { return ptr[0]; }
-  const T& front() const { return ptr[0]; }
-  T&       back() { return ptr[count - 1]; }
-  const T& back() const { return ptr[count - 1]; }
-
-  T*       data() { return count ? ptr : nullptr; }
-  const T* data() const { return count ? ptr : nullptr; }
-
-  T*       begin() { return ptr; }
-  const T* begin() const { return ptr; }
-  T*       end() { return ptr + count; }
-  const T* end() const { return ptr + count; }
-
- private:
-  T      ptr[N];
-  size_t count = 0;
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
