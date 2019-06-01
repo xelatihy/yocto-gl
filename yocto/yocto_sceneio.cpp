@@ -3580,9 +3580,8 @@ static void load_pbrt_scene(
 
   try {
     // Parse pbrt
-    auto pbrt_options = pbrt_params();
-    auto cb           = load_pbrt_scene_cb{scene, params, filename};
-    load_pbrt(filename, cb, pbrt_options);
+    auto cb = load_pbrt_scene_cb{scene, params, filename};
+    load_pbrt(filename, cb);
 
     // load textures
     auto dirname = get_dirname(filename);

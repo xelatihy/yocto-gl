@@ -69,13 +69,13 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <math.h>
-#include <limits.h>
-#include <stdint.h>
 #include <float.h>
-#include <string.h>
+#include <limits.h>
+#include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <algorithm>
 #include <functional>
@@ -145,13 +145,13 @@ inline float log2(float a) { return log2f(a); }
 inline float exp2(float a) { return exp2f(a); }
 inline float pow(float a, float b) { return powf(a, b); }
 inline float isfinite(float a) { return ::isfinite(a); }
-inline void swap(float& a, float& b) { std::swap(a, b); }
+inline void  swap(float& a, float& b) { std::swap(a, b); }
 
-inline int abs(int a) { return a < 0 ? -a : a; }
-inline int min(int a, int b) { return (a < b) ? a : b; }
-inline int max(int a, int b) { return (a > b) ? a : b; }
-inline int clamp(int a, int min_, int max_) { return min(max(a, min_), max_); }
-inline int pow2(int a) { return 1 << a; }
+inline int  abs(int a) { return a < 0 ? -a : a; }
+inline int  min(int a, int b) { return (a < b) ? a : b; }
+inline int  max(int a, int b) { return (a > b) ? a : b; }
+inline int  clamp(int a, int min_, int max_) { return min(max(a, min_), max_); }
+inline int  pow2(int a) { return 1 << a; }
 inline void swap(int& a, int& b) { std::swap(a, b); }
 
 }  // namespace yocto
@@ -767,7 +767,7 @@ inline int sum(const vec2i& a) { return a.x + a.y; }
 
 // Functions applied to vector elements
 inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
-inline void swap(vec2i& a, vec2i& b) { std::swap(a, b); }
+inline void  swap(vec2i& a, vec2i& b) { std::swap(a, b); }
 
 // Vector comparison operations.
 inline bool operator==(const vec3i& a, const vec3i& b) {
@@ -850,7 +850,7 @@ inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
 
 // Functions applied to vector elements
 inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
-inline void swap(vec3i& a, vec3i& b) { std::swap(a, b); }
+inline void  swap(vec3i& a, vec3i& b) { std::swap(a, b); }
 
 // Vector comparison operations.
 inline bool operator==(const vec4i& a, const vec4i& b) {

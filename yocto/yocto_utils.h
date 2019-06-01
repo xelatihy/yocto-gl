@@ -267,8 +267,8 @@ struct concurrent_queue {
   }
 
  private:
-  std::mutex    _mutex;
-  deque<T> _queue;
+  std::mutex _mutex;
+  deque<T>   _queue;
 };
 
 // Runs a rask as an asycnrhonous operation.

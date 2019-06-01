@@ -911,7 +911,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
   // synchronization
   atomic<int>          num_processed_prims(0);
-  std::mutex                queue_mutex;
+  std::mutex           queue_mutex;
   vector<future<void>> futures;
   auto                 nthreads = thread::hardware_concurrency();
 

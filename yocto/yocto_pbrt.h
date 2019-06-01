@@ -862,14 +862,8 @@ struct pbrt_callbacks {
   virtual void end_object(const pbrt_object& value, const pbrt_context& ctx) {}
 };
 
-// Load pbrt params
-struct pbrt_params {
-  bool flipv = true;
-};
-
 // Load pbrt scene
-void load_pbrt(
-    const string& filename, pbrt_callbacks& cb, const pbrt_params& params = {});
+void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv = true);
 
 }  // namespace yocto
 

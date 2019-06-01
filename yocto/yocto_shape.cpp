@@ -3079,12 +3079,9 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     bool flip_texcoord) {
   try {
     // load obj
-    auto oparams        = obj_params();
-    oparams.nomaterials = true;
-    oparams.flipv       = flip_texcoord;
     auto cb = load_obj_shape_cb{points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, facevarying};
-    load_obj(filename, cb, oparams);
+    load_obj(filename, cb, true, flip_texcoord);
 
     // merging quads and triangles
     if (!facevarying) {

@@ -99,7 +99,7 @@ image<vec4f> filter_bilateral(
   return filtered;
 }
 
-}
+}  // namespace yocto
 
 int main(int argc, char* argv[]) {
   // command line parameters
