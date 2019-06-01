@@ -261,9 +261,6 @@ static inline void parse_value(pbrt_stream& stream, vec3f& value) {
 static inline void parse_value(pbrt_stream& stream, vec4f& value) {
   for (auto i = 0; i < 4; i++) parse_value(stream, value[i]);
 }
-static inline void parse_value(pbrt_stream& stream, vec2i& value) {
-  for (auto i = 0; i < 2; i++) parse_value(stream, value[i]);
-}
 static inline void parse_value(pbrt_stream& stream, vec3i& value) {
   for (auto i = 0; i < 3; i++) parse_value(stream, value[i]);
 }

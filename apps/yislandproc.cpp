@@ -780,7 +780,7 @@ void load_island_curvetube(const string& filename, const string& dirname,
         auto p22 = lerp(p12, p23, 0.5f);
 
         // Now elevate to degree 3.
-        if (i == 0) bezier_positions += p11;
+        if (i == 0) bezier_positions.push_back(p11);
         bezier_positions.push_back(lerp(p11, p12, 2 / 3.f));
         bezier_positions.push_back(lerp(p12, p22, 1 / 3.f));
         bezier_positions.push_back(p22);

@@ -1289,16 +1289,25 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
   auto offset_environments = scene.environments.size();
   auto offset_nodes        = scene.nodes.size();
   auto offset_animations   = scene.animations.size();
-  scene.cameras += merge.cameras;
-  scene.textures += merge.textures;
-  scene.voltextures += merge.voltextures;
-  scene.materials += merge.materials;
-  scene.shapes += merge.shapes;
-  scene.subdivs += merge.subdivs;
-  scene.instances += merge.instances;
-  scene.environments += merge.environments;
-  scene.nodes += merge.nodes;
-  scene.animations += merge.animations;
+  scene.cameras.insert(
+      scene.cameras.end(), merge.cameras.begin(), merge.cameras.end());
+  scene.textures.insert(
+      scene.textures.end(), merge.textures.begin(), merge.textures.end());
+  scene.voltextures.insert(scene.voltextures.end(), merge.voltextures.begin(),
+      merge.voltextures.end());
+  scene.materials.insert(
+      scene.materials.end(), merge.materials.begin(), merge.materials.end());
+  scene.shapes.insert(
+      scene.shapes.end(), merge.shapes.begin(), merge.shapes.end());
+  scene.subdivs.insert(
+      scene.subdivs.end(), merge.subdivs.begin(), merge.subdivs.end());
+  scene.instances.insert(
+      scene.instances.end(), merge.instances.begin(), merge.instances.end());
+  scene.environments.insert(scene.environments.end(),
+      merge.environments.begin(), merge.environments.end());
+  scene.nodes.insert(scene.nodes.end(), merge.nodes.begin(), merge.nodes.end());
+  scene.animations.insert(
+      scene.animations.end(), merge.animations.begin(), merge.animations.end());
   for (auto material_id = offset_materials;
        material_id < scene.materials.size(); material_id++) {
     auto& material = scene.materials[material_id];

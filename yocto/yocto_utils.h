@@ -278,38 +278,6 @@ inline enumerate_iterator<T> enumerate(vector<T>& vals) {
   return enumerate_iterator<T>{vals.data(), vals.size()};
 };
 
-// Vector append and concatenation
-template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const T& b) {
-  a.push_back(b);
-  return a;
-}
-template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const vector<T>& b) {
-  a.insert(a.end(), b.begin(), b.end());
-  return a;
-}
-template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const initializer_list<T>& b) {
-  a.insert(a.end(), b.begin(), b.end());
-  return a;
-}
-template <typename T>
-inline vector<T> operator+(const vector<T>& a, const T& b) {
-  auto c = a;
-  return c += b;
-}
-template <typename T>
-inline vector<T> operator+(const vector<T>& a, const vector<T>& b) {
-  auto c = a;
-  return c += b;
-}
-template <typename T>
-inline vector<T> operator+(const vector<T>& a, const initializer_list<T>& b) {
-  auto c = a;
-  return c += b;
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
