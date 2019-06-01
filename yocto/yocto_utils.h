@@ -768,8 +768,12 @@ inline bool is_alpha(char c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
-inline bool is_whitespace(const string_view& str) {
-  return str.find_first_not_of(" \t\r\n") == str.npos;
+inline bool is_whitespace(string_view str) {
+  while(!str.empty()) {
+    if(!is_space(str.front())) return false;
+    str.remove_prefix(1);
+  }
+  return true;
 }
 
 inline void skip_whitespace(string_view& str) {
@@ -950,10 +954,12 @@ namespace yocto {
 
 // Check if we start or end with a sequence
 inline bool startswith(string_view str, string_view substr) {
-  return str.find(substr) == 0;
+  if(str.size() < substr.size()) return false;
+  return str.substr(0, substr.size()) == substr;
 }
 inline bool endswith(string_view str, string_view substr) {
-  return str.rfind(substr) == str.size() - substr.size();
+  if(str.size() < substr.size()) return false;
+  return str.substr(str.size() - substr.size(), substr.size()) == substr;
 }
 inline void split_view(string_view str, vector<string_view>& splits,
     string_view delimiters = " \t\r\n", bool trim_empty = true) {
