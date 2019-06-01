@@ -120,6 +120,23 @@ inline void from_json(const json& js, mat4f& val) {
   nlohmann::from_json(js, (std::array<float, 16>&)val);
 }
 
+inline string replace(string_view str, string_view from, string_view to) {
+  // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
+  auto replaced = ""s;
+  while (!str.empty()) {
+    auto pos = str.find(from);
+    if (pos == string_view::npos) {
+      replaced += str;
+      break;
+    } else {
+      replaced += str.substr(0, pos);
+      replaced += to;
+      str.remove_prefix(pos + from.size());
+    }
+  }
+  return replaced;
+}
+
 struct disney_material {
   string name                = "";
   vec3f  color               = zero3f;

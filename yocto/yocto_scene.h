@@ -303,7 +303,7 @@ namespace yocto {
 void merge_scene(yocto_scene& scene, const yocto_scene& merge);
 
 // Print scene statistics.
-string format_stats(const yocto_scene& scene, bool verbose = false);
+string format_stats(const yocto_scene& scene, const string& prefix = "", bool verbose = false);
 
 }  // namespace yocto
 

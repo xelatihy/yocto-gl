@@ -1346,7 +1346,8 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
   }
 }
 
-string format_stats(const yocto_scene& scene, bool verbose) {
+string format_stats(
+    const yocto_scene& scene, const string& prefix, bool verbose) {
   auto stats = vector<pair<string, size_t>>{};
   stats += {"cameras", scene.cameras.size()};
   stats += {"shapes", scene.shapes.size()};
@@ -1394,7 +1395,8 @@ string format_stats(const yocto_scene& scene, bool verbose) {
   auto str = ""s;
   for (auto& [key, value] : stats) {
     if (value == 0) continue;
-    str += pad_right(key, 15) + ": " + pad_left(to_string(value), 13) + "\n";
+    str += prefix + pad_right(key, 15) + ": " + pad_left(to_string(value), 13) +
+           "\n";
   }
 
   return str;

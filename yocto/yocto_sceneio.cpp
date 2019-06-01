@@ -135,8 +135,7 @@ static string get_save_scene_message(
   str += line_prefix + " Written by Yocto/GL\n";
   str += line_prefix + " https://github.com/xelatihy/yocto-gl\n";
   str += line_prefix + "\n";
-  auto lines = splitlines(format_stats(scene));
-  for (auto line : lines) str += line_prefix + " " + line + "\n";
+  str += format_stats(scene, line_prefix);
   str += line_prefix + "\n";
   return str;
 }
@@ -1660,11 +1659,15 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
   }
 
   // convert textures
+  auto _startswith = [](string_view str, string_view substr) {
+    if(str.size() < substr.size()) return false;
+    return str.substr(0, substr.size()) == substr;
+  };
   auto imap = unordered_map<cgltf_image*, int>{};
   for (auto tid = 0; tid < gltf->images_count; tid++) {
     auto gimg    = &gltf->images[tid];
     auto texture = yocto_texture{};
-    texture.uri  = (startswith(gimg->uri, "data:"))
+    texture.uri  = (_startswith(gimg->uri, "data:"))
                       ? string("[glTF-static inline].png")
                       : gimg->uri;
     scene.textures.push_back(texture);

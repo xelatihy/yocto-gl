@@ -761,43 +761,42 @@ namespace yocto {
 inline bool is_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-inline bool is_newline(char c) {
-  return c == '\r' || c == '\n';
-}
+inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_alpha(char c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
 inline bool is_whitespace(string_view str) {
-  while(!str.empty()) {
-    if(!is_space(str.front())) return false;
+  while (!str.empty()) {
+    if (!is_space(str.front())) return false;
     str.remove_prefix(1);
   }
   return true;
 }
 
 inline void skip_whitespace(string_view& str) {
-  while(!str.empty() && is_space(str.front())) str.remove_prefix(1);
+  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 inline void trim_whitespace(string_view& str) {
-  while(!str.empty() && is_space(str.front())) str.remove_prefix(1);
-  while(!str.empty() && is_space(str.back())) str.remove_suffix(1);
+  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
+  while (!str.empty() && is_space(str.back())) str.remove_suffix(1);
 }
 inline void remove_comment_and_newline(
     string_view& str, char comment_char = '#') {
-  while(!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
-  while(!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
   str.remove_suffix(cpy.size());
 }
 
 // Parse values from a string
-inline void parse_value(string_view& str, string_view& value, bool quoted = false) {
+inline void parse_value(
+    string_view& str, string_view& value, bool quoted = false) {
   skip_whitespace(str);
   if (str.empty()) throw io_error("cannot parse value");
   if (!quoted) {
     auto cpy = str;
-    while(!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -806,7 +805,7 @@ inline void parse_value(string_view& str, string_view& value, bool quoted = fals
     str.remove_prefix(1);
     if (str.empty()) throw io_error("cannot parse value");
     auto cpy = str;
-    while(!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
+    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
     if (cpy.empty()) throw io_error("cannot parse value");
     value = str;
     value.remove_suffix(cpy.size());
@@ -948,96 +947,6 @@ inline void parse_varname(string_view& str, string& value) {
   auto valuev = string_view{};
   parse_varname(str, valuev);
   value = valuev;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PYTHON-LIKE STRING OPERATIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Check if we start or end with a sequence
-inline bool startswith(string_view str, string_view substr) {
-  if(str.size() < substr.size()) return false;
-  return str.substr(0, substr.size()) == substr;
-}
-inline bool endswith(string_view str, string_view substr) {
-  if(str.size() < substr.size()) return false;
-  return str.substr(str.size() - substr.size(), substr.size()) == substr;
-}
-inline void split_view(string_view str, vector<string_view>& splits,
-    string_view delimiters = " \t\r\n", bool trim_empty = true) {
-  splits.clear();
-  while (!str.empty()) {
-    auto pos = str.find_first_of(delimiters);
-    if (pos == string_view::npos) {
-      splits.push_back(str);
-      break;
-    } else if (pos == 0) {
-      if (!trim_empty) splits.push_back(str.substr(0, 1));
-      str.remove_prefix(1);
-    } else {
-      splits.push_back(str.substr(0, pos));
-      str.remove_prefix(pos + 1);
-    }
-  }
-}
-inline vector<string_view> split_view(string_view str,
-    string_view delimiters = " \t\r\n", bool trim_empty = true) {
-  auto splits = vector<string_view>{};
-  split_view(str, splits, delimiters, trim_empty);
-  return splits;
-}
-inline vector<string> split(const string& str,
-    string_view delimiters = " \t\r\n", bool trim_empty = true) {
-  auto splits = vector<string_view>{};
-  split_view(str, splits, delimiters, trim_empty);
-  auto splits_str = vector<string>();
-  for (auto split : splits) splits_str.push_back(string(split));
-  return splits_str;
-}
-inline void splitlines(string_view str, vector<string_view>& splits) {
-  splits.clear();
-  while (!str.empty()) {
-    auto pos = std::min(str.find("\n"), str.find("\r\n"));
-    if (pos == string_view::npos) {
-      splits.push_back(str);
-      break;
-    } else {
-      splits.push_back(str.substr(0, pos));
-      str.remove_prefix(pos + (str.front() == '\n' ? 0 : 1));
-    }
-  }
-}
-inline vector<string_view> splitlines(string_view str) {
-  auto splits = vector<string_view>{};
-  splitlines(str, splits);
-  return splits;
-}
-inline vector<string> splitlines(const string& str) {
-  auto splits = vector<string_view>{};
-  splitlines(str, splits);
-  auto splits_str = vector<string>();
-  for (auto split : splits) splits_str.push_back(string(split));
-  return splits_str;
-}
-
-inline string replace(string_view str, string_view from, string_view to) {
-  // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
-  auto replaced = ""s;
-  while (!str.empty()) {
-    auto pos = str.find(from);
-    if (pos == string_view::npos) {
-      replaced += str;
-      break;
-    } else {
-      replaced += str.substr(0, pos);
-      replaced += to;
-      str.remove_prefix(pos + from.size());
-    }
-  }
-  return replaced;
 }
 
 }  // namespace yocto

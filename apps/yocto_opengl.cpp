@@ -847,9 +847,18 @@ struct filedialog_state {
     check_filename();
   }
   void set_filter(const string& flt) {
+    auto globs = vector<string>{""};
+    for(auto i = 0; i < flt.size(); i++) {
+      if(flt[i] == ';') {
+        globs.push_back("");
+      } else {
+        globs.back() += flt[i];
+      }
+    }
     filter = "";
     extensions.clear();
-    for (auto pattern : split(flt, ";")) {
+    for (auto pattern : globs) {
+      if(pattern == "") continue;
       auto ext = get_extension(pattern);
       if (ext != "") {
         extensions.push_back(ext);
