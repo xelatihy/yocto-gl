@@ -1539,50 +1539,6 @@ int trace_samples(image<vec4f>& image, trace_state& state,
   return current_sample + num_samples;
 }
 
-// Starts an anyncrhounous renderer.
-void trace_async_start(image<vec4f>& image, trace_state& state,
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    vector<future<void>>& futures, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue, const trace_params& params) {
-  auto& camera     = scene.cameras.at(params.camera);
-  auto  image_size = camera_resolution(camera, params.resolution);
-  image            = {image_size, zero4f};
-  state            = trace_state{};
-  init_trace_state(state, image_size, params.seed);
-  auto regions = vector<image_region>{};
-  make_imregions(regions, image.size(), params.region, true);
-  if (params.cancel) *params.cancel = false;
-
-  futures.clear();
-  futures.emplace_back(async([params, regions, &current_sample, &image, &scene,
-                                 &lights, &bvh, &state, &queue]() {
-    for (auto sample = 0; sample < params.samples; sample += params.batch) {
-      if (params.cancel && *params.cancel) return;
-      current_sample   = sample;
-      auto num_samples = min(params.batch, params.samples - current_sample);
-      parallel_foreach(
-          regions,
-          [num_samples, &params, &image, &scene, &lights, &bvh, &state, &queue](
-              const image_region& region) {
-            trace_region(
-                image, state, scene, bvh, lights, region, num_samples, params);
-            queue.push(region);
-          },
-          params.cancel, params.noparallel);
-    }
-    current_sample = params.samples;
-  }));
-}
-
-// Stop the asynchronous renderer.
-void trace_async_stop(vector<future<void>>& futures,
-    concurrent_queue<image_region>& queue, const trace_params& params) {
-  if (params.cancel) *params.cancel = true;
-  for (auto& f : futures) f.get();
-  futures.clear();
-  queue.clear();
-}
-
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
 pair<uint64_t, uint64_t> get_trace_stats() {

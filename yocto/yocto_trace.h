@@ -192,16 +192,6 @@ void trace_region(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     const image_region& region, int num_samples, const trace_params& params);
 
-// Starts an anyncrhounous renderer. The function will keep a reference to
-// params.
-void trace_async_start(image<vec4f>& image, trace_state& state,
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    vector<future<void>>& futures, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue, const trace_params& params);
-// Stop the asynchronous renderer.
-void trace_async_stop(vector<future<void>>& futures,
-    concurrent_queue<image_region>& queue, const trace_params& params);
-
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
 
