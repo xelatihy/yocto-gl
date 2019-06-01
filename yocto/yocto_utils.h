@@ -153,14 +153,36 @@ inline string format_duration(int64_t duration) {
 // print information and returns a timer that will print the time when
 // destroyed. Use with RIIA for scoped timing.
 struct print_timer {
-  print_timer(const string& msg) : start{get_time()} {
-    printf("%s", msg.c_str());
+  print_timer(const char* format, ...) : start{get_time()} {
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
     fflush(stdout);
   }
-  ~print_timer() {
-    printf(" in %s\n", format_duration(get_time() - start).c_str());
+  int64_t elapsed() { return get_time() - start; }
+  void print_elapsed(const char* format = "%s") {
+    auto duration = get_time() - start;
+    auto elapsed = duration / 1000000;  // milliseconds
+    auto hours   = (int)(elapsed / 3600000);
+    elapsed %= 3600000;
+    auto mins = (int)(elapsed / 60000);
+    elapsed %= 60000;
+    auto secs  = (int)(elapsed / 1000);
+    auto msecs = (int)(elapsed % 1000);
+    char buffer[256];
+    sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+    printf(format, buffer);
   }
-  int64_t start = 0;
+  ~print_timer() {
+    print_elapsed("in %s\n");
+  }
+
+ private:
+  int64_t        start = 0;
+  static int64_t get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+  }
 };
 
 }  // namespace yocto

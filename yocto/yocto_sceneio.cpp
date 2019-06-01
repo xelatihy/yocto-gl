@@ -2419,7 +2419,7 @@ static inline void _write_json_value(write_json_state& state, int value) {
     throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(write_json_state& state, size_t value) {
-  if (fprintf(state.fs, "%ull", (unsigned long long)value) < 0)
+  if (fprintf(state.fs, "%llu", (unsigned long long)value) < 0)
     throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(write_json_state& state, float value) {

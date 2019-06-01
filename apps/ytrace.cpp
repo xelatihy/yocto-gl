@@ -192,9 +192,8 @@ int main(int argc, char* argv[]) {
          sample += trace_prms.batch) {
       auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
       {
-        auto timer = print_timer(
-            "rendering cam" + std::to_string(trace_prms.camera) + " at " +
-            std::to_string(sample) + "/" + std::to_string(trace_prms.samples));
+        auto timer = print_timer("rendering cam%d at %4d/%4d", trace_prms.camera,
+            sample, trace_prms.samples);
         trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
       }
       if (save_batch) {
