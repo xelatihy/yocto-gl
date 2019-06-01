@@ -112,8 +112,8 @@ inline const float  pif = (float)pi;
 
 inline const auto int_max   = INT_MAX;
 inline const auto int_min   = INT_MIN;
-inline const auto float_max = FLT_MAX;
-inline const auto float_min = -FLT_MAX;
+inline const auto flt_max = FLT_MAX;
+inline const auto flt_min = -FLT_MAX;
 
 inline float abs(float a) { return a < 0 ? -a : a; }
 inline float min(float a, float b) { return (a < b) ? a : b; }
@@ -1365,8 +1365,8 @@ namespace yocto {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 struct bbox2f {
-  vec2f min = {float_max, float_max};
-  vec2f max = {float_min, float_min};
+  vec2f min = {flt_max, flt_max};
+  vec2f max = {flt_min, flt_min};
 
   bbox2f() {}
   bbox2f(const vec2f& min, const vec2f& max) : min{min}, max{max} {}
@@ -1377,8 +1377,8 @@ struct bbox2f {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 struct bbox3f {
-  vec3f min = {float_max, float_max, float_max};
-  vec3f max = {float_min, float_min, float_min};
+  vec3f min = {flt_max, flt_max, flt_max};
+  vec3f max = {flt_min, flt_min, flt_min};
 
   bbox3f() {}
   bbox3f(const vec3f& min, const vec3f& max) : min{min}, max{max} {}
@@ -1470,11 +1470,11 @@ struct ray2f {
   vec2f o    = {0, 0};
   vec2f d    = {0, 1};
   float tmin = ray_eps;
-  float tmax = float_max;
+  float tmax = flt_max;
 
   ray2f() {}
   ray2f(const vec2f& o, const vec2f& d, float tmin = ray_eps,
-      float tmax = float_max)
+      float tmax = flt_max)
       : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };
 
@@ -1483,11 +1483,11 @@ struct ray3f {
   vec3f o    = {0, 0, 0};
   vec3f d    = {0, 0, 1};
   float tmin = ray_eps;
-  float tmax = float_max;
+  float tmax = flt_max;
 
   ray3f() {}
   ray3f(const vec3f& o, const vec3f& d, float tmin = ray_eps,
-      float tmax = float_max)
+      float tmax = flt_max)
       : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };
 

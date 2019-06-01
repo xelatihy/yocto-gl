@@ -202,7 +202,7 @@ pair<float, int> sample_distance(const vec3f& density, float rl, float rd) {
   auto channel         = clamp((int)(rl * 3), 0, 2);
   auto density_channel = density[channel];
   if (density_channel == 0 || rd == 0)
-    return {float_max, channel};
+    return {flt_max, channel};
   else
     return {-log(rd) / density_channel, channel};
 }

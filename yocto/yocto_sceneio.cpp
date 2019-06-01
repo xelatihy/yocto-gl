@@ -38,8 +38,8 @@
 #include "ext/cgltf.h"
 
 #include <array>
-#include <climits>
-#include <cstdlib>
+#include <limits.h>
+#include <stdlib.h>
 #include <memory>
 #include <regex>
 
@@ -2175,7 +2175,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
     } else {
       auto persp      = &gcam->perspective;
       camera.aperture = 0;
-      set_yperspective(camera, persp->yfov, persp->aspect_ratio, float_max);
+      set_yperspective(camera, persp->yfov, persp->aspect_ratio, flt_max);
     }
     scene.cameras.push_back(camera);
     cmap[gcam] = (int)scene.cameras.size() - 1;
