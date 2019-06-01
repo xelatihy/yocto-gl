@@ -32,6 +32,8 @@ using namespace yocto;
 
 #include "ext/CLI11.hpp"
 
+namespace yocto {
+
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const vector<image<vec4f>>& features,
     const vector<float>& features_sigma) {
@@ -95,6 +97,8 @@ image<vec4f> filter_bilateral(
     }
   }
   return filtered;
+}
+
 }
 
 int main(int argc, char* argv[]) {

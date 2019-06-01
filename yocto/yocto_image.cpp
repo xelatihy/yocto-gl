@@ -1498,8 +1498,8 @@ static inline float* load_pfm(
   if (s > 0) {
     for (auto i = 0; i < nvalues; ++i) {
       auto dta = (uint8_t*)(pixels.get() + i);
-      swap(dta[0], dta[3]);
-      swap(dta[1], dta[2]);
+      std::swap(dta[0], dta[3]);
+      std::swap(dta[1], dta[2]);
     }
   }
 

@@ -40,9 +40,7 @@ image<vec4f> compute_diff_image(const image<vec4f>& a, const image<vec4f>& b) {
   auto diff = image{a.size(), zero4f};
   for (auto j = 0; j < a.size().y; j++) {
     for (auto i = 0; i < a.size().x; i++) {
-      diff[{i, j}] = {abs(a[{i, j}].x - b[{i, j}].x),
-          abs(a[{i, j}].y - b[{i, j}].y), abs(a[{i, j}].z - b[{i, j}].z),
-          abs(a[{i, j}].w - b[{i, j}].w)};
+      diff[{i, j}] = abs(a[{i, j}] - b[{i, j}]);
     }
   }
   return diff;
