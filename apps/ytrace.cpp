@@ -193,14 +193,14 @@ int main(int argc, char* argv[]) {
       auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
       {
         auto timer = print_timer(
-            "rendering cam" + to_string(trace_prms.camera) + " at " +
-            to_string(sample) + "/" + to_string(trace_prms.samples));
+            "rendering cam" + std::to_string(trace_prms.camera) + " at " +
+            std::to_string(sample) + "/" + std::to_string(trace_prms.samples));
         trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
       }
       if (save_batch) {
         auto outfilename = get_noextension(imfilename) + ".cam" +
-                           to_string(trace_prms.camera) + ".s" +
-                           to_string(sample + nsamples) + "." +
+                           std::to_string(trace_prms.camera) + ".s" +
+                           std::to_string(sample + nsamples) + "." +
                            get_extension(imfilename);
         try {
           if (logo) {
@@ -220,7 +220,7 @@ int main(int argc, char* argv[]) {
       auto outfilename = imfilename;
       if (all_cameras) {
         outfilename = get_noextension(imfilename) + ".cam" +
-                      to_string(trace_prms.camera) + "." +
+                      std::to_string(trace_prms.camera) + "." +
                       get_extension(imfilename);
       }
       auto timer = print_timer("saving image");

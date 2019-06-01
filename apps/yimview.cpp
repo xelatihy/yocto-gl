@@ -362,7 +362,8 @@ void update(const opengl_window& win, app_state& app) {
           task.result.get();
           img.load_done = true;
           img.name      = get_filename(img.filename) + " [" +
-                     to_string(img.img.size()) + "]";
+                     std::to_string(img.img.size().x) + "x" +
+                     std::to_string(img.img.size().y) + "]";
           img.display = img.img;
           log_glinfo(win, "done loading " + img.filename);
           init_gltexture(img.gl_txt, img.display, false, false, false);

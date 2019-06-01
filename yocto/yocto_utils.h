@@ -122,6 +122,16 @@ using namespace std::chrono_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Create a string from a printf like string
+inline string strprintf(const char* format, ...) {
+  char    buffer[4096];
+  va_list args;
+  va_start(args, format);
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  va_end(args);
+  return buffer;
+}
+
 // get time in nanoseconds
 inline int64_t get_time() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();

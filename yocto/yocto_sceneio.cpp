@@ -150,49 +150,9 @@ static inline file_holder open_output_file(
   return {fs, filename};
 }
 
-// Write text to file
-static inline void write_text(FILE* fs, const char* value) {
-  if (fputs(value, fs) == 0)
-    throw std::runtime_error("could not write to file");
-}
-static inline void write_text(FILE* fs, const string& value) {
-  if (fputs(value.c_str(), fs) == 0)
-    throw std::runtime_error("could not write to file");
-}
-
 // Read a line
 static inline bool read_line(FILE* fs, char* buffer, size_t size) {
   return fgets(buffer, size, fs) != nullptr;
-}
-
-template <typename T>
-static inline void format_values(
-    FILE* fs, const T* values, int num, bool bracketed = false) {
-  if (bracketed) write_text(fs, "[");
-  for (auto i = 0; i < num; i++) {
-    if (i) write_text(fs, bracketed ? "," : " ");
-    format_value(fs, values[i]);
-  }
-  if (bracketed) write_text(fs, "]");
-}
-
-template <typename T, typename... Ts>
-static inline void format_values(FILE* fs, const T& arg, const Ts&... args) {
-  write_value(fs, arg);
-  if constexpr (sizeof...(Ts) != 0) {
-    write_text(fs, " ");
-    write_values(fs, args...);
-  }
-}
-template <typename T, typename... Ts>
-static inline void format_line(FILE* fs, const T& arg, const Ts&... args) {
-  format_value(fs, arg);
-  if constexpr (sizeof...(Ts) != 0) {
-    write_text(fs, " ");
-    format_line(fs, args...);
-  } else {
-    write_text(fs, "\n");
-  }
 }
 
 }  // namespace yocto
@@ -273,15 +233,14 @@ void save_scene(const string& filename, const yocto_scene& scene,
   }
 }
 
-static string get_save_scene_message(
-    const yocto_scene& scene, const string& line_prefix) {
+static string get_save_scene_message(const yocto_scene& scene) {
   auto str = ""s;
-  str += line_prefix + " \n";
-  str += line_prefix + " Written by Yocto/GL\n";
-  str += line_prefix + " https://github.com/xelatihy/yocto-gl\n";
-  str += line_prefix + "\n";
-  str += format_stats(scene, line_prefix);
-  str += line_prefix + "\n";
+  str += "# \n";
+  str += "# Written by Yocto/GL\n";
+  str += "# https://github.com/xelatihy/yocto-gl\n";
+  str += "# \n";
+  str += format_stats(scene, "# ");
+  str += "# \n";
   return str;
 }
 
@@ -712,7 +671,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
     parse_yaml_value(yml, value);
     if (value < 0) return;
     if (value >= nrefs) {
-      throw std::runtime_error("reference not found " + to_string(value));
+      throw std::runtime_error("reference not found " + std::to_string(value));
     }
   }
 
@@ -995,6 +954,10 @@ static inline void write_yaml_text(FILE* fs, const char* value) {
   if (fprintf(fs, "%s", value) < 0)
     throw std::runtime_error("cannot print value");
 }
+static inline void write_yaml_text(FILE* fs, const string& value) {
+  if (fprintf(fs, "%s", value.c_str()) < 0)
+    throw std::runtime_error("cannot print value");
+}
 static inline void write_yaml_value(FILE* fs, const string& value) {
   if (fprintf(fs, "%s", value.c_str()) < 0)
     throw std::runtime_error("cannot print value");
@@ -1037,7 +1000,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   auto fs_ = open_output_file(filename);
   auto fs  = fs_.fs;
 
-  write_text(fs, get_save_scene_message(scene, "#"));
+  write_yaml_text(fs, get_save_scene_message(scene));
 
   static const auto def_camera      = yocto_camera{};
   static const auto def_texture     = yocto_texture{};
@@ -1125,12 +1088,12 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
         fs, "voldensity_tex", material.voldensity_tex, scene.voltextures);
   }
 
-  if (!scene.shapes.empty()) write_text(fs, "\n\nshapes:\n");
+  if (!scene.shapes.empty()) write_yaml_text(fs, "\n\nshapes:\n");
   for (auto& shape : scene.shapes) {
     write_yaml_line(fs, "  - uri:", shape.uri);
   }
 
-  if (!scene.subdivs.empty()) write_text(fs, "\n\nsubdivs:\n");
+  if (!scene.subdivs.empty()) write_yaml_text(fs, "\n\nsubdivs:\n");
   for (auto& subdiv : scene.subdivs) {
     write_yaml_line(fs, "  - uri:", subdiv.uri);
     write_yaml_ref(fs, "shape", subdiv.shape, scene.shapes);
@@ -1148,7 +1111,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   }
 
   if (!ply_instances) {
-    if (!scene.instances.empty()) write_text(fs, "\n\ninstances:\n");
+    if (!scene.instances.empty()) write_yaml_text(fs, "\n\ninstances:\n");
     for (auto& instance : scene.instances) {
       write_yaml_line(fs, "  - uri:", instance.uri);
       write_yaml_opt(fs, "frame", instance.frame, def_instance.frame);
@@ -1156,11 +1119,11 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
       write_yaml_ref(fs, "material", instance.material, scene.materials);
     }
   } else {
-    if (!scene.instances.empty()) write_text(fs, "\n\nply_instances:\n");
+    if (!scene.instances.empty()) write_yaml_text(fs, "\n\nply_instances:\n");
     write_yaml_line(fs, "  - uri:", instances_name);
   }
 
-  if (!scene.environments.empty()) write_text(fs, "\n\nenvironments:\n");
+  if (!scene.environments.empty()) write_yaml_text(fs, "\n\nenvironments:\n");
   for (auto& environment : scene.environments) {
     write_yaml_line(fs, "  - uri:", environment.uri);
     write_yaml_opt(fs, "frame", environment.frame, def_environment.frame);
@@ -1584,6 +1547,10 @@ static inline void write_obj_text(FILE* fs, const char* value) {
   if (fprintf(fs, "%s", value) < 0)
     throw std::runtime_error("cannot print value");
 }
+static inline void write_obj_text(FILE* fs, const string& value) {
+  if (fprintf(fs, "%s", value.c_str()) < 0)
+    throw std::runtime_error("cannot print value");
+}
 static inline void write_obj_value(FILE* fs, const char* value) {
   if (fprintf(fs, "%s", value) < 0)
     throw std::runtime_error("cannot print value");
@@ -1640,7 +1607,7 @@ static void save_mtl(
   auto fs  = fs_.fs;
 
   // embed data
-  write_text(fs, get_save_scene_message(scene, "#"));
+  write_obj_text(fs, get_save_scene_message(scene));
 
   // for each material, dump all the values
   for (auto& material : scene.materials) {
@@ -1668,7 +1635,7 @@ static void save_mtl(
           fs, "  map_Kt", scene.textures[material.transmission_tex].uri);
     if (material.normal_tex >= 0)
       write_obj_line(fs, "  map_norm", scene.textures[material.normal_tex].uri);
-    write_text(fs, "\n");
+    write_obj_text(fs, "\n");
   }
 }
 
@@ -1679,7 +1646,7 @@ static void save_objx(
   auto fs  = fs_.fs;
 
   // embed data
-  write_text(fs, get_save_scene_message(scene, "#"));
+  write_obj_text(fs, get_save_scene_message(scene));
 
   // cameras
   for (auto& camera : scene.cameras) {
@@ -1714,7 +1681,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   auto fs  = fs_.fs;
 
   // embed data
-  write_text(fs, get_save_scene_message(scene, "#"));
+  write_obj_text(fs, get_save_scene_message(scene));
 
   // material library
   if (!scene.materials.empty()) {
@@ -2076,7 +2043,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
       if (!gprim->attributes_count) continue;
       auto shape = yocto_shape();
       shape.uri  = (gmesh->name ? gmesh->name : "") +
-                  ((sid) ? to_string(sid) : string());
+                  ((sid) ? std::to_string(sid) : string());
       for (auto aid = 0; aid < gprim->attributes_count; aid++) {
         auto gattr    = &gprim->attributes[aid];
         auto semantic = string(gattr->name ? gattr->name : "");
@@ -2307,9 +2274,10 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
       auto gchannel = &ganm->channels[cid];
       auto path     = gchannel->target_path;
       if (sampler_map.find({gchannel->sampler, path}) == sampler_map.end()) {
-        auto gsampler   = gchannel->sampler;
-        auto animation  = yocto_animation{};
-        animation.uri   = (ganm->name ? ganm->name : "anim") + to_string(aid++);
+        auto gsampler  = gchannel->sampler;
+        auto animation = yocto_animation{};
+        animation.uri  = (ganm->name ? ganm->name : "anim") +
+                        std::to_string(aid++);
         animation.group = ganm->name ? ganm->name : "";
         auto input_view = accessor_values(gsampler->input);
         animation.times.resize(input_view.size());
@@ -2427,86 +2395,112 @@ struct write_json_state {
   FILE*                    fs = nullptr;
   vector<pair<bool, bool>> stack;
 };
+static inline void write_json_text(write_json_state& state, const char* text) {
+  if (fprintf(state.fs, "%s", text) < 0)
+    throw std::runtime_error("cannot write json");
+}
+static inline void write_json_text(
+    write_json_state& state, const string& text) {
+  if (fprintf(state.fs, "%s", text.c_str()) < 0)
+    throw std::runtime_error("cannot write json");
+}
 static inline void _write_json_next(
     write_json_state& state, bool dedent = false) {
   static const char* indents[7] = {
       "", "  ", "    ", "      ", "        ", "          ", "            "};
   if (state.stack.empty()) return;
-  write_text(state.fs, state.stack.back().second ? ",\n" : "\n");
-  write_text(state.fs,
-      indents[clamp((int)state.stack.size() + (dedent ? -1 : 0), 0, 6)]);
+  write_json_text(state, state.stack.back().second ? ",\n" : "\n");
+  write_json_text(
+      state, indents[clamp((int)state.stack.size() + (dedent ? -1 : 0), 0, 6)]);
   state.stack.back().second = true;
 }
 static inline void _write_json_value(write_json_state& state, int value) {
-  write_text(state.fs, to_string(value));
+  if (fprintf(state.fs, "%d", value) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(write_json_state& state, size_t value) {
-  write_text(state.fs, to_string(value));
+  if (fprintf(state.fs, "%ull", (unsigned long long)value) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(write_json_state& state, float value) {
-  write_text(state.fs, to_string(value));
+  if (fprintf(state.fs, "%g", value) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(write_json_state& state, bool value) {
-  write_text(state.fs, to_string(value, true));
+  if (fprintf(state.fs, "%s", value ? "true" : "false") < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const string& value) {
-  write_text(state.fs, value);
+  if (fprintf(state.fs, "\"%s\"", value.c_str()) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const char* value) {
-  write_text(state.fs, value);
+  if (fprintf(state.fs, "\"%s\"", value) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const vec2f& value) {
-  write_text(state.fs, to_string(value, true));
+  if (fprintf(state.fs, "[%g, %g]", value.x, value.y) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const vec3f& value) {
-  write_text(state.fs, to_string(value, true));
+  if (fprintf(state.fs, "[%g, %g, %g]", value.x, value.y, value.z) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const vec4f& value) {
-  write_text(state.fs, to_string(value, true));
+  if (fprintf(
+          state.fs, "[%g, %g, %g, %g]", value.x, value.y, value.z, value.w) < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const mat4f& value) {
-  write_text(state.fs, to_string(value, true));
+  if (fprintf(state.fs, "[ ") < 0)
+    throw std::runtime_error("cannot write json");
+  for (auto i = 0; i < 16; i++) {
+    if (fprintf(state.fs, i ? ", %g" : "%g", (&value.x.x)[i]) < 0)
+      throw std::runtime_error("cannot write json");
+  }
+  if (fprintf(state.fs, " ]") < 0)
+    throw std::runtime_error("cannot write json");
 }
 static inline void _write_json_value(
     write_json_state& state, const vector<int>& value) {
-  write_text(state.fs, "[ ");
+  write_json_text(state, "[ ");
   for (auto i = 0; i < value.size(); i++) {
-    if (i) write_text(state.fs, ", ");
+    if (i) write_json_text(state, ", ");
     _write_json_value(state, value[i]);
   }
-  write_text(state.fs, " ]");
+  write_json_text(state, " ]");
 }
 static inline void write_json_object(write_json_state& state) {
   _write_json_next(state);
-  write_text(state.fs, "{ ");
+  write_json_text(state, "{ ");
   state.stack.push_back({true, false});
 }
 static inline void write_json_object(write_json_state& state, const char* key) {
   _write_json_next(state);
   _write_json_value(state, key);
-  write_text(state.fs, ": {");
+  write_json_text(state, ": {");
   state.stack.push_back({true, false});
 }
 static inline void write_json_array(write_json_state& state) {
   _write_json_next(state);
-  write_text(state.fs, "[ ");
+  write_json_text(state, "[ ");
   state.stack.push_back({false, false});
 }
 static inline void write_json_array(write_json_state& state, const char* key) {
   _write_json_next(state);
   _write_json_value(state, key);
-  write_text(state.fs, ": [");
+  write_json_text(state, ": [");
   state.stack.push_back({false, false});
 }
 static inline void write_json_pop(write_json_state& state) {
   _write_json_next(state, true);
-  write_text(state.fs, state.stack.back().first ? "}" : "]");
+  write_json_text(state, state.stack.back().first ? "}" : "]");
   state.stack.pop_back();
 }
 template <typename T>
@@ -2519,7 +2513,7 @@ static inline void write_json_value(
     write_json_state& state, const char* key, const T& value) {
   _write_json_next(state);
   _write_json_value(state, key);
-  write_text(state.fs, ": ");
+  write_json_text(state, ": ");
   _write_json_value(state, value);
 }
 static inline void write_json_begin(write_json_state& state) {
@@ -2976,7 +2970,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
     auto material = mmap.at(ctx.material);
     if (amap.at(ctx.arealight) != zero3f) {
       material.emission = amap.at(ctx.arealight);
-      material.uri += "_arealight_" + to_string(light_id++);
+      material.uri += "_arealight_" + std::to_string(light_id++);
     }
     scene.materials.push_back(material);
     ammap[lookup_name] = (int)scene.materials.size() - 1;
@@ -3085,7 +3079,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
   void shape(const pbrt_shape& pshape, const pbrt_context& ctx) override {
     static auto shape_id = 0;
     auto        shape    = yocto_shape{};
-    shape.uri            = "shapes/shape__" + to_string(shape_id++) + ".ply";
+    shape.uri = "shapes/shape__" + std::to_string(shape_id++) + ".ply";
     switch (pshape.type) {
       case pbrt_shape::type_t::trianglemesh: {
         auto& mesh      = pshape.trianglemesh;
@@ -3130,7 +3124,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       } break;
       default: {
         throw std::runtime_error(
-            "unsupported shape type " + to_string((int)pshape.type));
+            "unsupported shape type " + std::to_string((int)pshape.type));
       }
     }
     scene.shapes.push_back(shape);
@@ -3431,7 +3425,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
   }
   void light(const pbrt_light& plight, const pbrt_context& ctx) override {
     static auto light_id = 0;
-    auto        name     = "light_" + to_string(light_id++);
+    auto        name     = "light_" + std::to_string(light_id++);
     switch (plight.type) {
       case pbrt_light::type_t::infinite: {
         auto& infinite    = plight.infinite;
@@ -3553,7 +3547,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       } break;
       default: {
         throw std::runtime_error(
-            "light type not supported " + to_string((int)plight.type));
+            "light type not supported " + std::to_string((int)plight.type));
       }
     }
   }
@@ -3621,7 +3615,7 @@ static inline void write_pbrt_text(FILE* fs, const char* value) {
     throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_text(FILE* fs, const string& value) {
-  if (fprintf(fs, "%s", value.c_str()) < 0)
+  if (fprintf(fs, "\"%s\"", value.c_str()) < 0)
     throw std::runtime_error("cannot print value");
 }
 static inline void write_pbrt_value(FILE* fs, const char* value) {
@@ -3661,7 +3655,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   auto fs  = fs_.fs;
 
   // embed data
-  write_pbrt_text(fs, get_save_scene_message(scene, "#"));
+  write_pbrt_text(fs, get_save_scene_message(scene));
 
   // convert camera and settings
   auto& camera     = scene.cameras.front();
@@ -3677,15 +3671,13 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   write_pbrt_text(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
   write_pbrt_text(fs, "Integrator \"path\"\n");
   write_pbrt_line(fs, "Film \"image\" \"string filename\"",
-      to_string(get_noextension(filename) + ".exr", true),
-      "\"integer xresolution\"", image_size.x, "\"integer yresolution\"",
-      image_size.y);
+      get_noextension(filename) + ".exr", "\"integer xresolution\"",
+      image_size.x, "\"integer yresolution\"", image_size.y);
 
   // convert textures
   for (auto& texture : scene.textures) {
-    write_pbrt_line(fs, "Texture", to_string(get_basename(texture.uri), true),
-        "\"spectrum\" \"imagemap\" \"string filename\"",
-        to_string(texture.uri, true));
+    write_pbrt_line(fs, "Texture", get_basename(texture.uri),
+        "\"spectrum\" \"imagemap\" \"string filename\"", texture.uri);
   }
 
   // convert materials
@@ -3694,15 +3686,13 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
         get_basename(material.uri));
     if (material.diffuse_tex >= 0) {
       write_pbrt_line(fs, "    \"texture Kd\"",
-          to_string(
-              get_basename(scene.textures[material.diffuse_tex].uri), true));
+          get_basename(scene.textures[material.diffuse_tex].uri));
     } else {
       write_pbrt_line(fs, "    \"rgb Kd\" [", material.diffuse, "]");
     }
     if (material.specular_tex >= 0) {
       write_pbrt_line(fs, "    \"texture Ks\"",
-          to_string(
-              get_basename(scene.textures[material.specular_tex].uri), true));
+          get_basename(scene.textures[material.specular_tex].uri));
     } else {
       auto specular = vec3f{1};
       write_pbrt_line(fs, "    \"rgb Ks\" [", specular, "]");
@@ -3721,14 +3711,13 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
     write_pbrt_text(fs, "AttributeBegin\n");
     write_pbrt_text(fs, "  TransformBegin\n");
     write_pbrt_line(fs, "    Transform [", instance.frame, "]");
-    write_pbrt_line(
-        fs, "    NamedMaterial", to_string(get_basename(material.uri), true));
+    write_pbrt_line(fs, "    NamedMaterial", get_basename(material.uri));
     if (material.emission != zero3f) {
       write_pbrt_line(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [",
           material.emission, "]");
     }
     write_pbrt_line(fs, "    Shape \"plymesh\" \"string filename\"",
-        to_string(get_noextension(shape.uri) + ".ply", true));
+        get_noextension(shape.uri) + ".ply");
     write_pbrt_text(fs, "  TransformEnd\n");
     write_pbrt_text(fs, "AttributeEnd\n");
   }

@@ -133,9 +133,9 @@ int main(int argc, char** argv) {
     auto sid = 0;
     for (auto& shape : scene.shapes) {
       if (!shape.quadspos.empty()) {
-        shape.uri = shape_directory + "shape_" + to_string(sid) + ".obj";
+        shape.uri = shape_directory + "shape_" + std::to_string(sid) + ".obj";
       } else {
-        shape.uri = shape_directory + "shape_" + to_string(sid) + ".ply";
+        shape.uri = shape_directory + "shape_" + std::to_string(sid) + ".ply";
       }
       sid++;
     }
@@ -147,9 +147,11 @@ int main(int argc, char** argv) {
     auto sid = 0;
     for (auto& subdiv : scene.subdivs) {
       if (!subdiv.quadspos.empty()) {
-        subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) + ".obj";
+        subdiv.uri = subdiv_directory + "subdiv_" + std::to_string(sid) +
+                     ".obj";
       } else {
-        subdiv.uri = subdiv_directory + "subdiv_" + to_string(sid) + ".ply";
+        subdiv.uri = subdiv_directory + "subdiv_" + std::to_string(sid) +
+                     ".ply";
       }
       sid++;
     }

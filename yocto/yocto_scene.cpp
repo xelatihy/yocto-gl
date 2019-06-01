@@ -398,7 +398,7 @@ void normalize_uris(yocto_scene& scene) {
     for (auto& c : name) {
       if (c == ':' || c == ' ') c = '_';
     }
-    if (name.empty()) name = base + "_" + to_string(num);
+    if (name.empty()) name = base + "_" + std::to_string(num);
     if (get_dirname(name).empty()) name = base + "s/" + name;
     if (get_extension(name).empty()) name = name + "." + ext;
   };
@@ -430,7 +430,7 @@ void rename_instances(yocto_scene& scene) {
     if (shape_count[instance.shape].y == 1) {
       instance.uri = "instances/" + shape_names[instance.shape] + ".yaml";
     } else {
-      auto num = to_string(shape_count[instance.shape].x++);
+      auto num = std::to_string(shape_count[instance.shape].x++);
       while (num.size() < (int)ceil(log10(shape_count[instance.shape].y)))
         num = '0' + num;
       instance.uri = "instances/" + shape_names[instance.shape] + "-" + num +

@@ -375,7 +375,7 @@ struct load_island_shape_callbacks : obj_callbacks {
     }
     shapes.push_back(yocto_shape{});
     shapes.back().uri = "shapes/" + parent_name + "/" + get_basename(filename) +
-                        "-" + to_string((int)shapes.size()) + ".ply";
+                        "-" + std::to_string((int)shapes.size()) + ".ply";
     pos_map.clear();
     pos_map.reserve(1024 * 1024);
     norm_map.clear();
@@ -962,11 +962,11 @@ void load_island_scene(const std::string& filename, yocto_scene& scene,
       scene.materials[id].uri = "materials/" + parent_name + ".yaml";
     } else {
       scene.shapes[id].uri = "shapes/" + parent_name +
-                             to_string(parent_shape_map[parent_name].x) +
+                             std::to_string(parent_shape_map[parent_name].x) +
                              ".ply";
-      scene.materials[id].uri = "materials/" + parent_name +
-                                to_string(parent_shape_map[parent_name].x) +
-                                ".ply";
+      scene.materials[id].uri =
+          "materials/" + parent_name +
+          std::to_string(parent_shape_map[parent_name].x) + ".ply";
       parent_shape_map[parent_name].x += 1;
     }
   }
@@ -989,9 +989,9 @@ void load_island_scene(const std::string& filename, yocto_scene& scene,
     if (parent_texture_map[parent_name].y == 1) {
       scene.textures[id].uri = "textures/" + parent_name + ".png";
     } else {
-      scene.textures[id].uri = "textures/" + parent_name +
-                               to_string(parent_texture_map[parent_name].x) +
-                               ".png";
+      scene.textures[id].uri =
+          "textures/" + parent_name +
+          std::to_string(parent_texture_map[parent_name].x) + ".png";
       parent_texture_map[parent_name].x += 1;
     }
   }
