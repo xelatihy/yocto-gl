@@ -132,24 +132,6 @@ inline string strprintf(const char* format, ...) {
   return buffer;
 }
 
-// get time in nanoseconds
-inline int64_t get_time() {
-  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration) {
-  auto elapsed = duration / 1000000;  // milliseconds
-  auto hours   = (int)(elapsed / 3600000);
-  elapsed %= 3600000;
-  auto mins = (int)(elapsed / 60000);
-  elapsed %= 60000;
-  auto secs  = (int)(elapsed / 1000);
-  auto msecs = (int)(elapsed % 1000);
-  char buffer[256];
-  sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-  return buffer;
-}
-
 // print information and returns a timer that will print the time when
 // destroyed. Use with RIIA for scoped timing.
 struct print_timer {
