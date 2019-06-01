@@ -89,7 +89,6 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::function;
 using std::pair;
 using std::string;
 using std::string_view;

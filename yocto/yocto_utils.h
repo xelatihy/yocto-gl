@@ -83,9 +83,10 @@
 
 #include "yocto_math.h"
 
-#include <cctype>
+#include <ctype.h>
+#include <stdio.h>
+
 #include <chrono>
-#include <cstdio>
 #include <deque>
 #include <future>
 #include <mutex>
