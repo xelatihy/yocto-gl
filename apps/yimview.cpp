@@ -125,22 +125,31 @@ void compute_image_stats(
 void update_app_display(const string& filename, const image<vec4f>& img,
     image<vec4f>& display, image_stats& stats,
     const tonemap_params&    tonemap_prms,
-    const colorgrade_params& colorgrade_prms, atomic<bool>& stop,
+    const colorgrade_params& colorgrade_prms, atomic<bool>* cancel,
     concurrent_queue<image_region>& queue) {
   auto regions = vector<image_region>{};
   make_imregions(regions, img.size(), 128);
-  parallel_foreach(
-      regions,
-      [&img, &display, &queue, tonemap_prms, colorgrade_prms,
-          do_colorgrade = colorgrade_prms != colorgrade_params{}](
-          const image_region& region) {
-        tonemap(display, img, region, tonemap_prms);
-        if (do_colorgrade) {
-          colorgrade(display, display, region, colorgrade_prms);
-        }
-        queue.push(region);
-      },
-      &stop);
+  auto           futures  = vector<future<void>>{};
+  auto           nthreads = std::thread::hardware_concurrency();
+  atomic<size_t> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(std::async(
+        std::launch::async, [&next_idx, cancel, &regions, &queue, &display,
+                                &img, tonemap_prms, colorgrade_prms]() {
+          while (true) {
+            if (cancel && *cancel) break;
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= regions.size()) break;
+            auto region = regions[idx];
+            tonemap(display, img, region, tonemap_prms);
+            if (colorgrade_prms != colorgrade_params{}) {
+              colorgrade(display, display, region, colorgrade_prms);
+            }
+            queue.push(region);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
   compute_image_stats(stats, display, false);
 }
 
@@ -408,7 +417,7 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::load: {
         log_glinfo(win, "start loading " + img.filename);
         img.load_done = false;
-        task.result   = async([&img]() {
+        task.result   = std::async(std::launch::async, [&img]() {
           img.img = {};
           load_image(img.filename, img.img);
           compute_image_stats(
@@ -417,7 +426,7 @@ void update(const opengl_window& win, app_state& app) {
       } break;
       case app_task_type::save: {
         log_glinfo(win, "start saving " + img.outname);
-        task.result = async([&img]() {
+        task.result = std::async(std::launch::async,[&img]() {
           if (!is_hdr_filename(img.outname)) {
             auto ldr = image<vec4b>{};
             float_to_byte(ldr, img.display);
@@ -432,10 +441,10 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::display: {
         log_glinfo(win, "start rendering " + img.filename);
         img.display_done = false;
-        task.result      = async([&img, &task]() {
+        task.result      = std::async(std::launch::async,[&img, &task]() {
           update_app_display(img.filename, img.img, img.display,
               img.display_stats, img.tonemap_prms, img.colorgrade_prms,
-              task.stop, task.queue);
+              &task.stop, task.queue);
         });
       } break;
     }

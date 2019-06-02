@@ -912,12 +912,12 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
   // synchronization
   atomic<int>          num_processed_prims(0);
   std::mutex           queue_mutex;
-  vector<future<void>> futures;
+  vector<std::future<void>> futures;
   auto                 nthreads = std::thread::hardware_concurrency();
 
   // create nodes until the queue is empty
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(async(
+    futures.emplace_back(std::async(std::launch::async,
         [&nodes, &prims, &params, &num_processed_prims, &queue_mutex, &queue] {
           while (true) {
             // exit if needed

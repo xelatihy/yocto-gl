@@ -42,6 +42,8 @@
 #include <array>
 #include <memory>
 #include <regex>
+#include <future>
+#include <thread>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -51,6 +53,54 @@ namespace yocto {
 using std::unique_ptr;
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CONCURRENCY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+static inline void parallel_foreach(
+    vector<T>& values, const Func& func, atomic<bool>* cancel = nullptr) {
+  auto           futures  = vector<std::future<void>>{};
+  auto           nthreads = std::thread::hardware_concurrency();
+  atomic<size_t> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, cancel, &values]() {
+          while (true) {
+            if (cancel && *cancel) break;
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= values.size()) break;
+            func(values[idx]);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+template <typename T, typename Func>
+static inline void parallel_foreach(const vector<T>& values, const Func& func,
+    atomic<bool>* cancel = nullptr) {
+  auto           futures  = vector<std::future<void>>{};
+  auto           nthreads = std::thread::hardware_concurrency();
+  atomic<size_t> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, cancel, &values]() {
+          while (true) {
+            if (cancel && *cancel) break;
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= values.size()) break;
+            func(values[idx]);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+ 
+}
 
 // -----------------------------------------------------------------------------
 // FILE IO
@@ -271,6 +321,7 @@ void load_textures(
   if (params.noparallel) {
     for (auto& texture : scene.textures) {
       if (params.cancel && *params.cancel) break;
+      if (!texture.hdr.empty() || !texture.ldr.empty()) return;
       load_texture(texture, dirname);
     }
   } else {
@@ -287,6 +338,7 @@ void load_textures(
   if (params.noparallel) {
     for (auto& texture : scene.voltextures) {
       if (params.cancel && *params.cancel) break;
+      if (!texture.vol.empty()) return;
       load_voltexture(texture, dirname);
     }
   } else {
