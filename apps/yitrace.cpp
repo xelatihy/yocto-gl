@@ -30,10 +30,13 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
-#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 #include "ysceneui.h"
 using namespace yocto;
+
+#include <atomic>
+#include <future>
+#include <thread>
 
 #include "ext/CLI11.hpp"
 
@@ -59,13 +62,13 @@ enum struct app_task_type {
 };
 
 struct app_task {
-  app_task_type       type;
-  std::future<void>   result;
-  std::atomic<bool>   stop;
-  std::atomic<int>    current;
-  deque<image_region> queue;
-  std::mutex          queuem;
-  app_edit            edit;
+  app_task_type            type;
+  std::future<void>        result;
+  std::atomic<bool>        stop;
+  std::atomic<int>         current;
+  std::deque<image_region> queue;
+  std::mutex               queuem;
+  app_edit                 edit;
 
   app_task(app_task_type type, const app_edit& edit = {})
       : type{type}, result{}, stop{false}, current{-1}, edit{edit} {}
@@ -120,16 +123,16 @@ struct app_scene {
   // tasks
   bool load_done = false, bvh_done = false, lights_done = false,
        render_done = false;
-  deque<app_task> task_queue;
+  std::deque<app_task> task_queue;
   app_selection   selection = {typeid(void), -1};
 };
 
 // Application state
 struct app_state {
   // data
-  deque<app_scene> scenes;
+  std::deque<app_scene> scenes;
   int              selected = -1;
-  deque<string>    errors;
+  std::deque<string>    errors;
 
   // default options
   load_params    load_prms    = {};
@@ -144,8 +147,8 @@ void update_app_render(const string& filename, image<vec4f>& render,
     image<vec4f>& display, image<vec4f>& preview, trace_state& state,
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
     const trace_params& trace_prms, const tonemap_params& tonemap_prms,
-    int preview_ratio, atomic<bool>* cancel, atomic<int>& current_sample,
-    deque<image_region>& queue, std::mutex& queuem) {
+    int preview_ratio, std::atomic<bool>* cancel, std::atomic<int>& current_sample,
+    std::deque<image_region>& queue, std::mutex& queuem) {
   auto preview_options = trace_prms;
   preview_options.resolution /= preview_ratio;
   preview_options.samples = 1;
@@ -178,13 +181,14 @@ void update_app_render(const string& filename, image<vec4f>& render,
     current_sample   = sample;
     auto num_samples = min(
         trace_prms.batch, trace_prms.samples - current_sample);
-    auto           futures  = vector<future<void>>{};
+    auto           futures  = vector<std::future<void>>{};
     auto           nthreads = std::thread::hardware_concurrency();
-    atomic<size_t> next_idx(0);
+    std::atomic<size_t> next_idx(0);
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
       futures.emplace_back(std::async(std::launch::async,
           [num_samples, &trace_prms, &tonemap_prms, &render, &display, &scene,
-              &lights, &bvh, &state, &queue, &queuem, &next_idx, cancel, &regions]() {
+              &lights, &bvh, &state, &queue, &queuem, &next_idx, cancel,
+              &regions]() {
             while (true) {
               if (cancel && *cancel) break;
               auto idx = next_idx.fetch_add(1);
@@ -436,7 +440,7 @@ void apply_edit(const string& filename, yocto_scene& scene,
   } else if (type == typeid(tonemap_params)) {
     tonemap_prms = any_cast<tonemap_params>(data);
   } else {
-    throw runtime_error("unsupported type "s + type.name());
+    throw std::runtime_error("unsupported type "s + type.name());
   }
 }
 
@@ -466,7 +470,7 @@ void load_element(
         subdiv.texcoords, subdiv.colors, subdiv.radius, subdiv.facevarying);
     tesselate_subdiv(scene, scene.subdivs[index]);
   } else {
-    throw runtime_error("unsupported type "s + type.name());
+    throw std::runtime_error("unsupported type "s + type.name());
   }
 }
 
@@ -484,7 +488,7 @@ void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
   } else if (type == typeid(yocto_instance)) {
     updated_instances.push_back(index);
   } else {
-    throw runtime_error("unsupported type "s + type.name());
+    throw std::runtime_error("unsupported type "s + type.name());
   }
 
   refit_bvh(bvh, scene, updated_shapes, bvh_prms);

@@ -31,6 +31,7 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_image.h"
+#include "yocto_random.h"
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #pragma GCC diagnostic push
@@ -469,7 +470,7 @@ vec3f color_to_xyz(const vec3f& col, color_space from) {
         hlg_linear_to_display(rgb.z),
     };
   } else {
-    throw runtime_error("should not have gotten here");
+    throw std::runtime_error("should not have gotten here");
   }
   return space.rgb_to_xyz_mat * rgb;
 }
@@ -515,7 +516,7 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to) {
         hlg_display_to_linear(rgb.z),
     };
   } else {
-    throw runtime_error("should not have gotten here");
+    throw std::runtime_error("should not have gotten here");
   }
   return rgb;
 }
@@ -1422,7 +1423,7 @@ void make_volpreset(volume<float>& vol, const string& type) {
   if (type == "test-volume") {
     make_test(vol, size, 6, 10);
   } else {
-    throw runtime_error("unknown volume preset " + type);
+    throw std::runtime_error("unknown volume preset " + type);
   }
 }
 

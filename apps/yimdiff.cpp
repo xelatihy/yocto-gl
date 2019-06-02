@@ -31,7 +31,6 @@
 //
 
 #include "../yocto/yocto_image.h"
-#include "../yocto/yocto_utils.h"
 using namespace yocto;
 
 #include "ext/CLI11.hpp"

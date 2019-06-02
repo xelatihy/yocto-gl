@@ -4,9 +4,6 @@
 // Yocto/Math provides the basic math primitives used in grahics, including
 // small-sized vectors and matrixes, frames, bounding boxes and transforms.
 //
-//
-// ## Small Vectors and Matrices, Frames, Bounding Boxes and Transforms
-//
 // We provide common operations for small vectors and matrices typically used
 // in graphics. In particular, we support 1-4 dimensional vectors
 // coordinates in float and int coordinates (`vec1f`, `vec2f`, `vec3f`, `vec4f`,
@@ -35,6 +32,9 @@
 // `translation_mat()` or `translation_frame()` respectively, etc.
 // For rotation we support axis-angle and quaternions, with slerp.
 //
+// Finally, we include a `timer` for benchmarking with high precision and 
+// a few common path manipulations ghat will be remove once C++ filesystem 
+// support will be more common.
 //
 
 //
@@ -83,6 +83,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <chrono>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -1807,6 +1808,118 @@ inline void update_fpscam(
   auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
   frame = {rot.x, rot.y, rot.z, pos};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// TIMER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// print information and returns a timer that will print the time when
+// destroyed. Use with RIIA for scoped timing.
+struct timer {
+  timer() : start{get_time()} {}
+  int64_t elapsed() { return get_time() - start; }
+  string  elapsedf() {
+    auto duration = get_time() - start;
+    auto elapsed  = duration / 1000000;  // milliseconds
+    auto hours    = (int)(elapsed / 3600000);
+    elapsed %= 3600000;
+    auto mins = (int)(elapsed / 60000);
+    elapsed %= 60000;
+    auto secs  = (int)(elapsed / 1000);
+    auto msecs = (int)(elapsed % 1000);
+    char buffer[256];
+    sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+    return buffer;
+  }
+  static int64_t get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+  }
+
+ private:
+  int64_t start = 0;
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+inline string normalize_path(const string& filename_) {
+  auto filename = filename_;
+  for (auto& c : filename)
+    if (c == '\\') c = '/';
+  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
+      filename[3] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  auto pos = (size_t)0;
+  while ((pos = filename.find("//")) != filename.npos)
+    filename = filename.substr(0, pos) + filename.substr(pos + 1);
+  return filename;
+}
+
+// Get directory name (including '/').
+inline string get_dirname(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('/');
+  if (pos == string::npos) return "";
+  return filename.substr(0, pos + 1);
+}
+
+// Get extension (not including '.').
+inline string get_extension(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return "";
+  return filename.substr(pos + 1);
+}
+
+// Get filename without directory.
+inline string get_filename(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('/');
+  if (pos == string::npos) return filename;
+  return filename.substr(pos + 1);
+}
+
+// Get extension.
+inline string get_noextension(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return filename;
+  return filename.substr(0, pos);
+}
+
+// Get filename without directory and extension.
+inline string get_basename(const string& filename) {
+  return get_noextension(get_filename(filename));
+}
+
+// Return the preset type and the remaining filename
+inline bool is_preset_filename(const string& filename) {
+  return filename.find("::yocto::") == 0;
+}
+// Return the preset type and the filename. Call only if this is a preset.
+inline pair<string, string> get_preset_type(const string& filename) {
+  if (filename.find("::yocto::") == 0) {
+    auto aux = filename.substr(string("::yocto::").size());
+    auto pos = aux.find("::");
+    if (pos == aux.npos) throw std::runtime_error("bad preset name" + filename);
+    return {aux.substr(0, pos), aux.substr(pos + 2)};
+  } else {
+    return {"", filename};
+  }
 }
 
 }  // namespace yocto

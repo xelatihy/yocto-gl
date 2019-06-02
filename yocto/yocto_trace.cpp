@@ -28,6 +28,9 @@
 
 #include "yocto_trace.h"
 
+#include <thread>
+#include <future>
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
@@ -1008,8 +1011,8 @@ float sample_lights_pdf(const yocto_scene& scene, const trace_lights& lights,
 }
 
 // Trace stats.
-atomic<uint64_t> _trace_npaths{0};
-atomic<uint64_t> _trace_nrays{0};
+std::atomic<uint64_t> _trace_npaths{0};
+std::atomic<uint64_t> _trace_nrays{0};
 
 // Sample camera
 ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
@@ -1523,9 +1526,9 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
           image, state, scene, bvh, lights, region, params.samples, params);
     }
   } else {
-    auto           futures  = vector<future<void>>{};
+    auto           futures  = vector<std::future<void>>{};
     auto           nthreads = std::thread::hardware_concurrency();
-    atomic<size_t> next_idx(0);
+    std::atomic<size_t> next_idx(0);
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
       futures.emplace_back(
           std::async(std::launch::async, [&image, &state, &scene, &bvh, &lights,
@@ -1559,9 +1562,9 @@ int trace_samples(image<vec4f>& image, trace_state& state,
           image, state, scene, bvh, lights, region, params.samples, params);
     }
   } else {
-    auto           futures  = vector<future<void>>{};
+    auto           futures  = vector<std::future<void>>{};
     auto           nthreads = std::thread::hardware_concurrency();
-    atomic<size_t> next_idx(0);
+    std::atomic<size_t> next_idx(0);
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
       futures.emplace_back(std::async(
           std::launch::async, [&image, &state, &scene, &bvh, &lights, &params,

@@ -27,9 +27,12 @@
 //
 
 #include "../yocto/yocto_image.h"
-#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 using namespace yocto;
+
+#include <future>
+#include <atomic>
+#include <thread>
 
 #include "ext/CLI11.hpp"
 
@@ -46,7 +49,7 @@ struct app_task {
   app_task_type       type;
   std::future<void>   result;
   std::atomic<bool>   stop;
-  deque<image_region> queue;
+  std::deque<image_region> queue;
   std::mutex          queuem;
 
   app_task(app_task_type type) : type{type}, result{}, stop{false} {}
@@ -83,7 +86,7 @@ struct app_image {
 
   // computation futures
   bool            load_done = false, display_done = false;
-  deque<app_task> task_queue;
+  std::deque<app_task> task_queue;
 
   // viewing properties
   vec2f image_center = zero2f;
@@ -93,9 +96,9 @@ struct app_image {
 
 struct app_state {
   // data
-  deque<app_image> images;
+  std::deque<app_image> images;
   int              selected = -1;
-  deque<string>    errors;
+  std::deque<string>    errors;
 
   // default options
   tonemap_params    tonemap_prms    = {};
@@ -126,13 +129,13 @@ void compute_image_stats(
 void update_app_display(const string& filename, const image<vec4f>& img,
     image<vec4f>& display, image_stats& stats,
     const tonemap_params&    tonemap_prms,
-    const colorgrade_params& colorgrade_prms, atomic<bool>* cancel,
-    deque<image_region>& queue, std::mutex& queuem) {
+    const colorgrade_params& colorgrade_prms, std::atomic<bool>* cancel,
+    std::deque<image_region>& queue, std::mutex& queuem) {
   auto regions = vector<image_region>{};
   make_imregions(regions, img.size(), 128);
-  auto           futures  = vector<future<void>>{};
+  auto           futures  = vector<std::future<void>>{};
   auto           nthreads = std::thread::hardware_concurrency();
-  atomic<size_t> next_idx(0);
+  std::atomic<size_t> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(std::async(std::launch::async,
         [&next_idx, cancel, &regions, &queue, &queuem, &display, &img,

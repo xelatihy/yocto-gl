@@ -30,9 +30,12 @@
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
-#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 #include "ysceneui.h"
+
+#include <future>
+#include <atomic>
+#include <thread>
 
 #include "ext/CLI11.hpp"
 
@@ -183,16 +186,16 @@ struct app_scene {
 
   // tasks
   bool            load_done = false;
-  deque<app_task> task_queue;
+  std::deque<app_task> task_queue;
   app_selection   selection = {typeid(void), -1};
 };
 
 // Application state
 struct app_state {
   // data
-  deque<app_scene> scenes;
+  std::deque<app_scene> scenes;
   int              selected = -1;
-  deque<string>    errors;
+  std::deque<string>    errors;
 
   // default options
   load_params   load_prms   = {};

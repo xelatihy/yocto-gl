@@ -88,7 +88,8 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_math.h"
-#include "yocto_utils.h"
+
+#include <atomic>
 
 // -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
@@ -214,7 +215,7 @@ struct bvh_params {
   bool embree_compact = false;
 #endif
   bool          noparallel = false;
-  atomic<bool>* cancel     = nullptr;
+  std::atomic<bool>* cancel     = nullptr;
 };
 
 // Build the bvh acceleration structure.

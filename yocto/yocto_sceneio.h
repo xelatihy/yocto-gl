@@ -47,6 +47,7 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_scene.h"
+#include <atomic>
 
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS
@@ -58,7 +59,7 @@ namespace yocto {
 struct load_params {
   bool          notextures  = false;
   bool          facevarying = false;
-  atomic<bool>* cancel      = nullptr;
+  std::atomic<bool>* cancel      = nullptr;
   bool          noparallel  = false;
 };
 
@@ -66,7 +67,7 @@ struct load_params {
 struct save_params {
   bool          notextures   = false;
   bool          objinstances = false;
-  atomic<bool>* cancel       = nullptr;
+  std::atomic<bool>* cancel       = nullptr;
   bool          noparallel   = false;
 };
 

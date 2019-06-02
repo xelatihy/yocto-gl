@@ -31,7 +31,6 @@
 #include "yocto_pbrt.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
-#include "yocto_utils.h"
 
 #include "ext/happly.h"
 #define CGLTF_IMPLEMENTATION
@@ -44,6 +43,7 @@
 #include <memory>
 #include <regex>
 #include <thread>
+#include <atomic>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -63,10 +63,10 @@ namespace yocto {
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
 static inline void parallel_foreach(
-    vector<T>& values, const Func& func, atomic<bool>* cancel = nullptr) {
+    vector<T>& values, const Func& func, std::atomic<bool>* cancel = nullptr) {
   auto           futures  = vector<std::future<void>>{};
   auto           nthreads = std::thread::hardware_concurrency();
-  atomic<size_t> next_idx(0);
+  std::atomic<size_t> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
         std::async(std::launch::async, [&func, &next_idx, cancel, &values]() {
@@ -82,10 +82,10 @@ static inline void parallel_foreach(
 }
 template <typename T, typename Func>
 static inline void parallel_foreach(
-    const vector<T>& values, const Func& func, atomic<bool>* cancel = nullptr) {
+    const vector<T>& values, const Func& func, std::atomic<bool>* cancel = nullptr) {
   auto           futures  = vector<std::future<void>>{};
   auto           nthreads = std::thread::hardware_concurrency();
-  atomic<size_t> next_idx(0);
+  std::atomic<size_t> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
         std::async(std::launch::async, [&func, &next_idx, cancel, &values]() {
@@ -106,12 +106,6 @@ static inline void parallel_foreach(
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Io error
-struct io_error : runtime_error {
-  explicit io_error(const char* msg) : runtime_error{msg} {}
-  explicit io_error(const std::string& msg) : runtime_error{msg} {}
-};
 
 // Load a text file
 inline void load_text(const string& filename, string& str) {
@@ -1275,9 +1269,9 @@ struct load_obj_scene_cb : obj_callbacks {
   string gname = ""s;
 
   // vertices
-  deque<vec3f> opos      = deque<vec3f>();
-  deque<vec3f> onorm     = deque<vec3f>();
-  deque<vec2f> otexcoord = deque<vec2f>();
+  std::deque<vec3f> opos      = {};
+  std::deque<vec3f> onorm     = {};
+  std::deque<vec2f> otexcoord = {};
 
   // object maps
   unordered_map<string, int> tmap = unordered_map<string, int>{{"", -1}};
