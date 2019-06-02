@@ -86,7 +86,7 @@
 #include <chrono>
 
 // -----------------------------------------------------------------------------
-// USING DIRECTIVES
+// MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -95,15 +95,9 @@ using std::string;
 using std::string_view;
 using std::unordered_map;
 using std::vector;
+
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// MATH CONSTANTS AND FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
 
 using byte = unsigned char;
 using uint = unsigned int;
