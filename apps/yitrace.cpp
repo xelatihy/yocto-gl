@@ -63,7 +63,7 @@ struct app_task {
   std::future<void>   result;
   std::atomic<bool>   stop;
   std::atomic<int>    current;
-  deque<image_region> queue_;
+  deque<image_region> queue;
   std::mutex          queuem;
   app_edit            edit;
 
@@ -145,7 +145,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
     const trace_params& trace_prms, const tonemap_params& tonemap_prms,
     int preview_ratio, atomic<bool>* cancel, atomic<int>& current_sample,
-    deque<image_region>& queue_, std::mutex& queuem) {
+    deque<image_region>& queue, std::mutex& queuem) {
   auto preview_options = trace_prms;
   preview_options.resolution /= preview_ratio;
   preview_options.samples = 1;
@@ -161,7 +161,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
   }
   {
     std::lock_guard guard{queuem};
-    queue_.push_back({{0, 0}, {0, 0}});
+    queue.push_back({{0, 0}, {0, 0}});
   }
   current_sample = 0;
 
@@ -184,7 +184,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
       futures.emplace_back(std::async(std::launch::async,
           [num_samples, &trace_prms, &tonemap_prms, &render, &display, &scene,
-              &lights, &bvh, &state, &queue_, &queuem, &next_idx, cancel, &regions]() {
+              &lights, &bvh, &state, &queue, &queuem, &next_idx, cancel, &regions]() {
             while (true) {
               if (cancel && *cancel) break;
               auto idx = next_idx.fetch_add(1);
@@ -195,7 +195,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
               tonemap(display, render, region, tonemap_prms);
               {
                 std::lock_guard guard{queuem};
-                queue_.push_back(region);
+                queue.push_back(region);
               }
             }
           }));
@@ -514,9 +514,9 @@ void update(const opengl_window& win, app_state& app) {
       auto region = image_region{};
       {
         std::lock_guard guard{task.queuem};
-        if (task.queue_.empty()) break;
-        region = task.queue_.front();
-        task.queue_.pop_front();
+        if (task.queue.empty()) break;
+        region = task.queue.front();
+        task.queue.pop_front();
       }
       if (region.size() == zero2i) {
         update_gltexture_region(
@@ -605,7 +605,7 @@ void update(const opengl_window& win, app_state& app) {
     if (!task.result.valid()) continue;
     if (task.type == app_task_type::render_image) {
       std::lock_guard guard{task.queuem};
-      if (!task.queue_.empty()) continue;
+      if (!task.queue.empty()) continue;
     }
     if (task.result.wait_for(std::chrono::nanoseconds(10)) !=
         std::future_status::ready)
@@ -798,7 +798,7 @@ void update(const opengl_window& win, app_state& app) {
           update_app_render(scn.filename, scn.render, scn.display, scn.preview,
               scn.state, scn.scene, scn.lights, scn.bvh, scn.trace_prms,
               scn.tonemap_prms, scn.preview_ratio, &task.stop, task.current,
-              task.queue_, task.queuem);
+              task.queue, task.queuem);
         });
         if (scn.render.size() != scn.image_size) {
           scn.render.resize(scn.image_size);

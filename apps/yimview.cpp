@@ -46,7 +46,7 @@ struct app_task {
   app_task_type       type;
   std::future<void>   result;
   std::atomic<bool>   stop;
-  deque<image_region> queue_;
+  deque<image_region> queue;
   std::mutex          queuem;
 
   app_task(app_task_type type) : type{type}, result{}, stop{false} {}
@@ -337,9 +337,9 @@ void update(const opengl_window& win, app_state& app) {
       auto region = image_region{};
       {
         std::lock_guard guard{task.queuem};
-        if (task.queue_.empty()) break;
-        region = task.queue_.front();
-        task.queue_.pop_front();
+        if (task.queue.empty()) break;
+        region = task.queue.front();
+        task.queue.pop_front();
       }
       update_gltexture_region(img.gl_txt, img.display, region, false);
     }
@@ -372,7 +372,7 @@ void update(const opengl_window& win, app_state& app) {
     if (!task.result.valid()) continue;
     if (task.type == app_task_type::display) {
       std::lock_guard guard{task.queuem};
-      if (!task.queue_.empty()) continue;
+      if (!task.queue.empty()) continue;
     }
     if (task.result.wait_for(std::chrono::nanoseconds(10)) !=
         std::future_status::ready)
@@ -458,7 +458,7 @@ void update(const opengl_window& win, app_state& app) {
         task.result      = std::async(std::launch::async, [&img, &task]() {
           update_app_display(img.filename, img.img, img.display,
               img.display_stats, img.tonemap_prms, img.colorgrade_prms,
-              &task.stop, task.queue_, task.queuem);
+              &task.stop, task.queue, task.queuem);
         });
       } break;
     }
