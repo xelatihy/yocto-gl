@@ -1516,11 +1516,31 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
   auto regions = vector<image_region>{};
   make_imregions(regions, image.size(), params.region, true);
 
-  parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, &params](
-                                const image_region& region) {
-    trace_region(
-        image, state, scene, bvh, lights, region, params.samples, params);
-  });
+  if (params.noparallel) {
+    for (auto& region : regions) {
+      if (params.cancel && *params.cancel) break;
+      trace_region(
+          image, state, scene, bvh, lights, region, params.samples, params);
+    }
+  } else {
+    auto           futures  = vector<future<void>>{};
+    auto           nthreads = std::thread::hardware_concurrency();
+    atomic<size_t> next_idx(0);
+    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+      futures.emplace_back(
+          std::async(std::launch::async, [&image, &state, &scene, &bvh, &lights,
+                                             &params, &regions, &next_idx]() {
+            while (true) {
+              if (params.cancel && *params.cancel) break;
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= regions.size()) break;
+              trace_region(image, state, scene, bvh, lights, regions[idx],
+                  params.samples, params);
+            }
+          }));
+    }
+    for (auto& f : futures) f.get();
+  }
 
   return image;
 }
@@ -1532,10 +1552,31 @@ int trace_samples(image<vec4f>& image, trace_state& state,
   auto regions = vector<image_region>{};
   make_imregions(regions, image.size(), params.region, true);
   auto num_samples = min(params.batch, params.samples - current_sample);
-  parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, num_samples,
-                                &params](const image_region& region) {
-    trace_region(image, state, scene, bvh, lights, region, num_samples, params);
-  });
+  if (params.noparallel) {
+    for (auto& region : regions) {
+      if (params.cancel && *params.cancel) break;
+      trace_region(
+          image, state, scene, bvh, lights, region, params.samples, params);
+    }
+  } else {
+    auto           futures  = vector<future<void>>{};
+    auto           nthreads = std::thread::hardware_concurrency();
+    atomic<size_t> next_idx(0);
+    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+      futures.emplace_back(std::async(
+          std::launch::async, [&image, &state, &scene, &bvh, &lights, &params,
+                                  &regions, &next_idx, num_samples]() {
+            while (true) {
+              if (params.cancel && *params.cancel) break;
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= regions.size()) break;
+              trace_region(image, state, scene, bvh, lights, regions[idx],
+                  num_samples, params);
+            }
+          }));
+    }
+    for (auto& f : futures) f.get();
+  }
   return current_sample + num_samples;
 }
 

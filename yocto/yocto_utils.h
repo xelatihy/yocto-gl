@@ -3,8 +3,8 @@
 //
 //
 // Yocto/Utils is a collection of utilities used in writing other Yocto/GL
-// libraries and example applications. We support simple path manipulation, 
-// and concurrency utilities. These utilities are likely to change often and 
+// libraries and example applications. We support simple path manipulation,
+// and concurrency utilities. These utilities are likely to change often and
 // are to be considered internal to Yocto.
 //
 //
@@ -289,28 +289,44 @@ inline void parallel_for(size_t begin, size_t end, const Func& func,
 }
 
 // Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(size_t num, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false) {
-  parallel_for(0, num, func, cancel, serial);
-}
-
-// Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline void parallel_foreach(vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
-      cancel, serial);
+inline void parallel_foreach(
+    vector<T>& values, const Func& func, atomic<bool>* cancel = nullptr) {
+  auto           futures  = vector<future<void>>{};
+  auto           nthreads = std::thread::hardware_concurrency();
+  atomic<size_t> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, cancel, &values]() {
+          while (true) {
+            if (cancel && *cancel) break;
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= values.size()) break;
+            func(values[idx]);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
 }
 template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
-      cancel, serial);
+    atomic<bool>* cancel = nullptr) {
+  auto           futures  = vector<future<void>>{};
+  auto           nthreads = std::thread::hardware_concurrency();
+  atomic<size_t> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, cancel, &values]() {
+          while (true) {
+            if (cancel && *cancel) break;
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= values.size()) break;
+            func(values[idx]);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
 }
 
 }  // namespace yocto
