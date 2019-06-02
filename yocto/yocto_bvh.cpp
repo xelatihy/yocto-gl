@@ -32,7 +32,11 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_bvh.h"
-#include "yocto_utils.h"
+
+#include <deque>
+#include <thread>
+#include <future>
+#include <atomic>
 
 #if YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -390,7 +394,7 @@ static void embree_error(void* ctx, RTCError code, const char* str) {
 }
 
 // Embree memory
-atomic<ssize_t> embree_memory = 0;
+std::atomic<ssize_t> embree_memory = 0;
 static bool     embree_memory_monitor(void* userPtr, ssize_t bytes, bool post) {
   embree_memory += bytes;
   return true;
@@ -848,7 +852,7 @@ static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
   nodes.reserve(prims.size() * 2);
 
   // queue up first node
-  auto queue = deque<vec3i>{{0, 0, (int)prims.size()}};
+  auto queue = std::deque<vec3i>{{0, 0, (int)prims.size()}};
   nodes.emplace_back();
 
   // create nodes until the queue is empty
@@ -906,18 +910,18 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
   nodes.reserve(prims.size() * 2);
 
   // queue up first node
-  auto queue = deque<vec3i>{{0, 0, (int)prims.size()}};
+  auto queue = std::deque<vec3i>{{0, 0, (int)prims.size()}};
   nodes.emplace_back();
 
   // synchronization
-  atomic<int>          num_processed_prims(0);
-  std::mutex           queue_mutex;
-  vector<future<void>> futures;
-  auto                 nthreads = std::thread::hardware_concurrency();
+  std::atomic<int>               num_processed_prims(0);
+  std::mutex                queue_mutex;
+  vector<std::future<void>> futures;
+  auto                      nthreads = std::thread::hardware_concurrency();
 
   // create nodes until the queue is empty
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(async(
+    futures.emplace_back(std::async(std::launch::async,
         [&nodes, &prims, &params, &num_processed_prims, &queue_mutex, &queue] {
           while (true) {
             // exit if needed

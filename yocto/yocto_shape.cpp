@@ -9,6 +9,9 @@
 #include "yocto_shape.h"
 #include "ext/happly.h"
 #include "yocto_obj.h"
+#include "yocto_random.h"
+
+#include <deque>
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER_VERTEX PROPETIES
@@ -1434,7 +1437,7 @@ void compute_geodesic_distances(geodesic_solver& graph,
   auto visited = vector<bool>(num_nodes, false);
 
   // setup queue
-  auto queue = deque<int>{};
+  auto queue = std::deque<int>{};
   for (auto source : sources) {
     distances[source] = 0.0f;
     visited[source]   = true;
@@ -2620,7 +2623,7 @@ void load_shape(const string& filename, vector<int>& points,
     load_cyhair_shape(
         filename, lines, positions, normals, texcoords, colors, radius);
   } else {
-    throw shapeio_error("unsupported mesh type " + ext);
+    throw std::runtime_error("unsupported mesh type " + ext);
   }
 }
 
@@ -2641,7 +2644,7 @@ void save_shape(const string& filename, const vector<int>& points,
     return save_obj_shape(filename, points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords);
   } else {
-    throw shapeio_error("unsupported mesh type " + ext);
+    throw std::runtime_error("unsupported mesh type " + ext);
   }
 }
 
@@ -2668,7 +2671,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
           positions[i] = {x[i], y[i], z[i]};
         }
       } else {
-        throw shapeio_error("vertex positions not present");
+        throw std::runtime_error("vertex positions not present");
       }
       if (vertex.hasProperty("nx") && vertex.hasProperty("ny") &&
           vertex.hasProperty("nz")) {
@@ -2726,7 +2729,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
     if (ply.hasElement("face")) {
       auto& elements = ply.getElement("face");
       if (!elements.hasProperty("vertex_indices"))
-        throw shapeio_error("bad ply faces");
+        throw std::runtime_error("bad ply faces");
       auto indices = vector<vector<int>>{};
       try {
         indices = elements.getListProperty<int>("vertex_indices");
@@ -2748,7 +2751,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
     if (ply.hasElement("line")) {
       auto& elements = ply.getElement("line");
       if (!elements.hasProperty("vertex_indices"))
-        throw shapeio_error("bad ply lines");
+        throw std::runtime_error("bad ply lines");
       auto indices = vector<vector<int>>{};
       try {
         indices = elements.getListProperty<int>("vertex_indices");
@@ -2765,7 +2768,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
     merge_triangles_and_quads(triangles, quads, false);
 
   } catch (const std::exception& e) {
-    throw shapeio_error("cannot load mesh " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load mesh " + filename + "\n" + e.what());
   }
 }
 
@@ -2896,7 +2899,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
     ply.write(filename,
         ascii ? happly::DataFormat::ASCII : happly::DataFormat::Binary);
   } catch (const std::exception& e) {
-    throw shapeio_error("cannot save mesh " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot save mesh " + filename + "\n" + e.what());
   }
 }
 
@@ -3089,7 +3092,7 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     }
 
   } catch (const std::exception& e) {
-    throw shapeio_error("cannot load mesh " + filename + "\n" + e.what());
+    throw std::runtime_error("cannot load mesh " + filename + "\n" + e.what());
   }
 }
 
@@ -3312,7 +3315,7 @@ static void load_cyhair(const string& filename, cyhair_data& hair) {
   read_value(fs, header);
   if (header.magic[0] != 'H' || header.magic[1] != 'A' ||
       header.magic[2] != 'I' || header.magic[3] != 'R')
-    throw shapeio_error("bad cyhair header");
+    throw std::runtime_error("bad cyhair header");
 
   // set up data
   hair.default_thickness    = header.default_thickness;
@@ -3333,7 +3336,7 @@ static void load_cyhair(const string& filename, cyhair_data& hair) {
   auto total_length = 0;
   for (auto segment : segments) total_length += segment + 1;
   if (total_length != header.num_points) {
-    throw shapeio_error("bad cyhair file");
+    throw std::runtime_error("bad cyhair file");
   }
 
   // read positions data

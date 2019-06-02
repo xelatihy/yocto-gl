@@ -29,7 +29,6 @@
 #include "yocto_scene.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
-#include "yocto_utils.h"
 
 #include <assert.h>
 #include <unordered_map>

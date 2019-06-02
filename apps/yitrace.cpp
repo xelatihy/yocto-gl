@@ -30,10 +30,13 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
-#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 #include "ysceneui.h"
 using namespace yocto;
+
+#include <atomic>
+#include <future>
+#include <thread>
 
 #include "ext/CLI11.hpp"
 
@@ -59,15 +62,16 @@ enum struct app_task_type {
 };
 
 struct app_task {
-  app_task_type                  type;
-  future<void>                   result;
-  atomic<bool>                   stop;
-  atomic<int>                    current;
-  concurrent_queue<image_region> queue;
-  app_edit                       edit;
+  app_task_type            type;
+  std::future<void>        result;
+  std::atomic<bool>        stop;
+  std::atomic<int>         current;
+  std::deque<image_region> queue;
+  std::mutex               queuem;
+  app_edit                 edit;
 
   app_task(app_task_type type, const app_edit& edit = {})
-      : type{type}, result{}, stop{false}, current{-1}, queue{}, edit{edit} {}
+      : type{type}, result{}, stop{false}, current{-1}, edit{edit} {}
   ~app_task() {
     stop = true;
     if (result.valid()) {
@@ -119,16 +123,16 @@ struct app_scene {
   // tasks
   bool load_done = false, bvh_done = false, lights_done = false,
        render_done = false;
-  deque<app_task> task_queue;
+  std::deque<app_task> task_queue;
   app_selection   selection = {typeid(void), -1};
 };
 
 // Application state
 struct app_state {
   // data
-  deque<app_scene> scenes;
+  std::deque<app_scene> scenes;
   int              selected = -1;
-  deque<string>    errors;
+  std::deque<string>    errors;
 
   // default options
   load_params    load_prms    = {};
@@ -143,8 +147,8 @@ void update_app_render(const string& filename, image<vec4f>& render,
     image<vec4f>& display, image<vec4f>& preview, trace_state& state,
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
     const trace_params& trace_prms, const tonemap_params& tonemap_prms,
-    int preview_ratio, atomic<bool>& stop, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue) {
+    int preview_ratio, std::atomic<bool>* cancel, std::atomic<int>& current_sample,
+    std::deque<image_region>& queue, std::mutex& queuem) {
   auto preview_options = trace_prms;
   preview_options.resolution /= preview_ratio;
   preview_options.samples = 1;
@@ -158,7 +162,10 @@ void update_app_render(const string& filename, image<vec4f>& render,
       preview[{i, j}] = display_preview[{pi, pj}];
     }
   }
-  queue.push({{0, 0}, {0, 0}});
+  {
+    std::lock_guard guard{queuem};
+    queue.push_back({{0, 0}, {0, 0}});
+  }
   current_sample = 0;
 
   auto& camera     = scene.cameras.at(trace_prms.camera);
@@ -170,22 +177,35 @@ void update_app_render(const string& filename, image<vec4f>& render,
 
   for (auto sample = 0; sample < trace_prms.samples;
        sample += trace_prms.batch) {
-    if (stop) return;
+    if (cancel && *cancel) return;
     current_sample   = sample;
     auto num_samples = min(
         trace_prms.batch, trace_prms.samples - current_sample);
-    parallel_foreach(
-        regions,
-        [num_samples, &trace_prms, &tonemap_prms, &render, &display, &scene,
-            &lights, &bvh, &state, &queue](const image_region& region) {
-          trace_region(render, state, scene, bvh, lights, region, num_samples,
-              trace_prms);
-          tonemap(display, render, region, tonemap_prms);
-          queue.push(region);
-        },
-        &stop);
+    auto           futures  = vector<std::future<void>>{};
+    auto           nthreads = std::thread::hardware_concurrency();
+    std::atomic<size_t> next_idx(0);
+    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+      futures.emplace_back(std::async(std::launch::async,
+          [num_samples, &trace_prms, &tonemap_prms, &render, &display, &scene,
+              &lights, &bvh, &state, &queue, &queuem, &next_idx, cancel,
+              &regions]() {
+            while (true) {
+              if (cancel && *cancel) break;
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= regions.size()) break;
+              auto region = regions[idx];
+              trace_region(render, state, scene, bvh, lights, region,
+                  num_samples, trace_prms);
+              tonemap(display, render, region, tonemap_prms);
+              {
+                std::lock_guard guard{queuem};
+                queue.push_back(region);
+              }
+            }
+          }));
+    }
+    current_sample = trace_prms.samples;
   }
-  current_sample = trace_prms.samples;
 }
 
 void add_new_scene(app_state& app, const string& filename) {
@@ -420,7 +440,7 @@ void apply_edit(const string& filename, yocto_scene& scene,
   } else if (type == typeid(tonemap_params)) {
     tonemap_prms = any_cast<tonemap_params>(data);
   } else {
-    throw runtime_error("unsupported type "s + type.name());
+    throw std::runtime_error("unsupported type "s + type.name());
   }
 }
 
@@ -450,7 +470,7 @@ void load_element(
         subdiv.texcoords, subdiv.colors, subdiv.radius, subdiv.facevarying);
     tesselate_subdiv(scene, scene.subdivs[index]);
   } else {
-    throw runtime_error("unsupported type "s + type.name());
+    throw std::runtime_error("unsupported type "s + type.name());
   }
 }
 
@@ -468,7 +488,7 @@ void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
   } else if (type == typeid(yocto_instance)) {
     updated_instances.push_back(index);
   } else {
-    throw runtime_error("unsupported type "s + type.name());
+    throw std::runtime_error("unsupported type "s + type.name());
   }
 
   refit_bvh(bvh, scene, updated_shapes, bvh_prms);
@@ -492,11 +512,16 @@ void update(const opengl_window& win, app_state& app) {
   for (auto& scn : app.scenes) {
     if (scn.task_queue.empty()) continue;
     auto& task = scn.task_queue.front();
-    if (task.type != app_task_type::render_image || task.queue.empty())
-      continue;
-    auto region  = image_region{};
+    if (task.type != app_task_type::render_image) continue;
     auto updated = false;
-    while (scn.task_queue.front().queue.try_pop(region)) {
+    while (true) {
+      auto region = image_region{};
+      {
+        std::lock_guard guard{task.queuem};
+        if (task.queue.empty()) break;
+        region = task.queue.front();
+        task.queue.pop_front();
+      }
       if (region.size() == zero2i) {
         update_gltexture_region(
             scn.gl_txt, scn.preview, {zero2i, scn.preview.size()}, false);
@@ -581,9 +606,13 @@ void update(const opengl_window& win, app_state& app) {
   for (auto& scn : app.scenes) {
     if (scn.task_queue.empty()) continue;
     auto& task = scn.task_queue.front();
-    if (!task.result.valid() || !task.queue.empty() ||
-        task.result.wait_for(std::chrono::nanoseconds(10)) !=
-            std::future_status::ready)
+    if (!task.result.valid()) continue;
+    if (task.type == app_task_type::render_image) {
+      std::lock_guard guard{task.queuem};
+      if (!task.queue.empty()) continue;
+    }
+    if (task.result.wait_for(std::chrono::nanoseconds(10)) !=
+        std::future_status::ready)
       continue;
     switch (task.type) {
       case app_task_type::none: break;
@@ -710,7 +739,7 @@ void update(const opengl_window& win, app_state& app) {
         scn.load_done   = false;
         scn.bvh_done    = false;
         scn.lights_done = false;
-        task.result     = async([&scn]() {
+        task.result     = std::async(std::launch::async, [&scn]() {
           load_scene(scn.filename, scn.scene, scn.load_prms);
           tesselate_subdivs(scn.scene);
           if (scn.add_skyenv) add_sky(scn.scene);
@@ -719,38 +748,38 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::load_element: {
         log_glinfo(win, "start loading element for " + scn.filename);
         scn.load_done = false;
-        task.result   = async([&scn, &task]() {
+        task.result   = std::async(std::launch::async, [&scn, &task]() {
           load_element(scn.filename, scn.scene, task.edit);
         });
       } break;
       case app_task_type::build_bvh: {
         log_glinfo(win, "start building bvh " + scn.filename);
         scn.bvh_done = false;
-        task.result  = async(
+        task.result  = std::async(std::launch::async,
             [&scn]() { build_bvh(scn.bvh, scn.scene, scn.bvh_prms); });
       } break;
       case app_task_type::refit_bvh: {
         log_glinfo(win, "start refitting bvh " + scn.filename);
         scn.bvh_done = false;
-        task.result  = async([&scn, &task]() {
+        task.result  = std::async(std::launch::async, [&scn, &task]() {
           refit_bvh(scn.filename, scn.scene, scn.bvh, scn.bvh_prms, task.edit);
         });
       } break;
       case app_task_type::init_lights: {
         log_glinfo(win, "start building lights " + scn.filename);
         scn.lights_done = false;
-        task.result     = async(
+        task.result     = std::async(std::launch::async,
             [&scn]() { init_trace_lights(scn.lights, scn.scene); });
       } break;
       case app_task_type::save_image: {
         log_glinfo(win, "start saving " + scn.imagename);
-        task.result = async([&scn]() {
+        task.result = std::async(std::launch::async, [&scn]() {
           save_tonemapped(scn.imagename, scn.render, scn.tonemap_prms);
         });
       } break;
       case app_task_type::save_scene: {
         log_glinfo(win, "start saving " + scn.outname);
-        task.result = async(
+        task.result = std::async(std::launch::async,
             [&scn]() { save_scene(scn.outname, scn.scene, scn.save_prms); });
       } break;
       case app_task_type::render_image: {
@@ -769,11 +798,11 @@ void update(const opengl_window& win, app_state& app) {
                    std::to_string(scn.render.size().x) + "x" +
                    std::to_string(scn.render.size().y) + " @ " +
                    std::to_string(scn.render_sample) + "]";
-        task.result = async([&scn, &task]() {
+        task.result = std::async(std::launch::async, [&scn, &task]() {
           update_app_render(scn.filename, scn.render, scn.display, scn.preview,
               scn.state, scn.scene, scn.lights, scn.bvh, scn.trace_prms,
-              scn.tonemap_prms, scn.preview_ratio, task.stop, task.current,
-              task.queue);
+              scn.tonemap_prms, scn.preview_ratio, &task.stop, task.current,
+              task.queue, task.queuem);
         });
         if (scn.render.size() != scn.image_size) {
           scn.render.resize(scn.image_size);

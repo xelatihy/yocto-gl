@@ -29,6 +29,8 @@
 
 #include "yocto_opengl.h"
 #include <stdarg.h>
+#include <atomic>
+#include <mutex>
 
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
@@ -100,7 +102,7 @@ void init_glprogram(
   glGetShaderiv(program.vertex_shader_id, GL_COMPILE_STATUS, &errflags);
   if (!errflags) {
     glGetShaderInfoLog(program.vertex_shader_id, 10000, 0, errbuf);
-    throw gl_error("shader not compiled with error\n"s + errbuf);
+    throw std::runtime_error("shader not compiled with error\n"s + errbuf);
   }
   assert(glGetError() == GL_NO_ERROR);
 
@@ -112,7 +114,7 @@ void init_glprogram(
   glGetShaderiv(program.fragment_shader_id, GL_COMPILE_STATUS, &errflags);
   if (!errflags) {
     glGetShaderInfoLog(program.fragment_shader_id, 10000, 0, errbuf);
-    throw gl_error("shader not compiled with error\n"s + errbuf);
+    throw std::runtime_error("shader not compiled with error\n"s + errbuf);
   }
   assert(glGetError() == GL_NO_ERROR);
 
@@ -126,12 +128,12 @@ void init_glprogram(
   glGetProgramiv(program.program_id, GL_LINK_STATUS, &errflags);
   if (!errflags) {
     glGetProgramInfoLog(program.program_id, 10000, 0, errbuf);
-    throw gl_error("program not linked with error\n"s + errbuf);
+    throw std::runtime_error("program not linked with error\n"s + errbuf);
   }
   glGetProgramiv(program.program_id, GL_VALIDATE_STATUS, &errflags);
   if (!errflags) {
     glGetProgramInfoLog(program.program_id, 10000, 0, errbuf);
-    throw gl_error("program not linked with error\n"s + errbuf);
+    throw std::runtime_error("program not linked with error\n"s + errbuf);
   }
   assert(glGetError() == GL_NO_ERROR);
 }
@@ -600,7 +602,7 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
 void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
     void* user_pointer, refresh_glcallback refresh_cb) {
   // init glfw
-  if (!glfwInit()) throw gl_error("cannot initialize windowing system");
+  if (!glfwInit()) throw std::runtime_error("cannot initialize windowing system");
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -611,7 +613,7 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
   // create window
   win     = opengl_window();
   win.win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
-  if (!win.win) throw gl_error("cannot initialize windowing system");
+  if (!win.win) throw std::runtime_error("cannot initialize windowing system");
   glfwMakeContextCurrent(win.win);
   glfwSwapInterval(1);  // Enable vsync
 
@@ -622,7 +624,7 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
   win.refresh_cb = refresh_cb;
 
   // init gl extensions
-  if (!gladLoadGL()) throw gl_error("cannot initialize OpenGL extensions");
+  if (!gladLoadGL()) throw std::runtime_error("cannot initialize OpenGL extensions");
 }
 
 void delete_glwindow(opengl_window& win) {

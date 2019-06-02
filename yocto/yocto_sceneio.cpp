@@ -31,7 +31,6 @@
 #include "yocto_pbrt.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
-#include "yocto_utils.h"
 
 #include "ext/happly.h"
 #define CGLTF_IMPLEMENTATION
@@ -40,8 +39,11 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <array>
+#include <future>
 #include <memory>
 #include <regex>
+#include <thread>
+#include <atomic>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -53,15 +55,57 @@ using std::unique_ptr;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// FILE IO
+// CONCURRENCY
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Io error
-struct io_error : runtime_error {
-  explicit io_error(const char* msg) : runtime_error{msg} {}
-  explicit io_error(const std::string& msg) : runtime_error{msg} {}
-};
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+static inline void parallel_foreach(
+    vector<T>& values, const Func& func, std::atomic<bool>* cancel = nullptr) {
+  auto           futures  = vector<std::future<void>>{};
+  auto           nthreads = std::thread::hardware_concurrency();
+  std::atomic<size_t> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, cancel, &values]() {
+          while (true) {
+            if (cancel && *cancel) break;
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= values.size()) break;
+            func(values[idx]);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+template <typename T, typename Func>
+static inline void parallel_foreach(
+    const vector<T>& values, const Func& func, std::atomic<bool>* cancel = nullptr) {
+  auto           futures  = vector<std::future<void>>{};
+  auto           nthreads = std::thread::hardware_concurrency();
+  std::atomic<size_t> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, cancel, &values]() {
+          while (true) {
+            if (cancel && *cancel) break;
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= values.size()) break;
+            func(values[idx]);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Load a text file
 inline void load_text(const string& filename, string& str) {
@@ -268,22 +312,38 @@ void load_textures(
   if (params.notextures) return;
 
   // load images
-  parallel_foreach(
-      scene.textures,
-      [&dirname](yocto_texture& texture) {
-        if (!texture.hdr.empty() || !texture.ldr.empty()) return;
-        load_texture(texture, dirname);
-      },
-      params.cancel, params.noparallel);
+  if (params.noparallel) {
+    for (auto& texture : scene.textures) {
+      if (params.cancel && *params.cancel) break;
+      if (!texture.hdr.empty() || !texture.ldr.empty()) return;
+      load_texture(texture, dirname);
+    }
+  } else {
+    parallel_foreach(
+        scene.textures,
+        [&dirname](yocto_texture& texture) {
+          if (!texture.hdr.empty() || !texture.ldr.empty()) return;
+          load_texture(texture, dirname);
+        },
+        params.cancel);
+  }
 
   // load volumes
-  parallel_foreach(
-      scene.voltextures,
-      [&dirname](yocto_voltexture& texture) {
-        if (!texture.vol.empty()) return;
-        load_voltexture(texture, dirname);
-      },
-      params.cancel, params.noparallel);
+  if (params.noparallel) {
+    for (auto& texture : scene.voltextures) {
+      if (params.cancel && *params.cancel) break;
+      if (!texture.vol.empty()) return;
+      load_voltexture(texture, dirname);
+    }
+  } else {
+    parallel_foreach(
+        scene.voltextures,
+        [&dirname](yocto_voltexture& texture) {
+          if (!texture.vol.empty()) return;
+          load_voltexture(texture, dirname);
+        },
+        params.cancel);
+  }
 }
 
 void save_texture(const yocto_texture& texture, const string& dirname) {
@@ -300,19 +360,33 @@ void save_textures(const yocto_scene& scene, const string& dirname,
   if (params.notextures) return;
 
   // save images
-  parallel_foreach(
-      scene.textures,
-      [&dirname](
-          const yocto_texture& texture) { save_texture(texture, dirname); },
-      params.cancel, params.noparallel);
+  if (params.noparallel) {
+    for (auto& texture : scene.textures) {
+      if (params.cancel && *params.cancel) break;
+      save_texture(texture, dirname);
+    }
+  } else {
+    parallel_foreach(
+        scene.textures,
+        [&dirname](
+            const yocto_texture& texture) { save_texture(texture, dirname); },
+        params.cancel);
+  }
 
   // save volumes
-  parallel_foreach(
-      scene.voltextures,
-      [&dirname](const yocto_voltexture& texture) {
-        save_voltexture(texture, dirname);
-      },
-      params.cancel, params.noparallel);
+  if (params.noparallel) {
+    for (auto& texture : scene.voltextures) {
+      if (params.cancel && *params.cancel) break;
+      save_voltexture(texture, dirname);
+    }
+  } else {
+    parallel_foreach(
+        scene.voltextures,
+        [&dirname](const yocto_voltexture& texture) {
+          save_voltexture(texture, dirname);
+        },
+        params.cancel);
+  }
 }
 
 void load_shape(yocto_shape& shape, const string& dirname) {
@@ -364,32 +438,60 @@ void save_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
 void load_shapes(
     yocto_scene& scene, const string& dirname, const load_params& params) {
   // load shapes
-  parallel_foreach(
-      scene.shapes,
-      [&dirname](yocto_shape& shape) { load_shape(shape, dirname); },
-      params.cancel, params.noparallel);
+  if (params.noparallel) {
+    for (auto& shape : scene.shapes) {
+      if (params.cancel && *params.cancel) break;
+      load_shape(shape, dirname);
+    }
+  } else {
+    parallel_foreach(
+        scene.shapes,
+        [&dirname](yocto_shape& shape) { load_shape(shape, dirname); },
+        params.cancel);
+  }
 
   // load subdivs
-  parallel_foreach(
-      scene.subdivs,
-      [&dirname](yocto_subdiv& subdiv) { load_subdiv(subdiv, dirname); },
-      params.cancel, params.noparallel);
+  if (params.noparallel) {
+    for (auto& subdiv : scene.subdivs) {
+      if (params.cancel && *params.cancel) break;
+      load_subdiv(subdiv, dirname);
+    }
+  } else {
+    parallel_foreach(
+        scene.subdivs,
+        [&dirname](yocto_subdiv& subdiv) { load_subdiv(subdiv, dirname); },
+        params.cancel);
+  }
 }
 
 // Save json meshes
 void save_shapes(const yocto_scene& scene, const string& dirname,
     const save_params& params) {
   // save shapes
-  parallel_foreach(
-      scene.shapes,
-      [&dirname](const yocto_shape& shape) { save_shape(shape, dirname); },
-      params.cancel, params.noparallel);
+  if (params.noparallel) {
+    for (auto& shape : scene.shapes) {
+      if (params.cancel && *params.cancel) break;
+      save_shape(shape, dirname);
+    }
+  } else {
+    parallel_foreach(
+        scene.shapes,
+        [&dirname](const yocto_shape& shape) { save_shape(shape, dirname); },
+        params.cancel);
+  }
   // save subdivs
-  parallel_foreach(
-      scene.subdivs,
-      [&dirname](
-          const yocto_subdiv& subdivs) { save_subdiv(subdivs, dirname); },
-      params.cancel, params.noparallel);
+  if (params.noparallel) {
+    for (auto& subdiv : scene.subdivs) {
+      if (params.cancel && *params.cancel) break;
+      save_subdiv(subdiv, dirname);
+    }
+  } else {
+    parallel_foreach(
+        scene.subdivs,
+        [&dirname](
+            const yocto_subdiv& subdiv) { save_subdiv(subdiv, dirname); },
+        params.cancel);
+  }
 }
 
 }  // namespace yocto
@@ -1167,9 +1269,9 @@ struct load_obj_scene_cb : obj_callbacks {
   string gname = ""s;
 
   // vertices
-  deque<vec3f> opos      = deque<vec3f>();
-  deque<vec3f> onorm     = deque<vec3f>();
-  deque<vec2f> otexcoord = deque<vec2f>();
+  std::deque<vec3f> opos      = {};
+  std::deque<vec3f> onorm     = {};
+  std::deque<vec2f> otexcoord = {};
 
   // object maps
   unordered_map<string, int> tmap = unordered_map<string, int>{{"", -1}};

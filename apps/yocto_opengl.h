@@ -35,7 +35,6 @@
 // -----------------------------------------------------------------------------
 
 #include "../yocto/yocto_scene.h"
-#include "../yocto/yocto_utils.h"
 
 #include <functional>
 
@@ -55,11 +54,6 @@ struct GLFWwindow;
 // OPENGL FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-struct gl_error : runtime_error {
-  explicit gl_error(const char* msg) : runtime_error{msg} {}
-  explicit gl_error(const string& msg) : runtime_error{msg} {}
-};
 
 void clear_glframebuffer(const vec4f& color, bool clear_depth = true);
 

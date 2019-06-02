@@ -103,8 +103,6 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_math.h"
-#include "yocto_random.h"
-#include "yocto_utils.h"
 
 // -----------------------------------------------------------------------------
 // SHAPE IO FUNCTIONS
@@ -125,12 +123,6 @@ void save_shape(const string& filename, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<float>& radius, bool ascii = false);
-
-// shapeio error
-struct shapeio_error : runtime_error {
-  explicit shapeio_error(const char* msg) : runtime_error{msg} {}
-  explicit shapeio_error(const std::string& msg) : runtime_error{msg} {}
-};
 
 }  // namespace yocto
 

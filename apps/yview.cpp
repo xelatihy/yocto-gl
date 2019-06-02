@@ -30,9 +30,12 @@
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
-#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 #include "ysceneui.h"
+
+#include <future>
+#include <atomic>
+#include <thread>
 
 #include "ext/CLI11.hpp"
 
@@ -135,15 +138,14 @@ enum struct app_task_type {
 };
 
 struct app_task {
-  app_task_type                  type;
-  future<void>                   result;
-  atomic<bool>                   stop;
-  atomic<int>                    current;
-  concurrent_queue<image_region> queue;
-  app_edit                       edit;
+  app_task_type     type;
+  std::future<void> result;
+  std::atomic<bool> stop;
+  std::atomic<int>  current;
+  app_edit          edit;
 
   app_task(app_task_type type, const app_edit& edit = {})
-      : type{type}, result{}, stop{false}, current{-1}, queue{}, edit{edit} {}
+      : type{type}, result{}, stop{false}, current{-1}, edit{edit} {}
   ~app_task() {
     stop = true;
     if (result.valid()) {
@@ -184,16 +186,16 @@ struct app_scene {
 
   // tasks
   bool            load_done = false;
-  deque<app_task> task_queue;
+  std::deque<app_task> task_queue;
   app_selection   selection = {typeid(void), -1};
 };
 
 // Application state
 struct app_state {
   // data
-  deque<app_scene> scenes;
+  std::deque<app_scene> scenes;
   int              selected = -1;
-  deque<string>    errors;
+  std::deque<string>    errors;
 
   // default options
   load_params   load_prms   = {};
@@ -1032,9 +1034,8 @@ void update(const opengl_window& win, app_state& app) {
   for (auto& scn : app.scenes) {
     if (scn.task_queue.empty()) continue;
     auto& task = scn.task_queue.front();
-    if (!task.result.valid() || !task.queue.empty() ||
-        task.result.wait_for(std::chrono::nanoseconds(10)) !=
-            std::future_status::ready)
+    if (!task.result.valid() || task.result.wait_for(std::chrono::nanoseconds(
+                                    10)) != std::future_status::ready)
       continue;
     switch (task.type) {
       case app_task_type::none: break;
@@ -1109,7 +1110,7 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::load_scene: {
         log_glinfo(win, "start loading " + scn.filename);
         scn.load_done = false;
-        task.result   = async([&scn]() {
+        task.result   = std::async(std::launch::async, [&scn]() {
           load_scene(scn.filename, scn.scene, scn.load_prms);
           tesselate_subdivs(scn.scene);
           init_drawgl_lights(scn.lights, scn.scene);
@@ -1124,18 +1125,18 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::load_element: {
         log_glinfo(win, "start loading element for " + scn.filename);
         scn.load_done = false;
-        task.result   = async([&scn, &task]() {
+        task.result   = std::async(std::launch::async, [&scn, &task]() {
           load_element(scn.filename, scn.scene, task.edit);
         });
       } break;
       case app_task_type::save_image: {
         log_glinfo(win, "start saving " + scn.imagename);
-        task.result = async(
+        task.result = std::async(std::launch::async,
             []() { throw std::runtime_error("not implemnted yet"); });
       } break;
       case app_task_type::save_scene: {
         log_glinfo(win, "start saving " + scn.outname);
-        task.result = async(
+        task.result = std::async(std::launch::async,
             [&scn]() { save_scene(scn.outname, scn.scene, scn.save_prms); });
       } break;
       case app_task_type::apply_edit: break;

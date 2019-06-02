@@ -28,6 +28,9 @@
 
 #include "yocto_trace.h"
 
+#include <thread>
+#include <future>
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
@@ -1008,8 +1011,8 @@ float sample_lights_pdf(const yocto_scene& scene, const trace_lights& lights,
 }
 
 // Trace stats.
-atomic<uint64_t> _trace_npaths{0};
-atomic<uint64_t> _trace_nrays{0};
+std::atomic<uint64_t> _trace_npaths{0};
+std::atomic<uint64_t> _trace_nrays{0};
 
 // Sample camera
 ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
@@ -1516,11 +1519,31 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
   auto regions = vector<image_region>{};
   make_imregions(regions, image.size(), params.region, true);
 
-  parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, &params](
-                                const image_region& region) {
-    trace_region(
-        image, state, scene, bvh, lights, region, params.samples, params);
-  });
+  if (params.noparallel) {
+    for (auto& region : regions) {
+      if (params.cancel && *params.cancel) break;
+      trace_region(
+          image, state, scene, bvh, lights, region, params.samples, params);
+    }
+  } else {
+    auto           futures  = vector<std::future<void>>{};
+    auto           nthreads = std::thread::hardware_concurrency();
+    std::atomic<size_t> next_idx(0);
+    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+      futures.emplace_back(
+          std::async(std::launch::async, [&image, &state, &scene, &bvh, &lights,
+                                             &params, &regions, &next_idx]() {
+            while (true) {
+              if (params.cancel && *params.cancel) break;
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= regions.size()) break;
+              trace_region(image, state, scene, bvh, lights, regions[idx],
+                  params.samples, params);
+            }
+          }));
+    }
+    for (auto& f : futures) f.get();
+  }
 
   return image;
 }
@@ -1532,55 +1555,32 @@ int trace_samples(image<vec4f>& image, trace_state& state,
   auto regions = vector<image_region>{};
   make_imregions(regions, image.size(), params.region, true);
   auto num_samples = min(params.batch, params.samples - current_sample);
-  parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, num_samples,
-                                &params](const image_region& region) {
-    trace_region(image, state, scene, bvh, lights, region, num_samples, params);
-  });
-  return current_sample + num_samples;
-}
-
-// Starts an anyncrhounous renderer.
-void trace_async_start(image<vec4f>& image, trace_state& state,
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    vector<future<void>>& futures, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue, const trace_params& params) {
-  auto& camera     = scene.cameras.at(params.camera);
-  auto  image_size = camera_resolution(camera, params.resolution);
-  image            = {image_size, zero4f};
-  state            = trace_state{};
-  init_trace_state(state, image_size, params.seed);
-  auto regions = vector<image_region>{};
-  make_imregions(regions, image.size(), params.region, true);
-  if (params.cancel) *params.cancel = false;
-
-  futures.clear();
-  futures.emplace_back(async([params, regions, &current_sample, &image, &scene,
-                                 &lights, &bvh, &state, &queue]() {
-    for (auto sample = 0; sample < params.samples; sample += params.batch) {
-      if (params.cancel && *params.cancel) return;
-      current_sample   = sample;
-      auto num_samples = min(params.batch, params.samples - current_sample);
-      parallel_foreach(
-          regions,
-          [num_samples, &params, &image, &scene, &lights, &bvh, &state, &queue](
-              const image_region& region) {
-            trace_region(
-                image, state, scene, bvh, lights, region, num_samples, params);
-            queue.push(region);
-          },
-          params.cancel, params.noparallel);
+  if (params.noparallel) {
+    for (auto& region : regions) {
+      if (params.cancel && *params.cancel) break;
+      trace_region(
+          image, state, scene, bvh, lights, region, params.samples, params);
     }
-    current_sample = params.samples;
-  }));
-}
-
-// Stop the asynchronous renderer.
-void trace_async_stop(vector<future<void>>& futures,
-    concurrent_queue<image_region>& queue, const trace_params& params) {
-  if (params.cancel) *params.cancel = true;
-  for (auto& f : futures) f.get();
-  futures.clear();
-  queue.clear();
+  } else {
+    auto           futures  = vector<std::future<void>>{};
+    auto           nthreads = std::thread::hardware_concurrency();
+    std::atomic<size_t> next_idx(0);
+    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+      futures.emplace_back(std::async(
+          std::launch::async, [&image, &state, &scene, &bvh, &lights, &params,
+                                  &regions, &next_idx, num_samples]() {
+            while (true) {
+              if (params.cancel && *params.cancel) break;
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= regions.size()) break;
+              trace_region(image, state, scene, bvh, lights, regions[idx],
+                  num_samples, params);
+            }
+          }));
+    }
+    for (auto& f : futures) f.get();
+  }
+  return current_sample + num_samples;
 }
 
 // Trace statistics for last run used for fine tuning implementation.
