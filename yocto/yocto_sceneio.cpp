@@ -44,6 +44,7 @@
 #include <regex>
 #include <thread>
 #include <atomic>
+#include <string_view>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -51,6 +52,8 @@
 namespace yocto {
 
 using std::unique_ptr;
+using std::string_view;
+using namespace std::literals::string_view_literals;
 
 }  // namespace yocto
 

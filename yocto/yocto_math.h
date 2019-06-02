@@ -80,7 +80,6 @@
 #include <algorithm>
 #include <functional>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <vector>
 #include <chrono>
@@ -92,12 +91,9 @@ namespace yocto {
 
 using std::pair;
 using std::string;
-using std::string_view;
 using std::unordered_map;
 using std::vector;
-
 using namespace std::literals::string_literals;
-using namespace std::literals::string_view_literals;
 
 using byte = unsigned char;
 using uint = unsigned int;
