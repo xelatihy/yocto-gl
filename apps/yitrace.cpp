@@ -59,15 +59,16 @@ enum struct app_task_type {
 };
 
 struct app_task {
-  app_task_type                  type;
-  future<void>                   result;
-  atomic<bool>                   stop;
-  atomic<int>                    current;
-  concurrent_queue<image_region> queue;
-  app_edit                       edit;
+  app_task_type       type;
+  std::future<void>   result;
+  std::atomic<bool>   stop;
+  std::atomic<int>    current;
+  deque<image_region> queue_;
+  std::mutex          queuem;
+  app_edit            edit;
 
   app_task(app_task_type type, const app_edit& edit = {})
-      : type{type}, result{}, stop{false}, current{-1}, queue{}, edit{edit} {}
+      : type{type}, result{}, stop{false}, current{-1}, edit{edit} {}
   ~app_task() {
     stop = true;
     if (result.valid()) {
@@ -144,7 +145,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
     const trace_params& trace_prms, const tonemap_params& tonemap_prms,
     int preview_ratio, atomic<bool>* cancel, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue) {
+    deque<image_region>& queue_, std::mutex& queuem) {
   auto preview_options = trace_prms;
   preview_options.resolution /= preview_ratio;
   preview_options.samples = 1;
@@ -158,7 +159,10 @@ void update_app_render(const string& filename, image<vec4f>& render,
       preview[{i, j}] = display_preview[{pi, pj}];
     }
   }
-  queue.push({{0, 0}, {0, 0}});
+  {
+    std::lock_guard guard{queuem};
+    queue_.push_back({{0, 0}, {0, 0}});
+  }
   current_sample = 0;
 
   auto& camera     = scene.cameras.at(trace_prms.camera);
@@ -180,7 +184,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
       futures.emplace_back(std::async(std::launch::async,
           [num_samples, &trace_prms, &tonemap_prms, &render, &display, &scene,
-              &lights, &bvh, &state, &queue, &next_idx, cancel, &regions]() {
+              &lights, &bvh, &state, &queue_, &queuem, &next_idx, cancel, &regions]() {
             while (true) {
               if (cancel && *cancel) break;
               auto idx = next_idx.fetch_add(1);
@@ -189,7 +193,10 @@ void update_app_render(const string& filename, image<vec4f>& render,
               trace_region(render, state, scene, bvh, lights, region,
                   num_samples, trace_prms);
               tonemap(display, render, region, tonemap_prms);
-              queue.push(region);
+              {
+                std::lock_guard guard{queuem};
+                queue_.push_back(region);
+              }
             }
           }));
     }
@@ -501,11 +508,16 @@ void update(const opengl_window& win, app_state& app) {
   for (auto& scn : app.scenes) {
     if (scn.task_queue.empty()) continue;
     auto& task = scn.task_queue.front();
-    if (task.type != app_task_type::render_image || task.queue.empty())
-      continue;
-    auto region  = image_region{};
+    if (task.type != app_task_type::render_image) continue;
     auto updated = false;
-    while (scn.task_queue.front().queue.try_pop(region)) {
+    while (true) {
+      auto region = image_region{};
+      {
+        std::lock_guard guard{task.queuem};
+        if (task.queue_.empty()) break;
+        region = task.queue_.front();
+        task.queue_.pop_front();
+      }
       if (region.size() == zero2i) {
         update_gltexture_region(
             scn.gl_txt, scn.preview, {zero2i, scn.preview.size()}, false);
@@ -590,9 +602,13 @@ void update(const opengl_window& win, app_state& app) {
   for (auto& scn : app.scenes) {
     if (scn.task_queue.empty()) continue;
     auto& task = scn.task_queue.front();
-    if (!task.result.valid() || !task.queue.empty() ||
-        task.result.wait_for(std::chrono::nanoseconds(10)) !=
-            std::future_status::ready)
+    if (!task.result.valid()) continue;
+    if (task.type == app_task_type::render_image) {
+      std::lock_guard guard{task.queuem};
+      if (!task.queue_.empty()) continue;
+    }
+    if (task.result.wait_for(std::chrono::nanoseconds(10)) !=
+        std::future_status::ready)
       continue;
     switch (task.type) {
       case app_task_type::none: break;
@@ -782,7 +798,7 @@ void update(const opengl_window& win, app_state& app) {
           update_app_render(scn.filename, scn.render, scn.display, scn.preview,
               scn.state, scn.scene, scn.lights, scn.bvh, scn.trace_prms,
               scn.tonemap_prms, scn.preview_ratio, &task.stop, task.current,
-              task.queue);
+              task.queue_, task.queuem);
         });
         if (scn.render.size() != scn.image_size) {
           scn.render.resize(scn.image_size);

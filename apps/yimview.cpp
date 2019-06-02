@@ -43,12 +43,13 @@ struct image_stats {
 enum struct app_task_type { none, load, save, display, close };
 
 struct app_task {
-  app_task_type                  type;
-  future<void>                   result;
-  atomic<bool>                   stop;
-  concurrent_queue<image_region> queue;
+  app_task_type       type;
+  std::future<void>   result;
+  std::atomic<bool>   stop;
+  deque<image_region> queue_;
+  std::mutex          queuem;
 
-  app_task(app_task_type type) : type{type}, result{}, stop{false}, queue{} {}
+  app_task(app_task_type type) : type{type}, result{}, stop{false} {}
   ~app_task() {
     stop = true;
     if (result.valid()) {
@@ -126,16 +127,16 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     image<vec4f>& display, image_stats& stats,
     const tonemap_params&    tonemap_prms,
     const colorgrade_params& colorgrade_prms, atomic<bool>* cancel,
-    concurrent_queue<image_region>& queue) {
+    deque<image_region>& queue, std::mutex& queuem) {
   auto regions = vector<image_region>{};
   make_imregions(regions, img.size(), 128);
   auto           futures  = vector<future<void>>{};
   auto           nthreads = std::thread::hardware_concurrency();
   atomic<size_t> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(std::async(
-        std::launch::async, [&next_idx, cancel, &regions, &queue, &display,
-                                &img, tonemap_prms, colorgrade_prms]() {
+    futures.emplace_back(std::async(std::launch::async,
+        [&next_idx, cancel, &regions, &queue, &queuem, &display, &img,
+            tonemap_prms, colorgrade_prms]() {
           while (true) {
             if (cancel && *cancel) break;
             auto idx = next_idx.fetch_add(1);
@@ -145,7 +146,10 @@ void update_app_display(const string& filename, const image<vec4f>& img,
             if (colorgrade_prms != colorgrade_params{}) {
               colorgrade(display, display, region, colorgrade_prms);
             }
-            queue.push(region);
+            {
+              std::lock_guard guard{queuem};
+              queue.push_back(region);
+            }
           }
         }));
   }
@@ -328,9 +332,15 @@ void update(const opengl_window& win, app_state& app) {
   for (auto& img : app.images) {
     if (img.task_queue.empty()) continue;
     auto& task = img.task_queue.front();
-    if (task.type != app_task_type::display || task.queue.empty()) continue;
-    auto region = image_region{};
-    while (img.task_queue.front().queue.try_pop(region)) {
+    if (task.type != app_task_type::display) continue;
+    while (true) {
+      auto region = image_region{};
+      {
+        std::lock_guard guard{task.queuem};
+        if (task.queue_.empty()) break;
+        region = task.queue_.front();
+        task.queue_.pop_front();
+      }
       update_gltexture_region(img.gl_txt, img.display, region, false);
     }
   }
@@ -359,9 +369,13 @@ void update(const opengl_window& win, app_state& app) {
   for (auto& img : app.images) {
     if (img.task_queue.empty()) continue;
     auto& task = img.task_queue.front();
-    if (!task.result.valid() || !task.queue.empty() ||
-        task.result.wait_for(std::chrono::nanoseconds(10)) !=
-            std::future_status::ready)
+    if (!task.result.valid()) continue;
+    if (task.type == app_task_type::display) {
+      std::lock_guard guard{task.queuem};
+      if (!task.queue_.empty()) continue;
+    }
+    if (task.result.wait_for(std::chrono::nanoseconds(10)) !=
+        std::future_status::ready)
       continue;
     switch (task.type) {
       case app_task_type::none: break;
@@ -444,7 +458,7 @@ void update(const opengl_window& win, app_state& app) {
         task.result      = std::async(std::launch::async, [&img, &task]() {
           update_app_display(img.filename, img.img, img.display,
               img.display_stats, img.tonemap_prms, img.colorgrade_prms,
-              &task.stop, task.queue);
+              &task.stop, task.queue_, task.queuem);
         });
       } break;
     }
