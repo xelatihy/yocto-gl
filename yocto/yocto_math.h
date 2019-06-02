@@ -1900,22 +1900,6 @@ inline string get_basename(const string& filename) {
   return get_noextension(get_filename(filename));
 }
 
-// Return the preset type and the remaining filename
-inline bool is_preset_filename(const string& filename) {
-  return filename.find("::yocto::") == 0;
-}
-// Return the preset type and the filename. Call only if this is a preset.
-inline pair<string, string> get_preset_type(const string& filename) {
-  if (filename.find("::yocto::") == 0) {
-    auto aux = filename.substr(string("::yocto::").size());
-    auto pos = aux.find("::");
-    if (pos == aux.npos) throw std::runtime_error("bad preset name" + filename);
-    return {aux.substr(0, pos), aux.substr(pos + 2)};
-  } else {
-    return {"", filename};
-  }
-}
-
 }  // namespace yocto
 
 #endif
