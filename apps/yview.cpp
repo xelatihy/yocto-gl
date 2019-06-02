@@ -135,11 +135,11 @@ enum struct app_task_type {
 };
 
 struct app_task {
-  app_task_type type;
-  std::future<void>  result;
-  std::atomic<bool>  stop;
-  std::atomic<int>   current;
-  app_edit      edit;
+  app_task_type     type;
+  std::future<void> result;
+  std::atomic<bool> stop;
+  std::atomic<int>  current;
+  app_edit          edit;
 
   app_task(app_task_type type, const app_edit& edit = {})
       : type{type}, result{}, stop{false}, current{-1}, edit{edit} {}
@@ -1107,7 +1107,7 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::load_scene: {
         log_glinfo(win, "start loading " + scn.filename);
         scn.load_done = false;
-        task.result   = std::async(std::launch::async,[&scn]() {
+        task.result   = std::async(std::launch::async, [&scn]() {
           load_scene(scn.filename, scn.scene, scn.load_prms);
           tesselate_subdivs(scn.scene);
           init_drawgl_lights(scn.lights, scn.scene);
@@ -1122,7 +1122,7 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::load_element: {
         log_glinfo(win, "start loading element for " + scn.filename);
         scn.load_done = false;
-        task.result   = std::async(std::launch::async,[&scn, &task]() {
+        task.result   = std::async(std::launch::async, [&scn, &task]() {
           load_element(scn.filename, scn.scene, task.edit);
         });
       } break;

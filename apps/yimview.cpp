@@ -426,7 +426,7 @@ void update(const opengl_window& win, app_state& app) {
       } break;
       case app_task_type::save: {
         log_glinfo(win, "start saving " + img.outname);
-        task.result = std::async(std::launch::async,[&img]() {
+        task.result = std::async(std::launch::async, [&img]() {
           if (!is_hdr_filename(img.outname)) {
             auto ldr = image<vec4b>{};
             float_to_byte(ldr, img.display);
@@ -441,7 +441,7 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::display: {
         log_glinfo(win, "start rendering " + img.filename);
         img.display_done = false;
-        task.result      = std::async(std::launch::async,[&img, &task]() {
+        task.result      = std::async(std::launch::async, [&img, &task]() {
           update_app_display(img.filename, img.img, img.display,
               img.display_stats, img.tonemap_prms, img.colorgrade_prms,
               &task.stop, task.queue);

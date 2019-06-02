@@ -40,9 +40,9 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <array>
+#include <future>
 #include <memory>
 #include <regex>
-#include <future>
 #include <thread>
 
 // -----------------------------------------------------------------------------
@@ -81,8 +81,8 @@ static inline void parallel_foreach(
   for (auto& f : futures) f.get();
 }
 template <typename T, typename Func>
-static inline void parallel_foreach(const vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr) {
+static inline void parallel_foreach(
+    const vector<T>& values, const Func& func, atomic<bool>* cancel = nullptr) {
   auto           futures  = vector<std::future<void>>{};
   auto           nthreads = std::thread::hardware_concurrency();
   atomic<size_t> next_idx(0);
@@ -99,8 +99,8 @@ static inline void parallel_foreach(const vector<T>& values, const Func& func,
   }
   for (auto& f : futures) f.get();
 }
- 
-}
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // FILE IO
