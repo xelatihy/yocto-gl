@@ -375,6 +375,8 @@ pair<mat3f, bool> eval_tangent_basis(
 vec3f              eval_element_normal(const yocto_shape& shape, int element);
 pair<vec3f, vec3f> eval_element_tangents(
     const yocto_shape& shape, int element, const vec2f& uv = zero2f);
+pair<mat3f, bool> eval_element_tangent_basis(
+    const yocto_shape& shape, int element, const vec2f& uv = zero2f);
 
 // Sample a shape element based on area/length.
 void             sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf);

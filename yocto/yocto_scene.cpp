@@ -725,6 +725,14 @@ pair<vec3f, vec3f> eval_element_tangents(
     return {zero3f, zero3f};
   }
 }
+pair<mat3f, bool> eval_element_tangent_basis(
+    const yocto_shape& shape, int element, const vec2f& uv) {
+  auto z        = eval_element_normal(shape, element);
+  auto tangents = eval_element_tangents(shape, element, uv);
+  auto x        = orthonormalize(tangents.first, z);
+  auto y        = normalize(cross(z, x));
+  return {{x, y, z}, dot(y, tangents.second) < 0};
+}
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
@@ -757,8 +765,7 @@ T eval_shape_elem(const yocto_shape& shape,
 
 // Shape values interpolated using barycentric coordinates
 vec3f eval_position(const yocto_shape& shape, int element, const vec2f& uv) {
-  return eval_shape_elem(
-      shape, shape.quadspos, shape.positions, element, uv);
+  return eval_shape_elem(shape, shape.quadspos, shape.positions, element, uv);
 }
 vec3f eval_normal(const yocto_shape& shape, int element, const vec2f& uv) {
   if (shape.normals.empty()) return eval_element_normal(shape, element);
