@@ -40,7 +40,6 @@ using namespace yocto;
 using std::any;
 using std::any_cast;
 using std::type_index;
-using std::unordered_map;
 
 struct app_selection {
   type_index type  = typeid(void);

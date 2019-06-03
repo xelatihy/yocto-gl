@@ -38,15 +38,6 @@
 
 #include <functional>
 
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::function;
-
-}
-
 // forward declaration
 struct GLFWwindow;
 
@@ -208,9 +199,9 @@ void draw_glimage_background(const opengl_texture& texture, int win_width,
     float border_size = 2);
 
 struct opengl_window;
-using refresh_glcallback = function<void(const opengl_window&)>;
+using refresh_glcallback = std::function<void(const opengl_window&)>;
 using drop_glcallback =
-    function<void(const opengl_window&, const vector<string>&)>;
+    std::function<void(const opengl_window&, const vector<string>&)>;
 
 struct opengl_window {
   GLFWwindow*        win           = nullptr;
@@ -351,7 +342,7 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
 bool draw_glcombobox(const opengl_window& win, const char* lbl, string& value,
     const vector<string>& labels);
 bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
-    int num, const function<const char*(int)>& labels,
+    int num, const std::function<const char*(int)>& labels,
     bool include_null = false);
 
 template <typename T>

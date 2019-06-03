@@ -40,7 +40,8 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::string_view;
+// Type aliases for readability
+using string_view = std::string_view;
 using namespace std::literals::string_view_literals;
 
 // Token stream

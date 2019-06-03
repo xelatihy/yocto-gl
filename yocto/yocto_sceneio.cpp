@@ -51,8 +51,8 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::unique_ptr;
-using std::string_view;
+// Type aliases for readability
+using string_view = std::string_view;
 using namespace std::literals::string_view_literals;
 
 }  // namespace yocto
@@ -2026,7 +2026,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
   if (result != cgltf_result_success) {
     throw std::runtime_error("could not load gltf " + filename);
   }
-  auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{data, cgltf_free};
+  auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{data, cgltf_free};
   if (cgltf_load_buffers(&params, data, get_dirname(filename).c_str()) !=
       cgltf_result_success) {
     throw std::runtime_error("could not load gltf buffers " + filename);
