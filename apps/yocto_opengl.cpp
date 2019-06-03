@@ -31,6 +31,7 @@
 #include <stdarg.h>
 #include <atomic>
 #include <mutex>
+#include <algorithm>
 
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
