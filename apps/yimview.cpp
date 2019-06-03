@@ -34,6 +34,9 @@ using namespace yocto;
 #include <future>
 #include <thread>
 
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
+
 #include "ext/CLI11.hpp"
 
 struct image_stats {
@@ -105,56 +108,6 @@ struct app_state {
   colorgrade_params colorgrade_prms = {};
 };
 
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get filename without directory.
-static inline string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-static inline string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
-}
-
-}  // namespace yocto
-
 // compute min/max
 void compute_image_stats(
     image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
@@ -214,8 +167,8 @@ void update_app_display(const string& filename, const image<vec4f>& img,
 void add_new_image(app_state& app, const string& filename) {
   auto& img           = app.images.emplace_back();
   img.filename        = filename;
-  img.outname         = get_noextension(filename) + ".display.png";
-  img.name            = get_filename(filename);
+  img.outname         = fs::path(filename).replace_extension(".display.png");
+  img.name            = fs::path(filename).filename();
   img.tonemap_prms    = app.tonemap_prms;
   img.colorgrade_prms = app.colorgrade_prms;
   img.load_done       = false;
@@ -241,7 +194,7 @@ void draw_glwidgets(const opengl_window& win) {
     add_new_image(app, load_path);
   }
   if (draw_glfiledialog(win, "save image", save_path, true,
-          get_dirname(save_path), get_filename(save_path),
+          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     app.images[app.selected].outname = save_path;
     app.images[app.selected].task_queue.emplace_back(app_task_type::save);
@@ -307,7 +260,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "image", get_filename(img.filename));
+    draw_gllabel(win, "image", fs::path(img.filename).filename());
     draw_gllabel(win, "filename", img.filename);
     draw_gllabel(win, "outname", img.outname);
     draw_gllabel(win, "image", "%d x %d", img.img.size().x, img.img.size().y);
@@ -437,7 +390,7 @@ void update(const opengl_window& win, app_state& app) {
         try {
           task.result.get();
           img.load_done = true;
-          img.name      = get_filename(img.filename) + " [" +
+          img.name      = fs::path(img.filename).filename().string() + " [" +
                      std::to_string(img.img.size().x) + "x" +
                      std::to_string(img.img.size().y) + "]";
           img.display = img.img;
@@ -446,7 +399,7 @@ void update(const opengl_window& win, app_state& app) {
           img.task_queue.emplace_back(app_task_type::display);
         } catch (std::exception& e) {
           log_glerror(win, e.what());
-          img.name = get_filename(img.filename) + " [error]";
+          img.name = fs::path(img.filename).filename().string() + " [error]";
           app.errors.push_back("cannot load " + img.filename);
         }
       } break;
