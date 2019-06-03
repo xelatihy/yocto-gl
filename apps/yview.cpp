@@ -33,8 +33,8 @@
 #include "yocto_opengl.h"
 #include "ysceneui.h"
 
-#include <future>
 #include <atomic>
+#include <future>
 #include <thread>
 
 #include "ext/CLI11.hpp"
@@ -185,16 +185,16 @@ struct app_scene {
   bool   animate        = false;
 
   // tasks
-  bool            load_done = false;
+  bool                 load_done = false;
   std::deque<app_task> task_queue;
-  app_selection   selection = {typeid(void), -1};
+  app_selection        selection = {typeid(void), -1};
 };
 
 // Application state
 struct app_state {
   // data
   std::deque<app_scene> scenes;
-  int              selected = -1;
+  int                   selected = -1;
   std::deque<string>    errors;
 
   // default options

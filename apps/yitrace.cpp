@@ -124,14 +124,14 @@ struct app_scene {
   bool load_done = false, bvh_done = false, lights_done = false,
        render_done = false;
   std::deque<app_task> task_queue;
-  app_selection   selection = {typeid(void), -1};
+  app_selection        selection = {typeid(void), -1};
 };
 
 // Application state
 struct app_state {
   // data
   std::deque<app_scene> scenes;
-  int              selected = -1;
+  int                   selected = -1;
   std::deque<string>    errors;
 
   // default options
@@ -147,8 +147,9 @@ void update_app_render(const string& filename, image<vec4f>& render,
     image<vec4f>& display, image<vec4f>& preview, trace_state& state,
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
     const trace_params& trace_prms, const tonemap_params& tonemap_prms,
-    int preview_ratio, std::atomic<bool>* cancel, std::atomic<int>& current_sample,
-    std::deque<image_region>& queue, std::mutex& queuem) {
+    int preview_ratio, std::atomic<bool>* cancel,
+    std::atomic<int>& current_sample, std::deque<image_region>& queue,
+    std::mutex& queuem) {
   auto preview_options = trace_prms;
   preview_options.resolution /= preview_ratio;
   preview_options.samples = 1;
@@ -181,8 +182,8 @@ void update_app_render(const string& filename, image<vec4f>& render,
     current_sample   = sample;
     auto num_samples = min(
         trace_prms.batch, trace_prms.samples - current_sample);
-    auto           futures  = vector<std::future<void>>{};
-    auto           nthreads = std::thread::hardware_concurrency();
+    auto                futures  = vector<std::future<void>>{};
+    auto                nthreads = std::thread::hardware_concurrency();
     std::atomic<size_t> next_idx(0);
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
       futures.emplace_back(std::async(std::launch::async,

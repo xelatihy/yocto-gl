@@ -30,8 +30,8 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
-#include <future>
 #include <atomic>
+#include <future>
 #include <thread>
 
 #include "ext/CLI11.hpp"
@@ -46,11 +46,11 @@ struct image_stats {
 enum struct app_task_type { none, load, save, display, close };
 
 struct app_task {
-  app_task_type       type;
-  std::future<void>   result;
-  std::atomic<bool>   stop;
+  app_task_type            type;
+  std::future<void>        result;
+  std::atomic<bool>        stop;
   std::deque<image_region> queue;
-  std::mutex          queuem;
+  std::mutex               queuem;
 
   app_task(app_task_type type) : type{type}, result{}, stop{false} {}
   ~app_task() {
@@ -85,7 +85,7 @@ struct app_image {
   colorgrade_params colorgrade_prms = {};
 
   // computation futures
-  bool            load_done = false, display_done = false;
+  bool                 load_done = false, display_done = false;
   std::deque<app_task> task_queue;
 
   // viewing properties
@@ -97,7 +97,7 @@ struct app_image {
 struct app_state {
   // data
   std::deque<app_image> images;
-  int              selected = -1;
+  int                   selected = -1;
   std::deque<string>    errors;
 
   // default options
@@ -133,8 +133,8 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     std::deque<image_region>& queue, std::mutex& queuem) {
   auto regions = vector<image_region>{};
   make_imregions(regions, img.size(), 128);
-  auto           futures  = vector<std::future<void>>{};
-  auto           nthreads = std::thread::hardware_concurrency();
+  auto                futures  = vector<std::future<void>>{};
+  auto                nthreads = std::thread::hardware_concurrency();
   std::atomic<size_t> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(std::async(std::launch::async,

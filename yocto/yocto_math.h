@@ -32,8 +32,8 @@
 // `translation_mat()` or `translation_frame()` respectively, etc.
 // For rotation we support axis-angle and quaternions, with slerp.
 //
-// Finally, we include a `timer` for benchmarking with high precision and 
-// a few common path manipulations ghat will be remove once C++ filesystem 
+// Finally, we include a `timer` for benchmarking with high precision and
+// a few common path manipulations ghat will be remove once C++ filesystem
 // support will be more common.
 //
 
@@ -77,10 +77,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <chrono>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <chrono>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -89,11 +89,11 @@ namespace yocto {
 
 // Aliased typenames for readability
 using string = std::string;
-template<typename T1, typename T2>
+template <typename T1, typename T2>
 using pair = std::pair<T1, T2>;
-template<typename K, typename V, typename H = std::hash<K>>
+template <typename K, typename V, typename H = std::hash<K>>
 using unordered_map = std::unordered_map<K, V, H>;
-template<typename T>
+template <typename T>
 using vector = std::vector<T>;
 using namespace std::literals::string_literals;
 

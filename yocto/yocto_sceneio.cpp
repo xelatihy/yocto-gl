@@ -39,12 +39,12 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <array>
+#include <atomic>
 #include <future>
 #include <memory>
 #include <regex>
-#include <thread>
-#include <atomic>
 #include <string_view>
+#include <thread>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -67,8 +67,8 @@ namespace yocto {
 template <typename T, typename Func>
 static inline void parallel_foreach(
     vector<T>& values, const Func& func, std::atomic<bool>* cancel = nullptr) {
-  auto           futures  = vector<std::future<void>>{};
-  auto           nthreads = std::thread::hardware_concurrency();
+  auto                futures  = vector<std::future<void>>{};
+  auto                nthreads = std::thread::hardware_concurrency();
   std::atomic<size_t> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
@@ -84,10 +84,10 @@ static inline void parallel_foreach(
   for (auto& f : futures) f.get();
 }
 template <typename T, typename Func>
-static inline void parallel_foreach(
-    const vector<T>& values, const Func& func, std::atomic<bool>* cancel = nullptr) {
-  auto           futures  = vector<std::future<void>>{};
-  auto           nthreads = std::thread::hardware_concurrency();
+static inline void parallel_foreach(const vector<T>& values, const Func& func,
+    std::atomic<bool>* cancel = nullptr) {
+  auto                futures  = vector<std::future<void>>{};
+  auto                nthreads = std::thread::hardware_concurrency();
   std::atomic<size_t> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
@@ -2026,7 +2026,8 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
   if (result != cgltf_result_success) {
     throw std::runtime_error("could not load gltf " + filename);
   }
-  auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{data, cgltf_free};
+  auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
+      data, cgltf_free};
   if (cgltf_load_buffers(&params, data, get_dirname(filename).c_str()) !=
       cgltf_result_success) {
     throw std::runtime_error("could not load gltf buffers " + filename);

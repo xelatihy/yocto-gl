@@ -50,8 +50,8 @@ using namespace yocto;
 #include <string_view>
 #include <unordered_set>
 
-using std::unordered_set;
 using std::string_view;
+using std::unordered_set;
 using namespace std::literals::string_view_literals;
 
 // -----------------------------------------------------------------------------

@@ -214,7 +214,7 @@ struct bvh_params {
   bool embree_flatten = false;
   bool embree_compact = false;
 #endif
-  bool          noparallel = false;
+  bool               noparallel = false;
   std::atomic<bool>* cancel     = nullptr;
 };
 
