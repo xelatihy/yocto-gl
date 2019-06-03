@@ -7,3 +7,5 @@ cmake-build-release
 .vscode/.cmaketools.json
 out.hdr
 .vscode/ipch/
+yocto1/
+apps1/
