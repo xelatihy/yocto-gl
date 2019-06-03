@@ -224,10 +224,10 @@ public:
     {
     };
 #ifdef __cpp_lib_string_view
-    template <class CharT>
-    struct _is_basic_string<std::basic_string_view<CharT>> : std::true_type
-    {
-    };
+    // template <class CharT>
+    // struct _is_basic_string<std::basic_string_view<CharT>> : std::true_type
+    // {
+    // };
 #endif
 
     template <typename T1, typename T2 = void>
@@ -285,7 +285,7 @@ public:
     path& operator+=(const path& x);
     path& operator+=(const string_type& x);
 #ifdef __cpp_lib_string_view
-    path& operator+=(std::basic_string_view<value_type> x);
+    // path& operator+=(std::basic_string_view<value_type> x);
 #endif
     path& operator+=(const value_type* x);
     path& operator+=(value_type x);
@@ -331,7 +331,7 @@ public:
     int compare(const path& p) const noexcept;
     int compare(const string_type& s) const;
 #ifdef __cpp_lib_string_view
-    int compare(std::basic_string_view<value_type> s) const;
+    // int compare(std::basic_string_view<value_type> s) const;
 #endif
     int compare(const value_type* s) const;
 
@@ -2142,10 +2142,10 @@ GHC_INLINE path& path::operator+=(const string_type& x)
 }
 
 #ifdef __cpp_lib_string_view
-GHC_INLINE path& path::operator+=(std::basic_string_view<value_type> x)
-{
-    return concat(x);
-}
+// GHC_INLINE path& path::operator+=(std::basic_string_view<value_type> x)
+// {
+//     return concat(x);
+// }
 #endif
 
 GHC_INLINE path& path::operator+=(const value_type* x)
@@ -2396,10 +2396,10 @@ GHC_INLINE int path::compare(const string_type& s) const
 }
 
 #ifdef __cpp_lib_string_view
-GHC_INLINE int path::compare(std::basic_string_view<value_type> s) const
-{
-    return native().compare(path(s).native());
-}
+// GHC_INLINE int path::compare(std::basic_string_view<value_type> s) const
+// {
+//     return native().compare(path(s).native());
+// }
 #endif
 
 GHC_INLINE int path::compare(const value_type* s) const
