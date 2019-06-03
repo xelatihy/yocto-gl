@@ -39,6 +39,10 @@
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
+#ifdef _WIN32
+#undef near
+#undef far
+#endif
 
 #include "ext/CLI11.hpp"
 
