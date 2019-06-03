@@ -175,14 +175,6 @@ static inline string get_dirname(const string& filename_) {
   return filename.substr(0, pos + 1);
 }
 
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
 // Get filename without directory.
 static inline string get_filename(const string& filename_) {
   auto filename = normalize_path(filename_);
@@ -197,11 +189,6 @@ static inline string get_noextension(const string& filename_) {
   auto pos      = filename.rfind('.');
   if (pos == string::npos) return filename;
   return filename.substr(0, pos);
-}
-
-// Get filename without directory and extension.
-static inline string get_basename(const string& filename) {
-  return get_noextension(get_filename(filename));
 }
 
 }  // namespace yocto
