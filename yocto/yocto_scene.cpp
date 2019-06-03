@@ -848,8 +848,12 @@ vec3f eval_shading_normal(const yocto_scene& scene,
             2 -
         1;
     normalmap.y = -normalmap.y;  // flip vertical axis
-    auto normal = eval_perturbed_normal(
-        scene, scene.shapes[instance.shape], element, uv, normalmap);
+    auto normal = eval_normal(shape, element, uv);
+    auto [tu, left_handed] = eval_tangsp(shape, element, uv);
+    tu                     = orthonormalize(tu, normal);
+    auto tv = normalize(cross(normal, tu) * (left_handed ? -1.0f : 1.0f));
+    normal  = normalize(
+        normalmap.x * tu + normalmap.y * tv + normalmap.z * normal);
     return transform_normal(instance.frame, normal, non_rigid_frame);
   }
 }

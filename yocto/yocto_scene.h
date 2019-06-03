@@ -371,8 +371,6 @@ vec4f eval_color(const yocto_shape& shape, int element, const vec2f& uv);
 float eval_radius(const yocto_shape& shape, int element, const vec2f& uv);
 pair<vec3f, bool> eval_tangsp(
     const yocto_shape& shape, int element, const vec2f& uv);
-vec3f eval_perturbed_normal(const yocto_scene& scene, const yocto_shape& shape,
-    int element, const vec2f& uv, const vec3f& normalmap);
 // Shape element values.
 vec3f             eval_element_normal(const yocto_shape& shape, int element);
 pair<vec3f, bool> eval_element_tangents(
