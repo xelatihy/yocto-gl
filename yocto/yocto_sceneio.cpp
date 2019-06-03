@@ -1819,7 +1819,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 
   // material library
   if (!scene.materials.empty()) {
-    auto mtlname = fs::path(filename).replace_extension(".mtl");
+    auto mtlname = fs::path(filename).filename().replace_extension(".mtl");
     write_obj_line(fs, "mtllib", mtlname);
   }
 
