@@ -105,6 +105,56 @@ struct app_state {
   colorgrade_params colorgrade_prms = {};
 };
 
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+static inline string normalize_path(const string& filename_) {
+  auto filename = filename_;
+  for (auto& c : filename)
+    if (c == '\\') c = '/';
+  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
+      filename[3] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  auto pos = (size_t)0;
+  while ((pos = filename.find("//")) != filename.npos)
+    filename = filename.substr(0, pos) + filename.substr(pos + 1);
+  return filename;
+}
+
+// Get directory name (including '/').
+static inline string get_dirname(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('/');
+  if (pos == string::npos) return "";
+  return filename.substr(0, pos + 1);
+}
+
+// Get filename without directory.
+static inline string get_filename(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('/');
+  if (pos == string::npos) return filename;
+  return filename.substr(pos + 1);
+}
+
+// Get extension.
+static inline string get_noextension(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return filename;
+  return filename.substr(0, pos);
+}
+
+}  // namespace yocto
+
 // compute min/max
 void compute_image_stats(
     image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
