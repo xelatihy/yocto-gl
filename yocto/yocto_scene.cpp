@@ -685,71 +685,50 @@ vec3f eval_element_normal(const yocto_shape& shape, int element) {
 }
 
 // Shape element normal.
-pair<vec3f, bool> eval_element_tangents(
+pair<vec3f, vec3f> eval_element_tangents(
     const yocto_shape& shape, int element, const vec2f& uv) {
   if (!shape.triangles.empty()) {
-    auto t    = shape.triangles[element];
-    auto norm = triangle_normal(
-        shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
-    auto txty = pair<vec3f, vec3f>();
+    auto t = shape.triangles[element];
     if (shape.texcoords.empty()) {
-      txty = triangle_tangents_fromuv(shape.positions[t.x],
+      return triangle_tangents_fromuv(shape.positions[t.x],
           shape.positions[t.y], shape.positions[t.z], {0, 0}, {1, 0}, {0, 1});
     } else {
-      txty = triangle_tangents_fromuv(shape.positions[t.x],
+      return triangle_tangents_fromuv(shape.positions[t.x],
           shape.positions[t.y], shape.positions[t.z], shape.texcoords[t.x],
           shape.texcoords[t.y], shape.texcoords[t.z]);
     }
-    auto tx = txty.first, ty = txty.second;
-    tx     = orthonormalize(tx, norm);
-    auto s = (dot(cross(norm, tx), ty) < 0) ? -1.0f : 1.0f;
-    return {tx, s};
   } else if (!shape.quads.empty()) {
-    auto q    = shape.quads[element];
-    auto norm = quad_normal(shape.positions[q.x], shape.positions[q.y],
-        shape.positions[q.z], shape.positions[q.w]);
-    auto txty = pair<vec3f, vec3f>();
+    auto q = shape.quads[element];
     if (shape.texcoords.empty()) {
-      txty = quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
+      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w], {0, 0}, {1, 0}, {0, 1},
           {1, 1}, uv);
     } else {
-      txty = quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
+      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w], shape.texcoords[q.x],
           shape.texcoords[q.y], shape.texcoords[q.z], shape.texcoords[q.w], uv);
     }
-    auto tx = txty.first, ty = txty.second;
-    tx     = orthonormalize(tx, norm);
-    auto s = (dot(cross(norm, tx), ty) < 0) ? -1.0f : 1.0f;
-    return {tx, s};
   } else if (!shape.quadspos.empty()) {
-    auto q    = shape.quadspos[element];
-    auto norm = quad_normal(shape.positions[q.x], shape.positions[q.y],
-        shape.positions[q.z], shape.positions[q.w]);
-    auto txty = pair<vec3f, vec3f>();
+    auto q = shape.quadspos[element];
     if (shape.texcoords.empty()) {
-      txty = quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
+      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w], {0, 0}, {1, 0}, {0, 1},
           {1, 1}, uv);
     } else {
       auto qt = shape.quadstexcoord[element];
-      txty    = quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
+      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w], shape.texcoords[qt.x],
           shape.texcoords[qt.y], shape.texcoords[qt.z], shape.texcoords[qt.w],
           uv);
     }
-    auto tx = txty.first, ty = txty.second;
-    tx     = orthonormalize(tx, norm);
-    auto s = (dot(cross(norm, tx), ty) < 0) ? -1.0f : 1.0f;
-    return {tx, s};
   } else {
-    return {zero3f, false};
+    return {zero3f, zero3f};
   }
 }
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T evaluate_shape_elem(const yocto_shape& shape,
+T eval_shape_elem(const yocto_shape& shape,
     const vector<vec4i>& facevarying_quads, const vector<T>& vals, int element,
     const vec2f& uv) {
   if (vals.empty()) return {};
@@ -778,40 +757,46 @@ T evaluate_shape_elem(const yocto_shape& shape,
 
 // Shape values interpolated using barycentric coordinates
 vec3f eval_position(const yocto_shape& shape, int element, const vec2f& uv) {
-  return evaluate_shape_elem(
+  return eval_shape_elem(
       shape, shape.quadspos, shape.positions, element, uv);
 }
 vec3f eval_normal(const yocto_shape& shape, int element, const vec2f& uv) {
   if (shape.normals.empty()) return eval_element_normal(shape, element);
   return normalize(
-      evaluate_shape_elem(shape, shape.quadsnorm, shape.normals, element, uv));
+      eval_shape_elem(shape, shape.quadsnorm, shape.normals, element, uv));
 }
 vec2f eval_texcoord(const yocto_shape& shape, int element, const vec2f& uv) {
   if (shape.texcoords.empty()) return uv;
-  return evaluate_shape_elem(
+  return eval_shape_elem(
       shape, shape.quadstexcoord, shape.texcoords, element, uv);
 }
 vec4f eval_color(const yocto_shape& shape, int element, const vec2f& uv) {
   if (shape.colors.empty()) return {1, 1, 1, 1};
-  return evaluate_shape_elem(shape, {}, shape.colors, element, uv);
+  return eval_shape_elem(shape, {}, shape.colors, element, uv);
 }
 float eval_radius(const yocto_shape& shape, int element, const vec2f& uv) {
   if (shape.radius.empty()) return 0.001f;
-  return evaluate_shape_elem(shape, {}, shape.radius, element, uv);
+  return eval_shape_elem(shape, {}, shape.radius, element, uv);
 }
-pair<vec3f, bool> eval_tangent_space(
+vec4f eval_tangent_space(
     const yocto_shape& shape, int element, const vec2f& uv) {
-  if (shape.tangents.empty()) return eval_element_tangents(shape, element, uv);
-  auto tangsp = evaluate_shape_elem(shape, {}, shape.tangents, element, uv);
-  return {xyz(tangsp), tangsp.w < 0};
+  if (shape.tangents.empty()) return zero4f;
+  return eval_shape_elem(shape, {}, shape.tangents, element, uv);
 }
 pair<mat3f, bool> eval_tangent_basis(
     const yocto_shape& shape, int element, const vec2f& uv) {
-  auto z      = eval_normal(shape, element, uv);
-  auto tangsp = eval_tangent_space(shape, element, uv);
-  auto x      = orthonormalize(tangsp.first, z);
-  auto y      = normalize(cross(z, x));
-  return {{x, y, z}, tangsp.second};
+  auto z = eval_normal(shape, element, uv);
+  if (shape.tangents.empty()) {
+    auto tangents = eval_element_tangents(shape, element, uv);
+    auto x        = orthonormalize(tangents.first, z);
+    auto y        = normalize(cross(z, x));
+    return {{x, y, z}, dot(y, tangents.second) < 0};
+  } else {
+    auto tangsp = eval_shape_elem(shape, {}, shape.tangents, element, uv);
+    auto x      = orthonormalize(xyz(tangsp), z);
+    auto y      = normalize(cross(z, x));
+    return {{x, y, z}, tangsp.w < 0};
+  }
 }
 
 // Instance values interpolated using barycentric coordinates.
@@ -838,12 +823,12 @@ vec3f eval_shading_normal(const yocto_scene& scene,
   } else if (material.normal_tex < 0) {
     return eval_normal(scene, instance, element, uv, non_rigid_frame);
   } else {
-    auto& normal_tex       = scene.textures[material.normal_tex];
-    auto  normalmap        = -1 + 2 * xyz(eval_texture(normal_tex,
+    auto& normal_tex = scene.textures[material.normal_tex];
+    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex,
                                   eval_texcoord(shape, element, uv), true));
-    auto basis = eval_tangent_basis(shape, element, uv);
-    normalmap.y            *= basis.second ? 1 : -1;  // flip vertical axis
-    auto normal  = normalize(basis.first * normalmap);
+    auto  basis      = eval_tangent_basis(shape, element, uv);
+    normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
+    auto normal = normalize(basis.first * normalmap);
     return transform_normal(instance.frame, normal, non_rigid_frame);
   }
 }
