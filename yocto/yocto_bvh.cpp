@@ -33,10 +33,10 @@
 
 #include "yocto_bvh.h"
 
-#include <deque>
-#include <thread>
-#include <future>
 #include <atomic>
+#include <deque>
+#include <future>
+#include <thread>
 
 #if YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -395,7 +395,7 @@ static void embree_error(void* ctx, RTCError code, const char* str) {
 
 // Embree memory
 std::atomic<ssize_t> embree_memory = 0;
-static bool     embree_memory_monitor(void* userPtr, ssize_t bytes, bool post) {
+static bool embree_memory_monitor(void* userPtr, ssize_t bytes, bool post) {
   embree_memory += bytes;
   return true;
 }
@@ -914,7 +914,7 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
   nodes.emplace_back();
 
   // synchronization
-  std::atomic<int>               num_processed_prims(0);
+  std::atomic<int>          num_processed_prims(0);
   std::mutex                queue_mutex;
   vector<std::future<void>> futures;
   auto                      nthreads = std::thread::hardware_concurrency();

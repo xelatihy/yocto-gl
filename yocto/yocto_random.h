@@ -164,10 +164,9 @@ inline vec3f rand3f(rng_state& rng) {
 template <typename T>
 inline void shuffle(vector<T>& vals, rng_state& rng) {
   // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
-  using std::swap;
   for (auto i = (int)vals.size() - 1; i > 0; i--) {
     auto j = rand1i(rng, i + 1);
-    swap(vals[j], vals[i]);
+    std::swap(vals[j], vals[i]);
   }
 }
 

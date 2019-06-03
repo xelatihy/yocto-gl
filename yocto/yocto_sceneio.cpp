@@ -39,18 +39,21 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <array>
+#include <atomic>
 #include <future>
 #include <memory>
 #include <regex>
+#include <string_view>
 #include <thread>
-#include <atomic>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::unique_ptr;
+// Type aliases for readability
+using string_view = std::string_view;
+using namespace std::literals::string_view_literals;
 
 }  // namespace yocto
 
@@ -64,8 +67,8 @@ namespace yocto {
 template <typename T, typename Func>
 static inline void parallel_foreach(
     vector<T>& values, const Func& func, std::atomic<bool>* cancel = nullptr) {
-  auto           futures  = vector<std::future<void>>{};
-  auto           nthreads = std::thread::hardware_concurrency();
+  auto                futures  = vector<std::future<void>>{};
+  auto                nthreads = std::thread::hardware_concurrency();
   std::atomic<size_t> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
@@ -81,10 +84,10 @@ static inline void parallel_foreach(
   for (auto& f : futures) f.get();
 }
 template <typename T, typename Func>
-static inline void parallel_foreach(
-    const vector<T>& values, const Func& func, std::atomic<bool>* cancel = nullptr) {
-  auto           futures  = vector<std::future<void>>{};
-  auto           nthreads = std::thread::hardware_concurrency();
+static inline void parallel_foreach(const vector<T>& values, const Func& func,
+    std::atomic<bool>* cancel = nullptr) {
+  auto                futures  = vector<std::future<void>>{};
+  auto                nthreads = std::thread::hardware_concurrency();
   std::atomic<size_t> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
@@ -286,6 +289,22 @@ static string get_save_scene_message(const yocto_scene& scene) {
   str += format_stats(scene, "# ");
   str += "# \n";
   return str;
+}
+
+// Return the preset type and the remaining filename
+static inline bool is_preset_filename(const string& filename) {
+  return filename.find("::yocto::") == 0;
+}
+// Return the preset type and the filename. Call only if this is a preset.
+static inline pair<string, string> get_preset_type(const string& filename) {
+  if (filename.find("::yocto::") == 0) {
+    auto aux = filename.substr(string("::yocto::").size());
+    auto pos = aux.find("::");
+    if (pos == aux.npos) throw std::runtime_error("bad preset name" + filename);
+    return {aux.substr(0, pos), aux.substr(pos + 2)};
+  } else {
+    return {"", filename};
+  }
 }
 
 void load_texture(yocto_texture& texture, const string& dirname) {
@@ -2007,7 +2026,8 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
   if (result != cgltf_result_success) {
     throw std::runtime_error("could not load gltf " + filename);
   }
-  auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{data, cgltf_free};
+  auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
+      data, cgltf_free};
   if (cgltf_load_buffers(&params, data, get_dirname(filename).c_str()) !=
       cgltf_result_success) {
     throw std::runtime_error("could not load gltf buffers " + filename);

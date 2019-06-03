@@ -1727,6 +1727,22 @@ static inline void load_stb_image_from_memory(
 }
 #endif
 
+// Return the preset type and the remaining filename
+static inline bool is_preset_filename(const string& filename) {
+  return filename.find("::yocto::") == 0;
+}
+// Return the preset type and the filename. Call only if this is a preset.
+static inline pair<string, string> get_preset_type(const string& filename) {
+  if (filename.find("::yocto::") == 0) {
+    auto aux = filename.substr(string("::yocto::").size());
+    auto pos = aux.find("::");
+    if (pos == aux.npos) throw std::runtime_error("bad preset name" + filename);
+    return {aux.substr(0, pos), aux.substr(pos + 2)};
+  } else {
+    return {"", filename};
+  }
+}
+
 static inline void load_image_preset(
     const string& filename, image<vec4f>& img) {
   auto [type, nfilename] = get_preset_type(filename);

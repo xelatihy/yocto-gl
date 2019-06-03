@@ -602,7 +602,8 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
 void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
     void* user_pointer, refresh_glcallback refresh_cb) {
   // init glfw
-  if (!glfwInit()) throw std::runtime_error("cannot initialize windowing system");
+  if (!glfwInit())
+    throw std::runtime_error("cannot initialize windowing system");
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -624,7 +625,8 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
   win.refresh_cb = refresh_cb;
 
   // init gl extensions
-  if (!gladLoadGL()) throw std::runtime_error("cannot initialize OpenGL extensions");
+  if (!gladLoadGL())
+    throw std::runtime_error("cannot initialize OpenGL extensions");
 }
 
 void delete_glwindow(opengl_window& win) {
@@ -1201,7 +1203,7 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, string& value,
 }
 
 bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
-    int num, const function<const char*(int)>& labels, bool include_null) {
+    int num, const std::function<const char*(int)>& labels, bool include_null) {
   if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx) : "<none>")) return false;
   auto old_idx = idx;
   if (include_null) {

@@ -33,10 +33,16 @@
 #include "yocto_pbrt.h"
 #include "yocto_image.h"
 
+#include <string_view>
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF LOW LEVEL PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Type aliases for readability
+using string_view = std::string_view;
+using namespace std::literals::string_view_literals;
 
 // Token stream
 struct pbrt_stream {

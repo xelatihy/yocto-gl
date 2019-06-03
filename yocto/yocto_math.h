@@ -32,8 +32,8 @@
 // `translation_mat()` or `translation_frame()` respectively, etc.
 // For rotation we support axis-angle and quaternions, with slerp.
 //
-// Finally, we include a `timer` for benchmarking with high precision and 
-// a few common path manipulations ghat will be remove once C++ filesystem 
+// Finally, we include a `timer` for benchmarking with high precision and
+// a few common path manipulations ghat will be remove once C++ filesystem
 // support will be more common.
 //
 
@@ -77,33 +77,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <algorithm>
-#include <functional>
+#include <chrono>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <vector>
-#include <chrono>
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::pair;
-using std::string;
-using std::string_view;
-using std::unordered_map;
-using std::vector;
-using namespace std::literals::string_literals;
-using namespace std::literals::string_view_literals;
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Aliased typenames for readability
+using string = std::string;
+template <typename T1, typename T2>
+using pair = std::pair<T1, T2>;
+template <typename K, typename V, typename H = std::hash<K>>
+using unordered_map = std::unordered_map<K, V, H>;
+template <typename T>
+using vector = std::vector<T>;
+using namespace std::literals::string_literals;
 
 using byte = unsigned char;
 using uint = unsigned int;
@@ -1904,22 +1896,6 @@ inline string get_noextension(const string& filename_) {
 // Get filename without directory and extension.
 inline string get_basename(const string& filename) {
   return get_noextension(get_filename(filename));
-}
-
-// Return the preset type and the remaining filename
-inline bool is_preset_filename(const string& filename) {
-  return filename.find("::yocto::") == 0;
-}
-// Return the preset type and the filename. Call only if this is a preset.
-inline pair<string, string> get_preset_type(const string& filename) {
-  if (filename.find("::yocto::") == 0) {
-    auto aux = filename.substr(string("::yocto::").size());
-    auto pos = aux.find("::");
-    if (pos == aux.npos) throw std::runtime_error("bad preset name" + filename);
-    return {aux.substr(0, pos), aux.substr(pos + 2)};
-  } else {
-    return {"", filename};
-  }
 }
 
 }  // namespace yocto

@@ -32,10 +32,15 @@
 
 #include "yocto_obj.h"
 
+#include <string_view>
+
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+using std::string_view;
+using namespace std::literals::string_view_literals;
 
 // Check if a file can be opened for reading.
 static inline bool exists_file(const string& filename) {

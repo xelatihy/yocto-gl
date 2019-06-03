@@ -47,8 +47,12 @@ using namespace yocto;
 #include "ext/json.hpp"
 #include "ext/sajson.h"
 
+#include <string_view>
 #include <unordered_set>
+
+using std::string_view;
 using std::unordered_set;
+using namespace std::literals::string_view_literals;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF DISNEY ISLAND SCENE
