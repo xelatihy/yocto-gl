@@ -40,12 +40,12 @@
 #include <stdlib.h>
 #include <array>
 #include <atomic>
+#include <deque>
 #include <future>
 #include <memory>
 #include <regex>
 #include <string_view>
 #include <thread>
-#include <deque>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

@@ -33,8 +33,8 @@
 #include "yocto_pbrt.h"
 #include "yocto_image.h"
 
-#include <string_view>
 #include <ctype.h>
+#include <string_view>
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF LOW LEVEL PARSING
@@ -56,8 +56,8 @@ struct pbrt_stream {
 static inline void skip_whitespace_or_comment(pbrt_stream& stream) {
   auto& str = stream.str;
   if (str.empty()) return;
-  while (!str.empty() && (isspace(str.front()) || str.front() == '#' ||
-                             str.front() == ',')) {
+  while (!str.empty() &&
+         (isspace(str.front()) || str.front() == '#' || str.front() == ',')) {
     if (str.front() == '#') {
       auto pos = str.find('\n');
       if (pos != string_view::npos) {

@@ -29,9 +29,9 @@
 
 #include "yocto_opengl.h"
 #include <stdarg.h>
+#include <algorithm>
 #include <atomic>
 #include <mutex>
-#include <algorithm>
 
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
