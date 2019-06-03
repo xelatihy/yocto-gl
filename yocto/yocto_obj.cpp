@@ -470,7 +470,7 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
         continue;
       mlibs.push_back(mtlname);
       auto mtlpath = fs::path(filename).parent_path() / mtlname;
-      load_mtl(mtlpath.string(), cb, fliptr);
+      load_mtl(mtlpath, cb, fliptr);
     } else {
       // unused
     }
@@ -478,7 +478,7 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
 
   // parse extensions if presents
   if (!nomaterials) {
-    auto extname    = fs::path(filename).replace_extension(".objx").string();
+    auto extname    = fs::path(filename).replace_extension(".objx");
     auto ext_exists = exists_file(extname);
     if (ext_exists) {
       load_objx(extname, cb);
