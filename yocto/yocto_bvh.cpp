@@ -37,6 +37,7 @@
 #include <deque>
 #include <future>
 #include <thread>
+#include <algorithm>
 
 #if YOCTO_EMBREE
 #include <embree3/rtcore.h>
