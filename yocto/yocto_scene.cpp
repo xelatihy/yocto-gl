@@ -799,23 +799,19 @@ float eval_radius(const yocto_shape& shape, int element, const vec2f& uv) {
   if (shape.radius.empty()) return 0.001f;
   return evaluate_shape_elem(shape, {}, shape.radius, element, uv);
 }
-pair<vec3f, bool> eval_tangsp(
+pair<vec3f, bool> eval_tangent_space(
     const yocto_shape& shape, int element, const vec2f& uv) {
   if (shape.tangents.empty()) return eval_element_tangents(shape, element, uv);
   auto tangsp = evaluate_shape_elem(shape, {}, shape.tangents, element, uv);
   return {xyz(tangsp), tangsp.w < 0};
 }
-// Shading normals including material perturbations.
-vec3f eval_perturbed_normal(const yocto_scene& scene, const yocto_shape& shape,
-    int element, const vec2f& uv, const vec3f& normalmap) {
-  auto normal = eval_normal(shape, element, uv);
-  if (shape.triangles.empty() && shape.quads.empty()) return normal;
-  auto [tu, left_handed] = eval_tangsp(shape, element, uv);
-  tu                     = orthonormalize(tu, normal);
-  auto tv = normalize(cross(normal, tu) * (left_handed ? -1.0f : 1.0f));
-  normal  = normalize(
-      normalmap.x * tu + normalmap.y * tv + normalmap.z * normal);
-  return normal;
+pair<mat3f, bool> eval_tangent_basis(
+    const yocto_shape& shape, int element, const vec2f& uv) {
+  auto z      = eval_normal(shape, element, uv);
+  auto tangsp = eval_tangent_space(shape, element, uv);
+  auto x      = orthonormalize(tangsp.first, z);
+  auto y      = normalize(cross(z, x));
+  return {{x, y, z}, tangsp.second};
 }
 
 // Instance values interpolated using barycentric coordinates.
@@ -842,18 +838,12 @@ vec3f eval_shading_normal(const yocto_scene& scene,
   } else if (material.normal_tex < 0) {
     return eval_normal(scene, instance, element, uv, non_rigid_frame);
   } else {
-    auto& normal_tex = scene.textures[material.normal_tex];
-    auto  normalmap =
-        xyz(eval_texture(normal_tex, eval_texcoord(shape, element, uv), true)) *
-            2 -
-        1;
-    normalmap.y = -normalmap.y;  // flip vertical axis
-    auto normal = eval_normal(shape, element, uv);
-    auto [tu, left_handed] = eval_tangsp(shape, element, uv);
-    tu                     = orthonormalize(tu, normal);
-    auto tv = normalize(cross(normal, tu) * (left_handed ? -1.0f : 1.0f));
-    normal  = normalize(
-        normalmap.x * tu + normalmap.y * tv + normalmap.z * normal);
+    auto& normal_tex       = scene.textures[material.normal_tex];
+    auto  normalmap        = -1 + 2 * xyz(eval_texture(normal_tex,
+                                  eval_texcoord(shape, element, uv), true));
+    auto basis = eval_tangent_basis(shape, element, uv);
+    normalmap.y            *= basis.second ? 1 : -1;  // flip vertical axis
+    auto normal  = normalize(basis.first * normalmap);
     return transform_normal(instance.frame, normal, non_rigid_frame);
   }
 }
