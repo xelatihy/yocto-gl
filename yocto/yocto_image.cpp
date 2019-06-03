@@ -67,14 +67,14 @@
 
 #include <memory>
 
-// #if defined(__cplusplus) && __cplusplus >= 201703L && defined(__has_include) && __has_include(<filesystem>)
-// #include <filesystem>
-// namespace fs = std::filesystem;
-// #else
+#if defined(__cplusplus) && __cplusplus >= 201703L && defined(__has_include) && __has_include(<filesystem>)
 #define NOMINMAX
+#include <filesystem>
+namespace fs = std::filesystem;
+#else
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
-// #endif
+#endif
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
