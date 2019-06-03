@@ -33,6 +33,7 @@
 #include "yocto_pbrt.h"
 #include "yocto_image.h"
 
+#include <ctype.h>
 #include <string_view>
 
 // -----------------------------------------------------------------------------
@@ -55,8 +56,8 @@ struct pbrt_stream {
 static inline void skip_whitespace_or_comment(pbrt_stream& stream) {
   auto& str = stream.str;
   if (str.empty()) return;
-  while (!str.empty() && (std::isspace(str.front()) || str.front() == '#' ||
-                             str.front() == ',')) {
+  while (!str.empty() &&
+         (isspace(str.front()) || str.front() == '#' || str.front() == ',')) {
     if (str.front() == '#') {
       auto pos = str.find('\n');
       if (pos != string_view::npos) {
@@ -95,7 +96,7 @@ static inline void parse_value(pbrt_stream& stream, string& value) {
 static inline void parse_command(pbrt_stream& stream, string& value) {
   skip_whitespace_or_comment(stream);
   auto& str = stream.str;
-  if (!std::isalpha((int)str.front())) {
+  if (!isalpha((int)str.front())) {
     throw std::runtime_error("bad command");
   }
   auto pos = str.find_first_not_of(

@@ -32,6 +32,7 @@
 
 #include "yocto_obj.h"
 
+#include <algorithm>
 #include <string_view>
 
 // -----------------------------------------------------------------------------
@@ -457,7 +458,8 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
       auto mtlname = ""s;
       parse_obj_value(line, mtlname);
       cb.mtllib(mtlname);
-      if (find(mlibs.begin(), mlibs.end(), mtlname) != mlibs.end()) continue;
+      if (std::find(mlibs.begin(), mlibs.end(), mtlname) != mlibs.end())
+        continue;
       mlibs.push_back(mtlname);
       auto mtlpath = get_dirname(filename) + mtlname;
       load_mtl(mtlpath, cb, fliptr);

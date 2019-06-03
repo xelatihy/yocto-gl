@@ -29,6 +29,7 @@
 
 #include "yocto_opengl.h"
 #include <stdarg.h>
+#include <algorithm>
 #include <atomic>
 #include <mutex>
 
