@@ -36,55 +36,8 @@
 #include <ctype.h>
 #include <string_view>
 
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-// Get filename without directory.
-static inline string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-}  // namespace yocto
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF LOW LEVEL PARSING
@@ -550,16 +503,16 @@ static inline void parse_param(
     if (verbose) printf("spectrum  not well supported\n");
     auto filename = ""s;
     parse_param(stream, filename);
-    filename = get_filename(filename);
-    if (get_extension(filename) == "spd") {
+    auto filenamep = fs::path(filename).filename();
+    if (filenamep.extension() == ".spd") {
       filename = filename.substr(0, filename.size() - 4);
       if (filename == "SHPS") {
         value = {1, 1, 1};
-      } else if (get_extension(filename) == "eta") {
+      } else if (filenamep.extension() == "eta") {
         auto eta =
             get_pbrt_etak(filename.substr(0, filename.length() - 4)).first;
         value = {eta.x, eta.y, eta.z};
-      } else if (get_extension(filename) == "k") {
+      } else if (filenamep.extension() == ".k") {
         auto k =
             get_pbrt_etak(filename.substr(0, filename.length() - 2)).second;
         value = {k.x, k.y, k.z};
@@ -1166,10 +1119,10 @@ static inline void parse_camera(
       if (pname == "lensfile") {
         parse_param(stream, ptype, tvalue.lensfile);
         // example: wide.22mm.dat
-        auto lensfile             = get_filename(tvalue.lensfile);
-        lensfile                  = lensfile.substr(0, lensfile.size() - 4);
-        lensfile                  = lensfile.substr(lensfile.find('.') + 1);
-        lensfile                  = lensfile.substr(0, lensfile.size() - 2);
+        auto lensfile = fs::path(tvalue.lensfile).filename().string();
+        lensfile      = lensfile.substr(0, lensfile.size() - 4);
+        lensfile      = lensfile.substr(lensfile.find('.') + 1);
+        lensfile      = lensfile.substr(0, lensfile.size() - 2);
         tvalue.approx_focallength = std::atof(lensfile.c_str());
       } else if (pname == "aperturediameter") {
         parse_param(stream, ptype, tvalue.aperturediameter);
@@ -1454,7 +1407,8 @@ static inline void parse_texture(
 }
 
 void approximate_fourier_material(pbrt_material::fourier_t& fourier) {
-  if (get_filename(fourier.bsdffile) == "paint.bsdf") {
+  auto filename = fs::path(fourier.bsdffile).filename().string();
+  if (filename == "paint.bsdf") {
     fourier.approx_type = pbrt_material::fourier_t::approx_type_t::plastic;
     auto& plastic       = fourier.approx_plastic;
     plastic.Kd          = {0.6f, 0.6f, 0.6f};
@@ -1462,7 +1416,7 @@ void approximate_fourier_material(pbrt_material::fourier_t& fourier) {
     plastic.Ks         = {1.0f, 1.0f, 1.0f};
     plastic.uroughness = 0.2f;
     plastic.vroughness = 0.2f;
-  } else if (get_filename(fourier.bsdffile) == "ceramic.bsdf") {
+  } else if (filename == "ceramic.bsdf") {
     fourier.approx_type = pbrt_material::fourier_t::approx_type_t::plastic;
     auto& plastic       = fourier.approx_plastic;
     plastic.Kd          = {0.6f, 0.6f, 0.6f};
@@ -1470,7 +1424,7 @@ void approximate_fourier_material(pbrt_material::fourier_t& fourier) {
     plastic.Ks         = {1.0f, 1.0f, 1.0f};
     plastic.uroughness = 0.025f;
     plastic.vroughness = 0.025f;
-  } else if (get_filename(fourier.bsdffile) == "leather.bsdf") {
+  } else if (filename == "leather.bsdf") {
     fourier.approx_type = pbrt_material::fourier_t::approx_type_t::plastic;
     auto& plastic       = fourier.approx_plastic;
     plastic.Kd          = {0.6f, 0.57f, 0.48f};
@@ -1478,7 +1432,7 @@ void approximate_fourier_material(pbrt_material::fourier_t& fourier) {
     plastic.Ks         = {1.0f, 1.0f, 1.0f};
     plastic.uroughness = 0.3f;
     plastic.vroughness = 0.3f;
-  } else if (get_filename(fourier.bsdffile) == "coated_copper.bsdf") {
+  } else if (filename == "coated_copper.bsdf") {
     fourier.approx_type = pbrt_material::fourier_t::approx_type_t::metal;
     auto& metal         = fourier.approx_metal;
     auto  etak          = get_pbrt_etak("Cu");
@@ -1486,14 +1440,14 @@ void approximate_fourier_material(pbrt_material::fourier_t& fourier) {
     metal.k             = {etak.second.x, etak.second.y, etak.second.z};
     metal.uroughness    = 0.01f;
     metal.vroughness    = 0.01f;
-  } else if (get_filename(fourier.bsdffile) == "roughglass_alpha_0.2.bsdf") {
+  } else if (filename == "roughglass_alpha_0.2.bsdf") {
     fourier.approx_type = pbrt_material::fourier_t::approx_type_t::glass;
     auto& glass         = fourier.approx_glass;
     glass.uroughness    = 0.2f;
     glass.vroughness    = 0.2f;
     glass.Kr            = {1, 1, 1};
     glass.Kt            = {1, 1, 1};
-  } else if (get_filename(fourier.bsdffile) == "roughgold_alpha_0.2.bsdf") {
+  } else if (filename == "roughgold_alpha_0.2.bsdf") {
     fourier.approx_type = pbrt_material::fourier_t::approx_type_t::metal;
     auto& metal         = fourier.approx_metal;
     auto  etak          = get_pbrt_etak("Au");
@@ -2820,7 +2774,7 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
     } else if (cmd == "Include") {
       auto inputname = ""s;
       parse_value(stream, inputname);
-      load_stream(get_dirname(filename) + inputname, streams);
+      load_stream(fs::path(filename).parent_path() / inputname, streams);
     } else {
       throw std::runtime_error("unknown command " + cmd);
     }

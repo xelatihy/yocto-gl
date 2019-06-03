@@ -13,40 +13,8 @@
 
 #include <deque>
 
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-}  // namespace yocto
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER_VERTEX PROPETIES
@@ -2645,16 +2613,16 @@ void load_shape(const string& filename, vector<int>& points,
   colors        = {};
   radius        = {};
 
-  auto ext = get_extension(filename);
-  if (ext == "ply" || ext == "PLY") {
+  auto ext = fs::path(filename).extension().string();
+  if (ext == ".ply" || ext == ".PLY") {
     load_ply_shape(filename, points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-  } else if (ext == "obj" || ext == "OBJ") {
+  } else if (ext == ".obj" || ext == ".OBJ") {
     load_obj_shape(filename, points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords,
         preserve_facevarrying);
-  } else if (ext == "hair" || ext == "HAIR") {
+  } else if (ext == ".hair" || ext == ".HAIR") {
     load_cyhair_shape(
         filename, lines, positions, normals, texcoords, colors, radius);
   } else {
@@ -2670,12 +2638,12 @@ void save_shape(const string& filename, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<float>& radius, bool ascii) {
-  auto ext = get_extension(filename);
-  if (ext == "ply" || ext == "PLY") {
+  auto ext = fs::path(filename).extension().string();
+  if (ext == ".ply" || ext == ".PLY") {
     return save_ply_shape(filename, points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors, radius,
         ascii);
-  } else if (ext == "obj" || ext == "OBJ") {
+  } else if (ext == ".obj" || ext == ".OBJ") {
     return save_obj_shape(filename, points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords);
   } else {

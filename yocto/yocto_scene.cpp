@@ -33,68 +33,8 @@
 #include <assert.h>
 #include <unordered_map>
 
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-// Get filename without directory.
-static inline string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-static inline string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
-}
-
-// Get filename without directory and extension.
-static inline string get_basename(const string& filename) {
-  return get_noextension(get_filename(filename));
-}
-
-}  // namespace yocto
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SCENE UTILITIES
@@ -454,8 +394,8 @@ void normalize_uris(yocto_scene& scene) {
       if (c == ':' || c == ' ') c = '_';
     }
     if (name.empty()) name = base + "_" + std::to_string(num);
-    if (get_dirname(name).empty()) name = base + "s/" + name;
-    if (get_extension(name).empty()) name = name + "." + ext;
+    if (fs::path(name).parent_path().empty()) name = base + "s/" + name;
+    if (fs::path(name).extension().empty()) name = name + "." + ext;
   };
   for (auto id = 0; id < scene.cameras.size(); id++)
     normalize(scene.cameras[id].uri, "camera", "yaml", id);
@@ -477,7 +417,7 @@ void normalize_uris(yocto_scene& scene) {
 void rename_instances(yocto_scene& scene) {
   auto shape_names = vector<string>(scene.shapes.size());
   for (auto sid = 0; sid < scene.shapes.size(); sid++) {
-    shape_names[sid] = get_basename(scene.shapes[sid].uri);
+    shape_names[sid] = fs::path(scene.shapes[sid].uri).stem();
   }
   auto shape_count = vector<vec2i>(scene.shapes.size(), vec2i{0, 0});
   for (auto& instance : scene.instances) shape_count[instance.shape].y += 1;
