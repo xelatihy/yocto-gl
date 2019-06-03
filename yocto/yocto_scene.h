@@ -369,13 +369,13 @@ vec3f eval_normal(const yocto_shape& shape, int element, const vec2f& uv);
 vec2f eval_texcoord(const yocto_shape& shape, int element, const vec2f& uv);
 vec4f eval_color(const yocto_shape& shape, int element, const vec2f& uv);
 float eval_radius(const yocto_shape& shape, int element, const vec2f& uv);
-pair<vec3f, bool> eval_tangsp(
+pair<mat3f, bool> eval_tangent_basis(
     const yocto_shape& shape, int element, const vec2f& uv);
-vec3f eval_perturbed_normal(const yocto_scene& scene, const yocto_shape& shape,
-    int element, const vec2f& uv, const vec3f& normalmap);
 // Shape element values.
-vec3f             eval_element_normal(const yocto_shape& shape, int element);
-pair<vec3f, bool> eval_element_tangents(
+vec3f              eval_element_normal(const yocto_shape& shape, int element);
+pair<vec3f, vec3f> eval_element_tangents(
+    const yocto_shape& shape, int element, const vec2f& uv = zero2f);
+pair<mat3f, bool> eval_element_tangent_basis(
     const yocto_shape& shape, int element, const vec2f& uv = zero2f);
 
 // Sample a shape element based on area/length.
