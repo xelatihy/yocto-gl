@@ -71,6 +71,7 @@
 // #include <filesystem>
 // namespace fs = std::filesystem;
 // #else
+#define NOMINMAX
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 // #endif
