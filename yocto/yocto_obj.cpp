@@ -35,47 +35,8 @@
 #include <algorithm>
 #include <string_view>
 
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get extension.
-static inline string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
-}
-
-}  // namespace yocto
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
@@ -239,7 +200,7 @@ static inline void parse_obj_value(string_view& str, obj_texture_info& info) {
   if (tokens.empty()) throw std::runtime_error("cannot parse value");
 
   // texture name
-  info.path = normalize_path(tokens.back());
+  info.path = fs::path(tokens.back()).generic_string();
 
   // texture params
   auto last = string();
@@ -503,7 +464,7 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
       if (std::find(mlibs.begin(), mlibs.end(), mtlname) != mlibs.end())
         continue;
       mlibs.push_back(mtlname);
-      auto mtlpath = get_dirname(filename) + mtlname;
+      auto mtlpath = fs::path(filename).parent_path() / mtlname;
       load_mtl(mtlpath, cb, fliptr);
     } else {
       // unused
@@ -512,7 +473,7 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
 
   // parse extensions if presents
   if (!nomaterials) {
-    auto extname    = get_noextension(filename) + ".objx";
+    auto extname    = fs::path(filename).replace_extension(".objx");
     auto ext_exists = exists_file(extname);
     if (ext_exists) {
       load_objx(extname, cb);

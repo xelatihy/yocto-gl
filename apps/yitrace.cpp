@@ -36,11 +36,13 @@ using namespace yocto;
 
 #include <atomic>
 #include <future>
+#include <map>
 #include <thread>
 
-#include "ext/CLI11.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
-#include <map>
+#include "ext/CLI11.hpp"
 
 namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
@@ -143,56 +145,6 @@ struct app_state {
   bool           add_skyenv   = false;
 };
 
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get filename without directory.
-static inline string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-static inline string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
-}
-
-}  // namespace yocto
-
 void update_app_render(const string& filename, image<vec4f>& render,
     image<vec4f>& display, image<vec4f>& preview, trace_state& state,
     const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
@@ -262,9 +214,9 @@ void update_app_render(const string& filename, image<vec4f>& render,
 void add_new_scene(app_state& app, const string& filename) {
   auto& scn        = app.scenes.emplace_back();
   scn.filename     = filename;
-  scn.imagename    = get_noextension(filename) + ".png";
-  scn.outname      = get_noextension(filename) + ".edited.yaml";
-  scn.name         = get_filename(scn.filename);
+  scn.imagename    = fs::path(filename).replace_extension(".png");
+  scn.outname      = fs::path(filename).replace_extension(".edited.yaml");
+  scn.name         = fs::path(scn.filename).filename();
   scn.load_prms    = app.load_prms;
   scn.save_prms    = app.save_prms;
   scn.trace_prms   = app.trace_prms;
@@ -291,14 +243,15 @@ void draw_glwidgets(const opengl_window& win) {
           win, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
     add_new_scene(app, load_path);
   }
-  if (draw_glfiledialog(win, "save", save_path, true, get_dirname(save_path),
-          get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
+  if (draw_glfiledialog(win, "save", save_path, true,
+          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
+          "*.yaml;*.obj;*.pbrt")) {
     app.scenes[app.selected].outname = save_path;
     app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_scene);
     save_path = "";
   }
   if (draw_glfiledialog(win, "save image", save_path, true,
-          get_dirname(save_path), get_filename(save_path),
+          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     app.scenes[app.selected].imagename = save_path;
     app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_image);
@@ -367,7 +320,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "scene", get_filename(scn.filename));
+    draw_gllabel(win, "scene", fs::path(scn.filename).filename());
     draw_gllabel(win, "filename", scn.filename);
     draw_gllabel(win, "outname", scn.outname);
     draw_gllabel(win, "imagename", scn.imagename);
@@ -502,20 +455,20 @@ void load_element(
 
   if (type == typeid(yocto_texture)) {
     auto& texture = scene.textures[index];
-    load_image(get_dirname(filename) + texture.uri, texture.hdr, texture.ldr);
+    load_image(fs::path(filename).parent_path() / texture.uri, texture.hdr, texture.ldr);
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
-    load_volume(get_dirname(filename) + texture.uri, texture.vol);
+    load_volume(fs::path(filename).parent_path() / texture.uri, texture.vol);
   } else if (type == typeid(yocto_shape)) {
     auto& shape = scene.shapes[index];
-    load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,
+    load_shape(fs::path(filename).parent_path() / shape.uri, shape.points, shape.lines,
         shape.triangles, shape.quads, shape.quadspos, shape.quadsnorm,
         shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
         shape.colors, shape.radius, false);
   } else if (type == typeid(yocto_subdiv)) {
     // TODO: this needs more fixing?
     auto& subdiv = scene.subdivs[index];
-    load_shape(get_dirname(filename) + subdiv.uri, subdiv.points, subdiv.lines,
+    load_shape(fs::path(filename).parent_path() / subdiv.uri, subdiv.points, subdiv.lines,
         subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
         subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
         subdiv.texcoords, subdiv.colors, subdiv.radius, subdiv.facevarying);
@@ -583,7 +536,7 @@ void update(const opengl_window& win, app_state& app) {
     }
     if (updated) {
       scn.render_sample = max(scn.render_sample, (int)task.current);
-      scn.name          = get_filename(scn.filename) + "[" +
+      scn.name          = fs::path(scn.filename).filename().string() + "[" +
                  std::to_string(scn.render.size().x) + "x" +
                  std::to_string(scn.render.size().y) + " @ " +
                  std::to_string(scn.render_sample) + "]";
@@ -678,7 +631,7 @@ void update(const opengl_window& win, app_state& app) {
           scn.render.resize(scn.image_size);
           scn.display.resize(scn.image_size);
           scn.preview.resize(scn.image_size);
-          scn.name = get_filename(scn.filename) + " [" +
+          scn.name = fs::path(scn.filename).filename().string() + " [" +
                      std::to_string(scn.render.size().x) + "x" +
                      std::to_string(scn.render.size().y) + " @ 0]";
           log_glinfo(win, "done loading " + scn.filename);
@@ -688,7 +641,7 @@ void update(const opengl_window& win, app_state& app) {
           scn.task_queue.emplace_back(app_task_type::render_image);
         } catch (std::exception& e) {
           log_glerror(win, e.what());
-          scn.name = get_filename(scn.filename) + " [errpr]";
+          scn.name = fs::path(scn.filename).filename().string() + " [errpr]";
           app.errors.push_back("cannot load " + scn.filename);
         }
       } break;
@@ -699,7 +652,7 @@ void update(const opengl_window& win, app_state& app) {
           log_glinfo(win, "done loading element from " + scn.filename);
         } catch (std::exception& e) {
           log_glerror(win, e.what());
-          scn.name = get_filename(scn.filename) + " [errpr]";
+          scn.name = fs::path(scn.filename).filename().string() + " [errpr]";
           app.errors.push_back("cannot load element from " + scn.filename);
         }
       } break;
@@ -707,11 +660,11 @@ void update(const opengl_window& win, app_state& app) {
         try {
           task.result.get();
           scn.bvh_done = true;
-          scn.name     = get_filename(scn.filename);
+          scn.name     = fs::path(scn.filename).filename().string();
           log_glinfo(win, "done building bvh " + scn.filename);
         } catch (std::exception& e) {
           log_glerror(win, e.what());
-          scn.name = get_filename(scn.filename) + " [errpr]";
+          scn.name = fs::path(scn.filename).filename().string() + " [errpr]";
           app.errors.push_back("cannot build bvh " + scn.filename);
         }
       } break;
@@ -719,11 +672,11 @@ void update(const opengl_window& win, app_state& app) {
         try {
           task.result.get();
           scn.bvh_done = true;
-          scn.name     = get_filename(scn.filename);
+          scn.name     = fs::path(scn.filename).filename().string();
           log_glinfo(win, "done refitting bvh " + scn.filename);
         } catch (std::exception& e) {
           log_glerror(win, e.what());
-          scn.name = get_filename(scn.filename) + " [errpr]";
+          scn.name = fs::path(scn.filename).filename().string() + " [errpr]";
           app.errors.push_back("cannot refit bvh " + scn.filename);
         }
       } break;
@@ -731,11 +684,11 @@ void update(const opengl_window& win, app_state& app) {
         try {
           task.result.get();
           scn.lights_done = true;
-          scn.name        = get_filename(scn.filename);
+          scn.name        = fs::path(scn.filename).filename().string();
           log_glinfo(win, "done building lights " + scn.filename);
         } catch (std::exception& e) {
           log_glerror(win, e.what());
-          scn.name = get_filename(scn.filename) + " [errpr]";
+          scn.name = fs::path(scn.filename).filename().string() + " [errpr]";
           app.errors.push_back("cannot build lights " + scn.filename);
         }
       } break;
@@ -763,7 +716,7 @@ void update(const opengl_window& win, app_state& app) {
           scn.render_done = true;
           log_glinfo(win, "done rendering " + scn.filename);
           scn.render_sample = scn.trace_prms.samples;
-          scn.name          = get_filename(scn.filename) + " [" +
+          scn.name = fs::path(scn.filename).filename().string() + " [" +
                      std::to_string(scn.render.size().x) + "x" +
                      std::to_string(scn.render.size().y) + " @ " +
                      std::to_string(scn.render_sample) + "]";
@@ -845,7 +798,7 @@ void update(const opengl_window& win, app_state& app) {
           scn.trace_prms.sampler = trace_sampler_type::eyelight;
         }
         scn.render_sample = 0;
-        scn.name          = get_filename(scn.filename) + " [" +
+        scn.name          = fs::path(scn.filename).filename().string() + " [" +
                    std::to_string(scn.render.size().x) + "x" +
                    std::to_string(scn.render.size().y) + " @ " +
                    std::to_string(scn.render_sample) + "]";

@@ -67,39 +67,8 @@
 
 #include <memory>
 
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-}  // namespace yocto
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
@@ -1794,8 +1763,8 @@ static inline void load_image_preset(
 
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename) {
-  return get_extension(filename) == "hdr" || get_extension(filename) == "exr" ||
-         get_extension(filename) == "pfm";
+  auto ext = fs::path(filename).extension().string();
+  return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
 // Loads an hdr image.
@@ -1803,12 +1772,12 @@ void load_image(const string& filename, image<vec4f>& img) {
   if (is_preset_filename(filename)) {
     return load_image_preset(filename, img);
   }
-  auto ext = get_extension(filename);
-  if (ext == "exr" || ext == "EXR") {
+  auto ext = fs::path(filename).extension().string();
+  if (ext == ".exr" || ext == ".EXR") {
     load_exr(filename, img);
-  } else if (ext == "pfm" || ext == "PFM") {
+  } else if (ext == ".pfm" || ext == ".PFM") {
     load_pfm(filename, img);
-  } else if (ext == "hdr" || ext == "HDR") {
+  } else if (ext == ".hdr" || ext == ".HDR") {
     load_stb(filename, img);
   } else if (!is_hdr_filename(filename)) {
     auto img8 = image<vec4b>{};
@@ -1821,12 +1790,12 @@ void load_image(const string& filename, image<vec4f>& img) {
 
 // Saves an hdr image.
 void save_image(const string& filename, const image<vec4f>& img) {
-  auto ext = get_extension(filename);
-  if (ext == "hdr" || ext == "HDR") {
+  auto ext = fs::path(filename).extension().string();
+  if (ext == ".hdr" || ext == ".HDR") {
     save_hdr(filename, img);
-  } else if (ext == "pfm" || ext == "PFM") {
+  } else if (ext == ".pfm" || ext == ".PFM") {
     save_pfm(filename, img);
-  } else if (ext == "exr" || ext == "EXR") {
+  } else if (ext == ".exr" || ext == ".EXR") {
     save_exr(filename, img);
   } else if (!is_hdr_filename(filename)) {
     auto img8 = image<vec4b>{img.size()};
@@ -1842,14 +1811,14 @@ void load_image(const string& filename, image<vec4b>& img) {
   if (is_preset_filename(filename)) {
     return load_image_preset(filename, img);
   }
-  auto ext = get_extension(filename);
-  if (ext == "png" || ext == "PNG") {
+  auto ext = fs::path(filename).extension().string();
+  if (ext == ".png" || ext == ".PNG") {
     load_stb(filename, img);
-  } else if (ext == "jpg" || ext == "JPG") {
+  } else if (ext == ".jpg" || ext == ".JPG") {
     load_stb(filename, img);
-  } else if (ext == "tga" || ext == "TGA") {
+  } else if (ext == ".tga" || ext == ".TGA") {
     load_stb(filename, img);
-  } else if (ext == "bmp" || ext == "BMP") {
+  } else if (ext == ".bmp" || ext == ".BMP") {
     load_stb(filename, img);
   } else if (is_hdr_filename(filename)) {
     auto imgf = image<vec4f>{};
@@ -1862,14 +1831,14 @@ void load_image(const string& filename, image<vec4b>& img) {
 
 // Saves an ldr image.
 void save_image(const string& filename, const image<vec4b>& img) {
-  auto ext = get_extension(filename);
-  if (ext == "png" || ext == "PNG") {
+  auto ext = fs::path(filename).extension().string();
+  if (ext == ".png" || ext == ".PNG") {
     save_png(filename, img);
-  } else if (ext == "jpg" || ext == "JPG") {
+  } else if (ext == ".jpg" || ext == ".JPG") {
     save_jpg(filename, img);
-  } else if (ext == "tga" || ext == "TGA") {
+  } else if (ext == ".tga" || ext == ".TGA") {
     save_tga(filename, img);
-  } else if (ext == "bmp" || ext == "BMP") {
+  } else if (ext == ".bmp" || ext == ".BMP") {
     save_bmp(filename, img);
   } else if (is_hdr_filename(filename)) {
     auto imgf = image<vec4f>{img.size()};

@@ -47,6 +47,9 @@
 #include <string_view>
 #include <thread>
 
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -55,69 +58,6 @@ namespace yocto {
 // Type aliases for readability
 using string_view = std::string_view;
 using namespace std::literals::string_view_literals;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-// Get filename without directory.
-static inline string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-static inline string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
-}
-
-// Get filename without directory and extension.
-static inline string get_basename(const string& filename) {
-  return get_noextension(get_filename(filename));
-}
 
 }  // namespace yocto
 
@@ -308,16 +248,16 @@ static void save_pbrt_scene(const string& filename, const yocto_scene& scene,
 // Load a scene
 void load_scene(
     const string& filename, yocto_scene& scene, const load_params& params) {
-  auto ext = get_extension(filename);
-  if (ext == "yaml" || ext == "YAML") {
+  auto ext = fs::path(filename).extension().string();
+  if (ext == ".yaml" || ext == ".YAML") {
     load_yaml_scene(filename, scene, params);
-  } else if (ext == "obj" || ext == "OBJ") {
+  } else if (ext == ".obj" || ext == ".OBJ") {
     load_obj_scene(filename, scene, params);
-  } else if (ext == "gltf" || ext == "GLTF") {
+  } else if (ext == ".gltf" || ext == ".GLTF") {
     load_gltf_scene(filename, scene, params);
-  } else if (ext == "pbrt" || ext == "PBRT") {
+  } else if (ext == ".pbrt" || ext == ".PBRT") {
     load_pbrt_scene(filename, scene, params);
-  } else if (ext == "ply" || ext == "PLY") {
+  } else if (ext == ".ply" || ext == ".PLY") {
     load_ply_scene(filename, scene, params);
   } else {
     scene = {};
@@ -328,16 +268,16 @@ void load_scene(
 // Save a scene
 void save_scene(const string& filename, const yocto_scene& scene,
     const save_params& params) {
-  auto ext = get_extension(filename);
-  if (ext == "yaml" || ext == "YAML") {
+  auto ext = fs::path(filename).extension().string();
+  if (ext == ".yaml" || ext == ".YAML") {
     save_yaml_scene(filename, scene, params);
-  } else if (ext == "obj" || ext == "OBJ") {
+  } else if (ext == ".obj" || ext == ".OBJ") {
     save_obj_scene(filename, scene, params);
-  } else if (ext == "gltf" || ext == "GLTF") {
+  } else if (ext == ".gltf" || ext == ".GLTF") {
     save_gltf_scene(filename, scene, params);
-  } else if (ext == "pbrt" || ext == "PBRT") {
+  } else if (ext == ".pbrt" || ext == ".PBRT") {
     save_pbrt_scene(filename, scene, params);
-  } else if (ext == "ply" || ext == "PLY") {
+  } else if (ext == ".ply" || ext == ".PLY") {
     save_ply_scene(filename, scene, params);
   } else {
     throw std::runtime_error("unsupported scene format " + ext);
@@ -377,16 +317,17 @@ void load_texture(yocto_texture& texture, const string& dirname) {
     make_impreset(texture.hdr, texture.ldr, type);
     texture.uri = nfilename;
   } else {
-    load_image(dirname + texture.uri, texture.hdr, texture.ldr);
+    load_image(fs::path(dirname) / texture.uri, texture.hdr, texture.ldr);
   }
 }
 
 void load_voltexture(yocto_voltexture& texture, const string& dirname) {
   if (is_preset_filename(texture.uri)) {
-    make_volpreset(texture.vol, get_basename(texture.uri));
-    texture.uri = get_noextension(texture.uri) + ".yvol";
+    auto [type, nfilename] = get_preset_type(texture.uri);
+    make_volpreset(texture.vol, type);
+    texture.uri = nfilename;
   } else {
-    load_volume(dirname + texture.uri, texture.vol);
+    load_volume(fs::path(dirname) / texture.uri, texture.vol);
   }
 }
 
@@ -430,11 +371,11 @@ void load_textures(
 }
 
 void save_texture(const yocto_texture& texture, const string& dirname) {
-  save_image(dirname + texture.uri, texture.hdr, texture.ldr);
+  save_image(fs::path(dirname) / texture.uri, texture.hdr, texture.ldr);
 }
 
 void save_voltexture(const yocto_voltexture& texture, const string& dirname) {
-  save_volume(dirname + texture.uri, texture.vol);
+  save_volume(fs::path(dirname) / texture.uri, texture.vol);
 }
 
 // helper to save textures
@@ -480,18 +421,18 @@ void load_shape(yocto_shape& shape, const string& dirname) {
         shape.normals, shape.texcoords, shape.colors, shape.radius, type);
     shape.uri = nfilename;
   } else {
-    load_shape(dirname + shape.uri, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, false);
+    load_shape(fs::path(dirname) / shape.uri, shape.points, shape.lines,
+        shape.triangles, shape.quads, shape.quadspos, shape.quadsnorm,
+        shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
+        shape.colors, shape.radius, false);
   }
 }
 
 void save_shape(const yocto_shape& shape, const string& dirname) {
-  save_shape(dirname + shape.uri, shape.points, shape.lines, shape.triangles,
-      shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, shape.colors,
-      shape.radius);
+  save_shape(fs::path(dirname) / shape.uri, shape.points, shape.lines,
+      shape.triangles, shape.quads, shape.quadspos, shape.quadsnorm,
+      shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
+      shape.colors, shape.radius);
 }
 
 void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
@@ -503,7 +444,7 @@ void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
         subdiv.radius, type);
     subdiv.uri = nfilename;
   } else {
-    load_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines,
+    load_shape(fs::path(dirname) / subdiv.uri, subdiv.points, subdiv.lines,
         subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
         subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
         subdiv.texcoords, subdiv.colors, subdiv.radius, subdiv.facevarying);
@@ -511,7 +452,7 @@ void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
 }
 
 void save_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
-  save_shape(dirname + subdiv.uri, subdiv.points, subdiv.lines,
+  save_shape(fs::path(dirname) / subdiv.uri, subdiv.points, subdiv.lines,
       subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
       subdiv.quadstexcoord, subdiv.positions, subdiv.normals, subdiv.texcoords,
       subdiv.colors, subdiv.radius);
@@ -1096,7 +1037,7 @@ static void load_yaml_scene(
     load_yaml(filename, cb, yaml_options);
 
     // load shape and textures
-    auto dirname = get_dirname(filename);
+    auto dirname = fs::path(filename).parent_path();
     load_shapes(scene, dirname, params);
     load_textures(scene, dirname, params);
   } catch (const std::exception& e) {
@@ -1104,7 +1045,7 @@ static void load_yaml_scene(
   }
 
   // fix scene
-  scene.uri = get_filename(filename);
+  scene.uri = fs::path(filename).filename();
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
@@ -1327,7 +1268,7 @@ static void save_yaml_scene(const string& filename, const yocto_scene& scene,
     save_yaml(filename, scene);
 
     // save meshes and textures
-    auto dirname = get_dirname(filename);
+    auto dirname = fs::path(filename).parent_path();
     save_shapes(scene, dirname, params);
     save_textures(scene, dirname, params);
   } catch (const std::exception& e) {
@@ -1703,14 +1644,14 @@ static void load_obj_scene(
     }
 
     // load textures
-    auto dirname = get_dirname(filename);
+    auto dirname = fs::path(filename).parent_path();
     load_textures(scene, dirname, params);
   } catch (const std::exception& e) {
     throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
-  scene.uri = get_filename(filename);
+  scene.uri = fs::path(filename).filename();
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
@@ -1796,7 +1737,7 @@ static void save_mtl(
 
   // for each material, dump all the values
   for (auto& material : scene.materials) {
-    write_obj_line(fs, "newmtl", get_basename(material.uri));
+    write_obj_line(fs, "newmtl", fs::path(material.uri).stem().string());
     write_obj_line(fs, "  illum", 2);
     write_obj_line(fs, "  Ke", material.emission);
     write_obj_line(fs, "  Kd", material.diffuse * (1 - material.metallic));
@@ -1835,14 +1776,15 @@ static void save_objx(
 
   // cameras
   for (auto& camera : scene.cameras) {
-    write_obj_line(fs, "c", get_basename(camera.uri), (int)camera.orthographic,
-        camera.film.x, camera.film.y, camera.lens, camera.focus,
-        camera.aperture, camera.frame);
+    write_obj_line(fs, "c", fs::path(camera.uri).stem().string(),
+        (int)camera.orthographic, camera.film.x, camera.film.y, camera.lens,
+        camera.focus, camera.aperture, camera.frame);
   }
 
   // environments
   for (auto& environment : scene.environments) {
-    write_obj_line(fs, "e", get_basename(environment.uri), environment.emission,
+    write_obj_line(fs, "e", fs::path(environment.uri).stem().string(),
+        environment.emission,
         environment.emission_tex >= 0
             ? scene.textures[environment.emission_tex].uri
             : "\"\" "s,
@@ -1852,9 +1794,10 @@ static void save_objx(
   // instances
   if (preserve_instances) {
     for (auto& instance : scene.instances) {
-      write_obj_line(fs, "i", get_basename(instance.uri),
-          get_basename(scene.shapes[instance.shape].uri),
-          get_basename(scene.materials[instance.material].uri), instance.frame);
+      write_obj_line(fs, "i", fs::path(instance.uri).stem().string(),
+          fs::path(scene.shapes[instance.shape].uri).stem().string(),
+          fs::path(scene.materials[instance.material].uri).stem().string(),
+          instance.frame);
     }
   }
 }
@@ -1870,7 +1813,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 
   // material library
   if (!scene.materials.empty()) {
-    auto mtlname = get_noextension(get_filename(filename)) + ".mtl";
+    auto mtlname = fs::path(filename).filename().replace_extension(".mtl");
     write_obj_line(fs, "mtllib", mtlname);
   }
 
@@ -1885,10 +1828,10 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   }
   for (auto& instance : preserve_instances ? instances : scene.instances) {
     auto& shape = scene.shapes[instance.shape];
-    write_obj_line(fs, "o", get_basename(instance.uri));
+    write_obj_line(fs, "o", fs::path(instance.uri).stem().string());
     if (instance.material >= 0)
-      write_obj_line(
-          fs, "usemtl", get_basename(scene.materials[instance.material].uri));
+      write_obj_line(fs, "usemtl",
+          fs::path(scene.materials[instance.material].uri).stem().string());
     if (instance.frame == identity3x4f) {
       for (auto& p : shape.positions) write_obj_line(fs, "v", p);
       for (auto& n : shape.normals) write_obj_line(fs, "vn", n);
@@ -1995,16 +1938,16 @@ static void save_obj_scene(const string& filename, const yocto_scene& scene,
   try {
     save_obj(filename, scene, params.objinstances, true);
     if (!scene.materials.empty()) {
-      save_mtl(get_noextension(filename) + ".mtl", scene, true);
+      save_mtl(fs::path(filename).replace_extension(".mtl"), scene, true);
     }
     if (!scene.cameras.empty() || !scene.environments.empty() ||
         params.objinstances) {
-      save_objx(
-          get_noextension(filename) + ".objx", scene, params.objinstances);
+      save_objx(fs::path(filename).replace_extension(".objx"), scene,
+          params.objinstances);
     }
 
     // skip textures if needed
-    auto dirname = get_dirname(filename);
+    auto dirname = fs::path(filename).parent_path();
     save_textures(scene, dirname, params);
   } catch (const std::exception& e) {
     throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
@@ -2012,7 +1955,7 @@ static void save_obj_scene(const string& filename, const yocto_scene& scene,
 }
 
 void print_obj_camera(const yocto_camera& camera) {
-  write_obj_line(stdout, "c", get_basename(camera.uri),
+  write_obj_line(stdout, "c", fs::path(camera.uri).stem().string(),
       (int)camera.orthographic, camera.film.x, camera.film.y, camera.lens,
       camera.focus, camera.aperture, camera.frame);
 }
@@ -2048,7 +1991,7 @@ static void load_ply_scene(
   }
 
   // fix scene
-  scene.uri = get_filename(filename);
+  scene.uri = fs::path(filename).filename();
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
@@ -2092,7 +2035,7 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
   }
   auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
       data, cgltf_free};
-  if (cgltf_load_buffers(&params, data, get_dirname(filename).c_str()) !=
+  if (cgltf_load_buffers(&params, data, fs::path(filename).parent_path().c_str()) !=
       cgltf_result_success) {
     throw std::runtime_error("could not load gltf buffers " + filename);
   }
@@ -2551,7 +2494,7 @@ static void load_gltf_scene(
     gltf_to_scene(filename, scene);
 
     // load textures
-    auto dirname = get_dirname(filename);
+    auto dirname = fs::path(filename).parent_path();
     load_textures(scene, dirname, params);
 
   } catch (const std::exception& e) {
@@ -2559,7 +2502,7 @@ static void load_gltf_scene(
   }
 
   // fix scene
-  scene.uri = get_filename(filename);
+  scene.uri = fs::path(filename).filename();
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
@@ -2835,7 +2778,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
   auto sid    = 0;
   for (auto& shape : scene.shapes) {
     auto& split = shapes[sid++];
-    split.uri   = get_noextension(shape.uri) + ".bin";
+    split.uri   = fs::path(shape.uri).replace_extension(".bin");
     split.mode  = 4;
     if (!shape.points.empty()) split.mode = 1;
     if (!shape.lines.empty()) split.mode = 1;
@@ -3025,9 +2968,9 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
         values.size())
       throw std::runtime_error("cannot write to file");
   };
-  auto dirname = get_dirname(filename);
+  auto dirname = fs::path(filename).parent_path();
   for (auto& shape : shapes) {
-    auto fs_ = open_output_file(dirname + shape.uri);
+    auto fs_ = open_output_file(dirname / shape.uri);
     auto fs  = fs_.fs;
     write_values(fs, shape.indices);
     write_values(fs, shape.positions);
@@ -3046,7 +2989,7 @@ static void save_gltf_scene(const string& filename, const yocto_scene& scene,
     save_gltf(filename, scene);
 
     // save textures
-    auto dirname = get_dirname(filename);
+    auto dirname = fs::path(filename).parent_path();
     save_textures(scene, dirname, params);
   } catch (const std::exception& e) {
     throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
@@ -3285,7 +3228,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       case pbrt_shape::type_t::plymesh: {
         auto& mesh = pshape.plymesh;
         shape.uri  = mesh.filename;
-        load_shape(get_dirname(filename) + mesh.filename, shape.points,
+        load_shape(fs::path(filename).parent_path() / mesh.filename, shape.points,
             shape.lines, shape.triangles, shape.quads, shape.quadspos,
             shape.quadsnorm, shape.quadstexcoord, shape.positions,
             shape.normals, shape.texcoords, shape.colors, shape.radius, false);
@@ -3770,14 +3713,14 @@ static void load_pbrt_scene(
     load_pbrt(filename, cb);
 
     // load textures
-    auto dirname = get_dirname(filename);
+    auto dirname = fs::path(filename).parent_path();
     load_textures(scene, dirname, params);
   } catch (const std::exception& e) {
     throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 
   // fix scene
-  scene.uri = get_filename(filename);
+  scene.uri = fs::path(filename).filename();
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
@@ -3856,28 +3799,28 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   write_pbrt_text(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
   write_pbrt_text(fs, "Integrator \"path\"\n");
   write_pbrt_line(fs, "Film \"image\" \"string filename\"",
-      get_noextension(filename) + ".exr", "\"integer xresolution\"",
+      fs::path(filename).stem().string() + ".exr", "\"integer xresolution\"",
       image_size.x, "\"integer yresolution\"", image_size.y);
 
   // convert textures
   for (auto& texture : scene.textures) {
-    write_pbrt_line(fs, "Texture", get_basename(texture.uri),
+    write_pbrt_line(fs, "Texture", fs::path(texture.uri).stem().string(),
         "\"spectrum\" \"imagemap\" \"string filename\"", texture.uri);
   }
 
   // convert materials
   for (auto& material : scene.materials) {
     write_pbrt_line(fs, "MakeNamedMaterial \"{}\" \"string type\" \"uber\"\n",
-        get_basename(material.uri));
+        fs::path(material.uri).stem().string());
     if (material.diffuse_tex >= 0) {
       write_pbrt_line(fs, "    \"texture Kd\"",
-          get_basename(scene.textures[material.diffuse_tex].uri));
+          fs::path(scene.textures[material.diffuse_tex].uri).stem().string());
     } else {
       write_pbrt_line(fs, "    \"rgb Kd\" [", material.diffuse, "]");
     }
     if (material.specular_tex >= 0) {
       write_pbrt_line(fs, "    \"texture Ks\"",
-          get_basename(scene.textures[material.specular_tex].uri));
+          fs::path(scene.textures[material.specular_tex].uri).stem().string());
     } else {
       auto specular = vec3f{1};
       write_pbrt_line(fs, "    \"rgb Ks\" [", specular, "]");
@@ -3896,13 +3839,13 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
     write_pbrt_text(fs, "AttributeBegin\n");
     write_pbrt_text(fs, "  TransformBegin\n");
     write_pbrt_line(fs, "    Transform [", instance.frame, "]");
-    write_pbrt_line(fs, "    NamedMaterial", get_basename(material.uri));
+    write_pbrt_line(fs, "    NamedMaterial", fs::path(material.uri).stem().string());
     if (material.emission != zero3f) {
       write_pbrt_line(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [",
           material.emission, "]");
     }
     write_pbrt_line(fs, "    Shape \"plymesh\" \"string filename\"",
-        get_noextension(shape.uri) + ".ply");
+        fs::path(shape.uri).replace_extension(".ply").string());
     write_pbrt_text(fs, "  TransformEnd\n");
     write_pbrt_text(fs, "AttributeEnd\n");
   }
@@ -3919,9 +3862,9 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
     save_pbrt(filename, scene);
 
     // save meshes
-    auto dirname = get_dirname(filename);
+    auto dirname = fs::path(filename).parent_path();
     for (auto& shape : scene.shapes) {
-      save_shape(get_noextension(dirname + shape.uri) + ".ply", shape.points,
+      save_shape((dirname / shape.uri).replace_extension(".ply"), shape.points,
           shape.lines, shape.triangles, shape.quads, shape.quadspos,
           shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
           shape.texcoords, shape.colors, shape.radius);

@@ -30,60 +30,13 @@
 #include "../yocto/yocto_sceneio.h"
 using namespace yocto;
 
-#include "ext/CLI11.hpp"
-
 #include <unordered_set>
 using std::unordered_set;
 
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-static inline string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
-}
-
-}  // namespace yocto
+#include "ext/CLI11.hpp"
 
 bool mkdir(const string& dir) {
   if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -165,11 +118,11 @@ int main(int argc, char** argv) {
   // change texture names
   if (uniform_txt) {
     for (auto& texture : scene.textures) {
-      auto ext = get_extension(texture.uri);
+      auto ext = fs::path(texture.uri).extension().string();
       if (is_hdr_filename(texture.uri)) {
-        texture.uri = get_noextension(texture.uri) + ".hdr";
+        texture.uri = fs::path(texture.uri).replace_extension(".hdr");
       } else {
-        texture.uri = get_noextension(texture.uri) + ".png";
+        texture.uri = fs::path(texture.uri).replace_extension(".png");
       }
     }
   }
@@ -212,17 +165,17 @@ int main(int argc, char** argv) {
   }
 
   // make a directory if needed
-  auto dirname  = get_dirname(output);
+  auto dirname  = fs::path(output).parent_path();
   auto dirnames = unordered_set<string>{dirname};
   for (auto& shape : scene.shapes)
-    dirnames.insert(dirname + get_dirname(shape.uri));
+    dirnames.insert(dirname / fs::path(shape.uri).parent_path());
   for (auto& subdiv : scene.subdivs)
-    dirnames.insert(dirname + get_dirname(subdiv.uri));
+    dirnames.insert(dirname / fs::path(subdiv.uri).parent_path());
   for (auto& texture : scene.textures)
-    dirnames.insert(dirname + get_dirname(texture.uri));
+    dirnames.insert(dirname / fs::path(texture.uri).parent_path());
   for (auto& dir : dirnames) {
-    if (!mkdir(get_dirname(dir))) {
-      printf("cannot create directory %s\n", get_dirname(output).c_str());
+    if (!mkdir(fs::path(dir).parent_path())) {
+      printf("cannot create directory %s\n", fs::path(output).parent_path().c_str());
     }
   }
 

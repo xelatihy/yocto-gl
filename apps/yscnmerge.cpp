@@ -30,57 +30,10 @@
 #include "../yocto/yocto_sceneio.h"
 using namespace yocto;
 
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
+
 #include "ext/CLI11.hpp"
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-// Get filename without directory.
-static inline string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-}  // namespace yocto
 
 bool mkdir(const string& dir) {
   if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -146,7 +99,7 @@ int main(int argc, char** argv) {
     }
     print_validation(to_merge, true);
     if (scene_postfix) {
-      auto postfix = "{" + get_filename(filename) + "}";
+      auto postfix = "{" + fs::path(filename).filename().string() + "}";
       for (auto& val : to_merge.cameras) val.uri += postfix;
       for (auto& val : to_merge.textures) val.uri += postfix;
       for (auto& val : to_merge.voltextures) val.uri += postfix;
@@ -169,37 +122,40 @@ int main(int argc, char** argv) {
   // add missing mesh names if necessary
   if (!mesh_directory.empty() && mesh_directory.back() != '/')
     mesh_directory += '/';
-  if (get_extension(output) == "yaml") {
+  if (fs::path(output).extension() == ".yaml") {
     for (auto& shape : scene.shapes) {
-      shape.uri = mesh_directory + get_filename(shape.uri);
+      shape.uri = fs::path(mesh_directory) / fs::path(shape.uri).filename();
     }
   }
   // gltf does not support embedded data
-  if (get_extension(output) == "gltf") {
+  if (fs::path(output).extension() == ".gltf") {
     for (auto& shape : scene.shapes) {
-      shape.uri = mesh_directory + shape.uri + ".bin";
+      shape.uri = fs::path(mesh_directory) /
+                  fs::path(shape.uri).filename().replace_extension(".bin");
     }
   }
 
   // add missing textures names if necessary
   if (!texture_directory.empty() && texture_directory.back() != '/')
     texture_directory += '/';
-  if (get_extension(output) == "yaml") {
+  if (fs::path(output).extension() == ".yaml") {
     auto tid = 0;
     for (auto& texture : scene.textures) {
       if (texture.uri.empty()) {
-        texture.uri = texture_directory + "ytexture#" + std::to_string(tid) +
-                      ".png";
+        texture.uri = fs::path(texture_directory) /
+                      ("texture" + std::to_string(tid) + ".png");
       } else if (texture_filenames) {
-        texture.uri = texture_directory + get_filename(texture.uri);
+        texture.uri = fs::path(texture_directory) /
+                      fs::path(texture.uri).filename();
       }
       tid++;
     }
   }
 
   // make a directory if needed
-  if (!mkdir(get_dirname(output))) {
-    printf("cannot create directory %s\n", get_dirname(output).c_str());
+  if (!mkdir(fs::path(output).parent_path())) {
+    printf(
+        "cannot create directory %s\n", fs::path(output).parent_path().c_str());
     exit(1);
   }
 

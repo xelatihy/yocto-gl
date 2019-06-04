@@ -31,51 +31,12 @@
 #include "../yocto/yocto_trace.h"
 using namespace yocto;
 
-#include "ext/CLI11.hpp"
-
 #include <map>
 
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-static inline string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
-}
-
-}  // namespace yocto
+#include "ext/CLI11.hpp"
 
 int main(int argc, char* argv[]) {
   // options
@@ -225,9 +186,11 @@ int main(int argc, char* argv[]) {
     trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
     printf(" in %s\n", batch_timer.elapsedf().c_str());
     if (save_batch) {
-      auto outfilename = get_noextension(imfilename) + "-s" +
-                         std::to_string(sample + nsamples) + "." +
-                         get_extension(imfilename);
+      auto outfilename = fs::path(imfilename)
+                             .replace_extension(
+                                 "-s" + std::to_string(sample + nsamples) +
+                                 fs::path(imfilename).extension().string())
+                             .string();
       try {
         if (logo) {
           save_tonemapped_with_logo(outfilename, render, tonemap_prms);
