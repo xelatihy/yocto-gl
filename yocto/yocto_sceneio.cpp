@@ -526,9 +526,9 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
 namespace yocto {
 
 struct yaml_callbacks {
-  virtual void object_group(string_view key) {}
-  virtual void object_begin() {}
-  virtual void key_value(string_view key, string_view value) {}
+  virtual void object_group(string_view name) {}
+  virtual void object_begin(string_view name) {}
+  virtual void key_value(string_view name, string_view key, string_view value) {}
 };
 
 static inline bool is_yaml_space(char c) {
@@ -695,8 +695,8 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
   auto fs  = fs_.fs;
 
   // parsing state
-  auto in_objects = false;
-  auto in_object  = false;
+  auto group     = ""s;
+  auto in_object = false;
 
   // read the file line by line
   char buffer[4096];
@@ -709,12 +709,18 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
 
     // peek commands
     if (is_yaml_space(line.front())) {
-      if (!in_objects) throw std::runtime_error("bad yaml");
       // indented property
+      if (group == "") throw std::runtime_error("bad yaml");
       skip_yaml_whitespace(line);
       if (line.empty()) throw std::runtime_error("bad yaml");
       if (line.front() == '-') {
-        callbacks.object_begin();
+        if (!in_object) callbacks.object_group(group);
+        callbacks.object_begin(group);
+        line.remove_prefix(1);
+        skip_yaml_whitespace(line);
+        in_object = true;
+      } else if (!in_object) {
+        callbacks.object_begin(group);
         line.remove_prefix(1);
         skip_yaml_whitespace(line);
         in_object = true;
@@ -726,20 +732,24 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
         throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       trim_yaml_whitespace(line);
-      callbacks.key_value(key, line);
+      callbacks.key_value(group, key, line);
     } else if (is_yaml_alpha(line.front())) {
       // new group
+      if (group != "" && !in_object) throw std::runtime_error("bad yaml");
       auto key = ""sv;
       parse_yaml_varname(line, key);
       skip_yaml_whitespace(line);
       if (line.empty() || line.front() != ':')
         throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
-      if (!line.empty() && !is_yaml_whitespace(line))
-        throw std::runtime_error("bad yaml");
-      callbacks.object_group(key);
-      in_objects = true;
-      in_object  = false;
+      if (!line.empty() && !is_yaml_whitespace(line)) {
+        group = "";
+        trim_yaml_whitespace(line);
+        callbacks.key_value("", key, line);
+      } else {
+        group = key;
+        in_object  = false;
+      }
     } else {
       throw std::runtime_error("bad yaml");
     }
@@ -811,29 +821,29 @@ struct load_yaml_scene_cb : yaml_callbacks {
     }
   }
 
-  void object_group(string_view key) override {
-    if (key == "cameras") {
+  void object_group(string_view name) override {
+    if (name == "cameras") {
       type = parsing_type::camera;
-    } else if (key == "textures") {
+    } else if (name == "textures") {
       type = parsing_type::texture;
-    } else if (key == "voltextures") {
+    } else if (name == "voltextures") {
       type = parsing_type::voltexture;
-    } else if (key == "materials") {
+    } else if (name == "materials") {
       type = parsing_type::material;
-    } else if (key == "shapes") {
+    } else if (name == "shapes") {
       type = parsing_type::shape;
-    } else if (key == "subdivs") {
+    } else if (name == "subdivs") {
       type = parsing_type::subdiv;
-    } else if (key == "instances") {
+    } else if (name == "instances") {
       type = parsing_type::instance;
-    } else if (key == "environments") {
+    } else if (name == "environments") {
       type = parsing_type::environment;
     } else {
       type = parsing_type::none;
-      throw std::runtime_error("unknown object type " + string(key));
+      throw std::runtime_error("unknown object type " + string(name));
     }
   }
-  void object_begin() override {
+  void object_begin(string_view name) override {
     switch (type) {
       case parsing_type::camera: scene.cameras.push_back({}); break;
       case parsing_type::texture: scene.textures.push_back({}); break;
@@ -846,7 +856,7 @@ struct load_yaml_scene_cb : yaml_callbacks {
       default: throw std::runtime_error("unknown object type");
     }
   }
-  void key_value(string_view key, string_view value) override {
+  void key_value(string_view name, string_view key, string_view value) override {
     switch (type) {
       case parsing_type::camera: {
         auto& camera = scene.cameras.back();
@@ -2035,8 +2045,8 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
   }
   auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
       data, cgltf_free};
-  if (cgltf_load_buffers(&params, data, fs::path(filename).parent_path().c_str()) !=
-      cgltf_result_success) {
+  if (cgltf_load_buffers(&params, data,
+          fs::path(filename).parent_path().c_str()) != cgltf_result_success) {
     throw std::runtime_error("could not load gltf buffers " + filename);
   }
 
@@ -3228,10 +3238,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       case pbrt_shape::type_t::plymesh: {
         auto& mesh = pshape.plymesh;
         shape.uri  = mesh.filename;
-        load_shape(fs::path(filename).parent_path() / mesh.filename, shape.points,
-            shape.lines, shape.triangles, shape.quads, shape.quadspos,
-            shape.quadsnorm, shape.quadstexcoord, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.radius, false);
+        load_shape(fs::path(filename).parent_path() / mesh.filename,
+            shape.points, shape.lines, shape.triangles, shape.quads,
+            shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords, shape.colors,
+            shape.radius, false);
       } break;
       case pbrt_shape::type_t::sphere: {
         auto& sphere        = pshape.sphere;
@@ -3839,7 +3850,8 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
     write_pbrt_text(fs, "AttributeBegin\n");
     write_pbrt_text(fs, "  TransformBegin\n");
     write_pbrt_line(fs, "    Transform [", instance.frame, "]");
-    write_pbrt_line(fs, "    NamedMaterial", fs::path(material.uri).stem().string());
+    write_pbrt_line(
+        fs, "    NamedMaterial", fs::path(material.uri).stem().string());
     if (material.emission != zero3f) {
       write_pbrt_line(fs, "    AreaLightSource \"diffuse\" \"rgb L\" [",
           material.emission, "]");
