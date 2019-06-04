@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
   auto save_batch   = false;
   auto add_skyenv   = false;
   auto validate     = false;
-  auto logo         = true;
+  auto logo         = false;
   auto imfilename   = "out.hdr"s;
   auto filename     = "scene.json"s;
 

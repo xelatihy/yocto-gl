@@ -1351,7 +1351,7 @@ struct load_obj_scene_cb : obj_callbacks {
     // create texture
     auto texture = yocto_texture{};
     texture.uri  = info.path;
-    texture.uri  = info.path;
+    for(auto& c : texture.uri) if(c == '\\') c = '/';
     scene.textures.push_back(texture);
     auto index      = (int)scene.textures.size() - 1;
     tmap[info.path] = index;
@@ -3571,7 +3571,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         // * stack.back().frame;
         environment.frame = (frame3f)ctx.transform_start *
                             frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-        environment.emission = (vec3f)infinite.scale;
+        environment.emission = (vec3f)infinite.scale * (vec3f)infinite.L;
         if (infinite.mapname != "") {
           auto texture = yocto_texture{};
           texture.uri  = infinite.mapname;

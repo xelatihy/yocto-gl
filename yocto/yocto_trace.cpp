@@ -1147,7 +1147,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     if (weight == zero3f || !isfinite(weight)) break;
 
     // russian roulette
-    if (max(weight) < 1 && bounce > 3) {
+    if (max(weight) < 1 && bounce > 6) {
       auto rr_prob = max((float)0.05, 1 - max(weight));
       if (rand1f(rng) > rr_prob) break;
       weight *= 1 / rr_prob;

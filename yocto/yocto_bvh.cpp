@@ -560,7 +560,12 @@ static void build_embree_flattened_bvh(
   // scene bvh
   auto embree_device = get_embree_device();
   auto embree_scene  = rtcNewScene(embree_device);
-  rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
+  if (params.embree_compact) {
+    rtcSetSceneFlags(embree_scene, RTC_SCENE_FLAG_COMPACT);
+  }
+  if (params.high_quality) {
+    rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
+  }
   scene.embree_bvh = embree_scene;
   if (scene.instances.empty()) {
     rtcCommitScene(embree_scene);

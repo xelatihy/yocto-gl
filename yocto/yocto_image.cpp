@@ -1598,23 +1598,6 @@ static inline bool save_pfm(
   return true;
 }
 
-// load pfm image
-static inline void load_pfm(const string& filename, image<vec4f>& img) {
-  auto width = 0, height = 0, ncomp = 0;
-  auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
-  if (!pixels) {
-    throw std::runtime_error("error loading image " + filename);
-  }
-  img = image{{width, height}, (const vec4f*)pixels};
-  delete[] pixels;
-}
-static inline void save_pfm(const string& filename, const image<vec4f>& img) {
-  if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-          (float*)img.data())) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-
 // load exr image weith tiny exr
 static inline const char* get_tinyexr_error(int error) {
   switch (error) {
@@ -1630,105 +1613,6 @@ static inline const char* get_tinyexr_error(int error) {
     default: throw std::runtime_error("unknown tinyexr error");
   }
 }
-
-static inline void load_exr(const string& filename, image<vec4f>& img) {
-  auto width = 0, height = 0;
-  auto pixels = (float*)nullptr;
-  if (auto error = LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr);
-      error < 0) {
-    throw std::runtime_error("error loading image " + filename + "("s +
-                             get_tinyexr_error(error) + ")"s);
-  }
-  if (!pixels) {
-    throw std::runtime_error("error loading image " + filename);
-  }
-  img = image{{width, height}, (const vec4f*)pixels};
-  free(pixels);
-}
-static inline void save_exr(const string& filename, const image<vec4f>& img) {
-  if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
-          filename.c_str())) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-
-// load an image using stbi library
-static inline void load_stb(const string& filename, image<vec4b>& img) {
-  auto width = 0, height = 0, ncomp = 0;
-  auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
-  if (!pixels) {
-    throw std::runtime_error("error loading image " + filename);
-  }
-  img = image{{width, height}, (const vec4b*)pixels};
-  free(pixels);
-}
-static inline void load_stb(const string& filename, image<vec4f>& img) {
-  auto width = 0, height = 0, ncomp = 0;
-  auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
-  if (!pixels) {
-    throw std::runtime_error("error loading image " + filename);
-  }
-  img = image{{width, height}, (const vec4f*)pixels};
-  free(pixels);
-}
-
-// save an image with stbi
-static inline void save_png(const string& filename, const image<vec4b>& img) {
-  if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-          img.data(), img.size().x * 4)) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-static inline void save_jpg(const string& filename, const image<vec4b>& img) {
-  if (!stbi_write_jpg(
-          filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-static inline void save_tga(const string& filename, const image<vec4b>& img) {
-  if (!stbi_write_tga(
-          filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-static inline void save_bmp(const string& filename, const image<vec4b>& img) {
-  if (!stbi_write_bmp(
-          filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-static inline void save_hdr(const string& filename, const image<vec4f>& img) {
-  if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-          (float*)img.data())) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-
-#if 0
-// load an image using stbi library
-static inline void load_stb_image_from_memory(
-    const byte* data, int data_size, image<vec4b>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
-    if (!pixels) {
-        throw std::runtime_error("error loading in-memory image");
-    }
-    img = image{{width, height}, (const vec4b*)pixels};
-    free(pixels);
-}
-static inline void load_stb_image_from_memory(
-    const byte* data, int data_size, image<vec4f>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
-    if (!pixels) {
-        throw std::runtime_error("error loading in-memory image {}");
-    }
-    img = image{{width, height}, (const vec4f*)pixels};
-    free(pixels);
-}
-#endif
 
 // Return the preset type and the remaining filename
 static inline bool is_preset_filename(const string& filename) {
@@ -1769,16 +1653,31 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an hdr image.
 void load_image(const string& filename, image<vec4f>& img) {
-  if (is_preset_filename(filename)) {
-    return load_image_preset(filename, img);
-  }
+  if (is_preset_filename(filename)) return load_image_preset(filename, img);
   auto ext = fs::path(filename).extension().string();
   if (ext == ".exr" || ext == ".EXR") {
-    load_exr(filename, img);
+    auto width = 0, height = 0;
+    auto pixels = (float*)nullptr;
+    if (auto error = LoadEXR(
+            &pixels, &width, &height, filename.c_str(), nullptr);
+        error < 0)
+      throw std::runtime_error("error loading image " + filename + "("s +
+                               get_tinyexr_error(error) + ")"s);
+    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    img = image{{width, height}, (const vec4f*)pixels};
+    free(pixels);
   } else if (ext == ".pfm" || ext == ".PFM") {
-    load_pfm(filename, img);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    img = image{{width, height}, (const vec4f*)pixels};
+    delete[] pixels;
   } else if (ext == ".hdr" || ext == ".HDR") {
-    load_stb(filename, img);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    img = image{{width, height}, (const vec4f*)pixels};
+    free(pixels);
   } else if (!is_hdr_filename(filename)) {
     auto img8 = image<vec4b>{};
     load_image(filename, img8);
@@ -1792,11 +1691,17 @@ void load_image(const string& filename, image<vec4f>& img) {
 void save_image(const string& filename, const image<vec4f>& img) {
   auto ext = fs::path(filename).extension().string();
   if (ext == ".hdr" || ext == ".HDR") {
-    save_hdr(filename, img);
+    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data()))
+      throw std::runtime_error("error saving image " + filename);
   } else if (ext == ".pfm" || ext == ".PFM") {
-    save_pfm(filename, img);
+    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data()))
+      throw std::runtime_error("error saving image " + filename);
   } else if (ext == ".exr" || ext == ".EXR") {
-    save_exr(filename, img);
+    if (SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
+            filename.c_str()) < 0)
+      throw std::runtime_error("error saving image " + filename);
   } else if (!is_hdr_filename(filename)) {
     auto img8 = image<vec4b>{img.size()};
     rgb_to_srgb(img8, img);
@@ -1808,18 +1713,15 @@ void save_image(const string& filename, const image<vec4f>& img) {
 
 // Loads an hdr image.
 void load_image(const string& filename, image<vec4b>& img) {
-  if (is_preset_filename(filename)) {
-    return load_image_preset(filename, img);
-  }
+  if (is_preset_filename(filename)) return load_image_preset(filename, img);
   auto ext = fs::path(filename).extension().string();
-  if (ext == ".png" || ext == ".PNG") {
-    load_stb(filename, img);
-  } else if (ext == ".jpg" || ext == ".JPG") {
-    load_stb(filename, img);
-  } else if (ext == ".tga" || ext == ".TGA") {
-    load_stb(filename, img);
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    load_stb(filename, img);
+  if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
+      ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    img = image{{width, height}, (const vec4b*)pixels};
+    free(pixels);
   } else if (is_hdr_filename(filename)) {
     auto imgf = image<vec4f>{};
     load_image(filename, imgf);
@@ -1833,13 +1735,21 @@ void load_image(const string& filename, image<vec4b>& img) {
 void save_image(const string& filename, const image<vec4b>& img) {
   auto ext = fs::path(filename).extension().string();
   if (ext == ".png" || ext == ".PNG") {
-    save_png(filename, img);
+    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data(), img.size().x * 4))
+      throw std::runtime_error("error saving image " + filename);
   } else if (ext == ".jpg" || ext == ".JPG") {
-    save_jpg(filename, img);
+    if (!stbi_write_jpg(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75))
+      throw std::runtime_error("error saving image " + filename);
   } else if (ext == ".tga" || ext == ".TGA") {
-    save_tga(filename, img);
+    if (!stbi_write_tga(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data()))
+      throw std::runtime_error("error saving image " + filename);
   } else if (ext == ".bmp" || ext == ".BMP") {
-    save_bmp(filename, img);
+    if (!stbi_write_bmp(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data()))
+      throw std::runtime_error("error saving image " + filename);
   } else if (is_hdr_filename(filename)) {
     auto imgf = image<vec4f>{img.size()};
     srgb_to_rgb(imgf, img);
