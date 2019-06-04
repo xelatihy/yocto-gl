@@ -745,8 +745,8 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks) {
         trim_yaml_whitespace(line);
         callbacks.property(key, line);
       } else {
-        group = key;
-        in_object  = false;
+        group     = key;
+        in_object = false;
       }
     } else {
       throw std::runtime_error("bad yaml");
@@ -1038,7 +1038,7 @@ static void load_yaml_scene(
 
   try {
     // Parse obj
-    auto cb           = load_yaml_scene_cb{scene, params};
+    auto cb = load_yaml_scene_cb{scene, params};
     load_yaml(filename, cb);
 
     // load shape and textures
