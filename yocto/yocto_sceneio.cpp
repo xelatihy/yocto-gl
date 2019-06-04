@@ -526,9 +526,10 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
 namespace yocto {
 
 struct yaml_callbacks {
-  virtual void object_group(string_view name) {}
-  virtual void object_begin(string_view name) {}
-  virtual void key_value(string_view name, string_view key, string_view value) {}
+  virtual void group(string_view name) {}
+  virtual void object(string_view name) {}
+  virtual void property(string_view key, string_view value) {}
+  virtual void property(string_view name, string_view key, string_view value) {}
 };
 
 static inline bool is_yaml_space(char c) {
@@ -686,10 +687,7 @@ inline void parse_yaml_value(string_view& str, mat4f& value) {
   return parse_yaml_value(str, &value.x.x, 16);
 }
 
-struct load_yaml_params {};
-
-inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
-    const load_yaml_params& params) {
+inline void load_yaml(const string& filename, yaml_callbacks& callbacks) {
   // open file
   auto fs_ = open_input_file(filename);
   auto fs  = fs_.fs;
@@ -714,13 +712,13 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
       skip_yaml_whitespace(line);
       if (line.empty()) throw std::runtime_error("bad yaml");
       if (line.front() == '-') {
-        if (!in_object) callbacks.object_group(group);
-        callbacks.object_begin(group);
+        if (!in_object) callbacks.group(group);
+        callbacks.object(group);
         line.remove_prefix(1);
         skip_yaml_whitespace(line);
         in_object = true;
       } else if (!in_object) {
-        callbacks.object_begin(group);
+        callbacks.object(group);
         line.remove_prefix(1);
         skip_yaml_whitespace(line);
         in_object = true;
@@ -732,7 +730,7 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
         throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       trim_yaml_whitespace(line);
-      callbacks.key_value(group, key, line);
+      callbacks.property(group, key, line);
     } else if (is_yaml_alpha(line.front())) {
       // new group
       if (group != "" && !in_object) throw std::runtime_error("bad yaml");
@@ -745,7 +743,7 @@ inline void load_yaml(const string& filename, yaml_callbacks& callbacks,
       if (!line.empty() && !is_yaml_whitespace(line)) {
         group = "";
         trim_yaml_whitespace(line);
-        callbacks.key_value("", key, line);
+        callbacks.property(key, line);
       } else {
         group = key;
         in_object  = false;
@@ -821,42 +819,40 @@ struct load_yaml_scene_cb : yaml_callbacks {
     }
   }
 
-  void object_group(string_view name) override {
+  void object(string_view name) override {
     if (name == "cameras") {
       type = parsing_type::camera;
+      scene.cameras.push_back({});
     } else if (name == "textures") {
       type = parsing_type::texture;
+      scene.textures.push_back({});
     } else if (name == "voltextures") {
       type = parsing_type::voltexture;
+      scene.voltextures.push_back({});
     } else if (name == "materials") {
       type = parsing_type::material;
+      scene.materials.push_back({});
     } else if (name == "shapes") {
       type = parsing_type::shape;
+      scene.shapes.push_back({});
     } else if (name == "subdivs") {
       type = parsing_type::subdiv;
+      scene.subdivs.push_back({});
     } else if (name == "instances") {
       type = parsing_type::instance;
+      scene.instances.push_back({});
     } else if (name == "environments") {
       type = parsing_type::environment;
+      scene.environments.push_back({});
     } else {
       type = parsing_type::none;
       throw std::runtime_error("unknown object type " + string(name));
     }
   }
-  void object_begin(string_view name) override {
-    switch (type) {
-      case parsing_type::camera: scene.cameras.push_back({}); break;
-      case parsing_type::texture: scene.textures.push_back({}); break;
-      case parsing_type::voltexture: scene.voltextures.push_back({}); break;
-      case parsing_type::material: scene.materials.push_back({}); break;
-      case parsing_type::shape: scene.shapes.push_back({}); break;
-      case parsing_type::subdiv: scene.subdivs.push_back({}); break;
-      case parsing_type::instance: scene.instances.push_back({}); break;
-      case parsing_type::environment: scene.environments.push_back({}); break;
-      default: throw std::runtime_error("unknown object type");
-    }
+  void property(string_view key, string_view value) override {
+    throw std::runtime_error("unknown property " + string(key));
   }
-  void key_value(string_view name, string_view key, string_view value) override {
+  void property(string_view name, string_view key, string_view value) override {
     switch (type) {
       case parsing_type::camera: {
         auto& camera = scene.cameras.back();
@@ -1042,9 +1038,8 @@ static void load_yaml_scene(
 
   try {
     // Parse obj
-    auto yaml_options = load_yaml_params();
     auto cb           = load_yaml_scene_cb{scene, params};
-    load_yaml(filename, cb, yaml_options);
+    load_yaml(filename, cb);
 
     // load shape and textures
     auto dirname = fs::path(filename).parent_path();
