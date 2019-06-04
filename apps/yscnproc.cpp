@@ -175,7 +175,8 @@ int main(int argc, char** argv) {
     dirnames.insert(dirname / fs::path(texture.uri).parent_path());
   for (auto& dir : dirnames) {
     if (!mkdir(fs::path(dir).parent_path())) {
-      printf("cannot create directory %s\n", fs::path(output).parent_path().c_str());
+      printf("cannot create directory %s\n",
+          fs::path(output).parent_path().c_str());
     }
   }
 

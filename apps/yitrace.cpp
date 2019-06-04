@@ -455,23 +455,25 @@ void load_element(
 
   if (type == typeid(yocto_texture)) {
     auto& texture = scene.textures[index];
-    load_image(fs::path(filename).parent_path() / texture.uri, texture.hdr, texture.ldr);
+    load_image(fs::path(filename).parent_path() / texture.uri, texture.hdr,
+        texture.ldr);
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
     load_volume(fs::path(filename).parent_path() / texture.uri, texture.vol);
   } else if (type == typeid(yocto_shape)) {
     auto& shape = scene.shapes[index];
-    load_shape(fs::path(filename).parent_path() / shape.uri, shape.points, shape.lines,
-        shape.triangles, shape.quads, shape.quadspos, shape.quadsnorm,
-        shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
-        shape.colors, shape.radius, false);
+    load_shape(fs::path(filename).parent_path() / shape.uri, shape.points,
+        shape.lines, shape.triangles, shape.quads, shape.quadspos,
+        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius, false);
   } else if (type == typeid(yocto_subdiv)) {
     // TODO: this needs more fixing?
     auto& subdiv = scene.subdivs[index];
-    load_shape(fs::path(filename).parent_path() / subdiv.uri, subdiv.points, subdiv.lines,
-        subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
-        subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius, subdiv.facevarying);
+    load_shape(fs::path(filename).parent_path() / subdiv.uri, subdiv.points,
+        subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.quadspos,
+        subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+        subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius,
+        subdiv.facevarying);
     tesselate_subdiv(scene, scene.subdivs[index]);
   } else {
     throw std::runtime_error("unsupported type "s + type.name());
