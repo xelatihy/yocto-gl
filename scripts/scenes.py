@@ -59,29 +59,61 @@ def yview(directory='mcguire',scene='*',format='yaml',mode='path'):
 @click.option('--scene', '-s', default='*')
 @click.option('--format','-f', default='yaml')
 @click.option('--mode','-m', default='path')
-@click.option('--outformat','-F', default='png')
-def ytrace(directory='mcguire',scene='*',format='yaml',outformat="png",mode='path'):
+def ytrace(directory='mcguire',scene='*',format='yaml',mode='path'):
     modes = {
-        'path': '--all-cameras -s 64 -r 360 --bvh-high-quality',
-        'embree': '--all-cameras -s 256 -r 720 --bvh-embree --bvh-high-quality',
-        'embree-compact': '--all-cameras -s 256 -r 720 --bvh-embree --bvh-embree-compact',
-        'eyelight': '--all-cameras -s 16 -r 720 -t eyelight --bvh-high-quality',
-        'eyelight-quick': '--all-cameras -s 16 -r 720 -t eyelight --no-bvh-highquality'
+        'path': '-s 64 -r 360 --bvh-high-quality',
+        'embree': '-s 256 -r 720 --bvh-embree --bvh-high-quality',
+        'embree-flatten': '-s 256 -r 720 --bvh-embree --bvh-embree-flatten --bvh-high-quality',
+        'embree-compact': '-s 256 -r 720 --bvh-embree --bvh-embree-compact',
+        'eyelight': '-s 16 -r 720 -t eyelight --bvh-high-quality',
+        'final': '-s 4096 -r 720 --bvh-embree --bvh-high-quality',
+        'final-compact': '-s 4096 -r 720 --bvh-embree --bvh-high-quality --bvh-embree-compact'
     }
     options = modes[mode]
+    outformat = 'png' if 'eyelight' in mode else 'hdr'
+    outprefix = 'eyelight' if 'eyelight' in mode else 'images'
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
+        extracams = []
+        if 'sanmiguel' in dirname: extracams = [1, 2]
+        if 'island' in dirname: extracams = [1, 2, 3, 4, 5, 6]
+        if 'landscape' in dirname: extracams = [1, 2, 3, 4, 5]
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
             basename = os.path.basename(filename).replace(f'.{format}','')
-            os.system(f'mkdir -p {directory}/images-{format}')
-            imagename = f'{directory}/images-{format}/ytrace-{mode}-{basename}.{outformat}'
+            os.system(f'mkdir -p {directory}/{outprefix}-{format}')
+            imagename = f'{directory}/{outprefix}-{format}/{basename}.{outformat}'
             cmd = f'../yocto-gl/bin/ytrace -o {imagename} {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
+            for cam in extracams:
+                imagename = f'{directory}/{outprefix}-{format}/{basename}-c{cam}.{outformat}'
+                cmd = f'../yocto-gl/bin/ytrace -o {imagename} --camera {cam} {options} {filename}'
+                print(cmd, file=sys.stderr)
+                os.system(cmd)
+
+@cli.command()
+@click.option('--directory', '-d', default='mcguire')
+@click.option('--scene', '-s', default='*')
+@click.option('--format','-f', default='yaml')
+@click.option('--mode','-m', default='linear')
+def tonemap(directory='mcguire',scene='*',format='yaml',mode='filmic'):
+    modes = {
+        'linear': '-t --logo --resize-height 540',
+        'contrast1': '-t --logcontrast 0.6 --logo',
+    }
+    options = modes[mode]
+    outformat = 'png'
+    outprefix = 'images'
+    for filename in sorted(glob.glob(f'{directory}/{outprefix}-{format}/{scene}.hdr')+
+                           glob.glob(f'{directory}/{outprefix}-{format}/{scene}.exr')):
+        imagename = filename.replace(f'.exr',f'.{outformat}').replace(f'.hdr',f'.{outformat}')
+        cmd = f'../yocto-gl/bin/yimproc -o {imagename} {options} {filename}'
+        print(cmd, file=sys.stderr)
+        os.system(cmd)
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
@@ -137,6 +169,9 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='pa
         outdirname = dirname.replace(f'/source/',f'/{outformat}/')
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
+        os.system(f'mkdir -p {outdirname}/textures')
+        if outformat == 'yaml':        
+            os.system(f'mkdir -p {outdirname}/shapes')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
                 with open(filename) as f:
@@ -191,10 +226,12 @@ def backup(directory='mcguire',scene='*',format='obj',mode='default'):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
         outdir = f'{directory}/backup-{format}'
+        basedir = f'{directory}/{format}'
         os.system(f'mkdir -p {outdir}')
-        outname = dirname.replace(f'/{format}/',f'/backup-{format}/') + '.zip'
-        os.system(f'rm {outname}')
-        cmd = f'zip {options} {outname} {dirname}'
+        dirname = dirname.replace(basedir+'/','')
+        outname = dirname + '.zip'
+        os.system(f'rm {outdir}/{outname}')
+        cmd = f'cd {basedir}; zip {options} {outname} {dirname}; mv {outname} ../../{outdir}/'
         print(cmd)
         os.system(cmd)
 

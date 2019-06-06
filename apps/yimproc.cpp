@@ -104,6 +104,7 @@ int main(int argc, char* argv[]) {
   // command line parameters
   auto do_tonemap          = false;
   auto tonemap_prms        = tonemap_params{};
+  auto add_logo            = false;
   auto resize_width        = 0;
   auto resize_height       = 0;
   auto spatial_sigma       = 0.0f;
@@ -121,6 +122,12 @@ int main(int argc, char* argv[]) {
   parser.add_flag("--filmic,!--no-filmic,-f", tonemap_prms.filmic,
       "Tonemap uses filmic curve");
   parser.add_option(
+      "--logcontrast", tonemap_prms.logcontrast, "Tonemap log contrast");
+  parser.add_option(
+      "--lincontrast", tonemap_prms.contrast, "Tonemap linear contrast");
+  parser.add_option(
+      "--saturation", tonemap_prms.saturation, "Tonemap saturation");
+  parser.add_option(
       "--resize-width", resize_width, "resize size (0 to maintain aspect)");
   parser.add_option(
       "--resize-height", resize_height, "resize size (0 to maintain aspect)");
@@ -130,6 +137,7 @@ int main(int argc, char* argv[]) {
       "--set-alpha", alpha_filename, "set alpha as this image alpha");
   parser.add_option("--set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
+  parser.add_flag("--logo", add_logo, "Add logo");
   parser.add_option("--output,-o", output, "output image filename")
       ->required(true);
   parser.add_option("filename", filename, "input image filename")
@@ -198,9 +206,7 @@ int main(int argc, char* argv[]) {
 
   // hdr correction
   if (do_tonemap) {
-    auto ldr = img;
-    tonemap(img, ldr, tonemap_prms);
-    img = ldr;
+    img = tonemap(img, tonemap_prms);
   }
 
   // save
@@ -208,9 +214,17 @@ int main(int argc, char* argv[]) {
     if (do_tonemap && tonemap_prms.srgb) {
       auto linear = image<vec4f>{};
       srgb_to_rgb(linear, img);
-      save_image(output, linear);
+      if (add_logo) {
+        save_image_with_logo(output, linear);
+      } else {
+        save_image(output, linear);
+      }
     } else {
-      save_image(output, img);
+      if (add_logo) {
+        save_image_with_logo(output, img);
+      } else {
+        save_image(output, img);
+      }
     }
   } catch (const std::exception& e) {
     printf("%s\n", e.what());

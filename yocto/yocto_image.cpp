@@ -546,6 +546,21 @@ void make_imregions(vector<image_region>& regions, const vec2i& size,
     shuffle(regions, rng);
   }
 }
+vector<image_region> make_imregions(
+    const vec2i& size, int region_size, bool shuffled) {
+  auto regions = vector<image_region>{};
+  for (auto y = 0; y < size.y; y += region_size) {
+    for (auto x = 0; x < size.x; x += region_size) {
+      regions.push_back({{x, y},
+          {min(x + region_size, size.x), min(y + region_size, size.y)}});
+    }
+  }
+  if (shuffled) {
+    auto rng = rng_state{};
+    shuffle(regions, rng);
+  }
+  return regions;
+}
 
 // Apply a function to each image pixel
 template <typename T1, typename T2, typename Func>
@@ -557,6 +572,16 @@ static inline void apply_image(
       result[{i, j}] = func(source[{i, j}]);
     }
   }
+}
+template <typename T1, typename T2, typename Func>
+static inline image<T1> apply_image(const image<T2>& source, const Func& func) {
+  auto result = image<T1>{source.size()};
+  for (auto j = 0; j < result.size().y; j++) {
+    for (auto i = 0; i < result.size().x; i++) {
+      result[{i, j}] = func(source[{i, j}]);
+    }
+  }
+  return result;
 }
 template <typename T1, typename T2, typename Func>
 static inline void apply_image(image<T1>& result, const image<T2>& source,
@@ -576,6 +601,12 @@ void byte_to_float(image<vec4f>& fl, const image<vec4b>& bt) {
 void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl) {
   return apply_image(bt, fl, [](const auto& a) { return float_to_byte(a); });
 }
+image<vec4f> byte_to_float(const image<vec4b>& bt) {
+  return apply_image<vec4f>(bt, [](const auto& a) { return byte_to_float(a); });
+}
+image<vec4b> float_to_byte(const image<vec4f>& fl) {
+  return apply_image<vec4b>(fl, [](const auto& a) { return float_to_byte(a); });
+}
 
 // Conversion between linear and gamma-encoded images.
 void srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb) {
@@ -591,6 +622,16 @@ void srgb_to_rgb(image<vec4f>& lin, const image<vec4b>& srgb) {
 void rgb_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin) {
   return apply_image(
       srgb, lin, [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
+}
+image<vec4f> srgb_to_rgb(const image<vec4f>& srgb) {
+  return apply_image<vec4f>(srgb, [](const auto& a) { return srgb_to_rgb(a); });
+}
+image<vec4f> rgb_to_srgb(const image<vec4f>& lin) {
+  return apply_image<vec4f>(lin, [](const auto& a) { return rgb_to_srgb(a); });
+}
+image<vec4b> rgb_to_srgb8(const image<vec4f>& lin) {
+  return apply_image<vec4b>(
+      lin, [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
 }
 
 // Filmic tonemapping
@@ -648,6 +689,12 @@ void tonemap(
         return vec4f{tonemap(xyz(hdr), params), hdr.w};
       });
 }
+image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params) {
+  return apply_image<vec4f>(hdr,
+      [scale = exp2(params.exposure) * params.tint, params](const vec4f& hdr) {
+        return vec4f{tonemap(xyz(hdr), params), hdr.w};
+      });
+}
 void tonemap(
     image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params) {
   return apply_image(ldr, hdr, [params](const vec4f& hdr) {
@@ -688,6 +735,18 @@ static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
 
 // Apply exposure and filmic tone mapping
 void colorgrade(image<vec4f>& corrected, const image<vec4f>& ldr,
+    const colorgrade_params& params) {
+  return apply_image(corrected, ldr, [&params](const vec4f& hdr) {
+    return vec4f{colorgrade(xyz(hdr), params), hdr.w};
+  });
+}
+image<vec4f> colorgrade(
+    const image<vec4f>& ldr, const colorgrade_params& params) {
+  return apply_image<vec4f>(ldr, [&params](const vec4f& hdr) {
+    return vec4f{colorgrade(xyz(hdr), params), hdr.w};
+  });
+}
+void colorgrade(image<vec4f>& corrected, const image<vec4f>& ldr,
     const image_region& region, const colorgrade_params& params) {
   return apply_image(corrected, ldr, region, [&params](const vec4f& hdr) {
     return vec4f{colorgrade(xyz(hdr), params), hdr.w};
@@ -702,18 +761,23 @@ vec3f compute_white_balance(const image<vec4f>& img) {
   return rgb / max(rgb);
 }
 
-void resize(
-    image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
+static vec2i resize_size(const vec2i& img_size, const vec2i& size_) {
   auto size = size_;
   if (size == zero2i) {
     throw std::invalid_argument("bad image size in resize");
   }
   if (size.y == 0) {
-    size.y = (int)round(size.x * (float)img.size().y / (float)img.size().x);
+    size.y = (int)round(size.x * (float)img_size.y / (float)img_size.x);
   } else if (size.x == 0) {
-    size.x = (int)round(size.y * (float)img.size().x / (float)img.size().y);
+    size.x = (int)round(size.y * (float)img_size.x / (float)img_size.y);
   }
-  res_img = {size};
+  return size;
+}
+
+void resize(
+    image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
+  auto size = resize_size(img.size(), size_);
+  res_img   = {size};
   stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
       sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
       res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
@@ -721,20 +785,30 @@ void resize(
 }
 void resize(
     image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
-  auto size = size_;
-  if (size == zero2i) {
-    throw std::invalid_argument("bad image size in resize");
-  }
-  if (size.y == 0) {
-    size.y = (int)round(size.x * (float)img.size().y / (float)img.size().x);
-  } else if (size.x == 0) {
-    size.x = (int)round(size.y * (float)img.size().x / (float)img.size().y);
-  }
-  res_img = {size};
+  auto size = resize_size(img.size(), size_);
+  res_img   = {size};
   stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
       sizeof(vec4b) * img.size().x, (byte*)res_img.data(), res_img.size().x,
       res_img.size().y, sizeof(vec4b) * res_img.size().x, 4, 3, 0,
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+}
+image<vec4f> resize(const image<vec4f>& img, const vec2i& size_) {
+  auto size    = resize_size(img.size(), size_);
+  auto res_img = image<vec4f>{size};
+  stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
+      sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
+      res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
+      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+  return res_img;
+}
+image<vec4b> resize(const image<vec4b>& img, const vec2i& size_) {
+  auto size    = resize_size(img.size(), size_);
+  auto res_img = image<vec4b>{size};
+  stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
+      sizeof(vec4b) * img.size().x, (byte*)res_img.data(), res_img.size().x,
+      res_img.size().y, sizeof(vec4b) * res_img.size().x, 4, 3, 0,
+      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+  return res_img;
 }
 
 }  // namespace yocto
@@ -763,6 +837,11 @@ void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
       norm[{i, j}] = {normal.x, normal.y, normal.z, 1};
     }
   }
+}
+image<vec4f> bump_to_normal(const image<vec4f>& img, float scale) {
+  auto norm = image<vec4f>{img.size()};
+  bump_to_normal(norm, img, scale);
+  return norm;
 }
 
 // Make an image
@@ -913,6 +992,11 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
     } break;
   }
 }
+image<vec4f> make_improc(const improc_params& params) {
+  auto img = image<vec4f>{params.size};
+  make_improc(img, params);
+  return img;
+}
 
 // Add a border to an image
 void add_border(
@@ -993,6 +1077,15 @@ void make_imsunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
 
   // cleanup
   for (auto i = 0; i < 9; i++) arhosekskymodelstate_free(skymodel_state[i]);
+}
+
+image<vec4f> make_imsunsky(const vec2i& size, float theta_sun, float turbidity,
+    bool has_sun, float sun_intensity, float sun_temperature,
+    const vec3f& ground_albedo) {
+  auto img = image<vec4f>{size};
+  make_imsunsky(img, size, theta_sun, turbidity, has_sun, sun_intensity,
+      sun_temperature, ground_albedo);
+  return img;
 }
 
 #else
@@ -1159,6 +1252,12 @@ void make_imlights(image<vec4f>& img, const vec2i& size, const vec3f& le,
     }
   }
 }
+image<vec4f> make_imlights(const vec2i& size, const vec3f& le, int nlights,
+    float langle, float lwidth, float lheight) {
+  auto img = image<vec4f>{size};
+  make_imlights(img, size, le, nlights, langle, lwidth, lheight);
+  return img;
+}
 
 void make_imlogo(image<vec4b>& img, const string& type) {
   static const auto size = vec2i{144, 28};
@@ -1201,6 +1300,12 @@ void make_imlogo(image<vec4b>& img, const string& type) {
   } else {
     throw std::runtime_error("unknown builtin image " + type);
   }
+}
+
+image<vec4b> make_imlogo(const string& type) {
+  auto img = image<vec4b>{};
+  make_imlogo(img, type);
+  return img;
 }
 
 void make_imlogo(image<vec4f>& img, const string& type) {
@@ -1378,6 +1483,11 @@ void make_impreset(image<vec4f>& img, const string& type) {
     throw std::invalid_argument("unknown image preset " + type);
   }
 }
+image<vec4f> make_impreset(const string& type) {
+  auto img = image<vec4f>{};
+  make_impreset(img, type);
+  return img;
+}
 
 void make_impreset(image<vec4b>& img, const string& type) {
   auto imgf = image<vec4f>{};
@@ -1391,7 +1501,13 @@ void make_impreset(image<vec4b>& img, const string& type) {
 
 void make_impreset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
   if (type.find("sky") == type.npos) {
-    make_impreset(ldr, type);
+    auto imgf = image<vec4f>{};
+    make_impreset(imgf, type);
+    if (type.find("-normal") == type.npos) {
+      rgb_to_srgb(ldr, imgf);
+    } else {
+      float_to_byte(ldr, imgf);
+    }
   } else {
     make_impreset(hdr, type);
   }
@@ -1420,6 +1536,11 @@ void make_test(
     }
   }
 }
+volume<float> make_test(const vec3i& size, float scale, float exponent) {
+  auto vol = volume<float>{};
+  make_test(vol, size, scale, exponent);
+  return vol;
+}
 
 void make_volpreset(volume<float>& vol, const string& type) {
   auto size = vec3i{256, 256, 256};
@@ -1428,6 +1549,11 @@ void make_volpreset(volume<float>& vol, const string& type) {
   } else {
     throw std::runtime_error("unknown volume preset " + type);
   }
+}
+volume<float> make_volpreset(const string& type) {
+  auto vol = volume<float>{};
+  make_volpreset(vol, type);
+  return vol;
 }
 
 }  // namespace yocto
@@ -1598,23 +1724,6 @@ static inline bool save_pfm(
   return true;
 }
 
-// load pfm image
-static inline void load_pfm(const string& filename, image<vec4f>& img) {
-  auto width = 0, height = 0, ncomp = 0;
-  auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
-  if (!pixels) {
-    throw std::runtime_error("error loading image " + filename);
-  }
-  img = image{{width, height}, (const vec4f*)pixels};
-  delete[] pixels;
-}
-static inline void save_pfm(const string& filename, const image<vec4f>& img) {
-  if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-          (float*)img.data())) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-
 // load exr image weith tiny exr
 static inline const char* get_tinyexr_error(int error) {
   switch (error) {
@@ -1630,105 +1739,6 @@ static inline const char* get_tinyexr_error(int error) {
     default: throw std::runtime_error("unknown tinyexr error");
   }
 }
-
-static inline void load_exr(const string& filename, image<vec4f>& img) {
-  auto width = 0, height = 0;
-  auto pixels = (float*)nullptr;
-  if (auto error = LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr);
-      error < 0) {
-    throw std::runtime_error("error loading image " + filename + "("s +
-                             get_tinyexr_error(error) + ")"s);
-  }
-  if (!pixels) {
-    throw std::runtime_error("error loading image " + filename);
-  }
-  img = image{{width, height}, (const vec4f*)pixels};
-  free(pixels);
-}
-static inline void save_exr(const string& filename, const image<vec4f>& img) {
-  if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
-          filename.c_str())) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-
-// load an image using stbi library
-static inline void load_stb(const string& filename, image<vec4b>& img) {
-  auto width = 0, height = 0, ncomp = 0;
-  auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
-  if (!pixels) {
-    throw std::runtime_error("error loading image " + filename);
-  }
-  img = image{{width, height}, (const vec4b*)pixels};
-  free(pixels);
-}
-static inline void load_stb(const string& filename, image<vec4f>& img) {
-  auto width = 0, height = 0, ncomp = 0;
-  auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
-  if (!pixels) {
-    throw std::runtime_error("error loading image " + filename);
-  }
-  img = image{{width, height}, (const vec4f*)pixels};
-  free(pixels);
-}
-
-// save an image with stbi
-static inline void save_png(const string& filename, const image<vec4b>& img) {
-  if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-          img.data(), img.size().x * 4)) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-static inline void save_jpg(const string& filename, const image<vec4b>& img) {
-  if (!stbi_write_jpg(
-          filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-static inline void save_tga(const string& filename, const image<vec4b>& img) {
-  if (!stbi_write_tga(
-          filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-static inline void save_bmp(const string& filename, const image<vec4b>& img) {
-  if (!stbi_write_bmp(
-          filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-static inline void save_hdr(const string& filename, const image<vec4f>& img) {
-  if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-          (float*)img.data())) {
-    throw std::runtime_error("error saving image " + filename);
-  }
-}
-
-#if 0
-// load an image using stbi library
-static inline void load_stb_image_from_memory(
-    const byte* data, int data_size, image<vec4b>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
-    if (!pixels) {
-        throw std::runtime_error("error loading in-memory image");
-    }
-    img = image{{width, height}, (const vec4b*)pixels};
-    free(pixels);
-}
-static inline void load_stb_image_from_memory(
-    const byte* data, int data_size, image<vec4f>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
-    if (!pixels) {
-        throw std::runtime_error("error loading in-memory image {}");
-    }
-    img = image{{width, height}, (const vec4f*)pixels};
-    free(pixels);
-}
-#endif
 
 // Return the preset type and the remaining filename
 static inline bool is_preset_filename(const string& filename) {
@@ -1769,16 +1779,31 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an hdr image.
 void load_image(const string& filename, image<vec4f>& img) {
-  if (is_preset_filename(filename)) {
-    return load_image_preset(filename, img);
-  }
+  if (is_preset_filename(filename)) return load_image_preset(filename, img);
   auto ext = fs::path(filename).extension().string();
   if (ext == ".exr" || ext == ".EXR") {
-    load_exr(filename, img);
+    auto width = 0, height = 0;
+    auto pixels = (float*)nullptr;
+    if (auto error = LoadEXR(
+            &pixels, &width, &height, filename.c_str(), nullptr);
+        error < 0)
+      throw std::runtime_error("error loading image " + filename + "("s +
+                               get_tinyexr_error(error) + ")"s);
+    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    img = image{{width, height}, (const vec4f*)pixels};
+    free(pixels);
   } else if (ext == ".pfm" || ext == ".PFM") {
-    load_pfm(filename, img);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    img = image{{width, height}, (const vec4f*)pixels};
+    delete[] pixels;
   } else if (ext == ".hdr" || ext == ".HDR") {
-    load_stb(filename, img);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    img = image{{width, height}, (const vec4f*)pixels};
+    free(pixels);
   } else if (!is_hdr_filename(filename)) {
     auto img8 = image<vec4b>{};
     load_image(filename, img8);
@@ -1792,11 +1817,17 @@ void load_image(const string& filename, image<vec4f>& img) {
 void save_image(const string& filename, const image<vec4f>& img) {
   auto ext = fs::path(filename).extension().string();
   if (ext == ".hdr" || ext == ".HDR") {
-    save_hdr(filename, img);
+    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data()))
+      throw std::runtime_error("error saving image " + filename);
   } else if (ext == ".pfm" || ext == ".PFM") {
-    save_pfm(filename, img);
+    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data()))
+      throw std::runtime_error("error saving image " + filename);
   } else if (ext == ".exr" || ext == ".EXR") {
-    save_exr(filename, img);
+    if (SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
+            filename.c_str()) < 0)
+      throw std::runtime_error("error saving image " + filename);
   } else if (!is_hdr_filename(filename)) {
     auto img8 = image<vec4b>{img.size()};
     rgb_to_srgb(img8, img);
@@ -1808,18 +1839,15 @@ void save_image(const string& filename, const image<vec4f>& img) {
 
 // Loads an hdr image.
 void load_image(const string& filename, image<vec4b>& img) {
-  if (is_preset_filename(filename)) {
-    return load_image_preset(filename, img);
-  }
+  if (is_preset_filename(filename)) return load_image_preset(filename, img);
   auto ext = fs::path(filename).extension().string();
-  if (ext == ".png" || ext == ".PNG") {
-    load_stb(filename, img);
-  } else if (ext == ".jpg" || ext == ".JPG") {
-    load_stb(filename, img);
-  } else if (ext == ".tga" || ext == ".TGA") {
-    load_stb(filename, img);
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    load_stb(filename, img);
+  if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
+      ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    img = image{{width, height}, (const vec4b*)pixels};
+    free(pixels);
   } else if (is_hdr_filename(filename)) {
     auto imgf = image<vec4f>{};
     load_image(filename, imgf);
@@ -1833,13 +1861,21 @@ void load_image(const string& filename, image<vec4b>& img) {
 void save_image(const string& filename, const image<vec4b>& img) {
   auto ext = fs::path(filename).extension().string();
   if (ext == ".png" || ext == ".PNG") {
-    save_png(filename, img);
+    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data(), img.size().x * 4))
+      throw std::runtime_error("error saving image " + filename);
   } else if (ext == ".jpg" || ext == ".JPG") {
-    save_jpg(filename, img);
+    if (!stbi_write_jpg(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75))
+      throw std::runtime_error("error saving image " + filename);
   } else if (ext == ".tga" || ext == ".TGA") {
-    save_tga(filename, img);
+    if (!stbi_write_tga(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data()))
+      throw std::runtime_error("error saving image " + filename);
   } else if (ext == ".bmp" || ext == ".BMP") {
-    save_bmp(filename, img);
+    if (!stbi_write_bmp(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data()))
+      throw std::runtime_error("error saving image " + filename);
   } else if (is_hdr_filename(filename)) {
     auto imgf = image<vec4f>{img.size()};
     srgb_to_rgb(imgf, img);
