@@ -95,6 +95,25 @@ def ytrace(directory='mcguire',scene='*',format='yaml',mode='path'):
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
 
+@cli.command()
+@click.option('--directory', '-d', default='mcguire')
+@click.option('--scene', '-s', default='*')
+@click.option('--format','-f', default='yaml')
+@click.option('--mode','-m', default='linear')
+def tonemap(directory='mcguire',scene='*',format='yaml',mode='filmic'):
+    modes = {
+        'linear': '-t --logo --resize-height 540',
+        'contrast1': '-t --logcontrast 0.6 --logo',
+    }
+    options = modes[mode]
+    outformat = 'png'
+    outprefix = 'images'
+    for filename in sorted(glob.glob(f'{directory}/{outprefix}-{format}/{scene}.hdr')+
+                           glob.glob(f'{directory}/{outprefix}-{format}/{scene}.exr')):
+        imagename = filename.replace(f'.exr',f'.{outformat}').replace(f'.hdr',f'.{outformat}')
+        cmd = f'../yocto-gl/bin/yimproc -o {imagename} {options} {filename}'
+        print(cmd, file=sys.stderr)
+        os.system(cmd)
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
