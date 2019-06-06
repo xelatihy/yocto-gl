@@ -70,7 +70,7 @@ def ytrace(directory='mcguire',scene='*',format='yaml',mode='path'):
         'final-compact': '-s 4096 -r 720 --bvh-embree --bvh-high-quality --bvh-embree-compact'
     }
     options = modes[mode]
-    outformat = 'png' if 'eyelight' in mode else 'exr'
+    outformat = 'png' if 'eyelight' in mode else 'hdr'
     outprefix = 'eyelight' if 'eyelight' in mode else 'images'
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
         if not os.path.isdir(dirname): continue
