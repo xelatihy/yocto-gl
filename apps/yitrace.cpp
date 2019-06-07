@@ -945,6 +945,7 @@ int main(int argc, char* argv[]) {
   parser.add_option(
       "--bounces", app.trace_prms.bounces, "Maximum number of bounces.");
   parser.add_option("--clamp", app.trace_prms.clamp, "Final pixel clamping.");
+  parser.add_flag("--filter", app.trace_prms.tentfilter, "Filter image.");
   parser.add_option(
       "--seed", app.trace_prms.seed, "Seed for the random number generators.");
   parser.add_flag("--env-hidden,!--no-env-hidden", app.trace_prms.envhidden,

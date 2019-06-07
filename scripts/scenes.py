@@ -67,7 +67,8 @@ def ytrace(directory='mcguire',scene='*',format='yaml',mode='path'):
         'embree-compact': '-s 256 -r 720 --bvh-embree --bvh-embree-compact',
         'eyelight': '-s 16 -r 720 -t eyelight --bvh-high-quality',
         'final': '-s 4096 -r 720 --bvh-embree --bvh-high-quality',
-        'final-compact': '-s 4096 -r 720 --bvh-embree --bvh-high-quality --bvh-embree-compact'
+        'final-compact': '-s 4096 -r 720 --bvh-embree --bvh-high-quality --bvh-embree-compact',
+        'final-filter': '-s 4096 -r 720 --filter --bvh-embree --bvh-high-quality',
     }
     options = modes[mode]
     outformat = 'png' if 'eyelight' in mode else 'hdr'
