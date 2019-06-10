@@ -82,6 +82,7 @@ int main(int argc, char* argv[]) {
   parser.add_option(
       "--bounces", trace_prms.bounces, "Maximum number of bounces.");
   parser.add_option("--clamp", trace_prms.clamp, "Final pixel clamping.");
+  parser.add_flag("--filter", trace_prms.tentfilter, "Filter image.");
   parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");
   parser.add_option(
       "--seed", trace_prms.seed, "Seed for the random number generators.");

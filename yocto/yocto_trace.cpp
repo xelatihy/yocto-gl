@@ -1019,6 +1019,16 @@ ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
   return eval_camera(camera, ij, image_size, puv, sample_disk(luv));
 }
+ray3f sample_camera_tent(const yocto_camera& camera, const vec2i& ij,
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
+  const auto width = 2.0f;
+  const auto offset = 0.5f;
+  auto fuv = width * vec2f{
+      puv.x < 0.5f ? sqrt(2 * puv.x) - 1 : 1 - sqrt(2 - 2 * puv.x),
+      puv.y - 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
+  } + offset;
+  return eval_camera(camera, ij, image_size, fuv, sample_disk(luv));
+}
 
 // Recursive path tracing.
 pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
@@ -1435,8 +1445,11 @@ void trace_region(image<vec4f>& image, trace_state& state,
       for (auto s = 0; s < num_samples; s++) {
         if (params.cancel && *params.cancel) return;
         _trace_npaths += 1;
-        auto ray = sample_camera(
-            camera, {i, j}, image.size(), rand2f(pixel.rng), rand2f(pixel.rng));
+        auto ray = params.tentfilter
+                       ? sample_camera_tent(camera, {i, j}, image.size(),
+                             rand2f(pixel.rng), rand2f(pixel.rng))
+                       : sample_camera(camera, {i, j}, image.size(),
+                             rand2f(pixel.rng), rand2f(pixel.rng));
         auto [radiance, hit] = sampler(
             scene, bvh, lights, ray.o, ray.d, pixel.rng, params);
         if (!hit) {

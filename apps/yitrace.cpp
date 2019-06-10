@@ -302,6 +302,7 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glcombobox(win, "false color", (int&)trace_prms.falsecolor,
         trace_falsecolor_names);
     draw_glslider(win, "nbounces", trace_prms.bounces, 1, 128);
+    draw_glcheckbox(win, "filter", trace_prms.tentfilter);
     draw_glslider(win, "seed", (int&)trace_prms.seed, 0, 1000000);
     draw_glslider(win, "pratio", scn.preview_ratio, 1, 64);
     auto tonemap_prms = scn.tonemap_prms;
@@ -944,6 +945,7 @@ int main(int argc, char* argv[]) {
   parser.add_option(
       "--bounces", app.trace_prms.bounces, "Maximum number of bounces.");
   parser.add_option("--clamp", app.trace_prms.clamp, "Final pixel clamping.");
+  parser.add_flag("--filter", app.trace_prms.tentfilter, "Filter image.");
   parser.add_option(
       "--seed", app.trace_prms.seed, "Seed for the random number generators.");
   parser.add_flag("--env-hidden,!--no-env-hidden", app.trace_prms.envhidden,
