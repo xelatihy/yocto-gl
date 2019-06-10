@@ -103,7 +103,7 @@ def ytrace(directory='mcguire',scene='*',format='yaml',mode='path'):
 @click.option('--mode','-m', default='linear')
 def tonemap(directory='mcguire',scene='*',format='yaml',mode='filmic'):
     modes = {
-        'linear': '-t --logo --resize-height 540',
+        'linear': '-t --logo',
         'contrast1': '-t --logcontrast 0.6 --logo',
     }
     options = modes[mode]
