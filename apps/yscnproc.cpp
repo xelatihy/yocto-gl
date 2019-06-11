@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
   // make a directory if needed
   auto dirname  = fs::path(output).parent_path();
   auto dirnames = unordered_set<string>{};
-  if(!dirname.empty()) dirnames.insert(dirname);
+  if (!dirname.empty()) dirnames.insert(dirname);
   for (auto& shape : scene.shapes)
     dirnames.insert(dirname / fs::path(shape.uri).parent_path());
   for (auto& subdiv : scene.subdivs)
@@ -176,8 +176,7 @@ int main(int argc, char** argv) {
     dirnames.insert(dirname / fs::path(texture.uri).parent_path());
   for (auto& dir : dirnames) {
     if (!mkdir(fs::path(dir))) {
-      printf("cannot create directory %s\n",
-          fs::path(output).c_str());
+      printf("cannot create directory %s\n", fs::path(output).c_str());
     }
   }
 

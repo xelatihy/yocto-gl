@@ -1021,12 +1021,15 @@ ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
 }
 ray3f sample_camera_tent(const yocto_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
-  const auto width = 2.0f;
+  const auto width  = 2.0f;
   const auto offset = 0.5f;
-  auto fuv = width * vec2f{
-      puv.x < 0.5f ? sqrt(2 * puv.x) - 1 : 1 - sqrt(2 - 2 * puv.x),
-      puv.y - 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
-  } + offset;
+  auto       fuv =
+      width *
+          vec2f{
+              puv.x < 0.5f ? sqrt(2 * puv.x) - 1 : 1 - sqrt(2 - 2 * puv.x),
+              puv.y - 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
+          } +
+      offset;
   return eval_camera(camera, ij, image_size, fuv, sample_disk(luv));
 }
 

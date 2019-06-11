@@ -509,13 +509,11 @@ static inline void parse_param(
       if (filenamep == "SHPS") {
         value = {1, 1, 1};
       } else if (filenamep.extension() == ".eta") {
-        auto eta =
-            get_pbrt_etak(filenamep.replace_extension("")).first;
-        value = {eta.x, eta.y, eta.z};
+        auto eta = get_pbrt_etak(filenamep.replace_extension("")).first;
+        value    = {eta.x, eta.y, eta.z};
       } else if (filenamep.extension() == ".k") {
-        auto k =
-            get_pbrt_etak(filenamep.replace_extension("")).second;
-        value = {k.x, k.y, k.z};
+        auto k = get_pbrt_etak(filenamep.replace_extension("")).second;
+        value  = {k.x, k.y, k.z};
       } else {
         throw std::runtime_error("unknown spectrum file " + filename);
       }
