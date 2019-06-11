@@ -3,7 +3,7 @@
       xmlns:xlink="http://www.w3.org/1999/xlink" 
       width="72" height="28">
     <rect width="72" height="28" />
-    <text x="4" y="20" fill="white" font-size="18px" font-family="Fira Sans Condensed">
+    <text x="4" y="20" fill="white" font-size="18px" font-weight="bold" font-family="Fira Sans Condensed">
         Yocto/GL</text>
 </svg>
  
