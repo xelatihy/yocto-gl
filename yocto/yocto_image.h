@@ -211,14 +211,14 @@ inline void set_region(
 }
 
 // Conversion from/to floats.
-void byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
-void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
+void         byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
+void         float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
 image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
-void srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb);
-void rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
+void         srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb);
+void         rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
 image<vec4f> rgb_to_srgb(const image<vec4f>& lin);
 image<vec4b> rgb_to_srgb8(const image<vec4f>& lin);
@@ -246,8 +246,8 @@ inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
 void tonemap(
     image<vec4f>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
 image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params);
-void tonemap(
-    image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
+void         tonemap(
+            image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     const image_region& region, const tonemap_params& params);
 
@@ -271,12 +271,12 @@ inline bool operator!=(const colorgrade_params& a, const colorgrade_params& b) {
 }
 
 // color grade an image region
+void         colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
+            const colorgrade_params& params);
+image<vec4f> colorgrade(
+    const image<vec4f>& img, const colorgrade_params& params);
 void colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
-  const colorgrade_params& params);
-image<vec4f> colorgrade(const image<vec4f>& img,
-  const colorgrade_params& params);
-void colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
-  const image_region& region, const colorgrade_params& params);
+    const image_region& region, const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);
@@ -358,7 +358,7 @@ struct improc_params {
 };
 
 // Make an image
-void make_improc(image<vec4f>& img, const improc_params& params);
+void         make_improc(image<vec4f>& img, const improc_params& params);
 image<vec4f> make_improc(const improc_params& params);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
@@ -373,12 +373,12 @@ image<vec4f> make_imsunsky(const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
-void make_imlights(image<vec4f>& img, const vec2i& size,
-    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-    float lwidth = pif / 16, float lheight = pif / 16);
-image<vec4f> make_imlights(const vec2i& size,
-    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-    float lwidth = pif / 16, float lheight = pif / 16);
+void         make_imlights(image<vec4f>& img, const vec2i& size,
+            const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
+            float lwidth = pif / 16, float lheight = pif / 16);
+image<vec4f> make_imlights(const vec2i& size, const vec3f& le = {1, 1, 1},
+    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
+    float lheight = pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 void bump_to_normal(
@@ -390,14 +390,14 @@ void add_border(image<vec4f>& img, const vec2i& size, int border_width,
     const vec4f& border_color);
 
 // Make logo images. Image is resized to proper size.
-void make_imlogo(image<vec4f>& img, const string& name);
-void make_imlogo(image<vec4b>& img, const string& name);
+void         make_imlogo(image<vec4f>& img, const string& name);
+void         make_imlogo(image<vec4b>& img, const string& name);
 image<vec4b> make_imlogo(const string& name);
 
 // Make an image preset, useful for testing. See implementation for types.
-void make_impreset(image<vec4f>& img, const string& type);
+void         make_impreset(image<vec4f>& img, const string& type);
 image<vec4f> make_impreset(const string& type);
-void make_impreset(image<vec4b>& img, const string& type);
+void         make_impreset(image<vec4b>& img, const string& type);
 void make_impreset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
 
 }  // namespace yocto

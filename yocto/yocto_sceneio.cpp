@@ -1351,7 +1351,8 @@ struct load_obj_scene_cb : obj_callbacks {
     // create texture
     auto texture = yocto_texture{};
     texture.uri  = info.path;
-    for(auto& c : texture.uri) if(c == '\\') c = '/';
+    for (auto& c : texture.uri)
+      if (c == '\\') c = '/';
     scene.textures.push_back(texture);
     auto index      = (int)scene.textures.size() - 1;
     tmap[info.path] = index;

@@ -1261,7 +1261,7 @@ image<vec4f> make_imlights(const vec2i& size, const vec3f& le, int nlights,
 
 void make_imlogo(image<vec4b>& img, const string& type) {
   static const auto logo_medium_size = vec2i{102, 36};
-  static const auto logo_small_size = vec2i{72, 28};
+  static const auto logo_small_size  = vec2i{72, 28};
   // clang-format off
   static const auto logo_medium = vector<byte>{
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
