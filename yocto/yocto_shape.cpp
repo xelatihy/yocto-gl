@@ -255,6 +255,7 @@ void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions, cons
 vector<vec3f> align_vertices(const vector<vec3f>& positions, const vec3i& alignment) {
   auto aligned = vector<vec3f>(positions.size());
   align_vertices(aligned, positions, alignment);
+  return aligned;
 }
 
 }  // namespace yocto
@@ -264,73 +265,60 @@ vector<vec3f> align_vertices(const vector<vec3f>& positions, const vec3i& alignm
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Create key entry for edge_map
-vec2i make_edgemap_edge(const vec2i& e) {
-  return e.x < e.y ? e : vec2i{e.y, e.x};
-}
-
 // Initialize an edge map with elements.
-void insert_edges(edge_map& emap, const vector<vec3i>& triangles) {
+edge_map::edge_map(const vector<vec3i>& triangles) {
   for (int i = 0; i < triangles.size(); i++) {
     auto& t = triangles[i];
-    insert_edge(emap, {t.x, t.y});
-    insert_edge(emap, {t.y, t.z});
-    insert_edge(emap, {t.z, t.x});
+    insert({t.x, t.y});
+    insert({t.y, t.z});
+    insert({t.z, t.x});
   }
 }
-void insert_edges(edge_map& emap, const vector<vec4i>& quads) {
+edge_map::edge_map(const vector<vec4i>& quads) {
   for (int i = 0; i < quads.size(); i++) {
     auto& q = quads[i];
-    insert_edge(emap, {q.x, q.y});
-    insert_edge(emap, {q.y, q.z});
-    if (q.z != q.w) insert_edge(emap, {q.z, q.w});
-    insert_edge(emap, {q.w, q.x});
+    insert({q.x, q.y});
+    insert({q.y, q.z});
+    if (q.z != q.w) insert({q.z, q.w});
+    insert({q.w, q.x});
   }
 }
+
 // Insert an edge and return its index
-int insert_edge(edge_map& emap, const vec2i& edge) {
-  auto es = make_edgemap_edge(edge);
-  auto it = emap.edge_index.find(es);
-  if (it == emap.edge_index.end()) {
-    auto idx = (int)emap.edges.size();
-    emap.edge_index.insert(it, {es, idx});
-    emap.edges.push_back(es);
-    emap.num_faces.push_back(1);
+int edge_map::insert(const vec2i& edge) {
+  auto es = edge.x <= edge.y ? edge : vec2i{edge.y, edge.x};
+  auto it = indices.find(es);
+  if (it == indices.end()) {
+    auto idx = (int)edges.size();
+    indices.insert(it, {es, idx});
+    edges.push_back(es);
+    nfaces.push_back(1);
     return idx;
   } else {
     auto idx = it->second;
-    emap.num_faces[idx] += 1;
+    nfaces[idx] += 1;
     return idx;
   }
 }
-// Get number of edges
-int get_num_edges(const edge_map& emap) { return emap.edges.size(); }
 // Get the edge index
-int get_edge_index(const edge_map& emap, const vec2i& edge) {
-  auto iterator = emap.edge_index.find(make_edgemap_edge(edge));
-  if (iterator == emap.edge_index.end()) return -1;
+int edge_map::index(const vec2i& edge) const {
+  auto es = edge.x <= edge.y ? edge : vec2i{edge.y, edge.x};
+  auto iterator = indices.find(es);
+  if (iterator == indices.end()) return -1;
   return iterator->second;
 }
 // Get a list of edges, boundary edges, boundary vertices
-void get_edges(const edge_map& emap, vector<vec2i>& edges) {
-  edges = emap.edges;
-}
-void get_boundary(const edge_map& emap, vector<vec2i>& boundary) {
+void edge_map::get_boundary(vector<vec2i>& boundary) const {
   boundary.clear();
-  for (auto edge_index = 0; edge_index < emap.edges.size(); edge_index++) {
-    if (emap.num_faces[edge_index] < 2)
-      boundary.push_back(emap.edges[edge_index]);
+  for (auto idx = 0; idx < edges.size(); idx++) {
+    if (nfaces[idx] < 2)
+      boundary.push_back(edges[idx]);
   }
 }
-void get_edges(const vector<vec3i>& triangles, vector<vec2i>& edges) {
-  auto emap = edge_map{};
-  insert_edges(emap, triangles);
-  get_edges(emap, edges);
-}
-void get_edges(const vector<vec4i>& quads, vector<vec2i>& edges) {
-  auto emap = edge_map{};
-  insert_edges(emap, quads);
-  get_edges(emap, edges);
+vector<vec2i> edge_map::get_boundary() const {
+  auto boundary = vector<vec2i>{};
+  get_boundary(boundary);
+  return boundary;
 }
 
 // Gets the cell index
@@ -709,10 +697,8 @@ void subdivide_triangles_impl(
   // loop over levels
   for (auto l = 0; l < level; l++) {
     // get edges
-    auto emap = edge_map{};
-    insert_edges(emap, triangles);
-    auto edges = vector<vec2i>{};
-    get_edges(emap, edges);
+    auto emap = edge_map{triangles};
+    auto edges = emap.get_edges();
     // number of elements
     auto nverts = (int)vert.size();
     auto nedges = (int)edges.size();
@@ -728,15 +714,15 @@ void subdivide_triangles_impl(
     auto ttriangles = vector<vec3i>(nfaces * 4);
     for (auto i = 0; i < nfaces; i++) {
       auto t                = triangles[i];
-      ttriangles[i * 4 + 0] = {t.x, nverts + get_edge_index(emap, {t.x, t.y}),
-          nverts + get_edge_index(emap, {t.z, t.x})};
-      ttriangles[i * 4 + 1] = {t.y, nverts + get_edge_index(emap, {t.y, t.z}),
-          nverts + get_edge_index(emap, {t.x, t.y})};
-      ttriangles[i * 4 + 2] = {t.z, nverts + get_edge_index(emap, {t.z, t.x}),
-          nverts + get_edge_index(emap, {t.y, t.z})};
-      ttriangles[i * 4 + 3] = {nverts + get_edge_index(emap, {t.x, t.y}),
-          nverts + get_edge_index(emap, {t.y, t.z}),
-          nverts + get_edge_index(emap, {t.z, t.x})};
+      ttriangles[i * 4 + 0] = {t.x, nverts + emap.index({t.x, t.y}),
+          nverts + emap.index({t.z, t.x})};
+      ttriangles[i * 4 + 1] = {t.y, nverts + emap.index({t.y, t.z}),
+          nverts + emap.index({t.x, t.y})};
+      ttriangles[i * 4 + 2] = {t.z, nverts + emap.index({t.z, t.x}),
+          nverts + emap.index({t.y, t.z})};
+      ttriangles[i * 4 + 3] = {nverts + emap.index({t.x, t.y}),
+          nverts + emap.index({t.y, t.z}),
+          nverts + emap.index({t.z, t.x})};
     }
     swap(ttriangles, triangles);
     swap(tvert, vert);
@@ -751,10 +737,8 @@ void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert, int level) {
   // loop over levels
   for (auto l = 0; l < level; l++) {
     // get edges
-    auto emap = edge_map{};
-    insert_edges(emap, quads);
-    auto edges = vector<vec2i>{};
-    get_edges(emap, edges);
+    auto emap = edge_map{quads};
+    auto edges = emap.get_edges();
     // number of elements
     auto nverts = (int)vert.size();
     auto nedges = (int)edges.size();
@@ -781,21 +765,21 @@ void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert, int level) {
     for (auto i = 0; i < nfaces; i++) {
       auto q = quads[i];
       if (q.z != q.w) {
-        tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.w, q.x})};
-        tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.w}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
-        tquads[qi++] = {q.w, nverts + get_edge_index(emap, {q.w, q.x}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.w})};
+        tquads[qi++] = {q.x, nverts + emap.index({q.x, q.y}),
+            nverts + nedges + i, nverts + emap.index({q.w, q.x})};
+        tquads[qi++] = {q.y, nverts + emap.index({q.y, q.z}),
+            nverts + nedges + i, nverts + emap.index({q.x, q.y})};
+        tquads[qi++] = {q.z, nverts + emap.index({q.z, q.w}),
+            nverts + nedges + i, nverts + emap.index({q.y, q.z})};
+        tquads[qi++] = {q.w, nverts + emap.index({q.w, q.x}),
+            nverts + nedges + i, nverts + emap.index({q.z, q.w})};
       } else {
-        tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.x})};
-        tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.x}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
+        tquads[qi++] = {q.x, nverts + emap.index({q.x, q.y}),
+            nverts + nedges + i, nverts + emap.index({q.z, q.x})};
+        tquads[qi++] = {q.y, nverts + emap.index({q.y, q.z}),
+            nverts + nedges + i, nverts + emap.index({q.x, q.y})};
+        tquads[qi++] = {q.z, nverts + emap.index({q.z, q.x}),
+            nverts + nedges + i, nverts + emap.index({q.y, q.z})};
       }
     }
     tquads.resize(qi);
@@ -852,11 +836,9 @@ void subdivide_catmullclark_impl(
   // loop over levels
   for (auto l = 0; l < level; l++) {
     // get edges
-    auto emap = edge_map{};
-    insert_edges(emap, quads);
-    auto edges = vector<vec2i>{}, boundary = vector<vec2i>{};
-    get_edges(emap, edges);
-    get_boundary(emap, boundary);
+    auto emap = edge_map{quads};
+    auto edges = emap.get_edges();
+    auto boundary = emap.get_boundary();
     // number of elements
     auto nverts    = (int)vert.size();
     auto nedges    = (int)edges.size();
@@ -886,21 +868,21 @@ void subdivide_catmullclark_impl(
     for (auto i = 0; i < nfaces; i++) {
       auto q = quads[i];
       if (q.z != q.w) {
-        tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.w, q.x})};
-        tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.w}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
-        tquads[qi++] = {q.w, nverts + get_edge_index(emap, {q.w, q.x}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.w})};
+        tquads[qi++] = {q.x, nverts + emap.index({q.x, q.y}),
+            nverts + nedges + i, nverts + emap.index({q.w, q.x})};
+        tquads[qi++] = {q.y, nverts + emap.index({q.y, q.z}),
+            nverts + nedges + i, nverts + emap.index({q.x, q.y})};
+        tquads[qi++] = {q.z, nverts + emap.index({q.z, q.w}),
+            nverts + nedges + i, nverts + emap.index({q.y, q.z})};
+        tquads[qi++] = {q.w, nverts + emap.index({q.w, q.x}),
+            nverts + nedges + i, nverts + emap.index({q.z, q.w})};
       } else {
-        tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.x})};
-        tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.x}),
-            nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
+        tquads[qi++] = {q.x, nverts + emap.index({q.x, q.y}),
+            nverts + nedges + i, nverts + emap.index({q.z, q.x})};
+        tquads[qi++] = {q.y, nverts + emap.index({q.y, q.z}),
+            nverts + nedges + i, nverts + emap.index({q.x, q.y})};
+        tquads[qi++] = {q.z, nverts + emap.index({q.z, q.x}),
+            nverts + nedges + i, nverts + emap.index({q.y, q.z})};
       }
     }
     tquads.resize(qi);
@@ -909,8 +891,8 @@ void subdivide_catmullclark_impl(
     auto tboundary = vector<vec2i>(nboundary * 2);
     for (auto i = 0; i < nboundary; i++) {
       auto e = boundary[i];
-      tboundary.push_back({e.x, nverts + get_edge_index(emap, e)});
-      tboundary.push_back({nverts + get_edge_index(emap, e), e.y});
+      tboundary.push_back({e.x, nverts + emap.index(e)});
+      tboundary.push_back({nverts + emap.index(e), e.y});
     }
 
     // setup creases -----------------------------------
@@ -1329,10 +1311,8 @@ void make_edge_solver_slow(geodesic_solver& solver,
 
   for (int i = 0; i < positions.size(); i++) add_node(solver, positions[i]);
 
-  auto emap = edge_map{};
-  insert_edges(emap, triangles);
-  auto edges = vector<vec2i>{};
-  get_edges(emap, edges);
+  auto emap = edge_map{triangles};
+  auto edges = emap.get_edges();
   for (auto& edge : edges) {
     add_undirected_arc(solver, edge.x, edge.y);
   }
@@ -1340,7 +1320,7 @@ void make_edge_solver_slow(geodesic_solver& solver,
   if (!use_steiner_points) return;
 
   solver.graph.reserve(size(positions) + size(edges));
-  auto steiner_per_edge = vector<int>(get_num_edges(emap));
+  auto steiner_per_edge = vector<int>(emap.size());
 
   // On each edge, connect the mid vertex with the vertices on th same edge.
   for (auto edge_index = 0; edge_index < size(edges); edge_index++) {
@@ -1358,7 +1338,7 @@ void make_edge_solver_slow(geodesic_solver& solver,
     for (int k : {0, 1, 2}) {
       int a          = triangles[face][k];
       int b          = triangles[face][(k + 1) % 3];
-      steiner_idx[k] = steiner_per_edge[get_edge_index(emap, {a, b})];
+      steiner_idx[k] = steiner_per_edge[emap.index({a, b})];
     }
 
     // Connect each mid-vertex to the opposite mesh vertex in the triangle
