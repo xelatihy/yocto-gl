@@ -106,33 +106,17 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// SHAPE IO FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Load/Save a shape
-void load_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, bool facevarying);
-void save_shape(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, bool ascii = false);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
+vector<vec3f> compute_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& positions);
+vector<vec3f> compute_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
+vector<vec3f> compute_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
 void compute_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
     const vector<vec3f>& positions);
 void compute_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
@@ -145,16 +129,27 @@ void compute_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-void compute_tangent_spaces(vector<vec4f>& tangent_spaces,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords);
+vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords);
+void          compute_tangent_spaces(vector<vec4f>& tangent_spaces,
+             const vector<vec3i>& triangles, const vector<vec3f>& positions,
+             const vector<vec3f>& normals, const vector<vec2f>& texcoords);
 
 // Apply skinning to vertex position and normals.
+pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms);
 void compute_skinning(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
+pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<mat4f>& xforms);
 void compute_matrix_skinning(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
@@ -168,12 +163,16 @@ void compute_matrix_skinning(vector<vec3f>& skinned_positions,
 namespace yocto {
 
 // Flip vertex normals
-void flip_normals(vector<vec3f>& normals);
+vector<vec3f>& flip_normals(const vector<vec3f>& normals);
+void flip_normals(vector<vec3f>& flipped, const vector<vec3f>& normals);
 // Flip face orientation
-void flip_triangles_orientation(vector<vec3f>& triangles);
-void flip_quads_orientation(vector<vec4f>& quads);
+vector<vec3i> flip_triangles(const vector<vec3i>& triangles);
+vector<vec4i> flip_quads(const vector<vec4i>& quads);
+void flip_triangles(vector<vec3i>& flipped, const vector<vec3i>& triangles);
+void flip_quads(vector<vec4i>& flipped, const vector<vec4i>& quads);
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-void align_vertices(vector<vec3f>& positions, const vec3i& alignment);
+vector<vec3f> align_vertices(const vector<vec3f>& positions, const vec3i& alignment);
+void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions, const vec3i& alignment);
 
 }  // namespace yocto
 
@@ -431,6 +430,28 @@ void compute_geodesic_distances(geodesic_solver& solver,
     vector<float>& distances, const vector<int>& sources);
 void convert_distance_to_color(
     vector<vec4f>& colors, const vector<float>& distances);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE IO FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/Save a shape
+void load_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
+    vector<float>& radius, bool facevarying);
+void save_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, bool ascii = false);
 
 }  // namespace yocto
 
