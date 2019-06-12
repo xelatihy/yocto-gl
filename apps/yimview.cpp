@@ -134,7 +134,7 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     const tonemap_params&    tonemap_prms,
     const colorgrade_params& colorgrade_prms, std::atomic<bool>* cancel,
     std::deque<image_region>& queue, std::mutex& queuem) {
-  auto regions = make_regions(img.size(), 128);
+  auto                regions  = make_regions(img.size(), 128);
   auto                futures  = vector<std::future<void>>{};
   auto                nthreads = std::thread::hardware_concurrency();
   std::atomic<size_t> next_idx(0);

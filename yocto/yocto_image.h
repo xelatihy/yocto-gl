@@ -293,11 +293,11 @@ bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear color space.
 image<vec4f> load_image4f(const string& filename);
-void load_image(const string& filename, image<vec4f>& img);
-void save_image(const string& filename, const image<vec4f>& img);
+void         load_image(const string& filename, image<vec4f>& img);
+void         save_image(const string& filename, const image<vec4f>& img);
 image<vec4b> load_image4b(const string& filename);
-void load_image(const string& filename, image<vec4b>& img);
-void save_image(const string& filename, const image<vec4b>& img);
+void         load_image(const string& filename, image<vec4b>& img);
+void         save_image(const string& filename, const image<vec4b>& img);
 
 // Convenience helper for loading HDR or LDR based on filename
 void load_image(const string& filename, image<vec4f>& hdr, image<vec4b>& ldr);

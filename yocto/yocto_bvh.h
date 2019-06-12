@@ -104,8 +104,7 @@ template <typename T>
 struct bvh_span {
   bvh_span() : ptr{nullptr}, count{0} {}
   bvh_span(const T* ptr, int count) : ptr{ptr}, count{count} {}
-  bvh_span(const vector<T>& vec)
-      : ptr{vec.data()}, count{(int)vec.size()} {}
+  bvh_span(const vector<T>& vec) : ptr{vec.data()}, count{(int)vec.size()} {}
 
   bool empty() const { return count == 0; }
   int  size() const { return count; }
@@ -204,6 +203,24 @@ struct bvh_scene {
   ~bvh_scene();
 #endif
 };
+
+// Initialize the data in the bvh
+inline bvh_shape make_bvh(
+    bvh_span<int> points, bvh_span<vec3f> positions, bvh_span<float> radius) {
+  return bvh_shape{points, {}, {}, {}, {}, positions, radius};
+}
+inline bvh_shape make_bvh(
+    bvh_span<vec2i> lines, bvh_span<vec3f> positions, bvh_span<float> radius) {
+  return bvh_shape{{}, lines, {}, {}, {}, positions, radius};
+}
+inline bvh_shape make_bvh(bvh_span<vec3i> triangles, bvh_span<vec3f> positions,
+    bvh_span<float> radius = {}) {
+  return bvh_shape{{}, {}, triangles, {}, {}, positions, radius};
+}
+inline bvh_shape make_bvh(bvh_span<vec4i> quads, bvh_span<vec3f> positions,
+    bvh_span<float> radius = {}) {
+  return bvh_shape{{}, {}, {}, quads, {}, positions, radius};
+}
 
 // bvh build params
 struct bvh_params {
