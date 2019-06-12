@@ -111,7 +111,6 @@ inline float max(float a, float b) { return (a > b) ? a : b; }
 inline float clamp(float a, float min_, float max_) {
   return min(max(a, min_), max_);
 }
-inline float clamp01(float a) { return min(max(a, 0.0f), 1.0f); }
 inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
 inline float radians(float a) { return a * pif / 180; }
 inline float degrees(float a) { return a * 180 / pif; }
@@ -273,7 +272,6 @@ inline vec2f min(const vec2f& a, const vec2f& b) {
 inline vec2f clamp(const vec2f& x, float min, float max) {
   return {clamp(x.x, min, max), clamp(x.y, min, max)};
 }
-inline vec2f clamp01(const vec2f& x) { return {clamp01(x.x), clamp01(x.y)}; }
 inline vec2f lerp(const vec2f& a, const vec2f& b, float u) {
   return a * (1 - u) + b * u;
 }
@@ -421,9 +419,6 @@ inline vec3f min(const vec3f& a, const vec3f& b) {
 inline vec3f clamp(const vec3f& x, float min, float max) {
   return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
 }
-inline vec3f clamp01(const vec3f& x) {
-  return {clamp01(x.x), clamp01(x.y), clamp01(x.z)};
-}
 inline vec3f lerp(const vec3f& a, const vec3f& b, float u) {
   return a * (1 - u) + b * u;
 }
@@ -559,9 +554,6 @@ inline vec4f min(const vec4f& a, const vec4f& b) {
 inline vec4f clamp(const vec4f& x, float min, float max) {
   return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
       clamp(x.w, min, max)};
-}
-inline vec4f clamp01(const vec4f& x) {
-  return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
 }
 inline vec4f lerp(const vec4f& a, const vec4f& b, float u) {
   return a * (1 - u) + b * u;

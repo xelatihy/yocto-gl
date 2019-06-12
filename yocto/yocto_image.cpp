@@ -727,7 +727,7 @@ static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
     gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
 
     // apply_image
-    auto lerp_value = clamp01(pow(rgb, 1 / gamma));
+    auto lerp_value = clamp(pow(rgb, 1 / gamma), 0, 1);
     rgb             = gain * lerp_value + lift * (1 - lerp_value);
   }
   return rgb;

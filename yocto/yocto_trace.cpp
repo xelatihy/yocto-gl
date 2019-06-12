@@ -50,7 +50,7 @@ float eval_microfacetD(
   if (cosine <= 0) return 0;
   auto roughness_square = roughness * roughness;
   auto cosine_square    = cosine * cosine;
-  auto tangent_square   = clamp01(1 - cosine_square) / cosine_square;
+  auto tangent_square   = clamp(1 - cosine_square, 0.0f, 1.0f) / cosine_square;
   if (ggx) {
     return roughness_square / (pif * cosine_square * cosine_square *
                                   (roughness_square + tangent_square) *
@@ -66,7 +66,7 @@ float evaluate_microfacetG1(float roughness, const vec3f& normal,
   if (dot(half_vector, direction) * cosine <= 0) return 0;
   auto roughness_square = roughness * roughness;
   auto cosine_square    = cosine * cosine;
-  auto tangent_square   = clamp01(1 - cosine_square) / cosine_square;
+  auto tangent_square   = clamp(1 - cosine_square, 0.0f, 1.0f) / cosine_square;
   if (ggx) {
     return 2 / (1 + sqrt(1.0f + roughness_square * tangent_square));
   } else {
@@ -99,7 +99,7 @@ vec3f sample_microfacet(
   }
   auto cosine_square     = 1 / (1 + tangent_square);
   auto cosine            = 1 / sqrt(1 + tangent_square);
-  auto radius            = sqrt(clamp01(1 - cosine_square));
+  auto radius            = sqrt(clamp(1 - cosine_square, 0.0f, 1.0f));
   auto local_half_vector = vec3f{cos(phi) * radius, sin(phi) * radius, cosine};
   return transform_direction(basis_fromz(normal), local_half_vector);
 }
