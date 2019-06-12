@@ -606,13 +606,19 @@ void build_bvh(
       }
     }
 #endif
-    sbvh.points    = shape.points;
-    sbvh.lines     = shape.lines;
-    sbvh.triangles = shape.triangles;
-    sbvh.quads     = shape.quads;
-    sbvh.quadspos  = shape.quadspos;
-    sbvh.positions = shape.positions;
-    sbvh.radius    = shape.radius;
+    if(!shape.points.empty()) {
+      sbvh = make_points_bvh(shape.points, shape.positions, shape.radius);
+    } else if(!shape.lines.empty()) {
+      sbvh = make_lines_bvh(shape.lines, shape.positions, shape.radius);
+    } else if(!shape.triangles.empty()) {
+      sbvh = make_triangles_bvh(shape.triangles, shape.positions, shape.radius);
+    } else if(!shape.quads.empty()) {
+      sbvh = make_quads_bvh(shape.quads, shape.positions, shape.radius);
+    } else if(!shape.quadspos.empty()) {
+      sbvh = make_fvquads_bvh(shape.quadspos, shape.positions, shape.radius);
+    } else {
+      throw std::runtime_error("empty shape");
+    }
   }
   if (!scene.instances.empty()) {
     bvh.instances = {&scene.instances[0].frame, (int)scene.instances.size(),

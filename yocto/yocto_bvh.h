@@ -205,21 +205,25 @@ struct bvh_scene {
 };
 
 // Initialize the data in the bvh
-inline bvh_shape make_bvh(
+inline bvh_shape make_points_bvh(
     bvh_span<int> points, bvh_span<vec3f> positions, bvh_span<float> radius) {
   return bvh_shape{points, {}, {}, {}, {}, positions, radius};
 }
-inline bvh_shape make_bvh(
+inline bvh_shape make_lines_bvh(
     bvh_span<vec2i> lines, bvh_span<vec3f> positions, bvh_span<float> radius) {
   return bvh_shape{{}, lines, {}, {}, {}, positions, radius};
 }
-inline bvh_shape make_bvh(bvh_span<vec3i> triangles, bvh_span<vec3f> positions,
+inline bvh_shape make_triangles_bvh(bvh_span<vec3i> triangles, bvh_span<vec3f> positions,
     bvh_span<float> radius = {}) {
   return bvh_shape{{}, {}, triangles, {}, {}, positions, radius};
 }
-inline bvh_shape make_bvh(bvh_span<vec4i> quads, bvh_span<vec3f> positions,
+inline bvh_shape make_quads_bvh(bvh_span<vec4i> quads, bvh_span<vec3f> positions,
     bvh_span<float> radius = {}) {
   return bvh_shape{{}, {}, {}, quads, {}, positions, radius};
+}
+inline bvh_shape make_fvquads_bvh(bvh_span<vec4i> quads, bvh_span<vec3f> positions,
+    bvh_span<float> radius = {}) {
+  return bvh_shape{{}, {}, {}, {}, quads, positions, radius};
 }
 
 // bvh build params
