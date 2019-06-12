@@ -1283,7 +1283,10 @@ namespace yocto {
 
 // Quaternions to represent rotations
 struct quat4f {
-  float x, y, z, w;
+  float x = 0;
+  float y = 0;
+  float z =0;
+  float w = 0;
 
   // constructors
   quat4f() : x{0}, y{0}, z{0}, w{1} {}
