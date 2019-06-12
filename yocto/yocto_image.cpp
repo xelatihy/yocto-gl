@@ -616,7 +616,8 @@ image<vec4f> rgb_to_srgb(const image<vec4f>& lin) {
   return apply_image<vec4f>(lin, [](const auto& a) { return rgb_to_srgb(a); });
 }
 image<vec4f> srgb_to_rgb(const image<vec4b>& srgb) {
-  return apply_image<vec4f>(srgb, [](const auto& a) { return srgb_to_rgb(byte_to_float(a)); });
+  return apply_image<vec4f>(
+      srgb, [](const auto& a) { return srgb_to_rgb(byte_to_float(a)); });
 }
 image<vec4b> rgb_to_srgb8(const image<vec4f>& lin) {
   return apply_image<vec4b>(
@@ -686,10 +687,9 @@ vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
 
 // Apply exposure and filmic tone mapping
 image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params) {
-  return apply_image<vec4f>(hdr,
-      [params](const vec4f& hdr) {
-        return vec4f{tonemap(xyz(hdr), params), hdr.w};
-      });
+  return apply_image<vec4f>(hdr, [params](const vec4f& hdr) {
+    return vec4f{tonemap(xyz(hdr), params), hdr.w};
+  });
 }
 image<vec4b> tonemap8(const image<vec4f>& hdr, const tonemap_params& params) {
   return apply_image<vec4b>(hdr, [params](const vec4f& hdr) {
@@ -834,7 +834,8 @@ image<vec4f> bump_to_normal(const image<vec4f>& img, float scale) {
 }
 
 // Make an image
-void make_procedural_image(image<vec4f>& img, const procedural_image_params& params) {
+void make_procedural_image(
+    image<vec4f>& img, const procedural_image_params& params) {
   auto make_img = [&](const auto& shader) {
     img.resize(params.size);
     auto scale = 1.0f / max(params.size);
@@ -1348,14 +1349,14 @@ void make_logo(image<vec4f>& img, const string& type) {
 }
 
 void add_logo(image<vec4f>& img, const string& type) {
-  auto logo = srgb_to_rgb(make_logo(type));
-  auto offset   = img.size() - logo.size() - 8;
+  auto logo   = srgb_to_rgb(make_logo(type));
+  auto offset = img.size() - logo.size() - 8;
   set_region(img, logo, offset);
 }
 
 void add_logo(image<vec4b>& img, const string& type) {
-  auto logo = make_logo(type);
-  auto offset   = img.size() - logo.size() - 8;
+  auto logo   = make_logo(type);
+  auto offset = img.size() - logo.size() - 8;
   set_region(img, logo, offset);
 }
 
@@ -1543,7 +1544,8 @@ void make_image_preset(image<vec4b>& img, const string& type) {
   }
 }
 
-void make_image_preset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
+void make_image_preset(
+    image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
   if (type.find("sky") == type.npos) {
     auto imgf = image<vec4f>{};
     make_image_preset(imgf, type);

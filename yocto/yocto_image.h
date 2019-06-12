@@ -246,8 +246,8 @@ inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
 // Apply exposure and filmic tone mapping
 image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params);
 image<vec4b> tonemap8(const image<vec4f>& hdr, const tonemap_params& params);
-void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_params& params);
+void         tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
+            const image_region& region, const tonemap_params& params);
 
 // minimal color grading
 struct colorgrade_params {
@@ -344,18 +344,19 @@ enum struct procedural_image_type {
 // Parameters for make_procedural_image
 struct procedural_image_params {
   procedural_image_type type   = procedural_image_type::grid;
-  vec2i           size   = {1024, 1024};
-  float           scale  = 1;
-  vec4f           color0 = {0, 0, 0, 1};
-  vec4f           color1 = {1, 1, 1, 1};
-  vec4f           noise  = {2, 0.5, 8, 1};  // lacunarity, gain, octaves, offset
-  float           borderw = 0;
-  vec4f           borderc = {0, 0, 0, 1};
+  vec2i                 size   = {1024, 1024};
+  float                 scale  = 1;
+  vec4f                 color0 = {0, 0, 0, 1};
+  vec4f                 color1 = {1, 1, 1, 1};
+  vec4f noise   = {2, 0.5, 8, 1};  // lacunarity, gain, octaves, offset
+  float borderw = 0;
+  vec4f borderc = {0, 0, 0, 1};
 };
 
 // Make an image
 image<vec4f> make_procedural_image(const procedural_image_params& params);
-void         make_procedural_image(image<vec4f>& img, const procedural_image_params& params);
+void         make_procedural_image(
+            image<vec4f>& img, const procedural_image_params& params);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
@@ -365,9 +366,9 @@ void         make_procedural_image(image<vec4f>& img, const procedural_image_par
 image<vec4f> make_sunsky(const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
-void make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
-    float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-    float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
+void         make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
+            float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
+            float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
 image<vec4f> make_lights(const vec2i& size, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
@@ -378,8 +379,8 @@ void         make_lights(image<vec4f>& img, const vec2i& size,
 
 // Comvert a bump map to a normal map. All linear color spaces.
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
-void bump_to_normal(
-    image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
+void         bump_to_normal(
+            image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
 
 // Add a border to an image
 void add_border(image<vec4f>& img, const vec2i& size, int border_width,
@@ -389,14 +390,15 @@ void add_border(image<vec4f>& img, const vec2i& size, int border_width,
 image<vec4b> make_logo(const string& name);
 void         make_logo(image<vec4f>& img, const string& name);
 void         make_logo(image<vec4b>& img, const string& name);
-void add_logo(image<vec4f>& img, const string& name);
-void add_logo(image<vec4b>& img, const string& name);
+void         add_logo(image<vec4f>& img, const string& name);
+void         add_logo(image<vec4b>& img, const string& name);
 
 // Make an image preset, useful for testing. See implementation for types.
 image<vec4f> make_image_preset(const string& type);
 void         make_image_preset(image<vec4f>& img, const string& type);
 void         make_image_preset(image<vec4b>& img, const string& type);
-void make_image_preset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
+void         make_image_preset(
+            image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
 
 }  // namespace yocto
 

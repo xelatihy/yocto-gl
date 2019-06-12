@@ -1592,8 +1592,8 @@ struct load_obj_scene_cb : obj_callbacks {
       params.subdivisions = oproc.level < 0 ? 0 : oproc.level;
       params.scale        = oproc.size / 2;
       params.uvscale      = oproc.size;
-      make_procedural_image(shape.triangles, shape.quads, shape.positions, shape.normals,
-          shape.texcoords, params);
+      make_procedural_image(shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, params);
     } else {
       throw std::runtime_error("unknown obj procedural");
     }

@@ -279,8 +279,8 @@ void load_island_lights(
       params.type = make_shape_type::quad;
       params.scale =
           (ljs.at("width").get<float>() + ljs.at("height").get<float>());
-      make_procedural_image(shape.triangles, shape.quads, shape.positions, shape.normals,
-          shape.texcoords, params);
+      make_procedural_image(shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, params);
       scene.shapes.push_back(shape);
       auto instance     = yocto_instance{};
       instance.uri      = "instances/lights/" + name + ".yaml";

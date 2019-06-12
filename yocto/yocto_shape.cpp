@@ -2250,81 +2250,96 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
   if (type == "default-quad") {
     auto params = procshape_params{};
     params.type = make_shape_type::quad;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-quady") {
     auto params = procshape_params{};
     params.type = make_shape_type::quad;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-cube") {
     auto params = procshape_params{};
     params.type = make_shape_type::cube;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-cube-rounded") {
     auto params    = procshape_params{};
     params.type    = make_shape_type::cube;
     params.rounded = 0.15;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-sphere") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::sphere;
     params.subdivisions = 5;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-disk") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::disk;
     params.subdivisions = 5;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-disk-bulged") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::disk;
     params.subdivisions = 5;
     params.rounded      = 0.25;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-quad-bulged") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::quad;
     params.subdivisions = 5;
     params.rounded      = 0.25;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-uvsphere") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::uvsphere;
     params.subdivisions = 5;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-uvsphere-flipcap") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::uvsphere;
     params.subdivisions = 5;
     params.rounded      = 0.75;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-uvdisk") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::uvdisk;
     params.subdivisions = 4;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-uvcylinder") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::uvcylinder;
     params.subdivisions = 5;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-uvcylinder-rounded") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::uvcylinder;
     params.subdivisions = 5;
     params.rounded      = 0.075;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-geosphere") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::geosphere;
     params.subdivisions = 5;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-floor") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::floor;
     params.scale        = 20;
     params.uvscale      = 20;
     params.subdivisions = 1;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-floor-bent") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::floor;
@@ -2332,12 +2347,14 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     params.uvscale      = 20;
     params.subdivisions = 5;
     params.rounded      = 0.5;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-matball") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::matball;
     params.subdivisions = 5;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-hairball") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::sphere;
@@ -2348,8 +2365,8 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    make_procedural_image(base_triangles, base_quads, base_positions, base_normals,
-        base_texcoords, params);
+    make_procedural_image(base_triangles, base_quads, base_positions,
+        base_normals, base_texcoords, params);
     auto hparams         = make_hair_params{};
     hparams.subdivisions = 2;
     hparams.num          = 65536;
@@ -2364,11 +2381,13 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     params.type         = make_shape_type::sphere;
     params.subdivisions = 5;
     params.scale        = 0.8f;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-suzanne") {
     auto params = procshape_params{};
     params.type = make_shape_type::suzanne;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-cube-facevarying") {
     auto params = procshape_params{};
     params.type = make_shape_type::cube;
@@ -2387,14 +2406,16 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     params.scale        = 0.075;
     params.rounded      = 0.3;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-uvsphere") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::uvsphere;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-uvsphere-flipcap") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::uvsphere;
@@ -2402,28 +2423,32 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     params.scale        = 0.075;
     params.rounded      = 0.3;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-sphere") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::sphere;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-sphere-displaced") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::sphere;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-disk") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::disk;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-uvcylinder") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::uvcylinder;
@@ -2431,7 +2456,8 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     params.scale        = 0.075;
     params.rounded      = 0.3;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-floor") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::floor;
@@ -2439,14 +2465,16 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     params.scale        = 2;
     params.uvscale      = 20;
     params.frame        = identity3x4f;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-matball") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::matball;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-hairball1") {
     auto params         = procshape_params{};
     params.type         = make_shape_type::sphere;
@@ -2458,8 +2486,8 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    make_procedural_image(base_triangles, base_quads, base_positions, base_normals,
-        base_texcoords, params);
+    make_procedural_image(base_triangles, base_quads, base_positions,
+        base_normals, base_texcoords, params);
     auto hparams           = make_hair_params{};
     hparams.num            = 65536;
     hparams.subdivisions   = 2;
@@ -2482,8 +2510,8 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    make_procedural_image(base_triangles, base_quads, base_positions, base_normals,
-        base_texcoords, params);
+    make_procedural_image(base_triangles, base_quads, base_positions,
+        base_normals, base_texcoords, params);
     auto hparams         = make_hair_params{};
     hparams.num          = 65536;
     hparams.subdivisions = 2;
@@ -2504,8 +2532,8 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    make_procedural_image(base_triangles, base_quads, base_positions, base_normals,
-        base_texcoords, params);
+    make_procedural_image(base_triangles, base_quads, base_positions,
+        base_normals, base_texcoords, params);
     auto hparams           = make_hair_params{};
     hparams.num            = 65536;
     hparams.subdivisions   = 2;
@@ -2523,13 +2551,15 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     params.subdivisions = 5;
     params.scale        = 0.075f * 0.8f;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-suzanne-subdiv") {
     auto params  = procshape_params{};
     params.type  = make_shape_type::suzanne;
     params.scale = 0.075f * 0.8f;
     params.frame = frame3f{{0, 0.075, 0}};
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-cube-subdiv") {
     auto params  = procshape_params{};
     params.type  = make_shape_type::cube;
@@ -2541,12 +2571,14 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     auto params  = procshape_params{};
     params.type  = make_shape_type::quad;
     params.scale = 0.2;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-arealight2") {
     auto params  = procshape_params{};
     params.type  = make_shape_type::quad;
     params.scale = 0.2;
-    make_procedural_image(triangles, quads, positions, normals, texcoords, params);
+    make_procedural_image(
+        triangles, quads, positions, normals, texcoords, params);
   } else {
     throw std::invalid_argument("unknown shape preset " + type);
   }
