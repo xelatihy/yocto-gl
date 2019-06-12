@@ -167,7 +167,7 @@ void flip_quads_orientation(vector<vec4f>& quads) {
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
 void align_vertices(vector<vec3f>& positions, const vec3i& alignment) {
   auto bounds = invalidb3f;
-  for (auto& p : positions) bounds += p;
+  for (auto& p : positions) bounds = merge(bounds, p);
   auto offset = vec3f{0, 0, 0};
   switch (alignment.x) {
     case 1: offset.x = bounds.min.x; break;
@@ -2229,7 +2229,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
 void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness) {
   auto bbox = invalidb3f;
-  for (auto p : positions) bbox += p;
+  for (auto p : positions) bbox = merge(bbox, p);
   auto center              = yocto::center(bbox);
   auto inner_quads         = quads;
   auto inner_positions     = positions;

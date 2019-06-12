@@ -1389,14 +1389,14 @@ inline bool operator!=(const bbox2f& a, const bbox2f& b) {
 }
 
 // Bounding box expansions with points and other boxes.
-inline bbox2f operator+(const bbox2f& a, const vec2f& b) {
+inline bbox2f merge(const bbox2f& a, const vec2f& b) {
   return {min(a.min, b), max(a.max, b)};
 }
-inline bbox2f operator+(const bbox2f& a, const bbox2f& b) {
+inline bbox2f merge(const bbox2f& a, const bbox2f& b) {
   return {min(a.min, b.min), max(a.max, b.max)};
 }
-inline bbox2f& operator+=(bbox2f& a, const vec2f& b) { return a = a + b; }
-inline bbox2f& operator+=(bbox2f& a, const bbox2f& b) { return a = a + b; }
+inline void expand(bbox2f& a, const vec2f& b) { a = merge(a, b); }
+inline void expand(bbox2f& a, const bbox2f& b) { a = merge(a, b); }
 
 // Bounding box properties
 inline vec3f center(const bbox3f& a) { return (a.min + a.max) / 2; }
@@ -1411,14 +1411,14 @@ inline bool operator!=(const bbox3f& a, const bbox3f& b) {
 }
 
 // Bounding box expansions with points and other boxes.
-inline bbox3f operator+(const bbox3f& a, const vec3f& b) {
+inline bbox3f merge(const bbox3f& a, const vec3f& b) {
   return {min(a.min, b), max(a.max, b)};
 }
-inline bbox3f operator+(const bbox3f& a, const bbox3f& b) {
+inline bbox3f merge(const bbox3f& a, const bbox3f& b) {
   return {min(a.min, b.min), max(a.max, b.max)};
 }
-inline bbox3f& operator+=(bbox3f& a, const vec3f& b) { return a = a + b; }
-inline bbox3f& operator+=(bbox3f& a, const bbox3f& b) { return a = a + b; }
+inline void expand(bbox3f& a, const vec3f& b) { a = merge(a, b); }
+inline void expand(bbox3f& a, const bbox3f& b) { a = merge(a, b); }
 
 // Primitive bounds.
 inline bbox3f point_bounds(const vec3f& p) { return {p, p}; }
@@ -1577,7 +1577,7 @@ inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b) {
       vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
       vec3f{b.max.x, b.max.y, b.max.z}};
   auto xformed = bbox3f();
-  for (auto& corner : corners) xformed += transform_point(a, corner);
+  for (auto& corner : corners) xformed = merge(xformed, transform_point(a, corner));
   return xformed;
 }
 inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
@@ -1587,7 +1587,7 @@ inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
       vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
       vec3f{b.max.x, b.max.y, b.max.z}};
   auto xformed = bbox3f();
-  for (auto& corner : corners) xformed += transform_point(a, corner);
+  for (auto& corner : corners) xformed = merge(xformed, transform_point(a, corner));
   return xformed;
 }
 
