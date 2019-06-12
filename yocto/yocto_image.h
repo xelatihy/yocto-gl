@@ -27,8 +27,8 @@
 // 3. resize images with `resize()`
 // 4. tonemap images with `tonemap()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
-// 5. make various image examples with the `make_improc()` functions
-// 6. create procedural sun-sky images with `make_imsunsky()`
+// 5. make various image examples with the `make_procedural_image()` functions
+// 6. create procedural sun-sky images with `make_sunsky()`
 // 7. many color conversion functions are available in the code below
 //
 //
@@ -325,8 +325,8 @@ void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Types for make_improc
-enum struct make_image_type {
+// Types for make_procedural_image
+enum struct procedural_image_type {
   grid,
   checker,
   bumps,
@@ -341,9 +341,9 @@ enum struct make_image_type {
   ridge
 };
 
-// Parameters for make_improc
-struct improc_params {
-  make_image_type type   = make_image_type::grid;
+// Parameters for make_procedural_image
+struct procedural_image_params {
+  procedural_image_type type   = procedural_image_type::grid;
   vec2i           size   = {1024, 1024};
   float           scale  = 1;
   vec4f           color0 = {0, 0, 0, 1};
@@ -354,47 +354,49 @@ struct improc_params {
 };
 
 // Make an image
-void         make_improc(image<vec4f>& img, const improc_params& params);
-image<vec4f> make_improc(const improc_params& params);
+image<vec4f> make_procedural_image(const procedural_image_params& params);
+void         make_procedural_image(image<vec4f>& img, const procedural_image_params& params);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
 // disabled with has_sun. The sun parameters can be slightly modified by
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
-void make_imsunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
+image<vec4f> make_sunsky(const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
-image<vec4f> make_imsunsky(const vec2i& size, float sun_angle,
+void make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
-void         make_imlights(image<vec4f>& img, const vec2i& size,
-            const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-            float lwidth = pif / 16, float lheight = pif / 16);
-image<vec4f> make_imlights(const vec2i& size, const vec3f& le = {1, 1, 1},
+image<vec4f> make_lights(const vec2i& size, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
+void         make_lights(image<vec4f>& img, const vec2i& size,
+            const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
+            float lwidth = pif / 16, float lheight = pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
+image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
 void bump_to_normal(
     image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
-image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
 
 // Add a border to an image
 void add_border(image<vec4f>& img, const vec2i& size, int border_width,
     const vec4f& border_color);
 
 // Make logo images. Image is resized to proper size.
-void         make_imlogo(image<vec4f>& img, const string& name);
-void         make_imlogo(image<vec4b>& img, const string& name);
-image<vec4b> make_imlogo(const string& name);
+image<vec4b> make_logo(const string& name);
+void         make_logo(image<vec4f>& img, const string& name);
+void         make_logo(image<vec4b>& img, const string& name);
+void add_logo(image<vec4f>& img, const string& name);
+void add_logo(image<vec4b>& img, const string& name);
 
 // Make an image preset, useful for testing. See implementation for types.
-void         make_impreset(image<vec4f>& img, const string& type);
-image<vec4f> make_impreset(const string& type);
-void         make_impreset(image<vec4b>& img, const string& type);
-void make_impreset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
+image<vec4f> make_image_preset(const string& type);
+void         make_image_preset(image<vec4f>& img, const string& type);
+void         make_image_preset(image<vec4b>& img, const string& type);
+void make_image_preset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
 
 }  // namespace yocto
 
@@ -468,7 +470,7 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b) {
 }
 
 // make a simple example volume
-void make_test(volume<float>& vol, const vec3i& size, float scale = 10,
+void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
     float exponent = 6);
 void make_volpreset(volume<float>& vol, const string& type);
 
