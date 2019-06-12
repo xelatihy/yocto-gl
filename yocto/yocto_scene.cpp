@@ -593,10 +593,10 @@ void print_validation(const yocto_scene& scene, bool notextures) {
 
 void build_bvh(
     bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
-  bvh.shapes.resize(scene.shapes.size());
+  auto sbvhs = vector<bvh_shape>{scene.shapes.size()};
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
     auto& shape = scene.shapes[idx];
-    auto& sbvh  = bvh.shapes[idx];
+    auto& sbvh  = sbvhs[idx];
 #if YOCTO_EMBREE
     // call Embree if needed
     if (params.use_embree) {
@@ -620,12 +620,9 @@ void build_bvh(
       throw std::runtime_error("empty shape");
     }
   }
-  if (!scene.instances.empty()) {
-    bvh.instances = {&scene.instances[0].frame, (int)scene.instances.size(),
-        sizeof(scene.instances[0])};
-  } else {
-    bvh.instances = {};
-  }
+  
+  bvh = make_instances_bvh({&scene.instances[0].frame, 
+      (int)scene.instances.size(), sizeof(scene.instances[0])}, sbvhs);
 
   build_bvh(bvh, params);
 }

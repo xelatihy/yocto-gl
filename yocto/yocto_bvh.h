@@ -186,10 +186,8 @@ struct bvh_instance {
 };
 
 struct bvh_scene {
-  // instances
+  // instances and shapes
   bvh_sspan<bvh_instance> instances = {};
-
-  // shape
   vector<bvh_shape> shapes = {};
 
   // nodes
@@ -224,6 +222,9 @@ inline bvh_shape make_quads_bvh(bvh_span<vec4i> quads, bvh_span<vec3f> positions
 inline bvh_shape make_fvquads_bvh(bvh_span<vec4i> quads, bvh_span<vec3f> positions,
     bvh_span<float> radius = {}) {
   return bvh_shape{{}, {}, {}, {}, quads, positions, radius};
+}
+inline bvh_scene make_instances_bvh(bvh_sspan<bvh_instance> instances, const vector<bvh_shape>& shapes) {
+  return bvh_scene{instances, shapes};
 }
 
 // bvh build params
