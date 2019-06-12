@@ -876,7 +876,8 @@ static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
     // compute bounds
     node.bbox = invalidb3f;
-    for (auto i = start; i < end; i++) node.bbox = merge(node.bbox, prims[i].bbox);
+    for (auto i = start; i < end; i++)
+      node.bbox = merge(node.bbox, prims[i].bbox);
 
     // split into two children
     if (end - start > bvh_max_prims) {
@@ -956,7 +957,8 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
             // compute bounds
             node.bbox = invalidb3f;
-            for (auto i = start; i < end; i++) node.bbox = merge(node.bbox, prims[i].bbox);
+            for (auto i = start; i < end; i++)
+              node.bbox = merge(node.bbox, prims[i].bbox);
 
             // split into two children
             if (end - start > bvh_max_prims) {
@@ -1104,32 +1106,37 @@ void refit_bvh(bvh_shape& shape, const bvh_params& params) {
       }
     } else if (!shape.points.empty()) {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& p = shape.points[node.prims[idx]];
-        node.bbox = merge(node.bbox, point_bounds(shape.positions[p], shape.radius[p]));
+        auto& p   = shape.points[node.prims[idx]];
+        node.bbox = merge(
+            node.bbox, point_bounds(shape.positions[p], shape.radius[p]));
       }
     } else if (!shape.lines.empty()) {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& l = shape.lines[node.prims[idx]];
-        node.bbox = merge(node.bbox, line_bounds(shape.positions[l.x], shape.positions[l.y],
-            shape.radius[l.x], shape.radius[l.y]));
+        auto& l   = shape.lines[node.prims[idx]];
+        node.bbox = merge(
+            node.bbox, line_bounds(shape.positions[l.x], shape.positions[l.y],
+                           shape.radius[l.x], shape.radius[l.y]));
       }
     } else if (!shape.triangles.empty()) {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& t = shape.triangles[node.prims[idx]];
-        node.bbox = merge(node.bbox, triangle_bounds(
-            shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]));
+        auto& t   = shape.triangles[node.prims[idx]];
+        node.bbox = merge(
+            node.bbox, triangle_bounds(shape.positions[t.x],
+                           shape.positions[t.y], shape.positions[t.z]));
       }
     } else if (!shape.quads.empty()) {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& q = shape.quads[node.prims[idx]];
-        node.bbox = merge(node.bbox, quad_bounds(shape.positions[q.x], shape.positions[q.y],
-            shape.positions[q.z], shape.positions[q.w]));
+        auto& q   = shape.quads[node.prims[idx]];
+        node.bbox = merge(
+            node.bbox, quad_bounds(shape.positions[q.x], shape.positions[q.y],
+                           shape.positions[q.z], shape.positions[q.w]));
       }
     } else if (!shape.quadspos.empty()) {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& q = shape.quadspos[node.prims[idx]];
-        node.bbox = merge(node.bbox, quad_bounds(shape.positions[q.x], shape.positions[q.y],
-            shape.positions[q.z], shape.positions[q.w]));
+        auto& q   = shape.quadspos[node.prims[idx]];
+        node.bbox = merge(
+            node.bbox, quad_bounds(shape.positions[q.x], shape.positions[q.y],
+                           shape.positions[q.z], shape.positions[q.w]));
       }
     }
   }

@@ -88,8 +88,8 @@
 namespace yocto {
 
 // Aliased typenames for readability
-using std::string;
 using std::pair;
+using std::string;
 using std::unordered_map;
 using std::vector;
 using namespace std::literals::string_literals;
@@ -1285,7 +1285,7 @@ namespace yocto {
 struct quat4f {
   float x = 0;
   float y = 0;
-  float z =0;
+  float z = 0;
   float w = 0;
 
   // constructors
@@ -1577,7 +1577,8 @@ inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b) {
       vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
       vec3f{b.max.x, b.max.y, b.max.z}};
   auto xformed = bbox3f();
-  for (auto& corner : corners) xformed = merge(xformed, transform_point(a, corner));
+  for (auto& corner : corners)
+    xformed = merge(xformed, transform_point(a, corner));
   return xformed;
 }
 inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
@@ -1587,7 +1588,8 @@ inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
       vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
       vec3f{b.max.x, b.max.y, b.max.z}};
   auto xformed = bbox3f();
-  for (auto& corner : corners) xformed = merge(xformed, transform_point(a, corner));
+  for (auto& corner : corners)
+    xformed = merge(xformed, transform_point(a, corner));
   return xformed;
 }
 

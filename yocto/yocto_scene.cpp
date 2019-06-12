@@ -55,7 +55,8 @@ bbox3f compute_bounds(const yocto_scene& scene) {
     shape_bbox[shape_id] = compute_bounds(scene.shapes[shape_id]);
   auto bbox = invalidb3f;
   for (auto& instance : scene.instances) {
-    bbox = merge(bbox, transform_bbox(instance.frame, shape_bbox[instance.shape]));
+    bbox = merge(
+        bbox, transform_bbox(instance.frame, shape_bbox[instance.shape]));
   }
   return bbox;
 }
