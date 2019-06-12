@@ -115,7 +115,7 @@ struct rng_state {
   rng_state(uint64_t state, uint64_t inc) : state{state}, inc{inc} {}
 };
 
-// Next random number.
+// Next random number, used internally only.
 inline uint32_t _advance_rng(rng_state& rng) {
   uint64_t oldstate   = rng.state;
   rng.state           = oldstate * 6364136223846793005ULL + rng.inc;

@@ -258,17 +258,17 @@ struct yocto_scene_node {
 
 // Keyframe data.
 struct yocto_animation {
-  enum struct type_t { linear, step, bezier };
-  string                uri          = "";
-  string                filename     = "";
-  string                group        = "";
-  type_t                type         = type_t::linear;
-  vector<float>         times        = {};
-  vector<vec3f>         translations = {};
-  vector<vec4f>         rotations    = {};
-  vector<vec3f>         scales       = {};
-  vector<vector<float>> morphs       = {};
-  vector<int>           targets      = {};
+  enum struct interpolation_type { linear, step, bezier };
+  string                uri           = "";
+  string                filename      = "";
+  string                group         = "";
+  interpolation_type    interpolation = interpolation_type::linear;
+  vector<float>         times         = {};
+  vector<vec3f>         translations  = {};
+  vector<vec4f>         rotations     = {};
+  vector<vec3f>         scales        = {};
+  vector<vector<float>> morphs        = {};
+  vector<int>           targets       = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.

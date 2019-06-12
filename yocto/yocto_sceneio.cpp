@@ -2420,13 +2420,15 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
           animation.times[i] = input_view[i][0];
         switch (gsampler->interpolation) {
           case cgltf_interpolation_type_linear:
-            animation.type = yocto_animation::type_t::linear;
+            animation.interpolation =
+                yocto_animation::interpolation_type::linear;
             break;
           case cgltf_interpolation_type_step:
-            animation.type = yocto_animation::type_t::step;
+            animation.interpolation = yocto_animation::interpolation_type::step;
             break;
           case cgltf_interpolation_type_cubic_spline:
-            animation.type = yocto_animation::type_t::bezier;
+            animation.interpolation =
+                yocto_animation::interpolation_type::bezier;
             break;
         }
         auto output_view = accessor_values(gsampler->output);

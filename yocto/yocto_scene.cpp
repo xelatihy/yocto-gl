@@ -197,14 +197,14 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
 
   if (!animation.translations.empty()) {
     auto value = vec3f{0, 0, 0};
-    switch (animation.type) {
-      case yocto_animation::type_t::step:
+    switch (animation.interpolation) {
+      case yocto_animation::interpolation_type::step:
         value = keyframe_step(animation.times, animation.translations, time);
         break;
-      case yocto_animation::type_t::linear:
+      case yocto_animation::interpolation_type::linear:
         value = keyframe_linear(animation.times, animation.translations, time);
         break;
-      case yocto_animation::type_t::bezier:
+      case yocto_animation::interpolation_type::bezier:
         value = keyframe_bezier(animation.times, animation.translations, time);
         break;
       default: throw std::runtime_error("should not have been here");
@@ -214,14 +214,14 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
   }
   if (!animation.rotations.empty()) {
     auto value = vec4f{0, 0, 0, 1};
-    switch (animation.type) {
-      case yocto_animation::type_t::step:
+    switch (animation.interpolation) {
+      case yocto_animation::interpolation_type::step:
         value = keyframe_step(animation.times, animation.rotations, time);
         break;
-      case yocto_animation::type_t::linear:
+      case yocto_animation::interpolation_type::linear:
         value = keyframe_linear(animation.times, animation.rotations, time);
         break;
-      case yocto_animation::type_t::bezier:
+      case yocto_animation::interpolation_type::bezier:
         value = keyframe_bezier(animation.times, animation.rotations, time);
         break;
     }
@@ -229,14 +229,14 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
   }
   if (!animation.scales.empty()) {
     auto value = vec3f{1, 1, 1};
-    switch (animation.type) {
-      case yocto_animation::type_t::step:
+    switch (animation.interpolation) {
+      case yocto_animation::interpolation_type::step:
         value = keyframe_step(animation.times, animation.scales, time);
         break;
-      case yocto_animation::type_t::linear:
+      case yocto_animation::interpolation_type::linear:
         value = keyframe_linear(animation.times, animation.scales, time);
         break;
-      case yocto_animation::type_t::bezier:
+      case yocto_animation::interpolation_type::bezier:
         value = keyframe_bezier(animation.times, animation.scales, time);
         break;
     }
