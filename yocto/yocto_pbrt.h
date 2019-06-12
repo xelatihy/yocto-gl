@@ -56,7 +56,9 @@ namespace yocto {
 
 // pbrt pbrt_spectrum as rgb color
 struct pbrt_spectrum3f {
-  float x, y, z;
+  float x = 0;
+  float y = 0;
+  float z = 0;
 
   pbrt_spectrum3f() : x{0}, y{0}, z{0} {}
   pbrt_spectrum3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
@@ -165,8 +167,8 @@ struct pbrt_film {
 // pbrt filters
 struct pbrt_filter {
   struct box_t {
-    float xwidth = 0.5f;
-    float ywidth = 0.5f;
+    float xwidth = 0.5;
+    float ywidth = 0.5;
   };
   struct gaussian_t {
     float xwidth = 2;
@@ -370,14 +372,14 @@ struct pbrt_texture {
   };
   struct marble_t {
     int   octaves   = 8;
-    float roughness = 0.5f;
+    float roughness = 0.5;
     float scale     = 1;
-    float variation = 0.2f;
+    float variation = 0.2;
   };
   struct mix_t {
     pbrt_textured3f tex1   = {1, 1, 1};
     pbrt_textured3f tex2   = {1, 1, 1};
-    pbrt_textured1f amount = 0.5f;
+    pbrt_textured1f amount = 0.5;
   };
   struct scale_t {
     pbrt_textured3f tex1 = {1, 1, 1};
@@ -488,7 +490,7 @@ struct pbrt_material {
     pbrt_textured1f bumpmap        = 0;
   };
   struct disney_t {
-    pbrt_textured3f color           = {0.5f, 0.5f, 0.5f};
+    pbrt_textured3f color           = {0.5, 0.5, 0.5};
     pbrt_textured1f anisotropic     = 0;
     pbrt_textured1f clearcoat       = 0;
     pbrt_textured1f clearcoatgloss  = 1;
@@ -698,17 +700,17 @@ struct pbrt_shape {
   };
   type_t         type         = type_t::trianglemesh;
   trianglemesh_t trianglemesh = {};
-  plymesh_t      plymesh{};
-  curve_t        curve       = {};
-  loopsubdiv_t   loopsubdiv  = {};
-  nurbs_t        nurbs       = {};
-  sphere_t       sphere      = {};
-  disk_t         disk        = {};
-  cone_t         cone        = {};
-  cylinder_t     cylinder    = {};
-  hyperboloid_t  hyperboloid = {};
-  paraboloid_t   paraboloid  = {};
-  heightfield_t  heightfield = {};
+  plymesh_t      plymesh      = {};
+  curve_t        curve        = {};
+  loopsubdiv_t   loopsubdiv   = {};
+  nurbs_t        nurbs        = {};
+  sphere_t       sphere       = {};
+  disk_t         disk         = {};
+  cone_t         cone         = {};
+  cylinder_t     cylinder     = {};
+  hyperboloid_t  hyperboloid  = {};
+  paraboloid_t   paraboloid   = {};
+  heightfield_t  heightfield  = {};
 };
 
 // pbrt lights
@@ -716,8 +718,8 @@ struct pbrt_light {
   struct distant_t {
     pbrt_spectrum3f scale = {1, 1, 1};
     pbrt_spectrum3f L     = {1, 1, 1};
-    vec3f           from{0, 0, 0};
-    vec3f           to = {0, 0, 1};
+    vec3f           from  = {0, 0, 0};
+    vec3f           to    = {0, 0, 1};
   };
   struct goniometric_t {
     pbrt_spectrum3f scale   = {1, 1, 1};
@@ -733,7 +735,7 @@ struct pbrt_light {
   struct point_t {
     pbrt_spectrum3f scale = {1, 1, 1};
     pbrt_spectrum3f I     = {1, 1, 1};
-    vec3f           from{0, 0, 0};
+    vec3f           from  = {0, 0, 0};
   };
   struct projection_t {
     pbrt_spectrum3f scale   = {1, 1, 1};
@@ -784,8 +786,8 @@ struct pbrt_arealight {
 // pbrt mediums
 struct pbrt_medium {
   struct homogeneous_t {
-    pbrt_spectrum3f sigma_a = {0.0011f, 0.0024f, 0.014f};
-    pbrt_spectrum3f sigma_s = {2.55f, 3.21f, 3.77f};
+    pbrt_spectrum3f sigma_a = {0.0011, 0.0024, 0.014};
+    pbrt_spectrum3f sigma_s = {2.55, 3.21, 3.77};
     string          preset  = "";
     float           g       = 0;
     float           scale   = 1;
