@@ -88,13 +88,10 @@
 namespace yocto {
 
 // Aliased typenames for readability
-using string = std::string;
-template <typename T1, typename T2>
-using pair = std::pair<T1, T2>;
-template <typename K, typename V, typename H = std::hash<K>>
-using unordered_map = std::unordered_map<K, V, H>;
-template <typename T>
-using vector = std::vector<T>;
+using std::string;
+using std::pair;
+using std::unordered_map;
+using std::vector;
 using namespace std::literals::string_literals;
 
 using byte = unsigned char;
