@@ -163,7 +163,7 @@ void compute_matrix_skinning(vector<vec3f>& skinned_positions,
 namespace yocto {
 
 // Flip vertex normals
-vector<vec3f>& flip_normals(const vector<vec3f>& normals);
+vector<vec3f> flip_normals(const vector<vec3f>& normals);
 void flip_normals(vector<vec3f>& flipped, const vector<vec3f>& normals);
 // Flip face orientation
 vector<vec3i> flip_triangles(const vector<vec3i>& triangles);

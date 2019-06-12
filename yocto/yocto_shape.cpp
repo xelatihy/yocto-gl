@@ -36,7 +36,6 @@ void compute_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
   }
   for (auto& tangent : tangents) tangent = normalize(tangent);
 }
-
 // Compute per-vertex normals for triangles.
 void compute_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
     const vector<vec3f>& positions) {
@@ -75,6 +74,26 @@ void compute_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
   for (auto& normal : normals) normal = normalize(normal);
 }
 
+// Shortcuts
+vector<vec3f> compute_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
+  auto tangents = vector<vec3f>{positions.size()};
+  compute_tangents(tangents, lines, positions);
+  return tangents;
+}
+vector<vec3f> compute_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
+  auto normals = vector<vec3f>{positions.size()};
+  compute_normals(normals, triangles, positions);
+  return normals;
+}
+vector<vec3f> compute_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
+  auto normals = vector<vec3f>{positions.size()};
+  compute_normals(normals, quads, positions);
+  return normals;
+}
+
 // Compute per-vertex tangent frame for triangle meshes.
 // Tangent space is defined by a four component vector.
 // The first three components are the tangent with respect to the U texcoord.
@@ -99,6 +118,14 @@ void compute_tangent_spaces(vector<vec4f>& tangent_spaces,
     auto s   = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
     tangent_spaces[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
   }
+}
+vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords) {
+  auto tangent_spaces = vector<vec4f>(positions.size());
+  compute_tangent_spaces(
+      tangent_spaces, triangles, positions, normals, texcoords);
+  return tangent_spaces;
 }
 
 // Apply skinning
@@ -125,6 +152,16 @@ void compute_skinning(vector<vec3f>& skinned_positions,
         transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
   }
 }
+pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms) {
+  auto skinned = pair<vector<vec3f>, vector<vec3f>>{
+      vector<vec3f>{positions.size()}, vector<vec3f>{normals.size()}};
+  compute_skinning(skinned.first, skinned.second, positions, normals, weights,
+      joints, xforms);
+  return skinned;
+}
 
 // Apply skinning as specified in Khronos glTF
 void compute_matrix_skinning(vector<vec3f>& skinned_positions,
@@ -144,6 +181,16 @@ void compute_matrix_skinning(vector<vec3f>& skinned_positions,
     skinned_normals[i]   = normalize(transform_direction(xform, normals[i]));
   }
 }
+pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<mat4f>& xforms) {
+  auto skinned = pair<vector<vec3f>, vector<vec3f>>{
+      vector<vec3f>{positions.size()}, vector<vec3f>{normals.size()}};
+  compute_matrix_skinning(skinned.first, skinned.second, positions, normals,
+      weights, joints, xforms);
+  return skinned;
+}
 
 }  // namespace yocto
 
@@ -153,19 +200,37 @@ void compute_matrix_skinning(vector<vec3f>& skinned_positions,
 namespace yocto {
 
 // Flip vertex normals
-void flip_normals(vector<vec3f>& normals) {
-  for (auto& n : normals) n = -n;
+void flip_normals(vector<vec3f>& flipped, const vector<vec3f>& normals) {
+  flipped = normals;
+  for (auto& n : flipped) n = -n;
+}
+vector<vec3f> flip_normals(const vector<vec3f>& normals) {
+  auto flipped  = normals;
+  flip_normals(flipped, normals);
+  return flipped;
 }
 // Flip face orientation
-void flip_triangles_orientation(vector<vec3f>& triangles) {
-  for (auto& t : triangles) swap(t.y, t.z);
+void flip_triangles(vector<vec3i>& flipped, const vector<vec3i>& triangles) {
+  flipped = triangles;
+  for (auto& t : flipped) swap(t.y, t.z);
 }
-void flip_quads_orientation(vector<vec4f>& quads) {
-  for (auto& q : quads) swap(q.y, q.w);
+vector<vec3i> flip_triangles(const vector<vec3i>& triangles) {
+  auto flipped = triangles;
+  flip_triangles(flipped, triangles);
+  return flipped;
+}
+void flip_quads(vector<vec4i>& flipped, const vector<vec4i>& quads) {
+  flipped = quads;
+  for (auto& q : flipped) swap(q.y, q.w);
+}
+vector<vec4i> flip_quads(const vector<vec4i>& quads) {
+  auto flipped = quads;
+  flip_quads(flipped, quads);
+  return flipped;
 }
 
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-void align_vertices(vector<vec3f>& positions, const vec3i& alignment) {
+void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions, const vec3i& alignment) {
   auto bounds = invalidb3f;
   for (auto& p : positions) bounds = merge(bounds, p);
   auto offset = vec3f{0, 0, 0};
@@ -184,7 +249,12 @@ void align_vertices(vector<vec3f>& positions, const vec3i& alignment) {
     case 2: offset.z = (bounds.min.z + bounds.max.z) / 2; break;
     case 3: offset.z = bounds.max.z; break;
   }
-  for (auto& p : positions) p -= offset;
+  aligned = positions;
+  for (auto& p : aligned) p -= offset;
+}
+vector<vec3f> align_vertices(const vector<vec3f>& positions, const vec3i& alignment) {
+  auto aligned = vector<vec3f>(positions.size());
+  align_vertices(aligned, positions, alignment);
 }
 
 }  // namespace yocto
