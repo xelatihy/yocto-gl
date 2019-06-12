@@ -169,6 +169,10 @@ namespace yocto {
 struct image_region {
   vec2i min = zero2i;
   vec2i max = zero2i;
+
+  image_region() { }
+  image_region(const vec2i& min, const vec2i& max) : min{min}, max{max} { }
+
   vec2i size() const { return max - min; }
 };
 
@@ -525,11 +529,11 @@ inline vec4f rgb_to_srgb(const vec4f& lin) {
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey) {
+inline vec3f contrast(const vec3f& rgb, float contrast, float grey) {
   return max(zero3f, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_logcontrast(
+inline vec3f logcontrast(
     const vec3f& rgb, float logcontrast, float grey) {
   auto epsilon  = (float)0.0001;
   auto log_grey = log2(grey);
@@ -538,7 +542,7 @@ inline vec3f apply_logcontrast(
   return max(zero3f, exp2(adjusted) - epsilon);
 }
 // Apply saturation.
-inline vec3f apply_saturation(const vec3f& rgb, float saturation,
+inline vec3f saturate(const vec3f& rgb, float saturation,
     const vec3f& weights = vec3f{0.333333f}) {
   auto grey = dot(weights, rgb);
   return max(zero3f, grey + (rgb - grey) * (saturation * 2));
