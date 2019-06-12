@@ -245,8 +245,7 @@ inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
 
 // Apply exposure and filmic tone mapping
 image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params);
-void         tonemap(
-            image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
+image<vec4b> tonemap8(const image<vec4f>& hdr, const tonemap_params& params);
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     const image_region& region, const tonemap_params& params);
 
