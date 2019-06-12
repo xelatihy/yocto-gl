@@ -1942,9 +1942,7 @@ void save_tonemapped(const string& filename, const image<vec4f>& hdr,
   if (is_hdr_filename(filename)) {
     save_image(filename, hdr);
   } else {
-    auto ldr = image<vec4b>{hdr.size()};
-    tonemap(ldr, hdr, params);
-    save_image(filename, ldr);
+    save_image(filename, tonemap8(hdr, params));
   }
 }
 
