@@ -42,7 +42,7 @@
 //    `compute_tangent_spaces()`
 // 6. compute skinning with `compute_skinning()` and
 //    `compute_matrix_skinning()`
-// 6. create shapes with `make_procedural_image()`, `make_hair()`,
+// 6. create shapes with `make_proc_image()`, `make_hair()`,
 // `make_points()`
 // 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 // 8. shape sampling with `sample_points()`, `sample_lines()`,
@@ -469,7 +469,7 @@ struct procshape_params {
 };
 
 // Make a procedural shape
-void make_procedural_image(vector<vec3i>& triangles, vector<vec4i>& quads,
+void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     const procshape_params& params);
 // Make face-varying quads. For now supports only quad, cube, suzanne, sphere,

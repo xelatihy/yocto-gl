@@ -1592,7 +1592,7 @@ struct load_obj_scene_cb : obj_callbacks {
       params.subdivisions = oproc.level < 0 ? 0 : oproc.level;
       params.scale        = oproc.size / 2;
       params.uvscale      = oproc.size;
-      make_procedural_image(shape.triangles, shape.quads, shape.positions,
+      make_proc_image(shape.triangles, shape.quads, shape.positions,
           shape.normals, shape.texcoords, params);
     } else {
       throw std::runtime_error("unknown obj procedural");
@@ -3246,7 +3246,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         params.type         = make_shape_type::uvsphere;
         params.subdivisions = 5;
         params.scale        = sphere.radius;
-        make_procedural_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_image(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
       } break;
       case pbrt_shape::type_t::disk: {
@@ -3255,7 +3255,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         params.type         = make_shape_type::uvdisk;
         params.subdivisions = 4;
         params.scale        = disk.radius;
-        make_procedural_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_image(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
       } break;
       default: {
@@ -3310,12 +3310,12 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto rgb2 = checkerboard.tex1.texture == ""
                         ? checkerboard.tex2.value
                         : pbrt_spectrum3f{0.6f, 0.6f, 0.6f};
-        auto params   = procedural_image_params{};
-        params.type   = procedural_image_type::checker;
+        auto params   = proc_image_params{};
+        params.type   = proc_image_params::type_t::checker;
         params.color0 = {rgb1.x, rgb1.y, rgb1.z, 1};
         params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1};
         params.scale  = 2;
-        make_procedural_image(texture.hdr, params);
+        make_proc_image(texture.hdr, params);
         float_to_byte(texture.ldr, texture.hdr);
         texture.hdr = {};
         if (verbose) printf("texture checkerboard not supported well");
@@ -3328,18 +3328,18 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       } break;
       case pbrt_texture::type_t::fbm: {
         // auto& fbm = ptexture.fbm;
-        auto params = procedural_image_params{};
-        params.type = procedural_image_type::fbm;
-        make_procedural_image(texture.hdr, params);
+        auto params = proc_image_params{};
+        params.type = proc_image_params::type_t::fbm;
+        make_proc_image(texture.hdr, params);
         float_to_byte(texture.ldr, texture.hdr);
         texture.hdr = {};
         if (verbose) printf("texture fbm not supported well");
       } break;
       case pbrt_texture::type_t::marble: {
         // auto& marble = ptexture.marble;
-        auto params = procedural_image_params{};
-        params.type = procedural_image_type::fbm;
-        make_procedural_image(texture.hdr, params);
+        auto params = proc_image_params{};
+        params.type = proc_image_params::type_t::fbm;
+        make_proc_image(texture.hdr, params);
         float_to_byte(texture.ldr, texture.hdr);
         texture.hdr = {};
         if (verbose) printf("texture marble not supported well");
@@ -3592,7 +3592,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto params  = procshape_params{};
         params.type  = make_shape_type::quad;
         params.scale = size / 2;
-        make_procedural_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_image(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3618,7 +3618,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         params.type         = make_shape_type::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_procedural_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_image(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3643,7 +3643,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         params.type         = make_shape_type::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_procedural_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_image(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3667,7 +3667,7 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         params.type         = make_shape_type::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_procedural_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_image(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();

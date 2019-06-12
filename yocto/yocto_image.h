@@ -27,7 +27,7 @@
 // 3. resize images with `resize()`
 // 4. tonemap images with `tonemap()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
-// 5. make various image examples with the `make_procedural_image()` functions
+// 5. make various image examples with the `make_proc_image()` functions
 // 6. create procedural sun-sky images with `make_sunsky()`
 // 7. many color conversion functions are available in the code below
 //
@@ -325,38 +325,26 @@ void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Types for make_procedural_image
-enum struct procedural_image_type {
-  grid,
-  checker,
-  bumps,
-  ramp,
-  gammaramp,
-  uvramp,
-  uvgrid,
-  blackbody,
-  noise,
-  turbulence,
-  fbm,
-  ridge
-};
-
-// Parameters for make_procedural_image
-struct procedural_image_params {
-  procedural_image_type type   = procedural_image_type::grid;
-  vec2i                 size   = {1024, 1024};
-  float                 scale  = 1;
-  vec4f                 color0 = {0, 0, 0, 1};
-  vec4f                 color1 = {1, 1, 1, 1};
-  vec4f noise   = {2, 0.5, 8, 1};  // lacunarity, gain, octaves, offset
-  float borderw = 0;
-  vec4f borderc = {0, 0, 0, 1};
+// Parameters for make_proc_image
+struct proc_image_params {
+  // clang-format off
+  enum struct type_t {
+    grid, checker, bumps, ramp, gammaramp, uvramp, uvgrid, blackbody, noise,
+    turbulence, fbm, ridge };
+  // clang-format on
+  type_t type    = type_t::grid;
+  vec2i  size    = {1024, 1024};
+  float  scale   = 1;
+  vec4f  color0  = {0, 0, 0, 1};
+  vec4f  color1  = {1, 1, 1, 1};
+  vec4f  noise   = {2, 0.5, 8, 1};  // lacunarity, gain, octaves, offset
+  float  borderw = 0;
+  vec4f  borderc = {0, 0, 0, 1};
 };
 
 // Make an image
-image<vec4f> make_procedural_image(const procedural_image_params& params);
-void         make_procedural_image(
-            image<vec4f>& img, const procedural_image_params& params);
+image<vec4f> make_proc_image(const proc_image_params& params);
+void make_proc_image(image<vec4f>& img, const proc_image_params& params);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
@@ -383,15 +371,20 @@ void         bump_to_normal(
             image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
 
 // Add a border to an image
-void add_border(image<vec4f>& img, const vec2i& size, int border_width,
-    const vec4f& border_color);
+image<vec4f> add_border(const image<vec4f>& img, int width, const vec4f& color);
+void         add_border(
+            image<vec4f>& bordered, image<vec4f>& img, int width, const vec4f& color);
 
 // Make logo images. Image is resized to proper size.
 image<vec4b> make_logo(const string& name);
 void         make_logo(image<vec4f>& img, const string& name);
 void         make_logo(image<vec4b>& img, const string& name);
-void         add_logo(image<vec4f>& img, const string& name);
-void         add_logo(image<vec4b>& img, const string& name);
+image<vec4f> add_logo(const image<vec4f>& img, const string& name);
+image<vec4b> add_logo(const image<vec4b>& img, const string& name);
+void         add_logo(
+            image<vec4f>& with_logo, const image<vec4f>& img, const string& name);
+void add_logo(
+    image<vec4b>& with_logo, const image<vec4b>& img, const string& name);
 
 // Make an image preset, useful for testing. See implementation for types.
 image<vec4f> make_image_preset(const string& type);
