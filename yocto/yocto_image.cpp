@@ -532,7 +532,7 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to) {
 namespace yocto {
 
 // Splits an image into an array of regions
-void make_imregions(vector<image_region>& regions, const vec2i& size,
+void make_regions(vector<image_region>& regions, const vec2i& size,
     int region_size, bool shuffled) {
   regions.clear();
   for (auto y = 0; y < size.y; y += region_size) {
@@ -546,7 +546,7 @@ void make_imregions(vector<image_region>& regions, const vec2i& size,
     shuffle(regions, rng);
   }
 }
-vector<image_region> make_imregions(
+vector<image_region> make_regions(
     const vec2i& size, int region_size, bool shuffled) {
   auto regions = vector<image_region>{};
   for (auto y = 0; y < size.y; y += region_size) {
@@ -619,7 +619,7 @@ image<vec4f> srgb_to_rgb(const image<vec4b>& srgb) {
   return apply_image<vec4f>(
       srgb, [](const auto& a) { return srgb_to_rgb(byte_to_float(a)); });
 }
-image<vec4b> rgb_to_srgb8(const image<vec4f>& lin) {
+image<vec4b> rgb_to_srgbb(const image<vec4f>& lin) {
   return apply_image<vec4b>(
       lin, [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
 }
@@ -691,7 +691,7 @@ image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params) {
     return vec4f{tonemap(xyz(hdr), params), hdr.w};
   });
 }
-image<vec4b> tonemap8(const image<vec4f>& hdr, const tonemap_params& params) {
+image<vec4b> tonemapb(const image<vec4f>& hdr, const tonemap_params& params) {
   return apply_image<vec4b>(hdr, [params](const vec4f& hdr) {
     return float_to_byte(vec4f{tonemap(xyz(hdr), params), hdr.w});
   });
@@ -1860,6 +1860,13 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an hdr image.
+image<vec4f> load_image4f(const string& filename) {
+  auto img = image<vec4f>{};
+  load_image(filename, img);
+  return img;
+}
+
+// Loads an hdr image.
 void load_image(const string& filename, image<vec4f>& img) {
   if (is_preset_filename(filename)) return load_image_preset(filename, img);
   auto ext = fs::path(filename).extension().string();
@@ -1919,7 +1926,14 @@ void save_image(const string& filename, const image<vec4f>& img) {
   }
 }
 
-// Loads an hdr image.
+// Loads an ldr image.
+image<vec4b> load_image4b(const string& filename) {
+  auto img = image<vec4b>{};
+  load_image(filename, img);
+  return img;
+}
+
+// Loads an ldr image.
 void load_image(const string& filename, image<vec4b>& img) {
   if (is_preset_filename(filename)) return load_image_preset(filename, img);
   auto ext = fs::path(filename).extension().string();
@@ -1991,7 +2005,7 @@ void save_tonemapped(const string& filename, const image<vec4f>& hdr,
   if (is_hdr_filename(filename)) {
     save_image(filename, hdr);
   } else {
-    save_image(filename, tonemap8(hdr, params));
+    save_image(filename, tonemapb(hdr, params));
   }
 }
 
@@ -2020,7 +2034,7 @@ void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
   if (is_hdr_filename(filename)) {
     save_image_with_logo(filename, hdr);
   } else {
-    save_image_with_logo(filename, tonemap8(hdr, params));
+    save_image_with_logo(filename, tonemapb(hdr, params));
   }
 }
 

@@ -173,9 +173,7 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-void make_imregions(vector<image_region>& regions, const vec2i& size,
-    int region_size = 32, bool shuffled = false);
-vector<image_region> make_imregions(
+vector<image_region> make_regions(
     const vec2i& size, int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
@@ -220,7 +218,7 @@ void         float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
 image<vec4f> rgb_to_srgb(const image<vec4f>& lin);
 image<vec4f> srgb_to_rgb(const image<vec4b>& srgb);
-image<vec4b> rgb_to_srgb8(const image<vec4f>& lin);
+image<vec4b> rgb_to_srgbb(const image<vec4f>& lin);
 void         srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb);
 void         rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
 
@@ -245,7 +243,7 @@ inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
 
 // Apply exposure and filmic tone mapping
 image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params);
-image<vec4b> tonemap8(const image<vec4f>& hdr, const tonemap_params& params);
+image<vec4b> tonemapb(const image<vec4f>& hdr, const tonemap_params& params);
 void         tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
             const image_region& region, const tonemap_params& params);
 
@@ -294,8 +292,10 @@ namespace yocto {
 bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear color space.
+image<vec4f> load_image4f(const string& filename);
 void load_image(const string& filename, image<vec4f>& img);
 void save_image(const string& filename, const image<vec4f>& img);
+image<vec4b> load_image4b(const string& filename);
 void load_image(const string& filename, image<vec4b>& img);
 void save_image(const string& filename, const image<vec4b>& img);
 

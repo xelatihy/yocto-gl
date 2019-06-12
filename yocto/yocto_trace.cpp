@@ -1532,8 +1532,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
   auto image = yocto::image{image_size, zero4f};
   auto state = trace_state{};
   init_trace_state(state, image_size, params.seed);
-  auto regions = vector<image_region>{};
-  make_imregions(regions, image.size(), params.region, true);
+  auto regions = make_regions(image.size(), params.region, true);
 
   if (params.noparallel) {
     for (auto& region : regions) {
@@ -1568,8 +1567,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 int trace_samples(image<vec4f>& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_params& params) {
-  auto regions = vector<image_region>{};
-  make_imregions(regions, image.size(), params.region, true);
+  auto regions = make_regions(image.size(), params.region, true);
   auto num_samples = min(params.batch, params.samples - current_sample);
   if (params.noparallel) {
     for (auto& region : regions) {
