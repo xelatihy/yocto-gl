@@ -152,12 +152,11 @@ void update_app_render(const string& filename, image<vec4f>& render,
     int preview_ratio, std::atomic<bool>* cancel,
     std::atomic<int>& current_sample, std::deque<image_region>& queue,
     std::mutex& queuem) {
-  auto preview_options = trace_prms;
-  preview_options.resolution /= preview_ratio;
-  preview_options.samples = 1;
-  auto small_preview      = trace_image(scene, bvh, lights, preview_options);
-  auto display_preview    = small_preview;
-  tonemap(display_preview, small_preview, tonemap_prms);
+  auto preview_prms = trace_prms;
+  preview_prms.resolution /= preview_ratio;
+  preview_prms.samples = 1;
+  auto small_preview      = trace_image(scene, bvh, lights, preview_prms);
+  auto display_preview    = tonemap(small_preview, tonemap_prms);
   for (auto j = 0; j < preview.size().y; j++) {
     for (auto i = 0; i < preview.size().x; i++) {
       auto pi = clamp(i / preview_ratio, 0, display_preview.size().x - 1),

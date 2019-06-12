@@ -968,8 +968,8 @@ namespace yocto {
 
 // Small Fixed-size matrices stored in column major format.
 struct mat2f {
-  vec2f x = {0, 0};
-  vec2f y = {0, 0};
+  vec2f x = {1, 0};
+  vec2f y = {0, 1};
 
   mat2f() {}
   mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
@@ -980,9 +980,9 @@ struct mat2f {
 
 // Small Fixed-size matrices stored in column major format.
 struct mat3f {
-  vec3f x = {0, 0, 0};
-  vec3f y = {0, 0, 0};
-  vec3f z = {0, 0, 0};
+  vec3f x = {1, 0, 0};
+  vec3f y = {0, 1, 0};
+  vec3f z = {0, 0, 1};
 
   mat3f() {}
   mat3f(const vec3f& x, const vec3f& y, const vec3f& z) : x{x}, y{y}, z{z} {}
@@ -993,10 +993,10 @@ struct mat3f {
 
 // Small Fixed-size matrices stored in column major format.
 struct mat4f {
-  vec4f x = {0, 0, 0, 0};
-  vec4f y = {0, 0, 0, 0};
-  vec4f z = {0, 0, 0, 0};
-  vec4f w = {0, 0, 0, 0};
+  vec4f x = {1, 0, 0, 0};
+  vec4f y = {0, 1, 0, 0};
+  vec4f z = {0, 0, 1, 0};
+  vec4f w = {0, 0, 0, 1};
 
   mat4f() {}
   mat4f(const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w)

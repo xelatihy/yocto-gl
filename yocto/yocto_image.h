@@ -180,16 +180,6 @@ vector<image_region> make_imregions(
 
 // Gets pixels in an image region
 template <typename T>
-inline void get_region(
-    image<T>& clipped, const image<T>& img, const image_region& region) {
-  clipped.resize(region.size());
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
-      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-    }
-  }
-}
-template <typename T>
 inline image<T> get_region(const image<T>& img, const image_region& region) {
   auto clipped = image<T>{region.size()};
   for (auto j = 0; j < region.size().y; j++) {
@@ -209,27 +199,38 @@ inline void set_region(
     }
   }
 }
+template <typename T>
+inline void get_region(
+    image<T>& clipped, const image<T>& img, const image_region& region) {
+  clipped.resize(region.size());
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+    }
+  }
+}
 
 // Conversion from/to floats.
-void         byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
-void         float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
 image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
+void         byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
+void         float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
-void         srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb);
-void         rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
 image<vec4f> rgb_to_srgb(const image<vec4f>& lin);
+image<vec4f> srgb_to_rgb(const image<vec4b>& srgb);
 image<vec4b> rgb_to_srgb8(const image<vec4f>& lin);
+void         srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb);
+void         rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
 
 // Tone mapping params
 struct tonemap_params {
   float exposure    = 0;
   vec3f tint        = {1, 1, 1};
-  float contrast    = 0.5f;
-  float logcontrast = 0.5f;
-  float saturation  = 0.5f;
+  float contrast    = 0.5;
+  float logcontrast = 0.5;
+  float saturation  = 0.5;
   bool  filmic      = false;
   bool  srgb        = true;
 };
@@ -243,8 +244,6 @@ inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
 }
 
 // Apply exposure and filmic tone mapping
-void tonemap(
-    image<vec4f>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
 image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params);
 void         tonemap(
             image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
@@ -271,8 +270,6 @@ inline bool operator!=(const colorgrade_params& a, const colorgrade_params& b) {
 }
 
 // color grade an image region
-void         colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
-            const colorgrade_params& params);
 image<vec4f> colorgrade(
     const image<vec4f>& img, const colorgrade_params& params);
 void colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
@@ -282,10 +279,10 @@ void colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
 vec3f compute_white_balance(const image<vec4f>& img);
 
 // Resize an image.
-void resize(image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
-void resize(image<vec4b>& res, const image<vec4b>& img, const vec2i& size);
 image<vec4f> resize(const image<vec4f>& img, const vec2i& size);
 image<vec4b> resize(const image<vec4b>& img, const vec2i& size);
+void resize(image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
+void resize(image<vec4b>& res, const image<vec4b>& img, const vec2i& size);
 
 }  // namespace yocto
 

@@ -102,8 +102,7 @@ const int bvh_max_prims = 4;
 // BVH tree node containing its bounds, indices to the BVH arrays of either
 // primitives or internal nodes, the node element type,
 // and the split axis. Leaf and internal nodes are identical, except that
-// indices refer to primitives for leaf nodes or other nodes for internal
-// nodes. See bvh_scene_data for more details.
+// indices refer to primitives for leaf nodes or other nodes for internal nodes.
 struct bvh_node {
   bbox3f bbox;
   short  num;

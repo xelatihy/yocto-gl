@@ -609,6 +609,19 @@ image<vec4b> float_to_byte(const image<vec4f>& fl) {
 }
 
 // Conversion between linear and gamma-encoded images.
+image<vec4f> srgb_to_rgb(const image<vec4f>& srgb) {
+  return apply_image<vec4f>(srgb, [](const auto& a) { return srgb_to_rgb(a); });
+}
+image<vec4f> rgb_to_srgb(const image<vec4f>& lin) {
+  return apply_image<vec4f>(lin, [](const auto& a) { return rgb_to_srgb(a); });
+}
+image<vec4f> srgb_to_rgb(const image<vec4b>& srgb) {
+  return apply_image<vec4f>(srgb, [](const auto& a) { return srgb_to_rgb(byte_to_float(a)); });
+}
+image<vec4b> rgb_to_srgb8(const image<vec4f>& lin) {
+  return apply_image<vec4b>(
+      lin, [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
+}
 void srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb) {
   return apply_image(lin, srgb, [](const auto& a) { return srgb_to_rgb(a); });
 }
@@ -622,16 +635,6 @@ void srgb_to_rgb(image<vec4f>& lin, const image<vec4b>& srgb) {
 void rgb_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin) {
   return apply_image(
       srgb, lin, [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
-}
-image<vec4f> srgb_to_rgb(const image<vec4f>& srgb) {
-  return apply_image<vec4f>(srgb, [](const auto& a) { return srgb_to_rgb(a); });
-}
-image<vec4f> rgb_to_srgb(const image<vec4f>& lin) {
-  return apply_image<vec4f>(lin, [](const auto& a) { return rgb_to_srgb(a); });
-}
-image<vec4b> rgb_to_srgb8(const image<vec4f>& lin) {
-  return apply_image<vec4b>(
-      lin, [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
 }
 
 // Filmic tonemapping
@@ -682,13 +685,6 @@ vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
 }
 
 // Apply exposure and filmic tone mapping
-void tonemap(
-    image<vec4f>& ldr, const image<vec4f>& hdr, const tonemap_params& params) {
-  return apply_image(ldr, hdr,
-      [scale = exp2(params.exposure) * params.tint, params](const vec4f& hdr) {
-        return vec4f{tonemap(xyz(hdr), params), hdr.w};
-      });
-}
 image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params) {
   return apply_image<vec4f>(hdr,
       [scale = exp2(params.exposure) * params.tint, params](const vec4f& hdr) {
@@ -734,12 +730,6 @@ static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
 }
 
 // Apply exposure and filmic tone mapping
-void colorgrade(image<vec4f>& corrected, const image<vec4f>& ldr,
-    const colorgrade_params& params) {
-  return apply_image(corrected, ldr, [&params](const vec4f& hdr) {
-    return vec4f{colorgrade(xyz(hdr), params), hdr.w};
-  });
-}
 image<vec4f> colorgrade(
     const image<vec4f>& ldr, const colorgrade_params& params) {
   return apply_image<vec4f>(ldr, [&params](const vec4f& hdr) {
@@ -774,24 +764,6 @@ static vec2i resize_size(const vec2i& img_size, const vec2i& size_) {
   return size;
 }
 
-void resize(
-    image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
-  auto size = resize_size(img.size(), size_);
-  res_img   = {size};
-  stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
-      sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
-      res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
-      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-}
-void resize(
-    image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
-  auto size = resize_size(img.size(), size_);
-  res_img   = {size};
-  stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
-      sizeof(vec4b) * img.size().x, (byte*)res_img.data(), res_img.size().x,
-      res_img.size().y, sizeof(vec4b) * res_img.size().x, 4, 3, 0,
-      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-}
 image<vec4f> resize(const image<vec4f>& img, const vec2i& size_) {
   auto size    = resize_size(img.size(), size_);
   auto res_img = image<vec4f>{size};
@@ -809,6 +781,24 @@ image<vec4b> resize(const image<vec4b>& img, const vec2i& size_) {
       res_img.size().y, sizeof(vec4b) * res_img.size().x, 4, 3, 0,
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return res_img;
+}
+void resize(
+    image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
+  auto size = resize_size(img.size(), size_);
+  res_img   = {size};
+  stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
+      sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
+      res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
+      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+}
+void resize(
+    image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
+  auto size = resize_size(img.size(), size_);
+  res_img   = {size};
+  stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
+      sizeof(vec4b) * img.size().x, (byte*)res_img.data(), res_img.size().x,
+      res_img.size().y, sizeof(vec4b) * res_img.size().x, 4, 3, 0,
+      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
 
 }  // namespace yocto
