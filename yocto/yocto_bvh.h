@@ -99,24 +99,12 @@ namespace yocto {
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
 
-// BVH tree node containing its bounds, indices to the BVH arrays of either
-// primitives or internal nodes, the node element type,
-// and the split axis. Leaf and internal nodes are identical, except that
-// indices refer to primitives for leaf nodes or other nodes for internal nodes.
-struct bvh_node {
-  bbox3f bbox;
-  short  num;
-  bool   internal;
-  byte   axis;
-  int    prims[bvh_max_prims];
-};
-
 // BVH array view
 template <typename T>
-struct bvh_array_view {
-  bvh_array_view() : ptr{nullptr}, count{0} {}
-  bvh_array_view(const T* ptr, int count) : ptr{ptr}, count{count} {}
-  bvh_array_view(const vector<T>& vec)
+struct bvh_span {
+  bvh_span() : ptr{nullptr}, count{0} {}
+  bvh_span(const T* ptr, int count) : ptr{ptr}, count{count} {}
+  bvh_span(const vector<T>& vec)
       : ptr{vec.data()}, count{(int)vec.size()} {}
 
   bool empty() const { return count == 0; }
@@ -132,39 +120,11 @@ struct bvh_array_view {
   int      count = 0;
 };
 
-// BVH tree stored as a node array with the tree structure is encoded using
-// array indices. BVH nodes indices refer to either the node array,
-// for internal nodes, or the primitive arrays, for leaf nodes.
-// Applicxation data is not stored explicitly.
-struct bvh_shape {
-  // elements
-  bvh_array_view<int>   points    = {};
-  bvh_array_view<vec2i> lines     = {};
-  bvh_array_view<vec3i> triangles = {};
-  bvh_array_view<vec4i> quads     = {};
-  bvh_array_view<vec4i> quadspos  = {};
-
-  // vertices
-  bvh_array_view<vec3f> positions = {};
-  bvh_array_view<float> radius    = {};
-
-  // nodes
-  vector<bvh_node> nodes;
-
-#if YOCTO_EMBREE
-  // Embree opaque data
-  void* embree_bvh       = nullptr;
-  bool  embree_flattened = false;
-  // Cleanup for embree data
-  ~bvh_shape();
-#endif
-};
-
-// BVH array view
+// BVH array view with stride
 template <typename T>
-struct bvh_strided_view {
-  bvh_strided_view() : ptr{nullptr}, count{0}, stride{0} {}
-  bvh_strided_view(const void* ptr, int count, int stride)
+struct bvh_sspan {
+  bvh_sspan() : ptr{nullptr}, count{0}, stride{0} {}
+  bvh_sspan(const void* ptr, int count, int stride)
       : ptr{ptr}, count{count}, stride{stride} {}
 
   bool empty() const { return count == 0; }
@@ -180,6 +140,46 @@ struct bvh_strided_view {
   int         stride = 0;
 };
 
+// BVH tree node containing its bounds, indices to the BVH arrays of either
+// primitives or internal nodes, the node element type,
+// and the split axis. Leaf and internal nodes are identical, except that
+// indices refer to primitives for leaf nodes or other nodes for internal nodes.
+struct bvh_node {
+  bbox3f bbox;
+  short  num;
+  bool   internal;
+  byte   axis;
+  int    prims[bvh_max_prims];
+};
+
+// BVH tree stored as a node array with the tree structure is encoded using
+// array indices. BVH nodes indices refer to either the node array,
+// for internal nodes, or the primitive arrays, for leaf nodes.
+// Applicxation data is not stored explicitly.
+struct bvh_shape {
+  // elements
+  bvh_span<int>   points    = {};
+  bvh_span<vec2i> lines     = {};
+  bvh_span<vec3i> triangles = {};
+  bvh_span<vec4i> quads     = {};
+  bvh_span<vec4i> quadspos  = {};
+
+  // vertices
+  bvh_span<vec3f> positions = {};
+  bvh_span<float> radius    = {};
+
+  // nodes
+  vector<bvh_node> nodes;
+
+#if YOCTO_EMBREE
+  // Embree opaque data
+  void* embree_bvh       = nullptr;
+  bool  embree_flattened = false;
+  // Cleanup for embree data
+  ~bvh_shape();
+#endif
+};
+
 // Instance for a scene BVH.
 struct bvh_instance {
   frame3f frame = identity3x4f;
@@ -188,7 +188,7 @@ struct bvh_instance {
 
 struct bvh_scene {
   // instances
-  bvh_strided_view<bvh_instance> instances = {};
+  bvh_sspan<bvh_instance> instances = {};
 
   // shape
   vector<bvh_shape> shapes = {};
