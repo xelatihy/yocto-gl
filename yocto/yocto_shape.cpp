@@ -285,14 +285,14 @@ edge_map make_edge_map(const vector<vec4i>& quads) {
   }
   return emap;
 }
-void insert_edges_(edge_map& emap, const vector<vec3i>& triangles) {
+void insert_edges(edge_map& emap, const vector<vec3i>& triangles) {
   for (auto& t : triangles) {
     insert_edge(emap, {t.x, t.y});
     insert_edge(emap, {t.y, t.z});
     insert_edge(emap, {t.z, t.x});
   }
 }
-void insert_edges_(edge_map& emap, const vector<vec4i>& quads) {
+void insert_edges(edge_map& emap, const vector<vec4i>& quads) {
   for (auto& q : quads) {
     insert_edge(emap, {q.x, q.y});
     insert_edge(emap, {q.y, q.z});
@@ -361,17 +361,18 @@ vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
 }
 
 // Create a hash_grid
-void init_hash_grid(hash_grid& grid, float cell_size) {
-  grid               = {};
+hash_grid make_hash_grid(float cell_size) {
+  auto grid               = hash_grid{};
   grid.cell_size     = cell_size;
   grid.cell_inv_size = 1 / cell_size;
+  return grid;
 }
-void init_hash_grid(
-    hash_grid& grid, const vector<vec3f>& positions, float cell_size) {
-  grid               = {};
+hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size) {
+  auto grid               = hash_grid{};
   grid.cell_size     = cell_size;
   grid.cell_inv_size = 1 / cell_size;
   for (auto& position : positions) insert_vertex(grid, position);
+  return grid;
 }
 // Inserts a point into the grid
 int insert_vertex(hash_grid& grid, const vec3f& position) {
@@ -382,7 +383,7 @@ int insert_vertex(hash_grid& grid, const vec3f& position) {
   return vertex_id;
 }
 // Finds the nearest neighboors within a given radius
-void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
+void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
     const vec3f& position, float max_radius, int skip_id) {
   auto cell        = get_cell_index(grid, position);
   auto cell_radius = (int)(max_radius * grid.cell_inv_size) + 1;
@@ -406,14 +407,14 @@ void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
     }
   }
 }
-void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
+void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
     const vec3f& position, float max_radius) {
-  find_nearest_neightbors(grid, neighboors, position, max_radius, -1);
+  find_neightbors(grid, neighboors, position, max_radius, -1);
 }
-void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
-    int vertex_id, float max_radius) {
-  find_nearest_neightbors(
-      grid, neighboors, grid.positions[vertex_id], max_radius, vertex_id);
+void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
+    int vertex, float max_radius) {
+  find_neightbors(
+      grid, neighboors, grid.positions[vertex], max_radius, vertex);
 }
 
 }  // namespace yocto
@@ -558,12 +559,11 @@ void weld_vertices(
     vector<vec3f>& positions, vector<int>& indices, float threshold) {
   indices.resize(positions.size());
   auto welded_positions = vector<vec3f>{};
-  auto grid             = hash_grid{};
-  init_hash_grid(grid, threshold);
+  auto grid             = make_hash_grid(threshold);
   auto neighboors = vector<int>{};
   for (auto vertex_id = 0; vertex_id < positions.size(); vertex_id++) {
     auto& position = positions[vertex_id];
-    find_nearest_neightbors(grid, neighboors, position, threshold);
+    find_neightbors(grid, neighboors, position, threshold);
     if (neighboors.empty()) {
       welded_positions.push_back(position);
       indices[vertex_id] = (int)welded_positions.size() - 1;

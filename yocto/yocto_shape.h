@@ -194,8 +194,8 @@ struct edge_map {
 // Initialize an edge map with elements.
 edge_map make_edge_map(const vector<vec3i>& triangles);
 edge_map make_edge_map(const vector<vec4i>& quads);
-void insert_edges_(edge_map& emap, const vector<vec3i>& triangles);
-void insert_edges_(edge_map& emap, const vector<vec4i>& quads);
+void insert_edges(edge_map& emap, const vector<vec3i>& triangles);
+void insert_edges(edge_map& emap, const vector<vec4i>& quads);
 // Insert an edge and return its index
 int insert_edge(edge_map& emap, const vec2i& edge);
 // Get the edge index / insertion count
@@ -210,7 +210,7 @@ vector<vec2i> get_edges(const vector<vec3i>& triangles);
 vector<vec2i> get_edges(const vector<vec4i>& quads);
 
 // A sparse grid of cells, containing list of points. Cells are stored in
-// a dictionary to get sparsing. Helpful for nearest neighboor lookups.
+// a dictionary to get sparsity. Helpful for nearest neighboor lookups.
 struct hash_grid {
   float                             cell_size     = 0;
   float                             cell_inv_size = 0;
@@ -219,16 +219,15 @@ struct hash_grid {
 };
 
 // Create a hash_grid
-void init_hash_grid(hash_grid& grid, float cell_size);
-void init_hash_grid(
-    hash_grid& grid, const vector<vec3f>& positions, float cell_size);
+hash_grid make_hash_grid(float cell_size);
+hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size);
 // Inserts a point into the grid
 int insert_vertex(hash_grid& grid, const vec3f& position);
 // Finds the nearest neighboors within a given radius
-void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
+void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
     const vec3f& position, float max_radius);
-void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
-    int vertex_id, float max_radius);
+void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
+    int vertex, float max_radius);
 
 }  // namespace yocto
 
