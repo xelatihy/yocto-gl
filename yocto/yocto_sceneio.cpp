@@ -2803,8 +2803,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
       split.indices.insert(split.indices.end(), (int*)shape.triangles.data(),
           (int*)shape.triangles.data() + shape.triangles.size() * 3);
       if (!shape.quads.empty()) {
-        auto triangles = vector<vec3i>{};
-        quads_to_triangles(triangles, shape.quads);
+        auto triangles = quads_to_triangles(shape.quads);
         split.indices.insert(split.indices.end(), (int*)triangles.data(),
             (int*)triangles.data() + triangles.size() * 3);
       }
@@ -2813,8 +2812,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
       split_facevarying(quads, split.positions, split.normals, split.texcoords,
           shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
           shape.normals, shape.texcoords);
-      auto triangles = vector<vec3i>{};
-      quads_to_triangles(triangles, quads);
+      auto triangles = quads_to_triangles(quads);
       split.indices.insert(split.indices.end(), (int*)triangles.data(),
           (int*)triangles.data() + triangles.size() * 3);
     }

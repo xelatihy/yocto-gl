@@ -237,15 +237,14 @@ void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
 namespace yocto {
 
 // Convert quads to triangles
+vector<vec3i> quads_to_triangles(const vector<vec4i>& quads);
 void quads_to_triangles(vector<vec3i>& triangles, const vector<vec4i>& quads);
-// Convert quads to triangles with a diamond-like topology.
-// Quads have to be consecutive one row after another.
-void quads_to_triangles(
-    vector<vec3i>& triangles, const vector<vec4i>& quads, int row_length);
 // Convert triangles to quads by creating degenerate quads
+vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles);
 void triangles_to_quads(vector<vec4i>& quads, const vector<vec3i>& triangles);
 
 // Convert beziers to lines using 3 lines for each bezier.
+vector<vec4i> bezier_to_lines(vector<vec2i>& lines);
 void bezier_to_lines(vector<vec2i>& lines, const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
@@ -258,6 +257,12 @@ void split_facevarying(vector<vec4i>& split_quads,
     const vector<vec2f>& texcoords);
 
 // Split primitives per id
+vector<vector<vec2i>> ungroup_lines(
+    const vector<vec2i>& lines, const vector<int>& ids);
+vector<vector<vec3i>> ungroup_triangles(
+    const vector<vec3i>& triangles, const vector<int>& ids);
+vector<vector<vec4i>> ungroup_quads(
+    const vector<vec4i>& quads, const vector<int>& ids);
 void ungroup_lines(vector<vector<vec2i>>& split_lines,
     const vector<vec2i>& lines, const vector<int>& ids);
 void ungroup_triangles(vector<vector<vec3i>>& split_triangles,

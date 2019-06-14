@@ -205,7 +205,7 @@ void flip_normals(vector<vec3f>& flipped, const vector<vec3f>& normals) {
   for (auto& n : flipped) n = -n;
 }
 vector<vec3f> flip_normals(const vector<vec3f>& normals) {
-  auto flipped  = normals;
+  auto flipped = normals;
   flip_normals(flipped, normals);
   return flipped;
 }
@@ -230,7 +230,8 @@ vector<vec4i> flip_quads(const vector<vec4i>& quads) {
 }
 
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions, const vec3i& alignment) {
+void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions,
+    const vec3i& alignment) {
   auto bounds = invalidb3f;
   for (auto& p : positions) bounds = merge(bounds, p);
   auto offset = vec3f{0, 0, 0};
@@ -252,7 +253,8 @@ void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions, cons
   aligned = positions;
   for (auto& p : aligned) p -= offset;
 }
-vector<vec3f> align_vertices(const vector<vec3f>& positions, const vec3i& alignment) {
+vector<vec3f> align_vertices(
+    const vector<vec3f>& positions, const vec3i& alignment) {
   auto aligned = vector<vec3f>(positions.size());
   align_vertices(aligned, positions, alignment);
   return aligned;
@@ -320,20 +322,17 @@ int insert_edge(edge_map& emap, const vec2i& edge) {
 int num_edges(const edge_map& emap) { return emap.edges.size(); }
 // Get the edge index
 int edge_index(const edge_map& emap, const vec2i& edge) {
-  auto es = edge.x < edge.y ? edge : vec2i{edge.y, edge.x};
+  auto es       = edge.x < edge.y ? edge : vec2i{edge.y, edge.x};
   auto iterator = emap.index.find(es);
   if (iterator == emap.index.end()) return -1;
   return iterator->second;
 }
 // Get a list of edges, boundary edges, boundary vertices
-vector<vec2i> get_edges(const edge_map& emap) {
-  return emap.edges;
-}
+vector<vec2i> get_edges(const edge_map& emap) { return emap.edges; }
 vector<vec2i> get_boundary(const edge_map& emap) {
   auto boundary = vector<vec2i>{};
   for (auto idx = 0; idx < emap.edges.size(); idx++) {
-    if (emap.nfaces[idx] < 2)
-      boundary.push_back(emap.edges[idx]);
+    if (emap.nfaces[idx] < 2) boundary.push_back(emap.edges[idx]);
   }
   return boundary;
 }
@@ -343,8 +342,7 @@ void get_edges(const edge_map& emap, vector<vec2i>& edges) {
 void get_boundary(const edge_map& emap, vector<vec2i>& boundary) {
   boundary.clear();
   for (auto idx = 0; idx < emap.edges.size(); idx++) {
-    if (emap.nfaces[idx] < 2)
-      boundary.push_back(emap.edges[idx]);
+    if (emap.nfaces[idx] < 2) boundary.push_back(emap.edges[idx]);
   }
 }
 vector<vec2i> get_edges(const vector<vec3i>& triangles) {
@@ -362,13 +360,13 @@ vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
 
 // Create a hash_grid
 hash_grid make_hash_grid(float cell_size) {
-  auto grid               = hash_grid{};
+  auto grid          = hash_grid{};
   grid.cell_size     = cell_size;
   grid.cell_inv_size = 1 / cell_size;
   return grid;
 }
 hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size) {
-  auto grid               = hash_grid{};
+  auto grid          = hash_grid{};
   grid.cell_size     = cell_size;
   grid.cell_inv_size = 1 / cell_size;
   for (auto& position : positions) insert_vertex(grid, position);
@@ -411,10 +409,9 @@ void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
     const vec3f& position, float max_radius) {
   find_neightbors(grid, neighboors, position, max_radius, -1);
 }
-void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
-    int vertex, float max_radius) {
-  find_neightbors(
-      grid, neighboors, grid.positions[vertex], max_radius, vertex);
+void find_neightbors(const hash_grid& grid, vector<int>& neighboors, int vertex,
+    float max_radius) {
+  find_neightbors(grid, neighboors, grid.positions[vertex], max_radius, vertex);
 }
 
 }  // namespace yocto
@@ -425,6 +422,15 @@ void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
 namespace yocto {
 
 // Convert quads to triangles
+vector<vec3i> quads_to_triangles(const vector<vec4i>& quads) {
+  auto triangles = vector<vec3i>{};
+  triangles.reserve(quads.size() * 2);
+  for (auto& q : quads) {
+    triangles.push_back({q.x, q.y, q.w});
+    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
+  }
+  return triangles;
+}
 void quads_to_triangles(vector<vec3i>& triangles, const vector<vec4i>& quads) {
   triangles.clear();
   triangles.reserve(quads.size() * 2);
@@ -434,33 +440,13 @@ void quads_to_triangles(vector<vec3i>& triangles, const vector<vec4i>& quads) {
   }
 }
 
-// Convert quads to triangles with a diamond-like topology.
-// Quads have to be consecutive one row after another.
-void quads_to_triangles(
-    vector<vec3i>& triangles, const vector<vec4i>& quads, int row_length) {
-  triangles.clear();
-  triangles.reserve(quads.size() * 2);
-  for (auto& q : quads) {
-    triangles.push_back({q.x, q.y, q.w});
-    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
-  }
-  // triangles.resize(usteps * vsteps * 2);
-  // for (auto j = 0; j < vsteps; j++) {
-  //     for (auto i = 0; i < usteps; i++) {
-  //         auto f1 = triangles[(j * usteps + i) * 2 + 0];
-  //         auto f2 = triangles[(j * usteps + i) * 2 + 1];
-  //         if ((i + j) % 2) {
-  //             f1 = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
-  //             f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i, j)};
-  //         } else {
-  //             f1 = {vid(i, j), vid(i + 1, j), vid(i, j + 1)};
-  //             f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i + 1, j)};
-  //         }
-  //     }
-  // }
-}
-
 // Convert triangles to quads by creating degenerate quads
+vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles) {
+  auto quads = vector<vec4i>{};
+  quads.reserve(triangles.size());
+  for (auto& t : triangles) quads.push_back({t.x, t.y, t.z, t.z});
+  return quads;
+}
 void triangles_to_quads(vector<vec4i>& quads, const vector<vec3i>& triangles) {
   quads.clear();
   quads.reserve(triangles.size());
@@ -468,6 +454,16 @@ void triangles_to_quads(vector<vec4i>& quads, const vector<vec3i>& triangles) {
 }
 
 // Convert beziers to lines using 3 lines for each bezier.
+vector<vec2i> bezier_to_lines(const vector<vec4i>& beziers) {
+  auto lines = vector<vec2i>{};
+  lines.reserve(beziers.size() * 3);
+  for (auto b : beziers) {
+    lines.push_back({b.x, b.y});
+    lines.push_back({b.y, b.z});
+    lines.push_back({b.z, b.w});
+  }
+  return lines;
+}
 void bezier_to_lines(vector<vec2i>& lines, const vector<vec4i>& beziers) {
   lines.clear();
   lines.reserve(beziers.size() * 3);
@@ -533,6 +529,28 @@ void split_facevarying(vector<vec4i>& split_quads,
 
 // Split primitives per id
 template <typename T>
+vector<vector<T>> ungroup_elems_impl(
+    const vector<T>& elems, const vector<int>& ids) {
+  auto max_id      = *max_element(ids.begin(), ids.end());
+  auto split_elems = vector<vector<T>>(max_id + 1);
+  for (auto elem_id = 0; elem_id < elems.size(); elem_id++) {
+    split_elems[ids[elem_id]].push_back(elems[elem_id]);
+  }
+  return split_elems;
+}
+vector<vector<vec2i>> ungroup_lines(
+    const vector<vec2i>& lines, const vector<int>& ids) {
+  return ungroup_elems_impl(lines, ids);
+}
+vector<vector<vec3i>> ungroup_triangles(
+    const vector<vec3i>& triangles, const vector<int>& ids) {
+  return ungroup_elems_impl(triangles, ids);
+}
+vector<vector<vec4i>> ungroup_quads(
+    const vector<vec4i>& quads, const vector<int>& ids) {
+  return ungroup_elems_impl(quads, ids);
+}
+template <typename T>
 void ungroup_elems_impl(vector<vector<T>>& split_elems, const vector<T>& elems,
     const vector<int>& ids) {
   auto max_id = *max_element(ids.begin(), ids.end());
@@ -560,7 +578,7 @@ void weld_vertices(
   indices.resize(positions.size());
   auto welded_positions = vector<vec3f>{};
   auto grid             = make_hash_grid(threshold);
-  auto neighboors = vector<int>{};
+  auto neighboors       = vector<int>{};
   for (auto vertex_id = 0; vertex_id < positions.size(); vertex_id++) {
     auto& position = positions[vertex_id];
     find_neightbors(grid, neighboors, position, threshold);
@@ -673,13 +691,11 @@ void merge_triangles_and_quads(
     vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
   if (quads.empty()) return;
   if (force_triangles) {
-    auto qtriangles = vector<vec3i>{};
-    quads_to_triangles(qtriangles, quads);
+    auto qtriangles = quads_to_triangles(quads);
     triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
     quads = {};
   } else {
-    auto tquads = vector<vec4i>{};
-    triangles_to_quads(tquads, triangles);
+    auto tquads = triangles_to_quads(triangles);
     quads.insert(quads.end(), tquads.begin(), tquads.end());
     triangles = {};
   }
@@ -730,7 +746,7 @@ void subdivide_triangles_impl(
   // loop over levels
   for (auto l = 0; l < level; l++) {
     // get edges
-    auto emap = make_edge_map(triangles);
+    auto emap  = make_edge_map(triangles);
     auto edges = get_edges(emap);
     // number of elements
     auto nverts = (int)vert.size();
@@ -770,7 +786,7 @@ void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert, int level) {
   // loop over levels
   for (auto l = 0; l < level; l++) {
     // get edges
-    auto emap = make_edge_map(quads);
+    auto emap  = make_edge_map(quads);
     auto edges = get_edges(emap);
     // number of elements
     auto nverts = (int)vert.size();
@@ -869,8 +885,8 @@ void subdivide_catmullclark_impl(
   // loop over levels
   for (auto l = 0; l < level; l++) {
     // get edges
-    auto emap = make_edge_map(quads);
-    auto edges = get_edges(emap);
+    auto emap     = make_edge_map(quads);
+    auto edges    = get_edges(emap);
     auto boundary = get_boundary(emap);
     // number of elements
     auto nverts    = (int)vert.size();
@@ -1344,7 +1360,7 @@ void make_edge_solver_slow(geodesic_solver& solver,
 
   for (int i = 0; i < positions.size(); i++) add_node(solver, positions[i]);
 
-  auto emap = make_edge_map(triangles);
+  auto emap  = make_edge_map(triangles);
   auto edges = get_edges(emap);
   for (auto& edge : edges) {
     add_undirected_arc(solver, edge.x, edge.y);
