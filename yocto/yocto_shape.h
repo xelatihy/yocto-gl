@@ -171,10 +171,8 @@ vector<vec4i> flip_quads(const vector<vec4i>& quads);
 void flip_triangles(vector<vec3i>& flipped, const vector<vec3i>& triangles);
 void flip_quads(vector<vec4i>& flipped, const vector<vec4i>& quads);
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-vector<vec3f> align_vertices(
-    const vector<vec3f>& positions, const vec3i& alignment);
-void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions,
-    const vec3i& alignment);
+vector<vec3f> align_vertices(const vector<vec3f>& positions, const vec3i& alignment);
+void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions, const vec3i& alignment);
 
 }  // namespace yocto
 
@@ -188,33 +186,24 @@ namespace yocto {
 // only bidirectional edges to keep the dictionary small. Use the functions
 // below to access this data.
 struct edge_map {
-  edge_map() { }
-  edge_map(const vector<vec3i>& triangles);
-  edge_map(const vector<vec4i>& quads);
-
-  // size
-  bool empty() const { return edges.empty(); }
-  size_t size() const { return edges.size(); }
-  void clear() { edges.clear(); indices.clear(); nfaces.clear(); }
-
-  // get edge index
-  int index(const vec2i& edge) const;
-
-  // insert an edge and returns its index
-  int insert(const vec2i& edge);
-  int operator[](const vec2i& edge) { return insert(edge); }
-
-  // returns a list of edges and boundary edges 
-  const vector<vec2i>& get_edges() const { return edges; }
-  void get_edges(vector<vec2i>& edges) const { edges = this->edges; }
-  vector<vec2i> get_boundary() const;
-  void get_boundary(vector<vec2i>& boundary) const;
-
-  private:
-  unordered_map<vec2i, int> indices = {};
+  unordered_map<vec2i, int> edge_index = {};
   vector<vec2i>             edges      = {};
-  vector<int>               nfaces  = {};
+  vector<int>               num_faces  = {};
 };
+
+// Initialize an edge map with elements.
+void insert_edges(edge_map& emap, const vector<vec3i>& triangles);
+void insert_edges(edge_map& emap, const vector<vec4i>& quads);
+// Insert an edge and return its index
+int insert_edge(edge_map& emap, const vec2i& edge);
+// Get the edge index / insertion count
+int get_edge_index(const edge_map& emap, const vec2i& edge);
+// Get list of edges / boundary edges
+int  get_num_edges(const edge_map& emap);
+void get_edges(const edge_map& emap, vector<vec2i>& edges);
+void get_boundary(const edge_map& emap, vector<vec2i>& edges);
+void get_edges(const vector<vec3i>& triangles, vector<vec2i>& edges);
+void get_edges(const vector<vec4i>& quads, vector<vec2i>& edges);
 
 // A sparse grid of cells, containing list of points. Cells are stored in
 // a dictionary to get sparsing. Helpful for nearest neighboor lookups.
