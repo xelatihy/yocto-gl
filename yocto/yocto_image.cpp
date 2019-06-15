@@ -1859,7 +1859,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an hdr image.
-image<vec4f> load_image4f(const string& filename) {
+image<vec4f> load_image(const string& filename) {
   auto img = image<vec4f>{};
   load_image(filename, img);
   return img;
@@ -1893,9 +1893,7 @@ void load_image(const string& filename, image<vec4f>& img) {
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
   } else if (!is_hdr_filename(filename)) {
-    auto img8 = image<vec4b>{};
-    load_image(filename, img8);
-    srgb_to_rgb(img, img8);
+    img = srgb_to_rgb(load_imageb(filename));
   } else {
     throw std::runtime_error("unsupported image format " + ext);
   }
@@ -1917,23 +1915,21 @@ void save_image(const string& filename, const image<vec4f>& img) {
             filename.c_str()) < 0)
       throw std::runtime_error("error saving image " + filename);
   } else if (!is_hdr_filename(filename)) {
-    auto img8 = image<vec4b>{img.size()};
-    rgb_to_srgb(img8, img);
-    save_image(filename, img8);
+    save_imageb(filename, rgb_to_srgbb(img));
   } else {
     throw std::runtime_error("unsupported image format " + ext);
   }
 }
 
 // Loads an ldr image.
-image<vec4b> load_image4b(const string& filename) {
+image<vec4b> load_imageb(const string& filename) {
   auto img = image<vec4b>{};
-  load_image(filename, img);
+  load_imageb(filename, img);
   return img;
 }
 
 // Loads an ldr image.
-void load_image(const string& filename, image<vec4b>& img) {
+void load_imageb(const string& filename, image<vec4b>& img) {
   if (is_preset_filename(filename)) return load_image_preset(filename, img);
   auto ext = fs::path(filename).extension().string();
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
@@ -1944,16 +1940,14 @@ void load_image(const string& filename, image<vec4b>& img) {
     img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
   } else if (is_hdr_filename(filename)) {
-    auto imgf = image<vec4f>{};
-    load_image(filename, imgf);
-    rgb_to_srgb(img, imgf);
+    img = rgb_to_srgbb(load_image(filename));
   } else {
     throw std::runtime_error("unsupported image format " + ext);
   }
 }
 
 // Saves an ldr image.
-void save_image(const string& filename, const image<vec4b>& img) {
+void save_imageb(const string& filename, const image<vec4b>& img) {
   auto ext = fs::path(filename).extension().string();
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
@@ -1972,9 +1966,7 @@ void save_image(const string& filename, const image<vec4b>& img) {
             filename.c_str(), img.size().x, img.size().y, 4, img.data()))
       throw std::runtime_error("error saving image " + filename);
   } else if (is_hdr_filename(filename)) {
-    auto imgf = image<vec4f>{img.size()};
-    srgb_to_rgb(imgf, img);
-    save_image(filename, imgf);
+    save_image(filename, srgb_to_rgb(img));
   } else {
     throw std::runtime_error("unsupported image format " + ext);
   }

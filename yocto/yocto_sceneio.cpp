@@ -320,7 +320,7 @@ void load_texture(yocto_texture& texture, const string& dirname) {
     if (is_hdr_filename(texture.uri)) {
       load_image(fs::path(dirname) / texture.uri, texture.hdr);
     } else {
-      load_image(fs::path(dirname) / texture.uri, texture.ldr);
+      load_imageb(fs::path(dirname) / texture.uri, texture.ldr);
     }
   }
 }
@@ -378,7 +378,7 @@ void save_texture(const yocto_texture& texture, const string& dirname) {
   if (!texture.hdr.empty()) {
     save_image(fs::path(dirname) / texture.uri, texture.hdr);
   } else {
-    save_image(fs::path(dirname) / texture.uri, texture.ldr);
+    save_imageb(fs::path(dirname) / texture.uri, texture.ldr);
   }
 }
 

@@ -456,7 +456,7 @@ void load_element(
     if (is_hdr_filename(texture.uri)) {
       load_image(fs::path(filename).parent_path() / texture.uri, texture.hdr);
     } else {
-      load_image(fs::path(filename).parent_path() / texture.uri, texture.ldr);
+      load_imageb(fs::path(filename).parent_path() / texture.uri, texture.ldr);
     }
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
@@ -784,7 +784,7 @@ void update(const opengl_window& win, app_state& app) {
           if (is_hdr_filename(scn.imagename)) {
             save_image(scn.imagename, scn.render);
           } else {
-            save_image(scn.imagename, tonemapb(scn.render, scn.tonemap_prms));
+            save_imageb(scn.imagename, tonemapb(scn.render, scn.tonemap_prms));
           }
         });
       } break;

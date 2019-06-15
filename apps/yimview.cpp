@@ -449,7 +449,7 @@ void update(const opengl_window& win, app_state& app) {
           if (!is_hdr_filename(img.outname)) {
             auto ldr = image<vec4b>{};
             float_to_byte(ldr, img.display);
-            save_image(img.outname, ldr);
+            save_imageb(img.outname, ldr);
           } else {
             auto aux = image<vec4f>{};
             srgb_to_rgb(aux, img.display);
