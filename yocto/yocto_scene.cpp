@@ -44,7 +44,7 @@ namespace yocto {
 // Computes a shape bounding box.
 bbox3f compute_bounds(const yocto_shape& shape) {
   auto bbox = invalidb3f;
-  for (auto p : shape.positions) bbox += p;
+  for (auto p : shape.positions) bbox = merge(bbox, p);
   return bbox;
 }
 
@@ -55,7 +55,8 @@ bbox3f compute_bounds(const yocto_scene& scene) {
     shape_bbox[shape_id] = compute_bounds(scene.shapes[shape_id]);
   auto bbox = invalidb3f;
   for (auto& instance : scene.instances) {
-    bbox += transform_bbox(instance.frame, shape_bbox[instance.shape]);
+    bbox = merge(
+        bbox, transform_bbox(instance.frame, shape_bbox[instance.shape]));
   }
   return bbox;
 }
@@ -85,23 +86,35 @@ void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
     throw std::runtime_error("point subdivision not supported");
   } else if (!shape.lines.empty()) {
     subdivide_lines(shape.lines, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivisions);
+        shape.texcoords, shape.colors, shape.radius, shape.lines,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, subdivisions);
   } else if (!shape.triangles.empty()) {
     subdivide_triangles(shape.triangles, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivisions);
+        shape.texcoords, shape.colors, shape.radius, shape.triangles,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, subdivisions);
   } else if (!shape.quads.empty() && !catmullclark) {
     subdivide_quads(shape.quads, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivisions);
+        shape.texcoords, shape.colors, shape.radius, shape.quads,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, subdivisions);
   } else if (!shape.quads.empty() && catmullclark) {
     subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivisions);
+        shape.texcoords, shape.colors, shape.radius, shape.quads,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, subdivisions);
   } else if (!shape.quadspos.empty() && !catmullclark) {
-    subdivide_quads(shape.quadspos, shape.positions, subdivisions);
-    subdivide_quads(shape.quadsnorm, shape.normals, subdivisions);
-    subdivide_quads(shape.quadstexcoord, shape.texcoords, subdivisions);
+    subdivide_quads(shape.quadspos, shape.positions, shape.quadspos,
+        shape.positions, subdivisions);
+    subdivide_quads(shape.quadsnorm, shape.normals, shape.quadsnorm,
+        shape.normals, subdivisions);
+    subdivide_quads(shape.quadstexcoord, shape.texcoords, shape.quadstexcoord,
+        shape.texcoords, subdivisions);
   } else if (!shape.quadspos.empty() && catmullclark) {
-    subdivide_catmullclark(shape.quadspos, shape.positions, subdivisions);
-    subdivide_catmullclark(
+    subdivide_catmullclark(shape.quadspos, shape.positions, shape.quadspos,
+        shape.positions, subdivisions);
+    subdivide_catmullclark(shape.quadstexcoord, shape.texcoords,
         shape.quadstexcoord, shape.texcoords, subdivisions, true);
   } else {
     throw std::runtime_error("empty shape");
@@ -196,14 +209,14 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
 
   if (!animation.translations.empty()) {
     auto value = vec3f{0, 0, 0};
-    switch (animation.type) {
-      case yocto_animation::type_t::step:
+    switch (animation.interpolation) {
+      case yocto_animation::interpolation_type::step:
         value = keyframe_step(animation.times, animation.translations, time);
         break;
-      case yocto_animation::type_t::linear:
+      case yocto_animation::interpolation_type::linear:
         value = keyframe_linear(animation.times, animation.translations, time);
         break;
-      case yocto_animation::type_t::bezier:
+      case yocto_animation::interpolation_type::bezier:
         value = keyframe_bezier(animation.times, animation.translations, time);
         break;
       default: throw std::runtime_error("should not have been here");
@@ -213,14 +226,14 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
   }
   if (!animation.rotations.empty()) {
     auto value = vec4f{0, 0, 0, 1};
-    switch (animation.type) {
-      case yocto_animation::type_t::step:
+    switch (animation.interpolation) {
+      case yocto_animation::interpolation_type::step:
         value = keyframe_step(animation.times, animation.rotations, time);
         break;
-      case yocto_animation::type_t::linear:
+      case yocto_animation::interpolation_type::linear:
         value = keyframe_linear(animation.times, animation.rotations, time);
         break;
-      case yocto_animation::type_t::bezier:
+      case yocto_animation::interpolation_type::bezier:
         value = keyframe_bezier(animation.times, animation.rotations, time);
         break;
     }
@@ -228,14 +241,14 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
   }
   if (!animation.scales.empty()) {
     auto value = vec3f{1, 1, 1};
-    switch (animation.type) {
-      case yocto_animation::type_t::step:
+    switch (animation.interpolation) {
+      case yocto_animation::interpolation_type::step:
         value = keyframe_step(animation.times, animation.scales, time);
         break;
-      case yocto_animation::type_t::linear:
+      case yocto_animation::interpolation_type::linear:
         value = keyframe_linear(animation.times, animation.scales, time);
         break;
-      case yocto_animation::type_t::bezier:
+      case yocto_animation::interpolation_type::bezier:
         value = keyframe_bezier(animation.times, animation.scales, time);
         break;
     }
@@ -300,6 +313,22 @@ void sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf) {
     throw std::runtime_error("empty shape");
   }
 }
+vector<float> sample_shape_cdf(const yocto_shape& shape) {
+  if (!shape.triangles.empty()) {
+    return sample_triangles_cdf(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return sample_quads_cdf(shape.quads, shape.positions);
+  } else if (!shape.lines.empty()) {
+    return sample_lines_cdf(shape.lines, shape.positions);
+  } else if (!shape.points.empty()) {
+    return sample_points_cdf(shape.points.size());
+  } else if (!shape.quadspos.empty()) {
+    return sample_quads_cdf(shape.quadspos, shape.positions);
+  } else {
+    throw std::runtime_error("empty shape");
+    return {};
+  }
+}
 
 // Sample a shape based on a distribution.
 pair<int, vec2f> sample_shape(const yocto_shape& shape,
@@ -328,6 +357,25 @@ float sample_shape_pdf(const yocto_shape& shape, const vector<float>& cdf,
 }
 
 // Update environment CDF for sampling.
+vector<float> sample_environment_cdf(
+    const yocto_scene& scene, const yocto_environment& environment) {
+  if (environment.emission_tex < 0) return {};
+  auto& texture    = scene.textures[environment.emission_tex];
+  auto  size       = texture_size(texture);
+  auto  texels_cdf = vector<float>(size.x * size.y);
+  if (size != zero2i) {
+    for (auto i = 0; i < texels_cdf.size(); i++) {
+      auto ij       = vec2i{i % size.x, i / size.x};
+      auto th       = (ij.y + 0.5f) * pif / size.y;
+      auto value    = lookup_texture(texture, ij.x, ij.y);
+      texels_cdf[i] = max(xyz(value)) * sin(th);
+      if (i) texels_cdf[i] += texels_cdf[i - 1];
+    }
+  } else {
+    throw std::runtime_error("empty texture");
+  }
+  return texels_cdf;
+}
 void sample_environment_cdf(const yocto_scene& scene,
     const yocto_environment& environment, vector<float>& texels_cdf) {
   if (environment.emission_tex < 0) {
@@ -386,216 +434,11 @@ float sample_environment_pdf(const yocto_scene& scene,
   }
 }
 
-// Add missing names and resolve duplicated names.
-void normalize_uris(yocto_scene& scene) {
-  auto normalize = [](string& name, const string& base, const string& ext,
-                       int num) {
-    for (auto& c : name) {
-      if (c == ':' || c == ' ') c = '_';
-    }
-    if (name.empty()) name = base + "_" + std::to_string(num);
-    if (fs::path(name).parent_path().empty()) name = base + "s/" + name;
-    if (fs::path(name).extension().empty()) name = name + "." + ext;
-  };
-  for (auto id = 0; id < scene.cameras.size(); id++)
-    normalize(scene.cameras[id].uri, "camera", "yaml", id);
-  for (auto id = 0; id < scene.textures.size(); id++)
-    normalize(scene.textures[id].uri, "texture", "png", id);
-  for (auto id = 0; id < scene.voltextures.size(); id++)
-    normalize(scene.voltextures[id].uri, "volume", "yvol", id);
-  for (auto id = 0; id < scene.materials.size(); id++)
-    normalize(scene.materials[id].uri, "material", "yaml", id);
-  for (auto id = 0; id < scene.shapes.size(); id++)
-    normalize(scene.shapes[id].uri, "shape", "ply", id);
-  for (auto id = 0; id < scene.instances.size(); id++)
-    normalize(scene.instances[id].uri, "instance", "yaml", id);
-  for (auto id = 0; id < scene.animations.size(); id++)
-    normalize(scene.animations[id].uri, "animation", "yaml", id);
-  for (auto id = 0; id < scene.nodes.size(); id++)
-    normalize(scene.nodes[id].uri, "node", "yaml", id);
-}
-void rename_instances(yocto_scene& scene) {
-  auto shape_names = vector<string>(scene.shapes.size());
-  for (auto sid = 0; sid < scene.shapes.size(); sid++) {
-    shape_names[sid] = fs::path(scene.shapes[sid].uri).stem();
-  }
-  auto shape_count = vector<vec2i>(scene.shapes.size(), vec2i{0, 0});
-  for (auto& instance : scene.instances) shape_count[instance.shape].y += 1;
-  for (auto& instance : scene.instances) {
-    if (shape_count[instance.shape].y == 1) {
-      instance.uri = "instances/" + shape_names[instance.shape] + ".yaml";
-    } else {
-      auto num = std::to_string(shape_count[instance.shape].x++);
-      while (num.size() < (int)ceil(log10(shape_count[instance.shape].y)))
-        num = '0' + num;
-      instance.uri = "instances/" + shape_names[instance.shape] + "-" + num +
-                     ".yaml";
-    }
-  }
-}
-
-// Normalized a scaled color in a material
-void normalize_scaled_color(float& scale, vec3f& color) {
-  auto scaled = scale * color;
-  if (max(scaled) == 0) {
-    scale = 0;
-    color = {1, 1, 1};
-  } else {
-    scale = max(scaled);
-    color = scaled / max(scaled);
-  }
-}
-
-// Add missing tangent space if needed.
-void add_tangent_spaces(yocto_scene& scene) {
-  for (auto& instance : scene.instances) {
-    auto& material = scene.materials[instance.material];
-    if (material.normal_tex < 0) continue;
-    auto& shape = scene.shapes[instance.shape];
-    if (!shape.tangents.empty() || shape.texcoords.empty()) continue;
-    if (!shape.triangles.empty()) {
-      if (shape.normals.empty()) {
-        shape.normals.resize(shape.positions.size());
-        compute_normals(shape.normals, shape.triangles, shape.positions);
-      }
-      shape.tangents.resize(shape.positions.size());
-      compute_tangent_spaces(shape.tangents, shape.triangles, shape.positions,
-          shape.normals, shape.texcoords);
-    } else {
-      throw std::runtime_error("type not supported");
-    }
-  }
-}
-
-// Add missing materials.
-void add_materials(yocto_scene& scene) {
-  auto material_id = -1;
-  for (auto& instance : scene.instances) {
-    if (instance.material >= 0) continue;
-    if (material_id < 0) {
-      auto material    = yocto_material{};
-      material.uri     = "materails/default.yaml";
-      material.diffuse = {0.2f, 0.2f, 0.2f};
-      scene.materials.push_back(material);
-      material_id = (int)scene.materials.size() - 1;
-    }
-    instance.material = material_id;
-  }
-}
-
-// Add missing radius.
-void add_radius(yocto_scene& scene, float radius) {
-  for (auto& shape : scene.shapes) {
-    if (shape.points.empty() && shape.lines.empty()) continue;
-    if (!shape.radius.empty()) continue;
-    shape.radius.assign(shape.positions.size(), radius);
-  }
-}
-
-// Add missing cameras.
-void add_cameras(yocto_scene& scene) {
-  if (scene.cameras.empty()) {
-    auto camera = yocto_camera{};
-    camera.uri  = "cameras/default.yaml";
-    set_view(camera, compute_bounds(scene), {0, 0, 1});
-    scene.cameras.push_back(camera);
-  }
-}
-
-// Add a sky environment
-void add_sky(yocto_scene& scene, float sun_angle) {
-  auto texture = yocto_texture{};
-  texture.uri  = "textures/sky.hdr";
-  make_imsunsky(texture.hdr, {1024, 512}, sun_angle);
-  scene.textures.push_back(texture);
-  auto environment         = yocto_environment{};
-  environment.uri          = "environments/default.yaml";
-  environment.emission     = {1, 1, 1};
-  environment.emission_tex = (int)scene.textures.size() - 1;
-  scene.environments.push_back(environment);
-}
-
-// Reduce memory usage
-void trim_memory(yocto_scene& scene) {
-  for (auto& shape : scene.shapes) {
-    shape.points.shrink_to_fit();
-    shape.lines.shrink_to_fit();
-    shape.triangles.shrink_to_fit();
-    shape.quads.shrink_to_fit();
-    shape.quadspos.shrink_to_fit();
-    shape.quadsnorm.shrink_to_fit();
-    shape.quadstexcoord.shrink_to_fit();
-    shape.positions.shrink_to_fit();
-    shape.normals.shrink_to_fit();
-    shape.texcoords.shrink_to_fit();
-    shape.colors.shrink_to_fit();
-    shape.radius.shrink_to_fit();
-    shape.tangents.shrink_to_fit();
-  }
-  for (auto& texture : scene.textures) {
-    texture.ldr.shrink_to_fit();
-    texture.hdr.shrink_to_fit();
-  }
-  scene.cameras.shrink_to_fit();
-  scene.shapes.shrink_to_fit();
-  scene.instances.shrink_to_fit();
-  scene.materials.shrink_to_fit();
-  scene.textures.shrink_to_fit();
-  scene.environments.shrink_to_fit();
-  scene.voltextures.shrink_to_fit();
-  scene.nodes.shrink_to_fit();
-  scene.animations.shrink_to_fit();
-}
-
-// Checks for validity of the scene.
-vector<string> validate_scene(const yocto_scene& scene, bool notextures) {
-  auto errs        = vector<string>();
-  auto check_names = [&errs](const auto& vals, const string& base) {
-    auto used = unordered_map<string, int>();
-    used.reserve(vals.size());
-    for (auto& value : vals) used[value.uri] += 1;
-    for (auto& [name, used] : used) {
-      if (name == "") {
-        errs.push_back("empty " + base + " name");
-      } else if (used > 1) {
-        errs.push_back("duplicated " + base + " name " + name);
-      }
-    }
-  };
-  auto check_empty_textures = [&errs](const vector<yocto_texture>& vals) {
-    for (auto& value : vals) {
-      if (value.hdr.empty() && value.ldr.empty()) {
-        errs.push_back("empty texture " + value.uri);
-      }
-    }
-  };
-
-  check_names(scene.cameras, "camera");
-  check_names(scene.shapes, "shape");
-  check_names(scene.textures, "texture");
-  check_names(scene.voltextures, "voltexture");
-  check_names(scene.materials, "material");
-  check_names(scene.instances, "instance");
-  check_names(scene.environments, "environment");
-  check_names(scene.nodes, "node");
-  check_names(scene.animations, "animation");
-  if (!notextures) check_empty_textures(scene.textures);
-
-  return errs;
-}
-
-// Logs validations errors
-void print_validation(const yocto_scene& scene, bool notextures) {
-  for (auto err : validate_scene(scene, notextures))
-    printf("%s [validation]\n", err.c_str());
-}
-
-void build_bvh(
-    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
-  bvh.shapes.resize(scene.shapes.size());
+bvh_scene make_bvh(const yocto_scene& scene, const bvh_params& params) {
+  auto sbvhs = vector<bvh_shape>{scene.shapes.size()};
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
     auto& shape = scene.shapes[idx];
-    auto& sbvh  = bvh.shapes[idx];
+    auto& sbvh  = sbvhs[idx];
 #if YOCTO_EMBREE
     // call Embree if needed
     if (params.use_embree) {
@@ -605,20 +448,62 @@ void build_bvh(
       }
     }
 #endif
-    sbvh.points    = shape.points;
-    sbvh.lines     = shape.lines;
-    sbvh.triangles = shape.triangles;
-    sbvh.quads     = shape.quads;
-    sbvh.quadspos  = shape.quadspos;
-    sbvh.positions = shape.positions;
-    sbvh.radius    = shape.radius;
+    if (!shape.points.empty()) {
+      sbvh = make_points_bvh(shape.points, shape.positions, shape.radius);
+    } else if (!shape.lines.empty()) {
+      sbvh = make_lines_bvh(shape.lines, shape.positions, shape.radius);
+    } else if (!shape.triangles.empty()) {
+      sbvh = make_triangles_bvh(shape.triangles, shape.positions, shape.radius);
+    } else if (!shape.quads.empty()) {
+      sbvh = make_quads_bvh(shape.quads, shape.positions, shape.radius);
+    } else if (!shape.quadspos.empty()) {
+      sbvh = make_quadspos_bvh(shape.quadspos, shape.positions, shape.radius);
+    } else {
+      throw std::runtime_error("empty shape");
+    }
   }
-  if (!scene.instances.empty()) {
-    bvh.instances = {&scene.instances[0].frame, (int)scene.instances.size(),
-        sizeof(scene.instances[0])};
-  } else {
-    bvh.instances = {};
+
+  auto bvh = make_instances_bvh(
+      {&scene.instances[0].frame, (int)scene.instances.size(),
+          sizeof(scene.instances[0])},
+      sbvhs);
+  build_bvh(bvh, params);
+  return bvh;
+}
+
+void make_bvh(
+    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
+  auto sbvhs = vector<bvh_shape>{scene.shapes.size()};
+  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+    auto& shape = scene.shapes[idx];
+    auto& sbvh  = sbvhs[idx];
+#if YOCTO_EMBREE
+    // call Embree if needed
+    if (params.use_embree) {
+      if (params.embree_compact &&
+          shape.positions.size() == shape.positions.capacity()) {
+        ((yocto_shape&)shape).positions.reserve(shape.positions.size() + 1);
+      }
+    }
+#endif
+    if (!shape.points.empty()) {
+      sbvh = make_points_bvh(shape.points, shape.positions, shape.radius);
+    } else if (!shape.lines.empty()) {
+      sbvh = make_lines_bvh(shape.lines, shape.positions, shape.radius);
+    } else if (!shape.triangles.empty()) {
+      sbvh = make_triangles_bvh(shape.triangles, shape.positions, shape.radius);
+    } else if (!shape.quads.empty()) {
+      sbvh = make_quads_bvh(shape.quads, shape.positions, shape.radius);
+    } else if (!shape.quadspos.empty()) {
+      sbvh = make_quadspos_bvh(shape.quadspos, shape.positions, shape.radius);
+    } else {
+      throw std::runtime_error("empty shape");
+    }
   }
+
+  bvh = {{&scene.instances[0].frame, (int)scene.instances.size(),
+             sizeof(scene.instances[0])},
+      sbvhs};
 
   build_bvh(bvh, params);
 }
@@ -1405,6 +1290,210 @@ string format_stats(
            "\n";
 
   return stats;
+}
+
+// Add missing names and resolve duplicated names.
+void normalize_uris(yocto_scene& scene) {
+  auto normalize = [](string& name, const string& base, const string& ext,
+                       int num) {
+    for (auto& c : name) {
+      if (c == ':' || c == ' ') c = '_';
+    }
+    if (name.empty()) name = base + "_" + std::to_string(num);
+    if (fs::path(name).parent_path().empty()) name = base + "s/" + name;
+    if (fs::path(name).extension().empty()) name = name + "." + ext;
+  };
+  for (auto id = 0; id < scene.cameras.size(); id++)
+    normalize(scene.cameras[id].uri, "camera", "yaml", id);
+  for (auto id = 0; id < scene.textures.size(); id++)
+    normalize(scene.textures[id].uri, "texture", "png", id);
+  for (auto id = 0; id < scene.voltextures.size(); id++)
+    normalize(scene.voltextures[id].uri, "volume", "yvol", id);
+  for (auto id = 0; id < scene.materials.size(); id++)
+    normalize(scene.materials[id].uri, "material", "yaml", id);
+  for (auto id = 0; id < scene.shapes.size(); id++)
+    normalize(scene.shapes[id].uri, "shape", "ply", id);
+  for (auto id = 0; id < scene.instances.size(); id++)
+    normalize(scene.instances[id].uri, "instance", "yaml", id);
+  for (auto id = 0; id < scene.animations.size(); id++)
+    normalize(scene.animations[id].uri, "animation", "yaml", id);
+  for (auto id = 0; id < scene.nodes.size(); id++)
+    normalize(scene.nodes[id].uri, "node", "yaml", id);
+}
+void rename_instances(yocto_scene& scene) {
+  auto shape_names = vector<string>(scene.shapes.size());
+  for (auto sid = 0; sid < scene.shapes.size(); sid++) {
+    shape_names[sid] = fs::path(scene.shapes[sid].uri).stem();
+  }
+  auto shape_count = vector<vec2i>(scene.shapes.size(), vec2i{0, 0});
+  for (auto& instance : scene.instances) shape_count[instance.shape].y += 1;
+  for (auto& instance : scene.instances) {
+    if (shape_count[instance.shape].y == 1) {
+      instance.uri = "instances/" + shape_names[instance.shape] + ".yaml";
+    } else {
+      auto num = std::to_string(shape_count[instance.shape].x++);
+      while (num.size() < (int)ceil(log10(shape_count[instance.shape].y)))
+        num = '0' + num;
+      instance.uri = "instances/" + shape_names[instance.shape] + "-" + num +
+                     ".yaml";
+    }
+  }
+}
+
+// Normalized a scaled color in a material
+void normalize_scaled_color(float& scale, vec3f& color) {
+  auto scaled = scale * color;
+  if (max(scaled) == 0) {
+    scale = 0;
+    color = {1, 1, 1};
+  } else {
+    scale = max(scaled);
+    color = scaled / max(scaled);
+  }
+}
+
+// Add missing tangent space if needed.
+void add_tangent_spaces(yocto_scene& scene) {
+  for (auto& instance : scene.instances) {
+    auto& material = scene.materials[instance.material];
+    if (material.normal_tex < 0) continue;
+    auto& shape = scene.shapes[instance.shape];
+    if (!shape.tangents.empty() || shape.texcoords.empty()) continue;
+    if (!shape.triangles.empty()) {
+      if (shape.normals.empty()) {
+        shape.normals.resize(shape.positions.size());
+        compute_normals(shape.normals, shape.triangles, shape.positions);
+      }
+      shape.tangents.resize(shape.positions.size());
+      compute_tangent_spaces(shape.tangents, shape.triangles, shape.positions,
+          shape.normals, shape.texcoords);
+    } else {
+      throw std::runtime_error("type not supported");
+    }
+  }
+}
+
+// Add missing materials.
+void add_materials(yocto_scene& scene) {
+  auto material_id = -1;
+  for (auto& instance : scene.instances) {
+    if (instance.material >= 0) continue;
+    if (material_id < 0) {
+      auto material    = yocto_material{};
+      material.uri     = "materails/default.yaml";
+      material.diffuse = {0.2f, 0.2f, 0.2f};
+      scene.materials.push_back(material);
+      material_id = (int)scene.materials.size() - 1;
+    }
+    instance.material = material_id;
+  }
+}
+
+// Add missing radius.
+void add_radius(yocto_scene& scene, float radius) {
+  for (auto& shape : scene.shapes) {
+    if (shape.points.empty() && shape.lines.empty()) continue;
+    if (!shape.radius.empty()) continue;
+    shape.radius.assign(shape.positions.size(), radius);
+  }
+}
+
+// Add missing cameras.
+void add_cameras(yocto_scene& scene) {
+  if (scene.cameras.empty()) {
+    auto camera = yocto_camera{};
+    camera.uri  = "cameras/default.yaml";
+    set_view(camera, compute_bounds(scene), {0, 0, 1});
+    scene.cameras.push_back(camera);
+  }
+}
+
+// Add a sky environment
+void add_sky(yocto_scene& scene, float sun_angle) {
+  auto texture = yocto_texture{};
+  texture.uri  = "textures/sky.hdr";
+  make_sunsky(texture.hdr, {1024, 512}, sun_angle);
+  scene.textures.push_back(texture);
+  auto environment         = yocto_environment{};
+  environment.uri          = "environments/default.yaml";
+  environment.emission     = {1, 1, 1};
+  environment.emission_tex = (int)scene.textures.size() - 1;
+  scene.environments.push_back(environment);
+}
+
+// Reduce memory usage
+void trim_memory(yocto_scene& scene) {
+  for (auto& shape : scene.shapes) {
+    shape.points.shrink_to_fit();
+    shape.lines.shrink_to_fit();
+    shape.triangles.shrink_to_fit();
+    shape.quads.shrink_to_fit();
+    shape.quadspos.shrink_to_fit();
+    shape.quadsnorm.shrink_to_fit();
+    shape.quadstexcoord.shrink_to_fit();
+    shape.positions.shrink_to_fit();
+    shape.normals.shrink_to_fit();
+    shape.texcoords.shrink_to_fit();
+    shape.colors.shrink_to_fit();
+    shape.radius.shrink_to_fit();
+    shape.tangents.shrink_to_fit();
+  }
+  for (auto& texture : scene.textures) {
+    texture.ldr.shrink_to_fit();
+    texture.hdr.shrink_to_fit();
+  }
+  scene.cameras.shrink_to_fit();
+  scene.shapes.shrink_to_fit();
+  scene.instances.shrink_to_fit();
+  scene.materials.shrink_to_fit();
+  scene.textures.shrink_to_fit();
+  scene.environments.shrink_to_fit();
+  scene.voltextures.shrink_to_fit();
+  scene.nodes.shrink_to_fit();
+  scene.animations.shrink_to_fit();
+}
+
+// Checks for validity of the scene.
+vector<string> validate_scene(const yocto_scene& scene, bool notextures) {
+  auto errs        = vector<string>();
+  auto check_names = [&errs](const auto& vals, const string& base) {
+    auto used = unordered_map<string, int>();
+    used.reserve(vals.size());
+    for (auto& value : vals) used[value.uri] += 1;
+    for (auto& [name, used] : used) {
+      if (name == "") {
+        errs.push_back("empty " + base + " name");
+      } else if (used > 1) {
+        errs.push_back("duplicated " + base + " name " + name);
+      }
+    }
+  };
+  auto check_empty_textures = [&errs](const vector<yocto_texture>& vals) {
+    for (auto& value : vals) {
+      if (value.hdr.empty() && value.ldr.empty()) {
+        errs.push_back("empty texture " + value.uri);
+      }
+    }
+  };
+
+  check_names(scene.cameras, "camera");
+  check_names(scene.shapes, "shape");
+  check_names(scene.textures, "texture");
+  check_names(scene.voltextures, "voltexture");
+  check_names(scene.materials, "material");
+  check_names(scene.instances, "instance");
+  check_names(scene.environments, "environment");
+  check_names(scene.nodes, "node");
+  check_names(scene.animations, "animation");
+  if (!notextures) check_empty_textures(scene.textures);
+
+  return errs;
+}
+
+// Logs validations errors
+void print_validation(const yocto_scene& scene, bool notextures) {
+  for (auto err : validate_scene(scene, notextures))
+    printf("%s [validation]\n", err.c_str());
 }
 
 }  // namespace yocto

@@ -152,12 +152,11 @@ void update_app_render(const string& filename, image<vec4f>& render,
     int preview_ratio, std::atomic<bool>* cancel,
     std::atomic<int>& current_sample, std::deque<image_region>& queue,
     std::mutex& queuem) {
-  auto preview_options = trace_prms;
-  preview_options.resolution /= preview_ratio;
-  preview_options.samples = 1;
-  auto small_preview      = trace_image(scene, bvh, lights, preview_options);
-  auto display_preview    = small_preview;
-  tonemap(display_preview, small_preview, tonemap_prms);
+  auto preview_prms = trace_prms;
+  preview_prms.resolution /= preview_ratio;
+  preview_prms.samples = 1;
+  auto small_preview   = trace_image(scene, bvh, lights, preview_prms);
+  auto display_preview = tonemap(small_preview, tonemap_prms);
   for (auto j = 0; j < preview.size().y; j++) {
     for (auto i = 0; i < preview.size().x; i++) {
       auto pi = clamp(i / preview_ratio, 0, display_preview.size().x - 1),
@@ -173,10 +172,8 @@ void update_app_render(const string& filename, image<vec4f>& render,
 
   auto& camera     = scene.cameras.at(trace_prms.camera);
   auto  image_size = camera_resolution(camera, trace_prms.resolution);
-  state            = trace_state{};
-  init_trace_state(state, image_size, trace_prms.seed);
-  auto regions = vector<image_region>{};
-  make_imregions(regions, render.size(), trace_prms.region, true);
+  state            = make_trace_state(image_size, trace_prms.seed);
+  auto regions     = make_regions(render.size(), trace_prms.region, true);
 
   for (auto sample = 0; sample < trace_prms.samples;
        sample += trace_prms.batch) {
@@ -456,8 +453,11 @@ void load_element(
 
   if (type == typeid(yocto_texture)) {
     auto& texture = scene.textures[index];
-    load_image(fs::path(filename).parent_path() / texture.uri, texture.hdr,
-        texture.ldr);
+    if (is_hdr_filename(texture.uri)) {
+      load_image(fs::path(filename).parent_path() / texture.uri, texture.hdr);
+    } else {
+      load_imageb(fs::path(filename).parent_path() / texture.uri, texture.ldr);
+    }
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
     load_volume(fs::path(filename).parent_path() / texture.uri, texture.vol);
@@ -763,7 +763,7 @@ void update(const opengl_window& win, app_state& app) {
         log_glinfo(win, "start building bvh " + scn.filename);
         scn.bvh_done = false;
         task.result  = std::async(std::launch::async,
-            [&scn]() { build_bvh(scn.bvh, scn.scene, scn.bvh_prms); });
+            [&scn]() { make_bvh(scn.bvh, scn.scene, scn.bvh_prms); });
       } break;
       case app_task_type::refit_bvh: {
         log_glinfo(win, "start refitting bvh " + scn.filename);
@@ -776,12 +776,16 @@ void update(const opengl_window& win, app_state& app) {
         log_glinfo(win, "start building lights " + scn.filename);
         scn.lights_done = false;
         task.result     = std::async(std::launch::async,
-            [&scn]() { init_trace_lights(scn.lights, scn.scene); });
+            [&scn]() { scn.lights = make_trace_lights(scn.scene); });
       } break;
       case app_task_type::save_image: {
         log_glinfo(win, "start saving " + scn.imagename);
         task.result = std::async(std::launch::async, [&scn]() {
-          save_tonemapped(scn.imagename, scn.render, scn.tonemap_prms);
+          if (is_hdr_filename(scn.imagename)) {
+            save_image(scn.imagename, scn.render);
+          } else {
+            save_imageb(scn.imagename, tonemapb(scn.render, scn.tonemap_prms));
+          }
         });
       } break;
       case app_task_type::save_scene: {
@@ -798,7 +802,7 @@ void update(const opengl_window& win, app_state& app) {
         if (scn.lights.instances.empty() && scn.lights.environments.empty() &&
             is_sampler_lit(scn.trace_prms)) {
           log_glinfo(win, "no lights presents, switching to eyelight shader");
-          scn.trace_prms.sampler = trace_sampler_type::eyelight;
+          scn.trace_prms.sampler = trace_params::sampler_type::eyelight;
         }
         scn.render_sample = 0;
         scn.name          = fs::path(scn.filename).filename().string() + " [" +
@@ -915,16 +919,15 @@ int main(int argc, char* argv[]) {
   auto filenames       = vector<string>{};
 
   // names for enums
-  auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
+  auto sampler_namemap = std::map<string, trace_params::sampler_type>{};
   for (auto type = 0; type < trace_sampler_names.size(); type++) {
-    trace_sampler_type_namemap[trace_sampler_names[type]] =
-        (trace_sampler_type)type;
+    sampler_namemap[trace_sampler_names[type]] =
+        (trace_params::sampler_type)type;
   }
-  auto trace_falsecolor_type_namemap =
-      std::map<string, trace_falsecolor_type>{};
+  auto falsecolor_namemap = std::map<string, trace_params::falsecolor_type>{};
   for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
-    trace_falsecolor_type_namemap[trace_falsecolor_names[type]] =
-        (trace_falsecolor_type)type;
+    falsecolor_namemap[trace_falsecolor_names[type]] =
+        (trace_params::falsecolor_type)type;
   }
 
   // parse command line
@@ -937,11 +940,11 @@ int main(int argc, char* argv[]) {
   parser.add_option(
       "--samples,-s", app.trace_prms.samples, "Number of samples.");
   parser.add_option("--tracer,-t", app.trace_prms.sampler, "Tracer type.")
-      ->transform(CLI::IsMember(trace_sampler_type_namemap));
+      ->transform(CLI::IsMember(sampler_namemap));
   parser
       .add_option("--falsecolor,-F", app.trace_prms.falsecolor,
           "Tracer false color type.")
-      ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
+      ->transform(CLI::IsMember(falsecolor_namemap));
   parser.add_option(
       "--bounces", app.trace_prms.bounces, "Maximum number of bounces.");
   parser.add_option("--clamp", app.trace_prms.clamp, "Final pixel clamping.");

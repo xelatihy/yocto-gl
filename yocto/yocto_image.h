@@ -27,8 +27,8 @@
 // 3. resize images with `resize()`
 // 4. tonemap images with `tonemap()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
-// 5. make various image examples with the `make_improc()` functions
-// 6. create procedural sun-sky images with `make_imsunsky()`
+// 5. make various image examples with the `make_proc_image()` functions
+// 6. create procedural sun-sky images with `make_sunsky()`
 // 7. many color conversion functions are available in the code below
 //
 //
@@ -169,26 +169,18 @@ namespace yocto {
 struct image_region {
   vec2i min = zero2i;
   vec2i max = zero2i;
+
+  image_region() {}
+  image_region(const vec2i& min, const vec2i& max) : min{min}, max{max} {}
+
   vec2i size() const { return max - min; }
 };
 
 // Splits an image into an array of regions
-void make_imregions(vector<image_region>& regions, const vec2i& size,
-    int region_size = 32, bool shuffled = false);
-vector<image_region> make_imregions(
+vector<image_region> make_regions(
     const vec2i& size, int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
-template <typename T>
-inline void get_region(
-    image<T>& clipped, const image<T>& img, const image_region& region) {
-  clipped.resize(region.size());
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
-      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-    }
-  }
-}
 template <typename T>
 inline image<T> get_region(const image<T>& img, const image_region& region) {
   auto clipped = image<T>{region.size()};
@@ -209,27 +201,38 @@ inline void set_region(
     }
   }
 }
+template <typename T>
+inline void get_region(
+    image<T>& clipped, const image<T>& img, const image_region& region) {
+  clipped.resize(region.size());
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+    }
+  }
+}
 
 // Conversion from/to floats.
-void         byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
-void         float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
 image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
+void         byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
+void         float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
-void         srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb);
-void         rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
-image<vec4f> rgb_to_srgb(const image<vec4f>& lin);
-image<vec4b> rgb_to_srgb8(const image<vec4f>& lin);
+image<vec4f> rgb_to_srgb(const image<vec4f>& rgb);
+image<vec4f> srgb_to_rgb(const image<vec4b>& srgb);
+image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb);
+void         srgb_to_rgb(image<vec4f>& rgb, const image<vec4f>& srgb);
+void         rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& rgb);
 
 // Tone mapping params
 struct tonemap_params {
   float exposure    = 0;
   vec3f tint        = {1, 1, 1};
-  float contrast    = 0.5f;
-  float logcontrast = 0.5f;
-  float saturation  = 0.5f;
+  float contrast    = 0.5;
+  float logcontrast = 0.5;
+  float saturation  = 0.5;
   bool  filmic      = false;
   bool  srgb        = true;
 };
@@ -243,13 +246,10 @@ inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
 }
 
 // Apply exposure and filmic tone mapping
-void tonemap(
-    image<vec4f>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
 image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params);
-void         tonemap(
-            image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params);
-void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_params& params);
+image<vec4b> tonemapb(const image<vec4f>& hdr, const tonemap_params& params);
+void         tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
+            const image_region& region, const tonemap_params& params);
 
 // minimal color grading
 struct colorgrade_params {
@@ -271,8 +271,6 @@ inline bool operator!=(const colorgrade_params& a, const colorgrade_params& b) {
 }
 
 // color grade an image region
-void         colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
-            const colorgrade_params& params);
 image<vec4f> colorgrade(
     const image<vec4f>& img, const colorgrade_params& params);
 void colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
@@ -282,10 +280,10 @@ void colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
 vec3f compute_white_balance(const image<vec4f>& img);
 
 // Resize an image.
-void resize(image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
-void resize(image<vec4b>& res, const image<vec4b>& img, const vec2i& size);
 image<vec4f> resize(const image<vec4f>& img, const vec2i& size);
 image<vec4b> resize(const image<vec4b>& img, const vec2i& size);
+void resize(image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
+void resize(image<vec4b>& res, const image<vec4b>& img, const vec2i& size);
 
 }  // namespace yocto
 
@@ -298,29 +296,12 @@ namespace yocto {
 bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear color space.
-void load_image(const string& filename, image<vec4f>& img);
-void save_image(const string& filename, const image<vec4f>& img);
-void load_image(const string& filename, image<vec4b>& img);
-void save_image(const string& filename, const image<vec4b>& img);
-
-// Convenience helper for loading HDR or LDR based on filename
-void load_image(const string& filename, image<vec4f>& hdr, image<vec4b>& ldr);
-void save_image(
-    const string& filename, const image<vec4f>& hdr, const image<vec4b>& ldr);
-
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-void save_tonemapped(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params);
-
-// Save with a logo embedded
-void save_image_with_logo(const string& filename, const image<vec4f>& img);
-void save_image_with_logo(const string& filename, const image<vec4b>& img);
-
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params);
+image<vec4f> load_image(const string& filename);
+void         load_image(const string& filename, image<vec4f>& img);
+void         save_image(const string& filename, const image<vec4f>& img);
+image<vec4b> load_imageb(const string& filename);
+void         load_imageb(const string& filename, image<vec4b>& img);
+void         save_imageb(const string& filename, const image<vec4b>& img);
 
 }  // namespace yocto
 
@@ -329,76 +310,75 @@ void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Types for make_improc
-enum struct make_image_type {
-  grid,
-  checker,
-  bumps,
-  ramp,
-  gammaramp,
-  uvramp,
-  uvgrid,
-  blackbody,
-  noise,
-  turbulence,
-  fbm,
-  ridge
-};
-
-// Parameters for make_improc
-struct improc_params {
-  make_image_type type   = make_image_type::grid;
-  vec2i           size   = {1024, 1024};
-  float           scale  = 1;
-  vec4f           color0 = {0, 0, 0, 1};
-  vec4f           color1 = {1, 1, 1, 1};
-  vec4f           noise  = {2, 0.5, 8, 1};  // lacunarity, gain, octaves, offset
-  float           borderw = 0;
-  vec4f           borderc = {0, 0, 0, 1};
+// Parameters for make_proc_image
+struct proc_image_params {
+  // clang-format off
+  enum struct type_t {
+    grid, checker, bumps, ramp, gammaramp, uvramp, uvgrid, blackbody, noise,
+    turbulence, fbm, ridge };
+  // clang-format on
+  type_t type    = type_t::grid;
+  vec2i  size    = {1024, 1024};
+  float  scale   = 1;
+  vec4f  color0  = {0, 0, 0, 1};
+  vec4f  color1  = {1, 1, 1, 1};
+  vec4f  noise   = {2, 0.5, 8, 1};  // lacunarity, gain, octaves, offset
+  float  borderw = 0;
+  vec4f  borderc = {0, 0, 0, 1};
 };
 
 // Make an image
-void         make_improc(image<vec4f>& img, const improc_params& params);
-image<vec4f> make_improc(const improc_params& params);
+image<vec4f> make_proc_image(const proc_image_params& params);
+void make_proc_image(image<vec4f>& img, const proc_image_params& params);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
 // disabled with has_sun. The sun parameters can be slightly modified by
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
-void make_imsunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
+image<vec4f> make_sunsky(const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
-image<vec4f> make_imsunsky(const vec2i& size, float sun_angle,
-    float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-    float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
+void         make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
+            float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
+            float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
-void         make_imlights(image<vec4f>& img, const vec2i& size,
-            const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-            float lwidth = pif / 16, float lheight = pif / 16);
-image<vec4f> make_imlights(const vec2i& size, const vec3f& le = {1, 1, 1},
+image<vec4f> make_lights(const vec2i& size, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
+void         make_lights(image<vec4f>& img, const vec2i& size,
+            const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
+            float lwidth = pif / 16, float lheight = pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
-void bump_to_normal(
-    image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
+void         bump_to_normal(
+            image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
 
 // Add a border to an image
-void add_border(image<vec4f>& img, const vec2i& size, int border_width,
-    const vec4f& border_color);
+image<vec4f> add_border(const image<vec4f>& img, int width, const vec4f& color);
+void         add_border(
+            image<vec4f>& bordered, image<vec4f>& img, int width, const vec4f& color);
 
 // Make logo images. Image is resized to proper size.
-void         make_imlogo(image<vec4f>& img, const string& name);
-void         make_imlogo(image<vec4b>& img, const string& name);
-image<vec4b> make_imlogo(const string& name);
+image<vec4b> make_logo(const string& name);
+void         make_logo(image<vec4f>& img, const string& name);
+void         make_logo(image<vec4b>& img, const string& name);
+image<vec4f> add_logo(
+    const image<vec4f>& img, const string& name = "logo-medium");
+image<vec4b> add_logo(
+    const image<vec4b>& img, const string& name = "logo-medium");
+void add_logo(image<vec4f>& with_logo, const image<vec4f>& img,
+    const string& name = "logo-medium");
+void add_logo(image<vec4b>& with_logo, const image<vec4b>& img,
+    const string& name = "logo-medium");
 
 // Make an image preset, useful for testing. See implementation for types.
-void         make_impreset(image<vec4f>& img, const string& type);
-image<vec4f> make_impreset(const string& type);
-void         make_impreset(image<vec4b>& img, const string& type);
-void make_impreset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
+image<vec4f> make_image_preset(const string& type);
+void         make_image_preset(image<vec4f>& img, const string& type);
+void         make_image_preset(image<vec4b>& img, const string& type);
+void         make_image_preset(
+            image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
 
 }  // namespace yocto
 
@@ -472,7 +452,7 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b) {
 }
 
 // make a simple example volume
-void make_test(volume<float>& vol, const vec3i& size, float scale = 10,
+void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
     float exponent = 6);
 void make_volpreset(volume<float>& vol, const string& type);
 
@@ -513,9 +493,9 @@ inline float srgb_to_rgb(float srgb) {
   return (srgb <= 0.04045) ? srgb / 12.92f
                            : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
 }
-inline float rgb_to_srgb(float lin) {
-  return (lin <= 0.0031308f) ? 12.92f * lin
-                             : (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
+inline float rgb_to_srgb(float rgb) {
+  return (rgb <= 0.0031308f) ? 12.92f * rgb
+                             : (1 + 0.055f) * pow(rgb, 1 / 2.4f) - 0.055f;
 }
 inline vec3f srgb_to_rgb(const vec3f& srgb) {
   return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
@@ -524,20 +504,19 @@ inline vec4f srgb_to_rgb(const vec4f& srgb) {
   return {
       srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
 }
-inline vec3f rgb_to_srgb(const vec3f& lin) {
-  return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z)};
+inline vec3f rgb_to_srgb(const vec3f& rgb) {
+  return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
 }
-inline vec4f rgb_to_srgb(const vec4f& lin) {
-  return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z), lin.w};
+inline vec4f rgb_to_srgb(const vec4f& rgb) {
+  return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_contrast(const vec3f& rgb, float contrast, float grey) {
+inline vec3f contrast(const vec3f& rgb, float contrast, float grey) {
   return max(zero3f, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f apply_logcontrast(
-    const vec3f& rgb, float logcontrast, float grey) {
+inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
   auto epsilon  = (float)0.0001;
   auto log_grey = log2(grey);
   auto log_ldr  = log2(rgb + epsilon);
@@ -545,7 +524,7 @@ inline vec3f apply_logcontrast(
   return max(zero3f, exp2(adjusted) - epsilon);
 }
 // Apply saturation.
-inline vec3f apply_saturation(const vec3f& rgb, float saturation,
+inline vec3f saturate(const vec3f& rgb, float saturation,
     const vec3f& weights = vec3f{0.333333f}) {
   auto grey = dot(weights, rgb);
   return max(zero3f, grey + (rgb - grey) * (saturation * 2));

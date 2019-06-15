@@ -735,8 +735,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
       if (!shape.triangles.empty())
         init_glelementbuffer(vbos.triangles_buffer, shape.triangles, false);
       if (!shape.quads.empty()) {
-        auto triangles = vector<vec3i>{};
-        quads_to_triangles(triangles, shape.quads);
+        auto triangles = quads_to_triangles(shape.quads);
         init_glelementbuffer(vbos.quads_buffer, triangles, false);
       }
     } else {
@@ -754,8 +753,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
       if (!texcoords.empty())
         init_glarraybuffer(vbos.texcoords_buffer, texcoords, false);
       if (!quads.empty()) {
-        auto triangles = vector<vec3i>{};
-        quads_to_triangles(triangles, quads);
+        auto triangles = quads_to_triangles(quads);
         init_glelementbuffer(vbos.quads_buffer, triangles, false);
       }
     }
@@ -977,8 +975,11 @@ void load_element(
 
   if (type == typeid(yocto_texture)) {
     auto& texture = scene.textures[index];
-    load_image(fs::path(filename).parent_path() / texture.uri, texture.hdr,
-        texture.ldr);
+    if (is_hdr_filename(texture.uri)) {
+      load_image(fs::path(filename).parent_path() / texture.uri, texture.hdr);
+    } else {
+      load_imageb(fs::path(filename).parent_path() / texture.uri, texture.ldr);
+    }
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
     load_volume(fs::path(filename).parent_path() / texture.uri, texture.vol);

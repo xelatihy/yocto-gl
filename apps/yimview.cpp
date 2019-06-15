@@ -134,8 +134,7 @@ void update_app_display(const string& filename, const image<vec4f>& img,
     const tonemap_params&    tonemap_prms,
     const colorgrade_params& colorgrade_prms, std::atomic<bool>* cancel,
     std::deque<image_region>& queue, std::mutex& queuem) {
-  auto regions = vector<image_region>{};
-  make_imregions(regions, img.size(), 128);
+  auto                regions  = make_regions(img.size(), 128);
   auto                futures  = vector<std::future<void>>{};
   auto                nthreads = std::thread::hardware_concurrency();
   std::atomic<size_t> next_idx(0);
@@ -450,7 +449,7 @@ void update(const opengl_window& win, app_state& app) {
           if (!is_hdr_filename(img.outname)) {
             auto ldr = image<vec4b>{};
             float_to_byte(ldr, img.display);
-            save_image(img.outname, ldr);
+            save_imageb(img.outname, ldr);
           } else {
             auto aux = image<vec4f>{};
             srgb_to_rgb(aux, img.display);

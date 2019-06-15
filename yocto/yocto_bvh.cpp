@@ -727,7 +727,7 @@ static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
 
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
-  for (auto i = start; i < end; i++) cbbox += prims[i].center;
+  for (auto i = start; i < end; i++) cbbox = merge(cbbox, prims[i].center);
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, split_axis};
 
@@ -747,10 +747,10 @@ static pair<int, int> split_sah(vector<bvh_prim>& prims, int start, int end) {
       auto left_nprims = 0, right_nprims = 0;
       for (auto i = start; i < end; i++) {
         if (prims[i].center[saxis] < split) {
-          left_bbox += prims[i].bbox;
+          left_bbox = merge(left_bbox, prims[i].bbox);
           left_nprims += 1;
         } else {
-          right_bbox += prims[i].bbox;
+          right_bbox = merge(right_bbox, prims[i].bbox);
           right_nprims += 1;
         }
       }
@@ -789,7 +789,7 @@ static pair<int, int> split_balanced(
 
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
-  for (auto i = start; i < end; i++) cbbox += prims[i].center;
+  for (auto i = start; i < end; i++) cbbox = merge(cbbox, prims[i].center);
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, axis};
 
@@ -824,7 +824,7 @@ static pair<int, int> split_middle(
 
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
-  for (auto i = start; i < end; i++) cbbox += prims[i].center;
+  for (auto i = start; i < end; i++) cbbox = merge(cbbox, prims[i].center);
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, axis};
 
@@ -876,7 +876,8 @@ static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
     // compute bounds
     node.bbox = invalidb3f;
-    for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
+    for (auto i = start; i < end; i++)
+      node.bbox = merge(node.bbox, prims[i].bbox);
 
     // split into two children
     if (end - start > bvh_max_prims) {
@@ -956,7 +957,8 @@ static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
             // compute bounds
             node.bbox = invalidb3f;
-            for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
+            for (auto i = start; i < end; i++)
+              node.bbox = merge(node.bbox, prims[i].bbox);
 
             // split into two children
             if (end - start > bvh_max_prims) {
@@ -1100,36 +1102,41 @@ void refit_bvh(bvh_shape& shape, const bvh_params& params) {
     node.bbox  = invalidb3f;
     if (node.internal) {
       for (auto i = 0; i < 2; i++) {
-        node.bbox += shape.nodes[node.prims[i]].bbox;
+        node.bbox = merge(node.bbox, shape.nodes[node.prims[i]].bbox);
       }
     } else if (!shape.points.empty()) {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& p = shape.points[node.prims[idx]];
-        node.bbox += point_bounds(shape.positions[p], shape.radius[p]);
+        auto& p   = shape.points[node.prims[idx]];
+        node.bbox = merge(
+            node.bbox, point_bounds(shape.positions[p], shape.radius[p]));
       }
     } else if (!shape.lines.empty()) {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& l = shape.lines[node.prims[idx]];
-        node.bbox += line_bounds(shape.positions[l.x], shape.positions[l.y],
-            shape.radius[l.x], shape.radius[l.y]);
+        auto& l   = shape.lines[node.prims[idx]];
+        node.bbox = merge(
+            node.bbox, line_bounds(shape.positions[l.x], shape.positions[l.y],
+                           shape.radius[l.x], shape.radius[l.y]));
       }
     } else if (!shape.triangles.empty()) {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& t = shape.triangles[node.prims[idx]];
-        node.bbox += triangle_bounds(
-            shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+        auto& t   = shape.triangles[node.prims[idx]];
+        node.bbox = merge(
+            node.bbox, triangle_bounds(shape.positions[t.x],
+                           shape.positions[t.y], shape.positions[t.z]));
       }
     } else if (!shape.quads.empty()) {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& q = shape.quads[node.prims[idx]];
-        node.bbox += quad_bounds(shape.positions[q.x], shape.positions[q.y],
-            shape.positions[q.z], shape.positions[q.w]);
+        auto& q   = shape.quads[node.prims[idx]];
+        node.bbox = merge(
+            node.bbox, quad_bounds(shape.positions[q.x], shape.positions[q.y],
+                           shape.positions[q.z], shape.positions[q.w]));
       }
     } else if (!shape.quadspos.empty()) {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& q = shape.quadspos[node.prims[idx]];
-        node.bbox += quad_bounds(shape.positions[q.x], shape.positions[q.y],
-            shape.positions[q.z], shape.positions[q.w]);
+        auto& q   = shape.quadspos[node.prims[idx]];
+        node.bbox = merge(
+            node.bbox, quad_bounds(shape.positions[q.x], shape.positions[q.y],
+                           shape.positions[q.z], shape.positions[q.w]));
       }
     }
   }
@@ -1150,7 +1157,7 @@ void refit_bvh(bvh_scene& scene, const vector<int>& updated_shapes,
     node.bbox  = invalidb3f;
     if (node.internal) {
       for (auto i = 0; i < 2; i++) {
-        node.bbox += scene.nodes[node.prims[i]].bbox;
+        node.bbox = merge(node.bbox, scene.nodes[node.prims[i]].bbox);
       }
     } else {
       for (auto idx = 0; idx < node.num; idx++) {
@@ -1159,7 +1166,7 @@ void refit_bvh(bvh_scene& scene, const vector<int>& updated_shapes,
         auto  bbox     = sbvh.nodes.empty()
                         ? invalidb3f
                         : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
-        node.bbox += bbox;
+        node.bbox = merge(node.bbox, bbox);
       }
     }
   }

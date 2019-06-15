@@ -55,9 +55,9 @@ struct app_edit {
 
 inline const unordered_map<int, string>& animation_type_names() {
   static auto names = unordered_map<int, string>{
-      {(int)yocto_animation::type_t::linear, "linear"},
-      {(int)yocto_animation::type_t::step, "step"},
-      {(int)yocto_animation::type_t::bezier, "bezier"},
+      {(int)yocto_animation::interpolation_type::linear, "linear"},
+      {(int)yocto_animation::interpolation_type::step, "step"},
+      {(int)yocto_animation::interpolation_type::bezier, "bezier"},
   };
   return names;
 }

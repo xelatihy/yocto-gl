@@ -532,7 +532,7 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to) {
 namespace yocto {
 
 // Splits an image into an array of regions
-void make_imregions(vector<image_region>& regions, const vec2i& size,
+void make_regions(vector<image_region>& regions, const vec2i& size,
     int region_size, bool shuffled) {
   regions.clear();
   for (auto y = 0; y < size.y; y += region_size) {
@@ -546,7 +546,7 @@ void make_imregions(vector<image_region>& regions, const vec2i& size,
     shuffle(regions, rng);
   }
 }
-vector<image_region> make_imregions(
+vector<image_region> make_regions(
     const vec2i& size, int region_size, bool shuffled) {
   auto regions = vector<image_region>{};
   for (auto y = 0; y < size.y; y += region_size) {
@@ -562,76 +562,66 @@ vector<image_region> make_imregions(
   return regions;
 }
 
-// Apply a function to each image pixel
-template <typename T1, typename T2, typename Func>
-static inline void apply_image(
-    image<T1>& result, const image<T2>& source, const Func& func) {
-  result.resize(source.size());
-  for (auto j = 0; j < result.size().y; j++) {
-    for (auto i = 0; i < result.size().x; i++) {
-      result[{i, j}] = func(source[{i, j}]);
-    }
-  }
-}
-template <typename T1, typename T2, typename Func>
-static inline image<T1> apply_image(const image<T2>& source, const Func& func) {
-  auto result = image<T1>{source.size()};
-  for (auto j = 0; j < result.size().y; j++) {
-    for (auto i = 0; i < result.size().x; i++) {
-      result[{i, j}] = func(source[{i, j}]);
-    }
-  }
-  return result;
-}
-template <typename T1, typename T2, typename Func>
-static inline void apply_image(image<T1>& result, const image<T2>& source,
-    const image_region& region, const Func& func) {
-  result.resize(source.size());
-  for (auto j = region.min.y; j < region.max.y; j++) {
-    for (auto i = region.min.x; i < region.max.x; i++) {
-      result[{i, j}] = func(source[{i, j}]);
-    }
-  }
-}
-
 // Conversion from/to floats.
 void byte_to_float(image<vec4f>& fl, const image<vec4b>& bt) {
-  return apply_image(fl, bt, [](const auto& a) { return byte_to_float(a); });
+  fl.resize(bt.size());
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
 }
 void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl) {
-  return apply_image(bt, fl, [](const auto& a) { return float_to_byte(a); });
+  bt.resize(fl.size());
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_byte(fl[i]);
 }
 image<vec4f> byte_to_float(const image<vec4b>& bt) {
-  return apply_image<vec4f>(bt, [](const auto& a) { return byte_to_float(a); });
+  auto fl = image<vec4f>{bt.size()};
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
+  return fl;
 }
 image<vec4b> float_to_byte(const image<vec4f>& fl) {
-  return apply_image<vec4b>(fl, [](const auto& a) { return float_to_byte(a); });
+  auto bt = image<vec4b>{fl.size()};
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_byte(fl[i]);
+  return bt;
 }
 
 // Conversion between linear and gamma-encoded images.
-void srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb) {
-  return apply_image(lin, srgb, [](const auto& a) { return srgb_to_rgb(a); });
-}
-void rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin) {
-  return apply_image(srgb, lin, [](const auto& a) { return rgb_to_srgb(a); });
-}
-void srgb_to_rgb(image<vec4f>& lin, const image<vec4b>& srgb) {
-  return apply_image(
-      lin, srgb, [](const auto& a) { return srgb_to_rgb(byte_to_float(a)); });
-}
-void rgb_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin) {
-  return apply_image(
-      srgb, lin, [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
-}
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb) {
-  return apply_image<vec4f>(srgb, [](const auto& a) { return srgb_to_rgb(a); });
+  auto rgb = image<vec4f>{srgb.size()};
+  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
+  return rgb;
 }
-image<vec4f> rgb_to_srgb(const image<vec4f>& lin) {
-  return apply_image<vec4f>(lin, [](const auto& a) { return rgb_to_srgb(a); });
+image<vec4f> rgb_to_srgb(const image<vec4f>& rgb) {
+  auto srgb = image<vec4f>{rgb.size()};
+  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
+  return srgb;
 }
-image<vec4b> rgb_to_srgb8(const image<vec4f>& lin) {
-  return apply_image<vec4b>(
-      lin, [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
+image<vec4f> srgb_to_rgb(const image<vec4b>& srgb) {
+  auto rgb = image<vec4f>{srgb.size()};
+  for (auto i = 0ull; i < rgb.count(); i++)
+    rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
+  return rgb;
+}
+image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb) {
+  auto srgb = image<vec4b>{rgb.size()};
+  for (auto i = 0ull; i < srgb.count(); i++)
+    srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
+  return srgb;
+}
+void srgb_to_rgb(image<vec4f>& rgb, const image<vec4f>& srgb) {
+  rgb.resize(srgb.size());
+  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
+}
+void rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& rgb) {
+  srgb.resize(rgb.size());
+  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
+}
+void srgb_to_rgb(image<vec4f>& rgb, const image<vec4b>& srgb) {
+  rgb.resize(srgb.size());
+  for (auto i = 0ull; i < rgb.count(); i++)
+    rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
+}
+void rgb_to_srgb(image<vec4b>& srgb, const image<vec4f>& rgb) {
+  srgb.resize(rgb.size());
+  for (auto i = 0ull; i < srgb.count(); i++)
+    srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
 }
 
 // Filmic tonemapping
@@ -667,45 +657,39 @@ static vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
   }
 }
 
-vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
+static vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   auto rgb = hdr;
   if (params.exposure != 0) rgb *= exp2(params.exposure);
   if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
-  if (params.contrast != 0.5f)
-    rgb = apply_contrast(rgb, params.contrast, 0.18f);
+  if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast, 0.18f);
   if (params.logcontrast != 0.5f)
-    rgb = apply_logcontrast(rgb, params.logcontrast, 0.18f);
-  if (params.saturation != 0.5f) rgb = apply_saturation(rgb, params.saturation);
+    rgb = logcontrast(rgb, params.logcontrast, 0.18f);
+  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
   if (params.filmic) rgb = tonemap_filmic(rgb);
   if (params.srgb) rgb = rgb_to_srgb(rgb);
   return rgb;
 }
+static vec4f tonemap(const vec4f& hdr, const tonemap_params& params) {
+  return {tonemap(xyz(hdr), params), hdr.w};
+}
 
 // Apply exposure and filmic tone mapping
-void tonemap(
-    image<vec4f>& ldr, const image<vec4f>& hdr, const tonemap_params& params) {
-  return apply_image(ldr, hdr,
-      [scale = exp2(params.exposure) * params.tint, params](const vec4f& hdr) {
-        return vec4f{tonemap(xyz(hdr), params), hdr.w};
-      });
-}
 image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params) {
-  return apply_image<vec4f>(hdr,
-      [scale = exp2(params.exposure) * params.tint, params](const vec4f& hdr) {
-        return vec4f{tonemap(xyz(hdr), params), hdr.w};
-      });
+  auto ldr = image<vec4f>{hdr.size()};
+  for (auto i = 0ull; i < hdr.count(); i++) ldr[i] = tonemap(hdr[i], params);
+  return ldr;
 }
-void tonemap(
-    image<vec4b>& ldr, const image<vec4f>& hdr, const tonemap_params& params) {
-  return apply_image(ldr, hdr, [params](const vec4f& hdr) {
-    return float_to_byte(vec4f{tonemap(xyz(hdr), params), hdr.w});
-  });
+image<vec4b> tonemapb(const image<vec4f>& hdr, const tonemap_params& params) {
+  auto ldr = image<vec4b>{hdr.size()};
+  for (auto i = 0ull; i < hdr.count(); i++)
+    ldr[i] = float_to_byte(tonemap(hdr[i], params));
+  return ldr;
 }
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     const image_region& region, const tonemap_params& params) {
-  return apply_image(ldr, hdr, region, [params](const vec4f& hdr) {
-    return vec4f{tonemap(xyz(hdr), params), hdr.w};
-  });
+  for (auto j = region.min.y; j < region.max.y; j++)
+    for (auto i = region.min.x; i < region.max.x; i++)
+      ldr[{i, j}] = tonemap(hdr[{i, j}], params);
 }
 
 static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
@@ -727,30 +711,28 @@ static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
     gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
 
     // apply_image
-    auto lerp_value = clamp01(pow(rgb, 1 / gamma));
+    auto lerp_value = clamp(pow(rgb, 1 / gamma), 0, 1);
     rgb             = gain * lerp_value + lift * (1 - lerp_value);
   }
   return rgb;
 }
+static vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params) {
+  return {colorgrade(xyz(ldr), params), ldr.w};
+}
 
 // Apply exposure and filmic tone mapping
-void colorgrade(image<vec4f>& corrected, const image<vec4f>& ldr,
-    const colorgrade_params& params) {
-  return apply_image(corrected, ldr, [&params](const vec4f& hdr) {
-    return vec4f{colorgrade(xyz(hdr), params), hdr.w};
-  });
-}
 image<vec4f> colorgrade(
     const image<vec4f>& ldr, const colorgrade_params& params) {
-  return apply_image<vec4f>(ldr, [&params](const vec4f& hdr) {
-    return vec4f{colorgrade(xyz(hdr), params), hdr.w};
-  });
+  auto corrected = image<vec4f>{ldr.size()};
+  for (auto i = 0ull; i < ldr.count(); i++)
+    corrected[i] = colorgrade(ldr[i], params);
+  return corrected;
 }
 void colorgrade(image<vec4f>& corrected, const image<vec4f>& ldr,
     const image_region& region, const colorgrade_params& params) {
-  return apply_image(corrected, ldr, region, [&params](const vec4f& hdr) {
-    return vec4f{colorgrade(xyz(hdr), params), hdr.w};
-  });
+  for (auto j = region.min.y; j < region.max.y; j++)
+    for (auto i = region.min.x; i < region.max.x; i++)
+      corrected[{i, j}] = colorgrade(ldr[{i, j}], params);
 }
 
 // compute white balance
@@ -774,24 +756,6 @@ static vec2i resize_size(const vec2i& img_size, const vec2i& size_) {
   return size;
 }
 
-void resize(
-    image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
-  auto size = resize_size(img.size(), size_);
-  res_img   = {size};
-  stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
-      sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
-      res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
-      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-}
-void resize(
-    image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
-  auto size = resize_size(img.size(), size_);
-  res_img   = {size};
-  stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
-      sizeof(vec4b) * img.size().x, (byte*)res_img.data(), res_img.size().x,
-      res_img.size().y, sizeof(vec4b) * res_img.size().x, 4, 3, 0,
-      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-}
 image<vec4f> resize(const image<vec4f>& img, const vec2i& size_) {
   auto size    = resize_size(img.size(), size_);
   auto res_img = image<vec4f>{size};
@@ -809,6 +773,24 @@ image<vec4b> resize(const image<vec4b>& img, const vec2i& size_) {
       res_img.size().y, sizeof(vec4b) * res_img.size().x, 4, 3, 0,
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return res_img;
+}
+void resize(
+    image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
+  auto size = resize_size(img.size(), size_);
+  res_img   = {size};
+  stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
+      sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
+      res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
+      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+}
+void resize(
+    image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
+  auto size = resize_size(img.size(), size_);
+  res_img   = {size};
+  stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
+      sizeof(vec4b) * img.size().x, (byte*)res_img.data(), res_img.size().x,
+      res_img.size().y, sizeof(vec4b) * res_img.size().x, 4, 3, 0,
+      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
 
 }  // namespace yocto
@@ -845,7 +827,7 @@ image<vec4f> bump_to_normal(const image<vec4f>& img, float scale) {
 }
 
 // Make an image
-void make_improc(image<vec4f>& img, const improc_params& params) {
+void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
   auto make_img = [&](const auto& shader) {
     img.resize(params.size);
     auto scale = 1.0f / max(params.size);
@@ -862,7 +844,7 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
     }
   };
   switch (params.type) {
-    case make_image_type::grid: {
+    case proc_image_params::type_t::grid: {
       make_img([&params](vec2f uv) {
         uv *= 4;
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -874,7 +856,7 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
         return c ? params.color0 : params.color1;
       });
     } break;
-    case make_image_type::checker: {
+    case proc_image_params::type_t::checker: {
       make_img([&params](vec2f uv) {
         uv *= 4;
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -882,7 +864,7 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
         return c ? params.color0 : params.color1;
       });
     } break;
-    case make_image_type::bumps: {
+    case proc_image_params::type_t::bumps: {
       make_img([&params](vec2f uv) {
         uv *= 4;
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -897,13 +879,13 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
         return lerp(params.color0, params.color1, val);
       });
     } break;
-    case make_image_type::ramp: {
+    case proc_image_params::type_t::ramp: {
       make_img([&params](vec2f uv) {
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         return lerp(params.color0, params.color1, uv.x);
       });
     } break;
-    case make_image_type::gammaramp: {
+    case proc_image_params::type_t::gammaramp: {
       make_img([&params](vec2f uv) {
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         if (uv.y < 1 / 3.0f) {
@@ -915,13 +897,13 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
         }
       });
     } break;
-    case make_image_type::uvramp: {
+    case proc_image_params::type_t::uvramp: {
       make_img([](vec2f uv) {
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         return vec4f{uv.x, uv.y, 0, 1};
       });
     } break;
-    case make_image_type::uvgrid: {
+    case proc_image_params::type_t::uvgrid: {
       make_img([](vec2f uv) {
         auto colored = true;
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -949,13 +931,13 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
         return vec4f{rgb, 1};
       });
     } break;
-    case make_image_type::blackbody: {
+    case proc_image_params::type_t::blackbody: {
       make_img([](vec2f uv) {
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         return vec4f{blackbody_to_rgb(lerp(1000, 12000, uv.x)), 1};
       });
     } break;
-    case make_image_type::noise: {
+    case proc_image_params::type_t::noise: {
       make_img([&params](vec2f uv) {
         uv *= 8;
         auto v = perlin_noise({uv.x, uv.y, 0.5f});
@@ -963,7 +945,7 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
         return lerp(params.color0, params.color1, v);
       });
     } break;
-    case make_image_type::turbulence: {
+    case proc_image_params::type_t::turbulence: {
       make_img([&params](vec2f uv) {
         uv *= 8;
         auto v = perlin_turbulence({uv.x, uv.y, 0.5f}, params.noise.x,
@@ -972,7 +954,7 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
         return lerp(params.color0, params.color1, v);
       });
     } break;
-    case make_image_type::fbm: {
+    case proc_image_params::type_t::fbm: {
       make_img([&params](vec2f uv) {
         uv *= 8;
         auto v = perlin_fbm({uv.x, uv.y, 0.5f}, params.noise.x, params.noise.y,
@@ -981,7 +963,7 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
         return lerp(params.color0, params.color1, v);
       });
     } break;
-    case make_image_type::ridge: {
+    case proc_image_params::type_t::ridge: {
       make_img([&params](vec2f uv) {
         uv *= 8;
         auto v = perlin_ridge({uv.x, uv.y, 0.5f}, params.noise.x,
@@ -992,25 +974,42 @@ void make_improc(image<vec4f>& img, const improc_params& params) {
     } break;
   }
 }
-image<vec4f> make_improc(const improc_params& params) {
+image<vec4f> make_proc_image(const proc_image_params& params) {
   auto img = image<vec4f>{params.size};
-  make_improc(img, params);
+  make_proc_image(img, params);
   return img;
 }
 
 // Add a border to an image
-void add_border(
-    image<vec4f>& img, int border_width, const vec4f& border_color) {
+image<vec4f> add_border(image<vec4f>& img, int width, const vec4f& color) {
+  auto bordered = img;
   for (auto j = 0; j < img.size().y; j++) {
-    for (auto b = 0; b < border_width; b++) {
-      img[{b, j}]                    = border_color;
-      img[{img.size().x - 1 - b, j}] = border_color;
+    for (auto b = 0; b < width; b++) {
+      bordered[{b, j}]                    = color;
+      bordered[{img.size().x - 1 - b, j}] = color;
     }
   }
   for (auto i = 0; i < img.size().x; i++) {
-    for (auto b = 0; b < border_width; b++) {
-      img[{i, b}]                    = border_color;
-      img[{i, img.size().y - 1 - b}] = border_color;
+    for (auto b = 0; b < width; b++) {
+      bordered[{i, b}]                    = color;
+      bordered[{i, img.size().y - 1 - b}] = color;
+    }
+  }
+  return bordered;
+}
+void add_border(
+    image<vec4f>& bordered, image<vec4f>& img, int width, const vec4f& color) {
+  bordered = img;
+  for (auto j = 0; j < img.size().y; j++) {
+    for (auto b = 0; b < width; b++) {
+      bordered[{b, j}]                    = color;
+      bordered[{img.size().x - 1 - b, j}] = color;
+    }
+  }
+  for (auto i = 0; i < img.size().x; i++) {
+    for (auto b = 0; b < width; b++) {
+      bordered[{i, b}]                    = color;
+      bordered[{i, img.size().y - 1 - b}] = color;
     }
   }
 }
@@ -1018,7 +1017,7 @@ void add_border(
 #if 1
 
 // Implementation of sunsky modified heavily from pbrt
-void make_imsunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
+void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
     float turbidity, bool has_sun, float sun_intensity, float sun_temperature,
     const vec3f& ground_albedo) {
   // idea adapted from pbrt
@@ -1079,11 +1078,11 @@ void make_imsunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
   for (auto i = 0; i < 9; i++) arhosekskymodelstate_free(skymodel_state[i]);
 }
 
-image<vec4f> make_imsunsky(const vec2i& size, float theta_sun, float turbidity,
+image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
     bool has_sun, float sun_intensity, float sun_temperature,
     const vec3f& ground_albedo) {
   auto img = image<vec4f>{size};
-  make_imsunsky(img, size, theta_sun, turbidity, has_sun, sun_intensity,
+  make_sunsky(img, size, theta_sun, turbidity, has_sun, sun_intensity,
       sun_temperature, ground_albedo);
   return img;
 }
@@ -1091,7 +1090,7 @@ image<vec4f> make_imsunsky(const vec2i& size, float theta_sun, float turbidity,
 #else
 
 // Implementation of sunsky modified heavily from pbrt
-image<vec4f> make_imsunsky(int width, int height, float theta_sun,
+image<vec4f> make_sunsky(int width, int height, float theta_sun,
     float turbidity, bool has_sun, float sun_angle_scale,
     float sun_emission_scale, const vec3f& ground_albedo,
     bool renormalize_sun) {
@@ -1185,7 +1184,7 @@ image<vec4f> make_imsunsky(int width, int height, float theta_sun,
   };
 
   // Make the sun sky image
-  auto img          = make_improc(width, height, vec4f{0, 0, 0, 1});
+  auto img          = make_proc_image(width, height, vec4f{0, 0, 0, 1});
   auto sky_integral = 0.0f, sun_integral = 0.0f;
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
@@ -1234,7 +1233,7 @@ image<vec4f> make_imsunsky(int width, int height, float theta_sun,
 #endif
 
 // Make an image of multiple lights.
-void make_imlights(image<vec4f>& img, const vec2i& size, const vec3f& le,
+void make_lights(image<vec4f>& img, const vec2i& size, const vec3f& le,
     int nlights, float langle, float lwidth, float lheight) {
   img.resize(size);
   for (auto j = 0; j < img.size().y / 2; j++) {
@@ -1252,14 +1251,14 @@ void make_imlights(image<vec4f>& img, const vec2i& size, const vec3f& le,
     }
   }
 }
-image<vec4f> make_imlights(const vec2i& size, const vec3f& le, int nlights,
+image<vec4f> make_lights(const vec2i& size, const vec3f& le, int nlights,
     float langle, float lwidth, float lheight) {
   auto img = image<vec4f>{size};
-  make_imlights(img, size, le, nlights, langle, lwidth, lheight);
+  make_lights(img, size, le, nlights, langle, lwidth, lheight);
   return img;
 }
 
-void make_imlogo(image<vec4b>& img, const string& type) {
+void make_logo(image<vec4b>& img, const string& type) {
   static const auto logo_medium_size = vec2i{102, 36};
   static const auto logo_small_size  = vec2i{72, 28};
   // clang-format off
@@ -1345,91 +1344,123 @@ static const auto logo_small = vector<byte> {
   }
 }
 
-image<vec4b> make_imlogo(const string& type) {
+image<vec4b> make_logo(const string& type) {
   auto img = image<vec4b>{};
-  make_imlogo(img, type);
+  make_logo(img, type);
   return img;
 }
 
-void make_imlogo(image<vec4f>& img, const string& type) {
+void make_logo(image<vec4f>& img, const string& type) {
   auto img8 = image<vec4b>();
-  make_imlogo(img8, type);
+  make_logo(img8, type);
   img.resize(img8.size());
   srgb_to_rgb(img, img8);
 }
 
-void make_impreset(image<vec4f>& img, const string& type) {
+image<vec4f> add_logo(const image<vec4f>& img, const string& type) {
+  auto logo   = srgb_to_rgb(make_logo(type));
+  auto offset = img.size() - logo.size() - 8;
+  auto wlogo  = img;
+  set_region(wlogo, logo, offset);
+  return wlogo;
+}
+
+image<vec4b> add_logo(const image<vec4b>& img, const string& type) {
+  auto logo   = make_logo(type);
+  auto offset = img.size() - logo.size() - 8;
+  auto wlogo  = img;
+  set_region(wlogo, logo, offset);
+  return wlogo;
+}
+
+void add_logo(
+    image<vec4f>& wlogo, const image<vec4f>& img, const string& type) {
+  auto logo   = srgb_to_rgb(make_logo(type));
+  auto offset = img.size() - logo.size() - 8;
+  wlogo       = img;
+  set_region(wlogo, logo, offset);
+}
+
+void add_logo(
+    image<vec4b>& wlogo, const image<vec4b>& img, const string& type) {
+  auto logo   = make_logo(type);
+  auto offset = img.size() - logo.size() - 8;
+  wlogo       = img;
+  set_region(wlogo, logo, offset);
+}
+
+void make_image_preset(image<vec4f>& img, const string& type) {
   auto size = vec2i{1024, 1024};
   if (type.find("sky") != type.npos) size = {2048, 1024};
   if (type == "grid") {
-    auto params   = improc_params{};
-    params.type   = make_image_type::grid;
+    auto params   = proc_image_params{};
+    params.type   = proc_image_params::type_t::grid;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.7, 0.7, 0.7, 1};
-    make_improc(img, params);
+    make_proc_image(img, params);
   } else if (type == "checker") {
-    auto params   = improc_params{};
-    params.type   = make_image_type::checker;
+    auto params   = proc_image_params{};
+    params.type   = proc_image_params::type_t::checker;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.7, 0.7, 0.7, 1};
-    make_improc(img, params);
+    make_proc_image(img, params);
   } else if (type == "bumps") {
-    auto params = improc_params{};
-    params.type = make_image_type::bumps;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::bumps;
+    make_proc_image(img, params);
   } else if (type == "uvramp") {
-    auto params = improc_params{};
-    params.type = make_image_type::uvramp;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::uvramp;
+    make_proc_image(img, params);
   } else if (type == "gammaramp") {
-    auto params = improc_params{};
-    params.type = make_image_type::gammaramp;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::gammaramp;
+    make_proc_image(img, params);
   } else if (type == "blackbodyramp") {
-    auto params = improc_params{};
-    params.type = make_image_type::blackbody;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::blackbody;
+    make_proc_image(img, params);
   } else if (type == "uvgrid") {
-    auto params = improc_params{};
-    params.type = make_image_type::uvgrid;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::uvgrid;
+    make_proc_image(img, params);
   } else if (type == "sky") {
-    make_imsunsky(
+    make_sunsky(
         img, size, pif / 4, 3.0f, false, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
-    make_imsunsky(
+    make_sunsky(
         img, size, pif / 4, 3.0f, true, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
-    auto params = improc_params{};
-    params.type = make_image_type::noise;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::noise;
+    make_proc_image(img, params);
   } else if (type == "fbm") {
-    auto params = improc_params{};
-    params.type = make_image_type::fbm;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::fbm;
+    make_proc_image(img, params);
   } else if (type == "ridge") {
-    auto params = improc_params{};
-    params.type = make_image_type::ridge;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::ridge;
+    make_proc_image(img, params);
   } else if (type == "turbulence") {
-    auto params = improc_params{};
-    params.type = make_image_type::turbulence;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::turbulence;
+    make_proc_image(img, params);
   } else if (type == "bump-normal") {
-    auto params = improc_params{};
-    params.type = make_image_type::bumps;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::bumps;
+    make_proc_image(img, params);
     auto bump = img;
     bump_to_normal(img, bump, 0.05f);
   } else if (type == "logo-medium") {
-    make_imlogo(img, "logo-medium");
+    make_logo(img, "logo-medium");
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       sub_imgs.at(i).resize(img.size());
-      make_impreset(sub_imgs.at(i), sub_types.at(i));
+      make_image_preset(sub_imgs.at(i), sub_types.at(i));
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
@@ -1446,7 +1477,7 @@ void make_impreset(image<vec4f>& img, const string& type) {
     auto sub_types = vector<string>{"sky", "sunsky"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      make_impreset(sub_imgs.at(i), sub_types.at(i));
+      make_image_preset(sub_imgs.at(i), sub_types.at(i));
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
@@ -1460,81 +1491,81 @@ void make_impreset(image<vec4f>& img, const string& type) {
       pos += sub_img.size().x;
     }
   } else if (type == "test-floor") {
-    auto params    = improc_params{};
-    params.type    = make_image_type::grid;
+    auto params    = proc_image_params{};
+    params.type    = proc_image_params::type_t::grid;
     params.color0  = vec4f{0.2, 0.2, 0.2, 1};
     params.color1  = vec4f{0.5, 0.5, 0.5, 1};
     params.borderw = 0.0025;
-    make_improc(img, params);
+    make_proc_image(img, params);
   } else if (type == "test-grid") {
-    auto params   = improc_params{};
-    params.type   = make_image_type::grid;
+    auto params   = proc_image_params{};
+    params.type   = proc_image_params::type_t::grid;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.5, 0.5, 0.5, 1};
-    make_improc(img, params);
+    make_proc_image(img, params);
   } else if (type == "test-checker") {
-    auto params   = improc_params{};
-    params.type   = make_image_type::checker;
+    auto params   = proc_image_params{};
+    params.type   = proc_image_params::type_t::checker;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.5, 0.5, 0.5, 1};
-    make_improc(img, params);
+    make_proc_image(img, params);
   } else if (type == "test-bumps") {
-    auto params = improc_params{};
-    params.type = make_image_type::bumps;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::bumps;
+    make_proc_image(img, params);
   } else if (type == "test-uvramp") {
-    auto params = improc_params{};
-    params.type = make_image_type::uvramp;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::uvramp;
+    make_proc_image(img, params);
   } else if (type == "test-gammaramp") {
-    auto params = improc_params{};
-    params.type = make_image_type::gammaramp;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::gammaramp;
+    make_proc_image(img, params);
   } else if (type == "test-blackbodyramp") {
-    auto params = improc_params{};
-    params.type = make_image_type::blackbody;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::blackbody;
+    make_proc_image(img, params);
   } else if (type == "test-uvgrid") {
-    auto params = improc_params{};
-    params.type = make_image_type::uvgrid;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::uvgrid;
+    make_proc_image(img, params);
   } else if (type == "test-sky") {
-    make_imsunsky(
+    make_sunsky(
         img, size, pif / 4, 3.0f, false, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
-    make_imsunsky(
+    make_sunsky(
         img, size, pif / 4, 3.0f, true, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
-    auto params = improc_params{};
-    params.type = make_image_type::noise;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::noise;
+    make_proc_image(img, params);
   } else if (type == "test-fbm") {
-    auto params = improc_params{};
-    params.type = make_image_type::fbm;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::fbm;
+    make_proc_image(img, params);
   } else if (type == "test-bumps-normal") {
-    auto params = improc_params{};
-    params.type = make_image_type::bumps;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::bumps;
+    make_proc_image(img, params);
     auto bump = img;
     bump_to_normal(img, bump, 0.05f);
   } else if (type == "test-fbm-displacement") {
-    auto params = improc_params{};
-    params.type = make_image_type::fbm;
-    make_improc(img, params);
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::fbm;
+    make_proc_image(img, params);
   } else {
     throw std::invalid_argument("unknown image preset " + type);
   }
 }
-image<vec4f> make_impreset(const string& type) {
+image<vec4f> make_image_preset(const string& type) {
   auto img = image<vec4f>{};
-  make_impreset(img, type);
+  make_image_preset(img, type);
   return img;
 }
 
-void make_impreset(image<vec4b>& img, const string& type) {
+void make_image_preset(image<vec4b>& img, const string& type) {
   auto imgf = image<vec4f>{};
-  make_impreset(imgf, type);
+  make_image_preset(imgf, type);
   if (type.find("-normal") == type.npos) {
     rgb_to_srgb(img, imgf);
   } else {
@@ -1542,17 +1573,18 @@ void make_impreset(image<vec4b>& img, const string& type) {
   }
 }
 
-void make_impreset(image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
+void make_image_preset(
+    image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
   if (type.find("sky") == type.npos) {
     auto imgf = image<vec4f>{};
-    make_impreset(imgf, type);
+    make_image_preset(imgf, type);
     if (type.find("-normal") == type.npos) {
       rgb_to_srgb(ldr, imgf);
     } else {
       float_to_byte(ldr, imgf);
     }
   } else {
-    make_impreset(hdr, type);
+    make_image_preset(hdr, type);
   }
 }
 
@@ -1804,7 +1836,7 @@ static inline void load_image_preset(
   auto [type, nfilename] = get_preset_type(filename);
   img.resize({1024, 1024});
   if (type == "images2") img.resize({2048, 1024});
-  make_impreset(img, type);
+  make_image_preset(img, type);
 }
 static inline void load_image_preset(
     const string& filename, image<vec4b>& img) {
@@ -1818,6 +1850,13 @@ static inline void load_image_preset(
 bool is_hdr_filename(const string& filename) {
   auto ext = fs::path(filename).extension().string();
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
+}
+
+// Loads an hdr image.
+image<vec4f> load_image(const string& filename) {
+  auto img = image<vec4f>{};
+  load_image(filename, img);
+  return img;
 }
 
 // Loads an hdr image.
@@ -1848,9 +1887,7 @@ void load_image(const string& filename, image<vec4f>& img) {
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
   } else if (!is_hdr_filename(filename)) {
-    auto img8 = image<vec4b>{};
-    load_image(filename, img8);
-    srgb_to_rgb(img, img8);
+    img = srgb_to_rgb(load_imageb(filename));
   } else {
     throw std::runtime_error("unsupported image format " + ext);
   }
@@ -1872,16 +1909,21 @@ void save_image(const string& filename, const image<vec4f>& img) {
             filename.c_str()) < 0)
       throw std::runtime_error("error saving image " + filename);
   } else if (!is_hdr_filename(filename)) {
-    auto img8 = image<vec4b>{img.size()};
-    rgb_to_srgb(img8, img);
-    save_image(filename, img8);
+    save_imageb(filename, rgb_to_srgbb(img));
   } else {
     throw std::runtime_error("unsupported image format " + ext);
   }
 }
 
-// Loads an hdr image.
-void load_image(const string& filename, image<vec4b>& img) {
+// Loads an ldr image.
+image<vec4b> load_imageb(const string& filename) {
+  auto img = image<vec4b>{};
+  load_imageb(filename, img);
+  return img;
+}
+
+// Loads an ldr image.
+void load_imageb(const string& filename, image<vec4b>& img) {
   if (is_preset_filename(filename)) return load_image_preset(filename, img);
   auto ext = fs::path(filename).extension().string();
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
@@ -1892,16 +1934,14 @@ void load_image(const string& filename, image<vec4b>& img) {
     img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
   } else if (is_hdr_filename(filename)) {
-    auto imgf = image<vec4f>{};
-    load_image(filename, imgf);
-    rgb_to_srgb(img, imgf);
+    img = rgb_to_srgbb(load_image(filename));
   } else {
     throw std::runtime_error("unsupported image format " + ext);
   }
 }
 
 // Saves an ldr image.
-void save_image(const string& filename, const image<vec4b>& img) {
+void save_imageb(const string& filename, const image<vec4b>& img) {
   auto ext = fs::path(filename).extension().string();
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
@@ -1920,72 +1960,9 @@ void save_image(const string& filename, const image<vec4b>& img) {
             filename.c_str(), img.size().x, img.size().y, 4, img.data()))
       throw std::runtime_error("error saving image " + filename);
   } else if (is_hdr_filename(filename)) {
-    auto imgf = image<vec4f>{img.size()};
-    srgb_to_rgb(imgf, img);
-    save_image(filename, imgf);
+    save_image(filename, srgb_to_rgb(img));
   } else {
     throw std::runtime_error("unsupported image format " + ext);
-  }
-}
-
-// Convenience helper for loading HDR or LDR based on filename
-void load_image(const string& filename, image<vec4f>& hdr, image<vec4b>& ldr) {
-  if (is_hdr_filename(filename)) {
-    load_image(filename, hdr);
-  } else {
-    load_image(filename, ldr);
-  }
-}
-void save_image(
-    const string& filename, const image<vec4f>& hdr, const image<vec4b>& ldr) {
-  if (!hdr.empty()) {
-    save_image(filename, hdr);
-  } else {
-    save_image(filename, ldr);
-  }
-}
-
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-void save_tonemapped(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params) {
-  if (is_hdr_filename(filename)) {
-    save_image(filename, hdr);
-  } else {
-    auto ldr = image<vec4b>{hdr.size()};
-    tonemap(ldr, hdr, params);
-    save_image(filename, ldr);
-  }
-}
-
-// Save with a logo embedded
-void save_image_with_logo(const string& filename, const image<vec4f>& img) {
-  auto logo = image<vec4f>{};
-  make_imlogo(logo, "logo-medium");
-  auto img_copy = img;
-  auto offset   = img.size() - logo.size() - 8;
-  set_region(img_copy, logo, offset);
-  save_image(filename, img_copy);
-}
-void save_image_with_logo(const string& filename, const image<vec4b>& img) {
-  auto logo = image<vec4b>{};
-  make_imlogo(logo, "logo-medium");
-  auto img_copy = img;
-  auto offset   = img.size() - logo.size() - 8;
-  set_region(img_copy, logo, offset);
-  save_image(filename, img_copy);
-}
-
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params) {
-  if (is_hdr_filename(filename)) {
-    save_image_with_logo(filename, hdr);
-  } else {
-    auto ldr = image<vec4b>{hdr.size()};
-    tonemap(ldr, hdr, params);
-    save_image_with_logo(filename, ldr);
   }
 }
 

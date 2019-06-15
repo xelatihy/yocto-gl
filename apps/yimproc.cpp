@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
   // command line parameters
   auto do_tonemap          = false;
   auto tonemap_prms        = tonemap_params{};
-  auto add_logo            = false;
+  auto logo                = false;
   auto resize_width        = 0;
   auto resize_height       = 0;
   auto spatial_sigma       = 0.0f;
@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
       "--set-alpha", alpha_filename, "set alpha as this image alpha");
   parser.add_option("--set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
-  parser.add_flag("--logo", add_logo, "Add logo");
+  parser.add_flag("--logo", logo, "Add logo");
   parser.add_option("--output,-o", output, "output image filename")
       ->required(true);
   parser.add_option("filename", filename, "input image filename")
@@ -212,19 +212,9 @@ int main(int argc, char* argv[]) {
   // save
   try {
     if (do_tonemap && tonemap_prms.srgb) {
-      auto linear = image<vec4f>{};
-      srgb_to_rgb(linear, img);
-      if (add_logo) {
-        save_image_with_logo(output, linear);
-      } else {
-        save_image(output, linear);
-      }
+      save_image(output, logo ? add_logo(srgb_to_rgb(img)) : srgb_to_rgb(img));
     } else {
-      if (add_logo) {
-        save_image_with_logo(output, img);
-      } else {
-        save_image(output, img);
-      }
+      save_image(output, logo ? add_logo(img) : img);
     }
   } catch (const std::exception& e) {
     printf("%s\n", e.what());

@@ -50,7 +50,7 @@ float eval_microfacetD(
   if (cosine <= 0) return 0;
   auto roughness_square = roughness * roughness;
   auto cosine_square    = cosine * cosine;
-  auto tangent_square   = clamp01(1 - cosine_square) / cosine_square;
+  auto tangent_square   = clamp(1 - cosine_square, 0.0f, 1.0f) / cosine_square;
   if (ggx) {
     return roughness_square / (pif * cosine_square * cosine_square *
                                   (roughness_square + tangent_square) *
@@ -66,7 +66,7 @@ float evaluate_microfacetG1(float roughness, const vec3f& normal,
   if (dot(half_vector, direction) * cosine <= 0) return 0;
   auto roughness_square = roughness * roughness;
   auto cosine_square    = cosine * cosine;
-  auto tangent_square   = clamp01(1 - cosine_square) / cosine_square;
+  auto tangent_square   = clamp(1 - cosine_square, 0.0f, 1.0f) / cosine_square;
   if (ggx) {
     return 2 / (1 + sqrt(1.0f + roughness_square * tangent_square));
   } else {
@@ -99,7 +99,7 @@ vec3f sample_microfacet(
   }
   auto cosine_square     = 1 / (1 + tangent_square);
   auto cosine            = 1 / sqrt(1 + tangent_square);
-  auto radius            = sqrt(clamp01(1 - cosine_square));
+  auto radius            = sqrt(clamp(1 - cosine_square, 0.0f, 1.0f));
   auto local_half_vector = vec3f{cos(phi) * radius, sin(phi) * radius, cosine};
   return transform_direction(basis_fromz(normal), local_half_vector);
 }
@@ -1329,66 +1329,66 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
       scene, instance, intersection.element, intersection.uv);
 
   switch (params.falsecolor) {
-    case trace_falsecolor_type::normal: {
+    case trace_params::falsecolor_type::normal: {
       return {normal * 0.5f + 0.5f, 1};
     }
-    case trace_falsecolor_type::frontfacing: {
+    case trace_params::falsecolor_type::frontfacing: {
       auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
                                                    : vec3f{1, 0, 0};
       return {frontfacing, 1};
     }
-    case trace_falsecolor_type::gnormal: {
+    case trace_params::falsecolor_type::gnormal: {
       auto normal = eval_element_normal(
           scene, instance, intersection.element, true);
       return {normal * 0.5f + 0.5f, 1};
     }
-    case trace_falsecolor_type::gfrontfacing: {
+    case trace_params::falsecolor_type::gfrontfacing: {
       auto normal = eval_element_normal(
           scene, instance, intersection.element, true);
       auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
                                                    : vec3f{1, 0, 0};
       return {frontfacing, 1};
     }
-    case trace_falsecolor_type::texcoord: {
+    case trace_params::falsecolor_type::texcoord: {
       auto texcoord = eval_texcoord(
           shape, intersection.element, intersection.uv);
       return {{texcoord.x, texcoord.y, 0}, 1};
     }
-    case trace_falsecolor_type::color: {
+    case trace_params::falsecolor_type::color: {
       auto color = eval_color(shape, intersection.element, intersection.uv);
       return {xyz(color), 1};
     }
-    case trace_falsecolor_type::emission: {
+    case trace_params::falsecolor_type::emission: {
       return {material.emission, 1};
     }
-    case trace_falsecolor_type::diffuse: {
+    case trace_params::falsecolor_type::diffuse: {
       return {material.diffuse, 1};
     }
-    case trace_falsecolor_type::specular: {
+    case trace_params::falsecolor_type::specular: {
       return {material.specular, 1};
     }
-    case trace_falsecolor_type::transmission: {
+    case trace_params::falsecolor_type::transmission: {
       return {material.transmission, 1};
     }
-    case trace_falsecolor_type::roughness: {
+    case trace_params::falsecolor_type::roughness: {
       return {vec3f{material.roughness}, 1};
     }
-    case trace_falsecolor_type::material: {
+    case trace_params::falsecolor_type::material: {
       auto hashed = std::hash<int>()(instance.material);
       auto rng_   = make_rng(trace_default_seed, hashed);
       return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
     }
-    case trace_falsecolor_type::shape: {
+    case trace_params::falsecolor_type::shape: {
       auto hashed = std::hash<int>()(instance.shape);
       auto rng_   = make_rng(trace_default_seed, hashed);
       return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
     }
-    case trace_falsecolor_type::instance: {
+    case trace_params::falsecolor_type::instance: {
       auto hashed = std::hash<int>()(intersection.instance);
       auto rng_   = make_rng(trace_default_seed, hashed);
       return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
     }
-    case trace_falsecolor_type::highlight: {
+    case trace_params::falsecolor_type::highlight: {
       auto emission = material.emission;
       auto outgoing = -direction;
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
@@ -1406,10 +1406,10 @@ using trace_sampler_func = pair<vec3f, bool> (*)(const yocto_scene& scene,
     const vec3f& direction, rng_state& rng, const trace_params& params);
 trace_sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
-    case trace_sampler_type::path: return trace_path;
-    case trace_sampler_type::naive: return trace_naive;
-    case trace_sampler_type::eyelight: return trace_eyelight;
-    case trace_sampler_type::falsecolor: return trace_falsecolor;
+    case trace_params::sampler_type::path: return trace_path;
+    case trace_params::sampler_type::naive: return trace_naive;
+    case trace_params::sampler_type::eyelight: return trace_eyelight;
+    case trace_params::sampler_type::falsecolor: return trace_falsecolor;
     default: {
       throw std::runtime_error("sampler unknown");
       return nullptr;
@@ -1420,10 +1420,10 @@ trace_sampler_func get_trace_sampler_func(const trace_params& params) {
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params) {
   switch (params.sampler) {
-    case trace_sampler_type::path: return true;
-    case trace_sampler_type::naive: return true;
-    case trace_sampler_type::eyelight: return true;
-    case trace_sampler_type::falsecolor: return true;
+    case trace_params::sampler_type::path: return true;
+    case trace_params::sampler_type::naive: return true;
+    case trace_params::sampler_type::eyelight: return true;
+    case trace_params::sampler_type::falsecolor: return true;
     default: {
       throw std::runtime_error("sampler unknown");
       return false;
@@ -1481,7 +1481,19 @@ void trace_region(image<vec4f>& image, trace_state& state,
 }
 
 // Init a sequence of random number generators.
-void init_trace_state(
+trace_state make_trace_state(const vec2i& image_size, uint64_t seed) {
+  auto state = trace_state{image_size,
+      vector<trace_pixel>(image_size.x * image_size.y, trace_pixel{})};
+  auto rng   = make_rng(1301081);
+  for (auto j = 0; j < state.image_size.y; j++) {
+    for (auto i = 0; i < state.image_size.x; i++) {
+      auto& pixel = get_trace_pixel(state, i, j);
+      pixel.rng   = make_rng(seed, rand1i(rng, 1 << 31) / 2 + 1);
+    }
+  }
+  return state;
+}
+void make_trace_state(
     trace_state& state, const vec2i& image_size, uint64_t seed) {
   state    = trace_state{image_size,
       vector<trace_pixel>(image_size.x * image_size.y, trace_pixel{})};
@@ -1495,28 +1507,47 @@ void init_trace_state(
 }
 
 // Init trace lights
-void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
-  lights = {};
-
+trace_lights make_trace_lights(const yocto_scene& scene) {
+  auto lights = trace_lights{};
   lights.shape_cdfs.resize(scene.shapes.size());
   lights.environment_cdfs.resize(scene.textures.size());
-
-  for (auto instance_id = 0; instance_id < scene.instances.size();
-       instance_id++) {
-    auto& instance = scene.instances[instance_id];
+  for (auto idx = 0; idx < scene.instances.size(); idx++) {
+    auto& instance = scene.instances[idx];
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
-    lights.instances.push_back(instance_id);
+    lights.instances.push_back(idx);
+    lights.shape_cdfs[instance.shape] = sample_shape_cdf(shape);
+  }
+  for (auto idx = 0; idx < scene.environments.size(); idx++) {
+    auto& environment = scene.environments[idx];
+    if (environment.emission == zero3f) continue;
+    lights.environments.push_back(idx);
+    if (environment.emission_tex >= 0) {
+      lights.environment_cdfs[environment.emission_tex] =
+          sample_environment_cdf(scene, environment);
+    }
+  }
+  return lights;
+}
+void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
+  lights = {};
+  lights.shape_cdfs.resize(scene.shapes.size());
+  lights.environment_cdfs.resize(scene.textures.size());
+  for (auto idx = 0; idx < scene.instances.size(); idx++) {
+    auto& instance = scene.instances[idx];
+    auto& shape    = scene.shapes[instance.shape];
+    auto& material = scene.materials[instance.material];
+    if (material.emission == zero3f) continue;
+    if (shape.triangles.empty() && shape.quads.empty()) continue;
+    lights.instances.push_back(idx);
     sample_shape_cdf(shape, lights.shape_cdfs[instance.shape]);
   }
-
-  for (auto environment_id = 0; environment_id < scene.environments.size();
-       environment_id++) {
-    auto& environment = scene.environments[environment_id];
+  for (auto idx = 0; idx < scene.environments.size(); idx++) {
+    auto& environment = scene.environments[idx];
     if (environment.emission == zero3f) continue;
-    lights.environments.push_back(environment_id);
+    lights.environments.push_back(idx);
     if (environment.emission_tex >= 0) {
       sample_environment_cdf(scene, environment,
           lights.environment_cdfs[environment.emission_tex]);
@@ -1529,53 +1560,15 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_params& params) {
   auto image_size = camera_resolution(
       scene.cameras.at(params.camera), params.resolution);
-  auto image = yocto::image{image_size, zero4f};
-  auto state = trace_state{};
-  init_trace_state(state, image_size, params.seed);
-  auto regions = vector<image_region>{};
-  make_imregions(regions, image.size(), params.region, true);
+  auto render  = image{image_size, zero4f};
+  auto state   = make_trace_state(render.size(), params.seed);
+  auto regions = make_regions(render.size(), params.region, true);
 
   if (params.noparallel) {
     for (auto& region : regions) {
       if (params.cancel && *params.cancel) break;
       trace_region(
-          image, state, scene, bvh, lights, region, params.samples, params);
-    }
-  } else {
-    auto                futures  = vector<std::future<void>>{};
-    auto                nthreads = std::thread::hardware_concurrency();
-    std::atomic<size_t> next_idx(0);
-    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-      futures.emplace_back(
-          std::async(std::launch::async, [&image, &state, &scene, &bvh, &lights,
-                                             &params, &regions, &next_idx]() {
-            while (true) {
-              if (params.cancel && *params.cancel) break;
-              auto idx = next_idx.fetch_add(1);
-              if (idx >= regions.size()) break;
-              trace_region(image, state, scene, bvh, lights, regions[idx],
-                  params.samples, params);
-            }
-          }));
-    }
-    for (auto& f : futures) f.get();
-  }
-
-  return image;
-}
-
-// Progressively compute an image by calling trace_samples multiple times.
-int trace_samples(image<vec4f>& image, trace_state& state,
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    int current_sample, const trace_params& params) {
-  auto regions = vector<image_region>{};
-  make_imregions(regions, image.size(), params.region, true);
-  auto num_samples = min(params.batch, params.samples - current_sample);
-  if (params.noparallel) {
-    for (auto& region : regions) {
-      if (params.cancel && *params.cancel) break;
-      trace_region(
-          image, state, scene, bvh, lights, region, params.samples, params);
+          render, state, scene, bvh, lights, region, params.samples, params);
     }
   } else {
     auto                futures  = vector<std::future<void>>{};
@@ -1583,13 +1576,48 @@ int trace_samples(image<vec4f>& image, trace_state& state,
     std::atomic<size_t> next_idx(0);
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
       futures.emplace_back(std::async(
-          std::launch::async, [&image, &state, &scene, &bvh, &lights, &params,
+          std::launch::async, [&render, &state, &scene, &bvh, &lights, &params,
+                                  &regions, &next_idx]() {
+            while (true) {
+              if (params.cancel && *params.cancel) break;
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= regions.size()) break;
+              trace_region(render, state, scene, bvh, lights, regions[idx],
+                  params.samples, params);
+            }
+          }));
+    }
+    for (auto& f : futures) f.get();
+  }
+
+  return render;
+}
+
+// Progressively compute an image by calling trace_samples multiple times.
+int trace_samples(image<vec4f>& render, trace_state& state,
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    int current_sample, const trace_params& params) {
+  auto regions     = make_regions(render.size(), params.region, true);
+  auto num_samples = min(params.batch, params.samples - current_sample);
+  if (params.noparallel) {
+    for (auto& region : regions) {
+      if (params.cancel && *params.cancel) break;
+      trace_region(
+          render, state, scene, bvh, lights, region, params.samples, params);
+    }
+  } else {
+    auto                futures  = vector<std::future<void>>{};
+    auto                nthreads = std::thread::hardware_concurrency();
+    std::atomic<size_t> next_idx(0);
+    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+      futures.emplace_back(std::async(
+          std::launch::async, [&render, &state, &scene, &bvh, &lights, &params,
                                   &regions, &next_idx, num_samples]() {
             while (true) {
               if (params.cancel && *params.cancel) break;
               auto idx = next_idx.fetch_add(1);
               if (idx >= regions.size()) break;
-              trace_region(image, state, scene, bvh, lights, regions[idx],
+              trace_region(render, state, scene, bvh, lights, regions[idx],
                   num_samples, params);
             }
           }));

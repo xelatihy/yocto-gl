@@ -27,7 +27,7 @@
 // 3. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
 // 4. for ray-intersection and closest point queries, use
-// 'build_bvh()`/`refit_bvh()`
+//    'make_bvh()`/`refit_bvh()`
 //
 //
 
@@ -258,17 +258,17 @@ struct yocto_scene_node {
 
 // Keyframe data.
 struct yocto_animation {
-  enum struct type_t { linear, step, bezier };
-  string                uri          = "";
-  string                filename     = "";
-  string                group        = "";
-  type_t                type         = type_t::linear;
-  vector<float>         times        = {};
-  vector<vec3f>         translations = {};
-  vector<vec4f>         rotations    = {};
-  vector<vec3f>         scales       = {};
-  vector<vector<float>> morphs       = {};
-  vector<int>           targets      = {};
+  enum struct interpolation_type { linear, step, bezier };
+  string                uri           = "";
+  string                filename      = "";
+  string                group         = "";
+  interpolation_type    interpolation = interpolation_type::linear;
+  vector<float>         times         = {};
+  vector<vec3f>         translations  = {};
+  vector<vec4f>         rotations     = {};
+  vector<vec3f>         scales        = {};
+  vector<vector<float>> morphs        = {};
+  vector<int>           targets       = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -306,36 +306,6 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge);
 string format_stats(
     const yocto_scene& scene, const string& prefix = "", bool verbose = false);
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// EVALUATION OF SCENE PROPERTIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Update node transforms.
-void update_transforms(
-    yocto_scene& scene, float time = 0, const string& anim_group = "");
-
-// Compute animation range.
-vec2f compute_animation_range(
-    const yocto_scene& scene, const string& anim_group = "");
-
-// Computes shape/scene approximate bounds.
-bbox3f compute_bounds(const yocto_shape& shape);
-bbox3f compute_bounds(const yocto_scene& scene);
-
-// Compute shape vertex normals
-void compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
-
-// Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
-    bool compute_normals);
-void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
-    float scale, bool compute_normals);
-void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv);
-void tesselate_subdivs(yocto_scene& scene);
-
 // Add missing names, normals, tangents and hierarchy.
 void add_normals(yocto_scene& scene);
 void add_tangent_spaces(yocto_scene& scene);
@@ -356,9 +326,41 @@ void trim_memory(yocto_scene& scene);
 // Checks for validity of the scene.
 void print_validation(const yocto_scene& scene, bool notextures = false);
 
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// EVALUATION OF SCENE PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Update node transforms.
+void update_transforms(
+    yocto_scene& scene, float time = 0, const string& anim_group = "");
+
+// Compute animation range.
+vec2f compute_animation_range(
+    const yocto_scene& scene, const string& anim_group = "");
+
+// Computes shape/scene approximate bounds.
+bbox3f compute_bounds(const yocto_shape& shape);
+bbox3f compute_bounds(const yocto_scene& scene);
+
+// Compute shape vertex normals
+vector<vec3f> compute_normals(const yocto_shape& shape);
+void          compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
+
+// Apply subdivision and displacement rules.
+void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
+    bool compute_normals);
+void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
+    float scale, bool compute_normals);
+void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv);
+void tesselate_subdivs(yocto_scene& scene);
+
 // Build/refit the bvh acceleration structure.
-void build_bvh(
-    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params);
+bvh_scene make_bvh(const yocto_scene& scene, const bvh_params& params);
+void      make_bvh(
+         bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params);
 void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
     const vector<int>& updated_shapes, const bvh_params& params);
 
@@ -379,9 +381,10 @@ pair<mat3f, bool> eval_element_tangent_basis(
     const yocto_shape& shape, int element, const vec2f& uv = zero2f);
 
 // Sample a shape element based on area/length.
-void             sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf);
 pair<int, vec2f> sample_shape(const yocto_shape& shape,
     const vector<float>& cdf, float re, const vec2f& ruv);
+vector<float>    sample_shape_cdf(const yocto_shape& shape);
+void             sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf);
 float sample_shape_pdf(const yocto_shape& shape, const vector<float>& cdf,
     int element, const vec2f& uv);
 
@@ -464,11 +467,13 @@ vec3f eval_environment(const yocto_scene& scene,
 vec3f eval_environment(const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
+vec3f         sample_environment(const yocto_scene& scene,
+            const yocto_environment& environment, const vector<float>& texels_cdf,
+            float re, const vec2f& ruv);
+vector<float> sample_environment_cdf(
+    const yocto_scene& scene, const yocto_environment& environment);
 void  sample_environment_cdf(const yocto_scene& scene,
      const yocto_environment& environment, vector<float>& texels_cdf);
-vec3f sample_environment(const yocto_scene& scene,
-    const yocto_environment& environment, const vector<float>& texels_cdf,
-    float re, const vec2f& ruv);
 float sample_environment_pdf(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     const vec3f& direction);

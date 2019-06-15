@@ -314,10 +314,14 @@ static inline pair<string, string> get_preset_type(const string& filename) {
 void load_texture(yocto_texture& texture, const string& dirname) {
   if (is_preset_filename(texture.uri)) {
     auto [type, nfilename] = get_preset_type(texture.uri);
-    make_impreset(texture.hdr, texture.ldr, type);
+    make_image_preset(texture.hdr, texture.ldr, type);
     texture.uri = nfilename;
   } else {
-    load_image(fs::path(dirname) / texture.uri, texture.hdr, texture.ldr);
+    if (is_hdr_filename(texture.uri)) {
+      load_image(fs::path(dirname) / texture.uri, texture.hdr);
+    } else {
+      load_imageb(fs::path(dirname) / texture.uri, texture.ldr);
+    }
   }
 }
 
@@ -371,7 +375,11 @@ void load_textures(
 }
 
 void save_texture(const yocto_texture& texture, const string& dirname) {
-  save_image(fs::path(dirname) / texture.uri, texture.hdr, texture.ldr);
+  if (!texture.hdr.empty()) {
+    save_image(fs::path(dirname) / texture.uri, texture.hdr);
+  } else {
+    save_imageb(fs::path(dirname) / texture.uri, texture.ldr);
+  }
 }
 
 void save_voltexture(const yocto_voltexture& texture, const string& dirname) {
@@ -416,7 +424,7 @@ void save_textures(const yocto_scene& scene, const string& dirname,
 void load_shape(yocto_shape& shape, const string& dirname) {
   if (is_preset_filename(shape.uri)) {
     auto [type, nfilename] = get_preset_type(shape.uri);
-    make_preset(shape.points, shape.lines, shape.triangles, shape.quads,
+    make_shape_preset(shape.points, shape.lines, shape.triangles, shape.quads,
         shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
         shape.normals, shape.texcoords, shape.colors, shape.radius, type);
     shape.uri = nfilename;
@@ -438,8 +446,8 @@ void save_shape(const yocto_shape& shape, const string& dirname) {
 void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
   if (is_preset_filename(subdiv.uri)) {
     auto [type, nfilename] = get_preset_type(subdiv.uri);
-    make_preset(subdiv.points, subdiv.lines, subdiv.triangles, subdiv.quads,
-        subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+    make_shape_preset(subdiv.points, subdiv.lines, subdiv.triangles,
+        subdiv.quads, subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
         subdiv.positions, subdiv.normals, subdiv.texcoords, subdiv.colors,
         subdiv.radius, type);
     subdiv.uri = nfilename;
@@ -1587,13 +1595,13 @@ struct load_obj_scene_cb : obj_callbacks {
     auto shape = yocto_shape();
     shape.uri  = oproc.name;
     if (oproc.type == "floor") {
-      auto params         = procshape_params{};
-      params.type         = make_shape_type::floor;
+      auto params         = proc_shape_params{};
+      params.type         = proc_shape_params::type_t::floor;
       params.subdivisions = oproc.level < 0 ? 0 : oproc.level;
       params.scale        = oproc.size / 2;
       params.uvscale      = oproc.size;
-      make_improc(shape.triangles, shape.quads, shape.positions, shape.normals,
-          shape.texcoords, params);
+      make_proc_shape(shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, params);
     } else {
       throw std::runtime_error("unknown obj procedural");
     }
@@ -2420,13 +2428,15 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
           animation.times[i] = input_view[i][0];
         switch (gsampler->interpolation) {
           case cgltf_interpolation_type_linear:
-            animation.type = yocto_animation::type_t::linear;
+            animation.interpolation =
+                yocto_animation::interpolation_type::linear;
             break;
           case cgltf_interpolation_type_step:
-            animation.type = yocto_animation::type_t::step;
+            animation.interpolation = yocto_animation::interpolation_type::step;
             break;
           case cgltf_interpolation_type_cubic_spline:
-            animation.type = yocto_animation::type_t::bezier;
+            animation.interpolation =
+                yocto_animation::interpolation_type::bezier;
             break;
         }
         auto output_view = accessor_values(gsampler->output);
@@ -2801,8 +2811,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
       split.indices.insert(split.indices.end(), (int*)shape.triangles.data(),
           (int*)shape.triangles.data() + shape.triangles.size() * 3);
       if (!shape.quads.empty()) {
-        auto triangles = vector<vec3i>{};
-        quads_to_triangles(triangles, shape.quads);
+        auto triangles = quads_to_triangles(shape.quads);
         split.indices.insert(split.indices.end(), (int*)triangles.data(),
             (int*)triangles.data() + triangles.size() * 3);
       }
@@ -2811,8 +2820,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
       split_facevarying(quads, split.positions, split.normals, split.texcoords,
           shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
           shape.normals, shape.texcoords);
-      auto triangles = vector<vec3i>{};
-      quads_to_triangles(triangles, quads);
+      auto triangles = quads_to_triangles(quads);
       split.indices.insert(split.indices.end(), (int*)triangles.data(),
           (int*)triangles.data() + triangles.size() * 3);
     }
@@ -3242,20 +3250,20 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       } break;
       case pbrt_shape::type_t::sphere: {
         auto& sphere        = pshape.sphere;
-        auto  params        = procshape_params{};
-        params.type         = make_shape_type::uvsphere;
+        auto  params        = proc_shape_params{};
+        params.type         = proc_shape_params::type_t::uvsphere;
         params.subdivisions = 5;
         params.scale        = sphere.radius;
-        make_improc(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
       } break;
       case pbrt_shape::type_t::disk: {
         auto& disk          = pshape.disk;
-        auto  params        = procshape_params{};
-        params.type         = make_shape_type::uvdisk;
+        auto  params        = proc_shape_params{};
+        params.type         = proc_shape_params::type_t::uvdisk;
         params.subdivisions = 4;
         params.scale        = disk.radius;
-        make_improc(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
       } break;
       default: {
@@ -3310,12 +3318,12 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto rgb2 = checkerboard.tex1.texture == ""
                         ? checkerboard.tex2.value
                         : pbrt_spectrum3f{0.6f, 0.6f, 0.6f};
-        auto params   = improc_params{};
-        params.type   = make_image_type::checker;
+        auto params   = proc_image_params{};
+        params.type   = proc_image_params::type_t::checker;
         params.color0 = {rgb1.x, rgb1.y, rgb1.z, 1};
         params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1};
         params.scale  = 2;
-        make_improc(texture.hdr, params);
+        make_proc_image(texture.hdr, params);
         float_to_byte(texture.ldr, texture.hdr);
         texture.hdr = {};
         if (verbose) printf("texture checkerboard not supported well");
@@ -3328,18 +3336,18 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       } break;
       case pbrt_texture::type_t::fbm: {
         // auto& fbm = ptexture.fbm;
-        auto params = improc_params{};
-        params.type = make_image_type::fbm;
-        make_improc(texture.hdr, params);
+        auto params = proc_image_params{};
+        params.type = proc_image_params::type_t::fbm;
+        make_proc_image(texture.hdr, params);
         float_to_byte(texture.ldr, texture.hdr);
         texture.hdr = {};
         if (verbose) printf("texture fbm not supported well");
       } break;
       case pbrt_texture::type_t::marble: {
         // auto& marble = ptexture.marble;
-        auto params = improc_params{};
-        params.type = make_image_type::fbm;
-        make_improc(texture.hdr, params);
+        auto params = proc_image_params{};
+        params.type = proc_image_params::type_t::fbm;
+        make_proc_image(texture.hdr, params);
         float_to_byte(texture.ldr, texture.hdr);
         texture.hdr = {};
         if (verbose) printf("texture marble not supported well");
@@ -3589,10 +3597,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         shape.uri    = name;
         auto dir     = normalize(distant.from - distant.to);
         auto size    = distant_dist * sin(5 * pif / 180);
-        auto params  = procshape_params{};
-        params.type  = make_shape_type::quad;
+        auto params  = proc_shape_params{};
+        params.type  = proc_shape_params::type_t::quad;
         params.scale = size / 2;
-        make_improc(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3614,11 +3622,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto& shape         = scene.shapes.back();
         shape.uri           = name;
         auto size           = 0.005f;
-        auto params         = procshape_params{};
-        params.type         = make_shape_type::sphere;
+        auto params         = proc_shape_params{};
+        params.type         = proc_shape_params::type_t::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_improc(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3639,11 +3647,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto& shape         = scene.shapes.back();
         shape.uri           = name;
         auto size           = 0.005f;
-        auto params         = procshape_params{};
-        params.type         = make_shape_type::sphere;
+        auto params         = proc_shape_params{};
+        params.type         = proc_shape_params::type_t::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_improc(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3663,11 +3671,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto& shape         = scene.shapes.back();
         shape.uri           = name;
         auto size           = 0.005f;
-        auto params         = procshape_params{};
-        params.type         = make_shape_type::sphere;
+        auto params         = proc_shape_params{};
+        params.type         = proc_shape_params::type_t::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_improc(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();

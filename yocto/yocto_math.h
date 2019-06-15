@@ -88,13 +88,10 @@
 namespace yocto {
 
 // Aliased typenames for readability
-using string = std::string;
-template <typename T1, typename T2>
-using pair = std::pair<T1, T2>;
-template <typename K, typename V, typename H = std::hash<K>>
-using unordered_map = std::unordered_map<K, V, H>;
-template <typename T>
-using vector = std::vector<T>;
+using std::pair;
+using std::string;
+using std::unordered_map;
+using std::vector;
 using namespace std::literals::string_literals;
 
 using byte = unsigned char;
@@ -114,7 +111,6 @@ inline float max(float a, float b) { return (a > b) ? a : b; }
 inline float clamp(float a, float min_, float max_) {
   return min(max(a, min_), max_);
 }
-inline float clamp01(float a) { return min(max(a, 0.0f), 1.0f); }
 inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
 inline float radians(float a) { return a * pif / 180; }
 inline float degrees(float a) { return a * 180 / pif; }
@@ -276,7 +272,6 @@ inline vec2f min(const vec2f& a, const vec2f& b) {
 inline vec2f clamp(const vec2f& x, float min, float max) {
   return {clamp(x.x, min, max), clamp(x.y, min, max)};
 }
-inline vec2f clamp01(const vec2f& x) { return {clamp01(x.x), clamp01(x.y)}; }
 inline vec2f lerp(const vec2f& a, const vec2f& b, float u) {
   return a * (1 - u) + b * u;
 }
@@ -424,9 +419,6 @@ inline vec3f min(const vec3f& a, const vec3f& b) {
 inline vec3f clamp(const vec3f& x, float min, float max) {
   return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
 }
-inline vec3f clamp01(const vec3f& x) {
-  return {clamp01(x.x), clamp01(x.y), clamp01(x.z)};
-}
 inline vec3f lerp(const vec3f& a, const vec3f& b, float u) {
   return a * (1 - u) + b * u;
 }
@@ -562,9 +554,6 @@ inline vec4f min(const vec4f& a, const vec4f& b) {
 inline vec4f clamp(const vec4f& x, float min, float max) {
   return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
       clamp(x.w, min, max)};
-}
-inline vec4f clamp01(const vec4f& x) {
-  return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
 }
 inline vec4f lerp(const vec4f& a, const vec4f& b, float u) {
   return a * (1 - u) + b * u;
@@ -979,8 +968,8 @@ namespace yocto {
 
 // Small Fixed-size matrices stored in column major format.
 struct mat2f {
-  vec2f x = {0, 0};
-  vec2f y = {0, 0};
+  vec2f x = {1, 0};
+  vec2f y = {0, 1};
 
   mat2f() {}
   mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
@@ -991,9 +980,9 @@ struct mat2f {
 
 // Small Fixed-size matrices stored in column major format.
 struct mat3f {
-  vec3f x = {0, 0, 0};
-  vec3f y = {0, 0, 0};
-  vec3f z = {0, 0, 0};
+  vec3f x = {1, 0, 0};
+  vec3f y = {0, 1, 0};
+  vec3f z = {0, 0, 1};
 
   mat3f() {}
   mat3f(const vec3f& x, const vec3f& y, const vec3f& z) : x{x}, y{y}, z{z} {}
@@ -1004,10 +993,10 @@ struct mat3f {
 
 // Small Fixed-size matrices stored in column major format.
 struct mat4f {
-  vec4f x = {0, 0, 0, 0};
-  vec4f y = {0, 0, 0, 0};
-  vec4f z = {0, 0, 0, 0};
-  vec4f w = {0, 0, 0, 0};
+  vec4f x = {1, 0, 0, 0};
+  vec4f y = {0, 1, 0, 0};
+  vec4f z = {0, 0, 1, 0};
+  vec4f w = {0, 0, 0, 1};
 
   mat4f() {}
   mat4f(const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w)
@@ -1294,7 +1283,10 @@ namespace yocto {
 
 // Quaternions to represent rotations
 struct quat4f {
-  float x, y, z, w;
+  float x = 0;
+  float y = 0;
+  float z = 0;
+  float w = 0;
 
   // constructors
   quat4f() : x{0}, y{0}, z{0}, w{1} {}
@@ -1397,14 +1389,14 @@ inline bool operator!=(const bbox2f& a, const bbox2f& b) {
 }
 
 // Bounding box expansions with points and other boxes.
-inline bbox2f operator+(const bbox2f& a, const vec2f& b) {
+inline bbox2f merge(const bbox2f& a, const vec2f& b) {
   return {min(a.min, b), max(a.max, b)};
 }
-inline bbox2f operator+(const bbox2f& a, const bbox2f& b) {
+inline bbox2f merge(const bbox2f& a, const bbox2f& b) {
   return {min(a.min, b.min), max(a.max, b.max)};
 }
-inline bbox2f& operator+=(bbox2f& a, const vec2f& b) { return a = a + b; }
-inline bbox2f& operator+=(bbox2f& a, const bbox2f& b) { return a = a + b; }
+inline void expand(bbox2f& a, const vec2f& b) { a = merge(a, b); }
+inline void expand(bbox2f& a, const bbox2f& b) { a = merge(a, b); }
 
 // Bounding box properties
 inline vec3f center(const bbox3f& a) { return (a.min + a.max) / 2; }
@@ -1419,14 +1411,14 @@ inline bool operator!=(const bbox3f& a, const bbox3f& b) {
 }
 
 // Bounding box expansions with points and other boxes.
-inline bbox3f operator+(const bbox3f& a, const vec3f& b) {
+inline bbox3f merge(const bbox3f& a, const vec3f& b) {
   return {min(a.min, b), max(a.max, b)};
 }
-inline bbox3f operator+(const bbox3f& a, const bbox3f& b) {
+inline bbox3f merge(const bbox3f& a, const bbox3f& b) {
   return {min(a.min, b.min), max(a.max, b.max)};
 }
-inline bbox3f& operator+=(bbox3f& a, const vec3f& b) { return a = a + b; }
-inline bbox3f& operator+=(bbox3f& a, const bbox3f& b) { return a = a + b; }
+inline void expand(bbox3f& a, const vec3f& b) { a = merge(a, b); }
+inline void expand(bbox3f& a, const bbox3f& b) { a = merge(a, b); }
 
 // Primitive bounds.
 inline bbox3f point_bounds(const vec3f& p) { return {p, p}; }
@@ -1585,7 +1577,8 @@ inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b) {
       vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
       vec3f{b.max.x, b.max.y, b.max.z}};
   auto xformed = bbox3f();
-  for (auto& corner : corners) xformed += transform_point(a, corner);
+  for (auto& corner : corners)
+    xformed = merge(xformed, transform_point(a, corner));
   return xformed;
 }
 inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
@@ -1595,7 +1588,8 @@ inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
       vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
       vec3f{b.max.x, b.max.y, b.max.z}};
   auto xformed = bbox3f();
-  for (auto& corner : corners) xformed += transform_point(a, corner);
+  for (auto& corner : corners)
+    xformed = merge(xformed, transform_point(a, corner));
   return xformed;
 }
 

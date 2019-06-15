@@ -97,7 +97,8 @@ struct trace_lights {
 };
 
 // Initialize lights.
-void init_trace_lights(trace_lights& lights, const yocto_scene& scene);
+trace_lights make_trace_lights(const yocto_scene& scene);
+void         make_trace_lights(trace_lights& lights, const yocto_scene& scene);
 
 // State of a pixel during tracing
 struct trace_pixel {
@@ -112,61 +113,50 @@ struct trace_state {
 };
 
 // Initialize state of the renderer.
-void init_trace_state(trace_state& state, const vec2i& image_size,
+trace_state make_trace_state(
+    const vec2i& image_size, uint64_t random_seed = trace_default_seed);
+void make_trace_state(trace_state& state, const vec2i& image_size,
     uint64_t random_seed = trace_default_seed);
 
-// Type of tracing algorithm to use
-enum struct trace_sampler_type {
-  path,        // path tracing
-  naive,       // naive path tracing
-  eyelight,    // eyelight rendering
-  falsecolor,  // false color rendering
+// Options for trace functions
+struct trace_params {
+  // clang-format off
+  // Type of tracing algorithm to use
+  enum struct sampler_type {
+    path,        // path tracing
+    naive,       // naive path tracing
+    eyelight,    // eyelight rendering
+    falsecolor,  // false color rendering
+  };
+  enum struct falsecolor_type {
+    normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
+    diffuse, specular, transmission, roughness, material, shape, instance,    
+    highlight };
+  // clang-format on
+
+  int                camera     = 0;
+  vec2i              resolution = {1280, 720};
+  sampler_type       sampler    = sampler_type::path;
+  falsecolor_type    falsecolor = falsecolor_type::diffuse;
+  int                samples    = 512;
+  int                bounces    = 8;
+  int                batch      = 16;
+  int                region     = 16;
+  float              clamp      = 10;
+  bool               envhidden  = false;
+  bool               tentfilter = false;
+  uint64_t           seed       = trace_default_seed;
+  std::atomic<bool>* cancel     = nullptr;
+  bool               noparallel = false;
 };
 
 const auto trace_sampler_names = vector<string>{
     "path", "naive", "eyelight", "falsecolor"};
 
-// Type of tracing algorithm to use
-enum struct trace_falsecolor_type {
-  normal,        // normal
-  frontfacing,   // faceforward
-  gnormal,       // geometric normal
-  gfrontfacing,  // geometric faceforward
-  texcoord,      // texcoord
-  color,         // color
-  emission,      // emission
-  diffuse,       // diffuse
-  specular,      // specular
-  transmission,  // transmission
-  roughness,     // roughness
-  material,      // material
-  shape,         // shape
-  instance,      // instance
-  highlight,     // highlight
-};
-
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
     "specular", "transmission", "roughness", "material", "shape", "instance",
     "highlight"};
-
-// Options for trace functions
-struct trace_params {
-  int                   camera     = 0;
-  vec2i                 resolution = {1280, 720};
-  trace_sampler_type    sampler    = trace_sampler_type::path;
-  trace_falsecolor_type falsecolor = trace_falsecolor_type::diffuse;
-  int                   samples    = 512;
-  int                   bounces    = 8;
-  int                   batch      = 16;
-  int                   region     = 16;
-  float                 clamp      = 10;
-  bool                  envhidden  = false;
-  bool                  tentfilter = false;
-  uint64_t              seed       = trace_default_seed;
-  std::atomic<bool>*    cancel     = nullptr;
-  bool                  noparallel = false;
-};
 
 // Equality operators
 inline bool operator==(const trace_params& a, const trace_params& b) {

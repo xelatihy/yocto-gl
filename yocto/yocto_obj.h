@@ -71,14 +71,19 @@ struct obj_texture_info {
   string path  = "";     // file path
   bool   clamp = false;  // clamp to edge
   float  scale = 1;      // scale for bump/displacement
+
   // Properties not explicitly handled.
   unordered_map<string, vector<float>> props;
+
+  obj_texture_info() {}
+  obj_texture_info(const char* path) : path{path} {}
+  obj_texture_info(const string& path) : path{path} {}
 };
 
 // Obj material.
 struct obj_material {
-  string name;       // name
-  int    illum = 0;  // MTL illum mode
+  string name  = "";  // name
+  int    illum = 0;   // MTL illum mode
 
   // base values
   vec3f ke  = {0, 0, 0};  // emission color
@@ -92,16 +97,16 @@ struct obj_material {
   float op  = 1;          // opacity
 
   // textures
-  obj_texture_info ke_map;    // emission texture
-  obj_texture_info ka_map;    // ambient texture
-  obj_texture_info kd_map;    // diffuse texture
-  obj_texture_info ks_map;    // specular texture
-  obj_texture_info kr_map;    // reflection texture
-  obj_texture_info kt_map;    // transmission texture
-  obj_texture_info ns_map;    // Phong exponent texture
-  obj_texture_info op_map;    // opacity texture
-  obj_texture_info ior_map;   // ior texture
-  obj_texture_info bump_map;  // bump map
+  obj_texture_info ke_map   = "";  // emission texture
+  obj_texture_info ka_map   = "";  // ambient texture
+  obj_texture_info kd_map   = "";  // diffuse texture
+  obj_texture_info ks_map   = "";  // specular texture
+  obj_texture_info kr_map   = "";  // reflection texture
+  obj_texture_info kt_map   = "";  // transmission texture
+  obj_texture_info ns_map   = "";  // Phong exponent texture
+  obj_texture_info op_map   = "";  // opacity texture
+  obj_texture_info ior_map  = "";  // ior texture
+  obj_texture_info bump_map = "";  // bump map
 
   // pbr values
   bool  has_pbr = false;  // whether pbr values are defined
@@ -112,12 +117,12 @@ struct obj_material {
   float pcr     = 0;      // coat roughness
 
   // textures
-  obj_texture_info pr_map;    // roughness texture
-  obj_texture_info pm_map;    // metallic texture
-  obj_texture_info ps_map;    // sheen texture
-  obj_texture_info norm_map;  // normal map
-  obj_texture_info disp_map;  // displacement map
-  obj_texture_info occ_map;   // occlusion map
+  obj_texture_info pr_map   = "";  // roughness texture
+  obj_texture_info pm_map   = "";  // metallic texture
+  obj_texture_info ps_map   = "";  // sheen texture
+  obj_texture_info norm_map = "";  // normal map
+  obj_texture_info disp_map = "";  // displacement map
+  obj_texture_info occ_map  = "";  // occlusion map
 
   // Properties not explicitly handled.
   unordered_map<string, vector<string>> props;
@@ -125,7 +130,7 @@ struct obj_material {
 
 // Obj camera [extension].
 struct obj_camera {
-  string  name;                     // name
+  string  name     = "";            // name
   frame3f frame    = identity3x4f;  // transform
   bool    ortho    = false;         // orthographic
   float   width    = 0.036f;        // film size (default to 35mm)
@@ -137,7 +142,7 @@ struct obj_camera {
 
 // Obj environment [extension].
 struct obj_environment {
-  string           name;                  // name
+  string           name  = "";            // name
   frame3f          frame = identity3x4f;  // transform
   vec3f            ke    = zero3f;        // emission color
   obj_texture_info ke_txt;                // emission texture
@@ -145,20 +150,20 @@ struct obj_environment {
 
 // Obj procedural object [extension].
 struct obj_procedural {
-  string  name;                  // name
-  frame3f frame = identity3x4f;  // transform
-  string  type;                  // type
-  string  material;              // material
-  float   size  = 2;             // size
-  int     level = -1;            // level of subdivision (-1 default)
+  string  name     = "";            // name
+  frame3f frame    = identity3x4f;  // transform
+  string  type     = "";            // type
+  string  material = "";            // material
+  float   size     = 2;             // size
+  int     level    = -1;            // level of subdivision (-1 default)
 };
 
 // Obj instance [extension]
 struct obj_instance {
-  string  name;                  // name
-  frame3f frame = identity3x4f;  // transform
-  string  object;                // object name
-  string  material;              // material name
+  string  name     = "";            // name
+  frame3f frame    = identity3x4f;  // transform
+  string  object   = "";            // object name
+  string  material = "";            // material name
 };
 
 // Obj callbacks

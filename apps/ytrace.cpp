@@ -53,16 +53,15 @@ int main(int argc, char* argv[]) {
   auto filename     = "scene.json"s;
 
   // names for enums
-  auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
+  auto sampler_namemap = std::map<string, trace_params::sampler_type>{};
   for (auto type = 0; type < trace_sampler_names.size(); type++) {
-    trace_sampler_type_namemap[trace_sampler_names[type]] =
-        (trace_sampler_type)type;
+    sampler_namemap[trace_sampler_names[type]] =
+        (trace_params::sampler_type)type;
   }
-  auto trace_falsecolor_type_namemap =
-      std::map<string, trace_falsecolor_type>{};
+  auto falsecolor_namemap = std::map<string, trace_params::falsecolor_type>{};
   for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
-    trace_falsecolor_type_namemap[trace_falsecolor_names[type]] =
-        (trace_falsecolor_type)type;
+    falsecolor_namemap[trace_falsecolor_names[type]] =
+        (trace_params::falsecolor_type)type;
   }
 
   // parse command line
@@ -74,11 +73,11 @@ int main(int argc, char* argv[]) {
       "--vres,-r", trace_prms.resolution.y, "Image vertical resolution.");
   parser.add_option("--samples,-s", trace_prms.samples, "Number of samples.");
   parser.add_option("--tracer,-t", trace_prms.sampler, "Trace type.")
-      ->transform(CLI::IsMember(trace_sampler_type_namemap));
+      ->transform(CLI::IsMember(sampler_namemap));
   parser
       .add_option(
           "--falsecolor,-F", trace_prms.falsecolor, "Tracer false color type.")
-      ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
+      ->transform(CLI::IsMember(falsecolor_namemap));
   parser.add_option(
       "--bounces", trace_prms.bounces, "Maximum number of bounces.");
   parser.add_option("--clamp", trace_prms.clamp, "Final pixel clamping.");
@@ -151,32 +150,29 @@ int main(int argc, char* argv[]) {
   if (add_skyenv) add_sky(scene);
 
   // build bvh
-  auto bvh = bvh_scene{};
   printf("building bvh");
   auto bvh_timer = timer();
-  build_bvh(bvh, scene, bvh_prms);
+  auto bvh       = make_bvh(scene, bvh_prms);
   printf(" in %s\n", bvh_timer.elapsedf().c_str());
 
   // init renderer
-  auto lights = trace_lights{};
   printf("building lights");
   auto lights_timer = timer();
-  init_trace_lights(lights, scene);
+  auto lights       = make_trace_lights(scene);
   printf(" in %s\n", lights_timer.elapsedf().c_str());
 
   // fix renderer type if no lights
   if ((lights.instances.empty() && lights.environments.empty()) &&
       is_sampler_lit(trace_prms)) {
     printf("no lights presents, switching to eyelight shader\n");
-    trace_prms.sampler = trace_sampler_type::eyelight;
+    trace_prms.sampler = trace_params::sampler_type::eyelight;
   }
 
   // allocate buffers
   auto image_size = camera_resolution(
       scene.cameras[trace_prms.camera], trace_prms.resolution);
   auto render = image{image_size, zero4f};
-  auto state  = trace_state{};
-  init_trace_state(state, image_size, trace_prms.seed);
+  auto state  = make_trace_state(image_size, trace_prms.seed);
 
   // render
   for (auto sample = 0; sample < trace_prms.samples;
@@ -193,10 +189,12 @@ int main(int argc, char* argv[]) {
                                  fs::path(imfilename).extension().string())
                              .string();
       try {
-        if (logo) {
-          save_tonemapped_with_logo(outfilename, render, tonemap_prms);
+        if (is_hdr_filename(outfilename)) {
+          save_image(outfilename, logo ? add_logo(render) : render);
         } else {
-          save_tonemapped(outfilename, render, tonemap_prms);
+          save_imageb(
+              outfilename, logo ? add_logo(tonemapb(render, tonemap_prms))
+                                : tonemapb(render, tonemap_prms));
         }
       } catch (const std::exception& e) {
         printf("%s\n", e.what());
@@ -209,10 +207,11 @@ int main(int argc, char* argv[]) {
   printf("saving image");
   auto save_timer = timer();
   try {
-    if (logo) {
-      save_tonemapped_with_logo(imfilename, render, tonemap_prms);
+    if (is_hdr_filename(imfilename)) {
+      save_image(imfilename, logo ? add_logo(render) : render);
     } else {
-      save_tonemapped(imfilename, render, tonemap_prms);
+      save_imageb(imfilename, logo ? add_logo(tonemapb(render, tonemap_prms))
+                                   : tonemapb(render, tonemap_prms));
     }
   } catch (const std::exception& e) {
     printf("%s\n", e.what());

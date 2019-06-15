@@ -115,7 +115,7 @@ struct rng_state {
   rng_state(uint64_t state, uint64_t inc) : state{state}, inc{inc} {}
 };
 
-// Next random number.
+// Next random number, used internally only.
 inline uint32_t _advance_rng(rng_state& rng) {
   uint64_t oldstate   = rng.state;
   rng.state           = oldstate * 6364136223846793005ULL + rng.inc;
@@ -182,7 +182,7 @@ namespace yocto {
 // Sample an hemispherical direction with uniform distribution.
 inline vec3f sample_hemisphere(const vec2f& ruv) {
   auto z   = ruv.y;
-  auto r   = sqrt(clamp01(1 - z * z));
+  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
@@ -193,7 +193,7 @@ inline float sample_hemisphere_pdf(const vec3f& direction) {
 // Sample an hemispherical direction with uniform distribution.
 inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv) {
   auto z               = ruv.y;
-  auto r               = sqrt(clamp01(1 - z * z));
+  auto r               = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi             = 2 * pif * ruv.x;
   auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
@@ -206,7 +206,7 @@ inline float sample_hemisphere_pdf(
 // Sample a spherical direction with uniform distribution.
 inline vec3f sample_sphere(const vec2f& ruv) {
   auto z   = 2 * ruv.y - 1;
-  auto r   = sqrt(clamp01(1 - z * z));
+  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
