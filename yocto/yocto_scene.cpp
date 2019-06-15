@@ -910,23 +910,12 @@ float camera_yfov(const yocto_camera& camera) {
 float camera_aspect(const yocto_camera& camera) {
   return camera.film.x / camera.film.y;
 }
-vec2i camera_resolution(const yocto_camera& camera, const vec2i& size_) {
-  auto size = size_;
-  if (size == zero2i) size = {1280, 720};
-  if (size.x != 0 && size.y != 0) {
-    if (size.x * camera.film.y / camera.film.x > size.y) {
-      size.x = 0;
-    } else {
-      size.y = 0;
-    }
+vec2i camera_resolution(const yocto_camera& camera, int resolution) {
+  if (camera.film.x > camera.film.y) {
+    return {resolution, (int)round(resolution * camera.film.y / camera.film.x)};
+  } else {
+    return {(int)round(resolution * camera.film.x / camera.film.y), resolution};
   }
-  if (size.x == 0) {
-    size.x = (int)round(size.y * camera.film.x / camera.film.y);
-  }
-  if (size.y == 0) {
-    size.y = (int)round(size.x * camera.film.y / camera.film.x);
-  }
-  return size;
 }
 void set_yperspective(
     yocto_camera& camera, float fov, float aspect, float focus, float film) {

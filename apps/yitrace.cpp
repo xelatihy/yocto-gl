@@ -291,8 +291,7 @@ void draw_glwidgets(const opengl_window& win) {
       if (draw_glcombobox(win, "camera", trace_prms.camera, cam_names)) {
       }
     }
-    draw_glslider(win, "width", trace_prms.resolution.x, 0, 4096);
-    draw_glslider(win, "height", trace_prms.resolution.y, 0, 4096);
+    draw_glslider(win, "resolution", trace_prms.resolution, 180, 4096);
     draw_glslider(win, "nsamples", trace_prms.samples, 16, 4096);
     draw_glcombobox(
         win, "tracer", (int&)trace_prms.sampler, trace_sampler_names);
@@ -934,9 +933,7 @@ int main(int argc, char* argv[]) {
   auto parser = CLI::App{"progressive path tracing"};
   parser.add_option("--camera", app.trace_prms.camera, "Camera index.");
   parser.add_option(
-      "--hres,-R", app.trace_prms.resolution.x, "Image horizontal resolution.");
-  parser.add_option(
-      "--vres,-r", app.trace_prms.resolution.y, "Image vertical resolution.");
+      "--resolution,-r", app.trace_prms.resolution, "Image resolution.");
   parser.add_option(
       "--samples,-s", app.trace_prms.samples, "Number of samples.");
   parser.add_option("--tracer,-t", app.trace_prms.sampler, "Tracer type.")

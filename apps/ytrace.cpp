@@ -68,9 +68,7 @@ int main(int argc, char* argv[]) {
   auto parser = CLI::App{"Offline path tracing"};
   parser.add_option("--camera", trace_prms.camera, "Camera index.");
   parser.add_option(
-      "--hres,-R", trace_prms.resolution.x, "Image horizontal resolution.");
-  parser.add_option(
-      "--vres,-r", trace_prms.resolution.y, "Image vertical resolution.");
+      "--resolution,-r", trace_prms.resolution, "Image resolution.");
   parser.add_option("--samples,-s", trace_prms.samples, "Number of samples.");
   parser.add_option("--tracer,-t", trace_prms.sampler, "Trace type.")
       ->transform(CLI::IsMember(sampler_namemap));

@@ -111,7 +111,7 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
 // Draw options
 struct drawgl_params {
   int   camera           = 0;
-  vec2i resolution       = {1280, 720};
+  int   resolution       = 1280;
   bool  wireframe        = false;
   bool  edges            = false;
   float edge_offset      = 0.01f;
@@ -1244,10 +1244,8 @@ int main(int argc, char* argv[]) {
   // parse command line
   auto parser = CLI::App{"views scenes inteactively"};
   parser.add_option("--camera", app.drawgl_prms.camera, "Camera index.");
-  parser.add_option("--hres,-R", app.drawgl_prms.resolution.x,
-      "Image horizontal resolution.");
   parser.add_option(
-      "--vres,-r", app.drawgl_prms.resolution.y, "Image vertical resolution.");
+      "--resolution,-r", app.drawgl_prms.resolution, "Image resolution.");
   parser.add_flag("--eyelight,!--no-eyelight,-c", app.drawgl_prms.eyelight,
       "Eyelight rendering.");
   parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");

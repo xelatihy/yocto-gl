@@ -405,7 +405,7 @@ float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
 vec2f camera_fov(const yocto_camera& camera);
 float camera_yfov(const yocto_camera& camera);
 float camera_aspect(const yocto_camera& camera);
-vec2i camera_resolution(const yocto_camera& camera, const vec2i& size);
+vec2i camera_resolution(const yocto_camera& camera, int resolution);
 void  set_yperspective(yocto_camera& camera, float yfov, float aspect,
      float focus, float film = 0.036f);
 // Sets camera field of view to enclose all the bbox. Camera view direction
