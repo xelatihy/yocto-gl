@@ -11,7 +11,7 @@ def cli():
 @click.option('--scene', '-s', default='*')
 @click.option('--format','-f', default='yaml')
 @click.option('--mode','-m', default='path')
-def yitrace(directory='mcguire',scene='*',format='yaml',mode='path'):
+def itrace(directory='mcguire',scene='*',format='yaml',mode='path'):
     modes = {
         'path': '--bvh-high-quality',
         'embree': '--bvh-embree --bvh-high-quality',
@@ -27,7 +27,7 @@ def yitrace(directory='mcguire',scene='*',format='yaml',mode='path'):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/yitrace {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscnitrace {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
@@ -36,7 +36,7 @@ def yitrace(directory='mcguire',scene='*',format='yaml',mode='path'):
 @click.option('--scene', '-s', default='*')
 @click.option('--format','-f', default='yaml')
 @click.option('--mode','-m', default='default')
-def yview(directory='mcguire',scene='*',format='yaml',mode='path'):
+def view(directory='mcguire',scene='*',format='yaml',mode='path'):
     modes = {
         'default': '--double-sided',
         'double-sided': '--double-sided',
@@ -50,7 +50,7 @@ def yview(directory='mcguire',scene='*',format='yaml',mode='path'):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/yview {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscnview {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
@@ -59,7 +59,7 @@ def yview(directory='mcguire',scene='*',format='yaml',mode='path'):
 @click.option('--scene', '-s', default='*')
 @click.option('--format','-f', default='yaml')
 @click.option('--mode','-m', default='path')
-def ytrace(directory='mcguire',scene='*',format='yaml',mode='path'):
+def trace(directory='mcguire',scene='*',format='yaml',mode='path'):
     modes = {
         'path': '-s 64 -r 640 --bvh-high-quality',
         'embree': '-s 256 -r 1280 --bvh-embree --bvh-high-quality',
@@ -87,12 +87,12 @@ def ytrace(directory='mcguire',scene='*',format='yaml',mode='path'):
             basename = os.path.basename(filename).replace(f'.{format}','')
             os.system(f'mkdir -p {directory}/{outprefix}-{format}')
             imagename = f'{directory}/{outprefix}-{format}/{basename}.{outformat}'
-            cmd = f'../yocto-gl/bin/ytrace -o {imagename} {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscntrace -o {imagename} {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
             for cam in extracams:
                 imagename = f'{directory}/{outprefix}-{format}/{basename}-c{cam}.{outformat}'
-                cmd = f'../yocto-gl/bin/ytrace -o {imagename} --camera {cam} {options} {filename}'
+                cmd = f'../yocto-gl/bin/yscntrace -o {imagename} --camera {cam} {options} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
 
@@ -112,7 +112,7 @@ def tonemap(directory='mcguire',scene='*',format='yaml',mode='filmic'):
     for filename in sorted(glob.glob(f'{directory}/{outprefix}-{format}/{scene}.hdr')+
                            glob.glob(f'{directory}/{outprefix}-{format}/{scene}.exr')):
         imagename = filename.replace(f'.exr',f'.{outformat}').replace(f'.hdr',f'.{outformat}')
-        cmd = f'../yocto-gl/bin/yimproc -o {imagename} {options} {filename}'
+        cmd = f'../yocto-gl/bin/yimgproc -o {imagename} {options} {filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)
 

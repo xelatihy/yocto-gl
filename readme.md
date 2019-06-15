@@ -83,12 +83,12 @@ See each header file for documentation.
 You can see Yocto/GL in action in the following applications written to
 test the library:
 
-- `apps/yview.cpp`: simple OpenGL viewer
-- `apps/ytrace.cpp`: offline path-tracer
-- `apps/yitrace.cpp`: interactive path-tracer
+- `apps/yscnview.cpp`: simple OpenGL viewer
+- `apps/yscntrace.cpp`: offline path-tracer
+- `apps/yscnitrace.cpp`: interactive path-tracer
 - `apps/yscnproc.cpp`: scene manipulation and conversion to/from OBJ and glTF
-- `apps/yimview.cpp`: HDR/PNG/JPG image viewer with exposure/gamma tone mapping
-- `apps/yimproc.cpp`: offline image manipulation.
+- `apps/yimgview.cpp`: HDR/PNG/JPG image viewer with exposure/gamma tone mapping
+- `apps/yimgproc.cpp`: offline image manipulation.
 
 You can build the example applications using CMake with
     `mkdir build; cd build; cmake ..; cmake --build`

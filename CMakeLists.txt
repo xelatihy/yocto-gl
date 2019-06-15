@@ -65,17 +65,17 @@ if(YOCTO_EMBREE)
 target_link_libraries(yocto libembree3.dylib)
 endif(YOCTO_EMBREE)
 
-add_executable(ytrace apps/ytrace.cpp)
+add_executable(yscntrace apps/yscntrace.cpp)
 add_executable(yscnproc apps/yscnproc.cpp)
 add_executable(yscnmerge apps/yscnmerge.cpp)
-add_executable(yimproc apps/yimproc.cpp)
+add_executable(yimgproc apps/yimgproc.cpp)
 add_executable(ymshproc apps/ymshproc.cpp)
 add_executable(yislandproc apps/yislandproc.cpp)
 
-target_link_libraries(ytrace yocto)
+target_link_libraries(yscntrace yocto)
 target_link_libraries(yscnproc yocto)
 target_link_libraries(yscnmerge yocto)
-target_link_libraries(yimproc yocto)
+target_link_libraries(yimgproc yocto)
 target_link_libraries(ymshproc yocto)
 target_link_libraries(yislandproc yocto)
 
@@ -105,21 +105,21 @@ if(YOCTO_OPENGL)
         apps/ext/imgui/imgui.cpp apps/ext/imgui/imgui_draw.cpp apps/ext/imgui/imgui_widgets.cpp
         apps/ext/imgui/imgui_impl_glfw.cpp apps/ext/imgui/imgui_impl_opengl3.cpp apps/ext/glad/glad.c)
 
-    add_executable(yview apps/yview.cpp)
-    add_executable(yitrace apps/yitrace.cpp)
-    add_executable(yimview apps/yimview.cpp)
+    add_executable(yscnview apps/yscnview.cpp)
+    add_executable(yscnitrace apps/yscnitrace.cpp)
+    add_executable(yimgview apps/yimgview.cpp)
 
-    target_link_libraries(yview yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
-    target_link_libraries(yitrace yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
-    target_link_libraries(yimview yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
+    target_link_libraries(yscnview yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
+    target_link_libraries(yscnitrace yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
+    target_link_libraries(yimgview yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
 endif(YOCTO_OPENGL)
 
 if(YOCTO_TESTING)
 enable_testing()
-add_executable(yimdiff apps/yimdiff.cpp)
-target_link_libraries(yimdiff yocto)
-set(test-yimproc ${CMAKE_SOURCE_DIR}/tests/_results/test-yimproc.sh)
-set(test-ytrace ${CMAKE_SOURCE_DIR}/tests/_results/test-ytrace.sh)
+add_executable(yimgdiff apps/yimgdiff.cpp)
+target_link_libraries(yimgdiff yocto)
+set(test-yimgproc ${CMAKE_SOURCE_DIR}/tests/_results/test-yimgproc.sh)
+set(test-yscntrace ${CMAKE_SOURCE_DIR}/tests/_results/test-yscntrace.sh)
 set(test-yscnproc ${CMAKE_SOURCE_DIR}/tests/_results/test-yscnproc.sh)
 set(testdir ${CMAKE_SOURCE_DIR}/tests)
 set(outdir ${CMAKE_SOURCE_DIR}/tests/_output)
@@ -128,38 +128,38 @@ set(diffdir ${CMAKE_SOURCE_DIR}/tests/_difference)
 # image io
 foreach(filename "uvgrid.png")
     get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME yimproc-${filename}
-             COMMAND ${test-yimproc} ${testdir}/textures/${filename} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
+    add_test(NAME yimgproc-${filename}
+             COMMAND ${test-yimgproc} ${testdir}/textures/${filename} ${outdir}/yimgproc-${name}.png ${resdir}/yimgproc-${name}.png ${diffdir}/yimgproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # procedurla images
 foreach(name "images1" "images2")
-    add_test(NAME yimproc-${name}
-             COMMAND ${test-yimproc} ::yocto::${name}::/${testdir}/${name}.png ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
+    add_test(NAME yimgproc-${name}
+             COMMAND ${test-yimgproc} ::yocto::${name}::/${testdir}/${name}.png ${outdir}/yimgproc-${name}.png ${resdir}/yimgproc-${name}.png ${diffdir}/yimgproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # eyelight
 foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "materials4.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "eyelight")
     get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME ytrace-${tracer}-${filename}
-            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 4 -r 640"
+    add_test(NAME yscntrace-${tracer}-${filename}
+            COMMAND ${test-yscntrace} ${testdir}/${filename} ${outdir}/yscntrace-${tracer}-${name}.png ${resdir}/yscntrace-${tracer}-${name}.png ${diffdir}/yscntrace-${tracer}-${name}.png "-t ${tracer} -s 4 -r 640"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # path
 foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "materials4.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME ytrace-${tracer}-${filename}
-            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 16 -r 640"
+    add_test(NAME yscntrace-${tracer}-${filename}
+            COMMAND ${test-yscntrace} ${testdir}/${filename} ${outdir}/yscntrace-${tracer}-${name}.png ${resdir}/yscntrace-${tracer}-${name}.png ${diffdir}/yscntrace-${tracer}-${name}.png "-t ${tracer} -s 16 -r 640"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 # naive
 foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "naive")
     get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME ytrace-${tracer}-${filename}
-            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 16 -r 640"
+    add_test(NAME yscntrace-${tracer}-${filename}
+            COMMAND ${test-yscntrace} ${testdir}/${filename} ${outdir}/yscntrace-${tracer}-${name}.png ${resdir}/yscntrace-${tracer}-${name}.png ${diffdir}/yscntrace-${tracer}-${name}.png "-t ${tracer} -s 16 -r 640"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 if(YOCTO_EMBREE)
@@ -167,8 +167,8 @@ if(YOCTO_EMBREE)
 foreach(filename "features1.yaml" "materials1.yaml" "materials2.yaml" "materials3.yaml" "shapes1.yaml" "shapes2.yaml" "shapes3.yaml" "arealights1.yaml" "environments1.yaml")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME ytrace-embree-${tracer}-${filename}
-            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-embree-${tracer}-${name}.png ${resdir}/ytrace-embree-${tracer}-${name}.png ${diffdir}/ytrace-embree-${tracer}-${name}.png "-t ${tracer} --bvh-embree -s 16 -r 640"
+    add_test(NAME yscntrace-embree-${tracer}-${filename}
+            COMMAND ${test-yscntrace} ${testdir}/${filename} ${outdir}/yscntrace-embree-${tracer}-${name}.png ${resdir}/yscntrace-embree-${tracer}-${name}.png ${diffdir}/yscntrace-embree-${tracer}-${name}.png "-t ${tracer} --bvh-embree -s 16 -r 640"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
 endif(YOCTO_EMBREE)
