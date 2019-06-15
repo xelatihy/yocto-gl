@@ -562,38 +562,6 @@ vector<image_region> make_regions(
   return regions;
 }
 
-// Apply a function to each image pixel
-template <typename T1, typename T2, typename Func>
-static inline void apply_image(
-    image<T1>& result, const image<T2>& source, const Func& func) {
-  result.resize(source.size());
-  for (auto j = 0; j < result.size().y; j++) {
-    for (auto i = 0; i < result.size().x; i++) {
-      result[{i, j}] = func(source[{i, j}]);
-    }
-  }
-}
-template <typename T1, typename T2, typename Func>
-static inline image<T1> apply_image(const image<T2>& source, const Func& func) {
-  auto result = image<T1>{source.size()};
-  for (auto j = 0; j < result.size().y; j++) {
-    for (auto i = 0; i < result.size().x; i++) {
-      result[{i, j}] = func(source[{i, j}]);
-    }
-  }
-  return result;
-}
-template <typename T1, typename T2, typename Func>
-static inline void apply_image(image<T1>& result, const image<T2>& source,
-    const image_region& region, const Func& func) {
-  result.resize(source.size());
-  for (auto j = region.min.y; j < region.max.y; j++) {
-    for (auto i = region.min.x; i < region.max.x; i++) {
-      result[{i, j}] = func(source[{i, j}]);
-    }
-  }
-}
-
 // Conversion from/to floats.
 void byte_to_float(image<vec4f>& fl, const image<vec4b>& bt) {
   fl.resize(bt.size());
