@@ -796,7 +796,7 @@ void update(const opengl_window& win, app_state& app) {
         if (scn.lights.instances.empty() && scn.lights.environments.empty() &&
             is_sampler_lit(scn.trace_prms)) {
           log_glinfo(win, "no lights presents, switching to eyelight shader");
-          scn.trace_prms.sampler = trace_sampler_type::eyelight;
+          scn.trace_prms.sampler = trace_params::sampler_type::eyelight;
         }
         scn.render_sample = 0;
         scn.name          = fs::path(scn.filename).filename().string() + " [" +
@@ -913,16 +913,17 @@ int main(int argc, char* argv[]) {
   auto filenames       = vector<string>{};
 
   // names for enums
-  auto trace_sampler_type_namemap = std::map<string, trace_sampler_type>{};
+  auto sampler_namemap =
+      std::map<string, trace_params::sampler_type>{};
   for (auto type = 0; type < trace_sampler_names.size(); type++) {
-    trace_sampler_type_namemap[trace_sampler_names[type]] =
-        (trace_sampler_type)type;
+    sampler_namemap[trace_sampler_names[type]] =
+        (trace_params::sampler_type)type;
   }
-  auto trace_falsecolor_type_namemap =
-      std::map<string, trace_falsecolor_type>{};
+  auto falsecolor_namemap =
+      std::map<string, trace_params::falsecolor_type>{};
   for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
-    trace_falsecolor_type_namemap[trace_falsecolor_names[type]] =
-        (trace_falsecolor_type)type;
+    falsecolor_namemap[trace_falsecolor_names[type]] =
+        (trace_params::falsecolor_type)type;
   }
 
   // parse command line
@@ -935,11 +936,11 @@ int main(int argc, char* argv[]) {
   parser.add_option(
       "--samples,-s", app.trace_prms.samples, "Number of samples.");
   parser.add_option("--tracer,-t", app.trace_prms.sampler, "Tracer type.")
-      ->transform(CLI::IsMember(trace_sampler_type_namemap));
+      ->transform(CLI::IsMember(sampler_namemap));
   parser
       .add_option("--falsecolor,-F", app.trace_prms.falsecolor,
           "Tracer false color type.")
-      ->transform(CLI::IsMember(trace_falsecolor_type_namemap));
+      ->transform(CLI::IsMember(falsecolor_namemap));
   parser.add_option(
       "--bounces", app.trace_prms.bounces, "Maximum number of bounces.");
   parser.add_option("--clamp", app.trace_prms.clamp, "Final pixel clamping.");

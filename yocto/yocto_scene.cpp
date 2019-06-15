@@ -326,7 +326,7 @@ vector<float> sample_shape_cdf(const yocto_shape& shape) {
     return sample_quads_cdf(shape.quadspos, shape.positions);
   } else {
     throw std::runtime_error("empty shape");
-    return  {};
+    return {};
   }
 }
 
@@ -357,12 +357,12 @@ float sample_shape_pdf(const yocto_shape& shape, const vector<float>& cdf,
 }
 
 // Update environment CDF for sampling.
-vector<float> sample_environment_cdf(const yocto_scene& scene,
-    const yocto_environment& environment) {
+vector<float> sample_environment_cdf(
+    const yocto_scene& scene, const yocto_environment& environment) {
   if (environment.emission_tex < 0) return {};
-  auto& texture = scene.textures[environment.emission_tex];
-  auto  size    = texture_size(texture);
-  auto texels_cdf = vector<float>(size.x * size.y);
+  auto& texture    = scene.textures[environment.emission_tex];
+  auto  size       = texture_size(texture);
+  auto  texels_cdf = vector<float>(size.x * size.y);
   if (size != zero2i) {
     for (auto i = 0; i < texels_cdf.size(); i++) {
       auto ij       = vec2i{i % size.x, i / size.x};

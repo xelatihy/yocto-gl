@@ -466,11 +466,11 @@ vec3f eval_environment(const yocto_scene& scene,
 vec3f eval_environment(const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
-vec3f sample_environment(const yocto_scene& scene,
-    const yocto_environment& environment, const vector<float>& texels_cdf,
-    float re, const vec2f& ruv);
-vector<float>  sample_environment_cdf(const yocto_scene& scene,
-     const yocto_environment& environment);
+vec3f         sample_environment(const yocto_scene& scene,
+            const yocto_environment& environment, const vector<float>& texels_cdf,
+            float re, const vec2f& ruv);
+vector<float> sample_environment_cdf(
+    const yocto_scene& scene, const yocto_environment& environment);
 void  sample_environment_cdf(const yocto_scene& scene,
      const yocto_environment& environment, vector<float>& texels_cdf);
 float sample_environment_pdf(const yocto_scene& scene,

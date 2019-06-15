@@ -1329,66 +1329,66 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
       scene, instance, intersection.element, intersection.uv);
 
   switch (params.falsecolor) {
-    case trace_falsecolor_type::normal: {
+    case trace_params::falsecolor_type::normal: {
       return {normal * 0.5f + 0.5f, 1};
     }
-    case trace_falsecolor_type::frontfacing: {
+    case trace_params::falsecolor_type::frontfacing: {
       auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
                                                    : vec3f{1, 0, 0};
       return {frontfacing, 1};
     }
-    case trace_falsecolor_type::gnormal: {
+    case trace_params::falsecolor_type::gnormal: {
       auto normal = eval_element_normal(
           scene, instance, intersection.element, true);
       return {normal * 0.5f + 0.5f, 1};
     }
-    case trace_falsecolor_type::gfrontfacing: {
+    case trace_params::falsecolor_type::gfrontfacing: {
       auto normal = eval_element_normal(
           scene, instance, intersection.element, true);
       auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
                                                    : vec3f{1, 0, 0};
       return {frontfacing, 1};
     }
-    case trace_falsecolor_type::texcoord: {
+    case trace_params::falsecolor_type::texcoord: {
       auto texcoord = eval_texcoord(
           shape, intersection.element, intersection.uv);
       return {{texcoord.x, texcoord.y, 0}, 1};
     }
-    case trace_falsecolor_type::color: {
+    case trace_params::falsecolor_type::color: {
       auto color = eval_color(shape, intersection.element, intersection.uv);
       return {xyz(color), 1};
     }
-    case trace_falsecolor_type::emission: {
+    case trace_params::falsecolor_type::emission: {
       return {material.emission, 1};
     }
-    case trace_falsecolor_type::diffuse: {
+    case trace_params::falsecolor_type::diffuse: {
       return {material.diffuse, 1};
     }
-    case trace_falsecolor_type::specular: {
+    case trace_params::falsecolor_type::specular: {
       return {material.specular, 1};
     }
-    case trace_falsecolor_type::transmission: {
+    case trace_params::falsecolor_type::transmission: {
       return {material.transmission, 1};
     }
-    case trace_falsecolor_type::roughness: {
+    case trace_params::falsecolor_type::roughness: {
       return {vec3f{material.roughness}, 1};
     }
-    case trace_falsecolor_type::material: {
+    case trace_params::falsecolor_type::material: {
       auto hashed = std::hash<int>()(instance.material);
       auto rng_   = make_rng(trace_default_seed, hashed);
       return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
     }
-    case trace_falsecolor_type::shape: {
+    case trace_params::falsecolor_type::shape: {
       auto hashed = std::hash<int>()(instance.shape);
       auto rng_   = make_rng(trace_default_seed, hashed);
       return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
     }
-    case trace_falsecolor_type::instance: {
+    case trace_params::falsecolor_type::instance: {
       auto hashed = std::hash<int>()(intersection.instance);
       auto rng_   = make_rng(trace_default_seed, hashed);
       return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
     }
-    case trace_falsecolor_type::highlight: {
+    case trace_params::falsecolor_type::highlight: {
       auto emission = material.emission;
       auto outgoing = -direction;
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
@@ -1406,10 +1406,10 @@ using trace_sampler_func = pair<vec3f, bool> (*)(const yocto_scene& scene,
     const vec3f& direction, rng_state& rng, const trace_params& params);
 trace_sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
-    case trace_sampler_type::path: return trace_path;
-    case trace_sampler_type::naive: return trace_naive;
-    case trace_sampler_type::eyelight: return trace_eyelight;
-    case trace_sampler_type::falsecolor: return trace_falsecolor;
+    case trace_params::sampler_type::path: return trace_path;
+    case trace_params::sampler_type::naive: return trace_naive;
+    case trace_params::sampler_type::eyelight: return trace_eyelight;
+    case trace_params::sampler_type::falsecolor: return trace_falsecolor;
     default: {
       throw std::runtime_error("sampler unknown");
       return nullptr;
@@ -1420,10 +1420,10 @@ trace_sampler_func get_trace_sampler_func(const trace_params& params) {
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params) {
   switch (params.sampler) {
-    case trace_sampler_type::path: return true;
-    case trace_sampler_type::naive: return true;
-    case trace_sampler_type::eyelight: return true;
-    case trace_sampler_type::falsecolor: return true;
+    case trace_params::sampler_type::path: return true;
+    case trace_params::sampler_type::naive: return true;
+    case trace_params::sampler_type::eyelight: return true;
+    case trace_params::sampler_type::falsecolor: return true;
     default: {
       throw std::runtime_error("sampler unknown");
       return false;
