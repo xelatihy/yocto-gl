@@ -1997,24 +1997,6 @@ void save_image(
   }
 }
 
-// Save with a logo embedded
-void save_image_with_logo(const string& filename, const image<vec4f>& img) {
-  auto logo = image<vec4f>{};
-  make_logo(logo, "logo-medium");
-  auto img_copy = img;
-  auto offset   = img.size() - logo.size() - 8;
-  set_region(img_copy, logo, offset);
-  save_image(filename, img_copy);
-}
-void save_image_with_logo(const string& filename, const image<vec4b>& img) {
-  auto logo = image<vec4b>{};
-  make_logo(logo, "logo-medium");
-  auto img_copy = img;
-  auto offset   = img.size() - logo.size() - 8;
-  set_region(img_copy, logo, offset);
-  save_image(filename, img_copy);
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
