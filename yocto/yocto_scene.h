@@ -306,6 +306,26 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge);
 string format_stats(
     const yocto_scene& scene, const string& prefix = "", bool verbose = false);
 
+// Add missing names, normals, tangents and hierarchy.
+void add_normals(yocto_scene& scene);
+void add_tangent_spaces(yocto_scene& scene);
+void add_materials(yocto_scene& scene);
+void add_cameras(yocto_scene& scene);
+void add_radius(yocto_scene& scene, float radius = 0.001f);
+
+// Normalize URIs and add missing ones. Assumes names are unique.
+void normalize_uris(yocto_scene& sceme);
+void rename_instances(yocto_scene& scene);
+
+// Add a sky environment
+void add_sky(yocto_scene& scene, float sun_angle = pif / 4);
+
+// Reduce memory usage
+void trim_memory(yocto_scene& scene);
+
+// Checks for validity of the scene.
+void print_validation(const yocto_scene& scene, bool notextures = false);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -326,7 +346,8 @@ bbox3f compute_bounds(const yocto_shape& shape);
 bbox3f compute_bounds(const yocto_scene& scene);
 
 // Compute shape vertex normals
-void compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
+vector<vec3f> compute_normals(const yocto_shape& shape);
+void          compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Apply subdivision and displacement rules.
 void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
@@ -335,26 +356,6 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     float scale, bool compute_normals);
 void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv);
 void tesselate_subdivs(yocto_scene& scene);
-
-// Add missing names, normals, tangents and hierarchy.
-void add_normals(yocto_scene& scene);
-void add_tangent_spaces(yocto_scene& scene);
-void add_materials(yocto_scene& scene);
-void add_cameras(yocto_scene& scene);
-void add_radius(yocto_scene& scene, float radius = 0.001f);
-
-// Normalize URIs and add missing ones. Assumes names are unique.
-void normalize_uris(yocto_scene& sceme);
-void rename_instances(yocto_scene& scene);
-
-// Add a sky environment
-void add_sky(yocto_scene& scene, float sun_angle = pif / 4);
-
-// Reduce memory usage
-void trim_memory(yocto_scene& scene);
-
-// Checks for validity of the scene.
-void print_validation(const yocto_scene& scene, bool notextures = false);
 
 // Build/refit the bvh acceleration structure.
 void build_bvh(
@@ -379,9 +380,10 @@ pair<mat3f, bool> eval_element_tangent_basis(
     const yocto_shape& shape, int element, const vec2f& uv = zero2f);
 
 // Sample a shape element based on area/length.
-void             sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf);
 pair<int, vec2f> sample_shape(const yocto_shape& shape,
     const vector<float>& cdf, float re, const vec2f& ruv);
+vector<float>    sample_shape_cdf(const yocto_shape& shape);
+void             sample_shape_cdf(const yocto_shape& shape, vector<float>& cdf);
 float sample_shape_pdf(const yocto_shape& shape, const vector<float>& cdf,
     int element, const vec2f& uv);
 
@@ -464,11 +466,13 @@ vec3f eval_environment(const yocto_scene& scene,
 vec3f eval_environment(const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
-void  sample_environment_cdf(const yocto_scene& scene,
-     const yocto_environment& environment, vector<float>& texels_cdf);
 vec3f sample_environment(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     float re, const vec2f& ruv);
+vector<float>  sample_environment_cdf(const yocto_scene& scene,
+     const yocto_environment& environment);
+void  sample_environment_cdf(const yocto_scene& scene,
+     const yocto_environment& environment, vector<float>& texels_cdf);
 float sample_environment_pdf(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     const vec3f& direction);
