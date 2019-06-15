@@ -771,6 +771,13 @@ void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert,
     swap(tvert, vert);
   }
 }
+template <typename T>
+pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
+    const vector<vec2i>& lines, const vector<T>& vert, int level) {
+  auto tess = pair<vector<vec2i>, vector<T>>{};
+  subdivide_lines_impl(tess.first, tess.second, lines, vert, level);
+  return tess;
+}
 
 // Subdivide triangle.
 template <typename T>
@@ -814,6 +821,13 @@ void subdivide_triangles_impl(vector<vec3i>& triangles, vector<T>& vert,
     swap(ttriangles, triangles);
     swap(tvert, vert);
   }
+}
+template <typename T>
+pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
+    const vector<vec3i>& triangles, const vector<T>& vert, int level) {
+  auto tess = pair<vector<vec3i>, vector<T>>{};
+  subdivide_triangles_impl(tess.first, tess.second, triangles, vert, level);
+  return tess;
 }
 
 // Subdivide quads.
@@ -879,6 +893,13 @@ void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert,
     swap(tvert, vert);
   }
 }
+template <typename T>
+pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
+    const vector<vec4i>& quads, const vector<T>& vert, int level) {
+  auto tess = pair<vector<vec4i>, vector<T>>{};
+  subdivide_quads_impl(tess.first, tess.second, quads, vert, level);
+  return tess;
+}
 
 // Subdivide beziers.
 template <typename T>
@@ -919,6 +940,13 @@ void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert,
     swap(tbeziers, beziers);
     swap(tvert, vert);
   }
+}
+template <typename T>
+pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
+    const vector<vec4i>& beziers, const vector<T>& vert, int level) {
+  auto tess = pair<vector<vec4i>, vector<T>>{};
+  subdivide_beziers_impl(tess.first, tess.second, beziers, vert, level);
+  return tess;
 }
 
 // Subdivide catmullclark.
@@ -1051,6 +1079,13 @@ void subdivide_catmullclark_impl(vector<vec4i>& quads, vector<T>& vert,
     swap(tvert, vert);
   }
 }
+template <typename T>
+pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
+    const vector<vec4i>& quads, const vector<T>& vert, int level, bool lock_boundary) {
+  auto tess = pair<vector<vec4i>, vector<T>>{};
+  subdivide_catmullclark_impl(tess.first, tess.second, quads, vert, level, lock_boundary);
+  return tess;
+}
 
 template <typename T, typename SubdivideFunc>
 void subdivide_elems_impl(vector<T>& selems, vector<vec3f>& spositions,
@@ -1125,6 +1160,22 @@ void subdivide_elems_impl(vector<T>& selems, vector<vec3f>& spositions,
   }
 }
 
+pair<vector<vec2i>, vector<float>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<float>& vert, int level) {
+  return subdivide_lines_impl(lines, vert, level);
+}
+pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<vec2f>& vert, int level) {
+  return subdivide_lines_impl(lines, vert, level);
+}
+pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<vec3f>& vert, int level) {
+  return subdivide_lines_impl(lines, vert, level);
+}
+pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<vec4f>& vert, int level) {
+  return subdivide_lines_impl(lines, vert, level);
+}
 void subdivide_lines(vector<vec2i>& slines, vector<float>& svert,
     const vector<vec2i>& lines, const vector<float>& vert, int level) {
   subdivide_lines_impl(slines, svert, lines, vert, level);
@@ -1154,6 +1205,22 @@ void subdivide_lines(vector<vec2i>& slines, vector<vec3f>& spositions,
       });
 }
 
+pair<vector<vec3i>, vector<float>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<float>& vert, int level) {
+  return subdivide_triangles_impl(triangles, vert, level);
+}
+pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<vec2f>& vert, int level) {
+  return subdivide_triangles_impl(triangles, vert, level);
+}
+pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<vec3f>& vert, int level) {
+  return subdivide_triangles_impl(triangles, vert, level);
+}
+pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<vec4f>& vert, int level) {
+  return subdivide_triangles_impl(triangles, vert, level);
+}
 void subdivide_triangles(vector<vec3i>& striangles, vector<float>& svert,
     const vector<vec3i>& triangles, const vector<float>& vert, int level) {
   subdivide_triangles_impl(striangles, svert, triangles, vert, level);
@@ -1184,6 +1251,22 @@ void subdivide_triangles(vector<vec3i>& striangles, vector<vec3f>& spositions,
       });
 }
 
+pair<vector<vec4i>, vector<float>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<float>& vert, int level) {
+  return subdivide_quads_impl(quads, vert, level);
+}
+pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<vec2f>& vert, int level) {
+  return subdivide_quads_impl(quads, vert, level);
+}
+pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<vec3f>& vert, int level) {
+  return subdivide_quads_impl(quads, vert, level);
+}
+pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<vec4f>& vert, int level) {
+  return subdivide_quads_impl(quads, vert, level);
+}
 void subdivide_quads(vector<vec4i>& squads, vector<float>& svert,
     const vector<vec4i>& quads, const vector<float>& vert, int level) {
   subdivide_quads_impl(squads, svert, quads, vert, level);
@@ -1213,6 +1296,22 @@ void subdivide_quads(vector<vec4i>& squads, vector<vec3f>& spositions,
       });
 }
 
+pair<vector<vec4i>, vector<float>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<float>& vert, int level) {
+  subdivide_beziers_impl(beziers, vert, level);
+}
+pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<vec2f>& vert, int level) {
+  subdivide_beziers_impl(beziers, vert, level);
+}
+pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<vec3f>& vert, int level) {
+  subdivide_beziers_impl(beziers, vert, level);
+}
+pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<vec4f>& vert, int level) {
+  subdivide_beziers_impl(beziers, vert, level);
+}
 void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
     const vector<vec4i>& beziers, const vector<float>& vert, int level) {
   subdivide_beziers_impl(sbeziers, svert, beziers, vert, level);
@@ -1242,6 +1341,26 @@ void subdivide_beziers(vector<vec4i>& sbeziers, vector<vec3f>& spositions,
       });
 }
 
+pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<float>& vert, int level,
+    bool lock_boundary) {
+  return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+}
+pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec2f>& vert, int level,
+    bool lock_boundary) {
+  return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+}
+pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec3f>& vert, int level,
+    bool lock_boundary) {
+  return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+}
+pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
+    bool lock_boundary) {
+  return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+}
 void subdivide_catmullclark(vector<vec4i>& squads, vector<float>& svert,
     const vector<vec4i>& quads, const vector<float>& vert, int level,
     bool lock_boundary) {
