@@ -172,8 +172,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
 
   auto& camera     = scene.cameras.at(trace_prms.camera);
   auto  image_size = camera_resolution(camera, trace_prms.resolution);
-  state            = trace_state{};
-  init_trace_state(state, image_size, trace_prms.seed);
+  state            = make_trace_state(image_size, trace_prms.seed);
   auto regions = make_regions(render.size(), trace_prms.region, true);
 
   for (auto sample = 0; sample < trace_prms.samples;
@@ -774,7 +773,7 @@ void update(const opengl_window& win, app_state& app) {
         log_glinfo(win, "start building lights " + scn.filename);
         scn.lights_done = false;
         task.result     = std::async(std::launch::async,
-            [&scn]() { init_trace_lights(scn.lights, scn.scene); });
+            [&scn]() { scn.lights = make_trace_lights(scn.scene); });
       } break;
       case app_task_type::save_image: {
         log_glinfo(win, "start saving " + scn.imagename);

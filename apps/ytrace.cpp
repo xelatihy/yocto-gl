@@ -157,10 +157,9 @@ int main(int argc, char* argv[]) {
   printf(" in %s\n", bvh_timer.elapsedf().c_str());
 
   // init renderer
-  auto lights = trace_lights{};
   printf("building lights");
   auto lights_timer = timer();
-  init_trace_lights(lights, scene);
+  auto lights = make_trace_lights(scene);
   printf(" in %s\n", lights_timer.elapsedf().c_str());
 
   // fix renderer type if no lights
@@ -174,8 +173,7 @@ int main(int argc, char* argv[]) {
   auto image_size = camera_resolution(
       scene.cameras[trace_prms.camera], trace_prms.resolution);
   auto render = image{image_size, zero4f};
-  auto state  = trace_state{};
-  init_trace_state(state, image_size, trace_prms.seed);
+  auto state  = make_trace_state(image_size, trace_prms.seed);
 
   // render
   for (auto sample = 0; sample < trace_prms.samples;
