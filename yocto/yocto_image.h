@@ -308,19 +308,9 @@ void load_image(const string& filename, image<vec4f>& hdr, image<vec4b>& ldr);
 void save_image(
     const string& filename, const image<vec4f>& hdr, const image<vec4b>& ldr);
 
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-void save_tonemapped(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params);
-
 // Save with a logo embedded
 void save_image_with_logo(const string& filename, const image<vec4f>& img);
 void save_image_with_logo(const string& filename, const image<vec4b>& img);
-
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params);
 
 }  // namespace yocto
 

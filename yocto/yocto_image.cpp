@@ -1997,17 +1997,6 @@ void save_image(
   }
 }
 
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-void save_tonemapped(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params) {
-  if (is_hdr_filename(filename)) {
-    save_image(filename, hdr);
-  } else {
-    save_image(filename, tonemapb(hdr, params));
-  }
-}
-
 // Save with a logo embedded
 void save_image_with_logo(const string& filename, const image<vec4f>& img) {
   auto logo = image<vec4f>{};
@@ -2024,17 +2013,6 @@ void save_image_with_logo(const string& filename, const image<vec4b>& img) {
   auto offset   = img.size() - logo.size() - 8;
   set_region(img_copy, logo, offset);
   save_image(filename, img_copy);
-}
-
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-void save_tonemapped_with_logo(const string& filename, const image<vec4f>& hdr,
-    const tonemap_params& params) {
-  if (is_hdr_filename(filename)) {
-    save_image_with_logo(filename, hdr);
-  } else {
-    save_image_with_logo(filename, tonemapb(hdr, params));
-  }
 }
 
 }  // namespace yocto

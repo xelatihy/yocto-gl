@@ -189,10 +189,13 @@ int main(int argc, char* argv[]) {
                                  fs::path(imfilename).extension().string())
                              .string();
       try {
-        if (logo) {
-          save_tonemapped_with_logo(outfilename, render, tonemap_prms);
+        if (is_hdr_filename(outfilename)) {
+          save_image(
+              outfilename, logo ? add_logo(render, "logo-medium") : render);
         } else {
-          save_tonemapped(outfilename, render, tonemap_prms);
+          save_image(outfilename,
+              logo ? add_logo(tonemapb(render, tonemap_prms), "logo-medium")
+                   : tonemapb(render, tonemap_prms));
         }
       } catch (const std::exception& e) {
         printf("%s\n", e.what());
@@ -205,10 +208,12 @@ int main(int argc, char* argv[]) {
   printf("saving image");
   auto save_timer = timer();
   try {
-    if (logo) {
-      save_tonemapped_with_logo(imfilename, render, tonemap_prms);
+    if (is_hdr_filename(imfilename)) {
+      save_image(imfilename, logo ? add_logo(render, "logo-medium") : render);
     } else {
-      save_tonemapped(imfilename, render, tonemap_prms);
+      save_image(imfilename,
+          logo ? add_logo(tonemapb(render, tonemap_prms), "logo-medium")
+               : tonemapb(render, tonemap_prms));
     }
   } catch (const std::exception& e) {
     printf("%s\n", e.what());

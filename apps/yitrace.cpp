@@ -778,7 +778,11 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::save_image: {
         log_glinfo(win, "start saving " + scn.imagename);
         task.result = std::async(std::launch::async, [&scn]() {
-          save_tonemapped(scn.imagename, scn.render, scn.tonemap_prms);
+          if (is_hdr_filename(scn.imagename)) {
+            save_image(scn.imagename, scn.render);
+          } else {
+            save_image(scn.imagename, tonemapb(scn.render, scn.tonemap_prms));
+          }
         });
       } break;
       case app_task_type::save_scene: {
