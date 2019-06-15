@@ -1081,9 +1081,11 @@ void subdivide_catmullclark_impl(vector<vec4i>& quads, vector<T>& vert,
 }
 template <typename T>
 pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
-    const vector<vec4i>& quads, const vector<T>& vert, int level, bool lock_boundary) {
+    const vector<vec4i>& quads, const vector<T>& vert, int level,
+    bool lock_boundary) {
   auto tess = pair<vector<vec4i>, vector<T>>{};
-  subdivide_catmullclark_impl(tess.first, tess.second, quads, vert, level, lock_boundary);
+  subdivide_catmullclark_impl(
+      tess.first, tess.second, quads, vert, level, lock_boundary);
   return tess;
 }
 
@@ -1420,8 +1422,8 @@ void sample_points_cdf(vector<float>& cdf, int npoints) {
 pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru) {
   return {sample_discrete(cdf, re), ru};
 }
-vector<float> sample_lines_cdf(const vector<vec2i>& lines,
-    const vector<vec3f>& positions) {
+vector<float> sample_lines_cdf(
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
   auto cdf = vector<float>(lines.size());
   for (auto i = 0; i < cdf.size(); i++) {
     auto l = lines[i];
@@ -1445,8 +1447,8 @@ pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv) {
   return {sample_discrete(cdf, re), sample_triangle(ruv)};
 }
-vector<float> sample_triangles_cdf(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions) {
+vector<float> sample_triangles_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
   auto cdf = vector<float>(triangles.size());
   for (auto i = 0; i < cdf.size(); i++) {
     auto t = triangles[i];
@@ -1479,8 +1481,8 @@ pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
     return {element, ruv};
   }
 }
-vector<float> sample_quads_cdf(const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
+vector<float> sample_quads_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
   auto cdf = vector<float>(quads.size());
   for (auto i = 0; i < cdf.size(); i++) {
     auto q = quads[i];
@@ -2060,9 +2062,9 @@ extern const vector<vec3f> suzanne_positions;
 extern const vector<vec4i> suzanne_quads;
 
 // Make a procedural shape
-void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
+void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const procshape_params& params) {
+    const proc_shape_params& params) {
   auto subdivide_quads_pnt = [&](auto& qquads, auto& qpositions, auto& qnormals,
                                  auto& qtexcoords) {
     struct vertex {
@@ -2112,7 +2114,7 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
   normals.clear();
   texcoords.clear();
   switch (params.type) {
-    case make_shape_type::quad: {
+    case proc_shape_params::type_t::quad: {
       subdivide_quads_pnt(
           quad_quads, quad_positions, quad_normals, quad_texcoords);
       if (params.rounded) {
@@ -2126,7 +2128,7 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
         }
       }
     } break;
-    case make_shape_type::floor: {
+    case proc_shape_params::type_t::floor: {
       subdivide_quads_pnt(
           quady_quads, quady_positions, quady_normals, quady_texcoords);
       if (params.rounded) {
@@ -2148,7 +2150,7 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
         }
       }
     } break;
-    case make_shape_type::cube: {
+    case proc_shape_params::type_t::cube: {
       subdivide_quads_pnt(
           cube_quads, cube_positions, cube_normals, cube_texcoords);
       auto steps  = vec3i{pow2(params.subdivisions)};
@@ -2188,13 +2190,13 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
         }
       }
     } break;
-    case make_shape_type::sphere: {
+    case proc_shape_params::type_t::sphere: {
       subdivide_quads_pnt(
           cube_quads, cube_positions, cube_normals, cube_texcoords);
       for (auto& p : positions) p = normalize(p);
       normals = positions;
     } break;
-    case make_shape_type::uvsphere: {
+    case proc_shape_params::type_t::uvsphere: {
       subdivide_quads_pnt(
           quad_quads, quad_positions, quad_normals, quad_texcoords);
       for (auto i = 0; i < positions.size(); i++) {
@@ -2220,7 +2222,7 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
         }
       }
     } break;
-    case make_shape_type::disk: {
+    case proc_shape_params::type_t::disk: {
       subdivide_quads_pnt(
           quad_quads, quad_positions, quad_normals, quad_texcoords);
       for (auto i = 0; i < positions.size(); i++) {
@@ -2242,7 +2244,7 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
         }
       }
     } break;
-    case make_shape_type::matball: {
+    case proc_shape_params::type_t::matball: {
       subdivide_quads_pnt(
           cube_quads, cube_positions, cube_normals, cube_texcoords);
       for (auto i = 0; i < positions.size(); i++) {
@@ -2251,10 +2253,10 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
         normals[i]   = normalize(p);
       }
     } break;
-    case make_shape_type::suzanne: {
+    case proc_shape_params::type_t::suzanne: {
       subdivide_quads_p(suzanne_quads, suzanne_positions);
     } break;
-    case make_shape_type::box: {
+    case proc_shape_params::type_t::box: {
       auto steps = vec3i{
           (int)round(pow2(params.subdivisions) * params.aspect.x),
           (int)round(pow2(params.subdivisions) * params.aspect.y),
@@ -2295,7 +2297,7 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
         }
       }
     } break;
-    case make_shape_type::rect: {
+    case proc_shape_params::type_t::rect: {
       auto steps = vec2i{
           (int)round(pow2(params.subdivisions) * params.aspect.x),
           (int)round(pow2(params.subdivisions) * params.aspect.y)};
@@ -2303,7 +2305,7 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
       auto size   = 2 * vec2f{params.aspect.x, params.aspect.y};
       make_rect(quads, positions, normals, texcoords, steps, size, uvsize);
     } break;
-    case make_shape_type::rect_stack: {
+    case proc_shape_params::type_t::rect_stack: {
       auto steps = vec3i{
           (int)round(pow2(params.subdivisions) * params.aspect.x),
           (int)round(pow2(params.subdivisions) * params.aspect.y),
@@ -2322,7 +2324,7 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
             qnormals, qtexturecoords);
       }
     } break;
-    case make_shape_type::uvdisk: {
+    case proc_shape_params::type_t::uvdisk: {
       subdivide_quads_pnt(
           quad_quads, quad_positions, quad_normals, quad_texcoords);
       for (auto i = 0; i < positions.size(); i++) {
@@ -2332,7 +2334,7 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
         normals[i]   = {0, 0, 1};
       }
     } break;
-    case make_shape_type::uvcylinder: {
+    case proc_shape_params::type_t::uvcylinder: {
       auto steps = vec3i{
           (int)round(pow2(params.subdivisions + 1) * params.aspect.x),
           (int)round(pow2(params.subdivisions + 0) * params.aspect.y),
@@ -2406,7 +2408,7 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
         }
       }
     } break;
-    case make_shape_type::geosphere: {
+    case proc_shape_params::type_t::geosphere: {
       // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
       const float X                = 0.525731112119133606f;
       const float Z                = 0.850650808352039932f;
@@ -2436,12 +2438,12 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
 }
 
 // Make face-varying quads
-void make_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+void make_proc_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const procshape_params& params) {
+    const proc_shape_params& params) {
   switch (params.type) {
-    case make_shape_type::quad: {
+    case proc_shape_params::type_t::quad: {
       subdivide_quads(
           quadspos, positions, quad_quads, quad_positions, params.subdivisions);
       subdivide_quads(
@@ -2449,7 +2451,7 @@ void make_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
       subdivide_quads(quadstexcoord, texcoords, quad_quads, quad_texcoords,
           params.subdivisions);
     } break;
-    case make_shape_type::cube: {
+    case proc_shape_params::type_t::cube: {
       subdivide_quads(quadspos, positions, fvcube_quads, fvcube_positions,
           params.subdivisions);
       subdivide_quads(
@@ -2457,7 +2459,7 @@ void make_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
       subdivide_quads(quadstexcoord, texcoords, cube_quads, cube_texcoords,
           params.subdivisions);
     } break;
-    case make_shape_type::sphere: {
+    case proc_shape_params::type_t::sphere: {
       subdivide_quads(quadspos, positions, fvcube_quads, fvcube_positions,
           params.subdivisions);
       subdivide_quads(quadstexcoord, texcoords, cube_quads, cube_texcoords,
@@ -2466,7 +2468,7 @@ void make_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
       normals   = positions;
       quadsnorm = quadspos;
     } break;
-    case make_shape_type::suzanne: {
+    case proc_shape_params::type_t::suzanne: {
       subdivide_quads(quadspos, positions, suzanne_quads, suzanne_positions,
           params.subdivisions);
     } break;
@@ -2578,105 +2580,105 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 // Shape presets used ofr testing.
-void make_preset(vector<int>& points, vector<vec2i>& lines,
+void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec4f>& colors, vector<float>& radius, const string& type) {
   if (type == "default-quad") {
-    auto params = procshape_params{};
-    params.type = make_shape_type::quad;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    auto params = proc_shape_params{};
+    params.type = proc_shape_params::type_t::quad;
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-quady") {
-    auto params = procshape_params{};
-    params.type = make_shape_type::quad;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    auto params = proc_shape_params{};
+    params.type = proc_shape_params::type_t::quad;
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-cube") {
-    auto params = procshape_params{};
-    params.type = make_shape_type::cube;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    auto params = proc_shape_params{};
+    params.type = proc_shape_params::type_t::cube;
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-cube-rounded") {
-    auto params    = procshape_params{};
-    params.type    = make_shape_type::cube;
+    auto params    = proc_shape_params{};
+    params.type    = proc_shape_params::type_t::cube;
     params.rounded = 0.15;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-sphere") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::sphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
     params.subdivisions = 5;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-disk") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::disk;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::disk;
     params.subdivisions = 5;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-disk-bulged") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::disk;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::disk;
     params.subdivisions = 5;
     params.rounded      = 0.25;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-quad-bulged") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::quad;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::quad;
     params.subdivisions = 5;
     params.rounded      = 0.25;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-uvsphere") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::uvsphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::uvsphere;
     params.subdivisions = 5;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-uvsphere-flipcap") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::uvsphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::uvsphere;
     params.subdivisions = 5;
     params.rounded      = 0.75;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-uvdisk") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::uvdisk;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::uvdisk;
     params.subdivisions = 4;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-uvcylinder") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::uvcylinder;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::uvcylinder;
     params.subdivisions = 5;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-uvcylinder-rounded") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::uvcylinder;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::uvcylinder;
     params.subdivisions = 5;
     params.rounded      = 0.075;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-geosphere") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::geosphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::geosphere;
     params.subdivisions = 5;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-floor") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::floor;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::floor;
     params.scale        = 20;
     params.uvscale      = 20;
     params.subdivisions = 1;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-floor-bent") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::floor;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::floor;
     params.scale        = 20;
     params.uvscale      = 20;
     params.subdivisions = 5;
     params.rounded      = 0.5;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-matball") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::matball;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::matball;
     params.subdivisions = 5;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-hairball") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::sphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
     params.subdivisions = 5;
     params.scale        = 0.8f;
     auto base_triangles = vector<vec3i>{};
@@ -2684,7 +2686,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    make_proc_image(base_triangles, base_quads, base_positions, base_normals,
+    make_proc_shape(base_triangles, base_quads, base_positions, base_normals,
         base_texcoords, params);
     auto hparams         = make_hair_params{};
     hparams.subdivisions = 2;
@@ -2696,96 +2698,96 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     make_hair(lines, positions, normals, texcoords, radius, base_triangles,
         base_quads, base_positions, base_normals, base_texcoords, hparams);
   } else if (type == "default-hairball-interior") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::sphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
     params.subdivisions = 5;
     params.scale        = 0.8f;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-suzanne") {
-    auto params = procshape_params{};
-    params.type = make_shape_type::suzanne;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    auto params = proc_shape_params{};
+    params.type = proc_shape_params::type_t::suzanne;
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "default-cube-facevarying") {
-    auto params = procshape_params{};
-    params.type = make_shape_type::cube;
-    make_fvshape(quadspos, quadsnorm, quadstexcoord, positions, normals,
+    auto params = proc_shape_params{};
+    params.type = proc_shape_params::type_t::cube;
+    make_proc_fvshape(quadspos, quadsnorm, quadstexcoord, positions, normals,
         texcoords, params);
   } else if (type == "default-sphere-facevarying") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::sphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
     params.subdivisions = 5;
-    make_fvshape(quadspos, quadsnorm, quadstexcoord, positions, normals,
+    make_proc_fvshape(quadspos, quadsnorm, quadstexcoord, positions, normals,
         texcoords, params);
   } else if (type == "test-cube") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::cube;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::cube;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.rounded      = 0.3;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-uvsphere") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::uvsphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::uvsphere;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-uvsphere-flipcap") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::uvsphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::uvsphere;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.rounded      = 0.3;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-sphere") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::sphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-sphere-displaced") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::sphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-disk") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::disk;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::disk;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-uvcylinder") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::uvcylinder;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::uvcylinder;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.rounded      = 0.3;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-floor") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::floor;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::floor;
     params.subdivisions = 0;
     params.scale        = 2;
     params.uvscale      = 20;
     params.frame        = identity3x4f;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-matball") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::matball;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::matball;
     params.subdivisions = 5;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-hairball1") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::sphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
     params.subdivisions = 5;
     params.scale        = 0.075f * 0.8f;
     params.frame        = frame3f{{0, 0.075, 0}};
@@ -2794,7 +2796,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    make_proc_image(base_triangles, base_quads, base_positions, base_normals,
+    make_proc_shape(base_triangles, base_quads, base_positions, base_normals,
         base_texcoords, params);
     auto hparams           = make_hair_params{};
     hparams.num            = 65536;
@@ -2808,8 +2810,8 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     make_hair(lines, positions, normals, texcoords, radius, base_triangles,
         base_quads, base_positions, base_normals, base_texcoords, hparams);
   } else if (type == "test-hairball2") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::sphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
     params.subdivisions = 5;
     params.scale        = 0.075f * 0.8f;
     params.frame        = frame3f{{0, 0.075, 0}};
@@ -2818,7 +2820,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    make_proc_image(base_triangles, base_quads, base_positions, base_normals,
+    make_proc_shape(base_triangles, base_quads, base_positions, base_normals,
         base_texcoords, params);
     auto hparams         = make_hair_params{};
     hparams.num          = 65536;
@@ -2830,8 +2832,8 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     make_hair(lines, positions, normals, texcoords, radius, base_triangles,
         base_quads, base_positions, base_normals, base_texcoords, hparams);
   } else if (type == "test-hairball3") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::sphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
     params.subdivisions = 5;
     params.scale        = 0.075f * 0.8f;
     params.frame        = frame3f{{0, 0.075, 0}};
@@ -2840,7 +2842,7 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    make_proc_image(base_triangles, base_quads, base_positions, base_normals,
+    make_proc_shape(base_triangles, base_quads, base_positions, base_normals,
         base_texcoords, params);
     auto hparams           = make_hair_params{};
     hparams.num            = 65536;
@@ -2854,35 +2856,35 @@ void make_preset(vector<int>& points, vector<vec2i>& lines,
     make_hair(lines, positions, normals, texcoords, radius, base_triangles,
         base_quads, base_positions, base_normals, base_texcoords, hparams);
   } else if (type == "test-hairball-interior") {
-    auto params         = procshape_params{};
-    params.type         = make_shape_type::sphere;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
     params.subdivisions = 5;
     params.scale        = 0.075f * 0.8f;
     params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-suzanne-subdiv") {
-    auto params  = procshape_params{};
-    params.type  = make_shape_type::suzanne;
+    auto params  = proc_shape_params{};
+    params.type  = proc_shape_params::type_t::suzanne;
     params.scale = 0.075f * 0.8f;
     params.frame = frame3f{{0, 0.075, 0}};
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-cube-subdiv") {
-    auto params  = procshape_params{};
-    params.type  = make_shape_type::cube;
+    auto params  = proc_shape_params{};
+    params.type  = proc_shape_params::type_t::cube;
     params.scale = 0.075;
     params.frame = frame3f{{0, 0.075, 0}};
-    make_fvshape(quadspos, quadsnorm, quadstexcoord, positions, normals,
+    make_proc_fvshape(quadspos, quadsnorm, quadstexcoord, positions, normals,
         texcoords, params);
   } else if (type == "test-arealight1") {
-    auto params  = procshape_params{};
-    params.type  = make_shape_type::quad;
+    auto params  = proc_shape_params{};
+    params.type  = proc_shape_params::type_t::quad;
     params.scale = 0.2;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-arealight2") {
-    auto params  = procshape_params{};
-    params.type  = make_shape_type::quad;
+    auto params  = proc_shape_params{};
+    params.type  = proc_shape_params::type_t::quad;
     params.scale = 0.2;
-    make_proc_image(triangles, quads, positions, normals, texcoords, params);
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else {
     throw std::invalid_argument("unknown shape preset " + type);
   }

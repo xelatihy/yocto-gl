@@ -275,11 +275,11 @@ void load_island_lights(
       scene.materials.push_back(material);
       auto shape  = yocto_shape{};
       shape.uri   = "shapes/lights/" + name + ".ply";
-      auto params = procshape_params{};
-      params.type = make_shape_type::quad;
+      auto params = proc_shape_params{};
+      params.type = proc_shape_params::type_t::quad;
       params.scale =
           (ljs.at("width").get<float>() + ljs.at("height").get<float>());
-      make_proc_image(shape.triangles, shape.quads, shape.positions,
+      make_proc_shape(shape.triangles, shape.quads, shape.positions,
           shape.normals, shape.texcoords, params);
       scene.shapes.push_back(shape);
       auto instance     = yocto_instance{};

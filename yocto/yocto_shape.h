@@ -132,7 +132,7 @@ void compute_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
 vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords);
-void          compute_tangent_spaces(vector<vec4f>& tangent_spaces,
+void          compute_tangent_spaces(vector<vec4f>& tangents,
              const vector<vec3i>& triangles, const vector<vec3f>& positions,
              const vector<vec3f>& normals, const vector<vec2f>& texcoords);
 
@@ -459,23 +459,23 @@ void subdivide_catmullclark(vector<vec4i>& squads, vector<vec3f>& spositions,
 namespace yocto {
 
 // Pick a point in a point set uniformly.
-int  sample_points(int npoints, float re);
-int  sample_points(const vector<float>& cdf, float re);
+int           sample_points(int npoints, float re);
+int           sample_points(const vector<float>& cdf, float re);
 vector<float> sample_points_cdf(int npoints);
-void sample_points_cdf(vector<float>& cdf, int npoints);
+void          sample_points_cdf(vector<float>& cdf, int npoints);
 
 // Pick a point on lines uniformly.
 pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru);
-vector<float> sample_lines_cdf(const vector<vec2i>& lines,
-    const vector<vec3f>& positions);
+vector<float>    sample_lines_cdf(
+       const vector<vec2i>& lines, const vector<vec3f>& positions);
 void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
     const vector<vec3f>& positions);
 
 // Pick a point on a triangle mesh uniformly.
 pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv);
-vector<float> sample_triangles_cdf(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions);
+vector<float> sample_triangles_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
 void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
     const vector<vec3f>& positions);
 
@@ -484,8 +484,8 @@ pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv);
 pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv);
-vector<float> sample_quads_cdf(const vector<vec4i>& quads,
-    const vector<vec3f>& positions);
+vector<float>    sample_quads_cdf(
+       const vector<vec4i>& quads, const vector<vec3f>& positions);
 void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
     const vector<vec3f>& positions);
 
@@ -562,45 +562,32 @@ void save_shape(const string& filename, const vector<int>& points,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Type of procedural shape
-enum struct make_shape_type {
-  quad,
-  floor,
-  cube,
-  sphere,
-  disk,
-  matball,
-  suzanne,
-  box,
-  rect,
-  rect_stack,
-  uvsphere,
-  uvdisk,
-  uvcylinder,
-  geosphere,
-};
-
 // Parameters for make shape function
-struct procshape_params {
-  make_shape_type type         = make_shape_type::quad;
-  int             subdivisions = 0;
-  float           scale        = 1;
-  float           uvscale      = 1;
-  float           rounded      = 0;
-  vec3f           aspect       = {1, 1, 1};  // for rect, box, cylinder
-  frame3f         frame        = identity3x4f;
+struct proc_shape_params {
+  // clang-format off
+  enum struct type_t {
+    quad, floor, cube, sphere, disk, matball, suzanne, box, rect, rect_stack,
+    uvsphere, uvdisk, uvcylinder, geosphere };
+  // clang-format on
+  type_t  type         = type_t::quad;
+  int     subdivisions = 0;
+  float   scale        = 1;
+  float   uvscale      = 1;
+  float   rounded      = 0;
+  vec3f   aspect       = {1, 1, 1};  // for rect, box, cylinder
+  frame3f frame        = identity3x4f;
 };
 
 // Make a procedural shape
-void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
+void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const procshape_params& params);
+    const proc_shape_params& params);
 // Make face-varying quads. For now supports only quad, cube, suzanne, sphere,
 // rect, box. Rounding not supported for now.
-void make_improcfvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+void make_proc_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const procshape_params& params);
+    const proc_shape_params& params);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
@@ -653,7 +640,7 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness);
 
 // Shape presets used ofr testing.
-void make_preset(vector<int>& points, vector<vec2i>& lines,
+void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,

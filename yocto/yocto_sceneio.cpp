@@ -416,7 +416,7 @@ void save_textures(const yocto_scene& scene, const string& dirname,
 void load_shape(yocto_shape& shape, const string& dirname) {
   if (is_preset_filename(shape.uri)) {
     auto [type, nfilename] = get_preset_type(shape.uri);
-    make_preset(shape.points, shape.lines, shape.triangles, shape.quads,
+    make_shape_preset(shape.points, shape.lines, shape.triangles, shape.quads,
         shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
         shape.normals, shape.texcoords, shape.colors, shape.radius, type);
     shape.uri = nfilename;
@@ -438,8 +438,8 @@ void save_shape(const yocto_shape& shape, const string& dirname) {
 void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
   if (is_preset_filename(subdiv.uri)) {
     auto [type, nfilename] = get_preset_type(subdiv.uri);
-    make_preset(subdiv.points, subdiv.lines, subdiv.triangles, subdiv.quads,
-        subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+    make_shape_preset(subdiv.points, subdiv.lines, subdiv.triangles,
+        subdiv.quads, subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
         subdiv.positions, subdiv.normals, subdiv.texcoords, subdiv.colors,
         subdiv.radius, type);
     subdiv.uri = nfilename;
@@ -1587,12 +1587,12 @@ struct load_obj_scene_cb : obj_callbacks {
     auto shape = yocto_shape();
     shape.uri  = oproc.name;
     if (oproc.type == "floor") {
-      auto params         = procshape_params{};
-      params.type         = make_shape_type::floor;
+      auto params         = proc_shape_params{};
+      params.type         = proc_shape_params::type_t::floor;
       params.subdivisions = oproc.level < 0 ? 0 : oproc.level;
       params.scale        = oproc.size / 2;
       params.uvscale      = oproc.size;
-      make_proc_image(shape.triangles, shape.quads, shape.positions,
+      make_proc_shape(shape.triangles, shape.quads, shape.positions,
           shape.normals, shape.texcoords, params);
     } else {
       throw std::runtime_error("unknown obj procedural");
@@ -3242,20 +3242,20 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
       } break;
       case pbrt_shape::type_t::sphere: {
         auto& sphere        = pshape.sphere;
-        auto  params        = procshape_params{};
-        params.type         = make_shape_type::uvsphere;
+        auto  params        = proc_shape_params{};
+        params.type         = proc_shape_params::type_t::uvsphere;
         params.subdivisions = 5;
         params.scale        = sphere.radius;
-        make_proc_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
       } break;
       case pbrt_shape::type_t::disk: {
         auto& disk          = pshape.disk;
-        auto  params        = procshape_params{};
-        params.type         = make_shape_type::uvdisk;
+        auto  params        = proc_shape_params{};
+        params.type         = proc_shape_params::type_t::uvdisk;
         params.subdivisions = 4;
         params.scale        = disk.radius;
-        make_proc_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
       } break;
       default: {
@@ -3589,10 +3589,10 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         shape.uri    = name;
         auto dir     = normalize(distant.from - distant.to);
         auto size    = distant_dist * sin(5 * pif / 180);
-        auto params  = procshape_params{};
-        params.type  = make_shape_type::quad;
+        auto params  = proc_shape_params{};
+        params.type  = proc_shape_params::type_t::quad;
         params.scale = size / 2;
-        make_proc_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3614,11 +3614,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto& shape         = scene.shapes.back();
         shape.uri           = name;
         auto size           = 0.005f;
-        auto params         = procshape_params{};
-        params.type         = make_shape_type::sphere;
+        auto params         = proc_shape_params{};
+        params.type         = proc_shape_params::type_t::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_proc_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3639,11 +3639,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto& shape         = scene.shapes.back();
         shape.uri           = name;
         auto size           = 0.005f;
-        auto params         = procshape_params{};
-        params.type         = make_shape_type::sphere;
+        auto params         = proc_shape_params{};
+        params.type         = proc_shape_params::type_t::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_proc_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
@@ -3663,11 +3663,11 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         auto& shape         = scene.shapes.back();
         shape.uri           = name;
         auto size           = 0.005f;
-        auto params         = procshape_params{};
-        params.type         = make_shape_type::sphere;
+        auto params         = proc_shape_params{};
+        params.type         = proc_shape_params::type_t::sphere;
         params.scale        = size;
         params.subdivisions = 2;
-        make_proc_image(shape.triangles, shape.quads, shape.positions,
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, params);
         scene.materials.push_back({});
         auto& material    = scene.materials.back();
