@@ -326,55 +326,86 @@ void merge_triangles_and_quads(
 namespace yocto {
 
 // Subdivide lines by splitting each line in half.
-void subdivide_lines(vector<vec2i>& lines, vector<float>& vert, int level);
-void subdivide_lines(vector<vec2i>& lines, vector<vec2f>& vert, int level);
-void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& vert, int level);
-void subdivide_lines(vector<vec2i>& lines, vector<vec4f>& vert, int level);
-void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, int level);
+void subdivide_lines(vector<vec2i>& slines, vector<float>& svert,
+    const vector<vec2i>& lines, const vector<float>& vert, int level);
+void subdivide_lines(vector<vec2i>& slines, vector<vec2f>& svert,
+    const vector<vec2i>& lines, const vector<vec2f>& vert, int level);
+void subdivide_lines(vector<vec2i>& slines, vector<vec3f>& svert,
+    const vector<vec2i>& lines, const vector<vec3f>& vert, int level);
+void subdivide_lines(vector<vec2i>& slines, vector<vec4f>& svert,
+    const vector<vec2i>& lines, const vector<vec4f>& vert, int level);
+void subdivide_lines(vector<vec2i>& slines, vector<vec3f>& spositions,
+    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
+    vector<float>& sradius, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, int level);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
-void subdivide_triangles(
-    vector<vec3i>& triangles, vector<float>& vert, int level);
-void subdivide_triangles(
-    vector<vec3i>& triangles, vector<vec2f>& vert, int level);
-void subdivide_triangles(
-    vector<vec3i>& triangles, vector<vec3f>& vert, int level);
-void subdivide_triangles(
-    vector<vec3i>& triangles, vector<vec4f>& vert, int level);
-void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, int level);
+void subdivide_triangles(vector<vec3i>& striangles, vector<float>& svert,
+    const vector<vec3i>& triangles, const vector<float>& vert, int level);
+void subdivide_triangles(vector<vec3i>& striangles, vector<vec2f>& svert,
+    const vector<vec3i>& triangles, const vector<vec2f>& vert, int level);
+void subdivide_triangles(vector<vec3i>& striangles, vector<vec3f>& svert,
+    const vector<vec3i>& triangles, const vector<vec3f>& vert, int level);
+void subdivide_triangles(vector<vec3i>& striangles, vector<vec4f>& svert,
+    const vector<vec3i>& triangles, const vector<vec4f>& vert, int level);
+void subdivide_triangles(vector<vec3i>& striangles, vector<vec3f>& spositions,
+    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
+    vector<float>& sradius, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, int level);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
-void subdivide_quads(vector<vec4i>& quads, vector<float>& vert, int level);
-void subdivide_quads(vector<vec4i>& quads, vector<vec2f>& vert, int level);
-void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& vert, int level);
-void subdivide_quads(vector<vec4i>& quads, vector<vec4f>& vert, int level);
-void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, int level);
+void subdivide_quads(vector<vec4i>& squads, vector<float>& svert,
+    const vector<vec4i>& quads, const vector<float>& vert, int level);
+void subdivide_quads(vector<vec4i>& squads, vector<vec2f>& svert,
+    const vector<vec4i>& quads, const vector<vec2f>& vert, int level);
+void subdivide_quads(vector<vec4i>& squads, vector<vec3f>& svert,
+    const vector<vec4i>& quads, const vector<vec3f>& vert, int level);
+void subdivide_quads(vector<vec4i>& squads, vector<vec4f>& svert,
+    const vector<vec4i>& quads, const vector<vec4f>& vert, int level);
+void subdivide_quads(vector<vec4i>& squads, vector<vec3f>& spositions,
+    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
+    vector<float>& sradius, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, int level);
 // Subdivide beziers by splitting each segment in two.
-void subdivide_beziers(vector<vec4i>& beziers, vector<float>& vert, int level);
-void subdivide_beziers(vector<vec4i>& beziers, vector<vec2f>& vert, int level);
-void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& vert, int level);
-void subdivide_beziers(vector<vec4i>& beziers, vector<vec4f>& vert, int level);
-void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, int level);
+void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
+    const vector<vec4i>& beziers, const vector<float>& vert, int level);
+void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
+    const vector<vec4i>& beziers, const vector<vec2f>& vert, int level);
+void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
+    const vector<vec4i>& beziers, const vector<vec3f>& vert, int level);
+void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
+    const vector<vec4i>& beziers, const vector<vec4f>& vert, int level);
+void subdivide_beziers(vector<vec4i>& sbeziers, vector<vec3f>& spositions,
+    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
+    vector<float>& sradius, const vector<vec4i>& beziers,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, int level);
 // Subdivide quads using Carmull-Clark subdivision rules.
-void subdivide_catmullclark(vector<vec4i>& quads, vector<float>& vert,
-    int level, bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& quads, vector<vec2f>& vert,
-    int level, bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& quads, vector<vec3f>& vert,
-    int level, bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& quads, vector<vec4f>& vert,
-    int level, bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, int level);
+void subdivide_catmullclark(vector<vec4i>& squads, vector<float>& svert,
+    const vector<vec4i>& quads, const vector<float>& vert, int level,
+    bool lock_boundary = false);
+void subdivide_catmullclark(vector<vec4i>& squads, vector<vec2f>& svert,
+    const vector<vec4i>& quads, const vector<vec2f>& vert, int level,
+    bool lock_boundary = false);
+void subdivide_catmullclark(vector<vec4i>& squads, vector<vec3f>& svert,
+    const vector<vec4i>& quads, const vector<vec3f>& vert, int level,
+    bool lock_boundary = false);
+void subdivide_catmullclark(vector<vec4i>& squads, vector<vec4f>& svert,
+    const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
+    bool lock_boundary = false);
+void subdivide_catmullclark(vector<vec4i>& squads, vector<vec3f>& spositions,
+    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
+    vector<float>& sradius, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, int level);
 
 }  // namespace yocto
 

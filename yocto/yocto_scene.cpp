@@ -86,23 +86,35 @@ void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
     throw std::runtime_error("point subdivision not supported");
   } else if (!shape.lines.empty()) {
     subdivide_lines(shape.lines, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivisions);
+        shape.texcoords, shape.colors, shape.radius, shape.lines,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, subdivisions);
   } else if (!shape.triangles.empty()) {
     subdivide_triangles(shape.triangles, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivisions);
+        shape.texcoords, shape.colors, shape.radius, shape.triangles,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, subdivisions);
   } else if (!shape.quads.empty() && !catmullclark) {
     subdivide_quads(shape.quads, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivisions);
+        shape.texcoords, shape.colors, shape.radius, shape.quads,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, subdivisions);
   } else if (!shape.quads.empty() && catmullclark) {
     subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, subdivisions);
+        shape.texcoords, shape.colors, shape.radius, shape.quads,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, subdivisions);
   } else if (!shape.quadspos.empty() && !catmullclark) {
-    subdivide_quads(shape.quadspos, shape.positions, subdivisions);
-    subdivide_quads(shape.quadsnorm, shape.normals, subdivisions);
-    subdivide_quads(shape.quadstexcoord, shape.texcoords, subdivisions);
+    subdivide_quads(shape.quadspos, shape.positions, shape.quadspos,
+        shape.positions, subdivisions);
+    subdivide_quads(shape.quadsnorm, shape.normals, shape.quadsnorm,
+        shape.normals, subdivisions);
+    subdivide_quads(shape.quadstexcoord, shape.texcoords, shape.quadstexcoord,
+        shape.texcoords, subdivisions);
   } else if (!shape.quadspos.empty() && catmullclark) {
-    subdivide_catmullclark(shape.quadspos, shape.positions, subdivisions);
-    subdivide_catmullclark(
+    subdivide_catmullclark(shape.quadspos, shape.positions, shape.quadspos,
+        shape.positions, subdivisions);
+    subdivide_catmullclark(shape.quadstexcoord, shape.texcoords,
         shape.quadstexcoord, shape.texcoords, subdivisions, true);
   } else {
     throw std::runtime_error("empty shape");

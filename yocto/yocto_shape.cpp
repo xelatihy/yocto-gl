@@ -741,7 +741,11 @@ namespace yocto {
 
 // Subdivide lines.
 template <typename T>
-void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert, int level) {
+void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert,
+    const vector<vec2i>& lines_, const vector<T>& vert_, int level) {
+  // initialization
+  lines = lines_;
+  vert  = vert_;
   // early exit
   if (lines.empty() || vert.empty()) return;
   // loop over levels
@@ -770,8 +774,11 @@ void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert, int level) {
 
 // Subdivide triangle.
 template <typename T>
-void subdivide_triangles_impl(
-    vector<vec3i>& triangles, vector<T>& vert, int level) {
+void subdivide_triangles_impl(vector<vec3i>& triangles, vector<T>& vert,
+    const vector<vec3i>& triangles_, const vector<T>& vert_, int level) {
+  // initialization
+  triangles = triangles_;
+  vert      = vert_;
   // early exit
   if (triangles.empty() || vert.empty()) return;
   // loop over levels
@@ -811,7 +818,11 @@ void subdivide_triangles_impl(
 
 // Subdivide quads.
 template <typename T>
-void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert, int level) {
+void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert,
+    const vector<vec4i>& quads_, const vector<T>& vert_, int level) {
+  // initialization
+  quads = quads_;
+  vert  = vert_;
   // early exit
   if (quads.empty() || vert.empty()) return;
   // loop over levels
@@ -871,8 +882,11 @@ void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert, int level) {
 
 // Subdivide beziers.
 template <typename T>
-void subdivide_beziers_impl(
-    vector<vec4i>& beziers, vector<T>& vert, int level) {
+void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert,
+    const vector<vec4i>& beziers_, const vector<T>& vert_, int level) {
+  // initialization
+  beziers = beziers_;
+  vert    = vert_;
   // early exit
   if (beziers.empty() || vert.empty()) return;
   // loop over levels
@@ -909,8 +923,12 @@ void subdivide_beziers_impl(
 
 // Subdivide catmullclark.
 template <typename T>
-void subdivide_catmullclark_impl(
-    vector<vec4i>& quads, vector<T>& vert, int level, bool lock_boundary) {
+void subdivide_catmullclark_impl(vector<vec4i>& quads, vector<T>& vert,
+    const vector<vec4i>& quads_, const vector<T>& vert_, int level,
+    bool lock_boundary) {
+  // initialization
+  quads = quads_;
+  vert  = vert_;
   // early exit
   if (quads.empty() || vert.empty()) return;
   // loop over levels
@@ -1035,9 +1053,13 @@ void subdivide_catmullclark_impl(
 }
 
 template <typename T, typename SubdivideFunc>
-void subdivide_elems_impl(vector<T>& elems, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, int level, const SubdivideFunc&& subdivide_func) {
+void subdivide_elems_impl(vector<T>& selems, vector<vec3f>& spositions,
+    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
+    vector<float>& sradius, const vector<T>& elems,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, int level,
+    const SubdivideFunc&& subdivide_func) {
   struct vertex {
     vec3f position = zero3f;
     vec3f normal   = zero3f;
@@ -1078,141 +1100,178 @@ void subdivide_elems_impl(vector<T>& elems, vector<vec3f>& positions,
   if (!radius.empty()) {
     for (auto i = 0; i < vertices.size(); i++) vertices[i].radius = radius[i];
   }
-  subdivide_func(elems, vertices, level);
+  subdivide_func(selems, vertices, elems, vertices, level);
   if (!positions.empty()) {
-    positions.resize(vertices.size());
+    spositions.resize(vertices.size());
     for (auto i = 0; i < vertices.size(); i++)
-      positions[i] = vertices[i].position;
+      spositions[i] = vertices[i].position;
   }
   if (!normals.empty()) {
-    normals.resize(vertices.size());
-    for (auto i = 0; i < vertices.size(); i++) normals[i] = vertices[i].normal;
+    snormals.resize(vertices.size());
+    for (auto i = 0; i < vertices.size(); i++) snormals[i] = vertices[i].normal;
   }
   if (!texcoords.empty()) {
-    texcoords.resize(vertices.size());
+    stexcoords.resize(vertices.size());
     for (auto i = 0; i < vertices.size(); i++)
-      texcoords[i] = vertices[i].texcoord;
+      stexcoords[i] = vertices[i].texcoord;
   }
   if (!colors.empty()) {
-    colors.resize(vertices.size());
-    for (auto i = 0; i < vertices.size(); i++) colors[i] = vertices[i].color;
+    scolors.resize(vertices.size());
+    for (auto i = 0; i < vertices.size(); i++) scolors[i] = vertices[i].color;
   }
   if (!radius.empty()) {
-    radius.resize(vertices.size());
-    for (auto i = 0; i < vertices.size(); i++) radius[i] = vertices[i].radius;
+    sradius.resize(vertices.size());
+    for (auto i = 0; i < vertices.size(); i++) sradius[i] = vertices[i].radius;
   }
 }
 
-void subdivide_lines(vector<vec2i>& lines, vector<float>& vert, int level) {
-  subdivide_lines_impl(lines, vert, level);
+void subdivide_lines(vector<vec2i>& slines, vector<float>& svert,
+    const vector<vec2i>& lines, const vector<float>& vert, int level) {
+  subdivide_lines_impl(slines, svert, lines, vert, level);
 }
-void subdivide_lines(vector<vec2i>& lines, vector<vec2f>& vert, int level) {
-  subdivide_lines_impl(lines, vert, level);
+void subdivide_lines(vector<vec2i>& slines, vector<vec2f>& svert,
+    const vector<vec2i>& lines, const vector<vec2f>& vert, int level) {
+  subdivide_lines_impl(slines, svert, lines, vert, level);
 }
-void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& vert, int level) {
-  subdivide_lines_impl(lines, vert, level);
+void subdivide_lines(vector<vec2i>& slines, vector<vec3f>& svert,
+    const vector<vec2i>& lines, const vector<vec3f>& vert, int level) {
+  subdivide_lines_impl(slines, svert, lines, vert, level);
 }
-void subdivide_lines(vector<vec2i>& lines, vector<vec4f>& vert, int level) {
-  subdivide_lines_impl(lines, vert, level);
+void subdivide_lines(vector<vec2i>& slines, vector<vec4f>& svert,
+    const vector<vec2i>& lines, const vector<vec4f>& vert, int level) {
+  subdivide_lines_impl(slines, svert, lines, vert, level);
 }
-void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, int level) {
-  subdivide_elems_impl(lines, positions, normals, texcoords, colors, radius,
-      level, [](auto& lines, auto& vert, int level) {
-        subdivide_lines_impl(lines, vert, level);
+void subdivide_lines(vector<vec2i>& slines, vector<vec3f>& spositions,
+    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
+    vector<float>& sradius, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, int level) {
+  subdivide_elems_impl(slines, spositions, snormals, stexcoords, scolors,
+      sradius, lines, positions, normals, texcoords, colors, radius, level,
+      [](auto& slines, auto& svert, auto& lines, auto& vert, int level) {
+        subdivide_lines_impl(slines, svert, lines, vert, level);
       });
 }
 
-void subdivide_triangles(
-    vector<vec3i>& triangles, vector<float>& vert, int level) {
-  subdivide_triangles_impl(triangles, vert, level);
+void subdivide_triangles(vector<vec3i>& striangles, vector<float>& svert,
+    const vector<vec3i>& triangles, const vector<float>& vert, int level) {
+  subdivide_triangles_impl(striangles, svert, triangles, vert, level);
 }
-void subdivide_triangles(
-    vector<vec3i>& triangles, vector<vec2f>& vert, int level) {
-  subdivide_triangles_impl(triangles, vert, level);
+void subdivide_triangles(vector<vec3i>& striangles, vector<vec2f>& svert,
+    const vector<vec3i>& triangles, const vector<vec2f>& vert, int level) {
+  subdivide_triangles_impl(striangles, svert, triangles, vert, level);
 }
-void subdivide_triangles(
-    vector<vec3i>& triangles, vector<vec3f>& vert, int level) {
-  subdivide_triangles_impl(triangles, vert, level);
+void subdivide_triangles(vector<vec3i>& striangles, vector<vec3f>& svert,
+    const vector<vec3i>& triangles, const vector<vec3f>& vert, int level) {
+  subdivide_triangles_impl(striangles, svert, triangles, vert, level);
 }
-void subdivide_triangles(
-    vector<vec3i>& triangles, vector<vec4f>& vert, int level) {
-  subdivide_triangles_impl(triangles, vert, level);
+void subdivide_triangles(vector<vec3i>& striangles, vector<vec4f>& svert,
+    const vector<vec3i>& triangles, const vector<vec4f>& vert, int level) {
+  subdivide_triangles_impl(striangles, svert, triangles, vert, level);
 }
-void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, int level) {
-  subdivide_elems_impl(triangles, positions, normals, texcoords, colors, radius,
-      level, [](auto& triangles, auto& vert, int level) {
-        subdivide_triangles_impl(triangles, vert, level);
+void subdivide_triangles(vector<vec3i>& striangles, vector<vec3f>& spositions,
+    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
+    vector<float>& sradius, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, int level) {
+  subdivide_elems_impl(striangles, spositions, snormals, stexcoords, scolors,
+      sradius, triangles, positions, normals, texcoords, colors, radius, level,
+      [](auto& striangles, auto& svert, auto& triangles, auto& vert,
+          int level) {
+        subdivide_triangles_impl(striangles, svert, triangles, vert, level);
       });
 }
 
-void subdivide_quads(vector<vec4i>& quads, vector<float>& vert, int level) {
-  subdivide_quads_impl(quads, vert, level);
+void subdivide_quads(vector<vec4i>& squads, vector<float>& svert,
+    const vector<vec4i>& quads, const vector<float>& vert, int level) {
+  subdivide_quads_impl(squads, svert, quads, vert, level);
 }
-void subdivide_quads(vector<vec4i>& quads, vector<vec2f>& vert, int level) {
-  subdivide_quads_impl(quads, vert, level);
+void subdivide_quads(vector<vec4i>& squads, vector<vec2f>& svert,
+    const vector<vec4i>& quads, const vector<vec2f>& vert, int level) {
+  subdivide_quads_impl(squads, svert, quads, vert, level);
 }
-void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& vert, int level) {
-  subdivide_quads_impl(quads, vert, level);
+void subdivide_quads(vector<vec4i>& squads, vector<vec3f>& svert,
+    const vector<vec4i>& quads, const vector<vec3f>& vert, int level) {
+  subdivide_quads_impl(squads, svert, quads, vert, level);
 }
-void subdivide_quads(vector<vec4i>& quads, vector<vec4f>& vert, int level) {
-  subdivide_quads_impl(quads, vert, level);
+void subdivide_quads(vector<vec4i>& squads, vector<vec4f>& svert,
+    const vector<vec4i>& quads, const vector<vec4f>& vert, int level) {
+  subdivide_quads_impl(squads, svert, quads, vert, level);
 }
-void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, int level) {
-  subdivide_elems_impl(quads, positions, normals, texcoords, colors, radius,
-      level, [](auto& quads, auto& vert, int level) {
-        subdivide_quads_impl(quads, vert, level);
+void subdivide_quads(vector<vec4i>& squads, vector<vec3f>& spositions,
+    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
+    vector<float>& sradius, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, int level) {
+  subdivide_elems_impl(squads, spositions, snormals, stexcoords, scolors,
+      sradius, quads, positions, normals, texcoords, colors, radius, level,
+      [](auto& squads, auto& svert, auto& quads, auto& vert, int level) {
+        subdivide_quads_impl(squads, svert, quads, vert, level);
       });
 }
 
-void subdivide_beziers(vector<vec4i>& beziers, vector<float>& vert, int level) {
-  subdivide_beziers_impl(beziers, vert, level);
+void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
+    const vector<vec4i>& beziers, const vector<float>& vert, int level) {
+  subdivide_beziers_impl(sbeziers, svert, beziers, vert, level);
 }
-void subdivide_beziers(vector<vec4i>& beziers, vector<vec2f>& vert, int level) {
-  subdivide_beziers_impl(beziers, vert, level);
+void subdivide_beziers(vector<vec4i>& sbeziers, vector<vec2f>& svert,
+    const vector<vec4i>& beziers, const vector<vec2f>& vert, int level) {
+  subdivide_beziers_impl(sbeziers, svert, beziers, vert, level);
 }
-void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& vert, int level) {
-  subdivide_beziers_impl(beziers, vert, level);
+void subdivide_beziers(vector<vec4i>& sbeziers, vector<vec3f>& svert,
+    const vector<vec4i>& beziers, const vector<vec3f>& vert, int level) {
+  subdivide_beziers_impl(sbeziers, svert, beziers, vert, level);
 }
-void subdivide_beziers(vector<vec4i>& beziers, vector<vec4f>& vert, int level) {
-  subdivide_beziers_impl(beziers, vert, level);
+void subdivide_beziers(vector<vec4i>& sbeziers, vector<vec4f>& svert,
+    const vector<vec4i>& beziers, const vector<vec4f>& vert, int level) {
+  subdivide_beziers_impl(sbeziers, svert, beziers, vert, level);
 }
-void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, int level) {
-  subdivide_elems_impl(beziers, positions, normals, texcoords, colors, radius,
-      level, [](auto& beziers, auto& vert, int level) {
-        subdivide_beziers_impl(beziers, vert, level);
+void subdivide_beziers(vector<vec4i>& sbeziers, vector<vec3f>& spositions,
+    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
+    vector<float>& sradius, const vector<vec4i>& beziers,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, int level) {
+  subdivide_elems_impl(sbeziers, spositions, snormals, stexcoords, scolors,
+      sradius, beziers, positions, normals, texcoords, colors, radius, level,
+      [](auto& sbeziers, auto& svert, auto& beziers, auto& vert, int level) {
+        subdivide_beziers_impl(sbeziers, svert, beziers, vert, level);
       });
 }
 
-void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<float>& vert, int level, bool lock_boundary) {
-  subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+void subdivide_catmullclark(vector<vec4i>& squads, vector<float>& svert,
+    const vector<vec4i>& quads, const vector<float>& vert, int level,
+    bool lock_boundary) {
+  subdivide_catmullclark_impl(squads, svert, quads, vert, level, lock_boundary);
 }
-void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec2f>& vert, int level, bool lock_boundary) {
-  subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+void subdivide_catmullclark(vector<vec4i>& squads, vector<vec2f>& svert,
+    const vector<vec4i>& quads, const vector<vec2f>& vert, int level,
+    bool lock_boundary) {
+  subdivide_catmullclark_impl(squads, svert, quads, vert, level, lock_boundary);
 }
-void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec3f>& vert, int level, bool lock_boundary) {
-  subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+void subdivide_catmullclark(vector<vec4i>& squads, vector<vec3f>& svert,
+    const vector<vec4i>& quads, const vector<vec3f>& vert, int level,
+    bool lock_boundary) {
+  subdivide_catmullclark_impl(squads, svert, quads, vert, level, lock_boundary);
 }
-void subdivide_catmullclark(
-    vector<vec4i>& quads, vector<vec4f>& vert, int level, bool lock_boundary) {
-  subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+void subdivide_catmullclark(vector<vec4i>& squads, vector<vec4f>& svert,
+    const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
+    bool lock_boundary) {
+  subdivide_catmullclark_impl(squads, svert, quads, vert, level, lock_boundary);
 }
-void subdivide_catmullclark(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, int level) {
-  subdivide_elems_impl(quads, positions, normals, texcoords, colors, radius,
-      level, [](auto& quads, auto& vert, int level) {
-        subdivide_catmullclark_impl(quads, vert, level, true);
+void subdivide_catmullclark(vector<vec4i>& squads, vector<vec3f>& spositions,
+    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
+    vector<float>& sradius, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, int level) {
+  subdivide_elems_impl(squads, spositions, snormals, stexcoords, scolors,
+      sradius, quads, positions, normals, texcoords, colors, radius, level,
+      [](auto& squads, auto& svert, auto& quads, auto& vert, int level) {
+        subdivide_catmullclark_impl(squads, svert, quads, vert, level, true);
       });
 }
 
@@ -1877,8 +1936,8 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
       vertices[i].normal   = qnormals[i];
       vertices[i].texcoord = qtexcoords[i];
     }
-    quads = qquads;
-    subdivide_quads_impl(quads, vertices, params.subdivisions);
+    subdivide_quads_impl(
+        quads, vertices, qquads, vertices, params.subdivisions);
     positions.resize(vertices.size());
     normals.resize(vertices.size());
     texcoords.resize(vertices.size());
@@ -1889,9 +1948,8 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
     }
   };
   auto subdivide_quads_p = [&](auto& qquads, auto& qpositions) {
-    quads     = qquads;
-    positions = qpositions;
-    subdivide_quads_impl(quads, positions, params.subdivisions);
+    subdivide_quads_impl(
+        quads, positions, qquads, qpositions, params.subdivisions);
   };
   triangles.clear();
   quads.clear();
@@ -2197,7 +2255,7 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
       // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
       const float X                = 0.525731112119133606f;
       const float Z                = 0.850650808352039932f;
-      static auto sphere_pos       = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
+      static auto sphere_positions = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
           {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X},
           {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0},
           {-Z, -X, 0.0}};
@@ -2205,9 +2263,8 @@ void make_proc_image(vector<vec3i>& triangles, vector<vec4i>& quads,
           {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
           {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
           {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-      positions                    = sphere_pos;
-      triangles                    = sphere_triangles;
-      subdivide_triangles(triangles, positions, params.subdivisions);
+      subdivide_triangles(triangles, positions, sphere_triangles,
+          sphere_positions, params.subdivisions);
       for (auto& p : positions) p = normalize(p);
       normals = positions;
     } break;
@@ -2228,41 +2285,35 @@ void make_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const procshape_params& params) {
-  auto subdivide_quads_p = [&](auto& qquads, auto& qpositions) {
-    quadspos  = qquads;
-    positions = qpositions;
-    subdivide_quads_impl(quadspos, positions, params.subdivisions);
-  };
-  auto subdivide_quads_n = [&](auto& qquads, auto& qnormals) {
-    quadsnorm = qquads;
-    normals   = qnormals;
-    subdivide_quads_impl(quadsnorm, normals, params.subdivisions);
-  };
-  auto subdivide_quads_t = [&](auto& qquads, auto& qtexcoords) {
-    quadstexcoord = qquads;
-    texcoords     = qtexcoords;
-    subdivide_quads_impl(quadstexcoord, texcoords, params.subdivisions);
-  };
   switch (params.type) {
     case make_shape_type::quad: {
-      subdivide_quads_p(quad_quads, quad_positions);
-      subdivide_quads_n(quad_quads, quad_normals);
-      subdivide_quads_t(quad_quads, quad_texcoords);
+      subdivide_quads(
+          quadspos, positions, quad_quads, quad_positions, params.subdivisions);
+      subdivide_quads(
+          quadsnorm, normals, quad_quads, quad_normals, params.subdivisions);
+      subdivide_quads(quadstexcoord, texcoords, quad_quads, quad_texcoords,
+          params.subdivisions);
     } break;
     case make_shape_type::cube: {
-      subdivide_quads_p(fvcube_quads, fvcube_positions);
-      subdivide_quads_n(cube_quads, cube_normals);
-      subdivide_quads_t(cube_quads, cube_texcoords);
+      subdivide_quads(quadspos, positions, fvcube_quads, fvcube_positions,
+          params.subdivisions);
+      subdivide_quads(
+          quadsnorm, normals, cube_quads, cube_normals, params.subdivisions);
+      subdivide_quads(quadstexcoord, texcoords, cube_quads, cube_texcoords,
+          params.subdivisions);
     } break;
     case make_shape_type::sphere: {
-      subdivide_quads_p(fvcube_quads, fvcube_positions);
-      subdivide_quads_t(cube_quads, cube_texcoords);
+      subdivide_quads(quadspos, positions, fvcube_quads, fvcube_positions,
+          params.subdivisions);
+      subdivide_quads(quadstexcoord, texcoords, cube_quads, cube_texcoords,
+          params.subdivisions);
       for (auto& p : positions) p = normalize(p);
       normals   = positions;
       quadsnorm = quadspos;
     } break;
     case make_shape_type::suzanne: {
-      subdivide_quads_p(suzanne_quads, suzanne_positions);
+      subdivide_quads(quadspos, positions, suzanne_quads, suzanne_positions,
+          params.subdivisions);
     } break;
     default: {
       throw std::runtime_error(
