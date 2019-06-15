@@ -53,14 +53,12 @@ int main(int argc, char* argv[]) {
   auto filename     = "scene.json"s;
 
   // names for enums
-  auto sampler_namemap =
-      std::map<string, trace_params::sampler_type>{};
+  auto sampler_namemap = std::map<string, trace_params::sampler_type>{};
   for (auto type = 0; type < trace_sampler_names.size(); type++) {
     sampler_namemap[trace_sampler_names[type]] =
         (trace_params::sampler_type)type;
   }
-  auto falsecolor_namemap =
-      std::map<string, trace_params::falsecolor_type>{};
+  auto falsecolor_namemap = std::map<string, trace_params::falsecolor_type>{};
   for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
     falsecolor_namemap[trace_falsecolor_names[type]] =
         (trace_params::falsecolor_type)type;
