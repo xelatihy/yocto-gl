@@ -592,25 +592,6 @@ pair<vector<vec3f>, vector<int>> weld_vertices(
   }
   return {welded, indices};
 }
-void weld_vertices_inplace(
-    vector<vec3f>& positions, vector<int>& indices, float threshold) {
-  indices.resize(positions.size());
-  auto welded     = vector<vec3f>{};
-  auto grid       = make_hash_grid(threshold);
-  auto neighboors = vector<int>{};
-  for (auto vertex = 0; vertex < positions.size(); vertex++) {
-    auto& position = positions[vertex];
-    find_neightbors(grid, neighboors, position, threshold);
-    if (neighboors.empty()) {
-      welded.push_back(position);
-      indices[vertex] = (int)welded.size() - 1;
-      insert_vertex(grid, position);
-    } else {
-      indices[vertex] = neighboors.front();
-    }
-  }
-  swap(welded, positions);
-}
 pair<vector<vec3i>, vector<vec3f>> weld_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     float threshold) {
@@ -632,18 +613,37 @@ pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     };
   return {wquads, wpositions};
 }
-void weld_triangles_inplace(
-    vector<vec3i>& triangles, vector<vec3f>& positions, float threshold) {
-  auto indices = vector<int>{};
-  weld_vertices_inplace(positions, indices, threshold);
-  for (auto& t : triangles) t = {indices[t.x], indices[t.y], indices[t.z]};
+void weld_vertices(
+    vector<vec3f>& wpositions, vector<int>& indices, const vector<vec3f>& positions, float threshold) {
+  indices.resize(positions.size());
+  wpositions.clear();
+  auto grid       = make_hash_grid(threshold);
+  auto neighboors = vector<int>{};
+  for (auto vertex = 0; vertex < positions.size(); vertex++) {
+    auto& position = positions[vertex];
+    find_neightbors(grid, neighboors, position, threshold);
+    if (neighboors.empty()) {
+      wpositions.push_back(position);
+      indices[vertex] = (int)wpositions.size() - 1;
+      insert_vertex(grid, position);
+    } else {
+      indices[vertex] = neighboors.front();
+    }
+  }
 }
-void weld_quads_inplace(
-    vector<vec4i>& quads, vector<vec3f>& positions, float threshold) {
+void weld_triangles_inplace(vector<vec3i>& wtriangles, vector<vec3f>& wpositions, 
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, float threshold) {
   auto indices = vector<int>{};
-  weld_vertices_inplace(positions, indices, threshold);
-  auto welded_quads = vector<vec4i>{};
-  for (auto& q : quads)
+  weld_vertices(wpositions, indices, positions, threshold);
+  wtriangles = triangles;
+  for (auto& t : wtriangles) t = {indices[t.x], indices[t.y], indices[t.z]};
+}
+void weld_quads_inplace(vector<vec4i>& wquads, vector<vec3f>& wpositions, 
+    const vector<vec4i>& quads, const vector<vec3f>& positions, float threshold) {
+  auto indices = vector<int>{};
+  weld_vertices(wpositions, indices, positions, threshold);
+  wquads = quads;
+  for (auto& q : wquads)
     q = {
         indices[q.x],
         indices[q.y],
