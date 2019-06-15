@@ -1298,19 +1298,19 @@ void subdivide_quads(vector<vec4i>& squads, vector<vec3f>& spositions,
 
 pair<vector<vec4i>, vector<float>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<float>& vert, int level) {
-  subdivide_beziers_impl(beziers, vert, level);
+  return subdivide_beziers_impl(beziers, vert, level);
 }
 pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec2f>& vert, int level) {
-  subdivide_beziers_impl(beziers, vert, level);
+  return subdivide_beziers_impl(beziers, vert, level);
 }
 pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec3f>& vert, int level) {
-  subdivide_beziers_impl(beziers, vert, level);
+  return subdivide_beziers_impl(beziers, vert, level);
 }
 pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec4f>& vert, int level) {
-  subdivide_beziers_impl(beziers, vert, level);
+  return subdivide_beziers_impl(beziers, vert, level);
 }
 void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
     const vector<vec4i>& beziers, const vector<float>& vert, int level) {
@@ -1403,15 +1403,33 @@ namespace yocto {
 
 // Pick a point in a point set uniformly.
 int sample_points(int npoints, float re) { return sample_uniform(npoints, re); }
+int sample_points(const vector<float>& cdf, float re) {
+  return sample_discrete(cdf, re);
+}
+vector<float> sample_points_cdf(int npoints) {
+  auto cdf = vector<float>(npoints);
+  for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
+  return cdf;
+}
 void sample_points_cdf(vector<float>& cdf, int npoints) {
   cdf.resize(npoints);
   for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
 }
-int sample_points(const vector<float>& cdf, float re) {
-  return sample_discrete(cdf, re);
-}
 
 // Pick a point on lines uniformly.
+pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru) {
+  return {sample_discrete(cdf, re), ru};
+}
+vector<float> sample_lines_cdf(const vector<vec2i>& lines,
+    const vector<vec3f>& positions) {
+  auto cdf = vector<float>(lines.size());
+  for (auto i = 0; i < cdf.size(); i++) {
+    auto l = lines[i];
+    auto w = line_length(positions[l.x], positions[l.y]);
+    cdf[i] = w + (i ? cdf[i - 1] : 0);
+  }
+  return cdf;
+}
 void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
     const vector<vec3f>& positions) {
   cdf.resize(lines.size());
@@ -1421,11 +1439,22 @@ void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
 }
-pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru) {
-  return {sample_discrete(cdf, re), ru};
-}
 
 // Pick a point on a triangle mesh uniformly.
+pair<int, vec2f> sample_triangles(
+    const vector<float>& cdf, float re, const vec2f& ruv) {
+  return {sample_discrete(cdf, re), sample_triangle(ruv)};
+}
+vector<float> sample_triangles_cdf(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions) {
+  auto cdf = vector<float>(triangles.size());
+  for (auto i = 0; i < cdf.size(); i++) {
+    auto t = triangles[i];
+    auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
+    cdf[i] = w + (i ? cdf[i - 1] : 0);
+  }
+  return cdf;
+}
 void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
     const vector<vec3f>& positions) {
   cdf.resize(triangles.size());
@@ -1435,22 +1464,8 @@ void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
 }
-pair<int, vec2f> sample_triangles(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-  return {sample_discrete(cdf, re), sample_triangle(ruv)};
-}
 
 // Pick a point on a quad mesh uniformly.
-void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
-  cdf.resize(quads.size());
-  for (auto i = 0; i < cdf.size(); i++) {
-    auto q = quads[i];
-    auto w = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    cdf[i] = w + (i ? cdf[i - 1] : 0);
-  }
-}
 pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv) {
   return {sample_discrete(cdf, re), ruv};
@@ -1462,6 +1477,27 @@ pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
     return {element, sample_triangle(ruv)};
   } else {
     return {element, ruv};
+  }
+}
+vector<float> sample_quads_cdf(const vector<vec4i>& quads,
+    const vector<vec3f>& positions) {
+  auto cdf = vector<float>(quads.size());
+  for (auto i = 0; i < cdf.size(); i++) {
+    auto q = quads[i];
+    auto w = quad_area(
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+    cdf[i] = w + (i ? cdf[i - 1] : 0);
+  }
+  return cdf;
+}
+void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
+    const vector<vec3f>& positions) {
+  cdf.resize(quads.size());
+  for (auto i = 0; i < cdf.size(); i++) {
+    auto q = quads[i];
+    auto w = quad_area(
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+    cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
 }
 
