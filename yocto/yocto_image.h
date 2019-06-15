@@ -220,11 +220,11 @@ void         float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
-image<vec4f> rgb_to_srgb(const image<vec4f>& lin);
+image<vec4f> rgb_to_srgb(const image<vec4f>& rgb);
 image<vec4f> srgb_to_rgb(const image<vec4b>& srgb);
-image<vec4b> rgb_to_srgbb(const image<vec4f>& lin);
-void         srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb);
-void         rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin);
+image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb);
+void         srgb_to_rgb(image<vec4f>& rgb, const image<vec4f>& srgb);
+void         rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& rgb);
 
 // Tone mapping params
 struct tonemap_params {
@@ -493,9 +493,9 @@ inline float srgb_to_rgb(float srgb) {
   return (srgb <= 0.04045) ? srgb / 12.92f
                            : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
 }
-inline float rgb_to_srgb(float lin) {
-  return (lin <= 0.0031308f) ? 12.92f * lin
-                             : (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
+inline float rgb_to_srgb(float rgb) {
+  return (rgb <= 0.0031308f) ? 12.92f * rgb
+                             : (1 + 0.055f) * pow(rgb, 1 / 2.4f) - 0.055f;
 }
 inline vec3f srgb_to_rgb(const vec3f& srgb) {
   return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
@@ -504,11 +504,11 @@ inline vec4f srgb_to_rgb(const vec4f& srgb) {
   return {
       srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
 }
-inline vec3f rgb_to_srgb(const vec3f& lin) {
-  return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z)};
+inline vec3f rgb_to_srgb(const vec3f& rgb) {
+  return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
 }
-inline vec4f rgb_to_srgb(const vec4f& lin) {
-  return {rgb_to_srgb(lin.x), rgb_to_srgb(lin.y), rgb_to_srgb(lin.z), lin.w};
+inline vec4f rgb_to_srgb(const vec4f& rgb) {
+  return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.

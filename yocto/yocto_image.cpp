@@ -596,46 +596,64 @@ static inline void apply_image(image<T1>& result, const image<T2>& source,
 
 // Conversion from/to floats.
 void byte_to_float(image<vec4f>& fl, const image<vec4b>& bt) {
-  return apply_image(fl, bt, [](const auto& a) { return byte_to_float(a); });
+  fl.resize(bt.size());
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
 }
 void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl) {
-  return apply_image(bt, fl, [](const auto& a) { return float_to_byte(a); });
+  bt.resize(fl.size());
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_byte(fl[i]);
 }
 image<vec4f> byte_to_float(const image<vec4b>& bt) {
-  return apply_image<vec4f>(bt, [](const auto& a) { return byte_to_float(a); });
+  auto fl = image<vec4f>{bt.size()};
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
+  return fl;
 }
 image<vec4b> float_to_byte(const image<vec4f>& fl) {
-  return apply_image<vec4b>(fl, [](const auto& a) { return float_to_byte(a); });
+  auto bt = image<vec4b>{fl.size()};
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_byte(fl[i]);
+  return bt;
 }
 
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb) {
-  return apply_image<vec4f>(srgb, [](const auto& a) { return srgb_to_rgb(a); });
+  auto rgb = image<vec4f>{srgb.size()};
+  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
+  return rgb;
 }
-image<vec4f> rgb_to_srgb(const image<vec4f>& lin) {
-  return apply_image<vec4f>(lin, [](const auto& a) { return rgb_to_srgb(a); });
+image<vec4f> rgb_to_srgb(const image<vec4f>& rgb) {
+  auto srgb = image<vec4f>{rgb.size()};
+  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
+  return srgb;
 }
 image<vec4f> srgb_to_rgb(const image<vec4b>& srgb) {
-  return apply_image<vec4f>(
-      srgb, [](const auto& a) { return srgb_to_rgb(byte_to_float(a)); });
+  auto rgb = image<vec4f>{srgb.size()};
+  for (auto i = 0ull; i < rgb.count(); i++)
+    rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
+  return rgb;
 }
-image<vec4b> rgb_to_srgbb(const image<vec4f>& lin) {
-  return apply_image<vec4b>(
-      lin, [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
+image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb) {
+  auto srgb = image<vec4b>{rgb.size()};
+  for (auto i = 0ull; i < srgb.count(); i++)
+    srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
+  return srgb;
 }
-void srgb_to_rgb(image<vec4f>& lin, const image<vec4f>& srgb) {
-  return apply_image(lin, srgb, [](const auto& a) { return srgb_to_rgb(a); });
+void srgb_to_rgb(image<vec4f>& rgb, const image<vec4f>& srgb) {
+  rgb.resize(srgb.size());
+  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
 }
-void rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& lin) {
-  return apply_image(srgb, lin, [](const auto& a) { return rgb_to_srgb(a); });
+void rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& rgb) {
+  srgb.resize(rgb.size());
+  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
 }
-void srgb_to_rgb(image<vec4f>& lin, const image<vec4b>& srgb) {
-  return apply_image(
-      lin, srgb, [](const auto& a) { return srgb_to_rgb(byte_to_float(a)); });
+void srgb_to_rgb(image<vec4f>& rgb, const image<vec4b>& srgb) {
+  rgb.resize(srgb.size());
+  for (auto i = 0ull; i < rgb.count(); i++)
+    rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
 }
-void rgb_to_srgb(image<vec4b>& srgb, const image<vec4f>& lin) {
-  return apply_image(
-      srgb, lin, [](const auto& a) { return float_to_byte(rgb_to_srgb(a)); });
+void rgb_to_srgb(image<vec4b>& srgb, const image<vec4f>& rgb) {
+  srgb.resize(rgb.size());
+  for (auto i = 0ull; i < srgb.count(); i++)
+    srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
 }
 
 // Filmic tonemapping
@@ -671,7 +689,7 @@ static vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
   }
 }
 
-vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
+static vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   auto rgb = hdr;
   if (params.exposure != 0) rgb *= exp2(params.exposure);
   if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
@@ -683,23 +701,27 @@ vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   if (params.srgb) rgb = rgb_to_srgb(rgb);
   return rgb;
 }
+static vec4f tonemap(const vec4f& hdr, const tonemap_params& params) {
+  return {tonemap(xyz(hdr), params), hdr.w};
+}
 
 // Apply exposure and filmic tone mapping
 image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params) {
-  return apply_image<vec4f>(hdr, [params](const vec4f& hdr) {
-    return vec4f{tonemap(xyz(hdr), params), hdr.w};
-  });
+  auto ldr = image<vec4f>{hdr.size()};
+  for (auto i = 0ull; i < hdr.count(); i++) ldr[i] = tonemap(hdr[i], params);
+  return ldr;
 }
 image<vec4b> tonemapb(const image<vec4f>& hdr, const tonemap_params& params) {
-  return apply_image<vec4b>(hdr, [params](const vec4f& hdr) {
-    return float_to_byte(vec4f{tonemap(xyz(hdr), params), hdr.w});
-  });
+  auto ldr = image<vec4b>{hdr.size()};
+  for (auto i = 0ull; i < hdr.count(); i++)
+    ldr[i] = float_to_byte(tonemap(hdr[i], params));
+  return ldr;
 }
 void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
     const image_region& region, const tonemap_params& params) {
-  return apply_image(ldr, hdr, region, [params](const vec4f& hdr) {
-    return vec4f{tonemap(xyz(hdr), params), hdr.w};
-  });
+  for (auto j = region.min.y; j < region.max.y; j++)
+    for (auto i = region.min.x; i < region.max.x; i++)
+      ldr[{i, j}] = tonemap(hdr[{i, j}], params);
 }
 
 static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
@@ -726,19 +748,23 @@ static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
   }
   return rgb;
 }
+static vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params) {
+  return {colorgrade(xyz(ldr), params), ldr.w};
+}
 
 // Apply exposure and filmic tone mapping
 image<vec4f> colorgrade(
     const image<vec4f>& ldr, const colorgrade_params& params) {
-  return apply_image<vec4f>(ldr, [&params](const vec4f& hdr) {
-    return vec4f{colorgrade(xyz(hdr), params), hdr.w};
-  });
+  auto corrected = image<vec4f>{ldr.size()};
+  for (auto i = 0ull; i < ldr.count(); i++)
+    corrected[i] = colorgrade(ldr[i], params);
+  return corrected;
 }
 void colorgrade(image<vec4f>& corrected, const image<vec4f>& ldr,
     const image_region& region, const colorgrade_params& params) {
-  return apply_image(corrected, ldr, region, [&params](const vec4f& hdr) {
-    return vec4f{colorgrade(xyz(hdr), params), hdr.w};
-  });
+  for (auto j = region.min.y; j < region.max.y; j++)
+    for (auto i = region.min.x; i < region.max.x; i++)
+      corrected[{i, j}] = colorgrade(ldr[{i, j}], params);
 }
 
 // compute white balance
