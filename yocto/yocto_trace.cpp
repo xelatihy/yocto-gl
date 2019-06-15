@@ -1482,9 +1482,9 @@ void trace_region(image<vec4f>& image, trace_state& state,
 
 // Init a sequence of random number generators.
 trace_state make_trace_state(const vec2i& image_size, uint64_t seed) {
-  auto state    = trace_state{image_size,
+  auto state = trace_state{image_size,
       vector<trace_pixel>(image_size.x * image_size.y, trace_pixel{})};
-  auto rng = make_rng(1301081);
+  auto rng   = make_rng(1301081);
   for (auto j = 0; j < state.image_size.y; j++) {
     for (auto i = 0; i < state.image_size.x; i++) {
       auto& pixel = get_trace_pixel(state, i, j);
@@ -1511,21 +1511,19 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
   auto lights = trace_lights{};
   lights.shape_cdfs.resize(scene.shapes.size());
   lights.environment_cdfs.resize(scene.textures.size());
-  for (auto instance_id = 0; instance_id < scene.instances.size();
-       instance_id++) {
-    auto& instance = scene.instances[instance_id];
+  for (auto idx = 0; idx < scene.instances.size(); idx++) {
+    auto& instance = scene.instances[idx];
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
-    lights.instances.push_back(instance_id);
+    lights.instances.push_back(idx);
     lights.shape_cdfs[instance.shape] = sample_shape_cdf(shape);
   }
-  for (auto environment_id = 0; environment_id < scene.environments.size();
-       environment_id++) {
-    auto& environment = scene.environments[environment_id];
+  for (auto idx = 0; idx < scene.environments.size(); idx++) {
+    auto& environment = scene.environments[idx];
     if (environment.emission == zero3f) continue;
-    lights.environments.push_back(environment_id);
+    lights.environments.push_back(idx);
     if (environment.emission_tex >= 0) {
       lights.environment_cdfs[environment.emission_tex] =
           sample_environment_cdf(scene, environment);
@@ -1537,21 +1535,19 @@ void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
   lights = {};
   lights.shape_cdfs.resize(scene.shapes.size());
   lights.environment_cdfs.resize(scene.textures.size());
-  for (auto instance_id = 0; instance_id < scene.instances.size();
-       instance_id++) {
-    auto& instance = scene.instances[instance_id];
+  for (auto idx = 0; idx < scene.instances.size(); idx++) {
+    auto& instance = scene.instances[idx];
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
-    lights.instances.push_back(instance_id);
+    lights.instances.push_back(idx);
     sample_shape_cdf(shape, lights.shape_cdfs[instance.shape]);
   }
-  for (auto environment_id = 0; environment_id < scene.environments.size();
-       environment_id++) {
-    auto& environment = scene.environments[environment_id];
+  for (auto idx = 0; idx < scene.environments.size(); idx++) {
+    auto& environment = scene.environments[idx];
     if (environment.emission == zero3f) continue;
-    lights.environments.push_back(environment_id);
+    lights.environments.push_back(idx);
     if (environment.emission_tex >= 0) {
       sample_environment_cdf(scene, environment,
           lights.environment_cdfs[environment.emission_tex]);
@@ -1564,8 +1560,8 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_params& params) {
   auto image_size = camera_resolution(
       scene.cameras.at(params.camera), params.resolution);
-  auto render = image{image_size, zero4f};
-  auto state = make_trace_state(render.size(), params.seed);
+  auto render  = image{image_size, zero4f};
+  auto state   = make_trace_state(render.size(), params.seed);
   auto regions = make_regions(render.size(), params.region, true);
 
   if (params.noparallel) {
@@ -1579,9 +1575,9 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     auto                nthreads = std::thread::hardware_concurrency();
     std::atomic<size_t> next_idx(0);
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-      futures.emplace_back(
-          std::async(std::launch::async, [&render, &state, &scene, &bvh, &lights,
-                                             &params, &regions, &next_idx]() {
+      futures.emplace_back(std::async(
+          std::launch::async, [&render, &state, &scene, &bvh, &lights, &params,
+                                  &regions, &next_idx]() {
             while (true) {
               if (params.cancel && *params.cancel) break;
               auto idx = next_idx.fetch_add(1);
