@@ -3805,7 +3805,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   auto  from       = camera.frame.o;
   auto  to         = camera.frame.o - camera.frame.z;
   auto  up         = camera.frame.y;
-  auto  image_size = camera_resolution(camera, {0, 720});
+  auto  image_size = camera_resolution(camera, 1280);
   write_pbrt_line(fs, "LookAt", from, to, up);
   write_pbrt_line(fs, "Camera \"perspective\" \"float fov\"",
       camera_fov(camera).x * 180 / pif);

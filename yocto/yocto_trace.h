@@ -135,7 +135,7 @@ struct trace_params {
   // clang-format on
 
   int                camera     = 0;
-  vec2i              resolution = {1280, 720};
+  int                resolution = 1280;
   sampler_type       sampler    = sampler_type::path;
   falsecolor_type    falsecolor = falsecolor_type::diffuse;
   int                samples    = 512;

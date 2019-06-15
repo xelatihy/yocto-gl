@@ -17,7 +17,7 @@ def yitrace(directory='mcguire',scene='*',format='yaml',mode='path'):
         'embree': '--bvh-embree --bvh-high-quality',
         'embree-compact': '--bvh-embree --bvh-embree-compact',
         'eyelight': '-t eyelight --bvh-high-quality',
-        'eyelight-quick': '--all-cameras -s 16 -r 720 -t eyelight --no-bvh-highquality'
+        'eyelight-quick': '--all-cameras -s 16 -r 1280 -t eyelight --no-bvh-highquality'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
@@ -61,14 +61,14 @@ def yview(directory='mcguire',scene='*',format='yaml',mode='path'):
 @click.option('--mode','-m', default='path')
 def ytrace(directory='mcguire',scene='*',format='yaml',mode='path'):
     modes = {
-        'path': '-s 64 -r 360 --bvh-high-quality',
-        'embree': '-s 256 -r 720 --bvh-embree --bvh-high-quality',
-        'embree-flatten': '-s 256 -r 720 --bvh-embree --bvh-embree-flatten --bvh-high-quality',
-        'embree-compact': '-s 256 -r 720 --bvh-embree --bvh-embree-compact',
-        'eyelight': '-s 16 -r 720 -t eyelight --bvh-high-quality',
-        'final': '-s 4096 -r 720 --bvh-embree --bvh-high-quality',
-        'final-compact': '-s 4096 -r 720 --bvh-embree --bvh-high-quality --bvh-embree-compact',
-        'final-filter': '-s 4096 -r 720 --filter --bvh-embree --bvh-high-quality',
+        'path': '-s 64 -r 640 --bvh-high-quality',
+        'embree': '-s 256 -r 1280 --bvh-embree --bvh-high-quality',
+        'embree-flatten': '-s 256 -r 1280 --bvh-embree --bvh-embree-flatten --bvh-high-quality',
+        'embree-compact': '-s 256 -r 1280 --bvh-embree --bvh-embree-compact',
+        'eyelight': '-s 16 -r 1280 -t eyelight --bvh-high-quality',
+        'final': '-s 4096 -r 1280 --bvh-embree --bvh-high-quality',
+        'final-compact': '-s 4096 -r 1280 --bvh-embree --bvh-high-quality --bvh-embree-compact',
+        'final-filter': '-s 4096 -r 1280 --filter --bvh-embree --bvh-high-quality',
     }
     options = modes[mode]
     outformat = 'png' if 'eyelight' in mode else 'hdr'
