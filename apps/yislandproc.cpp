@@ -567,7 +567,7 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
           }
           if (all_triangles) {
             shape.triangles = quads_to_triangles(shape.quads);
-            shape.quads = {};
+            shape.quads     = {};
           }
         }
       }

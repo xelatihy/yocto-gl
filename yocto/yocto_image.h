@@ -170,8 +170,8 @@ struct image_region {
   vec2i min = zero2i;
   vec2i max = zero2i;
 
-  image_region() { }
-  image_region(const vec2i& min, const vec2i& max) : min{min}, max{max} { }
+  image_region() {}
+  image_region(const vec2i& min, const vec2i& max) : min{min}, max{max} {}
 
   vec2i size() const { return max - min; }
 };
@@ -533,8 +533,7 @@ inline vec3f contrast(const vec3f& rgb, float contrast, float grey) {
   return max(zero3f, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f logcontrast(
-    const vec3f& rgb, float logcontrast, float grey) {
+inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
   auto epsilon  = (float)0.0001;
   auto log_grey = log2(grey);
   auto log_ldr  = log2(rgb + epsilon);

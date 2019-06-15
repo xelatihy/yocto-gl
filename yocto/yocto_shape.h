@@ -171,8 +171,10 @@ vector<vec4i> flip_quads(const vector<vec4i>& quads);
 void flip_triangles(vector<vec3i>& flipped, const vector<vec3i>& triangles);
 void flip_quads(vector<vec4i>& flipped, const vector<vec4i>& quads);
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-vector<vec3f> align_vertices(const vector<vec3f>& positions, const vec3i& alignment);
-void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions, const vec3i& alignment);
+vector<vec3f> align_vertices(
+    const vector<vec3f>& positions, const vec3i& alignment);
+void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions,
+    const vec3i& alignment);
 
 }  // namespace yocto
 
@@ -182,30 +184,30 @@ void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions, cons
 namespace yocto {
 
 // Dictionary to store edge information. `index` is the index to the edge
-// array, `edges` the array of edges and `nfaces` the number of adjacent faces. 
-// We store only bidirectional edges to keep the dictionary small. Use the 
+// array, `edges` the array of edges and `nfaces` the number of adjacent faces.
+// We store only bidirectional edges to keep the dictionary small. Use the
 // functions below to access this data.
 struct edge_map {
-  unordered_map<vec2i, int> index = {};
-  vector<vec2i>             edges = {};
+  unordered_map<vec2i, int> index  = {};
+  vector<vec2i>             edges  = {};
   vector<int>               nfaces = {};
 };
 
 // Initialize an edge map with elements.
 edge_map make_edge_map(const vector<vec3i>& triangles);
 edge_map make_edge_map(const vector<vec4i>& quads);
-void insert_edges(edge_map& emap, const vector<vec3i>& triangles);
-void insert_edges(edge_map& emap, const vector<vec4i>& quads);
+void     insert_edges(edge_map& emap, const vector<vec3i>& triangles);
+void     insert_edges(edge_map& emap, const vector<vec4i>& quads);
 // Insert an edge and return its index
 int insert_edge(edge_map& emap, const vec2i& edge);
 // Get the edge index / insertion count
 int edge_index(const edge_map& emap, const vec2i& edge);
 // Get list of edges / boundary edges
-int  num_edges(const edge_map& emap);
+int           num_edges(const edge_map& emap);
 vector<vec2i> get_edges(const edge_map& emap);
 vector<vec2i> get_boundary(const edge_map& emap);
-void get_edges(const edge_map& emap, vector<vec2i>& edges);
-void get_boundary(const edge_map& emap, vector<vec2i>& edges);
+void          get_edges(const edge_map& emap, vector<vec2i>& edges);
+void          get_boundary(const edge_map& emap, vector<vec2i>& edges);
 vector<vec2i> get_edges(const vector<vec3i>& triangles);
 vector<vec2i> get_edges(const vector<vec4i>& quads);
 
@@ -226,8 +228,8 @@ int insert_vertex(hash_grid& grid, const vec3f& position);
 // Finds the nearest neighboors within a given radius
 void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
     const vec3f& position, float max_radius);
-void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
-    int vertex, float max_radius);
+void find_neightbors(const hash_grid& grid, vector<int>& neighboors, int vertex,
+    float max_radius);
 
 }  // namespace yocto
 
@@ -271,11 +273,19 @@ void ungroup_quads(vector<vector<vec4i>>& split_quads,
     const vector<vec4i>& quads, const vector<int>& ids);
 
 // Weld vertices within a threshold.
-void weld_vertices(
+pair<vector<vec3f>, vector<int>> weld_vertices(
+    const vector<vec3f>& positions, float threshold);
+pair<vector<vec3i>, vector<vec3f>> weld_triangles(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    float threshold);
+pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, float threshold);
+// Weld vertices within a threshold.
+void weld_vertices_inplace(
     vector<vec3f>& positions, vector<int>& indices, float threshold);
-void weld_triangles(
+void weld_triangles_inplace(
     vector<vec3i>& triangles, vector<vec3f>& positions, float threshold);
-void weld_quads(
+void weld_quads_inplace(
     vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
 
 // Merge shape elements

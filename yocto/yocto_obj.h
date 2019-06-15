@@ -71,13 +71,13 @@ struct obj_texture_info {
   string path  = "";     // file path
   bool   clamp = false;  // clamp to edge
   float  scale = 1;      // scale for bump/displacement
-  
+
   // Properties not explicitly handled.
   unordered_map<string, vector<float>> props;
 
-  obj_texture_info() { }
-  obj_texture_info(const char* path) : path{path} { }
-  obj_texture_info(const string& path) : path{path} { }
+  obj_texture_info() {}
+  obj_texture_info(const char* path) : path{path} {}
+  obj_texture_info(const string& path) : path{path} {}
 };
 
 // Obj material.
