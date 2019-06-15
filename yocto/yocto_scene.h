@@ -26,7 +26,7 @@
 // 2. use `compute_shape_box()/compute_scene_box()` to compute element bounds
 // 3. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
-// 4. for ray-intersection and closest point queries, use 
+// 4. for ray-intersection and closest point queries, use
 //    'make_bvh()`/`refit_bvh()`
 //
 //

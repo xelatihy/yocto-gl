@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
   // build bvh
   printf("building bvh");
   auto bvh_timer = timer();
-  auto bvh = make_bvh(scene, bvh_prms);
+  auto bvh       = make_bvh(scene, bvh_prms);
   printf(" in %s\n", bvh_timer.elapsedf().c_str());
 
   // init renderer
