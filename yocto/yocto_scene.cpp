@@ -434,7 +434,44 @@ float sample_environment_pdf(const yocto_scene& scene,
   }
 }
 
-void build_bvh(
+bvh_scene make_bvh(const yocto_scene& scene, const bvh_params& params) {
+  auto sbvhs = vector<bvh_shape>{scene.shapes.size()};
+  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+    auto& shape = scene.shapes[idx];
+    auto& sbvh  = sbvhs[idx];
+#if YOCTO_EMBREE
+    // call Embree if needed
+    if (params.use_embree) {
+      if (params.embree_compact &&
+          shape.positions.size() == shape.positions.capacity()) {
+        ((yocto_shape&)shape).positions.reserve(shape.positions.size() + 1);
+      }
+    }
+#endif
+    if (!shape.points.empty()) {
+      sbvh = make_points_bvh(shape.points, shape.positions, shape.radius);
+    } else if (!shape.lines.empty()) {
+      sbvh = make_lines_bvh(shape.lines, shape.positions, shape.radius);
+    } else if (!shape.triangles.empty()) {
+      sbvh = make_triangles_bvh(shape.triangles, shape.positions, shape.radius);
+    } else if (!shape.quads.empty()) {
+      sbvh = make_quads_bvh(shape.quads, shape.positions, shape.radius);
+    } else if (!shape.quadspos.empty()) {
+      sbvh = make_quadspos_bvh(shape.quadspos, shape.positions, shape.radius);
+    } else {
+      throw std::runtime_error("empty shape");
+    }
+  }
+
+  auto bvh = make_instances_bvh(
+      {&scene.instances[0].frame, (int)scene.instances.size(),
+          sizeof(scene.instances[0])},
+      sbvhs);
+  build_bvh(bvh, params);
+  return bvh;
+}
+
+void make_bvh(
     bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
   auto sbvhs = vector<bvh_shape>{scene.shapes.size()};
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {

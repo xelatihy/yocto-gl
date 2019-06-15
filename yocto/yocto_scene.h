@@ -26,8 +26,8 @@
 // 2. use `compute_shape_box()/compute_scene_box()` to compute element bounds
 // 3. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
-// 4. for ray-intersection and closest point queries, use
-// 'build_bvh()`/`refit_bvh()`
+// 4. for ray-intersection and closest point queries, use 
+//    'make_bvh()`/`refit_bvh()`
 //
 //
 
@@ -358,8 +358,9 @@ void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv);
 void tesselate_subdivs(yocto_scene& scene);
 
 // Build/refit the bvh acceleration structure.
-void build_bvh(
-    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params);
+bvh_scene make_bvh(const yocto_scene& scene, const bvh_params& params);
+void      make_bvh(
+         bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params);
 void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
     const vector<int>& updated_shapes, const bvh_params& params);
 

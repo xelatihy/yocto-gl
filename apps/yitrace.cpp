@@ -760,7 +760,7 @@ void update(const opengl_window& win, app_state& app) {
         log_glinfo(win, "start building bvh " + scn.filename);
         scn.bvh_done = false;
         task.result  = std::async(std::launch::async,
-            [&scn]() { build_bvh(scn.bvh, scn.scene, scn.bvh_prms); });
+            [&scn]() { make_bvh(scn.bvh, scn.scene, scn.bvh_prms); });
       } break;
       case app_task_type::refit_bvh: {
         log_glinfo(win, "start refitting bvh " + scn.filename);

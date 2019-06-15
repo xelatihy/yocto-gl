@@ -150,10 +150,9 @@ int main(int argc, char* argv[]) {
   if (add_skyenv) add_sky(scene);
 
   // build bvh
-  auto bvh = bvh_scene{};
   printf("building bvh");
   auto bvh_timer = timer();
-  build_bvh(bvh, scene, bvh_prms);
+  auto bvh = make_bvh(scene, bvh_prms);
   printf(" in %s\n", bvh_timer.elapsedf().c_str());
 
   // init renderer
