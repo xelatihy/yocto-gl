@@ -450,15 +450,15 @@ void build_bvh(
     }
 #endif
     if (!shape.points.empty()) {
-      sbvh = {shape.points, shape.positions, shape.radius};
+      sbvh = make_points_bvh(shape.points, shape.positions, shape.radius);
     } else if (!shape.lines.empty()) {
-      sbvh = {shape.lines, shape.positions, shape.radius};
+      sbvh = make_lines_bvh(shape.lines, shape.positions, shape.radius);
     } else if (!shape.triangles.empty()) {
-      sbvh = {shape.triangles, shape.positions, shape.radius};
+      sbvh = make_triangles_bvh(shape.triangles, shape.positions, shape.radius);
     } else if (!shape.quads.empty()) {
-      sbvh = {shape.quads, shape.positions, shape.radius};
+      sbvh = make_quads_bvh(shape.quads, shape.positions, shape.radius);
     } else if (!shape.quadspos.empty()) {
-      sbvh = {shape.quadspos, shape.positions, shape.radius};
+      sbvh = make_quadspos_bvh(shape.quadspos, shape.positions, shape.radius);
     } else {
       throw std::runtime_error("empty shape");
     }

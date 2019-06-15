@@ -156,21 +156,6 @@ struct bvh_node {
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Applicxation data is not stored explicitly.
 struct bvh_shape {
-  // constructors
-  bvh_shape() {}
-  bvh_shape(
-      bvh_span<int> points, bvh_span<vec3f> positions, bvh_span<float> radius)
-      : points{points}, positions{positions}, radius{radius} {}
-  bvh_shape(
-      bvh_span<vec2i> lines, bvh_span<vec3f> positions, bvh_span<float> radius)
-      : lines{lines}, positions{positions}, radius{radius} {}
-  bvh_shape(bvh_span<vec3i> triangles, bvh_span<vec3f> positions,
-      bvh_span<float> radius)
-      : triangles{triangles}, positions{positions}, radius{radius} {}
-  bvh_shape(
-      bvh_span<vec4i> quads, bvh_span<vec3f> positions, bvh_span<float> radius)
-      : quads{quads}, positions{positions}, radius{radius} {}
-
   // elements
   bvh_span<int>   points    = {};
   bvh_span<vec2i> lines     = {};
@@ -201,11 +186,6 @@ struct bvh_instance {
 };
 
 struct bvh_scene {
-  // constructors
-  bvh_scene() {}
-  bvh_scene(bvh_sspan<bvh_instance> instances, const vector<bvh_shape>& shapes)
-      : instances{instances}, shapes{shapes} {}
-
   // instances and shapes
   bvh_sspan<bvh_instance> instances = {};
   vector<bvh_shape>       shapes    = {};
@@ -233,6 +213,32 @@ struct bvh_params {
   bool               noparallel = false;
   std::atomic<bool>* cancel     = nullptr;
 };
+
+// Initialize bvh data
+inline bvh_shape make_points_bvh(
+    bvh_span<int> points, bvh_span<vec3f> positions, bvh_span<float> radius) {
+  return bvh_shape{points, {}, {}, {}, {}, positions, radius};
+}
+inline bvh_shape make_lines_bvh(
+    bvh_span<vec2i> lines, bvh_span<vec3f> positions, bvh_span<float> radius) {
+  return bvh_shape{{}, lines, {}, {}, {}, positions, radius};
+}
+inline bvh_shape make_triangles_bvh(bvh_span<vec3i> triangles,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  return bvh_shape{{}, {}, triangles, {}, {}, positions, radius};
+}
+inline bvh_shape make_quads_bvh(
+    bvh_span<vec4i> quads, bvh_span<vec3f> positions, bvh_span<float> radius) {
+  return bvh_shape{{}, {}, {}, quads, {}, positions, radius};
+}
+inline bvh_shape make_quadspos_bvh(bvh_span<vec4i> quadspos,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  return bvh_shape{{}, {}, {}, {}, quadspos, positions, radius};
+}
+inline bvh_scene make_instances_bvh(
+    bvh_sspan<bvh_instance> instances, const vector<bvh_shape>& shapes) {
+  return bvh_scene{instances, shapes};
+}
 
 // Build the bvh acceleration structure.
 void build_bvh(bvh_shape& bvh, const bvh_params& params);
