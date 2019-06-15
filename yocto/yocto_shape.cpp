@@ -2493,7 +2493,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const make_hair_params& params) {
+    const vector<vec2f>& stexcoord, const hair_params& params) {
   auto alltriangles    = striangles;
   auto quads_triangles = vector<vec3i>{};
   quads_to_triangles(quads_triangles, squads);
@@ -2688,7 +2688,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_texcoords = vector<vec2f>{};
     make_proc_shape(base_triangles, base_quads, base_positions, base_normals,
         base_texcoords, params);
-    auto hparams         = make_hair_params{};
+    auto hparams         = hair_params{};
     hparams.subdivisions = 2;
     hparams.num          = 65536;
     hparams.length_min   = 0.2;
@@ -2798,7 +2798,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_texcoords = vector<vec2f>{};
     make_proc_shape(base_triangles, base_quads, base_positions, base_normals,
         base_texcoords, params);
-    auto hparams           = make_hair_params{};
+    auto hparams           = hair_params{};
     hparams.num            = 65536;
     hparams.subdivisions   = 2;
     hparams.length_min     = 0.1f * 0.15f;
@@ -2822,7 +2822,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_texcoords = vector<vec2f>{};
     make_proc_shape(base_triangles, base_quads, base_positions, base_normals,
         base_texcoords, params);
-    auto hparams         = make_hair_params{};
+    auto hparams         = hair_params{};
     hparams.num          = 65536;
     hparams.subdivisions = 2;
     hparams.length_min   = 0.1f * 0.15f;
@@ -2844,7 +2844,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_texcoords = vector<vec2f>{};
     make_proc_shape(base_triangles, base_quads, base_positions, base_normals,
         base_texcoords, params);
-    auto hparams           = make_hair_params{};
+    auto hparams           = hair_params{};
     hparams.num            = 65536;
     hparams.subdivisions   = 2;
     hparams.length_min     = 0.1f * 0.15f;

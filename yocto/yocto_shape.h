@@ -605,7 +605,7 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
     uint64_t seed);
 
 // Make fair params
-struct make_hair_params {
+struct hair_params {
   int   num               = 0;
   int   subdivisions      = 0;
   float length_min        = 0.1;
@@ -631,7 +631,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const make_hair_params& params);
+    const vector<vec2f>& stexcoord, const hair_params& params);
 
 // Thickens a shape by copying the shape content, rescaling it and flipping its
 // normals. Note that this is very much not robust and only useful for trivial
