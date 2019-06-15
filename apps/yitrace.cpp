@@ -173,7 +173,7 @@ void update_app_render(const string& filename, image<vec4f>& render,
   auto& camera     = scene.cameras.at(trace_prms.camera);
   auto  image_size = camera_resolution(camera, trace_prms.resolution);
   state            = make_trace_state(image_size, trace_prms.seed);
-  auto regions = make_regions(render.size(), trace_prms.region, true);
+  auto regions     = make_regions(render.size(), trace_prms.region, true);
 
   for (auto sample = 0; sample < trace_prms.samples;
        sample += trace_prms.batch) {

@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
   // init renderer
   printf("building lights");
   auto lights_timer = timer();
-  auto lights = make_trace_lights(scene);
+  auto lights       = make_trace_lights(scene);
   printf(" in %s\n", lights_timer.elapsedf().c_str());
 
   // fix renderer type if no lights
