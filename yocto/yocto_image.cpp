@@ -1980,23 +1980,6 @@ void save_image(const string& filename, const image<vec4b>& img) {
   }
 }
 
-// Convenience helper for loading HDR or LDR based on filename
-void load_image(const string& filename, image<vec4f>& hdr, image<vec4b>& ldr) {
-  if (is_hdr_filename(filename)) {
-    load_image(filename, hdr);
-  } else {
-    load_image(filename, ldr);
-  }
-}
-void save_image(
-    const string& filename, const image<vec4f>& hdr, const image<vec4b>& ldr) {
-  if (!hdr.empty()) {
-    save_image(filename, hdr);
-  } else {
-    save_image(filename, ldr);
-  }
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

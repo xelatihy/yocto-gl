@@ -303,11 +303,6 @@ image<vec4b> load_image4b(const string& filename);
 void         load_image(const string& filename, image<vec4b>& img);
 void         save_image(const string& filename, const image<vec4b>& img);
 
-// Convenience helper for loading HDR or LDR based on filename
-void load_image(const string& filename, image<vec4f>& hdr, image<vec4b>& ldr);
-void save_image(
-    const string& filename, const image<vec4f>& hdr, const image<vec4b>& ldr);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

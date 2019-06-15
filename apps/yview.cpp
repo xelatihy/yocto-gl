@@ -975,8 +975,11 @@ void load_element(
 
   if (type == typeid(yocto_texture)) {
     auto& texture = scene.textures[index];
-    load_image(fs::path(filename).parent_path() / texture.uri, texture.hdr,
-        texture.ldr);
+    if (is_hdr_filename(texture.uri)) {
+      load_image(fs::path(filename).parent_path() / texture.uri, texture.hdr);
+    } else {
+      load_image(fs::path(filename).parent_path() / texture.uri, texture.ldr);
+    }
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
     load_volume(fs::path(filename).parent_path() / texture.uri, texture.vol);

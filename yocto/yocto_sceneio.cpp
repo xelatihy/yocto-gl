@@ -317,7 +317,11 @@ void load_texture(yocto_texture& texture, const string& dirname) {
     make_image_preset(texture.hdr, texture.ldr, type);
     texture.uri = nfilename;
   } else {
-    load_image(fs::path(dirname) / texture.uri, texture.hdr, texture.ldr);
+    if(is_hdr_filename(texture.uri)) {
+      load_image(fs::path(dirname) / texture.uri, texture.hdr);
+    } else {
+      load_image(fs::path(dirname) / texture.uri, texture.ldr);
+    }
   }
 }
 
@@ -371,7 +375,11 @@ void load_textures(
 }
 
 void save_texture(const yocto_texture& texture, const string& dirname) {
-  save_image(fs::path(dirname) / texture.uri, texture.hdr, texture.ldr);
+  if(!texture.hdr.empty()) {
+    save_image(fs::path(dirname) / texture.uri, texture.hdr);
+  } else {
+    save_image(fs::path(dirname) / texture.uri, texture.ldr);
+  }
 }
 
 void save_voltexture(const yocto_voltexture& texture, const string& dirname) {
