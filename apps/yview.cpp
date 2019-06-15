@@ -111,7 +111,7 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
 // Draw options
 struct drawgl_params {
   int   camera           = 0;
-  int resolution       = 1280;
+  int   resolution       = 1280;
   bool  wireframe        = false;
   bool  edges            = false;
   float edge_offset      = 0.01f;

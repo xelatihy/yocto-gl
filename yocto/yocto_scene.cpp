@@ -911,7 +911,7 @@ float camera_aspect(const yocto_camera& camera) {
   return camera.film.x / camera.film.y;
 }
 vec2i camera_resolution(const yocto_camera& camera, int resolution) {
-  if(camera.film.x > camera.film.y) {
+  if (camera.film.x > camera.film.y) {
     return {resolution, (int)round(resolution * camera.film.y / camera.film.x)};
   } else {
     return {(int)round(resolution * camera.film.x / camera.film.y), resolution};
