@@ -21,8 +21,8 @@ def copyright():
     from PIL import ImageDraw 
     font = ImageFont.truetype('~/Library/Fonts/FiraSansCondensed-Regular.otf', 18)
     msg = {
-        'features1': 'Example materials',
-        'features2': 'Example shapes',
+        'features1': 'Example materials: matte, plastic, metal, glass, subsurface, normal mapping',
+        'features2': 'Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping',
     }
     for filename in glob.glob('tests/features*.png'):
         if '-cr.' in filename: continue
