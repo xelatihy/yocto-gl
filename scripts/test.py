@@ -7,8 +7,9 @@ def cli():
     pass
 
 @cli.command()
-def render():
-    for filename in glob.glob('tests/*.yaml'):
+@click.option('--scene', '-s', default='*.yaml')
+def render(scene='*.yaml'):
+    for filename in glob.glob(f'tests/{scene}'):
         print(f'rendering {filename}')
         imfilename = filename.replace('.yaml','.png')
         os.system(f'./bin/yscntrace {filename} -o {imfilename} -s 1024 --logo')
