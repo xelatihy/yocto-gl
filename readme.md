@@ -83,8 +83,8 @@ write and more robust io code. This follows the stardard practice in the C++ STL
 ## Credits
 
 This library includes code from the PCG random number generator,
-boost hash_combine, and public domain code from github.com/sgorsten/linalg, 
-gist.github.com/badboy/6267743 and github.com/nothings/stb_perlin.h.
+boost `hash_combine`, and public domain code from `github.com/sgorsten/linalg`, 
+`gist.github.com/badboy/6267743` and `github.com/nothings/stb_perlin.h`.
 Other external libraries are included with their own license.
 
 ## Compilation
