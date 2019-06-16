@@ -104,6 +104,7 @@ inline const auto int_max = INT_MAX;
 inline const auto int_min = INT_MIN;
 inline const auto flt_max = FLT_MAX;
 inline const auto flt_min = -FLT_MAX;
+inline const auto flt_eps = FLT_EPSILON;
 
 inline float abs(float a) { return a < 0 ? -a : a; }
 inline float min(float a, float b) { return (a < b) ? a : b; }

@@ -533,14 +533,20 @@ inline vec3f saturate(const vec3f& rgb, float saturation,
 // Convert between CIE XYZ and RGB
 inline vec3f rgb_to_xyz(const vec3f& rgb) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto mat = mat3f{{0.4124, 0.2126, 0.0193},
-      {0.3576, 0.7152, 0.1192}, {0.1805, 0.0722, 0.9504}};
+  static const auto mat = mat3f{
+      {0.4124, 0.2126, 0.0193},
+      {0.3576, 0.7152, 0.1192},
+      {0.1805, 0.0722, 0.9504},
+  };
   return mat * rgb;
 }
 inline vec3f xyz_to_rgb(const vec3f& xyz) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto mat = mat3f{{+3.2406, -1.5372, -0.4986},
-      {-0.9689, +1.8758, +0.0415}, {+0.0557, -0.2040, +1.0570}};
+  static const auto mat = mat3f{
+      {+3.2406, -0.9689, +0.0557},
+      {-1.5372, +1.8758, -0.2040},
+      {-0.4986, +0.0415, +1.0570},
+  };
   return mat * xyz;
 }
 
