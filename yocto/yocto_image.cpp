@@ -1189,7 +1189,7 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
       -1.41f * sun_kg * sun_m / pow(1 + 118.93f * sun_kg * sun_m, 0.45f));
   auto tauWA  = exp(-0.2385f * sun_kwa * 2.0f * sun_m /
                    pow(1 + 20.07f * sun_kwa * 2.0f * sun_m, 0.45f));
-  auto sun_le = sun_sol * tauR * tauA * tauO * tauG * tauWA * 1000;
+  auto sun_le = sun_sol * tauR * tauA * tauO * tauG * tauWA * 10000;
 
   // rescale by user
   sun_le *= sun_intensity;
@@ -1198,7 +1198,7 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
   // the minimum 5 pixel diamater
   auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
   sun_angular_radius *= sun_radius;
-  // sun_angular_radius = max(sun_angular_radius, 2 * pif / size.y);
+  sun_angular_radius = max(sun_angular_radius, 2 * pif / size.y);
 
   // sun direction
   auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
@@ -1460,6 +1460,9 @@ void make_image_preset(image<vec4f>& img, const string& type) {
   } else if (type == "sunsky") {
     make_sunsky(
         img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f);
+  } else if (type == "overcastsky") {
+    make_sunsky(
+        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.5f, 0.0f);
   } else if (type == "noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;
@@ -1565,6 +1568,9 @@ void make_image_preset(image<vec4f>& img, const string& type) {
   } else if (type == "test-sunsky") {
     make_sunsky(
         img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f);
+  } else if (type == "test-overcastsky") {
+    make_sunsky(
+        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.5f, 0.0f);
   } else if (type == "test-noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;
