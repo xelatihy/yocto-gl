@@ -15,6 +15,28 @@ def render(scene='*.yaml'):
         os.system(f'./bin/yscntrace {filename} -o {imfilename} -s 1024 --logo')
 
 @cli.command()
+def copyright():
+    from PIL import Image
+    from PIL import ImageFont
+    from PIL import ImageDraw 
+    font = ImageFont.truetype('~/Library/Fonts/FiraSansCondensed-Regular.otf', 18)
+    msg = {
+        'features1': 'Example materials',
+        'features2': 'Example shapes',
+    }
+    for filename in glob.glob('tests/features*.png'):
+        if '-cr.' in filename: continue
+        for k in msg:
+            if k in filename: text = msg[k]
+        img = Image.open(filename)
+        w, h = img.size
+        draw = ImageDraw.Draw(img)
+        tw, _ = draw.textsize(text, font=font)
+        draw.rectangle([8,h-26-8,8+8+tw,h-8], (0,0,0))
+        draw.text((8+4, h-20-8-4),text,(255,255,255),font=font)
+        img.save(filename.replace('.png', '-cr.png'))
+
+@cli.command()
 def run():
     os.system('mkdir -p build && mkdir -p build/release && cd build/release && cmake ../.. -GNinja -DYOCTO_EMBREE=ON')
     os.system('rm tests/_output/*.png; rm  tests/_difference/*.png')
