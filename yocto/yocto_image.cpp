@@ -1549,6 +1549,10 @@ void make_image_preset(image<vec4f>& img, const string& type) {
     make_proc_image(img, params);
     auto bump = img;
     bump_to_normal(img, bump, 0.05f);
+  } else if (type == "test-bumps-displacement") {
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::bumps;
+    make_proc_image(img, params);
   } else if (type == "test-fbm-displacement") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::fbm;
@@ -1566,7 +1570,7 @@ image<vec4f> make_image_preset(const string& type) {
 void make_image_preset(image<vec4b>& img, const string& type) {
   auto imgf = image<vec4f>{};
   make_image_preset(imgf, type);
-  if (type.find("-normal") == type.npos) {
+  if (type.find("-normal") == type.npos && type.find("-displacement") == type.npos) {
     rgb_to_srgb(img, imgf);
   } else {
     float_to_byte(img, imgf);

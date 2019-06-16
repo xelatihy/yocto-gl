@@ -206,7 +206,7 @@ void flip_normals(vector<vec3f>& flipped, const vector<vec3f>& normals) {
 }
 vector<vec3f> flip_normals(const vector<vec3f>& normals) {
   auto flipped = normals;
-  flip_normals(flipped, normals);
+  for (auto& n : flipped) n = -n;
   return flipped;
 }
 // Flip face orientation
@@ -216,16 +216,30 @@ void flip_triangles(vector<vec3i>& flipped, const vector<vec3i>& triangles) {
 }
 vector<vec3i> flip_triangles(const vector<vec3i>& triangles) {
   auto flipped = triangles;
-  flip_triangles(flipped, triangles);
+  for (auto& t : flipped) swap(t.y, t.z);
   return flipped;
 }
 void flip_quads(vector<vec4i>& flipped, const vector<vec4i>& quads) {
   flipped = quads;
-  for (auto& q : flipped) swap(q.y, q.w);
+  for (auto& q : flipped) {
+    if(q.z != q.w) {
+      swap(q.y, q.w);
+    } else {
+      swap(q.y, q.z);
+      q.w = q.z;
+    }
+  }
 }
 vector<vec4i> flip_quads(const vector<vec4i>& quads) {
   auto flipped = quads;
-  flip_quads(flipped, quads);
+  for (auto& q : flipped) {
+    if(q.z != q.w) {
+      swap(q.y, q.w);
+    } else {
+      swap(q.y, q.z);
+      q.w = q.z;
+    }
+  }
   return flipped;
 }
 
@@ -2751,7 +2765,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "test-sphere-displaced") {
     auto params         = proc_shape_params{};
     params.type         = proc_shape_params::type_t::sphere;
-    params.subdivisions = 5;
+    params.subdivisions = 7;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
     make_proc_shape(triangles, quads, positions, normals, texcoords, params);
