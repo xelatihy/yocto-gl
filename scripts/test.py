@@ -7,6 +7,13 @@ def cli():
     pass
 
 @cli.command()
+def render():
+    for filename in glob.glob('tests/*.yaml'):
+        print(f'rendering {filename}')
+        imfilename = filename.replace('.yaml','.png')
+        os.system(f'./bin/yscntrace {filename} -o {imfilename} -s 1024 --logo')
+
+@cli.command()
 def run():
     os.system('mkdir -p build && mkdir -p build/release && cd build/release && cmake ../.. -GNinja -DYOCTO_EMBREE=ON')
     os.system('rm tests/_output/*.png; rm  tests/_difference/*.png')
