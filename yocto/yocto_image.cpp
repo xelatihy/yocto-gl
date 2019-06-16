@@ -1091,8 +1091,8 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
 
 // Implementation of sunsky modified heavily from pbrt
 void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
-    float turbidity, bool has_sun, float sun_intensity,
-    float sun_radius, const vec3f& ground_albedo, float overcast, float horizon) {
+    float turbidity, bool has_sun, float sun_intensity, float sun_radius,
+    const vec3f& ground_albedo) {
   auto zenith_xyY = vec3f{
       (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
           0.00208f * theta_sun + 0.00000f) *
@@ -1134,33 +1134,6 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
                                        E * cos(theta_sun) * cos(theta_sun)));
     return zenith * num / den;
   };
-
-  // Eextensions from https://github.com/andrewwillmott/sun-sky
-  if (cos(theta_sun) < 0.0f) {
-    // sun going below the horizon
-    auto s = clamp(1 + cos(theta_sun) * 50, 0.0f, 1.0f);
-    perez_C_xyY *= s;
-    perez_E_xyY *= s;
-  }
-  if (overcast != 0) {
-    // lerp back towards unity
-    perez_A_xyY.x *= 1 - overcast;  // main sky chroma -> base
-    perez_A_xyY.y *= 1 - overcast;
-    // sun flare -> 0 strength/base chroma
-    perez_C_xyY *= 1 - overcast;
-    perez_E_xyY *= 1 - overcast;
-    // lerp towards a fit of the CIE cloudy sky model: 4, -0.7
-    perez_A_xyY.z = lerp(perez_A_xyY.z, 4.0f, overcast);
-    perez_B_xyY.z = lerp(perez_B_xyY.z, -0.7f, overcast);
-    // lerp base colour towards white point
-    zenith_xyY.x = lerp(zenith_xyY.x, 0.333f, overcast);
-    zenith_xyY.y = lerp(zenith_xyY.y, 0.333f, overcast);
-  }
-  if (horizon != 0) {
-    // The Preetham sky model has a "muddy" horizon, which can be objectionable
-    // in typical game views. We allow artistic control over it.
-    perez_B_xyY *= horizon;
-  }
 
   auto sky = [&perez_f, perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
                  perez_E_xyY, zenith_xyY](
@@ -1253,10 +1226,10 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
 
 image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
     bool has_sun, float sun_intensity, float sun_radius,
-    const vec3f& ground_albedo, float overcast, float horizon) {
+    const vec3f& ground_albedo) {
   auto img = image<vec4f>{size};
   make_sunsky(img, size, theta_sun, turbidity, has_sun, sun_intensity,
-      sun_radius, ground_albedo, overcast, horizon);
+      sun_radius, ground_albedo);
   return img;
 }
 
@@ -1456,13 +1429,10 @@ void make_image_preset(image<vec4f>& img, const string& type) {
     make_proc_image(img, params);
   } else if (type == "sky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f);
+        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f);
-  } else if (type == "overcastsky") {
-    make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.5f, 0.0f);
+        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;
@@ -1564,13 +1534,10 @@ void make_image_preset(image<vec4f>& img, const string& type) {
     make_proc_image(img, params);
   } else if (type == "test-sky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f);
+        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f);
-  } else if (type == "test-overcastsky") {
-    make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.5f, 0.0f);
+        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;

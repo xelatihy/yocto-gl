@@ -149,12 +149,6 @@ def make_tests():
             },
             {
                 "uri": "::yocto::test-sunsky::textures/test-sunsky.hdr"
-            },
-            {
-                "uri": "::yocto::test-overcastsky::textures/test-overcastsky.hdr"
-            },
-            {
-                "uri": "::yocto::test-overcastsunsky::textures/test-overcastsunsky.hdr"
             }
         ],
         "materials": [
