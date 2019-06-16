@@ -48,8 +48,10 @@ Here are two images rendered with the builtin path tracer, where the
 scenes are crated with the test generator.
 
 ![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/tests/features1.png)
+_Example materials: matte, plastic, metal, glass, subsurface, normal mapping_
 
 ![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](images/tests/features2.png)
+_Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping_
 
 ## Design Considerations
 
