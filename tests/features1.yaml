@@ -46,7 +46,6 @@ cameras:
 textures:
   - uri: ::yocto::test-floor::textures/test-floor.png
   - uri: ::yocto::test-uvgrid::textures/test-uvgrid.png
-  - uri: ::yocto::test-bumps-normal::textures/test-bumps-normal.png
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
@@ -61,11 +60,11 @@ materials:
     metallic: 1
     diffuse: [0.66, 0.45, 0.34]
     roughness: 0.2
-  - uri: materials/test-plastic-rough-bumped.yaml
+  - uri: materials/test-plastic-rough-coated.yaml
     specular: [0.04, 0.04, 0.04]
+    coat: [0.04, 0.04, 0.04]
     diffuse: [0.5, 0.7, 0.5]
     roughness: 0.2
-    normal_tex: textures/test-bumps-normal.png
   - uri: materials/test-volume-jade.yaml
     specular: [0.04, 0.04, 0.04]
     roughness: 0
@@ -112,9 +111,9 @@ instances:
     shape: shapes/test-bunny.obj
     material: materials/test-volume-jade.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - uri: instances/test-sphere_test-plastic-rough-bumped.yaml
+  - uri: instances/test-sphere_test-plastic-rough-coated.yaml
     shape: shapes/test-sphere.ply
-    material: materials/test-plastic-rough-bumped.yaml
+    material: materials/test-plastic-rough-coated.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - uri: instances/test-bunny_test-metal-rough.yaml
     shape: shapes/test-bunny.obj

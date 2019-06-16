@@ -47,9 +47,9 @@ test the library:
 Here are two images rendered with the builtin path tracer, where the
 scenes are crated with the test generator.
 
-![Yocto/GL](images/shapes.png)
+![Example materials: matte, plastic, metals, glass, subsurface](images/tests/features1.png)
 
-![Yocto/GL](images/lines.png)
+![Example shapes: procedural shapes, Catmull-Clark subdivs, hairs, normal maps](images/tests/features2.png)
 
 ## Design Considerations
 
