@@ -102,5 +102,5 @@ instances:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
   - uri: environments/test-sunsky.yaml
-    emission: [2, 2, 2]
+    emission: [1, 1, 1]
     emission_tex: textures/test-sunsky.hdr

@@ -9,7 +9,7 @@ def cli():
 @cli.command()
 @click.option('--scene', '-s', default='*.yaml')
 def render(scene='*.yaml'):
-    for filename in glob.glob(f'tests/{scene}'):
+    for filename in sorted(glob.glob(f'tests/{scene}')):
         print(f'rendering {filename}')
         imfilename = filename.replace('.yaml','.png')
         os.system(f'./bin/yscntrace {filename} -o {imfilename} -s 1024 --logo')
@@ -441,7 +441,7 @@ def make_tests():
         "environments": [
             {
                 "uri": 'environments/test-sky.yaml',
-                "emission": [2, 2, 2],
+                "emission": [0.5, 0.5, 0.5],
                 "emission_tex": "textures/test-sky.hdr"
             }
         ]
@@ -451,7 +451,7 @@ def make_tests():
         "environments": [
             {
                 "uri": 'environments/test-sunsky.yaml',
-                "emission": [2, 2, 2],
+                "emission": [1, 1, 1],
                 "emission_tex": "textures/test-sunsky.hdr"
             }
         ]

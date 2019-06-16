@@ -62,9 +62,6 @@
 #pragma GCC diagnostic pop
 #endif
 
-#include "ext/ArHosekSkyModel.cpp"
-#include "ext/ArHosekSkyModel.h"
-
 #include <memory>
 
 #include "ext/filesystem.hpp"
@@ -1014,7 +1011,7 @@ void add_border(
   }
 }
 
-#if 1
+#if 0
 
 // Implementation of sunsky modified heavily from pbrt
 void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
@@ -1090,13 +1087,12 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
 #else
 
 // Implementation of sunsky modified heavily from pbrt
-image<vec4f> make_sunsky(int width, int height, float theta_sun,
-    float turbidity, bool has_sun, float sun_angle_scale,
-    float sun_emission_scale, const vec3f& ground_albedo,
-    bool renormalize_sun) {
+void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
+    float turbidity, bool has_sun, float sun_intensity, float sun_radius,
+    const vec3f& ground_albedo) {
   auto zenith_xyY = vec3f{
       (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
-          0.00208f * theta_sun + 0) *
+          0.00208f * theta_sun + 0.00000f) *
               pow(turbidity, 2.f) +
           (-0.02902f * pow(theta_sun, 3.f) + 0.06377f * pow(theta_sun, 2.f) -
               0.03202f * theta_sun + 0.00394f) *
@@ -1104,7 +1100,7 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
           (+0.11693f * pow(theta_sun, 3.f) - 0.21196f * pow(theta_sun, 2.f) +
               0.06052f * theta_sun + 0.25885f),
       (+0.00275f * pow(theta_sun, 3.f) - 0.00610f * pow(theta_sun, 2.f) +
-          0.00316f * theta_sun + 0) *
+          0.00316f * theta_sun + 0.00000f) *
               pow(turbidity, 2.f) +
           (-0.04214f * pow(theta_sun, 3.f) + 0.08970f * pow(theta_sun, 2.f) -
               0.04153f * theta_sun + 0.00515f) *
@@ -1113,7 +1109,8 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
               0.06669f * theta_sun + 0.26688f),
       1000 * (4.0453f * turbidity - 4.9710f) *
               tan((4.0f / 9.0f - turbidity / 120.0f) * (pif - 2 * theta_sun)) -
-          .2155f * turbidity + 2.4192f};
+          .2155f * turbidity + 2.4192f,
+  };
 
   auto perez_A_xyY = vec3f{-0.01925f * turbidity - 0.25922f,
       -0.01669f * turbidity - 0.26078f, +0.17872f * turbidity - 1.46303f};
@@ -1128,10 +1125,10 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
 
   auto perez_f = [](vec3f A, vec3f B, vec3f C, vec3f D, vec3f E, float theta,
                      float gamma, float theta_sun, vec3f zenith) -> vec3f {
-    auto den = ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
-                                       E * cos(theta_sun) * cos(theta_sun)));
     auto num = ((1 + A * exp(B / cos(theta))) *
                 (1 + C * exp(D * gamma) + E * cos(gamma) * cos(gamma)));
+    auto den = ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
+                                       E * cos(theta_sun) * cos(theta_sun)));
     return zenith * num / den;
   };
 
@@ -1162,33 +1159,30 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
       -1.41f * sun_kg * sun_m / pow(1 + 118.93f * sun_kg * sun_m, 0.45f));
   auto tauWA  = exp(-0.2385f * sun_kwa * 2.0f * sun_m /
                    pow(1 + 20.07f * sun_kwa * 2.0f * sun_m, 0.45f));
-  auto sun_le = sun_sol * tauR * tauA * tauO * tauG * tauWA;
+  auto sun_le = sun_sol * tauR * tauA * tauO * tauG * tauWA * 10000;
 
   // rescale by user
-  sun_le *= sun_emission_scale;
+  sun_le *= sun_intensity;
 
   // sun scale from Wikipedia scaled by user quantity and rescaled to at
   // the minimum 5 pixel diamater
   auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
-  sun_angular_radius *= sun_angle_scale;
-  sun_angular_radius = max(sun_angular_radius, 5 * pif / height);
+  sun_angular_radius *= sun_radius;
+  sun_angular_radius = max(sun_angular_radius, 2 * pif / size.y);
 
   // sun direction
   auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
 
   auto sun = [has_sun, sun_angular_radius, sun_le](auto theta, auto gamma) {
-    // return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f
-    // :
-    //                                                zero3f;
     return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 : zero3f;
   };
 
   // Make the sun sky image
-  auto img          = make_proc_image(width, height, vec4f{0, 0, 0, 1});
+  img.resize(size);
   auto sky_integral = 0.0f, sun_integral = 0.0f;
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
-    theta      = clamp(theta, 0.0f, pif / 2 - float_epsilon);
+    theta      = clamp(theta, 0.0f, pif / 2 - flt_eps);
     for (int i = 0; i < img.size().x; i++) {
       auto phi = 2 * pif * (float(i + 0.5f) / img.size().x);
       auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
@@ -1199,14 +1193,6 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
       sun_integral += mean(sun_col) * sin(theta);
       auto col    = sky_col + sun_col;
       img[{i, j}] = {col.x, col.y, col.z, 1};
-    }
-  }
-
-  if (renormalize_sun) {
-    for (auto j = 0; j < img.size().y / 2; j++) {
-      for (int i = 0; i < img.size().x; i++) {
-        img[{i, j}] *= sky_integral / (sun_integral + sky_integral);
-      }
     }
   }
 
@@ -1226,7 +1212,21 @@ image<vec4f> make_sunsky(int width, int height, float theta_sun,
         img[{i, j}] = {ground.x, ground.y, ground.z, 1};
       }
     }
+  } else {
+    for (auto j = img.size().y / 2; j < img.size().y; j++) {
+      for (int i = 0; i < img.size().x; i++) {
+        img[{i, j}] = {0, 0, 0, 1};
+      }
+    }
   }
+}
+
+image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
+    bool has_sun, float sun_intensity, float sun_radius,
+    const vec3f& ground_albedo) {
+  auto img = image<vec4f>{size};
+  make_sunsky(img, size, theta_sun, turbidity, has_sun, sun_intensity,
+      sun_radius, ground_albedo);
   return img;
 }
 
@@ -1426,10 +1426,10 @@ void make_image_preset(image<vec4f>& img, const string& type) {
     make_proc_image(img, params);
   } else if (type == "sky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
+        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, true, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
+        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;
@@ -1531,10 +1531,10 @@ void make_image_preset(image<vec4f>& img, const string& type) {
     make_proc_image(img, params);
   } else if (type == "test-sky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
+        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, true, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
+        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;
@@ -1570,7 +1570,8 @@ image<vec4f> make_image_preset(const string& type) {
 void make_image_preset(image<vec4b>& img, const string& type) {
   auto imgf = image<vec4f>{};
   make_image_preset(imgf, type);
-  if (type.find("-normal") == type.npos && type.find("-displacement") == type.npos) {
+  if (type.find("-normal") == type.npos &&
+      type.find("-displacement") == type.npos) {
     rgb_to_srgb(img, imgf);
   } else {
     float_to_byte(img, imgf);

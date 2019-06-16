@@ -120,5 +120,5 @@ instances:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
   - uri: environments/test-sky.yaml
-    emission: [2, 2, 2]
+    emission: [0.5, 0.5, 0.5]
     emission_tex: textures/test-sky.hdr

@@ -222,7 +222,7 @@ vector<vec3i> flip_triangles(const vector<vec3i>& triangles) {
 void flip_quads(vector<vec4i>& flipped, const vector<vec4i>& quads) {
   flipped = quads;
   for (auto& q : flipped) {
-    if(q.z != q.w) {
+    if (q.z != q.w) {
       swap(q.y, q.w);
     } else {
       swap(q.y, q.z);
@@ -233,7 +233,7 @@ void flip_quads(vector<vec4i>& flipped, const vector<vec4i>& quads) {
 vector<vec4i> flip_quads(const vector<vec4i>& quads) {
   auto flipped = quads;
   for (auto& q : flipped) {
-    if(q.z != q.w) {
+    if (q.z != q.w) {
       swap(q.y, q.w);
     } else {
       swap(q.y, q.z);
