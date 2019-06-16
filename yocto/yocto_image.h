@@ -338,10 +338,10 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params);
 // of 0 sets the eath sun defaults (ignoring intensity too).
 image<vec4f> make_sunsky(const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-    float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
+    float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2}, float overcast = 0, float horizon = 0);
 void         make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
             float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-            float sun_temperature = 0, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
+            float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2}, float overcast = 0, float horizon = 0);
 // Make an image of multiple lights.
 image<vec4f> make_lights(const vec2i& size, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,

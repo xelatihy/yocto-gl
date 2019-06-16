@@ -1091,8 +1091,8 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
 
 // Implementation of sunsky modified heavily from pbrt
 void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
-    float turbidity, bool has_sun, float sun_intensity, float sun_temperature,
-    const vec3f& ground_albedo) {
+    float turbidity, bool has_sun, float sun_intensity,
+    float sun_radius, const vec3f& ground_albedo, float overcast, float horizon) {
   auto zenith_xyY = vec3f{
       (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
           0.00208f * theta_sun + 0.00000f) *
@@ -1135,6 +1135,33 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
     return zenith * num / den;
   };
 
+  // Eextensions from https://github.com/andrewwillmott/sun-sky
+  if (cos(theta_sun) < 0.0f) {
+    // sun going below the horizon
+    auto s = clamp(1 + cos(theta_sun) * 50, 0.0f, 1.0f);
+    perez_C_xyY *= s;
+    perez_E_xyY *= s;
+  }
+  if (overcast != 0) {
+    // lerp back towards unity
+    perez_A_xyY.x *= 1 - overcast;  // main sky chroma -> base
+    perez_A_xyY.y *= 1 - overcast;
+    // sun flare -> 0 strength/base chroma
+    perez_C_xyY *= 1 - overcast;
+    perez_E_xyY *= 1 - overcast;
+    // lerp towards a fit of the CIE cloudy sky model: 4, -0.7
+    perez_A_xyY.z = lerp(perez_A_xyY.z, 4.0f, overcast);
+    perez_B_xyY.z = lerp(perez_B_xyY.z, -0.7f, overcast);
+    // lerp base colour towards white point
+    zenith_xyY.x = lerp(zenith_xyY.x, 0.333f, overcast);
+    zenith_xyY.y = lerp(zenith_xyY.y, 0.333f, overcast);
+  }
+  if (horizon != 0) {
+    // The Preetham sky model has a "muddy" horizon, which can be objectionable
+    // in typical game views. We allow artistic control over it.
+    perez_B_xyY *= horizon;
+  }
+
   auto sky = [&perez_f, perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
                  perez_E_xyY, zenith_xyY](
                  float theta, float gamma, float theta_sun) -> vec3f {
@@ -1162,7 +1189,7 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
       -1.41f * sun_kg * sun_m / pow(1 + 118.93f * sun_kg * sun_m, 0.45f));
   auto tauWA  = exp(-0.2385f * sun_kwa * 2.0f * sun_m /
                    pow(1 + 20.07f * sun_kwa * 2.0f * sun_m, 0.45f));
-  auto sun_le = sun_sol * tauR * tauA * tauO * tauG * tauWA;
+  auto sun_le = sun_sol * tauR * tauA * tauO * tauG * tauWA * 1000;
 
   // rescale by user
   sun_le *= sun_intensity;
@@ -1170,8 +1197,8 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
   // sun scale from Wikipedia scaled by user quantity and rescaled to at
   // the minimum 5 pixel diamater
   auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
-  // sun_angular_radius *= sun_angle_scale;
-  sun_angular_radius = max(sun_angular_radius, 5 * pif / size.y);
+  sun_angular_radius *= sun_radius;
+  // sun_angular_radius = max(sun_angular_radius, 2 * pif / size.y);
 
   // sun direction
   auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
@@ -1199,16 +1226,6 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
     }
   }
 
-  #if 0
-  if (renormalize_sun) {
-    for (auto j = 0; j < img.size().y / 2; j++) {
-      for (int i = 0; i < img.size().x; i++) {
-        img[{i, j}] *= sky_integral / (sun_integral + sky_integral);
-      }
-    }
-  }
-  #endif
-
   if (ground_albedo != zero3f) {
     auto ground = zero3f;
     for (auto j = 0; j < img.size().y / 2; j++) {
@@ -1235,11 +1252,11 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
 }
 
 image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
-    bool has_sun, float sun_intensity, float sun_temperature,
-    const vec3f& ground_albedo) {
+    bool has_sun, float sun_intensity, float sun_radius,
+    const vec3f& ground_albedo, float overcast, float horizon) {
   auto img = image<vec4f>{size};
   make_sunsky(img, size, theta_sun, turbidity, has_sun, sun_intensity,
-      sun_temperature, ground_albedo);
+      sun_radius, ground_albedo, overcast, horizon);
   return img;
 }
 
@@ -1439,10 +1456,10 @@ void make_image_preset(image<vec4f>& img, const string& type) {
     make_proc_image(img, params);
   } else if (type == "sky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
+        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f);
   } else if (type == "sunsky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, true, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
+        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f);
   } else if (type == "noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;
@@ -1544,10 +1561,10 @@ void make_image_preset(image<vec4f>& img, const string& type) {
     make_proc_image(img, params);
   } else if (type == "test-sky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
+        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f);
   } else if (type == "test-sunsky") {
     make_sunsky(
-        img, size, pif / 4, 3.0f, true, 1.0f, 0.0f, vec3f{0.7f, 0.7f, 0.7f});
+        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f);
   } else if (type == "test-noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;
