@@ -62,9 +62,6 @@
 #pragma GCC diagnostic pop
 #endif
 
-#include "ext/ArHosekSkyModel.cpp"
-#include "ext/ArHosekSkyModel.h"
-
 #include <memory>
 
 #include "ext/filesystem.hpp"
