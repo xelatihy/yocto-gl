@@ -103,7 +103,7 @@ libraries `imgui.cpp`, `imgui_draw.cpp`, `imgui_impl_glfw_gl3.cpp`.
 For raytracing, we optionally link to Intel's Embree if `YGL_EMBREE` is 
 defined at build time.
 
-## Gallery
+## Images rendered with Yocto/GL path tracer
 
 ![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/tests/features1.png)
 _Example materials: matte, plastic, metal, glass, subsurface, normal mapping_
