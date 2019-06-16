@@ -2765,7 +2765,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "test-sphere-displaced") {
     auto params         = proc_shape_params{};
     params.type         = proc_shape_params::type_t::sphere;
-    params.subdivisions = 5;
+    params.subdivisions = 7;
     params.scale        = 0.075;
     params.frame        = frame3f{{0, 0.075, 0}};
     make_proc_shape(triangles, quads, positions, normals, texcoords, params);

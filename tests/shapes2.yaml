@@ -46,7 +46,7 @@ cameras:
 textures:
   - uri: ::yocto::test-floor::textures/test-floor.png
   - uri: ::yocto::test-uvgrid::textures/test-uvgrid.png
-  - uri: ::yocto::test-fbm-displacement::textures/test-fbm-displacement.png
+  - uri: ::yocto::test-bumps-displacement::textures/test-bumps-displacement.png
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
@@ -82,7 +82,7 @@ subdivs:
     shape: shapes/test-sphere-displaced.obj
     facevarying: true
     displacement: 0.025
-    displacement_tex: textures/test-fbm-displacement.png
+    displacement_tex: textures/test-bumps-displacement.png
   - uri: ::yocto::test-cube-subdiv::subdivs/test-cube-subdiv.obj
     shape: shapes/test-cube-subdiv.obj
     subdivisions: 4

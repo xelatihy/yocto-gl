@@ -140,9 +140,10 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     auto normals = shape.normals;
     if (shape.normals.empty()) compute_normals(shape, normals);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-      shape.positions[vid] +=
-          normals[vid] * scale *
-          mean(xyz(eval_texture(displacement, shape.texcoords[vid])));
+      auto disp = mean(
+          xyz(eval_texture(displacement, shape.texcoords[vid], true)));
+      if (!is_hdr_filename(displacement.uri)) disp -= 0.5f;
+      shape.positions[vid] += normals[vid] * scale * disp;
     }
     if (update_normals || !shape.normals.empty()) {
       compute_normals(shape, shape.normals);
@@ -155,8 +156,10 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
       auto qpos = shape.quadspos[fid];
       auto qtxt = shape.quadstexcoord[fid];
       for (auto i = 0; i < 4; i++) {
-        offset[qpos[i]] += scale * mean(xyz(eval_texture(displacement,
-                                       shape.texcoords[qtxt[i]])));
+        auto disp = mean(
+            xyz(eval_texture(displacement, shape.texcoords[qtxt[i]], true)));
+        if (!is_hdr_filename(displacement.uri)) disp -= 0.5f;
+        offset[qpos[i]] += scale * disp;
         count[qpos[i]] += 1;
       }
     }
