@@ -44,7 +44,14 @@ test the library:
 - `apps/yimgproc.cpp`: command-line image manipulation
 - `apps/yscnview.cpp`: simple OpenGL viewer
 
-See below for rendered images.
+Here are some test images rendered with the path tracer. More images are 
+included in the project site.
+
+![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](tests/features1.png)
+_Example materials: matte, plastic, metal, glass, subsurface, normal mapping_
+
+![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](tests/features2.png)
+_Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping_
 
 ## Design Considerations
 
@@ -102,11 +109,3 @@ your system. OpenGL extensions use `glad.{h, cpp}` For ImGUI, build with the
 libraries `imgui.cpp`, `imgui_draw.cpp`, `imgui_impl_glfw_gl3.cpp`.
 For raytracing, we optionally link to Intel's Embree if `YGL_EMBREE` is 
 defined at build time.
-
-## Images rendered with Yocto/GL path tracer
-
-![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/tests/features1.png)
-_Example materials: matte, plastic, metal, glass, subsurface, normal mapping_
-
-![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](images/tests/features2.png)
-_Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping_
