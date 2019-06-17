@@ -45,11 +45,9 @@ test the library:
 Here are some test images rendered with the path tracer. More images are 
 included in the project site.
 
-![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](tests/features1.png)
-_Example materials: matte, plastic, metal, glass, subsurface, normal mapping_
+![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/features1.png)
 
-![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](tests/features2.png)
-_Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping_
+![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](images/features2.png)
 
 ## Design Considerations
 
