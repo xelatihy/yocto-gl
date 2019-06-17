@@ -2,3 +2,6 @@ title: Yocto/GL
 author: Fabio Pellacini
 email: fabio.pellacini@gmail.com
 theme: minima
+header_pages:
+  - about.md
+  - portfolio.md
