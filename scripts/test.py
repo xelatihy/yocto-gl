@@ -11,11 +11,12 @@ def cli():
 def render(scene='*.yaml'):
     for filename in sorted(glob.glob(f'tests/{scene}')):
         print(f'rendering {filename}')
-        imfilename = filename.replace('.yaml','.png')
-        os.system(f'./bin/yscntrace {filename} -o {imfilename} -s 1024 --logo')
+        imfilename = filename.replace('.yaml','.hdr')
+        os.system(f'./bin/yscntrace {filename} -o {imfilename} -s 1024')
 
 @cli.command()
-def copyright():
+@click.option('--image', '-i', default='*.hdr')
+def tonemap(image='*.yaml'):
     from PIL import Image
     from PIL import ImageFont
     from PIL import ImageDraw 
@@ -24,17 +25,20 @@ def copyright():
         'features1': 'Example materials: matte, plastic, metal, glass, subsurface, normal mapping',
         'features2': 'Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping',
     }
-    for filename in glob.glob('tests/features*.png'):
-        if '-cr.' in filename: continue
+    for filename in sorted(glob.glob(f'tests/{image}')):
+        outname = filename.replace('.hdr','.png')
+        os.system(f'./bin/yimgproc {filename} -o {outname} -t --logo')
+        text = ''
         for k in msg:
             if k in filename: text = msg[k]
-        img = Image.open(filename)
+        if not text: continue
+        img = Image.open(outname)
         w, h = img.size
         draw = ImageDraw.Draw(img)
         tw, _ = draw.textsize(text, font=font)
         draw.rectangle([8,h-26-8,8+8+tw,h-8], (0,0,0))
         draw.text((8+4, h-20-8-4),text,(255,255,255),font=font)
-        img.save(filename.replace('.png', '-cr.png'))
+        img.save(outname)
 
 @cli.command()
 def run():
