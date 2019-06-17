@@ -9,20 +9,19 @@
           <ul class="contact-list">
             <li class="p-name">
               {%- if site.author -%}
-                by <a class="u-url" href="http://pellacini.di.uniroma1.it">{{ site.author | escape }}</a>
+                by {{ site.author | escape }}
               {%- endif -%}
               </li>
+              <li><a class="u-url" href="http://pellacini.di.uniroma1.it">pellacini.di.uniroma1.it</a></li>
               {%- if site.email -%}
               <li><a class="u-email" href="mailto:{{ site.email }}">{{ site.email }}</a></li>
               {%- endif -%}
           </ul>
         </div>
   
-        <!--
         <div class="footer-col one-half">
           <p>{{- site.description | escape -}}</p>
         </div>
-        -->
   
         <div class="social-links">
           {%- include social.html -%}
