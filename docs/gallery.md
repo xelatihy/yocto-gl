@@ -1,12 +1,12 @@
 # Gallery
 
-## Images rendered with Yocto/GL path tracer
+Images rendered with Yocto/GL path tracer.
 
 ![Yocto/GL pathtraced iomage](images/island.png)
 
 ![Yocto/GL pathtraced iomage](images/island-c6.png)
 
-![Yocto/GL pathtraced iomage](images/bistoexterior.png)
+![Yocto/GL pathtraced iomage](images/bistroexterior.png)
 
 ![Yocto/GL pathtraced iomage](images/sanmiguel-c1.png)
 
@@ -24,7 +24,7 @@
 
 ![Yocto/GL pathtraced iomage](images/breakfastroom.png)
 
-![Yocto/GL pathtraced iomage](images/bistointerior.png)
+![Yocto/GL pathtraced iomage](images/bistrointerior.png)
 
 ![Yocto/GL pathtraced iomage](images/coffee.png)
 
