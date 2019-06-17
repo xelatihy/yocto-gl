@@ -3,5 +3,8 @@ author: Fabio Pellacini
 email: fabio.pellacini@gmail.com
 theme: minima
 header_pages:
-  - about.md
+  - readme.md
   - portfolio.md
+titles_from_headings:
+  enabled:     true
+  strip_title: true
