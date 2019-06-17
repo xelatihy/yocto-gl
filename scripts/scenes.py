@@ -109,12 +109,28 @@ def tonemap(directory='mcguire',scene='*',format='yaml',mode='filmic'):
     options = modes[mode]
     outformat = 'png'
     outprefix = 'images'
+    from PIL import Image
+    from PIL import ImageFont
+    from PIL import ImageDraw 
+    font = ImageFont.truetype('~/Library/Fonts/FiraSansCondensed-Regular.otf', 18)
     for filename in sorted(glob.glob(f'{directory}/{outprefix}-{format}/{scene}.hdr')+
                            glob.glob(f'{directory}/{outprefix}-{format}/{scene}.exr')):
         imagename = filename.replace(f'.exr',f'.{outformat}').replace(f'.hdr',f'.{outformat}')
         cmd = f'../yocto-gl/bin/yimgproc -o {imagename} {options} {filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)
+        if directory not in ['bitterli', 'disney', 'mcguire', 'pbrt']: continue
+        authorfilename = filename.replace('images-yaml/','source/').replace('-fr.','.').replace('-hr.','.').replace('-c1.','.').replace('-c2.','.').replace('-c3.','.').replace('-c4.','.').replace('-c5.','.').replace('-c6.','.').replace('.hdr','') + '/AUTHOR.txt'
+        print(authorfilename)
+        with open(authorfilename) as f: text = f.read().strip()
+        img = Image.open(imagename)
+        _, h = img.size
+        draw = ImageDraw.Draw(img)
+        tw, _ = draw.textsize(text, font=font)
+        draw.rectangle([8,h-26-8,8+8+tw,h-8], (0,0,0))
+        draw.text((8+4, h-20-8-4),text,(255,255,255),font=font)
+        img.save(imagename)
+            
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
