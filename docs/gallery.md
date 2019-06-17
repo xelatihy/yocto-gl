@@ -26,9 +26,9 @@ Images rendered with Yocto/GL path tracer.
 
 ![Yocto/GL pathtraced iomage](images/bistrointerior.png)
 
-![Yocto/GL pathtraced iomage](images/coffee.png){:max-height="416px"}
+![Yocto/GL pathtraced iomage](images/coffee.png){:max-height="416px" height="416px"}
 
-![Yocto/GL pathtraced iomage](images/crown.png){:max-height="416px"}
+![Yocto/GL pathtraced iomage](images/crown.png){:max-height="416px" height="416px"}
 
 ![Yocto/GL pathtraced iomage](images/spaceship.png)
 
