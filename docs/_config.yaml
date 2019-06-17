@@ -1,5 +1,6 @@
 title: Yocto/GL
 author: by Fabio Pellacini (xelatihy) and Collaborators
+github_username: xelatihy
 theme: minima
 header_pages:
   - gallery.md
