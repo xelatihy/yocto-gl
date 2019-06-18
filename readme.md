@@ -47,9 +47,9 @@ test the library:
 Here are some test images rendered with the path tracer. More images are 
 included in the project site.
 
-![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/features1.png)
+![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](https://raw.githubusercontent.com/xelatihy/yocto-gl/master/images/features1.png)
 
-![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](images/features2.png)
+![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](https://raw.githubusercontent.com/xelatihy/yocto-gl/master/images/features2.png)
 
 ## Design Considerations
 
