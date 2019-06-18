@@ -1,19 +1,19 @@
-//
-// # Yocto/SceneIO: Tiny library for Yocto/Scene input and output
-//
-// Yocto/SceneIO provides loading and saving functionality for scenes
-// in Yocto/GL. We support a simple to use YAML format, PLY, OBJ and glTF.
-// The YAML serialization is a straight copy of the in-memory scene data.
-// To speed up testing, we also support a binary format that is a dump of
-// the current scene. This format should not be use for archival though.
-//
-// Error reporting is done through exceptions using the `io_error` exception.
-//
-// ## Scene Loading and Saving
-//
-// 1. load a scene with `load_scene()` and save it with `save_scene()`
-//
-//
+///
+/// # Yocto/SceneIO: Tiny library for Yocto/Scene input and output
+///
+/// Yocto/SceneIO provides loading and saving functionality for scenes
+/// in Yocto/GL. We support a simple to use YAML format, PLY, OBJ and glTF.
+/// The YAML serialization is a straight copy of the in-memory scene data.
+/// To speed up testing, we also support a binary format that is a dump of
+/// the current scene. This format should not be use for archival though.
+///
+/// Error reporting is done through exceptions using the `io_error` exception.
+///
+/// ## Scene Loading and Saving
+///
+/// 1. load a scene with `load_scene()` and save it with `save_scene()`
+///
+///
 
 //
 // LICENSE:
@@ -55,7 +55,7 @@
 
 namespace yocto {
 
-// Scene load params
+/// Scene load params
 struct load_params {
   bool               notextures  = false;
   bool               facevarying = false;
@@ -63,7 +63,7 @@ struct load_params {
   bool               noparallel  = false;
 };
 
-// Scene save params
+/// Scene save params
 struct save_params {
   bool               notextures   = false;
   bool               objinstances = false;
@@ -71,13 +71,13 @@ struct save_params {
   bool               noparallel   = false;
 };
 
-// Load/save a scene in the supported formats.
+/// Load/save a scene in the supported formats.
 void load_scene(
     const string& filename, yocto_scene& scene, const load_params& params = {});
 void save_scene(const string& filename, const yocto_scene& scene,
     const save_params& params = {});
 
-// Load/save scene textures
+/// Load/save scene textures
 void load_texture(yocto_texture& texture, const string& dirname);
 void save_texture(const yocto_texture& texture, const string& dirname);
 void load_voltexture(yocto_voltexture& texture, const string& dirname);
@@ -87,7 +87,7 @@ void load_textures(
 void save_textures(
     const yocto_scene& scene, const string& dirname, const save_params& params);
 
-// Load/save scene shapes
+/// Load/save scene shapes
 void load_shape(yocto_shape& shape, const string& dirname);
 void save_shape(const yocto_shape& shape, const string& dirname);
 void load_subdiv(yocto_subdiv& subdiv, const string& dirname);

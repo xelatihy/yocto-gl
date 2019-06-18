@@ -1,20 +1,20 @@
-//
-// # Yocto/Pbrt: Tiny library for Pbrt parsing
-//
-// Yocto/Pbrt is a simple pbrt parser that works with callbacks.
-// We make no attempt to provide a simple interface for pbrt but just the
-// low level parsing code.
-//
-// Error reporting is done through exceptions using the `io_error`
-// exception.
-//
-// ## Parse an pbrt file
-//
-// 1. define callbacks in `pbrt_callback` structure using lambda with capture
-//    if desired
-// 2. run the parse with `load_pbrt()`
-//
-//
+///
+/// # Yocto/Pbrt: Tiny library for Pbrt parsing
+///
+/// Yocto/Pbrt is a simple pbrt parser that works with callbacks.
+/// We make no attempt to provide a simple interface for pbrt but just the
+/// low level parsing code.
+///
+/// Error reporting is done through exceptions using the `io_error`
+/// exception.
+///
+/// ## Parse an pbrt file
+///
+/// 1. define callbacks in `pbrt_callback` structure using lambda with capture
+///    if desired
+/// 2. run the parse with `load_pbrt()`
+///
+///
 
 //
 // LICENSE:
@@ -54,7 +54,7 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// pbrt pbrt_spectrum as rgb color
+/// pbrt pbrt_spectrum as rgb color
 struct pbrt_spectrum3f {
   float x = 0;
   float y = 0;
@@ -69,11 +69,11 @@ struct pbrt_spectrum3f {
   const float& operator[](int i) const { return (&x)[i]; }
 };
 
-// pbrt cameras
+/// pbrt cameras
 struct pbrt_camera {
   struct perspective_t {
     float fov              = 90;
-    float frameaspectratio = -1;  // or computed from film
+    float frameaspectratio = -1;  /// or computed from film
     float lensradius       = 0;
     float focaldistance    = 1e30;
     vec4f screenwindow     = {-1, 1, -1, 1};
@@ -81,7 +81,7 @@ struct pbrt_camera {
     float shutterclose     = 1;
   };
   struct orthographic_t {
-    float frameaspectratio = -1;  // or computed from film
+    float frameaspectratio = -1;  /// or computed from film
     float lensradius       = 0;
     float focaldistance    = 1e30;
     vec4f screenwindow     = {-1, 1, -1, 1};
@@ -109,7 +109,7 @@ struct pbrt_camera {
   realistic_t    realistic    = {};
 };
 
-// pbrt samplers
+/// pbrt samplers
 struct pbrt_sampler {
   struct random_t {
     int pixelsamples = 16;
@@ -148,7 +148,7 @@ struct pbrt_sampler {
   stratified_t      stratified      = {};
 };
 
-// pbrt film
+/// pbrt film
 struct pbrt_film {
   struct image_t {
     int    xresolution        = 640;
@@ -164,7 +164,7 @@ struct pbrt_film {
   image_t image = {};
 };
 
-// pbrt filters
+/// pbrt filters
 struct pbrt_filter {
   struct box_t {
     float xwidth = 0.5;
@@ -199,7 +199,7 @@ struct pbrt_filter {
   triangle_t triangle = {};
 };
 
-// pbrt integrators
+/// pbrt integrators
 struct pbrt_integrator {
   struct path_t {
     enum struct lightsamplestrategy_t { uniform, power, spatial };
@@ -269,7 +269,7 @@ struct pbrt_integrator {
   whitted_t        whitted        = {};
 };
 
-// pbrt accellerators
+/// pbrt accellerators
 struct pbrt_accelerator {
   struct bvh_t {
     enum struct splitmethod_t { sah, equal, middle, hlbvh };
@@ -289,7 +289,7 @@ struct pbrt_accelerator {
   kdtree_t kdtree = {};
 };
 
-// pbrt texture or value
+/// pbrt texture or value
 struct pbrt_textured1f {
   float  value   = 0;
   string texture = "";
@@ -303,7 +303,7 @@ struct pbrt_textured3f {
   pbrt_textured3f(float x, float y, float z) : value{x, y, z}, texture{} {}
 };
 
-// pbrt textures
+/// pbrt textures
 struct pbrt_texture {
   struct constant_t {
     pbrt_textured3f value = {1, 1, 1};
@@ -431,7 +431,7 @@ struct pbrt_texture {
   wrinkled_t     wrinkled     = {};
 };
 
-// pbrt materials
+/// pbrt materials
 struct pbrt_material {
   struct matte_t {
     pbrt_textured3f Kd      = {0.5, 0.5, 0.5};
@@ -519,10 +519,10 @@ struct pbrt_material {
     glass_t       approx_glass   = {};
   };
   struct hair_t {
-    pbrt_textured3f color       = {0, 0, 0};  // TODO: missing default
-    pbrt_textured3f sigma_a     = {0, 0, 0};  // TODO: missing default
-    pbrt_textured1f eumelanin   = 0;          // TODO: missing default
-    pbrt_textured1f pheomelanin = 0;          // TODO: missing default
+    pbrt_textured3f color       = {0, 0, 0};  /// TODO: missing default
+    pbrt_textured3f sigma_a     = {0, 0, 0};  /// TODO: missing default
+    pbrt_textured1f eumelanin   = 0;          /// TODO: missing default
+    pbrt_textured1f pheomelanin = 0;          /// TODO: missing default
     pbrt_textured1f eta         = 1.55f;
     pbrt_textured1f beta_m      = 0.3f;
     pbrt_textured1f beta_n      = 0.3f;
@@ -600,7 +600,7 @@ struct pbrt_material {
   subsurface_t   subsurface{};
 };
 
-// pbrt shapes
+/// pbrt shapes
 struct pbrt_shape {
   struct trianglemesh_t {
     vector<vec3i>   indices     = {};
@@ -713,7 +713,7 @@ struct pbrt_shape {
   heightfield_t  heightfield  = {};
 };
 
-// pbrt lights
+/// pbrt lights
 struct pbrt_light {
   struct distant_t {
     pbrt_spectrum3f scale = {1, 1, 1};
@@ -768,7 +768,7 @@ struct pbrt_light {
   spot_t        spot        = {};
 };
 
-// pbrt area lights
+/// pbrt area lights
 struct pbrt_arealight {
   struct none_t {};
   struct diffuse_t {
@@ -783,7 +783,7 @@ struct pbrt_arealight {
   diffuse_t diffuse = {};
 };
 
-// pbrt mediums
+/// pbrt mediums
 struct pbrt_medium {
   struct homogeneous_t {
     pbrt_spectrum3f sigma_a = {0.0011, 0.0024, 0.014};
@@ -811,18 +811,18 @@ struct pbrt_medium {
   heterogeneous_t heterogeneous = {};
 };
 
-// pbrt medium interface
+/// pbrt medium interface
 struct pbrt_mediuminterface {
   string interior = "";
   string exterior = "";
 };
 
-// pbrt insstance
+/// pbrt insstance
 struct pbrt_object {
   string name = "";
 };
 
-// pbrt stack ctm
+/// pbrt stack ctm
 struct pbrt_context {
   frame3f transform_start        = identity3x4f;
   frame3f transform_end          = identity3x4f;
@@ -836,7 +836,7 @@ struct pbrt_context {
   float   last_lookat_distance   = 0;
 };
 
-// pbrt callbacks
+/// pbrt callbacks
 struct pbrt_callbacks {
   virtual void sampler(const pbrt_sampler& value, const pbrt_context& ctx) {}
   virtual void integrator(
@@ -863,7 +863,7 @@ struct pbrt_callbacks {
   virtual void end_object(const pbrt_object& value, const pbrt_context& ctx) {}
 };
 
-// Load pbrt scene
+/// Load pbrt scene
 void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv = true);
 
 }  // namespace yocto

@@ -1,41 +1,41 @@
-//
-// # Yocto/Math: Tiny library for math support in graphics applications.
-//
-// Yocto/Math provides the basic math primitives used in grahics, including
-// small-sized vectors and matrixes, frames, bounding boxes and transforms.
-//
-// We provide common operations for small vectors and matrices typically used
-// in graphics. In particular, we support 1-4 dimensional vectors
-// coordinates in float and int coordinates (`vec1f`, `vec2f`, `vec3f`, `vec4f`,
-// `vec1i`, `vec2i`, `vec3i`, `vec4i`).
-//
-// We support 2-4 dimensional matrices (`mat2f`, `mat3f`, `mat4f`) with
-// matrix-matrix and matrix-vector products, transposes and inverses.
-// Matrices are stored in column-major order and are accessed and
-// constructed by column. The one dimensional version is for completeness only.
-//
-// To represent transformations, most of the library facilities prefer the use
-// coordinate frames, aka rigid transforms, represented as `frame2f` and
-// `frame3f`. The structure store three coordinate axes and the origin.
-// This is equivalent to a rigid transform written as a column-major affine
-// matrix. Transform operations are fater with this representation.
-//
-// We represent bounding boxes in 2-3 dimensions with `bbox2f`, `bbox3f`
-// Each bounding box support construction from points and other bounding box.
-// We provide operations to compute bounds for points, lines, triangles and
-// quads.
-//
-// For both matrices and frames we support transform operations for points,
-// vectors and directions (`transform_point()`, `transform_vector()`,
-// `transform_direction()`). Transform matrices and frames can be
-// constructed from basic translation, rotation and scaling, e.g. with
-// `translation_mat()` or `translation_frame()` respectively, etc.
-// For rotation we support axis-angle and quaternions, with slerp.
-//
-// Finally, we include a `timer` for benchmarking with high precision and
-// a few common path manipulations ghat will be remove once C++ filesystem
-// support will be more common.
-//
+///
+/// # Yocto/Math: Tiny library for math support in graphics applications.
+///
+/// Yocto/Math provides the basic math primitives used in grahics, including
+/// small-sized vectors and matrixes, frames, bounding boxes and transforms.
+///
+/// We provide common operations for small vectors and matrices typically used
+/// in graphics. In particular, we support 1-4 dimensional vectors
+/// coordinates in float and int coordinates (`vec1f`, `vec2f`, `vec3f`, `vec4f`,
+/// `vec1i`, `vec2i`, `vec3i`, `vec4i`).
+///
+/// We support 2-4 dimensional matrices (`mat2f`, `mat3f`, `mat4f`) with
+/// matrix-matrix and matrix-vector products, transposes and inverses.
+/// Matrices are stored in column-major order and are accessed and
+/// constructed by column. The one dimensional version is for completeness only.
+///
+/// To represent transformations, most of the library facilities prefer the use
+/// coordinate frames, aka rigid transforms, represented as `frame2f` and
+/// `frame3f`. The structure store three coordinate axes and the origin.
+/// This is equivalent to a rigid transform written as a column-major affine
+/// matrix. Transform operations are fater with this representation.
+///
+/// We represent bounding boxes in 2-3 dimensions with `bbox2f`, `bbox3f`
+/// Each bounding box support construction from points and other bounding box.
+/// We provide operations to compute bounds for points, lines, triangles and
+/// quads.
+///
+/// For both matrices and frames we support transform operations for points,
+/// vectors and directions (`transform_point()`, `transform_vector()`,
+/// `transform_direction()`). Transform matrices and frames can be
+/// constructed from basic translation, rotation and scaling, e.g. with
+/// `translation_mat()` or `translation_frame()` respectively, etc.
+/// For rotation we support axis-angle and quaternions, with slerp.
+///
+/// Finally, we include a `timer` for benchmarking with high precision and
+/// a few common path manipulations ghat will be remove once C++ filesystem
+/// support will be more common.
+///
 
 //
 // LICENSE:
@@ -87,7 +87,7 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Aliased typenames for readability
+/// Aliased typenames for readability
 using std::pair;
 using std::string;
 using std::unordered_map;
@@ -192,16 +192,16 @@ struct vec4f {
   const float& operator[](int i) const { return (&x)[i]; }
 };
 
-// Zero vector constants.
+/// Zero vector constants.
 inline const auto zero2f = vec2f{0, 0};
 inline const auto zero3f = vec3f{0, 0, 0};
 inline const auto zero4f = vec4f{0, 0, 0, 0};
 
-// Element access
+/// Element access
 inline vec3f&       xyz(vec4f& a) { return (vec3f&)a; }
 inline const vec3f& xyz(const vec4f& a) { return (const vec3f&)a; }
 
-// Vector comparison operations.
+/// Vector comparison operations.
 inline bool operator==(const vec2f& a, const vec2f& b) {
   return a.x == b.x && a.y == b.y;
 }
@@ -209,7 +209,7 @@ inline bool operator!=(const vec2f& a, const vec2f& b) {
   return a.x != b.x || a.y != b.y;
 }
 
-// Vector operations.
+/// Vector operations.
 inline vec2f operator+(const vec2f& a) { return a; }
 inline vec2f operator-(const vec2f& a) { return {-a.x, -a.y}; }
 inline vec2f operator+(const vec2f& a, const vec2f& b) {
@@ -233,7 +233,7 @@ inline vec2f operator/(const vec2f& a, const vec2f& b) {
 inline vec2f operator/(const vec2f& a, float b) { return {a.x / b, a.y / b}; }
 inline vec2f operator/(float a, const vec2f& b) { return {a / b.x, a / b.y}; }
 
-// Vector assignments
+/// Vector assignments
 inline vec2f& operator+=(vec2f& a, const vec2f& b) { return a = a + b; }
 inline vec2f& operator+=(vec2f& a, float b) { return a = a + b; }
 inline vec2f& operator-=(vec2f& a, const vec2f& b) { return a = a - b; }
@@ -243,7 +243,7 @@ inline vec2f& operator*=(vec2f& a, float b) { return a = a * b; }
 inline vec2f& operator/=(vec2f& a, const vec2f& b) { return a = a / b; }
 inline vec2f& operator/=(vec2f& a, float b) { return a = a / b; }
 
-// Vector products and lengths.
+/// Vector products and lengths.
 inline float dot(const vec2f& a, const vec2f& b) {
   return a.x * b.x + a.y * b.y;
 }
@@ -261,7 +261,7 @@ inline float distance_squared(const vec2f& a, const vec2f& b) {
   return dot(a - b, a - b);
 }
 
-// Max element and clamp.
+/// Max element and clamp.
 inline vec2f max(const vec2f& a, float b) { return {max(a.x, b), max(a.y, b)}; }
 inline vec2f min(const vec2f& a, float b) { return {min(a.x, b), min(a.y, b)}; }
 inline vec2f max(const vec2f& a, const vec2f& b) {
@@ -285,7 +285,7 @@ inline float min(const vec2f& a) { return min(a.x, a.y); }
 inline float sum(const vec2f& a) { return a.x + a.y; }
 inline float mean(const vec2f& a) { return sum(a) / 2; }
 
-// Functions applied to vector elements
+/// Functions applied to vector elements
 inline vec2f abs(const vec2f& a) { return {abs(a.x), abs(a.y)}; };
 inline vec2f sqrt(const vec2f& a) { return {sqrt(a.x), sqrt(a.y)}; };
 inline vec2f exp(const vec2f& a) { return {exp(a.x), exp(a.y)}; };
@@ -304,7 +304,7 @@ inline vec2f gain(const vec2f& a, float b) {
 };
 inline void swap(vec2f& a, vec2f& b) { std::swap(a, b); }
 
-// Vector comparison operations.
+/// Vector comparison operations.
 inline bool operator==(const vec3f& a, const vec3f& b) {
   return a.x == b.x && a.y == b.y && a.z == b.z;
 }
@@ -312,7 +312,7 @@ inline bool operator!=(const vec3f& a, const vec3f& b) {
   return a.x != b.x || a.y != b.y || a.z != b.z;
 }
 
-// Vector operations.
+/// Vector operations.
 inline vec3f operator+(const vec3f& a) { return a; }
 inline vec3f operator-(const vec3f& a) { return {-a.x, -a.y, -a.z}; }
 inline vec3f operator+(const vec3f& a, const vec3f& b) {
@@ -352,7 +352,7 @@ inline vec3f operator/(float a, const vec3f& b) {
   return {a / b.x, a / b.y, a / b.z};
 }
 
-// Vector assignments
+/// Vector assignments
 inline vec3f& operator+=(vec3f& a, const vec3f& b) { return a = a + b; }
 inline vec3f& operator+=(vec3f& a, float b) { return a = a + b; }
 inline vec3f& operator-=(vec3f& a, const vec3f& b) { return a = a - b; }
@@ -362,7 +362,7 @@ inline vec3f& operator*=(vec3f& a, float b) { return a = a * b; }
 inline vec3f& operator/=(vec3f& a, const vec3f& b) { return a = a / b; }
 inline vec3f& operator/=(vec3f& a, float b) { return a = a / b; }
 
-// Vector products and lengths.
+/// Vector products and lengths.
 inline float dot(const vec3f& a, const vec3f& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z;
 }
@@ -384,7 +384,7 @@ inline float angle(const vec3f& a, const vec3f& b) {
   return acos(clamp(dot(normalize(a), normalize(b)), (float)-1, (float)1));
 }
 
-// Orthogonal vectors.
+/// Orthogonal vectors.
 inline vec3f orthogonal(const vec3f& v) {
   // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
   return abs(v.x) > abs(v.z) ? vec3f{-v.y, v.x, 0} : vec3f{0, -v.z, v.y};
@@ -393,7 +393,7 @@ inline vec3f orthonormalize(const vec3f& a, const vec3f& b) {
   return normalize(a - b * dot(a, b));
 }
 
-// Reflected and refracted vector.
+/// Reflected and refracted vector.
 inline vec3f reflect(const vec3f& w, const vec3f& n) {
   return -w + 2 * dot(n, w) * n;
 }
@@ -404,7 +404,7 @@ inline vec3f refract(const vec3f& w, const vec3f& n, float eta) {
   return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
 }
 
-// Max element and clamp.
+/// Max element and clamp.
 inline vec3f max(const vec3f& a, float b) {
   return {max(a.x, b), max(a.y, b), max(a.z, b)};
 }
@@ -432,7 +432,7 @@ inline float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
 inline float sum(const vec3f& a) { return a.x + a.y + a.z; }
 inline float mean(const vec3f& a) { return sum(a) / 3; }
 
-// Functions applied to vector elements
+/// Functions applied to vector elements
 inline vec3f abs(const vec3f& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
 inline vec3f sqrt(const vec3f& a) { return {sqrt(a.x), sqrt(a.y), sqrt(a.z)}; };
 inline vec3f exp(const vec3f& a) { return {exp(a.x), exp(a.y), exp(a.z)}; };
@@ -453,7 +453,7 @@ inline bool isfinite(const vec3f& a) {
 };
 inline void swap(vec3f& a, vec3f& b) { std::swap(a, b); }
 
-// Vector comparison operations.
+/// Vector comparison operations.
 inline bool operator==(const vec4f& a, const vec4f& b) {
   return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
@@ -461,7 +461,7 @@ inline bool operator!=(const vec4f& a, const vec4f& b) {
   return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
 }
 
-// Vector operations.
+/// Vector operations.
 inline vec4f operator+(const vec4f& a) { return a; }
 inline vec4f operator-(const vec4f& a) { return {-a.x, -a.y, -a.z, -a.w}; }
 inline vec4f operator+(const vec4f& a, const vec4f& b) {
@@ -501,7 +501,7 @@ inline vec4f operator/(float a, const vec4f& b) {
   return {a / b.x, a / b.y, a / b.z, a / b.w};
 }
 
-// Vector assignments
+/// Vector assignments
 inline vec4f& operator+=(vec4f& a, const vec4f& b) { return a = a + b; }
 inline vec4f& operator+=(vec4f& a, float b) { return a = a + b; }
 inline vec4f& operator-=(vec4f& a, const vec4f& b) { return a = a - b; }
@@ -511,7 +511,7 @@ inline vec4f& operator*=(vec4f& a, float b) { return a = a * b; }
 inline vec4f& operator/=(vec4f& a, const vec4f& b) { return a = a / b; }
 inline vec4f& operator/=(vec4f& a, float b) { return a = a / b; }
 
-// Vector products and lengths.
+/// Vector products and lengths.
 inline float dot(const vec4f& a, const vec4f& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
@@ -539,7 +539,7 @@ inline vec4f slerp(const vec4f& a, const vec4f& b, float u) {
   return an * (sin(th * (1 - u)) / sin(th)) + bn * (sin(th * u) / sin(th));
 }
 
-// Max element and clamp.
+/// Max element and clamp.
 inline vec4f max(const vec4f& a, float b) {
   return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
 }
@@ -568,7 +568,7 @@ inline float min(const vec4f& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 inline float sum(const vec4f& a) { return a.x + a.y + a.z + a.w; }
 inline float mean(const vec4f& a) { return sum(a) / 4; }
 
-// Functions applied to vector elements
+/// Functions applied to vector elements
 inline vec4f abs(const vec4f& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
 };
@@ -601,8 +601,8 @@ inline bool isfinite(const vec4f& a) {
 };
 inline void swap(vec4f& a, vec4f& b) { std::swap(a, b); }
 
-// Quaternion operatons represented as xi + yj + zk + w
-// const auto identity_quat4f = vec4f{0, 0, 0, 1};
+/// Quaternion operatons represented as xi + yj + zk + w
+/// const auto identity_quat4f = vec4f{0, 0, 0, 1};
 inline vec4f quat_mul(const vec4f& a, float b) {
   return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
@@ -679,17 +679,17 @@ struct vec4b {
   const byte& operator[](int i) const { return (&x)[i]; }
 };
 
-// Zero vector constants.
+/// Zero vector constants.
 inline const auto zero2i = vec2i{0, 0};
 inline const auto zero3i = vec3i{0, 0, 0};
 inline const auto zero4i = vec4i{0, 0, 0, 0};
 inline const auto zero4b = vec4b{0, 0, 0, 0};
 
-// Element access
+/// Element access
 inline vec3i&       xyz(vec4i& a) { return (vec3i&)a; }
 inline const vec3i& xyz(const vec4i& a) { return (const vec3i&)a; }
 
-// Vector comparison operations.
+/// Vector comparison operations.
 inline bool operator==(const vec2i& a, const vec2i& b) {
   return a.x == b.x && a.y == b.y;
 }
@@ -697,7 +697,7 @@ inline bool operator!=(const vec2i& a, const vec2i& b) {
   return a.x != b.x || a.y != b.y;
 }
 
-// Vector operations.
+/// Vector operations.
 inline vec2i operator+(const vec2i& a) { return a; }
 inline vec2i operator-(const vec2i& a) { return {-a.x, -a.y}; }
 inline vec2i operator+(const vec2i& a, const vec2i& b) {
@@ -721,7 +721,7 @@ inline vec2i operator/(const vec2i& a, const vec2i& b) {
 inline vec2i operator/(const vec2i& a, int b) { return {a.x / b, a.y / b}; }
 inline vec2i operator/(int a, const vec2i& b) { return {a / b.x, a / b.y}; }
 
-// Vector assignments
+/// Vector assignments
 inline vec2i& operator+=(vec2i& a, const vec2i& b) { return a = a + b; }
 inline vec2i& operator+=(vec2i& a, int b) { return a = a + b; }
 inline vec2i& operator-=(vec2i& a, const vec2i& b) { return a = a - b; }
@@ -731,7 +731,7 @@ inline vec2i& operator*=(vec2i& a, int b) { return a = a * b; }
 inline vec2i& operator/=(vec2i& a, const vec2i& b) { return a = a / b; }
 inline vec2i& operator/=(vec2i& a, int b) { return a = a / b; }
 
-// Max element and clamp.
+/// Max element and clamp.
 inline vec2i max(const vec2i& a, int b) { return {max(a.x, b), max(a.y, b)}; }
 inline vec2i min(const vec2i& a, int b) { return {min(a.x, b), min(a.y, b)}; }
 inline vec2i max(const vec2i& a, const vec2i& b) {
@@ -748,11 +748,11 @@ inline int max(const vec2i& a) { return max(a.x, a.y); }
 inline int min(const vec2i& a) { return min(a.x, a.y); }
 inline int sum(const vec2i& a) { return a.x + a.y; }
 
-// Functions applied to vector elements
+/// Functions applied to vector elements
 inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
 inline void  swap(vec2i& a, vec2i& b) { std::swap(a, b); }
 
-// Vector comparison operations.
+/// Vector comparison operations.
 inline bool operator==(const vec3i& a, const vec3i& b) {
   return a.x == b.x && a.y == b.y && a.z == b.z;
 }
@@ -760,7 +760,7 @@ inline bool operator!=(const vec3i& a, const vec3i& b) {
   return a.x != b.x || a.y != b.y || a.z != b.z;
 }
 
-// Vector operations.
+/// Vector operations.
 inline vec3i operator+(const vec3i& a) { return a; }
 inline vec3i operator-(const vec3i& a) { return {-a.x, -a.y, -a.z}; }
 inline vec3i operator+(const vec3i& a, const vec3i& b) {
@@ -800,7 +800,7 @@ inline vec3i operator/(int a, const vec3i& b) {
   return {a / b.x, a / b.y, a / b.z};
 }
 
-// Vector assignments
+/// Vector assignments
 inline vec3i& operator+=(vec3i& a, const vec3i& b) { return a = a + b; }
 inline vec3i& operator+=(vec3i& a, int b) { return a = a + b; }
 inline vec3i& operator-=(vec3i& a, const vec3i& b) { return a = a - b; }
@@ -810,7 +810,7 @@ inline vec3i& operator*=(vec3i& a, int b) { return a = a * b; }
 inline vec3i& operator/=(vec3i& a, const vec3i& b) { return a = a / b; }
 inline vec3i& operator/=(vec3i& a, int b) { return a = a / b; }
 
-// Max element and clamp.
+/// Max element and clamp.
 inline vec3i max(const vec3i& a, int b) {
   return {max(a.x, b), max(a.y, b), max(a.z, b)};
 }
@@ -831,11 +831,11 @@ inline int max(const vec3i& a) { return max(max(a.x, a.y), a.z); }
 inline int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
 inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
 
-// Functions applied to vector elements
+/// Functions applied to vector elements
 inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
 inline void  swap(vec3i& a, vec3i& b) { std::swap(a, b); }
 
-// Vector comparison operations.
+/// Vector comparison operations.
 inline bool operator==(const vec4i& a, const vec4i& b) {
   return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
@@ -843,7 +843,7 @@ inline bool operator!=(const vec4i& a, const vec4i& b) {
   return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
 }
 
-// Vector operations.
+/// Vector operations.
 inline vec4i operator+(const vec4i& a) { return a; }
 inline vec4i operator-(const vec4i& a) { return {-a.x, -a.y, -a.z, -a.w}; }
 inline vec4i operator+(const vec4i& a, const vec4i& b) {
@@ -883,7 +883,7 @@ inline vec4i operator/(int a, const vec4i& b) {
   return {a / b.x, a / b.y, a / b.z, a / b.w};
 }
 
-// Vector assignments
+/// Vector assignments
 inline vec4i& operator+=(vec4i& a, const vec4i& b) { return a = a + b; }
 inline vec4i& operator+=(vec4i& a, int b) { return a = a + b; }
 inline vec4i& operator-=(vec4i& a, const vec4i& b) { return a = a - b; }
@@ -893,7 +893,7 @@ inline vec4i& operator*=(vec4i& a, int b) { return a = a * b; }
 inline vec4i& operator/=(vec4i& a, const vec4i& b) { return a = a / b; }
 inline vec4i& operator/=(vec4i& a, int b) { return a = a / b; }
 
-// Max element and clamp.
+/// Max element and clamp.
 inline vec4i max(const vec4i& a, int b) {
   return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
 }
@@ -915,7 +915,7 @@ inline int max(const vec4i& a) { return max(max(max(a.x, a.y), a.z), a.w); }
 inline int min(const vec4i& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 inline int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
 
-// Functions applied to vector elements
+/// Functions applied to vector elements
 inline vec4i abs(const vec4i& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
 };
@@ -925,7 +925,7 @@ inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 
 namespace std {
 
-// Hash functor for vector for use with unordered_map
+/// Hash functor for vector for use with unordered_map
 template <>
 struct hash<yocto::vec2i> {
   size_t operator()(const yocto::vec2i& v) const {
@@ -967,7 +967,7 @@ struct hash<yocto::vec4i> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Small Fixed-size matrices stored in column major format.
+/// Small Fixed-size matrices stored in column major format.
 struct mat2f {
   vec2f x = {1, 0};
   vec2f y = {0, 1};
@@ -979,7 +979,7 @@ struct mat2f {
   const vec2f& operator[](int i) const { return (&x)[i]; }
 };
 
-// Small Fixed-size matrices stored in column major format.
+/// Small Fixed-size matrices stored in column major format.
 struct mat3f {
   vec3f x = {1, 0, 0};
   vec3f y = {0, 1, 0};
@@ -992,7 +992,7 @@ struct mat3f {
   const vec3f& operator[](int i) const { return (&x)[i]; }
 };
 
-// Small Fixed-size matrices stored in column major format.
+/// Small Fixed-size matrices stored in column major format.
 struct mat4f {
   vec4f x = {1, 0, 0, 0};
   vec4f y = {0, 1, 0, 0};
@@ -1007,19 +1007,19 @@ struct mat4f {
   const vec4f& operator[](int i) const { return (&x)[i]; }
 };
 
-// Identity matrices constants.
+/// Identity matrices constants.
 inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
 inline const auto identity3x3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 inline const auto identity4x4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
-// Matrix comparisons.
+/// Matrix comparisons.
 inline bool operator==(const mat2f& a, const mat2f& b) {
   return a.x == b.x && a.y == b.y;
 }
 inline bool operator!=(const mat2f& a, const mat2f& b) { return !(a == b); }
 
-// Matrix operations.
+/// Matrix operations.
 inline mat2f operator+(const mat2f& a, const mat2f& b) {
   return {a.x + b.x, a.y + b.y};
 }
@@ -1034,18 +1034,18 @@ inline mat2f operator*(const mat2f& a, const mat2f& b) {
   return {a * b.x, a * b.y};
 }
 
-// Matrix assignments.
+/// Matrix assignments.
 inline mat2f& operator+=(mat2f& a, const mat2f& b) { return a = a + b; }
 inline mat2f& operator*=(mat2f& a, const mat2f& b) { return a = a * b; }
 inline mat2f& operator*=(mat2f& a, float b) { return a = a * b; }
 
-// Matrix diagonals and transposes.
+/// Matrix diagonals and transposes.
 inline vec2f diagonal(const mat2f& a) { return {a.x.x, a.y.y}; }
 inline mat2f transpose(const mat2f& a) {
   return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
 }
 
-// Matrix adjoints, determinants and inverses.
+/// Matrix adjoints, determinants and inverses.
 inline float determinant(const mat2f& a) { return cross(a.x, a.y); }
 inline mat2f adjoint(const mat2f& a) {
   return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
@@ -1054,13 +1054,13 @@ inline mat2f inverse(const mat2f& a) {
   return adjoint(a) * (1 / determinant(a));
 }
 
-// Matrix comparisons.
+/// Matrix comparisons.
 inline bool operator==(const mat3f& a, const mat3f& b) {
   return a.x == b.x && a.y == b.y && a.z == b.z;
 }
 inline bool operator!=(const mat3f& a, const mat3f& b) { return !(a == b); }
 
-// Matrix operations.
+/// Matrix operations.
 inline mat3f operator+(const mat3f& a, const mat3f& b) {
   return {a.x + b.x, a.y + b.y, a.z + b.z};
 }
@@ -1077,12 +1077,12 @@ inline mat3f operator*(const mat3f& a, const mat3f& b) {
   return {a * b.x, a * b.y, a * b.z};
 }
 
-// Matrix assignments.
+/// Matrix assignments.
 inline mat3f& operator+=(mat3f& a, const mat3f& b) { return a = a + b; }
 inline mat3f& operator*=(mat3f& a, const mat3f& b) { return a = a * b; }
 inline mat3f& operator*=(mat3f& a, float b) { return a = a * b; }
 
-// Matrix diagonals and transposes.
+/// Matrix diagonals and transposes.
 inline vec3f diagonal(const mat3f& a) { return {a.x.x, a.y.y, a.z.z}; }
 inline mat3f transpose(const mat3f& a) {
   return {
@@ -1092,7 +1092,7 @@ inline mat3f transpose(const mat3f& a) {
   };
 }
 
-// Matrix adjoints, determinants and inverses.
+/// Matrix adjoints, determinants and inverses.
 inline float determinant(const mat3f& a) { return dot(a.x, cross(a.y, a.z)); }
 inline mat3f adjoint(const mat3f& a) {
   return transpose(mat3f{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
@@ -1101,9 +1101,9 @@ inline mat3f inverse(const mat3f& a) {
   return adjoint(a) * (1 / determinant(a));
 }
 
-// Constructs a basis from a direction
+/// Constructs a basis from a direction
 inline mat3f basis_fromz(const vec3f& v) {
-  // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+  /// https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   auto z    = normalize(v);
   auto sign = copysignf(1.0f, z.z);
   auto a    = -1.0f / (sign + z.z);
@@ -1113,13 +1113,13 @@ inline mat3f basis_fromz(const vec3f& v) {
   return {x, y, z};
 }
 
-// Matrix comparisons.
+/// Matrix comparisons.
 inline bool operator==(const mat4f& a, const mat4f& b) {
   return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
 inline bool operator!=(const mat4f& a, const mat4f& b) { return !(a == b); }
 
-// Matrix operations.
+/// Matrix operations.
 inline mat4f operator+(const mat4f& a, const mat4f& b) {
   return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
@@ -1136,12 +1136,12 @@ inline mat4f operator*(const mat4f& a, const mat4f& b) {
   return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
 
-// Matrix assignments.
+/// Matrix assignments.
 inline mat4f& operator+=(mat4f& a, const mat4f& b) { return a = a + b; }
 inline mat4f& operator*=(mat4f& a, const mat4f& b) { return a = a * b; }
 inline mat4f& operator*=(mat4f& a, float b) { return a = a * b; }
 
-// Matrix diagonals and transposes.
+/// Matrix diagonals and transposes.
 inline vec4f diagonal(const mat4f& a) { return {a.x.x, a.y.y, a.z.z, a.w.w}; }
 inline mat4f transpose(const mat4f& a) {
   return {
@@ -1159,7 +1159,7 @@ inline mat4f transpose(const mat4f& a) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Rigid frames stored as a column-major affine transform matrix.
+/// Rigid frames stored as a column-major affine transform matrix.
 struct frame2f {
   vec2f x = {1, 0};
   vec2f y = {0, 1};
@@ -1177,7 +1177,7 @@ struct frame2f {
   const vec2f& operator[](int i) const { return (&x)[i]; }
 };
 
-// Rigid frames stored as a column-major affine transform matrix.
+/// Rigid frames stored as a column-major affine transform matrix.
 struct frame3f {
   vec3f x = {1, 0, 0};
   vec3f y = {0, 1, 0};
@@ -1200,27 +1200,27 @@ struct frame3f {
   const vec3f& operator[](int i) const { return (&x)[i]; }
 };
 
-// Indentity frames.
+/// Indentity frames.
 inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
 inline const auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
-// Frame properties
+/// Frame properties
 inline const mat2f& rotation(const frame2f& a) { return (const mat2f&)a; }
 
-// Frame comparisons.
+/// Frame comparisons.
 inline bool operator==(const frame2f& a, const frame2f& b) {
   return a.x == b.x && a.y == b.y && a.o == b.o;
 }
 inline bool operator!=(const frame2f& a, const frame2f& b) { return !(a == b); }
 
-// Frame composition, equivalent to affine matrix product.
+/// Frame composition, equivalent to affine matrix product.
 inline frame2f operator*(const frame2f& a, const frame2f& b) {
   return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
 }
 inline frame2f& operator*=(frame2f& a, const frame2f& b) { return a = a * b; }
 
-// Frame inverse, equivalent to rigid affine inverse.
+/// Frame inverse, equivalent to rigid affine inverse.
 inline frame2f inverse(const frame2f& a, bool non_rigid = false) {
   if (non_rigid) {
     auto minv = inverse(rotation(a));
@@ -1231,22 +1231,22 @@ inline frame2f inverse(const frame2f& a, bool non_rigid = false) {
   }
 }
 
-// Frame properties
+/// Frame properties
 inline const mat3f& rotation(const frame3f& a) { return (const mat3f&)a; }
 
-// Frame comparisons.
+/// Frame comparisons.
 inline bool operator==(const frame3f& a, const frame3f& b) {
   return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
 }
 inline bool operator!=(const frame3f& a, const frame3f& b) { return !(a == b); }
 
-// Frame composition, equivalent to affine matrix product.
+/// Frame composition, equivalent to affine matrix product.
 inline frame3f operator*(const frame3f& a, const frame3f& b) {
   return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
 }
 inline frame3f& operator*=(frame3f& a, const frame3f& b) { return a = a * b; }
 
-// Frame inverse, equivalent to rigid affine inverse.
+/// Frame inverse, equivalent to rigid affine inverse.
 inline frame3f inverse(const frame3f& a, bool non_rigid = false) {
   if (non_rigid) {
     auto minv = inverse(rotation(a));
@@ -1257,7 +1257,7 @@ inline frame3f inverse(const frame3f& a, bool non_rigid = false) {
   }
 }
 
-// Frame construction from axis.
+/// Frame construction from axis.
 inline frame3f frame_fromz(const vec3f& o, const vec3f& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   auto z    = normalize(v);
@@ -1282,22 +1282,22 @@ inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Quaternions to represent rotations
+/// Quaternions to represent rotations
 struct quat4f {
   float x = 0;
   float y = 0;
   float z = 0;
   float w = 0;
 
-  // constructors
+  /// constructors
   quat4f() : x{0}, y{0}, z{0}, w{1} {}
   quat4f(float x, float y, float z, float w) : x{x}, y{y}, z{z}, w{w} {}
 };
 
-// Constants
+/// Constants
 inline const auto identity_quat4f = quat4f{0, 0, 0, 1};
 
-// Quaternion operatons
+/// Quaternion operatons
 inline quat4f operator+(const quat4f& a, const quat4f& b) {
   return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
@@ -1314,7 +1314,7 @@ inline quat4f operator*(const quat4f& a, const quat4f& b) {
       a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
 }
 
-// Quaterion operations
+/// Quaterion operations
 inline float dot(const quat4f& a, const quat4f& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
@@ -1349,7 +1349,7 @@ inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Axis aligned bounding box represented as a min/max vector pairs.
+/// Axis aligned bounding box represented as a min/max vector pairs.
 struct bbox2f {
   vec2f min = {flt_max, flt_max};
   vec2f max = {flt_min, flt_min};
@@ -1361,7 +1361,7 @@ struct bbox2f {
   const vec2f& operator[](int i) const { return (&min)[i]; }
 };
 
-// Axis aligned bounding box represented as a min/max vector pairs.
+/// Axis aligned bounding box represented as a min/max vector pairs.
 struct bbox3f {
   vec3f min = {flt_max, flt_max, flt_max};
   vec3f max = {flt_min, flt_min, flt_min};
@@ -1373,15 +1373,15 @@ struct bbox3f {
   const vec3f& operator[](int i) const { return (&min)[i]; }
 };
 
-// Empty bbox constant.
+/// Empty bbox constant.
 inline const auto invalidb2f = bbox2f{};
 inline const auto invalidb3f = bbox3f{};
 
-// Bounding box properties
+/// Bounding box properties
 inline vec2f center(const bbox2f& a) { return (a.min + a.max) / 2; }
 inline vec2f size(const bbox2f& a) { return a.max - a.min; }
 
-// Bounding box comparisons.
+/// Bounding box comparisons.
 inline bool operator==(const bbox2f& a, const bbox2f& b) {
   return a.min == b.min && a.max == b.max;
 }
@@ -1389,7 +1389,7 @@ inline bool operator!=(const bbox2f& a, const bbox2f& b) {
   return a.min != b.min || a.max != b.max;
 }
 
-// Bounding box expansions with points and other boxes.
+/// Bounding box expansions with points and other boxes.
 inline bbox2f merge(const bbox2f& a, const vec2f& b) {
   return {min(a.min, b), max(a.max, b)};
 }
@@ -1399,11 +1399,11 @@ inline bbox2f merge(const bbox2f& a, const bbox2f& b) {
 inline void expand(bbox2f& a, const vec2f& b) { a = merge(a, b); }
 inline void expand(bbox2f& a, const bbox2f& b) { a = merge(a, b); }
 
-// Bounding box properties
+/// Bounding box properties
 inline vec3f center(const bbox3f& a) { return (a.min + a.max) / 2; }
 inline vec3f size(const bbox3f& a) { return a.max - a.min; }
 
-// Bounding box comparisons.
+/// Bounding box comparisons.
 inline bool operator==(const bbox3f& a, const bbox3f& b) {
   return a.min == b.min && a.max == b.max;
 }
@@ -1411,7 +1411,7 @@ inline bool operator!=(const bbox3f& a, const bbox3f& b) {
   return a.min != b.min || a.max != b.max;
 }
 
-// Bounding box expansions with points and other boxes.
+/// Bounding box expansions with points and other boxes.
 inline bbox3f merge(const bbox3f& a, const vec3f& b) {
   return {min(a.min, b), max(a.max, b)};
 }
@@ -1421,7 +1421,7 @@ inline bbox3f merge(const bbox3f& a, const bbox3f& b) {
 inline void expand(bbox3f& a, const vec3f& b) { a = merge(a, b); }
 inline void expand(bbox3f& a, const bbox3f& b) { a = merge(a, b); }
 
-// Primitive bounds.
+/// Primitive bounds.
 inline bbox3f point_bounds(const vec3f& p) { return {p, p}; }
 inline bbox3f point_bounds(const vec3f& p, float r) {
   return {min(p - r, p + r), max(p - r, p + r)};
@@ -1449,7 +1449,7 @@ inline bbox3f quad_bounds(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Ray esplison
+/// Ray esplison
 inline const auto ray_eps = 1e-4f;
 
 struct ray2f {
@@ -1464,7 +1464,7 @@ struct ray2f {
       : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };
 
-// Rays with origin, direction and min/max t value.
+/// Rays with origin, direction and min/max t value.
 struct ray3f {
   vec3f o    = {0, 0, 0};
   vec3f d    = {0, 0, 1};
@@ -1484,7 +1484,7 @@ struct ray3f {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Transforms points, vectors and directions by matrices.
+/// Transforms points, vectors and directions by matrices.
 inline vec2f transform_point(const mat3f& a, const vec2f& b) {
   auto tvb = a * vec3f{b.x, b.y, 1};
   return vec2f{tvb.x, tvb.y} / tvb.z;
@@ -1526,7 +1526,7 @@ inline vec3f transform_normal(const mat3f& a, const vec3f& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
-// Transforms points, vectors and directions by frames.
+/// Transforms points, vectors and directions by frames.
 inline vec2f transform_point(const frame2f& a, const vec2f& b) {
   return a.x * b.x + a.y * b.y + a.o;
 }
@@ -1545,7 +1545,7 @@ inline vec2f transform_normal(
   }
 }
 
-// Transforms points, vectors and directions by frames.
+/// Transforms points, vectors and directions by frames.
 inline vec3f transform_point(const frame3f& a, const vec3f& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
 }
@@ -1564,7 +1564,7 @@ inline vec3f transform_normal(
   }
 }
 
-// Transforms rays and bounding boxes by matrices.
+/// Transforms rays and bounding boxes by matrices.
 inline ray3f transform_ray(const mat4f& a, const ray3f& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
@@ -1594,7 +1594,7 @@ inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
   return xformed;
 }
 
-// Translation, scaling and rotations transforms.
+/// Translation, scaling and rotations transforms.
 inline frame3f translation_frame(const vec3f& a) {
   return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
 }
@@ -1638,7 +1638,7 @@ inline frame3f rotation_frame(const mat3f& rot) {
   return {rot.x, rot.y, rot.z, {0, 0, 0}};
 }
 
-// Lookat frame. Z-axis can be inverted with inv_xz.
+/// Lookat frame. Z-axis can be inverted with inv_xz.
 inline frame3f lookat_frame(const vec3f& eye, const vec3f& center,
     const vec3f& up, bool inv_xz = false) {
   auto w = normalize(eye - center);
@@ -1651,7 +1651,7 @@ inline frame3f lookat_frame(const vec3f& eye, const vec3f& center,
   return {u, v, w, eye};
 }
 
-// OpenGL frustum, ortho and perspecgive matrices.
+/// OpenGL frustum, ortho and perspecgive matrices.
 inline mat4f frustum_mat(float l, float r, float b, float t, float n, float f) {
   return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
       {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
@@ -1681,7 +1681,7 @@ inline mat4f perspective_mat(float fovy, float aspect, float near) {
       {0, 0, 2 * near, 0}};
 }
 
-// Rotation conversions.
+/// Rotation conversions.
 inline pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
   return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
@@ -1696,8 +1696,8 @@ inline vec4f rotation_quat(const vec4f& axisangle) {
       vec3f{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
 
-// Computes the image uv coordinates corresponding to the view parameters.
-// Returns negative coordinates if out of the image.
+/// Computes the image uv coordinates corresponding to the view parameters.
+/// Returns negative coordinates if out of the image.
 inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
     float scale, const vec2i& txt_size) {
   auto xyf = (mouse_pos - center) / scale;
@@ -1705,7 +1705,7 @@ inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
       (int)round(xyf.y + txt_size.y / 2.0f)};
 }
 
-// Center image and autofit.
+/// Center image and autofit.
 inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
     const vec2i& winsize, bool zoom_to_fit) {
   if (zoom_to_fit) {
@@ -1717,7 +1717,7 @@ inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
   }
 }
 
-// Turntable for UI navigation.
+/// Turntable for UI navigation.
 inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
     const vec2f& rotate, float dolly, const vec2f& pan) {
   // rotate if necessary
@@ -1752,7 +1752,7 @@ inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
   }
 }
 
-// Turntable for UI navigation.
+/// Turntable for UI navigation.
 inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
     float dolly, const vec2f& pan) {
   // rotate if necessary
@@ -1781,7 +1781,7 @@ inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
   }
 }
 
-// FPS camera for UI navigation for a frame parametrization.
+/// FPS camera for UI navigation for a frame parametrization.
 inline void update_fpscam(
     frame3f& frame, const vec3f& transl, const vec2f& rotate) {
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
@@ -1804,14 +1804,14 @@ inline void update_fpscam(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// print information and returns a timer that will print the time when
-// destroyed. Use with RIIA for scoped timing.
+/// print information and returns a timer that will print the time when
+/// destroyed. Use with RIIA for scoped timing.
 struct timer {
   timer() : start{get_time()} {}
   int64_t elapsed() { return get_time() - start; }
   string  elapsedf() {
     auto duration = get_time() - start;
-    auto elapsed  = duration / 1000000;  // milliseconds
+    auto elapsed  = duration / 1000000;  /// milliseconds
     auto hours    = (int)(elapsed / 3600000);
     elapsed %= 3600000;
     auto mins = (int)(elapsed / 60000);
