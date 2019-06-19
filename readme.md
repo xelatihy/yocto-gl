@@ -1,5 +1,3 @@
-![Image rendered with Yocto/GL path tracer](images/island.png)
-
 # Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
 
 [![Build Status](https://travis-ci.org/xelatihy/yocto-gl.svg?branch=master)](https://travis-ci.org/xelatihy/yocto-gl) [![Build status](https://ci.appveyor.com/api/projects/status/rkqw7a8cenl877m6/branch/master?svg=true)](https://ci.appveyor.com/project/xelatihy/yocto-gl/branch/master)
@@ -46,11 +44,13 @@ test the library:
 - `apps/yscnview.cpp`: simple OpenGL viewer
 
 Here are some test images rendered with the path tracer. More images are 
-included in the [gallery](gallery.md).
+included in the [project site](https://xelatihy.github.io/yocto-gl/).
 
 ![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/features1.png)
 
 ![Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping](images/features2.png)
+
+![Image rendered with Yocto/GL path tracer. Model by Disney Animation Studios.](images/island.png)
 
 ## Design Considerations
 
