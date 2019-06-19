@@ -83,7 +83,7 @@ write and more robust io code. This follows the stardard practice in the C++ STL
 
 Main contributors:
   - Fabio Pellacini (lead developer): [web](http://pellacini.di.uniroma1.it), [github](https://github.com/xelatihy) 
-  - Edoardo Carra: [linkedin](https://www.linkedin.com/in/edoardocarra/)
+  - Edoardo Carra: [github](https://github.com/edoardocarra)
   - Giacomo Nazzaro: [github](https://github.com/giacomonazzaro)
 
 This library includes code from the [PCG random number generator](http://www.pcg-random.org),
