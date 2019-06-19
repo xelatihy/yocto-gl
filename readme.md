@@ -1,3 +1,21 @@
+<style type="text/css">
+.slider {width:100%; height:0px; padding-bottom: 50%; overflow:hidden; position:relative; }
+.slider img{ position:absolute; animation:slider 20s infinite; opacity:0; width: 100%; height: auto;}
+@keyframes slider {25%{opacity:1;} 40%{opacity:0;}} 
+.slider img:nth-child(4){animation-delay:0s;}
+.slider img:nth-child(3){animation-delay:5s;}
+.slider img:nth-child(2){animation-delay:10s;}
+.slider img:nth-child(1){animation-delay:15s;}
+</style>
+
+<div class="slider">
+  <img src="images/island.png" alt="4" />
+  <img src="images/bistroexterior.png" alt="3" />
+  <img src="images/landscape.png" alt="2" />
+  <img src="images/sanmiguel-c1.png" alt="1" />
+</div>
+
+
 # Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
 
 [![Build Status](https://travis-ci.org/xelatihy/yocto-gl.svg?branch=master)](https://travis-ci.org/xelatihy/yocto-gl) [![Build status](https://ci.appveyor.com/api/projects/status/rkqw7a8cenl877m6/branch/master?svg=true)](https://ci.appveyor.com/project/xelatihy/yocto-gl/branch/master)
@@ -5,8 +23,7 @@
 Yocto/GL is a collection of small C++17 libraries for building 
 physically-based graphics algorithms released under the MIT license.
 Yocto/GL is written in a deliberatly data-driven style for ease of
-development and use. 
-
+development and use.
 Yocto/GL is split into two small libraries to make code navigation easier.
 See each header file for documentation.
 
@@ -45,7 +62,7 @@ test the library:
 - `apps/yscnview.cpp`: simple OpenGL viewer
 
 Here are some test images rendered with the path tracer. More images are 
-included in the project site.
+included in the [gallery](gallery.md).
 
 ![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/features1.png)
 

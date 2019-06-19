@@ -23,7 +23,6 @@ Yocto/GL is a collection of small C++17 libraries for building
 physically-based graphics algorithms released under the MIT license.
 Yocto/GL is written in a deliberatly data-driven style for ease of
 development and use. 
-
 Yocto/GL is split into two small libraries to make code navigation easier.
 See each header file for documentation.
 
@@ -62,7 +61,7 @@ test the library:
 - `apps/yscnview.cpp`: simple OpenGL viewer
 
 Here are some test images rendered with the path tracer. More images are 
-included in the project site.
+included in the [gallery](gallery.md).
 
 ![Example materials: matte, plastic, metal, glass, subsurface, normal mapping](images/features1.png)
 
