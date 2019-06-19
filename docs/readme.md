@@ -1,19 +1,43 @@
 
 <style type="text/css">
 .slider {width:100%; height:100%; padding-bottom: 50%; overflow:hidden; position:relative; }
-.slider img{ position:absolute; animation:slider 20s infinite; opacity:0; width: 100%; height: auto; display:block; top: auto; left: 0; right: 0; bottom: 0;}
+.slider img{ position:absolute; animation:slider 80s infinite; opacity:0; width: 100%; height: auto; display:block; top: auto; left: 0; right: 0; bottom: 0;}
 @keyframes slider {25%{opacity:1;} 40%{opacity:0;}}
-.slider img:nth-child(4){animation-delay:0s;}
-.slider img:nth-child(3){animation-delay:5s;}
-.slider img:nth-child(2){animation-delay:10s;}
-.slider img:nth-child(1){animation-delay:15s;}
+.slider img:nth-child(15){animation-delay:0s;}
+.slider img:nth-child(15){animation-delay:5s;}
+.slider img:nth-child(14){animation-delay:10s;}
+.slider img:nth-child(13){animation-delay:15s;}
+.slider img:nth-child(12){animation-delay:20s;}
+.slider img:nth-child(11){animation-delay:25s;}
+.slider img:nth-child(10){animation-delay:30s;}
+.slider img:nth-child(9){animation-delay:35s;}
+.slider img:nth-child(8){animation-delay:40s;}
+.slider img:nth-child(7){animation-delay:45s;}
+.slider img:nth-child(6){animation-delay:50s;}
+.slider img:nth-child(5){animation-delay:55s;}
+.slider img:nth-child(4){animation-delay:60s;}
+.slider img:nth-child(3){animation-delay:65s;}
+.slider img:nth-child(2){animation-delay:70s;}
+.slider img:nth-child(1){animation-delay:75s;}
 </style>
 
 <div class="slider">
- <img src="images/island.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/bistroexterior.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/vokselia.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/rungholt.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/car2.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/spaceship.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/bistrointerior.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/breakfastroom.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/kitchen.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/classroom.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/bathroom1.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/landscape-c3.png" alt="Image rendered with Yocto/GL path tracer" />
  <img src="images/landscape.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/sanmiguel-c2.png" alt="Image rendered with Yocto/GL path tracer" />
  <img src="images/sanmiguel-c1.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/bistroexterior.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/island-c6.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/island.png" alt="Image rendered with Yocto/GL path tracer" />
 </div>
 
 # Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
