@@ -80,6 +80,11 @@ write and more robust io code. This follows the stardard practice in the C++ STL
 
 ## Credits
 
+Main contributors:
+  - Fabio Pellacini (lead developer): [web](http://pellacini.di.uniroma1.it), [github](https://github.com/xelatihy) 
+  - Edoardo Carra: [linkedin](https://www.linkedin.com/in/edoardocarra/)
+  - Giacomo Nazzaro: [github](https://github.com/giacomonazzaro)
+
 This library includes code from the [PCG random number generator](http://www.pcg-random.org),
 boost `hash_combine`, and public domain code from `github.com/sgorsten/linalg`, 
 `gist.github.com/badboy/6267743` and `github.com/nothings/stb_perlin.h`.

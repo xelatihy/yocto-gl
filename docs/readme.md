@@ -1,3 +1,22 @@
+
+<style type="text/css">
+.slider {width:100%; height:0px; padding-bottom: 50%; overflow:hidden; position:relative; }
+.slider img{ position:absolute; animation:slider 20s infinite; opacity:0; width: 100%; height: auto;}
+@keyframes slider {25%{opacity:1;} 40%{opacity:0;}} 
+.slider img:nth-child(4){animation-delay:0s;}
+.slider img:nth-child(3){animation-delay:5s;}
+.slider img:nth-child(2){animation-delay:10s;}
+.slider img:nth-child(1){animation-delay:15s;}
+</style>
+
+<div class="slider">
+  <img src="images/island.png" alt="4" />
+  <img src="images/bistroexterior.png" alt="3" />
+  <img src="images/landscape.png" alt="2" />
+  <img src="images/sanmiguel-c1.png" alt="1" />
+</div>
+
+
 # Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
 
 Yocto/GL is a collection of small C++17 libraries for building 
@@ -77,6 +96,11 @@ We use exception for error reporting to reduce code size and make it seimpler to
 write and more robust io code. This follows the stardard practice in the C++ STL.
 
 ## Credits
+
+Main contributors:
+  - Fabio Pellacini (lead developer): [web](http://pellacini.di.uniroma1.it), [github](https://github.com/xelatihy) 
+  - Edoardo Carra: [linkedin](https://www.linkedin.com/in/edoardocarra/)
+  - Giacomo Nazzaro: [github](https://github.com/giacomonazzaro)
 
 This library includes code from the [PCG random number generator](http://www.pcg-random.org),
 boost `hash_combine`, and public domain code from `github.com/sgorsten/linalg`, 
