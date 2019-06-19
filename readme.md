@@ -1,4 +1,4 @@
-[Image rendered with Yocto/GL path tracer](images/island.png)
+![Image rendered with Yocto/GL path tracer](images/island.png)
 
 # Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
 
