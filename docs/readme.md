@@ -1,20 +1,19 @@
-<style type="text/css">
-.slider {width:100%; height:0px; padding-bottom: 50%; overflow:hidden; position:relative; }
-.slider img{ position:absolute; animation:slider 20s infinite; opacity:0; width: 100%; height: auto;}
-@keyframes slider {25%{opacity:1;} 40%{opacity:0;}} 
+<style type=“text/css”>
+.slider {width:100%; height:100%; padding-bottom: 0%; overflow:hidden; position:relative; }
+.slider img{ position:absolute; animation:slider 20s infinite; opacity:0; width: 100%; height: auto; top: auto; left: 0; right: 0; bottom: 0;}
+@keyframes slider {25%{opacity:1;} 40%{opacity:0;}}
 .slider img:nth-child(4){animation-delay:0s;}
 .slider img:nth-child(3){animation-delay:5s;}
 .slider img:nth-child(2){animation-delay:10s;}
 .slider img:nth-child(1){animation-delay:15s;}
 </style>
 
-<div class="slider">
-  <img src="images/island.png" alt="4" />
-  <img src="images/bistroexterior.png" alt="3" />
-  <img src="images/landscape.png" alt="2" />
-  <img src="images/sanmiguel-c1.png" alt="1" />
+<div class=“slider”>
+ <img src=“images/island.png” alt=“4" />
+ <img src=“images/bistroexterior.png” alt=“3" />
+ <img src=“images/landscape.png” alt=“2" />
+ <img src=“images/sanmiguel-c1.png” alt=“1" />
 </div>
-
 
 # Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
 
