@@ -10,10 +10,10 @@
 </style>
 
 <div class="slider">
- <img src="images/island.png" alt="4" />
- <img src="images/bistroexterior.png" alt="3" />
- <img src="images/landscape.png" alt="2" />
- <img src="images/sanmiguel-c1.png" alt="1" />
+ <img src="images/island.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/bistroexterior.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/landscape.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/sanmiguel-c1.png" alt="Image rendered with Yocto/GL path tracer" />
 </div>
 
 # Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
