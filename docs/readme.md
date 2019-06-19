@@ -1,8 +1,8 @@
 
 <style type="text/css">
 .slider {width:100%; height:100%; padding-bottom: 50%; overflow:hidden; position:relative; }
-.slider img{ position:absolute; animation:slider 20s infinite; opacity:0; width: 100%; height: auto; top: auto; left: 0; right: 0; bottom: 0;}
-@keyframes slider {25%{opacity:1;} 40%{opacity:0;}}
+.slider img{ position:absolute; animation:slider 80s infinite; opacity:0; width: 100%; height: auto; top: auto; left: 0; right: 0; bottom: 0;}
+@keyframes slider {6.25%{opacity:1;} 9%{opacity:0;}}
 .slider img:nth-child(16){animation-delay:0s;}
 .slider img:nth-child(15){animation-delay:5s;}
 .slider img:nth-child(14){animation-delay:10s;}
