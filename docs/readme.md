@@ -1,3 +1,4 @@
+
 <style type=“text/css”>
 .slider {width:100%; height:100%; padding-bottom: 0%; overflow:hidden; position:relative; }
 .slider img{ position:absolute; animation:slider 20s infinite; opacity:0; width: 100%; height: auto; top: auto; left: 0; right: 0; bottom: 0;}
