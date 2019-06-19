@@ -677,22 +677,22 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (!is_delta(material)) return zero3f;
-  auto brdfcos = zero3f;
-
+  auto  brdfcos      = zero3f;
+  auto  coat_eta     = reflectivity_to_eta(material.coat);
+  auto  specular_eta = reflectivity_to_eta(material.specular);
+  float ndo          = dot(outgoing, normal);
   if (material.coat != zero3f && same_hemisphere(normal, outgoing, incoming)) {
-    brdfcos += fresnel_schlick(material.coat, abs(dot(normal, outgoing)));
+    brdfcos += fresnel_dielectric(coat_eta, ndo);
   }
   if (material.specular != zero3f &&
       same_hemisphere(normal, outgoing, incoming)) {
-    auto coat = fresnel_schlick(material.coat, abs(dot(normal, outgoing)));
-    brdfcos += (1 - coat) *
-               fresnel_schlick(material.specular, abs(dot(normal, outgoing)));
+    auto coat = fresnel_dielectric(coat_eta, ndo);
+    brdfcos += (1 - coat) * fresnel_dielectric(specular_eta, ndo);
   }
   if (material.transmission != zero3f &&
       other_hemisphere(normal, outgoing, incoming)) {
-    auto coat     = fresnel_schlick(material.coat, abs(dot(normal, outgoing)));
-    auto specular = fresnel_schlick(
-        material.specular, abs(dot(normal, outgoing)));
+    auto coat     = fresnel_dielectric(coat_eta, ndo);
+    auto specular = fresnel_dielectric(specular_eta, ndo);
     brdfcos += (1 - coat) * (1 - specular) * material.transmission;
   }
   return brdfcos;
@@ -700,9 +700,12 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
 
 vec4f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
-  auto ndo      = abs(dot(outgoing, normal));
-  auto coat     = fresnel_schlick(material.coat, ndo);
-  auto specular = fresnel_schlick(material.specular, ndo);
+  auto ndo          = dot(outgoing, normal);
+  auto coat_eta     = reflectivity_to_eta(material.coat);
+  auto specular_eta = reflectivity_to_eta(material.specular);
+
+  auto coat     = fresnel_dielectric(coat_eta, ndo);
+  auto specular = fresnel_dielectric(specular_eta, ndo);
 
   auto weights = zero4f;
   weights[0]   = max(coat);
@@ -1394,9 +1397,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
       return {emission * abs(dot(outgoing, normal)), 1};
     }
-    default: {
-      return {zero3f, false};
-    }
+    default: { return {zero3f, false}; }
   }
 }
 
