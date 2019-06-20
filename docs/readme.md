@@ -1,5 +1,5 @@
 
-<iframe width="100%" height="100%" src="https://www.youtube.com/embed/XlrMk0kJ3sc?autoplay=1&controls=0&loop=1&showinfo=0" frameborder="0" allow="accelerometer; autoplay; encrypted-media;" allowfullscreen></iframe>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/XlrMk0kJ3sc?controls=0;autoplay=1" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 # Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
 
