@@ -745,7 +745,7 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
   if (rnl < weight_sum && !material.thin) {
     auto halfway = sample_microfacet(material.roughness, up_normal, rn);
     auto eta     = mean(reflectivity_to_eta(material.specular));
-    return refract(
+    return refract_notir(
         outgoing, halfway, dot(normal, outgoing) > 0 ? 1 / eta : eta);
   }
   if (rnl < weight_sum && material.thin) {
@@ -783,7 +783,7 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
   weight_sum += pdfs[3];
   if (rnl < weight_sum && !material.thin) {
     auto eta = mean(reflectivity_to_eta(material.specular));
-    return refract(
+    return refract_notir(
         outgoing, up_normal, dot(normal, outgoing) > 0 ? 1 / eta : eta);
   }
   if (rnl < weight_sum && material.thin) {

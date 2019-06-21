@@ -398,9 +398,13 @@ inline vec3f reflect(const vec3f& w, const vec3f& n) {
   return -w + 2 * dot(n, w) * n;
 }
 inline vec3f refract(const vec3f& w, const vec3f& n, float eta) {
-  // auto k = 1.0 - eta * eta * (1.0 - dot(n, w) * dot(n, w));
   auto k = 1 - eta * eta * max((float)0, 1 - dot(n, w) * dot(n, w));
   if (k < 0) return {0, 0, 0};  // tir
+  return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
+}
+inline vec3f refract_notir(const vec3f& w, const vec3f& n, float eta) {
+  auto k = 1 - eta * eta * max((float)0, 1 - dot(n, w) * dot(n, w));
+  k = max(k, 0.001f);
   return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
 }
 
