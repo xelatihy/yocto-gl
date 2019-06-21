@@ -37,14 +37,27 @@ int main(int argc, char** argv) {
   // command line parameters
   auto geodesic_source = -1;
   auto facevarying     = false;
+  auto normals         = false;
+  auto rotate          = zero3f;
+  auto scale           = vec3f{1};
+  auto translate       = zero3f;
   auto output          = "out.ply"s;
   auto filename        = "mesh.ply"s;
 
   // parse command line
   auto parser = CLI::App{"Applies operations on a triangle mesh"};
   parser.add_option("--geodesic-source,-g", geodesic_source, "Geodesic source");
-  parser.add_flag(
-      "--facevarying,!-facevarying", facevarying, "Preserve facevarying");
+  parser.add_flag("--facevarying", facevarying, "Preserve facevarying");
+  parser.add_flag("--normals", normals, "Compute smooth normals");
+  parser.add_option("--rotatey", rotate.y, "Rotate around y axis");
+  parser.add_option("--rotatex", rotate.x, "Rotate around x axis");
+  parser.add_option("--rotatez", rotate.z, "Rotate around z axis");
+  parser.add_option("--translatey", translate.y, "Translate along y axis");
+  parser.add_option("--translatex", translate.x, "Translate along x axis");
+  parser.add_option("--translatez", translate.z, "Translate along z axis");
+  parser.add_option("--scaley", scale.y, "Scale along y axis");
+  parser.add_option("--scalex", scale.x, "Scale along x axis");
+  parser.add_option("--scalez", scale.z, "Scale along z axis");
   parser.add_option("--output,-o", output, "output mesh")->required(true);
   parser.add_option("mesh", filename, "input mesh")->required(true);
   try {
@@ -65,6 +78,23 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
+  // transform
+  if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
+    auto xform = translation_frame(translate) * scaling_frame(scale) *
+                 rotation_frame({1, 0, 0}, radians(rotate.x)) *
+                 rotation_frame({0, 0, 1}, radians(rotate.z)) *
+                 rotation_frame({0, 1, 0}, radians(rotate.y));
+    for (auto& p : shape.positions) p = transform_point(xform, p);
+    for (auto& n : shape.normals)
+      n = transform_normal(xform, n, max(scale) != min(scale));
+  }
+
+  // compute normals
+  if (normals) {
+    shape.normals = compute_normals(shape);
+    if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
+  }
+
   // compute geodesics and store them as colors
   if (geodesic_source >= 0) {
     auto solver = geodesic_solver{};
@@ -77,10 +107,9 @@ int main(int argc, char** argv) {
 
   // save mesh
   try {
-    save_shape(filename, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius);
+    save_shape(output, shape.points, shape.lines, shape.triangles, shape.quads,
+        shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
+        shape.normals, shape.texcoords, shape.colors, shape.radius);
   } catch (const std::exception& e) {
     printf("%s\n", e.what());
     exit(1);

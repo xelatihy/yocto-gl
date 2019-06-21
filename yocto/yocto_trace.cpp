@@ -1378,6 +1378,11 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
       auto rng_   = make_rng(trace_default_seed, hashed);
       return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
     }
+    case trace_params::falsecolor_type::element: {
+      auto hashed = std::hash<int>()(intersection.element);
+      auto rng_   = make_rng(trace_default_seed, hashed);
+      return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
+    }
     case trace_params::falsecolor_type::shape: {
       auto hashed = std::hash<int>()(instance.shape);
       auto rng_   = make_rng(trace_default_seed, hashed);
@@ -1422,8 +1427,8 @@ bool is_sampler_lit(const trace_params& params) {
   switch (params.sampler) {
     case trace_params::sampler_type::path: return true;
     case trace_params::sampler_type::naive: return true;
-    case trace_params::sampler_type::eyelight: return true;
-    case trace_params::sampler_type::falsecolor: return true;
+    case trace_params::sampler_type::eyelight: return false;
+    case trace_params::sampler_type::falsecolor: return false;
     default: {
       throw std::runtime_error("sampler unknown");
       return false;

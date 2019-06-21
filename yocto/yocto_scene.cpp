@@ -62,6 +62,21 @@ bbox3f compute_bounds(const yocto_scene& scene) {
 }
 
 // Compute vertex normals
+vector<vec3f> compute_normals(const yocto_shape& shape) {
+  if (!shape.points.empty()) {
+    return vector<vec3f>{shape.positions.size(), };
+  } else if (!shape.lines.empty()) {
+    return compute_tangents(shape.lines, shape.positions);
+  } else if (!shape.triangles.empty()) {
+    return compute_normals(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return compute_normals(shape.quads, shape.positions);
+  } else if (!shape.quadspos.empty()) {
+    return compute_normals(shape.quadspos, shape.positions);
+  } else {
+    throw std::runtime_error("unknown element type");
+  }
+}
 void compute_normals(const yocto_shape& shape, vector<vec3f>& normals) {
   normals.assign(shape.positions.size(), {0, 0, 1});
   if (!shape.points.empty()) {

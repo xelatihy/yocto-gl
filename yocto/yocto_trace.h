@@ -130,8 +130,8 @@ struct trace_params {
   };
   enum struct falsecolor_type {
     normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
-    diffuse, specular, transmission, roughness, material, shape, instance,    
-    highlight };
+    diffuse, specular, transmission, roughness, material, shape, instance, 
+    element, highlight };
   // clang-format on
 
   int                camera     = 0;
@@ -156,7 +156,7 @@ const auto trace_sampler_names = vector<string>{
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
     "specular", "transmission", "roughness", "material", "shape", "instance",
-    "highlight"};
+    "element", "highlight"};
 
 // Equality operators
 inline bool operator==(const trace_params& a, const trace_params& b) {
