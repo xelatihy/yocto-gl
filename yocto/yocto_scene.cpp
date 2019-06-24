@@ -64,7 +64,9 @@ bbox3f compute_bounds(const yocto_scene& scene) {
 // Compute vertex normals
 vector<vec3f> compute_normals(const yocto_shape& shape) {
   if (!shape.points.empty()) {
-    return vector<vec3f>{shape.positions.size(), };
+    return vector<vec3f>{
+        shape.positions.size(),
+    };
   } else if (!shape.lines.empty()) {
     return compute_tangents(shape.lines, shape.positions);
   } else if (!shape.triangles.empty()) {
@@ -1071,6 +1073,7 @@ material_point eval_material(const yocto_scene& scene,
   point.coat           = material.coat;
   point.transmission   = material.transmission;
   auto voltransmission = material.voltransmission;
+  auto volmeanfreepath = material.volmeanfreepath;
   point.volemission    = material.volemission;
   point.volscatter     = material.volscatter;
   point.volanisotropy  = material.volanisotropy;
@@ -1136,8 +1139,12 @@ material_point eval_material(const yocto_scene& scene,
     point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
   }
   if (point.opacity > 0.999f) point.opacity = 1;
-  if (voltransmission != zero3f) {
-    point.voldensity = -log(clamp(voltransmission, 0.0001f, 1.0f)) / volscale;
+  if (voltransmission != zero3f || volmeanfreepath != zero3f) {
+    if (voltransmission != zero3f) {
+      point.voldensity = -log(clamp(voltransmission, 0.0001f, 1.0f)) / volscale;
+    } else {
+      point.voldensity = 1 / (volmeanfreepath * volscale);
+    }
   } else {
     point.voldensity = zero3f;
   }
@@ -1241,6 +1248,14 @@ string format_stats(
     while (str.size() < 13) str = " " + str;
     return str;
   };
+  auto format3 = [](auto num) {
+    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
+               std::to_string(num.z);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+
+  auto bbox = compute_bounds(scene);
 
   auto stats = ""s;
   stats += prefix + "cameras:      " + format(scene.cameras.size()) + "\n";
@@ -1295,6 +1310,8 @@ string format_stats(
                         (size_t)texture.vol.size().z;
                })) +
            "\n";
+  stats += prefix + "center:       " + format3(center(bbox)) + "\n";
+  stats += prefix + "size:         " + format3(size(bbox)) + "\n";
 
   return stats;
 }

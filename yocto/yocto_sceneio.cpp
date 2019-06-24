@@ -931,6 +931,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
           parse_yaml_value(value, material.transmission);
         } else if (key == "voltransmission") {
           parse_yaml_value(value, material.voltransmission);
+        } else if (key == "volmeanfreepath") {
+          parse_yaml_value(value, material.volmeanfreepath);
         } else if (key == "volscatter") {
           parse_yaml_value(value, material.volscatter);
         } else if (key == "volemission") {
@@ -1199,6 +1201,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     write_yaml_opt(fs, "roughness", material.roughness, def_material.roughness);
     write_yaml_opt(fs, "voltransmission", material.voltransmission,
         def_material.voltransmission);
+    write_yaml_opt(fs, "volmeanfreepath", material.volmeanfreepath,
+        def_material.volmeanfreepath);
     write_yaml_opt(
         fs, "volscatter", material.volscatter, def_material.volscatter);
     write_yaml_opt(
@@ -1537,7 +1541,7 @@ struct load_obj_scene_cb : obj_callbacks {
     add_shape();
   }
   void material(const obj_material& omat) override {
-    auto material             = yocto_material();
+    auto material             = yocto_material{};
     material.uri              = omat.name;
     material.emission         = omat.ke;
     material.diffuse          = omat.kd;
@@ -1554,6 +1558,13 @@ struct load_obj_scene_cb : obj_callbacks {
     material.roughness_tex    = add_texture(omat.pr_map, true);
     material.opacity_tex      = add_texture(omat.op_map, true);
     material.normal_tex       = add_texture(omat.norm_map, true);
+    material.voltransmission  = omat.vt;
+    material.volmeanfreepath  = omat.vp;
+    material.volemission      = omat.ve;
+    material.volscatter       = omat.vs;
+    material.volanisotropy    = omat.vg;
+    material.volscale         = omat.vr;
+    material.subsurface_tex   = add_texture(omat.vs_map, false);
     if (material.transmission != zero3f) material.thin = true;
     scene.materials.push_back(material);
     mmap[material.uri] = (int)scene.materials.size() - 1;
@@ -1775,6 +1786,13 @@ static void save_mtl(
           fs, "  map_Kt", scene.textures[material.transmission_tex].uri);
     if (material.normal_tex >= 0)
       write_obj_line(fs, "  map_norm", scene.textures[material.normal_tex].uri);
+    if (material.voltransmission != zero3f) {
+      write_obj_line(fs, "  Vt", material.voltransmission);
+      write_obj_line(fs, "  Ve", material.volemission);
+      write_obj_line(fs, "  Vs", material.volscatter);
+      write_obj_line(fs, "  Vg", material.volanisotropy);
+      write_obj_line(fs, "  Vr", material.volscale);
+    }
     write_obj_text(fs, "\n");
   }
 }

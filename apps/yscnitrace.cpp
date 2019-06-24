@@ -298,6 +298,8 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glcombobox(win, "false color", (int&)trace_prms.falsecolor,
         trace_falsecolor_names);
     draw_glslider(win, "nbounces", trace_prms.bounces, 1, 128);
+    draw_glcheckbox(win, "env hidden", trace_prms.envhidden);
+    continue_glline(win);
     draw_glcheckbox(win, "filter", trace_prms.tentfilter);
     draw_glslider(win, "seed", (int&)trace_prms.seed, 0, 1000000);
     draw_glslider(win, "pratio", scn.preview_ratio, 1, 64);

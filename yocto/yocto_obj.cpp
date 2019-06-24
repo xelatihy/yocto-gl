@@ -308,6 +308,20 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
       parse_obj_value(line, material.disp_map);
     } else if (cmd == "map_norm" || cmd == "norm") {
       parse_obj_value(line, material.norm_map);
+    } else if (cmd == "Vt") {
+      parse_obj_value(line, material.vt);
+    } else if (cmd == "Vp") {
+      parse_obj_value(line, material.vp);
+    } else if (cmd == "Ve") {
+      parse_obj_value(line, material.ve);
+    } else if (cmd == "Vs") {
+      parse_obj_value(line, material.vs);
+    } else if (cmd == "Vg") {
+      parse_obj_value(line, material.vg);
+    } else if (cmd == "Vr") {
+      parse_obj_value(line, material.vr);
+    } else if (cmd == "map_Vs") {
+      parse_obj_value(line, material.vs_map);
     }
   }
 

@@ -285,6 +285,8 @@ inline bool draw_glsceneinspector(const opengl_window& win,
     updated = true;
   if (draw_glcoloredit(win, "vol transmission", edited.voltransmission))
     updated = true;
+  if (draw_glcoloredit(win, "vol meanfreepath", edited.volmeanfreepath))
+    updated = true;
   if (draw_glcoloredit(win, "vol scatter", edited.volscatter)) updated = true;
   if (draw_glcoloredit(win, "vol emission", edited.volemission)) updated = true;
   if (draw_glslider(win, "vol scale", edited.volscale, 0, 1)) updated = true;
@@ -306,6 +308,9 @@ inline bool draw_glsceneinspector(const opengl_window& win,
           win, "specular_tex", edited.specular_tex, scene.textures, true))
     updated = true;
   if (draw_glcombobox(win, "transmission_tex", edited.transmission_tex,
+          scene.textures, true))
+    updated = true;
+  if (draw_glcombobox(win, "subsurface_tex", edited.subsurface_tex,
           scene.textures, true))
     updated = true;
   if (draw_glcombobox(

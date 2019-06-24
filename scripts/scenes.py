@@ -66,9 +66,11 @@ def trace(directory='mcguire',scene='*',format='yaml',mode='path'):
         'embree-flatten': '-s 256 -r 1280 --bvh-embree --bvh-embree-flatten --bvh-high-quality',
         'embree-compact': '-s 256 -r 1280 --bvh-embree --bvh-embree-compact',
         'eyelight': '-s 16 -r 1280 -t eyelight --bvh-high-quality',
+        'embree-face': '-s 256 -r 640 --bvh-embree --bvh-high-quality',
         'final': '-s 4096 -r 1280 --bvh-embree --bvh-high-quality',
         'final-compact': '-s 4096 -r 1280 --bvh-embree --bvh-high-quality --bvh-embree-compact',
         'final-filter': '-s 4096 -r 1280 --filter --bvh-embree --bvh-high-quality',
+        'final-face': '-s 4096 -r 640 --bvh-embree --bvh-high-quality',
     }
     options = modes[mode]
     outformat = 'png' if 'eyelight' in mode else 'hdr'

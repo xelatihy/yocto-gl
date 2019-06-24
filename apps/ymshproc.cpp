@@ -40,6 +40,7 @@ int main(int argc, char** argv) {
   auto normals         = false;
   auto rotate          = zero3f;
   auto scale           = vec3f{1};
+  auto uscale = 1.0f;
   auto translate       = zero3f;
   auto output          = "out.ply"s;
   auto filename        = "mesh.ply"s;
@@ -55,6 +56,7 @@ int main(int argc, char** argv) {
   parser.add_option("--translatey", translate.y, "Translate along y axis");
   parser.add_option("--translatex", translate.x, "Translate along x axis");
   parser.add_option("--translatez", translate.z, "Translate along z axis");
+  parser.add_option("--scale", uscale, "Scale along xyz axes");
   parser.add_option("--scaley", scale.y, "Scale along y axis");
   parser.add_option("--scalex", scale.x, "Scale along x axis");
   parser.add_option("--scalez", scale.z, "Scale along z axis");
@@ -79,6 +81,7 @@ int main(int argc, char** argv) {
   }
 
   // transform
+  if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
     auto xform = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
