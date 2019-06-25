@@ -2067,8 +2067,9 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
   }
   auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
       data, cgltf_free};
-  if (cgltf_load_buffers(&params, data,
-          fs::path(filename).parent_path().c_str()) != cgltf_result_success) {
+    auto dirname = fs::path(filename).parent_path().string();
+    if(dirname != "") dirname += "/";
+  if (cgltf_load_buffers(&params, data, dirname.c_str()) != cgltf_result_success) {
     throw std::runtime_error("could not load gltf buffers " + filename);
   }
 
