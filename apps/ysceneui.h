@@ -310,8 +310,8 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glcombobox(win, "transmission_tex", edited.transmission_tex,
           scene.textures, true))
     updated = true;
-  if (draw_glcombobox(win, "subsurface_tex", edited.subsurface_tex,
-          scene.textures, true))
+  if (draw_glcombobox(
+          win, "subsurface_tex", edited.subsurface_tex, scene.textures, true))
     updated = true;
   if (draw_glcombobox(
           win, "roughness_tex", edited.roughness_tex, scene.textures, true))

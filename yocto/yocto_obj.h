@@ -125,15 +125,15 @@ struct obj_material {
   obj_texture_info occ_map  = "";  // occlusion map
 
   // volume values
-  vec3f vt = {0, 0, 0};                    // volumetric transmission
+  vec3f vt = {0, 0, 0};  // volumetric transmission
   vec3f vp = {0, 0, 0};  // volumetric mean-free-path
-  vec3f ve = {0, 0, 0};                    // volumetric emission
-  vec3f vs = {0, 0, 0};                    // volumetric scattering
-  float vg = 0;                            // volumetric anisotropy (phase g)
-  float vr = 0.01;                         // volumetric scale
+  vec3f ve = {0, 0, 0};  // volumetric emission
+  vec3f vs = {0, 0, 0};  // volumetric scattering
+  float vg = 0;          // volumetric anisotropy (phase g)
+  float vr = 0.01;       // volumetric scale
 
   // textures
-  obj_texture_info vs_map   = "";  // scattering texture
+  obj_texture_info vs_map = "";  // scattering texture
 
   // Properties not explicitly handled.
   unordered_map<string, vector<string>> props;

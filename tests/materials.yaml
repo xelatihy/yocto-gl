@@ -1,0 +1,240 @@
+cameras:
+  - uri: cameras/default.yaml
+    lens: 0.05
+    aperture: 0.0
+    film: [0.036, 0.015]
+    lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+  - uri: cameras/front.yaml
+    lens: 0.05
+    aperture: 0.0
+    film: [0.036, 0.012]
+    lookat: [0, 0.575, 1.4, 0, 0.05, 0, 0, 1, 0]
+  - uri: cameras/back.yaml
+    lens: 0.05
+    aperture: 0.0
+    film: [0.036, 0.012]
+    lookat: [0, 0.575, -1.4, 0, 0.05, 0, 0, 1, 0]
+  - uri: cameras/perspective-sharp.yaml
+    lens: 0.05
+    aperture: 0.0
+    film: [0.036, 0.015]
+    lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+  - uri: cameras/perspective-dof.yaml
+    lens: 0.05
+    aperture: 0.025
+    film: [0.036, 0.015]
+    lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+  - uri: cameras/orthographic-sharp.yaml
+    lens: 0.05
+    aperture: 0.0
+    film: [0.036, 0.015]
+    orthographic: true
+    lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+  - uri: cameras/orthographic-dof.yaml
+    lens: 0.05
+    aperture: 0.02
+    film: [0.036, 0.015]
+    orthographic: true
+    lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+textures:
+  - uri: ::yocto::test-floor::textures/test-floor.png
+  - uri: ::yocto::test-bumps-normal::textures/test-bumps-normal.png
+  - uri: ::yocto::test-sky::textures/test-sky.hdr
+materials:
+  - uri: materials/test-floor.yaml
+    diffuse: [0.7, 0.7, 0.7]
+    diffuse_tex: textures/test-floor.png
+  - uri: materials/test-matte.yaml
+    diffuse: [0.7, 0.7, 0.7]
+    roughness: 1
+  - uri: materials/test-plastic-sharp.yaml
+    specular: [0.04, 0.04, 0.04]
+    diffuse: [0.5, 0.5, 0.7]
+    roughness: 0.01
+  - uri: materials/test-plastic-rough.yaml
+    specular: [0.04, 0.04, 0.04]
+    diffuse: [0.5, 0.7, 0.5]
+    roughness: 0.2
+  - uri: materials/test-metal-sharp.yaml
+    metallic: 1
+    diffuse: [0.7, 0.7, 0.7]
+    roughness: 0
+  - uri: materials/test-metal-rough.yaml
+    metallic: 1
+    diffuse: [0.66, 0.45, 0.34]
+    roughness: 0.2
+  - uri: materials/test-plastic-sharp-bumped.yaml
+    specular: [0.04, 0.04, 0.04]
+    diffuse: [0.5, 0.5, 0.7]
+    roughness: 0.01
+    normal_tex: textures/test-bumps-normal.png
+  - uri: materials/test-metal-sharp-bumped.yaml
+    metallic: 1
+    diffuse: [0.7, 0.7, 0.7]
+    roughness: 0
+    normal_tex: textures/test-bumps-normal.png
+  - uri: materials/test-plastic-rough-coated.yaml
+    specular: [0.04, 0.04, 0.04]
+    coat: [0.04, 0.04, 0.04]
+    diffuse: [0.5, 0.7, 0.5]
+    roughness: 0.2
+  - uri: materials/test-metal-rough-coated.yaml
+    metallic: 1
+    coat: [0.04, 0.04, 0.04]
+    diffuse: [0.66, 0.45, 0.34]
+    roughness: 0.2
+  - uri: materials/test-transparent.yaml
+    diffuse: [0.7, 0.5, 0.5]
+    roughness: 1
+    opacity: 0.2
+  - uri: materials/test-glass-sharp.yaml
+    specular: [0.04, 0.04, 0.04]
+    transmission: [1, 1, 1]
+    roughness: 0
+    thin: false
+  - uri: materials/test-glass-rough.yaml
+    specular: [0.04, 0.04, 0.04]
+    transmission: [1, 0.7, 0.7]
+    roughness: 0.1
+    thin: false
+  - uri: materials/test-thinglass-sharp.yaml
+    specular: [0.04, 0.04, 0.04]
+    transmission: [1, 1, 1]
+    roughness: 0
+    thin: true
+  - uri: materials/test-thinglass-rough.yaml
+    specular: [0.04, 0.04, 0.04]
+    transmission: [1, 0.7, 0.7]
+    roughness: 0.05
+    thin: true
+  - uri: materials/test-volume-jade.yaml
+    specular: [0.04, 0.04, 0.04]
+    roughness: 0
+    transmission: [1, 1, 1]
+    voltransmission: [0.5, 0.5, 0.5]
+    volscatter: [0.3, 0.6, 0.3]
+  - uri: materials/test-volume-cloud.yaml
+    transmission: [1, 1, 1]
+    voltransmission: [0.65, 0.65, 0.65]
+    volscatter: [0.9, 0.9, 0.9]
+  - uri: materials/test-volume-glass.yaml
+    specular: [0.04, 0.04, 0.04]
+    roughness: 0
+    transmission: [1, 1, 1]
+    voltransmission: [1, 0.5, 0.5]
+    volscale: 0.02
+  - uri: materials/test-volume-smoke.yaml
+    transmission: [1, 1, 1]
+    voltransmission: [0.5, 0.5, 0.5]
+    volscatter: [0.2, 0.2, 0.2]
+    volanisotropy: -0.8
+  - uri: materials/test-volume-emissive.yaml
+    transmission: [1, 1, 1]
+    voltransmission: [0.95, 0.95, 0.95]
+    volemission: [15, 15, 10]
+    volscatter: [0.01, 0.01, 0.01]
+  - uri: materials/test-largearealight1.yaml
+    emission: [20, 20, 20]
+  - uri: materials/test-largearealight2.yaml
+    emission: [20, 20, 20]
+shapes:
+  - uri: ::yocto::test-floor::shapes/test-floor.ply
+  - uri: shapes/test-bunny.obj
+  - uri: ::yocto::test-largearealight1::shapes/test-largearealight1.ply
+  - uri: ::yocto::test-largearealight2::shapes/test-largearealight2.ply
+instances:
+  - uri: instances/test-floor.yaml
+    shape: shapes/test-floor.ply
+    material: materials/test-floor.yaml
+  - uri: instances/test-largearealight1.yaml
+    shape: shapes/test-largearealight1.ply
+    material: materials/test-largearealight1.yaml
+    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - uri: instances/test-largearealight2.yaml
+    shape: shapes/test-largearealight2.ply
+    material: materials/test-largearealight2.yaml
+    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - uri: instances/test-bunny_test-plastic-sharp.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-plastic-sharp.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0.2]
+  - uri: instances/test-bunny_test-plastic-rough.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-plastic-rough.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0.2]
+  - uri: instances/test-bunny_test-matte.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-matte.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.2]
+  - uri: instances/test-bunny_test-metal-sharp.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-metal-sharp.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0.2]
+  - uri: instances/test-bunny_test-metal-rough.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-metal-rough.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0.2]
+  - uri: instances/test-bunny_test-glass-sharp.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-glass-sharp.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - uri: instances/test-bunny_test-glass-rough.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-glass-rough.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - uri: instances/test-bunny_test-transparent.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-transparent.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - uri: instances/test-bunny_test-thinglass-sharp.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-thinglass-sharp.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
+  - uri: instances/test-bunny_test-thinglass-rough.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-thinglass-rough.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
+  - uri: instances/test-bunny_test-plastic-sharp-bumped.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-plastic-sharp-bumped.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.2]
+  - uri: instances/test-bunny_test-plastic-rough-coated.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-plastic-rough-coated.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.2]
+  - uri: instances/test-bunny_test-metal-sharp-bumped.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-metal-sharp-bumped.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2]
+  - uri: instances/test-bunny_test-metal-rough-coated.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-metal-rough-coated.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.2]
+  - uri: instances/test-bunny_test-metal-rough.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-metal-rough.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.2]
+  - uri: instances/test-bunny_test-volume-cloud.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-volume-cloud.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
+  - uri: instances/test-bunny_test-volume-glass.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-volume-glass.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
+  - uri: instances/test-bunny_test-volume-jade.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-volume-jade.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
+  - uri: instances/test-bunny_test-volume-emissive.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-volume-emissive.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
+  - uri: instances/test-bunny_test-volume-smoke.yaml
+    shape: shapes/test-bunny.obj
+    material: materials/test-volume-smoke.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
+environments:
+  - uri: environments/test-sky.yaml
+    emission: [0.5, 0.5, 0.5]
+    emission_tex: textures/test-sky.hdr

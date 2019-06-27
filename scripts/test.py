@@ -97,40 +97,35 @@ def make_tests():
                 "lens": 0.05,
                 "aperture": 0.0,
                 "film": [0.036, 0.015],
-                "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
-                "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
+                "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0,1,0]
             },
             {
                 "uri": "cameras/front.yaml",
                 "lens": 0.05,
                 "aperture": 0.0,
                 "film": [0.036, 0.012],
-                "focus": distance([0, 0.575, 0.14], [0, 0.05, 0]),
-                "frame": lookat([0, 0.575, 1.4], [0, 0.05, 0], [0,1,0])
+                "lookat": [0, 0.575, 1.4, 0, 0.05, 0, 0,1,0]
             },
             {
                 "uri": "cameras/back.yaml",
                 "lens": 0.05,
                 "aperture": 0.0,
                 "film": [0.036, 0.012],
-                "focus": distance([0, 0.575, -0.14], [0, 0.05, 0]),
-                "frame": lookat([0, 0.575, -1.4], [0, 0.05, 0], [0,1,0])
+                "lookat": [0, 0.575, -1.4, 0, 0.05, 0, 0,1,0]
             },
             {
                 "uri": "cameras/perspective-sharp.yaml",
                 "lens": 0.05,
                 "aperture": 0.0,
                 "film": [0.036, 0.015],
-                "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
-                "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
+                "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0,1,0]
             },
             {
                 "uri": "cameras/perspective-dof.yaml",
                 "lens": 0.05,
                 "aperture": 0.025,
                 "film": [0.036, 0.015],
-                "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
-                "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
+                "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0,1,0]
             },
             {
                 "uri": "cameras/orthographic-sharp.yaml",
@@ -138,8 +133,7 @@ def make_tests():
                 "aperture": 0.0,
                 "film": [0.036, 0.015],
                 "orthographic": True,
-                "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
-                "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
+                "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0,1,0]
             },
             {
                 "uri": "cameras/orthographic-dof.yaml",
@@ -147,8 +141,7 @@ def make_tests():
                 "aperture": 0.02,
                 "film": [0.036, 0.015],
                 "orthographic": True,
-                "focus": distance([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05]),
-                "frame": lookat([-0.75, 0.4, 0.9], [-0.075, 0.05, -0.05], [0,1,0])
+                "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0,1,0]
             },
         ],
         "textures": [
@@ -344,6 +337,14 @@ def make_tests():
             {
                 "uri": "materials/test-arealight2.yaml",
                 "emission": [20, 20, 20]
+            },
+            {
+                "uri": "materials/test-largearealight1.yaml",
+                "emission": [20, 20, 20]
+            },
+            {
+                "uri": "materials/test-largearealight2.yaml",
+                "emission": [20, 20, 20]
             }
         ],
         "shapes": [
@@ -397,6 +398,12 @@ def make_tests():
             },
             {
                 "uri": "::yocto::test-arealight2::shapes/test-arealight2.ply"
+            },
+            {
+                "uri": "::yocto::test-largearealight1::shapes/test-largearealight1.ply"
+            },
+            {
+                "uri": "::yocto::test-largearealight2::shapes/test-largearealight2.ply"
             }
         ],
         "subdivs": [
@@ -438,13 +445,13 @@ def make_tests():
                 "uri": "instances/test-arealight1.yaml",
                 "shape": "shapes/test-arealight1.ply",
                 "material": "materials/test-arealight1.yaml",
-                "frame": lookat([ -0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
+                "lookat": [ -0.4, 0.8, 0.8 ,  0, 0.1, 0 , 0, 1, 0]
             },
             {
                 "uri": "instances/test-arealight2.yaml",
                 "shape": "shapes/test-arealight2.ply",
                 "material": "materials/test-arealight2.yaml",
-                "frame": lookat([ 0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
+                "lookat": [ 0.4, 0.8, 0.8 , 0, 0.1, 0 , 0, 1, 0]
             }
         ],
         "environments": []
@@ -455,13 +462,36 @@ def make_tests():
                 "uri": "instances/test-arealight1.yaml",
                 "shape": "shapes/test-arealight1.ply",
                 "material": "materials/test-arealight1.yaml",
-                "frame": lookat([ -0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
+                "lookat": [ -0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
             },
             {
                 "uri": "instances/test-arealight2.yaml",
                 "shape": "shapes/test-arealight2.ply",
                 "material": "materials/test-arealight2.yaml",
-                "frame": lookat([ 0.4, 0.8, 0.8 ], [ 0, 0.1, 0 ], [0, 1, 0], True)
+                "lookat": [ 0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+            }
+        ],
+        "environments": [
+            {
+                "uri": 'environments/test-sky.yaml',
+                "emission": [0.5, 0.5, 0.5],
+                "emission_tex": "textures/test-sky.hdr"
+            }
+        ]
+    }
+    mixed_lights1 = {
+        "instances": [
+            {
+                "uri": "instances/test-largearealight1.yaml",
+                "shape": "shapes/test-largearealight1.ply",
+                "material": "materials/test-largearealight1.yaml",
+                "lookat": [ -0.8, 1.6, 1.6 , 0, 0.1, 0, 0, 1, 0]
+            },
+            {
+                "uri": "instances/test-largearealight2.yaml",
+                "shape": "shapes/test-largearealight2.ply",
+                "material": "materials/test-largearealight2.yaml",
+                "lookat": [ 0.8, 1.6, 1.6 , 0, 0.1, 0, 0, 1, 0]
             }
         ],
         "environments": [
@@ -482,7 +512,7 @@ def make_tests():
             }
         ]
     }
-    def make_test(name, shapes, materials, lights, xoffsets=[ -0.4, -0.2, 0, 0.2, 0.4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1], subdivs=[]):
+    def make_test(name, shapes, materials, lights, xoffsets=[ -0.4, -0.2, 0, 0.2, 0.4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1], subdivs=[], inrow=True):
         import copy
         def remove_preset(filename):
             splits = filename.rpartition('::')
@@ -496,7 +526,7 @@ def make_tests():
             material = materials[i % len(materials)]
             xoffset = xoffsets[i % len(xoffsets)]
             yoffset = yoffsets[i % len(yoffsets)]
-            zoffset = zoffsets[i % len(zoffsets)]
+            zoffset = zoffsets[i % len(zoffsets)] if inrow else zoffsets[i // len(xoffsets)]
             xscale = xscales[i % len(xscales)]
             yscale = yscales[i % len(yscales)]
             zscale = zscales[i % len(zscales)]
@@ -577,5 +607,11 @@ def make_tests():
     make_test('tests/shapes3.yaml', ['shapes/test-sphere.ply', "shapes/test-hairball1.ply", "shapes/test-hairball2.ply", "shapes/test-hairball3.ply", "shapes/test-sphere.ply", "", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", "shapes/test-hairball-interior.ply", ""], ["materials/test-matte.yaml", "materials/test-hair.yaml", "materials/test-hair.yaml", "materials/test-hair.yaml", "materials/test-matte.yaml"], mixed_lights, xscales=[ 0.5, 1, 1, 1, 0.5 ])
     make_test('tests/arealights1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-metal-rough.yaml", "materials/test-plastic-rough.yaml", "materials/test-metal-sharp.yaml"], area_lights)
     make_test('tests/environments1.yaml', ['shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj', 'shapes/test-sphere.ply', 'shapes/test-bunny.obj'], ["materials/test-uvgrid.yaml", "materials/test-plastic-sharp.yaml", "materials/test-metal-rough.yaml", "materials/test-plastic-rough.yaml", "materials/test-metal-sharp.yaml"], sunsky_lights)
+    make_test('tests/materials.yaml', ['shapes/test-bunny.obj'], 
+        ["materials/test-plastic-sharp.yaml", "materials/test-plastic-rough.yaml", "materials/test-matte.yaml", "materials/test-metal-sharp.yaml", "materials/test-metal-rough.yaml"] +
+        ["materials/test-glass-sharp.yaml", "materials/test-glass-rough.yaml", "materials/test-transparent.yaml", "materials/test-thinglass-sharp.yaml", "materials/test-thinglass-rough.yaml"] +
+        ["materials/test-plastic-sharp-bumped.yaml", "materials/test-plastic-rough-coated.yaml", "materials/test-metal-sharp-bumped.yaml", "materials/test-metal-rough-coated.yaml", "materials/test-metal-rough.yaml"] +
+        ["materials/test-volume-cloud.yaml", "materials/test-volume-glass.yaml", "materials/test-volume-jade.yaml", "materials/test-volume-emissive.yaml", "materials/test-volume-smoke.yaml"],
+        mixed_lights1, zoffsets=[ 0.2, 0, -0.2, -0.4 ], inrow=False)
 
 cli()

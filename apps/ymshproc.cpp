@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
   auto normals         = false;
   auto rotate          = zero3f;
   auto scale           = vec3f{1};
-  auto uscale = 1.0f;
+  auto uscale          = 1.0f;
   auto translate       = zero3f;
   auto output          = "out.ply"s;
   auto filename        = "mesh.ply"s;

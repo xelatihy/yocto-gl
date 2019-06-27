@@ -878,6 +878,11 @@ struct load_yaml_scene_cb : yaml_callbacks {
           parse_yaml_value(value, camera.focus);
         } else if (key == "aperture") {
           parse_yaml_value(value, camera.aperture);
+        } else if (key == "lookat") {
+          auto lookat = identity3x3f;
+          parse_yaml_value(value, lookat);
+          camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
+          camera.focus = length(lookat.x - lookat.y);
         } else {
           throw std::runtime_error("unknown property " + string(key));
         }
@@ -1018,6 +1023,10 @@ struct load_yaml_scene_cb : yaml_callbacks {
           get_yaml_ref(value, instance.shape, smap);
         } else if (key == "material") {
           get_yaml_ref(value, instance.material, mmap);
+        } else if (key == "lookat") {
+          auto lookat = identity3x3f;
+          parse_yaml_value(value, lookat);
+          instance.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         } else {
           throw std::runtime_error("unknown property " + string(key));
         }
@@ -1032,6 +1041,10 @@ struct load_yaml_scene_cb : yaml_callbacks {
           parse_yaml_value(value, environment.emission);
         } else if (key == "emission_tex") {
           get_yaml_ref(value, environment.emission_tex, tmap);
+        } else if (key == "lookat") {
+          auto lookat = identity3x3f;
+          parse_yaml_value(value, lookat);
+          environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         } else {
           throw std::runtime_error("unknown property " + string(key));
         }
@@ -2067,9 +2080,10 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
   }
   auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
       data, cgltf_free};
-    auto dirname = fs::path(filename).parent_path().string();
-    if(dirname != "") dirname += "/";
-  if (cgltf_load_buffers(&params, data, dirname.c_str()) != cgltf_result_success) {
+  auto dirname = fs::path(filename).parent_path().string();
+  if (dirname != "") dirname += "/";
+  if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
+      cgltf_result_success) {
     throw std::runtime_error("could not load gltf buffers " + filename);
   }
 

@@ -404,7 +404,7 @@ inline vec3f refract(const vec3f& w, const vec3f& n, float eta) {
 }
 inline vec3f refract_notir(const vec3f& w, const vec3f& n, float eta) {
   auto k = 1 - eta * eta * max((float)0, 1 - dot(n, w) * dot(n, w));
-  k = max(k, 0.001f);
+  k      = max(k, 0.001f);
   return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
 }
 

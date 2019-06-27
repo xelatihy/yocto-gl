@@ -2899,6 +2899,16 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     params.type  = proc_shape_params::type_t::quad;
     params.scale = 0.2;
     make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+  } else if (type == "test-largearealight1") {
+    auto params  = proc_shape_params{};
+    params.type  = proc_shape_params::type_t::quad;
+    params.scale = 0.4;
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+  } else if (type == "test-largearealight2") {
+    auto params  = proc_shape_params{};
+    params.type  = proc_shape_params::type_t::quad;
+    params.scale = 0.4;
+    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else {
     throw std::invalid_argument("unknown shape preset " + type);
   }
