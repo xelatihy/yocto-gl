@@ -787,7 +787,7 @@ void delete_drawgl_state(drawgl_state& state) {
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
   auto&         app = *(app_state*)get_gluser_pointer(win);
-  if (!begin_glwidgets_window(win, "yview")) return;
+  if (!begin_glwidgets_window(win, "yscnview")) return;
   if (!app.errors.empty() && error_message.empty()) {
     error_message = app.errors.front();
     app.errors.pop_front();
@@ -842,7 +842,7 @@ void draw_glwidgets(const opengl_window& win) {
       win, "scene", app.selected, (int)app.scenes.size(),
       [&app](int idx) { return app.scenes[idx].name.c_str(); }, false);
   auto& scn = app.scenes[app.selected];
-  if (begin_glheader(win, "trace")) {
+  if (begin_glheader(win, "view")) {
     auto cam_names = vector<string>();
     for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
     auto drawgl_prms = scn.drawgl_prms;
@@ -1164,7 +1164,7 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yview", &app, draw);
+  init_glwindow(win, {1280 + 320, 720}, "yscnview", &app, draw);
 
   // init widget
   init_glwidgets(win);

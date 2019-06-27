@@ -227,7 +227,7 @@ void add_new_scene(app_state& app, const string& filename) {
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
   auto&         app = *(app_state*)get_gluser_pointer(win);
-  if (!begin_glwidgets_window(win, "yitrace")) return;
+  if (!begin_glwidgets_window(win, "yscnitrace")) return;
   if (!app.errors.empty() && error_message.empty()) {
     error_message = app.errors.front();
     app.errors.pop_front();
@@ -841,7 +841,7 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yitrace", &app, draw);
+  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", &app, draw);
   set_drop_glcallback(win, drop_callback);
 
   // init widgets
