@@ -3539,8 +3539,21 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         if (verbose) printf("kdsubsurface material not properly supported\n");
       } break;
       case pbrt_material::type_t::subsurface: {
-        material.diffuse   = {1, 0, 0};
-        material.roughness = 1;
+        auto& subsurface = pmaterial.subsurface;
+        get_scaled_texture3f(
+            subsurface.Kr, material.specular, material.specular_tex);
+        material.specular *= 0.04f;
+        get_scaled_texture3f(
+            subsurface.Kt, material.transmission, material.transmission_tex);
+        material.roughness = get_pbrt_roughness(subsurface.uroughness.value,
+            subsurface.vroughness.value, subsurface.remaproughness);
+        material.volscale  = 1 / subsurface.scale;
+        auto sigma_a = zero3f, sigma_s = zero3f;
+        auto sigma_a_tex = -1, sigma_s_tex = -1;
+        get_scaled_texture3f(subsurface.sigma_a, sigma_a, sigma_a_tex);
+        get_scaled_texture3f(subsurface.sigma_prime_s, sigma_s, sigma_s_tex);
+        material.volmeanfreepath = 1 / (sigma_a + sigma_s);
+        material.volscatter      = sigma_s / (sigma_a + sigma_s);
         if (verbose) printf("subsurface material not properly supported\n");
       } break;
       case pbrt_material::type_t::mix: {

@@ -2013,10 +2013,9 @@ static inline void parse_material(pbrt_stream& stream, const string& type,
       parse_nametype(stream, pname, ptype);
       if (pname == "name") {
         parse_param(stream, ptype, tvalue.name);
-        auto params          = parse_subsurface(tvalue.name);
-        tvalue.sigma_a       = {params.first.x, params.first.y, params.first.z};
-        tvalue.sigma_prime_s = {
-            params.second.x, params.second.y, params.second.z};
+        auto params    = parse_subsurface(tvalue.name);
+        tvalue.sigma_a = {params.second.x, params.second.y, params.second.z};
+        tvalue.sigma_prime_s = {params.first.x, params.first.y, params.first.z};
       } else if (pname == "sigma_a") {
         parse_texture(stream, ptype, tvalue.sigma_a, constant_values);
       } else if (pname == "sigma_prime_s") {

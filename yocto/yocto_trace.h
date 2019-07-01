@@ -238,6 +238,9 @@ float eval_phasefunction(float cos_theta, float vg);
 // Return zeros if not available.
 pair<vec3f, vec3f> get_conductor_eta(const string& element);
 
+// Get subsurface params
+pair<vec3f, vec3f> get_subsurface_params(const string& name);
+
 }  // namespace yocto
 
 #endif
