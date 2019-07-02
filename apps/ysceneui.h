@@ -221,8 +221,13 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glslider(win, "aperture", edited.aperture, 0, 5)) updated = true;
   auto from = edited.frame.o,
        to   = edited.frame.o - edited.focus * edited.frame.z;
-  draw_glslider(win, "!!from", from, -10, 10);
-  draw_glslider(win, "!!to", to, -10, 10);
+  auto from_changed = draw_glslider(win, "!!from", from, -10, 10);
+  auto to_changed = draw_glslider(win, "!!to", to, -10, 10);
+  if(from_changed || to_changed) {
+    edited.frame = lookat_frame(from, to, {0,1,0});
+    edited.focus = length(from-to);
+    updated = true;
+  }
   if (updated) {
     edit = {sel.type, sel.index, edited, false};
   }
