@@ -790,9 +790,17 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
 
 vec4f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
+  auto ceta = reflectivity_to_eta(material.coat);
+  auto eta = reflectivity_to_eta(material.specular);
+
+  if(!material.thin && dot(normal, outgoing) < 0) {
+    ceta = 1 / ceta;
+    eta = 1 / eta;
+  }
+
   auto ndo      = abs(dot(outgoing, normal));
-  auto coat     = fresnel_schlick(material.coat, ndo);
-  auto specular = fresnel_schlick(material.specular, ndo);
+  auto coat     = fresnel_dielectric(ceta, ndo);
+  auto specular = fresnel_dielectric(eta, ndo);
 
   auto weights = zero4f;
   weights[0]   = max(coat);

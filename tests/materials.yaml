@@ -134,9 +134,9 @@ materials:
     volemission: [15, 15, 10]
     volscatter: [0.01, 0.01, 0.01]
   - uri: materials/test-largearealight1.yaml
-    emission: [20, 20, 20]
+    emission: [10, 10, 10]
   - uri: materials/test-largearealight2.yaml
-    emission: [20, 20, 20]
+    emission: [10, 10, 10]
 shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply
   - uri: shapes/test-bunny.obj
