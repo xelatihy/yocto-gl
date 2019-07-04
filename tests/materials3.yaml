@@ -45,8 +45,7 @@ materials:
     diffuse: [0.7, 0.7, 0.7]
     diffuse_tex: textures/test-floor.png
   - uri: materials/test-metal-rough.yaml
-    metallic: 1
-    diffuse: [0.66, 0.45, 0.34]
+    specular: [0.66, 0.45, 0.34]
     roughness: 0.2
   - uri: materials/test-plastic-sharp-bumped.yaml
     specular: [0.04, 0.04, 0.04]
@@ -54,8 +53,7 @@ materials:
     roughness: 0.01
     normal_tex: textures/test-bumps-normal.png
   - uri: materials/test-metal-sharp-bumped.yaml
-    metallic: 1
-    diffuse: [0.7, 0.7, 0.7]
+    specular: [0.7, 0.7, 0.7]
     roughness: 0
     normal_tex: textures/test-bumps-normal.png
   - uri: materials/test-plastic-rough-coated.yaml
@@ -64,9 +62,8 @@ materials:
     diffuse: [0.5, 0.7, 0.5]
     roughness: 0.2
   - uri: materials/test-metal-rough-coated.yaml
-    metallic: 1
     coat: [0.04, 0.04, 0.04]
-    diffuse: [0.66, 0.45, 0.34]
+    specular: [0.66, 0.45, 0.34]
     roughness: 0.2
   - uri: materials/test-largearealight1.yaml
     emission: [10, 10, 10]

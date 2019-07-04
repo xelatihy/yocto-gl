@@ -5,7 +5,10 @@ cmake-build-debug
 cmake-build-release
 .idea
 .vscode/.cmaketools.json
-out.hdr
+*.hdr
+*.exr
+*.png
 .vscode/ipch/
 yocto1/
 apps1/
+tests1/

@@ -55,12 +55,10 @@ materials:
     diffuse: [0.5, 0.7, 0.5]
     roughness: 0.2
   - uri: materials/test-metal-sharp.yaml
-    metallic: 1
-    diffuse: [0.7, 0.7, 0.7]
+    specular: [0.7, 0.7, 0.7]
     roughness: 0
   - uri: materials/test-metal-rough.yaml
-    metallic: 1
-    diffuse: [0.66, 0.45, 0.34]
+    specular: [0.66, 0.45, 0.34]
     roughness: 0.2
   - uri: materials/test-largearealight1.yaml
     emission: [10, 10, 10]

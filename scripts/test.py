@@ -255,14 +255,12 @@ def make_tests():
             },
             {
                 "uri": "materials/test-metal-sharp.yaml",
-                "metallic": 1,
-                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "specular": [ 0.7, 0.7, 0.7 ],
                 "roughness": 0
             },
             {
                 "uri": "materials/test-metal-rough.yaml",
-                "metallic": 1,
-                "diffuse": [ 0.66, 0.45, 0.34 ],
+                "specular": [ 0.66, 0.45, 0.34 ],
                 "roughness": 0.2
             },
             {
@@ -281,8 +279,7 @@ def make_tests():
             },
             {
                 "uri": "materials/test-metal-sharp-bumped.yaml",
-                "metallic": 1,
-                "diffuse": [ 0.7, 0.7, 0.7 ],
+                "specular": [ 0.7, 0.7, 0.7 ],
                 "roughness": 0,
                 "normal_tex": "textures/test-bumps-normal.png"
             },
@@ -295,9 +292,8 @@ def make_tests():
             },
             {
                 "uri": "materials/test-metal-rough-coated.yaml",
-                "metallic": 1,
                 "coat": [0.04, 0.04, 0.04],
-                "diffuse": [ 0.66, 0.45, 0.34 ],
+                "specular": [ 0.66, 0.45, 0.34 ],
                 "roughness": 0.2
             },
             {

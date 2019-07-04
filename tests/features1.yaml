@@ -46,8 +46,7 @@ materials:
     diffuse: [0.7, 0.7, 0.7]
     diffuse_tex: textures/test-floor.png
   - uri: materials/test-metal-rough.yaml
-    metallic: 1
-    diffuse: [0.66, 0.45, 0.34]
+    specular: [0.66, 0.45, 0.34]
     roughness: 0.2
   - uri: materials/test-plastic-rough-bumped.yaml
     specular: [0.04, 0.04, 0.04]
