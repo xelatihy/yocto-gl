@@ -49,24 +49,20 @@ materials:
     opacity: 0.2
   - uri: materials/test-glass-sharp.yaml
     specular: [0.04, 0.04, 0.04]
-    transmission: [1, 1, 1]
+    refraction: [1, 1, 1]
     roughness: 0
-    thin: false
   - uri: materials/test-glass-rough.yaml
     specular: [0.04, 0.04, 0.04]
-    transmission: [1, 0.7, 0.7]
+    refraction: [1, 0.7, 0.7]
     roughness: 0.1
-    thin: false
   - uri: materials/test-thinglass-sharp.yaml
     specular: [0.04, 0.04, 0.04]
     transmission: [1, 1, 1]
     roughness: 0
-    thin: true
   - uri: materials/test-thinglass-rough.yaml
     specular: [0.04, 0.04, 0.04]
     transmission: [1, 0.7, 0.7]
     roughness: 0.05
-    thin: true
   - uri: materials/test-largearealight1.yaml
     emission: [10, 10, 10]
   - uri: materials/test-largearealight2.yaml

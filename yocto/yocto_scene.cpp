@@ -1072,6 +1072,7 @@ material_point eval_material(const yocto_scene& scene,
   point.roughness      = material.roughness;
   point.coat           = material.coat;
   point.transmission   = material.transmission;
+  point.refraction     = material.refraction;
   auto voltransmission = material.voltransmission;
   auto volmeanfreepath = material.volmeanfreepath;
   point.volemission    = material.volemission;
@@ -1079,7 +1080,6 @@ material_point eval_material(const yocto_scene& scene,
   point.volanisotropy  = material.volanisotropy;
   auto volscale        = material.volscale;
   point.opacity        = material.opacity * shape_color.w;
-  point.thin           = material.thin;
 
   // textures
   if (material.emission_tex >= 0) {
@@ -1117,6 +1117,10 @@ material_point eval_material(const yocto_scene& scene,
   if (material.transmission_tex >= 0) {
     auto& transmission_tex = scene.textures[material.transmission_tex];
     point.transmission *= xyz(eval_texture(transmission_tex, texcoord));
+  }
+  if (material.refraction_tex >= 0) {
+    auto& refraction_tex = scene.textures[material.refraction_tex];
+    point.refraction *= xyz(eval_texture(refraction_tex, texcoord));
   }
   if (material.subsurface_tex >= 0) {
     auto& subsurface_tex = scene.textures[material.subsurface_tex];

@@ -934,6 +934,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
           parse_yaml_value(value, material.coat);
         } else if (key == "transmission") {
           parse_yaml_value(value, material.transmission);
+        } else if (key == "refraction") {
+          parse_yaml_value(value, material.refraction);
         } else if (key == "voltransmission") {
           parse_yaml_value(value, material.voltransmission);
         } else if (key == "volmeanfreepath") {
@@ -950,8 +952,6 @@ struct load_yaml_scene_cb : yaml_callbacks {
           parse_yaml_value(value, material.opacity);
         } else if (key == "coat") {
           parse_yaml_value(value, material.coat);
-        } else if (key == "thin") {
-          parse_yaml_value(value, material.thin);
         } else if (key == "emission_tex") {
           get_yaml_ref(value, material.emission_tex, tmap);
         } else if (key == "diffuse_tex") {
@@ -962,6 +962,8 @@ struct load_yaml_scene_cb : yaml_callbacks {
           get_yaml_ref(value, material.specular_tex, tmap);
         } else if (key == "transmission_tex") {
           get_yaml_ref(value, material.transmission_tex, tmap);
+        } else if (key == "refraction_tex") {
+          get_yaml_ref(value, material.refraction_tex, tmap);
         } else if (key == "roughness_tex") {
           get_yaml_ref(value, material.roughness_tex, tmap);
         } else if (key == "subsurface_tex") {
@@ -1211,6 +1213,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     write_yaml_opt(fs, "metallic", material.metallic, def_material.metallic);
     write_yaml_opt(
         fs, "transmission", material.transmission, def_material.transmission);
+    write_yaml_opt(
+        fs, "refraction", material.refraction, def_material.refraction);
     write_yaml_opt(fs, "roughness", material.roughness, def_material.roughness);
     write_yaml_opt(fs, "voltransmission", material.voltransmission,
         def_material.voltransmission);
@@ -1225,7 +1229,6 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     write_yaml_opt(fs, "volscale", material.volscale, def_material.volscale);
     write_yaml_opt(fs, "coat", material.coat, def_material.coat);
     write_yaml_opt(fs, "opacity", material.opacity, def_material.opacity);
-    write_yaml_opt(fs, "thin", material.thin, def_material.thin);
     write_yaml_ref(fs, "emission_tex", material.emission_tex, scene.textures);
     write_yaml_ref(fs, "diffuse_tex", material.diffuse_tex, scene.textures);
     write_yaml_ref(fs, "metallic_tex", material.metallic_tex, scene.textures);
@@ -1233,6 +1236,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     write_yaml_ref(fs, "roughness_tex", material.roughness_tex, scene.textures);
     write_yaml_ref(
         fs, "transmission_tex", material.transmission_tex, scene.textures);
+    write_yaml_ref(
+        fs, "refraction_tex", material.refraction_tex, scene.textures);
     write_yaml_ref(
         fs, "subsurface_tex", material.subsurface_tex, scene.textures);
     write_yaml_ref(fs, "coat_tex", material.coat_tex, scene.textures);
@@ -1578,7 +1583,6 @@ struct load_obj_scene_cb : obj_callbacks {
     material.volanisotropy    = omat.vg;
     material.volscale         = omat.vr;
     material.subsurface_tex   = add_texture(omat.vs_map, false);
-    if (material.transmission != zero3f) material.thin = true;
     scene.materials.push_back(material);
     mmap[material.uri] = (int)scene.materials.size() - 1;
   }
@@ -3449,7 +3453,6 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
         material.opacity   = (op.x + op.y + op.z) / 3;
         material.roughness = get_pbrt_roughness(
             uber.uroughness.value, uber.vroughness.value, uber.remaproughness);
-        material.thin = true;
       } break;
       case pbrt_material::type_t::plastic: {
         auto& plastic = pmaterial.plastic;
@@ -3511,7 +3514,6 @@ struct load_pbrt_scene_cb : pbrt_callbacks {
             glass.Kt, material.transmission, material.transmission_tex);
         material.roughness = get_pbrt_roughness(glass.uroughness.value,
             glass.vroughness.value, glass.remaproughness);
-        material.thin      = true;
       } break;
       case pbrt_material::type_t::hair: {
         auto& hair = pmaterial.hair;

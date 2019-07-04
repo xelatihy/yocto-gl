@@ -313,30 +313,26 @@ def make_tests():
             {
                 "uri": "materials/test-glass-sharp.yaml",
                 "specular": [0.04, 0.04, 0.04],
-                "transmission": [1, 1, 1],
-                "roughness": 0,
-                "thin": False
+                "refraction": [1, 1, 1],
+                "roughness": 0
             },
             {
                 "uri": "materials/test-glass-rough.yaml",
                 "specular": [0.04, 0.04, 0.04],
-                "transmission": [ 1, 0.7, 0.7 ],
-                "roughness": 0.1,
-                "thin": False
+                "refraction": [ 1, 0.7, 0.7 ],
+                "roughness": 0.1
             },
             {
                 "uri": "materials/test-thinglass-sharp.yaml",
                 "specular": [0.04, 0.04, 0.04],
                 "transmission": [1, 1, 1],
-                "roughness": 0,
-                "thin": True
+                "roughness": 0
             },
             {
                 "uri": "materials/test-thinglass-rough.yaml",
                 "specular": [0.04, 0.04, 0.04],
                 "transmission": [ 1, 0.7, 0.7 ],
-                "roughness": 0.05,
-                "thin": True
+                "roughness": 0.05
             },
             {
                 "uri": "materials/test-hair.yaml",
@@ -347,7 +343,7 @@ def make_tests():
                 "uri": "materials/test-volume-jade.yaml",
                 "specular": [0.04, 0.04, 0.04],
                 "roughness": 0,
-                "transmission": [1, 1, 1],
+                "refraction": [1, 1, 1],
                 "voltransmission": [0.5, 0.5, 0.5],
                 "volscatter": [0.3, 0.6, 0.3]
             },
@@ -361,7 +357,7 @@ def make_tests():
                 "uri": "materials/test-volume-glass.yaml",
                 "specular": [0.04, 0.04, 0.04],
                 "roughness": 0,
-                "transmission": [1, 1, 1],
+                "refraction": [1, 1, 1],
                 "voltransmission": [1, 0.5, 0.5],
                 "volscale": 0.02
             },

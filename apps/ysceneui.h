@@ -288,6 +288,8 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glcoloredit(win, "coat", edited.coat)) updated = true;
   if (draw_glcoloredit(win, "transmission", edited.transmission))
     updated = true;
+  if (draw_glcoloredit(win, "refraction", edited.refraction))
+    updated = true;
   if (draw_glcoloredit(win, "vol transmission", edited.voltransmission))
     updated = true;
   if (draw_glcoloredit(win, "vol meanfreepath", edited.volmeanfreepath))
@@ -298,7 +300,6 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glslider(win, "vol anisotropy", edited.volanisotropy, -1, 1))
     updated = true;
   if (draw_glslider(win, "opacity", edited.opacity, 0, 1)) updated = true;
-  if (draw_glcheckbox(win, "thin", edited.thin)) updated = true;
 
   if (draw_glcombobox(
           win, "emission_tex", edited.emission_tex, scene.textures, true))
@@ -313,6 +314,9 @@ inline bool draw_glsceneinspector(const opengl_window& win,
           win, "specular_tex", edited.specular_tex, scene.textures, true))
     updated = true;
   if (draw_glcombobox(win, "transmission_tex", edited.transmission_tex,
+          scene.textures, true))
+    updated = true;
+  if (draw_glcombobox(win, "refraction_tex", edited.refraction_tex,
           scene.textures, true))
     updated = true;
   if (draw_glcombobox(
