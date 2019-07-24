@@ -3487,47 +3487,6 @@ static inline file_holder open_output_file(
   return {fs, filename};
 }
 
-// Write text to file
-static inline void write_obj_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_obj_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_obj_value(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static void write_obj_value(FILE* fs, const obj_vertex& value) {
-  if (fprintf(fs, "%d", value.position) < 0)
-    throw std::runtime_error("cannot write value");
-  if (value.texcoord) {
-    if (fprintf(fs, "/%d", value.texcoord) < 0)
-      throw std::runtime_error("cannot write value");
-    if (value.normal) {
-      if (fprintf(fs, "/%d", value.normal) < 0)
-        throw std::runtime_error("cannot write value");
-    }
-  } else if (value.normal) {
-    if (fprintf(fs, "//%d", value.normal) < 0)
-      throw std::runtime_error("cannot write value");
-  }
-}
-
-template <typename T, typename... Ts>
-static inline void write_obj_line(
-    FILE* fs, const T& value, const Ts... values) {
-  write_obj_value(fs, value);
-  if constexpr (sizeof...(values) == 0) {
-    write_obj_text(fs, "\n");
-  } else {
-    write_obj_text(fs, " ");
-    write_obj_line(fs, values...);
-  }
-}
-
 // Load ply mesh
 static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -3535,19 +3494,16 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, bool flip_texcoord) {
-  // open file
-  auto fs_ = open_output_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = obj_ostreams{};
+  init_obj_ostreams(fs, filename, false, false);
 
-  write_obj_text(fs, "#\n");
-  write_obj_text(fs, "# Written by Yocto/GL\n");
-  write_obj_text(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  write_obj_text(fs, "#\n");
+  write_obj_comment(
+      fs, "\nWritten by Yocto/GL\nhttps://github.com/xelatihy/yocto-gl\n\n");
 
-  for (auto& p : positions) write_obj_line(fs, "v", p.x, p.y, p.z);
-  for (auto& n : normals) write_obj_line(fs, "vn", n.x, n.y, n.z);
+  for (auto& p : positions) write_obj_vertex(fs, p);
+  for (auto& n : normals) write_obj_normal(fs, n);
   for (auto& t : texcoords)
-    write_obj_line(fs, "vt", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+    write_obj_texcoord(fs, (flip_texcoord) ? vec2f{t.x, 1 - t.y} : t);
 
   auto mask = obj_vertex{1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
   auto vert = [mask](int i) {
@@ -3555,20 +3511,14 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
         (i + 1) * mask.normal};
   };
 
-  for (auto& p : points) {
-    write_obj_line(fs, "p", vert(p));
-  }
-  for (auto& l : lines) {
-    write_obj_line(fs, "l", vert(l.x), vert(l.y));
-  }
-  for (auto& t : triangles) {
-    write_obj_line(fs, "f", vert(t.x), vert(t.y), vert(t.z));
-  }
+  for (auto& p : points) write_obj_point(fs, vert(p));
+  for (auto& l : lines) write_obj_line(fs, vert(l.x), vert(l.y));
+  for (auto& t : triangles) write_obj_face(fs, vert(t.x), vert(t.y), vert(t.z));
   for (auto& q : quads) {
     if (q.z == q.w) {
-      write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z));
+      write_obj_face(fs, vert(q.x), vert(q.y), vert(q.z));
     } else {
-      write_obj_line(fs, "f", vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+      write_obj_face(fs, vert(q.x), vert(q.y), vert(q.z), vert(q.w));
     }
   }
 
@@ -3592,12 +3542,11 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
                                      : vec4i{-1, -1, -1, -1};
     auto qn = !quadsnorm.empty() ? quadsnorm.at(i) : vec4i{-1, -1, -1, -1};
     if (qp.z != qp.w) {
-      write_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
-          fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z),
-          fvvert(qp.w, qt.w, qn.w));
+      write_obj_face(fs, fvvert(qp.x, qt.x, qn.x), fvvert(qp.y, qt.y, qn.y),
+          fvvert(qp.z, qt.z, qn.z), fvvert(qp.w, qt.w, qn.w));
     } else {
-      write_obj_line(fs, "f", fvvert(qp.x, qt.x, qn.x),
-          fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z));
+      write_obj_face(fs, fvvert(qp.x, qt.x, qn.x), fvvert(qp.y, qt.y, qn.y),
+          fvvert(qp.z, qt.z, qn.z));
     }
   }
 }

@@ -1,18 +1,26 @@
 //
-// # Yocto/OBJ: Tiny library for OBJ parsing
+// # Yocto/OBJ: Tiny library for OBJ parsing/writing
 //
-// Yocto/OBJ is a simple Wavefront OBJ parser that works with callbacks.
-// We make no attempt to provide a simple interface for OBJ but just the
-// low level parsing code. We support a few extensions such as camera and
-// environment map loading.
+// Yocto/OBJ is a simple Wavefront OBJ parser that works with callbacks with
+// support for a few extensions such as camera, instances and environments.
+// The praser is designed for large files and does keep a copy of the model in 
+// memory but instead works with callbacks.
 //
-// Error reporting is done through exceptions using the `io_error` exception.
+// Yocto/GL also support writing OBJ files again without keeping a copy of the 
+// model but instead writing elements directly after each call.
+//
+// Error reporting is done by throwing `std::runtime_error` exceptions.
 //
 // ## Parse an OBJ file
 //
 // 1. define callbacks in `obj_callback` structure using lambda with capture
 //    if desired
 // 2. run the parse with `load_obj()`
+//
+// ## Write amn OBJ file
+//
+// 1. use `init_obj_streams()` to initialize the file streams for weriting
+// 2. use the `write)obj_XXX()` function to write single Obj elements
 //
 //
 
@@ -107,22 +115,23 @@ struct obj_material {
   obj_texture_info op_map   = "";  // opacity texture
   obj_texture_info ior_map  = "";  // ior texture
   obj_texture_info bump_map = "";  // bump map
-
-  // pbr values
-  bool  has_pbr = false;  // whether pbr values are defined
-  float pr      = 0;      // roughness
-  float pm      = 0;      // metallic
-  float ps      = 0;      // sheen
-  float pc      = 0;      // coat
-  float pcr     = 0;      // coat roughness
-
-  // textures
-  obj_texture_info pr_map   = "";  // roughness texture
-  obj_texture_info pm_map   = "";  // metallic texture
-  obj_texture_info ps_map   = "";  // sheen texture
   obj_texture_info norm_map = "";  // normal map
   obj_texture_info disp_map = "";  // displacement map
   obj_texture_info occ_map  = "";  // occlusion map
+
+  // pbr values
+  float pr  = 0;  // roughness
+  float pm  = 0;  // metallic
+  float ps  = 0;  // sheen
+  float pc  = 0;  // coat
+  float pcr = 0;  // coat roughness
+
+  // textures
+  obj_texture_info pr_map  = "";  // roughness texture
+  obj_texture_info pm_map  = "";  // metallic texture
+  obj_texture_info ps_map  = "";  // sheen texture
+  obj_texture_info pc_map  = "";  // coat texture
+  obj_texture_info pcr_map = "";  // coat roughness texture
 
   // volume values
   vec3f vt = {0, 0, 0};  // volumetric transmission
@@ -200,6 +209,53 @@ struct obj_callbacks {
 // Load obj scene
 void load_obj(const string& filename, obj_callbacks& cb,
     bool nomaterials = false, bool flipv = true, bool fliptr = true);
+
+// Holds streams for obj files. State of this object should be considered 
+// private and should not be accessed directly.
+struct obj_ostreams {
+  // Move-only object with automatic file closing on destruction.
+  obj_ostreams() {}
+  obj_ostreams(const obj_ostreams&) = delete;
+  obj_ostreams& operator=(const obj_ostreams&) = delete;
+  ~obj_ostreams();
+
+  // File streams
+  FILE* obj = nullptr;
+  FILE* mtl = nullptr;
+  FILE* obx = nullptr;
+};
+
+// Open/close obj write stream
+void init_obj_ostreams(obj_ostreams& fs, const string& filename, bool materials,
+    bool extensions, const string& comment = "");
+
+// Write obj elements
+void write_obj_comment(obj_ostreams& fs, const string& comment,
+    bool in_obj = true, bool in_mtl = false, bool in_objx = false,
+    bool skip_line = false);
+void write_obj_vertex(obj_ostreams& fs, const vec3f& p);
+void write_obj_normal(obj_ostreams& fs, const vec3f& n);
+void write_obj_texcoord(obj_ostreams& fs, const vec2f& t);
+void write_obj_face(obj_ostreams& fs, const vector<obj_vertex>& verts);
+void write_obj_face(obj_ostreams& fs, const obj_vertex& vert1,
+    const obj_vertex& vert2, const obj_vertex& vert3);
+void write_obj_face(obj_ostreams& fs, const obj_vertex& vert1,
+    const obj_vertex& vert2, const obj_vertex& vert3, const obj_vertex& vert4);
+void write_obj_line(obj_ostreams& fs, const vector<obj_vertex>& verts);
+void write_obj_line(
+    obj_ostreams& fs, const obj_vertex& vert1, const obj_vertex& vert2);
+void write_obj_point(obj_ostreams& fs, const vector<obj_vertex>& verts);
+void write_obj_point(obj_ostreams& fs, const obj_vertex& vert);
+void write_obj_object(obj_ostreams& fs, const string& name);
+void write_obj_group(obj_ostreams& fs, const string& name);
+void write_obj_usemtl(obj_ostreams& fs, const string& name);
+void write_obj_smoothing(obj_ostreams& fs, const string& name);
+void write_obj_mtllib(obj_ostreams& fs, const string& filename);
+void write_obj_material(obj_ostreams& fs, const obj_material& material);
+void write_obj_camera(obj_ostreams& fs, const obj_camera& camera);
+void write_obj_environmnet(obj_ostreams& fs, const obj_environment& environment);
+void write_obj_instance(obj_ostreams& fs, const obj_instance& instamce);
+void write_obj_procedural(obj_ostreams& fs, const obj_procedural& procedural);
 
 }  // namespace yocto
 

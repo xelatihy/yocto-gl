@@ -219,14 +219,14 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glslider(win, "film", edited.film, 0.01f, 0.1f)) updated = true;
   if (draw_glslider(win, "focus", edited.focus, 0.01f, 1000)) updated = true;
   if (draw_glslider(win, "aperture", edited.aperture, 0, 5)) updated = true;
-  auto from = edited.frame.o,
-       to   = edited.frame.o - edited.focus * edited.frame.z;
+  auto from         = edited.frame.o,
+       to           = edited.frame.o - edited.focus * edited.frame.z;
   auto from_changed = draw_glslider(win, "!!from", from, -10, 10);
-  auto to_changed = draw_glslider(win, "!!to", to, -10, 10);
-  if(from_changed || to_changed) {
-    edited.frame = lookat_frame(from, to, {0,1,0});
-    edited.focus = length(from-to);
-    updated = true;
+  auto to_changed   = draw_glslider(win, "!!to", to, -10, 10);
+  if (from_changed || to_changed) {
+    edited.frame = lookat_frame(from, to, {0, 1, 0});
+    edited.focus = length(from - to);
+    updated      = true;
   }
   if (updated) {
     edit = {sel.type, sel.index, edited, false};
@@ -288,8 +288,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glcoloredit(win, "coat", edited.coat)) updated = true;
   if (draw_glcoloredit(win, "transmission", edited.transmission))
     updated = true;
-  if (draw_glcoloredit(win, "refraction", edited.refraction))
-    updated = true;
+  if (draw_glcoloredit(win, "refraction", edited.refraction)) updated = true;
   if (draw_glcoloredit(win, "vol transmission", edited.voltransmission))
     updated = true;
   if (draw_glcoloredit(win, "vol meanfreepath", edited.volmeanfreepath))
@@ -316,8 +315,8 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glcombobox(win, "transmission_tex", edited.transmission_tex,
           scene.textures, true))
     updated = true;
-  if (draw_glcombobox(win, "refraction_tex", edited.refraction_tex,
-          scene.textures, true))
+  if (draw_glcombobox(
+          win, "refraction_tex", edited.refraction_tex, scene.textures, true))
     updated = true;
   if (draw_glcombobox(
           win, "subsurface_tex", edited.subsurface_tex, scene.textures, true))
