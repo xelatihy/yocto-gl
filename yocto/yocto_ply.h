@@ -75,7 +75,7 @@ struct ply_property {
 // Ply elements
 struct ply_element {
   string               name       = "";
-  int64_t              count      = 0;
+  size_t               count      = 0;
   vector<ply_property> properties = {};
 };
 
@@ -83,15 +83,18 @@ struct ply_element {
 struct ply_file {
   // Move-only object with automatic file closing on destruction.
   ply_file() {}
-  ply_file(const string& filename) { open(filename); }
+  ply_file(const string& filename, bool write = false, bool ascii = false) {
+    open(filename, write);
+    this->ascii = ascii;
+  }
   ply_file(const ply_file&) = delete;
   ply_file& operator=(const ply_file&) = delete;
   ~ply_file() { close(); }
 
   // Open/Close file
-  void open(const string& filename) {
+  void open(const string& filename, bool write = false) {
     this->filename = filename;
-    fs             = fopen(filename.c_str(), "rb");
+    fs             = fopen(filename.c_str(), write ? "wb" : "rb");
     if (!fs) throw std::runtime_error{"cannot open file " + filename};
   }
   void close() { fclose(fs); }
@@ -108,6 +111,14 @@ void read_ply_header(ply_file& ply, vector<ply_element>& elements);
 void read_ply_value(ply_file& ply, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists);
 void read_ply_value(ply_file& ply, const ply_element& element,
+    vector<float>& values, vector<vector<int>>& lists);
+
+// Write Ply functions
+void write_ply_header(ply_file& ply, const vector<ply_element>& elements,
+    const vector<string>& comments);
+void write_ply_value(ply_file& ply, const ply_element& element,
+    vector<double>& values, vector<vector<double>>& lists);
+void write_ply_value(ply_file& ply, const ply_element& element,
     vector<float>& values, vector<vector<int>>& lists);
 
 // Helpers to get element and property indices
