@@ -169,7 +169,7 @@ static inline void parse_ply_value(string_view& str, double& value) {
 template <typename T, typename VT>
 static inline void read_ply_prop(FILE* fs, VT& value) {
   auto typed_value = (T)0;
-  fread(&typed_value, sizeof(T), 1, fs);
+  if(fread(&typed_value, sizeof(T), 1, fs) != 1) throw std::runtime_error("cannot read value");;
   value = (VT)typed_value;
 }
 template <typename VT>
@@ -395,10 +395,6 @@ static inline void write_ply_value(FILE* fs, uint64_t value) {
   if (fprintf(fs, "%llu", value) < 0)
     throw std::runtime_error("cannot print value");
 }
-static inline void write_ply_value(FILE* fs, size_t value) {
-  if (fprintf(fs, "%lu", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
 static inline void write_ply_value(FILE* fs, float value) {
   if (fprintf(fs, "%g", value) < 0)
     throw std::runtime_error("cannot print value");
@@ -414,18 +410,6 @@ static inline void write_ply_value(FILE* fs, const char* value) {
 static inline void write_ply_value(FILE* fs, const string& value) {
   if (fprintf(fs, "%s", value.c_str()) < 0)
     throw std::runtime_error("cannot print value");
-}
-
-template <typename T, typename... Ts>
-static inline void write_ply_line(
-    FILE* fs, const T& value, const Ts... values) {
-  write_ply_value(fs, value);
-  if constexpr (sizeof...(values) == 0) {
-    write_ply_value(fs, "\n");
-  } else {
-    write_ply_value(fs, " ");
-    write_ply_line(fs, values...);
-  }
 }
 
 template <typename T, typename VT>
@@ -452,7 +436,7 @@ static inline void write_ply_prop(FILE* fs, ply_type type, VT value) {
 template <typename T, typename VT>
 static inline void write_ply_binprop(FILE* fs, VT value) {
   auto binvalue = (T)value;
-  if (fwrite(&binvalue, sizeof(VT), 1, fs) != 1)
+  if (fwrite(&binvalue, sizeof(T), 1, fs) != 1)
     throw std::runtime_error("cannot write to file");
 }
 
@@ -489,27 +473,27 @@ void write_ply_header(ply_file& ply, const vector<ply_element>& elements,
       {ply_type::f64, "double"},
   };
 
-  write_ply_line(ply.fs, "ply");
+  write_ply_value(ply.fs, "ply\n");
   if (ply.ascii) {
-    write_ply_line(ply.fs, "format", "ascii");
+    write_ply_value(ply.fs, "format ascii 1.0\n");
   } else if (ply.big_endian) {
-    write_ply_line(ply.fs, "format", "binary", "big_endian");
+    write_ply_value(ply.fs, "format binary_big_endian 1.0\n");
   } else {
-    write_ply_line(ply.fs, "format", "binary", "little_endian");
+    write_ply_value(ply.fs, "format binary_little_endian 1.0\n");
   }
-  for (auto& comment : comments) write_ply_line(ply.fs, "comment", comment);
+  for (auto& comment : comments) write_ply_value(ply.fs, "comment " + comment + "\n");
   for (auto& elem : elements) {
-    write_ply_line(ply.fs, "element", elem.name, elem.count);
+    write_ply_value(ply.fs, "element " + elem.name + " " + std::to_string(elem.count) + "\n");
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        write_ply_line(ply.fs, "property", "list", type_map[prop.value_type],
-            type_map[prop.list_type]);
+        write_ply_value(ply.fs, "property list " + type_map[prop.value_type] + " " +
+            type_map[prop.list_type] + " " + prop.name + "\n");
       } else {
-        write_ply_line(ply.fs, "property", type_map[prop.value_type]);
+        write_ply_value(ply.fs, "property " + type_map[prop.value_type] + " " + prop.name + "\n");
       }
     }
   }
-  write_ply_line(ply.fs, "end_header");
+  write_ply_value(ply.fs, "end_header\n");
 }
 
 template <typename VT, typename LT>
@@ -518,19 +502,23 @@ void write_ply_value_impl(ply_file& ply, const ply_element& element,
   if (ply.ascii) {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
+      if(pidx) write_ply_value(ply.fs, " ");
       write_ply_prop(ply.fs, prop.value_type, values[pidx]);
       if (prop.is_list) {
-        for (auto i = 0; i < (int)lists[pidx].size(); i++)
+        for (auto i = 0; i < (int)lists[pidx].size(); i++) {
+          if(i) write_ply_value(ply.fs, " ");
           write_ply_prop(ply.fs, prop.list_type, lists[pidx][i]);
+        }
       }
+      write_ply_value(ply.fs, "\n");
     }
   } else {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
-      write_ply_prop(ply.fs, prop.value_type, values[pidx]);
+      write_ply_binprop(ply.fs, prop.value_type, values[pidx]);
       if (prop.is_list) {
         for (auto i = 0; i < (int)lists[pidx].size(); i++)
-          write_ply_prop(ply.fs, prop.list_type, lists[pidx][i]);
+          write_ply_binprop(ply.fs, prop.list_type, lists[pidx][i]);
       }
     }
   }

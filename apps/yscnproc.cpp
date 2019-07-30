@@ -94,15 +94,15 @@ int main(int argc, char** argv) {
 
   // load scene
   auto scene = yocto_scene{};
-  printf("loading scene");
-  auto load_timer = timer();
   try {
+    printf("loading scene");
+    auto load_timer = timer();
     load_scene(filename, scene, load_prms);
+    printf(" in %s\n", load_timer.elapsedf().c_str());
   } catch (const std::exception& e) {
     printf("%s\n", e.what());
     exit(1);
   }
-  printf(" in %s\n", load_timer.elapsedf().c_str());
 
   // validate scene
   if (validate) {
@@ -181,15 +181,15 @@ int main(int argc, char** argv) {
   }
 
   // save scene
-  printf("saving scene");
-  auto save_timer = timer();
   try {
+    printf("saving scene");
+    auto save_timer = timer();
     save_scene(output, scene, save_prms);
+    printf(" in %s\n", save_timer.elapsedf().c_str());
   } catch (const std::exception& e) {
     printf("%s\n", e.what());
     exit(1);
   }
-  printf(" in %s\n", save_timer.elapsedf().c_str());
 
   // done
   return 0;
