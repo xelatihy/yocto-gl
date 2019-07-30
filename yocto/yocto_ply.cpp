@@ -294,6 +294,9 @@ void read_ply_header(ply_file& ply, vector<ply_element>& elements) {
     } else if (cmd == "comment") {
       skip_ply_whitespace(line);
       // comment is the rest of the line
+    } else if (cmd == "obj_info") {
+      skip_ply_whitespace(line);
+      // comment is the rest of the line
     } else if (cmd == "element") {
       auto& elem = elements.emplace_back();
       parse_ply_value(line, elem.name);
