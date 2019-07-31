@@ -112,120 +112,76 @@ static inline void parse_ply_value(string_view& str, string& value) {
   parse_ply_value(str, valuev);
   value = string{valuev};
 }
-static inline void parse_ply_value(string_view& str, int32_t& value) {
-  char* end = nullptr;
-  value     = (int32_t)strtol(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-static inline void parse_ply_value(string_view& str, int64_t& value) {
-  char* end = nullptr;
-  value     = (int64_t)strtoll(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-static inline void parse_ply_value(string_view& str, uint32_t& value) {
-  char* end = nullptr;
-  value     = (uint32_t)strtoul(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-static inline void parse_ply_value(string_view& str, uint64_t& value) {
-  char* end = nullptr;
-  value     = (uint64_t)strtoull(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-static inline void parse_ply_value(string_view& str, int8_t& value) {
-  auto vali = (int32_t)0;
-  parse_ply_value(str, vali);
-  if (vali < INT8_MIN || vali > INT8_MAX)
-    throw std::runtime_error("cannot parse value");
-  value = (int8_t)vali;
-}
-static inline void parse_ply_value(string_view& str, int16_t& value) {
-  auto vali = (int32_t)0;
-  parse_ply_value(str, vali);
-  if (vali < INT16_MIN || vali > INT16_MAX)
-    throw std::runtime_error("cannot parse value");
-  value = (int16_t)vali;
-}
-static inline void parse_ply_value(string_view& str, uint8_t& value) {
-  auto vali = (uint32_t)0;
-  parse_ply_value(str, vali);
-  if (vali > UINT8_MAX) throw std::runtime_error("cannot parse value");
-  value = (uint8_t)vali;
-}
-static inline void parse_ply_value(string_view& str, uint16_t& value) {
-  auto vali = (uint32_t)0;
-  parse_ply_value(str, vali);
-  if (vali > UINT16_MAX) throw std::runtime_error("cannot parse value");
-  value = (uint16_t)vali;
-}
-#ifdef __APPLE__
 static inline void parse_ply_value(string_view& str, size_t& value) {
-  parse_ply_value(str, (uint64_t&)value);
-}
-#endif
-static inline void parse_ply_value(string_view& str, float& value) {
   char* end = nullptr;
-  value     = strtof(str.data(), &end);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-static inline void parse_ply_value(string_view& str, double& value) {
-  char* end = nullptr;
-  value     = strtod(str.data(), &end);
+  value     = (size_t)strtoull(str.data(), &end, 10);
   if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
 
 // get ply value either ascii or binary
-template <typename T, typename VT>
-static inline void read_ply_prop(FILE* fs, bool big_endian, VT& value) {
-  auto typed_value = (T)0;
-  if (fread(&typed_value, sizeof(T), 1, fs) != 1)
+template <typename T>
+static inline T read_ply_value(FILE* fs, bool big_endian) {
+  auto value = (T)0;
+  if (fread(&value, sizeof(T), 1, fs) != 1)
     throw std::runtime_error("cannot read value");
-  if (big_endian) typed_value = swap_endian(typed_value);
-  value = (VT)typed_value;
+  if (big_endian) value = swap_endian(value);
+  return value;
 }
 template <typename VT>
 static inline void read_ply_prop(
     FILE* fs, bool big_endian, ply_type type, VT& value) {
   switch (type) {
-    case ply_type::i8: read_ply_prop<int8_t>(fs, big_endian, value); break;
-    case ply_type::i16: read_ply_prop<int16_t>(fs, big_endian, value); break;
-    case ply_type::i32: read_ply_prop<int32_t>(fs, big_endian, value); break;
-    case ply_type::i64: read_ply_prop<int64_t>(fs, big_endian, value); break;
-    case ply_type::u8: read_ply_prop<uint8_t>(fs, big_endian, value); break;
-    case ply_type::u16: read_ply_prop<uint16_t>(fs, big_endian, value); break;
-    case ply_type::u32: read_ply_prop<uint32_t>(fs, big_endian, value); break;
-    case ply_type::u64: read_ply_prop<uint64_t>(fs, big_endian, value); break;
-    case ply_type::f32: read_ply_prop<float>(fs, big_endian, value); break;
-    case ply_type::f64: read_ply_prop<double>(fs, big_endian, value); break;
+    case ply_type::i8:
+      value = (VT)read_ply_value<int8_t>(fs, big_endian);
+      break;
+    case ply_type::i16:
+      value = (VT)read_ply_value<int16_t>(fs, big_endian);
+      break;
+    case ply_type::i32:
+      value = (VT)read_ply_value<int32_t>(fs, big_endian);
+      break;
+    case ply_type::i64:
+      value = (VT)read_ply_value<int64_t>(fs, big_endian);
+      break;
+    case ply_type::u8:
+      value = (VT)read_ply_value<uint8_t>(fs, big_endian);
+      break;
+    case ply_type::u16:
+      value = (VT)read_ply_value<uint16_t>(fs, big_endian);
+      break;
+    case ply_type::u32:
+      value = (VT)read_ply_value<uint32_t>(fs, big_endian);
+      break;
+    case ply_type::u64:
+      value = (VT)read_ply_value<uint64_t>(fs, big_endian);
+      break;
+    case ply_type::f32:
+      value = (VT)read_ply_value<float>(fs, big_endian);
+      break;
+    case ply_type::f64:
+      value = (VT)read_ply_value<double>(fs, big_endian);
+      break;
   }
 }
 
-template <typename T, typename VT>
-static inline void parse_ply_prop(string_view& str, VT& value) {
-  auto typed_value = (T)0;
-  parse_ply_value(str, typed_value);
-  value = (VT)typed_value;
-}
 template <typename VT>
 static inline void parse_ply_prop(string_view& str, ply_type type, VT& value) {
+  char* end = nullptr;
   switch (type) {
-    case ply_type::i8: parse_ply_prop<int8_t>(str, value); break;
-    case ply_type::i16: parse_ply_prop<int16_t>(str, value); break;
-    case ply_type::i32: parse_ply_prop<int32_t>(str, value); break;
-    case ply_type::i64: parse_ply_prop<int64_t>(str, value); break;
-    case ply_type::u8: parse_ply_prop<uint8_t>(str, value); break;
-    case ply_type::u16: parse_ply_prop<uint16_t>(str, value); break;
-    case ply_type::u32: parse_ply_prop<uint32_t>(str, value); break;
-    case ply_type::u64: parse_ply_prop<uint64_t>(str, value); break;
-    case ply_type::f32: parse_ply_prop<float>(str, value); break;
-    case ply_type::f64: parse_ply_prop<double>(str, value); break;
+    case ply_type::i8: value = (VT)strtol(str.data(), &end, 10); break;
+    case ply_type::i16: value = (VT)strtol(str.data(), &end, 10); break;
+    case ply_type::i32: value = (VT)strtol(str.data(), &end, 10); break;
+    case ply_type::i64: value = (VT)strtoll(str.data(), &end, 10); break;
+    case ply_type::u8: value = (VT)strtoul(str.data(), &end, 10); break;
+    case ply_type::u16: value = (VT)strtoul(str.data(), &end, 10); break;
+    case ply_type::u32: value = (VT)strtoul(str.data(), &end, 10); break;
+    case ply_type::u64: value = (VT)strtoull(str.data(), &end, 10); break;
+    case ply_type::f32: value = (VT)strtof(str.data(), &end); break;
+    case ply_type::f64: value = (VT)strtod(str.data(), &end); break;
   }
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
 }
 
 // Load ply data
@@ -385,74 +341,31 @@ void read_ply_value_impl(ply_file& ply, const ply_element& element,
 }
 
 // Write text to file
-static inline void write_ply_value(FILE* fs, int8_t value) {
-  if (fprintf(fs, "%d", (int)value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_ply_value(FILE* fs, int16_t value) {
-  if (fprintf(fs, "%d", (int)value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_ply_value(FILE* fs, int32_t value) {
-  if (fprintf(fs, "%d", (int)value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_ply_value(FILE* fs, int64_t value) {
-  if (fprintf(fs, "%lld", (long long)value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_ply_value(FILE* fs, uint8_t value) {
-  if (fprintf(fs, "%u", (unsigned int)value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_ply_value(FILE* fs, uint16_t value) {
-  if (fprintf(fs, "%u", (unsigned int)value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_ply_value(FILE* fs, uint32_t value) {
-  if (fprintf(fs, "%u", (unsigned int)value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_ply_value(FILE* fs, uint64_t value) {
-  if (fprintf(fs, "%llu", (unsigned long long)value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_ply_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_ply_value(FILE* fs, double value) {
-  if (fprintf(fs, "%g", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_ply_value(FILE* fs, const char* value) {
+static inline void write_ply_text(FILE* fs, const char* value) {
   if (fprintf(fs, "%s", value) < 0)
     throw std::runtime_error("cannot print value");
 }
-static inline void write_ply_value(FILE* fs, const string& value) {
+static inline void write_ply_text(FILE* fs, const string& value) {
   if (fprintf(fs, "%s", value.c_str()) < 0)
     throw std::runtime_error("cannot print value");
 }
 
-template <typename T, typename VT>
-static inline void write_ply_prop(FILE* fs, VT value) {
-  write_ply_value(fs, (T)value);
-}
-
 template <typename VT>
 static inline void write_ply_prop(FILE* fs, ply_type type, VT value) {
+  auto ok = -1;
   switch (type) {
-    case ply_type::i8: write_ply_prop<int8_t>(fs, value); break;
-    case ply_type::i16: write_ply_prop<int16_t>(fs, value); break;
-    case ply_type::i32: write_ply_prop<int32_t>(fs, value); break;
-    case ply_type::i64: write_ply_prop<int64_t>(fs, value); break;
-    case ply_type::u8: write_ply_prop<uint8_t>(fs, value); break;
-    case ply_type::u16: write_ply_prop<uint16_t>(fs, value); break;
-    case ply_type::u32: write_ply_prop<uint32_t>(fs, value); break;
-    case ply_type::u64: write_ply_prop<uint64_t>(fs, value); break;
-    case ply_type::f32: write_ply_prop<float>(fs, value); break;
-    case ply_type::f64: write_ply_prop<double>(fs, value); break;
+    case ply_type::i8: ok = fprintf(fs, "%d", (int)value); break;
+    case ply_type::i16: ok = fprintf(fs, "%d", (int)value); break;
+    case ply_type::i32: ok = fprintf(fs, "%d", (int)value); break;
+    case ply_type::i64: ok = fprintf(fs, "%lld", (long long)value); break;
+    case ply_type::u8: ok = fprintf(fs, "%u", (unsigned)value); break;
+    case ply_type::u16: ok = fprintf(fs, "%u", (unsigned)value); break;
+    case ply_type::u32: ok = fprintf(fs, "%u", (unsigned)value); break;
+    case ply_type::u64: ok = fprintf(fs, "%llu", (unsigned long long)value); break;
+    case ply_type::f32: ok = fprintf(fs, "%g", (float)value); break;
+    case ply_type::f64: ok = fprintf(fs, "%g", (double)value); break;
   }
+  if(ok < 0) throw std::runtime_error("cannot print value");
 }
 
 template <typename T, typename VT>
@@ -509,31 +422,31 @@ void write_ply_header(ply_file& ply, const vector<ply_element>& elements,
       {ply_type::f64, "double"},
   };
 
-  write_ply_value(ply.fs, "ply\n");
+  write_ply_text(ply.fs, "ply\n");
   if (ply.ascii) {
-    write_ply_value(ply.fs, "format ascii 1.0\n");
+    write_ply_text(ply.fs, "format ascii 1.0\n");
   } else if (ply.big_endian) {
-    write_ply_value(ply.fs, "format binary_big_endian 1.0\n");
+    write_ply_text(ply.fs, "format binary_big_endian 1.0\n");
   } else {
-    write_ply_value(ply.fs, "format binary_little_endian 1.0\n");
+    write_ply_text(ply.fs, "format binary_little_endian 1.0\n");
   }
   for (auto& comment : comments)
-    write_ply_value(ply.fs, "comment " + comment + "\n");
+    write_ply_text(ply.fs, "comment " + comment + "\n");
   for (auto& elem : elements) {
-    write_ply_value(ply.fs,
+    write_ply_text(ply.fs,
         "element " + elem.name + " " + std::to_string(elem.count) + "\n");
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        write_ply_value(ply.fs, "property list " + type_map[prop.value_type] +
+        write_ply_text(ply.fs, "property list " + type_map[prop.value_type] +
                                     " " + type_map[prop.list_type] + " " +
                                     prop.name + "\n");
       } else {
-        write_ply_value(ply.fs,
+        write_ply_text(ply.fs,
             "property " + type_map[prop.value_type] + " " + prop.name + "\n");
       }
     }
   }
-  write_ply_value(ply.fs, "end_header\n");
+  write_ply_text(ply.fs, "end_header\n");
 }
 
 template <typename VT, typename LT>
@@ -542,15 +455,15 @@ void write_ply_value_impl(ply_file& ply, const ply_element& element,
   if (ply.ascii) {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
-      if (pidx) write_ply_value(ply.fs, " ");
+      if (pidx) write_ply_text(ply.fs, " ");
       write_ply_prop(ply.fs, prop.value_type, values[pidx]);
       if (prop.is_list) {
         for (auto i = 0; i < (int)lists[pidx].size(); i++) {
-          if (i) write_ply_value(ply.fs, " ");
+          if (i) write_ply_text(ply.fs, " ");
           write_ply_prop(ply.fs, prop.list_type, lists[pidx][i]);
         }
       }
-      write_ply_value(ply.fs, "\n");
+      write_ply_text(ply.fs, "\n");
     }
   } else {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
