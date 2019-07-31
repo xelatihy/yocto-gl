@@ -3014,7 +3014,8 @@ void save_shape(const string& filename, const vector<int>& points,
   }
 }
 
-#if 1
+#if 0
+
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
@@ -3223,7 +3224,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
 
 #endif
 
-#if 1
+#if 0
 
 // Save ply mesh
 static void save_ply_shape(const string& filename, const vector<int>& points,
