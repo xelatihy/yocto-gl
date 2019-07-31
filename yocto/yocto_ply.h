@@ -1,23 +1,62 @@
 //
-// # Yocto/Ply: Tiny library for PLY parsing/writing
+// # Yocto/Ply: L<ow-level library for PLY parsing and writing
 //
 // Yocto/Ply is a simple Stanford PLY parser that works with callbacks.
 // The praser is designed for large files and does keep a copy of the model.
-//
 // Yocto/Ply also support writing PLY files again without keeping a copy of the
 // model but instead writing elements directly after each call.
-//
 // Error reporting is done by throwing `std::runtime_error` exceptions.
 //
-// ## Parse a PLY file
+// Yocto/Ply provides fast/low-level access to PLY data and requires some 
+// familiarity with the PLY format to use effectively. For a higher level
+// interface, consider using Yocto/Shape `load_shape()` and `save_shape()`.
 //
-// 1. define callbacks in `ply_callbacks` structure
-// 2. run the parse with `load_ply()`
 //
-// ## Write amn PLY file
+// ## Load PLY
 //
-// 1. use `init_ply_stream()` to initialize the file streams for weriting
-// 2. use the `write_ply_XXX()` function to write single Ply elements
+// Load a PLY by first opening the file and reading its header. Then, for each
+// element, read the values of its lists and non-lists properties. Example:
+//
+//    auto ply = ply_file(filename);            // open file for reading
+//    auto elemnts = vector<ply_element>{};     // initialize elements
+//    auto comments = vector<string>{};         // initialize comments
+//    read_ply_header(ply, elements, comments); // read ply header
+//    for(auto& element : elements) {           // iterate over elements
+//      // initialize the element's property values and lists
+//      // using either doubles or vector<float> and vector<vector<int>>
+//      auto values = vector<double>(element.properties.size());
+//      auto lists - vector<vector<double>>(element.properties.size());
+//      for(auto i = 0; i < element.count; i ++) {     // iterate over values
+//        read_ply_value(ply, element, values, lists); // read properties
+//        // values contains values for non-list properties
+//        // lists contains the values for list properties
+//    }
+//
+// For convenience during parsing, you can use `find_ply_property()` to 
+// determine the index of the property you may be interested in.
+//
+//
+// ## Write PLY
+//
+// Write a PLY by first opening the file for writing and deciding whether to
+// use ASCII or binary (we recommend tha letter). Then fill in the elements
+// and comments and write its header. Finally, write its values one by one.
+// Example:
+//
+//    auto ply = ply_file(filename, true,ascii); // open file for writing
+//    auto elemnts = vector<ply_element>{};      // initialize elements
+//    auto comments = vector<string>{};          // initialize comments
+//    // add eleements and comments to the previous lists
+//    write_ply_header(ply, elements, comments); // read ply header
+//    for(auto& element : elements) {            // iterate over elements
+//      // initialize the element's property values and lists
+//      // using either doubles or vector<float> and vector<vector<int>>
+//      auto values = vector<double>(element.properties.size());
+//      auto lists - vector<vector<double>>(element.properties.size());
+//      for(auto i = 0; i < element.count; i ++) {      // iterate over values
+//        values = {...}; lists = {...};                // set values and lists
+//        write_ply_value(ply, element, values, lists); // write properties
+//    }
 //
 //
 
@@ -107,7 +146,8 @@ struct ply_file {
 };
 
 // Read Ply functions
-void read_ply_header(ply_file& ply, vector<ply_element>& elements);
+void read_ply_header(
+    ply_file& ply, vector<ply_element>& elements, vector<string>& comments);
 void read_ply_value(ply_file& ply, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists);
 void read_ply_value(ply_file& ply, const ply_element& element,

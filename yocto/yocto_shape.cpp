@@ -6,11 +6,18 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#ifndef YOCTO_PLY_INTERNAL
+#define YOCTO_PLY_INTERNAL 1
+#endif
+
 #include "yocto_shape.h"
-#include "ext/happly.h"
-#include "yocto_obj.h"
-#include "yocto_ply.h"
 #include "yocto_random.h"
+#include "yocto_obj.h"
+#if YOCTO_PLY_INTERNAL
+#include "yocto_ply.h"
+#else
+#include "ext/happly.h"
+#endif
 
 #include <deque>
 
@@ -3014,7 +3021,7 @@ void save_shape(const string& filename, const vector<int>& points,
   }
 }
 
-#if 0
+#if YOCTO_PLY_INTERNAL
 
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
@@ -3028,7 +3035,8 @@ static void load_ply_shape(const string& filename, vector<int>& points,
 
     // load elements
     auto elements = vector<ply_element>{};
-    read_ply_header(ply, elements);
+    auto comments = vector<string>{};
+    read_ply_header(ply, elements, comments);
 
     // read values
     auto values = vector<float>{};
@@ -3224,7 +3232,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
 
 #endif
 
-#if 0
+#if YOCTO_PLY_INTERNAL
 
 // Save ply mesh
 static void save_ply_shape(const string& filename, const vector<int>& points,

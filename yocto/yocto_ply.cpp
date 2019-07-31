@@ -50,25 +50,21 @@ using std::string_view;
 using namespace std::literals::string_view_literals;
 
 template <typename T>
-static inline T swap_endian(T u) {
+static inline T swap_endian(T value) {
   // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
   static_assert(CHAR_BIT == 8, "CHAR_BIT != 8");
-
   union {
-    T             u;
-    unsigned char u8[sizeof(T)];
+    T             value;
+    unsigned char bytes[sizeof(T)];
   } source, dest;
-
-  source.u = u;
-
+  source.value = value;
   for (size_t k = 0; k < sizeof(T); k++)
-    dest.u8[k] = source.u8[sizeof(T) - k - 1];
-
-  return dest.u;
+    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+  return dest.value;
 }
 
 // Read a line
-static inline bool read_line(FILE* fs, char* buffer, size_t size) {
+static inline bool read_ply_line(FILE* fs, char* buffer, size_t size) {
   return fgets(buffer, size, fs) != nullptr;
 }
 
@@ -231,7 +227,8 @@ static inline void parse_ply_prop(string_view& str, ply_type type, VT& value) {
 }
 
 // Load ply data
-void read_ply_header(ply_file& ply, vector<ply_element>& elements) {
+void read_ply_header(
+    ply_file& ply, vector<ply_element>& elements, vector<string>& comments) {
   // ply type names
   static auto type_map = unordered_map<string, ply_type>{
       {"char", ply_type::i8},
@@ -255,7 +252,7 @@ void read_ply_header(ply_file& ply, vector<ply_element>& elements) {
 
   // read the file header line by line
   char buffer[4096];
-  while (read_line(ply.fs, buffer, sizeof(buffer))) {
+  while (read_ply_line(ply.fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_ply_comment(line);
@@ -293,7 +290,7 @@ void read_ply_header(ply_file& ply, vector<ply_element>& elements) {
       }
     } else if (cmd == "comment") {
       skip_ply_whitespace(line);
-      // comment is the rest of the line
+      comments.push_back(string{line});
     } else if (cmd == "obj_info") {
       skip_ply_whitespace(line);
       // comment is the rest of the line
@@ -356,7 +353,7 @@ void read_ply_value_impl(ply_file& ply, const ply_element& element,
   // read property values
   if (ply.ascii) {
     char buffer[4096];
-    if (!read_line(ply.fs, buffer, sizeof(buffer)))
+    if (!read_ply_line(ply.fs, buffer, sizeof(buffer)))
       throw std::runtime_error("cannot read ply " + ply.filename);
     auto line = string_view{buffer};
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
@@ -459,22 +456,35 @@ static inline void write_ply_prop(FILE* fs, ply_type type, VT value) {
 template <typename T, typename VT>
 static inline void write_ply_binprop(FILE* fs, bool big_endian, VT value) {
   auto typed_value = (T)value;
-  if(big_endian) typed_value = swap_endian(typed_value);
+  if (big_endian) typed_value = swap_endian(typed_value);
   if (fwrite(&typed_value, sizeof(T), 1, fs) != 1)
     throw std::runtime_error("cannot write to file");
 }
 
 template <typename VT>
-static inline void write_ply_binprop(FILE* fs, bool big_endian, ply_type type, VT value) {
+static inline void write_ply_binprop(
+    FILE* fs, bool big_endian, ply_type type, VT value) {
   switch (type) {
     case ply_type::i8: write_ply_binprop<int8_t>(fs, big_endian, value); break;
-    case ply_type::i16: write_ply_binprop<int16_t>(fs, big_endian, value); break;
-    case ply_type::i32: write_ply_binprop<int32_t>(fs, big_endian, value); break;
-    case ply_type::i64: write_ply_binprop<int64_t>(fs, big_endian, value); break;
+    case ply_type::i16:
+      write_ply_binprop<int16_t>(fs, big_endian, value);
+      break;
+    case ply_type::i32:
+      write_ply_binprop<int32_t>(fs, big_endian, value);
+      break;
+    case ply_type::i64:
+      write_ply_binprop<int64_t>(fs, big_endian, value);
+      break;
     case ply_type::u8: write_ply_binprop<uint8_t>(fs, big_endian, value); break;
-    case ply_type::u16: write_ply_binprop<uint16_t>(fs, big_endian, value); break;
-    case ply_type::u32: write_ply_binprop<uint32_t>(fs, big_endian, value); break;
-    case ply_type::u64: write_ply_binprop<uint64_t>(fs, big_endian, value); break;
+    case ply_type::u16:
+      write_ply_binprop<uint16_t>(fs, big_endian, value);
+      break;
+    case ply_type::u32:
+      write_ply_binprop<uint32_t>(fs, big_endian, value);
+      break;
+    case ply_type::u64:
+      write_ply_binprop<uint64_t>(fs, big_endian, value);
+      break;
     case ply_type::f32: write_ply_binprop<float>(fs, big_endian, value); break;
     case ply_type::f64: write_ply_binprop<double>(fs, big_endian, value); break;
   }
@@ -546,7 +556,8 @@ void write_ply_value_impl(ply_file& ply, const ply_element& element,
       write_ply_binprop(ply.fs, ply.big_endian, prop.value_type, values[pidx]);
       if (prop.is_list) {
         for (auto i = 0; i < (int)lists[pidx].size(); i++)
-          write_ply_binprop(ply.fs, ply.big_endian, prop.list_type, lists[pidx][i]);
+          write_ply_binprop(
+              ply.fs, ply.big_endian, prop.list_type, lists[pidx][i]);
       }
     }
   }
