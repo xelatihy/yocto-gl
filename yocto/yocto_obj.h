@@ -1,26 +1,24 @@
 //
-// # Yocto/OBJ: Tiny library for OBJ parsing/writing
+// # Yocto/Obj: Tiny library for OBJ parsing/writing
 //
-// Yocto/OBJ is a simple Wavefront OBJ parser that works with callbacks with
+// Yocto/Obj is a simple Wavefront OBJ parser that works with callbacks with
 // support for a few extensions such as camera, instances and environments.
-// The praser is designed for large files and does keep a copy of the model in 
-// memory but instead works with callbacks.
+// The praser is designed for large files and does keep a copy of the model.
 //
-// Yocto/GL also support writing OBJ files again without keeping a copy of the 
+// Yocto/Obj also support writing OBJ files again without keeping a copy of the
 // model but instead writing elements directly after each call.
 //
 // Error reporting is done by throwing `std::runtime_error` exceptions.
 //
 // ## Parse an OBJ file
 //
-// 1. define callbacks in `obj_callback` structure using lambda with capture
-//    if desired
+// 1. define callbacks in `obj_callbacks` structure
 // 2. run the parse with `load_obj()`
 //
 // ## Write amn OBJ file
 //
 // 1. use `init_obj_streams()` to initialize the file streams for weriting
-// 2. use the `write)obj_XXX()` function to write single Obj elements
+// 2. use the `write_obj_XXX()` function to write single Obj elements
 //
 //
 
@@ -210,7 +208,7 @@ struct obj_callbacks {
 void load_obj(const string& filename, obj_callbacks& cb,
     bool nomaterials = false, bool flipv = true, bool fliptr = true);
 
-// Holds streams for obj files. State of this object should be considered 
+// Holds streams for obj files. State of this object should be considered
 // private and should not be accessed directly.
 struct obj_ostreams {
   // Move-only object with automatic file closing on destruction.
@@ -253,7 +251,8 @@ void write_obj_smoothing(obj_ostreams& fs, const string& name);
 void write_obj_mtllib(obj_ostreams& fs, const string& filename);
 void write_obj_material(obj_ostreams& fs, const obj_material& material);
 void write_obj_camera(obj_ostreams& fs, const obj_camera& camera);
-void write_obj_environmnet(obj_ostreams& fs, const obj_environment& environment);
+void write_obj_environmnet(
+    obj_ostreams& fs, const obj_environment& environment);
 void write_obj_instance(obj_ostreams& fs, const obj_instance& instamce);
 void write_obj_procedural(obj_ostreams& fs, const obj_procedural& procedural);
 

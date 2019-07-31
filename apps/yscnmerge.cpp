@@ -80,6 +80,7 @@ int main(int argc, char** argv) {
   } catch (const CLI::ParseError& e) {
     return parser.exit(e);
   }
+  setbuf(stdout, nullptr);
 
   // fix options
   auto load_prms       = load_params();

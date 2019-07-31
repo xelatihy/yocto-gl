@@ -32,7 +32,6 @@
 #include "yocto_random.h"
 #include "yocto_shape.h"
 
-#include "ext/happly.h"
 #define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
 
@@ -2494,11 +2493,11 @@ static inline void write_json_text(write_json_state& state, const char* text) {
   if (fprintf(state.fs, "%s", text) < 0)
     throw std::runtime_error("cannot write json");
 }
-static inline void write_json_text(
-    write_json_state& state, const string& text) {
-  if (fprintf(state.fs, "%s", text.c_str()) < 0)
-    throw std::runtime_error("cannot write json");
-}
+// static inline void write_json_text(
+//     write_json_state& state, const string& text) {
+//   if (fprintf(state.fs, "%s", text.c_str()) < 0)
+//     throw std::runtime_error("cannot write json");
+// }
 static inline void _write_json_next(
     write_json_state& state, bool dedent = false) {
   static const char* indents[7] = {
@@ -2521,10 +2520,10 @@ static inline void _write_json_value(write_json_state& state, float value) {
   if (fprintf(state.fs, "%g", value) < 0)
     throw std::runtime_error("cannot write json");
 }
-static inline void _write_json_value(write_json_state& state, bool value) {
-  if (fprintf(state.fs, "%s", value ? "true" : "false") < 0)
-    throw std::runtime_error("cannot write json");
-}
+// static inline void _write_json_value(write_json_state& state, bool value) {
+//   if (fprintf(state.fs, "%s", value ? "true" : "false") < 0)
+//     throw std::runtime_error("cannot write json");
+// }
 static inline void _write_json_value(
     write_json_state& state, const string& value) {
   if (fprintf(state.fs, "\"%s\"", value.c_str()) < 0)
@@ -2535,11 +2534,11 @@ static inline void _write_json_value(
   if (fprintf(state.fs, "\"%s\"", value) < 0)
     throw std::runtime_error("cannot write json");
 }
-static inline void _write_json_value(
-    write_json_state& state, const vec2f& value) {
-  if (fprintf(state.fs, "[%g, %g]", value.x, value.y) < 0)
-    throw std::runtime_error("cannot write json");
-}
+// static inline void _write_json_value(
+//     write_json_state& state, const vec2f& value) {
+//   if (fprintf(state.fs, "[%g, %g]", value.x, value.y) < 0)
+//     throw std::runtime_error("cannot write json");
+// }
 static inline void _write_json_value(
     write_json_state& state, const vec3f& value) {
   if (fprintf(state.fs, "[%g, %g, %g]", value.x, value.y, value.z) < 0)
@@ -2582,11 +2581,11 @@ static inline void write_json_object(write_json_state& state, const char* key) {
   write_json_text(state, ": {");
   state.stack.push_back({true, false});
 }
-static inline void write_json_array(write_json_state& state) {
-  _write_json_next(state);
-  write_json_text(state, "[ ");
-  state.stack.push_back({false, false});
-}
+// static inline void write_json_array(write_json_state& state) {
+//   _write_json_next(state);
+//   write_json_text(state, "[ ");
+//   state.stack.push_back({false, false});
+// }
 static inline void write_json_array(write_json_state& state, const char* key) {
   _write_json_next(state);
   _write_json_value(state, key);
@@ -3750,18 +3749,18 @@ static inline void write_pbrt_value(
     if (fprintf(fs, " ]") < 0) throw std::runtime_error("cannot print value");
   }
 }
-static inline void write_pbrt_value(
-    FILE* fs, const frame3f& value, bool parens = true) {
-  if (parens) {
-    if (fprintf(fs, "[ ") < 0) throw std::runtime_error("cannot print value");
-  }
-  for (auto i = 0; i < 12; i++)
-    if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
-      throw std::runtime_error("cannot print value");
-  if (parens) {
-    if (fprintf(fs, " ]") < 0) throw std::runtime_error("cannot print value");
-  }
-}
+// static inline void write_pbrt_value(
+//     FILE* fs, const frame3f& value, bool parens = true) {
+//   if (parens) {
+//     if (fprintf(fs, "[ ") < 0) throw std::runtime_error("cannot print value");
+//   }
+//   for (auto i = 0; i < 12; i++)
+//     if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
+//       throw std::runtime_error("cannot print value");
+//   if (parens) {
+//     if (fprintf(fs, " ]") < 0) throw std::runtime_error("cannot print value");
+//   }
+// }
 static inline void write_pbrt_value(
     FILE* fs, const mat4f& value, bool parens = true) {
   if (parens) {

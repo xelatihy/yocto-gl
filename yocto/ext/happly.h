@@ -3,6 +3,8 @@
 /* A header-only implementation of the .ply file format.
  * https://github.com/nmwsharp/happly
  * By Nicholas Sharp - nsharp@cs.cmu.edu
+ *
+ * Version 2, July 20, 2019
  */
 
 /*
@@ -28,6 +30,20 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+
+
+// clang-format off
+/*
+
+ === Changelog ===
+
+  Significant changes to the file recorded here.
+
+  - Version 2 (July 20, 2019)     Catch exceptions by const reference.
+  - Version 1 (undated)           Initial version. Unnamed changes before version numbering.
+
+*/
+// clang-format on
 
 #include <array>
 #include <cctype>
@@ -812,7 +828,7 @@ public:
       // First, try the usual approach, looking for a version of the property with the same signed-ness and possibly
       // smaller size
       return getDataFromListPropertyRecursive<T, T>(prop.get());
-    } catch (std::runtime_error orig_e) {
+    } catch (const std::runtime_error& orig_e) {
 
       // If the usual approach fails, look for a version with opposite signed-ness
       try {
@@ -835,7 +851,7 @@ public:
         }
 
         return origSignResult;
-      } catch (std::runtime_error new_e) {
+      } catch (const std::runtime_error& new_e) {
         throw orig_e;
       }
 
@@ -1243,7 +1259,7 @@ public:
       for (const std::string& p : std::vector<std::string>{"vertex_indices", "vertex_index"}) {
         try {
           return getElement(f).getListPropertyAnySign<T>(p);
-        } catch (std::runtime_error e) {
+        } catch (const std::runtime_error& e) {
           // that's fine
         }
       }

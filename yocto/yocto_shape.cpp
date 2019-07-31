@@ -6,10 +6,18 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#ifndef YOCTO_PLY_INTERNAL
+#define YOCTO_PLY_INTERNAL 1
+#endif
+
 #include "yocto_shape.h"
-#include "ext/happly.h"
-#include "yocto_obj.h"
 #include "yocto_random.h"
+#include "yocto_obj.h"
+#if YOCTO_PLY_INTERNAL
+#include "yocto_ply.h"
+#else
+#include "ext/happly.h"
+#endif
 
 #include <deque>
 
@@ -3013,6 +3021,91 @@ void save_shape(const string& filename, const vector<int>& points,
   }
 }
 
+#if YOCTO_PLY_INTERNAL
+
+static void load_ply_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
+    vector<float>& radius, bool flip_texcoord) {
+  try {
+    // open ply
+    auto ply = ply_file(filename);
+
+    // load elements
+    auto elements = vector<ply_element>{};
+    auto comments = vector<string>{};
+    read_ply_header(ply, elements, comments);
+
+    // read values
+    auto values = vector<float>{};
+    auto lists  = vector<vector<int>>{};
+    for (auto& element : elements) {
+      if (element.name == "vertex") {
+        auto pos  = find_ply_property(element, "x", "y", "z");
+        auto norm = find_ply_property(element, "nx", "ny", "nz");
+        auto uv   = find_ply_property(element, "u", "v");
+        if (uv.x < 0) uv = find_ply_property(element, "s", "t");
+        auto col = find_ply_property(element, "red", "green", "blue", "alpha");
+        auto rad = find_ply_property(element, "radius");
+        for (auto idx = 0; idx < element.count; idx++) {
+          read_ply_value(ply, element, values, lists);
+          if (pos.x >= 0)
+            positions.push_back({values[pos.x], values[pos.y], values[pos.z]});
+          if (norm.x >= 0)
+            normals.push_back({values[norm.x], values[norm.y], values[norm.z]});
+          if (uv.x >= 0) texcoords.push_back({values[uv.x], values[uv.y]});
+          if (col.x >= 0)
+            colors.push_back(
+                {values[col.x], values[col.y], values[col.z], values[col.w]});
+          if (rad > 0) radius.push_back({values[rad]});
+        }
+      } else if (element.name == "face") {
+        auto indices = find_ply_property(element, "vertex_indices");
+        for (auto idx = 0; idx < element.count; idx++) {
+          read_ply_value(ply, element, values, lists);
+          if (indices < 0) continue;
+          auto& face = lists[indices];
+          if (face.size() == 4) {
+            quads.push_back({face[0], face[1], face[2], face[3]});
+          } else {
+            for (auto i = 2; i < face.size(); i++)
+              triangles.push_back({face[0], face[i - 1], face[i]});
+          }
+        }
+      } else if (element.name == "line") {
+        auto indices = find_ply_property(element, "vertex_indices");
+        for (auto idx = 0; idx < element.count; idx++) {
+          read_ply_value(ply, element, values, lists);
+          if (indices < 0) continue;
+          auto line = lists[indices];
+          for (auto i = 1; i < line.size(); i++)
+            lines.push_back({line[i], line[i - 1]});
+        }
+      } else {
+        for (auto idx = 0; idx < element.count; idx++)
+          read_ply_value(ply, element, values, lists);
+      }
+    }
+
+    if (positions.empty())
+      throw std::runtime_error("vertex positions not present");
+
+    // fix texture coordinated
+    if (flip_texcoord && !texcoords.empty()) {
+      for (auto& uv : texcoords) uv.y = 1 - uv.y;
+    }
+
+    merge_triangles_and_quads(triangles, quads, false);
+
+  } catch (const std::exception& e) {
+    throw std::runtime_error("cannot load mesh " + filename + "\n" + e.what());
+  }
+}
+
+#else
+
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
@@ -3137,6 +3230,178 @@ static void load_ply_shape(const string& filename, vector<int>& points,
   }
 }
 
+#endif
+
+#if YOCTO_PLY_INTERNAL
+
+// Save ply mesh
+static void save_ply_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, bool ascii, bool flip_texcoord) {
+  if (!quadspos.empty()) {
+    auto split_quads         = vector<vec4i>{};
+    auto split_positions     = vector<vec3f>{};
+    auto split_normals       = vector<vec3f>{};
+    auto split_texturecoords = vector<vec2f>{};
+    split_facevarying(split_quads, split_positions, split_normals,
+        split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords);
+    return save_ply_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
+        split_positions, split_normals, split_texturecoords, {}, {}, ascii,
+        flip_texcoord);
+  }
+
+  auto ply = ply_file(filename, true);
+
+  // comment
+  auto comments = vector<string>{
+      "Written by Yocto/GL", "https://github.com/xelatihy/yocto-gl"};
+  
+  // elements
+  auto elements = vector<ply_element>{};
+  if(!positions.empty()) elements.push_back(ply_element{"vertex", positions.size()});
+  if (!positions.empty()) {
+    auto& vertex = elements.back();
+    vertex.properties.push_back({"x", false, ply_type::f32});
+    vertex.properties.push_back({"y", false, ply_type::f32});
+    vertex.properties.push_back({"z", false, ply_type::f32});
+  }
+  if (!normals.empty()) {
+    auto& vertex = elements.back();
+    vertex.properties.push_back({"nx", false, ply_type::f32});
+    vertex.properties.push_back({"ny", false, ply_type::f32});
+    vertex.properties.push_back({"nz", false, ply_type::f32});
+  }
+  if (!texcoords.empty()) {
+    auto& vertex = elements.back();
+    vertex.properties.push_back({"u", false, ply_type::f32});
+    vertex.properties.push_back({"v", false, ply_type::f32});
+  }
+  if (!colors.empty()) {
+    auto& vertex = elements.back();
+    vertex.properties.push_back({"red", false, ply_type::f32});
+    vertex.properties.push_back({"green", false, ply_type::f32});
+    vertex.properties.push_back({"blue", false, ply_type::f32});
+    vertex.properties.push_back({"alpha", false, ply_type::f32});
+  }
+  if (!radius.empty()) {
+    auto& vertex = elements.back();
+    vertex.properties.push_back({"radius", false, ply_type::f32});
+  }
+
+  // face date
+  if (!triangles.empty() || !quads.empty()) {
+    elements.push_back({"face", triangles.size() + quads.size()});
+    auto& face = elements.back();
+    face.properties.push_back({"vertex_indices", true, ply_type::u8, ply_type::i32});
+  }
+  if (!lines.empty()) {
+    elements.push_back({"line", lines.size()});
+    auto& face = elements.back();
+    face.properties.push_back({"vertex_indices", true, ply_type::u8, ply_type::i32});
+  }
+  if (!points.empty()) {
+    elements.push_back({"point", points.size()});
+    auto& face = elements.back();
+    face.properties.push_back({"vertex_indices", true, ply_type::u8, ply_type::i32});
+  }
+
+  // write header
+  write_ply_header(ply, elements, comments);
+
+  // write values
+  for(auto& element : elements) {
+    if(element.name == "vertex") {
+      auto values = vector<float>(element.properties.size());
+      auto lists  = vector<vector<int>>(element.properties.size());
+      for (auto idx = 0; idx < element.count; idx++) {
+        auto cur = 0;
+        if(!positions.empty()) {
+          values[cur++] = positions[idx].x;
+          values[cur++] = positions[idx].y;
+          values[cur++] = positions[idx].z;
+        }
+        if(!normals.empty()) {
+          values[cur++] = normals[idx].x;
+          values[cur++] = normals[idx].y;
+          values[cur++] = normals[idx].z;          
+        }
+        if(!texcoords.empty()) {
+          values[cur++] = texcoords[idx].x;
+            values[cur++] = flip_texcoord ? 1 - texcoords[idx].y : texcoords[idx].y;
+        }
+        if(!colors.empty()) {
+          values[cur++] = colors[idx].x;
+          values[cur++] = colors[idx].y;
+          values[cur++] = colors[idx].z;          
+          values[cur++] = colors[idx].w;          
+        }
+        if(!radius.empty()) {
+          values[cur++] = radius[idx];
+        }
+        write_ply_value(ply, element, values, lists);
+      }
+    } else if(element.name == "face") {
+      auto values = vector<float>(element.properties.size());
+      auto lists  = vector<vector<int>>(element.properties.size());
+      values[0] = (float)3;
+      lists[0].resize(3);
+      for(auto& t : triangles) {
+        lists[0][0] = t.x;
+        lists[0][1] = t.y;
+        lists[0][2] = t.z;
+        write_ply_value(ply, element, values, lists);
+      }
+      values[0] = (float)4;
+      lists[0].resize(4);
+      for(auto& q : quads) {
+        if(q.z == q.w) {
+          values[0] = (float)3;
+          lists[0].resize(3);
+          lists[0][0] = q.x;
+          lists[0][1] = q.y;
+          lists[0][2] = q.z;
+        } else {
+          values[0] = (float)4;
+          lists[0].resize(4);
+          lists[0][0] = q.x;
+          lists[0][1] = q.y;
+          lists[0][2] = q.z;
+          lists[0][3] = q.w;
+        }
+        write_ply_value(ply, element, values, lists);
+      }
+    } else if(element.name == "line") {
+      auto values = vector<float>(element.properties.size());
+      auto lists  = vector<vector<int>>(element.properties.size());
+      values[0] = (float)2;
+      lists[0].resize(2);
+      for(auto& l : lines) {
+        lists[0][0] = l.x;
+        lists[0][1] = l.y;
+        write_ply_value(ply, element, values, lists);
+      }
+    } else if(element.name == "point") {
+      auto values = vector<float>(element.properties.size());
+      auto lists  = vector<vector<int>>(element.properties.size());
+      values[0] = (float)1;
+      lists[0].resize(1);
+      for(auto& p : points) {
+        lists[0][0] = p;
+        write_ply_value(ply, element, values, lists);
+      }
+    } else {
+      throw std::runtime_error("should not have gotten here");
+    }
+  }
+}
+
+#else
+
 // Save ply mesh
 static void save_ply_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -3250,7 +3515,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
     }
     ply.getElement("line").addListProperty("vertex_indices", elements);
   }
-  if (!points.empty() || !quads.empty()) {
+  if (!points.empty()) {
     ply.addElement("point", points.size());
     auto elements = vector<vector<int>>{};
     for (auto& p : points) {
@@ -3268,6 +3533,8 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
   }
 }
 
+#endif
+
 struct load_obj_shape_cb : obj_callbacks {
   vector<int>&   points;
   vector<vec2i>& lines;
@@ -3280,8 +3547,6 @@ struct load_obj_shape_cb : obj_callbacks {
   vector<vec3f>& normals;
   vector<vec2f>& texcoords;
   bool           facevarying = false;
-
-  // TODO: implement me
 
   // obj vertices
   std::deque<vec3f> opos      = std::deque<vec3f>();

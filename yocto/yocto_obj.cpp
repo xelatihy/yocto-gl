@@ -1,5 +1,5 @@
 //
-// Implementation for Yocto/OBJ.
+// Implementation for Yocto/Obj.
 //
 
 //
@@ -732,7 +732,8 @@ void write_obj_camera(obj_ostreams& fs, const obj_camera& camera) {
   write_obj_line(fs.obx, "c", camera.name, (int)camera.ortho, camera.width,
       camera.height, camera.lens, camera.focus, camera.aperture, camera.frame);
 }
-void write_obj_environmnet(obj_ostreams& fs, const obj_environment& environment) {
+void write_obj_environmnet(
+    obj_ostreams& fs, const obj_environment& environment) {
   write_obj_line(fs.obx, "e", environment.name, environment.ke,
       environment.ke_txt.path != "" ? environment.ke_txt.path : "\"\" "s,
       environment.frame);
