@@ -58,7 +58,7 @@ static inline T swap_endian(T value) {
     unsigned char bytes[sizeof(T)];
   } source, dest;
   source.value = value;
-  for (size_t k = 0; k < sizeof(T); k++)
+  for (auto k = (size_t)0; k < sizeof(T); k++)
     dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
   return dest.value;
 }
@@ -162,9 +162,11 @@ static inline void parse_ply_value(string_view& str, uint16_t& value) {
   if (vali > UINT16_MAX) throw std::runtime_error("cannot parse value");
   value = (uint16_t)vali;
 }
+#ifdef __APPLE__
 static inline void parse_ply_value(string_view& str, size_t& value) {
   parse_ply_value(str, (uint64_t&)value);
 }
+#endif
 static inline void parse_ply_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
@@ -396,7 +398,7 @@ static inline void write_ply_value(FILE* fs, int32_t value) {
     throw std::runtime_error("cannot print value");
 }
 static inline void write_ply_value(FILE* fs, int64_t value) {
-  if (fprintf(fs, "%lld", value) < 0)
+  if (fprintf(fs, "%lld", (long long)value) < 0)
     throw std::runtime_error("cannot print value");
 }
 static inline void write_ply_value(FILE* fs, uint8_t value) {
@@ -412,7 +414,7 @@ static inline void write_ply_value(FILE* fs, uint32_t value) {
     throw std::runtime_error("cannot print value");
 }
 static inline void write_ply_value(FILE* fs, uint64_t value) {
-  if (fprintf(fs, "%llu", value) < 0)
+  if (fprintf(fs, "%llu", (unsigned long long)value) < 0)
     throw std::runtime_error("cannot print value");
 }
 static inline void write_ply_value(FILE* fs, float value) {
