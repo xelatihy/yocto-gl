@@ -59,9 +59,8 @@ SOFTWARE.
 // General namespace wrapping all Happly things.
 namespace happly {
 
-// Enum specifying binary or ASCII filetypes. Binary can be little-endian 
-// (default) or big endian.
-enum class DataFormat { ASCII, Binary, BinarySwapEndian };
+// Enum specifying binary or ASCII filetypes. Binary is always little-endian.
+enum class DataFormat { ASCII, Binary };
 
 // Type name strings
 // clang-format off
@@ -99,29 +98,6 @@ template <> struct CanonicalName<unsigned char>             { typedef uint8_t   
 template <> struct CanonicalName<size_t>                    { typedef std::conditional<std::is_same<std::make_signed<size_t>::type, int>::value, uint32_t, uint64_t>::type type; };
 // clang-format on
 } // namespace
-
-namespace {
-  /**
-   * Swap endianness.
-   * 
-   * @param value Value to swap.
-   * 
-   * @return Swapped value.
-   */
-template <typename T>
-inline T swapEndian(T value) {
-  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-  static_assert(CHAR_BIT == 8, "CHAR_BIT != 8");
-  union {
-    T             u;
-    unsigned char u8[sizeof(T)];
-  } source, dest;
-  source.u = value;
-  for (size_t k = 0; k < sizeof(T); k++)
-    dest.u8[k] = source.u8[sizeof(T) - k - 1];
-  return dest.u;
-}
-};
 
 /**
  * @brief A generic property, which is associated with some element. Can be plain Property or a ListProperty, of some
@@ -164,13 +140,6 @@ public:
   virtual void readNext(std::ifstream& stream) = 0;
 
   /**
-   * @brief (binary reading) Copy the next value of this property from a stream of bits.
-   *
-   * @param stream Stream to read from.
-   */
-  virtual void readNextSwapEndian(std::ifstream& stream) = 0;
-
-  /**
    * @brief (reading) Write a header entry for this property.
    *
    * @param outStream Stream to write to.
@@ -192,14 +161,6 @@ public:
    * @param iElement index of the element to write.
    */
   virtual void writeDataBinary(std::ofstream& outStream, size_t iElement) = 0;
-
-  /**
-   * @brief (binary writing) copy the bits of this property for some element to a stream
-   *
-   * @param outStream Stream to write to.
-   * @param iElement index of the element to write.
-   */
-  virtual void writeDataBinarySwapEndian(std::ofstream& outStream, size_t iElement) = 0;
 
   /**
    * @brief Number of element entries for this property
@@ -282,17 +243,6 @@ public:
   }
 
   /**
-   * @brief (binary reading) Copy the next value of this property from a stream of bits.
-   *
-   * @param stream Stream to read from.
-   */
-  virtual void readNextSwapEndian(std::ifstream& stream) override {
-    data.emplace_back();
-    stream.read((char*)&data.back(), sizeof(T));
-    data.back() = swapEndian(data.back());
-  }
-
-  /**
    * @brief (reading) Write a header entry for this property.
    *
    * @param outStream Stream to write to.
@@ -320,17 +270,6 @@ public:
    */
   virtual void writeDataBinary(std::ofstream& outStream, size_t iElement) override {
     outStream.write((char*)&data[iElement], sizeof(T));
-  }
-
-  /**
-   * @brief (binary writing) copy the bits of this property for some element to a stream
-   *
-   * @param outStream Stream to write to.
-   * @param iElement index of the element to write.
-   */
-  virtual void writeDataBinarySwapEndian(std::ofstream& outStream, size_t iElement) override {
-    auto value = swapEndian(data[iElement]);
-    outStream.write((char*)&value, sizeof(T));
   }
 
   /**
@@ -466,31 +405,6 @@ public:
   }
 
   /**
-   * @brief (binary reading) Copy the next value of this property from a stream of bits.
-   *
-   * @param stream Stream to read from.
-   */
-  virtual void readNextSwapEndian(std::ifstream& stream) override {
-
-    // Read the size of the list
-    size_t count = 0;
-    stream.read(((char*)&count), listCountBytes);
-    if(listCountBytes == 8) {
-      count = (size_t)swapEndian((uint64_t)count);
-    } else if(listCountBytes == 4) {
-      count = (size_t)swapEndian((uint32_t)count);
-    } else if(listCountBytes == 2) {
-      count = (size_t)swapEndian((uint16_t)count);
-    }
-
-    // Read list elements
-    data.emplace_back();
-    data.back().resize(count);
-    stream.read((char*)&data.back().front(), count*sizeof(T));
-    for(int i = 0; i < count; i ++) data.back()[i] = swapEndian(data.back()[i]);
-  }
-
-  /**
    * @brief (reading) Write a header entry for this property. Note that we already use "uchar" for the list count type.
    *
    * @param outStream Stream to write to.
@@ -540,28 +454,6 @@ public:
     outStream.write((char*)&count, sizeof(uint8_t));
     for (size_t iEntry = 0; iEntry < elemList.size(); iEntry++) {
       outStream.write((char*)&elemList[iEntry], sizeof(T));
-    }
-  }
-
-  /**
-   * @brief (binary writing) copy the bits of this property for some element to a stream
-   *
-   * @param outStream Stream to write to.
-   * @param iElement index of the element to write.
-   */
-  virtual void writeDataBinarySwapEndian(std::ofstream& outStream, size_t iElement) override {
-    std::vector<T>& elemList = data[iElement];
-
-    // Get the number of list elements as a uchar, and ensure the value fits
-    uint8_t count = elemList.size();
-    if(count != elemList.size()) {
-      throw std::runtime_error("List property has an element with more entries than fit in a uchar. See note in README.");
-    }
-
-    outStream.write((char*)&count, sizeof(uint8_t));
-    for (size_t iEntry = 0; iEntry < elemList.size(); iEntry++) {
-      auto value = swapEndian(elemList[iEntry]);
-      outStream.write((char*)&value, sizeof(T));
     }
   }
 
@@ -1047,21 +939,6 @@ public:
 
 
   /**
-   * @brief (binary writing) Writes out all of the data for every element of this element type to the stream, including
-   * all contained properties.
-   *
-   * @param outStream The stream to write to.
-   */
-  void writeDataBinarySwapEndian(std::ofstream& outStream) {
-    for (size_t iE = 0; iE < count; iE++) {
-      for (size_t iP = 0; iP < properties.size(); iP++) {
-        properties[iP]->writeDataBinarySwapEndian(outStream, iE);
-      }
-    }
-  }
-
-
-  /**
    * @brief Helper function which does the hard work to implement type promotion for data getters. Throws if type
    * conversion fails.
    *
@@ -1217,10 +1094,6 @@ public:
     if (inputDataFormat == DataFormat::Binary) {
       parseBinary(inStream, verbose);
     }
-    // === Parse data from an binary file
-    else if (inputDataFormat == DataFormat::BinarySwapEndian) {
-      parseBinarySwapEndian(inStream, verbose);
-    }
     // === Parse data from an ASCII file
     else if (inputDataFormat == DataFormat::ASCII) {
       parseASCII(inStream, verbose);
@@ -1279,8 +1152,6 @@ public:
     for (Element& e : elements) {
       if (outputDataFormat == DataFormat::Binary) {
         e.writeDataBinary(outStream);
-      } else if (outputDataFormat == DataFormat::BinarySwapEndian) {
-        e.writeDataBinarySwapEndian(outStream);
       } else if (outputDataFormat == DataFormat::ASCII) {
         e.writeDataASCII(outStream);
       }
@@ -1594,8 +1465,7 @@ private:
         inputDataFormat = DataFormat::Binary;
         if (verbose) cout << "  - Type: binary" << endl;
       } else if (typeStr == "binary_big_endian") {
-        inputDataFormat = DataFormat::BinarySwapEndian;
-        if (verbose) cout << "  - Type: binary big endian" << endl;
+        throw std::runtime_error("PLY parser: encountered scary big endian file. Don't know how to parse that");
       } else {
         throw std::runtime_error("PLY parser: bad format line");
       }
@@ -1617,12 +1487,6 @@ private:
         string comment = line.substr(7);
         if (verbose) cout << "  - Comment: " << comment << endl;
         comments.push_back(comment);
-        continue;
-      }
-
-      // Parse a comment
-      if (startsWith(line, "obj_info")) {
-        // skip this command found in old files
         continue;
       }
 
@@ -1742,35 +1606,6 @@ private:
     }
   }
 
-  /**
-   * @brief Read the actual data for a file, in binary.
-   *
-   * @param inStream
-   * @param verbose
-   */
-  void parseBinarySwapEndian(std::ifstream& inStream, bool verbose) {
-
-    using std::string;
-    using std::vector;
-
-    // Read all elements
-    for (Element& elem : elements) {
-
-      if (verbose) {
-        std::cout << "  - Processing element: " << elem.name << std::endl;
-      }
-
-      for (size_t iP = 0; iP < elem.properties.size(); iP++) {
-        elem.properties[iP]->reserve(elem.count);
-      }
-      for (size_t iEntry = 0; iEntry < elem.count; iEntry++) {
-        for (size_t iP = 0; iP < elem.properties.size(); iP++) {
-          elem.properties[iP]->readNextSwapEndian(inStream);
-        }
-      }
-    }
-  }
-
   // === Writing ===
 
 
@@ -1788,8 +1623,6 @@ private:
     outStream << "format ";
     if (outputDataFormat == DataFormat::Binary) {
       outStream << "binary_little_endian ";
-    } else if (outputDataFormat == DataFormat::BinarySwapEndian) {
-      outStream << "binary_big_endian ";
     } else if (outputDataFormat == DataFormat::ASCII) {
       outStream << "ascii ";
     }
