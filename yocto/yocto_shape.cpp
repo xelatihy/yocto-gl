@@ -3759,11 +3759,10 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, bool flip_texcoord) {
-  auto fs = obj_ostreams{};
-  init_obj_ostreams(fs, filename, false, false);
+  auto fs = obj_file(filename, true);
 
   write_obj_comment(
-      fs, "\nWritten by Yocto/GL\nhttps://github.com/xelatihy/yocto-gl\n\n");
+      fs, "Written by Yocto/GL\nhttps://github.com/xelatihy/yocto-gl\n");
 
   for (auto& p : positions) write_obj_vertex(fs, p);
   for (auto& n : normals) write_obj_normal(fs, n);

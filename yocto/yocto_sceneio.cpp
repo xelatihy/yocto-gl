@@ -1705,11 +1705,10 @@ static void load_obj_scene(
 static void save_obj(const string& filename, const yocto_scene& scene,
     bool preserve_instances, bool flip_texcoord = true) {
   // open writer
-  auto fs = obj_ostreams{};
-  init_obj_ostreams(fs, filename, !scene.materials.empty(),
-      !scene.cameras.empty() || !scene.environments.empty() ||
-          preserve_instances,
-      get_save_scene_message(scene, ""));
+  auto fs = obj_file(filename, true);
+
+  // stats
+  write_obj_comment(fs, get_save_scene_message(scene, ""));
 
   // shapes
   auto offset    = obj_vertex{0, 0, 0};

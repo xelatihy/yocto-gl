@@ -491,32 +491,23 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
   }
 }
 
-// Cleanup
-obj_ostreams::~obj_ostreams() {
-  if (obj) fclose(obj);
-  if (mtl) fclose(mtl);
-  if (obx) fclose(obx);
+// Obj file
+obj_file::obj_file(const string& filename, bool write) {
+  open_obj_file(*this, filename, write);
 }
+obj_file::~obj_file() { close_obj_file(*this); }
 
 // Open/close obj write stream
-void init_obj_ostreams(obj_ostreams& fs, const string& filename, bool materials,
-    bool extensions, const string& comment) {
-  auto obj_filename = filename;
-  auto mtl_filename = fs::path(filename).replace_extension(".mtl").string();
-  auto obx_filename = fs::path(filename).replace_extension(".objx").string();
-  auto mtlname =
-      fs::path(filename).filename().replace_extension(".mtl").string();
-  fs.obj = fopen(obj_filename.c_str(), "wt");
-  fs.mtl = materials ? fopen(mtl_filename.c_str(), "wt") : nullptr;
-  fs.obx = extensions ? fopen(obx_filename.c_str(), "wt") : nullptr;
-  if (!fs.obj) throw std::runtime_error{"cannot open file " + filename};
-  if (!fs.mtl && materials)
-    throw std::runtime_error{"cannot open file " + filename};
-  if (!fs.obx && extensions)
-    throw std::runtime_error{"cannot open file " + filename};
-  if (!comment.empty())
-    write_obj_comment(fs, comment, true, materials, extensions, true);
-  if (materials) write_obj_mtllib(fs, mtlname);
+void open_obj_file(obj_file& obj, const string& filename, bool write) {
+  obj.filename = filename;
+  obj.write = write;
+  obj.obj_fs        = fopen(filename.c_str(),  write ? "wt" : "rt");
+  if (!obj.obj_fs) throw std::runtime_error{"cannot open file " + filename};
+}
+void close_obj_file(obj_file& obj) {
+  if (obj.obj_fs) fclose(obj.obj_fs);
+  if (obj.mtl_fs) fclose(obj.mtl_fs);
+  if (obj.obx_fs) fclose(obj.obx_fs);
 }
 
 // Write text to file
@@ -608,74 +599,78 @@ static inline vector<string> split_string(
 }
 
 // Write obj elements
-void write_obj_comment(obj_ostreams& fs, const string& comment, bool in_obj,
-    bool in_mtl, bool in_obx, bool skip_line) {
-  if (comment.empty()) return;
+void write_obj_comment(obj_file& obj, const string& comment) {
   auto lines = split_string(comment, "\n");
   for (auto& line : lines) {
-    auto cline = "# " + line + "\n";
-    if (in_obj) write_obj_text(fs.obj, cline);
-    if (in_mtl) write_obj_text(fs.mtl, cline);
-    if (in_obx) write_obj_text(fs.obx, cline);
+    write_obj_text(obj.obj_fs, "# " + line + "\n");
   }
-  if (skip_line) {
-    if (in_obj) write_obj_text(fs.obj, "\n");
-    if (in_mtl) write_obj_text(fs.mtl, "\n");
-    if (in_obx) write_obj_text(fs.obx, "\n");
-  }
+  write_obj_text(obj.obj_fs, "\n");
 }
-void write_obj_vertex(obj_ostreams& fs, const vec3f& p) {
-  write_obj_line(fs.obj, "v", p);
+void write_obj_vertex(obj_file& obj, const vec3f& p) {
+  write_obj_line(obj.obj_fs, "v", p);
 }
-void write_obj_normal(obj_ostreams& fs, const vec3f& n) {
-  write_obj_line(fs.obj, "vn", n);
+void write_obj_normal(obj_file& obj, const vec3f& n) {
+  write_obj_line(obj.obj_fs, "vn", n);
 }
-void write_obj_texcoord(obj_ostreams& fs, const vec2f& t) {
-  write_obj_line(fs.obj, "vt", t);
+void write_obj_texcoord(obj_file& obj, const vec2f& t) {
+  write_obj_line(obj.obj_fs, "vt", t);
 }
-void write_obj_face(obj_ostreams& fs, const vector<obj_vertex>& verts) {
-  write_obj_line(fs.obj, "f", verts);
+void write_obj_face(obj_file& obj, const vector<obj_vertex>& verts) {
+  write_obj_line(obj.obj_fs, "f", verts);
 }
-void write_obj_face(obj_ostreams& fs, const obj_vertex& vert1,
+void write_obj_face(obj_file& obj, const obj_vertex& vert1,
     const obj_vertex& vert2, const obj_vertex& vert3) {
-  write_obj_line(fs.obj, "f", vert1, vert2, vert3);
+  write_obj_line(obj.obj_fs, "f", vert1, vert2, vert3);
 }
-void write_obj_face(obj_ostreams& fs, const obj_vertex& vert1,
+void write_obj_face(obj_file& obj, const obj_vertex& vert1,
     const obj_vertex& vert2, const obj_vertex& vert3, const obj_vertex& vert4) {
-  write_obj_line(fs.obj, "f", vert1, vert2, vert3, vert4);
+  write_obj_line(obj.obj_fs, "f", vert1, vert2, vert3, vert4);
 }
-void write_obj_line(obj_ostreams& fs, const vector<obj_vertex>& verts) {
-  write_obj_line(fs.obj, "l", verts);
+void write_obj_line(obj_file& obj, const vector<obj_vertex>& verts) {
+  write_obj_line(obj.obj_fs, "l", verts);
 }
 void write_obj_line(
-    obj_ostreams& fs, const obj_vertex& vert1, const obj_vertex& vert2) {
-  write_obj_line(fs.obj, "l", vert1, vert2);
+    obj_file& obj, const obj_vertex& vert1, const obj_vertex& vert2) {
+  write_obj_line(obj.obj_fs, "l", vert1, vert2);
 }
-void write_obj_point(obj_ostreams& fs, const vector<obj_vertex>& verts) {
-  write_obj_line(fs.obj, "p", verts);
+void write_obj_point(obj_file& obj, const vector<obj_vertex>& verts) {
+  write_obj_line(obj.obj_fs, "p", verts);
 }
-void write_obj_point(obj_ostreams& fs, const obj_vertex& vert1) {
-  write_obj_line(fs.obj, "p", vert1);
+void write_obj_point(obj_file& obj, const obj_vertex& vert1) {
+  write_obj_line(obj.obj_fs, "p", vert1);
 }
-void write_obj_object(obj_ostreams& fs, const string& name) {
-  write_obj_text(fs.obj, "\n");
-  write_obj_line(fs.obj, "o", name);
+void write_obj_object(obj_file& obj, const string& name) {
+  write_obj_text(obj.obj_fs, "\n");
+  write_obj_line(obj.obj_fs, "o", name);
 }
-void write_obj_group(obj_ostreams& fs, const string& name) {
-  write_obj_line(fs.obj, "g", name);
+void write_obj_group(obj_file& obj, const string& name) {
+  write_obj_line(obj.obj_fs, "g", name);
 }
-void write_obj_usemtl(obj_ostreams& fs, const string& name) {
-  write_obj_line(fs.obj, "usemtl", name);
+void write_obj_usemtl(obj_file& obj, const string& name) {
+  if (!obj.mtl_fs) {
+    auto filename = fs::path(obj.filename).replace_extension(".mtl").string();
+    obj.mtl_fs    = fopen(filename.c_str(), "wt");
+    if (!obj.mtl_fs) throw std::runtime_error{"cannot open file " + filename};
+    write_obj_text(obj.obj_fs, "\n");
+    write_obj_line(obj.obj_fs, "mtllib", fs::path(filename).filename().string());
+    write_obj_text(obj.obj_fs, "\n");
+  }
+
+  write_obj_line(obj.obj_fs, "usemtl", name);
 }
-void write_obj_smoothing(obj_ostreams& fs, const string& name) {
-  write_obj_line(fs.obj, "s", name);
+void write_obj_smoothing(obj_file& obj, const string& name) {
+  write_obj_line(obj.obj_fs, "s", name);
 }
-void write_obj_mtllib(obj_ostreams& fs, const string& filename) {
-  write_obj_text(fs.obj, "\n");
-  write_obj_line(fs.obj, "mtllib", filename);
-  write_obj_text(fs.obj, "\n");
-}
-void write_obj_material(obj_ostreams& fs, const obj_material& material) {
+void write_obj_material(obj_file& obj, const obj_material& material) {
+  if (!obj.mtl_fs) {
+    auto filename = fs::path(obj.filename).replace_extension(".mtl").string();
+    obj.mtl_fs    = fopen(filename.c_str(), "wt");
+    if (!obj.mtl_fs) throw std::runtime_error{"cannot open file " + filename};
+    write_obj_text(obj.obj_fs, "\n");
+    write_obj_line(obj.obj_fs, "mtllib", fs::path(filename).filename().string());
+    write_obj_text(obj.obj_fs, "\n");
+  }
+
   static auto def           = obj_material{};
   auto        write_obj_opt = [](FILE* fs, const char* name, const auto& val,
                            const auto& def) {
@@ -687,63 +682,82 @@ void write_obj_material(obj_ostreams& fs, const obj_material& material) {
     if (info.path.empty()) return;
     write_obj_line(fs, name, info.path);
   };
-  write_obj_line(fs.mtl, "newmtl", material.name);
-  write_obj_opt(fs.mtl, "  illum", material.illum, def.illum);
-  write_obj_opt(fs.mtl, "  Ke", material.ke, def.ke);
-  write_obj_opt(fs.mtl, "  Ka", material.ka, def.ka);
-  write_obj_opt(fs.mtl, "  Kd", material.kd, vec3f{-1, -1, -1});
-  write_obj_opt(fs.mtl, "  Ks", material.ks, vec3f{-1, -1, -1});
-  write_obj_opt(fs.mtl, "  Kr", material.kr, def.kr);
-  write_obj_opt(fs.mtl, "  Kt", material.kt, def.kt);
-  write_obj_opt(fs.mtl, "  Ns", (int)material.ns, -1);
-  write_obj_opt(fs.mtl, "  d", material.op, def.op);
-  write_obj_opt(fs.mtl, "  Ni", material.ior, def.ior);
-  write_obj_txt(fs.mtl, "  map_Ke", material.ke_map);
-  write_obj_txt(fs.mtl, "  map_Ka", material.ka_map);
-  write_obj_txt(fs.mtl, "  map_Kd", material.kd_map);
-  write_obj_txt(fs.mtl, "  map_Ks", material.ks_map);
-  write_obj_txt(fs.mtl, "  map_Kr", material.kr_map);
-  write_obj_txt(fs.mtl, "  map_Kt", material.kt_map);
-  write_obj_txt(fs.mtl, "  map_d", material.op_map);
-  write_obj_txt(fs.mtl, "  map_Ni", material.ior_map);
-  write_obj_txt(fs.mtl, "  map_bump", material.bump_map);
-  write_obj_txt(fs.mtl, "  map_norm", material.norm_map);
-  write_obj_txt(fs.mtl, "  map_disp", material.disp_map);
-  write_obj_txt(fs.mtl, "  map_occ", material.occ_map);
-  write_obj_opt(fs.mtl, "  Pr", material.pr, def.pr);
-  write_obj_opt(fs.mtl, "  Pm", material.pm, def.pm);
-  write_obj_opt(fs.mtl, "  Ps", material.ps, def.ps);
-  write_obj_opt(fs.mtl, "  Pc", material.pc, def.pc);
-  write_obj_opt(fs.mtl, "  Pcr", material.pcr, def.pcr);
-  write_obj_txt(fs.mtl, "  Pr_map", material.pr_map);
-  write_obj_txt(fs.mtl, "  Pm_map", material.pm_map);
-  write_obj_txt(fs.mtl, "  Ps_map", material.ps_map);
-  write_obj_txt(fs.mtl, "  Pc_map", material.pc_map);
-  write_obj_txt(fs.mtl, "  Pcr_map", material.pcr_map);
-  write_obj_opt(fs.mtl, "  Vt", material.vt, def.vt);
-  write_obj_opt(fs.mtl, "  Ve", material.ve, def.ve);
-  write_obj_opt(fs.mtl, "  Vs", material.vs, def.vs);
-  write_obj_opt(fs.mtl, "  Vg", material.vg, def.vg);
-  write_obj_opt(fs.mtl, "  Vr", material.vr, def.vr);
-  write_obj_txt(fs.mtl, "  Vs_map", material.vs_map);
-  write_obj_text(fs.mtl, "\n");
+  write_obj_line(obj.mtl_fs, "newmtl", material.name);
+  write_obj_opt(obj.mtl_fs, "  illum", material.illum, def.illum);
+  write_obj_opt(obj.mtl_fs, "  Ke", material.ke, def.ke);
+  write_obj_opt(obj.mtl_fs, "  Ka", material.ka, def.ka);
+  write_obj_opt(obj.mtl_fs, "  Kd", material.kd, vec3f{-1, -1, -1});
+  write_obj_opt(obj.mtl_fs, "  Ks", material.ks, vec3f{-1, -1, -1});
+  write_obj_opt(obj.mtl_fs, "  Kr", material.kr, def.kr);
+  write_obj_opt(obj.mtl_fs, "  Kt", material.kt, def.kt);
+  write_obj_opt(obj.mtl_fs, "  Ns", (int)material.ns, -1);
+  write_obj_opt(obj.mtl_fs, "  d", material.op, def.op);
+  write_obj_opt(obj.mtl_fs, "  Ni", material.ior, def.ior);
+  write_obj_txt(obj.mtl_fs, "  map_Ke", material.ke_map);
+  write_obj_txt(obj.mtl_fs, "  map_Ka", material.ka_map);
+  write_obj_txt(obj.mtl_fs, "  map_Kd", material.kd_map);
+  write_obj_txt(obj.mtl_fs, "  map_Ks", material.ks_map);
+  write_obj_txt(obj.mtl_fs, "  map_Kr", material.kr_map);
+  write_obj_txt(obj.mtl_fs, "  map_Kt", material.kt_map);
+  write_obj_txt(obj.mtl_fs, "  map_d", material.op_map);
+  write_obj_txt(obj.mtl_fs, "  map_Ni", material.ior_map);
+  write_obj_txt(obj.mtl_fs, "  map_bump", material.bump_map);
+  write_obj_txt(obj.mtl_fs, "  map_norm", material.norm_map);
+  write_obj_txt(obj.mtl_fs, "  map_disp", material.disp_map);
+  write_obj_txt(obj.mtl_fs, "  map_occ", material.occ_map);
+  write_obj_opt(obj.mtl_fs, "  Pr", material.pr, def.pr);
+  write_obj_opt(obj.mtl_fs, "  Pm", material.pm, def.pm);
+  write_obj_opt(obj.mtl_fs, "  Ps", material.ps, def.ps);
+  write_obj_opt(obj.mtl_fs, "  Pc", material.pc, def.pc);
+  write_obj_opt(obj.mtl_fs, "  Pcr", material.pcr, def.pcr);
+  write_obj_txt(obj.mtl_fs, "  Pr_map", material.pr_map);
+  write_obj_txt(obj.mtl_fs, "  Pm_map", material.pm_map);
+  write_obj_txt(obj.mtl_fs, "  Ps_map", material.ps_map);
+  write_obj_txt(obj.mtl_fs, "  Pc_map", material.pc_map);
+  write_obj_txt(obj.mtl_fs, "  Pcr_map", material.pcr_map);
+  write_obj_opt(obj.mtl_fs, "  Vt", material.vt, def.vt);
+  write_obj_opt(obj.mtl_fs, "  Ve", material.ve, def.ve);
+  write_obj_opt(obj.mtl_fs, "  Vs", material.vs, def.vs);
+  write_obj_opt(obj.mtl_fs, "  Vg", material.vg, def.vg);
+  write_obj_opt(obj.mtl_fs, "  Vr", material.vr, def.vr);
+  write_obj_txt(obj.mtl_fs, "  Vs_map", material.vs_map);
+  write_obj_text(obj.mtl_fs, "\n");
 }
-void write_obj_camera(obj_ostreams& fs, const obj_camera& camera) {
-  write_obj_line(fs.obx, "c", camera.name, (int)camera.ortho, camera.width,
+void write_obj_camera(obj_file& obj, const obj_camera& camera) {
+  if (!obj.obx_fs) {
+    auto filename = fs::path(obj.filename).replace_extension(".objx").string();
+    obj.obx_fs    = fopen(filename.c_str(), "wt");
+    if (!obj.obx_fs) throw std::runtime_error{"cannot open file " + filename};
+  }
+  write_obj_line(obj.obx_fs, "c", camera.name, (int)camera.ortho, camera.width,
       camera.height, camera.lens, camera.focus, camera.aperture, camera.frame);
 }
-void write_obj_environmnet(
-    obj_ostreams& fs, const obj_environment& environment) {
-  write_obj_line(fs.obx, "e", environment.name, environment.ke,
+void write_obj_environmnet(obj_file& obj, const obj_environment& environment) {
+  if (!obj.obx_fs) {
+    auto filename = fs::path(obj.filename).replace_extension(".objx").string();
+    obj.obx_fs    = fopen(filename.c_str(), "wt");
+    if (!obj.obx_fs) throw std::runtime_error{"cannot open file " + filename};
+  }
+  write_obj_line(obj.obx_fs, "e", environment.name, environment.ke,
       environment.ke_txt.path != "" ? environment.ke_txt.path : "\"\" "s,
       environment.frame);
 }
-void write_obj_instance(obj_ostreams& fs, const obj_instance& instance) {
-  write_obj_line(fs.obx, "i", instance.name, instance.object, instance.material,
-      instance.frame);
+void write_obj_instance(obj_file& obj, const obj_instance& instance) {
+  if (!obj.obx_fs) {
+    auto filename = fs::path(obj.filename).replace_extension(".objx").string();
+    obj.obx_fs    = fopen(filename.c_str(), "wt");
+    if (!obj.obx_fs) throw std::runtime_error{"cannot open file " + filename};
+  }
+  write_obj_line(obj.obx_fs, "i", instance.name, instance.object,
+      instance.material, instance.frame);
 }
-void write_obj_procedural(obj_ostreams& fs, const obj_procedural& procedural) {
-  write_obj_line(fs.obx, "po", procedural.name, procedural.type,
+void write_obj_procedural(obj_file& obj, const obj_procedural& procedural) {
+  if (!obj.obx_fs) {
+    auto filename = fs::path(obj.filename).replace_extension(".objx").string();
+    obj.obx_fs    = fopen(filename.c_str(), "wt");
+    if (!obj.obx_fs) throw std::runtime_error{"cannot open file " + filename};
+  }
+  write_obj_line(obj.obx_fs, "po", procedural.name, procedural.type,
       procedural.material, procedural.size, procedural.level, procedural.frame);
 }
 

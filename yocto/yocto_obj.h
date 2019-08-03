@@ -208,53 +208,51 @@ struct obj_callbacks {
 void load_obj(const string& filename, obj_callbacks& cb,
     bool nomaterials = false, bool flipv = true, bool fliptr = true);
 
-// Holds streams for obj files. State of this object should be considered
-// private and should not be accessed directly.
-struct obj_ostreams {
+// Holds file streams for OBJ parsing and writing.
+struct obj_file {
   // Move-only object with automatic file closing on destruction.
-  obj_ostreams() {}
-  obj_ostreams(const obj_ostreams&) = delete;
-  obj_ostreams& operator=(const obj_ostreams&) = delete;
-  ~obj_ostreams();
+  obj_file() {}
+  obj_file(const string& filename, bool write = false);
+  obj_file(const obj_file&) = delete;
+  obj_file& operator=(const obj_file&) = delete;
+  ~obj_file();
 
   // File streams
-  FILE* obj = nullptr;
-  FILE* mtl = nullptr;
-  FILE* obx = nullptr;
+  string filename = "";
+  bool write = false;
+  FILE*  obj_fs      = nullptr;
+  FILE*  mtl_fs      = nullptr;
+  FILE*  obx_fs      = nullptr;
 };
 
 // Open/close obj write stream
-void init_obj_ostreams(obj_ostreams& fs, const string& filename, bool materials,
-    bool extensions, const string& comment = "");
+void open_obj_file(obj_file& obj, const string& filename, bool write = false);
+void close_obj_file(obj_file& obj);
 
 // Write obj elements
-void write_obj_comment(obj_ostreams& fs, const string& comment,
-    bool in_obj = true, bool in_mtl = false, bool in_objx = false,
-    bool skip_line = false);
-void write_obj_vertex(obj_ostreams& fs, const vec3f& p);
-void write_obj_normal(obj_ostreams& fs, const vec3f& n);
-void write_obj_texcoord(obj_ostreams& fs, const vec2f& t);
-void write_obj_face(obj_ostreams& fs, const vector<obj_vertex>& verts);
-void write_obj_face(obj_ostreams& fs, const obj_vertex& vert1,
+void write_obj_comment(obj_file& obj, const string& comment);
+void write_obj_vertex(obj_file& obj, const vec3f& p);
+void write_obj_normal(obj_file& obj, const vec3f& n);
+void write_obj_texcoord(obj_file& obj, const vec2f& t);
+void write_obj_face(obj_file& obj, const vector<obj_vertex>& verts);
+void write_obj_face(obj_file& obj, const obj_vertex& vert1,
     const obj_vertex& vert2, const obj_vertex& vert3);
-void write_obj_face(obj_ostreams& fs, const obj_vertex& vert1,
+void write_obj_face(obj_file& obj, const obj_vertex& vert1,
     const obj_vertex& vert2, const obj_vertex& vert3, const obj_vertex& vert4);
-void write_obj_line(obj_ostreams& fs, const vector<obj_vertex>& verts);
+void write_obj_line(obj_file& obj, const vector<obj_vertex>& verts);
 void write_obj_line(
-    obj_ostreams& fs, const obj_vertex& vert1, const obj_vertex& vert2);
-void write_obj_point(obj_ostreams& fs, const vector<obj_vertex>& verts);
-void write_obj_point(obj_ostreams& fs, const obj_vertex& vert);
-void write_obj_object(obj_ostreams& fs, const string& name);
-void write_obj_group(obj_ostreams& fs, const string& name);
-void write_obj_usemtl(obj_ostreams& fs, const string& name);
-void write_obj_smoothing(obj_ostreams& fs, const string& name);
-void write_obj_mtllib(obj_ostreams& fs, const string& filename);
-void write_obj_material(obj_ostreams& fs, const obj_material& material);
-void write_obj_camera(obj_ostreams& fs, const obj_camera& camera);
-void write_obj_environmnet(
-    obj_ostreams& fs, const obj_environment& environment);
-void write_obj_instance(obj_ostreams& fs, const obj_instance& instamce);
-void write_obj_procedural(obj_ostreams& fs, const obj_procedural& procedural);
+    obj_file& obj, const obj_vertex& vert1, const obj_vertex& vert2);
+void write_obj_point(obj_file& obj, const vector<obj_vertex>& verts);
+void write_obj_point(obj_file& obj, const obj_vertex& vert);
+void write_obj_object(obj_file& obj, const string& name);
+void write_obj_group(obj_file& obj, const string& name);
+void write_obj_usemtl(obj_file& obj, const string& name);
+void write_obj_smoothing(obj_file& obj, const string& name);
+void write_obj_material(obj_file& obj, const obj_material& material);
+void write_obj_camera(obj_file& obj, const obj_camera& camera);
+void write_obj_environmnet(obj_file& obj, const obj_environment& environment);
+void write_obj_instance(obj_file& obj, const obj_instance& instamce);
+void write_obj_procedural(obj_file& obj, const obj_procedural& procedural);
 
 }  // namespace yocto
 
