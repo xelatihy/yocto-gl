@@ -211,7 +211,7 @@ static inline void parse_obj_value(string_view& str, mtl_texture_info& info) {
 }
 
 // Load obj materials
-void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
+ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
   // open file
   auto fs_ = open_input_file(filename);
   auto fs  = fs_.fs;
@@ -326,7 +326,7 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
 }
 
 // Load obj extensions
-void load_objx(const string& filename, obj_callbacks& cb) {
+ void load_objx(const string& filename, obj_callbacks& cb) {
   // open file
   auto fs_ = open_input_file(filename);
   auto fs  = fs_.fs;
@@ -388,7 +388,7 @@ void load_objx(const string& filename, obj_callbacks& cb) {
 }
 
 // Load obj scene
-void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
+ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
     bool flipv, bool fliptr) {
   // open file
   auto fs_ = open_input_file(filename);
@@ -855,123 +855,6 @@ void write_obj_comment(FILE* fs, const string& comment) {
     write_obj_text(fs, "# " + line + "\n");
   }
   write_obj_text(fs, "\n");
-}
-void write_obj_vertex(FILE* fs, const vec3f& p) { write_obj_line_(fs, "v", p); }
-void write_obj_normal(FILE* fs, const vec3f& n) {
-  write_obj_line_(fs, "vn", n);
-}
-void write_obj_texcoord(FILE* fs, const vec2f& t) {
-  write_obj_line_(fs, "vt", t);
-}
-void write_obj_face(FILE* fs, const vector<obj_vertex>& verts) {
-  write_obj_line_(fs, "f", verts);
-}
-void write_obj_face(FILE* fs, const obj_vertex& vert1, const obj_vertex& vert2,
-    const obj_vertex& vert3) {
-  write_obj_line_(fs, "f", vert1, vert2, vert3);
-}
-void write_obj_face(FILE* fs, const obj_vertex& vert1, const obj_vertex& vert2,
-    const obj_vertex& vert3, const obj_vertex& vert4) {
-  write_obj_line_(fs, "f", vert1, vert2, vert3, vert4);
-}
-void write_obj_line(FILE* fs, const vector<obj_vertex>& verts) {
-  write_obj_line_(fs, "l", verts);
-}
-void write_obj_line(
-    FILE* fs, const obj_vertex& vert1, const obj_vertex& vert2) {
-  write_obj_line_(fs, "l", vert1, vert2);
-}
-void write_obj_point(FILE* fs, const vector<obj_vertex>& verts) {
-  write_obj_line_(fs, "p", verts);
-}
-void write_obj_point(FILE* fs, const obj_vertex& vert1) {
-  write_obj_line_(fs, "p", vert1);
-}
-void write_obj_object(FILE* fs, const string& name) {
-  write_obj_text(fs, "\n");
-  write_obj_line_(fs, "o", name);
-}
-void write_obj_group(FILE* fs, const string& name) {
-  write_obj_line_(fs, "g", name);
-}
-void write_obj_usemtl(FILE* fs, const string& name) {
-  write_obj_line_(fs, "usemtl", name);
-}
-void write_obj_smoothing(FILE* fs, const string& name) {
-  write_obj_line_(fs, "s", name);
-}
-void write_obj_mtllib(FILE* fs, const string& name) {
-  write_obj_line_(fs, "mtllib", name);
-}
-void write_mtl_material(FILE* fs, const mtl_material& material) {
-  static auto def           = mtl_material{};
-  auto        write_obj_opt = [](FILE* fs, const char* name, const auto& val,
-                           const auto& def) {
-    if (val == def) return;
-    write_obj_line_(fs, name, val);
-  };
-  auto write_obj_txt = [](FILE* fs, const char* name,
-                           const mtl_texture_info& info) {
-    if (info.path.empty()) return;
-    write_obj_line_(fs, name, info.path);
-  };
-  write_obj_line_(fs, "newmtl", material.name);
-  write_obj_opt(fs, "  illum", material.illum, def.illum);
-  write_obj_opt(fs, "  Ke", material.ke, def.ke);
-  write_obj_opt(fs, "  Ka", material.ka, def.ka);
-  write_obj_opt(fs, "  Kd", material.kd, vec3f{-1, -1, -1});
-  write_obj_opt(fs, "  Ks", material.ks, vec3f{-1, -1, -1});
-  write_obj_opt(fs, "  Kr", material.kr, def.kr);
-  write_obj_opt(fs, "  Kt", material.kt, def.kt);
-  write_obj_opt(fs, "  Ns", (int)material.ns, -1);
-  write_obj_opt(fs, "  d", material.op, def.op);
-  write_obj_opt(fs, "  Ni", material.ior, def.ior);
-  write_obj_txt(fs, "  map_Ke", material.ke_map);
-  write_obj_txt(fs, "  map_Ka", material.ka_map);
-  write_obj_txt(fs, "  map_Kd", material.kd_map);
-  write_obj_txt(fs, "  map_Ks", material.ks_map);
-  write_obj_txt(fs, "  map_Kr", material.kr_map);
-  write_obj_txt(fs, "  map_Kt", material.kt_map);
-  write_obj_txt(fs, "  map_d", material.op_map);
-  write_obj_txt(fs, "  map_Ni", material.ior_map);
-  write_obj_txt(fs, "  map_bump", material.bump_map);
-  write_obj_txt(fs, "  map_norm", material.norm_map);
-  write_obj_txt(fs, "  map_disp", material.disp_map);
-  write_obj_txt(fs, "  map_occ", material.occ_map);
-  write_obj_opt(fs, "  Pr", material.pr, def.pr);
-  write_obj_opt(fs, "  Pm", material.pm, def.pm);
-  write_obj_opt(fs, "  Ps", material.ps, def.ps);
-  write_obj_opt(fs, "  Pc", material.pc, def.pc);
-  write_obj_opt(fs, "  Pcr", material.pcr, def.pcr);
-  write_obj_txt(fs, "  Pr_map", material.pr_map);
-  write_obj_txt(fs, "  Pm_map", material.pm_map);
-  write_obj_txt(fs, "  Ps_map", material.ps_map);
-  write_obj_txt(fs, "  Pc_map", material.pc_map);
-  write_obj_txt(fs, "  Pcr_map", material.pcr_map);
-  write_obj_opt(fs, "  Vt", material.vt, def.vt);
-  write_obj_opt(fs, "  Ve", material.ve, def.ve);
-  write_obj_opt(fs, "  Vs", material.vs, def.vs);
-  write_obj_opt(fs, "  Vg", material.vg, def.vg);
-  write_obj_opt(fs, "  Vr", material.vr, def.vr);
-  write_obj_txt(fs, "  Vs_map", material.vs_map);
-  write_obj_text(fs, "\n");
-}
-void write_objx_camera(FILE* fs, const objx_camera& camera) {
-  write_obj_line_(fs, "c", camera.name, (int)camera.ortho, camera.width,
-      camera.height, camera.lens, camera.focus, camera.aperture, camera.frame);
-}
-void write_objx_environmnet(FILE* fs, const objx_environment& environment) {
-  write_obj_line_(fs, "e", environment.name, environment.ke,
-      environment.ke_txt.path != "" ? environment.ke_txt.path : "\"\" "s,
-      environment.frame);
-}
-void write_objx_instance(FILE* fs, const objx_instance& instance) {
-  write_obj_line_(fs, "i", instance.name, instance.object, instance.material,
-      instance.frame);
-}
-void write_objx_procedural(FILE* fs, const objx_procedural& procedural) {
-  write_obj_line_(fs, "po", procedural.name, procedural.type,
-      procedural.material, procedural.size, procedural.level, procedural.frame);
 }
 
 void write_obj_element(FILE* fs, obj_element element, const vec3f& value,

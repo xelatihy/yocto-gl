@@ -184,30 +184,6 @@ struct objx_instance {
   string  material = "";            // material name
 };
 
-// Obj callbacks
-struct obj_callbacks {
-  virtual void vert(const vec3f&) {}
-  virtual void norm(const vec3f&) {}
-  virtual void texcoord(const vec2f&) {}
-  virtual void face(const vector<obj_vertex>&) {}
-  virtual void line(const vector<obj_vertex>&) {}
-  virtual void point(const vector<obj_vertex>&) {}
-  virtual void object(const string&) {}
-  virtual void group(const string&) {}
-  virtual void usemtl(const string&) {}
-  virtual void smoothing(const string&) {}
-  virtual void mtllib(const string&) {}
-  virtual void material(const mtl_material&) {}
-  virtual void camera(const objx_camera&) {}
-  virtual void environmnet(const objx_environment&) {}
-  virtual void instance(const objx_instance&) {}
-  virtual void procedural(const objx_procedural&) {}
-};
-
-// Load obj scene
-void load_obj(const string& filename, obj_callbacks& cb,
-    bool nomaterials = false, bool flipv = true, bool fliptr = true);
-
 // Obj element
 enum struct obj_element {
   // clang-format off
@@ -251,6 +227,44 @@ void write_mtl_element(
 void write_objx_element(FILE* fs, objx_element element,
     const objx_camera& camera, const objx_environment& environment,
     const objx_instance& instance, const objx_procedural& procedural);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// OLD INTERFACE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Obj callbacks
+struct  obj_callbacks {
+  virtual void vert(const vec3f&) {}
+  virtual void norm(const vec3f&) {}
+  virtual void texcoord(const vec2f&) {}
+  virtual void face(const vector<obj_vertex>&) {}
+  virtual void line(const vector<obj_vertex>&) {}
+  virtual void point(const vector<obj_vertex>&) {}
+  virtual void object(const string&) {}
+  virtual void group(const string&) {}
+  virtual void usemtl(const string&) {}
+  virtual void smoothing(const string&) {}
+  virtual void mtllib(const string&) {}
+  virtual void material(const mtl_material&) {}
+  virtual void camera(const objx_camera&) {}
+  virtual void environmnet(const objx_environment&) {}
+  virtual void instance(const objx_instance&) {}
+  virtual void procedural(const objx_procedural&) {}
+};
+
+// Load obj scene
+ void load_obj(const string& filename, obj_callbacks& cb,
+    bool nomaterials = false, bool flipv = true, bool fliptr = true);
+
+// Typedefs for backward compatibility
+using obj_material  = mtl_material;
+using obj_camera  = objx_camera;
+using obj_environment  = objx_environment;
+using obj_instance  = objx_instance;
+using obj_procedural  = objx_procedural;
 
 }  // namespace yocto
 

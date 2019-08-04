@@ -1318,8 +1318,6 @@ static void save_yaml_scene(const string& filename, const yocto_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#if 1
-
 // Loads an MTL
 static void load_mtl(const string& filename, yocto_scene& scene,
     unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
@@ -1771,9 +1769,7 @@ static void load_obj_scene(
   update_transforms(scene);
 }
 
-#else
-
-struct load_obj_scene_cb : obj_callbacks {
+struct  load_obj_scene_cb : obj_callbacks {
   yocto_scene&       scene;
   const load_params& params;
 
@@ -2102,7 +2098,7 @@ struct load_obj_scene_cb : obj_callbacks {
 };
 
 // Loads an OBJ
-static void load_obj_scene(
+ static void load_obj_scene_old(
     const string& filename, yocto_scene& scene, const load_params& params) {
   scene = {};
 
@@ -2156,8 +2152,6 @@ static void load_obj_scene(
   trim_memory(scene);
   update_transforms(scene);
 }
-
-#endif
 
 static void save_obj(const string& filename, const yocto_scene& scene,
     bool preserve_instances, bool flip_texcoord = true) {
