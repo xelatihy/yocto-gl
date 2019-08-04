@@ -1705,10 +1705,16 @@ static void load_obj_scene(
 static void save_obj(const string& filename, const yocto_scene& scene,
     bool preserve_instances, bool flip_texcoord = true) {
   // open writer
-  auto fs = obj_file(filename, true);
+  auto fs_ = open_output_file(filename);
+  auto fs  = fs_.fs;
 
   // stats
   write_obj_comment(fs, get_save_scene_message(scene, ""));
+
+  // material library
+  if (!scene.materials.empty())
+    write_obj_mtllib(
+        fs, fs::path(filename).replace_extension(".mtl").filename());
 
   // shapes
   auto offset    = obj_vertex{0, 0, 0};
@@ -1823,6 +1829,16 @@ static void save_obj(const string& filename, const yocto_scene& scene,
     offset.texcoord += shape.texcoords.size();
     offset.normal += shape.normals.size();
   }
+}
+
+static void save_mtl(
+    const string& filename, const yocto_scene& scene) {
+  // open writer
+  auto fs_ = open_output_file(filename);
+  auto fs  = fs_.fs;
+
+  // stats
+  write_obj_comment(fs, get_save_scene_message(scene, ""));
 
   // materials
   for (auto& material : scene.materials) {
@@ -1857,8 +1873,18 @@ static void save_obj(const string& filename, const yocto_scene& scene,
       omat.vg = material.volanisotropy;
       omat.vr = material.volscale;
     }
-    write_obj_material(fs, omat);
+    write_mtl_material(fs, omat);
   }
+}
+
+static void save_objx(
+    const string& filename, const yocto_scene& scene, bool preserve_instances) {
+  // open writer
+  auto fs_ = open_output_file(filename);
+  auto fs  = fs_.fs;
+
+  // stats
+  write_obj_comment(fs, get_save_scene_message(scene, ""));
 
   // cameras
   for (auto& camera : scene.cameras) {
@@ -1871,7 +1897,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
     ocam.focus    = camera.focus;
     ocam.aperture = camera.aperture;
     ocam.frame    = camera.frame;
-    write_obj_camera(fs, ocam);
+    write_objx_camera(fs, ocam);
   }
 
   // environments
@@ -1883,7 +1909,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
                            ? scene.textures[environment.emission_tex].uri
                            : ""s;
     oenv.frame = environment.frame;
-    write_obj_environmnet(fs, oenv);
+    write_objx_environmnet(fs, oenv);
   }
 
   // instances
@@ -1895,7 +1921,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
       oist.material =
           fs::path(scene.materials[instance.material].uri).stem().string();
       oist.frame = instance.frame;
-      write_obj_instance(fs, oist);
+      write_objx_instance(fs, oist);
     }
   }
 }
@@ -1904,6 +1930,12 @@ static void save_obj_scene(const string& filename, const yocto_scene& scene,
     const save_params& params) {
   try {
     save_obj(filename, scene, params.objinstances, true);
+    if (!scene.materials.empty())
+      save_mtl(fs::path(filename).replace_extension(".mtl"), scene);
+    if (!scene.cameras.empty() || !scene.cameras.empty() ||
+        (!scene.instances.empty() && params.objinstances))
+      save_objx(fs::path(filename).replace_extension(".objx"), scene, 
+      params.objinstances);
     auto dirname = fs::path(filename).parent_path();
     save_textures(scene, dirname, params);
   } catch (const std::exception& e) {
@@ -3751,13 +3783,15 @@ static inline void write_pbrt_value(
 // static inline void write_pbrt_value(
 //     FILE* fs, const frame3f& value, bool parens = true) {
 //   if (parens) {
-//     if (fprintf(fs, "[ ") < 0) throw std::runtime_error("cannot print value");
+//     if (fprintf(fs, "[ ") < 0) throw std::runtime_error("cannot print
+//     value");
 //   }
 //   for (auto i = 0; i < 12; i++)
 //     if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
 //       throw std::runtime_error("cannot print value");
 //   if (parens) {
-//     if (fprintf(fs, " ]") < 0) throw std::runtime_error("cannot print value");
+//     if (fprintf(fs, " ]") < 0) throw std::runtime_error("cannot print
+//     value");
 //   }
 // }
 static inline void write_pbrt_value(

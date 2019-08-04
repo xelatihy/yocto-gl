@@ -208,51 +208,31 @@ struct obj_callbacks {
 void load_obj(const string& filename, obj_callbacks& cb,
     bool nomaterials = false, bool flipv = true, bool fliptr = true);
 
-// Holds file streams for OBJ parsing and writing.
-struct obj_file {
-  // Move-only object with automatic file closing on destruction.
-  obj_file() {}
-  obj_file(const string& filename, bool write = false);
-  obj_file(const obj_file&) = delete;
-  obj_file& operator=(const obj_file&) = delete;
-  ~obj_file();
-
-  // File streams
-  string filename = "";
-  bool write = false;
-  FILE*  obj_fs      = nullptr;
-  FILE*  mtl_fs      = nullptr;
-  FILE*  obx_fs      = nullptr;
-};
-
-// Open/close obj write stream
-void open_obj_file(obj_file& obj, const string& filename, bool write = false);
-void close_obj_file(obj_file& obj);
-
 // Write obj elements
-void write_obj_comment(obj_file& obj, const string& comment);
-void write_obj_vertex(obj_file& obj, const vec3f& p);
-void write_obj_normal(obj_file& obj, const vec3f& n);
-void write_obj_texcoord(obj_file& obj, const vec2f& t);
-void write_obj_face(obj_file& obj, const vector<obj_vertex>& verts);
-void write_obj_face(obj_file& obj, const obj_vertex& vert1,
+void write_obj_comment(FILE* fs, const string& comment);
+void write_obj_vertex(FILE* fs, const vec3f& p);
+void write_obj_normal(FILE* fs, const vec3f& n);
+void write_obj_texcoord(FILE* fs, const vec2f& t);
+void write_obj_face(FILE* fs, const vector<obj_vertex>& verts);
+void write_obj_face(FILE* fs, const obj_vertex& vert1,
     const obj_vertex& vert2, const obj_vertex& vert3);
-void write_obj_face(obj_file& obj, const obj_vertex& vert1,
+void write_obj_face(FILE* fs, const obj_vertex& vert1,
     const obj_vertex& vert2, const obj_vertex& vert3, const obj_vertex& vert4);
-void write_obj_line(obj_file& obj, const vector<obj_vertex>& verts);
+void write_obj_line(FILE* fs, const vector<obj_vertex>& verts);
 void write_obj_line(
-    obj_file& obj, const obj_vertex& vert1, const obj_vertex& vert2);
-void write_obj_point(obj_file& obj, const vector<obj_vertex>& verts);
-void write_obj_point(obj_file& obj, const obj_vertex& vert);
-void write_obj_object(obj_file& obj, const string& name);
-void write_obj_group(obj_file& obj, const string& name);
-void write_obj_usemtl(obj_file& obj, const string& name);
-void write_obj_smoothing(obj_file& obj, const string& name);
-void write_obj_material(obj_file& obj, const obj_material& material);
-void write_obj_camera(obj_file& obj, const obj_camera& camera);
-void write_obj_environmnet(obj_file& obj, const obj_environment& environment);
-void write_obj_instance(obj_file& obj, const obj_instance& instamce);
-void write_obj_procedural(obj_file& obj, const obj_procedural& procedural);
+    FILE* fs, const obj_vertex& vert1, const obj_vertex& vert2);
+void write_obj_point(FILE* fs, const vector<obj_vertex>& verts);
+void write_obj_point(FILE* fs, const obj_vertex& vert);
+void write_obj_object(FILE* fs, const string& name);
+void write_obj_group(FILE* fs, const string& name);
+void write_obj_usemtl(FILE* fs, const string& name);
+void write_obj_smoothing(FILE* fs, const string& name);
+void write_obj_mtllib(FILE* fs, const string& name);
+void write_mtl_material(FILE* fs, const obj_material& material);
+void write_objx_camera(FILE* fs, const obj_camera& camera);
+void write_objx_environmnet(FILE* fs, const obj_environment& environment);
+void write_objx_instance(FILE* fs, const obj_instance& instamce);
+void write_obj_procedural(FILE* fs, const obj_procedural& procedural);
 
 }  // namespace yocto
 
