@@ -705,27 +705,27 @@ void write_objx_procedural(FILE* fs, const objx_procedural& procedural) {
       procedural.material, procedural.size, procedural.level, procedural.frame);
 }
 
-void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
+void write_obj_element(FILE* fs, obj_element command, const vec3f& value,
     const string& name, const vector<obj_vertex>& vertices) {
   switch (command) {
-    case obj_command::vertex: write_obj_line_(fs, "v", value); break;
-    case obj_command::normal: write_obj_line_(fs, "vn", value); break;
-    case obj_command::texcoord: write_obj_line_(fs, "vt", vec2f{value.x, value.y}); break;
-    case obj_command::face: write_obj_line_(fs, "f", vertices); break;
-    case obj_command::line: write_obj_line_(fs, "l", vertices); break;
-    case obj_command::point: write_obj_line_(fs, "p", vertices); break;
-    case obj_command::object: write_obj_line_(fs, "o", name); break;
-    case obj_command::group: write_obj_line_(fs, "g", name); break;
-    case obj_command::usemtl: write_obj_line_(fs, "usemtl", name); break;
-    case obj_command::smoothing: write_obj_line_(fs, "s", name); break;
-    case obj_command::mtllib: write_obj_line_(fs, "mtllib", name); break;
-    case obj_command::objxlib: break;
+    case obj_element::vertex: write_obj_line_(fs, "v", value); break;
+    case obj_element::normal: write_obj_line_(fs, "vn", value); break;
+    case obj_element::texcoord: write_obj_line_(fs, "vt", vec2f{value.x, value.y}); break;
+    case obj_element::face: write_obj_line_(fs, "f", vertices); break;
+    case obj_element::line: write_obj_line_(fs, "l", vertices); break;
+    case obj_element::point: write_obj_line_(fs, "p", vertices); break;
+    case obj_element::object: write_obj_line_(fs, "o", name); break;
+    case obj_element::group: write_obj_line_(fs, "g", name); break;
+    case obj_element::usemtl: write_obj_line_(fs, "usemtl", name); break;
+    case obj_element::smoothing: write_obj_line_(fs, "s", name); break;
+    case obj_element::mtllib: write_obj_line_(fs, "mtllib", name); break;
+    case obj_element::objxlib: break;
   }
 }
-void write_mtl_command(
-    FILE* fs, mtl_command command, const mtl_material& material) {
+void write_mtl_element(
+    FILE* fs, mtl_element command, const mtl_material& material) {
   switch (command) {
-    case mtl_command::material: {
+    case mtl_element::material: {
       static auto def    = mtl_material{};
       auto write_obj_opt = [](FILE* fs, const char* name, const auto& val,
                                const auto& def) {
@@ -780,25 +780,25 @@ void write_mtl_command(
     } break;
   }
 }
-void write_objx_command(FILE* fs, objx_command command,
+void write_objx_element(FILE* fs, objx_element command,
     const objx_camera& camera, const objx_environment& environment,
     const objx_instance& instance, const objx_procedural& procedural) {
   switch (command) {
-    case objx_command::camera: {
+    case objx_element::camera: {
       write_obj_line_(fs, "c", camera.name, (int)camera.ortho, camera.width,
           camera.height, camera.lens, camera.focus, camera.aperture,
           camera.frame);
     } break;
-    case objx_command::environment: {
+    case objx_element::environment: {
       write_obj_line_(fs, "e", environment.name, environment.ke,
           environment.ke_txt.path != "" ? environment.ke_txt.path : "\"\" "s,
           environment.frame);
     } break;
-    case objx_command::instance: {
+    case objx_element::instance: {
       write_obj_line_(fs, "i", instance.name, instance.object,
           instance.material, instance.frame);
     } break;
-    case objx_command::procedural: {
+    case objx_element::procedural: {
       write_obj_line_(fs, "po", procedural.name, procedural.type,
           procedural.material, procedural.size, procedural.level,
           procedural.frame);
