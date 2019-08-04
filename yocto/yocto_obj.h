@@ -73,7 +73,7 @@ inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
 }
 
 // Obj texture information.
-struct obj_texture_info {
+struct mtl_texture_info {
   string path  = "";     // file path
   bool   clamp = false;  // clamp to edge
   float  scale = 1;      // scale for bump/displacement
@@ -81,13 +81,13 @@ struct obj_texture_info {
   // Properties not explicitly handled.
   unordered_map<string, vector<float>> props;
 
-  obj_texture_info() {}
-  obj_texture_info(const char* path) : path{path} {}
-  obj_texture_info(const string& path) : path{path} {}
+  mtl_texture_info() {}
+  mtl_texture_info(const char* path) : path{path} {}
+  mtl_texture_info(const string& path) : path{path} {}
 };
 
 // Obj material.
-struct obj_material {
+struct mtl_material {
   string name  = "";  // name
   int    illum = 0;   // MTL illum mode
 
@@ -103,19 +103,19 @@ struct obj_material {
   float op  = 1;          // opacity
 
   // textures
-  obj_texture_info ke_map   = "";  // emission texture
-  obj_texture_info ka_map   = "";  // ambient texture
-  obj_texture_info kd_map   = "";  // diffuse texture
-  obj_texture_info ks_map   = "";  // specular texture
-  obj_texture_info kr_map   = "";  // reflection texture
-  obj_texture_info kt_map   = "";  // transmission texture
-  obj_texture_info ns_map   = "";  // Phong exponent texture
-  obj_texture_info op_map   = "";  // opacity texture
-  obj_texture_info ior_map  = "";  // ior texture
-  obj_texture_info bump_map = "";  // bump map
-  obj_texture_info norm_map = "";  // normal map
-  obj_texture_info disp_map = "";  // displacement map
-  obj_texture_info occ_map  = "";  // occlusion map
+  mtl_texture_info ke_map   = "";  // emission texture
+  mtl_texture_info ka_map   = "";  // ambient texture
+  mtl_texture_info kd_map   = "";  // diffuse texture
+  mtl_texture_info ks_map   = "";  // specular texture
+  mtl_texture_info kr_map   = "";  // reflection texture
+  mtl_texture_info kt_map   = "";  // transmission texture
+  mtl_texture_info ns_map   = "";  // Phong exponent texture
+  mtl_texture_info op_map   = "";  // opacity texture
+  mtl_texture_info ior_map  = "";  // ior texture
+  mtl_texture_info bump_map = "";  // bump map
+  mtl_texture_info norm_map = "";  // normal map
+  mtl_texture_info disp_map = "";  // displacement map
+  mtl_texture_info occ_map  = "";  // occlusion map
 
   // pbr values
   float pr  = 0;  // roughness
@@ -125,11 +125,11 @@ struct obj_material {
   float pcr = 0;  // coat roughness
 
   // textures
-  obj_texture_info pr_map  = "";  // roughness texture
-  obj_texture_info pm_map  = "";  // metallic texture
-  obj_texture_info ps_map  = "";  // sheen texture
-  obj_texture_info pc_map  = "";  // coat texture
-  obj_texture_info pcr_map = "";  // coat roughness texture
+  mtl_texture_info pr_map  = "";  // roughness texture
+  mtl_texture_info pm_map  = "";  // metallic texture
+  mtl_texture_info ps_map  = "";  // sheen texture
+  mtl_texture_info pc_map  = "";  // coat texture
+  mtl_texture_info pcr_map = "";  // coat roughness texture
 
   // volume values
   vec3f vt = {0, 0, 0};  // volumetric transmission
@@ -140,14 +140,14 @@ struct obj_material {
   float vr = 0.01;       // volumetric scale
 
   // textures
-  obj_texture_info vs_map = "";  // scattering texture
+  mtl_texture_info vs_map = "";  // scattering texture
 
   // Properties not explicitly handled.
   unordered_map<string, vector<string>> props;
 };
 
 // Obj camera [extension].
-struct obj_camera {
+struct objx_camera {
   string  name     = "";            // name
   frame3f frame    = identity3x4f;  // transform
   bool    ortho    = false;         // orthographic
@@ -159,15 +159,15 @@ struct obj_camera {
 };
 
 // Obj environment [extension].
-struct obj_environment {
+struct objx_environment {
   string           name  = "";            // name
   frame3f          frame = identity3x4f;  // transform
   vec3f            ke    = zero3f;        // emission color
-  obj_texture_info ke_txt;                // emission texture
+  mtl_texture_info ke_txt;                // emission texture
 };
 
 // Obj procedural object [extension].
-struct obj_procedural {
+struct objx_procedural {
   string  name     = "";            // name
   frame3f frame    = identity3x4f;  // transform
   string  type     = "";            // type
@@ -177,7 +177,7 @@ struct obj_procedural {
 };
 
 // Obj instance [extension]
-struct obj_instance {
+struct objx_instance {
   string  name     = "";            // name
   frame3f frame    = identity3x4f;  // transform
   string  object   = "";            // object name
@@ -197,11 +197,11 @@ struct obj_callbacks {
   virtual void usemtl(const string&) {}
   virtual void smoothing(const string&) {}
   virtual void mtllib(const string&) {}
-  virtual void material(const obj_material&) {}
-  virtual void camera(const obj_camera&) {}
-  virtual void environmnet(const obj_environment&) {}
-  virtual void instance(const obj_instance&) {}
-  virtual void procedural(const obj_procedural&) {}
+  virtual void material(const mtl_material&) {}
+  virtual void camera(const objx_camera&) {}
+  virtual void environmnet(const objx_environment&) {}
+  virtual void instance(const objx_instance&) {}
+  virtual void procedural(const objx_procedural&) {}
 };
 
 // Load obj scene
@@ -238,10 +238,10 @@ void write_obj_comment(FILE* fs, const string& comment);
 void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
     const string& name, const vector<obj_vertex>& vertices);
 void write_mtl_command(FILE* fs, mtl_command command, 
-  const obj_material& material);
+  const mtl_material& material);
 void write_objx_command(FILE* fs, objx_command command, 
-  const obj_camera& camera, const obj_environment& environment, 
-  const obj_instance& instance, const obj_procedural& procedural);
+  const objx_camera& camera, const objx_environment& environment, 
+  const objx_instance& instance, const objx_procedural& procedural);
 
 }  // namespace yocto
 

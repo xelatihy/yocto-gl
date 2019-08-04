@@ -184,9 +184,9 @@ static inline void parse_obj_value(string_view& str, obj_vertex& value) {
 }
 
 // Input for OBJ textures
-static inline void parse_obj_value(string_view& str, obj_texture_info& info) {
+static inline void parse_obj_value(string_view& str, mtl_texture_info& info) {
   // initialize
-  info = obj_texture_info();
+  info = mtl_texture_info();
 
   // get tokens
   auto tokens = vector<string>();
@@ -217,7 +217,7 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
   auto fs  = fs_.fs;
 
   // currently parsed material
-  auto material = obj_material();
+  auto material = mtl_material{};
   auto first    = true;
 
   // read the file line by line
@@ -238,7 +238,7 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
     if (cmd == "newmtl") {
       if (!first) cb.material(material);
       first    = false;
-      material = obj_material();
+      material = mtl_material{};
       parse_obj_value(line, material.name);
     } else if (cmd == "illum") {
       parse_obj_value(line, material.illum);
@@ -347,7 +347,7 @@ void load_objx(const string& filename, obj_callbacks& cb) {
 
     // possible token values
     if (cmd == "c") {
-      auto camera = obj_camera();
+      auto camera = objx_camera();
       parse_obj_value(line, camera.name);
       parse_obj_value(line, camera.ortho);
       parse_obj_value(line, camera.width);
@@ -358,7 +358,7 @@ void load_objx(const string& filename, obj_callbacks& cb) {
       parse_obj_value(line, camera.frame);
       cb.camera(camera);
     } else if (cmd == "e") {
-      auto environment = obj_environment();
+      auto environment = objx_environment();
       parse_obj_value(line, environment.name);
       parse_obj_value(line, environment.ke);
       parse_obj_value(line, environment.ke_txt.path);
@@ -366,14 +366,14 @@ void load_objx(const string& filename, obj_callbacks& cb) {
       if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
       cb.environmnet(environment);
     } else if (cmd == "i") {
-      auto instance = obj_instance();
+      auto instance = objx_instance();
       parse_obj_value(line, instance.name);
       parse_obj_value(line, instance.object);
       parse_obj_value(line, instance.material);
       parse_obj_value(line, instance.frame);
       cb.instance(instance);
     } else if (cmd == "po") {
-      auto procedural = obj_procedural();
+      auto procedural = objx_procedural();
       parse_obj_value(line, procedural.name);
       parse_obj_value(line, procedural.type);
       parse_obj_value(line, procedural.material);
@@ -634,15 +634,15 @@ void write_obj_smoothing(FILE* fs, const string& name) {
 void write_obj_mtllib(FILE* fs, const string& name) {
   write_obj_line_(fs, "mtllib", name);
 }
-void write_mtl_material(FILE* fs, const obj_material& material) {
-  static auto def           = obj_material{};
+void write_mtl_material(FILE* fs, const mtl_material& material) {
+  static auto def           = mtl_material{};
   auto        write_obj_opt = [](FILE* fs, const char* name, const auto& val,
                            const auto& def) {
     if (val == def) return;
     write_obj_line_(fs, name, val);
   };
   auto write_obj_txt = [](FILE* fs, const char* name,
-                           const obj_texture_info& info) {
+                           const mtl_texture_info& info) {
     if (info.path.empty()) return;
     write_obj_line_(fs, name, info.path);
   };
@@ -687,20 +687,20 @@ void write_mtl_material(FILE* fs, const obj_material& material) {
   write_obj_txt(fs, "  Vs_map", material.vs_map);
   write_obj_text(fs, "\n");
 }
-void write_objx_camera(FILE* fs, const obj_camera& camera) {
+void write_objx_camera(FILE* fs, const objx_camera& camera) {
   write_obj_line_(fs, "c", camera.name, (int)camera.ortho, camera.width,
       camera.height, camera.lens, camera.focus, camera.aperture, camera.frame);
 }
-void write_objx_environmnet(FILE* fs, const obj_environment& environment) {
+void write_objx_environmnet(FILE* fs, const objx_environment& environment) {
   write_obj_line_(fs, "e", environment.name, environment.ke,
       environment.ke_txt.path != "" ? environment.ke_txt.path : "\"\" "s,
       environment.frame);
 }
-void write_objx_instance(FILE* fs, const obj_instance& instance) {
+void write_objx_instance(FILE* fs, const objx_instance& instance) {
   write_obj_line_(fs, "i", instance.name, instance.object, instance.material,
       instance.frame);
 }
-void write_objx_procedural(FILE* fs, const obj_procedural& procedural) {
+void write_objx_procedural(FILE* fs, const objx_procedural& procedural) {
   write_obj_line_(fs, "po", procedural.name, procedural.type,
       procedural.material, procedural.size, procedural.level, procedural.frame);
 }
@@ -723,17 +723,17 @@ void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
   }
 }
 void write_mtl_command(
-    FILE* fs, mtl_command command, const obj_material& material) {
+    FILE* fs, mtl_command command, const mtl_material& material) {
   switch (command) {
     case mtl_command::material: {
-      static auto def    = obj_material{};
+      static auto def    = mtl_material{};
       auto write_obj_opt = [](FILE* fs, const char* name, const auto& val,
                                const auto& def) {
         if (val == def) return;
         write_obj_line_(fs, name, val);
       };
       auto write_obj_txt = [](FILE* fs, const char* name,
-                               const obj_texture_info& info) {
+                               const mtl_texture_info& info) {
         if (info.path.empty()) return;
         write_obj_line_(fs, name, info.path);
       };
@@ -781,8 +781,8 @@ void write_mtl_command(
   }
 }
 void write_objx_command(FILE* fs, objx_command command,
-    const obj_camera& camera, const obj_environment& environment,
-    const obj_instance& instance, const obj_procedural& procedural) {
+    const objx_camera& camera, const objx_environment& environment,
+    const objx_instance& instance, const objx_procedural& procedural) {
   switch (command) {
     case objx_command::camera: {
       write_obj_line_(fs, "c", camera.name, (int)camera.ortho, camera.width,

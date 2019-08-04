@@ -1372,7 +1372,7 @@ struct load_obj_scene_cb : obj_callbacks {
     texcoord_map.clear();
   }
   // Parse texture params and name
-  int add_texture(const obj_texture_info& info, bool force_linear) {
+  int add_texture(const mtl_texture_info& info, bool force_linear) {
     if (info.path == "") return -1;
     if (tmap.find(info.path) != tmap.end()) {
       return tmap.at(info.path);
@@ -1390,7 +1390,7 @@ struct load_obj_scene_cb : obj_callbacks {
     return index;
   }
   // Parse texture params and name
-  int add_voltexture(const obj_texture_info& info, bool srgb) {
+  int add_voltexture(const mtl_texture_info& info, bool srgb) {
     if (info.path == "") return -1;
     if (vmap.find(info.path) != vmap.end()) {
       return vmap.at(info.path);
@@ -1558,7 +1558,7 @@ struct load_obj_scene_cb : obj_callbacks {
     mname = name;
     add_shape();
   }
-  void material(const obj_material& omat) override {
+  void material(const mtl_material& omat) override {
     auto material             = yocto_material{};
     material.uri              = omat.name;
     material.emission         = omat.ke;
@@ -1586,7 +1586,7 @@ struct load_obj_scene_cb : obj_callbacks {
     scene.materials.push_back(material);
     mmap[material.uri] = (int)scene.materials.size() - 1;
   }
-  void camera(const obj_camera& ocam) override {
+  void camera(const objx_camera& ocam) override {
     auto camera         = yocto_camera();
     camera.uri          = ocam.name;
     camera.frame        = ocam.frame;
@@ -1597,7 +1597,7 @@ struct load_obj_scene_cb : obj_callbacks {
     camera.aperture     = ocam.aperture;
     scene.cameras.push_back(camera);
   }
-  void environmnet(const obj_environment& oenv) override {
+  void environmnet(const objx_environment& oenv) override {
     auto environment         = yocto_environment();
     environment.uri          = oenv.name;
     environment.frame        = oenv.frame;
@@ -1605,7 +1605,7 @@ struct load_obj_scene_cb : obj_callbacks {
     environment.emission_tex = add_texture(oenv.ke_txt, true);
     scene.environments.push_back(environment);
   }
-  void instance(const obj_instance& oist) override {
+  void instance(const objx_instance& oist) override {
     if (first_instance) {
       scene.instances.clear();
       first_instance = false;
@@ -1619,7 +1619,7 @@ struct load_obj_scene_cb : obj_callbacks {
       scene.instances.push_back(instance);
     }
   }
-  void procedural(const obj_procedural& oproc) override {
+  void procedural(const objx_procedural& oproc) override {
     auto shape = yocto_shape();
     shape.uri  = oproc.name;
     if (oproc.type == "floor") {
@@ -1831,7 +1831,7 @@ static void save_mtl(const string& filename, const yocto_scene& scene) {
 
   // materials
   for (auto& material : scene.materials) {
-    auto omat  = obj_material{};
+    auto omat  = mtl_material{};
     omat.name  = fs::path(material.uri).stem().string();
     omat.illum = 2;
     omat.ke    = material.emission;
@@ -1877,7 +1877,7 @@ static void save_objx(
 
   // cameras
   for (auto& camera : scene.cameras) {
-    auto ocam     = obj_camera{};
+    auto ocam     = objx_camera{};
     ocam.name     = fs::path(camera.uri).stem().string();
     ocam.ortho    = camera.orthographic;
     ocam.width    = camera.film.x;
@@ -1891,7 +1891,7 @@ static void save_objx(
 
   // environments
   for (auto& environment : scene.environments) {
-    auto oenv        = obj_environment{};
+    auto oenv        = objx_environment{};
     oenv.name        = fs::path(environment.uri).stem().string();
     oenv.ke          = environment.emission;
     oenv.ke_txt.path = environment.emission_tex >= 0
@@ -1904,7 +1904,7 @@ static void save_objx(
   // instances
   if (preserve_instances) {
     for (auto& instance : scene.instances) {
-      auto oist   = obj_instance{};
+      auto oist   = objx_instance{};
       oist.name   = fs::path(instance.uri).stem().string();
       oist.object = fs::path(scene.shapes[instance.shape].uri).stem().string();
       oist.material =
