@@ -3783,6 +3783,10 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     return obj_vertex{(i + 1) * mask.position, (i + 1) * mask.texcoord,
         (i + 1) * mask.normal};
   };
+  auto fvvert = [mask](int pi, int ti, int ni) {
+    return obj_vertex{(pi + 1) * mask.position, (ti + 1) * mask.texcoord,
+        (ni + 1) * mask.normal};
+  };
 
   elems.resize(1);
   for (auto& p : points) {
@@ -3815,14 +3819,6 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     }
     write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
   }
-
-  auto fvmask = obj_vertex{
-      1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
-  auto fvvert = [fvmask](int pi, int ti, int ni) {
-    return obj_vertex{(pi + 1) * fvmask.position, (ti + 1) * fvmask.texcoord,
-        (ni + 1) * fvmask.normal};
-  };
-
   // auto last_material_id = -1;
   elems.resize(4);
   for (auto i = 0; i < quadspos.size(); i++) {

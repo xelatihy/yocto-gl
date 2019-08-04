@@ -706,14 +706,14 @@ void write_objx_procedural(FILE* fs, const obj_procedural& procedural) {
 }
 
 void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
-    const string& name, const vector<obj_vertex>& elements) {
+    const string& name, const vector<obj_vertex>& vertices) {
   switch (command) {
     case obj_command::vertex: write_obj_line_(fs, "v", value); break;
     case obj_command::normal: write_obj_line_(fs, "vn", value); break;
     case obj_command::texcoord: write_obj_line_(fs, "vt", vec2f{value.x, value.y}); break;
-    case obj_command::face: write_obj_line_(fs, "f", elements); break;
-    case obj_command::line: write_obj_line_(fs, "l", elements); break;
-    case obj_command::point: write_obj_line_(fs, "p", elements); break;
+    case obj_command::face: write_obj_line_(fs, "f", vertices); break;
+    case obj_command::line: write_obj_line_(fs, "l", vertices); break;
+    case obj_command::point: write_obj_line_(fs, "p", vertices); break;
     case obj_command::object: write_obj_line_(fs, "o", name); break;
     case obj_command::group: write_obj_line_(fs, "g", name); break;
     case obj_command::usemtl: write_obj_line_(fs, "usemtl", name); break;

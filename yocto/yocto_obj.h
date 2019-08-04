@@ -212,7 +212,7 @@ void load_obj(const string& filename, obj_callbacks& cb,
 enum struct obj_command {
   // clang-format off
   vertex, normal, texcoord,         // data in value
-  face, line, point,                // data in elements
+  face, line, point,                // data in vertices
   object, group, usemtl, smoothing, // data in name
   mtllib, objxlib,                  // data in name
   // clang-format on
@@ -236,36 +236,12 @@ enum struct objx_command {
 // Write obj elements
 void write_obj_comment(FILE* fs, const string& comment);
 void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
-    const string& name, const vector<obj_vertex>& elements);
+    const string& name, const vector<obj_vertex>& vertices);
 void write_mtl_command(FILE* fs, mtl_command command, 
   const obj_material& material);
 void write_objx_command(FILE* fs, objx_command command, 
   const obj_camera& camera, const obj_environment& environment, 
   const obj_instance& instance, const obj_procedural& procedural);
-
-// Write obj elements
-void write_obj_vertex(FILE* fs, const vec3f& p);
-void write_obj_normal(FILE* fs, const vec3f& n);
-void write_obj_texcoord(FILE* fs, const vec2f& t);
-void write_obj_face(FILE* fs, const vector<obj_vertex>& verts);
-void write_obj_face(FILE* fs, const obj_vertex& vert1, const obj_vertex& vert2,
-    const obj_vertex& vert3);
-void write_obj_face(FILE* fs, const obj_vertex& vert1, const obj_vertex& vert2,
-    const obj_vertex& vert3, const obj_vertex& vert4);
-void write_obj_line(FILE* fs, const vector<obj_vertex>& verts);
-void write_obj_line(FILE* fs, const obj_vertex& vert1, const obj_vertex& vert2);
-void write_obj_point(FILE* fs, const vector<obj_vertex>& verts);
-void write_obj_point(FILE* fs, const obj_vertex& vert);
-void write_obj_object(FILE* fs, const string& name);
-void write_obj_group(FILE* fs, const string& name);
-void write_obj_usemtl(FILE* fs, const string& name);
-void write_obj_smoothing(FILE* fs, const string& name);
-void write_obj_mtllib(FILE* fs, const string& name);
-void write_mtl_material(FILE* fs, const obj_material& material);
-void write_objx_camera(FILE* fs, const obj_camera& camera);
-void write_objx_environmnet(FILE* fs, const obj_environment& environment);
-void write_objx_instance(FILE* fs, const obj_instance& instamce);
-void write_obj_procedural(FILE* fs, const obj_procedural& procedural);
 
 }  // namespace yocto
 

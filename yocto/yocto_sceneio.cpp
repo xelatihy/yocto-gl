@@ -1713,8 +1713,8 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 
   // material library
   if (!scene.materials.empty())
-    write_obj_mtllib(
-        fs, fs::path(filename).replace_extension(".mtl").filename());
+    write_obj_command(fs, obj_command::mtllib, zero3f,
+        fs::path(filename).replace_extension(".mtl").filename(), {});
 
   // shapes
   auto offset    = obj_vertex{0, 0, 0};
@@ -1727,24 +1727,31 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   }
   for (auto& instance : preserve_instances ? instances : scene.instances) {
     auto& shape = scene.shapes[instance.shape];
-    write_obj_object(fs, fs::path(instance.uri).stem().string());
+    write_obj_command(fs, obj_command::object, zero3f,
+        fs::path(instance.uri).stem().string(), {});
     if (instance.material >= 0)
-      write_obj_usemtl(
-          fs, fs::path(scene.materials[instance.material].uri).stem().string());
+      write_obj_command(fs, obj_command::usemtl, zero3f,
+          fs::path(scene.materials[instance.material].uri).stem().string(), {});
     if (instance.frame == identity3x4f) {
-      for (auto& p : shape.positions) write_obj_vertex(fs, p);
-      for (auto& n : shape.normals) write_obj_normal(fs, n);
+      for (auto& p : shape.positions)
+        write_obj_command(fs, obj_command::vertex, p, ""s, {});
+      for (auto& n : shape.normals)
+        write_obj_command(fs, obj_command::normal, n, ""s, {});
       for (auto& t : shape.texcoords)
-        write_obj_texcoord(fs, vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+        write_obj_command(fs, obj_command::texcoord,
+            vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, ""s, {});
     } else {
       for (auto& p : shape.positions) {
-        write_obj_vertex(fs, transform_point(instance.frame, p));
+        write_obj_command(fs, obj_command::vertex,
+            transform_point(instance.frame, p), ""s, {});
       }
       for (auto& n : shape.normals) {
-        write_obj_normal(fs, transform_direction(instance.frame, n));
+        write_obj_command(fs, obj_command::normal,
+            transform_direction(instance.frame, n), ""s, {});
       }
       for (auto& t : shape.texcoords)
-        write_obj_texcoord(fs, (flip_texcoord) ? vec2f{t.x, 1 - t.y} : t);
+        write_obj_command(fs, obj_command::texcoord,
+            vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, ""s, {});
     }
     auto mask = obj_vertex{
         1, shape.texcoords.empty() ? 0 : 1, shape.normals.empty() ? 0 : 1};
@@ -1753,77 +1760,60 @@ static void save_obj(const string& filename, const yocto_scene& scene,
           (i + offset.texcoord + 1) * mask.texcoord,
           (i + offset.normal + 1) * mask.normal};
     };
+    auto fvvert = [mask, offset](int pi, int ti, int ni) {
+      return obj_vertex{(pi + offset.position + 1) * mask.position,
+          (ti + offset.texcoord + 1) * mask.texcoord,
+          (ni + offset.normal + 1) * mask.normal};
+    };
+    auto elems = vector<obj_vertex>{};
+    elems.resize(1);
     for (auto& p : shape.points) {
-      write_obj_point(fs, vert(p));
+      elems[0] = vert(p);
+      write_obj_command(fs, obj_command::point, zero3f, ""s, elems);
     }
+    elems.resize(2);
     for (auto& l : shape.lines) {
-      write_obj_line(fs, vert(l.x), vert(l.y));
+      elems[0] = vert(l.x);
+      elems[1] = vert(l.y);
+      write_obj_command(fs, obj_command::line, zero3f, ""s, elems);
     }
+    elems.resize(3);
     for (auto& t : shape.triangles) {
-      write_obj_face(fs, vert(t.x), vert(t.y), vert(t.z));
+      elems[0] = vert(t.x);
+      elems[1] = vert(t.y);
+      elems[2] = vert(t.z);
+      write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
     }
+    elems.resize(4);
     for (auto& q : shape.quads) {
+      elems[0] = vert(q.x);
+      elems[1] = vert(q.y);
+      elems[2] = vert(q.z);
       if (q.z == q.w) {
-        write_obj_face(fs, vert(q.x), vert(q.y), vert(q.z));
+        elems.resize(3);
       } else {
-        write_obj_face(fs, vert(q.x), vert(q.y), vert(q.z), vert(q.w));
+        elems.resize(4);
+        elems[3] = vert(q.w);
       }
+      write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
     }
+    elems.resize(4);
     for (auto i = 0; i < shape.quadspos.size(); i++) {
-      if (!shape.texcoords.empty() && shape.normals.empty()) {
-        auto vert = [offset](int ip, int it) {
-          return obj_vertex{
-              ip + offset.position + 1, it + offset.texcoord + 1, 0};
-        };
-        auto qp = shape.quadspos[i];
-        auto qt = shape.quadstexcoord[i];
-        if (qp.z == qp.w) {
-          write_obj_face(
-              fs, vert(qp.x, qt.x), vert(qp.y, qt.y), vert(qp.z, qt.z));
-        } else {
-          write_obj_face(fs, vert(qp.x, qt.x), vert(qp.y, qt.y),
-              vert(qp.z, qt.z), vert(qp.w, qt.w));
-        }
-      } else if (!shape.texcoords.empty() && !shape.normals.empty()) {
-        auto vert = [offset](int ip, int it, int in) {
-          return obj_vertex{ip + offset.position + 1, it + offset.texcoord + 1,
-              in + offset.normal + 1};
-        };
-        auto qp = shape.quadspos[i];
-        auto qt = shape.quadstexcoord[i];
-        auto qn = shape.quadsnorm[i];
-        if (qp.z == qp.w) {
-          write_obj_face(fs, vert(qp.x, qt.x, qn.x), vert(qp.y, qt.y, qn.y),
-              vert(qp.z, qt.z, qn.z));
-        } else {
-          write_obj_face(fs, vert(qp.x, qt.x, qn.x), vert(qp.y, qt.y, qn.y),
-              vert(qp.z, qt.z, qn.z), vert(qp.w, qt.w, qn.w));
-        }
-      } else if (!shape.normals.empty()) {
-        auto vert = [offset](int ip, int in) {
-          return obj_vertex{
-              ip + offset.position + 1, 0, in + offset.normal + 1};
-        };
-        auto qp = shape.quadspos[i];
-        auto qn = shape.quadsnorm[i];
-        if (qp.z == qp.w) {
-          write_obj_face(
-              fs, vert(qp.x, qn.x), vert(qp.y, qn.y), vert(qp.z, qn.z));
-        } else {
-          write_obj_face(fs, vert(qp.x, qn.x), vert(qp.y, qn.y),
-              vert(qp.z, qn.z), vert(qp.w, qn.w));
-        }
+      auto qp = shape.quadspos.at(i);
+      auto qt = !shape.quadstexcoord.empty() ? shape.quadstexcoord.at(i)
+                                             : vec4i{-1, -1, -1, -1};
+      auto qn = !shape.quadsnorm.empty() ? shape.quadsnorm.at(i)
+                                         : vec4i{-1, -1, -1, -1};
+      elems[0] = fvvert(qp.x, qt.x, qn.x);
+      elems[1] = fvvert(qp.y, qt.y, qn.y);
+      elems[2] = fvvert(qp.z, qt.z, qn.z);
+      if (qp.z == qp.w) {
+        elems.resize(3);
       } else {
-        auto vert = [offset](int ip) {
-          return obj_vertex{ip + offset.position + 1, 0, 0};
-        };
-        auto q = shape.quadspos[i];
-        if (q.z == q.w) {
-          write_obj_face(fs, vert(q.x), vert(q.y), vert(q.z));
-        } else {
-          write_obj_face(fs, vert(q.x), vert(q.y), vert(q.z), vert(q.w));
-        }
+        elems.resize(4);
+        elems[3] = fvvert(qp.w, qt.w, qn.w);
       }
+      write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
     }
     offset.position += shape.positions.size();
     offset.texcoord += shape.texcoords.size();
@@ -1831,8 +1821,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   }
 }
 
-static void save_mtl(
-    const string& filename, const yocto_scene& scene) {
+static void save_mtl(const string& filename, const yocto_scene& scene) {
   // open writer
   auto fs_ = open_output_file(filename);
   auto fs  = fs_.fs;
@@ -1873,7 +1862,7 @@ static void save_mtl(
       omat.vg = material.volanisotropy;
       omat.vr = material.volscale;
     }
-    write_mtl_material(fs, omat);
+    write_mtl_command(fs, mtl_command::material, omat);
   }
 }
 
@@ -1897,7 +1886,7 @@ static void save_objx(
     ocam.focus    = camera.focus;
     ocam.aperture = camera.aperture;
     ocam.frame    = camera.frame;
-    write_objx_camera(fs, ocam);
+    write_objx_command(fs, objx_command::camera, ocam, {}, {}, {});
   }
 
   // environments
@@ -1909,7 +1898,7 @@ static void save_objx(
                            ? scene.textures[environment.emission_tex].uri
                            : ""s;
     oenv.frame = environment.frame;
-    write_objx_environmnet(fs, oenv);
+    write_objx_command(fs, objx_command::environment, {}, oenv, {}, {});
   }
 
   // instances
@@ -1921,7 +1910,7 @@ static void save_objx(
       oist.material =
           fs::path(scene.materials[instance.material].uri).stem().string();
       oist.frame = instance.frame;
-      write_objx_instance(fs, oist);
+      write_objx_command(fs, objx_command::instance, {}, {}, oist, {});
     }
   }
 }
@@ -1934,8 +1923,8 @@ static void save_obj_scene(const string& filename, const yocto_scene& scene,
       save_mtl(fs::path(filename).replace_extension(".mtl"), scene);
     if (!scene.cameras.empty() || !scene.cameras.empty() ||
         (!scene.instances.empty() && params.objinstances))
-      save_objx(fs::path(filename).replace_extension(".objx"), scene, 
-      params.objinstances);
+      save_objx(fs::path(filename).replace_extension(".objx"), scene,
+          params.objinstances);
     auto dirname = fs::path(filename).parent_path();
     save_textures(scene, dirname, params);
   } catch (const std::exception& e) {
