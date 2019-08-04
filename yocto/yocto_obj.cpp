@@ -710,7 +710,7 @@ void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
   switch (command) {
     case obj_command::vertex: write_obj_line_(fs, "v", value); break;
     case obj_command::normal: write_obj_line_(fs, "vn", value); break;
-    case obj_command::texcoord: write_obj_line_(fs, "vt", value); break;
+    case obj_command::texcoord: write_obj_line_(fs, "vt", vec2f{value.x, value.y}); break;
     case obj_command::face: write_obj_line_(fs, "f", elements); break;
     case obj_command::line: write_obj_line_(fs, "l", elements); break;
     case obj_command::point: write_obj_line_(fs, "p", elements); break;
