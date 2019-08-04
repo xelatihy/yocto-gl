@@ -184,9 +184,9 @@ static inline void parse_obj_value(string_view& str, obj_vertex& value) {
 }
 
 // Input for OBJ textures
-static inline void parse_obj_value(string_view& str, obj_texture_info& info) {
+static inline void parse_obj_value(string_view& str, mtl_texture_info& info) {
   // initialize
-  info = obj_texture_info();
+  info = mtl_texture_info();
 
   // get tokens
   auto tokens = vector<string>();
@@ -217,7 +217,7 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
   auto fs  = fs_.fs;
 
   // currently parsed material
-  auto material = obj_material();
+  auto material = mtl_material{};
   auto first    = true;
 
   // read the file line by line
@@ -229,7 +229,7 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
     skip_obj_whitespace(line);
     if (line.empty()) continue;
 
-    // get command
+    // get element
     auto cmd = ""s;
     parse_obj_value(line, cmd);
     if (cmd == "") continue;
@@ -238,7 +238,7 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
     if (cmd == "newmtl") {
       if (!first) cb.material(material);
       first    = false;
-      material = obj_material();
+      material = mtl_material{};
       parse_obj_value(line, material.name);
     } else if (cmd == "illum") {
       parse_obj_value(line, material.illum);
@@ -340,14 +340,14 @@ void load_objx(const string& filename, obj_callbacks& cb) {
     skip_obj_whitespace(line);
     if (line.empty()) continue;
 
-    // get command
+    // get element
     auto cmd = ""s;
     parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "c") {
-      auto camera = obj_camera();
+      auto camera = objx_camera();
       parse_obj_value(line, camera.name);
       parse_obj_value(line, camera.ortho);
       parse_obj_value(line, camera.width);
@@ -358,7 +358,7 @@ void load_objx(const string& filename, obj_callbacks& cb) {
       parse_obj_value(line, camera.frame);
       cb.camera(camera);
     } else if (cmd == "e") {
-      auto environment = obj_environment();
+      auto environment = objx_environment();
       parse_obj_value(line, environment.name);
       parse_obj_value(line, environment.ke);
       parse_obj_value(line, environment.ke_txt.path);
@@ -366,14 +366,14 @@ void load_objx(const string& filename, obj_callbacks& cb) {
       if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
       cb.environmnet(environment);
     } else if (cmd == "i") {
-      auto instance = obj_instance();
+      auto instance = objx_instance();
       parse_obj_value(line, instance.name);
       parse_obj_value(line, instance.object);
       parse_obj_value(line, instance.material);
       parse_obj_value(line, instance.frame);
       cb.instance(instance);
     } else if (cmd == "po") {
-      auto procedural = obj_procedural();
+      auto procedural = objx_procedural();
       parse_obj_value(line, procedural.name);
       parse_obj_value(line, procedural.type);
       parse_obj_value(line, procedural.material);
@@ -410,7 +410,7 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
     skip_obj_whitespace(line);
     if (line.empty()) continue;
 
-    // get command
+    // get element
     auto cmd = ""s;
     parse_obj_value(line, cmd);
     if (cmd == "") continue;
@@ -491,32 +491,273 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
   }
 }
 
-// Cleanup
-obj_ostreams::~obj_ostreams() {
-  if (obj) fclose(obj);
-  if (mtl) fclose(mtl);
-  if (obx) fclose(obx);
+// Read obj
+bool read_obj_element(FILE* fs, obj_element& element, vec3f& value,
+    string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size) {
+  // read the file line by line
+  char buffer[4096];
+  while (read_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
+
+    // get element
+    auto cmd = ""s;
+    parse_obj_value(line, cmd);
+    if (cmd == "") continue;
+
+    // possible token values
+    if (cmd == "v") {
+      element = obj_element::vertex;
+      parse_obj_value(line, value);
+      vert_size.position += 1;
+      return true;
+    } else if (cmd == "vn") {
+      element = obj_element::normal;
+      parse_obj_value(line, value);
+      vert_size.normal += 1;
+      return true;
+    } else if (cmd == "vt") {
+      element = obj_element::texcoord;
+      parse_obj_value(line, (vec2f&)value);
+      vert_size.texcoord += 1;
+      return true;
+    } else if (cmd == "f" || cmd == "l" || cmd == "p") {
+      vertices.clear();
+      skip_obj_whitespace(line);
+      while (!line.empty()) {
+        auto vert = obj_vertex{};
+        parse_obj_value(line, vert);
+        if (!vert.position) break;
+        if (vert.position < 0)
+          vert.position = vert_size.position + vert.position + 1;
+        if (vert.texcoord < 0)
+          vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
+        if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
+        vertices.push_back(vert);
+        skip_obj_whitespace(line);
+      }
+      if (cmd == "f") element = obj_element::face;
+      if (cmd == "l") element = obj_element::line;
+      if (cmd == "p") element = obj_element::point;
+      return true;
+    } else if (cmd == "o") {
+      element = obj_element::object;
+      parse_obj_value_or_empty(line, name);
+      return true;
+    } else if (cmd == "usemtl") {
+      element = obj_element::usemtl;
+      parse_obj_value_or_empty(line, name);
+      return true;
+    } else if (cmd == "g") {
+      element = obj_element::group;
+      parse_obj_value_or_empty(line, name);
+      return true;
+    } else if (cmd == "s") {
+      element = obj_element::smoothing;
+      parse_obj_value_or_empty(line, name);
+      return true;
+    } else if (cmd == "mtllib") {
+      element = obj_element::mtllib;
+      parse_obj_value(line, name);
+      return true;
+    } else {
+      // unused
+    }
+  }
+  return false;
 }
 
-// Open/close obj write stream
-void init_obj_ostreams(obj_ostreams& fs, const string& filename, bool materials,
-    bool extensions, const string& comment) {
-  auto obj_filename = filename;
-  auto mtl_filename = fs::path(filename).replace_extension(".mtl").string();
-  auto obx_filename = fs::path(filename).replace_extension(".objx").string();
-  auto mtlname =
-      fs::path(filename).filename().replace_extension(".mtl").string();
-  fs.obj = fopen(obj_filename.c_str(), "wt");
-  fs.mtl = materials ? fopen(mtl_filename.c_str(), "wt") : nullptr;
-  fs.obx = extensions ? fopen(obx_filename.c_str(), "wt") : nullptr;
-  if (!fs.obj) throw std::runtime_error{"cannot open file " + filename};
-  if (!fs.mtl && materials)
-    throw std::runtime_error{"cannot open file " + filename};
-  if (!fs.obx && extensions)
-    throw std::runtime_error{"cannot open file " + filename};
-  if (!comment.empty())
-    write_obj_comment(fs, comment, true, materials, extensions, true);
-  if (materials) write_obj_mtllib(fs, mtlname);
+// Read mtl
+bool read_mtl_element(
+    FILE* fs, mtl_element& element, mtl_material& material, bool fliptr) {
+  // currently parsed material
+  material   = mtl_material{};
+  auto found = false;
+
+  // read the file line by line
+  auto fpos = ftell(fs);
+  char buffer[4096];
+  while (read_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
+
+    // get element
+    auto cmd = ""s;
+    parse_obj_value(line, cmd);
+    if (cmd == "") continue;
+
+    // possible token values
+    if (cmd == "newmtl") {
+      if (found) {
+        fseek(fs, fpos, SEEK_SET);
+        element = mtl_element::material;
+        return true;
+      }
+      found = true;
+      parse_obj_value(line, material.name);
+    } else if (cmd == "illum") {
+      parse_obj_value(line, material.illum);
+    } else if (cmd == "Ke") {
+      parse_obj_value(line, material.ke);
+    } else if (cmd == "Kd") {
+      parse_obj_value(line, material.kd);
+    } else if (cmd == "Ks") {
+      parse_obj_value(line, material.ks);
+    } else if (cmd == "Kt") {
+      parse_obj_value(line, material.kt);
+    } else if (cmd == "Tf") {
+      material.kt = {-1, -1, -1};
+      parse_obj_value(line, material.kt);
+      if (material.kt.y < 0)
+        material.kt = {material.kt.x, material.kt.x, material.kt.x};
+      if (fliptr) material.kt = vec3f{1, 1, 1} - material.kt;
+    } else if (cmd == "Tr") {
+      parse_obj_value(line, material.op);
+      if (fliptr) material.op = 1 - material.op;
+    } else if (cmd == "Ns") {
+      parse_obj_value(line, material.ns);
+      material.pr = pow(2 / (material.ns + 2), 1 / 4.0f);
+      if (material.pr < 0.01f) material.pr = 0;
+      if (material.pr > 0.99f) material.pr = 1;
+    } else if (cmd == "d") {
+      parse_obj_value(line, material.op);
+    } else if (cmd == "map_Ke") {
+      parse_obj_value(line, material.ke_map);
+    } else if (cmd == "map_Kd") {
+      parse_obj_value(line, material.kd_map);
+    } else if (cmd == "map_Ks") {
+      parse_obj_value(line, material.ks_map);
+    } else if (cmd == "map_Tr") {
+      parse_obj_value(line, material.kt_map);
+    } else if (cmd == "map_d" || cmd == "map_Tr") {
+      parse_obj_value(line, material.op_map);
+    } else if (cmd == "map_bump" || cmd == "bump") {
+      parse_obj_value(line, material.bump_map);
+    } else if (cmd == "map_occ" || cmd == "occ") {
+      parse_obj_value(line, material.occ_map);
+    } else if (cmd == "map_disp" || cmd == "disp") {
+      parse_obj_value(line, material.disp_map);
+    } else if (cmd == "map_norm" || cmd == "norm") {
+      parse_obj_value(line, material.norm_map);
+    } else if (cmd == "Pm") {
+      parse_obj_value(line, material.pm);
+    } else if (cmd == "Pr") {
+      parse_obj_value(line, material.pr);
+    } else if (cmd == "Ps") {
+      parse_obj_value(line, material.ps);
+    } else if (cmd == "Pc") {
+      parse_obj_value(line, material.pc);
+    } else if (cmd == "Pcr") {
+      parse_obj_value(line, material.pcr);
+    } else if (cmd == "map_Pm") {
+      parse_obj_value(line, material.pm_map);
+    } else if (cmd == "map_Pr") {
+      parse_obj_value(line, material.pr_map);
+    } else if (cmd == "map_Ps") {
+      parse_obj_value(line, material.ps_map);
+    } else if (cmd == "map_Pc") {
+      parse_obj_value(line, material.pc_map);
+    } else if (cmd == "map_Pcr") {
+      parse_obj_value(line, material.pcr_map);
+    } else if (cmd == "Vt") {
+      parse_obj_value(line, material.vt);
+    } else if (cmd == "Vp") {
+      parse_obj_value(line, material.vp);
+    } else if (cmd == "Ve") {
+      parse_obj_value(line, material.ve);
+    } else if (cmd == "Vs") {
+      parse_obj_value(line, material.vs);
+    } else if (cmd == "Vg") {
+      parse_obj_value(line, material.vg);
+    } else if (cmd == "Vr") {
+      parse_obj_value(line, material.vr);
+    } else if (cmd == "map_Vs") {
+      parse_obj_value(line, material.vs_map);
+    }
+
+    // update pos
+    fpos = ftell(fs);
+  }
+
+  // return found value
+  if (found) {
+    element = mtl_element::material;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// Read objx
+bool read_objx_element(FILE* fs, objx_element& element, objx_camera& camera,
+    objx_environment& environment, objx_instance& instance,
+    objx_procedural& procedural) {
+  // read the file line by line
+  char buffer[4096];
+  while (read_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
+
+    // get element
+    auto cmd = ""s;
+    parse_obj_value(line, cmd);
+    if (cmd == "") continue;
+
+    // possible token values
+    if (cmd == "c") {
+      element = objx_element::camera;
+      camera  = objx_camera();
+      parse_obj_value(line, camera.name);
+      parse_obj_value(line, camera.ortho);
+      parse_obj_value(line, camera.width);
+      parse_obj_value(line, camera.height);
+      parse_obj_value(line, camera.lens);
+      parse_obj_value(line, camera.focus);
+      parse_obj_value(line, camera.aperture);
+      parse_obj_value(line, camera.frame);
+      return true;
+    } else if (cmd == "e") {
+      element     = objx_element::environment;
+      environment = objx_environment();
+      parse_obj_value(line, environment.name);
+      parse_obj_value(line, environment.ke);
+      parse_obj_value(line, environment.ke_txt.path);
+      parse_obj_value(line, environment.frame);
+      if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
+      return true;
+    } else if (cmd == "i") {
+      element  = objx_element::instance;
+      instance = objx_instance();
+      parse_obj_value(line, instance.name);
+      parse_obj_value(line, instance.object);
+      parse_obj_value(line, instance.material);
+      parse_obj_value(line, instance.frame);
+      return true;
+    } else if (cmd == "po") {
+      element    = objx_element::procedural;
+      procedural = objx_procedural();
+      parse_obj_value(line, procedural.name);
+      parse_obj_value(line, procedural.type);
+      parse_obj_value(line, procedural.material);
+      parse_obj_value(line, procedural.size);
+      parse_obj_value(line, procedural.level);
+      parse_obj_value(line, procedural.frame);
+      return true;
+    } else {
+      // unused
+    }
+  }
+
+  return false;
 }
 
 // Write text to file
@@ -574,18 +815,18 @@ static void write_obj_value(FILE* fs, const obj_vertex& value) {
 }
 
 template <typename T, typename... Ts>
-static inline void write_obj_line(
+static inline void write_obj_line_(
     FILE* fs, const T& value, const Ts... values) {
   write_obj_value(fs, value);
   if constexpr (sizeof...(values) == 0) {
     write_obj_text(fs, "\n");
   } else {
     write_obj_text(fs, " ");
-    write_obj_line(fs, values...);
+    write_obj_line_(fs, values...);
   }
 }
 template <typename T, typename Ts>
-static inline void write_obj_line(
+static inline void write_obj_line_(
     FILE* fs, const T& value, const vector<Ts>& values) {
   write_obj_value(fs, value);
   for (auto& value : values) {
@@ -608,143 +849,115 @@ static inline vector<string> split_string(
 }
 
 // Write obj elements
-void write_obj_comment(obj_ostreams& fs, const string& comment, bool in_obj,
-    bool in_mtl, bool in_obx, bool skip_line) {
-  if (comment.empty()) return;
+void write_obj_comment(FILE* fs, const string& comment) {
   auto lines = split_string(comment, "\n");
   for (auto& line : lines) {
-    auto cline = "# " + line + "\n";
-    if (in_obj) write_obj_text(fs.obj, cline);
-    if (in_mtl) write_obj_text(fs.mtl, cline);
-    if (in_obx) write_obj_text(fs.obx, cline);
+    write_obj_text(fs, "# " + line + "\n");
   }
-  if (skip_line) {
-    if (in_obj) write_obj_text(fs.obj, "\n");
-    if (in_mtl) write_obj_text(fs.mtl, "\n");
-    if (in_obx) write_obj_text(fs.obx, "\n");
+  write_obj_text(fs, "\n");
+}
+
+void write_obj_element(FILE* fs, obj_element element, const vec3f& value,
+    const string& name, const vector<obj_vertex>& vertices) {
+  switch (element) {
+    case obj_element::vertex: write_obj_line_(fs, "v", value); break;
+    case obj_element::normal: write_obj_line_(fs, "vn", value); break;
+    case obj_element::texcoord:
+      write_obj_line_(fs, "vt", vec2f{value.x, value.y});
+      break;
+    case obj_element::face: write_obj_line_(fs, "f", vertices); break;
+    case obj_element::line: write_obj_line_(fs, "l", vertices); break;
+    case obj_element::point: write_obj_line_(fs, "p", vertices); break;
+    case obj_element::object: write_obj_line_(fs, "o", name); break;
+    case obj_element::group: write_obj_line_(fs, "g", name); break;
+    case obj_element::usemtl: write_obj_line_(fs, "usemtl", name); break;
+    case obj_element::smoothing: write_obj_line_(fs, "s", name); break;
+    case obj_element::mtllib: write_obj_line_(fs, "mtllib", name); break;
+    case obj_element::objxlib: break;
   }
 }
-void write_obj_vertex(obj_ostreams& fs, const vec3f& p) {
-  write_obj_line(fs.obj, "v", p);
+void write_mtl_element(
+    FILE* fs, mtl_element element, const mtl_material& material) {
+  switch (element) {
+    case mtl_element::material: {
+      static auto def    = mtl_material{};
+      auto write_obj_opt = [](FILE* fs, const char* name, const auto& val,
+                               const auto& def) {
+        if (val == def) return;
+        write_obj_line_(fs, name, val);
+      };
+      auto write_obj_txt = [](FILE* fs, const char* name,
+                               const mtl_texture_info& info) {
+        if (info.path.empty()) return;
+        write_obj_line_(fs, name, info.path);
+      };
+      write_obj_line_(fs, "newmtl", material.name);
+      write_obj_opt(fs, "  illum", material.illum, def.illum);
+      write_obj_opt(fs, "  Ke", material.ke, def.ke);
+      write_obj_opt(fs, "  Ka", material.ka, def.ka);
+      write_obj_opt(fs, "  Kd", material.kd, vec3f{-1, -1, -1});
+      write_obj_opt(fs, "  Ks", material.ks, vec3f{-1, -1, -1});
+      write_obj_opt(fs, "  Kr", material.kr, def.kr);
+      write_obj_opt(fs, "  Kt", material.kt, def.kt);
+      write_obj_opt(fs, "  Ns", (int)material.ns, -1);
+      write_obj_opt(fs, "  d", material.op, def.op);
+      write_obj_opt(fs, "  Ni", material.ior, def.ior);
+      write_obj_txt(fs, "  map_Ke", material.ke_map);
+      write_obj_txt(fs, "  map_Ka", material.ka_map);
+      write_obj_txt(fs, "  map_Kd", material.kd_map);
+      write_obj_txt(fs, "  map_Ks", material.ks_map);
+      write_obj_txt(fs, "  map_Kr", material.kr_map);
+      write_obj_txt(fs, "  map_Kt", material.kt_map);
+      write_obj_txt(fs, "  map_d", material.op_map);
+      write_obj_txt(fs, "  map_Ni", material.ior_map);
+      write_obj_txt(fs, "  map_bump", material.bump_map);
+      write_obj_txt(fs, "  map_norm", material.norm_map);
+      write_obj_txt(fs, "  map_disp", material.disp_map);
+      write_obj_txt(fs, "  map_occ", material.occ_map);
+      write_obj_opt(fs, "  Pr", material.pr, def.pr);
+      write_obj_opt(fs, "  Pm", material.pm, def.pm);
+      write_obj_opt(fs, "  Ps", material.ps, def.ps);
+      write_obj_opt(fs, "  Pc", material.pc, def.pc);
+      write_obj_opt(fs, "  Pcr", material.pcr, def.pcr);
+      write_obj_txt(fs, "  Pr_map", material.pr_map);
+      write_obj_txt(fs, "  Pm_map", material.pm_map);
+      write_obj_txt(fs, "  Ps_map", material.ps_map);
+      write_obj_txt(fs, "  Pc_map", material.pc_map);
+      write_obj_txt(fs, "  Pcr_map", material.pcr_map);
+      write_obj_opt(fs, "  Vt", material.vt, def.vt);
+      write_obj_opt(fs, "  Ve", material.ve, def.ve);
+      write_obj_opt(fs, "  Vs", material.vs, def.vs);
+      write_obj_opt(fs, "  Vg", material.vg, def.vg);
+      write_obj_opt(fs, "  Vr", material.vr, def.vr);
+      write_obj_txt(fs, "  Vs_map", material.vs_map);
+      write_obj_text(fs, "\n");
+    } break;
+  }
 }
-void write_obj_normal(obj_ostreams& fs, const vec3f& n) {
-  write_obj_line(fs.obj, "vn", n);
-}
-void write_obj_texcoord(obj_ostreams& fs, const vec2f& t) {
-  write_obj_line(fs.obj, "vt", t);
-}
-void write_obj_face(obj_ostreams& fs, const vector<obj_vertex>& verts) {
-  write_obj_line(fs.obj, "f", verts);
-}
-void write_obj_face(obj_ostreams& fs, const obj_vertex& vert1,
-    const obj_vertex& vert2, const obj_vertex& vert3) {
-  write_obj_line(fs.obj, "f", vert1, vert2, vert3);
-}
-void write_obj_face(obj_ostreams& fs, const obj_vertex& vert1,
-    const obj_vertex& vert2, const obj_vertex& vert3, const obj_vertex& vert4) {
-  write_obj_line(fs.obj, "f", vert1, vert2, vert3, vert4);
-}
-void write_obj_line(obj_ostreams& fs, const vector<obj_vertex>& verts) {
-  write_obj_line(fs.obj, "l", verts);
-}
-void write_obj_line(
-    obj_ostreams& fs, const obj_vertex& vert1, const obj_vertex& vert2) {
-  write_obj_line(fs.obj, "l", vert1, vert2);
-}
-void write_obj_point(obj_ostreams& fs, const vector<obj_vertex>& verts) {
-  write_obj_line(fs.obj, "p", verts);
-}
-void write_obj_point(obj_ostreams& fs, const obj_vertex& vert1) {
-  write_obj_line(fs.obj, "p", vert1);
-}
-void write_obj_object(obj_ostreams& fs, const string& name) {
-  write_obj_text(fs.obj, "\n");
-  write_obj_line(fs.obj, "o", name);
-}
-void write_obj_group(obj_ostreams& fs, const string& name) {
-  write_obj_line(fs.obj, "g", name);
-}
-void write_obj_usemtl(obj_ostreams& fs, const string& name) {
-  write_obj_line(fs.obj, "usemtl", name);
-}
-void write_obj_smoothing(obj_ostreams& fs, const string& name) {
-  write_obj_line(fs.obj, "s", name);
-}
-void write_obj_mtllib(obj_ostreams& fs, const string& filename) {
-  write_obj_text(fs.obj, "\n");
-  write_obj_line(fs.obj, "mtllib", filename);
-  write_obj_text(fs.obj, "\n");
-}
-void write_obj_material(obj_ostreams& fs, const obj_material& material) {
-  static auto def           = obj_material{};
-  auto        write_obj_opt = [](FILE* fs, const char* name, const auto& val,
-                           const auto& def) {
-    if (val == def) return;
-    write_obj_line(fs, name, val);
-  };
-  auto write_obj_txt = [](FILE* fs, const char* name,
-                           const obj_texture_info& info) {
-    if (info.path.empty()) return;
-    write_obj_line(fs, name, info.path);
-  };
-  write_obj_line(fs.mtl, "newmtl", material.name);
-  write_obj_opt(fs.mtl, "  illum", material.illum, def.illum);
-  write_obj_opt(fs.mtl, "  Ke", material.ke, def.ke);
-  write_obj_opt(fs.mtl, "  Ka", material.ka, def.ka);
-  write_obj_opt(fs.mtl, "  Kd", material.kd, vec3f{-1, -1, -1});
-  write_obj_opt(fs.mtl, "  Ks", material.ks, vec3f{-1, -1, -1});
-  write_obj_opt(fs.mtl, "  Kr", material.kr, def.kr);
-  write_obj_opt(fs.mtl, "  Kt", material.kt, def.kt);
-  write_obj_opt(fs.mtl, "  Ns", (int)material.ns, -1);
-  write_obj_opt(fs.mtl, "  d", material.op, def.op);
-  write_obj_opt(fs.mtl, "  Ni", material.ior, def.ior);
-  write_obj_txt(fs.mtl, "  map_Ke", material.ke_map);
-  write_obj_txt(fs.mtl, "  map_Ka", material.ka_map);
-  write_obj_txt(fs.mtl, "  map_Kd", material.kd_map);
-  write_obj_txt(fs.mtl, "  map_Ks", material.ks_map);
-  write_obj_txt(fs.mtl, "  map_Kr", material.kr_map);
-  write_obj_txt(fs.mtl, "  map_Kt", material.kt_map);
-  write_obj_txt(fs.mtl, "  map_d", material.op_map);
-  write_obj_txt(fs.mtl, "  map_Ni", material.ior_map);
-  write_obj_txt(fs.mtl, "  map_bump", material.bump_map);
-  write_obj_txt(fs.mtl, "  map_norm", material.norm_map);
-  write_obj_txt(fs.mtl, "  map_disp", material.disp_map);
-  write_obj_txt(fs.mtl, "  map_occ", material.occ_map);
-  write_obj_opt(fs.mtl, "  Pr", material.pr, def.pr);
-  write_obj_opt(fs.mtl, "  Pm", material.pm, def.pm);
-  write_obj_opt(fs.mtl, "  Ps", material.ps, def.ps);
-  write_obj_opt(fs.mtl, "  Pc", material.pc, def.pc);
-  write_obj_opt(fs.mtl, "  Pcr", material.pcr, def.pcr);
-  write_obj_txt(fs.mtl, "  Pr_map", material.pr_map);
-  write_obj_txt(fs.mtl, "  Pm_map", material.pm_map);
-  write_obj_txt(fs.mtl, "  Ps_map", material.ps_map);
-  write_obj_txt(fs.mtl, "  Pc_map", material.pc_map);
-  write_obj_txt(fs.mtl, "  Pcr_map", material.pcr_map);
-  write_obj_opt(fs.mtl, "  Vt", material.vt, def.vt);
-  write_obj_opt(fs.mtl, "  Ve", material.ve, def.ve);
-  write_obj_opt(fs.mtl, "  Vs", material.vs, def.vs);
-  write_obj_opt(fs.mtl, "  Vg", material.vg, def.vg);
-  write_obj_opt(fs.mtl, "  Vr", material.vr, def.vr);
-  write_obj_txt(fs.mtl, "  Vs_map", material.vs_map);
-  write_obj_text(fs.mtl, "\n");
-}
-void write_obj_camera(obj_ostreams& fs, const obj_camera& camera) {
-  write_obj_line(fs.obx, "c", camera.name, (int)camera.ortho, camera.width,
-      camera.height, camera.lens, camera.focus, camera.aperture, camera.frame);
-}
-void write_obj_environmnet(
-    obj_ostreams& fs, const obj_environment& environment) {
-  write_obj_line(fs.obx, "e", environment.name, environment.ke,
-      environment.ke_txt.path != "" ? environment.ke_txt.path : "\"\" "s,
-      environment.frame);
-}
-void write_obj_instance(obj_ostreams& fs, const obj_instance& instance) {
-  write_obj_line(fs.obx, "i", instance.name, instance.object, instance.material,
-      instance.frame);
-}
-void write_obj_procedural(obj_ostreams& fs, const obj_procedural& procedural) {
-  write_obj_line(fs.obx, "po", procedural.name, procedural.type,
-      procedural.material, procedural.size, procedural.level, procedural.frame);
+void write_objx_element(FILE* fs, objx_element element,
+    const objx_camera& camera, const objx_environment& environment,
+    const objx_instance& instance, const objx_procedural& procedural) {
+  switch (element) {
+    case objx_element::camera: {
+      write_obj_line_(fs, "c", camera.name, (int)camera.ortho, camera.width,
+          camera.height, camera.lens, camera.focus, camera.aperture,
+          camera.frame);
+    } break;
+    case objx_element::environment: {
+      write_obj_line_(fs, "e", environment.name, environment.ke,
+          environment.ke_txt.path != "" ? environment.ke_txt.path : "\"\" "s,
+          environment.frame);
+    } break;
+    case objx_element::instance: {
+      write_obj_line_(fs, "i", instance.name, instance.object,
+          instance.material, instance.frame);
+    } break;
+    case objx_element::procedural: {
+      write_obj_line_(fs, "po", procedural.name, procedural.type,
+          procedural.material, procedural.size, procedural.level,
+          procedural.frame);
+    } break;
+  }
 }
 
 }  // namespace yocto

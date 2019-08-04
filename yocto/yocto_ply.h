@@ -7,7 +7,7 @@
 // model but instead writing elements directly after each call.
 // Error reporting is done by throwing `std::runtime_error` exceptions.
 //
-// Yocto/Ply provides fast/low-level access to PLY data and requires some 
+// Yocto/Ply provides fast/low-level access to PLY data and requires some
 // familiarity with the PLY format to use effectively. For a higher level
 // interface, consider using Yocto/Shape `load_shape()` and `save_shape()`.
 //
@@ -17,22 +17,23 @@
 // Load a PLY by first opening the file and reading its header. Then, for each
 // element, read the values of its lists and non-lists properties. Example:
 //
-//    auto ply = ply_file(filename);            // open file for reading
-//    auto elemnts = vector<ply_element>{};     // initialize elements
-//    auto comments = vector<string>{};         // initialize comments
-//    read_ply_header(ply, elements, comments); // read ply header
-//    for(auto& element : elements) {           // iterate over elements
+//    auto ply = fopen(filename, "rb");                // open for reading
+//    auto format = ply_format{};                      // initialize format
+//    auto elemnts = vector<ply_element>{};            // initialize elements
+//    auto comments = vector<string>{};                // initialize comments
+//    read_ply_header(ply, fromat elements, comments); // read ply header
+//    for(auto& element : elements) {                  // iterate elements
 //      // initialize the element's property values and lists
 //      // using either doubles or vector<float> and vector<vector<int>>
 //      auto values = vector<double>(element.properties.size());
 //      auto lists - vector<vector<double>>(element.properties.size());
-//      for(auto i = 0; i < element.count; i ++) {     // iterate over values
-//        read_ply_value(ply, element, values, lists); // read properties
+//      for(auto i = 0; i < element.count; i ++) {             // iterate values
+//        read_ply_value(ply, format, element, values, lists); // read props
 //        // values contains values for non-list properties
 //        // lists contains the values for list properties
 //    }
 //
-// For convenience during parsing, you can use `find_ply_property()` to 
+// For convenience during parsing, you can use `find_ply_property()` to
 // determine the index of the property you may be interested in.
 //
 //
@@ -43,19 +44,20 @@
 // and comments and write its header. Finally, write its values one by one.
 // Example:
 //
-//    auto ply = ply_file(filename, true,ascii); // open file for writing
-//    auto elemnts = vector<ply_element>{};      // initialize elements
-//    auto comments = vector<string>{};          // initialize comments
+//    auto fs = fopen(filename, "rb");                   // open for writing
+//    auto format = ply_format::binary_little_endian;    // initialize format
+//    auto elemnts = vector<ply_element>{};              // initialize elements
+//    auto comments = vector<string>{};                  // initialize comments
 //    // add eleements and comments to the previous lists
-//    write_ply_header(ply, elements, comments); // read ply header
-//    for(auto& element : elements) {            // iterate over elements
+//    write_ply_header(ply, format, elements, comments); // read ply header
+//    for(auto& element : elements) {                    // iterate elements
 //      // initialize the element's property values and lists
 //      // using either doubles or vector<float> and vector<vector<int>>
 //      auto values = vector<double>(element.properties.size());
 //      auto lists - vector<vector<double>>(element.properties.size());
-//      for(auto i = 0; i < element.count; i ++) {      // iterate over values
-//        values = {...}; lists = {...};                // set values and lists
-//        write_ply_value(ply, element, values, lists); // write properties
+//      for(auto i = 0; i < element.count; i ++) {       // iterate values
+//        values = {...}; lists = {...};                 // set values/lists
+//        write_ply_value(ply, foramt, element, values, lists); // write props
 //    }
 //
 //
@@ -100,6 +102,10 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Type of ply file. For best performance, choose binary_little_endian when
+// writing ply files.
+enum struct ply_format { ascii, binary_little_endian, binary_big_endian };
+
 // Type of Ply data
 enum struct ply_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 
@@ -118,47 +124,20 @@ struct ply_element {
   vector<ply_property> properties = {};
 };
 
-// Ply stream
-struct ply_file {
-  // Move-only object with automatic file closing on destruction.
-  ply_file() {}
-  ply_file(const string& filename, bool write = false, bool ascii = false) {
-    open(filename, write);
-    this->ascii = ascii;
-  }
-  ply_file(const ply_file&) = delete;
-  ply_file& operator=(const ply_file&) = delete;
-  ~ply_file() { close(); }
-
-  // Open/Close file
-  void open(const string& filename, bool write = false) {
-    this->filename = filename;
-    fs             = fopen(filename.c_str(), write ? "wb" : "rb");
-    if (!fs) throw std::runtime_error{"cannot open file " + filename};
-  }
-  void close() { fclose(fs); }
-
-  // Private data
-  string filename   = "";
-  FILE*  fs         = nullptr;
-  bool   ascii      = false;
-  bool   big_endian = false;
-};
-
 // Read Ply functions
-void read_ply_header(
-    ply_file& ply, vector<ply_element>& elements, vector<string>& comments);
-void read_ply_value(ply_file& ply, const ply_element& element,
+void read_ply_header(FILE* fs, ply_format& format,
+    vector<ply_element>& elements, vector<string>& comments);
+void read_ply_value(FILE* fs, ply_format format, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists);
-void read_ply_value(ply_file& ply, const ply_element& element,
+void read_ply_value(FILE* fs, ply_format format, const ply_element& element,
     vector<float>& values, vector<vector<int>>& lists);
 
 // Write Ply functions
-void write_ply_header(ply_file& ply, const vector<ply_element>& elements,
-    const vector<string>& comments);
-void write_ply_value(ply_file& ply, const ply_element& element,
+void write_ply_header(FILE* fs, ply_format format,
+    const vector<ply_element>& elements, const vector<string>& comments);
+void write_ply_value(FILE* fs, ply_format format, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists);
-void write_ply_value(ply_file& ply, const ply_element& element,
+void write_ply_value(FILE* fs, ply_format format, const ply_element& element,
     vector<float>& values, vector<vector<int>>& lists);
 
 // Helpers to get element and property indices
