@@ -409,12 +409,12 @@ static inline void parse_pbrt_nametype(
   name = string(str);
 }
 
-static inline void skip_open_bracket(pbrt_stream& stream) {
+static inline void skip_pbrt_open_bracket(pbrt_stream& stream) {
   if (!is_open_bracket(stream)) throw std::runtime_error("expected bracket");
   stream.str.remove_prefix(1);
   skip_whitespace_or_comment(stream);
 }
-static inline void skip_close_bracket(pbrt_stream& stream) {
+static inline void skip_pbrt_close_bracket(pbrt_stream& stream) {
   if (!is_close_bracket(stream)) throw std::runtime_error("expected bracket");
   stream.str.remove_prefix(1);
   skip_whitespace_or_comment(stream);
@@ -423,24 +423,24 @@ static inline void skip_close_bracket(pbrt_stream& stream) {
 template <typename T>
 static inline void parse_pbrt_param(pbrt_stream& stream, T& value) {
   auto has_brackets = is_open_bracket(stream);
-  if (has_brackets) skip_open_bracket(stream);
+  if (has_brackets) skip_pbrt_open_bracket(stream);
   parse_pbrt_value(stream, value);
-  if (has_brackets) skip_close_bracket(stream);
+  if (has_brackets) skip_pbrt_close_bracket(stream);
 }
 
 template <typename T>
 static inline void parse_pbrt_param(pbrt_stream& stream, vector<T>& values) {
-  skip_open_bracket(stream);
+  skip_pbrt_open_bracket(stream);
   values.clear();
   while (!is_close_bracket(stream)) {
     values.push_back({});
     parse_pbrt_value(stream, values.back());
   }
-  skip_close_bracket(stream);
+  skip_pbrt_close_bracket(stream);
 }
 
 template <typename T>
-static inline bool is_type_compatible(const string& type) {
+static inline bool is_pbrt_type_compatible(const string& type) {
   if constexpr (std::is_same<T, int>::value) {
     return type == "integer";
   } else if constexpr (std::is_same<T, float>::value) {
@@ -475,7 +475,7 @@ static inline bool is_type_compatible(const string& type) {
 template <typename T>
 static inline void parse_pbrt_param(
     pbrt_stream& stream, const string& type, T& value) {
-  if (!is_type_compatible<T>(type)) {
+  if (!is_pbrt_type_compatible<T>(type)) {
     throw std::runtime_error("incompatible type " + type);
   }
   parse_pbrt_param(stream, value);
@@ -617,7 +617,7 @@ static inline void parse_pbrt_param(
 template <typename T>
 static inline void parse_pbrt_param(
     pbrt_stream& stream, const string& type, vector<T>& value) {
-  if (!is_type_compatible<T>(type)) {
+  if (!is_pbrt_type_compatible<T>(type)) {
     throw std::runtime_error("incompatible type " + type);
   }
   parse_pbrt_param(stream, value);
@@ -654,9 +654,9 @@ static inline void skip_pbrt_value(pbrt_stream& stream) {
 
 static inline void skip_pbrt_param(pbrt_stream& stream) {
   if (is_open_bracket(stream)) {
-    skip_open_bracket(stream);
+    skip_pbrt_open_bracket(stream);
     while (!is_close_bracket(stream)) skip_pbrt_value(stream);
-    skip_close_bracket(stream);
+    skip_pbrt_close_bracket(stream);
   } else {
     skip_pbrt_value(stream);
   }
