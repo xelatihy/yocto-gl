@@ -1318,6 +1318,789 @@ static void save_yaml_scene(const string& filename, const yocto_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#if 1
+
+struct load_obj_scene_cb : obj_callbacks {
+  yocto_scene&       scene;
+  const load_params& params;
+
+  // current parsing values
+  string mname = ""s;
+  string oname = ""s;
+  string gname = ""s;
+
+  // vertices
+  std::deque<vec3f> opos      = {};
+  std::deque<vec3f> onorm     = {};
+  std::deque<vec2f> otexcoord = {};
+
+  // object maps
+  unordered_map<string, int> tmap = unordered_map<string, int>{{"", -1}};
+  unordered_map<string, int> vmap = unordered_map<string, int>{{"", -1}};
+  unordered_map<string, int> mmap = unordered_map<string, int>{{"", -1}};
+
+  // vertex maps
+  unordered_map<obj_vertex, int> vertex_map = unordered_map<obj_vertex, int>();
+  unordered_map<int, int>        pos_map    = unordered_map<int, int>();
+  unordered_map<int, int>        norm_map   = unordered_map<int, int>();
+  unordered_map<int, int>        texcoord_map = unordered_map<int, int>();
+
+  // parsed geometry and materials
+  unordered_map<string, vector<int>> object_shapes  = {};
+  bool                               first_instance = true;
+
+  // current parse state
+  bool facevarying_now = false;
+
+  load_obj_scene_cb(yocto_scene& scene, const load_params& params)
+      : scene{scene}, params{params} {}
+
+  // add object if needed
+  void add_shape() {
+    auto shape      = yocto_shape{};
+    shape.uri       = oname + gname;
+    facevarying_now = params.facevarying ||
+                      shape.uri.find("[yocto::facevarying]") != string::npos;
+    scene.shapes.push_back(shape);
+    auto instance     = yocto_instance{};
+    instance.uri      = shape.uri;
+    instance.shape    = (int)scene.shapes.size() - 1;
+    instance.material = mmap.at(mname);
+    scene.instances.push_back(instance);
+    object_shapes[oname].push_back((int)scene.shapes.size() - 1);
+    vertex_map.clear();
+    pos_map.clear();
+    norm_map.clear();
+    texcoord_map.clear();
+  }
+  // Parse texture params and name
+  int add_texture(const mtl_texture_info& info, bool force_linear) {
+    if (info.path == "") return -1;
+    if (tmap.find(info.path) != tmap.end()) {
+      return tmap.at(info.path);
+    }
+
+    // create texture
+    auto texture = yocto_texture{};
+    texture.uri  = info.path;
+    for (auto& c : texture.uri)
+      if (c == '\\') c = '/';
+    scene.textures.push_back(texture);
+    auto index      = (int)scene.textures.size() - 1;
+    tmap[info.path] = index;
+
+    return index;
+  }
+  // Parse texture params and name
+  int add_voltexture(const mtl_texture_info& info, bool srgb) {
+    if (info.path == "") return -1;
+    if (vmap.find(info.path) != vmap.end()) {
+      return vmap.at(info.path);
+    }
+
+    // create texture
+    auto texture = yocto_voltexture{};
+    texture.uri  = info.path;
+    scene.voltextures.push_back(texture);
+    auto index      = (int)scene.voltextures.size() - 1;
+    vmap[info.path] = index;
+
+    return index;
+  }
+  // Add  vertices to the current shape
+  void add_verts(const vector<obj_vertex>& verts, yocto_shape& shape) {
+    for (auto& vert : verts) {
+      auto it = vertex_map.find(vert);
+      if (it != vertex_map.end()) continue;
+      auto& shape  = scene.shapes.back();
+      auto  nverts = (int)shape.positions.size();
+      vertex_map.insert(it, {vert, nverts});
+      if (vert.position) shape.positions.push_back(opos.at(vert.position - 1));
+      if (vert.texcoord)
+        shape.texcoords.push_back(otexcoord.at(vert.texcoord - 1));
+      if (vert.normal) shape.normals.push_back(onorm.at(vert.normal - 1));
+      if (shape.normals.size() != 0 &&
+          shape.normals.size() != shape.positions.size()) {
+        while (shape.normals.size() != shape.positions.size())
+          shape.normals.push_back({0, 0, 1});
+      }
+      if (shape.texcoords.size() != 0 &&
+          shape.texcoords.size() != shape.positions.size()) {
+        while (shape.texcoords.size() != shape.positions.size())
+          shape.texcoords.push_back({0, 0});
+      }
+    }
+  }
+  // add vertex
+  void add_fvverts(const vector<obj_vertex>& verts, yocto_shape& shape) {
+    for (auto& vert : verts) {
+      if (!vert.position) continue;
+      auto pos_it = pos_map.find(vert.position);
+      if (pos_it != pos_map.end()) continue;
+      auto nverts = (int)shape.positions.size();
+      pos_map.insert(pos_it, {vert.position, nverts});
+      shape.positions.push_back(opos.at(vert.position - 1));
+    }
+    for (auto& vert : verts) {
+      if (!vert.texcoord) continue;
+      auto texcoord_it = texcoord_map.find(vert.texcoord);
+      if (texcoord_it != texcoord_map.end()) continue;
+      auto nverts = (int)shape.texcoords.size();
+      texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
+      shape.texcoords.push_back(otexcoord.at(vert.texcoord - 1));
+    }
+    for (auto& vert : verts) {
+      if (!vert.normal) continue;
+      auto norm_it = norm_map.find(vert.normal);
+      if (norm_it != norm_map.end()) continue;
+      auto nverts = (int)shape.normals.size();
+      norm_map.insert(norm_it, {vert.normal, nverts});
+      shape.normals.push_back(onorm.at(vert.normal - 1));
+    }
+  }
+
+  // callbacks
+  void vert(const vec3f& v) override { opos.push_back(v); }
+  void norm(const vec3f& v) override { onorm.push_back(v); }
+  void texcoord(const vec2f& v) override { otexcoord.push_back(v); }
+  void face(const vector<obj_vertex>& verts) override {
+    if (scene.shapes.empty()) add_shape();
+    if (!scene.shapes.back().positions.empty() &&
+        (!scene.shapes.back().lines.empty() ||
+            !scene.shapes.back().points.empty())) {
+      add_shape();
+    }
+    auto& shape = scene.shapes.back();
+    if (!facevarying_now) {
+      add_verts(verts, shape);
+      if (verts.size() == 4) {
+        shape.quads.push_back({vertex_map.at(verts[0]), vertex_map.at(verts[1]),
+            vertex_map.at(verts[2]), vertex_map.at(verts[3])});
+      } else {
+        for (auto i = 2; i < verts.size(); i++)
+          shape.triangles.push_back({vertex_map.at(verts[0]),
+              vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
+      }
+    } else {
+      add_fvverts(verts, shape);
+      if (verts.size() == 4) {
+        if (verts[0].position) {
+          shape.quadspos.push_back({pos_map.at(verts[0].position),
+              pos_map.at(verts[1].position), pos_map.at(verts[2].position),
+              pos_map.at(verts[3].position)});
+        }
+        if (verts[0].texcoord) {
+          shape.quadstexcoord.push_back({texcoord_map.at(verts[0].texcoord),
+              texcoord_map.at(verts[1].texcoord),
+              texcoord_map.at(verts[2].texcoord),
+              texcoord_map.at(verts[3].texcoord)});
+        }
+        if (verts[0].normal) {
+          shape.quadsnorm.push_back(
+              {norm_map.at(verts[0].normal), norm_map.at(verts[1].normal),
+                  norm_map.at(verts[2].normal), norm_map.at(verts[3].normal)});
+        }
+      } else {
+        if (verts[0].position) {
+          for (auto i = 2; i < verts.size(); i++)
+            shape.quadspos.push_back({pos_map.at(verts[0].position),
+                pos_map.at(verts[i - 1].position),
+                pos_map.at(verts[i].position), pos_map.at(verts[i].position)});
+        }
+        if (verts[0].texcoord) {
+          for (auto i = 2; i < verts.size(); i++)
+            shape.quadstexcoord.push_back({texcoord_map.at(verts[0].texcoord),
+                texcoord_map.at(verts[i - 1].texcoord),
+                texcoord_map.at(verts[i].texcoord),
+                texcoord_map.at(verts[i].texcoord)});
+        }
+        if (verts[0].normal) {
+          for (auto i = 2; i < verts.size(); i++)
+            shape.quadsnorm.push_back({norm_map.at(verts[0].normal),
+                norm_map.at(verts[i - 1].normal), norm_map.at(verts[i].normal),
+                norm_map.at(verts[i].normal)});
+        }
+      }
+    }
+  }
+  void line(const vector<obj_vertex>& verts) override {
+    if (scene.shapes.empty()) add_shape();
+    if (!scene.shapes.back().positions.empty() &&
+        scene.shapes.back().lines.empty()) {
+      add_shape();
+    }
+    auto& shape = scene.shapes.back();
+    add_verts(verts, shape);
+    for (auto i = 1; i < verts.size(); i++)
+      shape.lines.push_back(
+          {vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
+  }
+  void point(const vector<obj_vertex>& verts) override {
+    if (scene.shapes.empty()) add_shape();
+    if (!scene.shapes.back().positions.empty() &&
+        scene.shapes.back().points.empty()) {
+      add_shape();
+    }
+    auto& shape = scene.shapes.back();
+    add_verts(verts, shape);
+    for (auto i = 0; i < verts.size(); i++)
+      shape.points.push_back(vertex_map.at(verts[i]));
+  }
+  void object(const string& name) override {
+    oname = name;
+    gname = "";
+    mname = "";
+    add_shape();
+  }
+  void group(const string& name) override {
+    gname = name;
+    add_shape();
+  }
+  void usemtl(const string& name) override {
+    mname = name;
+    add_shape();
+  }
+  void material(const mtl_material& omat) override {
+    auto material             = yocto_material{};
+    material.uri              = omat.name;
+    material.emission         = omat.ke;
+    material.diffuse          = omat.kd;
+    material.specular         = omat.ks;
+    material.metallic         = omat.pm;
+    material.transmission     = omat.kt;
+    material.roughness        = omat.pr;
+    material.opacity          = omat.op;
+    material.emission_tex     = add_texture(omat.ke_map, false);
+    material.diffuse_tex      = add_texture(omat.kd_map, false);
+    material.metallic_tex     = add_texture(omat.pm_map, false);
+    material.specular_tex     = add_texture(omat.ks_map, false);
+    material.transmission_tex = add_texture(omat.kt_map, false);
+    material.roughness_tex    = add_texture(omat.pr_map, true);
+    material.opacity_tex      = add_texture(omat.op_map, true);
+    material.normal_tex       = add_texture(omat.norm_map, true);
+    material.voltransmission  = omat.vt;
+    material.volmeanfreepath  = omat.vp;
+    material.volemission      = omat.ve;
+    material.volscatter       = omat.vs;
+    material.volanisotropy    = omat.vg;
+    material.volscale         = omat.vr;
+    material.subsurface_tex   = add_texture(omat.vs_map, false);
+    scene.materials.push_back(material);
+    mmap[material.uri] = (int)scene.materials.size() - 1;
+  }
+  void camera(const objx_camera& ocam) override {
+    auto camera         = yocto_camera();
+    camera.uri          = ocam.name;
+    camera.frame        = ocam.frame;
+    camera.orthographic = ocam.ortho;
+    camera.lens         = ocam.lens;
+    camera.film         = {ocam.width, ocam.height};
+    camera.focus        = ocam.focus;
+    camera.aperture     = ocam.aperture;
+    scene.cameras.push_back(camera);
+  }
+  void environmnet(const objx_environment& oenv) override {
+    auto environment         = yocto_environment();
+    environment.uri          = oenv.name;
+    environment.frame        = oenv.frame;
+    environment.emission     = oenv.ke;
+    environment.emission_tex = add_texture(oenv.ke_txt, true);
+    scene.environments.push_back(environment);
+  }
+  void instance(const objx_instance& oist) override {
+    if (first_instance) {
+      scene.instances.clear();
+      first_instance = false;
+    }
+    for (auto& shape : object_shapes[oist.object]) {
+      auto instance     = yocto_instance{};
+      instance.uri      = oist.name;
+      instance.frame    = oist.frame;
+      instance.shape    = shape;
+      instance.material = mmap.at(oist.material);
+      scene.instances.push_back(instance);
+    }
+  }
+  void procedural(const objx_procedural& oproc) override {
+    auto shape = yocto_shape();
+    shape.uri  = oproc.name;
+    if (oproc.type == "floor") {
+      auto params         = proc_shape_params{};
+      params.type         = proc_shape_params::type_t::floor;
+      params.subdivisions = oproc.level < 0 ? 0 : oproc.level;
+      params.scale        = oproc.size / 2;
+      params.uvscale      = oproc.size;
+      make_proc_shape(shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, params);
+    } else {
+      throw std::runtime_error("unknown obj procedural");
+    }
+    scene.shapes.push_back(shape);
+    auto instance  = yocto_instance{};
+    instance.uri   = shape.uri;
+    instance.shape = (int)scene.shapes.size() - 1;
+    if (mmap.find(oproc.material) == mmap.end()) {
+      throw std::runtime_error("missing material " + oproc.material);
+    } else {
+      instance.material = mmap.find(oproc.material)->second;
+    }
+    scene.instances.push_back(instance);
+  }
+};
+
+// Loads an MTL
+static void load_mtl(const string& filename, yocto_scene& scene,
+    unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
+    const load_params& params) {
+  // Parse texture params and name
+  auto add_texture = [&scene, &tmap](const mtl_texture_info& info,
+                         bool force_linear) -> int {
+    if (info.path == "") return -1;
+    if (tmap.find(info.path) != tmap.end()) {
+      return tmap.at(info.path);
+    }
+
+    // create texture
+    auto texture = yocto_texture{};
+    texture.uri  = info.path;
+    for (auto& c : texture.uri)
+      if (c == '\\') c = '/';
+    scene.textures.push_back(texture);
+    auto index      = (int)scene.textures.size() - 1;
+    tmap[info.path] = index;
+
+    return index;
+  };
+
+  // open file
+  auto fs_ = open_input_file(filename);
+  auto fs  = fs_.fs;
+
+  // read mtl elements
+  auto element = mtl_element{};
+  auto omat    = mtl_material{};
+  while (read_mtl_element(fs, element, omat)) {
+    if (element == mtl_element::material) {
+      auto material             = yocto_material{};
+      material.uri              = omat.name;
+      material.emission         = omat.ke;
+      material.diffuse          = omat.kd;
+      material.specular         = omat.ks;
+      material.metallic         = omat.pm;
+      material.transmission     = omat.kt;
+      material.roughness        = omat.pr;
+      material.opacity          = omat.op;
+      material.emission_tex     = add_texture(omat.ke_map, false);
+      material.diffuse_tex      = add_texture(omat.kd_map, false);
+      material.metallic_tex     = add_texture(omat.pm_map, false);
+      material.specular_tex     = add_texture(omat.ks_map, false);
+      material.transmission_tex = add_texture(omat.kt_map, false);
+      material.roughness_tex    = add_texture(omat.pr_map, true);
+      material.opacity_tex      = add_texture(omat.op_map, true);
+      material.normal_tex       = add_texture(omat.norm_map, true);
+      material.voltransmission  = omat.vt;
+      material.volmeanfreepath  = omat.vp;
+      material.volemission      = omat.ve;
+      material.volscatter       = omat.vs;
+      material.volanisotropy    = omat.vg;
+      material.volscale         = omat.vr;
+      material.subsurface_tex   = add_texture(omat.vs_map, false);
+      scene.materials.push_back(material);
+      mmap[material.uri] = (int)scene.materials.size() - 1;
+    } else {
+      // skip other
+    }
+  }
+}
+
+// Loads an OBJX
+static void load_objx(const string& filename, yocto_scene& scene,
+    const unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
+    const unordered_map<string, vector<int>>& object_shapes,
+    const load_params&                        params) {
+  // Parse texture params and name
+  auto add_texture = [&scene, &tmap](const mtl_texture_info& info,
+                         bool force_linear) -> int {
+    if (info.path == "") return -1;
+    if (tmap.find(info.path) != tmap.end()) {
+      return tmap.at(info.path);
+    }
+
+    // create texture
+    auto texture = yocto_texture{};
+    texture.uri  = info.path;
+    for (auto& c : texture.uri)
+      if (c == '\\') c = '/';
+    scene.textures.push_back(texture);
+    auto index      = (int)scene.textures.size() - 1;
+    tmap[info.path] = index;
+
+    return index;
+  };
+
+  // open file
+  auto fs_ = open_input_file(filename);
+  auto fs  = fs_.fs;
+
+  // parsed geometry and materials
+  bool first_instance = true;
+
+  // read mtl elements
+  auto element = objx_element{};
+  auto ocam    = objx_camera{};
+  auto oenv    = objx_environment{};
+  auto oist    = objx_instance{};
+  auto oproc   = objx_procedural{};
+  while (read_objx_element(fs, element, ocam, oenv, oist, oproc)) {
+    if (element == objx_element::camera) {
+      auto camera         = yocto_camera();
+      camera.uri          = ocam.name;
+      camera.frame        = ocam.frame;
+      camera.orthographic = ocam.ortho;
+      camera.lens         = ocam.lens;
+      camera.film         = {ocam.width, ocam.height};
+      camera.focus        = ocam.focus;
+      camera.aperture     = ocam.aperture;
+      scene.cameras.push_back(camera);
+    } else if (element == objx_element::environment) {
+      auto environment         = yocto_environment();
+      environment.uri          = oenv.name;
+      environment.frame        = oenv.frame;
+      environment.emission     = oenv.ke;
+      environment.emission_tex = add_texture(oenv.ke_txt, true);
+      scene.environments.push_back(environment);
+    } else if (element == objx_element::instance) {
+      if (first_instance) {
+        scene.instances.clear();
+        first_instance = false;
+      }
+      for (auto& shape : object_shapes.at(oist.object)) {
+        auto instance     = yocto_instance{};
+        instance.uri      = oist.name;
+        instance.frame    = oist.frame;
+        instance.shape    = shape;
+        instance.material = mmap.at(oist.material);
+        scene.instances.push_back(instance);
+      }
+    } else if (element == objx_element::procedural) {
+      auto shape = yocto_shape();
+      shape.uri  = oproc.name;
+      if (oproc.type == "floor") {
+        auto params         = proc_shape_params{};
+        params.type         = proc_shape_params::type_t::floor;
+        params.subdivisions = oproc.level < 0 ? 0 : oproc.level;
+        params.scale        = oproc.size / 2;
+        params.uvscale      = oproc.size;
+        make_proc_shape(shape.triangles, shape.quads, shape.positions,
+            shape.normals, shape.texcoords, params);
+      } else {
+        throw std::runtime_error("unknown obj procedural");
+      }
+      scene.shapes.push_back(shape);
+      auto instance  = yocto_instance{};
+      instance.uri   = shape.uri;
+      instance.shape = (int)scene.shapes.size() - 1;
+      if (mmap.find(oproc.material) == mmap.end()) {
+        throw std::runtime_error("missing material " + oproc.material);
+      } else {
+        instance.material = mmap.find(oproc.material)->second;
+      }
+      scene.instances.push_back(instance);
+    } else {
+      // skip other
+    }
+  }
+}
+
+// Loads an OBJ
+static void load_obj(
+    const string& filename, yocto_scene& scene, const load_params& params) {
+  // current parsing values
+  string mname = ""s;
+  string oname = ""s;
+  string gname = ""s;
+
+  // vertices
+  auto opos      = std::deque<vec3f>{};
+  auto onorm     = std::deque<vec3f>{};
+  auto otexcoord = std::deque<vec2f>{};
+
+  // object maps
+  auto tmap = unordered_map<string, int>{{"", -1}};
+  auto vmap = unordered_map<string, int>{{"", -1}};
+  auto mmap = unordered_map<string, int>{{"", -1}};
+
+  // vertex maps
+  auto vertex_map   = unordered_map<obj_vertex, int>();
+  auto pos_map      = unordered_map<int, int>();
+  auto norm_map     = unordered_map<int, int>();
+  auto texcoord_map = unordered_map<int, int>();
+
+  // parsed geometry and materials
+  auto object_shapes = unordered_map<string, vector<int>>{};
+
+  // material libraries read already
+  auto mlibs = vector<string>{};
+
+  // current parse state
+  bool facevarying_now = false;
+
+  // Add  vertices to the current shape
+  auto add_verts = [&](const vector<obj_vertex>& verts, yocto_shape& shape) {
+    for (auto& vert : verts) {
+      auto it = vertex_map.find(vert);
+      if (it != vertex_map.end()) continue;
+      auto& shape  = scene.shapes.back();
+      auto  nverts = (int)shape.positions.size();
+      vertex_map.insert(it, {vert, nverts});
+      if (vert.position) shape.positions.push_back(opos.at(vert.position - 1));
+      if (vert.texcoord)
+        shape.texcoords.push_back(otexcoord.at(vert.texcoord - 1));
+      if (vert.normal) shape.normals.push_back(onorm.at(vert.normal - 1));
+      if (shape.normals.size() != 0 &&
+          shape.normals.size() != shape.positions.size()) {
+        while (shape.normals.size() != shape.positions.size())
+          shape.normals.push_back({0, 0, 1});
+      }
+      if (shape.texcoords.size() != 0 &&
+          shape.texcoords.size() != shape.positions.size()) {
+        while (shape.texcoords.size() != shape.positions.size())
+          shape.texcoords.push_back({0, 0});
+      }
+    }
+  };
+
+  // add vertex
+  auto add_fvverts = [&](const vector<obj_vertex>& verts, yocto_shape& shape) {
+    for (auto& vert : verts) {
+      if (!vert.position) continue;
+      auto pos_it = pos_map.find(vert.position);
+      if (pos_it != pos_map.end()) continue;
+      auto nverts = (int)shape.positions.size();
+      pos_map.insert(pos_it, {vert.position, nverts});
+      shape.positions.push_back(opos.at(vert.position - 1));
+    }
+    for (auto& vert : verts) {
+      if (!vert.texcoord) continue;
+      auto texcoord_it = texcoord_map.find(vert.texcoord);
+      if (texcoord_it != texcoord_map.end()) continue;
+      auto nverts = (int)shape.texcoords.size();
+      texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
+      shape.texcoords.push_back(otexcoord.at(vert.texcoord - 1));
+    }
+    for (auto& vert : verts) {
+      if (!vert.normal) continue;
+      auto norm_it = norm_map.find(vert.normal);
+      if (norm_it != norm_map.end()) continue;
+      auto nverts = (int)shape.normals.size();
+      norm_map.insert(norm_it, {vert.normal, nverts});
+      shape.normals.push_back(onorm.at(vert.normal - 1));
+    }
+  };
+
+  // add object if needed
+  auto add_shape = [&]() {
+    auto shape      = yocto_shape{};
+    shape.uri       = oname + gname;
+    facevarying_now = params.facevarying ||
+                      shape.uri.find("[yocto::facevarying]") != string::npos;
+    scene.shapes.push_back(shape);
+    auto instance     = yocto_instance{};
+    instance.uri      = shape.uri;
+    instance.shape    = (int)scene.shapes.size() - 1;
+    instance.material = mmap.at(mname);
+    scene.instances.push_back(instance);
+    object_shapes[oname].push_back((int)scene.shapes.size() - 1);
+    vertex_map.clear();
+    pos_map.clear();
+    norm_map.clear();
+    texcoord_map.clear();
+  };
+
+  // open file
+  auto fs_ = open_input_file(filename);
+  auto fs  = fs_.fs;
+
+  // load obj elements
+  auto element   = obj_element{};
+  auto value     = zero3f;
+  auto name      = ""s;
+  auto vertices  = vector<obj_vertex>{};
+  auto vert_size = obj_vertex{};
+  while (read_obj_element(fs, element, value, name, vertices, vert_size)) {
+    if (element == obj_element::vertex) {
+      opos.push_back(value);
+    } else if (element == obj_element::normal) {
+      onorm.push_back(value);
+    } else if (element == obj_element::texcoord) {
+      otexcoord.push_back({value.x, 1 - value.y});
+    } else if (element == obj_element::face) {
+      if (scene.shapes.empty()) add_shape();
+      if (!scene.shapes.back().positions.empty() &&
+          (!scene.shapes.back().lines.empty() ||
+              !scene.shapes.back().points.empty())) {
+        add_shape();
+      }
+      auto& shape = scene.shapes.back();
+      if (!facevarying_now) {
+        add_verts(vertices, shape);
+        if (vertices.size() == 4) {
+          shape.quads.push_back(
+              {vertex_map.at(vertices[0]), vertex_map.at(vertices[1]),
+                  vertex_map.at(vertices[2]), vertex_map.at(vertices[3])});
+        } else {
+          for (auto i = 2; i < vertices.size(); i++)
+            shape.triangles.push_back({vertex_map.at(vertices[0]),
+                vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
+        }
+      } else {
+        add_fvverts(vertices, shape);
+        if (vertices.size() == 4) {
+          if (vertices[0].position) {
+            shape.quadspos.push_back({pos_map.at(vertices[0].position),
+                pos_map.at(vertices[1].position),
+                pos_map.at(vertices[2].position),
+                pos_map.at(vertices[3].position)});
+          }
+          if (vertices[0].texcoord) {
+            shape.quadstexcoord.push_back(
+                {texcoord_map.at(vertices[0].texcoord),
+                    texcoord_map.at(vertices[1].texcoord),
+                    texcoord_map.at(vertices[2].texcoord),
+                    texcoord_map.at(vertices[3].texcoord)});
+          }
+          if (vertices[0].normal) {
+            shape.quadsnorm.push_back({norm_map.at(vertices[0].normal),
+                norm_map.at(vertices[1].normal),
+                norm_map.at(vertices[2].normal),
+                norm_map.at(vertices[3].normal)});
+          }
+        } else {
+          if (vertices[0].position) {
+            for (auto i = 2; i < vertices.size(); i++)
+              shape.quadspos.push_back({pos_map.at(vertices[0].position),
+                  pos_map.at(vertices[i - 1].position),
+                  pos_map.at(vertices[i].position),
+                  pos_map.at(vertices[i].position)});
+          }
+          if (vertices[0].texcoord) {
+            for (auto i = 2; i < vertices.size(); i++)
+              shape.quadstexcoord.push_back(
+                  {texcoord_map.at(vertices[0].texcoord),
+                      texcoord_map.at(vertices[i - 1].texcoord),
+                      texcoord_map.at(vertices[i].texcoord),
+                      texcoord_map.at(vertices[i].texcoord)});
+          }
+          if (vertices[0].normal) {
+            for (auto i = 2; i < vertices.size(); i++)
+              shape.quadsnorm.push_back({norm_map.at(vertices[0].normal),
+                  norm_map.at(vertices[i - 1].normal),
+                  norm_map.at(vertices[i].normal),
+                  norm_map.at(vertices[i].normal)});
+          }
+        }
+      }
+    } else if (element == obj_element::line) {
+      if (scene.shapes.empty()) add_shape();
+      if (!scene.shapes.back().positions.empty() &&
+          scene.shapes.back().lines.empty()) {
+        add_shape();
+      }
+      auto& shape = scene.shapes.back();
+      add_verts(vertices, shape);
+      for (auto i = 1; i < vertices.size(); i++)
+        shape.lines.push_back(
+            {vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
+    } else if (element == obj_element::point) {
+      if (scene.shapes.empty()) add_shape();
+      if (!scene.shapes.back().positions.empty() &&
+          scene.shapes.back().points.empty()) {
+        add_shape();
+      }
+      auto& shape = scene.shapes.back();
+      add_verts(vertices, shape);
+      for (auto i = 0; i < vertices.size(); i++)
+        shape.points.push_back(vertex_map.at(vertices[i]));
+    } else if (element == obj_element::object) {
+      oname = name;
+      gname = "";
+      mname = "";
+      add_shape();
+    } else if (element == obj_element::group) {
+      gname = name;
+      add_shape();
+    } else if (element == obj_element::usemtl) {
+      mname = name;
+      add_shape();
+    } else if (element == obj_element::mtllib) {
+      if (std::find(mlibs.begin(), mlibs.end(), name) != mlibs.end()) continue;
+      mlibs.push_back(name);
+      auto mtlpath = fs::path(filename).parent_path() / name;
+      load_mtl(mtlpath, scene, mmap, tmap, params);
+    } else {
+      // skip all other commands
+    }
+  }
+
+  // check for extension
+  auto extname = fs::path(filename).replace_extension(".objx");
+  if (fs::exists(extname))
+    load_objx(extname, scene, mmap, tmap, object_shapes, params);
+
+  // cleanup empty
+  for (auto shape = 0; shape < scene.shapes.size(); shape++) {
+    if (!scene.shapes[shape].positions.empty()) continue;
+    for (auto instance = 0; instance < scene.instances.size(); instance++) {
+      if (scene.instances[instance].shape < shape) {
+        continue;
+      } else if (scene.instances[instance].shape > shape) {
+        scene.instances[instance].shape -= 1;
+      } else {
+        scene.instances.erase(scene.instances.begin() + instance);
+        instance--;
+      }
+    }
+    scene.shapes.erase(scene.shapes.begin() + shape);
+    shape--;
+  }
+
+  // check if any empty shape is left
+  for (auto& shape : scene.shapes) {
+    if (shape.positions.empty())
+      throw std::runtime_error("empty shapes not supported");
+  }
+
+  // merging quads and triangles
+  for (auto& shape : scene.shapes) {
+    if (shape.triangles.empty() || shape.quads.empty()) continue;
+    merge_triangles_and_quads(shape.triangles, shape.quads, false);
+  }
+}
+
+// Loads an OBJ
+static void load_obj_scene(
+    const string& filename, yocto_scene& scene, const load_params& params) {
+  scene = {};
+
+  // Parse obj
+  load_obj(filename, scene, params);
+
+  // load textures
+  auto dirname = fs::path(filename).parent_path();
+  load_textures(scene, dirname, params);
+
+  // fix scene
+  scene.uri = fs::path(filename).filename();
+  add_cameras(scene);
+  add_materials(scene);
+  add_radius(scene);
+  normalize_uris(scene);
+  trim_memory(scene);
+  update_transforms(scene);
+}
+
+#else
+
 struct load_obj_scene_cb : obj_callbacks {
   yocto_scene&       scene;
   const load_params& params;
@@ -1701,6 +2484,8 @@ static void load_obj_scene(
   trim_memory(scene);
   update_transforms(scene);
 }
+
+#endif
 
 static void save_obj(const string& filename, const yocto_scene& scene,
     bool preserve_instances, bool flip_texcoord = true) {

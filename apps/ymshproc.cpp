@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
     printf("transforming shape");
     auto transform_timer = timer();
-    auto xform = translation_frame(translate) * scaling_frame(scale) *
+    auto xform           = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
                  rotation_frame({0, 1, 0}, radians(rotate.y));
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
   if (normals) {
     printf("computing normals");
     auto transform_timer = timer();
-    shape.normals = compute_normals(shape);
+    shape.normals        = compute_normals(shape);
     if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
     printf(" in %s\n", transform_timer.elapsedf().c_str());
   }
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
   if (geodesic_source >= 0) {
     printf("computing geodesics");
     auto transform_timer = timer();
-    auto solver = geodesic_solver{};
+    auto solver          = geodesic_solver{};
     init_geodesic_solver(solver, shape.triangles, shape.positions);
     auto distances = vector<float>{};
     compute_geodesic_distances(solver, distances, {geodesic_source});

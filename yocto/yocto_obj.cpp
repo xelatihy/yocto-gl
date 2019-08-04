@@ -571,16 +571,193 @@ bool read_obj_element(FILE* fs, obj_element& element, vec3f& value,
 }
 
 // Read mtl
-bool read_mtl_element(FILE* fs, mtl_element& element, 
-  const mtl_material& material) {
+bool read_mtl_element(
+    FILE* fs, mtl_element& element, mtl_material& material, bool fliptr) {
+  // currently parsed material
+  material   = mtl_material{};
+  auto found = false;
+
+  // read the file line by line
+  auto fpos = ftell(fs);
+  char buffer[4096];
+  while (read_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
+
+    // get element
+    auto cmd = ""s;
+    parse_obj_value(line, cmd);
+    if (cmd == "") continue;
+
+    // possible token values
+    if (cmd == "newmtl") {
+      if (found) {
+        fseek(fs, fpos, SEEK_SET);
+        element = mtl_element::material;
+        return true;
+      }
+      found = true;
+      parse_obj_value(line, material.name);
+    } else if (cmd == "illum") {
+      parse_obj_value(line, material.illum);
+    } else if (cmd == "Ke") {
+      parse_obj_value(line, material.ke);
+    } else if (cmd == "Kd") {
+      parse_obj_value(line, material.kd);
+    } else if (cmd == "Ks") {
+      parse_obj_value(line, material.ks);
+    } else if (cmd == "Kt") {
+      parse_obj_value(line, material.kt);
+    } else if (cmd == "Tf") {
+      material.kt = {-1, -1, -1};
+      parse_obj_value(line, material.kt);
+      if (material.kt.y < 0)
+        material.kt = {material.kt.x, material.kt.x, material.kt.x};
+      if (fliptr) material.kt = vec3f{1, 1, 1} - material.kt;
+    } else if (cmd == "Tr") {
+      parse_obj_value(line, material.op);
+      if (fliptr) material.op = 1 - material.op;
+    } else if (cmd == "Ns") {
+      parse_obj_value(line, material.ns);
+      material.pr = pow(2 / (material.ns + 2), 1 / 4.0f);
+      if (material.pr < 0.01f) material.pr = 0;
+      if (material.pr > 0.99f) material.pr = 1;
+    } else if (cmd == "d") {
+      parse_obj_value(line, material.op);
+    } else if (cmd == "map_Ke") {
+      parse_obj_value(line, material.ke_map);
+    } else if (cmd == "map_Kd") {
+      parse_obj_value(line, material.kd_map);
+    } else if (cmd == "map_Ks") {
+      parse_obj_value(line, material.ks_map);
+    } else if (cmd == "map_Tr") {
+      parse_obj_value(line, material.kt_map);
+    } else if (cmd == "map_d" || cmd == "map_Tr") {
+      parse_obj_value(line, material.op_map);
+    } else if (cmd == "map_bump" || cmd == "bump") {
+      parse_obj_value(line, material.bump_map);
+    } else if (cmd == "map_occ" || cmd == "occ") {
+      parse_obj_value(line, material.occ_map);
+    } else if (cmd == "map_disp" || cmd == "disp") {
+      parse_obj_value(line, material.disp_map);
+    } else if (cmd == "map_norm" || cmd == "norm") {
+      parse_obj_value(line, material.norm_map);
+    } else if (cmd == "Pm") {
+      parse_obj_value(line, material.pm);
+    } else if (cmd == "Pr") {
+      parse_obj_value(line, material.pr);
+    } else if (cmd == "Ps") {
+      parse_obj_value(line, material.ps);
+    } else if (cmd == "Pc") {
+      parse_obj_value(line, material.pc);
+    } else if (cmd == "Pcr") {
+      parse_obj_value(line, material.pcr);
+    } else if (cmd == "map_Pm") {
+      parse_obj_value(line, material.pm_map);
+    } else if (cmd == "map_Pr") {
+      parse_obj_value(line, material.pr_map);
+    } else if (cmd == "map_Ps") {
+      parse_obj_value(line, material.ps_map);
+    } else if (cmd == "map_Pc") {
+      parse_obj_value(line, material.pc_map);
+    } else if (cmd == "map_Pcr") {
+      parse_obj_value(line, material.pcr_map);
+    } else if (cmd == "Vt") {
+      parse_obj_value(line, material.vt);
+    } else if (cmd == "Vp") {
+      parse_obj_value(line, material.vp);
+    } else if (cmd == "Ve") {
+      parse_obj_value(line, material.ve);
+    } else if (cmd == "Vs") {
+      parse_obj_value(line, material.vs);
+    } else if (cmd == "Vg") {
+      parse_obj_value(line, material.vg);
+    } else if (cmd == "Vr") {
+      parse_obj_value(line, material.vr);
+    } else if (cmd == "map_Vs") {
+      parse_obj_value(line, material.vs_map);
+    }
+
+    // update pos
+    fpos = ftell(fs);
+  }
+
+  // return found value
+  if (found) {
+    element = mtl_element::material;
+    return true;
+  } else {
     return false;
+  }
 }
 
 // Read objx
-bool read_objx_element(FILE* fs, objx_element& element, 
-  const objx_camera& camera, const objx_environment& environment, 
-  const objx_instance& instance, const objx_procedural& procedural) {
-    return false;
+bool read_objx_element(FILE* fs, objx_element& element, objx_camera& camera,
+    objx_environment& environment, objx_instance& instance,
+    objx_procedural& procedural) {
+  // read the file line by line
+  char buffer[4096];
+  while (read_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
+
+    // get element
+    auto cmd = ""s;
+    parse_obj_value(line, cmd);
+    if (cmd == "") continue;
+
+    // possible token values
+    if (cmd == "c") {
+      element = objx_element::camera;
+      camera  = objx_camera();
+      parse_obj_value(line, camera.name);
+      parse_obj_value(line, camera.ortho);
+      parse_obj_value(line, camera.width);
+      parse_obj_value(line, camera.height);
+      parse_obj_value(line, camera.lens);
+      parse_obj_value(line, camera.focus);
+      parse_obj_value(line, camera.aperture);
+      parse_obj_value(line, camera.frame);
+      return true;
+    } else if (cmd == "e") {
+      element     = objx_element::environment;
+      environment = objx_environment();
+      parse_obj_value(line, environment.name);
+      parse_obj_value(line, environment.ke);
+      parse_obj_value(line, environment.ke_txt.path);
+      parse_obj_value(line, environment.frame);
+      if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
+      return true;
+    } else if (cmd == "i") {
+      element  = objx_element::instance;
+      instance = objx_instance();
+      parse_obj_value(line, instance.name);
+      parse_obj_value(line, instance.object);
+      parse_obj_value(line, instance.material);
+      parse_obj_value(line, instance.frame);
+      return true;
+    } else if (cmd == "po") {
+      element    = objx_element::procedural;
+      procedural = objx_procedural();
+      parse_obj_value(line, procedural.name);
+      parse_obj_value(line, procedural.type);
+      parse_obj_value(line, procedural.material);
+      parse_obj_value(line, procedural.size);
+      parse_obj_value(line, procedural.level);
+      parse_obj_value(line, procedural.frame);
+      return true;
+    } else {
+      // unused
+    }
+  }
+
+  return false;
 }
 
 // Write text to file
@@ -802,7 +979,9 @@ void write_obj_element(FILE* fs, obj_element element, const vec3f& value,
   switch (element) {
     case obj_element::vertex: write_obj_line_(fs, "v", value); break;
     case obj_element::normal: write_obj_line_(fs, "vn", value); break;
-    case obj_element::texcoord: write_obj_line_(fs, "vt", vec2f{value.x, value.y}); break;
+    case obj_element::texcoord:
+      write_obj_line_(fs, "vt", vec2f{value.x, value.y});
+      break;
     case obj_element::face: write_obj_line_(fs, "f", vertices); break;
     case obj_element::line: write_obj_line_(fs, "l", vertices); break;
     case obj_element::point: write_obj_line_(fs, "p", vertices); break;

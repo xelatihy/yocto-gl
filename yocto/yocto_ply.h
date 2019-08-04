@@ -7,7 +7,7 @@
 // model but instead writing elements directly after each call.
 // Error reporting is done by throwing `std::runtime_error` exceptions.
 //
-// Yocto/Ply provides fast/low-level access to PLY data and requires some 
+// Yocto/Ply provides fast/low-level access to PLY data and requires some
 // familiarity with the PLY format to use effectively. For a higher level
 // interface, consider using Yocto/Shape `load_shape()` and `save_shape()`.
 //
@@ -33,7 +33,7 @@
 //        // lists contains the values for list properties
 //    }
 //
-// For convenience during parsing, you can use `find_ply_property()` to 
+// For convenience during parsing, you can use `find_ply_property()` to
 // determine the index of the property you may be interested in.
 //
 //
@@ -102,11 +102,9 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Type of ply file. For best performance, choose binary_little_endian when 
+// Type of ply file. For best performance, choose binary_little_endian when
 // writing ply files.
-enum struct ply_format {
-  ascii, binary_little_endian, binary_big_endian
-};
+enum struct ply_format { ascii, binary_little_endian, binary_big_endian };
 
 // Type of Ply data
 enum struct ply_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
@@ -127,15 +125,16 @@ struct ply_element {
 };
 
 // Read Ply functions
-void read_ply_header(FILE* fs, ply_format& format, vector<ply_element>& elements, vector<string>& comments);
+void read_ply_header(FILE* fs, ply_format& format,
+    vector<ply_element>& elements, vector<string>& comments);
 void read_ply_value(FILE* fs, ply_format format, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists);
 void read_ply_value(FILE* fs, ply_format format, const ply_element& element,
     vector<float>& values, vector<vector<int>>& lists);
 
 // Write Ply functions
-void write_ply_header(FILE* fs, ply_format format, const vector<ply_element>& elements,
-    const vector<string>& comments);
+void write_ply_header(FILE* fs, ply_format format,
+    const vector<ply_element>& elements, const vector<string>& comments);
 void write_ply_value(FILE* fs, ply_format format, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists);
 void write_ply_value(FILE* fs, ply_format format, const ply_element& element,

@@ -237,10 +237,10 @@ enum struct objx_element {
 bool read_obj_element(FILE* fs, obj_element& element, vec3f& value,
     string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size);
 bool read_mtl_element(
-    FILE* fs, mtl_element& element, mtl_material& material);
-bool read_objx_element(FILE* fs, objx_element& element,
-    objx_camera& camera, objx_environment& environment,
-    objx_instance& instance, objx_procedural& procedural);
+    FILE* fs, mtl_element& element, mtl_material& material, bool fliptr = true);
+bool read_objx_element(FILE* fs, objx_element& element, objx_camera& camera,
+    objx_environment& environment, objx_instance& instance,
+    objx_procedural& procedural);
 
 // Write obj elements
 void write_obj_comment(FILE* fs, const string& comment);
