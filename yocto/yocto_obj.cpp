@@ -587,9 +587,7 @@ void write_obj_comment(FILE* fs, const string& comment) {
   }
   write_obj_text(fs, "\n");
 }
-void write_obj_vertex(FILE* fs, const vec3f& p) {
-  write_obj_line_(fs, "v", p);
-}
+void write_obj_vertex(FILE* fs, const vec3f& p) { write_obj_line_(fs, "v", p); }
 void write_obj_normal(FILE* fs, const vec3f& n) {
   write_obj_line_(fs, "vn", n);
 }
@@ -699,12 +697,113 @@ void write_objx_environmnet(FILE* fs, const obj_environment& environment) {
       environment.frame);
 }
 void write_objx_instance(FILE* fs, const obj_instance& instance) {
-  write_obj_line_(fs, "i", instance.name, instance.object,
-      instance.material, instance.frame);
+  write_obj_line_(fs, "i", instance.name, instance.object, instance.material,
+      instance.frame);
 }
 void write_objx_procedural(FILE* fs, const obj_procedural& procedural) {
   write_obj_line_(fs, "po", procedural.name, procedural.type,
       procedural.material, procedural.size, procedural.level, procedural.frame);
+}
+
+void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
+    const string& name, const vector<obj_vertex>& elements) {
+  switch (command) {
+    case obj_command::vertex: write_obj_line_(fs, "v", value); break;
+    case obj_command::normal: write_obj_line_(fs, "vn", value); break;
+    case obj_command::texcoord: write_obj_line_(fs, "vt", value); break;
+    case obj_command::face: write_obj_line_(fs, "f", elements); break;
+    case obj_command::line: write_obj_line_(fs, "l", elements); break;
+    case obj_command::point: write_obj_line_(fs, "p", elements); break;
+    case obj_command::object: write_obj_line_(fs, "o", name); break;
+    case obj_command::group: write_obj_line_(fs, "g", name); break;
+    case obj_command::usemtl: write_obj_line_(fs, "usemtl", name); break;
+    case obj_command::smoothing: write_obj_line_(fs, "s", name); break;
+    case obj_command::mtllib: write_obj_line_(fs, "mtllib", name); break;
+    case obj_command::objxlib: break;
+  }
+}
+void write_mtl_command(
+    FILE* fs, mtl_command command, const obj_material& material) {
+  switch (command) {
+    case mtl_command::material: {
+      static auto def    = obj_material{};
+      auto write_obj_opt = [](FILE* fs, const char* name, const auto& val,
+                               const auto& def) {
+        if (val == def) return;
+        write_obj_line_(fs, name, val);
+      };
+      auto write_obj_txt = [](FILE* fs, const char* name,
+                               const obj_texture_info& info) {
+        if (info.path.empty()) return;
+        write_obj_line_(fs, name, info.path);
+      };
+      write_obj_line_(fs, "newmtl", material.name);
+      write_obj_opt(fs, "  illum", material.illum, def.illum);
+      write_obj_opt(fs, "  Ke", material.ke, def.ke);
+      write_obj_opt(fs, "  Ka", material.ka, def.ka);
+      write_obj_opt(fs, "  Kd", material.kd, vec3f{-1, -1, -1});
+      write_obj_opt(fs, "  Ks", material.ks, vec3f{-1, -1, -1});
+      write_obj_opt(fs, "  Kr", material.kr, def.kr);
+      write_obj_opt(fs, "  Kt", material.kt, def.kt);
+      write_obj_opt(fs, "  Ns", (int)material.ns, -1);
+      write_obj_opt(fs, "  d", material.op, def.op);
+      write_obj_opt(fs, "  Ni", material.ior, def.ior);
+      write_obj_txt(fs, "  map_Ke", material.ke_map);
+      write_obj_txt(fs, "  map_Ka", material.ka_map);
+      write_obj_txt(fs, "  map_Kd", material.kd_map);
+      write_obj_txt(fs, "  map_Ks", material.ks_map);
+      write_obj_txt(fs, "  map_Kr", material.kr_map);
+      write_obj_txt(fs, "  map_Kt", material.kt_map);
+      write_obj_txt(fs, "  map_d", material.op_map);
+      write_obj_txt(fs, "  map_Ni", material.ior_map);
+      write_obj_txt(fs, "  map_bump", material.bump_map);
+      write_obj_txt(fs, "  map_norm", material.norm_map);
+      write_obj_txt(fs, "  map_disp", material.disp_map);
+      write_obj_txt(fs, "  map_occ", material.occ_map);
+      write_obj_opt(fs, "  Pr", material.pr, def.pr);
+      write_obj_opt(fs, "  Pm", material.pm, def.pm);
+      write_obj_opt(fs, "  Ps", material.ps, def.ps);
+      write_obj_opt(fs, "  Pc", material.pc, def.pc);
+      write_obj_opt(fs, "  Pcr", material.pcr, def.pcr);
+      write_obj_txt(fs, "  Pr_map", material.pr_map);
+      write_obj_txt(fs, "  Pm_map", material.pm_map);
+      write_obj_txt(fs, "  Ps_map", material.ps_map);
+      write_obj_txt(fs, "  Pc_map", material.pc_map);
+      write_obj_txt(fs, "  Pcr_map", material.pcr_map);
+      write_obj_opt(fs, "  Vt", material.vt, def.vt);
+      write_obj_opt(fs, "  Ve", material.ve, def.ve);
+      write_obj_opt(fs, "  Vs", material.vs, def.vs);
+      write_obj_opt(fs, "  Vg", material.vg, def.vg);
+      write_obj_opt(fs, "  Vr", material.vr, def.vr);
+      write_obj_txt(fs, "  Vs_map", material.vs_map);
+      write_obj_text(fs, "\n");
+    } break;
+  }
+}
+void write_objx_command(FILE* fs, objx_command command,
+    const obj_camera& camera, const obj_environment& environment,
+    const obj_instance& instance, const obj_procedural& procedural) {
+  switch (command) {
+    case objx_command::camera: {
+      write_obj_line_(fs, "c", camera.name, (int)camera.ortho, camera.width,
+          camera.height, camera.lens, camera.focus, camera.aperture,
+          camera.frame);
+    } break;
+    case objx_command::environment: {
+      write_obj_line_(fs, "e", environment.name, environment.ke,
+          environment.ke_txt.path != "" ? environment.ke_txt.path : "\"\" "s,
+          environment.frame);
+    } break;
+    case objx_command::instance: {
+      write_obj_line_(fs, "i", instance.name, instance.object,
+          instance.material, instance.frame);
+    } break;
+    case objx_command::procedural: {
+      write_obj_line_(fs, "po", procedural.name, procedural.type,
+          procedural.material, procedural.size, procedural.level,
+          procedural.frame);
+    } break;
+  }
 }
 
 }  // namespace yocto
