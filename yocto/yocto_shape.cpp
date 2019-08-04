@@ -6,22 +6,14 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#ifndef YOCTO_PLY_INTERNAL
-#define YOCTO_PLY_INTERNAL 1
-#endif
-
 #ifndef YOCTO_OBJ_DIRECT
 #define YOCTO_OBJ_DIRECT 1
 #endif
 
 #include "yocto_shape.h"
 #include "yocto_obj.h"
-#include "yocto_random.h"
-#if YOCTO_PLY_INTERNAL
 #include "yocto_ply.h"
-#else
-#include "ext/happly.h"
-#endif
+#include "yocto_random.h"
 
 #include <deque>
 
@@ -2987,20 +2979,24 @@ void load_shape(const string& filename, vector<int>& points,
   colors        = {};
   radius        = {};
 
-  auto ext = fs::path(filename).extension().string();
-  if (ext == ".ply" || ext == ".PLY") {
-    load_ply_shape(filename, points, lines, triangles, quads, quadspos,
-        quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
-        radius);
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    load_obj_shape(filename, points, lines, triangles, quads, quadspos,
-        quadsnorm, quadstexcoord, positions, normals, texcoords,
-        preserve_facevarrying);
-  } else if (ext == ".hair" || ext == ".HAIR") {
-    load_cyhair_shape(
-        filename, lines, positions, normals, texcoords, colors, radius);
-  } else {
-    throw std::runtime_error("unsupported mesh type " + ext);
+  try {
+    auto ext = fs::path(filename).extension().string();
+    if (ext == ".ply" || ext == ".PLY") {
+      load_ply_shape(filename, points, lines, triangles, quads, quadspos,
+          quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
+          radius);
+    } else if (ext == ".obj" || ext == ".OBJ") {
+      load_obj_shape(filename, points, lines, triangles, quads, quadspos,
+          quadsnorm, quadstexcoord, positions, normals, texcoords,
+          preserve_facevarrying);
+    } else if (ext == ".hair" || ext == ".HAIR") {
+      load_cyhair_shape(
+          filename, lines, positions, normals, texcoords, colors, radius);
+    } else {
+      throw std::runtime_error("unsupported shape type " + ext);
+    }
+  } catch (std::exception& e) {
+    throw std::runtime_error("cannot load shape " + filename + "\n" + e.what());
   }
 }
 
@@ -3012,16 +3008,20 @@ void save_shape(const string& filename, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<float>& radius, bool ascii) {
-  auto ext = fs::path(filename).extension().string();
-  if (ext == ".ply" || ext == ".PLY") {
-    return save_ply_shape(filename, points, lines, triangles, quads, quadspos,
-        quadsnorm, quadstexcoord, positions, normals, texcoords, colors, radius,
-        ascii);
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    return save_obj_shape(filename, points, lines, triangles, quads, quadspos,
-        quadsnorm, quadstexcoord, positions, normals, texcoords);
-  } else {
-    throw std::runtime_error("unsupported mesh type " + ext);
+  try {
+    auto ext = fs::path(filename).extension().string();
+    if (ext == ".ply" || ext == ".PLY") {
+      return save_ply_shape(filename, points, lines, triangles, quads, quadspos,
+          quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
+          radius, ascii);
+    } else if (ext == ".obj" || ext == ".OBJ") {
+      return save_obj_shape(filename, points, lines, triangles, quads, quadspos,
+          quadsnorm, quadstexcoord, positions, normals, texcoords);
+    } else {
+      throw std::runtime_error("unsupported shape type " + ext);
+    }
+  } catch (std::exception& e) {
+    throw std::runtime_error("cannot save shape " + filename + "\n" + e.what());
   }
 }
 
@@ -3051,183 +3051,51 @@ static inline file_holder open_output_file(
   return {fs, filename};
 }
 
-#if YOCTO_PLY_INTERNAL
-
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, bool flip_texcoord) {
-  try {
-    // open ply
-    auto fs_ = open_input_file(filename, true);
-    auto fs  = fs_.fs;
+  // open ply
+  auto fs_ = open_input_file(filename, true);
+  auto fs  = fs_.fs;
 
-    // load elements
-    auto format   = ply_format{};
-    auto elements = vector<ply_element>{};
-    auto comments = vector<string>{};
-    read_ply_header(fs, format, elements, comments);
+  // load elements
+  auto format   = ply_format{};
+  auto elements = vector<ply_element>{};
+  auto comments = vector<string>{};
+  read_ply_header(fs, format, elements, comments);
 
-    // read values
-    auto values = vector<float>{};
-    auto lists  = vector<vector<int>>{};
-    for (auto& element : elements) {
-      if (element.name == "vertex") {
-        auto pos  = find_ply_property(element, "x", "y", "z");
-        auto norm = find_ply_property(element, "nx", "ny", "nz");
-        auto uv   = find_ply_property(element, "u", "v");
-        if (uv.x < 0) uv = find_ply_property(element, "s", "t");
-        auto col = find_ply_property(element, "red", "green", "blue", "alpha");
-        auto rad = find_ply_property(element, "radius");
-        for (auto idx = 0; idx < element.count; idx++) {
-          read_ply_value(fs, format, element, values, lists);
-          if (pos.x >= 0)
-            positions.push_back({values[pos.x], values[pos.y], values[pos.z]});
-          if (norm.x >= 0)
-            normals.push_back({values[norm.x], values[norm.y], values[norm.z]});
-          if (uv.x >= 0) texcoords.push_back({values[uv.x], values[uv.y]});
-          if (col.x >= 0)
-            colors.push_back(
-                {values[col.x], values[col.y], values[col.z], values[col.w]});
-          if (rad > 0) radius.push_back({values[rad]});
-        }
-      } else if (element.name == "face") {
-        auto indices = find_ply_property(element, "vertex_indices");
-        for (auto idx = 0; idx < element.count; idx++) {
-          read_ply_value(fs, format, element, values, lists);
-          if (indices < 0) continue;
-          auto& face = lists[indices];
-          if (face.size() == 4) {
-            quads.push_back({face[0], face[1], face[2], face[3]});
-          } else {
-            for (auto i = 2; i < face.size(); i++)
-              triangles.push_back({face[0], face[i - 1], face[i]});
-          }
-        }
-      } else if (element.name == "line") {
-        auto indices = find_ply_property(element, "vertex_indices");
-        for (auto idx = 0; idx < element.count; idx++) {
-          read_ply_value(fs, format, element, values, lists);
-          if (indices < 0) continue;
-          auto line = lists[indices];
-          for (auto i = 1; i < line.size(); i++)
-            lines.push_back({line[i], line[i - 1]});
-        }
-      } else {
-        for (auto idx = 0; idx < element.count; idx++)
-          read_ply_value(fs, format, element, values, lists);
+  // read values
+  auto values = vector<float>{};
+  auto lists  = vector<vector<int>>{};
+  for (auto& element : elements) {
+    if (element.name == "vertex") {
+      auto pos  = find_ply_property(element, "x", "y", "z");
+      auto norm = find_ply_property(element, "nx", "ny", "nz");
+      auto uv   = find_ply_property(element, "u", "v");
+      if (uv.x < 0) uv = find_ply_property(element, "s", "t");
+      auto col = find_ply_property(element, "red", "green", "blue", "alpha");
+      auto rad = find_ply_property(element, "radius");
+      for (auto idx = 0; idx < element.count; idx++) {
+        read_ply_value(fs, format, element, values, lists);
+        if (pos.x >= 0)
+          positions.push_back({values[pos.x], values[pos.y], values[pos.z]});
+        if (norm.x >= 0)
+          normals.push_back({values[norm.x], values[norm.y], values[norm.z]});
+        if (uv.x >= 0) texcoords.push_back({values[uv.x], values[uv.y]});
+        if (col.x >= 0)
+          colors.push_back(
+              {values[col.x], values[col.y], values[col.z], values[col.w]});
+        if (rad > 0) radius.push_back({values[rad]});
       }
-    }
-
-    if (positions.empty())
-      throw std::runtime_error("vertex positions not present");
-
-    // fix texture coordinated
-    if (flip_texcoord && !texcoords.empty()) {
-      for (auto& uv : texcoords) uv.y = 1 - uv.y;
-    }
-
-    merge_triangles_and_quads(triangles, quads, false);
-
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot load mesh " + filename + "\n" + e.what());
-  }
-}
-
-#else
-
-static void load_ply_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, bool flip_texcoord) {
-  try {
-    // load ply
-    happly::PLYData ply(filename);
-
-    // copy vertex data
-    if (ply.hasElement("vertex")) {
-      auto& vertex = ply.getElement("vertex");
-      if (vertex.hasProperty("x") && vertex.hasProperty("y") &&
-          vertex.hasProperty("z")) {
-        auto x = vertex.getProperty<float>("x");
-        auto y = vertex.getProperty<float>("y");
-        auto z = vertex.getProperty<float>("z");
-        positions.resize(x.size());
-        for (auto i = 0; i < positions.size(); i++) {
-          positions[i] = {x[i], y[i], z[i]};
-        }
-      } else {
-        throw std::runtime_error("vertex positions not present");
-      }
-      if (vertex.hasProperty("nx") && vertex.hasProperty("ny") &&
-          vertex.hasProperty("nz")) {
-        auto x = vertex.getProperty<float>("nx");
-        auto y = vertex.getProperty<float>("ny");
-        auto z = vertex.getProperty<float>("nz");
-        normals.resize(x.size());
-        for (auto i = 0; i < normals.size(); i++) {
-          normals[i] = {x[i], y[i], z[i]};
-        }
-      }
-      if (vertex.hasProperty("u") && vertex.hasProperty("v")) {
-        auto x = vertex.getProperty<float>("u");
-        auto y = vertex.getProperty<float>("v");
-        texcoords.resize(x.size());
-        for (auto i = 0; i < texcoords.size(); i++) {
-          texcoords[i] = {x[i], y[i]};
-        }
-      }
-      if (vertex.hasProperty("s") && vertex.hasProperty("t")) {
-        auto x = vertex.getProperty<float>("s");
-        auto y = vertex.getProperty<float>("t");
-        texcoords.resize(x.size());
-        for (auto i = 0; i < texcoords.size(); i++) {
-          texcoords[i] = {x[i], y[i]};
-        }
-      }
-      if (vertex.hasProperty("red") && vertex.hasProperty("green") &&
-          vertex.hasProperty("blue")) {
-        auto x = vertex.getProperty<float>("red");
-        auto y = vertex.getProperty<float>("green");
-        auto z = vertex.getProperty<float>("blue");
-        colors.resize(x.size());
-        for (auto i = 0; i < colors.size(); i++) {
-          colors[i] = {x[i], y[i], z[i], 1};
-        }
-        if (vertex.hasProperty("alpha")) {
-          auto w = vertex.getProperty<float>("alpha");
-          for (auto i = 0; i < colors.size(); i++) {
-            colors[i].w = w[i];
-          }
-        }
-      }
-      if (vertex.hasProperty("radius")) {
-        radius = vertex.getProperty<float>("radius");
-      }
-    }
-
-    // fix texture coordinated
-    if (flip_texcoord && !texcoords.empty()) {
-      for (auto& uv : texcoords) uv.y = 1 - uv.y;
-    }
-
-    // copy face data
-    if (ply.hasElement("face")) {
-      auto& elements = ply.getElement("face");
-      if (!elements.hasProperty("vertex_indices"))
-        throw std::runtime_error("bad ply faces");
-      auto indices = vector<vector<int>>{};
-      try {
-        indices = elements.getListProperty<int>("vertex_indices");
-      } catch (...) {
-        (vector<vector<unsigned int>>&)indices =
-            elements.getListProperty<unsigned int>("vertex_indices");
-      }
-      for (auto& face : indices) {
+    } else if (element.name == "face") {
+      auto indices = find_ply_property(element, "vertex_indices");
+      for (auto idx = 0; idx < element.count; idx++) {
+        read_ply_value(fs, format, element, values, lists);
+        if (indices < 0) continue;
+        auto& face = lists[indices];
         if (face.size() == 4) {
           quads.push_back({face[0], face[1], face[2], face[3]});
         } else {
@@ -3235,36 +3103,31 @@ static void load_ply_shape(const string& filename, vector<int>& points,
             triangles.push_back({face[0], face[i - 1], face[i]});
         }
       }
-    }
-
-    // copy face data
-    if (ply.hasElement("line")) {
-      auto& elements = ply.getElement("line");
-      if (!elements.hasProperty("vertex_indices"))
-        throw std::runtime_error("bad ply lines");
-      auto indices = vector<vector<int>>{};
-      try {
-        indices = elements.getListProperty<int>("vertex_indices");
-      } catch (...) {
-        (vector<vector<unsigned int>>&)indices =
-            elements.getListProperty<unsigned int>("vertex_indices");
-      }
-      for (auto& line : indices) {
+    } else if (element.name == "line") {
+      auto indices = find_ply_property(element, "vertex_indices");
+      for (auto idx = 0; idx < element.count; idx++) {
+        read_ply_value(fs, format, element, values, lists);
+        if (indices < 0) continue;
+        auto line = lists[indices];
         for (auto i = 1; i < line.size(); i++)
           lines.push_back({line[i], line[i - 1]});
       }
+    } else {
+      for (auto idx = 0; idx < element.count; idx++)
+        read_ply_value(fs, format, element, values, lists);
     }
-
-    merge_triangles_and_quads(triangles, quads, false);
-
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot load mesh " + filename + "\n" + e.what());
   }
+
+  if (positions.empty())
+    throw std::runtime_error("vertex positions not present");
+
+  // fix texture coordinated
+  if (flip_texcoord && !texcoords.empty()) {
+    for (auto& uv : texcoords) uv.y = 1 - uv.y;
+  }
+
+  merge_triangles_and_quads(triangles, quads, false);
 }
-
-#endif
-
-#if YOCTO_PLY_INTERNAL
 
 // Save ply mesh
 static void save_ply_shape(const string& filename, const vector<int>& points,
@@ -3441,141 +3304,6 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
   }
 }
 
-#else
-
-// Save ply mesh
-static void save_ply_shape(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, bool ascii, bool flip_texcoord) {
-  if (!quadspos.empty()) {
-    auto split_quads         = vector<vec4i>{};
-    auto split_positions     = vector<vec3f>{};
-    auto split_normals       = vector<vec3f>{};
-    auto split_texturecoords = vector<vec2f>{};
-    split_facevarying(split_quads, split_positions, split_normals,
-        split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords);
-    return save_ply_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
-        split_positions, split_normals, split_texturecoords, {}, {}, ascii,
-        flip_texcoord);
-  }
-
-  // empty data
-  happly::PLYData ply;
-  ply.comments.push_back("Written by Yocto/GL");
-  ply.comments.push_back("https://github.com/xelatihy/yocto-gl");
-
-  // add elements
-  ply.addElement("vertex", positions.size());
-  if (!positions.empty()) {
-    auto& vertex = ply.getElement("vertex");
-    auto  x      = vector<float>{};
-    auto  y      = vector<float>{};
-    auto  z      = vector<float>{};
-    for (auto& p : positions) {
-      x.push_back(p.x);
-      y.push_back(p.y);
-      z.push_back(p.z);
-    }
-    vertex.addProperty("x", x);
-    vertex.addProperty("y", y);
-    vertex.addProperty("z", z);
-  }
-  if (!normals.empty()) {
-    auto& vertex = ply.getElement("vertex");
-    auto  x      = vector<float>{};
-    auto  y      = vector<float>{};
-    auto  z      = vector<float>{};
-    for (auto& n : normals) {
-      x.push_back(n.x);
-      y.push_back(n.y);
-      z.push_back(n.z);
-    }
-    vertex.addProperty("nx", x);
-    vertex.addProperty("ny", y);
-    vertex.addProperty("nz", z);
-  }
-  if (!texcoords.empty()) {
-    auto& vertex = ply.getElement("vertex");
-    auto  x      = vector<float>{};
-    auto  y      = vector<float>{};
-    for (auto& t : texcoords) {
-      x.push_back(t.x);
-      y.push_back(flip_texcoord ? 1 - t.y : t.y);
-    }
-    vertex.addProperty("u", x);
-    vertex.addProperty("v", y);
-  }
-  if (!colors.empty()) {
-    auto& vertex = ply.getElement("vertex");
-    auto  x      = vector<float>{};
-    auto  y      = vector<float>{};
-    auto  z      = vector<float>{};
-    auto  w      = vector<float>{};
-    for (auto& c : colors) {
-      x.push_back(c.x);
-      y.push_back(c.y);
-      z.push_back(c.z);
-      w.push_back(c.w);
-    }
-    vertex.addProperty("red", x);
-    vertex.addProperty("green", y);
-    vertex.addProperty("blue", z);
-    vertex.addProperty("alpha", w);
-  }
-  if (!radius.empty()) {
-    auto& vertex = ply.getElement("vertex");
-    vertex.addProperty("radius", radius);
-  }
-
-  // face date
-  if (!triangles.empty() || !quads.empty()) {
-    ply.addElement("face", triangles.size() + quads.size());
-    auto elements = vector<vector<int>>{};
-    for (auto& t : triangles) {
-      elements.push_back({t.x, t.y, t.z});
-    }
-    for (auto& q : quads) {
-      if (q.z == q.w) {
-        elements.push_back({q.x, q.y, q.z});
-      } else {
-        elements.push_back({q.x, q.y, q.z, q.w});
-      }
-    }
-    ply.getElement("face").addListProperty("vertex_indices", elements);
-  }
-  if (!lines.empty()) {
-    ply.addElement("line", lines.size());
-    auto elements = vector<vector<int>>{};
-    for (auto& l : lines) {
-      elements.push_back({l.x, l.y});
-    }
-    ply.getElement("line").addListProperty("vertex_indices", elements);
-  }
-  if (!points.empty()) {
-    ply.addElement("point", points.size());
-    auto elements = vector<vector<int>>{};
-    for (auto& p : points) {
-      elements.push_back({p});
-    }
-    ply.getElement("point").addListProperty("vertex_indices", elements);
-  }
-
-  // Write our data
-  try {
-    ply.write(filename,
-        ascii ? happly::DataFormat::ASCII : happly::DataFormat::Binary);
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot save mesh " + filename + "\n" + e.what());
-  }
-}
-
-#endif
-
 #if YOCTO_OBJ_DIRECT
 
 // Load obj mesh
@@ -3585,28 +3313,105 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
     bool flip_texcoord) {
-  try {
-    // open obj
-    auto fs_ = open_input_file(filename, true);
-    auto fs  = fs_.fs;
+  // open obj
+  auto fs_ = open_input_file(filename, true);
+  auto fs  = fs_.fs;
 
-    // obj vertices
-    std::deque<vec3f> opos      = std::deque<vec3f>();
-    std::deque<vec3f> onorm     = std::deque<vec3f>();
-    std::deque<vec2f> otexcoord = std::deque<vec2f>();
+  // obj vertices
+  std::deque<vec3f> opos      = std::deque<vec3f>();
+  std::deque<vec3f> onorm     = std::deque<vec3f>();
+  std::deque<vec2f> otexcoord = std::deque<vec2f>();
 
-    // vertex maps
-    unordered_map<obj_vertex, int> vertex_map =
-        unordered_map<obj_vertex, int>();
+  // vertex maps
+  unordered_map<obj_vertex, int> vertex_map = unordered_map<obj_vertex, int>();
 
-    // vertex maps
-    unordered_map<int, int> pos_map      = unordered_map<int, int>();
-    unordered_map<int, int> texcoord_map = unordered_map<int, int>();
-    unordered_map<int, int> norm_map     = unordered_map<int, int>();
+  // vertex maps
+  unordered_map<int, int> pos_map      = unordered_map<int, int>();
+  unordered_map<int, int> texcoord_map = unordered_map<int, int>();
+  unordered_map<int, int> norm_map     = unordered_map<int, int>();
 
-    // Add  vertices to the current shape
-    auto add_verts = [&](const vector<obj_vertex>& verts) {
-      for (auto& vert : verts) {
+  // read obj
+  auto element   = obj_element{};
+  auto value     = zero3f;
+  auto name      = ""s;
+  auto vertices  = vector<obj_vertex>{};
+  auto vert_size = obj_vertex{};
+  while (read_obj_element(fs, element, value, name, vertices, vert_size)) {
+    if (element == obj_element::vertex) {
+      opos.push_back(value);
+    } else if (element == obj_element::normal) {
+      onorm.push_back(value);
+    } else if (element == obj_element::texcoord) {
+      otexcoord.push_back({value.x, value.y});
+    } else if (element == obj_element::face && facevarying) {
+      for (auto& vert : vertices) {
+        if (!vert.position) continue;
+        auto pos_it = pos_map.find(vert.position);
+        if (pos_it != pos_map.end()) continue;
+        auto nverts = (int)positions.size();
+        pos_map.insert(pos_it, {vert.position, nverts});
+        positions.push_back(opos.at(vert.position - 1));
+      }
+      for (auto& vert : vertices) {
+        if (!vert.texcoord) continue;
+        auto texcoord_it = texcoord_map.find(vert.texcoord);
+        if (texcoord_it != texcoord_map.end()) continue;
+        auto nverts = (int)texcoords.size();
+        texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
+        texcoords.push_back(otexcoord.at(vert.texcoord - 1));
+      }
+      for (auto& vert : vertices) {
+        if (!vert.normal) continue;
+        auto norm_it = norm_map.find(vert.normal);
+        if (norm_it != norm_map.end()) continue;
+        auto nverts = (int)normals.size();
+        norm_map.insert(norm_it, {vert.normal, nverts});
+        normals.push_back(onorm.at(vert.normal - 1));
+      }
+      if (vertices.size() == 4) {
+        if (vertices[0].position) {
+          quadspos.push_back({pos_map.at(vertices[0].position),
+              pos_map.at(vertices[1].position),
+              pos_map.at(vertices[2].position),
+              pos_map.at(vertices[3].position)});
+        }
+        if (vertices[0].texcoord) {
+          quadstexcoord.push_back({texcoord_map.at(vertices[0].texcoord),
+              texcoord_map.at(vertices[1].texcoord),
+              texcoord_map.at(vertices[2].texcoord),
+              texcoord_map.at(vertices[3].texcoord)});
+        }
+        if (vertices[0].normal) {
+          quadsnorm.push_back({norm_map.at(vertices[0].normal),
+              norm_map.at(vertices[1].normal), norm_map.at(vertices[2].normal),
+              norm_map.at(vertices[3].normal)});
+        }
+        // quads_materials.push_back(current_material_id);
+      } else {
+        if (vertices[0].position) {
+          for (auto i = 2; i < vertices.size(); i++)
+            quadspos.push_back({pos_map.at(vertices[0].position),
+                pos_map.at(vertices[1].position),
+                pos_map.at(vertices[i].position),
+                pos_map.at(vertices[i].position)});
+        }
+        if (vertices[0].texcoord) {
+          for (auto i = 2; i < vertices.size(); i++)
+            quadstexcoord.push_back({texcoord_map.at(vertices[0].texcoord),
+                texcoord_map.at(vertices[1].texcoord),
+                texcoord_map.at(vertices[i].texcoord),
+                texcoord_map.at(vertices[i].texcoord)});
+        }
+        if (vertices[0].normal) {
+          for (auto i = 2; i < vertices.size(); i++)
+            quadsnorm.push_back({norm_map.at(vertices[0].normal),
+                norm_map.at(vertices[1].normal),
+                norm_map.at(vertices[i].normal),
+                norm_map.at(vertices[i].normal)});
+        }
+      }
+    } else if (element == obj_element::face && !facevarying) {
+      for (auto& vert : vertices) {
         auto it = vertex_map.find(vert);
         if (it != vertex_map.end()) continue;
         auto nverts = (int)positions.size();
@@ -3615,144 +3420,55 @@ static void load_obj_shape(const string& filename, vector<int>& points,
         if (vert.texcoord) texcoords.push_back(otexcoord.at(vert.texcoord - 1));
         if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
       }
-    };
-
-    // add vertex
-    auto add_fvverts = [&](const vector<obj_vertex>& verts) {
-      for (auto& vert : verts) {
-        if (!vert.position) continue;
-        auto pos_it = pos_map.find(vert.position);
-        if (pos_it != pos_map.end()) continue;
+      if (vertices.size() == 4) {
+        quads.push_back({vertex_map.at(vertices[0]), vertex_map.at(vertices[1]),
+            vertex_map.at(vertices[2]), vertex_map.at(vertices[3])});
+      } else {
+        for (auto i = 2; i < vertices.size(); i++)
+          triangles.push_back({vertex_map.at(vertices[0]),
+              vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
+      }
+    } else if (element == obj_element::line) {
+      for (auto& vert : vertices) {
+        auto it = vertex_map.find(vert);
+        if (it != vertex_map.end()) continue;
         auto nverts = (int)positions.size();
-        pos_map.insert(pos_it, {vert.position, nverts});
-        positions.push_back(opos.at(vert.position - 1));
+        vertex_map.insert(it, {vert, nverts});
+        if (vert.position) positions.push_back(opos.at(vert.position - 1));
+        if (vert.texcoord) texcoords.push_back(otexcoord.at(vert.texcoord - 1));
+        if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
       }
-      for (auto& vert : verts) {
-        if (!vert.texcoord) continue;
-        auto texcoord_it = texcoord_map.find(vert.texcoord);
-        if (texcoord_it != texcoord_map.end()) continue;
-        auto nverts = (int)texcoords.size();
-        texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
-        texcoords.push_back(otexcoord.at(vert.texcoord - 1));
+      for (auto i = 1; i < vertices.size(); i++)
+        lines.push_back(
+            {vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
+    } else if (element == obj_element::point) {
+      for (auto& vert : vertices) {
+        auto it = vertex_map.find(vert);
+        if (it != vertex_map.end()) continue;
+        auto nverts = (int)positions.size();
+        vertex_map.insert(it, {vert, nverts});
+        if (vert.position) positions.push_back(opos.at(vert.position - 1));
+        if (vert.texcoord) texcoords.push_back(otexcoord.at(vert.texcoord - 1));
+        if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
       }
-      for (auto& vert : verts) {
-        if (!vert.normal) continue;
-        auto norm_it = norm_map.find(vert.normal);
-        if (norm_it != norm_map.end()) continue;
-        auto nverts = (int)normals.size();
-        norm_map.insert(norm_it, {vert.normal, nverts});
-        normals.push_back(onorm.at(vert.normal - 1));
-      }
-    };
-
-    // read obj
-    auto element   = obj_element{};
-    auto value     = zero3f;
-    auto name      = ""s;
-    auto vertices  = vector<obj_vertex>{};
-    auto vert_size = obj_vertex{};
-    while (read_obj_element(fs, element, value, name, vertices, vert_size)) {
-      switch (element) {
-        case obj_element::vertex: {
-          opos.push_back(value);
-        } break;
-        case obj_element::normal: {
-          onorm.push_back(value);
-        } break;
-        case obj_element::texcoord: {
-          otexcoord.push_back({value.x, value.y});
-        } break;
-        case obj_element::face: {
-          if (!facevarying) {
-            add_verts(vertices);
-            if (vertices.size() == 4) {
-              quads.push_back(
-                  {vertex_map.at(vertices[0]), vertex_map.at(vertices[1]),
-                      vertex_map.at(vertices[2]), vertex_map.at(vertices[3])});
-            } else {
-              for (auto i = 2; i < vertices.size(); i++)
-                triangles.push_back(
-                    {vertex_map.at(vertices[0]), vertex_map.at(vertices[i - 1]),
-                        vertex_map.at(vertices[i])});
-            }
-          } else {
-            add_fvverts(vertices);
-            if (vertices.size() == 4) {
-              if (vertices[0].position) {
-                quadspos.push_back({pos_map.at(vertices[0].position),
-                    pos_map.at(vertices[1].position),
-                    pos_map.at(vertices[2].position),
-                    pos_map.at(vertices[3].position)});
-              }
-              if (vertices[0].texcoord) {
-                quadstexcoord.push_back({texcoord_map.at(vertices[0].texcoord),
-                    texcoord_map.at(vertices[1].texcoord),
-                    texcoord_map.at(vertices[2].texcoord),
-                    texcoord_map.at(vertices[3].texcoord)});
-              }
-              if (vertices[0].normal) {
-                quadsnorm.push_back({norm_map.at(vertices[0].normal),
-                    norm_map.at(vertices[1].normal),
-                    norm_map.at(vertices[2].normal),
-                    norm_map.at(vertices[3].normal)});
-              }
-              // quads_materials.push_back(current_material_id);
-            } else {
-              if (vertices[0].position) {
-                for (auto i = 2; i < vertices.size(); i++)
-                  quadspos.push_back({pos_map.at(vertices[0].position),
-                      pos_map.at(vertices[1].position),
-                      pos_map.at(vertices[i].position),
-                      pos_map.at(vertices[i].position)});
-              }
-              if (vertices[0].texcoord) {
-                for (auto i = 2; i < vertices.size(); i++)
-                  quadstexcoord.push_back(
-                      {texcoord_map.at(vertices[0].texcoord),
-                          texcoord_map.at(vertices[1].texcoord),
-                          texcoord_map.at(vertices[i].texcoord),
-                          texcoord_map.at(vertices[i].texcoord)});
-              }
-              if (vertices[0].normal) {
-                for (auto i = 2; i < vertices.size(); i++)
-                  quadsnorm.push_back({norm_map.at(vertices[0].normal),
-                      norm_map.at(vertices[1].normal),
-                      norm_map.at(vertices[i].normal),
-                      norm_map.at(vertices[i].normal)});
-              }
-            }
-          }
-        } break;
-        case obj_element::line: {
-          add_verts(vertices);
-          for (auto i = 1; i < vertices.size(); i++)
-            lines.push_back(
-                {vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
-        } break;
-        case obj_element::point: {
-          add_verts(vertices);
-          for (auto i = 0; i < vertices.size(); i++)
-            points.push_back(vertex_map.at(vertices[i]));
-        } break;
-        default: break;
-      }
+      for (auto i = 0; i < vertices.size(); i++)
+        points.push_back(vertex_map.at(vertices[i]));
+    } else {
+      // skip all other commands
     }
+  }
 
-    if (positions.empty())
-      throw std::runtime_error("vertex positions not present");
+  if (positions.empty())
+    throw std::runtime_error("vertex positions not present");
 
-    // fix texture coordinated
-    if (flip_texcoord && !texcoords.empty()) {
-      for (auto& uv : texcoords) uv.y = 1 - uv.y;
-    }
+  // fix texture coordinated
+  if (flip_texcoord && !texcoords.empty()) {
+    for (auto& uv : texcoords) uv.y = 1 - uv.y;
+  }
 
-    // merging quads and triangles
-    if (!facevarying) {
-      merge_triangles_and_quads(triangles, quads, false);
-    }
-
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot load mesh " + filename + "\n" + e.what());
+  // merging quads and triangles
+  if (!facevarying) {
+    merge_triangles_and_quads(triangles, quads, false);
   }
 }
 
