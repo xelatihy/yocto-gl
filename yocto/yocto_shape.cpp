@@ -10,6 +10,10 @@
 #define YOCTO_PLY_INTERNAL 1
 #endif
 
+#ifndef YOCTO_OBJ_DIRECT
+#define YOCTO_OBJ_DIRECT 1
+#endif
+
 #include "yocto_shape.h"
 #include "yocto_obj.h"
 #include "yocto_random.h"
@@ -3058,10 +3062,10 @@ static void load_ply_shape(const string& filename, vector<int>& points,
   try {
     // open ply
     auto fs_ = open_input_file(filename, true);
-    auto fs = fs_.fs;
+    auto fs  = fs_.fs;
 
     // load elements
-    auto format = ply_format{};
+    auto format   = ply_format{};
     auto elements = vector<ply_element>{};
     auto comments = vector<string>{};
     read_ply_header(fs, format, elements, comments);
@@ -3284,7 +3288,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
   }
 
   auto fs_ = open_output_file(filename, true);
-  auto fs = fs_.fs;
+  auto fs  = fs_.fs;
 
   // format
   auto format = ply_format::binary_little_endian;
@@ -3572,6 +3576,188 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
 
 #endif
 
+#if YOCTO_OBJ_DIRECT
+
+// Load obj mesh
+static void load_obj_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
+    bool flip_texcoord) {
+  try {
+    // open obj
+    auto fs_ = open_input_file(filename, true);
+    auto fs  = fs_.fs;
+
+    // obj vertices
+    std::deque<vec3f> opos      = std::deque<vec3f>();
+    std::deque<vec3f> onorm     = std::deque<vec3f>();
+    std::deque<vec2f> otexcoord = std::deque<vec2f>();
+
+    // vertex maps
+    unordered_map<obj_vertex, int> vertex_map =
+        unordered_map<obj_vertex, int>();
+
+    // vertex maps
+    unordered_map<int, int> pos_map      = unordered_map<int, int>();
+    unordered_map<int, int> texcoord_map = unordered_map<int, int>();
+    unordered_map<int, int> norm_map     = unordered_map<int, int>();
+
+    // Add  vertices to the current shape
+    auto add_verts = [&](const vector<obj_vertex>& verts) {
+      for (auto& vert : verts) {
+        auto it = vertex_map.find(vert);
+        if (it != vertex_map.end()) continue;
+        auto nverts = (int)positions.size();
+        vertex_map.insert(it, {vert, nverts});
+        if (vert.position) positions.push_back(opos.at(vert.position - 1));
+        if (vert.texcoord) texcoords.push_back(otexcoord.at(vert.texcoord - 1));
+        if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
+      }
+    };
+
+    // add vertex
+    auto add_fvverts = [&](const vector<obj_vertex>& verts) {
+      for (auto& vert : verts) {
+        if (!vert.position) continue;
+        auto pos_it = pos_map.find(vert.position);
+        if (pos_it != pos_map.end()) continue;
+        auto nverts = (int)positions.size();
+        pos_map.insert(pos_it, {vert.position, nverts});
+        positions.push_back(opos.at(vert.position - 1));
+      }
+      for (auto& vert : verts) {
+        if (!vert.texcoord) continue;
+        auto texcoord_it = texcoord_map.find(vert.texcoord);
+        if (texcoord_it != texcoord_map.end()) continue;
+        auto nverts = (int)texcoords.size();
+        texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
+        texcoords.push_back(otexcoord.at(vert.texcoord - 1));
+      }
+      for (auto& vert : verts) {
+        if (!vert.normal) continue;
+        auto norm_it = norm_map.find(vert.normal);
+        if (norm_it != norm_map.end()) continue;
+        auto nverts = (int)normals.size();
+        norm_map.insert(norm_it, {vert.normal, nverts});
+        normals.push_back(onorm.at(vert.normal - 1));
+      }
+    };
+
+    // read obj
+    auto element   = obj_element{};
+    auto value     = zero3f;
+    auto name      = ""s;
+    auto vertices  = vector<obj_vertex>{};
+    auto vert_size = obj_vertex{};
+    while (read_obj_element(fs, element, value, name, vertices, vert_size)) {
+      switch (element) {
+        case obj_element::vertex: {
+          opos.push_back(value);
+        } break;
+        case obj_element::normal: {
+          onorm.push_back(value);
+        } break;
+        case obj_element::texcoord: {
+          otexcoord.push_back({value.x, value.y});
+        } break;
+        case obj_element::face: {
+          if (!facevarying) {
+            add_verts(vertices);
+            if (vertices.size() == 4) {
+              quads.push_back(
+                  {vertex_map.at(vertices[0]), vertex_map.at(vertices[1]),
+                      vertex_map.at(vertices[2]), vertex_map.at(vertices[3])});
+            } else {
+              for (auto i = 2; i < vertices.size(); i++)
+                triangles.push_back(
+                    {vertex_map.at(vertices[0]), vertex_map.at(vertices[i - 1]),
+                        vertex_map.at(vertices[i])});
+            }
+          } else {
+            add_fvverts(vertices);
+            if (vertices.size() == 4) {
+              if (vertices[0].position) {
+                quadspos.push_back({pos_map.at(vertices[0].position),
+                    pos_map.at(vertices[1].position),
+                    pos_map.at(vertices[2].position),
+                    pos_map.at(vertices[3].position)});
+              }
+              if (vertices[0].texcoord) {
+                quadstexcoord.push_back({texcoord_map.at(vertices[0].texcoord),
+                    texcoord_map.at(vertices[1].texcoord),
+                    texcoord_map.at(vertices[2].texcoord),
+                    texcoord_map.at(vertices[3].texcoord)});
+              }
+              if (vertices[0].normal) {
+                quadsnorm.push_back({norm_map.at(vertices[0].normal),
+                    norm_map.at(vertices[1].normal),
+                    norm_map.at(vertices[2].normal),
+                    norm_map.at(vertices[3].normal)});
+              }
+              // quads_materials.push_back(current_material_id);
+            } else {
+              if (vertices[0].position) {
+                for (auto i = 2; i < vertices.size(); i++)
+                  quadspos.push_back({pos_map.at(vertices[0].position),
+                      pos_map.at(vertices[1].position),
+                      pos_map.at(vertices[i].position),
+                      pos_map.at(vertices[i].position)});
+              }
+              if (vertices[0].texcoord) {
+                for (auto i = 2; i < vertices.size(); i++)
+                  quadstexcoord.push_back(
+                      {texcoord_map.at(vertices[0].texcoord),
+                          texcoord_map.at(vertices[1].texcoord),
+                          texcoord_map.at(vertices[i].texcoord),
+                          texcoord_map.at(vertices[i].texcoord)});
+              }
+              if (vertices[0].normal) {
+                for (auto i = 2; i < vertices.size(); i++)
+                  quadsnorm.push_back({norm_map.at(vertices[0].normal),
+                      norm_map.at(vertices[1].normal),
+                      norm_map.at(vertices[i].normal),
+                      norm_map.at(vertices[i].normal)});
+              }
+            }
+          }
+        } break;
+        case obj_element::line: {
+          add_verts(vertices);
+          for (auto i = 1; i < vertices.size(); i++)
+            lines.push_back(
+                {vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
+        } break;
+        case obj_element::point: {
+          add_verts(vertices);
+          for (auto i = 0; i < vertices.size(); i++)
+            points.push_back(vertex_map.at(vertices[i]));
+        } break;
+        default: break;
+      }
+    }
+
+    if (positions.empty())
+      throw std::runtime_error("vertex positions not present");
+
+    // fix texture coordinated
+    if (flip_texcoord && !texcoords.empty()) {
+      for (auto& uv : texcoords) uv.y = 1 - uv.y;
+    }
+
+    // merging quads and triangles
+    if (!facevarying) {
+      merge_triangles_and_quads(triangles, quads, false);
+    }
+
+  } catch (const std::exception& e) {
+    throw std::runtime_error("cannot load mesh " + filename + "\n" + e.what());
+  }
+}
+
+#else
+
 struct load_obj_shape_cb : obj_callbacks {
   vector<int>&   points;
   vector<vec2i>& lines;
@@ -3740,7 +3926,7 @@ struct load_obj_shape_cb : obj_callbacks {
   //        }
 };
 
-// Load ply mesh
+// Load obj mesh
 static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
@@ -3763,6 +3949,8 @@ static void load_obj_shape(const string& filename, vector<int>& points,
   }
 }
 
+#endif
+
 // Load ply mesh
 static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -3781,7 +3969,8 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   for (auto& n : normals)
     write_obj_element(fs, obj_element::normal, n, ""s, {});
   for (auto& t : texcoords)
-    write_obj_element(fs, obj_element::texcoord, vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, ""s, {});
+    write_obj_element(fs, obj_element::texcoord,
+        vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, ""s, {});
 
   auto elems = vector<obj_vertex>{};
   auto mask = obj_vertex{1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
@@ -3837,15 +4026,15 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     auto qp = quadspos.at(i);
     auto qt = !quadstexcoord.empty() ? quadstexcoord.at(i)
                                      : vec4i{-1, -1, -1, -1};
-    auto qn = !quadsnorm.empty() ? quadsnorm.at(i) : vec4i{-1, -1, -1, -1};
-    elems[0] =  fvvert(qp.x, qt.x, qn.x);
-    elems[1] =  fvvert(qp.y, qt.y, qn.y);
-    elems[2] =  fvvert(qp.z, qt.z, qn.z);
+    auto qn  = !quadsnorm.empty() ? quadsnorm.at(i) : vec4i{-1, -1, -1, -1};
+    elems[0] = fvvert(qp.x, qt.x, qn.x);
+    elems[1] = fvvert(qp.y, qt.y, qn.y);
+    elems[2] = fvvert(qp.z, qt.z, qn.z);
     if (qp.z == qp.w) {
       elems.resize(3);
     } else {
       elems.resize(4);
-      elems[3] =  fvvert(qp.w, qt.w, qn.w);
+      elems[3] = fvvert(qp.w, qt.w, qn.w);
     }
     write_obj_element(fs, obj_element::face, zero3f, ""s, elems);
   }
