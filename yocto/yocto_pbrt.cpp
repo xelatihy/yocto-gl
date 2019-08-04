@@ -80,19 +80,25 @@ static inline void skip_whitespace_or_comment(pbrt_stream& stream) {
 }
 
 // parse a quoted string
+static inline void parse_value(pbrt_stream& stream, string_view& value) {
+    skip_whitespace_or_comment(stream);
+    auto& str = stream.str;
+    if (str.front() != '"') throw std::runtime_error("cannot parse value");
+    str.remove_prefix(1);
+    if (str.empty()) throw std::runtime_error("cannot parse value");
+    auto cpy = str;
+    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
+    if (cpy.empty()) throw std::runtime_error("cannot parse value");
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+    str.remove_prefix(1);
+}
+    
 static inline void parse_value(pbrt_stream& stream, string& value) {
-  skip_whitespace_or_comment(stream);
-  auto& str = stream.str;
-  if (str.front() != '"') {
-    throw std::runtime_error("bad string");
-  }
-  str.remove_prefix(1);
-  auto pos = str.find('"');
-  if (pos == string_view::npos) {
-    throw std::runtime_error("bad string");
-  }
-  value.assign(str.substr(0, pos));
-  str.remove_prefix(pos + 1);
+    auto view = ""sv;
+    parse_value(stream, view);
+    value = string{view};
 }
 
 // parse a quoted string
@@ -2543,8 +2549,326 @@ static inline void parse_pbrt_medium(
   }
 }
 
+// A file holder that closes a file when destructed. Useful for RIIA
+struct file_holder {
+  FILE*  fs       = nullptr;
+  string filename = "";
+
+  file_holder() { }
+  file_holder(file_holder&& other) {
+    this->fs = other.fs;
+    this->filename = other.filename;
+    other.fs = nullptr;
+  }
+  file_holder(const file_holder&) = delete;
+  file_holder& operator=(const file_holder&) = delete;
+  ~file_holder() {
+    if (fs) fclose(fs);
+  }
+};
+
+static inline void open_input_file(file_holder& file,
+    const string& filename, bool binary = false) {
+  auto& fs = file.fs;
+  fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
+  if (!fs) throw std::runtime_error("could not open file " + filename);
+}
+
+// Read a line
+static inline bool read_line(FILE* fs, char* buffer, size_t size) {
+  return fgets(buffer, size, fs) != nullptr;
+}
+
+static inline bool is_pbrt_space(char c) {
+  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+static inline bool is_pbrt_newline(char c) { return c == '\r' || c == '\n'; }
+
+static inline void skip_pbrt_whitespace(string_view& str) {
+  while (!str.empty() && is_pbrt_space(str.front())) str.remove_prefix(1);
+}
+static inline void remove_pbrt_comment(
+    string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_pbrt_newline(str.back())) str.remove_suffix(1);
+  auto cpy = str;
+  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  str.remove_suffix(cpy.size());
+}
+
+// Read a pbrt command from file
+bool read_pbrt_line(FILE* fs, string& cmd) {
+  char buffer[4096];
+  cmd.clear();
+  auto found = false;
+  auto pos   = ftell(fs);
+  while (read_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_pbrt_comment(line);
+    skip_pbrt_whitespace(line);
+    if (line.empty()) continue;
+
+    // check if command
+    auto is_cmd = line[0] >= 'A' && line[0] <= 'Z';
+    if (is_cmd) {
+      if (found) {
+        fseek(fs, pos, SEEK_SET);
+        return true;
+      } else {
+        found = true;
+      }
+    } else if (!found) {
+      throw std::runtime_error("bad pbrt command");
+    }
+    cmd += line;
+    pos = ftell(fs);
+  }
+  return found;
+}
+
 // Load pbrt scene
 void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
+  // start laoding files
+  auto files = vector<file_holder>{};
+  auto& file = files.emplace_back();
+  open_input_file(file, filename);
+
+  // parsing stack
+  auto stack    = vector<pbrt_context>{{}};
+  auto object   = pbrt_object{};
+  auto coordsys = unordered_map<string, pair<frame3f, frame3f>>{};
+
+  // helpders
+  auto set_transform = [](pbrt_context& ctx, const mat4f& xform) {
+    if (ctx.active_transform_start) ctx.transform_start = (frame3f)xform;
+    if (ctx.active_transform_end) ctx.transform_end = (frame3f)xform;
+  };
+  auto concat_transform = [](pbrt_context& ctx, const mat4f& xform) {
+    if (ctx.active_transform_start) ctx.transform_start *= (frame3f)xform;
+    if (ctx.active_transform_end) ctx.transform_end *= (frame3f)xform;
+  };
+
+  // constant values
+  unordered_map<string, pbrt_spectrum3f> constant_values = {};
+
+  // parse command by command
+  while (!files.empty()) {
+    auto fs     = files.back().fs;
+    auto stream = pbrt_stream{};
+    auto cmd    = ""s;
+    while (read_pbrt_line(fs, stream.buffer)) {
+      stream.str = string_view{stream.buffer};
+      // get command
+      parse_command(stream, cmd);
+      if (cmd == "WorldBegin") {
+        stack.push_back({});
+      } else if (cmd == "WorldEnd") {
+        stack.pop_back();
+        if (stack.size() != 1) throw std::runtime_error("bad stack");
+      } else if (cmd == "AttributeBegin") {
+        stack.push_back(stack.back());
+      } else if (cmd == "AttributeEnd") {
+        stack.pop_back();
+      } else if (cmd == "TransformBegin") {
+        stack.push_back(stack.back());
+      } else if (cmd == "TransformEnd") {
+        stack.pop_back();
+      } else if (cmd == "ObjectBegin") {
+        parse_value(stream, object.name);
+        stack.push_back(stack.back());
+        cb.begin_object(object, stack.back());
+      } else if (cmd == "ObjectEnd") {
+        cb.end_object(object, stack.back());
+        stack.pop_back();
+        object = {};
+      } else if (cmd == "ObjectInstance") {
+        auto value = pbrt_object{};
+        parse_value(stream, value.name);
+        cb.object_instance(value, stack.back());
+      } else if (cmd == "ActiveTransform") {
+        auto value = ""s;
+        parse_command(stream, value);
+        if (value == "StartTime") {
+          stack.back().active_transform_start = true;
+          stack.back().active_transform_end   = false;
+        } else if (value == "EndTime") {
+          stack.back().active_transform_start = false;
+          stack.back().active_transform_end   = true;
+        } else if (value == "All") {
+          stack.back().active_transform_start = true;
+          stack.back().active_transform_end   = true;
+        } else {
+          throw std::runtime_error("bad active transform");
+        }
+      } else if (cmd == "Transform") {
+        auto xf = identity4x4f;
+        parse_param(stream, xf);
+        set_transform(stack.back(), xf);
+      } else if (cmd == "ConcatTransform") {
+        auto xf = identity4x4f;
+        parse_param(stream, xf);
+        concat_transform(stack.back(), xf);
+      } else if (cmd == "Scale") {
+        auto v = zero3f;
+        parse_param(stream, v);
+        concat_transform(stack.back(), (mat4f)scaling_frame(v));
+      } else if (cmd == "Translate") {
+        auto v = zero3f;
+        parse_param(stream, v);
+        concat_transform(stack.back(), (mat4f)translation_frame(v));
+      } else if (cmd == "Rotate") {
+        auto v = zero4f;
+        parse_param(stream, v);
+        concat_transform(stack.back(),
+            (mat4f)rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
+      } else if (cmd == "LookAt") {
+        auto from = zero3f, to = zero3f, up = zero3f;
+        parse_param(stream, from);
+        parse_param(stream, to);
+        parse_param(stream, up);
+        // from pbrt parser
+        auto frame = lookat_frame(from, to, up, true);
+        // frame.z = normalize(to-from);
+        // frame.x = normalize(cross(frame.z,up));
+        // frame.y = cross(frame.x,frame.z);
+        // frame.o    = from;
+        concat_transform(stack.back(), (mat4f)inverse(frame));
+        stack.back().last_lookat_distance = length(from - to);
+        // stack.back().focus = length(m.x - m.y);
+      } else if (cmd == "ReverseOrientation") {
+        stack.back().reverse = !stack.back().reverse;
+      } else if (cmd == "CoordinateSystem") {
+        auto name = ""s;
+        parse_value(stream, name);
+        coordsys[name] = {
+            stack.back().transform_start, stack.back().transform_end};
+      } else if (cmd == "CoordSysTransform") {
+        auto name = ""s;
+        parse_value(stream, name);
+        if (coordsys.find(name) != coordsys.end()) {
+          stack.back().transform_start = coordsys.at(name).first;
+          stack.back().transform_end   = coordsys.at(name).second;
+        }
+      } else if (cmd == "Integrator") {
+        auto type = ""s;
+        parse_value(stream, type);
+        auto value = pbrt_integrator{};
+        parse_integrator(stream, type, value);
+        cb.integrator(value, stack.back());
+      } else if (cmd == "Sampler") {
+        auto type = ""s;
+        parse_value(stream, type);
+        auto value = pbrt_sampler{};
+        parse_sampler(stream, type, value);
+        cb.sampler(value, stack.back());
+      } else if (cmd == "PixelFilter") {
+        auto type = ""s;
+        parse_value(stream, type);
+        auto value = pbrt_filter{};
+        parse_filter(stream, type, value);
+        cb.filter(value, stack.back());
+      } else if (cmd == "Film") {
+        auto type = ""s;
+        parse_value(stream, type);
+        auto value = pbrt_film{};
+        parse_film(stream, type, value);
+        cb.film(value, stack.back());
+      } else if (cmd == "Accelerator") {
+        auto type = ""s;
+        parse_value(stream, type);
+        auto value = pbrt_accelerator{};
+        parse_accelerator(stream, type, value);
+        cb.accelerator(value, stack.back());
+      } else if (cmd == "Camera") {
+        auto type = ""s;
+        parse_value(stream, type);
+        auto value = pbrt_camera{};
+        parse_camera(stream, type, value);
+        cb.camera(value, stack.back());
+      } else if (cmd == "Texture") {
+        auto name = ""s, comptype = ""s, type = ""s;
+        parse_value(stream, name);
+        parse_value(stream, comptype);
+        parse_value(stream, type);
+        auto value = pbrt_texture{};
+        parse_texture(stream, type, value);
+        if (type == "constant") {
+          constant_values[name] = value.constant.value.value;
+        }
+        cb.texture(value, name, stack.back());
+      } else if (cmd == "Material") {
+        static auto material_id = 0;
+        auto        type        = ""s;
+        parse_value(stream, type);
+        if (type == "") {
+          stack.back().material = "";
+        } else {
+          auto value = pbrt_material{};
+          auto name  = "unnamed_material_" + std::to_string(material_id++);
+          parse_material(stream, type, value, constant_values);
+          stack.back().material = name;
+          cb.material(value, name, stack.back());
+        }
+      } else if (cmd == "MakeNamedMaterial") {
+        auto name = ""s, type = ""s;
+        parse_value(stream, name);
+        parse_typeparam(stream, type);
+        auto value = pbrt_material{};
+        parse_material(stream, type, value, constant_values);
+        cb.material(value, name, stack.back());
+      } else if (cmd == "NamedMaterial") {
+        auto name = ""s;
+        parse_value(stream, name);
+        stack.back().material = name;
+      } else if (cmd == "Shape") {
+        auto type = ""s;
+        parse_value(stream, type);
+        auto value = pbrt_shape{};
+        parse_shape(stream, type, value);
+        cb.shape(value, stack.back());
+      } else if (cmd == "AreaLightSource") {
+        auto type = ""s;
+        parse_value(stream, type);
+        static auto material_id = 0;
+        auto        name = "unnamed_arealight_" + std::to_string(material_id++);
+        auto        value = pbrt_arealight{};
+        parse_arealight(stream, type, value);
+        stack.back().arealight = name;
+        cb.arealight(value, name, stack.back());
+      } else if (cmd == "LightSource") {
+        auto type = ""s;
+        parse_value(stream, type);
+        auto value = pbrt_light{};
+        parse_light(stream, type, value);
+        cb.light(value, stack.back());
+      } else if (cmd == "MakeNamedMedium") {
+        auto name = ""s, type = ""s;
+        parse_value(stream, name);
+        parse_typeparam(stream, type);
+        auto value = pbrt_medium{};
+        parse_pbrt_medium(stream, type, value);
+        cb.medium(value, name, stack.back());
+      } else if (cmd == "MediumInterface") {
+        auto interior = ""s, exterior = ""s;
+        parse_value(stream, interior);
+        parse_value(stream, exterior);
+        stack.back().medium_interior = interior;
+        stack.back().medium_exterior = exterior;
+      } else if (cmd == "Include") {
+        auto inputname = ""s;
+        parse_value(stream, inputname);
+        auto& file = files.emplace_back();
+        open_input_file(file, fs::path(filename).parent_path() / inputname);
+      } else {
+        throw std::runtime_error("unknown command " + cmd);
+      }
+    }
+    files.pop_back();
+  }
+}
+
+// Load pbrt scene
+void load_pbrt_old(const string& filename, pbrt_callbacks& cb, bool flipv) {
   // start laoding files
   auto streams = vector<pbrt_stream>{};
   init_stream(streams);

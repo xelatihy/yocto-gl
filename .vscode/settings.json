@@ -82,7 +82,9 @@
         "__errc": "cpp",
         "stack": "cpp",
         "any": "cpp",
-        "__functional_03": "cpp"
+        "__functional_03": "cpp",
+        "cinttypes": "cpp",
+        "strstream": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "Disabled",
     "cmake.buildDirectory": "${workspaceRoot}/build/vscode",

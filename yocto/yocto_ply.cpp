@@ -199,6 +199,16 @@ void read_ply_header(FILE* fs, ply_format& format,
       {"ulong", ply_type::u64},
       {"float", ply_type::f32},
       {"double", ply_type::f64},
+      {"int8", ply_type::i8},
+      {"int16", ply_type::i16},
+      {"int32", ply_type::i32},
+      {"int64", ply_type::i64},
+      {"uint8", ply_type::u8},
+      {"uint16", ply_type::u16},
+      {"uint32", ply_type::u32},
+      {"uint64", ply_type::u64},
+      {"float32", ply_type::f32},
+      {"float64", ply_type::f64},
   };
 
   // parsing checks
