@@ -211,7 +211,7 @@ static inline void parse_obj_value(string_view& str, mtl_texture_info& info) {
 }
 
 // Load obj materials
- void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
+void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
   // open file
   auto fs_ = open_input_file(filename);
   auto fs  = fs_.fs;
@@ -326,7 +326,7 @@ static inline void parse_obj_value(string_view& str, mtl_texture_info& info) {
 }
 
 // Load obj extensions
- void load_objx(const string& filename, obj_callbacks& cb) {
+void load_objx(const string& filename, obj_callbacks& cb) {
   // open file
   auto fs_ = open_input_file(filename);
   auto fs  = fs_.fs;
@@ -388,7 +388,7 @@ static inline void parse_obj_value(string_view& str, mtl_texture_info& info) {
 }
 
 // Load obj scene
- void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
+void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
     bool flipv, bool fliptr) {
   // open file
   auto fs_ = open_input_file(filename);

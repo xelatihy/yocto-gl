@@ -236,7 +236,7 @@ void write_objx_element(FILE* fs, objx_element element,
 namespace yocto {
 
 // Obj callbacks
-struct  obj_callbacks {
+struct obj_callbacks {
   virtual void vert(const vec3f&) {}
   virtual void norm(const vec3f&) {}
   virtual void texcoord(const vec2f&) {}
@@ -256,14 +256,14 @@ struct  obj_callbacks {
 };
 
 // Load obj scene
- void load_obj(const string& filename, obj_callbacks& cb,
+void load_obj(const string& filename, obj_callbacks& cb,
     bool nomaterials = false, bool flipv = true, bool fliptr = true);
 
 // Typedefs for backward compatibility
-using obj_material  = mtl_material;
-using obj_camera  = objx_camera;
-using obj_environment  = objx_environment;
-using obj_instance  = objx_instance;
+using obj_material    = mtl_material;
+using obj_camera      = objx_camera;
+using obj_environment = objx_environment;
+using obj_instance    = objx_instance;
 using obj_procedural  = objx_procedural;
 
 }  // namespace yocto

@@ -1769,7 +1769,7 @@ static void load_obj_scene(
   update_transforms(scene);
 }
 
-struct  load_obj_scene_cb : obj_callbacks {
+struct load_obj_scene_cb : obj_callbacks {
   yocto_scene&       scene;
   const load_params& params;
 
@@ -2098,7 +2098,7 @@ struct  load_obj_scene_cb : obj_callbacks {
 };
 
 // Loads an OBJ
- static void load_obj_scene_old(
+static void load_obj_scene_old(
     const string& filename, yocto_scene& scene, const load_params& params) {
   scene = {};
 
