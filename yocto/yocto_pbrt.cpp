@@ -48,13 +48,6 @@ namespace yocto {
 using string_view = std::string_view;
 using namespace std::literals::string_view_literals;
 
-// Token stream
-struct pbrt_stream {
-  string      buffer;
-  string_view str;
-  string_view saved;
-};
-
 // A file holder that closes a file when destructed. Useful for RIIA
 struct file_holder {
   FILE*  fs       = nullptr;
@@ -132,35 +125,10 @@ bool read_pbrt_line(FILE* fs, string& cmd) {
   return found;
 }
 
-// skip white space or comment
-static inline void skip_whitespace_or_comment(pbrt_stream& stream) {
-  auto& str = stream.str;
-  if (str.empty()) return;
-  while (!str.empty() &&
-         (isspace(str.front()) || str.front() == '#' || str.front() == ',')) {
-    if (str.front() == '#') {
-      auto pos = str.find('\n');
-      if (pos != string_view::npos) {
-        str.remove_prefix(pos);
-      } else {
-        str.remove_prefix(str.length());
-      }
-    } else {
-      auto pos = str.find_first_not_of(" \t\n\r,");
-      if (pos == string_view::npos) {
-        str.remove_prefix(str.length());
-      } else {
-        str.remove_prefix(pos);
-      }
-    }
-  }
-}
-
 // parse a quoted string
-static inline void parse_pbrt_value(pbrt_stream& stream, string_view& value) {
-    skip_whitespace_or_comment(stream);
-    auto& str = stream.str;
-    if (str.front() != '"') throw std::runtime_error("cannot parse value");
+static inline void parse_pbrt_value(string_view& str, string_view& value) {
+    skip_pbrt_whitespace(str);
+        if (str.front() != '"') throw std::runtime_error("cannot parse value");
     str.remove_prefix(1);
     if (str.empty()) throw std::runtime_error("cannot parse value");
     auto cpy = str;
@@ -172,17 +140,16 @@ static inline void parse_pbrt_value(pbrt_stream& stream, string_view& value) {
     str.remove_prefix(1);
 }
     
-static inline void parse_pbrt_value(pbrt_stream& stream, string& value) {
+static inline void parse_pbrt_value(string_view& str, string& value) {
     auto view = ""sv;
-    parse_pbrt_value(stream, view);
+    parse_pbrt_value(str, view);
     value = string{view};
 }
 
 // parse a quoted string
-static inline void parse_pbrt_command(pbrt_stream& stream, string& value) {
-  skip_whitespace_or_comment(stream);
-  auto& str = stream.str;
-  if (!isalpha((int)str.front())) {
+static inline void parse_pbrt_command(string_view& str, string& value) {
+  skip_pbrt_whitespace(str);
+    if (!isalpha((int)str.front())) {
     throw std::runtime_error("bad command");
   }
   auto pos = str.find_first_not_of(
@@ -197,10 +164,9 @@ static inline void parse_pbrt_command(pbrt_stream& stream, string& value) {
 }
 
 // parse a number
-static inline void parse_pbrt_value(pbrt_stream& stream, float& value) {
-  skip_whitespace_or_comment(stream);
-  auto& str = stream.str;
-  if (str.empty()) throw std::runtime_error("number expected");
+static inline void parse_pbrt_value(string_view& str, float& value) {
+  skip_pbrt_whitespace(str);
+    if (str.empty()) throw std::runtime_error("number expected");
   auto next = (char*)nullptr;
   value     = strtof(str.data(), &next);
   if (str.data() == next) throw std::runtime_error("number expected");
@@ -208,18 +174,17 @@ static inline void parse_pbrt_value(pbrt_stream& stream, float& value) {
 }
 
 // parse a number
-static inline void parse_pbrt_value(pbrt_stream& stream, int& value) {
-  skip_whitespace_or_comment(stream);
-  auto& str = stream.str;
-  if (str.empty()) throw std::runtime_error("number expected");
+static inline void parse_pbrt_value(string_view& str, int& value) {
+  skip_pbrt_whitespace(str);
+    if (str.empty()) throw std::runtime_error("number expected");
   auto next = (char*)nullptr;
   value     = strtol(str.data(), &next, 10);
   if (str.data() == next) throw std::runtime_error("number expected");
   str.remove_prefix(next - str.data());
 }
-static inline void parse_pbrt_value(pbrt_stream& stream, bool& value) {
+static inline void parse_pbrt_value(string_view& str, bool& value) {
   auto value_name = ""s;
-  parse_pbrt_value(stream, value_name);
+  parse_pbrt_value(str, value_name);
   if (value_name == "true") {
     value = true;
   } else if (value_name == "false") {
@@ -230,9 +195,9 @@ static inline void parse_pbrt_value(pbrt_stream& stream, bool& value) {
 }
 template <typename T>
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, T& value, unordered_map<string, T>& value_names) {
+    string_view& str, T& value, unordered_map<string, T>& value_names) {
   auto value_name = ""s;
-  parse_pbrt_value(stream, value_name);
+  parse_pbrt_value(str, value_name);
   try {
     value = value_names.at(value_name);
   } catch (std::out_of_range&) {
@@ -240,7 +205,7 @@ static inline void parse_pbrt_value(
   }
 }
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, pbrt_texture::bilerp_t::mapping_type& value) {
+    string_view& str, pbrt_texture::bilerp_t::mapping_type& value) {
   static auto value_names =
       unordered_map<string, pbrt_texture::bilerp_t::mapping_type>{
           {"uv", pbrt_texture::bilerp_t::mapping_type::uv},
@@ -248,63 +213,63 @@ static inline void parse_pbrt_value(
           {"cylindrical", pbrt_texture::bilerp_t::mapping_type::cylindrical},
           {"planar", pbrt_texture::bilerp_t::mapping_type::planar},
       };
-  return parse_pbrt_value(stream, value, value_names);
+  return parse_pbrt_value(str, value, value_names);
 }
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, pbrt_texture::checkerboard_t::mapping_type& value) {
-  return parse_pbrt_value(stream, (pbrt_texture::bilerp_t::mapping_type&)value);
+    string_view& str, pbrt_texture::checkerboard_t::mapping_type& value) {
+  return parse_pbrt_value(str, (pbrt_texture::bilerp_t::mapping_type&)value);
 }
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, pbrt_texture::dots_t::mapping_type& value) {
-  return parse_pbrt_value(stream, (pbrt_texture::bilerp_t::mapping_type&)value);
+    string_view& str, pbrt_texture::dots_t::mapping_type& value) {
+  return parse_pbrt_value(str, (pbrt_texture::bilerp_t::mapping_type&)value);
 }
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, pbrt_texture::imagemap_t::mapping_type& value) {
-  return parse_pbrt_value(stream, (pbrt_texture::bilerp_t::mapping_type&)value);
+    string_view& str, pbrt_texture::imagemap_t::mapping_type& value) {
+  return parse_pbrt_value(str, (pbrt_texture::bilerp_t::mapping_type&)value);
 }
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, pbrt_texture::uv_t::mapping_type& value) {
-  return parse_pbrt_value(stream, (pbrt_texture::bilerp_t::mapping_type&)value);
+    string_view& str, pbrt_texture::uv_t::mapping_type& value) {
+  return parse_pbrt_value(str, (pbrt_texture::bilerp_t::mapping_type&)value);
 }
 
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, pbrt_texture::checkerboard_t::aamode_type& value) {
+    string_view& str, pbrt_texture::checkerboard_t::aamode_type& value) {
   static auto value_names =
       unordered_map<string, pbrt_texture::checkerboard_t::aamode_type>{
           {"closedform", pbrt_texture::checkerboard_t::aamode_type::closedform},
           {"none", pbrt_texture::checkerboard_t::aamode_type::none},
       };
-  return parse_pbrt_value(stream, value, value_names);
+  return parse_pbrt_value(str, value, value_names);
 }
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, pbrt_texture::imagemap_t::wrap_type& value) {
+    string_view& str, pbrt_texture::imagemap_t::wrap_type& value) {
   static auto value_names =
       unordered_map<string, pbrt_texture::imagemap_t::wrap_type>{
           {"repeat", pbrt_texture::imagemap_t::wrap_type::repeat},
           {"clamp", pbrt_texture::imagemap_t::wrap_type::clamp},
           {"black", pbrt_texture::imagemap_t::wrap_type::black},
       };
-  return parse_pbrt_value(stream, value, value_names);
+  return parse_pbrt_value(str, value, value_names);
 }
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, pbrt_shape::curve_t::basis_t& value) {
+    string_view& str, pbrt_shape::curve_t::basis_t& value) {
   static auto value_names = unordered_map<string, pbrt_shape::curve_t::basis_t>{
       {"bezier", pbrt_shape::curve_t::basis_t::bezier},
       {"bspline", pbrt_shape::curve_t::basis_t::bspline},
   };
-  return parse_pbrt_value(stream, value, value_names);
+  return parse_pbrt_value(str, value, value_names);
 }
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, pbrt_shape::curve_t::type_t& value) {
+    string_view& str, pbrt_shape::curve_t::type_t& value) {
   static auto value_names = unordered_map<string, pbrt_shape::curve_t::type_t>{
       {"flat", pbrt_shape::curve_t::type_t::flat},
       {"cylinder", pbrt_shape::curve_t::type_t::cylinder},
       {"ribbon", pbrt_shape::curve_t::type_t::ribbon},
   };
-  return parse_pbrt_value(stream, value, value_names);
+  return parse_pbrt_value(str, value, value_names);
 }
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, pbrt_accelerator::bvh_t::splitmethod_t& value) {
+    string_view& str, pbrt_accelerator::bvh_t::splitmethod_t& value) {
   static auto value_names =
       unordered_map<string, pbrt_accelerator::bvh_t::splitmethod_t>{
           {"sah", pbrt_accelerator::bvh_t::splitmethod_t::sah},
@@ -312,9 +277,9 @@ static inline void parse_pbrt_value(
           {"middle", pbrt_accelerator::bvh_t::splitmethod_t::middle},
           {"hlbvh", pbrt_accelerator::bvh_t::splitmethod_t::hlbvh},
       };
-  return parse_pbrt_value(stream, value, value_names);
+  return parse_pbrt_value(str, value, value_names);
 }
-static inline void parse_pbrt_value(pbrt_stream&         stream,
+static inline void parse_pbrt_value(string_view& str,
     pbrt_integrator::path_t::lightsamplestrategy_t& value) {
   static auto value_names =
       unordered_map<string, pbrt_integrator::path_t::lightsamplestrategy_t>{
@@ -322,78 +287,74 @@ static inline void parse_pbrt_value(pbrt_stream&         stream,
           {"spatial", pbrt_integrator::path_t::lightsamplestrategy_t::spatial},
           {"uniform", pbrt_integrator::path_t::lightsamplestrategy_t::uniform},
       };
-  return parse_pbrt_value(stream, value, value_names);
+  return parse_pbrt_value(str, value, value_names);
 }
-static inline void parse_pbrt_value(pbrt_stream&            stream,
+static inline void parse_pbrt_value(string_view&            str,
     pbrt_integrator::volpath_t::lightsamplestrategy_t& value) {
   return parse_pbrt_value(
-      stream, (pbrt_integrator::path_t::lightsamplestrategy_t&)value);
+      str, (pbrt_integrator::path_t::lightsamplestrategy_t&)value);
 }
-static inline void parse_pbrt_value(pbrt_stream&         stream,
+static inline void parse_pbrt_value(string_view&         str,
     pbrt_integrator::bdpt_t::lightsamplestrategy_t& value) {
   return parse_pbrt_value(
-      stream, (pbrt_integrator::path_t::lightsamplestrategy_t&)value);
+      str, (pbrt_integrator::path_t::lightsamplestrategy_t&)value);
 }
 static inline void parse_pbrt_value(
-    pbrt_stream& stream, pbrt_integrator::directlighting_t::strategy_t& value) {
+    string_view& str, pbrt_integrator::directlighting_t::strategy_t& value) {
   static auto value_names =
       unordered_map<string, pbrt_integrator::directlighting_t::strategy_t>{
           {"all", pbrt_integrator::directlighting_t::strategy_t::all},
           {"one", pbrt_integrator::directlighting_t::strategy_t::one},
       };
-  return parse_pbrt_value(stream, value, value_names);
+  return parse_pbrt_value(str, value, value_names);
 }
 
 // parse a vec type
-static inline void parse_pbrt_value(pbrt_stream& stream, vec2f& value) {
-  for (auto i = 0; i < 2; i++) parse_pbrt_value(stream, value[i]);
+static inline void parse_pbrt_value(string_view& str, vec2f& value) {
+  for (auto i = 0; i < 2; i++) parse_pbrt_value(str, value[i]);
 }
-static inline void parse_pbrt_value(pbrt_stream& stream, vec3f& value) {
-  for (auto i = 0; i < 3; i++) parse_pbrt_value(stream, value[i]);
+static inline void parse_pbrt_value(string_view& str, vec3f& value) {
+  for (auto i = 0; i < 3; i++) parse_pbrt_value(str, value[i]);
 }
-static inline void parse_pbrt_value(pbrt_stream& stream, vec4f& value) {
-  for (auto i = 0; i < 4; i++) parse_pbrt_value(stream, value[i]);
+static inline void parse_pbrt_value(string_view& str, vec4f& value) {
+  for (auto i = 0; i < 4; i++) parse_pbrt_value(str, value[i]);
 }
-static inline void parse_pbrt_value(pbrt_stream& stream, vec3i& value) {
-  for (auto i = 0; i < 3; i++) parse_pbrt_value(stream, value[i]);
+static inline void parse_pbrt_value(string_view& str, vec3i& value) {
+  for (auto i = 0; i < 3; i++) parse_pbrt_value(str, value[i]);
 }
-static inline void parse_pbrt_value(pbrt_stream& stream, vec4i& value) {
-  for (auto i = 0; i < 4; i++) parse_pbrt_value(stream, value[i]);
+static inline void parse_pbrt_value(string_view& str, vec4i& value) {
+  for (auto i = 0; i < 4; i++) parse_pbrt_value(str, value[i]);
 }
-static inline void parse_pbrt_value(pbrt_stream& stream, mat4f& value) {
-  for (auto i = 0; i < 4; i++) parse_pbrt_value(stream, value[i]);
+static inline void parse_pbrt_value(string_view& str, mat4f& value) {
+  for (auto i = 0; i < 4; i++) parse_pbrt_value(str, value[i]);
 }
-static inline void parse_pbrt_value(pbrt_stream& stream, pbrt_spectrum3f& value) {
-  for (auto i = 0; i < 3; i++) parse_pbrt_value(stream, value[i]);
+static inline void parse_pbrt_value(string_view& str, pbrt_spectrum3f& value) {
+  for (auto i = 0; i < 3; i++) parse_pbrt_value(str, value[i]);
 }
 
 // Check next
-static inline bool is_empty(pbrt_stream& stream) {
-  skip_whitespace_or_comment(stream);
-  return stream.str.empty();
+static inline bool is_pbrt_string(string_view& str) {
+  skip_pbrt_whitespace(str);
+  return !str.empty() && str.front() == '"';
 }
-static inline bool is_string(pbrt_stream& stream) {
-  skip_whitespace_or_comment(stream);
-  return !stream.str.empty() && stream.str.front() == '"';
+static inline bool is_open_bracket(string_view& str) {
+  skip_pbrt_whitespace(str);
+  return !str.empty() && str.front() == '[';
 }
-static inline bool is_open_bracket(pbrt_stream& stream) {
-  skip_whitespace_or_comment(stream);
-  return !stream.str.empty() && stream.str.front() == '[';
+static inline bool is_close_bracket(string_view& str) {
+  skip_pbrt_whitespace(str);
+  return !str.empty() && str.front() == ']';
 }
-static inline bool is_close_bracket(pbrt_stream& stream) {
-  skip_whitespace_or_comment(stream);
-  return !stream.str.empty() && stream.str.front() == ']';
-}
-static inline bool is_param(pbrt_stream& stream) {
-  skip_whitespace_or_comment(stream);
-  return is_string(stream);
+static inline bool is_pbrt_param(string_view& str) {
+  skip_pbrt_whitespace(str);
+  return is_pbrt_string(str);
 }
 
 // parse a quoted string
 static inline void parse_pbrt_nametype(
-    pbrt_stream& stream, string& name, string& type) {
+    string_view& str_, string& name, string& type) {
   auto value = ""s;
-  parse_pbrt_value(stream, value);
+  parse_pbrt_value(str_, value);
   auto str  = string_view{value};
   auto pos1 = str.find(' ');
   if (pos1 == string_view::npos) {
@@ -409,34 +370,34 @@ static inline void parse_pbrt_nametype(
   name = string(str);
 }
 
-static inline void skip_pbrt_open_bracket(pbrt_stream& stream) {
-  if (!is_open_bracket(stream)) throw std::runtime_error("expected bracket");
-  stream.str.remove_prefix(1);
-  skip_whitespace_or_comment(stream);
+static inline void skip_pbrt_open_bracket(string_view& str) {
+  if (!is_open_bracket(str)) throw std::runtime_error("expected bracket");
+  str.remove_prefix(1);
+  skip_pbrt_whitespace(str);
 }
-static inline void skip_pbrt_close_bracket(pbrt_stream& stream) {
-  if (!is_close_bracket(stream)) throw std::runtime_error("expected bracket");
-  stream.str.remove_prefix(1);
-  skip_whitespace_or_comment(stream);
-}
-
-template <typename T>
-static inline void parse_pbrt_param(pbrt_stream& stream, T& value) {
-  auto has_brackets = is_open_bracket(stream);
-  if (has_brackets) skip_pbrt_open_bracket(stream);
-  parse_pbrt_value(stream, value);
-  if (has_brackets) skip_pbrt_close_bracket(stream);
+static inline void skip_pbrt_close_bracket(string_view& str) {
+  if (!is_close_bracket(str)) throw std::runtime_error("expected bracket");
+  str.remove_prefix(1);
+  skip_pbrt_whitespace(str);
 }
 
 template <typename T>
-static inline void parse_pbrt_param(pbrt_stream& stream, vector<T>& values) {
-  skip_pbrt_open_bracket(stream);
+static inline void parse_pbrt_param(string_view& str, T& value) {
+  auto has_brackets = is_open_bracket(str);
+  if (has_brackets) skip_pbrt_open_bracket(str);
+  parse_pbrt_value(str, value);
+  if (has_brackets) skip_pbrt_close_bracket(str);
+}
+
+template <typename T>
+static inline void parse_pbrt_param(string_view& str, vector<T>& values) {
+  skip_pbrt_open_bracket(str);
   values.clear();
-  while (!is_close_bracket(stream)) {
+  while (!is_close_bracket(str)) {
     values.push_back({});
-    parse_pbrt_value(stream, values.back());
+    parse_pbrt_value(str, values.back());
   }
-  skip_pbrt_close_bracket(stream);
+  skip_pbrt_close_bracket(str);
 }
 
 template <typename T>
@@ -474,11 +435,11 @@ static inline bool is_pbrt_type_compatible(const string& type) {
 
 template <typename T>
 static inline void parse_pbrt_param(
-    pbrt_stream& stream, const string& type, T& value) {
+    string_view& str, const string& type, T& value) {
   if (!is_pbrt_type_compatible<T>(type)) {
     throw std::runtime_error("incompatible type " + type);
   }
-  parse_pbrt_param(stream, value);
+  parse_pbrt_param(str, value);
 }
 
 static inline pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
@@ -568,24 +529,24 @@ static inline pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
 }
 
 static inline void parse_pbrt_param(
-    pbrt_stream& stream, const string& type, pbrt_spectrum3f& value) {
+    string_view& str, const string& type, pbrt_spectrum3f& value) {
   bool verbose = false;
   if (type == "rgb") {
-    parse_pbrt_param(stream, value);
+    parse_pbrt_param(str, value);
   } else if (type == "color") {
-    parse_pbrt_param(stream, value);
+    parse_pbrt_param(str, value);
   } else if (type == "float") {
     auto valuef = 0.0f;
-    parse_pbrt_param(stream, valuef);
+    parse_pbrt_param(str, valuef);
     value = {valuef, valuef, valuef};
   } else if (type == "blackbody") {
     auto blackbody = zero2f;
-    parse_pbrt_param(stream, blackbody);
+    parse_pbrt_param(str, blackbody);
     (vec3f&)value = blackbody_to_rgb(blackbody.x) * blackbody.y;
-  } else if (type == "spectrum" && is_string(stream)) {
+  } else if (type == "spectrum" && is_pbrt_string(str)) {
     if (verbose) printf("spectrum  not well supported\n");
     auto filename = ""s;
-    parse_pbrt_param(stream, filename);
+    parse_pbrt_param(str, filename);
     auto filenamep = fs::path(filename).filename();
     if (filenamep.extension() == ".spd") {
       filenamep = filenamep.replace_extension("");
@@ -604,10 +565,10 @@ static inline void parse_pbrt_param(
       throw std::runtime_error("unsupported spectrum format");
       // value = {1, 0, 0};
     }
-  } else if (type == "spectrum" && !is_string(stream)) {
+  } else if (type == "spectrum" && !is_pbrt_string(str)) {
     if (verbose) printf("spectrum  not well supported\n");
     auto values = vector<float>{};
-    parse_pbrt_param(stream, values);
+    parse_pbrt_param(str, values);
     value = {1, 0, 0};
   } else {
     throw std::runtime_error("unsupported spectrum type");
@@ -616,102 +577,48 @@ static inline void parse_pbrt_param(
 
 template <typename T>
 static inline void parse_pbrt_param(
-    pbrt_stream& stream, const string& type, vector<T>& value) {
+    string_view& str, const string& type, vector<T>& value) {
   if (!is_pbrt_type_compatible<T>(type)) {
     throw std::runtime_error("incompatible type " + type);
   }
-  parse_pbrt_param(stream, value);
+  parse_pbrt_param(str, value);
 }
 
 static inline void parse_pbrt_param(
-    pbrt_stream& stream, const string& type, pbrt_textured3f& value) {
+    string_view& str, const string& type, pbrt_textured3f& value) {
   if (type == "texture") {
-    parse_pbrt_param(stream, value.texture);
+    parse_pbrt_param(str, value.texture);
   } else {
-    parse_pbrt_param(stream, type, value.value);
+    parse_pbrt_param(str, type, value.value);
   }
 }
 static inline void parse_pbrt_param(
-    pbrt_stream& stream, const string& type, pbrt_textured1f& value) {
+    string_view& str, const string& type, pbrt_textured1f& value) {
   if (type == "texture") {
-    parse_pbrt_param(stream, value.texture);
+    parse_pbrt_param(str, value.texture);
   } else {
-    parse_pbrt_param(stream, type, value.value);
+    parse_pbrt_param(str, type, value.value);
   }
 }
 
-static inline void skip_pbrt_value(pbrt_stream& stream) {
-  skip_whitespace_or_comment(stream);
-  auto& str = stream.str;
-  if (str.front() == '"') {
+static inline void skip_pbrt_value(string_view& str) {
+  skip_pbrt_whitespace(str);
+    if (str.front() == '"') {
     str.remove_prefix(1);
     str.remove_prefix(str.find('"') + 1);
   } else {
     str.remove_prefix(str.find_first_of(" \n\t\r],\""));
   }
-  skip_whitespace_or_comment(stream);
+  skip_pbrt_whitespace(str);
 }
 
-static inline void skip_pbrt_param(pbrt_stream& stream) {
-  if (is_open_bracket(stream)) {
-    skip_pbrt_open_bracket(stream);
-    while (!is_close_bracket(stream)) skip_pbrt_value(stream);
-    skip_pbrt_close_bracket(stream);
+static inline void skip_pbrt_param(string_view& str) {
+  if (is_open_bracket(str)) {
+    skip_pbrt_open_bracket(str);
+    while (!is_close_bracket(str)) skip_pbrt_value(str);
+    skip_pbrt_close_bracket(str);
   } else {
-    skip_pbrt_value(stream);
-  }
-}
-
-static inline void save_stream_position(pbrt_stream& stream) {
-  stream.saved = stream.str;
-}
-static inline void restore_stream_position(pbrt_stream& stream) {
-  stream.str = stream.saved;
-}
-
-// Load a text file
-static inline void load_text(const string& filename, string& str) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen(filename.c_str(), "rt");
-  if (!fs) throw std::runtime_error("cannot open file " + filename);
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) {
-    fclose(fs);
-    throw std::runtime_error("cannot read file " + filename);
-  }
-  fclose(fs);
-}
-
-// Load a token stream
-static inline void load_stream(const string& filename, pbrt_stream& stream) {
-  load_text(filename, stream.buffer);
-  stream.str = stream.buffer;
-}
-
-// operations on token stacks
-static inline void init_stream(vector<pbrt_stream>& stream) {
-  stream.reserve(100);
-}
-static inline void load_stream(
-    const string& filename, vector<pbrt_stream>& stream) {
-  stream.emplace_back();
-  load_stream(filename, stream.back());
-}
-
-// Skip whitespace
-static inline void skip_whitespace_or_comment_to_next_file(
-    vector<pbrt_stream>& stream) {
-  if (stream.empty()) return;
-  while (!stream.empty()) {
-    skip_whitespace_or_comment(stream.back());
-    if (is_empty(stream.back())) {
-      stream.pop_back();
-    } else {
-      break;
-    }
+    skip_pbrt_value(str);
   }
 }
 
@@ -724,16 +631,16 @@ namespace yocto {
 
 // Parse Accelerator
 static inline void parse_pbrt_accelerator(
-    pbrt_stream& stream, const string& type, pbrt_accelerator& value) {
+    string_view& str, const string& type, pbrt_accelerator& value) {
   auto pname = ""s, ptype = ""s;
   if (type == "bvh") {
     auto tvalue = pbrt_accelerator::bvh_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "maxnodeprims") {
-        parse_pbrt_param(stream, ptype, tvalue.maxnodeprims);
+        parse_pbrt_param(str, ptype, tvalue.maxnodeprims);
       } else if (pname == "splitmethod") {
-        parse_pbrt_param(stream, ptype, tvalue.splitmethod);
+        parse_pbrt_param(str, ptype, tvalue.splitmethod);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -742,18 +649,18 @@ static inline void parse_pbrt_accelerator(
     value.bvh  = tvalue;
   } else if (type == "kdtree") {
     auto tvalue = pbrt_accelerator::kdtree_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "intersectcost") {
-        parse_pbrt_param(stream, ptype, tvalue.intersectcost);
+        parse_pbrt_param(str, ptype, tvalue.intersectcost);
       } else if (pname == "traversalcost") {
-        parse_pbrt_param(stream, ptype, tvalue.traversalcost);
+        parse_pbrt_param(str, ptype, tvalue.traversalcost);
       } else if (pname == "emptybonus") {
-        parse_pbrt_param(stream, ptype, tvalue.emptybonus);
+        parse_pbrt_param(str, ptype, tvalue.emptybonus);
       } else if (pname == "maxprims") {
-        parse_pbrt_param(stream, ptype, tvalue.maxprims);
+        parse_pbrt_param(str, ptype, tvalue.maxprims);
       } else if (pname == "maxdepth") {
-        parse_pbrt_param(stream, ptype, tvalue.maxdepth);
+        parse_pbrt_param(str, ptype, tvalue.maxdepth);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -767,40 +674,40 @@ static inline void parse_pbrt_accelerator(
 
 // Parse Integrator
 static inline void parse_pbrt_integrator(
-    pbrt_stream& stream, const string& type, pbrt_integrator& value) {
+    string_view& str, const string& type, pbrt_integrator& value) {
   auto pname = ""s, ptype = ""s;
   if (type == "path") {
     auto tvalue = pbrt_integrator::path_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "maxdepth") {
-        parse_pbrt_param(stream, ptype, tvalue.maxdepth);
+        parse_pbrt_param(str, ptype, tvalue.maxdepth);
       } else if (pname == "pixelbounds") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelbounds);
+        parse_pbrt_param(str, ptype, tvalue.pixelbounds);
       } else if (pname == "rrthreshold") {
-        parse_pbrt_param(stream, ptype, tvalue.rrthreshold);
+        parse_pbrt_param(str, ptype, tvalue.rrthreshold);
       } else if (pname == "lightsamplestrategy") {
-        parse_pbrt_param(stream, ptype, tvalue.lightsamplestrategy);
+        parse_pbrt_param(str, ptype, tvalue.lightsamplestrategy);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
-      // parse_pbrt_optional_param(stream, "lightsamplestrategy",
+      // parse_pbrt_optional_param(str, "lightsamplestrategy",
       // tvalue.lightsamplestrategy); // TODO: enums
     }
     value.type = pbrt_integrator::type_t::path;
     value.path = tvalue;
   } else if (type == "volpath") {
     auto tvalue = pbrt_integrator::volpath_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "maxdepth") {
-        parse_pbrt_param(stream, ptype, tvalue.maxdepth);
+        parse_pbrt_param(str, ptype, tvalue.maxdepth);
       } else if (pname == "pixelbounds") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelbounds);
+        parse_pbrt_param(str, ptype, tvalue.pixelbounds);
       } else if (pname == "rrthreshold") {
-        parse_pbrt_param(stream, ptype, tvalue.rrthreshold);
+        parse_pbrt_param(str, ptype, tvalue.rrthreshold);
       } else if (pname == "lightsamplestrategy") {
-        parse_pbrt_param(stream, ptype, tvalue.lightsamplestrategy);
+        parse_pbrt_param(str, ptype, tvalue.lightsamplestrategy);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -809,14 +716,14 @@ static inline void parse_pbrt_integrator(
     value.volpath = tvalue;
   } else if (type == "directlighting") {
     auto tvalue = pbrt_integrator::directlighting_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "maxdepth") {
-        parse_pbrt_param(stream, ptype, tvalue.maxdepth);
+        parse_pbrt_param(str, ptype, tvalue.maxdepth);
       } else if (pname == "pixelbounds") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelbounds);
+        parse_pbrt_param(str, ptype, tvalue.pixelbounds);
       } else if (pname == "strategy") {
-        parse_pbrt_param(stream, ptype, tvalue.strategy);
+        parse_pbrt_param(str, ptype, tvalue.strategy);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -825,18 +732,18 @@ static inline void parse_pbrt_integrator(
     value.directlighting = tvalue;
   } else if (type == "bdpt") {
     auto tvalue = pbrt_integrator::bdpt_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "maxdepth") {
-        parse_pbrt_param(stream, ptype, tvalue.maxdepth);
+        parse_pbrt_param(str, ptype, tvalue.maxdepth);
       } else if (pname == "pixelbounds") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelbounds);
+        parse_pbrt_param(str, ptype, tvalue.pixelbounds);
       } else if (pname == "lightsamplestrategy") {
-        parse_pbrt_param(stream, ptype, tvalue.lightsamplestrategy);
+        parse_pbrt_param(str, ptype, tvalue.lightsamplestrategy);
       } else if (pname == "visualizestrategies") {
-        parse_pbrt_param(stream, ptype, tvalue.visualizestrategies);
+        parse_pbrt_param(str, ptype, tvalue.visualizestrategies);
       } else if (pname == "visualizeweights") {
-        parse_pbrt_param(stream, ptype, tvalue.visualizeweights);
+        parse_pbrt_param(str, ptype, tvalue.visualizeweights);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -845,22 +752,22 @@ static inline void parse_pbrt_integrator(
     value.bdpt = tvalue;
   } else if (type == "mlt") {
     auto tvalue = pbrt_integrator::mlt_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "maxdepth") {
-        parse_pbrt_param(stream, ptype, tvalue.maxdepth);
+        parse_pbrt_param(str, ptype, tvalue.maxdepth);
       } else if (pname == "pixelbounds") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelbounds);
+        parse_pbrt_param(str, ptype, tvalue.pixelbounds);
       } else if (pname == "bootstrapsamples") {
-        parse_pbrt_param(stream, ptype, tvalue.bootstrapsamples);
+        parse_pbrt_param(str, ptype, tvalue.bootstrapsamples);
       } else if (pname == "chains") {
-        parse_pbrt_param(stream, ptype, tvalue.chains);
+        parse_pbrt_param(str, ptype, tvalue.chains);
       } else if (pname == "mutationsperpixel") {
-        parse_pbrt_param(stream, ptype, tvalue.mutationsperpixel);
+        parse_pbrt_param(str, ptype, tvalue.mutationsperpixel);
       } else if (pname == "largestepprobability") {
-        parse_pbrt_param(stream, ptype, tvalue.largestepprobability);
+        parse_pbrt_param(str, ptype, tvalue.largestepprobability);
       } else if (pname == "sigma") {
-        parse_pbrt_param(stream, ptype, tvalue.sigma);
+        parse_pbrt_param(str, ptype, tvalue.sigma);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -869,22 +776,22 @@ static inline void parse_pbrt_integrator(
     value.mlt  = tvalue;
   } else if (type == "sppm") {
     auto tvalue = pbrt_integrator::sppm_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "maxdepth") {
-        parse_pbrt_param(stream, ptype, tvalue.maxdepth);
+        parse_pbrt_param(str, ptype, tvalue.maxdepth);
       } else if (pname == "pixelbounds") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelbounds);
+        parse_pbrt_param(str, ptype, tvalue.pixelbounds);
       } else if (pname == "iterations") {
-        parse_pbrt_param(stream, ptype, tvalue.iterations);
+        parse_pbrt_param(str, ptype, tvalue.iterations);
       } else if (pname == "numiterations") {
-        parse_pbrt_param(stream, ptype, tvalue.iterations);
+        parse_pbrt_param(str, ptype, tvalue.iterations);
       } else if (pname == "photonsperiteration") {
-        parse_pbrt_param(stream, ptype, tvalue.photonsperiteration);
+        parse_pbrt_param(str, ptype, tvalue.photonsperiteration);
       } else if (pname == "imagewritefrequency") {
-        parse_pbrt_param(stream, ptype, tvalue.imagewritefrequency);
+        parse_pbrt_param(str, ptype, tvalue.imagewritefrequency);
       } else if (pname == "radius") {
-        parse_pbrt_param(stream, ptype, tvalue.radius);
+        parse_pbrt_param(str, ptype, tvalue.radius);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -893,12 +800,12 @@ static inline void parse_pbrt_integrator(
     value.sppm = tvalue;
   } else if (type == "whitted") {
     auto tvalue = pbrt_integrator::whitted_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "maxdepth") {
-        parse_pbrt_param(stream, ptype, tvalue.maxdepth);
+        parse_pbrt_param(str, ptype, tvalue.maxdepth);
       } else if (pname == "pixelbounds") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelbounds);
+        parse_pbrt_param(str, ptype, tvalue.pixelbounds);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -912,14 +819,14 @@ static inline void parse_pbrt_integrator(
 
 // Parse Sampler
 static inline void parse_pbrt_sampler(
-    pbrt_stream& stream, const string& type, pbrt_sampler& value) {
+    string_view& str, const string& type, pbrt_sampler& value) {
   auto pname = ""s, ptype = ""s;
   if (type == "random") {
     auto tvalue = pbrt_sampler::random_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "pixelsamples") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelsamples);
+        parse_pbrt_param(str, ptype, tvalue.pixelsamples);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -928,10 +835,10 @@ static inline void parse_pbrt_sampler(
     value.random = tvalue;
   } else if (type == "halton") {
     auto tvalue = pbrt_sampler::halton_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "pixelsamples") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelsamples);
+        parse_pbrt_param(str, ptype, tvalue.pixelsamples);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -940,10 +847,10 @@ static inline void parse_pbrt_sampler(
     value.halton = tvalue;
   } else if (type == "sobol") {
     auto tvalue = pbrt_sampler::sobol_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "pixelsamples") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelsamples);
+        parse_pbrt_param(str, ptype, tvalue.pixelsamples);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -952,10 +859,10 @@ static inline void parse_pbrt_sampler(
     value.sobol = tvalue;
   } else if (type == "02sequence") {
     auto tvalue = pbrt_sampler::zerotwosequence_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "pixelsamples") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelsamples);
+        parse_pbrt_param(str, ptype, tvalue.pixelsamples);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -964,10 +871,10 @@ static inline void parse_pbrt_sampler(
     value.zerotwosequence = tvalue;
   } else if (type == "lowdiscrepancy") {
     auto tvalue = pbrt_sampler::zerotwosequence_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "pixelsamples") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelsamples);
+        parse_pbrt_param(str, ptype, tvalue.pixelsamples);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -976,10 +883,10 @@ static inline void parse_pbrt_sampler(
     value.zerotwosequence = tvalue;
   } else if (type == "maxmindist") {
     auto tvalue = pbrt_sampler::maxmindist_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "pixelsamples") {
-        parse_pbrt_param(stream, ptype, tvalue.pixelsamples);
+        parse_pbrt_param(str, ptype, tvalue.pixelsamples);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -988,14 +895,14 @@ static inline void parse_pbrt_sampler(
     value.maxmindist = tvalue;
   } else if (type == "stratified") {
     auto tvalue = pbrt_sampler::stratified_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "xsamples") {
-        parse_pbrt_param(stream, ptype, tvalue.xsamples);
+        parse_pbrt_param(str, ptype, tvalue.xsamples);
       } else if (pname == "ysamples") {
-        parse_pbrt_param(stream, ptype, tvalue.ysamples);
+        parse_pbrt_param(str, ptype, tvalue.ysamples);
       } else if (pname == "jitter") {
-        parse_pbrt_param(stream, ptype, tvalue.jitter);
+        parse_pbrt_param(str, ptype, tvalue.jitter);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1009,16 +916,16 @@ static inline void parse_pbrt_sampler(
 
 // Parse Filter
 static inline void parse_pbrt_filter(
-    pbrt_stream& stream, const string& type, pbrt_filter& value) {
+    string_view& str, const string& type, pbrt_filter& value) {
   auto pname = ""s, ptype = ""s;
   if (type == "box") {
     auto tvalue = pbrt_filter::box_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "xwidth") {
-        parse_pbrt_param(stream, ptype, tvalue.xwidth);
+        parse_pbrt_param(str, ptype, tvalue.xwidth);
       } else if (pname == "ywidth") {
-        parse_pbrt_param(stream, ptype, tvalue.ywidth);
+        parse_pbrt_param(str, ptype, tvalue.ywidth);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1027,14 +934,14 @@ static inline void parse_pbrt_filter(
     value.box  = tvalue;
   } else if (type == "gaussian") {
     auto tvalue = pbrt_filter::gaussian_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "xwidth") {
-        parse_pbrt_param(stream, ptype, tvalue.xwidth);
+        parse_pbrt_param(str, ptype, tvalue.xwidth);
       } else if (pname == "ywidth") {
-        parse_pbrt_param(stream, ptype, tvalue.ywidth);
+        parse_pbrt_param(str, ptype, tvalue.ywidth);
       } else if (pname == "alpha") {
-        parse_pbrt_param(stream, ptype, tvalue.alpha);
+        parse_pbrt_param(str, ptype, tvalue.alpha);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1043,16 +950,16 @@ static inline void parse_pbrt_filter(
     value.gaussian = tvalue;
   } else if (type == "mitchell") {
     auto tvalue = pbrt_filter::mitchell_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "xwidth") {
-        parse_pbrt_param(stream, ptype, tvalue.xwidth);
+        parse_pbrt_param(str, ptype, tvalue.xwidth);
       } else if (pname == "ywidth") {
-        parse_pbrt_param(stream, ptype, tvalue.ywidth);
+        parse_pbrt_param(str, ptype, tvalue.ywidth);
       } else if (pname == "B") {
-        parse_pbrt_param(stream, ptype, tvalue.B);
+        parse_pbrt_param(str, ptype, tvalue.B);
       } else if (pname == "C") {
-        parse_pbrt_param(stream, ptype, tvalue.C);
+        parse_pbrt_param(str, ptype, tvalue.C);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1061,14 +968,14 @@ static inline void parse_pbrt_filter(
     value.mitchell = tvalue;
   } else if (type == "sinc") {
     auto tvalue = pbrt_filter::sinc_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "xwidth") {
-        parse_pbrt_param(stream, ptype, tvalue.xwidth);
+        parse_pbrt_param(str, ptype, tvalue.xwidth);
       } else if (pname == "ywidth") {
-        parse_pbrt_param(stream, ptype, tvalue.ywidth);
+        parse_pbrt_param(str, ptype, tvalue.ywidth);
       } else if (pname == "tau") {
-        parse_pbrt_param(stream, ptype, tvalue.tau);
+        parse_pbrt_param(str, ptype, tvalue.tau);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1077,12 +984,12 @@ static inline void parse_pbrt_filter(
     value.sinc = tvalue;
   } else if (type == "triangle") {
     auto tvalue = pbrt_filter::triangle_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "xwidth") {
-        parse_pbrt_param(stream, ptype, tvalue.xwidth);
+        parse_pbrt_param(str, ptype, tvalue.xwidth);
       } else if (pname == "ywidth") {
-        parse_pbrt_param(stream, ptype, tvalue.ywidth);
+        parse_pbrt_param(str, ptype, tvalue.ywidth);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1096,28 +1003,28 @@ static inline void parse_pbrt_filter(
 
 // Parse Filter
 static inline void parse_pbrt_film(
-    pbrt_stream& stream, const string& type, pbrt_film& value) {
+    string_view& str, const string& type, pbrt_film& value) {
   auto pname = ""s, ptype = ""s;
   if (type == "image") {
     auto tvalue = pbrt_film::image_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "xresolution") {
-        parse_pbrt_param(stream, ptype, tvalue.xresolution);
+        parse_pbrt_param(str, ptype, tvalue.xresolution);
       } else if (pname == "yresolution") {
-        parse_pbrt_param(stream, ptype, tvalue.yresolution);
+        parse_pbrt_param(str, ptype, tvalue.yresolution);
       } else if (pname == "yresolution") {
-        parse_pbrt_param(stream, ptype, tvalue.yresolution);
+        parse_pbrt_param(str, ptype, tvalue.yresolution);
       } else if (pname == "cropwindow") {
-        parse_pbrt_param(stream, ptype, tvalue.cropwindow);
+        parse_pbrt_param(str, ptype, tvalue.cropwindow);
       } else if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "maxsampleluminance") {
-        parse_pbrt_param(stream, ptype, tvalue.maxsampleluminance);
+        parse_pbrt_param(str, ptype, tvalue.maxsampleluminance);
       } else if (pname == "diagonal") {
-        parse_pbrt_param(stream, ptype, tvalue.diagonal);
+        parse_pbrt_param(str, ptype, tvalue.diagonal);
       } else if (pname == "filename") {
-        parse_pbrt_param(stream, ptype, tvalue.filename);
+        parse_pbrt_param(str, ptype, tvalue.filename);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1131,26 +1038,26 @@ static inline void parse_pbrt_film(
 
 // Parse Camera
 static inline void parse_pbrt_camera(
-    pbrt_stream& stream, const string& type, pbrt_camera& value) {
+    string_view& str, const string& type, pbrt_camera& value) {
   auto pname = ""s, ptype = ""s;
   if (type == "perspective") {
     auto tvalue = pbrt_camera::perspective_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "fov") {
-        parse_pbrt_param(stream, ptype, tvalue.fov);
+        parse_pbrt_param(str, ptype, tvalue.fov);
       } else if (pname == "frameaspectratio") {
-        parse_pbrt_param(stream, ptype, tvalue.frameaspectratio);
+        parse_pbrt_param(str, ptype, tvalue.frameaspectratio);
       } else if (pname == "lensradius") {
-        parse_pbrt_param(stream, ptype, tvalue.lensradius);
+        parse_pbrt_param(str, ptype, tvalue.lensradius);
       } else if (pname == "focaldistance") {
-        parse_pbrt_param(stream, ptype, tvalue.focaldistance);
+        parse_pbrt_param(str, ptype, tvalue.focaldistance);
       } else if (pname == "screenwindow") {
-        parse_pbrt_param(stream, ptype, tvalue.screenwindow);
+        parse_pbrt_param(str, ptype, tvalue.screenwindow);
       } else if (pname == "shutteropen") {
-        parse_pbrt_param(stream, ptype, tvalue.shutteropen);
+        parse_pbrt_param(str, ptype, tvalue.shutteropen);
       } else if (pname == "shutterclose") {
-        parse_pbrt_param(stream, ptype, tvalue.shutterclose);
+        parse_pbrt_param(str, ptype, tvalue.shutterclose);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1159,20 +1066,20 @@ static inline void parse_pbrt_camera(
     value.perspective = tvalue;
   } else if (type == "orthographic") {
     auto tvalue = pbrt_camera::orthographic_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "frameaspectratio") {
-        parse_pbrt_param(stream, ptype, tvalue.frameaspectratio);
+        parse_pbrt_param(str, ptype, tvalue.frameaspectratio);
       } else if (pname == "lensradius") {
-        parse_pbrt_param(stream, ptype, tvalue.lensradius);
+        parse_pbrt_param(str, ptype, tvalue.lensradius);
       } else if (pname == "focaldistance") {
-        parse_pbrt_param(stream, ptype, tvalue.focaldistance);
+        parse_pbrt_param(str, ptype, tvalue.focaldistance);
       } else if (pname == "screenwindow") {
-        parse_pbrt_param(stream, ptype, tvalue.screenwindow);
+        parse_pbrt_param(str, ptype, tvalue.screenwindow);
       } else if (pname == "shutteropen") {
-        parse_pbrt_param(stream, ptype, tvalue.shutteropen);
+        parse_pbrt_param(str, ptype, tvalue.shutteropen);
       } else if (pname == "shutterclose") {
-        parse_pbrt_param(stream, ptype, tvalue.shutterclose);
+        parse_pbrt_param(str, ptype, tvalue.shutterclose);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1181,12 +1088,12 @@ static inline void parse_pbrt_camera(
     value.orthographic = tvalue;
   } else if (type == "environment") {
     auto tvalue = pbrt_camera::environment_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "shutteropen") {
-        parse_pbrt_param(stream, ptype, tvalue.shutteropen);
+        parse_pbrt_param(str, ptype, tvalue.shutteropen);
       } else if (pname == "shutterclose") {
-        parse_pbrt_param(stream, ptype, tvalue.shutterclose);
+        parse_pbrt_param(str, ptype, tvalue.shutterclose);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1195,10 +1102,10 @@ static inline void parse_pbrt_camera(
     value.environment = tvalue;
   } else if (type == "realistic") {
     auto tvalue = pbrt_camera::realistic_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "lensfile") {
-        parse_pbrt_param(stream, ptype, tvalue.lensfile);
+        parse_pbrt_param(str, ptype, tvalue.lensfile);
         // example: wide.22mm.dat
         auto lensfile = fs::path(tvalue.lensfile).filename().string();
         lensfile      = lensfile.substr(0, lensfile.size() - 4);
@@ -1206,15 +1113,15 @@ static inline void parse_pbrt_camera(
         lensfile      = lensfile.substr(0, lensfile.size() - 2);
         tvalue.approx_focallength = std::atof(lensfile.c_str());
       } else if (pname == "aperturediameter") {
-        parse_pbrt_param(stream, ptype, tvalue.aperturediameter);
+        parse_pbrt_param(str, ptype, tvalue.aperturediameter);
       } else if (pname == "focusdistance") {
-        parse_pbrt_param(stream, ptype, tvalue.focusdistance);
+        parse_pbrt_param(str, ptype, tvalue.focusdistance);
       } else if (pname == "simpleweighting") {
-        parse_pbrt_param(stream, ptype, tvalue.simpleweighting);
+        parse_pbrt_param(str, ptype, tvalue.simpleweighting);
       } else if (pname == "shutteropen") {
-        parse_pbrt_param(stream, ptype, tvalue.shutteropen);
+        parse_pbrt_param(str, ptype, tvalue.shutteropen);
       } else if (pname == "shutterclose") {
-        parse_pbrt_param(stream, ptype, tvalue.shutterclose);
+        parse_pbrt_param(str, ptype, tvalue.shutterclose);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1228,14 +1135,14 @@ static inline void parse_pbrt_camera(
 
 // Parse Texture
 static inline void parse_pbrt_texture(
-    pbrt_stream& stream, const string& type, pbrt_texture& value) {
+    string_view& str, const string& type, pbrt_texture& value) {
   auto pname = ""s, ptype = ""s;
   if (type == "constant") {
     auto tvalue = pbrt_texture::constant_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "value") {
-        parse_pbrt_param(stream, ptype, tvalue.value);
+        parse_pbrt_param(str, ptype, tvalue.value);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1244,30 +1151,30 @@ static inline void parse_pbrt_texture(
     value.constant = tvalue;
   } else if (type == "bilerp") {
     auto tvalue = pbrt_texture::bilerp_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "v00") {
-        parse_pbrt_param(stream, ptype, tvalue.v00);
+        parse_pbrt_param(str, ptype, tvalue.v00);
       } else if (pname == "v01") {
-        parse_pbrt_param(stream, ptype, tvalue.v01);
+        parse_pbrt_param(str, ptype, tvalue.v01);
       } else if (pname == "v10") {
-        parse_pbrt_param(stream, ptype, tvalue.v10);
+        parse_pbrt_param(str, ptype, tvalue.v10);
       } else if (pname == "v11") {
-        parse_pbrt_param(stream, ptype, tvalue.v11);
+        parse_pbrt_param(str, ptype, tvalue.v11);
       } else if (pname == "mapping") {
-        parse_pbrt_param(stream, ptype, tvalue.mapping);
+        parse_pbrt_param(str, ptype, tvalue.mapping);
       } else if (pname == "uscale") {
-        parse_pbrt_param(stream, ptype, tvalue.uscale);
+        parse_pbrt_param(str, ptype, tvalue.uscale);
       } else if (pname == "vscale") {
-        parse_pbrt_param(stream, ptype, tvalue.vscale);
+        parse_pbrt_param(str, ptype, tvalue.vscale);
       } else if (pname == "udelta") {
-        parse_pbrt_param(stream, ptype, tvalue.udelta);
+        parse_pbrt_param(str, ptype, tvalue.udelta);
       } else if (pname == "vdelta") {
-        parse_pbrt_param(stream, ptype, tvalue.vdelta);
+        parse_pbrt_param(str, ptype, tvalue.vdelta);
       } else if (pname == "v1") {
-        parse_pbrt_param(stream, ptype, tvalue.v1);
+        parse_pbrt_param(str, ptype, tvalue.v1);
       } else if (pname == "v2") {
-        parse_pbrt_param(stream, ptype, tvalue.v2);
+        parse_pbrt_param(str, ptype, tvalue.v2);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1276,30 +1183,30 @@ static inline void parse_pbrt_texture(
     value.bilerp = tvalue;
   } else if (type == "checkerboard") {
     auto tvalue = pbrt_texture::checkerboard_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "dimension") {
-        parse_pbrt_param(stream, ptype, tvalue.dimension);
+        parse_pbrt_param(str, ptype, tvalue.dimension);
       } else if (pname == "tex1") {
-        parse_pbrt_param(stream, ptype, tvalue.tex1);
+        parse_pbrt_param(str, ptype, tvalue.tex1);
       } else if (pname == "tex2") {
-        parse_pbrt_param(stream, ptype, tvalue.tex2);
+        parse_pbrt_param(str, ptype, tvalue.tex2);
       } else if (pname == "aamode") {
-        parse_pbrt_param(stream, ptype, tvalue.aamode);
+        parse_pbrt_param(str, ptype, tvalue.aamode);
       } else if (pname == "mapping") {
-        parse_pbrt_param(stream, ptype, tvalue.mapping);
+        parse_pbrt_param(str, ptype, tvalue.mapping);
       } else if (pname == "uscale") {
-        parse_pbrt_param(stream, ptype, tvalue.uscale);
+        parse_pbrt_param(str, ptype, tvalue.uscale);
       } else if (pname == "vscale") {
-        parse_pbrt_param(stream, ptype, tvalue.vscale);
+        parse_pbrt_param(str, ptype, tvalue.vscale);
       } else if (pname == "udelta") {
-        parse_pbrt_param(stream, ptype, tvalue.udelta);
+        parse_pbrt_param(str, ptype, tvalue.udelta);
       } else if (pname == "vdelta") {
-        parse_pbrt_param(stream, ptype, tvalue.vdelta);
+        parse_pbrt_param(str, ptype, tvalue.vdelta);
       } else if (pname == "v1") {
-        parse_pbrt_param(stream, ptype, tvalue.v1);
+        parse_pbrt_param(str, ptype, tvalue.v1);
       } else if (pname == "v2") {
-        parse_pbrt_param(stream, ptype, tvalue.v2);
+        parse_pbrt_param(str, ptype, tvalue.v2);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1308,26 +1215,26 @@ static inline void parse_pbrt_texture(
     value.checkerboard = tvalue;
   } else if (type == "dots") {
     auto tvalue = pbrt_texture::dots_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "inside") {
-        parse_pbrt_param(stream, ptype, tvalue.inside);
+        parse_pbrt_param(str, ptype, tvalue.inside);
       } else if (pname == "outside") {
-        parse_pbrt_param(stream, ptype, tvalue.outside);
+        parse_pbrt_param(str, ptype, tvalue.outside);
       } else if (pname == "mapping") {
-        parse_pbrt_param(stream, ptype, tvalue.mapping);
+        parse_pbrt_param(str, ptype, tvalue.mapping);
       } else if (pname == "uscale") {
-        parse_pbrt_param(stream, ptype, tvalue.uscale);
+        parse_pbrt_param(str, ptype, tvalue.uscale);
       } else if (pname == "vscale") {
-        parse_pbrt_param(stream, ptype, tvalue.vscale);
+        parse_pbrt_param(str, ptype, tvalue.vscale);
       } else if (pname == "udelta") {
-        parse_pbrt_param(stream, ptype, tvalue.udelta);
+        parse_pbrt_param(str, ptype, tvalue.udelta);
       } else if (pname == "vdelta") {
-        parse_pbrt_param(stream, ptype, tvalue.vdelta);
+        parse_pbrt_param(str, ptype, tvalue.vdelta);
       } else if (pname == "v1") {
-        parse_pbrt_param(stream, ptype, tvalue.v1);
+        parse_pbrt_param(str, ptype, tvalue.v1);
       } else if (pname == "v2") {
-        parse_pbrt_param(stream, ptype, tvalue.v2);
+        parse_pbrt_param(str, ptype, tvalue.v2);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1336,34 +1243,34 @@ static inline void parse_pbrt_texture(
     value.dots = tvalue;
   } else if (type == "imagemap") {
     auto tvalue = pbrt_texture::imagemap_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "filename") {
-        parse_pbrt_param(stream, ptype, tvalue.filename);
+        parse_pbrt_param(str, ptype, tvalue.filename);
       } else if (pname == "wrap") {
-        parse_pbrt_param(stream, ptype, tvalue.wrap);
+        parse_pbrt_param(str, ptype, tvalue.wrap);
       } else if (pname == "maxanisotropy") {
-        parse_pbrt_param(stream, ptype, tvalue.maxanisotropy);
+        parse_pbrt_param(str, ptype, tvalue.maxanisotropy);
       } else if (pname == "trilinear") {
-        parse_pbrt_param(stream, ptype, tvalue.trilinear);
+        parse_pbrt_param(str, ptype, tvalue.trilinear);
       } else if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "gamma") {
-        parse_pbrt_param(stream, ptype, tvalue.gamma);
+        parse_pbrt_param(str, ptype, tvalue.gamma);
       } else if (pname == "mapping") {
-        parse_pbrt_param(stream, ptype, tvalue.mapping);
+        parse_pbrt_param(str, ptype, tvalue.mapping);
       } else if (pname == "uscale") {
-        parse_pbrt_param(stream, ptype, tvalue.uscale);
+        parse_pbrt_param(str, ptype, tvalue.uscale);
       } else if (pname == "vscale") {
-        parse_pbrt_param(stream, ptype, tvalue.vscale);
+        parse_pbrt_param(str, ptype, tvalue.vscale);
       } else if (pname == "udelta") {
-        parse_pbrt_param(stream, ptype, tvalue.udelta);
+        parse_pbrt_param(str, ptype, tvalue.udelta);
       } else if (pname == "vdelta") {
-        parse_pbrt_param(stream, ptype, tvalue.vdelta);
+        parse_pbrt_param(str, ptype, tvalue.vdelta);
       } else if (pname == "v1") {
-        parse_pbrt_param(stream, ptype, tvalue.v1);
+        parse_pbrt_param(str, ptype, tvalue.v1);
       } else if (pname == "v2") {
-        parse_pbrt_param(stream, ptype, tvalue.v2);
+        parse_pbrt_param(str, ptype, tvalue.v2);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1372,14 +1279,14 @@ static inline void parse_pbrt_texture(
     value.imagemap = tvalue;
   } else if (type == "mix") {
     auto tvalue = pbrt_texture::mix_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "tex1") {
-        parse_pbrt_param(stream, ptype, tvalue.tex1);
+        parse_pbrt_param(str, ptype, tvalue.tex1);
       } else if (pname == "tex2") {
-        parse_pbrt_param(stream, ptype, tvalue.tex2);
+        parse_pbrt_param(str, ptype, tvalue.tex2);
       } else if (pname == "amount") {
-        parse_pbrt_param(stream, ptype, tvalue.amount);
+        parse_pbrt_param(str, ptype, tvalue.amount);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1388,12 +1295,12 @@ static inline void parse_pbrt_texture(
     value.mix  = tvalue;
   } else if (type == "scale") {
     auto tvalue = pbrt_texture::scale_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "tex1") {
-        parse_pbrt_param(stream, ptype, tvalue.tex1);
+        parse_pbrt_param(str, ptype, tvalue.tex1);
       } else if (pname == "tex2") {
-        parse_pbrt_param(stream, ptype, tvalue.tex2);
+        parse_pbrt_param(str, ptype, tvalue.tex2);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1402,12 +1309,12 @@ static inline void parse_pbrt_texture(
     value.scale = tvalue;
   } else if (type == "fbm") {
     auto tvalue = pbrt_texture::fbm_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "octaves") {
-        parse_pbrt_param(stream, ptype, tvalue.octaves);
+        parse_pbrt_param(str, ptype, tvalue.octaves);
       } else if (pname == "roughness") {
-        parse_pbrt_param(stream, ptype, tvalue.roughness);
+        parse_pbrt_param(str, ptype, tvalue.roughness);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1416,12 +1323,12 @@ static inline void parse_pbrt_texture(
     value.fbm  = tvalue;
   } else if (type == "wrinkled") {
     auto tvalue = pbrt_texture::wrinkled_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "octaves") {
-        parse_pbrt_param(stream, ptype, tvalue.octaves);
+        parse_pbrt_param(str, ptype, tvalue.octaves);
       } else if (pname == "roughness") {
-        parse_pbrt_param(stream, ptype, tvalue.roughness);
+        parse_pbrt_param(str, ptype, tvalue.roughness);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1430,8 +1337,8 @@ static inline void parse_pbrt_texture(
     value.wrinkled = tvalue;
   } else if (type == "windy") {
     auto tvalue = pbrt_texture::windy_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "") {
         // TODO: missing params
       } else {
@@ -1442,16 +1349,16 @@ static inline void parse_pbrt_texture(
     value.windy = tvalue;
   } else if (type == "marble") {
     auto tvalue = pbrt_texture::marble_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "octaves") {
-        parse_pbrt_param(stream, ptype, tvalue.octaves);
+        parse_pbrt_param(str, ptype, tvalue.octaves);
       } else if (pname == "roughness") {
-        parse_pbrt_param(stream, ptype, tvalue.roughness);
+        parse_pbrt_param(str, ptype, tvalue.roughness);
       } else if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "variation") {
-        parse_pbrt_param(stream, ptype, tvalue.variation);
+        parse_pbrt_param(str, ptype, tvalue.variation);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1460,22 +1367,22 @@ static inline void parse_pbrt_texture(
     value.marble = tvalue;
   } else if (type == "uv") {
     auto tvalue = pbrt_texture::uv_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "mapping") {
-        parse_pbrt_param(stream, ptype, tvalue.mapping);
+        parse_pbrt_param(str, ptype, tvalue.mapping);
       } else if (pname == "uscale") {
-        parse_pbrt_param(stream, ptype, tvalue.uscale);
+        parse_pbrt_param(str, ptype, tvalue.uscale);
       } else if (pname == "vscale") {
-        parse_pbrt_param(stream, ptype, tvalue.vscale);
+        parse_pbrt_param(str, ptype, tvalue.vscale);
       } else if (pname == "udelta") {
-        parse_pbrt_param(stream, ptype, tvalue.udelta);
+        parse_pbrt_param(str, ptype, tvalue.udelta);
       } else if (pname == "vdelta") {
-        parse_pbrt_param(stream, ptype, tvalue.vdelta);
+        parse_pbrt_param(str, ptype, tvalue.vdelta);
       } else if (pname == "v1") {
-        parse_pbrt_param(stream, ptype, tvalue.v1);
+        parse_pbrt_param(str, ptype, tvalue.v1);
       } else if (pname == "v2") {
-        parse_pbrt_param(stream, ptype, tvalue.v2);
+        parse_pbrt_param(str, ptype, tvalue.v2);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -1633,36 +1540,36 @@ static inline pair<vec3f, vec3f> parse_pbrt_subsurface(const string& name) {
 }
 
 // Get typename
-static inline void parse_pbrt_typeparam(pbrt_stream& stream, string& value) {
-  save_stream_position(stream);
+static inline void parse_pbrt_typeparam(string_view& str, string& value) {
+  auto saved = str;
   value      = "";
   auto pname = ""s, ptype = ""s;
-  while (is_param(stream) && value == "") {
-    parse_pbrt_nametype(stream, pname, ptype);
+  while (is_pbrt_param(str) && value == "") {
+    parse_pbrt_nametype(str, pname, ptype);
     if (pname == "type") {
-      parse_pbrt_param(stream, ptype, value);
+      parse_pbrt_param(str, ptype, value);
     } else {
-      skip_pbrt_param(stream);
+      skip_pbrt_param(str);
     }
   }
   if (value == "") throw std::runtime_error("type not found");
-  restore_stream_position(stream);
+  str = saved;
 }
 
 // Parse param and resolve constant textures
-static inline void parse_pbrt_texture(pbrt_stream& stream, const string& ptype,
+static inline void parse_pbrt_texture(string_view& str, const string& ptype,
     pbrt_textured3f&                              value,
     const unordered_map<string, pbrt_spectrum3f>& constant_values) {
-  parse_pbrt_param(stream, ptype, value);
+  parse_pbrt_param(str, ptype, value);
   if (value.texture == "") return;
   if (constant_values.find(value.texture) == constant_values.end()) return;
   value.value   = constant_values.at(value.texture);
   value.texture = "";
 }
-static inline void parse_pbrt_texture(pbrt_stream& stream, const string& ptype,
+static inline void parse_pbrt_texture(string_view& str, const string& ptype,
     pbrt_textured1f&                              value,
     const unordered_map<string, pbrt_spectrum3f>& constant_values) {
-  parse_pbrt_param(stream, ptype, value);
+  parse_pbrt_param(str, ptype, value);
   if (value.texture == "") return;
   if (constant_values.find(value.texture) == constant_values.end()) return;
   auto col      = constant_values.at(value.texture);
@@ -1671,23 +1578,23 @@ static inline void parse_pbrt_texture(pbrt_stream& stream, const string& ptype,
 }
 
 // Parse Material
-static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
+static inline void parse_pbrt_material(string_view& str, const string& type,
     pbrt_material&                                value,
     const unordered_map<string, pbrt_spectrum3f>& constant_values) {
   auto pname = ""s, ptype = ""s;
   if (type == "matte") {
     auto tvalue = pbrt_material::matte_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "Kd") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kd, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kd, constant_values);
       } else if (pname == "sigma") {
-        parse_pbrt_param(stream, ptype, tvalue.sigma);
+        parse_pbrt_param(str, ptype, tvalue.sigma);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -1697,15 +1604,15 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.matte = tvalue;
   } else if (type == "mirror") {
     auto tvalue = pbrt_material::mirror_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "Kr") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kr, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kr, constant_values);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -1715,28 +1622,28 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.mirror = tvalue;
   } else if (type == "plastic") {
     auto tvalue = pbrt_material::plastic_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "Kd") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kd, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kd, constant_values);
       } else if (pname == "Ks") {
-        parse_pbrt_texture(stream, ptype, tvalue.Ks, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Ks, constant_values);
       } else if (pname == "roughness") {
         pbrt_textured1f roughness = 0.01f;
-        parse_pbrt_param(stream, ptype, roughness);
+        parse_pbrt_param(str, ptype, roughness);
         tvalue.uroughness = roughness;
         tvalue.vroughness = roughness;
       } else if (pname == "uroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.uroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.uroughness, constant_values);
       } else if (pname == "vroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.vroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.vroughness, constant_values);
       } else if (pname == "remaproughness") {
-        parse_pbrt_param(stream, ptype, tvalue.remaproughness);
+        parse_pbrt_param(str, ptype, tvalue.remaproughness);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -1746,30 +1653,30 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.plastic = tvalue;
   } else if (type == "metal") {
     auto tvalue = pbrt_material::metal_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "eta") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "k") {
-        parse_pbrt_texture(stream, ptype, tvalue.k, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.k, constant_values);
       } else if (pname == "index") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "roughness") {
         pbrt_textured1f roughness = 0.01f;
-        parse_pbrt_param(stream, ptype, roughness);
+        parse_pbrt_param(str, ptype, roughness);
         tvalue.uroughness = roughness;
         tvalue.vroughness = roughness;
       } else if (pname == "uroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.uroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.uroughness, constant_values);
       } else if (pname == "vroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.vroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.vroughness, constant_values);
       } else if (pname == "remaproughness") {
-        parse_pbrt_param(stream, ptype, tvalue.remaproughness);
+        parse_pbrt_param(str, ptype, tvalue.remaproughness);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -1779,32 +1686,32 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.metal = tvalue;
   } else if (type == "glass") {
     auto tvalue = pbrt_material::glass_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "Kr") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kr, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kr, constant_values);
       } else if (pname == "Kt") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kt, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kt, constant_values);
       } else if (pname == "eta") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "index") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "roughness") {
         pbrt_textured1f roughness = 0.01f;
-        parse_pbrt_param(stream, ptype, roughness);
+        parse_pbrt_param(str, ptype, roughness);
         tvalue.uroughness = roughness;
         tvalue.vroughness = roughness;
       } else if (pname == "uroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.uroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.uroughness, constant_values);
       } else if (pname == "vroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.vroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.vroughness, constant_values);
       } else if (pname == "remaproughness") {
-        parse_pbrt_param(stream, ptype, tvalue.remaproughness);
+        parse_pbrt_param(str, ptype, tvalue.remaproughness);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -1814,32 +1721,32 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.glass = tvalue;
   } else if (type == "translucent") {
     auto tvalue = pbrt_material::translucent_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "Kd") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kd, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kd, constant_values);
       } else if (pname == "Ks") {
-        parse_pbrt_texture(stream, ptype, tvalue.Ks, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Ks, constant_values);
       } else if (pname == "reflect") {
-        parse_pbrt_texture(stream, ptype, tvalue.reflect, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.reflect, constant_values);
       } else if (pname == "transmit") {
-        parse_pbrt_texture(stream, ptype, tvalue.transmit, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.transmit, constant_values);
       } else if (pname == "roughness") {
         pbrt_textured1f roughness = 0.01f;
-        parse_pbrt_param(stream, ptype, roughness);
+        parse_pbrt_param(str, ptype, roughness);
         tvalue.uroughness = roughness;
         tvalue.vroughness = roughness;
       } else if (pname == "uroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.uroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.uroughness, constant_values);
       } else if (pname == "vroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.vroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.vroughness, constant_values);
       } else if (pname == "remaproughness") {
-        parse_pbrt_param(stream, ptype, tvalue.remaproughness);
+        parse_pbrt_param(str, ptype, tvalue.remaproughness);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -1849,38 +1756,38 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.translucent = tvalue;
   } else if (type == "uber") {
     auto tvalue = pbrt_material::uber_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "Kd") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kd, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kd, constant_values);
       } else if (pname == "Ks") {
-        parse_pbrt_texture(stream, ptype, tvalue.Ks, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Ks, constant_values);
       } else if (pname == "Kr") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kr, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kr, constant_values);
       } else if (pname == "Kt") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kt, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kt, constant_values);
       } else if (pname == "eta") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "index") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "opacity") {
-        parse_pbrt_texture(stream, ptype, tvalue.opacity, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.opacity, constant_values);
       } else if (pname == "roughness") {
         pbrt_textured1f roughness = 0.01f;
-        parse_pbrt_param(stream, ptype, roughness);
+        parse_pbrt_param(str, ptype, roughness);
         tvalue.uroughness = roughness;
         tvalue.vroughness = roughness;
       } else if (pname == "uroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.uroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.uroughness, constant_values);
       } else if (pname == "vroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.vroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.vroughness, constant_values);
       } else if (pname == "remaproughness") {
-        parse_pbrt_param(stream, ptype, tvalue.remaproughness);
+        parse_pbrt_param(str, ptype, tvalue.remaproughness);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -1890,52 +1797,52 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.uber = tvalue;
   } else if (type == "disney") {
     auto tvalue = pbrt_material::disney_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "color") {
-        parse_pbrt_texture(stream, ptype, tvalue.color, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.color, constant_values);
       } else if (pname == "anisotropic") {
-        parse_pbrt_texture(stream, ptype, tvalue.anisotropic, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.anisotropic, constant_values);
       } else if (pname == "clearcoat") {
-        parse_pbrt_texture(stream, ptype, tvalue.clearcoat, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.clearcoat, constant_values);
       } else if (pname == "clearcoatgloss") {
-        parse_pbrt_texture(stream, ptype, tvalue.clearcoatgloss, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.clearcoatgloss, constant_values);
       } else if (pname == "eta") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "index") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "metallic") {
-        parse_pbrt_texture(stream, ptype, tvalue.metallic, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.metallic, constant_values);
       } else if (pname == "roughness") {
         pbrt_textured1f roughness = 0.01f;
-        parse_pbrt_param(stream, ptype, roughness);
+        parse_pbrt_param(str, ptype, roughness);
         tvalue.uroughness = roughness;
         tvalue.vroughness = roughness;
       } else if (pname == "uroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.uroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.uroughness, constant_values);
       } else if (pname == "vroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.vroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.vroughness, constant_values);
       } else if (pname == "remaproughness") {
-        parse_pbrt_param(stream, ptype, tvalue.remaproughness);
+        parse_pbrt_param(str, ptype, tvalue.remaproughness);
       } else if (pname == "scatterdistance") {
-        parse_pbrt_texture(stream, ptype, tvalue.scatterdistance, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.scatterdistance, constant_values);
       } else if (pname == "sheen") {
-        parse_pbrt_texture(stream, ptype, tvalue.sheen, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.sheen, constant_values);
       } else if (pname == "sheentint") {
-        parse_pbrt_texture(stream, ptype, tvalue.sheentint, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.sheentint, constant_values);
       } else if (pname == "spectrans") {
-        parse_pbrt_texture(stream, ptype, tvalue.spectrans, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.spectrans, constant_values);
       } else if (pname == "thin") {
-        parse_pbrt_param(stream, ptype, tvalue.thin);
+        parse_pbrt_param(str, ptype, tvalue.thin);
       } else if (pname == "difftrans") {
-        parse_pbrt_texture(stream, ptype, tvalue.difftrans, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.difftrans, constant_values);
       } else if (pname == "flatness") {
-        parse_pbrt_texture(stream, ptype, tvalue.flatness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.flatness, constant_values);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -1945,31 +1852,31 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.disney = tvalue;
   } else if (type == "hair") {
     auto tvalue = pbrt_material::hair_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "color") {
-        parse_pbrt_texture(stream, ptype, tvalue.color, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.color, constant_values);
       } else if (pname == "sigma_a") {
-        parse_pbrt_texture(stream, ptype, tvalue.sigma_a, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.sigma_a, constant_values);
       } else if (pname == "eumelanin") {
-        parse_pbrt_texture(stream, ptype, tvalue.eumelanin, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eumelanin, constant_values);
       } else if (pname == "pheomelanin") {
-        parse_pbrt_texture(stream, ptype, tvalue.pheomelanin, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.pheomelanin, constant_values);
       } else if (pname == "eta") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "index") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "beta_m") {
-        parse_pbrt_texture(stream, ptype, tvalue.beta_m, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.beta_m, constant_values);
       } else if (pname == "beta_n") {
-        parse_pbrt_texture(stream, ptype, tvalue.beta_n, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.beta_n, constant_values);
       } else if (pname == "alpha") {
-        parse_pbrt_texture(stream, ptype, tvalue.alpha, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.alpha, constant_values);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -1979,36 +1886,36 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.hair = tvalue;
   } else if (type == "kdsubsurface") {
     auto tvalue = pbrt_material::kdsubsurface_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "Kd") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kd, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kd, constant_values);
       } else if (pname == "Kr") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kr, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kr, constant_values);
       } else if (pname == "Kt") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kt, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kt, constant_values);
       } else if (pname == "mfp") {
-        parse_pbrt_texture(stream, ptype, tvalue.mfp, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.mfp, constant_values);
       } else if (pname == "eta") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "index") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "roughness") {
         pbrt_textured1f roughness = 0.01f;
-        parse_pbrt_param(stream, ptype, roughness);
+        parse_pbrt_param(str, ptype, roughness);
         tvalue.uroughness = roughness;
         tvalue.vroughness = roughness;
       } else if (pname == "uroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.uroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.uroughness, constant_values);
       } else if (pname == "vroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.vroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.vroughness, constant_values);
       } else if (pname == "remaproughness") {
-        parse_pbrt_param(stream, ptype, tvalue.remaproughness);
+        parse_pbrt_param(str, ptype, tvalue.remaproughness);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -2018,19 +1925,19 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.kdsubsurface = tvalue;
   } else if (type == "mix") {
     auto tvalue = pbrt_material::mix_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "amount") {
-        parse_pbrt_texture(stream, ptype, tvalue.amount, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.amount, constant_values);
       } else if (pname == "namedmaterial1") {
-        parse_pbrt_param(stream, ptype, tvalue.namedmaterial1);
+        parse_pbrt_param(str, ptype, tvalue.namedmaterial1);
       } else if (pname == "namedmaterial2") {
-        parse_pbrt_param(stream, ptype, tvalue.namedmaterial2);
+        parse_pbrt_param(str, ptype, tvalue.namedmaterial2);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -2040,16 +1947,16 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.mix  = tvalue;
   } else if (type == "fourier") {
     auto tvalue = pbrt_material::fourier_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "bsdffile") {
-        parse_pbrt_param(stream, ptype, tvalue.bsdffile);
+        parse_pbrt_param(str, ptype, tvalue.bsdffile);
         approximate_fourier_material(tvalue);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -2059,30 +1966,30 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.fourier = tvalue;
   } else if (type == "substrate") {
     auto tvalue = pbrt_material::substrate_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "Kd") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kd, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kd, constant_values);
       } else if (pname == "Ks") {
-        parse_pbrt_texture(stream, ptype, tvalue.Ks, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Ks, constant_values);
       } else if (pname == "roughness") {
         pbrt_textured1f roughness = 0.01f;
-        parse_pbrt_param(stream, ptype, roughness);
+        parse_pbrt_param(str, ptype, roughness);
         tvalue.uroughness = roughness;
         tvalue.vroughness = roughness;
       } else if (pname == "uroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.uroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.uroughness, constant_values);
       } else if (pname == "vroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.vroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.vroughness, constant_values);
       } else if (pname == "remaproughness") {
-        parse_pbrt_param(stream, ptype, tvalue.remaproughness);
+        parse_pbrt_param(str, ptype, tvalue.remaproughness);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -2092,43 +1999,43 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
     value.substrate = tvalue;
   } else if (type == "subsurface") {
     auto tvalue = pbrt_material::subsurface_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "name") {
-        parse_pbrt_param(stream, ptype, tvalue.name);
+        parse_pbrt_param(str, ptype, tvalue.name);
         auto params    = parse_pbrt_subsurface(tvalue.name);
         tvalue.sigma_a = {params.second.x, params.second.y, params.second.z};
         tvalue.sigma_prime_s = {params.first.x, params.first.y, params.first.z};
       } else if (pname == "sigma_a") {
-        parse_pbrt_texture(stream, ptype, tvalue.sigma_a, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.sigma_a, constant_values);
       } else if (pname == "sigma_prime_s") {
-        parse_pbrt_texture(stream, ptype, tvalue.sigma_prime_s, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.sigma_prime_s, constant_values);
       } else if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "eta") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "index") {
-        parse_pbrt_texture(stream, ptype, tvalue.eta, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.eta, constant_values);
       } else if (pname == "Kr") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kr, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kr, constant_values);
       } else if (pname == "Kt") {
-        parse_pbrt_texture(stream, ptype, tvalue.Kt, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.Kt, constant_values);
       } else if (pname == "roughness") {
         pbrt_textured1f roughness = 0.01f;
-        parse_pbrt_param(stream, ptype, roughness);
+        parse_pbrt_param(str, ptype, roughness);
         tvalue.uroughness = roughness;
         tvalue.vroughness = roughness;
       } else if (pname == "uroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.uroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.uroughness, constant_values);
       } else if (pname == "vroughness") {
-        parse_pbrt_texture(stream, ptype, tvalue.vroughness, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.vroughness, constant_values);
       } else if (pname == "remaproughness") {
-        parse_pbrt_param(stream, ptype, tvalue.remaproughness);
+        parse_pbrt_param(str, ptype, tvalue.remaproughness);
       } else if (pname == "bumpmap") {
-        parse_pbrt_texture(stream, ptype, tvalue.bumpmap, constant_values);
+        parse_pbrt_texture(str, ptype, tvalue.bumpmap, constant_values);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -2143,28 +2050,28 @@ static inline void parse_pbrt_material(pbrt_stream& stream, const string& type,
 
 // Parse Shape
 static inline void parse_pbrt_shape(
-    pbrt_stream& stream, const string& type, pbrt_shape& value) {
+    string_view& str, const string& type, pbrt_shape& value) {
   auto pname = ""s, ptype = ""s;
   if (type == "trianglemesh") {
     auto tvalue = pbrt_shape::trianglemesh_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "indices") {
-        parse_pbrt_param(stream, ptype, tvalue.indices);
+        parse_pbrt_param(str, ptype, tvalue.indices);
       } else if (pname == "P") {
-        parse_pbrt_param(stream, ptype, tvalue.P);
+        parse_pbrt_param(str, ptype, tvalue.P);
       } else if (pname == "N") {
-        parse_pbrt_param(stream, ptype, tvalue.N);
+        parse_pbrt_param(str, ptype, tvalue.N);
       } else if (pname == "S") {
-        parse_pbrt_param(stream, ptype, tvalue.S);
+        parse_pbrt_param(str, ptype, tvalue.S);
       } else if (pname == "uv") {
-        parse_pbrt_param(stream, ptype, tvalue.uv);
+        parse_pbrt_param(str, ptype, tvalue.uv);
       } else if (pname == "st") {
-        parse_pbrt_param(stream, ptype, tvalue.uv);
+        parse_pbrt_param(str, ptype, tvalue.uv);
       } else if (pname == "alpha") {
-        parse_pbrt_param(stream, ptype, tvalue.alpha);
+        parse_pbrt_param(str, ptype, tvalue.alpha);
       } else if (pname == "shadowalpha") {
-        parse_pbrt_param(stream, ptype, tvalue.shadowalpha);
+        parse_pbrt_param(str, ptype, tvalue.shadowalpha);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2173,18 +2080,18 @@ static inline void parse_pbrt_shape(
     value.trianglemesh = tvalue;
   } else if (type == "plymesh") {
     auto tvalue = pbrt_shape::plymesh_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "filename") {
-        parse_pbrt_param(stream, ptype, tvalue.filename);
+        parse_pbrt_param(str, ptype, tvalue.filename);
       } else if (pname == "alpha") {
-        parse_pbrt_param(stream, ptype, tvalue.alpha);
+        parse_pbrt_param(str, ptype, tvalue.alpha);
       } else if (pname == "shadowalpha") {
-        parse_pbrt_param(stream, ptype, tvalue.shadowalpha);
+        parse_pbrt_param(str, ptype, tvalue.shadowalpha);
       } else if (pname == "discarddegenerateUVs") {
         // hack for some files
         auto value = false;
-        parse_pbrt_param(stream, ptype, value);
+        parse_pbrt_param(str, ptype, value);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2193,29 +2100,29 @@ static inline void parse_pbrt_shape(
     value.plymesh = tvalue;
   } else if (type == "curve") {
     auto tvalue = pbrt_shape::curve_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "P") {
-        parse_pbrt_param(stream, ptype, tvalue.P);
+        parse_pbrt_param(str, ptype, tvalue.P);
       } else if (pname == "N") {
-        parse_pbrt_param(stream, ptype, tvalue.N);
+        parse_pbrt_param(str, ptype, tvalue.N);
       } else if (pname == "basis") {
-        parse_pbrt_param(stream, ptype, tvalue.basis);
+        parse_pbrt_param(str, ptype, tvalue.basis);
       } else if (pname == "degree") {
-        parse_pbrt_param(stream, ptype, tvalue.degree);
+        parse_pbrt_param(str, ptype, tvalue.degree);
       } else if (pname == "type") {
-        parse_pbrt_param(stream, ptype, tvalue.type);
+        parse_pbrt_param(str, ptype, tvalue.type);
       } else if (pname == "width") {
         auto width = 1.0f;
-        parse_pbrt_param(stream, ptype, width);
+        parse_pbrt_param(str, ptype, width);
         tvalue.width0 = width;
         tvalue.width1 = width;
       } else if (pname == "width0") {
-        parse_pbrt_param(stream, ptype, tvalue.width0);
+        parse_pbrt_param(str, ptype, tvalue.width0);
       } else if (pname == "width1") {
-        parse_pbrt_param(stream, ptype, tvalue.width1);
+        parse_pbrt_param(str, ptype, tvalue.width1);
       } else if (pname == "splitdepth") {
-        parse_pbrt_param(stream, ptype, tvalue.splitdepth);
+        parse_pbrt_param(str, ptype, tvalue.splitdepth);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2224,16 +2131,16 @@ static inline void parse_pbrt_shape(
     value.curve = tvalue;
   } else if (type == "loopsubdiv") {
     auto tvalue = pbrt_shape::loopsubdiv_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "indices") {
-        parse_pbrt_param(stream, ptype, tvalue.indices);
+        parse_pbrt_param(str, ptype, tvalue.indices);
       } else if (pname == "P") {
-        parse_pbrt_param(stream, ptype, tvalue.P);
+        parse_pbrt_param(str, ptype, tvalue.P);
       } else if (pname == "levels") {
-        parse_pbrt_param(stream, ptype, tvalue.levels);
+        parse_pbrt_param(str, ptype, tvalue.levels);
       } else if (pname == "nlevels") {
-        parse_pbrt_param(stream, ptype, tvalue.levels);
+        parse_pbrt_param(str, ptype, tvalue.levels);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2242,28 +2149,28 @@ static inline void parse_pbrt_shape(
     value.loopsubdiv = tvalue;
   } else if (type == "nurbs") {
     auto tvalue = pbrt_shape::nurbs_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "nu") {
-        parse_pbrt_param(stream, ptype, tvalue.nu);
+        parse_pbrt_param(str, ptype, tvalue.nu);
       } else if (pname == "nv") {
-        parse_pbrt_param(stream, ptype, tvalue.nv);
+        parse_pbrt_param(str, ptype, tvalue.nv);
       } else if (pname == "uknots") {
-        parse_pbrt_param(stream, ptype, tvalue.uknots);
+        parse_pbrt_param(str, ptype, tvalue.uknots);
       } else if (pname == "vknots") {
-        parse_pbrt_param(stream, ptype, tvalue.vknots);
+        parse_pbrt_param(str, ptype, tvalue.vknots);
       } else if (pname == "u0") {
-        parse_pbrt_param(stream, ptype, tvalue.u0);
+        parse_pbrt_param(str, ptype, tvalue.u0);
       } else if (pname == "v0") {
-        parse_pbrt_param(stream, ptype, tvalue.v0);
+        parse_pbrt_param(str, ptype, tvalue.v0);
       } else if (pname == "u1") {
-        parse_pbrt_param(stream, ptype, tvalue.u1);
+        parse_pbrt_param(str, ptype, tvalue.u1);
       } else if (pname == "v1") {
-        parse_pbrt_param(stream, ptype, tvalue.v1);
+        parse_pbrt_param(str, ptype, tvalue.v1);
       } else if (pname == "P") {
-        parse_pbrt_param(stream, ptype, tvalue.P);
+        parse_pbrt_param(str, ptype, tvalue.P);
       } else if (pname == "Pw") {
-        parse_pbrt_param(stream, ptype, tvalue.Pw);
+        parse_pbrt_param(str, ptype, tvalue.Pw);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2272,16 +2179,16 @@ static inline void parse_pbrt_shape(
     value.nurbs = tvalue;
   } else if (type == "sphere") {
     auto tvalue = pbrt_shape::sphere_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "radius") {
-        parse_pbrt_param(stream, ptype, tvalue.radius);
+        parse_pbrt_param(str, ptype, tvalue.radius);
       } else if (pname == "zmin") {
-        parse_pbrt_param(stream, ptype, tvalue.zmin);
+        parse_pbrt_param(str, ptype, tvalue.zmin);
       } else if (pname == "zmax") {
-        parse_pbrt_param(stream, ptype, tvalue.zmax);
+        parse_pbrt_param(str, ptype, tvalue.zmax);
       } else if (pname == "phimax") {
-        parse_pbrt_param(stream, ptype, tvalue.phimax);
+        parse_pbrt_param(str, ptype, tvalue.phimax);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2290,16 +2197,16 @@ static inline void parse_pbrt_shape(
     value.sphere = tvalue;
   } else if (type == "disk") {
     auto tvalue = pbrt_shape::disk_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "radius") {
-        parse_pbrt_param(stream, ptype, tvalue.radius);
+        parse_pbrt_param(str, ptype, tvalue.radius);
       } else if (pname == "height") {
-        parse_pbrt_param(stream, ptype, tvalue.height);
+        parse_pbrt_param(str, ptype, tvalue.height);
       } else if (pname == "innerradius") {
-        parse_pbrt_param(stream, ptype, tvalue.innerradius);
+        parse_pbrt_param(str, ptype, tvalue.innerradius);
       } else if (pname == "phimax") {
-        parse_pbrt_param(stream, ptype, tvalue.phimax);
+        parse_pbrt_param(str, ptype, tvalue.phimax);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2308,14 +2215,14 @@ static inline void parse_pbrt_shape(
     value.disk = tvalue;
   } else if (type == "cone") {
     auto tvalue = pbrt_shape::cone_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "radius") {
-        parse_pbrt_param(stream, ptype, tvalue.radius);
+        parse_pbrt_param(str, ptype, tvalue.radius);
       } else if (pname == "height") {
-        parse_pbrt_param(stream, ptype, tvalue.height);
+        parse_pbrt_param(str, ptype, tvalue.height);
       } else if (pname == "phimax") {
-        parse_pbrt_param(stream, ptype, tvalue.phimax);
+        parse_pbrt_param(str, ptype, tvalue.phimax);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2324,16 +2231,16 @@ static inline void parse_pbrt_shape(
     value.cone = tvalue;
   } else if (type == "cylinder") {
     auto tvalue = pbrt_shape::cylinder_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "radius") {
-        parse_pbrt_param(stream, ptype, tvalue.radius);
+        parse_pbrt_param(str, ptype, tvalue.radius);
       } else if (pname == "zmin") {
-        parse_pbrt_param(stream, ptype, tvalue.zmin);
+        parse_pbrt_param(str, ptype, tvalue.zmin);
       } else if (pname == "zmax") {
-        parse_pbrt_param(stream, ptype, tvalue.zmax);
+        parse_pbrt_param(str, ptype, tvalue.zmax);
       } else if (pname == "phimax") {
-        parse_pbrt_param(stream, ptype, tvalue.phimax);
+        parse_pbrt_param(str, ptype, tvalue.phimax);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2342,14 +2249,14 @@ static inline void parse_pbrt_shape(
     value.cylinder = tvalue;
   } else if (type == "hyperboloid") {
     auto tvalue = pbrt_shape::hyperboloid_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "p1") {
-        parse_pbrt_param(stream, ptype, tvalue.p1);
+        parse_pbrt_param(str, ptype, tvalue.p1);
       } else if (pname == "p2") {
-        parse_pbrt_param(stream, ptype, tvalue.p2);
+        parse_pbrt_param(str, ptype, tvalue.p2);
       } else if (pname == "phimax") {
-        parse_pbrt_param(stream, ptype, tvalue.phimax);
+        parse_pbrt_param(str, ptype, tvalue.phimax);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2358,16 +2265,16 @@ static inline void parse_pbrt_shape(
     value.hyperboloid = tvalue;
   } else if (type == "paraboloid") {
     auto tvalue = pbrt_shape::paraboloid_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "radius") {
-        parse_pbrt_param(stream, ptype, tvalue.radius);
+        parse_pbrt_param(str, ptype, tvalue.radius);
       } else if (pname == "zmin") {
-        parse_pbrt_param(stream, ptype, tvalue.zmin);
+        parse_pbrt_param(str, ptype, tvalue.zmin);
       } else if (pname == "zmax") {
-        parse_pbrt_param(stream, ptype, tvalue.zmax);
+        parse_pbrt_param(str, ptype, tvalue.zmax);
       } else if (pname == "phimax") {
-        parse_pbrt_param(stream, ptype, tvalue.phimax);
+        parse_pbrt_param(str, ptype, tvalue.phimax);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2376,14 +2283,14 @@ static inline void parse_pbrt_shape(
     value.paraboloid = tvalue;
   } else if (type == "heightfield") {
     auto tvalue = pbrt_shape::heightfield_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "nu") {
-        parse_pbrt_param(stream, ptype, tvalue.nu);
+        parse_pbrt_param(str, ptype, tvalue.nu);
       } else if (pname == "nv") {
-        parse_pbrt_param(stream, ptype, tvalue.nv);
+        parse_pbrt_param(str, ptype, tvalue.nv);
       } else if (pname == "Pz") {
-        parse_pbrt_param(stream, ptype, tvalue.Pz);
+        parse_pbrt_param(str, ptype, tvalue.Pz);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2397,22 +2304,22 @@ static inline void parse_pbrt_shape(
 
 // Parse AreaLightSource
 static inline void parse_pbrt_arealight(
-    pbrt_stream& stream, const string& type, pbrt_arealight& value) {
+    string_view& str, const string& type, pbrt_arealight& value) {
   auto pname = ""s, ptype = ""s;
   if (type == "diffuse") {
     auto tvalue = pbrt_arealight::diffuse_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "L") {
-        parse_pbrt_param(stream, ptype, tvalue.L);
+        parse_pbrt_param(str, ptype, tvalue.L);
       } else if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "twosided") {
-        parse_pbrt_param(stream, ptype, tvalue.twosided);
+        parse_pbrt_param(str, ptype, tvalue.twosided);
       } else if (pname == "samples") {
-        parse_pbrt_param(stream, ptype, tvalue.samples);
+        parse_pbrt_param(str, ptype, tvalue.samples);
       } else if (pname == "nsamples") {
-        parse_pbrt_param(stream, ptype, tvalue.samples);
+        parse_pbrt_param(str, ptype, tvalue.samples);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2426,20 +2333,20 @@ static inline void parse_pbrt_arealight(
 
 // Parse LightSource
 static inline void parse_pbrt_light(
-    pbrt_stream& stream, const string& type, pbrt_light& value) {
+    string_view& str, const string& type, pbrt_light& value) {
   auto pname = ""s, ptype = ""s;
   if (type == "distant") {
     auto tvalue = pbrt_light::distant_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "L") {
-        parse_pbrt_param(stream, ptype, tvalue.L);
+        parse_pbrt_param(str, ptype, tvalue.L);
       } else if (pname == "from") {
-        parse_pbrt_param(stream, ptype, tvalue.from);
+        parse_pbrt_param(str, ptype, tvalue.from);
       } else if (pname == "to") {
-        parse_pbrt_param(stream, ptype, tvalue.to);
+        parse_pbrt_param(str, ptype, tvalue.to);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2448,14 +2355,14 @@ static inline void parse_pbrt_light(
     value.distant = tvalue;
   } else if (type == "goniometric") {
     auto tvalue = pbrt_light::goniometric_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "I") {
-        parse_pbrt_param(stream, ptype, tvalue.I);
+        parse_pbrt_param(str, ptype, tvalue.I);
       } else if (pname == "mapname") {
-        parse_pbrt_param(stream, ptype, tvalue.mapname);
+        parse_pbrt_param(str, ptype, tvalue.mapname);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2464,18 +2371,18 @@ static inline void parse_pbrt_light(
     value.goniometric = tvalue;
   } else if (type == "infinite") {
     auto tvalue = pbrt_light::infinite_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "L") {
-        parse_pbrt_param(stream, ptype, tvalue.L);
+        parse_pbrt_param(str, ptype, tvalue.L);
       } else if (pname == "samples") {
-        parse_pbrt_param(stream, ptype, tvalue.samples);
+        parse_pbrt_param(str, ptype, tvalue.samples);
       } else if (pname == "nsamples") {
-        parse_pbrt_param(stream, ptype, tvalue.samples);
+        parse_pbrt_param(str, ptype, tvalue.samples);
       } else if (pname == "mapname") {
-        parse_pbrt_param(stream, ptype, tvalue.mapname);
+        parse_pbrt_param(str, ptype, tvalue.mapname);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2484,14 +2391,14 @@ static inline void parse_pbrt_light(
     value.infinite = tvalue;
   } else if (type == "distant") {
     auto tvalue = pbrt_light::distant_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "L") {
-        parse_pbrt_param(stream, ptype, tvalue.L);
+        parse_pbrt_param(str, ptype, tvalue.L);
       } else if (pname == "from") {
-        parse_pbrt_param(stream, ptype, tvalue.from);
+        parse_pbrt_param(str, ptype, tvalue.from);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2500,16 +2407,16 @@ static inline void parse_pbrt_light(
     value.distant = tvalue;
   } else if (type == "projection") {
     auto tvalue = pbrt_light::projection_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "I") {
-        parse_pbrt_param(stream, ptype, tvalue.I);
+        parse_pbrt_param(str, ptype, tvalue.I);
       } else if (pname == "fov") {
-        parse_pbrt_param(stream, ptype, tvalue.fov);
+        parse_pbrt_param(str, ptype, tvalue.fov);
       } else if (pname == "mapname") {
-        parse_pbrt_param(stream, ptype, tvalue.mapname);
+        parse_pbrt_param(str, ptype, tvalue.mapname);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2518,20 +2425,20 @@ static inline void parse_pbrt_light(
     value.projection = tvalue;
   } else if (type == "spot") {
     auto tvalue = pbrt_light::spot_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "I") {
-        parse_pbrt_param(stream, ptype, tvalue.I);
+        parse_pbrt_param(str, ptype, tvalue.I);
       } else if (pname == "from") {
-        parse_pbrt_param(stream, ptype, tvalue.from);
+        parse_pbrt_param(str, ptype, tvalue.from);
       } else if (pname == "to") {
-        parse_pbrt_param(stream, ptype, tvalue.to);
+        parse_pbrt_param(str, ptype, tvalue.to);
       } else if (pname == "coneangle") {
-        parse_pbrt_param(stream, ptype, tvalue.coneangle);
+        parse_pbrt_param(str, ptype, tvalue.coneangle);
       } else if (pname == "conedeltaangle") {
-        parse_pbrt_param(stream, ptype, tvalue.conedeltaangle);
+        parse_pbrt_param(str, ptype, tvalue.conedeltaangle);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2540,14 +2447,14 @@ static inline void parse_pbrt_light(
     value.spot = tvalue;
   } else if (type == "point") {
     auto tvalue = pbrt_light::point_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "I") {
-        parse_pbrt_param(stream, ptype, tvalue.I);
+        parse_pbrt_param(str, ptype, tvalue.I);
       } else if (pname == "from") {
-        parse_pbrt_param(stream, ptype, tvalue.from);
+        parse_pbrt_param(str, ptype, tvalue.from);
       } else {
         throw std::runtime_error("unknown parameter " + pname);
       }
@@ -2561,25 +2468,25 @@ static inline void parse_pbrt_light(
 
 // Parse Medium
 static inline void parse_pbrt_medium(
-    pbrt_stream& stream, const string& type, pbrt_medium& value) {
+    string_view& str, const string& type, pbrt_medium& value) {
   auto pname = ""s, ptype = ""s;
   if (type == "homogeneous") {
     auto tvalue = pbrt_medium::homogeneous_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "sigma_a") {
-        parse_pbrt_param(stream, ptype, tvalue.sigma_a);
+        parse_pbrt_param(str, ptype, tvalue.sigma_a);
       } else if (pname == "sigma_s") {
-        parse_pbrt_param(stream, ptype, tvalue.sigma_s);
+        parse_pbrt_param(str, ptype, tvalue.sigma_s);
       } else if (pname == "preset") {
-        parse_pbrt_param(stream, ptype, tvalue.preset);
+        parse_pbrt_param(str, ptype, tvalue.preset);
       } else if (pname == "g") {
-        parse_pbrt_param(stream, ptype, tvalue.g);
+        parse_pbrt_param(str, ptype, tvalue.g);
       } else if (pname == "scale") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -2589,31 +2496,31 @@ static inline void parse_pbrt_medium(
     value.homogeneous = tvalue;
   } else if (type == "heterogeneous") {
     auto tvalue = pbrt_medium::heterogeneous_t{};
-    while (is_param(stream)) {
-      parse_pbrt_nametype(stream, pname, ptype);
+    while (is_pbrt_param(str)) {
+      parse_pbrt_nametype(str, pname, ptype);
       if (pname == "sigma_a") {
-        parse_pbrt_param(stream, ptype, tvalue.scale);
+        parse_pbrt_param(str, ptype, tvalue.scale);
       } else if (pname == "sigma_s") {
-        parse_pbrt_param(stream, ptype, tvalue.sigma_s);
+        parse_pbrt_param(str, ptype, tvalue.sigma_s);
       } else if (pname == "preset") {
-        parse_pbrt_param(stream, ptype, tvalue.preset);
+        parse_pbrt_param(str, ptype, tvalue.preset);
       } else if (pname == "g") {
-        parse_pbrt_param(stream, ptype, tvalue.g);
+        parse_pbrt_param(str, ptype, tvalue.g);
       } else if (pname == "p0") {
-        parse_pbrt_param(stream, ptype, tvalue.p0);
+        parse_pbrt_param(str, ptype, tvalue.p0);
       } else if (pname == "p1") {
-        parse_pbrt_param(stream, ptype, tvalue.p1);
+        parse_pbrt_param(str, ptype, tvalue.p1);
       } else if (pname == "nx") {
-        parse_pbrt_param(stream, ptype, tvalue.nx);
+        parse_pbrt_param(str, ptype, tvalue.nx);
       } else if (pname == "ny") {
-        parse_pbrt_param(stream, ptype, tvalue.ny);
+        parse_pbrt_param(str, ptype, tvalue.ny);
       } else if (pname == "nz") {
-        parse_pbrt_param(stream, ptype, tvalue.nz);
+        parse_pbrt_param(str, ptype, tvalue.nz);
       } else if (pname == "density") {
-        parse_pbrt_param(stream, ptype, tvalue.density);
+        parse_pbrt_param(str, ptype, tvalue.density);
       } else if (pname == "type") {
         auto ttype = ""s;
-        parse_pbrt_param(stream, ptype, ttype);
+        parse_pbrt_param(str, ptype, ttype);
         if (ttype != type) throw std::runtime_error("inconsistent types");
       } else {
         throw std::runtime_error("unknown parameter " + pname);
@@ -2654,12 +2561,12 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
   // parse command by command
   while (!files.empty()) {
     auto fs     = files.back().fs;
-    auto stream = pbrt_stream{};
+    auto line   = ""s;
     auto cmd    = ""s;
-    while (read_pbrt_line(fs, stream.buffer)) {
-      stream.str = string_view{stream.buffer};
+    while (read_pbrt_line(fs, line)) {
+      auto str = string_view{line};
       // get command
-      parse_pbrt_command(stream, cmd);
+      parse_pbrt_command(str, cmd);
       if (cmd == "WorldBegin") {
         stack.push_back({});
       } else if (cmd == "WorldEnd") {
@@ -2674,7 +2581,7 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
       } else if (cmd == "TransformEnd") {
         stack.pop_back();
       } else if (cmd == "ObjectBegin") {
-        parse_pbrt_value(stream, object.name);
+        parse_pbrt_value(str, object.name);
         stack.push_back(stack.back());
         cb.begin_object(object, stack.back());
       } else if (cmd == "ObjectEnd") {
@@ -2683,11 +2590,11 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
         object = {};
       } else if (cmd == "ObjectInstance") {
         auto value = pbrt_object{};
-        parse_pbrt_value(stream, value.name);
+        parse_pbrt_value(str, value.name);
         cb.object_instance(value, stack.back());
       } else if (cmd == "ActiveTransform") {
         auto value = ""s;
-        parse_pbrt_command(stream, value);
+        parse_pbrt_command(str, value);
         if (value == "StartTime") {
           stack.back().active_transform_start = true;
           stack.back().active_transform_end   = false;
@@ -2702,30 +2609,30 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
         }
       } else if (cmd == "Transform") {
         auto xf = identity4x4f;
-        parse_pbrt_param(stream, xf);
+        parse_pbrt_param(str, xf);
         set_transform(stack.back(), xf);
       } else if (cmd == "ConcatTransform") {
         auto xf = identity4x4f;
-        parse_pbrt_param(stream, xf);
+        parse_pbrt_param(str, xf);
         concat_transform(stack.back(), xf);
       } else if (cmd == "Scale") {
         auto v = zero3f;
-        parse_pbrt_param(stream, v);
+        parse_pbrt_param(str, v);
         concat_transform(stack.back(), (mat4f)scaling_frame(v));
       } else if (cmd == "Translate") {
         auto v = zero3f;
-        parse_pbrt_param(stream, v);
+        parse_pbrt_param(str, v);
         concat_transform(stack.back(), (mat4f)translation_frame(v));
       } else if (cmd == "Rotate") {
         auto v = zero4f;
-        parse_pbrt_param(stream, v);
+        parse_pbrt_param(str, v);
         concat_transform(stack.back(),
             (mat4f)rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
       } else if (cmd == "LookAt") {
         auto from = zero3f, to = zero3f, up = zero3f;
-        parse_pbrt_param(stream, from);
-        parse_pbrt_param(stream, to);
-        parse_pbrt_param(stream, up);
+        parse_pbrt_param(str, from);
+        parse_pbrt_param(str, to);
+        parse_pbrt_param(str, up);
         // from pbrt parser
         auto frame = lookat_frame(from, to, up, true);
         // frame.z = normalize(to-from);
@@ -2739,59 +2646,59 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
         stack.back().reverse = !stack.back().reverse;
       } else if (cmd == "CoordinateSystem") {
         auto name = ""s;
-        parse_pbrt_value(stream, name);
+        parse_pbrt_value(str, name);
         coordsys[name] = {
             stack.back().transform_start, stack.back().transform_end};
       } else if (cmd == "CoordSysTransform") {
         auto name = ""s;
-        parse_pbrt_value(stream, name);
+        parse_pbrt_value(str, name);
         if (coordsys.find(name) != coordsys.end()) {
           stack.back().transform_start = coordsys.at(name).first;
           stack.back().transform_end   = coordsys.at(name).second;
         }
       } else if (cmd == "Integrator") {
         auto type = ""s;
-        parse_pbrt_value(stream, type);
+        parse_pbrt_value(str, type);
         auto value = pbrt_integrator{};
-        parse_pbrt_integrator(stream, type, value);
+        parse_pbrt_integrator(str, type, value);
         cb.integrator(value, stack.back());
       } else if (cmd == "Sampler") {
         auto type = ""s;
-        parse_pbrt_value(stream, type);
+        parse_pbrt_value(str, type);
         auto value = pbrt_sampler{};
-        parse_pbrt_sampler(stream, type, value);
+        parse_pbrt_sampler(str, type, value);
         cb.sampler(value, stack.back());
       } else if (cmd == "PixelFilter") {
         auto type = ""s;
-        parse_pbrt_value(stream, type);
+        parse_pbrt_value(str, type);
         auto value = pbrt_filter{};
-        parse_pbrt_filter(stream, type, value);
+        parse_pbrt_filter(str, type, value);
         cb.filter(value, stack.back());
       } else if (cmd == "Film") {
         auto type = ""s;
-        parse_pbrt_value(stream, type);
+        parse_pbrt_value(str, type);
         auto value = pbrt_film{};
-        parse_pbrt_film(stream, type, value);
+        parse_pbrt_film(str, type, value);
         cb.film(value, stack.back());
       } else if (cmd == "Accelerator") {
         auto type = ""s;
-        parse_pbrt_value(stream, type);
+        parse_pbrt_value(str, type);
         auto value = pbrt_accelerator{};
-        parse_pbrt_accelerator(stream, type, value);
+        parse_pbrt_accelerator(str, type, value);
         cb.accelerator(value, stack.back());
       } else if (cmd == "Camera") {
         auto type = ""s;
-        parse_pbrt_value(stream, type);
+        parse_pbrt_value(str, type);
         auto value = pbrt_camera{};
-        parse_pbrt_camera(stream, type, value);
+        parse_pbrt_camera(str, type, value);
         cb.camera(value, stack.back());
       } else if (cmd == "Texture") {
         auto name = ""s, comptype = ""s, type = ""s;
-        parse_pbrt_value(stream, name);
-        parse_pbrt_value(stream, comptype);
-        parse_pbrt_value(stream, type);
+        parse_pbrt_value(str, name);
+        parse_pbrt_value(str, comptype);
+        parse_pbrt_value(str, type);
         auto value = pbrt_texture{};
-        parse_pbrt_texture(stream, type, value);
+        parse_pbrt_texture(str, type, value);
         if (type == "constant") {
           constant_values[name] = value.constant.value.value;
         }
@@ -2799,64 +2706,64 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
       } else if (cmd == "Material") {
         static auto material_id = 0;
         auto        type        = ""s;
-        parse_pbrt_value(stream, type);
+        parse_pbrt_value(str, type);
         if (type == "") {
           stack.back().material = "";
         } else {
           auto value = pbrt_material{};
           auto name  = "unnamed_material_" + std::to_string(material_id++);
-          parse_pbrt_material(stream, type, value, constant_values);
+          parse_pbrt_material(str, type, value, constant_values);
           stack.back().material = name;
           cb.material(value, name, stack.back());
         }
       } else if (cmd == "MakeNamedMaterial") {
         auto name = ""s, type = ""s;
-        parse_pbrt_value(stream, name);
-        parse_pbrt_typeparam(stream, type);
+        parse_pbrt_value(str, name);
+        parse_pbrt_typeparam(str, type);
         auto value = pbrt_material{};
-        parse_pbrt_material(stream, type, value, constant_values);
+        parse_pbrt_material(str, type, value, constant_values);
         cb.material(value, name, stack.back());
       } else if (cmd == "NamedMaterial") {
         auto name = ""s;
-        parse_pbrt_value(stream, name);
+        parse_pbrt_value(str, name);
         stack.back().material = name;
       } else if (cmd == "Shape") {
         auto type = ""s;
-        parse_pbrt_value(stream, type);
+        parse_pbrt_value(str, type);
         auto value = pbrt_shape{};
-        parse_pbrt_shape(stream, type, value);
+        parse_pbrt_shape(str, type, value);
         cb.shape(value, stack.back());
       } else if (cmd == "AreaLightSource") {
         auto type = ""s;
-        parse_pbrt_value(stream, type);
+        parse_pbrt_value(str, type);
         static auto material_id = 0;
         auto        name = "unnamed_arealight_" + std::to_string(material_id++);
         auto        value = pbrt_arealight{};
-        parse_pbrt_arealight(stream, type, value);
+        parse_pbrt_arealight(str, type, value);
         stack.back().arealight = name;
         cb.arealight(value, name, stack.back());
       } else if (cmd == "LightSource") {
         auto type = ""s;
-        parse_pbrt_value(stream, type);
+        parse_pbrt_value(str, type);
         auto value = pbrt_light{};
-        parse_pbrt_light(stream, type, value);
+        parse_pbrt_light(str, type, value);
         cb.light(value, stack.back());
       } else if (cmd == "MakeNamedMedium") {
         auto name = ""s, type = ""s;
-        parse_pbrt_value(stream, name);
-        parse_pbrt_typeparam(stream, type);
+        parse_pbrt_value(str, name);
+        parse_pbrt_typeparam(str, type);
         auto value = pbrt_medium{};
-        parse_pbrt_medium(stream, type, value);
+        parse_pbrt_medium(str, type, value);
         cb.medium(value, name, stack.back());
       } else if (cmd == "MediumInterface") {
         auto interior = ""s, exterior = ""s;
-        parse_pbrt_value(stream, interior);
-        parse_pbrt_value(stream, exterior);
+        parse_pbrt_value(str, interior);
+        parse_pbrt_value(str, exterior);
         stack.back().medium_interior = interior;
         stack.back().medium_exterior = exterior;
       } else if (cmd == "Include") {
         auto inputname = ""s;
-        parse_pbrt_value(stream, inputname);
+        parse_pbrt_value(str, inputname);
         auto& file = files.emplace_back();
         open_input_file(file, fs::path(filename).parent_path() / inputname);
       } else {
@@ -2864,243 +2771,6 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
       }
     }
     files.pop_back();
-  }
-}
-
-// Load pbrt scene
-void load_pbrt_old(const string& filename, pbrt_callbacks& cb, bool flipv) {
-  // start laoding files
-  auto streams = vector<pbrt_stream>{};
-  init_stream(streams);
-  load_stream(filename, streams);
-
-  // parsing stack
-  auto stack    = vector<pbrt_context>{{}};
-  auto object   = pbrt_object{};
-  auto coordsys = unordered_map<string, pair<frame3f, frame3f>>{};
-
-  // helpders
-  auto set_transform = [](pbrt_context& ctx, const mat4f& xform) {
-    if (ctx.active_transform_start) ctx.transform_start = (frame3f)xform;
-    if (ctx.active_transform_end) ctx.transform_end = (frame3f)xform;
-  };
-  auto concat_transform = [](pbrt_context& ctx, const mat4f& xform) {
-    if (ctx.active_transform_start) ctx.transform_start *= (frame3f)xform;
-    if (ctx.active_transform_end) ctx.transform_end *= (frame3f)xform;
-  };
-
-  // constant values
-  unordered_map<string, pbrt_spectrum3f> constant_values = {};
-
-  // parse command by command
-  auto cmd = ""s;
-  while (!streams.empty() && !is_empty(streams.back())) {
-    // get command
-    auto& stream = streams.back();
-    parse_pbrt_command(stream, cmd);
-    if (cmd == "WorldBegin") {
-      stack.push_back({});
-    } else if (cmd == "WorldEnd") {
-      stack.pop_back();
-      if (stack.size() != 1) throw std::runtime_error("bad stack");
-    } else if (cmd == "AttributeBegin") {
-      stack.push_back(stack.back());
-    } else if (cmd == "AttributeEnd") {
-      stack.pop_back();
-    } else if (cmd == "TransformBegin") {
-      stack.push_back(stack.back());
-    } else if (cmd == "TransformEnd") {
-      stack.pop_back();
-    } else if (cmd == "ObjectBegin") {
-      parse_pbrt_value(stream, object.name);
-      stack.push_back(stack.back());
-      cb.begin_object(object, stack.back());
-    } else if (cmd == "ObjectEnd") {
-      cb.end_object(object, stack.back());
-      stack.pop_back();
-      object = {};
-    } else if (cmd == "ObjectInstance") {
-      auto value = pbrt_object{};
-      parse_pbrt_value(stream, value.name);
-      cb.object_instance(value, stack.back());
-    } else if (cmd == "ActiveTransform") {
-      auto value = ""s;
-      parse_pbrt_command(stream, value);
-      if (value == "StartTime") {
-        stack.back().active_transform_start = true;
-        stack.back().active_transform_end   = false;
-      } else if (value == "EndTime") {
-        stack.back().active_transform_start = false;
-        stack.back().active_transform_end   = true;
-      } else if (value == "All") {
-        stack.back().active_transform_start = true;
-        stack.back().active_transform_end   = true;
-      } else {
-        throw std::runtime_error("bad active transform");
-      }
-    } else if (cmd == "Transform") {
-      auto xf = identity4x4f;
-      parse_pbrt_param(stream, xf);
-      set_transform(stack.back(), xf);
-    } else if (cmd == "ConcatTransform") {
-      auto xf = identity4x4f;
-      parse_pbrt_param(stream, xf);
-      concat_transform(stack.back(), xf);
-    } else if (cmd == "Scale") {
-      auto v = zero3f;
-      parse_pbrt_param(stream, v);
-      concat_transform(stack.back(), (mat4f)scaling_frame(v));
-    } else if (cmd == "Translate") {
-      auto v = zero3f;
-      parse_pbrt_param(stream, v);
-      concat_transform(stack.back(), (mat4f)translation_frame(v));
-    } else if (cmd == "Rotate") {
-      auto v = zero4f;
-      parse_pbrt_param(stream, v);
-      concat_transform(stack.back(),
-          (mat4f)rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
-    } else if (cmd == "LookAt") {
-      auto from = zero3f, to = zero3f, up = zero3f;
-      parse_pbrt_param(stream, from);
-      parse_pbrt_param(stream, to);
-      parse_pbrt_param(stream, up);
-      // from pbrt parser
-      auto frame = lookat_frame(from, to, up, true);
-      // frame.z = normalize(to-from);
-      // frame.x = normalize(cross(frame.z,up));
-      // frame.y = cross(frame.x,frame.z);
-      // frame.o    = from;
-      concat_transform(stack.back(), (mat4f)inverse(frame));
-      stack.back().last_lookat_distance = length(from - to);
-      // stack.back().focus = length(m.x - m.y);
-    } else if (cmd == "ReverseOrientation") {
-      stack.back().reverse = !stack.back().reverse;
-    } else if (cmd == "CoordinateSystem") {
-      auto name = ""s;
-      parse_pbrt_value(stream, name);
-      coordsys[name] = {
-          stack.back().transform_start, stack.back().transform_end};
-    } else if (cmd == "CoordSysTransform") {
-      auto name = ""s;
-      parse_pbrt_value(stream, name);
-      if (coordsys.find(name) != coordsys.end()) {
-        stack.back().transform_start = coordsys.at(name).first;
-        stack.back().transform_end   = coordsys.at(name).second;
-      }
-    } else if (cmd == "Integrator") {
-      auto type = ""s;
-      parse_pbrt_value(stream, type);
-      auto value = pbrt_integrator{};
-      parse_pbrt_integrator(stream, type, value);
-      cb.integrator(value, stack.back());
-    } else if (cmd == "Sampler") {
-      auto type = ""s;
-      parse_pbrt_value(stream, type);
-      auto value = pbrt_sampler{};
-      parse_pbrt_sampler(stream, type, value);
-      cb.sampler(value, stack.back());
-    } else if (cmd == "PixelFilter") {
-      auto type = ""s;
-      parse_pbrt_value(stream, type);
-      auto value = pbrt_filter{};
-      parse_pbrt_filter(stream, type, value);
-      cb.filter(value, stack.back());
-    } else if (cmd == "Film") {
-      auto type = ""s;
-      parse_pbrt_value(stream, type);
-      auto value = pbrt_film{};
-      parse_pbrt_film(stream, type, value);
-      cb.film(value, stack.back());
-    } else if (cmd == "Accelerator") {
-      auto type = ""s;
-      parse_pbrt_value(stream, type);
-      auto value = pbrt_accelerator{};
-      parse_pbrt_accelerator(stream, type, value);
-      cb.accelerator(value, stack.back());
-    } else if (cmd == "Camera") {
-      auto type = ""s;
-      parse_pbrt_value(stream, type);
-      auto value = pbrt_camera{};
-      parse_pbrt_camera(stream, type, value);
-      cb.camera(value, stack.back());
-    } else if (cmd == "Texture") {
-      auto name = ""s, comptype = ""s, type = ""s;
-      parse_pbrt_value(stream, name);
-      parse_pbrt_value(stream, comptype);
-      parse_pbrt_value(stream, type);
-      auto value = pbrt_texture{};
-      parse_pbrt_texture(stream, type, value);
-      if (type == "constant") {
-        constant_values[name] = value.constant.value.value;
-      }
-      cb.texture(value, name, stack.back());
-    } else if (cmd == "Material") {
-      static auto material_id = 0;
-      auto        type        = ""s;
-      parse_pbrt_value(stream, type);
-      if (type == "") {
-        stack.back().material = "";
-      } else {
-        auto value = pbrt_material{};
-        auto name  = "unnamed_material_" + std::to_string(material_id++);
-        parse_pbrt_material(stream, type, value, constant_values);
-        stack.back().material = name;
-        cb.material(value, name, stack.back());
-      }
-    } else if (cmd == "MakeNamedMaterial") {
-      auto name = ""s, type = ""s;
-      parse_pbrt_value(stream, name);
-      parse_pbrt_typeparam(stream, type);
-      auto value = pbrt_material{};
-      parse_pbrt_material(stream, type, value, constant_values);
-      cb.material(value, name, stack.back());
-    } else if (cmd == "NamedMaterial") {
-      auto name = ""s;
-      parse_pbrt_value(stream, name);
-      stack.back().material = name;
-    } else if (cmd == "Shape") {
-      auto type = ""s;
-      parse_pbrt_value(stream, type);
-      auto value = pbrt_shape{};
-      parse_pbrt_shape(stream, type, value);
-      cb.shape(value, stack.back());
-    } else if (cmd == "AreaLightSource") {
-      auto type = ""s;
-      parse_pbrt_value(stream, type);
-      static auto material_id = 0;
-      auto        name  = "unnamed_arealight_" + std::to_string(material_id++);
-      auto        value = pbrt_arealight{};
-      parse_pbrt_arealight(stream, type, value);
-      stack.back().arealight = name;
-      cb.arealight(value, name, stack.back());
-    } else if (cmd == "LightSource") {
-      auto type = ""s;
-      parse_pbrt_value(stream, type);
-      auto value = pbrt_light{};
-      parse_pbrt_light(stream, type, value);
-      cb.light(value, stack.back());
-    } else if (cmd == "MakeNamedMedium") {
-      auto name = ""s, type = ""s;
-      parse_pbrt_value(stream, name);
-      parse_pbrt_typeparam(stream, type);
-      auto value = pbrt_medium{};
-      parse_pbrt_medium(stream, type, value);
-      cb.medium(value, name, stack.back());
-    } else if (cmd == "MediumInterface") {
-      auto interior = ""s, exterior = ""s;
-      parse_pbrt_value(stream, interior);
-      parse_pbrt_value(stream, exterior);
-      stack.back().medium_interior = interior;
-      stack.back().medium_exterior = exterior;
-    } else if (cmd == "Include") {
-      auto inputname = ""s;
-      parse_pbrt_value(stream, inputname);
-      load_stream(fs::path(filename).parent_path() / inputname, streams);
-    } else {
-      throw std::runtime_error("unknown command " + cmd);
-    }
-    // go to next file if needed
-    skip_whitespace_or_comment_to_next_file(streams);
   }
 }
 
